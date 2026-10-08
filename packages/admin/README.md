@@ -37,7 +37,7 @@ import { SiteAdminComponents } from "./provider";
 export default defineAdminPlugin({ Provider: SiteAdminComponents });
 ```
 
-Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` is a complete example. The provider:
+Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` is a sketch. The provider:
 
 ```tsx
 // plugins/site-admin/provider.tsx
@@ -133,7 +133,7 @@ const components = {
 ```
 
 Each field or `layout` group `tab` creates a tab in the properties panel (a `Properties` tab if none; the group's `tab` takes precedence). A view field
-(`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `CmsAdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/client` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a complete example.
+(`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `CmsAdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/client` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
 uses `MediaThumbnail` and `useMediaUrl` from `@monti-cms/admin/media` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
@@ -317,7 +317,7 @@ export function StatsPage() {
 }
 ```
 
-The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is the whole plugin, with its tests; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
+The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is a sketch of the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
 
 Edit screen extensions (`editorExtensions`) are hooks that add an element at the end of the toolbar, an action next to the block handle, and actions for the selection menu and slash menu. For the field side, body images, media and code blocks,
 attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).

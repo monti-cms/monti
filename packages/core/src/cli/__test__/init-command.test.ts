@@ -42,7 +42,7 @@ describe("monti init on the command line", () => {
 	it("--json prints one JSON document and asks nothing, even on a terminal", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\n---\nx\n" });
 		const prompter = scriptedPrompter({});
-		const result = run(dir, ["--json", "--database", "skip", "--extras", "ai", "--no-install"], {
+		const result = run(dir, ["--json", "--extras", "ai", "--no-install"], {
 			interactive: true,
 			prompter,
 		});
@@ -53,11 +53,11 @@ describe("monti init on the command line", () => {
 		expect(report).toMatchObject({
 			ok: true,
 			dryRun: false,
-			answers: { database: { kind: "skip" }, ai: true, adminPath: "/studio" },
+			answers: { ai: true, adminPath: "/studio" },
 			app: { packageManager: "pnpm", src: false, contentFolders: [{ dir: "content/posts", files: 1 }] },
 		});
 		expect(report.created).toContain("monti.config.ts");
-		expect(report.next.at(-1)).toContain("monti import content/posts");
+		expect(report.next.join("\n")).not.toContain("monti import");
 		expect(result.err).toEqual([]);
 	});
 
@@ -83,8 +83,8 @@ describe("monti init on the command line", () => {
 		const result = run(dir, [
 			"--yes",
 			"--no-install",
-			"--database",
-			"postgres://u:p@h:5432/d",
+			"--database-schema",
+			"blog",
 			"--admin-github-id",
 			"42",
 			"--site-url",
@@ -105,17 +105,15 @@ describe("monti init on the command line", () => {
 			"npm",
 		]);
 		expect(await result.code).toBe(0);
-		expect(read(dir, ".env.local")).toContain("MONTI_ADMIN_GITHUB_ID=42");
+		expect(read(dir, ".env.example")).toContain("MONTI_ADMIN_GITHUB_ID=42");
+		expect(read(dir, ".env.example")).toContain("DATABASE_SCHEMA=blog");
 		expect(JSON.parse(read(dir, "monti.schema.json")).admin).toEqual({ path: "/cms" });
 		expect(result.out.join("\n")).toContain("npx monti");
 	});
 
-	it("--database docker and the removed flags are refused", async () => {
-		const docker = run(fixtureApp(), ["--yes", "--database", "docker"]);
-		expect(await docker.code).toBe(1);
-		expect(docker.err.join("\n")).toContain('--database "docker" must be a postgres:// URL or "skip"');
-		for (const flag of ["--no-migrate", "--no-docker-start", "--blog-theme", "--resume"]) {
-			const removed = run(fixtureApp(), ["--yes", flag]);
+	it("the flags of the removed behavior are refused", async () => {
+		for (const flag of ["--database", "--no-migrate", "--no-docker-start", "--blog-theme", "--resume"]) {
+			const removed = run(fixtureApp(), ["--yes", flag, "x"]);
 			expect(await removed.code).toBe(1);
 		}
 	});
@@ -142,10 +140,9 @@ describe("monti init on the command line", () => {
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 	});
 
-	it("an interactive run: the questions, the answers, and the final summary", async () => {
+	it("an interactive run: the questions, the install confirmation, and the final summary", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\ndate: 2024-01-01\n---\nx\n" });
 		const prompter = scriptedPrompter({
-			[QUESTIONS.database]: "skip",
 			[QUESTIONS.databaseSchema]: "",
 			[QUESTIONS.adminGithubId]: "583231",
 			[QUESTIONS.locales]: "ko,en",
@@ -154,13 +151,13 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.blocks]: "pick",
 			[QUESTIONS.blockList]: ["callout", "tabs"],
 			[QUESTIONS.adminPath]: "/studio",
-			"Add withCms": true,
+			"Install the": true,
 		});
 		const host = fakeHost();
+		const before = read(dir, "next.config.ts");
 		const result = run(dir, [], { interactive: true, prompter, host });
 		expect(await result.code).toBe(0);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.database,
 			QUESTIONS.databaseSchema,
 			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
@@ -169,26 +166,19 @@ describe("monti init on the command line", () => {
 			QUESTIONS.blocks,
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
-			"Add withCms to next.config.ts?",
+			expect.stringContaining("Install the"),
 		]);
-		// The detection is shown first, the next.config diff before the question about it.
 		expect(prompter.notes[0]).toMatchObject({ title: "Detected" });
 		expect(prompter.notes[0]?.body).toContain("App Router");
 		expect(prompter.notes[0]?.body).toContain("Found 1 Markdown/MDX file in content/posts/");
-		expect(
-			prompter.notes.some(
-				(note) => note.title === "Change to next.config.ts" && note.body.includes("+import { withCms }"),
-			),
-		).toBe(true);
 		expect(host.install).toHaveBeenCalled();
+		expect(read(dir, "next.config.ts")).toBe(before);
 		expect(result.out.join("\n")).toContain("Start the app: pnpm dev, then open http://localhost:3000/studio");
 	});
 
-	it("declining the next.config change leaves it alone and prints the change to make", async () => {
+	it("answering no to the install runs nothing and lists the command", async () => {
 		const dir = fixtureApp();
-		const before = read(dir, "next.config.ts");
 		const prompter = scriptedPrompter({
-			[QUESTIONS.database]: "skip",
 			[QUESTIONS.databaseSchema]: "",
 			[QUESTIONS.adminGithubId]: "",
 			[QUESTIONS.locales]: "en",
@@ -196,18 +186,19 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.extras]: [],
 			[QUESTIONS.blocks]: "all",
 			[QUESTIONS.adminPath]: "/studio",
-			"Add withCms": false,
+			"Install the": false,
 		});
-		const result = run(dir, ["--no-install"], { interactive: true, prompter });
+		const host = fakeHost();
+		const result = run(dir, [], { interactive: true, prompter, host });
 		expect(await result.code).toBe(0);
-		expect(read(dir, "next.config.ts")).toBe(before);
-		expect(result.out.join("\n")).toContain("Wrap the config in next.config.ts");
+		expect(host.install).not.toHaveBeenCalled();
+		expect(result.out.join("\n")).toMatch(/Install the packages:\n\s+pnpm add @monti-cms\/core/);
 	});
 
 	it("Ctrl+C leaves the project as it was and exits 130", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
-		const prompter = scriptedPrompter({ [QUESTIONS.database]: "cancel" });
+		const prompter = scriptedPrompter({ [QUESTIONS.databaseSchema]: "cancel" });
 		const result = run(dir, [], { interactive: true, prompter });
 		expect(await result.code).toBe(130);
 		expect(result.err).toEqual(["Cancelled. Nothing was written."]);
@@ -226,7 +217,6 @@ describe("monti init on the command line", () => {
 			"--yes",
 			"--json",
 			"--dry-run",
-			"--database",
 			"--admin-github-id",
 			"--site-url",
 			"--locales",

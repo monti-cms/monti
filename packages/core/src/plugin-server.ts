@@ -24,16 +24,6 @@ export { type ExportBodyParams, exportBodyText } from "./format/export-body";
 export { HttpError, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
-export {
-	type CheckOutcome,
-	type CheckStatus,
-	type DoctorCheck,
-	type DoctorContext,
-	fail,
-	ok,
-	skip,
-	warn,
-} from "./plugin/doctor";
 export type { LoadedServerPlugin } from "./plugin/server";
 export type {
 	ImportedItem,

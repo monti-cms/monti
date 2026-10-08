@@ -1,8 +1,7 @@
 import { CmsError, type Entry } from "@monti-cms/core/plugin/server";
-import { applyDraftFile, applyFile, describeError, recordOf } from "./apply";
-import { reconcileDraft } from "./drafts";
-import { exportDraft, exportEntry, hasDraftFile, isSyncable, parseEntryFile } from "./entry-file";
-import { enqueue, flushTarget, pushEntries } from "./outbound";
+import { applyFile, describeError, recordOf } from "./apply";
+import { exportEntry, isSyncable, parseEntryFile } from "./entry-file";
+import { pushEntries } from "./outbound";
 import type { ConflictRecord } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
 
@@ -15,8 +14,6 @@ import { GitSyncError, type SyncContext } from "./sync";
 /** A conflict with the two texts to compare. */
 export interface ConflictView {
 	readonly id: string;
-	/** `"draft"`: the conflict is about the draft branch of the entry, not the published file. */
-	readonly scope?: "draft";
 	readonly target: string;
 	readonly repo: string;
 	readonly entryId: string;
@@ -62,18 +59,12 @@ export async function listConflicts(ctx: SyncContext): Promise<ConflictView[]> {
 		if (!target) continue;
 		const entry = await readEntry(ctx, conflict.entryId);
 		let serverText: string | null = null;
-		if (conflict.scope === "draft") {
-			if (hasDraftFile(entry, target)) {
-				const { pattern } = await ctx.format(target);
-				serverText = (await exportDraft(ctx.cms, target, pattern, entry)).text;
-			}
-		} else if (isSyncable(entry, target)) {
+		if (isSyncable(entry, target)) {
 			const { pattern } = await ctx.format(target);
 			serverText = (await exportEntry(ctx.cms, target, pattern, entry)).text;
 		}
 		views.push({
 			id: conflict.id,
-			...(conflict.scope ? { scope: conflict.scope } : {}),
 			target: conflict.target,
 			repo: target.repo,
 			entryId: conflict.entryId,
@@ -95,61 +86,6 @@ export async function listConflicts(ctx: SyncContext): Promise<ConflictView[]> {
 export type Resolution = "git" | "server";
 
 /**
- * Settles a conflict about a draft branch. `"git"`: the text on the branch becomes the entry's draft (it is not published). `"server"`: the draft of the entry as the
- * server has it overwrites the file on the branch (and when the entry has been published or discarded since, what that means for the repo goes out as usual).
- */
-async function resolveDraftConflict(
-	ctx: SyncContext,
-	params: { readonly target: string; readonly entryId: string; readonly resolution: Resolution },
-	conflict: ConflictRecord,
-): Promise<{ readonly resolution: Resolution }> {
-	const target = ctx.target(params.target);
-	if (params.resolution === "server") {
-		await reconcileDraft(ctx, target, params.entryId, { force: true });
-		await ctx.state.conflicts.remove(params.target, params.entryId, "draft");
-		// The entry may have been published while the decision waited: that publish was held back, so it goes out now.
-		await enqueue(ctx, target, params.entryId);
-		await flushTarget(ctx, target).catch((error) =>
-			console.error(`[git-sync] flush of ${target.id} after resolving a draft conflict failed`, error),
-		);
-		return { resolution: "server" };
-	}
-	const parsed = parseEntryFile(conflict.gitText);
-	if (!parsed.ok) throw new GitSyncError(`The git version cannot be read: ${parsed.message}`);
-	const { file } = parsed;
-	const { pattern } = await ctx.format(target);
-	await ctx.withLock(target, async () => {
-		const entry = await readEntry(ctx, params.entryId);
-		const record = await ctx.state.drafts.get(target.id, params.entryId);
-		if (!entry || !record) throw new CmsError("The entry or its draft branch is gone", "not_found");
-		const slug = file.slug ?? pattern.parse(conflict.path)?.slug ?? record.slug;
-		let saved: Awaited<ReturnType<typeof applyDraftFile>>;
-		try {
-			saved = await applyDraftFile(ctx, target, {
-				path: conflict.path,
-				sha: conflict.gitSha,
-				file,
-				collection: conflict.collection,
-				locale: conflict.locale,
-				slug,
-				entry,
-			});
-		} catch (error) {
-			throw new GitSyncError(`The git version could not be written to the draft: ${describeError(error)}`);
-		}
-		await ctx.state.drafts.put({
-			...record,
-			blobSha: conflict.gitSha,
-			contentHash: saved.working.contentHash,
-			slug: saved.workingSlug ?? record.slug,
-			syncedAt: new Date(ctx.now()).toISOString(),
-		});
-		await ctx.state.conflicts.remove(params.target, params.entryId, "draft");
-	});
-	return { resolution: "git" };
-}
-
-/**
  * Settles a conflict.
  *
  * - `"git"` ("Use git version"): the git text is written to the entry with the same pipeline as an edit and published, replacing what the server has (a draft with
@@ -166,18 +102,14 @@ export async function resolveConflict(
 		readonly entryId: string;
 		readonly resolution: Resolution;
 		readonly gitSha?: string;
-		/** `"draft"` for a conflict about a draft branch. */
-		readonly scope?: "draft";
 	},
 ): Promise<{ readonly resolution: Resolution; readonly pullRequestUrl?: string }> {
 	const target = ctx.target(params.target);
-	const conflict = await ctx.state.conflicts.get(params.target, params.entryId, params.scope);
+	const conflict = await ctx.state.conflicts.get(params.target, params.entryId);
 	if (!conflict) throw new CmsError("There is no such conflict", "not_found");
 	if (params.gitSha !== undefined && params.gitSha !== conflict.gitSha) {
 		throw new CmsError("The file changed in git since you looked at it; reload the conflict", "conflict");
 	}
-	if (params.scope === "draft") return resolveDraftConflict(ctx, params, conflict);
-
 	if (params.resolution === "server") {
 		const pushed = await pushEntries(ctx, target, [params.entryId]);
 		await ctx.state.conflicts.remove(params.target, params.entryId);

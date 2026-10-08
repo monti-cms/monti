@@ -1,6 +1,6 @@
 import type { ReadEntry } from "@monti-cms/core/read";
 import Link from "next/link";
-import { ArticleBody } from "@/components/monti/article-body/article-body";
+import { ArticleBody } from "@/components/article-body";
 import { cms } from "@/monti.config";
 import { PostMeta } from "./post-meta";
 

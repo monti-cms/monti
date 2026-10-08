@@ -37,7 +37,7 @@
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs && node ../../scripts/copy-registry.mjs",
+		"build": "node ../../scripts/build-package.mjs",
 		"schema:build": "tsx scripts/write-json-schema.ts"
 	},
 	"dependencies": {
@@ -77,7 +77,6 @@
 	"files": [
 		"bin",
 		"dist",
-		"registry",
 		"README.md",
 		"render.css",
 		"schema.json"

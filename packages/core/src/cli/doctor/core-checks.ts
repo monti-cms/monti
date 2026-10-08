@@ -1,12 +1,14 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
-import { type CheckOutcome, fail, ok, skip, warn } from "../../plugin/doctor";
 import { formatDecision } from "../../server/decision";
 import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
 import { findSchemaFile, generateSchemaTypes, readSchema, SCHEMA_TYPES_FILE } from "../schema-types";
+import { AUTH_CHECKS } from "./auth-checks";
+import { DATABASE_CHECKS } from "./database-checks";
+import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
 
 /** Everything the core checks look at, gathered once before they run. */
 export interface DoctorState {
@@ -294,23 +296,6 @@ const legacySecrets: CoreCheck = {
 		);
 	},
 };
-
-// ---- storage ----
-
-const noStorage: CoreCheck = {
-	group: "storage",
-	id: "none",
-	title: "Media storage",
-	needsCms: true,
-	run: (state) =>
-		state.cms?.isMediaConfigured
-			? ok("a media storage is configured")
-			: ok(
-					"no media storage: image upload is off and the admin hides the media menu. Add `storage: s3Storage()` (@monti-cms/storage-s3) to turn it on",
-				),
-};
-
-// ---- next ----
 
 const FILE_EXTENSIONS = ["tsx", "ts", "jsx", "js"] as const;
 
@@ -747,9 +732,10 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	boundary,
 	schemaFile,
 	schemaTypes,
+	...DATABASE_CHECKS,
 	montiSecret,
 	legacySecrets,
-	noStorage,
+	...AUTH_CHECKS,
 	nextFiles,
 	nextWithCms,
 	nextHydration,
@@ -761,5 +747,5 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	oldAdminComponents,
 ];
 
-/** The order the groups are printed in. Groups not listed (plugins) follow. */
-export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "storage", "next", "upgrade"] as const;
+/** The order the groups are printed in. */
+export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "next", "upgrade"] as const;

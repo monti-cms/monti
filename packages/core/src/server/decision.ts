@@ -1,5 +1,5 @@
 /**
- * Something Monti decided on its own, and why. "Automatic is fine, silent is not": the startup summary of the server and `monti doctor` list these, so nobody has to
+ * Something Monti decided on its own, and why. "Automatic is fine, silent is not": `monti doctor` lists these, so nobody has to
  * guess where a value came from.
  *
  * `source` is one of: `set in monti.config.ts (...)`, `from env NAME`, or `auto-detected (reason)`.

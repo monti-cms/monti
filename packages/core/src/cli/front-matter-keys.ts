@@ -1,12 +1,9 @@
 /**
- * What the front matter keys of a post usually mean: the one table `monti init` (to shape the starter schema) and `monti import` (to guess the mapping) read.
- * To change how a key is understood, edit a row. A key that is in no row is never guessed: import reports it as not mapped and leaves it out (unless the
- * collection has a field of exactly that name). Keys are compared in lower case.
+ * What the front matter keys of a post usually mean: the one table `monti init` reads to shape the starter schema from the front matter of the posts the app already has.
+ * To change how a key is understood, edit a row. A key that is in no row gets a plain field. Keys are compared in lower case.
  */
 
 export type KeyRole =
-	| "title"
-	| "slug"
 	| "publishedAt"
 	| "draft"
 	| "published"
@@ -15,8 +12,7 @@ export type KeyRole =
 	| "locale"
 	| "tag"
 	| "category"
-	| "series"
-	| "filenameLocale";
+	| "series";
 
 export interface KeyRow {
 	readonly role: KeyRole;
@@ -25,8 +21,6 @@ export interface KeyRow {
 }
 
 export const KEY_TABLE: readonly KeyRow[] = [
-	{ role: "title", keys: ["title"], note: "the title field of the collection" },
-	{ role: "slug", keys: ["slug"], note: "the address of the entry; without it the address is made from the file name" },
 	{
 		role: "publishedAt",
 		keys: ["date", "pubDate", "publishDate", "publishedDate", "publishedAt", "datePublished"],
@@ -60,11 +54,6 @@ export const KEY_TABLE: readonly KeyRow[] = [
 	},
 	{ role: "category", keys: ["category", "categories"], note: "a relation to the category collection" },
 	{ role: "series", keys: ["series"], note: "a relation to the series collection (init makes none)" },
-	{
-		role: "filenameLocale",
-		keys: ["<name>.<lang>.md", "<name>.<lang>.mdx"],
-		note: "the language in the file name (hello.ko.mdx is the ko translation of hello.mdx)",
-	},
 ];
 
 /** The keys of the given roles, in lower case. */

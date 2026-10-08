@@ -52,7 +52,7 @@ const nextConfig: NextConfig = {};
 export default withCms(nextConfig);
 ```
 
-설정 파일은 잇지 않는다(설정은 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나이고, 관리자는 그 인스턴스에서 사이트를 받는다). 코어 패키지를 앱과 함께 빌드하고, Next의 `basePath`를 서버·브라우저 번들에 알린다. 설정에 더하는 것은 이것뿐이고, 서버가 시작 요약에 그대로 출력한다(`withCms`를 빼면 되돌릴 수 있고, 그러면 `transpilePackages: ["@monti-cms/core"]`를 직접 적는다). 대신할 파일은 쓰지 않는다. 설치하지 않은 선택 패키지(`chart()`의 `recharts`)는 번들러가 내는 "module not found" 오류가 된다. `next dev`에서는 `"use client"` 파일이 서버 전용 설정을 불러올 때 서버를 시작할 때마다 한 번 경고하기도 한다("파일" 참고).
+설정 파일은 잇지 않는다(설정은 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나이고, 관리자는 그 인스턴스에서 사이트를 받는다). 코어 패키지를 앱과 함께 빌드하고, Next의 `basePath`를 서버·브라우저 번들에 알린다. 설정에 더하는 것은 이것뿐이고, core README의 "Monti가 스스로 정하는 것과 끄는 법" 표가 정확히 그 목록이다(`withCms`를 빼면 되돌릴 수 있고, 그러면 `transpilePackages: ["@monti-cms/core"]`를 직접 적는다). 대신할 파일은 쓰지 않는다. 설치하지 않은 선택 패키지(`chart()`의 `recharts`)는 번들러가 내는 "module not found" 오류가 된다. `next dev`에서는 `"use client"` 파일이 서버 전용 설정을 불러올 때 서버를 시작할 때마다 한 번 경고하기도 한다("파일" 참고).
 
 ### 관리자 페이지·레이아웃
 
@@ -83,7 +83,7 @@ export default function AdminPage(props: CmsAdminPageProps) {
 
 `CmsAdminLayout`은 관리자 레이아웃의 props(`themeProvider`·`themeStorageKey`·`toaster`, `@monti-cms/admin` README)를 받아 `NextAdminRouter` 안에 그린다.
 
-**Cache Components.** 관리자는 Next의 `cacheComponents`(와 `partialPrefetching`)가 있든 없든 동작한다. `create-next-app`은 새 앱에서 이 둘을 켠다. `CmsAdminLayout`은 폴백 없는 `Suspense` 경계 안에서 요청을 기다리므로(`connection()`) 그 아래는 미리 렌더링되지 않는다. 세션, 데이터베이스, 현재 시각, URL이 모두 요청 시점의 데이터이기 때문이다. 페이지는 그 경계의 자식이라 따로 경계가 필요 없다. `cacheComponents`가 켜져 있으면 페이지에 `export const instant = false`를 넣는다(`next.config`에 `cacheComponents: true`가 있으면 `monti init`이 넣는다). 절대 instant하지 않은 라우트를 Next 16.4의 개발 전용 instant 검증이 검사하지 않게 하는 것으로, 없으면 개발 오버레이가 어드민을 그릴 수 없어 검증하지 못했다고 알린다. `cacheComponents`가 꺼져 있으면 Next가 이 export 때문에 빌드를 실패시키니 그때는 넣지 않는다. 관리자 테마 프로바이더는 React가 하이드레이션하기 전에 `<html>`에 클래스와 `color-scheme`을 달므로, 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`이 필요하다(`monti init`이 추가한다).
+**Cache Components.** 관리자는 Next의 `cacheComponents`(와 `partialPrefetching`)가 있든 없든 동작한다. `create-next-app`은 새 앱에서 이 둘을 켠다. `CmsAdminLayout`은 폴백 없는 `Suspense` 경계 안에서 요청을 기다리므로(`connection()`) 그 아래는 미리 렌더링되지 않는다. 세션, 데이터베이스, 현재 시각, URL이 모두 요청 시점의 데이터이기 때문이다. 페이지는 그 경계의 자식이라 따로 경계가 필요 없다. `cacheComponents`가 켜져 있으면 페이지에 `export const instant = false`를 넣는다(`next.config`에 `cacheComponents: true`가 있으면 `monti init`이 넣는다). 절대 instant하지 않은 라우트를 Next 16.4의 개발 전용 instant 검증이 검사하지 않게 하는 것으로, 없으면 개발 오버레이가 어드민을 그릴 수 없어 검증하지 못했다고 알린다. `cacheComponents`가 꺼져 있으면 Next가 이 export 때문에 빌드를 실패시키니 그때는 넣지 않는다. 관리자 테마 프로바이더는 React가 하이드레이션하기 전에 `<html>`에 클래스와 `color-scheme`을 달므로, 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`이 필요하다(`monti init`은 추가할 줄을 적어 주고, 레이아웃을 고치지는 않는다).
 
 `NextAdminRouter`는 관리자용 App Router 어댑터다. `next/link`와 `next/navigation` 위에 만든 `Link`·`navigate`·`replace`·`usePathname`·`useSearchParams`를 `@monti-cms/admin`에 주는 클라이언트 컴포넌트다. `CmsAdminPage`는 관리자의 서버 화면에 Next의 `redirect`와 `notFound`를 준다. 관리자 자체는 Next에서 아무것도 가져오지 않는다.
 

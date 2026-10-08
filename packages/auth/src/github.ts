@@ -1,5 +1,5 @@
 import GitHub from "@auth/core/providers/github";
-import { type DoctorCheck, fail, ok, problemText, warn } from "@monti-cms/core";
+import { problemText } from "@monti-cms/core";
 import { githubLabel } from "./messages";
 import type { LoginProvider } from "./provider";
 
@@ -40,7 +40,7 @@ const GITHUB_ICON = `data:image/svg+xml,${encodeURIComponent(
 
 const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 
-/** How to get the two values, shared by the error and the doctor message. */
+/** How to get the two values. */
 const OAUTH_APP_FIX =
 	"create a GitHub OAuth app (https://github.com/settings/developers, OAuth Apps, New OAuth App) whose callback URL is <your site>/api/cms/auth/callback/github (`monti doctor` prints it), then copy its Client ID into AUTH_GITHUB_ID and a new client secret into AUTH_GITHUB_SECRET";
 
@@ -53,38 +53,6 @@ export function github(options: GithubOptions = {}): LoginProvider {
 	const clientId = () => options.clientId || fromEnv(GITHUB_ENV.clientId);
 	const clientSecret = () => options.clientSecret || fromEnv(GITHUB_ENV.clientSecret);
 
-	/** In production a missing value breaks login; on a development machine the development login stands in, so it is a warning there. */
-	const missing = (name: string, env: Readonly<Record<string, string | undefined>>) => {
-		const message = `${name} is not set, so nobody can sign in with GitHub${
-			env.NODE_ENV === "production" ? "" : " (under `next dev` the development login is used instead)"
-		}`;
-		const details = { where: WHERE_TO_SET, fix: OAUTH_APP_FIX };
-		return env.NODE_ENV === "production" ? fail(message, details) : warn(message, details);
-	};
-	const checks: readonly DoctorCheck[] = [
-		{
-			id: "github-id",
-			title: "GitHub client id",
-			run: ({ env }) =>
-				clientId()
-					? ok(
-							options.clientId ? "set by github({ clientId })" : `${GITHUB_ENV.clientId} is set`,
-							options.clientId ? { where: "github({ clientId })" } : { where: GITHUB_ENV.clientId },
-						)
-					: missing(GITHUB_ENV.clientId, env),
-		},
-		{
-			id: "github-secret",
-			title: "GitHub client secret",
-			run: ({ env }) =>
-				clientSecret()
-					? ok(
-							options.clientSecret ? "set by github({ clientSecret })" : `${GITHUB_ENV.clientSecret} is set`,
-							options.clientSecret ? { where: "github({ clientSecret })" } : { where: GITHUB_ENV.clientSecret },
-						)
-					: missing(GITHUB_ENV.clientSecret, env),
-		},
-	];
 	return {
 		id: "github",
 		name: "GitHub",
@@ -109,7 +77,6 @@ export function github(options: GithubOptions = {}): LoginProvider {
 			env: GITHUB_ENV.admin,
 			findId: 'open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id"',
 		},
-		checks,
 		get admins() {
 			return adminsOf(options);
 		},

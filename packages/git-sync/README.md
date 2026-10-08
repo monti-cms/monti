@@ -2,7 +2,7 @@
 
 English | [한국어](README.ko.md)
 
-Two-way sync of **published entries** with files in a GitHub repo: a separate content repo, or the `content` folder of a site repo (Astro, Hugo, ...). Publishing commits the entry's file (or opens a pull request); a change pushed to the repo comes back to the CMS. If an entry changed on both sides, nothing is merged: the admin lists the conflict with a diff and a person picks a side. Optionally **drafts** sync too, each on its own branch with a pull request that publishes on merge ("Drafts" below).
+Two-way sync of **published entries** with files in a GitHub repo: a separate content repo, or the `content` folder of a site repo (Astro, Hugo, ...). Publishing commits the entry's file (or opens a pull request); a change pushed to the repo comes back to the CMS. If an entry changed on both sides, nothing is merged: the admin lists the conflict with a diff and a person picks a side.
 
 - Talks to GitHub through the API with a token and a webhook, so it works on serverless hosting. No checkout, no `git` binary.
 - Delivered through the core's event outbox (`afterCommit`): a failed push is retried, not lost.
@@ -41,14 +41,13 @@ Then run `monti migrate` (it creates the plugin's storage), open `/<admin path>/
 
 ## Config
 
-`gitSync({ targets, enabled?, debounceMs?, draftDebounceMs?, client? })`
+`gitSync({ targets, enabled?, debounceMs?, client? })`
 
 | Option | Meaning |
 | --- | --- |
 | `targets` | Where entries are synced to (below). Each target is synced on its own |
 | `enabled` | `false` registers nothing (no screen, hooks or routes), so a config can carry the plugin switched off. Default `true` |
 | `debounceMs` | Publishes that arrive within this many milliseconds of the last commit wait in a queue and go out together in one commit. A publish after a quiet period is committed at once. `0` commits every publish at once. Default `2000` |
-| `draftDebounceMs` | For targets with `drafts: true`: a draft goes to its branch once the entry has been quiet for this many milliseconds, so autosaves do not make a commit each. `0` writes every save at once. Default `30000` |
 | `client` | Makes the GitHub client. For tests and hosts that reach GitHub another way (`@monti-cms/git-sync/testing` has a fake). Server only |
 
 A target:
@@ -64,7 +63,6 @@ A target:
 | `mode` | `"commit"` (the default) commits to the branch. `"pr"` commits to `prBranch` and opens or updates a pull request, which merges itself once checks pass when the repo allows auto-merge |
 | `prBranch` | The branch `"pr"` mode works on. Default `monti/publish` |
 | `id` | Name of the target (it keys the saved state). Default: `owner-name`, with the folder appended |
-| `drafts` | `true` also syncs drafts: a branch `monti/draft/<slug>` and a pull request per entry with unpublished changes; publishing in the CMS merges it and merging it on GitHub publishes the entry ("Drafts" below). Default `false` |
 | `apiUrl` | REST API root of GitHub Enterprise Server (`https://git.example.com/api/v3`) |
 
 The config is checked when the site config is created: a missing collection, a path that cannot tell entries apart, or a collection field named like a front matter key git-sync writes (`slug`, `date`, `lastmod`, `monti`) is an error naming the target.
@@ -72,12 +70,10 @@ The config is checked when the site config is created: a missing collection, a p
 ## Setting it up
 
 1. **Token.** Create a fine-grained personal access token on GitHub with **read and write** access to *Contents* and *Pull requests* of the repo (a classic token with `repo` scope also works). On the Git sync screen, Settings tab, save it. It is stored encrypted and shown only as its last four characters. The app needs `MONTI_SECRET`; without it nothing can be saved.
-2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/cms/v1/git-sync/webhook`), content type `application/json`, the **push** event (and **Pull requests** for a target with `drafts: true`), and a secret: use "Generate" on the Settings tab, save it there, and paste the same value into GitHub. The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
+2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/cms/v1/git-sync/webhook`), content type `application/json`, the **push** event, and a secret: use "Generate" on the Settings tab, save it there, and paste the same value into GitHub. The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
 3. **First sync.** `monti git-sync:push --all` writes every published entry to the repo (below).
 
 Without the webhook, "Pull now" on the screen and `monti git-sync:pull` (for a cron job) bring changes in.
-
-`monti doctor` checks all of this and says what is missing and how to fix it (`git-sync/targets`, `format`, `token`, `webhook-secret`): no target listed, a target format no plugin provides, no token saved or one that `MONTI_SECRET` can no longer read, no webhook secret (with the webhook address to use). `monti doctor --online` also asks GitHub with the saved token whether each repo and branch is reachable, and tells a rejected token (401) from a repo the token cannot see (404).
 
 ## The file
 
@@ -129,7 +125,7 @@ An `afterCommit` event of a synced collection puts the entry in a queue (saved i
 | published (also: restored) | the file is written, or updated |
 | the published slug changed | the file is renamed (the old path is deleted in the same commit) |
 | unpublished, archived, trashed, deleted | the file is deleted |
-| saved (a draft) | nothing: the file holds the published version (a target with `drafts: true` puts it on a draft branch, "Drafts" below) |
+| saved (a draft) | nothing: the file holds the published version |
 
 - **Batching.** The first publish after a quiet period (`debounceMs`) is committed at once. Publishes that follow inside the window are queued and go out in one commit when the window ends. The event of a queued entry is **deferred** (the subscriber returns `{ retryAt }`, see "Event delivery" in the core README): it is rescheduled for the end of the window, and it is not a failure, so it is not listed on the Events screen, does not count in its badge, uses no attempt and cannot dead-letter. Nothing runs in the background on serverless hosting, so the deferred events are delivered when the outbox is next run (the next write, `monti events:retry`, a cron); a process that keeps running flushes by itself when the window ends. The commit message lists what is in it.
 - **`"pr"` mode.** The commit goes to `prBranch`. If a pull request from it is open, it is added to; otherwise the branch starts again from the head of `branch` and a new pull request opens. Auto-merge is enabled when the repo allows it (otherwise the screen says the pull request waits for a merge).
@@ -165,42 +161,6 @@ The **Conflicts** tab lists them with a line diff of the **server text** against
 
 A decision is made on the file the person looked at (its blob sha is sent back); if the file changed again, the decision is refused and the screen shows the new text. A conflict also settles itself when the file is edited back to what was last synced: there is nothing left to decide, and what the server changed goes out with the next flush.
 
-## Drafts (optional)
-
-A target with `drafts: true` also syncs **drafts**. Each entry with unpublished changes gets a branch `monti/draft/<slug>` and a pull request from it into the target's `branch`. **Publishing in the CMS merges that pull request, and merging it on GitHub publishes the entry.** Default off; the published-entry sync above is unchanged.
-
-```ts
-gitSync({
-	draftDebounceMs: 30_000, // optional, the default
-	targets: [{ repo: "acme/site", folder: "content", collections: ["post"], drafts: true }],
-});
-```
-
-**Out.** Every event of an entry makes its draft branch say what the entry says *now* (a late or repeated event does no harm):
-
-| Change | Result |
-| --- | --- |
-| saved, with changes that are not published (also: created, restored, unarchived) | the draft file is committed to `monti/draft/<slug>`. The branch is created from the head of `branch` on the first save; the pull request is opened on the first save and updated after that. Its title is `Draft: <title>` and its body links back to the entry's edit page in the admin (an absolute link when the site config has `site.url`) |
-| saved, back to the published version (the draft was discarded) | the pull request is closed and the branch deleted |
-| trashed, archived, deleted | the same |
-| published | the pull request is **squash-merged** (below) instead of a separate commit to `branch` |
-
-- **Debounce.** The editor autosaves, so a draft goes to its branch only once the entry has been quiet for `draftDebounceMs` (default 30 s, per entry; `0` writes every save at once). It uses the same defer as the batching of published files: the delivery of the newest save is deferred until the quiet period ends and the older saves, which a newer one has overtaken, are dropped. The branch gets one commit per pause. The outbox keeps the order of an entry's events, so a publish made inside the quiet period is delivered when the period ends (the process that keeps running does that by itself).
-- **Publish merges the pull request.** First the branch is made to say what was published (the debounce may not have sent the last save yet), then the pull request is squash-merged and its branch deleted. If the merge is **blocked** (a required check, branch protection, a conflict), the target's mode decides: in `"commit"` mode the pull request is closed and the publish is a commit to `branch` as usual; in `"pr"` mode the pull request **stays open with auto-merge on** and carries the publish, and merging it (auto-merge, or by hand) completes it. Other failures (a token that cannot merge, GitHub down) fail and retry through the outbox. An entry with no draft pull request is published as usual.
-- **A new address for a draft** (the slug changed) opens a **new branch and pull request and closes the old ones**. A branch cannot be renamed through the git data API, so this is the simple choice. When two drafts of a repo would share a branch name (the same slug in two collections or languages) the later one gets the first eight characters of its id appended.
-
-**In.** The webhook also needs the **Pull requests** event (it is Push and Pull requests for a target with drafts). Signatures are verified exactly as for pushes.
-
-| Event | Result |
-| --- | --- |
-| `push` to a `monti/draft/*` branch | the file on the branch is read through the format and saved as the entry's draft, **without publishing** (the same pipeline as an edit in the admin). The save this causes is not committed back |
-| `pull_request`, `closed` and merged, of a draft pull request | the entry is **published with the merged file's content as its published version** (the file is applied as the draft, then published). The push to `branch` that the merge makes finds the same thing, in either order |
-| `pull_request`, `closed` without merging | nothing: the draft stays as it is in the CMS. The next change of the draft opens a new pull request |
-
-**Conflicts** follow the same rule as for published files: if the draft changed on the server since the last sync **and** the file changed on the branch, nothing is written and a conflict is recorded (marked "Draft branch" on the Conflicts tab). **Use git version** saves the branch's text as the entry's draft (it is not published); **Use server version** overwrites the branch with the server's draft. A draft pull request merged on GitHub while the draft also changed on the server is a conflict of the published file (git has the merged text, the server has more): **Use git version** publishes the merged text. While a conflict about a draft waits, nothing is pushed for the entry, and a publish in the CMS waits for the decision.
-
-The pull request, its branch and its last synced state are kept per entry in the plugin's storage. The Sync tab lists the open draft pull requests of each target with links, and the entry's page in the editor shows a small **Draft PR** link when the entry has one (an edit screen extension, which sits in the toolbar).
-
 ## Initial sync
 
 ```sh
@@ -223,11 +183,9 @@ All of them load the app like `monti migrate` (`--env-file`, `--no-env-file`, `-
 
 `/<admin path>/git-sync` (sidebar item "Git sync"):
 
-- **Sync**: per target the repo and branch, mode, folder, path pattern, format and collections; how many entries are synced, waiting in the queue or in conflict; the open draft pull requests with links (targets with `drafts: true`); the last pull (counts, files with errors, skipped files) and the last commit (files, commit, pull request link, notes); **Pull now** and **Commit the queue now**.
-- **Conflicts**: the list with the diff and the two actions (a conflict about a draft branch is marked). The tab shows how many there are.
+- **Sync**: per target the repo and branch, mode, folder, path pattern, format and collections; how many entries are synced, waiting in the queue or in conflict; the last pull (counts, files with errors, skipped files) and the last commit (files, commit, pull request link, notes); **Pull now** and **Commit the queue now**.
+- **Conflicts**: the list with the diff and the two actions. The tab shows how many there are.
 - **Settings**: the GitHub token and the webhook secret (write-only), the webhook payload URL.
-
-The entry page of the editor shows a small **Draft PR** link to the entry's draft pull request when there is one (an edit screen extension, in the toolbar).
 
 ## API
 
@@ -237,14 +195,13 @@ Under `/api/cms/v1/git-sync/`; all admin only except the webhook, which is publi
 | --- | --- |
 | `GET status`, `GET/PUT settings` | The screen's data; the token and secret are only ever written |
 | `POST pull`, `POST flush` | `{ target? }`: "Pull now" and "Commit the queue now" |
-| `GET drafts` | The open draft pull requests; `?entryId=` for one entry (the editor's link) |
-| `GET conflicts`, `POST conflicts/resolve` | `{ target, entryId, resolution: "git" \| "server", gitSha?, scope?: "draft" }` |
-| `POST webhook` | GitHub's `push` and `pull_request` webhook (`X-Hub-Signature-256`, `X-GitHub-Event`) |
+| `GET conflicts`, `POST conflicts/resolve` | `{ target, entryId, resolution: "git" \| "server", gitSha? }` |
+| `POST webhook` | GitHub's `push` webhook (`X-Hub-Signature-256`, `X-GitHub-Event`) |
 
 ## Testing a site that uses it
 
 ```ts
-import { createFakeGitHub, pullRequestPayload, pushPayload, webhookSignature } from "@monti-cms/git-sync/testing";
+import { createFakeGitHub, pushPayload, webhookSignature } from "@monti-cms/git-sync/testing";
 
 const github = createFakeGitHub();
 const repo = github.repo("acme/site", { main: { "README.md": "# site\n" } });
@@ -253,13 +210,12 @@ repo.files("main"); // path to text
 repo.commit("main", [{ path: "content/post/a.en.mdx", text: "..." }]); // an edit in git
 repo.merge(1); // merge the open pull request
 repo.close(1); // close it without merging
-repo.mergeBlocked = "Required status check is expected."; // merging through the API fails the way a protected branch does
 github.failNext("createCommit"); // GitHub failing, to test the retry
 ```
 
 ## Choices worth knowing
 
-- **Published** entries sync by default. Drafts sync only for a target with `drafts: true`, on their own branches.
+- Only **published** entries sync: a draft never goes to the repo.
 - The file holds the **published** version; relations are slugs with the ids under `monti.refs`; the path is derived from the slug.
 - The pull compares blobs (what git has) with records (what git-sync last wrote), not commits, so it does not matter how many pushes a webhook delivery covers, and a missed webhook is made up by the next pull.
 - One flush or pull runs per target at a time, across processes (a lock in plugin storage, with an expiry).

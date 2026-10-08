@@ -4,7 +4,7 @@ import { detectApp } from "../init-detect";
 import { localesFromFileNames } from "../locale-names";
 import { fakeHost, fixtureApp, POST_MDX, read, scriptedPrompter } from "./init-helpers";
 
-const quiet = () => ({ host: fakeHost(), env: {}, install: false });
+const quiet = () => ({ host: fakeHost(), install: false });
 
 describe("languages found in the content files", () => {
 	it("reads suffixes like hello.ko.mdx, and puts first the language whose files have no pair", () => {
@@ -87,14 +87,11 @@ describe("monti init and the languages of the content", () => {
 		const dir = fixtureApp(PAIR);
 		const prompter = scriptedPrompter({
 			"Languages of the site": "ko,en,ja",
-			"Add withCms": true,
-			"Add .env.local": true,
 		});
 		const report = await initProject({
 			cwd: dir,
 			prompter,
 			...quiet(),
-			database: "skip",
 			databaseSchema: "",
 			adminGithubId: "1",
 			siteUrl: "http://localhost:3000",
@@ -117,9 +114,7 @@ describe("monti init and the languages of the content", () => {
 		const dir = fixtureApp(PAIR);
 		const report = await initProject({ cwd: dir, ...quiet(), locales: "en" });
 		expect(report.answers.locales).toEqual(["en"]);
-		expect(report.notes.join("\n")).toMatch(
-			/ko, en found in the file names.*site languages are en.*skipped by `monti import`/,
-		);
+		expect(report.notes.join("\n")).toMatch(/ko, en found in the file names.*site languages are en/);
 	});
 
 	it("language folders give the languages too", async () => {

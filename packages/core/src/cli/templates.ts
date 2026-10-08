@@ -60,11 +60,9 @@ export const DEFAULT_BLOCK_IDS: readonly string[] = ["callout", "collapsible", "
 
 /** What the questions of `monti init` decided. Every field has a flag. */
 export interface InitAnswers {
-	/** `url`: a Postgres URL the user gave. `skip`: fill `DATABASE_URL` in later. */
-	readonly database: { readonly kind: "url"; readonly url: string } | { readonly kind: "skip" };
-	/** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given. Without it the tables go in `public`. */
+	/** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given: an example value in `.env.example`. Without it the tables go in `public`. */
 	readonly databaseSchema?: string;
-	/** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given. */
+	/** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given: filled in `.env.example` (it is public, not a secret). */
 	readonly adminGithubId?: string;
 	/** Public URL of the site, for the OAuth callback URL. */
 	readonly siteUrl: string;
@@ -131,13 +129,13 @@ const itemCollection = (label: string, icon: string, multiLocale: boolean) => ({
 });
 
 /**
- * The collections of the starter schema: `post` with the fields every blog has, then (when a content folder was found) one field per front matter key, read the same
- * way `monti import` reads it for its mapping (`front-matter-keys.ts`), so what init makes is what import fills:
+ * The collections of the starter schema: `post` with the fields every blog has, then (when a content folder was found) one field per front matter key, read by the
+ * table in `front-matter-keys.ts`:
  *
- * - `date` and the other publish date keys get no field: import puts them in the publish date of the entry.
+ * - `date` and the other publish date keys get no field: the entry has its own publish date.
  * - `description`, `summary`, `excerpt` and the like become the field with the `summary` role.
  * - `tags` (also `keywords`, `topics`) become the collection `tag` and a relation `tagIds`. `category` becomes `category` and `categoryId`, and `categories` (a list)
- *   `categoryIds`. Import fills them and creates the entries they name.
+ *   `categoryIds`.
  * - `draft`, `published` and the language keys are the CMS's own and get no field.
  */
 export function starterCollections(keys: readonly FrontMatterKey[], multiLocale: boolean): StarterSchema {
@@ -224,9 +222,7 @@ export function starterCollections(keys: readonly FrontMatterKey[], multiLocale:
 	if (relationKeys.has("tag")) collections.tag = itemCollection("Tag", "tag", multiLocale);
 	if (relationKeys.has("category")) collections.category = itemCollection("Category", "shapes", multiLocale);
 	for (const [target, key] of relationKeys) {
-		notes.push(
-			`"${key}" becomes the ${target} collection and a relation field on post; \`monti import\` fills it and creates the ${target} entries.`,
-		);
+		notes.push(`"${key}" becomes the ${target} collection and a relation field on post.`);
 	}
 	return { collections, notes };
 }
@@ -448,44 +444,77 @@ export default withCms(nextConfig);
 /** The OAuth callback URL of the GitHub login for a site URL. */
 export const githubCallbackUrl = (siteUrl: string) => `${siteUrl.replace(/\/+$/, "")}/api/cms/auth/callback/github`;
 
-/** `.env.example`: every variable the chosen features read, in order, with what each is. Safe to commit (no values). */
+/**
+ * `.env.example`: every variable the chosen features read, in order, each with what it is and where to get it. Committed to git, so it holds placeholders only,
+ * never a secret. The person copies it to `.env.local` (`cp .env.example .env.local`) and fills it in.
+ */
 export function envExampleTemplate(answers: InitAnswers): string {
+	const site = answers.siteUrl.replace(/\/+$/, "");
 	const lines: string[] = [
-		"# Postgres connection URL",
+		"# Copy this file to .env.local and fill it in:  cp .env.example .env.local",
+		"# .env.local is for this machine only: keep it out of git. This example file is safe to commit, so never put a real secret in it.",
+		"",
+		"# --- Database ---",
+		"",
+		"# Postgres connection URL. Get it from your database host's dashboard (Neon, Supabase, Vercel Postgres, RDS, ...),",
+		"# or use a local Postgres: postgres://postgres:postgres@localhost:5432/monti (create the database first: createdb monti).",
 		"DATABASE_URL=postgres://user:password@localhost:5432/monti",
-		"# Schema name when the database is shared (public if empty)",
-		"# DATABASE_SCHEMA=",
-		"# A long random value (openssl rand -base64 32). Signs login sessions and encrypts stored values (AI keys, git-sync tokens)",
+		"",
+		"# Postgres schema for the tables. Optional: empty means public. Use one when the database is shared with other apps.",
+		answers.databaseSchema ? `DATABASE_SCHEMA=${answers.databaseSchema}` : "# DATABASE_SCHEMA=monti",
+		"",
+		"# --- Secret ---",
+		"",
+		"# A long random value that signs login sessions and encrypts stored values (AI keys, git-sync tokens).",
+		"# Generate one:  openssl rand -base64 32",
+		"# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
+		"# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
 		"MONTI_SECRET=",
-		`# GitHub login for production (\`next dev\` signs you in as the admin without these). OAuth app callback URL: ${githubCallbackUrl(answers.siteUrl)}`,
+		"",
+		"# --- Admin login (GitHub) ---",
+		"",
+		"# Under `next dev` you are signed in as the admin without these, from this machine only. A deployed site needs them.",
+		"# Create a GitHub OAuth app:  GitHub > Settings > Developer settings > OAuth Apps > New OAuth App",
+		`#   Homepage URL:               ${site}`,
+		`#   Authorization callback URL: ${githubCallbackUrl(site)}`,
+		"# For the deployed site make a second OAuth app (or add its URL the same way), e.g. https://your-domain.com/api/cms/auth/callback/github",
+		"# Then copy the app's Client ID here, and generate a new client secret and copy it to AUTH_GITHUB_SECRET.",
 		"AUTH_GITHUB_ID=",
 		"AUTH_GITHUB_SECRET=",
-		'# Numeric GitHub id of the admin (https://api.github.com/users/<your-name>, the "id" field)',
-		"MONTI_ADMIN_GITHUB_ID=",
-		"# Public URL of the site (links in bodies written as full URLs count as internal links)",
-		`# SITE_URL=${answers.siteUrl}`,
-		"# Only behind a proxy you run yourself (nginx, a load balancer): true. Vercel, Netlify and Cloudflare Pages are detected",
+		"",
+		'# Your numeric GitHub id: the only account that may sign in as admin. Open https://api.github.com/users/<your-login> and copy the "id" field.',
+		`MONTI_ADMIN_GITHUB_ID=${answers.adminGithubId ?? ""}`,
+		"",
+		"# --- Site ---",
+		"",
+		"# Public URL of the site. Links in bodies written as full URLs to it count as internal links.",
+		`# SITE_URL=${site}`,
+		"",
+		"# Set to true only behind a proxy you run yourself (nginx, a load balancer). Vercel, Netlify and Cloudflare Pages are detected.",
 		"# AUTH_TRUST_HOST=true",
 	];
 	if (answers.storage === "s3") {
 		lines.push(
-			"# Image storage (S3, Cloudflare R2, MinIO). R2: S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com and S3_REGION=auto. MinIO: S3_ENDPOINT=http://localhost:9000 and S3_FORCE_PATH_STYLE=true",
+			"",
+			"# --- Image storage (S3, Cloudflare R2, MinIO) ---",
+			"",
+			"# Where the S3 API lives. AWS S3: leave empty. Cloudflare R2: https://<account-id>.r2.cloudflarestorage.com (R2 dashboard > bucket > Settings). MinIO: http://localhost:9000.",
 			"S3_ENDPOINT=",
+			"# The bucket's region (AWS: e.g. us-east-1). Cloudflare R2: auto.",
 			"S3_REGION=",
+			"# The bucket name; create the bucket in your storage dashboard first.",
 			"S3_BUCKET=",
+			"# An access key with read and write on that bucket. AWS: IAM > Users > Security credentials. R2: R2 > Manage API tokens. MinIO: the console's Access Keys.",
 			"S3_ACCESS_KEY_ID=",
 			"S3_SECRET_ACCESS_KEY=",
-			"# Start of the public URL of uploaded files (a CDN or a public bucket)",
+			"# The start of the public address of uploaded files: a CDN in front of the bucket, or the bucket's public URL (R2: Settings > Public access).",
 			"S3_PUBLIC_URL=",
+			"# MinIO and some other S3-compatible stores need path-style addresses: true.",
 			"# S3_FORCE_PATH_STYLE=true",
 		);
 	}
 	return `${lines.join("\n")}\n`;
 }
-
-/** The comment at the top of `.env.local`. */
-export const ENV_LOCAL_HEADER =
-	"# Written by `monti init`: only values you typed or that were generated. This file is for this machine; keep it out of git.\n";
 
 /** The npm packages the answers need, besides what the app already lists. */
 export function packagesFor(answers: InitAnswers): string[] {

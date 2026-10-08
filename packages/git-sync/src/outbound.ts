@@ -366,11 +366,7 @@ export async function flushTarget(
 			client,
 			remote: await client.listFiles(head, target.folder),
 			records: await ctx.state.records.list(target.id),
-			conflicts: new Map(
-				(await ctx.state.conflicts.list(target.id))
-					.filter((conflict) => conflict.scope !== "draft")
-					.map((conflict) => [conflict.entryId, conflict]),
-			),
+			conflicts: new Map((await ctx.state.conflicts.list(target.id)).map((conflict) => [conflict.entryId, conflict])),
 			forced: new Set(options.force ?? []),
 			prOpen:
 				target.mode === "pr" &&
@@ -503,18 +499,13 @@ export interface EventOutcome {
 
 /**
  * The part of the `afterCommit` subscriber for published files. For each target that syncs the entry's collection it queues the entry and commits the queue.
- * The event only says that something happened; what goes to the repo is the entry as it is now (its published version, or none). `skip` names the targets whose
- * draft pull request took this publish (merged it, or holds it).
+ * The event only says that something happened; what goes to the repo is the entry as it is now (its published version, or none).
  */
-export async function onPublishedEvent(
-	ctx: SyncContext,
-	event: ContentEvent,
-	skip: ReadonlySet<string> = new Set(),
-): Promise<EventOutcome> {
+export async function onPublishedEvent(ctx: SyncContext, event: ContentEvent): Promise<EventOutcome> {
 	const failures: unknown[] = [];
 	const deferred: Date[] = [];
 	if (!FILE_KINDS.has(event.kind)) return { failures, deferred };
-	const targets = ctx.targets.filter((target) => target.collections.includes(event.collection) && !skip.has(target.id));
+	const targets = ctx.targets.filter((target) => target.collections.includes(event.collection));
 	if (targets.length === 0) return { failures, deferred };
 	const entry = event.kind === "deleted" ? null : await event.read();
 	for (const target of targets) {

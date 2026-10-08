@@ -39,7 +39,7 @@ export function resolveTrustHost(configured: boolean | undefined, env: Env = pro
 	return explainTrustHost(configured, env).trusted;
 }
 
-/** {@link resolveTrustHost} with the reason for the answer, for the startup summary and `monti doctor`. */
+/** {@link resolveTrustHost} with the reason for the answer, for `monti doctor`. */
 export function explainTrustHost(
 	configured: boolean | undefined,
 	env: Env = process.env,

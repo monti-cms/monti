@@ -5,12 +5,6 @@ import type { NextConfig } from "next";
 
 const PACKAGES = ["@monti-cms/core"];
 
-/**
- * The environment variable `withCms` sets to say what it added to the Next config. The server reads it for the startup summary (`MONTI_WITHCMS` in
- * `@monti-cms/core`), because the config is loaded where the summary is not printed.
- */
-const WITHCMS_ENV = "MONTI_WITHCMS";
-
 const WATCHING = Symbol.for("monti.schema-types.watching");
 
 /**
@@ -81,7 +75,7 @@ export function checkImportBoundaryInDev(
  * - in development, the types of the schema file are kept up to date ({@link watchSchemaTypesInDev}) and a client component that imports the server-only
  *   `monti.config.ts` is warned about ({@link checkImportBoundaryInDev}).
  *
- * The startup summary of the server lists these (it reads `MONTI_WITHCMS`). To undo them, remove `withCms` from `next.config.ts`; the admin then needs
+ * To undo them, remove `withCms` from `next.config.ts`; the admin then needs
  * `transpilePackages: ["@monti-cms/core"]` and the base path set by hand.
  *
  * It links no config file: `monti.config.ts` exports the CMS instance, the app's server files import it, and the admin gets the site from that instance as data.
@@ -91,18 +85,6 @@ export function checkImportBoundaryInDev(
 export function withCms(nextConfig: NextConfig): NextConfig {
 	watchSchemaTypesInDev(process.cwd());
 	checkImportBoundaryInDev(process.cwd());
-	const development = process.env.NODE_ENV === "development";
-	const added = [
-		`transpilePackages += ${PACKAGES.join(", ")}`,
-		`env.NEXT_PUBLIC_CMS_BASE_PATH = "${nextConfig.basePath?.replace(/\/+$/, "") ?? ""}" (Next basePath)`,
-		...(development
-			? [
-					"monti-env.d.ts is rewritten when the schema file changes",
-					"client imports of monti.config.ts are warned about",
-				]
-			: []),
-	];
-	process.env[WITHCMS_ENV] = added.join("; ");
 	return {
 		...nextConfig,
 		// Tells the server and browser bundles Next `basePath` (read by `cmsApiUrl()` and `withBasePath()`). Site code has nothing to do.

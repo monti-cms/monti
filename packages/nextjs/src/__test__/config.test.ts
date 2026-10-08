@@ -26,12 +26,6 @@ describe("withCms: what it adds", () => {
 		expect(config.turbopack).toBeUndefined();
 		expect(config.webpack).toBeUndefined();
 	});
-
-	it("tells the server what it added, for the startup summary", () => {
-		withCms({ basePath: "/blog" });
-		expect(process.env.MONTI_WITHCMS).toContain("transpilePackages += @monti-cms/core");
-		expect(process.env.MONTI_WITHCMS).toContain('NEXT_PUBLIC_CMS_BASE_PATH = "/blog"');
-	});
 });
 
 describe("withCms: basePath", () => {

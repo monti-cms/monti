@@ -5,7 +5,7 @@ import { parseWith } from "../handler";
 import { attachmentDisposition, extensionFor, inspectUploadedFile, UPLOAD_URL_TTL_SECONDS } from "./media-files";
 
 /**
- * The two steps of a media upload, shared by the upload routes and the code that uploads files itself (`monti import`): `prepareMediaUpload` registers the
+ * The two steps of a media upload, shared by the upload routes: `prepareMediaUpload` registers the
  * asset and issues the direct upload URL, `completeMediaUpload` inspects the stored file and makes the asset usable. Both throw `HttpError`.
  */
 

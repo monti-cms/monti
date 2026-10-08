@@ -1,4 +1,4 @@
-/** Reading languages out of file and folder names (`hello.ko.mdx`, `ko/hello.mdx`), for `monti init` (which languages the site has) and `monti import` (which files it can place). */
+/** Reading languages out of file and folder names (`hello.ko.mdx`, `ko/hello.mdx`), for `monti init` (which languages the site has). */
 
 /**
  * Whether a name is the code of a real language, as a file or folder name writes it: two letters (`ko`, `pt-BR`). Three-letter codes are left out on purpose, because

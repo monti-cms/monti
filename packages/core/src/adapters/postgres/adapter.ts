@@ -3,7 +3,6 @@ import { problemError } from "../../core/problem";
 import type { ContentStore } from "../../core/store";
 import type { Decision } from "../../server/decision";
 import type { DatabaseAdapter } from "../../server/define";
-import { postgresChecks } from "./checks";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain";
 import { createPluginStorage } from "./plugin-storage";
 
@@ -91,7 +90,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 		});
 	return {
 		name: "postgres",
-		checks: postgresChecks({ connectionString: options.connectionString, schema: options.schema }),
+		settings: () => ({ connectionString: options.connectionString, schema: options.schema }),
 		createStore: (storeOptions) =>
 			lazyStore(
 				async () => (await loadStoreModule()).createContentStore(getPool(), { ...schemaOptions(), ...storeOptions }),

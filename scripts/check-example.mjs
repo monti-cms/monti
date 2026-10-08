@@ -105,20 +105,6 @@ run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
 // `monti.config.ts` holds the database and login settings and is server-only: no client component may import it (directly or through other files).
 run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
 
-// `monti add article-body` from the registry that is built from this repo must give the same file the example holds (the example's copy is what the pages import).
-const articleBodyPath = path.join(app, "components/monti/article-body/article-body.tsx");
-const articleBodyBefore = readFileSync(articleBodyPath, "utf8");
-run(
-	"pnpm",
-	["exec", "monti", "add", "article-body", "--registry", path.join(root, "registry/r"), "--overwrite", "--yes"],
-	app,
-);
-if (readFileSync(articleBodyPath, "utf8") !== articleBodyBefore) {
-	throw new Error(
-		"check-example: monti add article-body wrote a file that differs from examples/blog/components/monti/article-body",
-	);
-}
-
 /** The test database, or `undefined` when none is configured. */
 const databaseUrl = (() => {
 	const file = path.join(root, ".env.local");

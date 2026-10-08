@@ -8,7 +8,6 @@ import {
 } from "@monti-cms/core/adapters/auth";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth, type Decision } from "@monti-cms/core/server";
 import { collectAdmins, ignoredAdminText } from "./admins";
-import { authChecks } from "./checks";
 import { type LoginProvider, qualifyAccountId, splitAccountId } from "./provider";
 
 /**
@@ -131,7 +130,6 @@ export function auth(options: AuthOptions): AuthAdapter {
 
 	return {
 		name: "auth",
-		checks: authChecks(options),
 		decisions: (env): readonly Decision[] => {
 			const explicit = options.devBypass;
 			const nodeEnv = env.NODE_ENV ?? "";

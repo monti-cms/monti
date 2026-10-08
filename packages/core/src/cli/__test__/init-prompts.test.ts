@@ -8,8 +8,6 @@ import { fixtureApp, scriptedPrompter } from "./init-helpers";
 const app = () => detectApp(fixtureApp());
 
 const everything = {
-	[QUESTIONS.database]: "url",
-	"Postgres URL": "postgres://me:pw@db.example.com:5432/blog",
 	[QUESTIONS.databaseSchema]: "blog",
 	[QUESTIONS.adminGithubId]: "583231",
 	[QUESTIONS.locales]: "ko, en",
@@ -21,12 +19,10 @@ const everything = {
 };
 
 describe("the questions of monti init", () => {
-	it("asks in the order database, schema, login, locales, storage, extras, blocks, admin path", async () => {
+	it("asks in the order schema, GitHub id, locales, storage, extras, blocks, admin path", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.database,
-			"Postgres URL",
 			QUESTIONS.databaseSchema,
 			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
@@ -37,7 +33,6 @@ describe("the questions of monti init", () => {
 			QUESTIONS.adminPath,
 		]);
 		expect(answers).toEqual({
-			database: { kind: "url", url: "postgres://me:pw@db.example.com:5432/blog" },
 			databaseSchema: "blog",
 			adminGithubId: "583231",
 			siteUrl: "http://localhost:3000",
@@ -49,17 +44,6 @@ describe("the questions of monti init", () => {
 			blocks: ["callout", "mermaid"],
 			adminPath: "/cms",
 		});
-	});
-
-	it("explains the GitHub OAuth app with the exact callback URL before asking for the id", async () => {
-		const prompter = scriptedPrompter(everything);
-		await collectAnswers(app(), { siteUrl: "https://blog.example.com" }, prompter);
-		const note = prompter.notes.find((entry) => entry.title === QUESTIONS.adminLogin);
-		expect(note?.body).toContain("https://github.com/settings/developers");
-		expect(note?.body).toContain("Authorization callback URL: https://blog.example.com/api/cms/auth/callback/github");
-		expect(note?.body).toContain("AUTH_GITHUB_ID");
-		expect(note?.body).toContain("AUTH_GITHUB_SECRET");
-		expect(note?.body).toContain("MONTI_ADMIN_GITHUB_ID");
 	});
 
 	it("the offered extras are AI and git-sync; Bareun is not offered", async () => {
@@ -140,25 +124,6 @@ describe("the questions of monti init", () => {
 		await expect(collectAnswers(app(), { databaseSchema: "my-schema" })).rejects.toThrow(/--database-schema/);
 	});
 
-	it("the database question offers a URL or skip, and nothing else", async () => {
-		let offered: string[] = [];
-		const prompter = scriptedPrompter(everything);
-		const select = prompter.select.bind(prompter);
-		prompter.select = async (question) => {
-			if (question.message === QUESTIONS.database) offered = question.options.map((option) => option.value);
-			return select(question);
-		};
-		await collectAnswers(app(), {}, prompter);
-		expect(offered).toEqual(["url", "skip"]);
-	});
-
-	it("skip needs no URL, and a docker flag is refused", async () => {
-		const skip = scriptedPrompter({ ...everything, [QUESTIONS.database]: "skip" });
-		expect((await collectAnswers(app(), {}, skip)).database).toEqual({ kind: "skip" });
-		expect(skip.asked).not.toContain("Postgres URL");
-		await expect(collectAnswers(app(), { database: "docker" })).rejects.toThrow(/--database/);
-	});
-
 	it("an empty GitHub id is allowed (filled in later); a wrong one is refused", async () => {
 		const empty = await collectAnswers(app(), {}, scriptedPrompter({ ...everything, [QUESTIONS.adminGithubId]: "  " }));
 		expect(empty.adminGithubId).toBeUndefined();
@@ -172,7 +137,6 @@ describe("the questions of monti init", () => {
 		const answers = await collectAnswers(
 			app(),
 			{
-				database: "skip",
 				databaseSchema: "",
 				locales: "ja",
 				storage: "none",
@@ -193,7 +157,6 @@ describe("the questions of monti init", () => {
 
 	it("without a prompter every question takes its default", async () => {
 		expect(await collectAnswers(app(), {})).toEqual({
-			database: { kind: "skip" },
 			adminGithubId: undefined,
 			siteUrl: "http://localhost:3000",
 			locales: ["en"],

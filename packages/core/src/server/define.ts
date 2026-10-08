@@ -2,7 +2,6 @@ import type { ContentStore } from "../core/store";
 import type { FormatRegistry } from "../format/registry";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { MediaStore } from "../media/store";
-import type { DoctorCheck } from "../plugin/doctor";
 import type { PluginStorage } from "../plugin/storage";
 import type { PluginSecrets } from "../secrets";
 import type { EventDeliveryOptions } from "../services/events";
@@ -42,7 +41,7 @@ export interface DatabaseAdapter {
 	}): Promise<MigrationSummary | undefined | void>;
 	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti migrate`. */
 	describeTarget?(): string | undefined;
-	/** What the adapter decided on its own (which environment variable the URL came from, ...), for the startup summary and `monti doctor`. */
+	/** What the adapter decided on its own (which environment variable the URL came from, ...), for `monti doctor`. */
 	decisions?(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
 	/**
 	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
@@ -51,16 +50,17 @@ export interface DatabaseAdapter {
 	pluginStorage(plugin: string): PluginStorage;
 	/** Closes the connection (when the command-line tool finishes). */
 	close?(): Promise<void>;
-	/** Checks `monti doctor` runs for the database, listed under `database/`: the connection setting, reachability, the schema and the migrations. */
-	readonly checks?: readonly DoctorCheck[];
+	/**
+	 * What `monti doctor` reads to check the connection: the connection string and the schema name the adapter was given in `monti.config.ts`. A value left
+	 * out here is read from the environment (`DATABASE_URL`, `DATABASE_SCHEMA`). Read only: it must not open a connection.
+	 */
+	settings?(): { readonly connectionString?: string | undefined; readonly schema?: string | undefined };
 }
 
 /** Media (image and attachment) store connection. */
 export interface MediaAdapter {
 	readonly name: string;
 	createStore(): MediaStore;
-	/** Checks `monti doctor` runs for the media storage, listed under `storage/`: the settings it needs, and (with `--online`) access to the bucket. */
-	readonly checks?: readonly DoctorCheck[];
 }
 
 /** Result of the admin login check. */
@@ -169,10 +169,8 @@ export interface AuthCreateContext {
 export interface AuthAdapter {
 	readonly name: string;
 	create(context: AuthCreateContext): CmsAuth;
-	/** What the login decided on its own (which environment variables the providers read, whether the development bypass is on, and why), for the startup summary and `monti doctor`. */
+	/** What the login decided on its own (which environment variables the providers read, whether the development bypass is on, and why), for `monti doctor`. */
 	decisions?(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
-	/** Checks `monti doctor` runs for the login, listed under `auth/`: the providers' settings, the admins, the callback URL and host trust. */
-	readonly checks?: readonly DoctorCheck[];
 }
 
 export interface CmsServerConfig {

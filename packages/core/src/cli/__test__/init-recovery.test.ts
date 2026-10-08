@@ -4,13 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import { formatInitReport, initProject } from "../init";
 import { fakeHost, fixtureApp, listFiles, read } from "./init-helpers";
 
-const WITH_DATABASE = { database: "postgres://a:b@c:5432/d", env: {} } as const;
-
 describe("monti init when the install fails", () => {
 	it("does not say Monti is added: the install step failed, ok is false and the install command is listed", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost({ install: () => Promise.reject(new Error("`pnpm add` failed")) });
-		const report = await initProject({ cwd: dir, host, ...WITH_DATABASE });
+		const report = await initProject({ cwd: dir, host });
 		const text = formatInitReport(report);
 
 		expect(report.ok).toBe(false);
@@ -27,13 +25,12 @@ describe("monti init when the install fails", () => {
 		await initProject({
 			cwd: failed,
 			host: fakeHost({ install: () => Promise.reject(new Error("offline")) }),
-			...WITH_DATABASE,
 		});
 		expect(existsSync(path.join(failed, ".monti"))).toBe(false);
 
 		const dry = fixtureApp();
 		const install = vi.fn(() => Promise.reject(new Error("offline")));
-		await initProject({ cwd: dry, host: fakeHost({ install }), dryRun: true, ...WITH_DATABASE });
+		await initProject({ cwd: dry, host: fakeHost({ install }), dryRun: true });
 		expect(existsSync(path.join(dry, ".monti"))).toBe(false);
 		expect(install).not.toHaveBeenCalled();
 	});
@@ -43,7 +40,6 @@ describe("monti init when the install fails", () => {
 		const failed = await initProject({
 			cwd: dir,
 			host: fakeHost({ install: () => Promise.reject(new Error("offline")) }),
-			...WITH_DATABASE,
 		});
 		expect(failed.ok).toBe(false);
 		const filesAfterFailure = listFiles(dir);
@@ -51,7 +47,7 @@ describe("monti init when the install fails", () => {
 		writeFileSync(path.join(dir, "monti.config.ts"), edited);
 
 		const online = fakeHost();
-		const second = await initProject({ cwd: dir, host: online, ...WITH_DATABASE });
+		const second = await initProject({ cwd: dir, host: online });
 		expect(second.ok).toBe(true);
 		expect(second.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "done"]]);
 		expect(online.install).toHaveBeenCalled();

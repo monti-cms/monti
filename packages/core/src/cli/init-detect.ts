@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { detectPackageManager } from "./add";
 import { parseJsonc } from "./config-paths";
 import {
 	type DetectedLocale,
@@ -13,6 +12,26 @@ import {
 /** What `monti init` finds out about the app before it asks anything. Read-only: nothing is written here. */
 
 export type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
+
+/** The package manager of the app, by its lockfile, then its `packageManager` field; `npm` when neither says. */
+export function detectPackageManager(cwd: string): PackageManager {
+	const lockfiles = [
+		["pnpm-lock.yaml", "pnpm"],
+		["yarn.lock", "yarn"],
+		["bun.lock", "bun"],
+		["bun.lockb", "bun"],
+		["package-lock.json", "npm"],
+	] as const;
+	for (const [file, manager] of lockfiles) if (existsSync(path.join(cwd, file))) return manager;
+	const manifest = path.join(cwd, "package.json");
+	const field = (
+		existsSync(manifest)
+			? (parseJsonc(readFileSync(manifest, "utf8")) as { packageManager?: unknown } | undefined)
+			: undefined
+	)?.packageManager;
+	const named = typeof field === "string" ? field.split("@")[0] : undefined;
+	return named === "pnpm" || named === "yarn" || named === "bun" ? named : "npm";
+}
 
 export type FrontMatterType = "string" | "list" | "boolean" | "number" | "date";
 

@@ -1,4 +1,4 @@
-import type { DoctorCheck, PluginStorage } from "@monti-cms/core";
+import type { PluginStorage } from "@monti-cms/core";
 
 /*
  * The types below describe what the Auth.js provider objects and sign-in results look like, as small structural types of our own. The published
@@ -78,16 +78,14 @@ export interface LoginProvider {
 	/** Admins of this provider: ids inside the provider (`"123"`) or qualified (`"github:123"`). Unset entries (an unset environment variable) are skipped. */
 	readonly admins?: readonly (string | undefined)[];
 	/**
-	 * What `monti doctor` can tell about the admins of this provider: the environment variable they are read from, and how a person finds their id.
+	 * Where the admins of this provider come from: the environment variable they are read from, and how a person finds their id.
 	 * Used in the messages about an admin list that is empty or has an entry that is not an id.
 	 */
 	readonly adminSource?: { readonly env: string; readonly findId: string };
-	/** Where this provider's settings come from, for the startup summary and `monti doctor` (`client id from env AUTH_GITHUB_ID, ...`). */
+	/** Where this provider's settings come from, for `monti doctor` (`client id from env AUTH_GITHUB_ID, ...`). */
 	provenance?(env: Readonly<Record<string, string | undefined>>): string;
 	/** `true` for an OAuth-style provider: the app registered at the provider must list the callback URL (`<site>/api/cms/auth/callback/<id>`), which `monti doctor` prints. */
 	readonly usesCallbackUrl?: boolean;
-	/** Checks `monti doctor` runs for this provider (are its client id and secret set), listed under `auth/`. */
-	readonly checks?: readonly DoctorCheck[];
 	/**
 	 * Throws a clear error that names the missing setting (an unset `AUTH_GITHUB_ID`). Called when the login connection is created in a server that
 	 * requires login, and before any sign-in is attempted, so a development server running on the dev bypass does not need the provider set up.

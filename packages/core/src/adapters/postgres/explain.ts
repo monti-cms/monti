@@ -58,7 +58,7 @@ export function explainDatabaseError(
 				problem: {
 					what: `Nothing is listening for the database${at}`,
 					where: DATABASE_URL_WHERE,
-					fix: "start Postgres (`docker compose up -d` if `monti init` wrote a docker-compose.yml), or correct the host and port in DATABASE_URL",
+					fix: "start Postgres, or correct the host and port in DATABASE_URL",
 				},
 			};
 		}

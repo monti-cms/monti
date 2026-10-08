@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
-import { ArticleBody } from "@/components/monti/article-body/article-body";
+import { ArticleBody } from "@/components/article-body";
 import { PostMeta } from "@/components/post-meta";
 import { cms } from "@/monti.config";
 

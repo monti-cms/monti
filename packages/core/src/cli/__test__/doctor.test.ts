@@ -235,8 +235,7 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(loads.message).toContain("this-package-does-not-exist");
 		expect(loads.where).toBe("monti.config.ts");
 		expect(loads.fix).toContain("this-package-does-not-exist");
-		expect(byId(report, "database/skipped").status).toBe("skip");
-		expect(byId(report, "plugins/skipped").status).toBe("skip");
+		expect(byId(report, "database/url").status).toBe("skip");
 		// The file checks still run.
 		expect(byId(report, "schema/file").status).toBe("ok");
 	});
@@ -381,66 +380,18 @@ describe("monti doctor on a project that still has the old setup", () => {
 	});
 });
 
-describe("monti doctor checks contributed by plugins", () => {
-	const plugin = `definePlugin({
-		name: "demo",
-		options: {},
-		server: async () => ({
-			default: {
-				checks: [
-					{ id: "token", title: "Token", run: () => ({ status: "ok", message: "token saved" }) },
-					{ id: "webhook", title: "Webhook", run: () => ({ status: "warn", message: "no webhook secret", where: "the Demo screen", fix: "save one there" }) },
-					{ id: "repo", title: "Repo", online: true, run: ({ online }) => ({ status: "ok", message: online ? "repo reachable" : "offline?" }) },
-					{ id: "broken", title: "Broken", run: () => { throw new Error("boom"); } },
-				],
-			},
-		}),
-	})`;
-	const imports = `import { definePlugin } from ${JSON.stringify(path.join(import.meta.dirname, "../../plugin/define.ts"))};`;
-
-	it("lists them under the plugin's name, with the ones that need the network skipped by default", async () => {
+describe("monti doctor --only", () => {
+	it("runs only the groups and checks it names", async () => {
 		setEnv();
-		const dir = project({ "monti.config.ts": configText(plugin, imports) });
-		const { report } = await doctor(dir);
-		expect(statusesOf(report)).toMatchObject({
-			"demo/token": "ok",
-			"demo/webhook": "warn",
-			"demo/repo": "skip",
-			"demo/broken": "fail",
-		});
-		expect(byId(report, "demo/webhook")).toMatchObject({
-			where: "the Demo screen",
-			fix: "save one there",
-			group: "demo",
-		});
-		expect(byId(report, "demo/repo")).toMatchObject({ online: true });
-		expect(byId(report, "demo/repo").message).toContain("--online");
-		expect(byId(report, "demo/broken").message).toContain("boom");
-		// A plugin's group comes after the core ones.
-		expect(report.checks.findIndex((check) => check.group === "demo")).toBeGreaterThan(
-			report.checks.findIndex((check) => check.group === "upgrade"),
-		);
+		const { report } = await doctor(project(), ["--only", "auth/admins,schema/file"]);
+		expect(report.checks.map((check) => check.id).sort()).toEqual(["auth/admins", "schema/file"]);
 	});
 
-	it("runs the network checks with --online", async () => {
+	it("lists only the core groups, in order", async () => {
 		setEnv();
-		const dir = project({ "monti.config.ts": configText(plugin, imports) });
-		const { report } = await doctor(dir, ["--online"]);
-		expect(report.online).toBe(true);
-		expect(byId(report, "demo/repo")).toMatchObject({ status: "ok", message: "repo reachable" });
-	});
-
-	it("runs only what --only names", async () => {
-		setEnv();
-		const dir = project({ "monti.config.ts": configText(plugin, imports) });
-		const { report } = await doctor(dir, ["--only", "demo,schema/file"]);
-		expect(report.checks.map((check) => check.id).sort()).toEqual([
-			"demo/broken",
-			"demo/repo",
-			"demo/token",
-			"demo/webhook",
-			"schema/file",
-		]);
+		const { report } = await doctor(project());
+		const groups = [...new Set(report.checks.map((check) => check.group))];
+		expect(groups).toEqual(["config", "schema", "database", "secrets", "auth", "next", "upgrade"]);
 	});
 });
 
@@ -448,7 +399,7 @@ describe("monti doctor --json and the text report", () => {
 	it("prints a stable JSON shape for tools", async () => {
 		setEnv();
 		const { report } = await doctor(project());
-		expect(Object.keys(report).sort()).toEqual(["checks", "cwd", "ok", "online", "summary"]);
+		expect(Object.keys(report).sort()).toEqual(["checks", "cwd", "ok", "summary"]);
 		expect(report.summary).toEqual({
 			ok: expect.any(Number),
 			warn: expect.any(Number),

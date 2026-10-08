@@ -45,21 +45,6 @@ export const isSyncable = (
 	entry.publishedSlug !== "" &&
 	target.collections.includes(entry.collection);
 
-/**
- * Whether an entry has a draft that is a file of its own: it is not live (a draft, never published or unpublished) or it is published with changes that are not
- * published yet (another content or another address). A published entry whose draft equals its published version has nothing to put on a draft branch.
- */
-export const hasDraftFile = (entry: Entry | null, target: ResolvedTarget): entry is Entry & { workingSlug: string } =>
-	entry !== null &&
-	target.collections.includes(entry.collection) &&
-	typeof entry.workingSlug === "string" &&
-	entry.workingSlug !== "" &&
-	(entry.status === "draft" ||
-		(entry.status === "published" &&
-			(entry.published === undefined ||
-				entry.working.contentHash !== entry.published.contentHash ||
-				entry.workingSlug !== entry.publishedSlug)));
-
 const iso = (value: unknown): string | undefined => {
 	if (value === undefined || value === null) return undefined;
 	const date = value instanceof Date ? value : new Date(value as string);
@@ -166,16 +151,6 @@ export async function exportEntry(
 		body: entry.published,
 		slug: entry.publishedSlug,
 	});
-}
-
-/** Writes the file of an entry's draft (what is on its draft branch). Links to entries that are not published are written as their path too. */
-export async function exportDraft(
-	cms: Cms,
-	target: ResolvedTarget,
-	pattern: PathPattern,
-	entry: Entry & { workingSlug: string },
-): Promise<ExportedEntry> {
-	return exportVersion(cms, target, pattern, entry, "working", { body: entry.working, slug: entry.workingSlug });
 }
 
 async function exportVersion(

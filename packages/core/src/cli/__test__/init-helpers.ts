@@ -22,6 +22,16 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 `;
 
+/** The root layout `create-next-app` writes. */
+export const CREATE_NEXT_APP_LAYOUT = `export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}
+`;
+
 /** The files `create-next-app` writes (App Router, TypeScript, Tailwind), without an install. */
 export const CREATE_NEXT_APP: Record<string, string> = {
 	"package.json": JSON.stringify(
@@ -38,7 +48,7 @@ export const CREATE_NEXT_APP: Record<string, string> = {
 	"tsconfig.json": JSON.stringify({
 		compilerOptions: { strict: true, resolveJsonModule: true, paths: { "@/*": ["./*"] } },
 	}),
-	"app/layout.tsx": "export default function RootLayout() { return null; }\n",
+	"app/layout.tsx": CREATE_NEXT_APP_LAYOUT,
 	"app/page.tsx": "export default function Home() { return null; }\n",
 	"app/globals.css": '@import "tailwindcss";\n',
 	"next.config.ts": DEFAULT_NEXT_CONFIG,
@@ -66,7 +76,7 @@ export const SRC_APP: Record<string, string | null> = {
 	"app/layout.tsx": null,
 	"app/page.tsx": null,
 	"app/globals.css": null,
-	"src/app/layout.tsx": "export default function RootLayout() { return null; }\n",
+	"src/app/layout.tsx": CREATE_NEXT_APP_LAYOUT,
 	"src/app/page.tsx": "export default function Home() { return null; }\n",
 	"src/app/globals.css": '@import "tailwindcss";\n',
 	"tsconfig.json": JSON.stringify({
@@ -96,10 +106,9 @@ export interface FakeHost extends InitHost {
 /** A host that installs nothing, and records the calls. */
 export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {
 	return {
-		generateSecret: () => "generated-secret",
 		install: vi.fn<InitHost["install"]>(),
 		...overrides,
-	} as FakeHost;
+	} as unknown as FakeHost;
 }
 
 /** The order the questions are asked in, as the messages of the prompts. */

@@ -23,7 +23,7 @@ import { type CmsEvents, createEventDispatcher } from "../services/events";
 import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
-import { announceStartup, coreDecisions } from "./startup-summary";
+import { coreDecisions } from "./decisions";
 
 /** The content service of any site: input is checked at run time only. */
 type LooseContentService = ReturnType<typeof createContentService<Entry>>;
@@ -82,7 +82,7 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	 * the working directory.
 	 */
 	readonly schemaFile?: string;
-	/** Where the public site URL came from, for the startup summary (`defineConfig` knows: the config, the schema file or `SITE_URL`). */
+	/** Where the public site URL came from, for `monti doctor` (`defineConfig` knows: the config, the schema file or `SITE_URL`). */
 	readonly siteUrlSource?: string;
 }
 
@@ -202,7 +202,7 @@ export interface Cms<
 	reloadSchema(): SchemaReload;
 	/**
 	 * What this instance decided on its own and why: the database and schema (and which environment variable they came from), the login, whether the development
-	 * bypass is on, whether the host is trusted, the site URL, the schema file and hot reload. The startup summary and `monti doctor` print these.
+	 * bypass is on, whether the host is trusted, the site URL, the schema file and hot reload. `monti doctor` prints these.
 	 */
 	decisions(env?: Readonly<Record<string, string | undefined>>): readonly Decision[];
 }
@@ -286,9 +286,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		let bulk: BulkService | undefined;
 		let auth: CmsAuth | undefined;
 
-		const announce = () => announceStartup(() => self().decisions());
 		const getAuth = (): CmsAuth => {
-			announce();
 			auth ??= server.auth.create({
 				site,
 				loginPath: site.adminUrl("/login"),
@@ -301,7 +299,6 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		};
 		let rawStore: ContentStore | undefined;
 		const getRawStore = (): ContentStore => {
-			announce();
 			rawStore ??= connections.database.createStore({ site });
 			return rawStore;
 		};
@@ -323,7 +320,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					problemText({
 						what: "Media storage is not configured, so there is nowhere to keep uploads",
 						where: "`storage` in monti.config.ts",
-						fix: "add a storage adapter, for example `storage: s3Storage()` (@monti-cms/storage-s3, which reads the S3_* values); `monti doctor` checks them",
+						fix: "add a storage adapter, for example `storage: s3Storage()` (@monti-cms/storage-s3, which reads the S3_* values)",
 					}),
 					"media_not_configured",
 				);

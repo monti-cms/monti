@@ -67,16 +67,6 @@ export {
 	type PluginNavItem,
 	type PluginRoute,
 } from "./plugin/define";
-export {
-	type CheckOutcome,
-	type CheckStatus,
-	type DoctorCheck,
-	type DoctorContext,
-	fail,
-	ok,
-	skip,
-	warn,
-} from "./plugin/doctor";
 export type {
 	ImportedItem,
 	PluginCollection,
