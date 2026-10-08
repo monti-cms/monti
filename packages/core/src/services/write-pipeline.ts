@@ -42,7 +42,7 @@ export interface WriteRequest {
 export interface WriteResult {
 	/** Core preparation of the (transformed) input. */
 	readonly snapshot: PreparedSnapshot;
-	/** Warnings of the blocks' own `validate`, and of the `validate` and `validatePublish` hooks. */
+	/** Warnings: a text body that could not be read (it is kept as an `unparsed` body), the blocks' own `validate`, and the `validate` and `validatePublish` hooks. */
 	readonly warnings: readonly Issue[];
 	/** Whether a `transform` hook changed the data. */
 	readonly transformed: boolean;
@@ -295,10 +295,14 @@ export function createWritePipeline(options: WritePipelineOptions) {
 				...(read.imported ? { imported: read.imported } : {}),
 			});
 			// The blocks check their own syntax (`validate` of a block definition). Findings are warnings, never blockers.
-			const warnings: Issue[] = await validateBlocks(site, snapshot.doc, {
-				locale: request.locale,
-				operation: request.operation,
-			});
+			// A text body the format could not read is still saved (as an `unparsed` body); the write says why, so it is not found out later.
+			const warnings: Issue[] = [
+				...(read.imported?.issues ?? []).map((issue): Issue => ({ ...issue, path: "body" })),
+				...(await validateBlocks(site, snapshot.doc, {
+					locale: request.locale,
+					operation: request.operation,
+				})),
+			];
 			if (sources.length === 0) return { snapshot, warnings, transformed };
 
 			const added = await validate(sources, "validate", request, snapshot);
