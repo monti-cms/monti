@@ -392,6 +392,49 @@ describe("monti doctor on a project that still has the old setup", () => {
 	});
 });
 
+describe("monti doctor on the media storage", () => {
+	const withStorage = (store: string) =>
+		configText().replace(
+			"database: postgres(),",
+			`database: postgres(),\n\tstorage: { createStore: () => { ${store} } },`,
+		);
+
+	it("says uploads are off when the config has no storage", async () => {
+		setEnv();
+		const { report } = await doctor(project());
+		expect(byId(report, "config/storage")).toMatchObject({ status: "ok" });
+		expect(byId(report, "config/storage").message).toContain("no `storage`");
+	});
+
+	it("fails with the variable and the fix when the storage cannot be set up, since public images would silently be gone", async () => {
+		setEnv();
+		const dir = project({
+			"monti.config.ts": withStorage(
+				"throw Object.assign(new Error('S3_BUCKET is not set'), { problem: { what: 'S3_BUCKET is not set', where: '.env.local', fix: 'set S3_BUCKET' } });",
+			),
+		});
+		const { code, report } = await doctor(dir, ["--only", "config/storage"]);
+		const storage = byId(report, "config/storage");
+		expect(storage.status).toBe("fail");
+		expect(storage.message).toBe("S3_BUCKET is not set");
+		expect(storage.where).toBe(".env.local");
+		expect(storage.fix).toContain("set S3_BUCKET");
+		expect(storage.fix).toContain("unavailable");
+		expect(code).toBe(1);
+	});
+
+	it("passes when the store can make public file addresses", async () => {
+		setEnv();
+		const dir = project({
+			"monti.config.ts": withStorage(
+				"return { getPublicUrl: (key: string) => `https://files.example.com/${key}` } as never;",
+			),
+		});
+		const { report } = await doctor(dir, ["--only", "config/storage"]);
+		expect(byId(report, "config/storage").status).toBe("ok");
+	});
+});
+
 describe("monti doctor --only", () => {
 	it("runs only the groups and checks it names", async () => {
 		setEnv();

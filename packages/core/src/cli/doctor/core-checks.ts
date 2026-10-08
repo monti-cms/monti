@@ -166,6 +166,31 @@ const boundary: CoreCheck = {
 	},
 };
 
+/**
+ * The media storage settings. The public pages hide a storage problem on purpose (an image whose address cannot be made is drawn as "unavailable", the page
+ * still renders), so a missing `S3_*` value would otherwise show up only as images that are gone. This builds the store the way the first upload or read does.
+ */
+const storageConfigured: CoreCheck = {
+	group: "config",
+	id: "storage",
+	title: "Media storage",
+	needsCms: true,
+	run: (state) => {
+		if (!state.cms?.server.media)
+			return ok("no `storage` in the config, so uploads are off and the media menu is hidden");
+		try {
+			state.cms.mediaStore().getPublicUrl("monti-doctor");
+		} catch (error) {
+			const problem = (error as { problem?: { what?: string; where?: string; fix?: string } }).problem;
+			return fail(problem?.what ?? messageOf(error).split("\n")[0] ?? "the media storage cannot be set up", {
+				where: problem?.where ?? "`storage` in monti.config.ts",
+				fix: `${problem?.fix ?? "fix the storage settings"}\nuntil then every image on the public pages is drawn as unavailable`,
+			});
+		}
+		return ok("the media storage is set up, and public file addresses can be made");
+	},
+};
+
 // ---- schema ----
 
 const schemaFileOf = (state: DoctorState): string | undefined => {
@@ -730,6 +755,7 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	configLoads,
 	automatic,
 	boundary,
+	storageConfigured,
 	schemaFile,
 	schemaTypes,
 	...DATABASE_CHECKS,
