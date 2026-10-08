@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../test/site";
+import { AuthError } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
 import { createSecretsVault } from "../../secrets";
 import { defineConfig } from "../config";
@@ -54,7 +55,23 @@ describe("defineConfig: one config, one instance", () => {
 
 	it("names what is missing", () => {
 		expect(() => defineConfig({ ...site, auth } as never)).toThrow(/database.*postgres\(\)/);
-		expect(() => defineConfig({ ...site, database } as never)).toThrow(/auth/);
+	});
+
+	it("boots without `auth`: the dev bypass lets this machine in, and production refuses everyone", async () => {
+		const cms = defineConfig({ ...site, database });
+		cms.attachHost({ requestHeaders: async () => new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" }) });
+		expect(cms.auth().providers).toEqual([]);
+		expect(cms.decisions({ NODE_ENV: "production" }).find((entry) => entry.topic === "Login")?.value).toBe("none");
+
+		vi.stubEnv("NODE_ENV", "development");
+		expect(await cms.authGateway.isDevBypassActive()).toBe(true);
+		expect(await cms.authGateway.verifyAdmin()).toMatchObject({ isAdmin: true });
+
+		vi.stubEnv("NODE_ENV", "production");
+		expect(await cms.authGateway.isDevBypassActive()).toBe(false);
+		await expect(cms.authGateway.verifyAdmin()).rejects.toThrow(AuthError);
+		const handled = await cms.authHandlers.GET(new Request("http://localhost:3000/api/cms/auth/session"));
+		expect(handled.status).toBe(404);
 	});
 
 	it("refuses to load in a browser bundle", () => {

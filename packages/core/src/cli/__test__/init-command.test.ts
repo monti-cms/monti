@@ -83,10 +83,6 @@ describe("monti init on the command line", () => {
 		const result = run(dir, [
 			"--yes",
 			"--no-install",
-			"--database-schema",
-			"blog",
-			"--admin-github-id",
-			"42",
 			"--site-url",
 			"https://x.dev",
 			"--locales",
@@ -105,14 +101,21 @@ describe("monti init on the command line", () => {
 			"npm",
 		]);
 		expect(await result.code).toBe(0);
-		expect(read(dir, ".env.example")).toContain("MONTI_ADMIN_GITHUB_ID=42");
-		expect(read(dir, ".env.example")).toContain("DATABASE_SCHEMA=blog");
+		expect(read(dir, ".env.example")).toContain("https://x.dev");
 		expect(JSON.parse(read(dir, "monti.schema.json")).admin).toEqual({ path: "/cms" });
 		expect(result.out.join("\n")).toContain("npx monti");
 	});
 
 	it("the flags of the removed behavior are refused", async () => {
-		for (const flag of ["--database", "--no-migrate", "--no-docker-start", "--blog-theme", "--resume"]) {
+		for (const flag of [
+			"--database",
+			"--database-schema",
+			"--admin-github-id",
+			"--no-migrate",
+			"--no-docker-start",
+			"--blog-theme",
+			"--resume",
+		]) {
 			const removed = run(fixtureApp(), ["--yes", flag, "x"]);
 			expect(await removed.code).toBe(1);
 		}
@@ -143,8 +146,6 @@ describe("monti init on the command line", () => {
 	it("an interactive run: the questions, the install confirmation, and the final summary", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\ndate: 2024-01-01\n---\nx\n" });
 		const prompter = scriptedPrompter({
-			[QUESTIONS.databaseSchema]: "",
-			[QUESTIONS.adminGithubId]: "583231",
 			[QUESTIONS.locales]: "ko,en",
 			[QUESTIONS.storage]: "s3",
 			[QUESTIONS.extras]: ["ai"],
@@ -158,8 +159,6 @@ describe("monti init on the command line", () => {
 		const result = run(dir, [], { interactive: true, prompter, host });
 		expect(await result.code).toBe(0);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.databaseSchema,
-			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
 			QUESTIONS.storage,
 			QUESTIONS.extras,
@@ -179,8 +178,6 @@ describe("monti init on the command line", () => {
 	it("answering no to the install runs nothing and lists the command", async () => {
 		const dir = fixtureApp();
 		const prompter = scriptedPrompter({
-			[QUESTIONS.databaseSchema]: "",
-			[QUESTIONS.adminGithubId]: "",
 			[QUESTIONS.locales]: "en",
 			[QUESTIONS.storage]: "none",
 			[QUESTIONS.extras]: [],
@@ -198,7 +195,7 @@ describe("monti init on the command line", () => {
 	it("Ctrl+C leaves the project as it was and exits 130", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
-		const prompter = scriptedPrompter({ [QUESTIONS.databaseSchema]: "cancel" });
+		const prompter = scriptedPrompter({ [QUESTIONS.locales]: "cancel" });
 		const result = run(dir, [], { interactive: true, prompter });
 		expect(await result.code).toBe(130);
 		expect(result.err).toEqual(["Cancelled. Nothing was written."]);
@@ -217,7 +214,6 @@ describe("monti init on the command line", () => {
 			"--yes",
 			"--json",
 			"--dry-run",
-			"--admin-github-id",
 			"--site-url",
 			"--locales",
 			"--time-zone",

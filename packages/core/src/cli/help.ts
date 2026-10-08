@@ -12,9 +12,7 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
               --yes, -y             Take the default for every question that has no flag, and run the package install without asking
               --json                Print the result as JSON (implies --yes)
               --dry-run             Show what would be written and run, and change nothing
-              --database-schema <n> Postgres schema for the tables, written as DATABASE_SCHEMA in .env.example, for a database shared with other apps (default public)
-              --admin-github-id <n> Numeric GitHub id of the admin, written as MONTI_ADMIN_GITHUB_ID in .env.example
-              --site-url <url>      Public site URL, for the GitHub OAuth callback URL (default http://localhost:3000)
+              --site-url <url>      Public site URL, for the SITE_URL example in .env.example (default http://localhost:3000)
               --locales <list>      Language codes, the default first (default: the languages found in file names like hello.ko.mdx or in folders like ko/, else en);
                                     --locale <code> is the same for one
               --time-zone <tz>      IANA time zone for dates and times (default UTC)

@@ -8,8 +8,6 @@ import { fixtureApp, scriptedPrompter } from "./init-helpers";
 const app = () => detectApp(fixtureApp());
 
 const everything = {
-	[QUESTIONS.databaseSchema]: "blog",
-	[QUESTIONS.adminGithubId]: "583231",
 	[QUESTIONS.locales]: "ko, en",
 	[QUESTIONS.storage]: "s3",
 	[QUESTIONS.extras]: ["ai", "git-sync"],
@@ -19,12 +17,10 @@ const everything = {
 };
 
 describe("the questions of monti init", () => {
-	it("asks in the order schema, GitHub id, locales, storage, extras, blocks, admin path", async () => {
+	it("asks in the order locales, storage, extras, blocks, admin path", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.databaseSchema,
-			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
 			QUESTIONS.storage,
 			QUESTIONS.extras,
@@ -33,8 +29,6 @@ describe("the questions of monti init", () => {
 			QUESTIONS.adminPath,
 		]);
 		expect(answers).toEqual({
-			databaseSchema: "blog",
-			adminGithubId: "583231",
 			siteUrl: "http://localhost:3000",
 			locales: ["ko", "en"],
 			timeZone: "UTC",
@@ -116,28 +110,19 @@ describe("the questions of monti init", () => {
 		expect(options.find((option) => option.value === "callout")?.hint).not.toMatch(/Heavy/);
 	});
 
-	it("--database-schema skips the question, and a wrong name is refused", async () => {
+	it("never asks for a login, a GitHub id or a database schema, and takes no flag for them", async () => {
 		const prompter = scriptedPrompter(everything);
-		const answers = await collectAnswers(app(), { databaseSchema: "preview" }, prompter);
-		expect(prompter.asked).not.toContain(QUESTIONS.databaseSchema);
-		expect(answers.databaseSchema).toBe("preview");
-		await expect(collectAnswers(app(), { databaseSchema: "my-schema" })).rejects.toThrow(/--database-schema/);
-	});
-
-	it("an empty GitHub id is allowed (filled in later); a wrong one is refused", async () => {
-		const empty = await collectAnswers(app(), {}, scriptedPrompter({ ...everything, [QUESTIONS.adminGithubId]: "  " }));
-		expect(empty.adminGithubId).toBeUndefined();
-		await expect(
-			collectAnswers(app(), {}, scriptedPrompter({ ...everything, [QUESTIONS.adminGithubId]: "octocat" })),
-		).rejects.toThrow(/numeric GitHub id/);
+		const answers = await collectAnswers(app(), {}, prompter);
+		expect(prompter.asked.join("\n")).not.toMatch(/github|schema|login/i);
+		expect(Object.keys(answers)).not.toContain("adminGithubId");
+		expect(Object.keys(answers)).not.toContain("databaseSchema");
 	});
 
 	it("a question whose flag is given is not asked", async () => {
-		const prompter = scriptedPrompter({ [QUESTIONS.adminGithubId]: "", [QUESTIONS.extras]: [] });
+		const prompter = scriptedPrompter({ [QUESTIONS.extras]: [] });
 		const answers = await collectAnswers(
 			app(),
 			{
-				databaseSchema: "",
 				locales: "ja",
 				storage: "none",
 				blocks: "none",
@@ -146,7 +131,7 @@ describe("the questions of monti init", () => {
 			},
 			prompter,
 		);
-		expect(prompter.asked).toEqual([QUESTIONS.adminGithubId, QUESTIONS.extras]);
+		expect(prompter.asked).toEqual([QUESTIONS.extras]);
 		expect(answers).toMatchObject({
 			locales: ["ja"],
 			storage: "none",
@@ -157,7 +142,6 @@ describe("the questions of monti init", () => {
 
 	it("without a prompter every question takes its default", async () => {
 		expect(await collectAnswers(app(), {})).toEqual({
-			adminGithubId: undefined,
 			siteUrl: "http://localhost:3000",
 			locales: ["en"],
 			timeZone: "UTC",

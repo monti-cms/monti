@@ -32,7 +32,7 @@ allowBuilds:
   esbuild: true
 ```
 
-- **Questions:** the database schema, your GitHub id, languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`).
+- **Questions:** languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`). It sets up no login: you add one (for example GitHub) before you deploy; `monti doctor` reminds you.
 - **No prompts:** every question has a flag, and `--yes` takes the defaults (and installs without asking); `--no-install` prints the install command instead. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
 - **Safe:** it edits no existing file, never overwrites one without asking (a file that is already there is skipped and reported), never writes outside the project, and says what it wrote if a run stops partway. If the install fails it says so and prints the exact install command; running `monti init` again continues, and existing files are kept.
 - **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.

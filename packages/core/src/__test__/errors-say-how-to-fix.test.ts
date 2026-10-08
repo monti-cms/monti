@@ -96,14 +96,11 @@ describe("errors of core", () => {
 		expect(message).toContain("storage: s3Storage()");
 	});
 
-	it("defineConfig without a database or login says what to add", () => {
+	it("defineConfig without a database says what to add", () => {
 		const noDatabase = messageOf(() => defineConfig({ auth: {} } as never));
 		expect(noDatabase).toContain("`database`");
 		expect(noDatabase).toContain("database: postgres()");
 		expect(noDatabase).toContain("DATABASE_URL");
-		const noAuth = messageOf(() => defineConfig({ database: {} } as never));
-		expect(noAuth).toContain("`auth`");
-		expect(noAuth).toContain("auth({ providers: [github()] })");
 	});
 
 	it("a schema file with a wrong value lists the JSON paths and ends with how to fix them", () => {
