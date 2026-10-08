@@ -62,13 +62,8 @@ function fixture(): string {
 }
 
 const host = {
-	run: () => true,
-	dockerAvailable: () => false,
-	freePort: async (port: number) => port,
-	databaseReachable: async () => false,
 	generateSecret: () => "test-secret",
 	install: () => undefined,
-	migrate: async () => true,
 };
 
 describe("the project monti init writes", () => {
@@ -78,13 +73,12 @@ describe("the project monti init writes", () => {
 			cwd: dir,
 			host,
 			env: {},
-			database: "docker",
+			database: "skip",
 			locales: "en,ko",
 			storage: "s3",
 			extras: "ai,git-sync",
 			blocks: "all",
 			install: false,
-			dockerStart: false,
 		});
 		expect(report.created).toContain("monti.config.ts");
 		const tsc = path.join(repo, "node_modules/.bin/tsc");

@@ -1,5 +1,5 @@
 import type { Site } from "../../site";
-import { DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "../front-matter-keys";
+import { DATE_KEYS, keysOf, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "../front-matter-keys";
 import {
 	type FieldTarget,
 	type FolderMapping,
@@ -15,7 +15,7 @@ import {
 	TARGET_SLUG,
 } from "./mapping";
 import { type Choice, choose, type Prompter } from "./prompt";
-import { derivePath, folderKeyOf, legacyFolderKeyOf, localeCode, type ParsedSource } from "./source";
+import { derivePath, folderKeyOf, localeCode, type ParsedSource } from "./source";
 
 /**
  * Guessing the mapping. A guess is confident when a name matches (a folder called `posts` and a collection called `post`; a key `tags` and a relation field
@@ -58,6 +58,11 @@ const singular = (value: string) =>
 		: value.endsWith("s") && !value.endsWith("ss")
 			? value.slice(0, -1)
 			: value;
+
+const TITLE_KEYS = keysOf("title");
+const SLUG_KEYS = keysOf("slug");
+const DRAFT_KEYS = keysOf("draft");
+const PUBLISHED_KEYS = keysOf("published");
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
@@ -136,13 +141,6 @@ export function guessCollections(site: Site, sources: readonly ParsedSource[], o
 		const folder = folderKeyOf(source, site.LOCALES);
 		folders.set(folder, [...(folders.get(folder) ?? []), source]);
 		if (derivePath(source.rel, site.LOCALES).folder === ".") directFolders.add(folder);
-		// A mapping saved before the keys were paths from the working directory names the folder relative to the scanned one: it keeps its decisions under the new key.
-		const legacy = legacyFolderKeyOf(source.rel, site.LOCALES);
-		const old = mapping.folders[legacy];
-		if (legacy !== folder && mapping.folders[folder] === undefined && old !== undefined) {
-			mapping.folders[folder] = old;
-			delete mapping.folders[legacy];
-		}
 	}
 
 	// Where the language of a file comes from: every source that shows up in the files.
@@ -286,11 +284,11 @@ function guessFields(
 		const values = valuesOf(state.files, key);
 		let decided: FieldTarget | undefined;
 
-		if (lower === "title") decided = claimField(key, titleName);
-		else if (lower === "slug") decided = claimReserved(TARGET_SLUG);
+		if (TITLE_KEYS.has(lower)) decided = claimField(key, titleName);
+		else if (SLUG_KEYS.has(lower)) decided = claimReserved(TARGET_SLUG);
 		else if (DATE_KEYS.has(lower)) decided = claimReserved(TARGET_PUBLISHED_AT);
-		else if (lower === "draft" && allBooleans(values)) decided = claimReserved(TARGET_DRAFT);
-		else if (lower === "published") {
+		else if (DRAFT_KEYS.has(lower) && allBooleans(values)) decided = claimReserved(TARGET_DRAFT);
+		else if (PUBLISHED_KEYS.has(lower)) {
 			decided = allBooleans(values) ? claimReserved(TARGET_PUBLISHED) : claimReserved(TARGET_PUBLISHED_AT);
 		} else if (LOCALE_KEYS.has(lower) && isLocaleKey(site, values)) decided = claimReserved(TARGET_LOCALE);
 		else if (SUMMARY_KEYS.has(lower))

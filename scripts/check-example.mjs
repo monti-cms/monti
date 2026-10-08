@@ -10,11 +10,13 @@
  *   node scripts/check-example.mjs --no-build # use the dist that is already built
  *   node scripts/check-example.mjs --keep     # keep the temp folder afterwards
  *
- * The build needs no DB or login. The HTTP status checks do: with `CMS_TEST_DATABASE_URL` (the repo's `.env.local` or the environment) the built app is started on the
- * schema `cms_example_check` of the test database and must answer 200 for a known post, 404 for an unknown one and 308 for an old address, with and without
- * `cacheComponents`. Without that variable they are skipped, and the script says so.
+ * The build needs no DB or login. The HTTP checks do: with `CMS_TEST_DATABASE_URL` (the repo's `.env.local` or the environment) the built app is started on the
+ * schema `cms_example_check` of the test database. A known post must answer 200 in both variants. Only with `cacheComponents` off must an unknown post answer a real
+ * 404 and an old address a real 308 (`notFound()` and `permanentRedirect()` in a page; with the option on Next has sent a 200 shell by then, see docs/recipes/strict-status.md).
+ * With no login settings in production, the admin answers with the "Not set up yet" screen that points to `monti doctor`, in both variants.
+ * Without that variable the HTTP checks are skipped, and the script says so.
  */
-import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import net from "node:net";
@@ -103,26 +105,19 @@ run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
 // `monti.config.ts` holds the database and login settings and is server-only: no client component may import it (directly or through other files).
 run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
 
-// The blog theme as `monti add blog-theme` gives it to a newcomer (its pages under app/(site)/<the path of the collection in monti.schema.json> and app/(site)/preview/..., here /posts) is built too, next to the
-// example's own copy of the theme: the registry sources are what new apps get, and they must build with and without `cacheComponents`.
-const exampleProxyPath = path.join(app, "proxy.ts");
-const exampleProxy = readFileSync(exampleProxyPath, "utf8");
+// `monti add article-body` from the registry that is built from this repo must give the same file the example holds (the example's copy is what the pages import).
+const articleBodyPath = path.join(app, "components/monti/article-body/article-body.tsx");
+const articleBodyBefore = readFileSync(articleBodyPath, "utf8");
 run(
 	"pnpm",
-	["exec", "monti", "add", "blog-theme", "--registry", path.join(root, "registry/r"), "--overwrite", "--yes"],
+	["exec", "monti", "add", "article-body", "--registry", path.join(root, "registry/r"), "--overwrite", "--yes"],
 	app,
 );
-for (const page of [
-	"app/(site)/posts/page.tsx",
-	"app/(site)/posts/[slug]/page.tsx",
-	"app/(site)/preview/posts/[slug]/page.tsx",
-]) {
-	if (!existsSync(path.join(app, page))) throw new Error(`check-example: monti add blog-theme did not write ${page}`);
+if (readFileSync(articleBodyPath, "utf8") !== articleBodyBefore) {
+	throw new Error(
+		"check-example: monti add article-body wrote a file that differs from examples/blog/components/monti/article-body",
+	);
 }
-
-// The registry's proxy.ts (blog routes) replaced the example's, which also covers its memos: put the example's back for the status checks.
-if (!existsSync(exampleProxyPath)) throw new Error("check-example: monti add blog-theme did not write proxy.ts");
-writeFileSync(exampleProxyPath, exampleProxy);
 
 /** The test database, or `undefined` when none is configured. */
 const databaseUrl = (() => {
@@ -166,10 +161,11 @@ const freePort = () =>
 	});
 
 /**
- * Starts the built app and checks the status of the post addresses. A page under Cache Components streams after its `200`, so these are decided in
- * `proxy.ts`: a known post 200, an unknown post 404 (not a `200` with `noindex`), an old address a real 308 to the new one.
+ * Starts the built app and checks the pages. A known post is 200 everywhere. Unknown posts and old addresses are checked only when `strict` is on (cacheComponents off):
+ * under Cache Components a page streams after its `200`, so `notFound()` is a `noindex` page there and `permanentRedirect()` a client-side redirect.
+ * The admin shows the setup screen, because the app has no GitHub login settings in production.
  */
-async function checkStatuses(label) {
+async function checkStatuses(label, strict) {
 	if (!appEnv) return;
 	const port = await freePort();
 	console.log(`\n--- status checks, ${label}, port ${port} ---`);
@@ -191,13 +187,14 @@ async function checkStatuses(label) {
 		}
 		const expectations = [
 			["/ko/posts/cms-elements", 200],
-			["/ko/posts/no-such-post", 404],
-			["/ko/posts/cms-elements-draft", 404],
-			["/ko/memos/no-such-memo", 404],
-			["/ko/posts/renamed-post-old", 308, "/ko/posts/renamed-post"],
-			// The app has no GitHub login settings in production: the admin and the draft preview answer 503 (a page cannot send that status under Cache Components; proxy.ts does).
-			["/studio", 503],
-			["/preview/ko/posts/cms-elements", 503],
+			...(strict
+				? [
+						["/ko/posts/no-such-post", 404],
+						["/ko/posts/cms-elements-draft", 404],
+						["/ko/memos/no-such-memo", 404],
+						["/ko/posts/renamed-post-old", 308, "/ko/posts/renamed-post"],
+					]
+				: []),
 		];
 		const failures = [];
 		for (const [address, status, location] of expectations) {
@@ -209,22 +206,30 @@ async function checkStatuses(label) {
 			);
 			if (!ok) failures.push(address);
 		}
-		if (failures.length > 0) throw new Error(`check-example: wrong status for ${failures.join(", ")} (${label})`);
+		// The admin is not a public page: its status does not matter, but it must say what to do (the setup screen points to `monti doctor`).
+		for (const address of ["/studio", "/preview/ko/posts/cms-elements"]) {
+			const response = await fetch(origin + address, { redirect: "manual" });
+			const text = await response.text();
+			const ok = address === "/studio" ? text.includes("monti doctor") : response.status !== 500;
+			console.log(`${ok ? "ok  " : "FAIL"} ${address} -> ${response.status}`);
+			if (!ok) failures.push(address);
+		}
+		if (failures.length > 0) throw new Error(`check-example: wrong answer for ${failures.join(", ")} (${label})`);
 	} finally {
 		server.kill();
 	}
 }
 
-const check = async (label) => {
+const check = async (label, strict = false) => {
 	console.log(`\n=== ${label} ===`);
 	run("pnpm", ["exec", "tsc", "--noEmit", "-p", "."], app);
 	rmSync(path.join(app, ".next"), { recursive: true, force: true });
 	run("pnpm", ["exec", "next", "build"], app, { NEXT_TELEMETRY_DISABLED: "1" });
-	await checkStatuses(label);
+	await checkStatuses(label, strict);
 };
 
 // New Next apps start with `cacheComponents` and `partialPrefetching` on, so the example keeps them on: the build with them is the one a newcomer gets
-// (the studio route and the blog theme pages must build), and the build without them proves the same sources work for an app that has not turned them on.
+// (the studio route and the example pages must build), and the build without them proves the same sources work for an app that has not turned them on.
 const nextConfigPath = path.join(app, "next.config.ts");
 const nextConfigText = readFileSync(nextConfigPath, "utf8");
 if (!/cacheComponents:\s*true/.test(nextConfigText) || !/partialPrefetching:\s*true/.test(nextConfigText)) {
@@ -252,7 +257,7 @@ try {
 		}
 	};
 	strip(pagesDir);
-	await check("example config, cacheComponents off");
+	await check("example config, cacheComponents off", true);
 
 	// The default blocks need neither mermaid nor recharts: take them out of the config and out of node_modules, and build again.
 	const configPath = path.join(app, "monti.config.ts");
@@ -281,26 +286,8 @@ try {
 		}
 	}
 	run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
-	await check("light config: the default blocks, no mermaid and no recharts installed");
+	await check("light config: the default blocks, no mermaid and no recharts installed", true);
 
-	// The other way round: a heavy block in the config without its library is named by `monti doctor`, with the command that installs it.
-	writeFileSync(configPath, configText);
-	const doctor = spawnSync("pnpm", ["exec", "monti", "doctor", "--only", "config/plugin-packages"], {
-		cwd: app,
-		encoding: "utf8",
-	});
-	const doctorOutput = `${doctor.stdout ?? ""}${doctor.stderr ?? ""}`;
-	if (doctor.status === 0) {
-		throw new Error(
-			"check-example: monti doctor passed with chart() and mermaid() configured and neither library installed",
-		);
-	}
-	if (!/pnpm add [^\n]*recharts/.test(doctorOutput) || !/mermaid/.test(doctorOutput)) {
-		throw new Error(
-			`check-example: monti doctor did not name the missing packages and their install command:\n${doctorOutput}`,
-		);
-	}
-	console.log("\ncheck-example: doctor names recharts and mermaid when they are missing");
 	console.log("\ncheck-example: ok");
 } finally {
 	if (args.has("--keep")) console.log(`kept: ${work}`);

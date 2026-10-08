@@ -17,7 +17,6 @@ export const DEFAULT_REGISTRY_URL = "https://raw.githubusercontent.com/monti-cms
 const FileSchema = z.object({
 	path: z.string().min(1),
 	type: z.string().optional(),
-	target: z.string().optional(),
 	content: z.string().optional(),
 });
 

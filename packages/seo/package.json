@@ -2,7 +2,6 @@
 	"name": "@monti-cms/seo",
 	"version": "0.1.0",
 	"private": true,
-	"cmsPlugin": true,
 	"description": "SEO extension for @monti-cms/core: search and share field set, search preview, AI suggestions for search title and description, public page helper",
 	"license": "MIT",
 	"type": "module",

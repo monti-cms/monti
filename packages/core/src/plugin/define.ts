@@ -24,11 +24,6 @@ export interface CmsPlugin<
 	readonly nav?: readonly PluginNavItem[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;
-	/**
-	 * npm packages this plugin needs in the app that it does not install itself (optional peers of its package, e.g. `recharts` for the chart block).
-	 * `monti doctor` checks that each one is installed and says which command installs it.
-	 */
-	readonly requires?: readonly string[];
 	/** Validation called when the site config is created. Throws if the config is invalid. */
 	readonly validate?: (config: PluginConfigView) => void;
 	/**

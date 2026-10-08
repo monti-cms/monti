@@ -2,7 +2,6 @@
 	"name": "@monti-cms/mdx",
 	"version": "0.1.0",
 	"private": true,
-	"cmsPlugin": true,
 	"description": "MDX for @monti-cms/core: the mdx format (import and export), renderMdx, the admin source panel, syntax extensions and the migrations of stores that kept bodies as MDX",
 	"license": "MIT",
 	"type": "module",

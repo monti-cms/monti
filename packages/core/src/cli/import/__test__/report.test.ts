@@ -24,7 +24,7 @@ const reportOf = (overrides: Partial<ImportReport>): ImportReport => {
 		collections: {},
 		translations: [],
 		createdTargets: {},
-		media: { uploaded: 0, reused: 0, wouldUpload: 0, copied: 0, wouldCopy: 0, configured: false },
+		media: { uploaded: 0, reused: 0, wouldUpload: 0, left: 0, configured: false },
 		links: { resolved: 0, unresolved: 0 },
 		notes: [],
 		...overrides,

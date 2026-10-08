@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
 import type { CmsNode } from "../../doc/types";
@@ -8,12 +8,9 @@ import type { ImportState } from "./state";
 
 /**
  * Local images. An image of a body (`![alt](./cover.png)`, `![](/images/a.png)`) or of a media field that is a file on disk is uploaded to the configured media
- * storage and the document points to the media item by id. Without media storage the image is copied into the app's `public/` folder (`public/media/cover.png`)
- * and the document points to that address, so it shows on the site with no storage; an image that is already under `public/` keeps its address.
+ * storage and the document points to the media item by id. Without media storage nothing is copied or rewritten: the image keeps the address it has in the
+ * body, and the import counts how many were left so the report can say so.
  */
-
-/** The folder inside `public/` the copies go to. */
-export const COPY_FOLDER = "media";
 
 const MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
 	".png": "image/png",
@@ -56,71 +53,27 @@ export interface MediaImporter {
 	resolve(
 		src: string,
 		sourceFile: string,
-	): Promise<{ mediaId?: string; url?: string; wouldUpload?: boolean; warning?: string } | undefined>;
+	): Promise<{ mediaId?: string; wouldUpload?: boolean; warning?: string; left?: true } | undefined>;
 	readonly stats: {
 		uploaded: number;
 		reused: number;
 		wouldUpload: number;
 		bytes: number;
-		copied: number;
-		wouldCopy: number;
+		/** Without storage: the distinct image files that were left as they are. */
+		left: number;
 	};
-}
-
-/** Whether `child` is `parent` or inside it. */
-const isInside = (parent: string, child: string): boolean => {
-	const relative = path.relative(parent, child);
-	return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-};
-
-/**
- * Copies an image into `<publicDir>/media/` and returns the address that serves it (`/media/cover.png`). A file with that name and the same bytes is reused; one
- * with other bytes gets a short hash in its name, so two images never overwrite each other. In a dry run nothing is written.
- */
-export function copyToPublic(
-	file: string,
-	publicDir: string,
-	dryRun: boolean,
-	/** In a dry run nothing is written, so the names already given out are remembered here (name -> hash of its bytes). */
-	reserved: Map<string, string> = new Map(),
-): { url: string; copied: boolean } {
-	const bytes = readFileSync(file);
-	const hash = createHash("sha256").update(bytes).digest("hex");
-	const extension = path.extname(file);
-	const stem = path.basename(file, extension).replace(/[^A-Za-z0-9._-]+/g, "-") || "image";
-	const folder = path.join(publicDir, COPY_FOLDER);
-	const holds = (name: string): "same" | "other" | "free" => {
-		const given = reserved.get(name);
-		if (given !== undefined) return given === hash ? "same" : "other";
-		const target = path.join(folder, name);
-		if (!existsSync(target)) return "free";
-		return readFileSync(target).equals(bytes) ? "same" : "other";
-	};
-	let name = `${stem}${extension}`;
-	if (holds(name) === "other") name = `${stem}-${hash.slice(0, 8)}${extension}`;
-	const state = holds(name);
-	if (state === "free") {
-		reserved.set(name, hash);
-		if (!dryRun) {
-			mkdirSync(folder, { recursive: true });
-			copyFileSync(file, path.join(folder, name));
-		}
-	}
-	return { url: `/${COPY_FOLDER}/${name}`, copied: state === "free" };
 }
 
 export function createMediaImporter(options: {
 	readonly cms: Cms;
 	readonly state: ImportState;
 	readonly publicDirs: readonly string[];
-	/** The folder the site serves files from (`public`). Without media storage, images that are not already in it are copied here. */
-	readonly copyTo?: string;
 	readonly dryRun: boolean;
 }): MediaImporter {
-	const { cms, state, publicDirs, dryRun, copyTo } = options;
-	const stats = { uploaded: 0, reused: 0, wouldUpload: 0, bytes: 0, copied: 0, wouldCopy: 0 };
+	const { cms, state, publicDirs, dryRun } = options;
+	const stats = { uploaded: 0, reused: 0, wouldUpload: 0, bytes: 0, left: 0 };
 	const done = new Map<string, Promise<{ mediaId?: string; wouldUpload?: boolean; warning?: string }>>();
-	const reservedNames = new Map<string, string>();
+	const leftFiles = new Set<string>();
 
 	async function upload(file: string): Promise<{ mediaId?: string; wouldUpload?: boolean; warning?: string }> {
 		const mimeType = MIME_BY_EXTENSION[path.extname(file).toLowerCase()];
@@ -177,26 +130,9 @@ export function createMediaImporter(options: {
 			if ("missing" in found)
 				return { warning: `the image ${found.missing} was not found on disk, so it stays as written` };
 			if (!cms.isMediaConfigured) {
-				const name = path.basename(found.file);
-				if (!copyTo) {
-					return {
-						warning: `${name} stays a URL: no media storage is configured and no public folder was found to copy it to`,
-					};
-				}
-				// Already served from public/: its address works as it is.
-				if (isInside(copyTo, found.file) && src.startsWith("/")) return undefined;
-				if (isInside(copyTo, found.file)) {
-					return { url: `/${path.relative(copyTo, found.file).split(path.sep).join("/")}` };
-				}
-				try {
-					const copy = copyToPublic(found.file, copyTo, dryRun, reservedNames);
-					if (copy.copied) stats[dryRun ? "wouldCopy" : "copied"] += 1;
-					return { url: copy.url };
-				} catch (error) {
-					return {
-						warning: `${name} could not be copied to ${path.basename(copyTo)}/ (${error instanceof Error ? error.message : String(error)}), so it stays as written`,
-					};
-				}
+				leftFiles.add(found.file);
+				stats.left = leftFiles.size;
+				return { left: true };
 			}
 			let pending = done.get(found.file);
 			if (!pending) {
@@ -226,25 +162,6 @@ export function imageSources(nodes: readonly CmsNode[]): string[] {
 	};
 	visit(nodes);
 	return [...found];
-}
-
-/** The nodes with the `src` of the images in `urls` replaced by the address they were copied to. Returns the same array when nothing changed. */
-export function withImageUrls(nodes: readonly CmsNode[], urls: ReadonlyMap<string, string>): readonly CmsNode[] {
-	let changed = false;
-	const out = nodes.map((node): CmsNode => {
-		let next = node;
-		if (node.type === "image" && typeof node.attrs?.src === "string") {
-			const url = urls.get(node.attrs.src);
-			if (url) next = { ...node, attrs: { ...node.attrs, src: url } };
-		}
-		if (node.content) {
-			const content = withImageUrls(node.content, urls);
-			if (content !== node.content) next = { ...next, content: [...content] };
-		}
-		if (next !== node) changed = true;
-		return next;
-	});
-	return changed ? out : nodes;
 }
 
 /** The nodes with the images of `mediaIds` (by `src`) turned into media items. Returns the same array when nothing changed. */

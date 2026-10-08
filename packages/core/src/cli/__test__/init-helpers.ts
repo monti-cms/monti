@@ -90,23 +90,14 @@ export function listFiles(dir: string, prefix = ""): string[] {
 }
 
 export interface FakeHost extends InitHost {
-	run: ReturnType<typeof vi.fn<InitHost["run"]>>;
 	install: ReturnType<typeof vi.fn<InitHost["install"]>>;
-	migrate: ReturnType<typeof vi.fn<InitHost["migrate"]>>;
-	databaseReachable: ReturnType<typeof vi.fn<InitHost["databaseReachable"]>>;
 }
 
-/** A host that installs, starts and migrates nothing, and records the calls. */
+/** A host that installs nothing, and records the calls. */
 export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {
 	return {
-		run: vi.fn<InitHost["run"]>(() => true),
-		dockerAvailable: () => true,
-		freePort: async (start) => start,
-		databaseReachable: vi.fn<InitHost["databaseReachable"]>(async () => true),
 		generateSecret: () => "generated-secret",
 		install: vi.fn<InitHost["install"]>(),
-		migrate: vi.fn<InitHost["migrate"]>(async () => true),
-		pnpmVersion: () => undefined,
 		...overrides,
 	} as FakeHost;
 }

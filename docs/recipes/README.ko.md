@@ -16,6 +16,7 @@ Monti를 확장하는 방법을 보여 주는, 동작하는 작은 예제 모음
 | [공개 사이트에서 글을 타입 있게 읽기](read-posts.md) | 목록, 글 하나, 태그, 리디렉션. 타입은 설정에서 온다 | `cms.read`, `Cms<typeof config>` |
 | [플러그인에 관리자 페이지 더하기](admin-page.md) | 자체 API 경로가 있는 "Post stats" 화면 | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
 | [플러그인에서 `monti doctor` 검사 더하기](doctor-check.md) | 어디를 어떻게 고치는지 알려 주는 검사, 플러그인 이름으로 표시 | `server.checks` |
+| [Cache Components에서 엄격한 404와 308](strict-status.md) | 필요할 때 작은 `proxy.ts`로 진짜 404와 308 | `cms.read.getEntry`, Next `proxy.ts` |
 
 ## 레시피마다 드는 양
 

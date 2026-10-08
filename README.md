@@ -29,16 +29,27 @@ bun add @monti-cms/core
 bunx monti init
 ```
 
-It looks at the app (App Router, `src/` or not, package manager, TypeScript, Tailwind, existing `content/` folders of Markdown or MDX), asks a few questions, and then writes explicit files you can read and change: `monti.config.ts` (one line per feature, each with a comment), `monti.schema.json` (a starter `post` collection, shaped by your front matter if it finds content), the three Next files (`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example` and `.env.local` (only a generated `MONTI_SECRET` and the values you typed). It installs the packages, wraps `next.config.ts` with `withCms` (showing the diff), runs `monti migrate` when the database is reachable, and ends with a plain list of what is left, with exact values, and a pointer to `monti doctor` for whenever something does not work.
+It looks at the app (App Router, `src/` or not, package manager, TypeScript, existing `content/` folders of Markdown or MDX), asks a few questions, and then writes explicit files you can read and change: `monti.config.ts` (one line per feature, each with a comment), `monti.schema.json` (a starter `post` collection, shaped by your front matter if it finds content), the three Next files (`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example` and `.env.local` (only a generated `MONTI_SECRET` and the values you typed). It installs the packages, wraps `next.config.ts` with `withCms` (showing the diff), and ends with a plain, numbered list of what is left, with exact values. It never touches the database: `monti migrate` is the first numbered step.
 
-- **Questions:** the database (a URL, a local Docker Postgres, or later), the GitHub login, languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, the admin path (default `/studio`), and whether to install the blog theme pages.
+The whole flow:
+
+```text
+install → monti init → monti migrate → monti doctor → pnpm dev → (optional) monti import
+```
+
+With pnpm 12, add `allowBuilds:` with `esbuild: true` to `pnpm-workspace.yaml` before installing (pnpm 12 stops an install until esbuild's install script is allowed; Monti does not edit that file).
+
+- **Questions:** the database (a URL, or later), the GitHub login, languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`).
 - **No prompts:** every question has a flag, and `--yes` takes the defaults. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
-- **Safe:** it never overwrites a file without asking, never writes outside the project, and says what it wrote if a run stops partway. When a step fails (the install, the theme, the typography plugin, the tables) it does not say "Monti is added": it lists the failed steps and the exact commands that finish the job, in order, and `monti init --resume` runs only the steps that did not complete.
-- **pnpm 12:** it stops an install until esbuild's install script is allowed. Put `allowBuilds:` with `esbuild: true` in `pnpm-workspace.yaml` (never a second key); `monti init` checks it and fixes it with a diff and a confirmation.
+- **Safe:** it never overwrites a file without asking, never writes outside the project, and says what it wrote if a run stops partway. If the install fails it says so and prints the exact install command; running `monti init` again continues, and existing files are kept.
 - **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.
 - **Existing posts:** if it finds Markdown or MDX folders, it ends by suggesting `monti import <folder>`. Its default body blocks are a light set; `mermaid` and `chart` are opt-in (`--blocks all`): they come from `@monti-cms/blocks/mermaid` and `@monti-cms/blocks/chart` and bring `mermaid` and `recharts` only when chosen, so an app without them loads and installs neither.
 
 Until the public release, `@monti-cms/core` is installed from the release bundle first (see "Install"); `monti init` then installs the rest. Always install `@monti-cms/core` before running `monti`: `npx monti` without it fetches an unrelated package. The short version with every command is the [Quick start](packages/core/README.md#quick-start-existing-next-app) of the core README.
+
+## Nothing automatic is silent
+
+When the server starts, Monti prints one short block with what it decided on its own and why (the database and which variable it came from, the login, the dev login bypass, host trust, `SITE_URL`, the schema file, what `withCms` added). Hide it with `MONTI_QUIET=1`; `monti doctor` lists the same lines. Each automatic behavior and how to turn it off or override it is in "What Monti decides on its own" of the [core README](packages/core/README.md#what-monti-decides-on-its-own-and-how-to-turn-it-off).
 
 ## Troubleshooting: run `monti doctor`
 
@@ -48,7 +59,7 @@ If something does not work, run this in the folder of the app:
 pnpm exec monti doctor
 ```
 
-It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every warning and failure says what is wrong, where (a file or an environment variable) and how to fix it: the config file and the schema file, `DATABASE_URL` and whether the database is reachable and migrated (how many migrations are pending, and `monti migrate`), `MONTI_SECRET`, the GitHub login (the callback URL to register, the admin id, `SITE_URL`), the three Next files, what is left of the old two-file setup (with the exact rename steps), and the checks each plugin adds (git-sync token and webhook, the S3 values, an AI connection, MDX syntax extensions). `--online` also checks the git-sync repo and the S3 bucket, `--json` prints the result for tools, and the exit code is 1 when a check fails. The errors the packages throw say the same things in the same way. See "Troubleshooting: `monti doctor`" in the [core README](packages/core/README.md).
+It checks the whole setup and prints each check as `ok`, `warn` or `FAIL`. Every warning and failure says what is wrong, where (a file or an environment variable) and how to fix it: the config file and the schema file, `DATABASE_URL` and whether the database is reachable and migrated (how many migrations are pending, and `monti migrate`), `MONTI_SECRET`, the GitHub login (the callback URL to register, the admin id, `SITE_URL`), the three Next files, what Monti decided on its own and where each value came from, the `upgrade/` checks (only for sites coming from the pre-overhaul setup; they will be removed after the owner's blog migration (#93)), and the checks each plugin adds (git-sync token and webhook, the S3 values, an AI connection, MDX syntax extensions). `--online` also checks the git-sync repo and the S3 bucket, `--json` prints the result for tools, and the exit code is 1 when a check fails. The errors the packages throw say the same things in the same way. See "Troubleshooting: `monti doctor`" in the [core README](packages/core/README.md).
 
 ## Packages
 

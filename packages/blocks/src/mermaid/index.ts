@@ -20,8 +20,6 @@ export const mermaid = () =>
 		name: "mermaid",
 		options: {},
 		blocks: [mermaidBlock],
-		// An optional peer of this package: apps that do not use the block do not install it (`monti doctor` checks it).
-		requires: ["mermaid"],
 		admin: () => import("@monti-cms/blocks/mermaid/admin"),
 		render: () => import("@monti-cms/blocks/mermaid/render"),
 		// If the AI plugin is present, the create and edit features attach automatically (`./ai`).

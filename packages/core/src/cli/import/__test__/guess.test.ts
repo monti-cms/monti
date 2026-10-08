@@ -87,17 +87,6 @@ describe("guessing the collection of a folder", () => {
 		expect(result.mapping.folders["content/posts"]?.collection).toBe("note");
 	});
 
-	it("reads a mapping saved with folders relative to the scanned folder, and moves it to the real paths", () => {
-		const existing = parseMapping(
-			{ version: 1, folders: { posts: { collection: "note", fields: { title: "title" } } } },
-			"monti.import.json",
-		);
-		const result = guessCollections(site, [source("posts/a.mdx", "---\ntitle: A\n---\n")], { rootName: "c", existing });
-		expect(result.questions).toEqual([]);
-		expect(Object.keys(result.mapping.folders)).toEqual(["content/posts"]);
-		expect(result.mapping.folders["content/posts"]?.collection).toBe("note");
-	});
-
 	it("rejects a saved mapping that names a collection the site does not have", () => {
 		const existing = parseMapping(
 			{ version: 1, folders: { "content/posts": { collection: "gone", fields: {} } } },
@@ -176,6 +165,26 @@ describe("guessing the fields of a folder", () => {
 	it("maps two keys to one field only once", async () => {
 		const { mapping } = await guess([post("title: A\nsummary: s\ndescription: d")]);
 		expect(mapping.folders["content/posts"]?.fields).toMatchObject({ summary: "summary", description: "@skip" });
+	});
+
+	it("leaves out the keys the table does not know, even when a field of the collection could be mistaken for them", async () => {
+		// The collection has a `cover` media field and a `summary`: `heroImage`, `lastmod` (not the publish date), `subtitle` and the rest do not go there.
+		const { mapping } = await guess([
+			post(
+				"title: A\nheroImage: /a.png\nlastmod: 2024-02-01\nupdatedDate: 2024-02-01\nsubtitle: s\nweight: 3\nlayout: post\nauthor: me\nimages: [a.png]",
+			),
+		]);
+		expect(mapping.folders["content/posts"]?.fields).toEqual({
+			title: "title",
+			heroImage: "@skip",
+			lastmod: "@skip",
+			updatedDate: "@skip",
+			subtitle: "@skip",
+			weight: "@skip",
+			layout: "@skip",
+			author: "@skip",
+			images: "@skip",
+		});
 	});
 
 	it("skips a key that appears after the mapping was saved, without asking", () => {

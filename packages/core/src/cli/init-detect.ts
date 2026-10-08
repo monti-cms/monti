@@ -59,7 +59,6 @@ export interface DetectedApp {
 	readonly typescript: boolean;
 	/** `undefined` when there is no tsconfig. */
 	readonly resolveJsonModule?: boolean;
-	readonly tailwind: { readonly installed: boolean; readonly typography: boolean };
 	readonly contentFolders: readonly ContentFolder[];
 	/** The next config file (`next.config.ts`, `.mjs` or `.js`), if any. */
 	readonly nextConfig?: string;
@@ -271,10 +270,6 @@ export function detectApp(cwd: string): DetectedApp {
 		packageManager: detectPackageManager(cwd),
 		typescript: exists("tsconfig.json") || dependencies.has("typescript"),
 		resolveJsonModule: tsconfig === undefined ? undefined : compilerOptions?.resolveJsonModule === true,
-		tailwind: {
-			installed: dependencies.has("tailwindcss"),
-			typography: dependencies.has("@tailwindcss/typography"),
-		},
 		contentFolders: findContentFolders(cwd),
 		nextConfig: NEXT_CONFIG_FILES.find(exists),
 		devPort: port ? Number(port) : 3000,

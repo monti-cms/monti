@@ -9,8 +9,7 @@
 		".": "./src/index.ts",
 		"./config": "./src/config.ts",
 		"./admin": "./src/admin/index.tsx",
-		"./auth": "./src/auth/index.ts",
-		"./proxy": "./src/proxy.ts"
+		"./auth": "./src/auth/index.ts"
 	},
 	"scripts": {
 		"test": "vitest",
@@ -72,10 +71,6 @@
 			"./auth": {
 				"types": "./dist/auth/index.d.ts",
 				"default": "./dist/auth/index.js"
-			},
-			"./proxy": {
-				"types": "./dist/proxy.d.ts",
-				"default": "./dist/proxy.js"
 			}
 		}
 	}

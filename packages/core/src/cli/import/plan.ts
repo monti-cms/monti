@@ -265,13 +265,16 @@ function planFile(source: ParsedSource, options: PlanOptions): FilePlan {
 		const target: FieldTarget | undefined = folder.fields[key];
 		if (target === undefined) {
 			plan.skippedKeys.push(key);
-			warnings.push({ kind: "unknown_field", message: `"${key}" is not in the mapping, so it is skipped` });
+			warnings.push({ kind: "unknown_field", message: `"${key}" is not mapped, so it is left out` });
 			continue;
 		}
 		const reserved = reservedOf(target);
 		if (reserved === TARGET_SKIP) {
 			plan.skippedKeys.push(key);
-			warnings.push({ kind: "unknown_field", message: `"${key}" has no field in ${collection}, so it is skipped` });
+			warnings.push({
+				kind: "unknown_field",
+				message: `"${key}" is not mapped (${collection} has no field for it), so it is left out`,
+			});
 			continue;
 		}
 		if (reserved === TARGET_LOCALE) continue;

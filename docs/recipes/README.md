@@ -16,6 +16,7 @@ The principle behind them: open what users touch, seal what core must guard behi
 | [Read posts on the public site, typed](read-posts.md) | list, single post, tags, redirects; types from the config | `cms.read`, `Cms<typeof config>` |
 | [Add an admin page to a plugin](admin-page.md) | a "Post stats" screen with its own API route | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
 | [Add a `monti doctor` check from a plugin](doctor-check.md) | checks with where and how to fix, under the plugin's name | `server.checks` |
+| [Strict 404 and 308 under Cache Components](strict-status.md) | a real 404 and 308 from a small `proxy.ts`, when you need them | `cms.read.getEntry`, Next `proxy.ts` |
 
 ## How much each one takes
 

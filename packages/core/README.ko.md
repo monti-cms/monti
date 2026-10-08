@@ -9,7 +9,13 @@ DB(Postgres) 기반 블로그 CMS의 본체. 사이트 설정, 컬렉션 스키�
 
 React 19 위의 Next.js 16(App Router) 앱이 필요하다. `@monti-cms/core`를 먼저 설치한 다음 패키지 매니저로 `monti init`을 돌린다. 설치 전에 `npx monti`를 돌리면 이름이 `monti`인 전혀 다른 npm 패키지를 받으니, 언제나 설치를 먼저 한다.
 
-1~2단계: `@monti-cms/core`를 **설치**한 다음 **init**을 돌린다(파일을 쓰고, 나머지 패키지를 설치하고, DB에 닿으면 마이그레이션까지 돌린다). 쓰는 패키지 매니저의 블록을 그대로 복사한다.
+전체 흐름:
+
+```text
+설치 → monti init → monti migrate → monti doctor → pnpm dev → (선택) monti import
+```
+
+1~2단계: `@monti-cms/core`를 **설치**한 다음 **init**을 돌린다(파일을 쓰고 나머지 패키지를 설치한다. 데이터베이스는 건드리지 않는다). 쓰는 패키지 매니저의 블록을 그대로 복사한다.
 
 ```sh
 # pnpm
@@ -29,18 +35,12 @@ bun add @monti-cms/core
 bunx monti init
 ```
 
-**pnpm 12는 esbuild의 설치 스크립트를 허락하거나 거부할 때까지 설치를 멈추고**(pnpm 10은 경고만 한다) `pnpm-workspace.yaml`에 `esbuild: set this to true or false`라는 자리표시자도 써 둔다. `pnpm-workspace.yaml`에 아래 줄을 그대로 한 번만 정해 둔다(다른 줄은 그대로 두고, `allowBuilds`나 `esbuild` 키를 두 번 쓰지 않는다. 자리표시자가 있으면 그 값을 `true`로 바꾼다).
+pnpm 12라면 먼저 `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다(pnpm 12는 esbuild의 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
 
-```yaml
-allowBuilds:
-  esbuild: true
-```
-
-`monti init`도 실행할 때 이를 다시 본다. pnpm 12인데 `pnpm-workspace.yaml`에 결정이 없으면, 아무것도 설치하기 전에 바뀌는 내용을 diff로 보여 주고 물어본 뒤 고친다.
-
-3. **설정 점검.** `pnpm exec monti doctor`는 모든 검사를 `ok`, `warn`, `FAIL`로 보여 주고, 경고마다 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다.
-4. **앱 실행.** `pnpm dev`로 띄우고 `http://localhost:3000/studio`를 연다(`monti init`은 관리자를 `/studio`에 쓴다. `--admin-path`로 바꾼다).
-5. **기존 글 가져오기**(선택). `pnpm exec monti import content/posts --dry-run`은 무슨 일이 일어날지만 보여 주고 아무것도 쓰지 않는다. `--dry-run` 없이 돌리면 가져온다. `content/posts` 자리에는 자기 폴더를 쓴다.
+3. **표 만들기.** init이 넣지 않았다면 `.env.local`의 `DATABASE_URL`에 Postgres URL을 적고 `pnpm exec monti migrate`를 돌린다.
+4. **설정 점검.** `pnpm exec monti doctor`는 모든 검사를 `ok`, `warn`, `FAIL`로 보여 주고, 경고마다 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다. Monti가 스스로 정한 값과 그 출처도 함께 보여 준다.
+5. **앱 실행.** `pnpm dev`로 띄우고 `http://localhost:3000/studio`를 연다(`monti init`은 관리자를 `/studio`에 쓴다. `--admin-path`로 바꾼다).
+6. **기존 글 가져오기**(선택). `pnpm exec monti import content/posts --dry-run`은 무슨 일이 일어날지만 보여 주고 아무것도 쓰지 않는다. `--dry-run` 없이 돌리면 가져온다. `content/posts` 자리에는 자기 폴더를 쓴다.
 
 `monti --help`는 모든 명령을 보여 주고, `monti <명령> --help`(예: `monti init --help`)는 그 명령의 도움말만 보여 준다. 아래는 모두 참조 내용이다.
 
@@ -59,6 +59,37 @@ allowBuilds:
 
 다른 호스트(Astro, Remix 등)는 코어나 관리자를 고치지 않고 어댑터 패키지를 새로 만들어 붙인다. 테스트가 경계를 지킨다. 코어와 관리자의 소스 파일은 `next/*`를 가져올 수 없다.
 
+## Monti가 스스로 정하는 것과 끄는 법
+
+자동은 괜찮지만 조용히 하는 것은 안 된다. 서버가 시작될 때(개발과 프로덕션, 프로세스당 한 번) Monti는 스스로 정한 것과 이유를 짧은 블록 하나로 출력한다. `monti doctor`도 `config/automatic`에서 같은 줄을 보여 준다. 줄마다 값의 출처가 있다: `set in monti.config.ts`, `from env NAME`, `auto-detected (이유)`.
+
+```text
+monti: what was decided automatically (hide this with MONTI_QUIET=1; `monti doctor` lists the same)
+  - Database: localhost:5432/monti [from env DATABASE_URL]
+  - Database schema: public [default (DATABASE_SCHEMA is not set)]
+  - Login: GitHub [client id from env AUTH_GITHUB_ID, client secret from env AUTH_GITHUB_SECRET, admins from env MONTI_ADMIN_GITHUB_ID]
+  - Dev login bypass: on (requests from this machine are the admin, no login) [auto-detected (NODE_ENV is "development" and no hosting platform variable is set)]
+  - Trust host: on [auto-detected (NODE_ENV is "development", not production)]
+  - SITE_URL: http://localhost:3000 [from env SITE_URL]
+  - Schema file: monti.schema.json [auto-detected (monti.schema.json in the app folder)]
+  - Schema hot reload: on [auto-detected (NODE_ENV is "development": the schema file is read again when it changes)]
+  - withCms (next.config): transpilePackages += @monti-cms/core; env.NEXT_PUBLIC_CMS_BASE_PATH = "" (Next basePath); ... [set in next.config.ts; remove withCms to undo]
+```
+
+테스트, `next build`, `monti` 명령(자체 출력이 있다)에서는 이 블록을 출력하지 않는다. **숨기기:** `MONTI_QUIET=1`을 설정한다.
+
+| 자동으로 하는 일 | 끄거나 바꾸는 법 |
+| --- | --- |
+| 데이터베이스 URL과 스키마를 `DATABASE_URL`, `DATABASE_SCHEMA`에서 읽는다 | `monti.config.ts`에서 `postgres({ connectionString, schema })`를 준다 |
+| GitHub 로그인 설정을 `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_ADMIN_GITHUB_ID`에서 읽는다 | `github({ clientId, clientSecret, admins })`를 준다 |
+| 개발 로그인 우회는 `next dev`에서 켜지고, 내 컴퓨터에서 온 요청에만 적용된다 | `auth({ devBypass: false })` |
+| 호스트 신뢰는 알려진 호스팅 플랫폼과 개발에서 켜지고, 그 밖의 프로덕션에서는 꺼진다 | `defineConfig`의 `trustHost: true 또는 false`, 또는 `AUTH_TRUST_HOST=true 또는 false` |
+| 설정과 스키마 파일 어디에도 `site.url`이 없으면 `SITE_URL`이 채운다 | `monti.config.ts`의 `site.url` 또는 스키마 파일의 `site.url`을 적는다 |
+| 스키마 파일을 이름(`monti.schema.json`, `src/` 아래도)으로 찾고, `next dev`에서 바뀌면 다시 읽으며, `monti-env.d.ts`를 다시 쓴다(쓸 때마다 한 줄을 출력한다) | 핫 리로드는 개발에서만 되고 끄는 스위치는 없다(프로덕션 서버는 시작한 스키마로 돈다). `monti-env.d.ts`를 다시 쓰지 않게 하려면 `next.config.ts`에서 `withCms`를 빼고 `monti schema:types`를 직접 돌린다 |
+| `withCms`는 `transpilePackages`, `env.NEXT_PUBLIC_CMS_BASE_PATH`를 더하고, 개발에서는 타입 감시와 클라이언트 코드가 `monti.config.ts`를 import할 때의 경고도 더한다 | `next.config.ts`에서 `withCms`를 빼고 `transpilePackages: ["@monti-cms/core"]`를 직접 적는다 |
+| `monti schema:apply`는 먼저 `monti migrate`를 돌린다(그 출력이 맨 앞에 나온다) | `monti schema:apply --dry-run`은 아무것도 마이그레이션하지 않는다 |
+| `monti add article-body`는 전역 CSS를 고친다(타이포그래피 플러그인, `render.css` import) | diff를 거절하거나 줄을 직접 추가한다. 보고서에 나오는 diff(또는 `--yes`) 없이는 아무것도 쓰지 않는다 |
+
 ## 빈 Next 앱에 설치
 
 Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필요 없다. 스타일이 미리 만들어져 있어서 앱은 어떤 CSS 구성이든 쓸 수 있다. 저장소는 Postgres만 지원한다. 가장 쉬운 길은 위의 빠른 시작(아래 2단계가 `monti init`)이다. 1·2단계를 대신 해 주고 데이터베이스도 묻는다. 이 절의 나머지는 `monti init`이 하는 일이고, 읽어 보거나 손으로 할 때 쓴다. 순서는 `monti init` → 컬렉션 고치기 → `monti migrate`다.
@@ -74,33 +105,26 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next
 로그인은 `@monti-cms/auth`(Auth.js core, Next.js 없음)다. GitHub 로그인에 다른 패키지는 필요 없다. 프로바이더는 그 README를 본다.
 명령줄 `monti`는 `@monti-cms/core`에 들어 있다(TypeScript 설정 파일은 함께 설치되는 tsx가 읽는다).
 
-pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패로 끝낸다(10은 경고만 한다). tsx가 쓰는 esbuild의 설치 스크립트를 허락한다.
-
-```yaml
-# pnpm-workspace.yaml (앱 폴더)
-allowBuilds:
-  esbuild: true
-```
+pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패로 끝낸다(10은 경고만 한다). tsx가 쓰는 esbuild의 설치 스크립트를 허락한다. `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다.
 
 ### 2. `monti init`
 
 `@monti-cms/core`를 설치한 뒤 앱 폴더(`package.json`이 있는 곳)에서 `pnpm exec monti init`으로 돌린다(다른 패키지 매니저는 빠른 시작을 본다. 설치 전에 `npx monti`를 돌리면 다른 패키지를 받는다). 기존 Next.js(App Router) 앱에 Monti를 더한다. 앱을 읽고, 몇 가지를 묻고, 읽을 수 있는 파일을 적고, 패키지를 설치한 뒤, 남은 일을 쉬운 말로 적어 준다. **묻지 않고 파일을 덮어쓰지 않고**, 다시 돌려도 안전하다.
 
-**알아내는 것:** App Router 폴더(`app/` 또는 `src/app/`), 패키지 매니저(락 파일이나 `packageManager`), TypeScript, 이미 있는 Tailwind·typography, 개발 포트(`dev` 스크립트), `.env.local`을 빠뜨린 `.gitignore`, Markdown·MDX 폴더(`content/`, `posts/`, `_posts/`, `blog/` 등). 그 폴더의 front matter 키가 시작용 `post` 컬렉션의 모양이 되고(아래 "front matter에 맞춘 모양" 참고), 끝에서 `monti import <폴더>`를 권한다. `pages/`만 있는 앱은 이유를 알리고 멈춘다.
+**알아내는 것:** App Router 폴더(`app/` 또는 `src/app/`), 패키지 매니저(락 파일이나 `packageManager`), TypeScript, 개발 포트(`dev` 스크립트), `.env.local`을 빠뜨린 `.gitignore`, Markdown·MDX 폴더(`content/`, `posts/`, `_posts/`, `blog/` 등). 그 폴더의 front matter 키가 시작용 `post` 컬렉션의 모양이 되고(아래 "front matter에 맞춘 모양" 참고), 끝에서 `monti import <폴더>`를 권한다. `pages/`만 있는 앱은 이유를 알리고 멈춘다.
 
 **질문**(각각 플래그가 있다. 아래 표):
 
 | 질문 | 고르는 것 | 기본값 |
 | --- | --- | --- |
-| 데이터베이스 | Postgres URL 붙여넣기, 로컬 Docker Postgres(5432부터 비어 있는 첫 포트로 `docker-compose.yml`을 쓰고, Docker가 있으면 띄운다), 건너뛰기 | 건너뛰기 |
-| 데이터베이스 스키마 | 표를 담을 Postgres 스키마(`.env.local`의 `DATABASE_SCHEMA`). 다른 앱과 같이 쓰는 데이터베이스용이다. Docker 데이터베이스일 때는 묻지 않는다 | `public` |
+| 데이터베이스 | Postgres URL 붙여넣기, 또는 나중에(`DATABASE_URL`을 직접 채운다) | 건너뛰기 |
+| 데이터베이스 스키마 | 표를 담을 Postgres 스키마(`.env.local`의 `DATABASE_SCHEMA`). 다른 앱과 같이 쓰는 데이터베이스용이다 | `public` |
 | 관리자 로그인 | GitHub. OAuth 앱을 만드는 순서와 정확한 콜백 주소(`<사이트 주소>/api/cms/auth/callback/github`)를 보여 주고, 숫자 GitHub id를 묻는다(비워도 된다) | |
 | 언어 | 언어 코드, 기본 언어가 먼저. 콘텐츠에 `hello.ko.mdx`와 `hello.en.mdx` 같은 파일 이름이나 `ko/`, `en/` 같은 언어 폴더가 있으면 그 언어를 제안하고, 기본 언어는 짝이 없는 파일을 가진 언어(없으면 첫 번째)다. `--yes`는 그대로 쓴다 | 찾은 언어, 없으면 `en` |
 | 이미지 저장소 | S3 호환(S3·R2·MinIO. 설정은 `S3_*`), 또는 없음 | 없음 |
 | 부가 기능 | AI 글쓰기, git 동기화(Bareun은 묻지 않는다) | 없음 |
 | 블록 | 가벼운 기본 묶음(`callout`, `collapsible`, `tabs`, `code-ref`, `color`), 전부, 없음, 또는 `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color` 중에서 고르기. `mermaid`와 `chart`는 별도 진입점에서 오고, 고른 경우에만 라이브러리(`mermaid`, `recharts`)가 따라온다 | 기본 |
 | 관리자 경로 | `/studio` 같은 경로 | `/studio` |
-| 블로그 테마 | 레지스트리로 블로그 테마 페이지 설치(`monti add blog-theme`) | 안 함 |
 
 **쓰는 파일**(있는 파일은 그대로 두고, 그러겠다고 하거나 `--overwrite`를 줄 때만 바꾼다. `next.config`·`tsconfig.json`·`.gitignore`의 고침은 diff로 보여 주고 질문에서 물으며, `--yes`면 바로 한다):
 
@@ -113,23 +137,20 @@ allowBuilds:
 | 관리자 API와 로그인(`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | 설정 잇기(`withCms`): 기본 모양이면 합치고 diff로 보여 주며, 아니면 바꿀 내용을 그대로 적어 준다 | `next.config.ts` |
 | tsconfig에 없으면 `"resolveJsonModule": true`: 주석과 서식을 지키는 텍스트 삽입이고 diff로 보여 준다. `extends`가 있거나 모양이 특이하면 그대로 두고 할 일로 적는다 | `tsconfig.json` |
-| `.gitignore`에 없으면 `.env.local`과 `.env*.local`(파일이 없으면 만든다). diff로 보여 준다. `.monti/`도 넣지만 단계가 실패해 진행 상황을 저장해야 할 때만이다("파일을 쓴 뒤에는" 참고) | `.gitignore` |
-| pnpm 12이고 esbuild의 설치 스크립트에 대한 결정이 없을 때: `allowBuilds: esbuild: true`(없는 키는 더하고, pnpm이 써 둔 자리표시자는 바꾸고, 이미 내린 결정은 그대로 두며, 키를 두 번 쓰지 않는다). 아무것도 설치하기 전에 diff로 보여 준다 | `pnpm-workspace.yaml` |
-| 프로덕션에서 로그인 설정(`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_SECRET`)이 없으면 관리자가 서버 로그에 오류를 남기고 `200`을 주는 대신 `monti doctor`를 가리키는 페이지와 함께 `503`으로 답한다(Cache Components에서는 페이지가 그 상태를 보낼 수 없고 프록시는 보낼 수 있다). 앱에 `proxy.ts`나 `middleware.ts`가 있으면(그 안에서 `@monti-cms/nextjs/proxy`의 `setupResponse(request, cms)`를 먼저 부른다), 또는 블로그 테마를 고르면(테마의 프록시가 같은 일을 한다) 쓰지 않는다 | `proxy.ts`(`src/`가 있으면 `src/proxy.ts`) |
+| `.gitignore`에 없으면 `.env.local`과 `.env*.local`(파일이 없으면 만든다). diff로 보여 준다. | `.gitignore` |
 | 고른 기능이 읽는 모든 변수(값 없음) | `.env.example` |
 | 직접 입력했거나 만든 값만: `MONTI_SECRET`(만든다), `DATABASE_URL`, `MONTI_ADMIN_GITHUB_ID`. 이미 있는 파일에는 없는 이름만 더한다 | `.env.local` |
-| 로컬 Postgres(Docker를 골랐을 때만. compose 파일이 이미 있으면 건드리지 않고 넣을 서비스를 보여 준다) | `docker-compose.yml` |
 
 `src/`를 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
 
-**파일을 쓴 뒤에는** 고른 기능에 필요한 패키지를 찾아낸 패키지 매니저로 설치하고, Docker 데이터베이스를 띄워 기다린 뒤, DB에 닿으면 `monti migrate`를 돌린다. 블로그 테마를 고르면 `@tailwindcss/typography`(테마의 글은 `prose` 클래스를 쓴다)도 따로 한 단계로 설치한다. 실패한 단계(네트워크 없음, Docker 없음, 설치 거부)는 파일을 되돌리지 않고, 요약도 "Monti를 추가했다"고 하지 않는다. 일부만 끝났다고 알리고, 실패한 단계를 적고, 이어서 **일을 끝낼 정확한 명령을 돌릴 순서대로** 적는다. 진행 상황은 `.monti/init.json`(git에서 제외되고 시크릿은 들어 있지 않다)에 저장되고, `monti init --resume`은 끝나지 않은 단계(패키지, typography 플러그인, 테이블, 테마)만 다시 돌리며 다시 묻지 않는다. 요약은 한 일을 먼저, 남은 일을 정확한 값이 든 번호 단계로 적는다: GitHub OAuth 앱, 그 콜백 주소와 ID·시크릿을 넣을 환경 변수 이름, 동작하지 않을 때 쓸 `monti doctor`(무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다), `pnpm dev`, `/studio` 주소.
+**파일을 쓴 뒤에는** 고른 기능에 필요한 패키지를 찾아낸 패키지 매니저로 설치하고 거기서 멈춘다. **데이터베이스를 띄우지 않고, `monti migrate`를 돌리지 않고, 스타일을 설치하지 않고, 페이지를 더하지 않고, `pnpm-workspace.yaml`을 건드리지 않는다.** 설치가 실패해도 파일은 그대로 남고, 요약은 "Monti를 더했다"고 하지 않고 일부만 됐다고 하면서 실패한 단계와 설치 명령을 그대로 알려 준다. `monti init`을 다시 돌리면 이어서 한다(있는 파일은 그대로 둔다). 요약은 남은 일을 번호 붙은 단계와 정확한 값으로 보여 준다: 끝내지 못한 설치, init에 없다면 Postgres URL, **`monti migrate`**, `monti doctor`, `/studio` 주소와 함께 `pnpm dev`, 콘텐츠를 찾았다면 `monti import <폴더>`, 그리고 배포한 사이트나 고른 기능에만 필요한 것(GitHub OAuth 앱과 콜백 주소, S3 값, git-sync 대상).
 
 **질문 없이.** 플래그를 준 질문은 묻지 않는다. `--yes`, `--json`이거나 터미널이 없으면(CI) 아무것도 묻지 않고, 모든 질문이 플래그나 기본값을 쓴다. `--json` 출력은 JSON 문서 하나(`ok`, `created`, `updated`, `skipped`, `steps`, `notes`, `next` 등)이고, 오류는 `{ "ok": false, "error": "..." }`다. 종료 코드는 성공 0, 단계 실패나 잘못된 입력 1, 취소 130이다.
 
 ```sh
 pnpm exec monti init                 # 대화형
 pnpm exec monti init --yes           # 전부 기본값: DB는 나중에, 가벼운 블록 묶음, /studio
-pnpm exec monti init --yes --json --database docker --database-schema monti --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
+pnpm exec monti init --yes --json --database postgres://user:password@localhost:5432/monti --database-schema monti --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
 pnpm exec monti init --dry-run --yes # 쓰고 돌릴 일만 보여 준다
 ```
 
@@ -138,8 +159,8 @@ pnpm exec monti init --dry-run --yes # 쓰고 돌릴 일만 보여 준다
 | `--yes`, `-y` | 질문 없이. 답이 없는 질문은 기본값 | |
 | `--json` | 결과를 JSON으로 출력(`--yes`를 포함) | |
 | `--dry-run` | 쓰지도 돌리지도 않고 계획만 보인다 | |
-| `--database <값>` | `postgres://` URL, `docker`, `skip` | `skip` |
-| `--database-schema <이름>` | 표를 담을 Postgres 스키마. `.env.local`에 `DATABASE_SCHEMA`로 적는다. 다른 앱과 같이 쓰는 데이터베이스용이다. Docker 데이터베이스가 아니면 질문으로도 묻는다 | `public` |
+| `--database <값>` | `postgres://` URL, 또는 `skip`(`DATABASE_URL`은 나중에 채운다) | `skip` |
+| `--database-schema <이름>` | 표를 담을 Postgres 스키마. `.env.local`에 `DATABASE_SCHEMA`로 적는다. 다른 앱과 같이 쓰는 데이터베이스용이다. | `public` |
 | `--admin-github-id <번호>` | 관리자의 숫자 GitHub id(`MONTI_ADMIN_GITHUB_ID`) | 없음 |
 | `--site-url <url>` | 공개 사이트 주소. OAuth 콜백 주소에 쓴다 | `http://localhost:<개발 포트>` |
 | `--locales <목록>` | 언어 코드, 기본 언어가 먼저(하나면 `--locale <코드>`도 같다) | 콘텐츠 파일 이름이나 폴더에서 찾은 언어, 없으면 `en` |
@@ -148,13 +169,9 @@ pnpm exec monti init --dry-run --yes # 쓰고 돌릴 일만 보여 준다
 | `--extras <목록>` | `ai`, `git-sync`, `none` | `none` |
 | `--blocks <목록>` | `default`(가벼운 묶음), `all`, `none`, 블록 이름(`default,mermaid`는 가벼운 묶음에 더한다) | `default` |
 | `--admin-path <경로>` | 관리자 경로(영문자·숫자·`-`·`_`. `/`와 `/api` 아래는 안 된다) | `/studio` |
-| `--blog-theme` / `--no-blog-theme` | 블로그 테마 페이지 추가 | 안 함 |
 | `--overwrite` | 다른 내용인 기존 파일을 바꾼다 | 그대로 둔다 |
-| `--no-install` | 패키지를 설치하지 않는다(그래서 마이그레이션과 테마 추가도 없다) | |
-| `--no-migrate` | `monti migrate`를 돌리지 않는다 | |
-| `--no-docker-start` | `docker-compose.yml`만 쓰고 띄우지 않는다 | |
+| `--no-install` | 패키지를 설치하지 않는다 | |
 | `--package-manager <이름>` | `npm`, `pnpm`, `yarn`, `bun` | 찾아낸 것 |
-| `--resume` | 지난 실행이 끝내지 못한 단계만 `.monti/init.json`에서 읽어 다시 돌린다. 묻지 않고, init이 쓴 파일은 다시 쓰지 않는다 | |
 
 **기본 블록은 가볍다.** 기본 묶음은 `callout`, `collapsible`, `tabs`, `code-ref`, `color`다. `mermaid`는 `node_modules`를 약 26 MB 늘리고 브라우저 스크립트도 커서 직접 고를 때만 들어간다. `chart`는 recharts와 d3를 더해서 마찬가지다. `--blocks all`로 고르거나, 기본 묶음 옆에 이름을 적는다(`--blocks default,mermaid`). 무거운 블록은 진입점이 따로 있고(`import { chart } from "@monti-cms/blocks/chart"`, `import { mermaid } from "@monti-cms/blocks/mermaid"`) 그 라이브러리는 `@monti-cms/blocks`의 선택적 peer라서, 고르지 않은 앱은 둘 다 설치하지 않고 아무것도 불러오지 않는다. `@monti-cms/blocks` 자체는 가볍게 남는다. `monti init`은 맞는 진입점에서 import를 쓰고, 고른 블록의 라이브러리만 설치한다.
 
@@ -245,7 +262,7 @@ storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.
 | `SITE_URL` | 선택. 사이트의 공개 URL(`site.url`). 환경마다 다르다. 코드나 스키마 파일의 `site.url`이 있으면 그쪽이 이긴다 |
 | `AUTH_TRUST_HOST` | 선택. `X-Forwarded-Host`를 덮어쓰는, 직접 운영하는 프록시(nginx, 로드 밸런서) 뒤에서 돌 때만 `true`. Vercel·Netlify·Cloudflare Pages 같은 플랫폼은 알아서 감지한다("호스트 신뢰" 참고) |
 
-**SSL.** `sslmode=require`(`prefer`, `verify-ca`도)인 `DATABASE_URL`은 `sslmode=verify-full`로 읽는다. 지금 `pg` 드라이버가 실제로 하는 동작과 같아서(인증서를 검증한다) 명령마다 9줄짜리 SECURITY WARNING이 더는 나오지 않는다. `uselibpqcompat`을 정했거나 다른 모드(`disable`, `no-verify`, `verify-full`)인 URL은 그대로 둔다.
+**SSL.** `DATABASE_URL`은 쓴 그대로 `pg` 드라이버에 넘긴다. `sslmode=require`(`prefer`, `verify-ca`도)이면 드라이버가 시작할 때마다 9줄짜리 SECURITY WARNING을 출력한다. 지금은 그 모드들을 `verify-full`(암호화, 인증서 확인)로 읽고, 다음 메이저 버전에서 libpq의 의미로 바뀔 예정이기 때문이다. `monti doctor`가 이를 설명하고(`database/url`) 끄는 법도 알려 준다: URL에 `sslmode=verify-full`을 적는다. 드라이버가 지금 하는 것과 같아서 연결의 안전성은 그대로다. libpq의 의미(`require`에서 인증서를 확인하지 않음)를 원할 때만 `uselibpqcompat=true`를 URL에 더한다.
 
 옵션에 명시한 값이 항상 이 환경 변수보다 앞서고, 다른 이름에서 값을 짐작하지 않는다. 필요한 값이 없으면 변수 이름을 알려 주는 오류가 난다(환경 변수는 값이 처음 쓰일 때 읽으므로 환경 변수 없이 빌드해도 실패하지 않는다). 개발용 로그인을 위한 변수는 없다. `next dev`에서는 저절로 켜진다("개발용 로그인 우회").
 
@@ -287,9 +304,7 @@ export const { GET, POST } = cms.authHandlers;
 
 ### 선택 의존성
 
-CMS 패키지의 선택 의존성(예: 블록 확장의 `mermaid`·`recharts`)은 그 기능을 쓸 때만 설치한다. 설치하지 않은 것은 `withCms`(`@monti-cms/nextjs/config`)가
-대신할 모듈(패키지마다 하나씩, `node_modules/.cache/monti/missing` 아래에 쓴다)로 이어 빌드가 멈추지 않게 하고, 그 기능을 쓰면 설치할 패키지 이름이 든 오류가 난다(예: "The package "recharts" is not installed, and a block you use needs it").
-설치한 뒤에는 `.next` 폴더를 지우고 개발 서버를 다시 띄운다. 플러그인은 필요한 패키지를 `requires`에 적고(`chart()`는 `recharts`, `mermaid()`는 `mermaid`), 하나라도 없으면 `monti doctor`가 설치 명령과 함께 실패로 알린다(`config/plugin-packages`).
+CMS 패키지의 선택 의존성(블록 확장의 `mermaid`·`recharts`)은 그 기능을 쓸 때만 설치한다. 둘은 별도 진입점(`@monti-cms/blocks/mermaid`, `@monti-cms/blocks/chart`)이라서, import하지 않는 앱은 불러오지도 않는다. `recharts` 없이 `chart()`를(`mermaid` 없이 `mermaid()`를) import하면 번들러가 패키지 이름이 든 "module not found" 오류로 멈춘다. 그 패키지를 설치하고(`pnpm add recharts`) 개발 서버를 다시 띄운다.
 
 ### 직접 잇기 (`monti init` 없이)
 
@@ -417,14 +432,14 @@ pnpm exec monti doctor
 
 | 그룹 | 검사 |
 | --- | --- |
-| `config` | env 파일, `.env.local`이 `.gitignore`에 있는지, 설정 파일을 찾았는지, 불러와지고 인스턴스를 내보내는지, **플러그인이 필요로 하는 npm 패키지가 설치돼 있는지**(`chart()`는 `recharts`, `mermaid()`는 `mermaid`. 고치는 법은 설치 명령), **`"use client"` 파일이 설정이나 다른 서버 전용 모듈을 import하지 않는지**(`monti check:boundary`를 대신한다) |
+| `config` | env 파일, `.env.local`이 `.gitignore`에 있는지, 설정 파일을 찾았는지, 불러와지고 인스턴스를 내보내는지, **Monti가 스스로 정한 값과 그 출처**(`config/automatic`), **`"use client"` 파일이 설정이나 다른 서버 전용 모듈을 import하지 않는지**(`monti check:boundary`를 대신한다) |
 | `schema` | 스키마 파일이 올바른지(문제마다 JSON 경로), `monti-env.d.ts`가 최신인지 |
 | `database` | `DATABASE_URL`이 있고 Postgres URL인지, 데이터베이스에 닿는지(틀린 호스트·포트·비밀번호·데이터베이스 이름을 구분한다), `DATABASE_SCHEMA`가 있는지, **미적용 마이그레이션이 몇 개인지**(`monti migrate`) |
 | `secrets` | `MONTI_SECRET`이 있고 충분히 강한지, 옛 `CMS_SECRET`·`AUTH_SECRET`이 아직 있지만 쓰이지 않는지 |
 | `auth` | 로그인 방법, GitHub 클라이언트 id와 시크릿, 관리자가 있는지(숫자 id가 아니라 로그인 이름을 쓴 항목을 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, OAuth 앱에 **등록할 콜백 URL**(`SITE_URL`에서 만든다) |
 | `storage` | `s3Storage()`면 `S3_*` 값이 있고 형식이 맞는지, (`--online`) 키로 버킷에 닿는지 |
 | `next` | 관리자 경로에 Next 파일 셋이 있고 알맞은 컴포넌트를 쓰는지(`admin.path`와 맞지 않는 폴더면 그 폴더를 짚는다), `next.config`가 `withCms`를 쓰는지, 관리자 주소 |
-| `leftovers` | 옛 설정에서 남은 것과 정확한 단계: `cms.config.ts`·`cms.server.ts`와 그것을 import하는 파일, `monti.config.ts`에 남은 옛 옵션, 옛 변수 이름(`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), `(admin)` 라우트 폴더, `admin-components.tsx` |
+| `upgrade` | **마이그레이션 전용.** 개편 전 설정에서 올리는 사이트를 위한 검사이며, 소유자의 블로그 마이그레이션(#93) 뒤에 옛 데이터 호환(#45)과 함께 지운다. 옛 설정에서 남은 것과 정확한 단계: `cms.config.ts`·`cms.server.ts`와 그것을 import하는 파일, `monti.config.ts`에 남은 옛 옵션, 옛 변수 이름(`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), `(admin)` 라우트 폴더, `admin-components.tsx` |
 | 플러그인 이름 | 플러그인이 더한 검사("플러그인"의 "`monti doctor` 검사"): git-sync(대상, 파일 형식, 토큰, 웹훅 시크릿, `--online`이면 저장소), AI 플러그인(연결이 저장돼 있는지), mdx(형식과 문법 확장이 불러와지는지) |
 
 패키지가 던지는 오류도 같은 말투를 쓴다: 없는 `DATABASE_URL`·`MONTI_SECRET`·GitHub id·`S3_*` 값, 꺼져 있거나 마이그레이션되지 않은 데이터베이스, 올바르지 않은 스키마 파일, 어떤 플러그인도 제공하지 않는 형식, 인스턴스를 받지 못한 Next 파일. 각각 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 말한다(오류 메시지 한 줄 안에서 `Where:`와 `Fix:`가 각 부분을 표시한다). 실행 중에 꺼져 있거나 마이그레이션되지 않은 데이터베이스를 만난 요청은 `503`으로 답하고, 서버 로그에 전체 메시지가 남는다.
@@ -439,27 +454,34 @@ pnpm exec monti import content/posts             # 몇 가지 질문에 답하�
 pnpm exec monti import content/posts --publish   # 프런트매터가 초안이 아닌 글을 발행한다
 ```
 
-**필요한 것.** 파일의 형식은 확장자로 정하고, 설정이 등록한 형식(`cms.formats()`, "형식")에서 찾는다. MDX 플러그인(`@monti-cms/mdx`의 `plugins: [mdx()]`, 디렉티브 표기로 쓴 글이면 `directiveSyntax()`도)을 넣어야 하고, 없으면 명령이 멈추면서 그렇게 알려 준다. `.md`를 맡은 형식이 없으면 `.md`도 MDX 형식으로 읽으므로, 일반 마크다운에 `{`나 `<`가 섞여 있으면 그 파일이 파싱 오류가 된다(줄 번호와 함께 알려 주고 나머지 파일은 계속한다). `--format <name>`은 모든 파일을 한 형식으로 읽고, 매핑 파일의 `formats`는 확장자마다 하나씩 정한다. 로컬 이미지는 설정의 미디어 저장소(`storage`, 예: `s3Storage()`)에 올린다. 저장소가 없으면 `public/media/`(글 옆이나 그 위에서 찾은, 사이트가 서비스하는 폴더)로 복사하고 글은 `/media/<이름>`을 가리키므로 저장소 없이도 보인다(이미 `public/` 아래에 있는 이미지는 주소를 그대로 두고, 이름이 같고 내용이 다른 이미지는 이름에 해시를 붙이며, 보고서가 복사한 것을 알려 준다). `storage`를 넣고 다시 가져오면 올리는 쪽으로 바뀐다. 가져오기는 기억을 데이터베이스에 두므로 먼저 `monti migrate`를 돌려 둔다.
+**필요한 것.** 파일의 형식은 확장자로 정하고, 설정이 등록한 형식(`cms.formats()`, "형식")에서 찾는다. MDX 플러그인(`@monti-cms/mdx`의 `plugins: [mdx()]`, 디렉티브 표기로 쓴 글이면 `directiveSyntax()`도)을 넣어야 하고, 없으면 명령이 멈추면서 그렇게 알려 준다. `.md`를 맡은 형식이 없으면 `.md`도 MDX 형식으로 읽으므로, 일반 마크다운에 `{`나 `<`가 섞여 있으면 그 파일이 파싱 오류가 된다(줄 번호와 함께 알려 주고 나머지 파일은 계속한다). `--format <name>`은 모든 파일을 한 형식으로 읽고, 매핑 파일의 `formats`는 확장자마다 하나씩 정한다. 로컬 이미지는 설정의 미디어 저장소(`storage`, 예: `s3Storage()`)에 올린다. 저장소가 없으면 아무것도 복사하거나 고쳐 쓰지 않는다. 글은 원래의 이미지 주소를 그대로 지니고, 보고서가 그대로 둔 이미지의 수를 알려 준다("3 images were left as they are; configure `storage` to upload images"). 가져오기는 기억을 데이터베이스에 두므로 먼저 `monti migrate`를 돌려 둔다.
 
-**무엇을 짐작하고 언제 묻는가.** 이름이 맞으면 묻지 않고 짐작한 대로 쓴다. 그 밖에는 질문이다(번호를 고르고, Enter는 기본값). `--yes`이거나 터미널이 아니면 불분명한 것은 빼 둔다.
+**가져오기가 짐작하는 방법과 `monti.import.json`으로 바꾸는 법.** 이름이 맞으면 묻지 않고 짐작한 대로 쓴다. 그 밖에는 질문이다(번호를 고르고, Enter는 기본값). `--yes`이거나 터미널이 아니면 불분명한 것은 빼 둔다. front matter 키는 작은 표 하나(`packages/core/src/cli/front-matter-keys.ts`의 `KEY_TABLE`)에서 읽는다. `monti init`도 같은 표를 읽으므로, init이 필드로 만든 키는 import가 채우는 키다. **어느 행에도 없는 키는 짐작하지 않는다.** "not mapped, so it is left out"으로 알려 주고 빼 둔다(컬렉션에 정확히 같은 이름의 필드가 있으면 그 필드로 간다). 짐작을 바꾸려면 아래 "매핑 파일"을 고친다. 매핑 파일이 표보다 앞선다.
 
-| 원본 | 가는 곳 | 묻는 경우 |
+| 역할 | 키(소문자로 견준다) | 가는 곳 |
 | --- | --- | --- |
-| 폴더(`content/posts`) | 컬렉션: 폴더 이름을 컬렉션 이름·레이블과 단수·복수 구분 없이 견준다(`posts` → `post`) | 맞는 컬렉션이 없을 때(선택지는 컬렉션들과 "이 폴더는 가져오지 않기") |
-| 프런트매터의 `slug`, 없으면 파일 이름(`hello.mdx`, `hello/index.mdx`는 `hello`) | 주소 | 묻지 않는다 |
-| 파일 이름 `hello.ko.mdx`, 언어 폴더(`ko/hello.mdx`), 프런트매터의 `lang`/`locale`/`language` | 언어. 한 글의 여러 언어 파일은 짝지어지고, 기본 언어 파일이 원본이고 나머지는 그 주소를 쓰는 번역이 된다 | 묻지 않는다. 파일 이름이 사이트에 없는 언어로 끝나면(`ko`가 `locales`에 없는데 `hello.ko.mdx`) 그 파일은 드라이런에서도 경고와 함께 건너뛰고, `helloko` 같은 주소는 만들지 않는다. 먼저 `monti.schema.json`의 `locales`에 언어를 더한다. `monti init`은 파일 이름에서 찾은 언어를 제안한다 |
-| `title` | 제목 역할 필드 | 묻지 않는다 |
-| `date`, `pubDate`, `publishDate`, `publishedAt` | 항목의 발행일(발행할 때 정해지므로 옛 글이 제 날짜를 지닌다) | 묻지 않는다 |
-| `draft: true`, `published: false` | `--publish`를 줘도 초안으로 남는다 | 묻지 않는다 |
-| `description`, `summary`, `excerpt` | `summary` 역할 필드 | 묻지 않는다 |
-| `tags`, `categories`, `category`, `keywords`, `series` | 슬러그로 찾는 관계 필드(`Next.js` 같은 이름은 슬러그 `nextjs`로 바꾼다). 없는 대상은 매핑에 `create: true`가 있으면 만든다(태그 같은 아이템 컬렉션은 기본 켜짐) | 맞을 수 있는 관계 필드가 여럿이거나 없을 때, 그리고 없는 대상을 만들지 한 번 |
-| 그 밖의 키 | 이름이 같은 필드 | 묻지 않는다. 필드가 없는 키는 건너뛰고 알려 준다(3개 이상의 파일에 있으면 한 번만) |
+| 폴더 | `content/posts` | 컬렉션: 폴더 이름을 컬렉션 이름·레이블과 단수·복수 구분 없이 견준다(`posts` → `post`). 맞는 컬렉션이 없으면 묻는다(선택지는 컬렉션들과 "이 폴더는 가져오지 않기") |
+| 제목 | `title` | 제목 역할 필드 |
+| 슬러그 | `slug` | 주소. 없으면 파일 이름(`hello.mdx`, `hello/index.mdx`는 `hello`) |
+| 발행일 | `date`, `pubDate`, `publishDate`, `publishedDate`, `publishedAt`, `datePublished` | 항목의 발행일(발행할 때 정해지므로 옛 글이 제 날짜를 지닌다). `lastmod`, `updatedDate`, `modified`는 발행일이 아니므로 뺀다 |
+| 초안 | `draft` | `true`이면 `--publish`를 줘도 초안으로 남는다 |
+| 발행 여부 | `published` | `false`이면 초안으로 남는다. 날짜면 발행일로 쓴다 |
+| 발행 상태 | `publish`, `status` | CMS가 직접 지니는 발행 상태이므로 필드가 없다 |
+| 요약 | `description`, `summary`, `excerpt`, `abstract` | `summary` 역할 필드 |
+| 언어 | `lang`, `locale`, `language`, 파일 이름 `hello.ko.mdx`, 언어 폴더 `ko/hello.mdx` | 언어. 한 글의 여러 언어 파일은 짝지어지고, 기본 언어 파일이 원본이고 나머지는 그 주소를 쓰는 번역이 된다. 사이트에 없는 언어로 끝나는 파일 이름(`ko`가 `locales`에 없는데 `hello.ko.mdx`)은 드라이 런에서도 경고와 함께 건너뛴다. 먼저 `monti.schema.json`의 `locales`에 그 언어를 더한다. `monti init`은 파일 이름에서 찾은 언어를 제안한다 |
+| 태그 | `tag`, `tags`, `keyword`, `keywords`, `topic`, `topics` | 태그 컬렉션으로 가는 관계. 슬러그로 찾는다(`Next.js` 같은 이름은 슬러그 `nextjs`로 바꾼다). 없는 대상은 매핑에 `create: true`가 있으면 만든다(아이템 컬렉션은 기본) |
+| 카테고리 | `category`, `categories` | 카테고리 컬렉션으로 가는 관계, 같은 방식 |
+| 시리즈 | `series` | 시리즈 컬렉션으로 가는 관계(`monti init`은 만들지 않는다) |
+| 같은 이름의 필드 | 그 밖의 키 | 이름이 같은 필드 |
+| 그 밖의 것 | `heroImage`, `lastmod`, `weight`, `layout`, `author` 등 | 짐작하지 않는다. 파일마다 한 번 알려 주고("`heroImage` is not mapped (post has no field for it), so it is left out"), 3개 이상의 파일에 있으면 한 줄로 묶는다 |
 
-`monti init`은 같은 front matter로 시작용 스키마를 만들므로 이름이 맞는다. `tags`에는 이미 `tag` 컬렉션과 `tagIds` 필드가, `category`에는 `category` 컬렉션과 `categoryId` 필드가 있다. `monti import`가 관계를 채우고 태그·카테고리 항목을 만든다.
+TOML front matter(`+++`, Hugo가 쓸 수 있다)는 읽지 않는다. 그 이유와 함께 파일이 실패하므로 YAML로 바꾼다.
+
+`monti init`은 같은 표로 시작용 스키마를 만들므로 이름이 맞는다. `tags`에는 이미 `tag` 컬렉션과 `tagIds` 필드가, `category`에는 `category` 컬렉션과 `categoryId` 필드가 있다. `monti import`가 관계를 채우고 태그와 카테고리 항목을 만든다.
 
 질문이 끝나면 매핑을 보여 주고 한 번 묻는다("Use it and save it for the next run?"). 저장된 매핑이 모든 것에 답하는 실행은 아무것도 묻지 않는다.
 
-**매핑 파일**은 명령을 돌리는 곳 옆의 `monti.import.json`이다(`--mapping <file>`로 다른 파일을 고른다). 처음 확인한 실행 뒤에 쓰이고(`--dry-run`은 쓰지 않는다) 이후 모든 실행이 읽는다. 결정을 바꾸려면 직접 고치고, 폴더 항목을 지우면 그 폴더를 다시 짐작한다. 파일에 아직 없는 키(새 프런트매터 키)는 묻지 않고 건너뛰며 알려 준다. 옛 폴더 키(가져오는 폴더 기준)로 저장된 매핑도 읽히고, 다음 실행에서 새 키로 옮겨진다.
+**매핑 파일**은 명령을 돌리는 곳 옆의 `monti.import.json`이다(`--mapping <file>`로 다른 파일을 고른다). 처음 확인한 실행 뒤에 쓰이고(`--dry-run`은 쓰지 않는다) 이후 모든 실행이 읽는다. 결정을 바꾸려면 직접 고치고, 폴더 항목을 지우면 그 폴더를 다시 짐작한다. 파일에 아직 없는 키(새 프런트매터 키)는 묻지 않고 건너뛰며 알려 준다.
 
 ```json
 {
@@ -806,23 +828,21 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 ## 소스로 쓰는 컴포넌트
 
-`monti add <이름...>`은 Monti 레지스트리의 컴포넌트를 앱에 소스로 복사해, 앱이 직접 소유하는 코드로 만듭니다. 공개 페이지용 `article-body`(저장된 문서와 목차), 컬렉션의 글 목록(페이지 나눔)과 글 페이지를 주는 `blog-theme`(필요한 `article-body` 포함), `useEntryEditor`와 `useField`로 만든
+`monti add <이름...>`은 Monti 레지스트리의 컴포넌트를 앱에 소스로 복사해, 앱이 직접 소유하는 코드로 만듭니다. 공개 페이지용 `article-body`(저장된 문서와 목차), `useEntryEditor`와 `useField`로 만든
 어드민 `entry-editor` 화면, `blockViews`에 넣는 블록 편집 화면이 있습니다. import는 앱의 별칭(`components.json` 또는 `@/components`)으로 바뀌고, 필요한 npm 패키지는
 앱의 패키지 매니저로 설치하며, 고친 파일은 `--overwrite`를 주지 않는 한 덮어쓰지 않습니다.
 
 ```sh
 pnpm exec monti add article-body              # -> components/monti/article-body/article-body.tsx
 pnpm exec monti add entry-editor --dry-run    # 계획만 보여 주고 아무것도 바꾸지 않음
-pnpm exec monti add blog-theme --yes          # 타이포그래피 플러그인과 render.css import도 묻지 않고 전역 CSS에 추가
+pnpm exec monti add article-body --yes       # 타이포그래피 플러그인과 render.css import도 묻지 않고 전역 CSS에 추가
 pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트리(폴더 또는 URL)
 ```
 
 `monti add`는 설치된 `@monti-cms/core` 패키지 안에 들어 있는 레지스트리(패키지의 `registry/` 폴더)에서 설치하므로, 움직이는 GitHub 브랜치가 아니라 패키지와 같은 버전의 컴포넌트를 받습니다. 다른 레지스트리는 여전히 `--registry <url|path>`로 읽습니다. 모노레포 체크아웃에서는 `registry/r`을 먼저 읽습니다. 레지스트리는 shadcn 레지스트리 스키마를 따르며 저장소의 `registry/`에 있습니다(`registry/r`로 빌드해 커밋). 컴포넌트는 호스트의 Tailwind와 공개 진입점
-(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`)만 씁니다. `examples/blog`가 이 방법으로 `blog-theme`을 설치해 블로그 목록과 글 페이지에서 씁니다.
-`article-body`와 `blog-theme`은 전역 CSS에 `@tailwindcss/typography`와 `@monti-cms/core/render.css` import(블록을 쓰면 `@monti-cms/blocks/render.css`도)가 있는지 확인하고, 바꿀 내용을 diff로 보여 주며 묻고, 거절하면 추가할 줄을 그대로 출력합니다. `monti init`도 블로그 테마를 고르면 같게 하고, 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`도 추가합니다(diff와 질문 포함). 어드민 테마가 React가 하이드레이션하기 전에 `<html>`에 클래스를 달기 때문에, 없으면 첫 어드민 화면에서 하이드레이션 불일치가 기록됩니다. `monti init`이 쓰는 어드민 라우트 파일은 Next의 `cacheComponents`가 있든 없든 동작하며, `next.config`에 `cacheComponents: true`가 있으면 페이지에 `export const instant = false`도 넣습니다(세그먼트 설정은 패키지에서 다시 내보낼 수 없고, 옵션이 꺼져 있으면 Next가 거부합니다). 둘 중 하나라도 빠졌으면 `monti doctor`가 경고합니다(`next/hydration`, `next/theme-styles`).
+(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`)만 씁니다. `examples/blog`가 이 방법으로 `article-body`를 설치해 글 페이지에서 씁니다. 목록, 글, 미리보기 페이지는 예제 안의 평범한 앱 코드입니다.
+`article-body`는 전역 CSS에 `@tailwindcss/typography`와 `@monti-cms/core/render.css` import(블록을 쓰면 `@monti-cms/blocks/render.css`도)가 있는지 확인하고, 바꿀 내용을 diff로 보여 주며 묻고, 거절하면 추가할 줄을 그대로 출력합니다. `monti init`은 루트 레이아웃의 `<html>` 태그에 `suppressHydrationWarning`도 추가합니다(diff와 질문 포함). 어드민 테마가 React가 하이드레이션하기 전에 `<html>`에 클래스를 달기 때문에, 없으면 첫 어드민 화면에서 하이드레이션 불일치가 기록됩니다. `monti init`이 쓰는 어드민 라우트 파일은 Next의 `cacheComponents`가 있든 없든 동작하며, `next.config`에 `cacheComponents: true`가 있으면 페이지에 `export const instant = false`도 넣습니다(세그먼트 설정은 패키지에서 다시 내보낼 수 없고, 옵션이 꺼져 있으면 Next가 거부합니다). 빠졌으면 `monti doctor`가 경고합니다(`next/hydration`).
 전체 설명, 컴포넌트 목록, 추가하는 법은 [`registry/README.ko.md`](../../registry/README.ko.md)에 있습니다.
-
-`blog-theme`(`monti init --blog-theme`도 같다)은 `monti.schema.json`을 읽습니다. 페이지를 `app/(site)/<컬렉션 path에서 /:slug를 뺀 경로>` 아래에 써서, 페이지와 스키마의 `path`가 만드는 링크가 서로 맞습니다(스키마가 없으면 `/blog`). `theme.config.ts`(`collection`, `routeBase`, 요약 필드 `excerptField`, 태그 필드 `topicsField`, 작성자 필드 `authorField`)도 스키마에 실제로 있는 필드로 채우므로 필드 이름을 손으로 고칠 필요가 없습니다.
 
 ## 진입점
 

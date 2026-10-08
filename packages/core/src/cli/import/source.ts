@@ -79,7 +79,14 @@ export interface ParsedSource extends SourceFile {
 export function readSource(file: SourceFile): ParsedSource {
 	const text = readFileSync(file.abs, "utf8");
 	const hash = createHash("sha256").update(text).digest("hex");
-	const parsed = parseFile(text);
+	// Hugo's TOML front matter (`+++`) is not read; without this the whole block would be imported as the first lines of the body.
+	const parsed: ReturnType<typeof parseFile> = /^﻿?\+\+\+[ \t]*\r?\n/.test(text)
+		? {
+				ok: false,
+				message: "front matter in TOML (+++ lines) is not supported; convert it to YAML (--- lines)",
+				line: 1,
+			}
+		: parseFile(text);
 	if (!parsed.ok) {
 		return {
 			...file,
@@ -131,9 +138,6 @@ export function folderKeyOf(source: Pick<ParsedSource, "rel" | "key">, locales: 
 	const root = source.key.endsWith(source.rel) ? source.key.slice(0, source.key.length - source.rel.length) : "";
 	return [root.replace(/\/+$/, ""), folder === "." ? "" : folder].filter(Boolean).join("/") || ".";
 }
-
-/** The key a folder had in the mapping files written before keys were paths from the working directory: relative to the scanned folder. */
-export const legacyFolderKeyOf = (rel: string, locales: readonly string[]): string => derivePath(rel, locales).folder;
 
 /** The site's language code a text names (`KO`, `pt-br`), or `undefined`. */
 export function localeCode(value: string, locales: readonly string[]): string | undefined {

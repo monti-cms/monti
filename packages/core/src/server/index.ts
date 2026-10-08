@@ -56,6 +56,7 @@ export type {
 	WriteOperation,
 } from "../services/hooks";
 export { defineConfig, type MontiServerOptions, SECRET_ENV, SITE_URL_ENV } from "./config";
+export { type Decision, formatDecision } from "./decision";
 export {
 	type AuthAdapter,
 	type AuthContext,

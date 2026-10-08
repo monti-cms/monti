@@ -1,88 +1,15 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/import-boundary";
 import { findSchemaFile, watchSchemaTypes } from "@monti-cms/core/schema-types";
 import type { NextConfig } from "next";
 
 const PACKAGES = ["@monti-cms/core"];
-/** Core-side packages. Only the optional peer dependencies of these and of CMS plugin packages are checked. */
-const CORE_PACKAGES = ["@monti-cms/core", "@monti-cms/admin", "@monti-cms/nextjs"];
-/** Marker a CMS plugin package puts in `package.json` (`"cmsPlugin": true`). The name does not matter. */
-export const PLUGIN_MARKER = "cmsPlugin";
-/** Module substituted for an optional dependency that is not installed (importing it raises an error telling you to install it). */
-export const MISSING_OPTIONAL_MODULE = "@monti-cms/core/stubs/missing-optional";
-
-const readJson = (file: string): Record<string, unknown> | undefined => {
-	try {
-		return JSON.parse(readFileSync(file, "utf8"));
-	} catch {
-		return undefined;
-	}
-};
 
 /**
- * Whether `node_modules/<name>` exists, walking up from the `from` folder (same order as Node and bundler package lookup).
- * If `boundary` (Turbopack `root`) is given, nothing outside it is checked (Turbopack does not look there either).
+ * The environment variable `withCms` sets to say what it added to the Next config. The server reads it for the startup summary (`MONTI_WITHCMS` in
+ * `@monti-cms/core`), because the config is loaded where the summary is not printed.
  */
-const installedFrom = (from: string, name: string, boundary?: string): boolean => {
-	for (let dir = from; ; dir = path.dirname(dir)) {
-		if (boundary && path.relative(boundary, dir).startsWith("..")) return false;
-		if (existsSync(path.join(dir, "node_modules", name, "package.json"))) return true;
-		if (path.dirname(dir) === dir) return false;
-	}
-};
-
-/**
- * Optional peer dependencies of the CMS packages the app installed (core and admin packages, and plugin packages with `"cmsPlugin": true` in `package.json`)
- * (`peerDependenciesMeta.optional`) that are not installed.
- * Example: the block extension's Mermaid preview loads `mermaid` only when a preview is opened, but the bundler also tries to resolve `import("mermaid")` of extensions in use or not,
- * so the build stops if it is not installed.
- */
-export function missingOptionalPeers(root: string, boundary?: string): string[] {
-	const app = readJson(path.join(root, "package.json"));
-	const deps = { ...(app?.dependencies as object), ...(app?.devDependencies as object) };
-	const missing = new Set<string>();
-	for (const name of Object.keys(deps)) {
-		const dir = path.join(root, "node_modules", name);
-		const meta = readJson(path.join(dir, "package.json"));
-		if (!CORE_PACKAGES.includes(name) && meta?.[PLUGIN_MARKER] !== true) continue;
-		const optional = Object.entries((meta?.peerDependenciesMeta ?? {}) as Record<string, { optional?: boolean }>)
-			.filter(([, value]) => value?.optional)
-			.map(([peer]) => peer);
-		if (optional.length === 0) continue;
-		const real = realpathSync(dir);
-		for (const peer of optional) if (!installedFrom(real, peer, boundary)) missing.add(peer);
-	}
-	return [...missing].sort();
-}
-
-/** The text of the stub that stands in for the missing package `name`: loading it says which package to install. */
-const stubText = (name: string): string =>
-	`// Written by withCms: the optional package ${name} is not installed. Loading it is an error that says so.\n` +
-	`throw new Error(${JSON.stringify(
-		`[monti] The package "${name}" is not installed, and a block you use needs it. Install it with your package manager (for example \`pnpm add ${name}\`), delete the .next folder and restart the dev server. \`monti doctor\` lists what is missing.`,
-	)});\n`;
-
-/**
- * Where each missing package is redirected to: a stub file of its own that names the package in its error (written under `node_modules/.cache/monti`, the place tools
- * keep generated files), or core's shared stub when the file cannot be written. The paths are relative to `root`, with `/`.
- */
-export function missingStubs(root: string, missing: readonly string[]): Record<string, string> {
-	const stubs: Record<string, string> = {};
-	const folder = path.join(root, "node_modules", ".cache", "monti", "missing");
-	for (const name of missing) {
-		// The build error for a missing export names this file, so the name says what is wrong.
-		const file = `${name.replace(/[^A-Za-z0-9._-]+/g, "__")}-not-installed.cjs`;
-		try {
-			mkdirSync(folder, { recursive: true });
-			writeFileSync(path.join(folder, file), stubText(name));
-			stubs[name] = `./node_modules/.cache/monti/missing/${file}`;
-		} catch {
-			stubs[name] = MISSING_OPTIONAL_MODULE;
-		}
-	}
-	return stubs;
-}
+const WITHCMS_ENV = "MONTI_WITHCMS";
 
 const WATCHING = Symbol.for("monti.schema-types.watching");
 
@@ -147,52 +74,39 @@ export function checkImportBoundaryInDev(
 }
 
 /**
- * Adds the CMS wiring to the Next config. Builds package sources (TypeScript) together with the app, tells the server and browser bundles Next's `basePath`, and
- * points optional dependencies of CMS packages that are not installed (e.g. the block extension's `mermaid`) at an empty module (using that feature raises
- * an error telling you to install it).
+ * Adds the CMS wiring to the Next config, and nothing else:
  *
- * In development it also keeps the generated types of the schema file up to date (see {@link watchSchemaTypesInDev}) and warns when a client component imports
- * the server-only `monti.config.ts` (see {@link checkImportBoundaryInDev}).
+ * - `transpilePackages` gets `@monti-cms/core`, so its TypeScript sources build with the app;
+ * - `env.NEXT_PUBLIC_CMS_BASE_PATH` carries Next's `basePath` to the server and browser bundles;
+ * - in development, the types of the schema file are kept up to date ({@link watchSchemaTypesInDev}) and a client component that imports the server-only
+ *   `monti.config.ts` is warned about ({@link checkImportBoundaryInDev}).
+ *
+ * The startup summary of the server lists these (it reads `MONTI_WITHCMS`). To undo them, remove `withCms` from `next.config.ts`; the admin then needs
+ * `transpilePackages: ["@monti-cms/core"]` and the base path set by hand.
  *
  * It links no config file: `monti.config.ts` exports the CMS instance, the app's server files import it, and the admin gets the site from that instance as data.
+ * An optional package that a block needs (`mermaid`, `recharts`) is not stubbed: if an app imports the block without installing it, the bundler says which
+ * package is missing.
  */
 export function withCms(nextConfig: NextConfig): NextConfig {
-	const turbopackRoot = nextConfig.turbopack?.root;
-	const missing = missingOptionalPeers(
-		process.cwd(),
-		turbopackRoot ? realpathSync(path.resolve(process.cwd(), turbopackRoot)) : undefined,
-	);
-	const stubs = missingStubs(process.cwd(), missing);
-	const userWebpack = nextConfig.webpack;
 	watchSchemaTypesInDev(process.cwd());
 	checkImportBoundaryInDev(process.cwd());
-
+	const development = process.env.NODE_ENV === "development";
+	const added = [
+		`transpilePackages += ${PACKAGES.join(", ")}`,
+		`env.NEXT_PUBLIC_CMS_BASE_PATH = "${nextConfig.basePath?.replace(/\/+$/, "") ?? ""}" (Next basePath)`,
+		...(development
+			? [
+					"monti-env.d.ts is rewritten when the schema file changes",
+					"client imports of monti.config.ts are warned about",
+				]
+			: []),
+	];
+	process.env[WITHCMS_ENV] = added.join("; ");
 	return {
 		...nextConfig,
 		// Tells the server and browser bundles Next `basePath` (read by `cmsApiUrl()` and `withBasePath()`). Site code has nothing to do.
 		env: { ...nextConfig.env, NEXT_PUBLIC_CMS_BASE_PATH: nextConfig.basePath?.replace(/\/+$/, "") ?? "" },
 		transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), ...PACKAGES])],
-		turbopack: {
-			...nextConfig.turbopack,
-			resolveAlias: {
-				...stubs,
-				...nextConfig.turbopack?.resolveAlias,
-			},
-		},
-		webpack: (config, context) => {
-			config.resolve ??= {};
-			// The stub of each package: its own file, or the one inside the core package the app installed (the same file as `MISSING_OPTIONAL_MODULE`).
-			const shared = path.join(process.cwd(), "node_modules", "@monti-cms", "core", "stubs", "missing-optional.cjs");
-			config.resolve.alias = {
-				...Object.fromEntries(
-					missing.map((name) => [
-						name,
-						stubs[name] === MISSING_OPTIONAL_MODULE ? shared : path.resolve(process.cwd(), stubs[name] ?? shared),
-					]),
-				),
-				...config.resolve.alias,
-			};
-			return userWebpack ? userWebpack(config, context) : config;
-		},
 	};
 }

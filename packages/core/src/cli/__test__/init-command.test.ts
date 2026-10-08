@@ -42,7 +42,7 @@ describe("monti init on the command line", () => {
 	it("--json prints one JSON document and asks nothing, even on a terminal", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\n---\nx\n" });
 		const prompter = scriptedPrompter({});
-		const result = run(dir, ["--json", "--database", "docker", "--extras", "ai", "--no-install"], {
+		const result = run(dir, ["--json", "--database", "skip", "--extras", "ai", "--no-install"], {
 			interactive: true,
 			prompter,
 		});
@@ -53,7 +53,7 @@ describe("monti init on the command line", () => {
 		expect(report).toMatchObject({
 			ok: true,
 			dryRun: false,
-			answers: { database: { kind: "docker" }, ai: true, adminPath: "/studio" },
+			answers: { database: { kind: "skip" }, ai: true, adminPath: "/studio" },
 			app: { packageManager: "pnpm", src: false, contentFolders: [{ dir: "content/posts", files: 1 }] },
 		});
 		expect(report.created).toContain("monti.config.ts");
@@ -101,7 +101,6 @@ describe("monti init on the command line", () => {
 			"callout,tabs",
 			"--admin-path",
 			"/cms",
-			"--blog-theme",
 			"--package-manager",
 			"npm",
 		]);
@@ -111,10 +110,14 @@ describe("monti init on the command line", () => {
 		expect(result.out.join("\n")).toContain("npx monti");
 	});
 
-	it("--no-blog-theme and --blog-theme together are refused", async () => {
-		const result = run(fixtureApp(), ["--yes", "--blog-theme", "--no-blog-theme"]);
-		expect(await result.code).toBe(1);
-		expect(result.err.join("\n")).toContain("cannot both be given");
+	it("--database docker and the removed flags are refused", async () => {
+		const docker = run(fixtureApp(), ["--yes", "--database", "docker"]);
+		expect(await docker.code).toBe(1);
+		expect(docker.err.join("\n")).toContain('--database "docker" must be a postgres:// URL or "skip"');
+		for (const flag of ["--no-migrate", "--no-docker-start", "--blog-theme", "--resume"]) {
+			const removed = run(fixtureApp(), ["--yes", flag]);
+			expect(await removed.code).toBe(1);
+		}
 	});
 
 	it("a bad --package-manager and an unknown flag are refused", async () => {
@@ -142,7 +145,8 @@ describe("monti init on the command line", () => {
 	it("an interactive run: the questions, the answers, and the final summary", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\ndate: 2024-01-01\n---\nx\n" });
 		const prompter = scriptedPrompter({
-			[QUESTIONS.database]: "docker",
+			[QUESTIONS.database]: "skip",
+			[QUESTIONS.databaseSchema]: "",
 			[QUESTIONS.adminGithubId]: "583231",
 			[QUESTIONS.locales]: "ko,en",
 			[QUESTIONS.storage]: "s3",
@@ -150,7 +154,6 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.blocks]: "pick",
 			[QUESTIONS.blockList]: ["callout", "tabs"],
 			[QUESTIONS.adminPath]: "/studio",
-			[QUESTIONS.blogTheme]: false,
 			"Add withCms": true,
 		});
 		const host = fakeHost();
@@ -158,6 +161,7 @@ describe("monti init on the command line", () => {
 		expect(await result.code).toBe(0);
 		expect(prompter.asked).toEqual([
 			QUESTIONS.database,
+			QUESTIONS.databaseSchema,
 			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
 			QUESTIONS.storage,
@@ -165,7 +169,6 @@ describe("monti init on the command line", () => {
 			QUESTIONS.blocks,
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
-			QUESTIONS.blogTheme,
 			"Add withCms to next.config.ts?",
 		]);
 		// The detection is shown first, the next.config diff before the question about it.
@@ -177,8 +180,7 @@ describe("monti init on the command line", () => {
 				(note) => note.title === "Change to next.config.ts" && note.body.includes("+import { withCms }"),
 			),
 		).toBe(true);
-		expect(host.run).toHaveBeenCalledWith("docker", ["compose", "up", "-d"], dir);
-		expect(host.migrate).toHaveBeenCalled();
+		expect(host.install).toHaveBeenCalled();
 		expect(result.out.join("\n")).toContain("Start the app: pnpm dev, then open http://localhost:3000/studio");
 	});
 
@@ -194,7 +196,6 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.extras]: [],
 			[QUESTIONS.blocks]: "all",
 			[QUESTIONS.adminPath]: "/studio",
-			[QUESTIONS.blogTheme]: false,
 			"Add withCms": false,
 		});
 		const result = run(dir, ["--no-install"], { interactive: true, prompter });
@@ -234,11 +235,8 @@ describe("monti init on the command line", () => {
 			"--extras",
 			"--blocks",
 			"--admin-path",
-			"--blog-theme",
 			"--overwrite",
 			"--no-install",
-			"--no-migrate",
-			"--no-docker-start",
 			"--package-manager",
 		]) {
 			expect(out.join("\n")).toContain(flag);

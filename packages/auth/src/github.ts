@@ -91,6 +91,20 @@ export function github(options: GithubOptions = {}): LoginProvider {
 		label: githubLabel,
 		icon: GITHUB_ICON,
 		usesCallbackUrl: true,
+		provenance: (env) => {
+			const part = (label: string, given: string | undefined, name: string) =>
+				given
+					? `${label} set in monti.config.ts`
+					: env[name]?.trim()
+						? `${label} from env ${name}`
+						: `${label}: env ${name} is not set`;
+			const admins = options.admins
+				? "admins set in monti.config.ts"
+				: env[GITHUB_ENV.admin]?.trim()
+					? `admins from env ${GITHUB_ENV.admin}`
+					: `no admin: env ${GITHUB_ENV.admin} is not set`;
+			return `${part("client id", options.clientId, GITHUB_ENV.clientId)}, ${part("client secret", options.clientSecret, GITHUB_ENV.clientSecret)}, ${admins}`;
+		},
 		adminSource: {
 			env: GITHUB_ENV.admin,
 			findId: 'open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id"',

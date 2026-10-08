@@ -63,12 +63,3 @@ describe("the barrel of @monti-cms/blocks stays light", () => {
 		expect(exports["./mermaid"]).toBe("./src/mermaid/index.ts");
 	});
 });
-
-describe("the heavy blocks are plugins from their own entry points", () => {
-	it("chart() and mermaid() need their library, which doctor checks", async () => {
-		const { chart } = await import("../chart");
-		const { mermaid } = await import("../mermaid");
-		expect(chart().requires).toEqual(["recharts"]);
-		expect(mermaid().requires).toEqual(["mermaid"]);
-	});
-});

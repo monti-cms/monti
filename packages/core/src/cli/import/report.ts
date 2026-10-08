@@ -65,9 +65,8 @@ export interface ImportReport {
 		uploaded: number;
 		reused: number;
 		wouldUpload: number;
-		/** Without storage: images copied into the public folder (or, in a dry run, that would be). */
-		copied: number;
-		wouldCopy: number;
+		/** Without storage: the local images that were left as they are. */
+		left: number;
 		configured: boolean;
 	};
 	readonly links: { resolved: number; unresolved: number };
@@ -135,6 +134,7 @@ export function describeMapping(mapping: ImportMapping): string[] {
 	if (mapping.locale && mapping.locale.from.length > 0) {
 		lines.push(`language: from ${mapping.locale.from.join(", ")}`);
 	}
+	if (mapping.publicDir) lines.push(`images: looked up in ${mapping.publicDir} (and next to the posts)`);
 	return lines;
 }
 
@@ -226,11 +226,6 @@ export function formatReport(report: ImportReport): string {
 		}
 		if (report.media.configured) {
 			lines.push("", `Images: ${report.media.wouldUpload} to upload, ${report.media.reused} already uploaded.`);
-		} else if (report.media.wouldCopy > 0) {
-			lines.push(
-				"",
-				`Images: ${report.media.wouldCopy} to copy into the public folder (no media storage is configured).`,
-			);
 		}
 		const translated = describeTranslations(report.translations);
 		if (translated) lines.push("", `Translations: ${translated}.`);
@@ -269,7 +264,6 @@ export function formatReport(report: ImportReport): string {
 		if (report.media.uploaded > 0 || report.media.reused > 0) {
 			lines.push(`Images: ${report.media.uploaded} uploaded, ${report.media.reused} already in the library.`);
 		}
-		if (report.media.copied > 0) lines.push(`Images: ${report.media.copied} copied into the public folder.`);
 		if (report.links.resolved > 0 || report.links.unresolved > 0) {
 			lines.push(
 				`Links between posts: ${report.links.resolved} turned into entry links, ${report.links.unresolved} left as written.`,

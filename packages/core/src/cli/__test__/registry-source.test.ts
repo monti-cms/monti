@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,7 +86,10 @@ describe("the registry that ships in @monti-cms/core", () => {
 				readFileSync(path.join(repoRoot, "registry/r", name), "utf8"),
 			);
 		}
-		expect(existsSync(path.join(packageRegistry, "blog-theme.json"))).toBe(true);
+		for (const item of ["article-body", "field-row", "entry-editor", "notice-block-view"]) {
+			expect(built).toContain(`${item}.json`);
+		}
+		expect(built).not.toContain("blog-theme.json");
 	});
 
 	it("is part of the published files of the package", () => {

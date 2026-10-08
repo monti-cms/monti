@@ -33,10 +33,7 @@ const FOLDER: ContentFolder = {
 };
 
 const siteOf = (folder: ContentFolder, locales = ["en"]) => {
-	const text = schemaTemplate(
-		{ adminPath: "/studio", locales, timeZone: "UTC", blogTheme: false },
-		{ siteName: "blog", folder },
-	);
+	const text = schemaTemplate({ adminPath: "/studio", locales, timeZone: "UTC" }, { siteName: "blog", folder });
 	return createSite(defineSite({ schema: JSON.parse(text) } as never) as never);
 };
 
@@ -111,11 +108,8 @@ describe("the starter schema of monti init", () => {
 		);
 	});
 
-	it("the path follows the content folder, which is where the blog theme serves the posts", () => {
-		const text = schemaTemplate(
-			{ adminPath: "/studio", locales: ["en"], timeZone: "UTC", blogTheme: true },
-			{ folder: FOLDER },
-		);
+	it("the path follows the content folder", () => {
+		const text = schemaTemplate({ adminPath: "/studio", locales: ["en"], timeZone: "UTC" }, { folder: FOLDER });
 		expect(JSON.parse(text).collections.post.path).toBe("/blog/:slug");
 	});
 });

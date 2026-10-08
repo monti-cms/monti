@@ -21,7 +21,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types";
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
- * - `monti doctor [--json] [--online] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, leftovers of the old setup, and the checks plugins add) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
+ * - `monti doctor [--json] [--online] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup, and the checks plugins add) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
  * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
  * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of the config file to `monti.schema.json`.
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
@@ -133,6 +133,8 @@ export async function runCli(
 	io: CliIo = { cwd: process.cwd(), log: console.log, error: console.error },
 ): Promise<number> {
 	const [command, ...rest] = argv;
+	// The command line prints its own output; the server's startup summary stays out of it.
+	process.env.MONTI_CLI = "1";
 	try {
 		// `monti <command> --help` prints that command's section only. (`doctor` and `import` answer it themselves, and a plugin command has its own.)
 		if (command !== undefined && (rest.includes("--help") || rest.includes("-h"))) {

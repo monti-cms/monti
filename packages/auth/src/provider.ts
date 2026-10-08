@@ -82,6 +82,8 @@ export interface LoginProvider {
 	 * Used in the messages about an admin list that is empty or has an entry that is not an id.
 	 */
 	readonly adminSource?: { readonly env: string; readonly findId: string };
+	/** Where this provider's settings come from, for the startup summary and `monti doctor` (`client id from env AUTH_GITHUB_ID, ...`). */
+	provenance?(env: Readonly<Record<string, string | undefined>>): string;
 	/** `true` for an OAuth-style provider: the app registered at the provider must list the callback URL (`<site>/api/cms/auth/callback/<id>`), which `monti doctor` prints. */
 	readonly usesCallbackUrl?: boolean;
 	/** Checks `monti doctor` runs for this provider (are its client id and secret set), listed under `auth/`. */

@@ -3,7 +3,7 @@ import { formatDoctorReport } from "./format";
 import { runDoctor } from "./run";
 
 export const DOCTOR_HELP = `  doctor    Check the setup and say how to fix what is wrong: the config file, the schema file, the database and its migrations, the secret, the login, the Next files,
-            leftovers of the old setup, and the checks each plugin adds. Every warning and failure says what is wrong, where, and how to fix it. Exit code 1 when a check fails.
+            upgrade checks (for sites coming from the pre-overhaul setup), and the checks each plugin adds. Every warning and failure says what is wrong, where, and how to fix it. Exit code 1 when a check fails.
               --json                Print the result as JSON (for tools): { ok, cwd, online, summary, checks: [{ id, group, title, status, message, where?, fix? }] }
               --online              Also run the checks that call out over the network (the git-sync repo, the S3 bucket)
               --only <list>         Run only these checks: groups or ids, comma separated (config, database, database/migrations, git-sync, ...)

@@ -1,9 +1,9 @@
 import { Pool } from "pg";
 import { problemError } from "../../core/problem";
 import type { ContentStore } from "../../core/store";
+import type { Decision } from "../../server/decision";
 import type { DatabaseAdapter } from "../../server/define";
 import { postgresChecks } from "./checks";
-import { normalizeConnectionString } from "./connection";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain";
 import { createPluginStorage } from "./plugin-storage";
 
@@ -76,7 +76,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 				"database_url_missing",
 			);
 		}
-		pool ??= new Pool({ connectionString: normalizeConnectionString(connectionString) });
+		pool ??= new Pool({ connectionString });
 		return pool;
 	};
 	/** Read when used (like the connection string), so the environment of the running process decides. */
@@ -108,6 +108,30 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 			} catch (error) {
 				throw explain(error) ?? error;
 			}
+		},
+		decisions: (env): readonly Decision[] => {
+			const url = options.connectionString || env[DATABASE_URL_ENV]?.trim() || undefined;
+			const schema = options.schema || env[DATABASE_SCHEMA_ENV]?.trim() || undefined;
+			return [
+				{
+					topic: "Database",
+					value: describeConnection(url) ?? "no URL",
+					source: options.connectionString
+						? "set in monti.config.ts (postgres({ connectionString }))"
+						: url
+							? `from env ${DATABASE_URL_ENV}`
+							: `${DATABASE_URL_ENV} is not set`,
+				},
+				{
+					topic: "Database schema",
+					value: schema ?? "public",
+					source: options.schema
+						? "set in monti.config.ts (postgres({ schema }))"
+						: schema
+							? `from env ${DATABASE_SCHEMA_ENV}`
+							: `default (${DATABASE_SCHEMA_ENV} is not set)`,
+				},
+			];
 		},
 		describeTarget: () => {
 			const where = describeConnection(options.connectionString || process.env[DATABASE_URL_ENV]);

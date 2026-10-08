@@ -4,7 +4,6 @@ import path from "node:path";
 import { parseJsonc } from "./config-paths";
 import { setupThemeStyles, type ThemeStylesResult } from "./first-run";
 import type { Prompter } from "./init-prompts";
-import { INIT_PROXY_TEMPLATE } from "./proxy-template";
 import {
 	defaultRegistrySource,
 	describeSource,
@@ -14,7 +13,6 @@ import {
 	type RegistryItem,
 	resolveItems,
 } from "./registry";
-import { applyBlogThemeSettings, type BlogThemeSettings, blogThemeSettings } from "./theme-settings";
 
 /**
  * `monti add <name...>`: copies components from a registry into the host app as source it owns, rewrites the registry's own import alias to the host's,
@@ -76,12 +74,10 @@ export interface AddReport {
 	readonly manual: readonly string[];
 	/** The check of the global CSS (typography plugin, `render.css` imports), for components that draw article text. */
 	readonly styles?: ThemeStylesResult;
-	/** What `monti add` filled in from the app's own schema (the blog theme: collection, route base, field names), as lines for the report. */
-	readonly configured: readonly string[];
 }
 
 /** Components whose markup uses the `prose` classes and the code and block styles of `render.css`: the global CSS has to load them. */
-const STYLED_ITEMS = ["article-body", "blog-theme"];
+const STYLED_ITEMS = ["article-body"];
 
 interface TsconfigLike {
 	readonly compilerOptions?: {
@@ -133,71 +129,22 @@ function aliasFolder(cwd: string, alias: string): { dir: string; mapped: boolean
 	return { dir: path.join(cwd, existsSync(path.join(cwd, "src")) ? "src" : "", match[1] ?? ""), mapped: false };
 }
 
-/** Whether `next.config` turns on Next's `cacheComponents`. */
-function usesCacheComponents(cwd: string): boolean {
-	for (const name of ["next.config.ts", "next.config.mjs", "next.config.js"]) {
-		const file = path.join(cwd, name);
-		if (existsSync(file)) return /\bcacheComponents\s*:\s*true\b/.test(readFileSync(file, "utf8"));
-	}
-	return false;
-}
-
-/**
- * A line a registry file marks with `// monti:cache-components` (an `export const instant = false;`, only valid with that option) is kept, without its marker, when
- * the app turns `cacheComponents` on, and dropped (with the comment lines right above it) when it does not.
- */
-export function applyCacheComponentsMarker(source: string, enabled: boolean): string {
-	const marked = /(?:^\/\/[^\n]*\n)*^([^\n]*?)[ \t]*\/\/ monti:cache-components[^\n]*\n?/gm;
-	return source.replace(marked, (whole, line: string) =>
-		enabled ? `${whole.slice(0, whole.indexOf(line))}${line}\n` : "",
-	);
-}
-
 /** Turns the registry's own import prefix into the host's alias. Only quoted specifiers (`from "..."`, `import("...")`). */
 export const rewriteRegistryImports = (source: string, installAlias: string): string =>
 	source.replace(/(["'])@\/registry\/monti\//g, (_, quote: string) => `${quote}${installAlias}/`);
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/;
 
-/**
- * Fills the placeholders of a `target`. `{app}` is the folder of the Next App Router: `src/app` when the app has one (or has `src/` and no `app/`), else `app`.
- * `{routeBase}` is the address the posts live at, without the slashes around it (`blog`, from the `path` of the collection in `monti.schema.json`); the caller
- * that read the schema passes it. Any other `{name}` is an error, so a typo does not create a folder called `{name}`.
- */
-export function resolveTargetPlaceholders(cwd: string, target: string, routeBase?: string): string {
-	return target.replace(/\{([^{}/]*)\}/g, (_, name: string) => {
-		if (name === "routeBase" && routeBase !== undefined) return routeBase.replace(/^\/+|\/+$/g, "");
-		if (name !== "app") {
-			throw new Error(
-				`Unknown placeholder {${name}} in the target "${target}". Known: {app}${routeBase === undefined ? "" : ", {routeBase}"}.`,
-			);
-		}
-		if (existsSync(path.join(cwd, "src/app"))) return "src/app";
-		return existsSync(path.join(cwd, "src")) && !existsSync(path.join(cwd, "app")) ? "src/app" : "app";
-	});
-}
-
-/** Where a file goes: its `target` (relative to the app folder, `~/` and `{app}` allowed), else under the install folder in the components alias. */
-function destinationOf(
-	cwd: string,
-	componentsDir: string,
-	item: RegistryItem,
-	file: RegistryFile,
-	routeBase: string | undefined,
-): string {
-	let relative: string;
-	if (file.target) {
-		relative = resolveTargetPlaceholders(cwd, file.target, routeBase).replace(/^~\//, "");
-	} else {
-		const own = `items/${item.name}/`;
-		const inside = file.path.replace(/^\.\//, "");
-		relative = path.join(
-			componentsDir,
-			INSTALL_FOLDER,
-			item.name,
-			inside.startsWith(own) ? inside.slice(own.length) : inside,
-		);
-	}
+/** Where a file goes: under the install folder in the components alias, in a folder named for its item. */
+function destinationOf(cwd: string, componentsDir: string, item: RegistryItem, file: RegistryFile): string {
+	const own = `items/${item.name}/`;
+	const inside = file.path.replace(/^\.\//, "");
+	const relative = path.join(
+		componentsDir,
+		INSTALL_FOLDER,
+		item.name,
+		inside.startsWith(own) ? inside.slice(own.length) : inside,
+	);
 	const absolute = path.resolve(cwd, relative);
 	if (path.relative(cwd, absolute).startsWith("..") || path.isAbsolute(path.relative(cwd, absolute)))
 		throw new Error(`${item.name}: ${file.path} would be written outside the app (${relative}).`);
@@ -251,17 +198,10 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 	const source = options.registry ? parseRegistrySource(options.registry, cwd) : defaultRegistrySource();
 	const items = await resolveItems(source, options.names, fetchFn);
 
-	// The blog theme is a set of pages that must agree with the schema, so the schema shapes it: the route folders follow the `path` of the collection, and
-	// theme.config.ts gets the collection and the names of the summary, tags and author fields the schema has.
-	const theme: BlogThemeSettings | undefined = items.some((item) => item.name === "blog-theme")
-		? blogThemeSettings(cwd)
-		: undefined;
-
 	const alias = componentsAlias(cwd);
 	const folder = aliasFolder(cwd, alias);
 	const installAlias = `${alias}/${INSTALL_FOLDER}`;
 
-	const cacheComponents = usesCacheComponents(cwd);
 	const created: string[] = [];
 	const overwritten: string[] = [];
 	const unchanged: string[] = [];
@@ -271,23 +211,15 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 		for (const file of item.files) {
 			if (file.content === undefined)
 				throw new Error(`${item.name}: ${file.path} has no content in the registry item.`);
-			const absolute = destinationOf(cwd, folder.dir, item, file, theme?.routeBase);
-			let content = SOURCE_FILE.test(file.path)
-				? applyCacheComponentsMarker(rewriteRegistryImports(file.content, installAlias), cacheComponents)
-				: file.content;
-			if (theme && item.name === "blog-theme" && path.basename(file.path) === "theme.config.ts")
-				content = applyBlogThemeSettings(content, theme);
+			const absolute = destinationOf(cwd, folder.dir, item, file);
+			const content = SOURCE_FILE.test(file.path) ? rewriteRegistryImports(file.content, installAlias) : file.content;
 			const relative = path.relative(cwd, absolute).split(path.sep).join("/");
 			if (!existsSync(absolute)) {
 				created.push(relative);
 				writes.push({ absolute, content });
 			} else if (readFileSync(absolute, "utf8") === content) {
 				unchanged.push(relative);
-			} else if (
-				options.overwrite ||
-				(/(^|\/)proxy\.ts$/.test(relative) && readFileSync(absolute, "utf8") === INIT_PROXY_TEMPLATE)
-			) {
-				// `monti init` wrote this proxy.ts, and the theme's proxy does the same and more: it is replaced without asking.
+			} else if (options.overwrite) {
 				overwritten.push(relative);
 				writes.push({ absolute, content });
 			} else {
@@ -319,8 +251,6 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 			`Add the alias to compilerOptions.paths in tsconfig.json so the installed imports resolve: "${alias.split("/")[0]}/*": ["./${existsSync(path.join(cwd, "src")) ? "src/" : ""}*"]`,
 		);
 
-	manual.push(...(theme?.notes ?? []));
-
 	const report: AddReport = {
 		dryRun: Boolean(options.dryRun),
 		registry: describeSource(source),
@@ -333,7 +263,6 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 		devDependencies,
 		importAlias: installAlias,
 		manual,
-		configured: theme ? [`theme.config.ts from ${theme.summary}`] : [],
 	};
 	const styled = items.some((item) => STYLED_ITEMS.includes(item.name));
 	const installStyles = (dryRun: boolean) =>
@@ -390,7 +319,6 @@ export function formatAddReport(report: AddReport): string {
 		lines.push(`${report.dryRun ? "would install (dev)" : "installed (dev)"}: ${report.devDependencies.join(", ")}`);
 	if (report.conflicts.length === 0 && report.created.length + report.overwritten.length > 0)
 		lines.push(`import from ${report.importAlias}/<component>/<file>`);
-	for (const line of report.configured) lines.push(`configured: ${line}`);
 	if (report.styles?.diff) {
 		lines.push(
 			`${report.dryRun ? "would change" : "changed"} ${report.styles.diff.file}:`,

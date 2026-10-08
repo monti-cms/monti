@@ -1,10 +1,9 @@
 import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
-import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSchemaFile } from "../../schema-file/format";
-import { defaultInitHost, formatInitReport, InitError, initProject, ProjectWriter, unifiedDiff } from "../init";
+import { formatInitReport, InitError, initProject, ProjectWriter, unifiedDiff } from "../init";
 import { InitCancelled } from "../init-prompts";
 import {
 	CREATE_NEXT_APP,
@@ -32,7 +31,6 @@ const ANSWERED = {
 	extras: "none",
 	blocks: "none",
 	adminPath: "/studio",
-	blogTheme: false,
 } as const;
 
 describe("monti init in a fresh create-next-app", () => {
@@ -45,7 +43,6 @@ describe("monti init in a fresh create-next-app", () => {
 			"monti.config.ts",
 			"monti.schema.json",
 			"monti-env.d.ts",
-			"proxy.ts",
 			"app/studio/[[...path]]/page.tsx",
 			"app/studio/layout.tsx",
 			"app/api/cms/[...path]/route.ts",
@@ -118,26 +115,26 @@ describe("monti init in a fresh create-next-app", () => {
 		// What is left has exact values.
 		const next = report.next.join("\n");
 		expect(next).toContain("DATABASE_URL in .env.local");
-		expect(next).toContain("pnpm exec monti migrate");
+		expect(next).toContain("Create the tables: pnpm exec monti migrate");
 		expect(next).toContain("Authorization callback URL: http://localhost:3000/api/cms/auth/callback/github");
 		expect(next).toContain("AUTH_GITHUB_ID");
 		expect(next).toContain("AUTH_GITHUB_SECRET");
 		expect(next).toContain("MONTI_ADMIN_GITHUB_ID");
-		expect(report.next.at(-1)).toBe("Start the app: pnpm dev, then open http://localhost:3000/studio");
+		const start = report.next.findIndex((line) => line.startsWith("Start the app"));
+		expect(report.next[start]).toBe("Start the app: pnpm dev, then open http://localhost:3000/studio");
 		// The summary points to `monti doctor` for whatever does not work, just before starting the app.
-		expect(report.next.at(-2)).toContain("pnpm exec monti doctor");
-		expect(report.next.at(-2)).toContain("what is wrong, where, and how to fix it");
+		expect(report.next[start - 1]).toContain("pnpm exec monti doctor");
+		expect(report.next[start - 1]).toContain("what is wrong, where, and how to fix it");
 		expect(next).not.toContain("monti import");
 		// Everything the generated files say is English.
 		expect(config + layout).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 	});
 
-	it("does not install, start or migrate anything when no database was given", async () => {
+	it("only installs the packages, and has no step for the database", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host, env: {} });
-		expect(host.run).not.toHaveBeenCalled();
-		expect(host.migrate).not.toHaveBeenCalled();
+		expect(Object.keys(host).sort()).toEqual(["generateSecret", "install"]);
 		// The packages are installed with the detected package manager.
 		expect(host.install).toHaveBeenCalledTimes(1);
 		const command = host.install.mock.calls[0]?.[0];
@@ -157,9 +154,43 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(command?.args).not.toContain("mermaid");
 		expect(command?.args).not.toContain("recharts");
 		expect(command?.cwd).toBe(dir);
-		expect(report.steps).toContainEqual(
-			expect.objectContaining({ name: "Run monti migrate", status: "skipped", detail: "DATABASE_URL is not set" }),
-		);
+		expect(report.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "done"]]);
+	});
+
+	it("never writes a docker compose file, a proxy or theme files", async () => {
+		const dir = fixtureApp();
+		const before = listFiles(dir);
+		const report = await initProject({ cwd: dir, ...quiet(), database: "postgres://a:b@c:5432/d" });
+		const created = listFiles(dir).filter((file) => !before.includes(file));
+		expect(created.length).toBeGreaterThan(0);
+		for (const file of created) {
+			expect(file).not.toMatch(/docker|compose|proxy\.ts|theme|\(site\)/i);
+		}
+		expect(report.created.join("\n")).not.toMatch(/docker|compose|proxy\.ts|theme/i);
+		expect(JSON.parse(read(dir, "monti.schema.json")).site ?? {}).not.toHaveProperty("previewPath");
+	});
+
+	it("puts Create the tables (monti migrate) after the install and the database URL, before doctor and starting the app", async () => {
+		const missing = await initProject({ cwd: fixtureApp(), host: fakeHost(), env: {}, install: false });
+		const lines = missing.next;
+		const index = (needle: string) => lines.findIndex((line) => line.includes(needle));
+		expect(index("Install the packages")).toBeGreaterThanOrEqual(0);
+		expect(index("DATABASE_URL in .env.local")).toBeGreaterThan(index("Install the packages"));
+		expect(index("Create the tables: pnpm exec monti migrate")).toBeGreaterThan(index("DATABASE_URL in .env.local"));
+		expect(index("pnpm exec monti doctor")).toBeGreaterThan(index("Create the tables"));
+		expect(index("Start the app")).toBeGreaterThan(index("pnpm exec monti doctor"));
+
+		// With a database and the packages installed, the tables are still created by the person.
+		const known = await initProject({
+			cwd: fixtureApp(),
+			host: fakeHost(),
+			env: {},
+			database: "postgres://a:b@c:5432/d",
+		});
+		const text = known.next.join("\n");
+		expect(text).not.toContain("Install the packages");
+		expect(text).not.toContain("DATABASE_URL in .env.local");
+		expect(text).toContain("Create the tables: pnpm exec monti migrate");
 	});
 });
 
@@ -167,11 +198,10 @@ describe("monti init in other app shapes", () => {
 	it("a src/ app keeps the config in src and the Next files under src/app", async () => {
 		const dir = fixtureApp(SRC_APP);
 		const report = await initProject({ cwd: dir, ...quiet(), adminPath: "/cms/studio" });
-		expect(report.created.slice(0, 7)).toEqual([
+		expect(report.created.slice(0, 6)).toEqual([
 			"src/monti.config.ts",
 			"src/monti.schema.json",
 			"src/monti-env.d.ts",
-			"src/proxy.ts",
 			"src/app/cms/studio/[[...path]]/page.tsx",
 			"src/app/cms/studio/layout.tsx",
 			"src/app/api/cms/[...path]/route.ts",
@@ -214,13 +244,14 @@ describe("monti init in other app shapes", () => {
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host, env: {}, database: "skip" });
 		expect(host.install.mock.calls[0]?.[0].command).toBe("yarn");
-		expect(report.next.join("\n")).toContain("yarn monti migrate");
-		expect(report.next.at(-1)).toContain("Start the app: yarn dev");
-		expect(
-			(await initProject({ cwd: fixtureApp({ "pnpm-lock.yaml": null }), ...quiet(), packageManager: "bun" })).next.at(
-				-1,
-			),
-		).toContain("bun run dev");
+		expect(report.next.join("\n")).toContain("Create the tables: yarn monti migrate");
+		expect(report.next.join("\n")).toContain("Start the app: yarn dev");
+		const bun = await initProject({
+			cwd: fixtureApp({ "pnpm-lock.yaml": null }),
+			...quiet(),
+			packageManager: "bun",
+		});
+		expect(bun.next.join("\n")).toContain("Start the app: bun run dev");
 	});
 
 	it("takes the dev port from the dev script for the callback URL", async () => {
@@ -257,48 +288,16 @@ describe("monti init in other app shapes", () => {
 });
 
 describe("monti init choices", () => {
-	it("a local Docker Postgres: writes docker-compose.yml, starts it, waits for it and migrates", async () => {
+	it("--database docker is refused with a message naming the accepted answers, and nothing is written", async () => {
 		const dir = fixtureApp();
-		const host = fakeHost({ freePort: async () => 5433 });
-		const report = await initProject({ cwd: dir, host, env: {}, database: "docker" });
-		expect(read(dir, "docker-compose.yml")).toContain('- "5433:5432"');
-		expect(read(dir, ".env.local")).toContain("DATABASE_URL=postgres://monti:monti@localhost:5433/monti");
-		expect(host.run).toHaveBeenCalledWith("docker", ["compose", "up", "-d"], dir);
-		expect(host.databaseReachable).toHaveBeenCalledWith("postgres://monti:monti@localhost:5433/monti", 30000);
-		expect(host.migrate).toHaveBeenCalledWith(dir);
-		expect(report.steps.map((step) => `${step.name}:${step.status}`)).toEqual([
-			"Start Postgres in Docker:done",
-			"Install packages:done",
-			"Run monti migrate:done",
-		]);
-		expect(report.next.join("\n")).not.toContain("Create the tables");
-		expect(report.ok).toBe(true);
-	});
-
-	it("without Docker it still writes the files and says to start it", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost({ dockerAvailable: () => false, databaseReachable: (async () => false) as never });
-		const report = await initProject({ cwd: dir, host, env: {}, database: "docker" });
-		expect(host.run).not.toHaveBeenCalled();
-		expect(host.migrate).not.toHaveBeenCalled();
-		expect(read(dir, "docker-compose.yml")).toContain("postgres:17");
-		expect(report.steps[0]).toMatchObject({ status: "skipped", detail: "Docker is not running or not installed" });
-		expect(report.next.join("\n")).toContain(
-			"Start the database: docker compose up -d (install and start Docker first)",
+		const before = listFiles(dir);
+		await expect(initProject({ cwd: dir, ...quiet(), database: "docker" })).rejects.toThrow(
+			/--database "docker" must be a postgres:\/\/ URL or "skip"/,
 		);
-		expect(report.next.join("\n")).toContain("Create the tables: pnpm exec monti migrate");
+		expect(listFiles(dir)).toEqual(before);
 	});
 
-	it("an existing compose file is not touched; the service to add is printed", async () => {
-		const dir = fixtureApp({ "compose.yaml": "services: {}\n" });
-		const report = await initProject({ cwd: dir, ...quiet(), database: "docker" });
-		expect(read(dir, "compose.yaml")).toBe("services: {}\n");
-		expect(() => read(dir, "docker-compose.yml")).toThrow();
-		expect(report.skipped).toContain("compose.yaml");
-		expect(report.notes.join("\n")).toContain("monti-db:");
-	});
-
-	it("a pasted URL goes to .env.local (and the report hides its password); migrate runs when it is reachable", async () => {
+	it("a pasted URL goes to .env.local and the report hides its password; migrate is left to the person", async () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({
@@ -311,20 +310,11 @@ describe("monti init choices", () => {
 		expect(read(dir, ".env.local")).toContain("DATABASE_URL=postgres://me:hunter2@db.example.com:5432/blog");
 		expect(read(dir, ".env.local")).toContain("MONTI_ADMIN_GITHUB_ID=12345");
 		expect(JSON.stringify(report)).not.toContain("hunter2");
-		expect(host.databaseReachable).toHaveBeenCalledWith("postgres://me:hunter2@db.example.com:5432/blog", 0);
-		expect(host.migrate).toHaveBeenCalledTimes(1);
+		expect(report.next.join("\n")).not.toContain("DATABASE_URL in .env.local");
+		expect(report.next.join("\n")).toContain("Create the tables: pnpm exec monti migrate");
 		expect(report.next.join("\n")).not.toContain("Put your numeric GitHub id");
 		// .env.example never holds a value.
 		expect(read(dir, ".env.example")).not.toContain("hunter2");
-	});
-
-	it("an unreachable database is not an error: migrate is left as a step", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost({ databaseReachable: (async () => false) as never });
-		const report = await initProject({ cwd: dir, host, env: {}, database: "postgres://u:p@nowhere:5432/db" });
-		expect(host.migrate).not.toHaveBeenCalled();
-		expect(report.ok).toBe(true);
-		expect(report.next.join("\n")).toContain("Create the tables: pnpm exec monti migrate");
 	});
 
 	it("every feature: the config has one line each, the packages follow, S3 names are listed", async () => {
@@ -388,66 +378,6 @@ describe("monti init choices", () => {
 		expect(config).not.toContain("@monti-cms/blocks");
 		expect(config).toContain("mdx(),");
 		expect(read(dir, "app/studio/layout.tsx")).not.toContain("blocks/styles.css");
-	});
-
-	it("the blog theme is added through the registry (monti add blog-theme) only when asked", async () => {
-		const without = fixtureApp();
-		await initProject({ cwd: without, ...quiet() });
-		expect(listFiles(without).some((file) => file.includes("(site)"))).toBe(false);
-
-		const dir = fixtureApp();
-		const host = fakeHost();
-		const report = await initProject({ cwd: dir, host, env: {}, blogTheme: true, database: "skip" });
-		expect(report.steps).toContainEqual(
-			expect.objectContaining({ name: "Add the blog theme", status: "done", detail: expect.stringMatching(/files$/) }),
-		);
-		// The typography plugin is installed by its own step, before the theme.
-		expect(report.steps.map((step) => step.id)).toEqual(["install", "migrate", "typography", "theme"]);
-		expect(JSON.parse(read(dir, "monti.schema.json")).site.previewPath).toBe("/preview");
-		const next = report.next.join("\n");
-		// The theme was shaped by the schema that was just written: no manual edit of its field names is left.
-		expect(next).not.toContain("excerptField");
-		expect(report.notes.join("\n")).toContain("theme.config.ts from monti.schema.json: collection post at /posts");
-		expect(read(dir, "components/monti/blog-theme/theme.config.ts")).toContain('routeBase: "/posts"');
-		expect(report.created).toContain("app/(site)/posts/page.tsx");
-		// Tailwind is there, the typography plugin is not: with no prompts the plugin is installed and the global CSS gets the lines.
-		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).toContain(
-			"add -D @tailwindcss/typography",
-		);
-		const css = read(dir, "app/globals.css");
-		expect(css).toContain('@import "@monti-cms/core/render.css";');
-		expect(css).toContain('@import "@monti-cms/blocks/render.css";');
-		expect(css).toContain('@plugin "@tailwindcss/typography";');
-		expect(report.updated).toContain("app/globals.css");
-		expect(next).not.toContain("typography");
-	});
-
-	it("asks before changing the global CSS for the theme, and prints the exact lines when declined", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost();
-		const prompter = scriptedPrompter({
-			"Add these to app/globals.css": false,
-			"Add withCms": true,
-			"Add .env.local": true,
-		});
-		const report = await initProject({
-			cwd: dir,
-			host,
-			env: {},
-			prompter,
-			...ANSWERED,
-			blogTheme: true,
-		});
-		expect(read(dir, "app/globals.css")).toBe('@import "tailwindcss";\n');
-		// The plugin is installed because the theme was chosen; only the edit of the CSS was declined.
-		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).toContain(
-			"add -D @tailwindcss/typography",
-		);
-		const next = report.next.join("\n");
-		expect(next).toContain('@import "@monti-cms/core/render.css";');
-		expect(next).toContain('@plugin "@tailwindcss/typography";');
-		expect(next).not.toContain("blocks/render.css");
-		expect(prompter.notes.some((note) => note.title === "Change to app/globals.css")).toBe(true);
 	});
 
 	it("opts the admin page out of the instant validation only when next.config turns on cacheComponents", async () => {
@@ -548,7 +478,6 @@ describe("monti init and files that already exist", () => {
 			Extra: [],
 			blocks: "all",
 			admin: "/studio",
-			"blog theme": false,
 			"Add withCms": true,
 		});
 		await initProject({ cwd: asked, ...quiet(), prompter });
@@ -568,11 +497,11 @@ describe("monti init and files that already exist", () => {
 		expect(read(set, ".env.local")).toBe("MONTI_SECRET=keep-me\nDATABASE_URL=postgres://a:b@c:5432/d\n");
 	});
 
-	it("an existing DATABASE_URL in .env.local counts as a database: migrate runs", async () => {
+	it("an existing DATABASE_URL in .env.local counts as a database: it is not asked for again", async () => {
 		const dir = fixtureApp({ ".env.local": "DATABASE_URL=postgres://u:p@h:5432/d\n" });
-		const host = fakeHost();
-		await initProject({ cwd: dir, host, env: {} });
-		expect(host.migrate).toHaveBeenCalledTimes(1);
+		const report = await initProject({ cwd: dir, host: fakeHost(), env: {} });
+		expect(report.next.join("\n")).not.toContain("DATABASE_URL in .env.local");
+		expect(report.next.join("\n")).toContain("Create the tables");
 	});
 
 	it("when next.config cannot be edited safely it is left as is and the exact change is printed", async () => {
@@ -652,7 +581,6 @@ describe("monti init and files that already exist", () => {
 			Extra: [],
 			blocks: "all",
 			admin: "/studio",
-			"blog theme": false,
 			"Add withCms": true,
 			resolveJsonModule: false,
 			"to .gitignore": false,
@@ -674,11 +602,9 @@ describe("monti init --dry-run", () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const host = fakeHost();
-		const report = await initProject({ cwd: dir, host, env: {}, dryRun: true, database: "docker", extras: "ai" });
+		const report = await initProject({ cwd: dir, host, env: {}, dryRun: true, database: "skip", extras: "ai" });
 		expect(listFiles(dir)).toEqual(before);
-		expect(host.run).not.toHaveBeenCalled();
 		expect(host.install).not.toHaveBeenCalled();
-		expect(host.migrate).not.toHaveBeenCalled();
 		expect(report.dryRun).toBe(true);
 		expect(report.created).toContain("monti.config.ts");
 		expect(report.steps.every((step) => step.status === "planned")).toBe(true);
@@ -698,16 +624,7 @@ describe("monti init when something goes wrong", () => {
 			expect.objectContaining({ name: "Install packages", status: "failed", detail: "`pnpm add` failed" }),
 		);
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
-		expect(host.migrate).not.toHaveBeenCalled();
-		expect(report.recovery[0]).toMatch(/^pnpm add @monti-cms\/core/);
-	});
-
-	it("a failed migrate marks the run as not ok", async () => {
-		const dir = fixtureApp();
-		const host = fakeHost({ migrate: async () => false });
-		const report = await initProject({ cwd: dir, host, env: {}, database: "postgres://a:b@c:5432/d" });
-		expect(report.ok).toBe(false);
-		expect(report.steps.at(-1)).toMatchObject({ name: "Run monti migrate", status: "failed" });
+		expect(report.next.join("\n")).toMatch(/Install the packages:\npnpm add @monti-cms\/core/);
 	});
 
 	it("a write that fails stops with the list of what was written before it", async () => {
@@ -795,21 +712,5 @@ describe("unifiedDiff", () => {
 			"-export default nextConfig;",
 			"+export default withCms(nextConfig);",
 		]);
-	});
-});
-
-describe("the real host", () => {
-	it("finds a free port, and tells an open database port from a closed one", async () => {
-		const server = net.createServer();
-		await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-		const { port } = server.address() as net.AddressInfo;
-		try {
-			expect(await defaultInitHost.databaseReachable(`postgres://u:p@127.0.0.1:${port}/db`, 0)).toBe(true);
-			expect(await defaultInitHost.freePort(port)).toBeGreaterThan(port);
-		} finally {
-			await new Promise((resolve) => server.close(resolve));
-		}
-		expect(await defaultInitHost.databaseReachable(`postgres://u:p@127.0.0.1:${port}/db`, 0)).toBe(false);
-		expect(await defaultInitHost.databaseReachable("not a url", 0)).toBe(false);
 	});
 });

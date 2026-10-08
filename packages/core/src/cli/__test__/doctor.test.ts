@@ -8,7 +8,11 @@ import { runCli } from "../index";
 import { migrate } from "../migrate";
 import { byId, configText, project, setEnv, statusesOf } from "./doctor-helpers";
 
-const DATABASE = process.env.CMS_TEST_DATABASE_URL ?? "";
+// The pg driver warns about sslmode=require; verify-full is what it means today, so the healthy project has no warning.
+const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
+	/sslmode=(require|prefer|verify-ca)/,
+	"sslmode=verify-full",
+);
 const STRONG_SECRET = "h8Kq2vXw9RtZbN4mYcLs7PdFgJe3UaQo6WiTnV5xBzE=";
 
 /** An app folder and the output of `monti doctor --json` in it. */
@@ -182,6 +186,36 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "database/url").message).toContain("postgres://");
 	});
 
+	it("warns about sslmode=require|prefer|verify-ca without uselibpqcompat, and says what to change", async () => {
+		for (const mode of ["require", "prefer", "verify-ca"]) {
+			setEnv({ DATABASE_URL: `postgres://u:p@db.example.com:5432/blog?sslmode=${mode}` });
+			const { report } = await doctor(project());
+			const url = byId(report, "database/url");
+			expect(url.status).toBe("warn");
+			expect(url.message).toContain("SECURITY WARNING");
+			expect(url.fix).toContain("sslmode=verify-full");
+		}
+		for (const query of ["sslmode=verify-full", "sslmode=require&uselibpqcompat=true", ""]) {
+			setEnv({ DATABASE_URL: `postgres://u:p@db.example.com:5432/blog${query ? `?${query}` : ""}` });
+			const { report } = await doctor(project());
+			expect(byId(report, "database/url").status).toBe("ok");
+		}
+	});
+
+	it("lists what Monti decided on its own as Topic: value [source], one line each", async () => {
+		setEnv({ DATABASE_URL: "postgres://u:p@localhost:5432/monti", MONTI_SECRET: STRONG_SECRET });
+		const { report } = await doctor(project());
+		const automatic = byId(report, "config/automatic");
+		expect(automatic.status).toBe("ok");
+		const lines = automatic.message.split("\n");
+		expect(lines.length).toBeGreaterThan(0);
+		for (const line of lines) expect(line).toMatch(/^[^:]+: .+ \[.+\]$/);
+		const database = lines.find((line) => line.startsWith("Database:"));
+		expect(database).toContain("localhost:5432/monti");
+		expect(database).toContain("from env DATABASE_URL");
+		expect(automatic.message).not.toContain("u:p");
+	});
+
 	it("warns about a weak MONTI_SECRET and never prints it", async () => {
 		setEnv({ MONTI_SECRET: "changeme" });
 		const { report } = await doctor(project());
@@ -254,35 +288,18 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
 	});
 
-	it("warns about a root layout without suppressHydrationWarning and a theme without its styles", async () => {
+	it("warns about a root layout without suppressHydrationWarning, and is quiet once it has it", async () => {
 		setEnv();
-		const dir = project({
-			"app/layout.tsx": '<html lang="en"><body /></html>\n',
-			"app/globals.css": '@import "tailwindcss";\n',
-			"components/monti/article-body/article-body.tsx": "export {};\n",
-		});
+		const dir = project({ "app/layout.tsx": '<html lang="en"><body /></html>\n' });
 		const { report } = await doctor(dir);
 		const hydration = byId(report, "next/hydration");
 		expect(hydration.status).toBe("warn");
 		expect(hydration.fix).toContain("suppressHydrationWarning");
-		const styles = byId(report, "next/theme-styles");
-		expect(styles.status).toBe("warn");
-		expect(styles.fix).toContain('@import "@monti-cms/core/render.css";');
-		expect(styles.fix).toContain('@plugin "@tailwindcss/typography";');
+		expect(report.checks.some((check) => check.id === "next/theme-styles")).toBe(false);
 
-		const fixed = project({
-			"app/layout.tsx": '<html lang="en" suppressHydrationWarning><body /></html>\n',
-			"app/globals.css":
-				'@import "tailwindcss";\n@import "@monti-cms/core/render.css";\n@plugin "@tailwindcss/typography";\n',
-			"components/monti/article-body/article-body.tsx": "export {};\n",
-			"package.json": JSON.stringify({
-				dependencies: { next: "16.4.0" },
-				devDependencies: { "@tailwindcss/typography": "^0.5.0" },
-			}),
-		});
+		const fixed = project({ "app/layout.tsx": '<html lang="en" suppressHydrationWarning><body /></html>\n' });
 		const again = await doctor(fixed);
 		expect(byId(again.report, "next/hydration").status).toBe("ok");
-		expect(byId(again.report, "next/theme-styles").status).toBe("ok");
 	});
 
 	it("tells when the admin files sit at a different path than the config says", async () => {
@@ -301,7 +318,7 @@ describe("monti doctor on a project with missing settings", () => {
 	});
 });
 
-describe("monti doctor on a project with leftovers of the old setup", () => {
+describe("monti doctor on a project that still has the old setup", () => {
 	it("gives the exact steps for the old config files, env names, route group, and options", async () => {
 		setEnv({
 			CMS_DATABASE_URL: "postgres://old",
@@ -323,14 +340,14 @@ describe("monti doctor on a project with leftovers of the old setup", () => {
 
 		const report = await runDoctor({ cwd: dir, env: process.env });
 
-		const files = byId(report, "leftovers/config-files");
+		const files = byId(report, "upgrade/config-files");
 		expect(files.status).toBe("warn");
 		expect(files.message).toContain("cms.config.ts and cms.server.ts");
 		expect(files.fix).toContain("one `export const cms = defineConfig");
 		expect(files.fix).toContain("Delete cms.config.ts and cms.server.ts");
 		expect(files.fix).toContain("lib/posts.ts");
 
-		const env = byId(report, "leftovers/env");
+		const env = byId(report, "upgrade/env");
 		expect(env.status).toBe("warn");
 		expect(env.where).toContain(".env.local");
 		expect(env.fix).toContain("rename CMS_DATABASE_URL to DATABASE_URL");
@@ -342,13 +359,13 @@ describe("monti doctor on a project with leftovers of the old setup", () => {
 		expect(secrets.fix).toContain("CMS_SECRET: rename it to MONTI_SECRET, keeping the same value");
 		expect(secrets.fix).toContain("AUTH_SECRET: delete it");
 
-		const groups = byId(report, "leftovers/route-groups");
+		const groups = byId(report, "upgrade/route-groups");
 		expect(groups.status).toBe("warn");
 		expect(groups.fix).toContain('git mv "app/(admin)/studio" "app/studio"');
 		// The files are still found through the group, so the Next files check passes.
 		expect(byId(report, "next/files").status).toBe("ok");
 
-		const text = byId(report, "leftovers/config-text");
+		const text = byId(report, "upgrade/config-text");
 		expect(text.status).toBe("warn");
 		expect(text.fix).toContain("host");
 		expect(text.fix).toContain("DATABASE_URL");
@@ -401,7 +418,7 @@ describe("monti doctor checks contributed by plugins", () => {
 		expect(byId(report, "demo/broken").message).toContain("boom");
 		// A plugin's group comes after the core ones.
 		expect(report.checks.findIndex((check) => check.group === "demo")).toBeGreaterThan(
-			report.checks.findIndex((check) => check.group === "leftovers"),
+			report.checks.findIndex((check) => check.group === "upgrade"),
 		);
 	});
 

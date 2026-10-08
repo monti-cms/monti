@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { checkImportBoundaryInDev, missingOptionalPeers, watchSchemaTypesInDev, withCms } from "../config";
+import { checkImportBoundaryInDev, watchSchemaTypesInDev, withCms } from "../config";
 
 let dirs: string[] = [];
 afterEach(() => {
@@ -20,56 +20,17 @@ const app = (files: Record<string, object>) => {
 	return dir;
 };
 
-describe("withCms: optional dependencies that are not installed", () => {
-	it("picks only the optional peers of CMS packages that cannot be found", () => {
-		const dir = app({
-			"package.json": { dependencies: { "@monti-cms/blocks": "x", "other-lib": "x" } },
-			"node_modules/@monti-cms/blocks/package.json": {
-				cmsPlugin: true,
-				peerDependenciesMeta: { mermaid: { optional: true }, recharts: { optional: true }, react: {} },
-			},
-			"node_modules/recharts/package.json": {},
-			// Optional dependencies of libraries that are not CMS packages are left alone.
-			"node_modules/other-lib/package.json": { peerDependenciesMeta: { nodemailer: { optional: true } } },
-		});
-		expect(missingOptionalPeers(dir)).toEqual(["mermaid"]);
+describe("withCms: what it adds", () => {
+	it("adds no stand-ins for packages that are not installed", () => {
+		const config = withCms({});
+		expect(config.turbopack).toBeUndefined();
+		expect(config.webpack).toBeUndefined();
 	});
 
-	it("plugin packages are found by the `cmsPlugin` marker, not by name", () => {
-		const dir = app({
-			"package.json": {
-				dependencies: { "acme-cms-chart": "x", "@monti-cms/core-lookalike": "x", "@monti-cms/admin": "x" },
-			},
-			"node_modules/acme-cms-chart/package.json": {
-				cmsPlugin: true,
-				peerDependenciesMeta: { d3: { optional: true } },
-			},
-			// A similar name without the marker is not a plugin.
-			"node_modules/@monti-cms/core-lookalike/package.json": {
-				peerDependenciesMeta: { nodemailer: { optional: true } },
-			},
-			// Core and admin packages are checked even without the marker.
-			"node_modules/@monti-cms/admin/package.json": { peerDependenciesMeta: { sonner: { optional: true } } },
-		});
-		expect(missingOptionalPeers(dir)).toEqual(["d3", "sonner"]);
-	});
-
-	it("empty list if package.json is missing or there are no CMS packages", () => {
-		expect(missingOptionalPeers(app({}))).toEqual([]);
-		expect(missingOptionalPeers(app({ "package.json": { dependencies: { "@monti-cms/core": "x" } } }))).toEqual([]);
-	});
-
-	it("anything installed outside the Turbopack root counts as missing", () => {
-		const outer = app({ "node_modules/mermaid/package.json": {} });
-		const root = path.join(outer, "site");
-		mkdirSync(path.join(root, "node_modules/@monti-cms/blocks"), { recursive: true });
-		writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { "@monti-cms/blocks": "x" } }));
-		writeFileSync(
-			path.join(root, "node_modules/@monti-cms/blocks/package.json"),
-			JSON.stringify({ cmsPlugin: true, peerDependenciesMeta: { mermaid: { optional: true } } }),
-		);
-		expect(missingOptionalPeers(root)).toEqual([]);
-		expect(missingOptionalPeers(root, realpathSync(root))).toEqual(["mermaid"]);
+	it("tells the server what it added, for the startup summary", () => {
+		withCms({ basePath: "/blog" });
+		expect(process.env.MONTI_WITHCMS).toContain("transpilePackages += @monti-cms/core");
+		expect(process.env.MONTI_WITHCMS).toContain('NEXT_PUBLIC_CMS_BASE_PATH = "/blog"');
 	});
 });
 

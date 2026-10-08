@@ -36,14 +36,9 @@ const options = {
 	extras: { type: "string" },
 	blocks: { type: "string" },
 	"admin-path": { type: "string" },
-	"blog-theme": { type: "boolean" },
-	"no-blog-theme": { type: "boolean" },
 	overwrite: { type: "boolean" },
 	"no-install": { type: "boolean" },
-	"no-migrate": { type: "boolean" },
-	"no-docker-start": { type: "boolean" },
 	"package-manager": { type: "string" },
-	resume: { type: "boolean" },
 } as const;
 
 /** Runs `monti init <argv>` and returns the exit code: 0 done, 1 an error or a step that failed, 130 cancelled. */
@@ -59,9 +54,6 @@ export async function runInitCommand(
 		if (manager !== undefined && !(PACKAGE_MANAGERS as readonly string[]).includes(manager)) {
 			throw new Error(`--package-manager "${manager}" must be one of ${PACKAGE_MANAGERS.join(", ")}`);
 		}
-		if (values["blog-theme"] && values["no-blog-theme"]) {
-			throw new Error("--blog-theme and --no-blog-theme cannot both be given");
-		}
 		// Prompts only when a person is at the terminal and did not ask for none.
 		const interactive =
 			(extras.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY)) && !values.yes && !json;
@@ -72,9 +64,6 @@ export async function runInitCommand(
 			dryRun: values["dry-run"],
 			overwrite: values.overwrite,
 			install: values["no-install"] ? false : undefined,
-			migrate: values["no-migrate"] ? false : undefined,
-			dockerStart: values["no-docker-start"] ? false : undefined,
-			resume: values.resume,
 			packageManager: manager as PackageManager | undefined,
 			database: values.database,
 			databaseSchema: values["database-schema"],
@@ -86,7 +75,6 @@ export async function runInitCommand(
 			extras: values.extras,
 			blocks: values.blocks,
 			adminPath: values["admin-path"],
-			blogTheme: values["blog-theme"] ? true : values["no-blog-theme"] ? false : undefined,
 			log: json ? undefined : io.log,
 			host: extras.host,
 		});

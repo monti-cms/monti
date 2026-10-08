@@ -15,22 +15,6 @@ export function addEnvToGitignore(existing: string | undefined): string {
 	return `${base}${separator}${base === "" ? "" : "\n"}# Local env files (monti init)\n${missing.join("\n")}\n`;
 }
 
-/** Whether a `.gitignore` text covers the `.monti/` folder (where `monti init` keeps its progress). */
-export function ignoresState(gitignore: string): boolean {
-	return gitignore
-		.split(/\r?\n/)
-		.map((line) => line.trim())
-		.some((line) => [".monti", ".monti/", "/.monti", "/.monti/", ".monti/*"].includes(line));
-}
-
-/** `.gitignore` text with `.monti/` added when it is not covered; the other lines are untouched. `existing` is `undefined` for a missing file. */
-export function addStateToGitignore(existing: string | undefined): string {
-	if (ignoresState(existing ?? "")) return existing ?? "";
-	const base = existing ?? "";
-	const separator = base === "" || base.endsWith("\n") ? "" : "\n";
-	return `${base}${separator}${base === "" ? "" : "\n"}# Progress of monti init (monti init --resume)\n.monti/\n`;
-}
-
 type Json = Record<string, unknown>;
 
 /**
@@ -77,49 +61,4 @@ function sortKeys(value: unknown): unknown {
 		);
 	}
 	return value;
-}
-
-/**
- * `pnpm-workspace.yaml` text that lets esbuild run its install script (`allowBuilds: esbuild: true`), which pnpm 12 asks for before it finishes an install. `existing`
- * is `undefined` for a missing file. Returns `"ok"` when `allowBuilds.esbuild` is already `true` or `false` (the person decided), the new text when it is missing or is
- * the placeholder pnpm writes (`set this to true or false`), and `undefined` when the file is shaped so that a text edit would not be safe (a flow map with other
- * entries). It never writes a second `allowBuilds` or a second `esbuild` key, and the other lines are untouched.
- */
-export function allowEsbuildBuild(existing: string | undefined): string | "ok" | undefined {
-	const text = existing ?? "";
-	const eol = text.includes("\r\n") ? "\r\n" : "\n";
-	if (text.trim() === "") return `allowBuilds:${eol}  esbuild: true${eol}`;
-	const lines = text.split(/\r?\n/);
-	const at = lines.findIndex((line) => /^allowBuilds\s*:/.test(line));
-	if (at === -1) {
-		const base = text.endsWith("\n") ? text : `${text}${eol}`;
-		return `${base}allowBuilds:${eol}  esbuild: true${eol}`;
-	}
-	const rest = (lines[at] ?? "")
-		.replace(/^allowBuilds\s*:/, "")
-		.replace(/\s+#.*$/, "")
-		.trim();
-	if (rest.startsWith("{")) {
-		if (rest === "{}")
-			return [...lines.slice(0, at), "allowBuilds:", "  esbuild: true", ...lines.slice(at + 1)].join(eol);
-		return /\besbuild\s*:\s*(true|false)\b/.test(rest) ? "ok" : undefined;
-	}
-	if (rest !== "" && rest !== "~" && rest !== "null") return undefined;
-	let end = at + 1;
-	while (end < lines.length && (lines[end] === "" || /^[ \t#]/.test(lines[end] ?? ""))) end++;
-	const block = lines.slice(at + 1, end);
-	const key = block.findIndex((line) => /^[ \t]+["']?esbuild["']?\s*:/.test(line));
-	if (key !== -1) {
-		const line = block[key] ?? "";
-		const value = line
-			.replace(/^[ \t]+["']?esbuild["']?\s*:/, "")
-			.replace(/\s+#.*$/, "")
-			.trim();
-		if (value === "true" || value === "false") return "ok";
-		const fixed = line.replace(/^([ \t]+["']?esbuild["']?\s*:).*$/, "$1 true");
-		return [...lines.slice(0, at + 1 + key), fixed, ...lines.slice(at + 2 + key)].join(eol);
-	}
-	const child = block.find((line) => /^[ \t]+\S/.test(line) && !/^\s*#/.test(line));
-	const indent = /^([ \t]+)/.exec(child ?? "")?.[1] ?? "  ";
-	return [...lines.slice(0, at + 1), `${indent}esbuild: true`, ...lines.slice(at + 1)].join(eol);
 }

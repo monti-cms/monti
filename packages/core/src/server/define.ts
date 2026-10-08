@@ -8,6 +8,7 @@ import type { PluginSecrets } from "../secrets";
 import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";
 import type { Site } from "../site";
+import type { Decision } from "./decision";
 
 /**
  * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, hooks and the public API. Read on the server only.
@@ -41,6 +42,8 @@ export interface DatabaseAdapter {
 	}): Promise<MigrationSummary | undefined | void>;
 	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti migrate`. */
 	describeTarget?(): string | undefined;
+	/** What the adapter decided on its own (which environment variable the URL came from, ...), for the startup summary and `monti doctor`. */
+	decisions?(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
 	/**
 	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
 	 * An adapter implements it over its own database; plugins never see the database.
@@ -166,6 +169,8 @@ export interface AuthCreateContext {
 export interface AuthAdapter {
 	readonly name: string;
 	create(context: AuthCreateContext): CmsAuth;
+	/** What the login decided on its own (which environment variables the providers read, whether the development bypass is on, and why), for the startup summary and `monti doctor`. */
+	decisions?(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
 	/** Checks `monti doctor` runs for the login, listed under `auth/`: the providers' settings, the admins, the callback URL and host trust. */
 	readonly checks?: readonly DoctorCheck[];
 }

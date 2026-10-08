@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initProject } from "../init";
 import { detectApp } from "../init-detect";
-import { allowEsbuildBuild } from "../init-edits";
 import { localesFromFileNames } from "../locale-names";
 import { fakeHost, fixtureApp, POST_MDX, read, scriptedPrompter } from "./init-helpers";
 
@@ -104,7 +103,6 @@ describe("monti init and the languages of the content", () => {
 			extras: "none",
 			blocks: "none",
 			adminPath: "/studio",
-			blogTheme: false,
 		});
 		expect(prompter.asked.find((question) => question.includes("Languages of the site"))).toMatch(
 			/Found ko, en in the file names of content\/posts\//,
@@ -139,64 +137,5 @@ describe("monti init and the languages of the content", () => {
 		const dir = fixtureApp({ "content/posts/a.mdx": POST_MDX("a"), "content/posts/b.mdx": POST_MDX("b") });
 		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(report.answers.locales).toEqual(["en"]);
-	});
-});
-
-describe("allowEsbuildBuild", () => {
-	it("writes the lines for a missing or empty file", () => {
-		expect(allowEsbuildBuild(undefined)).toBe("allowBuilds:\n  esbuild: true\n");
-		expect(allowEsbuildBuild("")).toBe("allowBuilds:\n  esbuild: true\n");
-	});
-
-	it("appends the block to a file that has none, whatever its last line", () => {
-		expect(allowEsbuildBuild("packages:\n  - a")).toBe("packages:\n  - a\nallowBuilds:\n  esbuild: true\n");
-		expect(allowEsbuildBuild("packages: []\n")).toBe("packages: []\nallowBuilds:\n  esbuild: true\n");
-	});
-
-	it("replaces pnpm's placeholder in place, keeping the indentation and the neighbours", () => {
-		expect(
-			allowEsbuildBuild("allowBuilds:\n    sharp: true\n    esbuild: set this to true or false\n    x: false\n"),
-		).toBe("allowBuilds:\n    sharp: true\n    esbuild: true\n    x: false\n");
-		expect(allowEsbuildBuild('allowBuilds:\n  "esbuild": "set this to true or false"\n')).toBe(
-			'allowBuilds:\n  "esbuild": true\n',
-		);
-	});
-
-	it("inserts esbuild into an allowBuilds that lacks it, with the indentation of its children", () => {
-		expect(allowEsbuildBuild("allowBuilds:\n    sharp: true\nother: 1\n")).toBe(
-			"allowBuilds:\n    esbuild: true\n    sharp: true\nother: 1\n",
-		);
-		expect(allowEsbuildBuild("allowBuilds:\nother: 1\n")).toBe("allowBuilds:\n  esbuild: true\nother: 1\n");
-		expect(allowEsbuildBuild("allowBuilds: {}\n")).toBe("allowBuilds:\n  esbuild: true\n");
-	});
-
-	it("leaves true and false alone", () => {
-		expect(allowEsbuildBuild("allowBuilds:\n  esbuild: true\n")).toBe("ok");
-		expect(allowEsbuildBuild("allowBuilds:\n  esbuild: false # no\n")).toBe("ok");
-		expect(allowEsbuildBuild("allowBuilds: { esbuild: true }\n")).toBe("ok");
-	});
-
-	it("gives up on a shape it would have to guess at", () => {
-		expect(allowEsbuildBuild("allowBuilds: { sharp: true }\n")).toBeUndefined();
-		expect(allowEsbuildBuild("allowBuilds: *anchor\n")).toBeUndefined();
-	});
-
-	it("keeps Windows line endings", () => {
-		expect(allowEsbuildBuild("packages: []\r\nallowBuilds:\r\n  sharp: true\r\n")).toBe(
-			"packages: []\r\nallowBuilds:\r\n  esbuild: true\r\n  sharp: true\r\n",
-		);
-	});
-
-	it("the result is stable: running it on its own output changes nothing", () => {
-		for (const input of [
-			undefined,
-			"packages: []\n",
-			"allowBuilds:\n  esbuild: set this to true or false\n",
-			"allowBuilds: {}\n",
-		]) {
-			const once = allowEsbuildBuild(input);
-			expect(typeof once).toBe("string");
-			expect(allowEsbuildBuild(once as string)).toBe("ok");
-		}
 	});
 });

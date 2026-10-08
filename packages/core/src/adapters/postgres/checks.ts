@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import { type DoctorCheck, type DoctorContext, fail, ok, skip, warn } from "../../plugin/doctor";
-import { normalizeConnectionString } from "./connection";
+import { SSLMODE_FIX, sslmodeWarning } from "./connection";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain";
 
 /** How long a check waits for the database before it calls it unreachable. */
@@ -24,7 +24,7 @@ const schemaOf = (settings: Settings, ctx: DoctorContext): string =>
 /** Opens a short-lived pool of its own (the adapter's pool waits for a connection without end), runs `fn` and closes it. */
 async function withPool<T>(connectionString: string, fn: (pool: Pool) => Promise<T>): Promise<T> {
 	const pool = new Pool({
-		connectionString: normalizeConnectionString(connectionString),
+		connectionString,
 		max: 1,
 		connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
 	});
@@ -70,7 +70,7 @@ export function postgresChecks(settings: Settings): readonly DoctorCheck[] {
 			if (!value) {
 				return fail("DATABASE_URL is not set, so there is no database to connect to", {
 					where: DATABASE_URL_WHERE,
-					fix: "put your Postgres URL in DATABASE_URL, for example DATABASE_URL=postgres://user:password@localhost:5432/monti. `monti init --database docker` writes a docker-compose.yml for a local one",
+					fix: "put your Postgres URL in DATABASE_URL, for example DATABASE_URL=postgres://user:password@localhost:5432/monti. ",
 				});
 			}
 			if (/^["']|["']$|\s/.test(value)) {
@@ -92,9 +92,10 @@ export function postgresChecks(settings: Settings): readonly DoctorCheck[] {
 					fix: "write it as postgres://user:password@host:5432/database (a password with special characters such as @ or / must be percent-encoded)",
 				});
 			}
-			return ok(`Postgres at ${target}`, {
-				where: settings.connectionString ? "postgres({ connectionString })" : "DATABASE_URL",
-			});
+			const where = settings.connectionString ? "postgres({ connectionString })" : "DATABASE_URL";
+			const ssl = sslmodeWarning(value);
+			if (ssl) return warn(`Postgres at ${target}; ${ssl}`, { where, fix: SSLMODE_FIX });
+			return ok(`Postgres at ${target}`, { where });
 		},
 	};
 

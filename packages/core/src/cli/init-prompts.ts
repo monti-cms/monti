@@ -51,7 +51,7 @@ export class InitCancelled extends Error {
 
 /** The raw flag values (strings as typed). `undefined` means the flag was not given. */
 export interface InitAnswerFlags {
-	/** A `postgres://` URL, `docker` or `skip`. */
+	/** A `postgres://` URL, or `skip` (fill `DATABASE_URL` in later). */
 	readonly database?: string;
 	/** The Postgres schema for the tables (`DATABASE_SCHEMA`). */
 	readonly databaseSchema?: string;
@@ -67,7 +67,6 @@ export interface InitAnswerFlags {
 	/** `all`, `none`, `default` (the light set) or comma-separated block names. */
 	readonly blocks?: string;
 	readonly adminPath?: string;
-	readonly blogTheme?: boolean;
 }
 
 const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
@@ -102,9 +101,7 @@ const EXTRAS = ["ai", "git-sync"] as const;
 /** Every validator returns the error text, or `undefined` when the value is fine. The same text is used for a flag and for a prompt. */
 const check = {
 	database: (value: string) =>
-		["docker", "skip"].includes(value) || POSTGRES_URL.test(value)
-			? undefined
-			: 'must be a postgres:// URL, "docker" (a local Postgres in Docker) or "skip"',
+		value === "skip" || POSTGRES_URL.test(value) ? undefined : 'must be a postgres:// URL or "skip"',
 	databaseSchema: (value: string) =>
 		value === "" || /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value)
 			? undefined
@@ -163,7 +160,7 @@ export function validateFlags(flags: InitAnswerFlags): void {
 }
 
 const databaseOf = (value: string): InitAnswers["database"] =>
-	value === "docker" ? { kind: "docker" } : value === "skip" ? { kind: "skip" } : { kind: "url", url: value };
+	value === "skip" ? { kind: "skip" } : { kind: "url", url: value };
 
 /** The steps for the GitHub OAuth app, with the callback URL for the site URL. */
 export function oauthInstructions(siteUrl: string): string {
@@ -191,7 +188,6 @@ export const QUESTIONS = {
 	blocks: "Which body blocks do you want?",
 	blockList: "Pick the blocks",
 	adminPath: "Where should the admin live?",
-	blogTheme: "Install the blog theme pages (monti add blog-theme)? Skip it if your blog already has pages",
 } as const;
 
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
@@ -223,10 +219,9 @@ export async function collectAnswers(
 			message: QUESTIONS.database,
 			options: [
 				{ value: "url", label: "I have a Postgres URL", hint: "paste it next" },
-				{ value: "docker", label: "Use a local Postgres in Docker", hint: "writes docker-compose.yml" },
-				{ value: "skip", label: "Skip, I will fill DATABASE_URL in later" },
+				{ value: "skip", label: "Later, I will fill DATABASE_URL in" },
 			],
-			initial: "docker",
+			initial: "url",
 		});
 		if (choice === "url") {
 			const url = await prompter.text({
@@ -236,12 +231,12 @@ export async function collectAnswers(
 					POSTGRES_URL.test(value.trim()) ? undefined : "must start with postgres:// or postgresql://",
 			});
 			database = { kind: "url", url: url.trim() };
-		} else database = { kind: choice };
+		} else database = { kind: "skip" };
 	} else database = { kind: "skip" };
 
-	// Schema of the tables. Not asked for the Docker database, which is yours alone.
+	// Schema of the tables
 	let databaseSchema = flags.databaseSchema?.trim() || undefined;
-	if (flags.databaseSchema === undefined && prompter && database.kind !== "docker") {
+	if (flags.databaseSchema === undefined && prompter) {
 		databaseSchema =
 			(
 				await prompter.text({
@@ -359,10 +354,6 @@ export async function collectAnswers(
 				).trim()
 			: DEFAULT_INIT_ADMIN_PATH);
 
-	// Blog theme
-	const blogTheme =
-		flags.blogTheme ?? (prompter ? await prompter.confirm({ message: QUESTIONS.blogTheme, initial: false }) : false);
-
 	return {
 		database,
 		...(databaseSchema ? { databaseSchema } : {}),
@@ -375,7 +366,6 @@ export async function collectAnswers(
 		gitSync: extras.includes("git-sync"),
 		blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
 		adminPath,
-		blogTheme,
 	};
 }
 

@@ -27,7 +27,6 @@
 		"./schema-change": "./src/schema-change/index.ts",
 		"./schema-edit": "./src/schema-edit/index.ts",
 		"./schema.json": "./schema.json",
-		"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 		"./render.css": "./render.css"
 	},
 	"bin": {
@@ -79,7 +78,6 @@
 		"bin",
 		"dist",
 		"registry",
-		"stubs",
 		"README.md",
 		"render.css",
 		"schema.json"
@@ -167,7 +165,6 @@
 				"default": "./dist/schema-edit/index.js"
 			},
 			"./schema.json": "./schema.json",
-			"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 			"./render.css": "./render.css"
 		}
 	},

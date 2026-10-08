@@ -28,7 +28,6 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | (라우트 핸들러와 관리자가 알아서 붙인다) | `nextHost` |
-| `@monti-cms/nextjs/proxy` | `proxy.ts` | `cmsProxy(cms)`·`setupResponse(request, cms)`·`loginProblem(cms)` |
 
 ### 라우트 핸들러
 
@@ -53,7 +52,7 @@ const nextConfig: NextConfig = {};
 export default withCms(nextConfig);
 ```
 
-설정 파일은 잇지 않는다(설정은 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나이고, 관리자는 그 인스턴스에서 사이트를 받는다). 코어 패키지를 앱과 함께 빌드하고, Next의 `basePath`를 서버·브라우저 번들에 알리고, 설치하지 않은 CMS 패키지의 선택 의존성은 빈 모듈로 잇는다(코어 README의 "선택 의존성"). `next dev`에서는 `"use client"` 파일이 서버 전용 설정을 불러올 때 서버를 시작할 때마다 한 번 경고하기도 한다("파일" 참고).
+설정 파일은 잇지 않는다(설정은 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나이고, 관리자는 그 인스턴스에서 사이트를 받는다). 코어 패키지를 앱과 함께 빌드하고, Next의 `basePath`를 서버·브라우저 번들에 알린다. 설정에 더하는 것은 이것뿐이고, 서버가 시작 요약에 그대로 출력한다(`withCms`를 빼면 되돌릴 수 있고, 그러면 `transpilePackages: ["@monti-cms/core"]`를 직접 적는다). 대신할 파일은 쓰지 않는다. 설치하지 않은 선택 패키지(`chart()`의 `recharts`)는 번들러가 내는 "module not found" 오류가 된다. `next dev`에서는 `"use client"` 파일이 서버 전용 설정을 불러올 때 서버를 시작할 때마다 한 번 경고하기도 한다("파일" 참고).
 
 ### 관리자 페이지·레이아웃
 
@@ -124,11 +123,13 @@ export const cms = defineConfig({
 
 ## 미리보기 페이지
 
-초안을 보여 주는 사이트 페이지(`site.previewPath`, 예: `/preview/ko/posts/<slug>`)는 `cms.read.getPreview`를 직접 부르지 말고 `@monti-cms/nextjs`의 `previewEntry(cms, { collection, slug, locale })`로 읽는다. 읽기 전에 요청 헤더를 인스턴스에 붙이므로, 콜드 스타트 뒤 첫 요청이 미리보기이거나 서버리스 인스턴스가 사이트 페이지만 처리했더라도 관리자 세션(`next dev`에서는 개발용 우회)을 읽을 수 있다. 관리자가 아니면 `null`이라 페이지는 404를 낸다. `examples/blog`와 레지스트리의 `blog-theme`에 이 페이지가 있다.
+초안을 보여 주는 사이트 페이지(`site.previewPath`, 예: `/preview/ko/posts/<slug>`)는 `cms.read.getPreview`를 직접 부르지 말고 `@monti-cms/nextjs`의 `previewEntry(cms, { collection, slug, locale })`로 읽는다. 읽기 전에 요청 헤더를 인스턴스에 붙이므로, 콜드 스타트 뒤 첫 요청이 미리보기이거나 서버리스 인스턴스가 사이트 페이지만 처리했더라도 관리자 세션(`next dev`에서는 개발용 우회)을 읽을 수 있다. 관리자가 아니면 `null`이라 페이지는 404를 낸다. `examples/blog`에 이 페이지가 있다.
 
-## 로그인 설정 없이 프로덕션
+## 상태 코드와 로그인 설정
 
-Cache Components에서는 페이지가 오류 상태를 보낼 수 없으므로(`200`을 보낸 뒤에 스트리밍한다), 프로덕션에서 `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_SECRET`이 없는 사이트는 관리자와 초안 미리보기에 `200`과 로그에 남은 오류로 답하게 된다. 프록시는 어떤 페이지보다 먼저 답한다. `proxy.ts`의 `export const proxy = cmsProxy(cms)`(앱에 프록시가 없으면 `monti init`이 쓰고, 블로그 테마의 프록시도 같은 일을 한다)는 관리자 경로와 `site.previewPath`에 `monti doctor`를 가리키는 페이지와 함께 `503`을 보내고 전체 문제를 한 번 로그에 남긴다. 다른 요청은 그대로 지나가고, `next dev`에서는 아무것도 하지 않는다. 자기 프록시가 있는 앱은 `setupResponse(request, cms)`를 먼저 부르고, `undefined`가 아니면 그 값을 돌려준다.
+**404와 308.** Monti는 `proxy.ts`를 주지 않는다. 페이지가 다른 Next 페이지처럼 `notFound()`와 `permanentRedirect()`를 부른다. `cacheComponents`가 꺼져 있으면 진짜 `404`와 `308`이다. 켜져 있으면 Next가 이미 페이지의 셸을 `200`으로 보냈으므로, 없는 글은 `noindex`가 붙은 페이지가 되고 옛 주소는 브라우저 안의 리다이렉트가 된다. 검색엔진은 이를 soft 404로 볼 수 있다. 엄격한 상태 코드가 필요하면 [엄격한 상태 레시피](../../docs/recipes/strict-status.md)에 짧은 `proxy.ts`와 테스트된 함수가 있다.
+
+**로그인 설정 없는 프로덕션.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_SECRET` 중 하나라도 없으면 관리자 레이아웃이 `monti doctor`를 가리키는 "아직 설정되지 않았습니다" 화면을 보여 주고 전체 문제를 한 번 로그에 남긴다. 프로덕션에서 메시지를 숨기는 Next의 오류 페이지 대신이다. 공개 페이지가 아니라 관리자이므로 상태는 Next가 보내는 대로다(Cache Components에서는 `200`). `next dev`에서는 개발 로그인을 쓰므로 아무것도 보이지 않는다.
 
 ## 올리기
 

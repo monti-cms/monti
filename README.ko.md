@@ -29,16 +29,27 @@ bun add @monti-cms/core
 bunx monti init
 ```
 
-앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, Tailwind, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, 읽고 고칠 수 있는 파일을 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example`, `.env.local`(만든 `MONTI_SECRET`과 직접 입력한 값만)이다. 패키지를 설치하고, `next.config.ts`를 `withCms`로 감싸고(바뀐 내용을 diff로 보여 준다), DB에 닿으면 `monti migrate`를 돌린 뒤, 남은 일을 정확한 값과 함께 쉬운 말로 적어 주고, 동작하지 않을 때를 위해 `monti doctor`를 가리킨다.
+앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, 읽고 고칠 수 있는 파일을 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example`, `.env.local`(만든 `MONTI_SECRET`과 직접 입력한 값만)이다. 패키지를 설치하고, `next.config.ts`를 `withCms`로 감싸고(바뀐 내용을 diff로 보여 준다), 남은 일을 정확한 값과 함께 번호를 붙여 쉬운 말로 적어 준다. 데이터베이스는 건드리지 않는다. `monti migrate`가 첫 번째 번호 단계다.
 
-- **질문:** 데이터베이스(URL, 로컬 Docker Postgres, 나중에), GitHub 로그인, 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`), 블로그 테마 페이지 설치 여부.
+전체 흐름:
+
+```text
+설치 → monti init → monti migrate → monti doctor → pnpm dev → (선택) monti import
+```
+
+pnpm 12라면 설치 전에 `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다(pnpm 12는 esbuild의 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
+
+- **질문:** 데이터베이스(URL 또는 나중에), GitHub 로그인, 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`).
 - **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
-- **안전:** 묻지 않고 파일을 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 단계(설치, 테마, typography 플러그인, 테이블)가 실패하면 "Monti를 추가했다"고 하지 않고, 실패한 단계와 일을 끝낼 정확한 명령을 순서대로 적는다. `monti init --resume`은 끝나지 않은 단계만 다시 돌린다.
-- **pnpm 12:** esbuild의 설치 스크립트를 허락할 때까지 설치를 멈춘다. `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다(키를 두 번 쓰지 않는다). `monti init`이 확인하고 diff와 확인을 거쳐 고친다.
+- **안전:** 묻지 않고 파일을 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 설치가 실패하면 그렇게 말하고 설치 명령을 그대로 적어 준다. `monti init`을 다시 돌리면 이어서 하고, 있는 파일은 그대로 둔다.
 - **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
 - **기존 글:** Markdown·MDX 폴더가 있으면 끝에서 `monti import <폴더>`를 권한다. 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`). 둘은 `@monti-cms/blocks/mermaid`와 `@monti-cms/blocks/chart`에서 오고, 고른 경우에만 `mermaid`와 `recharts`가 따라오므로 고르지 않은 앱은 둘 다 불러오지도 설치하지도 않는다.
 
 공개 릴리스 전에는 `@monti-cms/core`를 먼저 릴리스 번들로 설치하고("설치" 참고), 나머지는 `monti init`이 설치한다. `monti`는 언제나 `@monti-cms/core`를 설치한 뒤에 돌린다. 설치 전의 `npx monti`는 관계없는 다른 패키지를 받는다. 모든 명령을 담은 짧은 안내는 core README의 [빠른 시작](packages/core/README.ko.md#빠른-시작-기존-next-앱)이다.
+
+## 조용히 하는 자동 동작은 없다
+
+서버가 시작되면 Monti가 스스로 정한 것과 이유를 짧은 블록 하나로 출력한다(데이터베이스와 그 출처 변수, 로그인, 개발 로그인 우회, 호스트 신뢰, `SITE_URL`, 스키마 파일, `withCms`가 더한 것). `MONTI_QUIET=1`로 숨기고, `monti doctor`가 같은 줄을 보여 준다. 자동 동작마다 끄거나 바꾸는 법은 [core README](packages/core/README.ko.md)의 "Monti가 스스로 정하는 것과 끄는 법"에 있다.
 
 ## 문제 해결: `monti doctor`
 
@@ -48,7 +59,7 @@ bunx monti init
 pnpm exec monti doctor
 ```
 
-설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, GitHub 로그인(등록할 콜백 URL, 관리자 id, `SITE_URL`), Next 파일 셋, 옛 두 파일 설정에서 남은 것(정확한 이름 바꾸기 단계와 함께), 플러그인이 더한 검사(git-sync 토큰과 웹훅, S3 값, AI 연결, MDX 문법 확장). `--online`은 git-sync 저장소와 S3 버킷도 확인하고, `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
+설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, GitHub 로그인(등록할 콜백 URL, 관리자 id, `SITE_URL`), Next 파일 셋, Monti가 스스로 정한 값과 그 출처, `upgrade/` 검사(개편 전 설정에서 올리는 사이트만 해당하며 소유자의 블로그 마이그레이션(#93) 뒤에 지운다), 플러그인이 더한 검사(git-sync 토큰과 웹훅, S3 값, AI 연결, MDX 문법 확장). `--online`은 git-sync 저장소와 S3 버킷도 확인하고, `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
 
 ## 패키지
 

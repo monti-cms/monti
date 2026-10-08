@@ -106,3 +106,18 @@ describe("folderKeyOf", () => {
 		expect(key("ko/posts/a.md", "content")).toBe("content/posts");
 	});
 });
+
+describe("readSource", () => {
+	it("refuses TOML front matter instead of importing it as the start of the body", () => {
+		const dir = mkdtempSync(path.join(tmpdir(), "monti-source-"));
+		try {
+			const file = path.join(dir, "old.md");
+			writeFileSync(file, '+++\ntitle = "Old"\n+++\n\nBody\n');
+			const read = readSource({ abs: file, rel: "old.md", key: "old.md", ext: "md" });
+			expect(read.error).toMatch(/TOML/);
+			expect(read.body).toBe("");
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});

@@ -6,12 +6,12 @@ import { IMPORT_HELP } from "./import/command";
  * prints the header and every section. A section is a two-space indented block that starts with the command name, the way `IMPORT_HELP` and `DOCTOR_HELP` are.
  */
 
-const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): asks a few questions, writes explicit files, installs the packages and runs the migrations.
+const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): asks a few questions, writes explicit files and installs the packages; run monti migrate next.
             Existing files are never overwritten without a yes. Every question has a flag; with --yes, --json, or no terminal nothing is asked.
               --yes, -y             Take the default for every question that has no flag
               --json                Print the result as JSON (implies --yes)
               --dry-run             Show what would be written and run, and change nothing
-              --database <v>        A postgres:// URL, "docker" (a local Postgres, writes docker-compose.yml and starts it) or "skip" (default skip)
+              --database <v>        A postgres:// URL, or "skip" to fill DATABASE_URL in later (default skip)
               --database-schema <n> Postgres schema for the tables (DATABASE_SCHEMA in .env.local), for a database shared with other apps (default public)
               --admin-github-id <n> Numeric GitHub id of the admin (MONTI_ADMIN_GITHUB_ID in .env.local)
               --site-url <url>      Public site URL, for the GitHub OAuth callback URL (default http://localhost:3000)
@@ -24,14 +24,9 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
                                     (default: the light set, callout, collapsible, tabs, code-ref and color. mermaid adds about 26 MB of packages and chart adds
                                     recharts, so both are opt-in: name them, or pass all)
               --admin-path <path>   Admin screen path (default /studio)
-              --blog-theme          Also add the blog theme pages (monti add blog-theme); --no-blog-theme to skip (default skip). The pages follow the path of the
-                                    post collection in monti.schema.json, and theme.config.ts gets its field names
               --overwrite           Replace existing files that differ (default: keep them)
-              --no-install          Do not install packages (and so do not migrate or add the theme)
-              --no-migrate          Do not run monti migrate
-              --no-docker-start     Write docker-compose.yml but do not start it
+              --no-install          Do not install packages
               --package-manager <m> npm, pnpm, yarn or bun (default: detected)
-              --resume              Run again only the steps the last run did not complete (progress is saved in .monti/init.json, which is git-ignored)
 `;
 
 const ADD_HELP = `  add       Copy components from the registry into the app as source you own, and install their npm packages
@@ -40,7 +35,7 @@ const ADD_HELP = `  add       Copy components from the registry into the app as 
                                     components match the packages the app has)
               --overwrite           Replace files that differ from the registry (default: stop and write nothing)
               --dry-run             Show what would be written and installed
-              --yes, -y             Also add the typography plugin and the render.css imports the theme needs to your global CSS without asking (default: ask, or print the lines)
+              --yes, -y             Also add the typography plugin and the render.css imports the component needs to your global CSS without asking (default: ask, or print the lines)
 `;
 
 const MIGRATE_HELP = `  migrate   Create or update the tables in the database of monti.config.ts, and say where (host, database, schema) and how many steps ran

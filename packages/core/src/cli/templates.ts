@@ -60,11 +60,8 @@ export const DEFAULT_BLOCK_IDS: readonly string[] = ["callout", "collapsible", "
 
 /** What the questions of `monti init` decided. Every field has a flag. */
 export interface InitAnswers {
-	/** `url`: a Postgres URL the user gave. `docker`: a local Postgres in Docker. `skip`: fill `DATABASE_URL` in later. */
-	readonly database:
-		| { readonly kind: "url"; readonly url: string }
-		| { readonly kind: "docker" }
-		| { readonly kind: "skip" };
+	/** `url`: a Postgres URL the user gave. `skip`: fill `DATABASE_URL` in later. */
+	readonly database: { readonly kind: "url"; readonly url: string } | { readonly kind: "skip" };
 	/** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given. Without it the tables go in `public`. */
 	readonly databaseSchema?: string;
 	/** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given. */
@@ -80,7 +77,6 @@ export interface InitAnswers {
 	/** Ids of {@link BLOCK_CHOICES}. */
 	readonly blocks: readonly string[];
 	readonly adminPath: string;
-	readonly blogTheme: boolean;
 }
 
 /** The language's name in that language for a locale code (e.g. `ko` -> `한국어`). Falls back to the code itself. */
@@ -245,12 +241,12 @@ export function pathFor(folder: ContentFolder | undefined): string {
 
 /**
  * The schema file `monti init` creates (`monti.schema.json`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
- * time zone, the site name, the admin path when it is not the default, and the preview path when the blog theme is installed. It holds the plain data of the site;
+ * time zone, the site name and the admin path when it is not the default. It holds the plain data of the site;
  * `monti.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete). With `folder` (a content folder the app
- * already has) the fields follow its front matter, and `path` follows its name, which is also where the blog theme serves the posts.
+ * already has) the fields follow its front matter, and `path` follows its name.
  */
 export function schemaTemplate(
-	answers: Pick<InitAnswers, "adminPath" | "locales" | "timeZone" | "blogTheme">,
+	answers: Pick<InitAnswers, "adminPath" | "locales" | "timeZone">,
 	options: { readonly siteName?: string; readonly folder?: ContentFolder; readonly link?: string } = {},
 ): string {
 	const [defaultLocale = DEFAULT_INIT_LOCALE] = answers.locales;
@@ -263,7 +259,7 @@ export function schemaTemplate(
 				label: "Post",
 				// body, draft and publish. Use "item" for small entries like tags
 				kind: "document",
-				// public URL shape (a sample; use your own). Used for internal links in the body and preview URLs, and the blog theme serves the posts here
+				// public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
 				path: pathFor(options.folder),
 				icon: "file-text",
 				fields: post?.fields,
@@ -273,7 +269,7 @@ export function schemaTemplate(
 		locales: answers.locales.map((code) => ({ code, name: languageName(code) })),
 		defaultLocale,
 		timeZone: answers.timeZone,
-		site: { name: options.siteName || "My site", ...(answers.blogTheme ? { previewPath: "/preview" } : {}) },
+		site: { name: options.siteName || "My site" },
 		...(answers.adminPath === DEFAULT_ADMIN_PATH ? {} : { admin: { path: answers.adminPath } }),
 	};
 	return `${JSON.stringify(schema, null, "\t")}\n`;
@@ -448,29 +444,6 @@ const nextConfig: NextConfig = {};
 export default withCms(nextConfig);
 `;
 }
-
-/** The compose file for the local Postgres. */
-export function dockerComposeTemplate(port: number): string {
-	return `# A local Postgres for development, written by \`monti init\`. Start it with: docker compose up -d
-services:
-  monti-db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: monti
-      POSTGRES_PASSWORD: monti
-      POSTGRES_DB: monti
-    ports:
-      - "${port}:5432"
-    volumes:
-      - monti-db:/var/lib/postgresql/data
-
-volumes:
-  monti-db:
-`;
-}
-
-export const dockerDatabaseUrl = (port: number) => `postgres://monti:monti@localhost:${port}/monti`;
 
 /** The OAuth callback URL of the GitHub login for a site URL. */
 export const githubCallbackUrl = (siteUrl: string) => `${siteUrl.replace(/\/+$/, "")}/api/cms/auth/callback/github`;

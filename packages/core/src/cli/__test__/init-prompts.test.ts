@@ -18,11 +18,10 @@ const everything = {
 	[QUESTIONS.blocks]: "pick",
 	[QUESTIONS.blockList]: ["callout", "mermaid"],
 	[QUESTIONS.adminPath]: "/cms",
-	[QUESTIONS.blogTheme]: true,
 };
 
 describe("the questions of monti init", () => {
-	it("asks in the order database, schema, login, locales, storage, extras, blocks, admin path, blog theme", async () => {
+	it("asks in the order database, schema, login, locales, storage, extras, blocks, admin path", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
@@ -36,7 +35,6 @@ describe("the questions of monti init", () => {
 			QUESTIONS.blocks,
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
-			QUESTIONS.blogTheme,
 		]);
 		expect(answers).toEqual({
 			database: { kind: "url", url: "postgres://me:pw@db.example.com:5432/blog" },
@@ -50,7 +48,6 @@ describe("the questions of monti init", () => {
 			gitSync: true,
 			blocks: ["callout", "mermaid"],
 			adminPath: "/cms",
-			blogTheme: true,
 		});
 	});
 
@@ -143,19 +140,23 @@ describe("the questions of monti init", () => {
 		await expect(collectAnswers(app(), { databaseSchema: "my-schema" })).rejects.toThrow(/--database-schema/);
 	});
 
-	it("the Docker database is the app's own, so the schema is not asked for it", async () => {
-		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.database]: "docker" });
-		const answers = await collectAnswers(app(), {}, prompter);
-		expect(prompter.asked).not.toContain(QUESTIONS.databaseSchema);
-		expect(answers.databaseSchema).toBeUndefined();
+	it("the database question offers a URL or skip, and nothing else", async () => {
+		let offered: string[] = [];
+		const prompter = scriptedPrompter(everything);
+		const select = prompter.select.bind(prompter);
+		prompter.select = async (question) => {
+			if (question.message === QUESTIONS.database) offered = question.options.map((option) => option.value);
+			return select(question);
+		};
+		await collectAnswers(app(), {}, prompter);
+		expect(offered).toEqual(["url", "skip"]);
 	});
 
-	it("a docker answer needs no URL; skip needs nothing", async () => {
-		const docker = scriptedPrompter({ ...everything, [QUESTIONS.database]: "docker" });
-		expect((await collectAnswers(app(), {}, docker)).database).toEqual({ kind: "docker" });
-		expect(docker.asked).not.toContain("Postgres URL");
+	it("skip needs no URL, and a docker flag is refused", async () => {
 		const skip = scriptedPrompter({ ...everything, [QUESTIONS.database]: "skip" });
 		expect((await collectAnswers(app(), {}, skip)).database).toEqual({ kind: "skip" });
+		expect(skip.asked).not.toContain("Postgres URL");
+		await expect(collectAnswers(app(), { database: "docker" })).rejects.toThrow(/--database/);
 	});
 
 	it("an empty GitHub id is allowed (filled in later); a wrong one is refused", async () => {
@@ -177,7 +178,6 @@ describe("the questions of monti init", () => {
 				storage: "none",
 				blocks: "none",
 				adminPath: "/studio",
-				blogTheme: false,
 				timeZone: "Asia/Tokyo",
 			},
 			prompter,
@@ -188,7 +188,6 @@ describe("the questions of monti init", () => {
 			storage: "none",
 			blocks: [],
 			timeZone: "Asia/Tokyo",
-			blogTheme: false,
 		});
 	});
 
@@ -205,18 +204,12 @@ describe("the questions of monti init", () => {
 			// the light set: no mermaid or chart, which are heavy
 			blocks: ["callout", "collapsible", "tabs", "code-ref", "color"],
 			adminPath: "/studio",
-			blogTheme: false,
 		});
 	});
 
 	it("the locale list drops duplicates and keeps the first as the default", async () => {
 		const answers = await collectAnswers(app(), { locales: "ko,en,ko" });
 		expect(answers.locales).toEqual(["ko", "en"]);
-	});
-
-	it("the blog theme defaults to no when asked", async () => {
-		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blogTheme]: false });
-		expect((await collectAnswers(app(), {}, prompter)).blogTheme).toBe(false);
 	});
 
 	it("cancelling at any question rejects", async () => {

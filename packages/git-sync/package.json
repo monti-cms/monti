@@ -2,7 +2,6 @@
 	"name": "@monti-cms/git-sync",
 	"version": "0.1.0",
 	"private": true,
-	"cmsPlugin": true,
 	"description": "Two-way sync of published entries with files in a GitHub repo for @monti-cms/core: commits or pull requests out, the push webhook in, and a conflict screen",
 	"license": "MIT",
 	"type": "module",
