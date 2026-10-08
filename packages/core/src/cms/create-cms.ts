@@ -5,6 +5,7 @@ import { resolveTrustHost } from "../adapters/auth/trust-host";
 import { findSchemaFile } from "../cli/schema-types";
 import { problemText } from "../core/problem";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
+import type { SaveDraftInput, ServiceInput } from "../core/types";
 import type { FormatRegistry } from "../format/registry";
 import type { MediaStore } from "../media/store";
 import type { OwnedPluginRoute } from "../plugin/define";
@@ -22,7 +23,29 @@ import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
 
-export type ContentService = ReturnType<typeof createContentService<Entry>>;
+/** The content service of any site: input is checked at run time only. */
+type LooseContentService = ReturnType<typeof createContentService<Entry>>;
+
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+/**
+ * The content service. With the config of the instance (`Cms<typeof config>` has `ContentService<typeof config>`), `createDraft` and `saveDraft` know the
+ * collections and the metadata of each, and an item collection (a tag) needs no body. Without a config it takes any collection.
+ */
+export type ContentService<Config extends AnyCmsConfig = AnyCmsConfig> = Omit<
+	LooseContentService,
+	"createDraft" | "saveDraft"
+> & {
+	createDraft(
+		input: ServiceInput<IsAny<Config> extends true ? AnyCmsConfig : Config>,
+		options?: { publishImmediately?: boolean },
+	): ReturnType<LooseContentService["createDraft"]>;
+	saveDraft(
+		entryId: string,
+		input: SaveDraftInput<IsAny<Config> extends true ? AnyCmsConfig : Config>,
+		options?: { publishImmediately?: boolean },
+	): ReturnType<LooseContentService["saveDraft"]>;
+};
 export type BulkService = ReturnType<typeof createBulkService<Entry>>;
 
 /** Options of {@link Cms.handle}. */
@@ -88,7 +111,7 @@ export interface Cms<
 	/** The content store. Created on first use. */
 	store(): ContentStore;
 	/** Content write operations (drafts, publishing, duplicates, translations). Runs the write hooks. */
-	contentService(): ContentService;
+	contentService(): ContentService<Config>;
 	/** Bulk write operations. Runs the write hooks. */
 	bulkService(): BulkService;
 	/** Whether the server config has a media store. Without one, the admin hides the media menu and uploads. */
@@ -250,7 +273,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		);
 
 		let store: ContentStore | undefined;
-		let service: ContentService | undefined;
+		let service: LooseContentService | undefined;
 		let bulk: BulkService | undefined;
 		let auth: CmsAuth | undefined;
 
@@ -307,7 +330,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					formats: plugins.formats,
 					...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
 				});
-				return service;
+				return service as unknown as ContentService<Config>;
 			},
 			bulkService: () => {
 				bulk ??= createBulkService<Entry>(getStore(), {

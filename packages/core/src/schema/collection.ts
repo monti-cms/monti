@@ -201,3 +201,21 @@ export type MetadataOf<S extends CollectionSchema> = {
 		UnionToIntersection<Nested<S["fields"]>>[K]
 	>;
 };
+
+type RequiredKeys<Fields> = {
+	[K in keyof Stored<Fields>]: Stored<Fields>[K] extends { readonly required: true } ? K : never;
+}[keyof Stored<Fields>];
+
+/**
+ * Metadata type of a published entry, built from a collection definition. Publishing needs every `required` field, so those keys are not optional here
+ * (`post.metadata.title` is a `string`); the rest are optional as in {@link MetadataOf}, and so are the fields that depend on a conditional field.
+ */
+export type PublishedMetadataOf<S extends CollectionSchema> = {
+	-readonly [K in RequiredKeys<S["fields"]>]: FieldValue<S["fields"][K]>;
+} & {
+	-readonly [K in Exclude<keyof Stored<S["fields"]>, RequiredKeys<S["fields"]>>]?: FieldValue<S["fields"][K]>;
+} & {
+	-readonly [K in keyof UnionToIntersection<Nested<S["fields"]>>]?: ValueOf<
+		UnionToIntersection<Nested<S["fields"]>>[K]
+	>;
+};

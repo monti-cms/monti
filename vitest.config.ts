@@ -6,6 +6,8 @@ export default defineConfig(({ mode }) => ({
 		// Runs all packages (`packages/*`) at once. Each package uses its own config file.
 		projects: [
 			"packages/*",
+			// The extension recipes (docs/recipes): each one runs end to end.
+			"examples/recipes",
 			// Regression guard: re-runs the core, admin and AI tests with the other-site example config.
 			"packages/*/vitest.othersite.config.ts",
 			// Re-runs the tests that need a syntax extension switched on in the site config (`mdx({ syntax })`).

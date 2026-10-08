@@ -1,6 +1,6 @@
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsImageSource } from "../doc/types";
-import type { MetadataOf } from "../schema/collection";
+import type { MetadataOf, PublishedMetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
 import type { AnyCmsConfig } from "../site/create-site";
 import type { Collection } from "./collections";
@@ -113,6 +113,19 @@ export type MetadataFor<
 		: never;
 
 /**
+ * The metadata of a published entry (what `cms.read` returns): like {@link MetadataFor}, but the `required` fields are not optional, because publishing
+ * needs them (`post.metadata.title` is a `string`).
+ */
+export type PublishedMetadataFor<
+	C extends string = string,
+	Config extends AnyCmsConfig = AnyCmsConfig,
+> = string extends keyof Config["collections"]
+	? { [field: string]: unknown }
+	: C extends keyof Config["collections"]
+		? WithRecordTranslations<Config["collections"][C], PublishedMetadataOf<Config["collections"][C]>>
+		: never;
+
+/**
  * A body is given either as a stored document (`StoredDocument` JSON) or as text in a format (`body` and the `format` that reads it), never both. The
  * document is what is checked, hashed and stored; text is read into a document first by the format (a text it cannot read is kept as an `unparsed` node).
  */
@@ -120,7 +133,10 @@ type BodyInput =
 	| { doc: unknown; body?: undefined; format?: undefined }
 	| { body: string; format: string; doc?: undefined };
 
-type InputFor<C extends string, M> = BodyInput & {
+/** An item collection (a tag, a series) has no body of its own: it may be written with none, and the document is empty. */
+type NoBody = { doc?: undefined; body?: undefined; format?: undefined };
+
+type InputFor<C extends string, M, Body = BodyInput> = Body & {
 	collection: C;
 	slug: string | null;
 	metadata: M;
@@ -130,7 +146,11 @@ type InputFor<C extends string, M> = BodyInput & {
 };
 
 export type ServiceInput<Config extends AnyCmsConfig = AnyCmsConfig> = {
-	[C in CollectionName<Config>]: InputFor<C, MetadataFor<C, Config>>;
+	[C in CollectionName<Config>]: InputFor<
+		C,
+		MetadataFor<C, Config>,
+		Config["collections"][C] extends { readonly kind: "item" } ? BodyInput | NoBody : BodyInput
+	>;
 }[CollectionName<Config>];
 
 export type SaveDraftInput<Config extends AnyCmsConfig = AnyCmsConfig> = ServiceInput<Config> & {
@@ -210,13 +230,28 @@ export type WorkingCopy = {
 	readonly translationGroupId?: string;
 };
 
+/**
+ * The text of a `ServiceError` that was given no message: the code, then what its issues say (`validation_failed: The slug "A" must be lowercase (slug)`,
+ * `publish_validation_failed: empty_body (body)`), so an error that reaches a log or a test failure tells what is wrong, not only a code.
+ * An issue says its `message`, else its code, and where it is (`path`).
+ */
+const errorText = (code: string, issues: readonly Issue[] | undefined): string => {
+	const told = (issues ?? []).map((issue) => {
+		const what = issue.message || issue.code;
+		return issue.path ? `${what} (${issue.path})` : what;
+	});
+	return told.length > 0
+		? `${code}: ${told.slice(0, 3).join("; ")}${told.length > 3 ? ` (and ${told.length - 3} more)` : ""}`
+		: code;
+};
+
 export class ServiceError extends Error {
 	constructor(
 		public readonly code: string,
 		public readonly issues?: readonly Issue[],
 		message?: string,
 	) {
-		super(message ?? code);
+		super(message ?? errorText(code, issues));
 		this.name = "ServiceError";
 	}
 }

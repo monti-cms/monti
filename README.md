@@ -90,6 +90,10 @@ For the other packages, change only `path:/<folder name>` and use the same tag.
 
 `@monti-cms/mdx` is needed for MDX (the `mdx` format, the source panel, syntax extensions) and by the AI extension; install it the same way. Installation and setup are described in each package's README. The example app with everything attached is [`examples/blog`](examples/blog); its one config file is `monti.config.ts`, which exports the ready `cms` instance.
 
+## Recipes
+
+Small, working, tested examples of how to extend Monti, each written from the docs alone: a Slack message on publish, your own block (definition, editor view, public component, check), a custom admin field screen, a slug rule before save, a custom format, typed reads on the public site, an admin page of a plugin, and a `monti doctor` check from a plugin. Start at [`docs/recipes`](docs/recipes/README.md); the code is in [`examples/recipes`](examples/recipes) and every recipe has a test that runs it end to end.
+
 ## Development
 
 ```sh
@@ -100,6 +104,7 @@ pnpm typecheck        # type check all packages
 pnpm build            # build all packages (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
 pnpm test:run         # tests (needs Postgres)
 pnpm example:check    # pack the packages, install them into the example app and build it
+pnpm recipes:check    # check that the code shown in docs/recipes is the code of examples/recipes (pnpm recipes:docs updates the pages)
 ```
 
 On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.

@@ -1,6 +1,11 @@
 import { assignBlockIds } from "../doc/block-ids";
 import { isAllowedImageSrc } from "../doc/image-src";
-import { canonicalDocument, readStoredDocument, type StoredDocument } from "../doc/stored-document";
+import {
+	canonicalDocument,
+	emptyStoredDocument,
+	readStoredDocument,
+	type StoredDocument,
+} from "../doc/stored-document";
 import type { CmsImageSource } from "../doc/types";
 import { importText } from "../format/convert";
 import { type FormatRegistry, NO_FORMATS } from "../format/registry";
@@ -94,13 +99,16 @@ export function validateExactRecord(
 	}
 }
 
-/** Keys a service input must have: the body is `doc`, or `body` with its `format`. */
-export const serviceInputKeys = (input: unknown): readonly string[] => [
-	"collection",
-	"slug",
-	"metadata",
-	...(input !== null && typeof input === "object" && Object.hasOwn(input, "doc") ? ["doc"] : ["body", "format"]),
-];
+/** Keys a service input must have: the body is `doc`, or `body` with its `format`, or nothing (an item collection has no body, `readInputBody`). */
+export const serviceInputKeys = (input: unknown): readonly string[] => {
+	const has = (key: string) => input !== null && typeof input === "object" && Object.hasOwn(input, key);
+	return [
+		"collection",
+		"slug",
+		"metadata",
+		...(has("doc") ? ["doc"] : has("body") || has("format") ? ["body", "format"] : []),
+	];
+};
 
 /** What reading the body of a service input gives: the document, and the findings about a text that could not become one. */
 export interface InputBody {
@@ -154,6 +162,9 @@ export const readInputBody = async (
 	options: TextImport = {},
 ): Promise<InputBody> => {
 	if (input.doc !== undefined) return documentInputBody(site, input, previous);
+	// An item collection has no body of its own: written with none, it is an empty document.
+	if (input.body === undefined && input.format === undefined && site.isItemCollection(input.collection))
+		return { doc: emptyStoredDocument(), importIssues: [] };
 	if (typeof input.body !== "string" || typeof input.format !== "string") throw new ServiceError("invalid_input");
 	const imported = await importText(site, options.formats ?? NO_FORMATS, input.format, input.body, {
 		locale: options.locale ?? site.DEFAULT_LOCALE,
@@ -172,20 +183,30 @@ function fieldValueServiceError(code: string, path: string, label: string | unde
 	return new ServiceError(code, [{ code, path, ...(label ? { message: label } : {}) }]);
 }
 
+/** A metadata error that names the field: a code alone ("invalid_metadata_type") does not say which of the fields is wrong. */
+const metadataError = (code: string, field: string, message: string): ServiceError =>
+	new ServiceError(code, [{ code, path: field, message }]);
+
+const describeValue = (v: unknown): string => (v === null ? "null" : Array.isArray(v) ? "a list" : typeof v);
+
 /** A metadata value in its storage shape: a string, or a plain array of strings (`type` fixes which one when the field is known). */
-function readStoredValue(v: unknown, type?: string): MetadataValue {
+function readStoredValue(v: unknown, field: string, type?: string): MetadataValue {
+	const wrong = (expected: string) =>
+		metadataError(
+			"invalid_metadata_type",
+			field,
+			`The value of "${field}" must be ${expected}, not ${describeValue(v)}.`,
+		);
 	if (type === "string" || (type === undefined && typeof v === "string")) {
-		if (typeof v !== "string") throw new ServiceError("invalid_metadata_type");
+		if (typeof v !== "string") throw wrong("text");
 		return v;
 	}
-	if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype) {
-		throw new ServiceError("invalid_metadata_type");
-	}
-	if (Reflect.ownKeys(v).length !== v.length + 1) throw new ServiceError("invalid_metadata_type");
+	if (!Array.isArray(v) || Object.getPrototypeOf(v) !== Array.prototype) throw wrong("a list of text");
+	if (Reflect.ownKeys(v).length !== v.length + 1) throw wrong("a plain list of text");
 	for (let i = 0; i < v.length; i++) {
 		const desc = Object.getOwnPropertyDescriptor(v, String(i));
-		if (!desc || desc.get || desc.set) throw new ServiceError("invalid_metadata_type");
-		if (typeof v[i] !== "string") throw new ServiceError("invalid_metadata_type");
+		if (!desc || desc.get || desc.set) throw wrong("a plain list of text");
+		if (typeof v[i] !== "string") throw wrong(`a list of text (item ${i} is ${describeValue(v[i])})`);
 	}
 	return Object.freeze([...(v as string[])]);
 }
@@ -232,6 +253,8 @@ function validateMetadata(
 	const rules = site.COLLECTION_DEFINITIONS[collection]?.fields ?? {};
 	const metadata: Record<string, MetadataValue> = {};
 	for (const [k, v] of Object.entries(input)) {
+		// `undefined` is a field that is not set (JSON cannot carry it), so `{ summary: undefined }` is the same as leaving `summary` out.
+		if (v === undefined) continue;
 		if (k === RECORD_TRANSLATIONS_KEY) {
 			// Per-locale names of a record collection. The default-locale value lives in the field itself.
 			const normalized = site.normalizeRecordTranslations(collection, v, site.PREFIXED_LOCALES);
@@ -246,11 +269,18 @@ function validateMetadata(
 		if (!stored || !Object.hasOwn(rules, k)) {
 			// The value of a field the site has removed: kept as stored, with only its storage shape checked.
 			// A key the entry does not already hold is new, so it is not a removed field but a mistake.
-			if (k === "__proto__" || !Object.hasOwn(previous, k)) throw new ServiceError("invalid_metadata_key");
-			metadata[k] = readStoredValue(v);
+			if (k === "__proto__" || !Object.hasOwn(previous, k)) {
+				const known = Object.keys(rules).join(", ");
+				throw metadataError(
+					"invalid_metadata_key",
+					k,
+					`"${k}" is not a field of ${collection}${known ? ` (its fields are: ${known})` : ""}.`,
+				);
+			}
+			metadata[k] = readStoredValue(v, k);
 			continue;
 		}
-		metadata[k] = readStoredValue(v, rules[k]);
+		metadata[k] = readStoredValue(v, k, rules[k]);
 
 		// A select value that is no longer an option is kept too (a warning at publish, never an error).
 		if (stored.field.kind === "select") continue;
