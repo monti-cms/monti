@@ -160,6 +160,24 @@ describe("write hook contract", () => {
 			expect((await store.getEntry(created.id)).working.metadata.title).toBe("SHOUTING");
 		});
 
+		it("gets the address of the entry, and may change it", async () => {
+			const seen: (string | null)[] = [];
+			sources = server({
+				transform: ({ slug, metadata, doc }) => {
+					seen.push(slug);
+					return { metadata, doc, slug: slug?.toUpperCase() };
+				},
+				validate: ({ slug }) => {
+					seen.push(slug);
+				},
+			});
+			const input = await postInput("Slug hook");
+			const created = await service.createDraft({ ...input, slug: "mixed-case" } as ServiceInput);
+			// The transform saw what was sent, the validation what core prepared from what the transform returned.
+			expect(seen).toEqual(["mixed-case", "MIXED-CASE"]);
+			expect(created.workingSlug).toBe("MIXED-CASE");
+		});
+
 		it("validates it: a key the schema does not have is rejected and nothing is stored", async () => {
 			sources = server({ transform: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }) });
 			const before = await entryCount();

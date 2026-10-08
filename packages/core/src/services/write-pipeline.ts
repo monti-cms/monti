@@ -179,7 +179,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 			if (error instanceof ServiceError) return unchanged;
 			throw error;
 		}
-		const original = copyOf<WriteData>({ metadata: input.metadata, doc: body.doc });
+		const original = copyOf<WriteData>({ metadata: input.metadata, doc: body.doc, slug: input.slug ?? null });
 		if (!original) return unchanged;
 
 		let data: WriteData = original;
@@ -190,6 +190,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 				collection: input.collection,
 				...(request.entryId === undefined ? {} : { entryId: request.entryId }),
 				locale: request.locale,
+				slug: data.slug ?? null,
 				metadata: data.metadata,
 				doc: data.doc,
 			});
@@ -204,17 +205,21 @@ export function createWritePipeline(options: WritePipelineOptions) {
 				if (!read) throw hookFailed(source, "transform");
 				doc = read;
 			}
-			data = { metadata: result.metadata, doc };
+			if (result.slug !== undefined && result.slug !== null && typeof result.slug !== "string")
+				throw hookFailed(source, "transform");
+			data = { metadata: result.metadata, doc, slug: result.slug === undefined ? data.slug : result.slug };
 		}
 
 		const metadataChanged = !isDeepStrictEqual(data.metadata, original.metadata);
 		const docChanged = !isDeepStrictEqual(data.doc, original.doc);
-		if (!metadataChanged && !docChanged) return unchanged;
+		const slugChanged = data.slug !== original.slug;
+		if (!metadataChanged && !docChanged && !slugChanged) return unchanged;
 		return {
 			input: {
 				...input,
 				metadata: metadataChanged ? data.metadata : input.metadata,
 				...(docChanged ? { doc: data.doc } : {}),
+				...(slugChanged ? { slug: data.slug ?? null } : {}),
 			} as ServiceInput,
 			transformed: true,
 		};
@@ -261,6 +266,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 					collection: copy.collection,
 					...(request.entryId === undefined ? {} : { entryId: request.entryId }),
 					locale: request.locale,
+					slug: copy.slug,
 					metadata: copy.metadata,
 					doc: copy.doc,
 					snapshot: copy,

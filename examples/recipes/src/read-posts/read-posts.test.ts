@@ -90,13 +90,12 @@ async function typedResults() {
 	expectTypeOf(cms).toEqualTypeOf<BlogCms>();
 
 	// The write side knows the same: an item collection (a tag) needs no body, a post needs one.
-	await cms.contentService().createDraft({ collection: "tag", slug: "t", metadata: { title: "T" } });
+	const { createDraft } = cms.contentService();
+	await createDraft({ collection: "tag", slug: "t", metadata: { title: "T" } });
 	// @ts-expect-error a post needs a body (`doc`, or `body` and `format`)
-	await cms.contentService().createDraft({ collection: "post", slug: "p", metadata: { title: "P" } });
+	await createDraft({ collection: "post", slug: "p", metadata: { title: "P" } });
 	// @ts-expect-error the title is text
-	await cms
-		.contentService()
-		.createDraft({ collection: "post", slug: "p", metadata: { title: 1 }, body: "", format: "mdx" });
+	await createDraft({ collection: "post", slug: "p", metadata: { title: 1 }, body: "", format: "mdx" });
 }
 
 describe("the results are typed from the config", () => {

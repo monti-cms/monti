@@ -32,6 +32,8 @@ export interface WriteHookContext {
 	readonly entryId?: string;
 	/** Content locale of the entry. */
 	readonly locale: string;
+	/** The address (slug) the write gives the entry, `null` when it gives none. A `transform` can change it (`WriteData.slug`). */
+	readonly slug: string | null;
 	readonly metadata: { readonly [key: string]: unknown };
 	/** The body as a stored document (one `unparsed` node when the body could not become a document, which only a draft can be). */
 	readonly doc: StoredDocument;
@@ -41,6 +43,8 @@ export interface WriteHookContext {
 export interface WriteData {
 	readonly metadata: { readonly [key: string]: unknown };
 	readonly doc: StoredDocument;
+	/** The address of the entry. Leave it out of a `transform`'s result to keep it; return a string to change it (core still checks and normalises it). */
+	readonly slug?: string | null;
 }
 
 /**

@@ -9,16 +9,25 @@ const LOWERCASE_ASCII_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * bypassed by a format import, the AI plugin or a bulk change: they all go through the same pipeline.
  */
 export const slugRule: WriteHooks = {
-	validate: ({ collection, snapshot }) => {
-		if (collection !== "post" || snapshot.slug === null || LOWERCASE_ASCII_SLUG.test(snapshot.slug)) return;
+	validate: ({ collection, slug }) => {
+		if (collection !== "post" || slug === null || LOWERCASE_ASCII_SLUG.test(slug)) return;
 		return {
 			issues: [
 				{
 					code: "slug_not_lowercase_ascii",
-					path: "slug",
-					message: `The slug "${snapshot.slug}" must use only lowercase a-z, digits and single hyphens (for example "hello-world").`,
+					path: "slug", // the field the editor shows the message under
+					message: `The slug "${slug}" must use only lowercase a-z, digits and single hyphens (for example "hello-world").`,
 				},
 			],
 		};
 	},
+};
+
+/**
+ * The other choice: fix the slug instead of refusing it. `transform` runs first, before core prepares the data, and returns the data to prepare
+ * (leave `slug` out to keep it). Use both hooks together to fix what can be fixed and refuse the rest.
+ */
+export const lowercaseSlugs: WriteHooks = {
+	transform: ({ collection, slug, metadata, doc }) =>
+		collection === "post" && slug !== null ? { metadata, doc, slug: slug.toLowerCase() } : undefined,
 };

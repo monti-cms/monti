@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
-import { postgres } from "../adapters/postgres/adapter";
-import { normalizeConnectionString } from "../adapters/postgres/connection";
-import { problemError } from "../core/problem";
-import type { CmsServerConfig } from "../server/define";
-import { fakeAuth } from "./fake-cms";
+import { fakeAuth } from "../../cms/fake-cms";
+import { problemError } from "../../core/problem";
+import type { CmsServerConfig } from "../../server/define";
+import { postgres } from "./adapter";
+import { normalizeConnectionString } from "./connection";
 
 /** What {@link testServer} returns: the server options to spread into `defineConfig`, and the cleanup. */
 export interface TestServer {
