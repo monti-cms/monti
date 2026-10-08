@@ -3,7 +3,7 @@
 English | [한국어](README.ko.md)
 
 A personal tech blog on `@monti-cms/core`, modelled on the maintainer's own blog: collections Post, Memo, Category, Tag and Series (the `collection` collection), in Korean (the default) and English. It attaches everything
-the blog uses, one plugin per line in `monti.config.ts`: every body block (`@monti-cms/blocks`: `callout()`, `collapsible()`, `tabs()`, `columns()`, `mermaid()`, `chart()`, `tooltip()`, `codeRef()`, `color()`, `codeExplorer()`), the SEO fields (`@monti-cms/seo`), the AI plugin (`@monti-cms/ai`),
+the blog uses, one plugin per line in `monti.config.ts`: every body block (`@monti-cms/blocks`: `callout()`, `collapsible()`, `tabs()`, `columns()`, `mermaid()` and `chart()` from their own entry points `@monti-cms/blocks/mermaid` and `@monti-cms/blocks/chart` (they need `mermaid` and `recharts`, which this app installs; an app that does not use them installs neither), `tooltip()`, `codeRef()`, `color()`, `codeExplorer()`), the SEO fields (`@monti-cms/seo`), the AI plugin (`@monti-cms/ai`),
 an example admin extension of its own (a word-list spell check, `plugins/word-list`) and MDX written in the directive notation (`mdx({ syntax: [directiveSyntax()] })` of `@monti-cms/mdx` and `@monti-cms/syntax-directive`, write mode on, so a post body reads `:::callout{…}`).
 Packages are installed from **built bundles** (`vendor/*.tgz`), not from the repository sources.
 

@@ -6,6 +6,7 @@ import { detectPackageManager } from "../add";
 import { findRootLayout, hasSuppressHydrationWarning, setupThemeStyles } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
+import { isPackageInstalled } from "../installed";
 import { findSchemaFile, generateSchemaTypes, readSchema, SCHEMA_TYPES_FILE } from "../schema-types";
 
 /** Everything the core checks look at, gathered once before they run. */
@@ -122,6 +123,31 @@ const configLoads: CoreCheck = {
 				? `install the package it imports (\`${missing.startsWith(".") ? "check the path of the import" : `add ${missing} with your package manager`}\`), then run \`monti doctor\` again`
 				: "fix the error above in the config file (the full message is printed by `monti migrate`), then run `monti doctor` again",
 		});
+	},
+};
+
+const pluginPackages: CoreCheck = {
+	group: "config",
+	id: "plugin-packages",
+	title: "Packages the plugins need",
+	needsCms: true,
+	run: (state) => {
+		const plugins = state.cms?.site.plugins ?? [];
+		const needs = plugins.flatMap((plugin) => (plugin.requires ?? []).map((name) => ({ plugin: plugin.name, name })));
+		if (needs.length === 0) return ok("none of the plugins needs a package of its own");
+		const missing = needs.filter(({ name }) => !isPackageInstalled(state.cwd, name));
+		if (missing.length === 0) return ok(`installed: ${needs.map(({ name }) => name).join(", ")}`);
+		const names = [...new Set(missing.map(({ name }) => name))];
+		const manager = detectPackageManager(state.cwd);
+		return fail(
+			missing
+				.map(({ plugin, name }) => `the ${plugin} block needs the package ${name}, which is not installed`)
+				.join("; "),
+			{
+				where: "package.json of your app",
+				fix: `${manager} ${manager === "npm" ? "install" : "add"} ${names.join(" ")}, then restart the dev server (or remove the block from the plugins of ${state.configPath ?? "monti.config.ts"})`,
+			},
+		);
 	},
 };
 
@@ -755,6 +781,7 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	envIgnored,
 	configFile,
 	configLoads,
+	pluginPackages,
 	boundary,
 	schemaFile,
 	schemaTypes,

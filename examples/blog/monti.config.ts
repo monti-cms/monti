@@ -1,18 +1,10 @@
 import { aiPlugin } from "@monti-cms/ai";
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
-import {
-	callout,
-	chart,
-	codeExplorer,
-	codeRef,
-	collapsible,
-	color,
-	columns,
-	mermaid,
-	tabs,
-	tooltip,
-} from "@monti-cms/blocks";
+import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tooltip } from "@monti-cms/blocks";
+// The two heavy blocks have their own entry points, so an app that does not use them never loads (or installs) mermaid and recharts.
+import { chart } from "@monti-cms/blocks/chart";
+import { mermaid } from "@monti-cms/blocks/mermaid";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";

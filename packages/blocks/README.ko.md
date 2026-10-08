@@ -23,7 +23,10 @@
 
 ```ts
 // monti.config.ts
-import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "@monti-cms/blocks";
+import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tooltip } from "@monti-cms/blocks";
+// 무거운 두 블록은 진입점이 따로 있어서, 쓰지 않는 앱은 그 라이브러리를 불러오지도 설치하지도 않는다.
+import { chart } from "@monti-cms/blocks/chart"; // `recharts`가 필요하다
+import { mermaid } from "@monti-cms/blocks/mermaid"; // `mermaid`가 필요하다
 import { defineConfig } from "@monti-cms/core/server";
 
 export const cms = defineConfig({
@@ -44,6 +47,8 @@ export const cms = defineConfig({
 	],
 });
 ```
+
+배럴 `@monti-cms/blocks`는 가볍다. recharts나 mermaid를 불러오지 않는다. `recharts`와 `mermaid`는 이 패키지의 선택적 peer라서 `chart()`나 `mermaid()`를 쓸 때만 설치한다(`pnpm add recharts`, `pnpm add mermaid`). 블록이 설정에 있는데 라이브러리가 없으면 오류가 설치할 패키지 이름을 알려 주고, `monti doctor`가 설치 명령과 함께 실패로 알린다(`config/plugin-packages`. 플러그인은 필요한 것을 `requires`에 적는다). `ALL_BLOCKS`(정의만, 라이브러리 없음)는 `@monti-cms/blocks/definitions`에 있다.
 
 전부 한 번에 넣는 함수는 없다. 블록마다 플러그인이 따로 있고, 설정의 목록이 곧 사이트가 가진 블록 목록이다. 같은 플러그인을 두 번 넣으면 설정 오류다.
 

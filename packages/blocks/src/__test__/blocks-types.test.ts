@@ -1,7 +1,8 @@
 import type { CmsConfig, CmsPlugin, CollectionsConfig } from "@monti-cms/core";
 import type { DocumentComponentsFor } from "@monti-cms/core/render";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { callout, chart, codeRef, collapsible, color, tooltip } from "../index";
+import { chart } from "../chart";
+import { callout, codeRef, collapsible, color, tooltip } from "../index";
 import { allBlocks } from "../test/all-blocks";
 
 /** The names of the blocks and marks a config with these plugins types components for. */

@@ -16,7 +16,7 @@ export const DEFAULT_SITE_URL = "http://localhost:3000";
 export interface BlockChoice {
 	/** The name used in flags (`--blocks callout,tabs`). */
 	readonly id: string;
-	/** The function exported by `@monti-cms/blocks`, listed in `plugins`. */
+	/** The function listed in `plugins`: exported by `@monti-cms/blocks`, or by `@monti-cms/blocks/<id>` for a block with a `needs` (the heavy ones, so the barrel never loads their library). */
 	readonly fn: string;
 	/** One line for the list and for the comment in the config. */
 	readonly description: string;
@@ -279,6 +279,10 @@ export function schemaTemplate(
 	return `${JSON.stringify(schema, null, "\t")}\n`;
 }
 
+/** The module a block's function is imported from. */
+export const blockEntry = (block: BlockChoice): string =>
+	block.needs ? `@monti-cms/blocks/${block.id}` : "@monti-cms/blocks";
+
 const unique = <T>(values: readonly T[]) => [...new Set(values)];
 
 /** The block choices for the ids, in the order of {@link BLOCK_CHOICES}. */
@@ -300,12 +304,16 @@ export function configTemplate(answers: InitAnswers): string {
 	if (answers.ai) imports.push({ from: "@monti-cms/ai", names: ["aiPlugin"] });
 	if (answers.gitSync) imports.push({ from: "@monti-cms/git-sync", names: ["gitSync"] });
 	if (answers.storage === "s3") imports.push({ from: "@monti-cms/storage-s3", names: ["s3Storage"] });
-	if (blocks.length > 0) {
+	const light = blocks.filter((block) => !block.needs);
+	if (light.length > 0) {
 		imports.push({
 			from: "@monti-cms/blocks",
-			names: blocks.map((block) => block.fn).sort((a, b) => a.localeCompare(b)),
+			names: light.map((block) => block.fn).sort((a, b) => a.localeCompare(b)),
 		});
 	}
+	// A block that needs a library of its own has its own entry point, so the app that does not choose it never loads that library.
+	for (const block of blocks.filter((block) => block.needs))
+		imports.push({ from: blockEntry(block), names: [block.fn] });
 	imports.sort((a, b) => a.from.localeCompare(b.from));
 	const importLines = [
 		...imports.map(({ from, names }) => {

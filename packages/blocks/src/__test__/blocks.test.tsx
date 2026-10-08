@@ -3,21 +3,11 @@ import { defineCollection, defineSite, fields, translate } from "@monti-cms/core
 import { render, screen, waitFor } from "@testing-library/react";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
-import {
-	callout,
-	chart,
-	codeExplorer,
-	codeRef,
-	collapsible,
-	color,
-	columns,
-	defaultTextPalette,
-	mermaid,
-	tabs,
-	tooltip,
-} from "..";
+import { callout, codeExplorer, codeRef, collapsible, color, columns, defaultTextPalette, tabs, tooltip } from "..";
+import { chart } from "../chart";
 import { ChartProvider } from "../chart/provider";
 import { colorMessages } from "../color/messages";
+import { mermaid } from "../mermaid";
 import { MermaidProvider } from "../mermaid/provider";
 
 const names = (plugins: readonly { name: string }[]) => plugins.map((plugin) => plugin.name);

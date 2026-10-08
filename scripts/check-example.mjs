@@ -2,6 +2,8 @@
 /**
  * Example app bundle check. Builds and packs the repo packages (`packages/*`), copies the example app (`examples/blog`) to a temp folder outside the repo,
  * installs it from those bundles, then runs a type check (`skipLibCheck: false`) and `next build`, once with `cacheComponents` on (as in a new Next app) and once with it off. The example config attaches every extension. It also runs the config checks of `monti doctor` (the config loads, and no client component imports it).
+ * Last it turns the copy into the app a newcomer gets with the default blocks: no `mermaid()` or `chart()` in the config and neither `mermaid` nor `recharts` installed. That app must type check,
+ * build and (with the test database) serve the pages, content saved with the heavy blocks included. The heavy blocks come from `@monti-cms/blocks/chart` and `/mermaid`, so nothing of them may load.
  * Inside the repo the sources are used directly, so this catches what breaks only in the bundles (`dist`, `exports`, dependency declarations).
  *
  *   node scripts/check-example.mjs            # build first
@@ -12,7 +14,7 @@
  * schema `cms_example_check` of the test database and must answer 200 for a known post, 404 for an unknown one and 308 for an old address, with and without
  * `cacheComponents`. Without that variable they are skipped, and the script says so.
  */
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import net from "node:net";
@@ -248,6 +250,48 @@ try {
 	};
 	strip(pagesDir);
 	await check("example config, cacheComponents off");
+
+	// The default blocks need neither mermaid nor recharts: take them out of the config and out of node_modules, and build again.
+	const configPath = path.join(app, "monti.config.ts");
+	const heavy =
+		/^(?:\/\/ The two heavy blocks[^\n]*\n|import \{ (?:chart|mermaid) \} from "@monti-cms\/blocks\/(?:chart|mermaid)";\n|\t\t(?:chart|mermaid)\(\),\n)/gm;
+	const configText = readFileSync(configPath, "utf8");
+	const lightConfig = configText.replace(heavy, "");
+	if (lightConfig === configText || /\b(?:chart|mermaid)\(\)|blocks\/(?:chart|mermaid)/.test(lightConfig)) {
+		throw new Error("check-example: could not take chart() and mermaid() out of the copied monti.config.ts");
+	}
+	writeFileSync(configPath, lightConfig);
+	const lightPackage = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
+	delete lightPackage.dependencies.mermaid;
+	delete lightPackage.dependencies.recharts;
+	writeFileSync(pkgJsonPath, `${JSON.stringify(lightPackage, null, "\t")}\n`);
+	run("pnpm", ["install", "--no-frozen-lockfile"], app);
+	for (const heavyPackage of ["mermaid", "recharts"]) {
+		if (existsSync(path.join(app, "node_modules", heavyPackage))) {
+			throw new Error(`check-example: ${heavyPackage} is still installed in the light app`);
+		}
+	}
+	run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
+	await check("light config: the default blocks, no mermaid and no recharts installed");
+
+	// The other way round: a heavy block in the config without its library is named by `monti doctor`, with the command that installs it.
+	writeFileSync(configPath, configText);
+	const doctor = spawnSync("pnpm", ["exec", "monti", "doctor", "--only", "config/plugin-packages"], {
+		cwd: app,
+		encoding: "utf8",
+	});
+	const doctorOutput = `${doctor.stdout ?? ""}${doctor.stderr ?? ""}`;
+	if (doctor.status === 0) {
+		throw new Error(
+			"check-example: monti doctor passed with chart() and mermaid() configured and neither library installed",
+		);
+	}
+	if (!/pnpm add [^\n]*recharts/.test(doctorOutput) || !/mermaid/.test(doctorOutput)) {
+		throw new Error(
+			`check-example: monti doctor did not name the missing packages and their install command:\n${doctorOutput}`,
+		);
+	}
+	console.log("\ncheck-example: doctor names recharts and mermaid when they are missing");
 	console.log("\ncheck-example: ok");
 } finally {
 	if (args.has("--keep")) console.log(`kept: ${work}`);

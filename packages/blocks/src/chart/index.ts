@@ -21,6 +21,8 @@ export const chart = () =>
 		name: "chart",
 		options: {},
 		blocks: [chartBlock],
+		// An optional peer of this package: apps that do not use the block do not install it (`monti doctor` checks it).
+		requires: ["recharts"],
 		admin: () => import("@monti-cms/blocks/chart/admin"),
 		render: () => import("@monti-cms/blocks/chart/render"),
 		// If the AI plugin is present, the create and edit features attach automatically (`./ai`).

@@ -9,7 +9,8 @@ import {
 	valueFieldsOf,
 } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
-import { chart, mermaid } from "../../../blocks/src";
+import { chart } from "../../../blocks/src/chart";
+import { mermaid } from "../../../blocks/src/mermaid";
 import { seo } from "../../../seo/src";
 import { testSite } from "../../test/site";
 import type { AiActionDefinition, AiAttach } from "../action";

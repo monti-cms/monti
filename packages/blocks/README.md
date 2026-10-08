@@ -23,7 +23,10 @@ Stored as standard MDX (JSX elements). Sites that use the directive notation (`:
 
 ```ts
 // monti.config.ts
-import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "@monti-cms/blocks";
+import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tooltip } from "@monti-cms/blocks";
+// The two heavy blocks have their own entry points, so an app that does not use them never loads (or installs) their libraries.
+import { chart } from "@monti-cms/blocks/chart"; // needs `recharts`
+import { mermaid } from "@monti-cms/blocks/mermaid"; // needs `mermaid`
 import { defineConfig } from "@monti-cms/core/server";
 
 export const cms = defineConfig({
@@ -44,6 +47,8 @@ export const cms = defineConfig({
 	],
 });
 ```
+
+The barrel `@monti-cms/blocks` is light: it never loads recharts or mermaid. `recharts` and `mermaid` are optional peers of this package; install them (`pnpm add recharts`, `pnpm add mermaid`) only when you use `chart()` or `mermaid()`. If a block is in the config and its library is missing, the error names the package to install, and `monti doctor` fails with the install command (`config/plugin-packages`; a plugin lists what it needs in `requires`). `ALL_BLOCKS` (the definitions only, no libraries) is in `@monti-cms/blocks/definitions`.
 
 There is no function that adds them all: each block is its own plugin, and the list in the config is the list of blocks the site has. Adding the same plugin twice is a config error.
 
