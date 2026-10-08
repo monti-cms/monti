@@ -170,7 +170,7 @@ describe("any site: list screen", () => {
 		listed = [item("e1", "Alpha")];
 		handle = (url, init) =>
 			url.pathname === "/api/cms/v1/entries/e1/duplicate" && init?.method === "POST"
-				? json({ id: "copy-1" }, 201)
+				? json({ entry: { id: "copy-1" }, warnings: [] }, 201)
 				: undefined;
 		render(
 			<AdminQueryProvider>
@@ -210,11 +210,14 @@ describe("any site: record panel", () => {
 		handle = (url, init) =>
 			url.pathname === "/api/cms/v1/entries" && init?.method === "POST"
 				? json({
-						id: "r1",
-						collection: record,
-						status: "published",
-						version: 1,
-						working: { metadata: {}, doc: emptyStoredDocument() },
+						entry: {
+							id: "r1",
+							collection: record,
+							status: "published",
+							version: 1,
+							working: { metadata: {}, doc: emptyStoredDocument() },
+						},
+						warnings: [],
 					})
 				: undefined;
 		const onSaved = vi.fn();
@@ -258,9 +261,8 @@ describe("any site: entry editor", () => {
 			if (init.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
 				return json({
-					...entry,
-					version: 5,
-					working: { metadata: body.metadata, doc: body.doc },
+					entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
+					warnings: [],
 				});
 			}
 			return undefined;

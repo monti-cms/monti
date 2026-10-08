@@ -20,7 +20,7 @@ const gitSyncServer: CmsServerPlugin = {
 		{ pattern: "v1/git-sync/webhook", module: routes.webhook, public: true },
 	],
 	// Delivered through the event outbox: a failed push is retried, not lost.
-	afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event),
+	hooks: { afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event) },
 	commands,
 	// What `monti doctor` checks: targets, file format, token, webhook secret, and (with --online) the repo.
 	checks: gitSyncChecks,

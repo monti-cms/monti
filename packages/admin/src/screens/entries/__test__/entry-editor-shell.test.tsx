@@ -196,9 +196,12 @@ describe("entry editor shell", () => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
 				return json({
-					...entry,
-					version: 5,
-					working: { metadata: body.metadata, doc: body.doc },
+					entry: {
+						...entry,
+						version: 5,
+						working: { metadata: body.metadata, doc: body.doc },
+					},
+					warnings: [],
 				});
 			}
 		});
@@ -238,9 +241,12 @@ describe("entry editor shell", () => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
 				return json({
-					...entry,
-					version: 5,
-					working: { metadata: body.metadata, doc: body.doc },
+					entry: {
+						...entry,
+						version: 5,
+						working: { metadata: body.metadata, doc: body.doc },
+					},
+					warnings: [],
 				});
 			}
 		});
@@ -271,9 +277,12 @@ describe("entry editor shell", () => {
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
 				return json({
-					...entry,
-					version: 5,
-					working: { metadata: body.metadata, doc: body.doc },
+					entry: {
+						...entry,
+						version: 5,
+						working: { metadata: body.metadata, doc: body.doc },
+					},
+					warnings: [],
 				});
 			}
 		});
@@ -291,11 +300,14 @@ describe("entry editor shell", () => {
 				const body = JSON.parse(String(init.body));
 				return json(
 					{
-						...entry,
-						id: "created-entry",
-						version: 1,
-						workingSlug: body.slug,
-						working: { metadata: body.metadata, doc: body.doc },
+						entry: {
+							...entry,
+							id: "created-entry",
+							version: 1,
+							workingSlug: body.slug,
+							working: { metadata: body.metadata, doc: body.doc },
+						},
+						warnings: [],
 					},
 					201,
 				);
@@ -324,16 +336,22 @@ describe("entry editor shell", () => {
 			if (input === "/api/cms/v1/entries" && init?.method === "POST") {
 				const body = JSON.parse(String(init.body));
 				return json({
-					...entry,
-					id: "published-entry",
-					collection: "memo",
-					version: 1,
-					workingSlug: body.slug,
-					working: { metadata: body.metadata, doc: body.doc },
+					entry: {
+						...entry,
+						id: "published-entry",
+						collection: "memo",
+						version: 1,
+						workingSlug: body.slug,
+						working: { metadata: body.metadata, doc: body.doc },
+					},
+					warnings: [],
 				});
 			}
 			if (input === "/api/cms/v1/entries/published-entry/publish" && init?.method === "POST") {
-				return json({ ...entry, id: "published-entry", collection: "memo", status: "published", version: 2 });
+				return json({
+					entry: { ...entry, id: "published-entry", collection: "memo", status: "published", version: 2 },
+					warnings: [],
+				});
 			}
 		});
 		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="memo" />);
@@ -581,7 +599,7 @@ describe("entry editor shell", () => {
 
 		it("takes the body the panel hands back as the body, which the next save sends", async () => {
 			serve((_input, init) => {
-				if (init?.method === "PATCH") return json({ ...entry, version: 5 });
+				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
 			});
 			withPanels([{ format: "custom", label: "내 원문 보기", Panel: FakePanel }]);
 			await screen.findByLabelText("시각 본문");
@@ -666,15 +684,18 @@ describe("entry editor shell", () => {
 
 	it("adds categories and tags through the add panel, prefilled with the typed name", async () => {
 		serve((input, init) => {
-			if (init?.method === "PATCH") return json({ ...entry, version: 5 });
+			if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
 			if (input === "/api/cms/v1/entries" && init?.method === "POST") {
 				const data = JSON.parse(String(init.body));
 				return json(
 					{
-						id: data.collection === "category" ? "cat-2" : "tag-2",
-						workingSlug: "slug",
-						publishedSlug: "slug",
-						working: { metadata: data.metadata, doc: emptyStoredDocument() },
+						entry: {
+							id: data.collection === "category" ? "cat-2" : "tag-2",
+							workingSlug: "slug",
+							publishedSlug: "slug",
+							working: { metadata: data.metadata, doc: emptyStoredDocument() },
+						},
+						warnings: [],
 					},
 					201,
 				);
@@ -755,7 +776,7 @@ describe("entry editor shell", () => {
 						version: server.version + 1,
 						working: { ...server.working, metadata: body.metadata, doc: body.doc },
 					};
-					return json(server);
+					return json({ entry: server, warnings: [] });
 				}
 			});
 			renderEdit();
@@ -884,7 +905,7 @@ describe("entry editor shell", () => {
 	it("fills an empty post summary from the body before publishing", async () => {
 		serve(
 			(input, init) => {
-				if (init?.method === "PATCH") return json({ ...entry, version: 5 });
+				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
 				if (input.endsWith("/publish")) return json({ ...entry, version: 6, status: "published", warnings: [] });
 			},
 			{
@@ -1067,7 +1088,7 @@ describe("templates", () => {
 		serve(
 			(input, init) => {
 				if (input === "/api/cms/v1/templates") return json({ items: [template] });
-				if (init?.method === "PATCH") return json({ ...entry, version: 5 });
+				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
 			},
 			{ ...entry, working: { ...entry.working, doc: emptyStoredDocument() } },
 		);
@@ -1143,7 +1164,7 @@ describe("language tabs", () => {
 	it("creates a translation from the missing-language button and opens it", async () => {
 		serve((input, init) => {
 			if (input === "/api/cms/v1/entries/entry-1/translations" && init?.method === "POST") {
-				return json({ id: "entry-ja" }, 201);
+				return json({ entry: { id: "entry-ja" }, warnings: [] }, 201);
 			}
 		}, source);
 		renderEdit();

@@ -51,12 +51,14 @@ describe("0014_block_ids", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			doc: docFromMdx("Body"),
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				doc: docFromMdx("Body"),
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -66,21 +68,25 @@ describe("0014_block_ids", () => {
 	};
 
 	const createDraft = async (mdx: string) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("post"),
-			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			doc: docFromMdx(mdx),
-		});
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("post"),
+				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
+				doc: docFromMdx(mdx),
+			})
+			.then((result) => result.entry);
 
 	const edit = (entry: Entry, mdx: string) =>
-		service.saveDraft(entry.id, {
-			collection: contentCollection,
-			slug: entry.workingSlug,
-			metadata: entry.working.metadata as never,
-			doc: docFromMdx(mdx),
-			expectedVersion: entry.version,
-		});
+		service
+			.saveDraft(entry.id, {
+				collection: contentCollection,
+				slug: entry.workingSlug,
+				metadata: entry.working.metadata as never,
+				doc: docFromMdx(mdx),
+				expectedVersion: entry.version,
+			})
+			.then((result) => result.entry);
 
 	/** A published entry whose working body has moved on: `workingMdx` is the draft, `publishedMdx` what was published. */
 	const publishedThenEdited = async (publishedMdx: string, workingMdx: string) => {

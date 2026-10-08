@@ -56,15 +56,17 @@ export function createRelationResolver(options: { readonly cms: Cms; readonly dr
 			}
 			try {
 				const titleName = cms.site.titleField(to).name;
-				const entry = await cms.contentService().createDraft(
-					{
-						collection: to,
-						slug,
-						metadata: { [titleName]: value },
-						doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] },
-					} as never,
-					cms.site.isItemCollection(to) ? undefined : { publishImmediately: false },
-				);
+				const entry = (
+					await cms.contentService().createDraft(
+						{
+							collection: to,
+							slug,
+							metadata: { [titleName]: value },
+							doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] },
+						} as never,
+						cms.site.isItemCollection(to) ? undefined : { publishImmediately: false },
+					)
+				).entry;
 				const id = (entry as { translationGroupId: string }).translationGroupId;
 				cache.set(key, id);
 				return { id };

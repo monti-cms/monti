@@ -40,7 +40,13 @@ export type BulkUsage = {
 	readonly state: string;
 };
 export type BulkItemResult =
-	| { readonly id: string; readonly ok: true; readonly version: number }
+	| {
+			readonly id: string;
+			readonly ok: true;
+			readonly version: number;
+			/** What the write pipeline warned about for this item (a publish or a metadata change). Absent when there is none. */
+			readonly warnings?: readonly Issue[];
+	  }
 	| {
 			readonly id: string;
 			readonly ok: false;
@@ -118,8 +124,13 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, opti
 						continue;
 					}
 					if (request.op === "publish") {
-						const { entry } = await content.publish({ id: item.id, expectedVersion: item.expectedVersion });
-						results.push({ id: item.id, ok: true, version: (entry as { version: number }).version });
+						const { entry, warnings } = await content.publish({ id: item.id, expectedVersion: item.expectedVersion });
+						results.push({
+							id: item.id,
+							ok: true,
+							version: (entry as { version: number }).version,
+							...(warnings.length > 0 ? { warnings } : {}),
+						});
 						continue;
 					}
 					if (LIFECYCLE_OPS.includes(request.op)) {
@@ -165,7 +176,7 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, opti
 					}
 					const previousReferences = await storePort.getWorkingReferences({ entryId: item.id });
 					// A metadata or folder change leaves the body as it is, block ids included.
-					const { snapshot } = await pipeline.run({
+					const { snapshot, warnings } = await pipeline.run({
 						operation: "save",
 						entryId: item.id,
 						locale: working.locale ?? site.DEFAULT_LOCALE,
@@ -179,7 +190,7 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, opti
 						references: snapshot.references,
 						folderId,
 					})) as { version: number };
-					results.push({ id: item.id, ok: true, version: saved.version });
+					results.push({ id: item.id, ok: true, version: saved.version, ...(warnings.length > 0 ? { warnings } : {}) });
 				} catch (e) {
 					const { code, issues, details } = (e ?? {}) as {
 						code?: unknown;

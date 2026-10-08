@@ -52,12 +52,14 @@ describe("0018_link_entry_ids", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			doc: docOf("Body"),
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				doc: docOf("Body"),
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -67,12 +69,14 @@ describe("0018_link_entry_ids", () => {
 	};
 
 	const create = async (slug: string, mdx: string) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug,
-			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			doc: docOf(mdx),
-		});
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug,
+				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
+				doc: docOf(mdx),
+			})
+			.then((result) => result.entry);
 
 	const hrefTo = (slug: string) => {
 		const path = testSite.contentPath(contentCollection, slug);
@@ -181,13 +185,15 @@ describe("0018_link_entry_ids", () => {
 		const oldSlug = publishedTarget.workingSlug as string;
 		// A rename: publishing the new slug turns the old one into an alias.
 		const renamedSlug = unique("renamed");
-		const renamed = await service.saveDraft(target.id, {
-			collection: contentCollection,
-			slug: renamedSlug,
-			metadata: (await store.getEntry(target.id)).working.metadata as never,
-			doc: docOf("Target"),
-			expectedVersion: publishedTarget.version,
-		});
+		const renamed = (
+			await service.saveDraft(target.id, {
+				collection: contentCollection,
+				slug: renamedSlug,
+				metadata: (await store.getEntry(target.id)).working.metadata as never,
+				doc: docOf("Target"),
+				expectedVersion: publishedTarget.version,
+			})
+		).entry;
 		await publishDraft(testSite, store, { id: target.id, expectedVersion: renamed.version });
 		const missing = unique("nobody-holds-this");
 		const source = await create(unique("source"), `[old](${hrefTo(oldSlug)}) [gone](${hrefTo(missing)})`);

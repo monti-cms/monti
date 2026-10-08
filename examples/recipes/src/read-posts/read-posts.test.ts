@@ -9,22 +9,24 @@ const cms = createBlogCms(test.server);
 const published = new Map<string, { id: string; version: number }>();
 const publish = async (slug: string, metadata: { summary: string; tagIds: string[] }) => {
 	const service = cms.contentService();
-	const draft = await service.createDraft({
-		collection: "post",
-		slug,
-		metadata: { title: slug, ...metadata },
-		body: "Body.",
-		format: "mdx",
-	});
+	const draft = (
+		await service.createDraft({
+			collection: "post",
+			slug,
+			metadata: { title: slug, ...metadata },
+			body: "Body.",
+			format: "mdx",
+		})
+	).entry;
 	published.set(slug, (await service.publish({ id: draft.id, expectedVersion: draft.version })).entry);
 };
 
 beforeAll(async () => {
 	await cms.migrate();
 	// An item collection has no body, so there is nothing to give besides the name. A tag is published when it is created.
-	const tag = await cms
-		.contentService()
-		.createDraft({ collection: "tag", slug: "monti", metadata: { title: "Monti" } });
+	const tag = (
+		await cms.contentService().createDraft({ collection: "tag", slug: "monti", metadata: { title: "Monti" } })
+	).entry;
 	for (const [slug, tagIds] of [
 		["first", [tag.id]],
 		["second", []],
@@ -61,14 +63,16 @@ describe("reading posts on the public site", () => {
 		const service = cms.contentService();
 		const second = published.get("second");
 		if (!second) throw new Error("second was not published");
-		const draft = await service.saveDraft(second.id, {
-			collection: "post",
-			slug: "second-renamed",
-			metadata: { title: "second" },
-			body: "Body.",
-			format: "mdx",
-			expectedVersion: second.version,
-		});
+		const draft = (
+			await service.saveDraft(second.id, {
+				collection: "post",
+				slug: "second-renamed",
+				metadata: { title: "second" },
+				body: "Body.",
+				format: "mdx",
+				expectedVersion: second.version,
+			})
+		).entry;
 		await service.publish({ id: draft.id, expectedVersion: draft.version });
 		expect(await getPost(cms, "second")).toEqual({ redirectTo: "/posts/second-renamed" });
 	});

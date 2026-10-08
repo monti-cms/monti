@@ -51,13 +51,17 @@ export function LanguageTabs({
 				toast.error(t("lang.saveFirst"));
 				return;
 			}
-			const created = await cmsFetch<{ id: string }>(site, cmsApiUrl(`/v1/entries/${entry.id}/translations`), {
-				method: "POST",
-				json: { locale: target },
-				fallback: t("lang.createFailed"),
-			});
+			const created = await cmsFetch<{ entry: { id: string } }>(
+				site,
+				cmsApiUrl(`/v1/entries/${entry.id}/translations`),
+				{
+					method: "POST",
+					json: { locale: target },
+					fallback: t("lang.createFailed"),
+				},
+			);
 			toast.success(t("lang.created", { lang: site.localeLabel(target) }));
-			router.navigate(site.adminEntryEditHref(created.id));
+			router.navigate(site.adminEntryEditHref(created.entry.id));
 		} catch (error) {
 			toast.error(errorText(site, error, t("lang.createFailed")));
 		} finally {

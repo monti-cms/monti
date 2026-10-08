@@ -349,7 +349,7 @@ describe("save", () => {
 			translations: [{ id: "entry-1", locale: "ko", status: "draft", isSource: true, title: "t", workingSlug: "test" }],
 		};
 		const { editor, client } = await opened({ server: group });
-		client.update.mockResolvedValueOnce({ ...ENTRY, version: 5 });
+		client.update.mockResolvedValueOnce({ entry: { ...ENTRY, version: 5 }, warnings: [] });
 		editor().setForm({ title: "수정" });
 		await editor().save();
 		expect(editor().entry?.translations).toHaveLength(1);
@@ -557,7 +557,7 @@ describe("publish", () => {
 		client.publish.mockImplementationOnce(
 			() =>
 				new Promise((resolve) => {
-					release = () => resolve({ ...ENTRY, version: 5, status: "published" });
+					release = () => resolve({ entry: { ...ENTRY, version: 5, status: "published" }, warnings: [] });
 				}),
 		);
 		const first = editor().publish();
@@ -581,9 +581,7 @@ describe("publish", () => {
 	it("sends resetPublishedAt only when asked, and returns the warnings", async () => {
 		const { editor, client } = await opened();
 		client.publish.mockResolvedValueOnce({
-			...ENTRY,
-			version: 5,
-			status: "published",
+			entry: { ...ENTRY, version: 5, status: "published" },
 			warnings: [{ code: "seo_missing" }],
 		});
 		const result = await editor().publish({ resetPublishedAt: true });

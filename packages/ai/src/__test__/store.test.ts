@@ -130,12 +130,14 @@ describe("AI action edited-value store", () => {
 	});
 
 	it("the core content lookup used by code checks finds slugs used by other posts in the same collection and language", async () => {
-		const entry = await createContentService<Entry>(content, { site: testSite }).createDraft({
-			collection: "category",
-			slug: "used-address",
-			metadata: { title: "주소 확인" },
-			doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] },
-		});
+		const entry = (
+			await createContentService<Entry>(content, { site: testSite }).createDraft({
+				collection: "category",
+				slug: "used-address",
+				metadata: { title: "주소 확인" },
+				doc: { type: "doc", version: STORED_DOCUMENT_VERSION, content: [] },
+			})
+		).entry;
 		const lookup = createContentLookup({ store: () => content });
 		const slugs = ["used-address", "free-address"];
 		expect(await lookup.slugsInUse({ collection: "category", locale: "ko", slugs })).toEqual(new Set(["used-address"]));

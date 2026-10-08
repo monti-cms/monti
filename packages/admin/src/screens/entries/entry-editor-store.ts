@@ -596,7 +596,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 					...(translation ? { translation } : {}),
 				};
 				const folderId = target.mode === "new" ? target.folderId : null;
-				const saved =
+				const { entry: saved, warnings } =
 					isNew || !m.entryId
 						? await client.create({ collection, ...(folderId ? { folderId } : {}), ...body })
 						: await client.update(m.entryId, { expectedVersion: m.version, ...body });
@@ -610,7 +610,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 					entry: merged,
 					readOnly: merged.status === "trashed",
 					saveError: null,
-					bodyWarnings: saved.warnings ?? [],
+					bodyWarnings: warnings,
 				});
 				callbacks().onSaved?.(merged, { created: isNew });
 
@@ -743,15 +743,15 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			const id = m.entryId;
 			if (!id) return editorFailure("invalid_state", t("editor.unsaved"));
 			try {
-				const published = await client.publish(id, {
+				const { entry: published, warnings } = await client.publish(id, {
 					expectedVersion: m.version,
 					...(options.resetPublishedAt ? { resetPublishedAt: true } : {}),
 				});
 				m.version = published.version;
 				const merged: EntryData = { ...published, ...keepTranslationGroup(state().entry, published) };
-				commit({ entry: merged, readOnly: merged.status === "trashed", bodyWarnings: published.warnings ?? [] });
+				commit({ entry: merged, readOnly: merged.status === "trashed", bodyWarnings: warnings });
 				callbacks().onSaved?.(merged, { created: false });
-				return { ok: true, value: { entry: merged, warnings: published.warnings ?? [], filled: filled.value } };
+				return { ok: true, value: { entry: merged, warnings, filled: filled.value } };
 			} catch (caught) {
 				if (caught instanceof CmsApiError && caught.code === "conflict") {
 					const server = await client.get(id).catch(() => null);
@@ -801,7 +801,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			const copy = await client.duplicate(id, {
 				title: copyTitle(site, current.collection, formTitle(site, current.collection, current.form)),
 			});
-			return { ok: true, value: copy };
+			return { ok: true, value: copy.entry };
 		} catch (caught) {
 			return failed(failureOf(site, caught, t("duplicateFailed")));
 		}

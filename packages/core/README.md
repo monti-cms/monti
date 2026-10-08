@@ -598,7 +598,7 @@ or `contributes`, a text override of `admin.messages` that is a function (string
 
 **Typing.** The types follow the config you pass, with no registration step. `defineConfig({ … })` (and `createCms({ config })`) returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 and a collection that is not in the config is a type error. Where a library type cannot see an instance, give it the config type: `DocumentComponentsFor<typeof config>` or `DocumentComponentsOf<typeof cms>` types the `components` of `<CmsContent>` (block names and the attribute props of each block), and the AI plugin's action names take the config type the same way.
-What you read is typed for a published entry: a `required` field is not optional in `entry.metadata` (`post.metadata.title` is a `string`), because publishing needs it (`PublishedMetadataFor`). What you write is typed by the same config: `cms.contentService().createDraft({ collection: "post", … })` knows the metadata of a post, a post needs a body (`doc`, or `body` with its `format`), and an item collection (a tag) needs none. `{ summary: undefined }` means "not set". A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from the declaration file `monti schema:types` writes ("The schema file").
+What you read is typed for a published entry: a `required` field is not optional in `entry.metadata` (`post.metadata.title` is a `string`), because publishing needs it (`PublishedMetadataFor`). What you write is typed by the same config: `cms.contentService().createDraft({ collection: "post", … })` knows the metadata of a post, a post needs a body (`doc`, or `body` with its `format`), and an item collection (a tag) needs none. `{ summary: undefined }` means "not set". Every write of the service answers `{ entry, warnings }` ("Hook contract"). A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from the declaration file `monti schema:types` writes ("The schema file").
 
 ### Server-only config
 
@@ -1027,7 +1027,7 @@ blocks: [
   validated before publishing.
 - A block can check its own syntax with `validate(node, ctx)`. Core calls it for every node of the block (a code fence of its language, an element, or a text decoration) in the write pipeline, after core preparation, on every create, save, publish and bulk, API or AI write.
   `node` has `name`, `id` (the block's id in the stored document), `attributes` and, for a fence block, `source` (the code without its annotation comments); `ctx` has `site` (`site.createTranslator(messages)` gives text in the admin language), `locale` and `operation`.
-  It returns `{ code, message?, params? }[]` (or a promise of one). The findings are **warnings**, never blockers: each carries the block's id in `position.blockId` and its name in `params.block`, comes back as `warnings` in the save and publish responses, and the editor shows it under that block. A check that throws becomes a `block_validate_failed` warning and the write goes on.
+  It returns `{ code, message?, params? }[]` (or a promise of one). The findings are **warnings**, never blockers: each carries the block's id in `position.blockId` and its name in `params.block`, comes back as `warnings` next to the entry in the save and publish responses, and the editor shows it under that block. A check that throws becomes a `block_validate_failed` warning and the write goes on.
   `validate` is a function, so it runs on the server and is not part of the block data the browser receives.
   `@monti-cms/blocks` checks a chart with its own parser (`parseChartDsl`) and a Mermaid diagram with `mermaid.parse` (only when `mermaid` is installed).
 
@@ -1191,7 +1191,8 @@ export const myPlugin = () =>
 		options: {}, // JSON value. Read by both the server and the browser
 		nav: [{ path: "my", label: "My screen", icon: "plug" }], // admin sidebar "Manage" group
 		validate: ({ collections }) => {}, // called when the site config is built
-		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display
+		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display, hooks that need server code
+		hooks: { validate: () => undefined }, // write hooks written inline: a plugin that only adds hooks needs no `server` module (and no `options`)
 		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
 		formats: () => import("my-plugin/formats"), // a CmsFormat or a list of them ("Formats")
 		render: () => import("my-plugin/render"), // the public components of the plugin's blocks: `export const documentComponents = (context) => ({ blocks: { name: Component } })` ("Rendering a stored document")
@@ -1209,8 +1210,10 @@ export const myPlugin = () =>
   forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
   `migrate` is called by `monti migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
-- The server-side `hooks` (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract".
-- `afterCommit(event, cms)` of the server side (next to `hooks`) is the same notification as `hooks.afterCommit` (delivered from the outbox, retried, at least once, "Event delivery") but also gets the instance, so a subscriber that needs its storage, the store or the formats keeps no state of its own. A plugin that has both is one subscriber, `plugin:<name>`, that runs `hooks.afterCommit` first.
+- **Write hooks** (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract". A plugin sets them in one of two places, never both (a plugin with hooks in both fails when it loads):
+  - **Inline**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. For a plugin that only adds hooks: no module file, and `options` can be left out. The plugin object is part of the site config, which the browser bundle imports too, so inline hooks must be small and pure: no secret, no Node-only API, no network client, no heavy import.
+  - **In the lazy `server` module**: `server: async () => ({ default: { hooks } })`. Read on the server only, so this is the place for hooks that hold a secret, call out over the network or import something heavy, and for a plugin that has routes, migrations, commands or checks anyway.
+- `afterCommit(event, cms)` gets the instance, in a plugin's hooks and in the server config's alike, so a subscriber that needs its storage, the store or the formats keeps no state of its own. It is delivered from the outbox (retried, at least once, "Event delivery"), and `event.once(run)` runs work once per event.
 - `commands` of the server side adds command line commands: `monti <plugin name>:<command> [options]` loads the app like `monti migrate` (`--env-file`, `--no-env-file`, `--config`), runs `command.run({ cms, args, log, error })` and exits with the code it returns. The command declares its `options` (`{ name: { type: "string" | "boolean", description } }`); `--help` lists them. `monti git-sync:pull` is one.
 - Custom admin components are a plugin too. Give it an `admin` module whose default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`); the `Provider` (a `"use client"` component) wraps the admin and registers the components with `CmsAdminComponentsProvider`. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
 
@@ -1307,7 +1310,7 @@ The server options are part of the one `defineConfig({ … })` call, next to the
 | `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else on when a known proxy platform is detected or in development, else off |
 | `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
-| `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed: cache revalidation, webhooks, search indexing; retried when it fails, so it must be idempotent). See "Hook contract" and "Event delivery". Plugins can set `hooks` too |
+| `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed, with the instance as its second argument: cache revalidation, webhooks, search indexing; retried when it fails, so wrap work that must not be repeated in `event.once`). See "Hook contract" and "Event delivery". Plugins can set `hooks` too |
 | `events` | Optional. How `afterCommit` deliveries are retried and kept: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. See "Event delivery" |
 
 To use another store or login, build and pass your own `DatabaseAdapter`, `MediaAdapter` (as `storage`) or `AuthAdapter`. The low-level `createCms({ config, server })` takes the same options as a `CmsServerConfig` (`media` instead of `storage`), with the site config as a separate value.
@@ -1356,8 +1359,8 @@ export const cms = defineConfig({
 		}),
 		// The same, for a publish only.
 		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
-		// After the change is committed.
-		afterCommit: (event) => revalidate(event.collection, event.publishedSlug),
+		// After the change is committed. It gets the instance, like a plugin's.
+		afterCommit: (event, cms) => revalidate(cms.site, event.collection, event.publishedSlug),
 	},
 });
 ```
@@ -1380,7 +1383,8 @@ export const cms = defineConfig({
 - A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then gets a `saved` change followed by a `published` one for the entry; a publish that changes nothing gets only `published`). A create or save that publishes at once (records) is reported the same way: `created` or `saved`, then `published`.
 - An issue a `validate` or `validatePublish` adds is `{ code, path?, message?, params? }`. `path` is the field the editor shows it under (`"slug"`, `"title"`), and `message` is the text the person reads: a `code` that core has no text for is shown as its `message`, so write one. The `ServiceError` a refused write throws carries them as `issues`, and its own `message` lists what they say (`validation_failed: The slug "A" must be lowercase (slug)`).
 - A hook that throws, or returns something that is not its contract, fails the write with `hook_failed` (HTTP 500). The error names the hook and its owner (`server` or `plugin:<name>`) in `issues[].params`; nothing is stored. `validate` failures give `validation_failed` and `validatePublish` failures give `publish_validation_failed` (HTTP 422), with the added issues next to the draft's own.
-- `afterCommit` gets the event: ids, status, slugs, `version`, `contentHash`, `eventId`, and `read()` for the committed entry (never the body itself). Delivery is from an outbox: at least once, in order per entry, retried when it fails. See "Event delivery".
+- `afterCommit` gets the event: ids, status, slugs, `version`, `contentHash`, `eventId`, `read()` for the committed entry (never the body itself) and `once(run)`, and the instance as its second argument. Delivery is from an outbox: at least once, in order per entry, retried when it fails. See "Event delivery".
+- **What a write returns.** Every write of `cms.contentService()` (`createDraft`, `saveDraft`, `createTranslation`, `duplicate`, `publish`, `restore`) resolves to `{ entry, warnings }`: the entry as it is now, and the warnings the write found (core's, the blocks' and the hooks'). The warnings are never part of the entry, and the list is empty when there are none. The admin API answers the same shape (`POST /entries`, `PATCH /entries/:id`, `POST /entries/:id/publish`, `/restore`, `/duplicate` and `/translations`), and an item of a bulk result carries `warnings` when its write had any. Archiving, unarchiving and trashing are store calls without hooks to warn: they return the entry.
 
 Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `write-pipeline.test.ts`):
 
@@ -1397,22 +1401,24 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 - **The outbox.** In the same transaction as a change, the store inserts a row into `cms_events` (migration `0022_events`): `id`, `kind` (`created`, `saved`, `published`, `archived`, `unarchived`, `trashed`, `restored`, `deleted`), `entry_id`, `collection`, `locale`, `content_hash`, `version`, `occurred_at` and a `payload` with the status and slugs. A change that rolls back leaves no event; a change that commits always has one. A create or save that publishes at once writes two events (`created`/`saved`, then `published`). There is no foreign key to `entries`, so the event of a deletion outlives the entry. A change to a source's translations is reported once, for the entry it was made on (`translationGroupId` names the group).
 - **Subscribers.** The config's `hooks.afterCommit` is the subscriber `server`; each plugin's `hooks.afterCommit` is `plugin:<plugin name>`. The name is stable and keys the delivery state in `cms_event_deliveries` (one row per event and subscriber: `state`, `attempts`, `last_error`, `next_attempt_at`), so do not rename a plugin that has one. A subscriber added later gets the events committed after it appears, not the history.
 - **Delivery.** After the commit, the process that made the change tries each subscriber right away, in the same call, so latency is what it was before. A failure is recorded and retried later with a growing delay (15 seconds, doubling, at most an hour; `events.backoffMs` changes it) and the delivery is dead-lettered (`dead`) after `events.maxAttempts` tries (default 8). The write is never undone, and the other subscribers are not held back.
-- **At least once, in order per entry.** An event can be delivered more than once (a subscriber that did its work and then failed, a try that never finished), so **a subscriber must be idempotent**: it receives `event.eventId`, the same on every try, to remember what it handled. Events of one entry are delivered in commit order: an event waits while an earlier event of the same entry is pending, in flight or failing and not dead. A dead or dismissed delivery no longer holds the order, so a manual retry of a dead one can arrive after later events; a subscriber that exports the entry reads its current state and compares `version`. Events of different entries are independent.
+- **At least once, in order per entry.** An event can be delivered more than once (a subscriber that did its work and then failed, a try that never finished), so **a subscriber must be idempotent**: `event.eventId` is the same on every try, and `event.once` (below) keeps the "already done" note for you. Events of one entry are delivered in commit order: an event waits while an earlier event of the same entry is pending, in flight or failing and not dead. A dead or dismissed delivery no longer holds the order, so a manual retry of a dead one can arrive after later events; a subscriber that exports the entry reads its current state and compares `version`. Events of different entries are independent.
+- **Doing it once.** `await event.once(run)` runs `run` one time per event and subscriber and says whether it ran: when an earlier try already finished `run`, it is skipped and `once` returns `false`. A `run` that throws is not marked, so the retry runs it again. The mark is written after `run` returns, so only a crash between the two repeats the work. This is all the idempotency code a subscriber that sends a message or calls an API needs. The marks live in the plugin storage of core (`core-events`, a name no plugin can take) and are dropped with the events (`events.retentionDays`). Work whose repeat is harmless needs no `once`.
 - **Reading the committed entry.** `event.read()` returns the entry as it is now (`Entry`: `working` and, once published, `published`, each `{ metadata, doc, … }`, plus `publishedSlug`, `workingSlug`, `version`; `Entry` is exported by `@monti-cms/core/plugin/server`) or `null` when it was deleted. For a message with an address use `cms.site.contentPath(collection, slug)` (the path, `null` if the collection has none) and `cms.site.config.site?.url` (the origin, from `SITE_URL`). `event.version` and `event.contentHash` say which change this event is: when `read().version` is higher, a later event for the entry follows. A subscriber that exports an entry through a format (git-sync) reads it, runs the format and skips the event if the version it wrote is already newer.
 - **Deferring.** A subscriber that is not ready yet (it batches events, or knows when a rate limit ends) returns `{ retryAt: Date }` or throws `new DeferDelivery(retryAt)` (`@monti-cms/core/server`, `@monti-cms/core/plugin/server`). The delivery goes back to `pending`, due at `retryAt`. It is **not a failure**: nothing is logged, it is not listed on the Events screen, it is not in the failed badge, it does not use an attempt (`attempts` goes back by one, so a delivery deferred any number of times is still on its try) and it can never dead-letter. It still holds the order of the entry's later events. `cms.events.retry()` returns how many were `deferred`; `retry({ all: true })` also tries deferred deliveries that are not due yet. git-sync uses this for its batch window.
 
 ```ts
-// git-sync/server.ts, the `server` module of the plugin (`definePlugin({ name: "git-sync", server: () => import("./server") })`)
+// slack/server.ts, the `server` module of a plugin (`definePlugin({ name: "slack", server: () => import("./server") })`)
 import type { CmsServerPlugin } from "@monti-cms/core";
 
 const plugin: CmsServerPlugin = {
 	hooks: {
-		// Delivered at least once: use `event.eventId` to skip an event this subscriber already handled.
-		afterCommit: async (event) => {
-			if (await alreadyHandled(event.eventId)) return;
-			const entry = await event.read(); // the committed entry, or null if it was deleted
-			await pushToGit(event, entry);
-			await markHandled(event.eventId);
+		afterCommit: async (event, cms) => {
+			if (event.kind !== "published") return;
+			// Delivered at least once: `once` runs this one time for the event, and the retry of a throw runs it again.
+			await event.once(async () => {
+				const entry = await event.read(); // the committed entry, or null if it was deleted
+				await postToSlack(entry, cms.site.contentPath(event.collection, event.publishedSlug));
+			});
 		},
 	},
 };

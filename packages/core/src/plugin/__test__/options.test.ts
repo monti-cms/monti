@@ -52,3 +52,17 @@ describe("site.getPluginOptions", () => {
 		expect(site.getPluginOptions("color")).toEqual({ palette: ["red"] });
 	});
 });
+
+describe("definePlugin", () => {
+	it("needs only a name for a plugin that adds hooks: options are an empty object, the hooks stay as given", () => {
+		const hooks = { validate: () => undefined };
+		const plugin = definePlugin({ name: "hook-only", hooks });
+		expect(plugin.options).toEqual({});
+		expect(plugin.hooks).toBe(hooks);
+		expect(plugin.server).toBeUndefined();
+	});
+
+	it("keeps the options it is given", () => {
+		expect(definePlugin({ name: "with-options", options: { a: 1 } }).options).toEqual({ a: 1 });
+	});
+});

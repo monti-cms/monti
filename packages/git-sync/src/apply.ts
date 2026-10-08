@@ -77,12 +77,12 @@ export async function applyFile(
 		let created = false;
 		if (current) {
 			if (current.status === "trashed")
-				current = await service.restore({ id: current.id, expectedVersion: current.version });
+				current = (await service.restore({ id: current.id, expectedVersion: current.version })).entry;
 			else if (current.status === "archived") {
 				current = await cms.store().unarchiveEntry({ id: current.id, expectedVersion: current.version });
 			}
 		} else if (input.locale === cms.site.DEFAULT_LOCALE || cms.site.isItemCollection(input.collection)) {
-			const entry = await service.createDraft(body as never, { publishImmediately: true });
+			const entry = (await service.createDraft(body as never, { publishImmediately: true })).entry;
 			return { entry: entry as Applied["entry"], created: true };
 		} else {
 			const sourceId = input.file.translationOf
@@ -93,12 +93,14 @@ export async function applyFile(
 					`${input.path} is a "${input.locale}" file with no entry yet; add \`monti.translationOf\` (the id of the source entry) to its front matter`,
 				);
 			}
-			current = await service.createTranslation({ sourceId, locale: input.locale });
+			current = (await service.createTranslation({ sourceId, locale: input.locale })).entry;
 			created = true;
 		}
-		const saved = await service.saveDraft(current.id, { ...body, expectedVersion: current.version } as never, {
-			publishImmediately: false,
-		});
+		const saved = (
+			await service.saveDraft(current.id, { ...body, expectedVersion: current.version } as never, {
+				publishImmediately: false,
+			})
+		).entry;
 		const { entry } = await service.publish({ id: current.id, expectedVersion: saved.version });
 		return { entry: entry as Applied["entry"], created };
 	} finally {
@@ -140,18 +142,20 @@ export async function applyDraftFile(
 	await ctx.state.applying.mark(target.id, input.path, ctx.now());
 	ctx.importing.add(target.id);
 	try {
-		return await cms.contentService().saveDraft(
-			input.entry.id,
-			{
-				collection: input.collection,
-				slug: input.slug,
-				metadata,
-				body: input.file.body,
-				format: target.format,
-				expectedVersion: input.entry.version,
-			} as never,
-			{ publishImmediately: false },
-		);
+		return (
+			await cms.contentService().saveDraft(
+				input.entry.id,
+				{
+					collection: input.collection,
+					slug: input.slug,
+					metadata,
+					body: input.file.body,
+					format: target.format,
+					expectedVersion: input.entry.version,
+				} as never,
+				{ publishImmediately: false },
+			)
+		).entry;
 	} finally {
 		ctx.importing.delete(target.id);
 		await ctx.state.applying.clear(target.id, input.path).catch(() => undefined);

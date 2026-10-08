@@ -3,7 +3,7 @@ import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
 import { CmsApiError } from "../../admin-api";
 import type { CmsIssue } from "../../api-error-message";
-import type { EntryEditorClient, RecoveryRecord, RecoveryStore } from "../entry-editor-client";
+import type { EntryEditorClient, EntryWriteResult, RecoveryRecord, RecoveryStore } from "../entry-editor-client";
 import { type EntryData, type EntryForm, type EntryFormPatch, formFingerprint, formFromEntry } from "../entry-form";
 
 /**
@@ -36,7 +36,7 @@ export function fakeClient(initial: EntryData = ENTRY) {
 	const server = { current: initial };
 	const client = {
 		get: vi.fn(async (_id: string) => structuredClone(server.current)),
-		create: vi.fn(async (input: Parameters<EntryEditorClient["create"]>[0]) => {
+		create: vi.fn(async (input: Parameters<EntryEditorClient["create"]>[0]): Promise<EntryWriteResult> => {
 			server.current = {
 				...ENTRY,
 				id: "created-1",
@@ -45,9 +45,9 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				workingSlug: input.slug,
 				working: { metadata: input.metadata, doc: input.doc },
 			};
-			return structuredClone(server.current);
+			return { entry: structuredClone(server.current), warnings: [] };
 		}),
-		update: vi.fn(async (_id: string, input: Parameters<EntryEditorClient["update"]>[1]) => {
+		update: vi.fn(async (_id: string, input: Parameters<EntryEditorClient["update"]>[1]): Promise<EntryWriteResult> => {
 			if (input.expectedVersion !== server.current.version) throw conflictError();
 			server.current = {
 				...server.current,
@@ -55,16 +55,13 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				workingSlug: input.slug,
 				working: { metadata: input.metadata, doc: input.doc },
 			};
-			return structuredClone(server.current);
+			return { entry: structuredClone(server.current), warnings: [] };
 		}),
 		publish: vi.fn(
-			async (
-				_id: string,
-				input: Parameters<EntryEditorClient["publish"]>[1],
-			): Promise<EntryData & { warnings?: CmsIssue[] }> => {
+			async (_id: string, input: Parameters<EntryEditorClient["publish"]>[1]): Promise<EntryWriteResult> => {
 				if (input.expectedVersion !== server.current.version) throw conflictError();
 				server.current = { ...server.current, version: server.current.version + 1, status: "published" };
-				return { ...structuredClone(server.current), warnings: [] };
+				return { entry: structuredClone(server.current), warnings: [] };
 			},
 		),
 		changeStatus: vi.fn(async (_id: string, action: Parameters<EntryEditorClient["changeStatus"]>[1]) => {
@@ -72,8 +69,8 @@ export function fakeClient(initial: EntryData = ENTRY) {
 			server.current = { ...server.current, version: server.current.version + 1, status: status[action] };
 		}),
 		duplicate: vi.fn(async (_id: string, _input: { title: string }) => ({
-			...structuredClone(server.current),
-			id: "copy-1",
+			entry: { ...structuredClone(server.current), id: "copy-1" },
+			warnings: [],
 		})),
 		remove: vi.fn(async (_id: string, _input: { expectedVersion: number }) => undefined),
 		relations: vi.fn(async (_id: string) => ({ incomingReferences: [] })),

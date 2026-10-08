@@ -78,6 +78,7 @@ describe("assertPluginRoutesFree", () => {
 describe("assertPluginNamesFree", () => {
 	it("rejects a plugin name equal to a core feature", () => {
 		expect(() => assertPluginNamesFree(["media"])).toThrow(/plugin name "media" collides with the core feature/);
+		expect(() => assertPluginNamesFree(["core-events"])).toThrow(/collides with the core feature/);
 		expect(() => assertPluginNamesFree(["ai", "seo"])).not.toThrow();
 	});
 });

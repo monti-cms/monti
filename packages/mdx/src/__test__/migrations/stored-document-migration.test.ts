@@ -71,13 +71,15 @@ describe("0013_stored_documents", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			format: "mdx",
-			body: "Body",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				format: "mdx",
+				body: "Body",
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -87,13 +89,15 @@ describe("0013_stored_documents", () => {
 	};
 
 	const createDraft = async (mdx: string) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("post"),
-			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			format: "mdx",
-			body: mdx,
-		});
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("post"),
+				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
+				format: "mdx",
+				body: mdx,
+			})
+			.then((result) => result.entry);
 
 	const publishedWith = async (mdx: string) => {
 		const draft = await createDraft(mdx);

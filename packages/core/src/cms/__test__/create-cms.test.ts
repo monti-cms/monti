@@ -143,7 +143,10 @@ describe("createCms: an instance owns its server resources", () => {
 		storeA.claims.push(claim("server"));
 		await cmsA.events.retry();
 		expect(a.afterCommit).toHaveBeenCalledTimes(1);
-		expect(a.afterCommit).toHaveBeenCalledWith(expect.objectContaining({ eventId: "ev1", kind: "saved", attempt: 1 }));
+		expect(a.afterCommit).toHaveBeenCalledWith(
+			expect.objectContaining({ eventId: "ev1", kind: "saved", attempt: 1 }),
+			cmsA,
+		);
 		expect(b.afterCommit).not.toHaveBeenCalled();
 		// Each instance claims for its own subscribers, on its own store.
 		expect(storeA.claimDeliveries).toHaveBeenCalledWith(expect.objectContaining({ subscribers: ["server"] }));

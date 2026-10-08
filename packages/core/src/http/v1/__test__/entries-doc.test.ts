@@ -65,13 +65,15 @@ describe("entry API with a stored document", () => {
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const known = targets.get(to);
 		if (known) return known;
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-			format: "paragraphs",
-			body: "Body",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
+				format: "paragraphs",
+				body: "Body",
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -109,7 +111,7 @@ describe("entry API with a stored document", () => {
 	const created = async (body: Record<string, unknown>) => {
 		const res = await post(body);
 		expect(res.status).toBe(201);
-		return (await res.json()) as Entry;
+		return ((await res.json()) as { entry: Entry }).entry;
 	};
 
 	const storedRow = async (id: string) =>
@@ -172,7 +174,7 @@ describe("entry API with a stored document", () => {
 		const res = await patch(entry.id, { expectedVersion: entry.version, doc });
 
 		expect(res.status).toBe(200);
-		const saved = (await res.json()) as Entry;
+		const saved = ((await res.json()) as { entry: Entry }).entry;
 		expect(saved.version).toBe(entry.version + 1);
 		expect(saved.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
@@ -193,7 +195,7 @@ describe("entry API with a stored document", () => {
 		const res = await patch(entry.id, { expectedVersion: entry.version, doc });
 
 		expect(res.status).toBe(200);
-		const saved = (await res.json()) as Entry;
+		const saved = ((await res.json()) as { entry: Entry }).entry;
 		const ids = saved.working.doc?.content.map((block) => block.id);
 		expect(ids?.slice(0, 2)).toEqual(["client01", "client02"]);
 		expect(isBlockId(ids?.[2])).toBe(true);
@@ -210,7 +212,7 @@ describe("entry API with a stored document", () => {
 		});
 
 		expect(res.status).toBe(200);
-		const saved = (await res.json()) as Entry;
+		const saved = ((await res.json()) as { entry: Entry }).entry;
 		expect(saved.working.doc?.content.map((block) => block.id)).toEqual(
 			entry.working.doc?.content.map((block) => block.id),
 		);
@@ -222,7 +224,7 @@ describe("entry API with a stored document", () => {
 		const res = await patch(entry.id, { expectedVersion: entry.version, metadata: entry.working.metadata });
 
 		expect(res.status).toBe(200);
-		const saved = (await res.json()) as Entry;
+		const saved = ((await res.json()) as { entry: Entry }).entry;
 		expect(saved.version).toBe(entry.version);
 		expect(saved.working.doc).toEqual(entry.working.doc);
 	});
@@ -289,7 +291,7 @@ describe("entry API with a stored document", () => {
 		const res = await patch(entry.id, { expectedVersion: loaded.version, doc: loaded.working.doc });
 
 		expect(res.status).toBe(200);
-		const saved = (await res.json()) as Entry;
+		const saved = ((await res.json()) as { entry: Entry }).entry;
 		expect(saved.version).toBe(loaded.version);
 		expect(saved.working.contentHash).toBe(loaded.working.contentHash);
 		expect(await storedRow(entry.id)).toEqual(before);
@@ -300,10 +302,12 @@ describe("entry API with a stored document", () => {
 		async () => {
 			const source = await created({ format: "paragraphs", body: "First\n\nSecond" });
 			expect(source.working.doc).not.toBeNull();
-			const created_ = await service.createTranslation({
-				sourceId: source.id,
-				locale: secondLocale as string,
-			});
+			const created_ = (
+				await service.createTranslation({
+					sourceId: source.id,
+					locale: secondLocale as string,
+				})
+			).entry;
 
 			const loaded = (await read(created_.id)) as Entry & { source?: { doc: unknown } };
 			expect(loaded.source?.doc).toEqual(source.working.doc);
@@ -326,7 +330,7 @@ describe("entry API with a stored document", () => {
 				translation: { version: 4, baseDoc: reloaded.source?.doc },
 			});
 			expect(confirmed.status).toBe(200);
-			expect(((await confirmed.json()) as Entry).working.translation).toEqual({
+			expect(((await confirmed.json()) as { entry: Entry }).entry.working.translation).toEqual({
 				version: 4,
 				baseDoc: reloaded.source?.doc,
 			});

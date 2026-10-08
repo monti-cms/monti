@@ -114,12 +114,14 @@ describe("cms.read returns the document", () => {
 
 	/** A draft written the way the app writes one: the body goes through the write pipeline, which stores its document. */
 	const draft = async (slug: string, body: string | StoredDocument) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug,
-			metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
-			...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
-		} as never);
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug,
+				metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
+				...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
+			} as never)
+			.then((result) => result.entry);
 
 	const publish = async (slug: string, body: string | StoredDocument) => {
 		const created = await draft(slug, body);

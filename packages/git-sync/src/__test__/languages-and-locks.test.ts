@@ -14,29 +14,33 @@ afterAll(closeGlobalPool);
 
 describe("languages and item collections", () => {
 	it("writes each language to its own file, with the source named in the translation's front matter", async () => {
-		const source = await h.service.createDraft(
-			{
-				collection: "post",
-				slug: "two-languages",
-				metadata: { title: "English title", summary: "s" },
-				body: "English body",
-				format: "mdx",
-			},
-			{ publishImmediately: true },
-		);
-		const translation = await h.service.createTranslation({ sourceId: source.id, locale: "ko" });
-		const saved = await h.service.saveDraft(
-			translation.id,
-			{
-				collection: "post",
-				slug: "two-languages",
-				metadata: { title: "한국어 제목" },
-				body: "한국어 본문",
-				format: "mdx",
-				expectedVersion: translation.version,
-			},
-			{ publishImmediately: false },
-		);
+		const source = (
+			await h.service.createDraft(
+				{
+					collection: "post",
+					slug: "two-languages",
+					metadata: { title: "English title", summary: "s" },
+					body: "English body",
+					format: "mdx",
+				},
+				{ publishImmediately: true },
+			)
+		).entry;
+		const translation = (await h.service.createTranslation({ sourceId: source.id, locale: "ko" })).entry;
+		const saved = (
+			await h.service.saveDraft(
+				translation.id,
+				{
+					collection: "post",
+					slug: "two-languages",
+					metadata: { title: "한국어 제목" },
+					body: "한국어 본문",
+					format: "mdx",
+					expectedVersion: translation.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		await h.service.publish({ id: translation.id, expectedVersion: saved.version });
 
 		const files = h.repo.files("main");
@@ -66,16 +70,18 @@ describe("languages and item collections", () => {
 	});
 
 	it("syncs an item collection, with the per-language names under translations", async () => {
-		const tag = await h.service.createDraft(
-			{
-				collection: "tag",
-				slug: "outbound-tag",
-				metadata: { title: "Tag", translations: { ko: { title: "태그" } } },
-				body: "",
-				format: "mdx",
-			},
-			{ publishImmediately: true },
-		);
+		const tag = (
+			await h.service.createDraft(
+				{
+					collection: "tag",
+					slug: "outbound-tag",
+					metadata: { title: "Tag", translations: { ko: { title: "태그" } } },
+					body: "",
+					format: "mdx",
+				},
+				{ publishImmediately: true },
+			)
+		).entry;
 		expect(parseFile(h.repo.files("main").get("content/tag/outbound-tag.en.mdx") ?? "")).toMatchObject({
 			ok: true,
 			data: { title: "Tag", translations: { ko: { title: "태그" } }, monti: { id: tag.id, collection: "tag" } },
@@ -85,10 +91,12 @@ describe("languages and item collections", () => {
 
 describe("one flush or pull at a time per target", () => {
 	const memo = (slug: string) =>
-		h.service.createDraft(
-			{ collection: "memo", slug, metadata: { title: slug }, body: "x", format: "mdx" },
-			{ publishImmediately: true },
-		);
+		h.service
+			.createDraft(
+				{ collection: "memo", slug, metadata: { title: slug }, body: "x", format: "mdx" },
+				{ publishImmediately: true },
+			)
+			.then((result) => result.entry);
 
 	it("takes over a lock whose holder stopped", async () => {
 		expect(await h.ctx.state.locks.tryAcquire("site", "crashed", 1, Date.now() - 10)).toBe(true);

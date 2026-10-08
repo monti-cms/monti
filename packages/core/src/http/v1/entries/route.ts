@@ -49,6 +49,5 @@ export const POST = adminRoute(async ({ request, cms }) => {
 				: { doc: emptyStoredDocument() }),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 	} as ServiceInput;
-	const entry = await cms.contentService().createDraft(input);
-	return json(entry, { status: 201 });
+	return json(await cms.contentService().createDraft(input), { status: 201 });
 });

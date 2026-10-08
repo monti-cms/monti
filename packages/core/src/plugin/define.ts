@@ -1,7 +1,6 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
-import type { AfterCommit, ContentEvent } from "../core/store";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
 import type { DoctorCheck } from "./doctor";
@@ -32,7 +31,13 @@ export interface CmsPlugin<
 	readonly requires?: readonly string[];
 	/** Validation called when the site config is created. Throws if the config is invalid. */
 	readonly validate?: (config: PluginConfigView) => void;
-	/** Server side (API routes, migrations). The default export is a `CmsServerPlugin`. */
+	/**
+	 * Write hooks written inline, for a plugin that only needs hooks: `definePlugin({ name, hooks })` needs no `server` module. Inline code is part of the
+	 * site config, which the browser bundle imports too, so keep it small and free of server-only code, secrets and heavy imports; a plugin with those
+	 * puts its hooks in `server` (a lazy module, read only on the server). Not both: a plugin with `hooks` here and in `server` fails when it loads.
+	 */
+	readonly hooks?: WriteHooks;
+	/** Server side (API routes, migrations, hooks, commands, checks). The default export is a `CmsServerPlugin`. Read only on the server. */
 	readonly server?: () => Promise<{ readonly default: CmsServerPlugin }>;
 	/** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */
 	readonly admin?: () => Promise<{ readonly default: unknown }>;
@@ -107,16 +112,11 @@ export interface CmsServerPlugin {
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
 	readonly features?: (cms: Cms) => Promise<Readonly<Record<string, boolean>>>;
 	/**
-	 * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit`.
-	 * They run after the server config's hooks, in the order of the plugins in the site config.
+	 * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit` (which gets the
+	 * instance as its second argument, like the config's). They run after the server config's hooks, in the order of the plugins in the site config.
+	 * A plugin may set them inline (`CmsPlugin.hooks`) or here, not in both.
 	 */
 	readonly hooks?: WriteHooks;
-	/**
-	 * Receives every committed change, like `hooks.afterCommit` (delivered through the event outbox, retried when it throws, at least once), and also gets the
-	 * instance it runs for, so a subscriber that must read its storage or the content (`cms.storage(name)`, `cms.store()`, `cms.formats()`) needs no state of its own.
-	 * A plugin that has both this and `hooks.afterCommit` is one subscriber (`plugin:<name>`) that runs `hooks.afterCommit` first.
-	 */
-	readonly afterCommit?: (event: ContentEvent, cms: Cms) => ReturnType<AfterCommit>;
 	/**
 	 * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti migrate`), runs the command with the instance and
 	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
@@ -163,14 +163,18 @@ export interface PluginCommand {
  */
 export function definePlugin<
 	const Name extends string,
-	Options,
+	Options = Record<string, never>,
 	const Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 	const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>,
 >(
-	plugin: CmsPlugin<Name, Options, Blocks> & { readonly contributes?: Contributes },
+	plugin: Omit<CmsPlugin<Name, Options, Blocks>, "options"> & {
+		/** Config values both sides read. Optional: a plugin without any (a hook-only plugin) has `{}`. */
+		readonly options?: Options;
+		readonly contributes?: Contributes;
+	},
 ): CmsPlugin<Name, Options, Blocks> & { readonly contributes?: Contributes } {
 	if (!/^[a-z][a-z0-9-]*$/.test(plugin.name)) throw new Error(`cms plugin: invalid name "${plugin.name}"`);
-	return plugin;
+	return { ...plugin, options: plugin.options ?? ({} as Options) };
 }
 
 /** The type of a plugin picked by name from the site config's plugin list. */

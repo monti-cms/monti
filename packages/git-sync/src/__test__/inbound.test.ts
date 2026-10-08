@@ -33,10 +33,9 @@ const hook = (body: string, headers: Record<string, string> = {}) =>
 const push = () => hook(pushPayload("acme/site", "main"));
 
 const publishMemo = (slug: string, title = slug, body = `Body of ${title}`) =>
-	h.service.createDraft(
-		{ collection: "memo", slug, metadata: { title }, body, format: "mdx" },
-		{ publishImmediately: true },
-	);
+	h.service
+		.createDraft({ collection: "memo", slug, metadata: { title }, body, format: "mdx" }, { publishImmediately: true })
+		.then((result) => result.entry);
 
 /** An edit made in git: the file's text changes on the branch. */
 const editInGit = (path: string, change: (text: string) => string) => {
@@ -162,16 +161,18 @@ describe("a change in git reaches the CMS", () => {
 	});
 
 	it("creates a translation from a file that names its source, and publishes it", async () => {
-		const source = await h.service.createDraft(
-			{
-				collection: "post",
-				slug: "tr-source",
-				metadata: { title: "Source", summary: "s" },
-				body: "source text",
-				format: "mdx",
-			},
-			{ publishImmediately: true },
-		);
+		const source = (
+			await h.service.createDraft(
+				{
+					collection: "post",
+					slug: "tr-source",
+					metadata: { title: "Source", summary: "s" },
+					body: "source text",
+					format: "mdx",
+				},
+				{ publishImmediately: true },
+			)
+		).entry;
 		const path = "content/post/tr-source.ko.mdx";
 		h.repo.commit("main", [
 			{
@@ -278,18 +279,20 @@ describe("a change in git reaches the CMS", () => {
 		expect((await h.store.getEntry(entry.id)).status).toBe("published");
 
 		const current = await h.store.getEntry(entry.id);
-		const saved = await h.service.saveDraft(
-			entry.id,
-			{
-				collection: "memo",
-				slug: "deleted-in-git",
-				metadata: { title: "Deleted in git 2" },
-				body: "again",
-				format: "mdx",
-				expectedVersion: current.version,
-			},
-			{ publishImmediately: false },
-		);
+		const saved = (
+			await h.service.saveDraft(
+				entry.id,
+				{
+					collection: "memo",
+					slug: "deleted-in-git",
+					metadata: { title: "Deleted in git 2" },
+					body: "again",
+					format: "mdx",
+					expectedVersion: current.version,
+				},
+				{ publishImmediately: false },
+			)
+		).entry;
 		await h.service.publish({ id: entry.id, expectedVersion: saved.version });
 		expect(h.repo.files("main").has(path)).toBe(true);
 	});
@@ -314,20 +317,24 @@ describe("a change in git reaches the CMS", () => {
 
 describe("round trip", () => {
 	it("imports exactly what it exported: fields, relations by id and the body come back unchanged", async () => {
-		const tag = await h.service.createDraft(
-			{
-				collection: "tag",
-				slug: "rt-tag",
-				metadata: { title: "Round trip tag", translations: { ko: { title: "태그" } } },
-				body: "",
-				format: "mdx",
-			},
-			{ publishImmediately: true },
-		);
-		const target = await h.service.createDraft(
-			{ collection: "memo", slug: "rt-target", metadata: { title: "Target" }, body: "linked", format: "mdx" },
-			{ publishImmediately: true },
-		);
+		const tag = (
+			await h.service.createDraft(
+				{
+					collection: "tag",
+					slug: "rt-tag",
+					metadata: { title: "Round trip tag", translations: { ko: { title: "태그" } } },
+					body: "",
+					format: "mdx",
+				},
+				{ publishImmediately: true },
+			)
+		).entry;
+		const target = (
+			await h.service.createDraft(
+				{ collection: "memo", slug: "rt-target", metadata: { title: "Target" }, body: "linked", format: "mdx" },
+				{ publishImmediately: true },
+			)
+		).entry;
 		const body = [
 			"## Heading",
 			"",
@@ -340,20 +347,22 @@ describe("round trip", () => {
 			"const x = 1;",
 			"```",
 		].join("\n");
-		const entry = await h.service.createDraft(
-			{
-				collection: "post",
-				slug: "rt-post",
-				metadata: {
-					title: "Round trip: a title with colon & 'quotes'",
-					summary: "Line one\nLine two",
-					tagIds: [tag.id],
+		const entry = (
+			await h.service.createDraft(
+				{
+					collection: "post",
+					slug: "rt-post",
+					metadata: {
+						title: "Round trip: a title with colon & 'quotes'",
+						summary: "Line one\nLine two",
+						tagIds: [tag.id],
+					},
+					body,
+					format: "mdx",
 				},
-				body,
-				format: "mdx",
-			},
-			{ publishImmediately: true },
-		);
+				{ publishImmediately: true },
+			)
+		).entry;
 		const before = await h.store.getEntry(entry.id);
 		const path = "content/post/rt-post.en.mdx";
 		const text = h.repo.files("main").get(path) ?? "";
@@ -383,15 +392,19 @@ describe("round trip", () => {
 
 	describe("a single-valued relation (categoryId)", () => {
 		const tagOf = (slug: string) =>
-			h.service.createDraft(
-				{ collection: "tag", slug, metadata: { title: slug }, body: "", format: "mdx" },
-				{ publishImmediately: true },
-			);
+			h.service
+				.createDraft(
+					{ collection: "tag", slug, metadata: { title: slug }, body: "", format: "mdx" },
+					{ publishImmediately: true },
+				)
+				.then((result) => result.entry);
 		const postIn = (slug: string, categoryId: string) =>
-			h.service.createDraft(
-				{ collection: "post", slug, metadata: { title: slug, categoryId }, body: "body", format: "mdx" },
-				{ publishImmediately: true },
-			);
+			h.service
+				.createDraft(
+					{ collection: "post", slug, metadata: { title: slug, categoryId }, body: "body", format: "mdx" },
+					{ publishImmediately: true },
+				)
+				.then((result) => result.entry);
 		const path = (slug: string) => `content/post/${slug}.en.mdx`;
 
 		it("is exported as one slug (not a list) with the id in monti.refs, and imports back to the same hash", async () => {
@@ -452,15 +465,19 @@ describe("round trip", () => {
 
 	describe("relations are slugs in the file, ids in the entry", () => {
 		const tagOf = (slug: string, title = slug) =>
-			h.service.createDraft(
-				{ collection: "tag", slug, metadata: { title }, body: "", format: "mdx" },
-				{ publishImmediately: true },
-			);
+			h.service
+				.createDraft(
+					{ collection: "tag", slug, metadata: { title }, body: "", format: "mdx" },
+					{ publishImmediately: true },
+				)
+				.then((result) => result.entry);
 		const postWith = (slug: string, tagIds: string[]) =>
-			h.service.createDraft(
-				{ collection: "post", slug, metadata: { title: slug, tagIds }, body: "body", format: "mdx" },
-				{ publishImmediately: true },
-			);
+			h.service
+				.createDraft(
+					{ collection: "post", slug, metadata: { title: slug, tagIds }, body: "body", format: "mdx" },
+					{ publishImmediately: true },
+				)
+				.then((result) => result.entry);
 		const path = (slug: string) => `content/post/${slug}.en.mdx`;
 
 		it("writes the slugs a site needs and the exact ids under monti.refs, for a list and for a single relation", async () => {
@@ -550,16 +567,18 @@ describe("round trip", () => {
 	});
 
 	it("round trips the per-language names of an item collection", async () => {
-		const tag = await h.service.createDraft(
-			{
-				collection: "tag",
-				slug: "rt-names",
-				metadata: { title: "Names", translations: { ko: { title: "이름" } } },
-				body: "",
-				format: "mdx",
-			},
-			{ publishImmediately: true },
-		);
+		const tag = (
+			await h.service.createDraft(
+				{
+					collection: "tag",
+					slug: "rt-names",
+					metadata: { title: "Names", translations: { ko: { title: "이름" } } },
+					body: "",
+					format: "mdx",
+				},
+				{ publishImmediately: true },
+			)
+		).entry;
 		const before = await h.store.getEntry(tag.id);
 		const path = "content/tag/rt-names.en.mdx";
 		expect(parseFile(h.repo.files("main").get(path) ?? "")).toMatchObject({

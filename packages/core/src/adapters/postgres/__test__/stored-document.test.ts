@@ -55,12 +55,14 @@ describe("stored documents", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			doc: docOf("Body"),
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				doc: docOf("Body"),
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -72,21 +74,25 @@ describe("stored documents", () => {
 	const metadataFor = async () => requiredMetadata(contentCollection, unique("Post"), relationTarget);
 
 	const createDraft = async (body: { doc: unknown } | { text: string }) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("post"),
-			metadata: await metadataFor(),
-			...("text" in body ? { format: "paragraphs", body: body.text } : body),
-		} as never);
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("post"),
+				metadata: await metadataFor(),
+				...("text" in body ? { format: "paragraphs", body: body.text } : body),
+			} as never)
+			.then((result) => result.entry);
 
 	const save = async (entry: Entry, body: { doc: unknown } | { text: string }) =>
-		service.saveDraft(entry.id, {
-			collection: contentCollection,
-			slug: entry.workingSlug,
-			metadata: entry.working.metadata as never,
-			...("text" in body ? { format: "paragraphs", body: body.text } : body),
-			expectedVersion: entry.version,
-		} as never);
+		service
+			.saveDraft(entry.id, {
+				collection: contentCollection,
+				slug: entry.workingSlug,
+				metadata: entry.working.metadata as never,
+				...("text" in body ? { format: "paragraphs", body: body.text } : body),
+				expectedVersion: entry.version,
+			} as never)
+			.then((result) => result.entry);
 
 	const publish = (entry: Entry) => publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
@@ -298,7 +304,8 @@ describe("stored documents", () => {
 		it("a translation starts from the source's stored text, which is also the source it was confirmed against", async () => {
 			const source = await createDraft({ doc: docOf(BODY) });
 
-			const translation = await service.createTranslation({ sourceId: source.id, locale: secondLocale as string });
+			const translation = (await service.createTranslation({ sourceId: source.id, locale: secondLocale as string }))
+				.entry;
 
 			const row = await expectConsistent(translation.id, "working");
 			expect(row.doc).not.toBeNull();

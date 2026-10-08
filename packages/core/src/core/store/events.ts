@@ -64,12 +64,19 @@ export interface ContentEvent extends ContentChange {
 	 * a later event is (or was) delivered for it, so a subscriber that exports the entry can skip the stale one. The delivery order per entry is the commit order.
 	 */
 	read(): Promise<Entry | null>;
+	/**
+	 * Runs `run` once for this event and this subscriber, however many times the delivery is tried. Delivery is at least once, so a subscriber whose work
+	 * must not be repeated (a message, a charge, an export) wraps it in `once`: when an earlier try already finished `run`, it is skipped and this returns
+	 * `false`; otherwise `run` runs, the event is marked done once it returned, and this returns `true`. A `run` that throws is not marked, so the retry
+	 * runs it again. The mark is kept as long as the event is (`events.retentionDays`). Only a crash between the end of `run` and the mark can repeat it.
+	 */
+	once(run: () => void | Promise<void>): Promise<boolean>;
 }
 
 /**
  * Called after the change is committed (create, save, publish, archive, trash, restore, delete): cache refresh, webhooks, search indexing, a git commit.
- * The change stands even if it fails, and the failure is retried. Delivery is at least once, so it must be idempotent: use `event.eventId` to skip an event
- * it already handled.
+ * The change stands even if it fails, and the failure is retried. Delivery is at least once, so it must be idempotent: wrap work that
+ * must not be repeated in `event.once(...)`.
  */
 export type AfterCommit = (event: ContentEvent) => void | DeferredDelivery | Promise<void | DeferredDelivery>;
 

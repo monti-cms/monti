@@ -47,16 +47,18 @@ const push = () => {
 };
 
 const publishNote = (slug: string, headline: string, summary?: string) =>
-	h.service.createDraft(
-		{
-			collection: "note",
-			slug,
-			metadata: { headline, ...(summary ? { summary } : {}) },
-			body: `Body of ${headline}`,
-			format: "mdx",
-		} as never,
-		{ publishImmediately: true },
-	);
+	h.service
+		.createDraft(
+			{
+				collection: "note",
+				slug,
+				metadata: { headline, ...(summary ? { summary } : {}) },
+				body: `Body of ${headline}`,
+				format: "mdx",
+			} as never,
+			{ publishImmediately: true },
+		)
+		.then((result) => result.entry);
 
 describe("git-sync with a title field that is not named title", () => {
 	it("exports the title as the front matter key `title`, the other fields as stored", async () => {
@@ -98,13 +100,15 @@ describe("git-sync with a title field that is not named title", () => {
 		expect(found.status).toBe("current");
 		expect(found.status === "current" && found.entry.metadata).toMatchObject({ headline: "By hand" });
 
-		const draft = await h.service.createDraft({
-			collection: "note",
-			slug: "drafted",
-			metadata: { headline: "Drafted headline" },
-			body: "x",
-			format: "mdx",
-		} as never);
+		const draft = (
+			await h.service.createDraft({
+				collection: "note",
+				slug: "drafted",
+				metadata: { headline: "Drafted headline" },
+				body: "x",
+				format: "mdx",
+			} as never)
+		).entry;
 		expect(draft.status).toBe("draft");
 		const pr = h.repo.pullRequests.find((item) => item.head.endsWith("drafted"));
 		expect(pr?.title).toBe("Draft: Drafted headline");

@@ -67,12 +67,14 @@ describe("links by entry id", () => {
 		testSite.localizePath(locale, pathOf(slug));
 
 	const draft = async (slug: string, body: string | StoredDocument) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug,
-			metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
-			...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
-		} as never);
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug,
+				metadata: await requiredMetadata(contentCollection, `Title ${slug}`, relationTarget),
+				...(typeof body === "string" ? { format: "paragraphs", body } : { doc: body }),
+			} as never)
+			.then((result) => result.entry);
 
 	/** A paragraph of links by id, written as the document keeps them (a text format of the test reads addresses, not ids). */
 	const linksByIdTo = (...links: [label: string, entryId: string][]): StoredDocument => ({
@@ -181,22 +183,26 @@ describe("links by entry id", () => {
 	it("two new posts that link to each other can both be published, and each link works once its target is published", async () => {
 		const first = await draft("links-series-1", "One");
 		const second = await draft("links-series-2", "Two");
-		const one = await service.saveDraft(first.id, {
-			collection: contentCollection,
-			slug: "links-series-1",
-			metadata: first.working.metadata as never,
-			format: "paragraphs",
-			body: `Next: [two](${pathOf("links-series-2")})`,
-			expectedVersion: first.version,
-		});
-		const two = await service.saveDraft(second.id, {
-			collection: contentCollection,
-			slug: "links-series-2",
-			metadata: second.working.metadata as never,
-			format: "paragraphs",
-			body: `Back: [one](${pathOf("links-series-1")})`,
-			expectedVersion: second.version,
-		});
+		const one = (
+			await service.saveDraft(first.id, {
+				collection: contentCollection,
+				slug: "links-series-1",
+				metadata: first.working.metadata as never,
+				format: "paragraphs",
+				body: `Next: [two](${pathOf("links-series-2")})`,
+				expectedVersion: first.version,
+			})
+		).entry;
+		const two = (
+			await service.saveDraft(second.id, {
+				collection: contentCollection,
+				slug: "links-series-2",
+				metadata: second.working.metadata as never,
+				format: "paragraphs",
+				body: `Back: [one](${pathOf("links-series-1")})`,
+				expectedVersion: second.version,
+			})
+		).entry;
 
 		const publishedOne = await publishDraft(testSite, store, { id: one.id, expectedVersion: one.version });
 		// The target is not published yet: the page draws the link as plain text.

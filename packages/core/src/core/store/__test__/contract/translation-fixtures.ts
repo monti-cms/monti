@@ -63,13 +63,15 @@ export function translationHelpers(store: ContentStore) {
 	/** A new published item of the target collection. Created fresh for each entry so that only that entry appears when filtering by relation. */
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const metadata = await requiredMetadata(to, "에세이", relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: `${to}-${++sequence}`,
-			metadata,
-			format: "paragraphs",
-			body: "",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: `${to}-${++sequence}`,
+				metadata,
+				format: "paragraphs",
+				body: "",
+			})
+		).entry;
 		if (draft.status === "published") return draft.id;
 		return (await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).id;
 	};
@@ -83,13 +85,15 @@ export function translationHelpers(store: ContentStore) {
 			const id = await relationTarget(relation.to);
 			metadata[relation.name] = relation.many ? [id] : id;
 		}
-		return service.createDraft({
-			collection: contentCollection,
-			slug,
-			metadata: metadata as never,
-			format: "paragraphs",
-			body: "한국어 본문",
-		});
+		return service
+			.createDraft({
+				collection: contentCollection,
+				slug,
+				metadata: metadata as never,
+				format: "paragraphs",
+				body: "한국어 본문",
+			})
+			.then((result) => result.entry);
 	};
 
 	return { service, relationTarget, createPost };

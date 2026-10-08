@@ -601,16 +601,18 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			).rejects.toBeInstanceOf(ServiceError);
 			expect(await store.getWorkingEntryBySlug({ collection: recordCollection, slug: badSlug })).toBeNull();
 
-			const published = await service.createDraft(
-				{
-					collection: recordCollection,
-					slug: "validation-valid-record",
-					metadata: await filled("Valid record", recordCollection),
-					format: "paragraphs",
-					body: "",
-				},
-				{ publishImmediately: true },
-			);
+			const published = (
+				await service.createDraft(
+					{
+						collection: recordCollection,
+						slug: "validation-valid-record",
+						metadata: await filled("Valid record", recordCollection),
+						format: "paragraphs",
+						body: "",
+					},
+					{ publishImmediately: true },
+				)
+			).entry;
 			expect(published.status).toBe("published");
 			expect(published.published).toBeDefined();
 			const before = await store.getEntry(published.id);
@@ -677,17 +679,19 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				});
 				expect(draftItem.status).toBe("draft");
 				const service = createContentService(store, serviceOptions);
-				const collectionDraft = await service.createDraft({
-					collection,
-					slug: "validation-collection",
-					metadata: {
-						...(await filled("Reading list", collection)),
-						...(when ? { [when.field]: when.value } : {}),
-						[name]: many ? [draftItem.id] : draftItem.id,
-					} as MetadataFor,
-					format: "paragraphs",
-					body: "",
-				});
+				const collectionDraft = (
+					await service.createDraft({
+						collection,
+						slug: "validation-collection",
+						metadata: {
+							...(await filled("Reading list", collection)),
+							...(when ? { [when.field]: when.value } : {}),
+							[name]: many ? [draftItem.id] : draftItem.id,
+						} as MetadataFor,
+						format: "paragraphs",
+						body: "",
+					})
+				).entry;
 				const published = await publishDraft(testSite, store, {
 					id: collectionDraft.id,
 					expectedVersion: collectionDraft.version,
@@ -934,13 +938,15 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 		const relationTarget = async (to: Collection): Promise<string> => {
 			const known = targets.get(to);
 			if (known) return known;
-			const draft = await service.createDraft({
-				collection: to,
-				slug: unique(to),
-				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-				format: "paragraphs",
-				body: "Body",
-			});
+			const draft = (
+				await service.createDraft({
+					collection: to,
+					slug: unique(to),
+					metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
+					format: "paragraphs",
+					body: "Body",
+				})
+			).entry;
 			const id = (
 				draft.status === "published"
 					? draft
@@ -994,14 +1000,16 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 		it("keeps the value of a removed field when saving", async () => {
 			const draft = await staleDraft("Save");
 			// An API client that sends the stored metadata back, edited elsewhere, loses nothing.
-			const saved = await service.saveDraft(draft.id, {
-				collection: contentCollection,
-				slug: draft.workingSlug,
-				metadata: { ...draft.working.metadata, title: "Renamed" },
-				format: "paragraphs",
-				body: "Body",
-				expectedVersion: draft.version,
-			} as never);
+			const saved = (
+				await service.saveDraft(draft.id, {
+					collection: contentCollection,
+					slug: draft.workingSlug,
+					metadata: { ...draft.working.metadata, title: "Renamed" },
+					format: "paragraphs",
+					body: "Body",
+					expectedVersion: draft.version,
+				} as never)
+			).entry;
 			expect(saved.working.metadata).toMatchObject({
 				title: "Renamed",
 				[ORPHAN]: "left behind",
@@ -1013,14 +1021,16 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			const name = selectField?.name ?? "";
 			const draft = await staleDraft("Select");
 			expect(draft.working.metadata[name]).toBe(UNKNOWN_OPTION);
-			const saved = await service.saveDraft(draft.id, {
-				collection: contentCollection,
-				slug: draft.workingSlug,
-				metadata: draft.working.metadata,
-				format: "paragraphs",
-				body: "Body changed",
-				expectedVersion: draft.version,
-			} as never);
+			const saved = (
+				await service.saveDraft(draft.id, {
+					collection: contentCollection,
+					slug: draft.workingSlug,
+					metadata: draft.working.metadata,
+					format: "paragraphs",
+					body: "Body changed",
+					expectedVersion: draft.version,
+				} as never)
+			).entry;
 			expect(saved.working.metadata[name]).toBe(UNKNOWN_OPTION);
 		});
 
@@ -1061,7 +1071,15 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 				op: "publish",
 				items: [{ id: draft.id, expectedVersion: draft.version }],
 			});
-			expect(results).toEqual([{ id: draft.id, ok: true, version: draft.version + 1 }]);
+			// The warnings of the publish come back with the item, as they do for a single publish.
+			expect(results).toEqual([
+				{
+					id: draft.id,
+					ok: true,
+					version: draft.version + 1,
+					warnings: expect.arrayContaining([expect.objectContaining({ code: "orphaned_metadata_key", path: ORPHAN })]),
+				},
+			]);
 			const after = await store.getEntry(draft.id);
 			expect(after.status).toBe("published");
 			expect(after.working.metadata[ORPHAN]).toBe("left behind");
@@ -1094,14 +1112,16 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 		it.skipIf(!secondLocale)(
 			"lets a translation keep a removed value it already holds, and rejects a new one",
 			async () => {
-				const source = await service.createDraft({
-					collection: contentCollection,
-					slug: unique("translated"),
-					metadata: await requiredMetadata(contentCollection, "Source", relationTarget),
-					format: "paragraphs",
-					body: "Body",
-				});
-				const created = await service.createTranslation({ sourceId: source.id, locale: secondLocale ?? "" });
+				const source = (
+					await service.createDraft({
+						collection: contentCollection,
+						slug: unique("translated"),
+						metadata: await requiredMetadata(contentCollection, "Source", relationTarget),
+						format: "paragraphs",
+						body: "Body",
+					})
+				).entry;
+				const created = (await service.createTranslation({ sourceId: source.id, locale: secondLocale ?? "" })).entry;
 				// The translation was saved before the field was removed.
 				const translation = await seedSave(store, created.id, {
 					expectedVersion: created.version,
@@ -1117,7 +1137,8 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 						body: "Body",
 						expectedVersion: translation.version,
 					}) as never;
-				const saved = await service.saveDraft(translation.id, input({ title: "Retitled", [ORPHAN]: "left behind" }));
+				const saved = (await service.saveDraft(translation.id, input({ title: "Retitled", [ORPHAN]: "left behind" })))
+					.entry;
 				expect(saved.working.metadata).toMatchObject({ title: "Retitled", [ORPHAN]: "left behind" });
 				await expect(
 					service.saveDraft(translation.id, {
@@ -1183,13 +1204,15 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 		/** A new published item of the target collection (for an item collection, saving is publishing). */
 		const createTarget = async (to: Collection, title = unique(`target ${to}`)): Promise<Entry> => {
 			const metadata = await requiredMetadata(to, title, relationTarget);
-			const draft = await service.createDraft({
-				collection: to,
-				slug: unique(to),
-				metadata,
-				format: "paragraphs",
-				body: "Body",
-			});
+			const draft = (
+				await service.createDraft({
+					collection: to,
+					slug: unique(to),
+					metadata,
+					format: "paragraphs",
+					body: "Body",
+				})
+			).entry;
 			return draft.status === "published"
 				? draft
 				: publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
@@ -1211,13 +1234,15 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			}) as MetadataFor;
 
 		const publishedPost = async (extra: Record<string, unknown> = {}, body = "본문") => {
-			const draft = await service.createDraft({
-				collection: contentCollection,
-				slug: unique("post"),
-				metadata: await contentMetadata("글", extra),
-				format: "paragraphs",
-				body,
-			});
+			const draft = (
+				await service.createDraft({
+					collection: contentCollection,
+					slug: unique("post"),
+					metadata: await contentMetadata("글", extra),
+					format: "paragraphs",
+					body,
+				})
+			).entry;
 			return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 		};
 
@@ -1230,17 +1255,21 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 				...(when ? { [when.field]: when.value } : {}),
 				[name]: many ? [targetId] : targetId,
 			} as MetadataFor;
-			return service.createDraft({ collection, slug: unique("referrer"), metadata, format: "paragraphs", body: "x" });
+			return service
+				.createDraft({ collection, slug: unique("referrer"), metadata, format: "paragraphs", body: "x" })
+				.then((result) => result.entry);
 		};
 
 		it("creates a record from its title alone and derives the slug", async () => {
-			const tag = await service.createDraft({
-				collection: recordCollection,
-				slug: null,
-				metadata: await requiredMetadata(recordCollection, "Type Script", relationTarget),
-				format: "paragraphs",
-				body: "",
-			});
+			const tag = (
+				await service.createDraft({
+					collection: recordCollection,
+					slug: null,
+					metadata: await requiredMetadata(recordCollection, "Type Script", relationTarget),
+					format: "paragraphs",
+					body: "",
+				})
+			).entry;
 			expect(tag.status).toBe("published");
 			expect(tag.publishedSlug).toBe("type-script");
 		});
@@ -1261,13 +1290,15 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 		});
 
 		it("restores a trashed record as an active (public) record", async () => {
-			const tag = await service.createDraft({
-				collection: recordCollection,
-				slug: null,
-				metadata: await requiredMetadata(recordCollection, unique("tag"), relationTarget),
-				format: "paragraphs",
-				body: "",
-			});
+			const tag = (
+				await service.createDraft({
+					collection: recordCollection,
+					slug: null,
+					metadata: await requiredMetadata(recordCollection, unique("tag"), relationTarget),
+					format: "paragraphs",
+					body: "",
+				})
+			).entry;
 			const trashed = await store.trashEntry({ id: tag.id, expectedVersion: tag.version });
 			const restored = await restoreDraft(testSite, store, { id: tag.id, expectedVersion: trashed.version });
 			expect(restored.status).toBe("published");
@@ -1280,22 +1311,26 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			});
 
 			const slug = unique("never-published");
-			const draft = await service.createDraft({
-				collection: contentCollection,
-				slug,
-				metadata: { title: "x" },
-				format: "paragraphs",
-				body: "x",
-			});
+			const draft = (
+				await service.createDraft({
+					collection: contentCollection,
+					slug,
+					metadata: { title: "x" },
+					format: "paragraphs",
+					body: "x",
+				})
+			).entry;
 			const trashedDraft = await store.trashEntry({ id: draft.id, expectedVersion: draft.version });
 			await store.permanentDeleteEntry({ id: draft.id, expectedVersion: trashedDraft.version });
-			const reused = await service.createDraft({
-				collection: contentCollection,
-				slug,
-				metadata: { title: "y" },
-				format: "paragraphs",
-				body: "y",
-			});
+			const reused = (
+				await service.createDraft({
+					collection: contentCollection,
+					slug,
+					metadata: { title: "y" },
+					format: "paragraphs",
+					body: "y",
+				})
+			).entry;
 			expect(reused.workingSlug).toBe(slug);
 		});
 
@@ -1324,13 +1359,15 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			const tag = await createTarget(manyRelation.to, unique("bulk"));
 			const metadata = await contentMetadata("n");
 			delete metadata[manyRelation.name];
-			const post = await service.createDraft({
-				collection: contentCollection,
-				slug: unique("untagged"),
-				metadata,
-				format: "paragraphs",
-				body: "x",
-			});
+			const post = (
+				await service.createDraft({
+					collection: contentCollection,
+					slug: unique("untagged"),
+					metadata,
+					format: "paragraphs",
+					body: "x",
+				})
+			).entry;
 			const { results } = await createBulkService(store, serviceOptions).run({
 				op: "relation.add",
 				field: manyRelation.name,
@@ -1345,21 +1382,25 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			"permanently deletes trashed items in bulk and names the entries that still reference a blocked one",
 			async () => {
 				if (!documentRelation) return;
-				const target = await service.createDraft({
-					collection: documentRelation.to,
-					slug: unique("replaced"),
-					metadata: await requiredMetadata(documentRelation.to, "대체될 글", relationTarget),
-					format: "paragraphs",
-					body: "x",
-				});
+				const target = (
+					await service.createDraft({
+						collection: documentRelation.to,
+						slug: unique("replaced"),
+						metadata: await requiredMetadata(documentRelation.to, "대체될 글", relationTarget),
+						format: "paragraphs",
+						body: "x",
+					})
+				).entry;
 				const referrer = await createReferrer("참조하는 글", target.id);
-				const loose = await service.createDraft({
-					collection: contentCollection,
-					slug: unique("loose"),
-					metadata: { title: "l" },
-					format: "paragraphs",
-					body: "l",
-				});
+				const loose = (
+					await service.createDraft({
+						collection: contentCollection,
+						slug: unique("loose"),
+						metadata: { title: "l" },
+						format: "paragraphs",
+						body: "l",
+					})
+				).entry;
 				const trashedTarget = await store.trashEntry({ id: target.id, expectedVersion: target.version });
 				const trashedLoose = await store.trashEntry({ id: loose.id, expectedVersion: loose.version });
 
@@ -1382,13 +1423,15 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 		);
 
 		it("duplicates without the publish date and with a hash that matches its metadata", async () => {
-			const draft = await service.createDraft({
-				collection: contentCollection,
-				slug: unique("dup"),
-				metadata: await contentMetadata("원본"),
-				format: "paragraphs",
-				body: "본문",
-			});
+			const draft = (
+				await service.createDraft({
+					collection: contentCollection,
+					slug: unique("dup"),
+					metadata: await contentMetadata("원본"),
+					format: "paragraphs",
+					body: "본문",
+				})
+			).entry;
 			const source = await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 			expect(source.publishedAt).toBeInstanceOf(Date);
 			const copy = await duplicateDraft(testSite, store, { id: source.id, title: "원본 (복사)" });
@@ -1406,21 +1449,25 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 		it("can return to a previous public slug of the same entry", async () => {
 			const post = await publishedPost();
 			const original = post.publishedSlug as string;
-			const renamed = await service.saveDraft(post.id, {
-				collection: contentCollection,
-				slug: unique("renamed"),
-				metadata: post.working.metadata as never,
-				doc: post.working.doc,
-				expectedVersion: post.version,
-			});
+			const renamed = (
+				await service.saveDraft(post.id, {
+					collection: contentCollection,
+					slug: unique("renamed"),
+					metadata: post.working.metadata as never,
+					doc: post.working.doc,
+					expectedVersion: post.version,
+				})
+			).entry;
 			const republished = await publishDraft(testSite, store, { id: post.id, expectedVersion: renamed.version });
-			const back = await service.saveDraft(post.id, {
-				collection: contentCollection,
-				slug: original,
-				metadata: post.working.metadata as never,
-				doc: post.working.doc,
-				expectedVersion: republished.version,
-			});
+			const back = (
+				await service.saveDraft(post.id, {
+					collection: contentCollection,
+					slug: original,
+					metadata: post.working.metadata as never,
+					doc: post.working.doc,
+					expectedVersion: republished.version,
+				})
+			).entry;
 			const final = await publishDraft(testSite, store, { id: post.id, expectedVersion: back.version });
 			expect(final.publishedSlug).toBe(original);
 		});
@@ -1429,13 +1476,15 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 			if (!filterRelation) return;
 			const tag = await createTarget(filterRelation.to, unique("filter"));
 			const tagged = await publishedPost({ [filterRelation.name]: relationValue(filterRelation, tag.id) });
-			const changed = await service.saveDraft(tagged.id, {
-				collection: contentCollection,
-				slug: tagged.workingSlug,
-				metadata: { ...(tagged.working.metadata as object), title: "수정 중" } as never,
-				doc: tagged.working.doc,
-				expectedVersion: tagged.version,
-			});
+			const changed = (
+				await service.saveDraft(tagged.id, {
+					collection: contentCollection,
+					slug: tagged.workingSlug,
+					metadata: { ...(tagged.working.metadata as object), title: "수정 중" } as never,
+					doc: tagged.working.doc,
+					expectedVersion: tagged.version,
+				})
+			).entry;
 
 			const relations = { [filterRelation.name]: [tag.id] };
 			const byTag = await store.listEntries({ collection: contentCollection, relations });
@@ -1521,13 +1570,15 @@ const createDuplicateContract: ContractSuite = (factory) => {
 			expect(Object.keys(relations).length).toBeGreaterThan(0);
 
 			// A published entry with a folder and an image (a media reference) in its body, made the way production makes it.
-			const original = await createContentService<Entry>(store, serviceOptions).createDraft({
-				collection: contentCollection,
-				slug: "orig-slug",
-				metadata: { title: "Original Post", ...relations },
-				doc: imageDoc(mediaId, "sample", "Hello world"),
-				folderId: folder.id,
-			} as ServiceInput);
+			const original = (
+				await createContentService<Entry>(store, serviceOptions).createDraft({
+					collection: contentCollection,
+					slug: "orig-slug",
+					metadata: { title: "Original Post", ...relations },
+					doc: imageDoc(mediaId, "sample", "Hello world"),
+					folderId: folder.id,
+				} as ServiceInput)
+			).entry;
 			const originalRefs = await store.getWorkingReferences({ entryId: original.id });
 			expect(
 				originalRefs.some(
@@ -1650,13 +1701,15 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 			const known = targets.get(to);
 			if (known) return known;
 			const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-			const draft = await service.createDraft({
-				collection: to,
-				slug: unique(to),
-				metadata,
-				format: "paragraphs",
-				body: "Body",
-			});
+			const draft = (
+				await service.createDraft({
+					collection: to,
+					slug: unique(to),
+					metadata,
+					format: "paragraphs",
+					body: "Body",
+				})
+			).entry;
 			const published =
 				draft.status === "published"
 					? draft
@@ -1666,21 +1719,25 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		};
 
 		const createDraft = async (body: { text: string } | { doc: unknown }) =>
-			service.createDraft({
-				collection: contentCollection,
-				slug: unique("post"),
-				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-				...("text" in body ? { format: "paragraphs", body: body.text } : body),
-			} as never);
+			service
+				.createDraft({
+					collection: contentCollection,
+					slug: unique("post"),
+					metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
+					...("text" in body ? { format: "paragraphs", body: body.text } : body),
+				} as never)
+				.then((result) => result.entry);
 
 		const save = (entry: Entry, body: { text: string } | { doc: unknown }) =>
-			service.saveDraft(entry.id, {
-				collection: contentCollection,
-				slug: entry.workingSlug,
-				metadata: entry.working.metadata as never,
-				expectedVersion: entry.version,
-				...("text" in body ? { format: "paragraphs", body: body.text } : body),
-			} as never);
+			service
+				.saveDraft(entry.id, {
+					collection: contentCollection,
+					slug: entry.workingSlug,
+					metadata: entry.working.metadata as never,
+					expectedVersion: entry.version,
+					...("text" in body ? { format: "paragraphs", body: body.text } : body),
+				} as never)
+				.then((result) => result.entry);
 
 		const publish = (entry: Entry) => publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 

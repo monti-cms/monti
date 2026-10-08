@@ -46,12 +46,14 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			doc: docOf("Body"),
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				doc: docOf("Body"),
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -61,21 +63,25 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 	};
 
 	const createDraft = async (body: { doc: unknown }) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("post"),
-			metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
-			...body,
-		} as never);
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("post"),
+				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
+				...body,
+			} as never)
+			.then((result) => result.entry);
 
 	const save = (entry: Entry, body: { doc: unknown }) =>
-		service.saveDraft(entry.id, {
-			collection: contentCollection,
-			slug: entry.workingSlug,
-			metadata: entry.working.metadata as never,
-			expectedVersion: entry.version,
-			...body,
-		} as never);
+		service
+			.saveDraft(entry.id, {
+				collection: contentCollection,
+				slug: entry.workingSlug,
+				metadata: entry.working.metadata as never,
+				expectedVersion: entry.version,
+				...body,
+			} as never)
+			.then((result) => result.entry);
 
 	const stored = async (entryId: string, state: "working" | "published") => {
 		const found = (

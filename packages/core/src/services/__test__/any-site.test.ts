@@ -42,13 +42,15 @@ describe("any site: core content flow", () => {
 		const known = targets.get(to);
 		if (known) return known;
 		const metadata = await requiredMetadata(to, unique(`target ${to}`), relationTarget);
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata,
-			format: "paragraphs",
-			body: "Body",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata,
+				format: "paragraphs",
+				body: "Body",
+			})
+		).entry;
 		const entry =
 			draft.status === "published"
 				? draft
@@ -58,13 +60,15 @@ describe("any site: core content flow", () => {
 	};
 
 	const createContent = async (title: string) =>
-		service.createDraft({
-			collection: contentCollection,
-			slug: unique("content"),
-			metadata: await requiredMetadata(contentCollection, title, relationTarget),
-			format: "paragraphs",
-			body: "Body text",
-		});
+		service
+			.createDraft({
+				collection: contentCollection,
+				slug: unique("content"),
+				metadata: await requiredMetadata(contentCollection, title, relationTarget),
+				format: "paragraphs",
+				body: "Body text",
+			})
+			.then((result) => result.entry);
 
 	beforeAll(async () => {
 		const isolated = await createIsolatedTestPool();
@@ -84,13 +88,15 @@ describe("any site: core content flow", () => {
 	});
 
 	it("saves a record from its title alone and derives the slug", async () => {
-		const record = await service.createDraft({
-			collection: recordCollection,
-			slug: null,
-			metadata: await requiredMetadata(recordCollection, "Any Site Record", relationTarget),
-			format: "paragraphs",
-			body: "",
-		});
+		const record = (
+			await service.createDraft({
+				collection: recordCollection,
+				slug: null,
+				metadata: await requiredMetadata(recordCollection, "Any Site Record", relationTarget),
+				format: "paragraphs",
+				body: "",
+			})
+		).entry;
 		expect(record.status).toBe("published");
 		expect(record.publishedSlug).toBe("any-site-record");
 	});
@@ -103,13 +109,15 @@ describe("any site: core content flow", () => {
 	});
 
 	it("reports a missing title as missing_field with the title field's label", async () => {
-		const draft = await service.createDraft({
-			collection: contentCollection,
-			slug: unique("untitled"),
-			metadata: {},
-			format: "paragraphs",
-			body: "Body text",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: contentCollection,
+				slug: unique("untitled"),
+				metadata: {},
+				format: "paragraphs",
+				body: "Body text",
+			})
+		).entry;
 		await expect(publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject(
 			{
 				code: "publish_validation_failed",
@@ -181,13 +189,15 @@ describe("any site: core content flow", () => {
 		const draftWith = async (title: string, mediaId: string) => {
 			if (!collection || !media) throw new Error("no media field");
 			const metadata = await requiredMetadata(collection, title, relationTarget);
-			return service.createDraft({
-				collection,
-				slug: unique("media"),
-				metadata: { ...metadata, [media.name]: mediaId },
-				format: "paragraphs",
-				body: "Body text",
-			} as Parameters<typeof service.createDraft>[0]);
+			return service
+				.createDraft({
+					collection,
+					slug: unique("media"),
+					metadata: { ...metadata, [media.name]: mediaId },
+					format: "paragraphs",
+					body: "Body text",
+				} as Parameters<typeof service.createDraft>[0])
+				.then((result) => result.entry);
 		};
 
 		it("the config has a media field (SEO share image)", () => {

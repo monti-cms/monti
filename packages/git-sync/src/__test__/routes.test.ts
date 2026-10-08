@@ -142,10 +142,12 @@ describe("status, pull now and the queue", () => {
 		const queued = await createHarness({ debounceMs: 60_000 });
 		try {
 			const publish = (slug: string) =>
-				queued.service.createDraft(
-					{ collection: "memo", slug, metadata: { title: slug }, body: "x", format: "mdx" },
-					{ publishImmediately: true },
-				);
+				queued.service
+					.createDraft(
+						{ collection: "memo", slug, metadata: { title: slug }, body: "x", format: "mdx" },
+						{ publishImmediately: true },
+					)
+					.then((result) => result.entry);
 			await publish("sent-at-once");
 			await publish("waits-in-queue");
 			expect(queued.repo.files("main").has("content/memo/waits-in-queue.en.mdx")).toBe(false);
@@ -166,10 +168,12 @@ describe("status, pull now and the queue", () => {
 
 describe("conflicts over the API", () => {
 	it("lists a conflict with both texts and resolves it with the person's choice", async () => {
-		const entry = await h.service.createDraft(
-			{ collection: "memo", slug: "api-conflict", metadata: { title: "Before" }, body: "text", format: "mdx" },
-			{ publishImmediately: true },
-		);
+		const entry = (
+			await h.service.createDraft(
+				{ collection: "memo", slug: "api-conflict", metadata: { title: "Before" }, body: "text", format: "mdx" },
+				{ publishImmediately: true },
+			)
+		).entry;
 		const path = "content/memo/api-conflict.en.mdx";
 		h.repo.commit("main", [
 			{ path, text: (h.repo.files("main").get(path) ?? "").replace("title: Before", "title: In git") },

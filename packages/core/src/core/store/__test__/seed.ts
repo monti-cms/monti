@@ -103,19 +103,19 @@ export async function publishDraft(
 }
 
 /** Restores a trashed entry the way production does (a record is prepared by the pipeline first). */
-export function restoreDraft(
+export async function restoreDraft(
 	site: Site,
 	store: ContentStore,
 	params: { id: string; expectedVersion: number },
 ): Promise<Entry> {
-	return createContentService<Entry>(store, { site }).restore(params);
+	return (await createContentService<Entry>(store, { site }).restore(params)).entry;
 }
 
 /** Duplicates a draft the way production does (through the write pipeline). */
-export function duplicateDraft(
+export async function duplicateDraft(
 	site: Site,
 	store: ContentStore,
 	params: { id: string; title?: string },
 ): Promise<Entry> {
-	return createContentService<Entry>(store, { site }).duplicate(params);
+	return (await createContentService<Entry>(store, { site }).duplicate(params)).entry;
 }

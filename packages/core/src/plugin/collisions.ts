@@ -6,8 +6,18 @@
 /** A single-segment path of the core admin UI (`/admin/<path>`). An empty string is the list view. Keep it identical to the admin UI's path picking. */
 export const CORE_ADMIN_PAGES: readonly string[] = ["", "entries", "login", "media", "templates", "trash"];
 
-/** Names the core uses in the admin meta API `features`. Cannot be used as plugin names. */
-export const CORE_FEATURE_KEYS: readonly string[] = ["folders", "references", "search", "templates", "media"];
+/**
+ * Names the core uses in the admin meta API `features`, and the plugin storage it keeps for itself (`core-events`: the marks of `event.once`).
+ * Cannot be used as plugin names.
+ */
+export const CORE_FEATURE_KEYS: readonly string[] = [
+	"folders",
+	"references",
+	"search",
+	"templates",
+	"media",
+	"core-events",
+];
 
 const trimSlashes = (path: string) => path.replace(/^\/+|\/+$/g, "");
 const showPage = (path: string) => `/${path}`;

@@ -90,13 +90,15 @@ describe("the format option of the admin API", () => {
 	const relationTarget = async (to: Collection): Promise<string> => {
 		const known = targets.get(to);
 		if (known) return known;
-		const draft = await service.createDraft({
-			collection: to,
-			slug: unique(to),
-			metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
-			format: "paragraphs",
-			body: "Body",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: to,
+				slug: unique(to),
+				metadata: await requiredMetadata(to, unique(`target ${to}`), relationTarget),
+				format: "paragraphs",
+				body: "Body",
+			})
+		).entry;
 		const published =
 			draft.status === "published"
 				? draft
@@ -119,7 +121,7 @@ describe("the format option of the admin API", () => {
 	const created = async (body: Record<string, unknown>) => {
 		const res = await post(body);
 		expect(res.status, JSON.stringify(await res.clone().json())).toBe(201);
-		return (await res.json()) as Entry;
+		return ((await res.json()) as { entry: Entry }).entry;
 	};
 
 	const patch = (id: string, body: Record<string, unknown>) =>
@@ -138,13 +140,15 @@ describe("the format option of the admin API", () => {
 
 	/** A published post with a slug, the target of the links below. */
 	const publishedPost = async (slug: string) => {
-		const draft = await service.createDraft({
-			collection: contentCollection,
-			slug,
-			metadata: await requiredMetadata(contentCollection, unique("Target"), relationTarget),
-			format: "paragraphs",
-			body: "Target body",
-		});
+		const draft = (
+			await service.createDraft({
+				collection: contentCollection,
+				slug,
+				metadata: await requiredMetadata(contentCollection, unique("Target"), relationTarget),
+				format: "paragraphs",
+				body: "Target body",
+			})
+		).entry;
 		return publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version });
 	};
 
@@ -168,7 +172,7 @@ describe("the format option of the admin API", () => {
 			});
 
 			expect(res.status).toBe(200);
-			const saved = (await res.json()) as Entry;
+			const saved = ((await res.json()) as { entry: Entry }).entry;
 			expect(saved.working.doc.content.map((block) => block.id)).toEqual(
 				entry.working.doc.content.map((block) => block.id),
 			);

@@ -35,6 +35,7 @@ export type {
 	StoredFileHead,
 } from "../media/store";
 export { ALLOWED_MEDIA_MIMES } from "../media/store";
+export type { WriteResult } from "../services/content-service";
 export type {
 	CmsEvents,
 	EventDeliveryOptions,
@@ -43,6 +44,7 @@ export type {
 	EventRetryResult,
 } from "../services/events";
 export type {
+	AfterCommitHook,
 	TransformHook,
 	ValidateHook,
 	ValidatePublishHook,

@@ -45,7 +45,7 @@ describe("publish HTTP contract", () => {
 		publish.mockResolvedValue({ entry: { id: "entry-1", version: 5, status: "published" }, warnings });
 		const response = await POST(request(), context);
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ id: "entry-1", status: "published", warnings });
+		expect(await response.json()).toMatchObject({ entry: { id: "entry-1", status: "published" }, warnings });
 		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
 	});
 

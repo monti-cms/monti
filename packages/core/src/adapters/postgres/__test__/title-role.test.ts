@@ -68,20 +68,24 @@ describe("a collection whose title field is not named title", () => {
 	});
 
 	const article = async (headline: string, extra: Record<string, unknown> = {}) =>
-		service.createDraft({
-			collection: "article",
-			slug: site.slugFromValues("article", { headline }),
-			metadata: { headline, ...extra },
-			doc: docOf(`Body of ${headline}`),
-		} as never);
+		service
+			.createDraft({
+				collection: "article",
+				slug: site.slugFromValues("article", { headline }),
+				metadata: { headline, ...extra },
+				doc: docOf(`Body of ${headline}`),
+			} as never)
+			.then((result) => result.entry);
 	const publish = async (entry: Entry) => publishDraft(site, store, { id: entry.id, expectedVersion: entry.version });
 	const topic = (name: string, translations?: Record<string, { name: string }>) =>
-		service.createDraft({
-			collection: "topic",
-			slug: null,
-			metadata: { name, ...(translations ? { translations } : {}) },
-			doc: docOf(""),
-		} as never);
+		service
+			.createDraft({
+				collection: "topic",
+				slug: null,
+				metadata: { name, ...(translations ? { translations } : {}) },
+				doc: docOf(""),
+			} as never)
+			.then((result) => result.entry);
 
 	it("answers the title field as the title of the site's collections", () => {
 		expect(site.titleField("article").name).toBe("headline");
@@ -201,7 +205,7 @@ describe("a collection whose title field is not named title", () => {
 
 	it("duplicates an entry with a new title written to the title field", async () => {
 		const source = await article("Original");
-		const copy = await service.duplicate({ id: source.id, title: "Original (copy)" });
+		const copy = (await service.duplicate({ id: source.id, title: "Original (copy)" })).entry;
 		expect(copy.working.metadata).toMatchObject({ headline: "Original (copy)" });
 		expect(copy.working.metadata).not.toHaveProperty("title");
 	});
