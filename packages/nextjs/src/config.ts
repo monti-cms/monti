@@ -71,7 +71,8 @@ export function missingStubs(root: string, missing: readonly string[]): Record<s
 	const stubs: Record<string, string> = {};
 	const folder = path.join(root, "node_modules", ".cache", "monti", "missing");
 	for (const name of missing) {
-		const file = `${name.replace(/[^A-Za-z0-9._-]+/g, "__")}.cjs`;
+		// The build error for a missing export names this file, so the name says what is wrong.
+		const file = `${name.replace(/[^A-Za-z0-9._-]+/g, "__")}-not-installed.cjs`;
 		try {
 			mkdirSync(folder, { recursive: true });
 			writeFileSync(path.join(folder, file), stubText(name));

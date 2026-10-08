@@ -195,6 +195,9 @@ async function checkStatuses(label) {
 			["/ko/posts/cms-elements-draft", 404],
 			["/ko/memos/no-such-memo", 404],
 			["/ko/posts/renamed-post-old", 308, "/ko/posts/renamed-post"],
+			// The app has no GitHub login settings in production: the admin and the draft preview answer 503 (a page cannot send that status under Cache Components; proxy.ts does).
+			["/studio", 503],
+			["/preview/ko/posts/cms-elements", 503],
 		];
 		const failures = [];
 		for (const [address, status, location] of expectations) {
@@ -265,9 +268,15 @@ try {
 	delete lightPackage.dependencies.mermaid;
 	delete lightPackage.dependencies.recharts;
 	writeFileSync(pkgJsonPath, `${JSON.stringify(lightPackage, null, "\t")}\n`);
+	// A clean install: the lockfile of the heavy app has both libraries in it, and pnpm would keep them in the store (and hoist them for the bundler to find).
+	rmSync(path.join(app, "pnpm-lock.yaml"), { force: true });
+	rmSync(path.join(app, "node_modules"), { recursive: true, force: true });
 	run("pnpm", ["install", "--no-frozen-lockfile"], app);
 	for (const heavyPackage of ["mermaid", "recharts"]) {
-		if (existsSync(path.join(app, "node_modules", heavyPackage))) {
+		const stored = readdirSync(path.join(app, "node_modules/.pnpm")).filter((name) =>
+			name.startsWith(`${heavyPackage}@`),
+		);
+		if (existsSync(path.join(app, "node_modules", heavyPackage)) || stored.length > 0) {
 			throw new Error(`check-example: ${heavyPackage} is still installed in the light app`);
 		}
 	}

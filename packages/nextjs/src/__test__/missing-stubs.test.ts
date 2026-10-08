@@ -29,6 +29,8 @@ describe("the stand-in for a package that is not installed", () => {
 				new RegExp(`package "${name}" is not installed.*add ${name}`),
 			);
 		}
+		// A build that cannot find an export names the file, so the file name says what is missing.
+		expect(stubs.recharts).toMatch(/\/recharts-not-installed\.cjs$/);
 		expect(readFileSync(path.join(root, stubs.recharts as string), "utf8")).not.toContain("@scope/pkg");
 	});
 
