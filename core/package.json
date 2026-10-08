@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/core",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "DB-backed CMS core: config, schema, stores, the stored document, its renderer and plugins",
   "license": "MIT",

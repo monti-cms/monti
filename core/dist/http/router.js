@@ -33,6 +33,7 @@ import * as rPublicEntries from "./v1/public/entries/route.js";
 import * as rSchemaPreview from "./v1/schema/preview/route.js";
 import * as rSchema from "./v1/schema/route.js";
 import { validateSameOrigin } from "./v1/security.js";
+import * as rFirstAdmin from "./v1/session/first-admin/route.js";
 import * as rSignIn from "./v1/session/sign-in/[provider]/route.js";
 import * as rSignOut from "./v1/session/sign-out/route.js";
 import * as r34 from "./v1/templates/[id]/route.js";
@@ -72,6 +73,7 @@ const ROUTES = [
     { pattern: "v1/schema", module: rSchema },
     { pattern: "v1/schema/preview", module: rSchemaPreview },
     // Sign in and out of the admin (browser form posts from the login screen). They check the same origin themselves and need no login.
+    { pattern: "v1/session/first-admin", module: rFirstAdmin },
     { pattern: "v1/session/sign-in/[provider]", module: rSignIn },
     { pattern: "v1/session/sign-out", module: rSignOut },
     // Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.

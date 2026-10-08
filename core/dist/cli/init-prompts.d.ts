@@ -46,10 +46,6 @@ export declare class InitCancelled extends Error {
 }
 /** The raw flag values (strings as typed). `undefined` means the flag was not given. */
 export interface InitAnswerFlags {
-    /** The Postgres schema for the tables, as an example value in `.env.example` (`DATABASE_SCHEMA`). */
-    readonly databaseSchema?: string;
-    /** The numeric GitHub id of the admin, filled in `.env.example` (`MONTI_ADMIN_GITHUB_ID`). */
-    readonly adminGithubId?: string;
     readonly siteUrl?: string;
     /** Comma-separated locale codes, the default first. */
     readonly locales?: string;
@@ -61,6 +57,8 @@ export interface InitAnswerFlags {
     /** `all`, `none`, `default` (the light set) or comma-separated block names. */
     readonly blocks?: string;
     readonly adminPath?: string;
+    /** `password` or `github`. */
+    readonly login?: string;
 }
 /** An admin path becomes a folder in the app, so it is plain path segments only. */
 export declare const validAdminPath: (value: string) => boolean;
@@ -68,14 +66,13 @@ export declare const validAdminPath: (value: string) => boolean;
 export declare function validateFlags(flags: InitAnswerFlags): void;
 /** What the questions ask, for the tests and the docs. */
 export declare const QUESTIONS: {
-    readonly databaseSchema: "Postgres schema for the tables (empty: public). Use one when the database is shared with other apps. Goes in .env.example";
-    readonly adminGithubId: "Your numeric GitHub id (MONTI_ADMIN_GITHUB_ID in .env.example). Leave empty to fill it in later";
     readonly locales: "Languages of the site (comma-separated, the default first)";
     readonly storage: "Where should uploaded images go?";
     readonly extras: "Extra features";
     readonly blocks: "Which body blocks do you want?";
     readonly blockList: "Pick the blocks";
     readonly adminPath: "Where should the admin live?";
+    readonly login: "How should people sign in to the admin?";
 };
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
 export declare function detectedLocales(app: DetectedApp): {

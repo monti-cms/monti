@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/admin",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "Admin UI for @monti-cms/core: editor, lists, media, templates, and plugin extension points. Framework-neutral: a host package (@monti-cms/nextjs) supplies the router",
   "license": "MIT",
@@ -85,7 +85,7 @@
     "react": ">=19",
     "react-dom": ">=19",
     "sonner": "^2.0.8",
-    "@monti-cms/core": "^0.2.0-next.1"
+    "@monti-cms/core": "^0.2.0-next.2"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -107,7 +107,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.2.0-next.1"
+    "@monti-cms/core": "0.2.0-next.2"
   },
   "files": [
     "dist",

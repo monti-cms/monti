@@ -1,2 +1,2 @@
 /** Login screen text. `provider` carries the name (e.g. GitHub) only when there is a single login method. */
-export declare const loginMessages: import("@monti-cms/core").MessageBundle<"description" | "forbidden" | "forbiddenTitle" | "signIn" | "signOut" | "title">;
+export declare const loginMessages: import("@monti-cms/core").MessageBundle<"confirmPassword" | "createFirstAdmin" | "description" | "email" | "errorClosed" | "errorConfirm" | "errorCredentials" | "errorEmail" | "errorOther" | "errorPassword" | "firstAdminDescription" | "firstAdminTitle" | "forbidden" | "forbiddenTitle" | "noLogin" | "noLoginTitle" | "password" | "passwordDescription" | "passwordHint" | "signIn" | "signInSubmit" | "signOut" | "title">;

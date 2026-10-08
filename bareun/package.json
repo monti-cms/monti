@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/bareun",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "Bareun spell and sentence checker for @monti-cms/core",
   "license": "MIT",
@@ -23,8 +23,8 @@
   "peerDependencies": {
     "next": ">=16",
     "react": ">=19",
-    "@monti-cms/core": "^0.2.0-next.1",
-    "@monti-cms/admin": "^0.2.0-next.1"
+    "@monti-cms/core": "^0.2.0-next.2",
+    "@monti-cms/admin": "^0.2.0-next.2"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -47,8 +47,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.2.0-next.1",
-    "@monti-cms/admin": "0.2.0-next.1"
+    "@monti-cms/core": "0.2.0-next.2",
+    "@monti-cms/admin": "0.2.0-next.2"
   },
   "files": [
     "dist",

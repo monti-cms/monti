@@ -12,15 +12,18 @@ export declare const SITE_URL_ENV = "SITE_URL";
 /** The environment variable the one master secret is read from when `secret` is not given. */
 export declare const SECRET_ENV = "MONTI_SECRET";
 /**
- * What `monti.config.ts` says about the server, next to the site options (`schema`, `plugins`, ...). Everything but `database` and `auth` is optional.
+ * What `monti.config.ts` says about the server, next to the site options (`schema`, `plugins`, ...). Everything but `database` is optional.
  * It is read on the server only, so it may name secrets; the usual way is to leave them to the environment (`postgres()` reads `DATABASE_URL`, `github()`
  * reads `AUTH_GITHUB_ID`, and `MONTI_SECRET` is the secret).
  */
 export interface MontiServerOptions {
     /** Where the content lives (`postgres()`). */
     readonly database: DatabaseAdapter;
-    /** How admins log in (`auth({ providers: [github()] })` of `@monti-cms/auth`). */
-    readonly auth: AuthAdapter;
+    /**
+     * How admins log in (`auth({ providers: [github()] })` of `@monti-cms/auth`). Without it nobody can sign in: under `next dev` the development login lets you
+     * into the admin, and a deployed admin answers that no login is configured.
+     */
+    readonly auth?: AuthAdapter;
     /**
      * Where uploaded images and files go: a storage adapter from any package (for example the S3-compatible one). Without it, media upload and management
      * are unavailable and the admin hides the media menu.

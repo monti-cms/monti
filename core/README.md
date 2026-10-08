@@ -19,7 +19,7 @@ Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.2&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -82,14 +82,14 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.1&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.1&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.2&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.2&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.2&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
 Until the public release the Monti packages come from the GitHub release bundle, so each one is added by its GitHub address (the same ref, only `path:/<folder>` changes). `monti init` does this for you.
 
 The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
-Login is `@monti-cms/auth` (Auth.js core, no Next.js in it); GitHub login needs no extra package. See its README for providers.
+`monti init` installs `@monti-cms/auth` (Auth.js core, no Next.js in it) for the login you choose; see its README for providers.
 The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
 
 pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses: put `allowBuilds:` with `esbuild: true` in `pnpm-workspace.yaml`.
@@ -104,13 +104,12 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 
 | Question | Choices | Default |
 | --- | --- | --- |
-| Database schema | The Postgres schema that holds the tables, written as the example value of `DATABASE_SCHEMA` in `.env.example`, for a database shared with other apps | `public` |
-| Admin GitHub id | Your numeric GitHub id (optional), written as `MONTI_ADMIN_GITHUB_ID` in `.env.example` (it is public, not a secret) | empty |
 | Locales | language codes, the default first. When the content has file names like `hello.ko.mdx` and `hello.en.mdx`, or language folders like `ko/` and `en/`, those languages are offered, and the default is the one whose files have no pair (else the first). `--yes` takes them | the languages found, else `en` |
 | Image storage | S3-compatible (S3, R2, MinIO; settings come from `S3_*`), or none | none |
 | Extras | AI writing, git sync (Bareun is not offered) | none |
 | Blocks | the light default set (`callout`, `collapsible`, `tabs`, `code-ref`, `color`), all, none, or a list picked from `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color`. `mermaid` and `chart` come from their own entry points and bring their library (`mermaid`, `recharts`) only when chosen | default |
 | Admin path | a path like `/studio` | `/studio` |
+| Login | "How should people sign in to the admin?": email and password (built in, no other service needed), or GitHub (needs a GitHub OAuth app). There is no "none" choice | email and password |
 | Install | when the packages are missing: the exact install command for the detected package manager, then "run it?" | yes |
 
 **What it writes** (only new files; one that already exists is skipped and reported, and replaced only on a yes or `--overwrite`):
@@ -122,7 +121,7 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | The types of the schema file, written from it (not edited by hand) | `monti-env.d.ts` |
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, the GitHub OAuth app with its callback URL, your numeric GitHub id, the `S3_*` values). It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
+| Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, a commented `DATABASE_SCHEMA` line saying when to set it, the `S3_*` values). It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
 
 For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
 
@@ -140,14 +139,14 @@ The summary then lists what is left as numbered steps, each with the exact conte
 8. `monti doctor` (it tells you if any step above is missing);
 9. `pnpm dev`, then open the admin address (`/studio`);
 
-followed by the notes that apply: the git-sync target, and a pointer to `.env.example` for the GitHub OAuth app a deployed site needs.
+followed by the notes that apply: the git-sync target, and one item about the login. With **email and password** (the default): right after you deploy, open the admin and create the first admin (or create it beforehand by running the app in production mode against the production database; under `next dev` you are the admin without signing in, so the screen does not show), and `monti admin:reset-password` for a forgotten password. With **GitHub**: create the OAuth app, with its homepage and callback URL, and fill `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID`. Either way `monti.config.ts` already has the `auth: auth({ providers: [...] })` line, and `@monti-cms/auth` is installed.
 
 **Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `skipped`, `overwritten`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
 
 ```sh
 pnpm exec monti init                 # interactive
 pnpm exec monti init --yes           # all defaults: the light block set, /studio, packages installed without asking
-pnpm exec monti init --yes --json --database-schema monti --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
+pnpm exec monti init --yes --json --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
 pnpm exec monti init --dry-run --yes # show what would be written and run
 pnpm exec monti init --no-install    # write the files, print the install command
 ```
@@ -157,15 +156,14 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 | `--yes`, `-y` | no prompts; unanswered questions take their default, and the install runs without asking | |
 | `--json` | print the result as JSON (implies `--yes`) | |
 | `--dry-run` | write and run nothing; show the plan | |
-| `--database-schema <name>` | the Postgres schema that holds the tables, written to `.env.example` as the example value of `DATABASE_SCHEMA`; for a database shared with other apps. Also asked as a question | `public` |
-| `--admin-github-id <n>` | numeric GitHub id of the admin, filled in `.env.example` as `MONTI_ADMIN_GITHUB_ID` | none |
-| `--site-url <url>` | public site URL, used for the OAuth callback URL in `.env.example` | `http://localhost:<dev port>` |
+| `--site-url <url>` | public site URL, the example value of `SITE_URL` in `.env.example` | `http://localhost:<dev port>` |
 | `--locales <list>` | language codes, the default first (`--locale <code>` is the same for one) | the languages found in the content file names or folders, else `en` |
 | `--time-zone <tz>` | IANA time zone | `UTC` |
 | `--storage <s3\|none>` | image storage | `none` |
 | `--extras <list>` | `ai`, `git-sync`, or `none` | `none` |
 | `--blocks <list>` | `default` (the light set), `all`, `none`, or block names (`default,mermaid` adds to the light set) | `default` |
 | `--admin-path <path>` | admin path (letters, digits, `-`, `_`; not `/` and not under `/api`) | `/studio` |
+| `--login <password\|github>` | how people sign in to the admin: the built-in email and password login, or GitHub | `password` |
 | `--overwrite` | replace existing files that differ | keep them |
 | `--no-install` | do not install packages; the install command is printed in the list of what is left | |
 | `--package-manager <m>` | `npm`, `pnpm`, `yarn` or `bun` | detected |
@@ -213,8 +211,6 @@ The site's data lives in `monti.schema.json`; `monti.config.ts` loads it and add
 
 ```ts
 // monti.config.ts
-import { auth } from "@monti-cms/auth";
-import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import schema from "./monti.schema.json";
 
@@ -222,7 +218,7 @@ export const cms = defineConfig({
 	schema, // the data stays in monti.schema.json
 	plugins: [], // one line per feature, each works with no arguments: mdx(), seo(), callout(), ...
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	// auth: auth({ providers: [password()] }), // the login: password() (built in) or github(); without it only `next dev` lets you in
 	// storage: <adapter from any package>, // media uploads; without it the admin hides the media menu
 });
 ```
@@ -252,9 +248,9 @@ Put them in `.env.local`.
 | Name | Meaning |
 | --- | --- |
 | `DATABASE_URL` | Postgres connection URL (read by `postgres()`) |
-| `DATABASE_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing. `monti init` asks for it (`--database-schema`) and writes it as an example value in `.env.example` |
+| `DATABASE_SCHEMA` | Optional. Schema name (`public` if unset). Set it when the database is shared with other apps, so the tables stay separate. `monti migrate` creates it if missing. `monti init` does not ask: `.env.example` has it as a commented line |
 | `MONTI_SECRET` | A random long value, for example from `openssl rand -base64 32`. The one secret: login sessions are signed with a key derived from it, and plugins' stored values (AI service keys, git-sync tokens) are encrypted under keys derived from it (`defineConfig({ secret })` takes the same value). To change it, keep the old value in `previousSecrets` ("Secrets") |
-| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/cms/auth/callback/github`. Not needed in `next dev` |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | Only with a GitHub login (`monti init --login github` writes them into `.env.example`) (`auth: auth({ providers: [github()] })`, which needs `@monti-cms/auth`). The GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/cms/auth/callback/github`. Not needed in `next dev` |
 | `MONTI_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID, or several separated by commas (read by `github()`). Not needed in `next dev` |
 | `SITE_URL` | Optional. The public URL of the site (`site.url`), different per environment; `site.url` in code or in the schema file wins |
 | `AUTH_TRUST_HOST` | Optional. `true` only when the server runs behind a proxy you run yourself (nginx, a load balancer) that overwrites `X-Forwarded-Host`; Vercel, Netlify, Cloudflare Pages and the like are detected. See "Host trust" |
@@ -435,7 +431,7 @@ What it checks, in the order it prints:
 | `schema` | the schema file is valid (each problem with its JSON path), and `monti-env.d.ts` is up to date |
 | `database` | `DATABASE_URL` is set and a Postgres URL (and the `sslmode` warning of the driver explained), the database is reachable (wrong host, port, password and database name are told apart), `DATABASE_SCHEMA` exists, **how many migrations are pending** (`monti migrate`) |
 | `secrets` | `MONTI_SECRET` is set and strong enough; the old `CMS_SECRET` and `AUTH_SECRET` are still set but unused |
-| `auth` | only the values core knows: the GitHub client id and secret (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), an admin is listed in `MONTI_ADMIN_GITHUB_ID` (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
+| `auth` | whether the config has a login (a warning in development and a failure for production or a known host platform, with how to add GitHub login); with the email and password login, a warning while no admin account exists yet (open the admin and create the first admin); with GitHub, only the values core knows: the GitHub client id and secret (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), an admin is listed in `MONTI_ADMIN_GITHUB_ID` (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
 | `next` | the three Next files exist at the admin path and use the right component (it points at a folder that does not match `admin.path`), `next.config` uses `withCms`, the admin address |
 | `upgrade` | **migration only**, for sites upgrading from the pre-overhaul setup; these checks will be removed after the owner's blog migration (#93), together with the old-data compatibility (#45). What is left of the old setup, each with the exact steps: `cms.config.ts` and `cms.server.ts` and the files that import them, old options in `monti.config.ts`, old variable names (`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), an `(admin)` route folder, `admin-components.tsx` |
 
@@ -466,7 +462,7 @@ export const cms = defineConfig({
 });
 ```
 
-Everything else imports `cms` from this file. `defineConfig` takes the site options (`schema`, or `collections` and `locales`, plus `plugins`, `blocks`, `site`, `admin`, `codeBlock`, `media`, `seed`, ...) and the server options ("Server options"): `database` and `auth` are required, the rest is optional.
+Everything else imports `cms` from this file. `defineConfig` takes the site options (`schema`, or `collections` and `locales`, plus `plugins`, `blocks`, `site`, `admin`, `codeBlock`, `media`, `seed`, ...) and the server options ("Server options"): `database` is required, the rest is optional.
 
 There is one public `defineConfig`, the one of `@monti-cms/core/server`; `@monti-cms/core` (the root entry) no longer exports `defineConfig`. The low-level `createCms({ config, server })` (where `server` is a `CmsServerConfig`) takes a site config built with `defineSite` of `@monti-cms/core`, which tests and tools use. `defineServerConfig` is removed.
 
@@ -761,7 +757,7 @@ Three things the steps above do not show:
 | `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti migrate` (create tables), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti migrate` (create tables), `monti admin:reset-password` (set a new password for an admin of the email and password login), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `testServer()` (`{ server, drop }`: the `database` and `auth` options for a real instance on a schema of its own, ["Testing your hooks and plugins"](#testing-your-hooks-and-plugins)), `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
@@ -1186,7 +1182,7 @@ The server options are part of the one `defineConfig({ … })` call, next to the
 | Item | Meaning |
 |---|---|
 | `database` | Required. Content store. `postgres()` reads `DATABASE_URL` and `DATABASE_SCHEMA`; `postgres({ connectionString, schema })` sets them in code |
-| `auth` | Required. Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). `host` is an explicit override for use outside a Next integration (it wins over the host that `cms.attachHost` attached); in a Next.js app leave it out. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
+| `auth` | Optional. Without it nobody can sign in: under `next dev` the development login lets you into the admin from your machine, and a deployed admin answers that no login is configured (`monti doctor` warns in development and fails for production). Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). `host` is an explicit override for use outside a Next integration (it wins over the host that `cms.attachHost` attached); in a Next.js app leave it out. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
 | `secret` | Optional. The one secret. If unset, the `MONTI_SECRET` environment variable. Login sessions and plugins' encrypted values (AI service keys, git-sync tokens) get keys derived from it; nothing receives the secret itself ("Secrets"). |
 | `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else on when a known proxy platform is detected or in development, else off |
@@ -1205,6 +1201,15 @@ Order: the `trustHost` option wins; then the `AUTH_TRUST_HOST` variable (`true`/
 - Security note: with it on, a client could choose the host the login callback is built from, unless the proxy overwrites `X-Forwarded-Host`. The platforms above do.
 - A proxy you run yourself (nginx, a load balancer) is not detected: set `trustHost: true` or `AUTH_TRUST_HOST=true`, and only if it overwrites `X-Forwarded-Host`.
 - Otherwise set `AUTH_URL` to the site's public URL. It fixes the origin login uses, so login works without trusting the host. For the same-origin check, set `site.url` so the public host is accepted.
+
+### Email and password login
+
+`auth: auth({ providers: [password()] })` (`password` from `@monti-cms/auth/password`) is the login that needs no other service. `monti init` writes it by default. The accounts live in the Monti database, in the plugin storage of the instance (`monti migrate` creates the table; there is nothing else to set up), with the password hashed by scrypt (`node:crypto`, a salt per account). Every account is an admin, and the session is the same signed cookie as for GitHub (key derived from `MONTI_SECRET`).
+
+- **The first admin** is created on the admin's own screen: while no account exists, the login screen (`<admin path>/login`, where the admin sends you) shows "Create the first admin" with email, password and confirmation, and signs you in. There is no setup code. As soon as one account exists the screen is closed, and the server refuses the request too (it is not only hidden), so the screen cannot be used to add a second admin. Right after you deploy, open the admin and create it; or create it beforehand by running the app in production mode (`next build`, `next start`) on your machine with `DATABASE_URL` pointing at the production database. Under `next dev` you are the admin without signing in, so the screen does not show.
+- **Sign-in** is an email and password form. A few failed attempts for one email (5 in a minute) are refused for the rest of that minute.
+- **A forgotten password:** `monti admin:reset-password [--email <email>]` asks for the email (unless given) and for the new password twice, and writes it to the database of `monti.config.ts`. There is no mail. Sessions that are already signed in stay valid until they expire (8 hours).
+- `monti doctor` warns while no admin account exists (`auth/admin-accounts`).
 
 ### Login bypass for development
 

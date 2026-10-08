@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/git-sync",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "Two-way sync of published entries with files in a GitHub repo for @monti-cms/core: commits or pull requests out, the push webhook in, and a conflict screen",
   "license": "MIT",
@@ -29,8 +29,8 @@
     "lucide-react": ">=0.562.0",
     "react": ">=19",
     "sonner": "^2.0.8",
-    "@monti-cms/admin": "^0.2.0-next.1",
-    "@monti-cms/core": "^0.2.0-next.1"
+    "@monti-cms/admin": "^0.2.0-next.2",
+    "@monti-cms/core": "^0.2.0-next.2"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -54,9 +54,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.2.0-next.1",
-    "@monti-cms/admin": "0.2.0-next.1",
-    "@monti-cms/mdx": "0.2.0-next.1"
+    "@monti-cms/admin": "0.2.0-next.2",
+    "@monti-cms/mdx": "0.2.0-next.2",
+    "@monti-cms/core": "0.2.0-next.2"
   },
   "files": [
     "dist",

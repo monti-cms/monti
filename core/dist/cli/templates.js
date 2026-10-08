@@ -227,7 +227,10 @@ export function configTemplate(answers) {
     const blocks = chosenBlocks(answers.blocks);
     const imports = [
         { from: "@monti-cms/auth", names: ["auth"] },
-        { from: "@monti-cms/auth/github", names: ["github"] },
+        {
+            from: answers.login === "github" ? "@monti-cms/auth/github" : "@monti-cms/auth/password",
+            names: [answers.login],
+        },
         { from: "@monti-cms/core/server", names: ["defineConfig", "postgres"] },
         { from: "@monti-cms/mdx", names: ["mdx"] },
     ];
@@ -301,9 +304,17 @@ export function configTemplate(answers) {
         "\t// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.",
         "\tdatabase: postgres(),",
         "",
-        "\t// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (your GitHub OAuth app) and MONTI_ADMIN_GITHUB_ID (the admin's numeric GitHub id).",
-        "\t// Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.",
-        "\tauth: auth({ providers: [github()] }),",
+        ...(answers.login === "github"
+            ? [
+                "\t// Sign in with GitHub: the OAuth app and the admin come from AUTH_GITHUB_ID, AUTH_GITHUB_SECRET and MONTI_ADMIN_GITHUB_ID (see .env.example).",
+                "\t// Under `next dev` you are the admin without signing in, from this machine only.",
+                "\tauth: auth({ providers: [github()] }),",
+            ]
+            : [
+                "\t// Sign in with an email and a password, kept in the database above. The first admin is created on the admin screen the first time you open it.",
+                "\t// Under `next dev` you are the admin without signing in, from this machine only. A forgotten password: `monti admin:reset-password`.",
+                "\tauth: auth({ providers: [password()] }),",
+            ]),
         "",
         ...storage,
         "",
@@ -359,6 +370,15 @@ export default withCms(nextConfig);
 }
 /** The OAuth callback URL of the GitHub login for a site URL. */
 export const githubCallbackUrl = (siteUrl) => `${siteUrl.replace(/\/+$/, "")}/api/cms/auth/callback/github`;
+/** How to add GitHub login to a config that has none: the one how-to `monti init` and `monti doctor` both print. */
+export function githubLoginHowTo(siteUrl) {
+    return [
+        "install @monti-cms/auth, then add `auth: auth({ providers: [github()] })` to defineConfig in monti.config.ts",
+        '(import { auth } from "@monti-cms/auth" and { github } from "@monti-cms/auth/github"),',
+        "set AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (a GitHub OAuth app: GitHub > Settings > Developer settings > OAuth Apps) and MONTI_ADMIN_GITHUB_ID (your numeric GitHub id, from https://api.github.com/users/<your-login>),",
+        `and register ${githubCallbackUrl(siteUrl)} as the OAuth callback URL`,
+    ].join(" ");
+}
 /**
  * `.env.example`: every variable the chosen features read, in order, each with what it is and where to get it. Committed to git, so it holds placeholders only,
  * never a secret. The person copies it to `.env.local` (`cp .env.example .env.local`) and fills it in.
@@ -375,8 +395,8 @@ export function envExampleTemplate(answers) {
         "# or use a local Postgres: postgres://postgres:postgres@localhost:5432/monti (create the database first: createdb monti).",
         "DATABASE_URL=postgres://user:password@localhost:5432/monti",
         "",
-        "# Postgres schema for the tables. Optional: empty means public. Use one when the database is shared with other apps.",
-        answers.databaseSchema ? `DATABASE_SCHEMA=${answers.databaseSchema}` : "# DATABASE_SCHEMA=monti",
+        "# Set DATABASE_SCHEMA only when the database is shared with other apps and the tables should live in their own schema (default: public).",
+        "# DATABASE_SCHEMA=monti",
         "",
         "# --- Secret ---",
         "",
@@ -386,20 +406,6 @@ export function envExampleTemplate(answers) {
         "# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
         "MONTI_SECRET=",
         "",
-        "# --- Admin login (GitHub) ---",
-        "",
-        "# Under `next dev` you are signed in as the admin without these, from this machine only. A deployed site needs them.",
-        "# Create a GitHub OAuth app:  GitHub > Settings > Developer settings > OAuth Apps > New OAuth App",
-        `#   Homepage URL:               ${site}`,
-        `#   Authorization callback URL: ${githubCallbackUrl(site)}`,
-        "# For the deployed site make a second OAuth app (or add its URL the same way), e.g. https://your-domain.com/api/cms/auth/callback/github",
-        "# Then copy the app's Client ID here, and generate a new client secret and copy it to AUTH_GITHUB_SECRET.",
-        "AUTH_GITHUB_ID=",
-        "AUTH_GITHUB_SECRET=",
-        "",
-        '# Your numeric GitHub id: the only account that may sign in as admin. Open https://api.github.com/users/<your-login> and copy the "id" field.',
-        `MONTI_ADMIN_GITHUB_ID=${answers.adminGithubId ?? ""}`,
-        "",
         "# --- Site ---",
         "",
         "# Public URL of the site. Links in bodies written as full URLs to it count as internal links.",
@@ -408,6 +414,9 @@ export function envExampleTemplate(answers) {
         "# Set to true only behind a proxy you run yourself (nginx, a load balancer). Vercel, Netlify and Cloudflare Pages are detected.",
         "# AUTH_TRUST_HOST=true",
     ];
+    if (answers.login === "github") {
+        lines.push("", "# --- Login with GitHub ---", "", "# A GitHub OAuth app: GitHub > Settings > Developer settings > OAuth Apps > New OAuth App.", `# Homepage URL: ${site}`, `# Authorization callback URL: ${githubCallbackUrl(site)}`, "# Register one app per address (the local one and the deployed one), or one callback URL per app.", "# Its Client ID, then a client secret you generate on the same page:", "AUTH_GITHUB_ID=", "AUTH_GITHUB_SECRET=", "", "# Who is an admin: your numeric GitHub id, not your login (a login can be renamed and then taken by someone else).", '# Open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id". Several ids go in one value, separated by commas.', "MONTI_ADMIN_GITHUB_ID=");
+    }
     if (answers.storage === "s3") {
         lines.push("", "# --- Image storage (S3, Cloudflare R2, MinIO) ---", "", "# Where the S3 API lives. AWS S3: leave empty. Cloudflare R2: https://<account-id>.r2.cloudflarestorage.com (R2 dashboard > bucket > Settings). MinIO: http://localhost:9000.", "S3_ENDPOINT=", "# The bucket's region (AWS: e.g. us-east-1). Cloudflare R2: auto.", "S3_REGION=", "# The bucket name; create the bucket in your storage dashboard first.", "S3_BUCKET=", "# An access key with read and write on that bucket. AWS: IAM > Users > Security credentials. R2: R2 > Manage API tokens. MinIO: the console's Access Keys.", "S3_ACCESS_KEY_ID=", "S3_SECRET_ACCESS_KEY=", "# The start of the public address of uploaded files: a CDN in front of the bucket, or the bucket's public URL (R2: Settings > Public access).", "S3_PUBLIC_URL=", "# MinIO and some other S3-compatible stores need path-style addresses: true.", "# S3_FORCE_PATH_STYLE=true");
     }
@@ -418,8 +427,8 @@ export function packagesFor(answers) {
     const blocks = chosenBlocks(answers.blocks);
     return unique([
         "@monti-cms/core",
-        "@monti-cms/admin",
         "@monti-cms/auth",
+        "@monti-cms/admin",
         "@monti-cms/nextjs",
         "@monti-cms/mdx",
         "next-themes",

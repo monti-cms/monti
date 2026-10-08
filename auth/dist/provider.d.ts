@@ -1,4 +1,5 @@
 import type { PluginStorage } from "@monti-cms/core";
+import type { LoginAccounts } from "@monti-cms/core/server";
 /** An Auth.js provider config (OAuth, OIDC or credentials): what `GitHub({ ... })` or `Credentials({ ... })` of `@auth/core/providers/*` returns. */
 export interface AuthJsProvider {
     readonly id: string;
@@ -64,6 +65,11 @@ export interface LoginProvider {
     } & Readonly<Record<string, string>>;
     /** Icon of the button: an image address (an `https:` or `data:` URL). */
     readonly icon?: string;
+    /**
+     * `true` when every account of this provider is an admin, because the accounts are the admin accounts (the built-in password login). A person who signed in with the
+     * provider is an admin; `admins` is not used and no "no admin is set" warning is given for it.
+     */
+    readonly everyAccountIsAdmin?: boolean;
     /** Admins of this provider: ids inside the provider (`"123"`) or qualified (`"github:123"`). Unset entries (an unset environment variable) are skipped. */
     readonly admins?: readonly (string | undefined)[];
     /**
@@ -83,6 +89,8 @@ export interface LoginProvider {
      * requires login, and before any sign-in is attempted, so a development server running on the dev bypass does not need the provider set up.
      */
     requireConfigured?(): void;
+    /** The accounts this provider keeps in the database (the password login). Called once when the login connection is created, with the context `setup` gets. */
+    accounts?(context: LoginProviderContext): LoginAccounts;
     /** The Auth.js provider config. Called once when the login connection is created. */
     setup(context: LoginProviderContext): AuthJsProvider;
     /** Turns the account of a finished sign-in into the Monti account. Returning `null` refuses the sign-in. */

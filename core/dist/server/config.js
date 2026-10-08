@@ -1,3 +1,4 @@
+import { noLogin } from "../adapters/auth/no-login.js";
 import { createCms } from "../cms/index.js";
 import { defineSite } from "../config/define.js";
 import { problemText } from "../core/problem.js";
@@ -32,13 +33,6 @@ export function defineConfig(input) {
             fix: "add `database: postgres()` (postgres is exported by @monti-cms/core/server); it reads DATABASE_URL",
         }));
     }
-    if (!input.auth) {
-        throw new Error(problemText({
-            what: "defineConfig has no `auth`, so there is no way to log in to the admin",
-            where: "defineConfig({ ... }) in monti.config.ts",
-            fix: "add `auth: auth({ providers: [github()] })` (auth is exported by @monti-cms/auth, github by @monti-cms/auth/github)",
-        }));
-    }
     const site = {};
     for (const [key, value] of Object.entries(input))
         if (!isServerKey(key))
@@ -60,7 +54,7 @@ export function defineConfig(input) {
     const config = defineSite(site);
     const server = {
         database: input.database,
-        auth: input.auth,
+        auth: input.auth ?? noLogin(),
         ...(input.storage ? { media: input.storage } : {}),
         secret: input.secret || process.env[SECRET_ENV] || undefined,
         ...(input.previousSecrets

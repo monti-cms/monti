@@ -33,10 +33,6 @@ const BLOCK_IDS = BLOCK_CHOICES.map((block) => block.id);
 const EXTRAS = ["ai", "git-sync"];
 /** Every validator returns the error text, or `undefined` when the value is fine. The same text is used for a flag and for a prompt. */
 const check = {
-    databaseSchema: (value) => value === "" || /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value)
-        ? undefined
-        : "must be a schema name: letters, digits and _, not starting with a digit (up to 63 characters)",
-    githubId: (value) => value === "" || /^\d+$/.test(value) ? undefined : "must be the numeric GitHub id (digits only), for example 583231",
     siteUrl: (value) => (isHttpUrl(value) ? undefined : "must be an http(s) URL like http://localhost:3000"),
     locales: (value) => {
         const codes = splitList(value);
@@ -55,6 +51,7 @@ const check = {
         const bad = splitList(value).find((name) => !["all", "none", "default", ...BLOCK_IDS].includes(name));
         return bad ? `"${bad}" is not a block; use default, all, none or any of ${BLOCK_IDS.join(", ")}` : undefined;
     },
+    login: (value) => (["password", "github"].includes(value) ? undefined : 'must be "password" or "github"'),
     adminPath: (value) => validAdminPath(value)
         ? undefined
         : 'must be a path like "/studio" (letters, digits, - and _; not "/" and not under "/api")',
@@ -77,8 +74,6 @@ const parseBlocks = (value) => {
 };
 /** Checks every flag that was given, before anything is asked. */
 export function validateFlags(flags) {
-    checked("database-schema", flags.databaseSchema, check.databaseSchema);
-    checked("admin-github-id", flags.adminGithubId, check.githubId);
     checked("site-url", flags.siteUrl, check.siteUrl);
     checked("locales", flags.locales, check.locales);
     checked("time-zone", flags.timeZone, check.timeZone);
@@ -86,17 +81,17 @@ export function validateFlags(flags) {
     checked("extras", flags.extras, check.extras);
     checked("blocks", flags.blocks, check.blocks);
     checked("admin-path", flags.adminPath, check.adminPath);
+    checked("login", flags.login, check.login);
 }
 /** What the questions ask, for the tests and the docs. */
 export const QUESTIONS = {
-    databaseSchema: "Postgres schema for the tables (empty: public). Use one when the database is shared with other apps. Goes in .env.example",
-    adminGithubId: "Your numeric GitHub id (MONTI_ADMIN_GITHUB_ID in .env.example). Leave empty to fill it in later",
     locales: "Languages of the site (comma-separated, the default first)",
     storage: "Where should uploaded images go?",
     extras: "Extra features",
     blocks: "Which body blocks do you want?",
     blockList: "Pick the blocks",
     adminPath: "Where should the admin live?",
+    login: "How should people sign in to the admin?",
 };
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
 export function detectedLocales(app) {
@@ -112,22 +107,6 @@ export function detectedLocales(app) {
 export async function collectAnswers(app, flags, prompter) {
     validateFlags(flags);
     const siteUrl = flags.siteUrl ?? `http://localhost:${app.devPort}`;
-    // Schema of the tables
-    let databaseSchema = flags.databaseSchema?.trim() || undefined;
-    if (flags.databaseSchema === undefined && prompter) {
-        databaseSchema =
-            (await prompter.text({
-                message: QUESTIONS.databaseSchema,
-                placeholder: "public",
-                validate: (value) => check.databaseSchema(value.trim()),
-            })).trim() || undefined;
-    }
-    // Admin (GitHub id)
-    let adminGithubId = flags.adminGithubId || undefined;
-    if (flags.adminGithubId === undefined && prompter) {
-        const id = (await prompter.text({ message: QUESTIONS.adminGithubId, validate: (value) => check.githubId(value.trim()) })).trim();
-        adminGithubId = id || undefined;
-    }
     // Locales, the default first
     let locales;
     const foundLocales = detectedLocales(app);
@@ -223,9 +202,20 @@ export async function collectAnswers(app, flags, prompter) {
                 validate: (value) => check.adminPath(value.trim()),
             })).trim()
             : DEFAULT_INIT_ADMIN_PATH);
+    // Login. There is no "none" choice: a config without a login is only what a hand-written config can be.
+    const login = flags.login !== undefined
+        ? flags.login
+        : prompter
+            ? await prompter.select({
+                message: QUESTIONS.login,
+                options: [
+                    { value: "password", label: "Email and password (built in, no other service needed)" },
+                    { value: "github", label: "GitHub (needs a GitHub OAuth app)" },
+                ],
+                initial: "password",
+            })
+            : "password";
     return {
-        ...(databaseSchema ? { databaseSchema } : {}),
-        adminGithubId,
         siteUrl,
         locales,
         timeZone: flags.timeZone ?? DEFAULT_INIT_TIME_ZONE,
@@ -234,6 +224,7 @@ export async function collectAnswers(app, flags, prompter) {
         gitSync: extras.includes("git-sync"),
         blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
         adminPath,
+        login,
     };
 }
 /** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */

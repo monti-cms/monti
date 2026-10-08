@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/seo",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "SEO extension for @monti-cms/core: search and share field set, search preview, AI suggestions for search title and description, public page helper",
   "license": "MIT",
@@ -17,9 +17,9 @@
   },
   "peerDependencies": {
     "react": ">=19",
-    "@monti-cms/ai": "^0.2.0-next.1",
-    "@monti-cms/admin": "^0.2.0-next.1",
-    "@monti-cms/core": "^0.2.0-next.1"
+    "@monti-cms/admin": "^0.2.0-next.2",
+    "@monti-cms/ai": "^0.2.0-next.2",
+    "@monti-cms/core": "^0.2.0-next.2"
   },
   "peerDependenciesMeta": {
     "@monti-cms/ai": {
@@ -46,9 +46,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/ai": "0.2.0-next.1",
-    "@monti-cms/core": "0.2.0-next.1",
-    "@monti-cms/admin": "0.2.0-next.1"
+    "@monti-cms/core": "0.2.0-next.2",
+    "@monti-cms/ai": "0.2.0-next.2",
+    "@monti-cms/admin": "0.2.0-next.2"
   },
   "files": [
     "dist",

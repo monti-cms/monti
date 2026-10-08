@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/mdx",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "MDX for @monti-cms/core: the mdx format (import and export), renderMdx, the admin source panel, syntax extensions and the migrations of stores that kept bodies as MDX",
   "license": "MIT",
@@ -44,8 +44,8 @@
   },
   "peerDependencies": {
     "react": ">=19",
-    "@monti-cms/core": "^0.2.0-next.1",
-    "@monti-cms/admin": "^0.2.0-next.1"
+    "@monti-cms/core": "^0.2.0-next.2",
+    "@monti-cms/admin": "^0.2.0-next.2"
   },
   "peerDependenciesMeta": {
     "@monti-cms/admin": {
@@ -75,8 +75,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/admin": "0.2.0-next.1",
-    "@monti-cms/core": "0.2.0-next.1"
+    "@monti-cms/core": "0.2.0-next.2",
+    "@monti-cms/admin": "0.2.0-next.2"
   },
   "files": [
     "dist",

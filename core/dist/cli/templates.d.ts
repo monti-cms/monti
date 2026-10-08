@@ -28,11 +28,7 @@ export declare const BLOCK_CHOICES: readonly BlockChoice[];
 export declare const DEFAULT_BLOCK_IDS: readonly string[];
 /** What the questions of `monti init` decided. Every field has a flag. */
 export interface InitAnswers {
-    /** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given: an example value in `.env.example`. Without it the tables go in `public`. */
-    readonly databaseSchema?: string;
-    /** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given: filled in `.env.example` (it is public, not a secret). */
-    readonly adminGithubId?: string;
-    /** Public URL of the site, for the OAuth callback URL. */
+    /** Public URL of the site, for the `SITE_URL` example in `.env.example`. */
     readonly siteUrl: string;
     /** Locale codes, the default first. */
     readonly locales: readonly string[];
@@ -43,6 +39,8 @@ export interface InitAnswers {
     /** Ids of {@link BLOCK_CHOICES}. */
     readonly blocks: readonly string[];
     readonly adminPath: string;
+    /** How people sign in to the admin: the built-in email and password login, or GitHub (an OAuth app). */
+    readonly login: "password" | "github";
 }
 /** A key from front matter as a field name: kept as it is when it is one word of letters and digits, else camel-cased. `undefined` if nothing usable is left. */
 export declare function fieldNameOf(key: string): string | undefined;
@@ -104,6 +102,8 @@ export declare const apiRouteTemplate: (configImport: string) => string;
 export declare function nextConfigTemplate(): string;
 /** The OAuth callback URL of the GitHub login for a site URL. */
 export declare const githubCallbackUrl: (siteUrl: string) => string;
+/** How to add GitHub login to a config that has none: the one how-to `monti init` and `monti doctor` both print. */
+export declare function githubLoginHowTo(siteUrl: string): string;
 /**
  * `.env.example`: every variable the chosen features read, in order, each with what it is and where to get it. Committed to git, so it holds placeholders only,
  * never a secret. The person copies it to `.env.local` (`cp .env.example .env.local`) and fills it in.

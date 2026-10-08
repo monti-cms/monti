@@ -38,7 +38,7 @@ export async function AdminPage({ cms, server, params, searchParams }) {
             case "schema":
                 return _jsx(SchemaPage, { cms: cms, server: server });
             case "login":
-                return _jsx(LoginPage, { cms: cms, server: server });
+                return _jsx(LoginPage, { cms: cms, server: server, searchParams: searchParams });
         }
     }
     if (path.length === 1 && first) {

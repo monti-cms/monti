@@ -2,7 +2,7 @@
 
 [English](README.md) | 한국어
 
-프레임워크 없이 쓰는 `@monti-cms/core`용 관리자 로그인. 코어의 `CmsAuth`를 표준 `Request`·`Response` 위에서 구현하고, [Auth.js core](https://authjs.dev)(`@auth/core`)를 바탕으로 하며, `next/*`에서 아무것도 가져오지 않는다. 로그인 방법은 **프로바이더**다. GitHub는 여기에 들어 있고, GitLab·Google·비밀번호 로그인은 코어를 건드리지 않고 프로바이더 패키지가 더한다.
+프레임워크 없이 쓰는 `@monti-cms/core`용 관리자 로그인. 코어의 `CmsAuth`를 표준 `Request`·`Response` 위에서 구현하고, [Auth.js core](https://authjs.dev)(`@auth/core`)를 바탕으로 하며, `next/*`에서 아무것도 가져오지 않는다. 로그인 방법은 **프로바이더**다. GitHub와 내장 이메일·비밀번호 로그인은 여기에 들어 있고, GitLab·Google은 코어를 건드리지 않고 프로바이더 패키지가 더한다.
 
 ## 설치
 
@@ -41,6 +41,32 @@ export const cms = defineConfig({
 
 GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/auth/callback/github`다.
 
+### 이메일과 비밀번호: `password()`
+
+```ts
+// monti.config.ts
+import { auth } from "@monti-cms/auth";
+import { password } from "@monti-cms/auth/password";
+
+export const cms = defineConfig({
+	schema,
+	database: postgres(),
+	auth: auth({ providers: [password()] }),
+});
+```
+
+다른 서비스도, 모든 사이트가 갖는 값(`DATABASE_URL`, `MONTI_SECRET`) 밖의 환경 변수도 필요 없다. `monti init`이 기본으로 이것을 쓴다(`--login password`. `--login github`이면 `github()`를 쓴다).
+
+- **계정**은 Monti 데이터베이스, 곧 인스턴스의 플러그인 저장소(플러그인 `auth`, 컬렉션 `password-accounts`와 `password-setup`)에 있으므로 `monti migrate`가 설정의 전부다. 계정은 이메일(앞뒤 공백 제거, 소문자)과 비밀번호 해시다. 해시는 `node:crypto`의 scrypt이고, 계정마다 무작위 salt를 쓰며, 비용은 해시와 함께 저장하고, 일정한 시간으로 비교한다. 모르는 이메일도 틀린 비밀번호만큼 시간이 걸려서 거절한다. 비밀번호는 10자 이상이다. 해시 의존성을 더하지 않는다.
+- **모든 계정이 관리자**다(`LoginProvider.everyAccountIsAdmin`). 계정 ID는 `password:<이메일>`이고, 세션은 로그인에 성공해야만 만들어진다. 관리자 목록이 필요 없고, 이 프로바이더에는 "관리자가 없다" 경고를 내지 않는다.
+- **첫 관리자**는 계정이 하나도 없는 동안 관리자 로그인 화면에서 만든다: 이메일, 비밀번호, 확인을 넣으면 만들고 바로 로그인시킨다. 화면이 아니라 서버가 막는다. `POST /api/cms/v1/session/first-admin`이 `cms.auth().accounts.createFirst`를 부르는데, 계정이 하나라도 있으면 `closed`로 거절한다. `expectedVersion: 0`으로 쓰는 표지 행 하나 덕분에 동시에 두 번 시도해도 하나만 성공한다. 설정 코드는 없다. 배포한 직후 관리자를 열어 만들거나, 운영 데이터베이스를 가리키게 해서 내 컴퓨터에서 앱을 프로덕션 모드로 돌려 미리 만든다(`next dev`에서는 로그인 없이 관리자이므로 그 화면이 나오지 않는다).
+- **세션**은 다른 프로바이더와 같은 서명된 JWT 쿠키다(8시간, 갱신식, 키는 `MONTI_SECRET`에서 만든다). Auth.js의 `Credentials` 프로바이더는 JWT 전략이 필요한데, 이 패키지가 이미 그것을 쓴다.
+- **실패한 시도는 단순하게 늦춘다:** 한 이메일로 1분 안에 5번 실패하면 그 1분의 나머지 동안 거절한다(서버 프로세스의 메모리에 세므로 인스턴스마다이고 서버끼리 공유하지 않는다). 완전한 방어가 아니라 제동이니 긴 비밀번호를 쓴다.
+- **비밀번호를 잊었을 때**는 `monti admin:reset-password [--email <이메일>]`(코어)로 새로 정한다. 메일은 없다. 이미 로그인한 세션은 만료될 때까지 유효하다.
+- 관리자 계정이 아직 없으면 `monti doctor`가 경고한다(`auth/admin-accounts`).
+
+`cms.auth().accounts`(`@monti-cms/core/server`의 `LoginAccounts`)로 화면·라우트·명령이 계정에 닿는다: `hasAny()`, `createFirst({ email, password })`, `resetPassword({ email, password })`가 각각 `{ ok: true }` 또는 `{ ok: false, reason }`을 돌려준다.
+
 ### `auth(options)`
 
 | 옵션 | 뜻 |
@@ -57,7 +83,7 @@ GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/au
 
 하나뿐인 비밀 값 `MONTI_SECRET`(`defineConfig`)이 설정해야 할 비밀 값의 전부다. 세션 쿠키 키(`cms.secrets("auth").deriveKey("session")`)와 각 플러그인의 암호화 키(AI 서비스 키, git-sync 토큰)가 모두 이 값에서 HKDF로 파생된다. `AUTH_SECRET`과 `CMS_SECRET`은 더 읽지 않고, `auth()`에도 `secret` 옵션이 없다. 값이 없으면 `MONTI_SECRET`을 짚는 오류와 함께 로그인이 실패한다. 값을 바꾸면 모두 로그아웃되며, 바꾸기 전 값을 `defineConfig`의 `previousSecrets`에 적어 두면 그 값으로 저장된 것을 계속 읽을 수 있다.
 
-`monti doctor`가 로그인 설정(`auth/*`)을 점검한다: GitHub 클라이언트 id와 시크릿, 관리자가 있는지(GitHub 로그인 이름처럼 숫자 id가 아닌 항목은 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, 그리고 OAuth 앱에 등록할 콜백 URL(`SITE_URL`에서 만든다)을 찍는다. 프로바이더는 콜백 URL이 필요하면 `usesCallbackUrl`을 켠다. GitHub로 처음 로그인할 때는 GitHub가 브라우저를 어디로 돌려보낼지를 서버 로그가 알려 주고, 로그인했지만 관리자가 아닌 사람은 더해야 할 id와 함께 로그에 남는다.
+`monti doctor`가 로그인 설정(`auth/*`)을 점검한다: 이메일·비밀번호 로그인이면 관리자 계정이 이미 있는지, GitHub이면 GitHub 클라이언트 id와 시크릿, 관리자가 있는지(GitHub 로그인 이름처럼 숫자 id가 아닌 항목은 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, 그리고 OAuth 앱에 등록할 콜백 URL(`SITE_URL`에서 만든다)을 찍는다. 프로바이더는 콜백 URL이 필요하면 `usesCallbackUrl`을 켠다. GitHub로 처음 로그인할 때는 GitHub가 브라우저를 어디로 돌려보낼지를 서버 로그가 알려 주고, 로그인했지만 관리자가 아닌 사람은 더해야 할 id와 함께 로그에 남는다.
 
 세션 키를 직접 만드는 로그인 연결도 같은 도구를 받는다. `AuthCreateContext`에 `secrets: PluginSecrets`(`cms.secrets("auth")`)가 있다.
 
@@ -95,6 +121,8 @@ interface LoginProvider {
 	name: string; // "GitHub"
 	label: { en: string; [locale: string]: string }; // 버튼 글자. 바꾸려면 admin.messages["cms.auth"]["<id>.label"]
 	icon?: string; // 버튼에 넣을 이미지 URL이나 data: URL
+	everyAccountIsAdmin?: boolean; // 이 프로바이더의 모든 계정이 관리자(password())
+	accounts?(context): LoginAccounts; // 데이터베이스에 두는 계정. 첫 관리자 화면과 monti admin:reset-password가 쓴다
 	admins?: readonly (string | undefined)[];
 	setup(context: { storage(plugin: string): PluginStorage; trustHost: boolean }): AuthJsProvider; // Auth.js 프로바이더 설정
 	account(signedIn: { user; account; profile? }): { id: string; name?: string } | null; // 계정 -> Monti 계정. null이면 로그인을 거절
@@ -129,15 +157,9 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 
 그다음 `providers: [github({ ... }), gitlab({ ... })]`로 쓴다. 로그인 화면에 프로바이더마다 버튼이 하나씩 생기고, 콜백은 `/api/cms/auth/callback/gitlab`, 관리자는 `gitlab:<id>`다. 이 패키지의 테스트가 이런 프로바이더를 가짜 서버로 등록해 본다.
 
-### 비밀번호 프로바이더 더하기(계획만 있고 아직 만들지 않았다)
+### 다른 credentials 프로바이더
 
-비밀번호 로그인은 사용자를 플러그인 저장소에 두는 credentials 프로바이더다. 그것을 위한 자리는 있고, 그 위에 올라갈 패키지는 아직 없다.
-
-- **저장소의 사용자.** `setup({ storage })`가 다른 플러그인이 쓰는 것과 같은 플러그인별 저장소 `cms.storage(plugin)`를 받는다. 패키지가 자기 플러그인 이름으로 사용자 기록을 거기에 두고, `account()`가 사용자 키를 ID로 돌려준다(`password:<키>`).
-- **해시와 횟수 제한.** Auth.js `Credentials` 프로바이더의 `authorize`에 둔다. 메모리를 많이 쓰는 해시(scrypt, argon2)로 비교하고, 실패 횟수를 같은 저장소에 세어 한도를 넘으면 거절한다.
-- **아직 없는 것.** 로그인 화면에는 프로바이더마다 버튼만 있고 입력 칸이 없다. 그래서 지금은 `signIn`이 credentials 프로바이더를 거절한다("아직 지원하지 않음"). 지원하려면 로그인 화면에 입력 칸을 만들고, `signIn`이 보낸 값을 `/callback/<id>`로 넘겨야 한다. 이는 이 패키지가 아니라 비밀번호 패키지의 일이다.
-
-이런 프로바이더의 컴파일 검사를 거친 예가 `src/__test__/providers.test.ts`에 있다.
+`password()`는 평범한 credentials 프로바이더다. 따로 패키지로 만든 것도 모양이 같다. `setup`이 Auth.js `Credentials` 프로바이더(`id`는 `LoginProvider`의 것)를 돌려주고, 사용자는 `context.storage(plugin)`에 두고, 해시와 횟수 제한은 `authorize`에서 한다. 코어가 `credentials: true`로 내놓는 프로바이더마다 로그인 화면이 이메일·비밀번호 입력 칸을 보여 주고, `signIn`이 보낸 `email`과 `password`를 `/callback/<id>`로 넘긴다. 컴파일 검사를 거친 예가 `src/__test__/providers.test.ts`에 있다.
 
 ## 로그인 흐름
 

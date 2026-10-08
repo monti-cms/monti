@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/nextjs",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "private": true,
   "description": "Next.js adapter for @monti-cms/core and @monti-cms/admin: route handler, next.config wiring, admin page and layout with the App Router adapter, the login wiring for @monti-cms/auth",
   "license": "MIT",
@@ -26,9 +26,9 @@
   "peerDependencies": {
     "next": ">=16",
     "react": ">=19",
-    "@monti-cms/core": "^0.2.0-next.1",
-    "@monti-cms/auth": "^0.2.0-next.1",
-    "@monti-cms/admin": "^0.2.0-next.1"
+    "@monti-cms/auth": "^0.2.0-next.2",
+    "@monti-cms/core": "^0.2.0-next.2",
+    "@monti-cms/admin": "^0.2.0-next.2"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -51,9 +51,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/admin": "0.2.0-next.1",
-    "@monti-cms/core": "0.2.0-next.1",
-    "@monti-cms/auth": "0.2.0-next.1"
+    "@monti-cms/admin": "0.2.0-next.2",
+    "@monti-cms/auth": "0.2.0-next.2",
+    "@monti-cms/core": "0.2.0-next.2"
   },
   "files": [
     "dist",

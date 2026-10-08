@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { adminResetPassword } from "./admin-command.js";
 import { runDoctorCommand } from "./doctor/index.js";
 import { eventsRetry } from "./events.js";
 import { HELP, helpFor } from "./help.js";
@@ -12,6 +13,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types.js";
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
  * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
+ * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
  * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
@@ -21,6 +23,7 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types.js";
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
  * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
  */
+export { adminResetPassword } from "./admin-command.js";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths.js";
 export { unifiedDiff } from "./diff.js";
 export { DOCTOR_HELP, formatDoctorReport, runDoctor, runDoctorCommand, } from "./doctor/index.js";
@@ -49,6 +52,26 @@ export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, 
         }
         if (command === "init") {
             return await runInitCommand(rest, io);
+        }
+        if (command === "admin:reset-password") {
+            const { values } = parseArgs({
+                args: [...rest],
+                options: {
+                    email: { type: "string" },
+                    "env-file": { type: "string", multiple: true },
+                    "no-env-file": { type: "boolean" },
+                    config: { type: "string" },
+                },
+            });
+            return await adminResetPassword({
+                cwd: io.cwd,
+                envFiles: values["no-env-file"] ? [] : values["env-file"],
+                config: values.config,
+                email: values.email,
+                prompts: io.adminPrompts,
+                log: io.log,
+                error: io.error,
+            });
         }
         if (command === "migrate") {
             const { values } = parseArgs({

@@ -1,5 +1,6 @@
 import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust-host.js";
 import { CMS_AUTH_BASE_PATH } from "../../server/define.js";
+import { githubLoginHowTo } from "../templates.js";
 import { fail, ok, skip, warn } from "./outcome.js";
 /** The `auth` group of `monti doctor`: only the environment values and config values core itself knows about the GitHub login. */
 const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
@@ -39,6 +40,13 @@ function missingGithubValue(name, env) {
     const details = { where: WHERE_TO_SET, fix: OAUTH_APP_FIX };
     return isProduction(env) ? fail(message, details) : warn(message, details);
 }
+/** Whether the config loaded and names no `auth` (the built-in no-login stands in). */
+const hasNoLogin = (state) => state.cms?.server.auth.name === "none";
+/** The login-dependent checks have nothing to check when the config names no login. */
+const withLogin = (check) => ({
+    ...check,
+    run: (state) => (hasNoLogin(state) ? skip("not checked: the config has no login") : check.run(state)),
+});
 /**
  * False only when the config loaded and its login has providers but none is GitHub, so a site with another login gets no GitHub checks.
  * When the config did not load, or the login cannot be created yet (a missing setting throws), the checks run.
@@ -46,6 +54,8 @@ function missingGithubValue(name, env) {
 function usesGithub(state) {
     if (!state.cms)
         return true;
+    if (hasNoLogin(state))
+        return false;
     try {
         const providers = state.cms.auth().providers;
         return providers.length === 0 || providers.some((provider) => provider.id === "github");
@@ -54,10 +64,39 @@ function usesGithub(state) {
         return true;
     }
 }
+/** Whether the config loaded and its login includes the built-in email and password method. */
+function usesPassword(state) {
+    if (!state.cms || hasNoLogin(state))
+        return false;
+    try {
+        return state.cms.auth().providers.some((provider) => provider.credentials === true);
+    }
+    catch {
+        return false;
+    }
+}
 const githubOnly = (check) => ({
     ...check,
     run: (state) => (usesGithub(state) ? check.run(state) : skip("not checked: the login has no GitHub provider")),
 });
+const login = {
+    group: "auth",
+    id: "login",
+    title: "Login",
+    needsCms: true,
+    run: (state) => {
+        if (!hasNoLogin(state))
+            return ok(state.cms?.server.auth.name ?? "set", { where: "auth in monti.config.ts" });
+        const message = "the config has no login (`auth`), so nobody can sign in to the admin";
+        const details = {
+            where: "defineConfig in monti.config.ts",
+            fix: githubLoginHowTo(siteOrigin(state).origin),
+        };
+        return looksDeployed(state.env)
+            ? fail(message, details)
+            : warn(`${message} outside \`next dev\` (under \`next dev\` you are the admin without signing in)`, details);
+    },
+};
 const githubId = {
     group: "auth",
     id: "github-id",
@@ -103,6 +142,30 @@ const admins = {
         }
         const listed = ids.map((id) => (id.includes(":") ? id : `github:${id}`));
         return ok(`${ids.length} admin${ids.length === 1 ? "" : "s"}: ${listed.join(", ")}`, { where: GITHUB_ADMIN });
+    },
+};
+const adminAccounts = {
+    group: "auth",
+    id: "admin-accounts",
+    title: "Admin accounts",
+    needsCms: true,
+    run: async (state) => {
+        if (!usesPassword(state))
+            return skip("not checked: the login is not email and password");
+        let any;
+        try {
+            any = await state.cms?.auth().accounts?.hasAny();
+        }
+        catch (error) {
+            return skip(`could not read the admin accounts (${error instanceof Error ? error.message : String(error)}); fix the database checks first`);
+        }
+        if (any)
+            return ok("at least one admin account exists", { where: "the database (plugin storage of `auth`)" });
+        const adminUrl = `${siteOrigin(state).origin}${state.cms?.site.adminHref() ?? ""}`;
+        return warn("no admin account exists yet, so nobody can sign in", {
+            where: "the database",
+            fix: `open the admin (${adminUrl}) and create the first admin: right after you deploy, or beforehand by running the app in production mode against the production database (under \`next dev\` you are the admin without signing in, so the screen does not show). A forgotten password: \`monti admin:reset-password\``,
+        });
     },
 };
 const siteUrl = {
@@ -183,10 +246,12 @@ const callbackUrl = {
     },
 };
 export const AUTH_CHECKS = [
+    login,
     githubOnly(githubId),
     githubOnly(githubSecret),
     githubOnly(admins),
+    adminAccounts,
     siteUrl,
-    trustHost,
-    callbackUrl,
+    withLogin(trustHost),
+    githubOnly(withLogin(callbackUrl)),
 ];

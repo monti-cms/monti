@@ -132,7 +132,9 @@ export function auth(options) {
             const { sets: admins, ignored } = collectAdmins(options);
             for (const item of ignored)
                 console.warn(`[cms-auth] ${ignoredAdminText(item)}`);
-            if (![...admins.values()].some((ids) => ids.size > 0) && !isDevAuthBypassEnabled(options.devBypass)) {
+            if (![...admins.values()].some((ids) => ids.size > 0) &&
+                !providers.some((provider) => provider.everyAccountIsAdmin) &&
+                !isDevAuthBypassEnabled(options.devBypass)) {
                 console.warn(`[cms-auth] ${problemText({
                     what: "No admin is set, so nobody can log in",
                     where: "MONTI_ADMIN_GITHUB_ID in .env.local, or `admins` of the provider or of auth()",
@@ -140,7 +142,11 @@ export function auth(options) {
                 })}`);
             }
             const providerOf = (id) => providers.find((provider) => provider.id === id);
-            const authjsProviders = providers.map((provider) => provider.setup({ storage, trustHost }));
+            const providerContext = providers.map(() => ({ storage, trustHost }));
+            const authjsProviders = providers.map((provider, index) => provider.setup(providerContext[index]));
+            const accounts = providers
+                .map((provider, index) => provider.accounts?.(providerContext[index]))
+                .find((found) => found !== undefined);
             const authjsConfigProviders = authjsProviders;
             const isCredentials = new Map(providers.map((provider, index) => {
                 return [provider.id, authjsProviders[index]?.type === "credentials"];
@@ -222,10 +228,10 @@ export function auth(options) {
                     headers: { ...(cookie ? { cookie } : {}), ...(init.method === "POST" ? { "content-type": FORM } : {}) },
                 });
             };
-            const flow = async (path, request, redirectTo) => {
+            const flow = async (path, request, redirectTo, fields = {}) => {
                 const headers = await headersOf(request);
                 const internal = headers &&
-                    internalRequest(path, headers, { method: "POST", body: new URLSearchParams({ callbackUrl: redirectTo ?? "/" }) }, request?.url);
+                    internalRequest(path, headers, { method: "POST", body: new URLSearchParams({ ...fields, callbackUrl: redirectTo ?? "/" }) }, request?.url);
                 if (!internal) {
                     throw new Error(`[cms-auth] ${problemText({
                         what: "Signing in or out needs the request it is for, and none is available",
@@ -264,7 +270,9 @@ export function auth(options) {
                         return t(`${provider.id}.label`);
                     },
                     ...(provider.icon ? { icon: provider.icon } : {}),
+                    ...(isCredentials.get(provider.id) ? { credentials: true } : {}),
                 })),
+                ...(accounts ? { accounts } : {}),
                 signIn: async (providerId = defaultProvider, signInOptions) => {
                     if (!providerOf(providerId)) {
                         throw new Error(`[cms-auth] ${problemText({
@@ -274,12 +282,9 @@ export function auth(options) {
                         })}`);
                     }
                     requireConfigured();
+                    // An email and password method posts the form's fields to the callback of its provider; an OAuth one starts the redirect to the service.
                     if (isCredentials.get(providerId)) {
-                        throw new Error(`[cms-auth] ${problemText({
-                            what: `"${providerId}" is a credentials provider, which needs a form on the login page, and that is not supported yet`,
-                            where: "`providers` of auth() in monti.config.ts",
-                            fix: "use an OAuth provider such as github() for now",
-                        })}`);
+                        return flow(`/callback/${providerId}`, signInOptions?.request, signInOptions?.redirectTo, signInOptions?.credentials);
                     }
                     return flow(`/signin/${providerId}`, signInOptions?.request, signInOptions?.redirectTo);
                 },
@@ -290,7 +295,9 @@ export function auth(options) {
                     if (!split || !provider)
                         return false;
                     const normalized = (provider.normalizeId ?? ((id) => id.trim() || null))(split.id);
-                    return normalized !== null && Boolean(admins.get(provider.id)?.has(normalized));
+                    if (normalized === null)
+                        return false;
+                    return provider.everyAccountIsAdmin === true || Boolean(admins.get(provider.id)?.has(normalized));
                 },
                 get devBypass() {
                     return isDevAuthBypassEnabled(options.devBypass);

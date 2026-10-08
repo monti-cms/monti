@@ -15,7 +15,19 @@ export const POST = async (request, context) => {
         if (!auth.providers.some((method) => method.id === provider)) {
             throw new HttpError(404, "not_found", "Unknown sign-in method");
         }
-        const result = await auth.signIn(provider, { redirectTo: cms.site.adminUrl(), request });
+        const method = auth.providers.find((candidate) => candidate.id === provider);
+        // An email and password method sends what the form holds along; an OAuth method has no fields.
+        let credentials;
+        if (method?.credentials) {
+            const form = await request.formData();
+            const field = (name) => (typeof form.get(name) === "string" ? String(form.get(name)) : "");
+            credentials = { email: field("email"), password: field("password") };
+        }
+        const result = await auth.signIn(provider, {
+            redirectTo: cms.site.adminUrl(),
+            request,
+            ...(credentials ? { credentials } : {}),
+        });
         return result instanceof Response ? result : new Response(null, { status: 204 });
     }
     catch (error) {
