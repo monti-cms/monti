@@ -17,6 +17,12 @@ import type { Site } from "../site";
  * Connections are created on first use. Reading the config where environment variables are absent, such as during a build, does not fail.
  */
 
+/** What a migration did: steps run now, and steps that had run before. */
+export interface MigrationSummary {
+	readonly applied: number;
+	readonly upToDate: number;
+}
+
 /** Content store connection. */
 export interface DatabaseAdapter {
 	readonly name: string;
@@ -25,8 +31,16 @@ export interface DatabaseAdapter {
 	 * `EventStore`) in the transaction of the change; the core delivers them (`afterCommit` of the server config and plugins) after the commit.
 	 */
 	createStore(options: { readonly site: Site }): ContentStore;
-	/** Creates the tables or brings them to the latest shape (`monti migrate`). Running it repeatedly gives the same result. */
-	migrate(options: { readonly site: Site; readonly formats?: FormatRegistry }): Promise<void>;
+	/**
+	 * Creates the tables or brings them to the latest shape (`monti migrate`). Running it repeatedly gives the same result. It may return how many steps it ran,
+	 * so `monti migrate` can say what it did.
+	 */
+	migrate(options: {
+		readonly site: Site;
+		readonly formats?: FormatRegistry;
+	}): Promise<MigrationSummary | undefined | void>;
+	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti migrate`. */
+	describeTarget?(): string | undefined;
 	/**
 	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
 	 * An adapter implements it over its own database; plugins never see the database.

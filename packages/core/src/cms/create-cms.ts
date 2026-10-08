@@ -347,10 +347,15 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				verifyAdmin: () => authGateway.verifyAdmin(),
 			}),
 			migrate: async ({ log = console.log } = {}) => {
-				log(`Starting CMS database migration (${connections.database.name})...`);
-				await connections.database.migrate({ site, formats: await plugins.formats() });
+				const target = connections.database.describeTarget?.();
+				log(`Migrating the ${connections.database.name} database${target ? `: ${target}` : ""}`);
+				const summary = await connections.database.migrate({ site, formats: await plugins.formats() });
 				await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
-				log("CMS database migration completed successfully!");
+				log(
+					summary
+						? `Applied ${summary.applied} step${summary.applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
+						: "Migration completed.",
+				);
 			},
 			close: async () => {
 				await connections.database.close?.();

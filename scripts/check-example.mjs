@@ -101,7 +101,7 @@ run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
 // `monti.config.ts` holds the database and login settings and is server-only: no client component may import it (directly or through other files).
 run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);
 
-// The blog theme as `monti add blog-theme` gives it to a newcomer (its pages under app/(site)/blog and app/(site)/preview/blog) is built too, next to the
+// The blog theme as `monti add blog-theme` gives it to a newcomer (its pages under app/(site)/<the path of the collection in monti.schema.json> and app/(site)/preview/..., here /posts) is built too, next to the
 // example's own copy of the theme: the registry sources are what new apps get, and they must build with and without `cacheComponents`.
 const exampleProxyPath = path.join(app, "proxy.ts");
 const exampleProxy = readFileSync(exampleProxyPath, "utf8");
@@ -111,9 +111,9 @@ run(
 	app,
 );
 for (const page of [
-	"app/(site)/blog/page.tsx",
-	"app/(site)/blog/[slug]/page.tsx",
-	"app/(site)/preview/blog/[slug]/page.tsx",
+	"app/(site)/posts/page.tsx",
+	"app/(site)/posts/[slug]/page.tsx",
+	"app/(site)/preview/posts/[slug]/page.tsx",
 ]) {
 	if (!existsSync(path.join(app, page))) throw new Error(`check-example: monti add blog-theme did not write ${page}`);
 }

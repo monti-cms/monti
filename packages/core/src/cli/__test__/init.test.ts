@@ -23,6 +23,7 @@ const quiet = () => ({ host: fakeHost(), env: {}, install: false });
 /** Flags for every question of the prompts, so a scripted prompter only has to answer the confirmations. */
 const ANSWERED = {
 	database: "skip",
+	databaseSchema: "",
 	adminGithubId: "12345",
 	siteUrl: "http://localhost:3000",
 	locales: "en",
@@ -58,19 +59,12 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config).toContain('import schema from "./monti.schema.json";');
 		expect(config).toContain("export const cms = defineConfig({\n\tschema,");
 		expect(config).toMatch(/\/\/ Bodies as MDX.*\n\t\tmdx\(\),/);
-		for (const line of [
-			"callout(), //",
-			"collapsible(), //",
-			"tabs(), //",
-			"columns(), //",
-			"codeExplorer(), //",
-			"mermaid(), //",
-			"chart(), //",
-			"tooltip(), //",
-			"codeRef(), //",
-			"color(), //",
-		]) {
+		// The default set is the light one: mermaid and chart (heavy) are opt-in.
+		for (const line of ["callout(), //", "collapsible(), //", "tabs(), //", "codeRef(), //", "color(), //"]) {
 			expect(config).toContain(line);
+		}
+		for (const line of ["mermaid()", "chart()", "columns()", "codeExplorer()", "tooltip()"]) {
+			expect(config).not.toContain(line);
 		}
 		expect(config).toContain("database: postgres(),");
 		expect(config).toContain("auth: auth({ providers: [github()] }),");
@@ -156,11 +150,11 @@ describe("monti init in a fresh create-next-app", () => {
 				"@monti-cms/nextjs",
 				"@monti-cms/mdx",
 				"@monti-cms/blocks",
-				"mermaid",
-				"recharts",
 			]),
 		);
 		expect(command?.args).not.toContain("@monti-cms/ai");
+		expect(command?.args).not.toContain("mermaid");
+		expect(command?.args).not.toContain("recharts");
 		expect(command?.cwd).toBe(dir);
 		expect(report.steps).toContainEqual({
 			name: "Run monti migrate",
@@ -199,7 +193,10 @@ describe("monti init in other app shapes", () => {
 		const report = await initProject({ cwd: dir, ...quiet() });
 		const post = JSON.parse(read(dir, "monti.schema.json")).collections.post;
 		expect(post.path).toBe("/posts/:slug");
-		expect(Object.keys(post.fields)).toEqual(["title", "slug", "author", "cover", "date", "description", "tags"]);
+		// `date` is the publish date of the entry (no field), `tags` is a relation to the tag collection.
+		expect(Object.keys(post.fields)).toEqual(["title", "slug", "author", "cover", "description", "tagIds"]);
+		expect(post.fields.tagIds).toMatchObject({ kind: "relation", to: "tag", many: true });
+		expect(JSON.parse(read(dir, "monti.schema.json")).collections.tag).toMatchObject({ kind: "item" });
 		expect(post.fields.description).toMatchObject({ kind: "text", role: "summary" });
 		expect(post.fields.cover).toMatchObject({ kind: "media", accept: "image" });
 		expect(post.fields).not.toHaveProperty("draft");
@@ -401,7 +398,6 @@ describe("monti init choices", () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host, env: {}, blogTheme: true, database: "skip" });
-		expect(report.created).toContain("app/(site)/blog/page.tsx");
 		expect(report.steps).toContainEqual({
 			name: "Add the blog theme",
 			status: "done",
@@ -409,7 +405,11 @@ describe("monti init choices", () => {
 		});
 		expect(JSON.parse(read(dir, "monti.schema.json")).site.previewPath).toBe("/preview");
 		const next = report.next.join("\n");
-		expect(next).toContain('set excerptField to "summary"');
+		// The theme was shaped by the schema that was just written: no manual edit of its field names is left.
+		expect(next).not.toContain("excerptField");
+		expect(report.notes.join("\n")).toContain("theme.config.ts from monti.schema.json: collection post at /posts");
+		expect(read(dir, "components/monti/blog-theme/theme.config.ts")).toContain('routeBase: "/posts"');
+		expect(report.created).toContain("app/(site)/posts/page.tsx");
 		// Tailwind is there, the typography plugin is not: with no prompts the plugin is installed and the global CSS gets the lines.
 		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).toContain(
 			"add -D @tailwindcss/typography",

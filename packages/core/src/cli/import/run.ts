@@ -148,7 +148,7 @@ export async function runImport(options: ImportOptions): Promise<ImportReport> {
 	}
 	const changed = JSON.stringify(mapping) !== JSON.stringify(existingMapping);
 	if (options.prompter && (asked > 0 || !existingMapping)) {
-		options.prompter.note(describeMapping(mapping, scanned).join("\n"), "The mapping I will use");
+		options.prompter.note(describeMapping(mapping).join("\n"), "The mapping I will use");
 		if (!(await confirm(options.prompter, dryRun ? "Looks right?" : "Use it and save it for the next run?", true))) {
 			throw new ImportError(
 				`stopped: nothing was written. Edit ${path.basename(options.mappingFile)} (or run again) and try once more`,
@@ -560,6 +560,19 @@ function buildReport(input: {
 		entry[file.status] += 1;
 		if (plan.collection && plan.locale !== input.options.cms.site.DEFAULT_LOCALE) entry.translations += 1;
 	});
+	const defaultLocale = input.options.cms.site.DEFAULT_LOCALE;
+	const translations = input.plans.flatMap((plan, position) =>
+		plan.collection && plan.locale !== defaultLocale
+			? [
+					{
+						path: (files[position] as FileResult).path,
+						collection: plan.collection,
+						locale: plan.locale,
+						slug: plan.slug,
+					},
+				]
+			: [],
+	);
 	const base = {
 		dryRun: input.options.dryRun === true,
 		path: input.scanned,
@@ -570,6 +583,7 @@ function buildReport(input: {
 		files,
 		counts,
 		collections,
+		translations,
 		createdTargets: Object.fromEntries(input.relations.created),
 		media: {
 			uploaded: input.media.stats.uploaded,

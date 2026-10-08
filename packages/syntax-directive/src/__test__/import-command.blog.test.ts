@@ -93,7 +93,7 @@ describe("monti import: Next with contentlayer", () => {
 		expect(find(report, "posts/unknown-fields.mdx").notices.map((notice) => notice.kind)).toEqual(
 			expect.arrayContaining(["unknown_field", "missing_required"]),
 		);
-		expect(report.mapping.folders.posts).toMatchObject({
+		expect(report.mapping.folders["content/posts"]).toMatchObject({
 			collection: "post",
 			fields: {
 				title: "title",
@@ -122,7 +122,7 @@ describe("monti import: Next with contentlayer", () => {
 
 		expect(report.counts).toEqual({ imported: 5, updated: 0, skipped: 1, failed: 1 });
 		expect(report.mappingSaved).toBe(true);
-		expect(JSON.parse(readFileSync(mappingFile, "utf8")).folders.posts.collection).toBe("post");
+		expect(JSON.parse(readFileSync(mappingFile, "utf8")).folders["content/posts"].collection).toBe("post");
 		for (const name of ["intro.mdx", "intro.ko.mdx", "directive.mdx", "draft-notes.mdx", "unknown-fields.mdx"]) {
 			expect(find(report, `posts/${name}`).status).toBe("imported");
 			expect(find(report, `posts/${name}`).state).toBe("draft");
@@ -287,9 +287,9 @@ describe("monti import: Astro", () => {
 		const first = await runImport({ cms: h.cms, cwd, target, mappingFile, publish: true, prompter });
 
 		expect(prompter.asked.length).toBeGreaterThanOrEqual(3);
-		expect(prompter.said.join("\n")).toMatch(/Which collection do the 3 files in "blog" go to\?/);
+		expect(prompter.said.join("\n")).toMatch(/Which collection do the 3 files in "src\/content\/blog" go to\?/);
 		expect(first.counts).toEqual({ imported: 3, updated: 0, skipped: 0, failed: 0 });
-		expect(first.mapping.folders.blog).toMatchObject({
+		expect(first.mapping.folders["src/content/blog"]).toMatchObject({
 			collection: "post",
 			fields: {
 				title: "title",

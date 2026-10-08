@@ -14,7 +14,7 @@ const mapping = (
 		{
 			version: 1,
 			locale: { from: ["frontMatter", "filename", "folder"] },
-			folders: { posts: { collection: "post", fields }, pages: { collection: null, fields: {} } },
+			folders: { "content/posts": { collection: "post", fields }, "content/pages": { collection: null, fields: {} } },
 			...extra,
 		},
 		"m",
@@ -176,7 +176,7 @@ describe("planning a file", () => {
 			{
 				version: 1,
 				locale: { from: ["filename"] },
-				folders: { tags: { collection: "tag", fields: { title: "title" } } },
+				folders: { "content/tags": { collection: "tag", fields: { title: "title" } } },
 			},
 			"m",
 		);

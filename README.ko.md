@@ -11,24 +11,39 @@
 Next.js(App Router) 앱 폴더에서 실행한다.
 
 ```sh
+# 공개 릴리스 전에는 @monti-cms/core를 먼저 릴리스 번들로 설치한다("설치" 참고)
+# pnpm
+pnpm add @monti-cms/core
+pnpm exec monti init
+
+# npm
+npm install @monti-cms/core
 npx monti init
+
+# yarn
+yarn add @monti-cms/core
+yarn monti init
+
+# bun
+bun add @monti-cms/core
+bunx monti init
 ```
 
-앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, Tailwind, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, 읽고 고칠 수 있는 파일을 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example`, `.env.local`(만든 `MONTI_SECRET`과 직접 입력한 값만)이다. 패키지를 설치하고, `next.config.ts`를 `withCms`로 감싸고(바뀐 내용을 diff로 보여 준다), DB에 닿으면 `monti migrate`를 돌린 뒤, 남은 일을 정확한 값과 함께 쉬운 말로 적어 주고, 동작하지 않을 때를 위해 `npx monti doctor`를 가리킨다.
+앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, Tailwind, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, 읽고 고칠 수 있는 파일을 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), `.env.example`, `.env.local`(만든 `MONTI_SECRET`과 직접 입력한 값만)이다. 패키지를 설치하고, `next.config.ts`를 `withCms`로 감싸고(바뀐 내용을 diff로 보여 준다), DB에 닿으면 `monti migrate`를 돌린 뒤, 남은 일을 정확한 값과 함께 쉬운 말로 적어 주고, 동작하지 않을 때를 위해 `monti doctor`를 가리킨다.
 
 - **질문:** 데이터베이스(URL, 로컬 Docker Postgres, 나중에), GitHub 로그인, 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`), 블로그 테마 페이지 설치 여부.
 - **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
 - **안전:** 묻지 않고 파일을 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다.
-- **기존 글:** Markdown·MDX 폴더가 있으면 끝에서 `npx monti import <폴더>`를 권한다.
+- **기존 글:** Markdown·MDX 폴더가 있으면 끝에서 `monti import <폴더>`를 권한다. 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`).
 
-공개 릴리스 전에는 `@monti-cms/core`를 먼저 릴리스 번들로 설치하고("설치" 참고), 나머지는 `npx monti init`이 설치한다.
+공개 릴리스 전에는 `@monti-cms/core`를 먼저 릴리스 번들로 설치하고("설치" 참고), 나머지는 `monti init`이 설치한다. `monti`는 언제나 `@monti-cms/core`를 설치한 뒤에 돌린다. 설치 전의 `npx monti`는 관계없는 다른 패키지를 받는다. 모든 명령을 담은 짧은 안내는 core README의 [빠른 시작](packages/core/README.ko.md#빠른-시작-기존-next-앱)이다.
 
 ## 문제 해결: `monti doctor`
 
 동작하지 않는 것이 있으면 앱 폴더에서 이것을 돌린다.
 
 ```sh
-npx monti doctor
+pnpm exec monti doctor
 ```
 
 설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, GitHub 로그인(등록할 콜백 URL, 관리자 id, `SITE_URL`), Next 파일 셋, 옛 두 파일 설정에서 남은 것(정확한 이름 바꾸기 단계와 함께), 플러그인이 더한 검사(git-sync 토큰과 웹훅, S3 값, AI 연결, MDX 문법 확장). `--online`은 git-sync 저장소와 S3 버킷도 확인하고, `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.

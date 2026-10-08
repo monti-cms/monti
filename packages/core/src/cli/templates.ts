@@ -1,4 +1,5 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define";
+import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys";
 import type { ContentFolder, FrontMatterKey } from "./init-detect";
 import { SCHEMA_LINK } from "./schema-types";
 
@@ -21,6 +22,8 @@ export interface BlockChoice {
 	readonly description: string;
 	/** An npm package the block needs besides `@monti-cms/blocks`. */
 	readonly needs?: string;
+	/** Why the block is not in the default set: what it adds to the app. Set only for blocks that are opt-in. */
+	readonly heavy?: string;
 }
 
 /** Every block of `@monti-cms/blocks`, in the order the plugins are listed (the inline marks last: overlapping marks are stored in this order). */
@@ -30,12 +33,30 @@ export const BLOCK_CHOICES: readonly BlockChoice[] = [
 	{ id: "tabs", fn: "tabs", description: "content split into tabs" },
 	{ id: "columns", fn: "columns", description: "side-by-side columns" },
 	{ id: "code-explorer", fn: "codeExplorer", description: "code with a file tree and several files" },
-	{ id: "mermaid", fn: "mermaid", description: "diagrams written in Mermaid", needs: "mermaid" },
-	{ id: "chart", fn: "chart", description: "bar, line and pie charts", needs: "recharts" },
+	{
+		id: "mermaid",
+		fn: "mermaid",
+		description: "diagrams written in Mermaid",
+		needs: "mermaid",
+		heavy: "the mermaid package alone is about 26 MB in node_modules and loads a large script in the browser",
+	},
+	{
+		id: "chart",
+		fn: "chart",
+		description: "bar, line and pie charts",
+		needs: "recharts",
+		heavy: "it adds recharts and its dependencies (d3), which is a large script for the pages that show a chart",
+	},
 	{ id: "tooltip", fn: "tooltip", description: "inline text with a hover explanation" },
 	{ id: "code-ref", fn: "codeRef", description: "inline link from a phrase to a line of code" },
 	{ id: "color", fn: "color", description: "inline text color" },
 ];
+
+/**
+ * The blocks `monti init` turns on when nobody chose: the light ones. The heavy ones (`mermaid`, `chart`) are opt-in (`--blocks all` or a list that names them),
+ * because each adds a large package to the app. `columns`, `code-explorer` and `tooltip` are also left out: they are small, but a first blog rarely needs them.
+ */
+export const DEFAULT_BLOCK_IDS: readonly string[] = ["callout", "collapsible", "tabs", "code-ref", "color"];
 
 /** What the questions of `monti init` decided. Every field has a flag. */
 export interface InitAnswers {
@@ -44,6 +65,8 @@ export interface InitAnswers {
 		| { readonly kind: "url"; readonly url: string }
 		| { readonly kind: "docker" }
 		| { readonly kind: "skip" };
+	/** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given. Without it the tables go in `public`. */
+	readonly databaseSchema?: string;
 	/** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given. */
 	readonly adminGithubId?: string;
 	/** Public URL of the site, for the OAuth callback URL. */
@@ -80,9 +103,6 @@ const sentenceCase = (key: string): string => {
 
 /** The field names the starter collection always has. */
 const STARTER_FIELDS = new Set(["title", "slug"]);
-/** Front matter keys the CMS keeps itself (publish state), so no field is made for them. */
-const CMS_STATE_KEYS = new Set(["draft", "published", "publish", "status"]);
-const SUMMARY_KEYS = ["summary", "description", "excerpt", "abstract", "subtitle"];
 const IMAGE_KEYS = ["image", "cover", "coverimage", "thumbnail", "heroimage", "ogimage", "banner", "featuredimage"];
 
 /** A key from front matter as a field name: kept as it is when it is one word of letters and digits, else camel-cased. `undefined` if nothing usable is left. */
@@ -95,8 +115,36 @@ export function fieldNameOf(key: string): string | undefined {
 
 type SchemaField = Record<string, unknown>;
 
-/** The fields of the starter collection: the three every blog has, then (when content folders were found) one field per front matter key. */
-export function starterFields(keys: readonly FrontMatterKey[], multiLocale: boolean): Record<string, SchemaField> {
+/** What the starter schema holds, and what was decided on the way (for the init report). */
+export interface StarterSchema {
+	/** `post` first, then the collections its relations point to. */
+	readonly collections: Record<string, { readonly fields: Record<string, SchemaField> } & Record<string, unknown>>;
+	/** Plain-words lines about front matter keys that got a relation, or that need no field. */
+	readonly notes: string[];
+}
+
+const itemCollection = (label: string, icon: string, multiLocale: boolean) => ({
+	label,
+	// small entries that posts point to (see "item" in the collection docs)
+	kind: "item",
+	icon,
+	fields: {
+		title: { kind: "text", label: "Name", required: true, ...(multiLocale ? { localized: true } : {}), max: 200 },
+		slug: { kind: "slug", label: "Address", required: true, from: "title" },
+	} as Record<string, SchemaField>,
+});
+
+/**
+ * The collections of the starter schema: `post` with the fields every blog has, then (when a content folder was found) one field per front matter key, read the same
+ * way `monti import` reads it for its mapping (`front-matter-keys.ts`), so what init makes is what import fills:
+ *
+ * - `date` and the other publish date keys get no field: import puts them in the publish date of the entry.
+ * - `description`, `summary`, `excerpt` and the like become the field with the `summary` role.
+ * - `tags` (also `keywords`, `topics`) become the collection `tag` and a relation `tagIds`. `category` becomes `category` and `categoryId`, and `categories` (a list)
+ *   `categoryIds`. Import fills them and creates the entries they name.
+ * - `draft`, `published` and the language keys are the CMS's own and get no field.
+ */
+export function starterCollections(keys: readonly FrontMatterKey[], multiLocale: boolean): StarterSchema {
 	const localized = multiLocale ? { localized: true } : {};
 	const fields: Record<string, SchemaField> = {
 		// the title field is named `title` (the label is up to you)
@@ -109,6 +157,8 @@ export function starterFields(keys: readonly FrontMatterKey[], multiLocale: bool
 			from: "title",
 		},
 	};
+	const notes: string[] = [];
+	const relationKeys = new Map<string, string>();
 	let summaryName: string | undefined;
 	const extra: Record<string, SchemaField> = {};
 	for (const key of keys.slice(0, 16)) {
@@ -116,7 +166,33 @@ export function starterFields(keys: readonly FrontMatterKey[], multiLocale: bool
 		const lower = key.name.toLowerCase();
 		if (!name || STARTER_FIELDS.has(name) || STARTER_FIELDS.has(lower) || CMS_STATE_KEYS.has(lower) || name in extra)
 			continue;
-		if (summaryName === undefined && SUMMARY_KEYS.includes(lower)) {
+		if (DATE_KEYS.has(lower)) {
+			notes.push(
+				`"${key.name}" is the publish date of an entry, so it has no field of its own (import fills the date).`,
+			);
+			continue;
+		}
+		if (LOCALE_KEYS.has(lower)) continue;
+		const target = RELATION_KEYS[lower];
+		if (target === "tag" || target === "category") {
+			if (relationKeys.has(target)) {
+				notes.push(
+					`"${key.name}" also means ${target}, which "${relationKeys.get(target)}" already fills, so import skips it.`,
+				);
+				continue;
+			}
+			const many = target === "tag" || key.type === "list";
+			relationKeys.set(target, key.name);
+			extra[`${target}${many ? "Ids" : "Id"}`] = {
+				kind: "relation",
+				label: target === "tag" ? "Tags" : many ? "Categories" : "Category",
+				to: target,
+				...(many ? { many: true } : {}),
+				createInline: true,
+			};
+			continue;
+		}
+		if (summaryName === undefined && SUMMARY_KEYS.has(lower)) {
 			summaryName = name;
 			extra[name] = {
 				kind: "text",
@@ -148,7 +224,15 @@ export function starterFields(keys: readonly FrontMatterKey[], multiLocale: bool
 			...localized,
 		};
 	}
-	return { ...fields, ...extra };
+	const collections: StarterSchema["collections"] = { post: { fields: { ...fields, ...extra } } };
+	if (relationKeys.has("tag")) collections.tag = itemCollection("Tag", "tag", multiLocale);
+	if (relationKeys.has("category")) collections.category = itemCollection("Category", "shapes", multiLocale);
+	for (const [target, key] of relationKeys) {
+		notes.push(
+			`"${key}" becomes the ${target} collection and a relation field on post; \`monti import\` fills it and creates the ${target} entries.`,
+		);
+	}
+	return { collections, notes };
 }
 
 /** The public address shape for a content folder: its last folder name (`content/blog` -> `/blog/:slug`), else `/posts/:slug`. */
@@ -160,15 +244,18 @@ export function pathFor(folder: ContentFolder | undefined): string {
 }
 
 /**
- * The schema file `monti init` creates (`monti.schema.json`): one `post` collection, the locales and time zone, the site name, the admin path when it is not the default,
- * and the preview path when the blog theme is installed. It holds the plain data of the site; `monti.config.ts` loads it. `link` is the path of the JSON Schema from the
- * schema file (editors use it for autocomplete). With `folder` and `keys` (a content folder the app already has) the fields follow its front matter.
+ * The schema file `monti init` creates (`monti.schema.json`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
+ * time zone, the site name, the admin path when it is not the default, and the preview path when the blog theme is installed. It holds the plain data of the site;
+ * `monti.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete). With `folder` (a content folder the app
+ * already has) the fields follow its front matter, and `path` follows its name, which is also where the blog theme serves the posts.
  */
 export function schemaTemplate(
 	answers: Pick<InitAnswers, "adminPath" | "locales" | "timeZone" | "blogTheme">,
 	options: { readonly siteName?: string; readonly folder?: ContentFolder; readonly link?: string } = {},
 ): string {
 	const [defaultLocale = DEFAULT_INIT_LOCALE] = answers.locales;
+	const { collections } = starterCollections(options.folder?.keys ?? [], answers.locales.length > 1);
+	const { post, ...related } = collections;
 	const schema = {
 		$schema: options.link ?? SCHEMA_LINK,
 		collections: {
@@ -176,11 +263,12 @@ export function schemaTemplate(
 				label: "Post",
 				// body, draft and publish. Use "item" for small entries like tags
 				kind: "document",
-				// public URL shape (a sample; use your own). Used for internal links in the body and preview URLs
+				// public URL shape (a sample; use your own). Used for internal links in the body and preview URLs, and the blog theme serves the posts here
 				path: pathFor(options.folder),
 				icon: "file-text",
-				fields: starterFields(options.folder?.keys ?? [], answers.locales.length > 1),
+				fields: post?.fields,
 			},
+			...related,
 		},
 		locales: answers.locales.map((code) => ({ code, name: languageName(code) })),
 		defaultLocale,

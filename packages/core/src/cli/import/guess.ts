@@ -1,4 +1,5 @@
 import type { Site } from "../../site";
+import { DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "../front-matter-keys";
 import {
 	type FieldTarget,
 	type FolderMapping,
@@ -14,7 +15,7 @@ import {
 	TARGET_SLUG,
 } from "./mapping";
 import { type Choice, choose, type Prompter } from "./prompt";
-import { derivePath, localeCode, type ParsedSource } from "./source";
+import { derivePath, folderKeyOf, legacyFolderKeyOf, localeCode, type ParsedSource } from "./source";
 
 /**
  * Guessing the mapping. A guess is confident when a name matches (a folder called `posts` and a collection called `post`; a key `tags` and a relation field
@@ -57,22 +58,6 @@ const singular = (value: string) =>
 		: value.endsWith("s") && !value.endsWith("ss")
 			? value.slice(0, -1)
 			: value;
-
-const DATE_KEYS = new Set(["date", "pubdate", "publishdate", "publisheddate", "publishedat", "datepublished"]);
-const SUMMARY_KEYS = new Set(["description", "summary", "excerpt", "abstract", "subtitle", "intro"]);
-const LOCALE_KEYS = new Set(["lang", "locale", "language"]);
-/** Keys that hold terms (tags, categories) and so become relations; the value is the kind of entry the key most likely means. */
-const RELATION_KEYS: Readonly<Record<string, string>> = {
-	tag: "tag",
-	tags: "tag",
-	keyword: "tag",
-	keywords: "tag",
-	topic: "tag",
-	topics: "tag",
-	category: "category",
-	categories: "category",
-	series: "series",
-};
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
@@ -145,9 +130,19 @@ export function guessCollections(site: Site, sources: readonly ParsedSource[], o
 	}
 
 	const folders = new Map<string, ParsedSource[]>();
+	/** Folders whose files lie directly in the scanned folder: the person pointed at this folder of posts itself. */
+	const directFolders = new Set<string>();
 	for (const source of sources) {
-		const { folder } = derivePath(source.rel, site.LOCALES);
+		const folder = folderKeyOf(source, site.LOCALES);
 		folders.set(folder, [...(folders.get(folder) ?? []), source]);
+		if (derivePath(source.rel, site.LOCALES).folder === ".") directFolders.add(folder);
+		// A mapping saved before the keys were paths from the working directory names the folder relative to the scanned one: it keeps its decisions under the new key.
+		const legacy = legacyFolderKeyOf(source.rel, site.LOCALES);
+		const old = mapping.folders[legacy];
+		if (legacy !== folder && mapping.folders[folder] === undefined && old !== undefined) {
+			mapping.folders[folder] = old;
+			delete mapping.folders[legacy];
+		}
 	}
 
 	// Where the language of a file comes from: every source that shows up in the files.
@@ -182,7 +177,7 @@ export function guessCollections(site: Site, sources: readonly ParsedSource[], o
 				);
 			}
 		} else {
-			guessCollection(site, state, folder, options.rootName, questions);
+			guessCollection(site, state, folder, options.rootName, questions, directFolders.has(key));
 		}
 	}
 	return { mapping, questions, notes };
@@ -194,7 +189,7 @@ export function guessFieldMappings(site: Site, sources: readonly ParsedSource[],
 	const notes: string[] = [];
 	const folders = new Map<string, ParsedSource[]>();
 	for (const source of sources) {
-		const { folder } = derivePath(source.rel, site.LOCALES);
+		const folder = folderKeyOf(source, site.LOCALES);
 		folders.set(folder, [...(folders.get(folder) ?? []), source]);
 	}
 	for (const [key, files] of [...folders].sort(([a], [b]) => (a < b ? -1 : 1))) {
@@ -210,6 +205,7 @@ function guessCollection(
 	folder: FolderMapping,
 	rootName: string,
 	questions: Question[],
+	direct: boolean,
 ): void {
 	const name = state.key === "." ? rootName : state.key.split("/").pop() || state.key;
 	const matches = collectionMatches(site, name);
@@ -232,8 +228,10 @@ function guessCollection(
 		text: `Which collection do the ${state.files.length} file${state.files.length === 1 ? "" : "s"} in "${state.key === "." ? rootName : state.key}" go to?`,
 		choices,
 		defaultIndex: lone >= 0 ? lone : choices.length - 1,
-		// Nobody is asked: an unclear folder is left out rather than put in the wrong collection.
-		autoIndex: choices.length - 1,
+		// Nobody is asked: an unclear folder is left out rather than put in the wrong collection. The exception is the folder that was pointed at itself
+		// (`monti import content/blog`, the next step `monti init` prints) on a site with a single document collection: posts can only go there, so it is not
+		// left out for being called something else than `post`.
+		autoIndex: lone === 0 && matches.length === 0 && direct ? 0 : choices.length - 1,
 		apply: (value) => {
 			folder.collection = value === "" ? null : value;
 		},
@@ -300,7 +298,10 @@ function guessFields(
 		else if (Object.hasOwn(RELATION_KEYS, lower)) {
 			const matches = relationMatches(site, collection, key).filter((field) => !used.has(field.name));
 			const relations = info.filter((field) => field.kind === "relation" && !used.has(field.name));
+			const sameName = info.find((field) => field.kind !== "relation" && norm(field.name) === norm(key));
 			if (matches.length === 1) decided = claimField(key, matches[0]?.name);
+			// A plain field of the same name (a `series` text field) is where the key goes: no relation was meant.
+			else if (matches.length === 0 && sameName) decided = claimField(key, sameName.name);
 			else if (relations.length > 0) {
 				// Not clear which relation field the key means: ask.
 				const choices: Choice[] = [

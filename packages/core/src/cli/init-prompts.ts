@@ -2,6 +2,7 @@ import { isAdminPath } from "../config/define";
 import type { DetectedApp } from "./init-detect";
 import {
 	BLOCK_CHOICES,
+	DEFAULT_BLOCK_IDS,
 	DEFAULT_INIT_ADMIN_PATH,
 	DEFAULT_INIT_LOCALE,
 	DEFAULT_INIT_TIME_ZONE,
@@ -52,6 +53,8 @@ export class InitCancelled extends Error {
 export interface InitAnswerFlags {
 	/** A `postgres://` URL, `docker` or `skip`. */
 	readonly database?: string;
+	/** The Postgres schema for the tables (`DATABASE_SCHEMA`). */
+	readonly databaseSchema?: string;
 	readonly adminGithubId?: string;
 	readonly siteUrl?: string;
 	/** Comma-separated locale codes, the default first. */
@@ -61,7 +64,7 @@ export interface InitAnswerFlags {
 	readonly storage?: string;
 	/** Comma-separated: `ai`, `git-sync`, or `none`. */
 	readonly extras?: string;
-	/** `all`, `none` or comma-separated block names. */
+	/** `all`, `none`, `default` (the light set) or comma-separated block names. */
 	readonly blocks?: string;
 	readonly adminPath?: string;
 	readonly blogTheme?: boolean;
@@ -102,6 +105,10 @@ const check = {
 		["docker", "skip"].includes(value) || POSTGRES_URL.test(value)
 			? undefined
 			: 'must be a postgres:// URL, "docker" (a local Postgres in Docker) or "skip"',
+	databaseSchema: (value: string) =>
+		value === "" || /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value)
+			? undefined
+			: "must be a schema name: letters, digits and _, not starting with a digit (up to 63 characters)",
 	githubId: (value: string) =>
 		value === "" || /^\d+$/.test(value) ? undefined : "must be the numeric GitHub id (digits only), for example 583231",
 	siteUrl: (value: string) => (isHttpUrl(value) ? undefined : "must be an http(s) URL like http://localhost:3000"),
@@ -118,8 +125,8 @@ const check = {
 		return bad ? `"${bad}" is not an extra; use ${EXTRAS.join(", ")} or none` : undefined;
 	},
 	blocks: (value: string) => {
-		const bad = splitList(value).find((name) => !["all", "none", ...BLOCK_IDS].includes(name));
-		return bad ? `"${bad}" is not a block; use all, none or any of ${BLOCK_IDS.join(", ")}` : undefined;
+		const bad = splitList(value).find((name) => !["all", "none", "default", ...BLOCK_IDS].includes(name));
+		return bad ? `"${bad}" is not a block; use default, all, none or any of ${BLOCK_IDS.join(", ")}` : undefined;
 	},
 	adminPath: (value: string) =>
 		validAdminPath(value)
@@ -136,6 +143,7 @@ function checked(flag: string, value: string | undefined, validate: (value: stri
 const parseBlocks = (value: string): string[] => {
 	const names = splitList(value);
 	if (names.includes("all")) return [...BLOCK_IDS];
+	if (names.includes("default")) return BLOCK_IDS.filter((id) => DEFAULT_BLOCK_IDS.includes(id) || names.includes(id));
 	if (names.includes("none")) return [];
 	return BLOCK_IDS.filter((id) => names.includes(id));
 };
@@ -143,6 +151,7 @@ const parseBlocks = (value: string): string[] => {
 /** Checks every flag that was given, before anything is asked. */
 export function validateFlags(flags: InitAnswerFlags): void {
 	checked("database", flags.database, check.database);
+	checked("database-schema", flags.databaseSchema, check.databaseSchema);
 	checked("admin-github-id", flags.adminGithubId, check.githubId);
 	checked("site-url", flags.siteUrl, check.siteUrl);
 	checked("locales", flags.locales, check.locales);
@@ -174,6 +183,7 @@ export function oauthInstructions(siteUrl: string): string {
 export const QUESTIONS = {
 	database: "Where is your Postgres database?",
 	adminLogin: "Admin login",
+	databaseSchema: "Postgres schema for the tables (empty: public). Use one when the database is shared with other apps",
 	adminGithubId: "Your numeric GitHub id (MONTI_ADMIN_GITHUB_ID). Leave empty to fill it in later",
 	locales: "Languages of the site (comma-separated, the default first)",
 	storage: "Where should uploaded images go?",
@@ -219,6 +229,19 @@ export async function collectAnswers(
 			database = { kind: "url", url: url.trim() };
 		} else database = { kind: choice };
 	} else database = { kind: "skip" };
+
+	// Schema of the tables. Not asked for the Docker database, which is yours alone.
+	let databaseSchema = flags.databaseSchema?.trim() || undefined;
+	if (flags.databaseSchema === undefined && prompter && database.kind !== "docker") {
+		databaseSchema =
+			(
+				await prompter.text({
+					message: QUESTIONS.databaseSchema,
+					placeholder: "public",
+					validate: (value) => check.databaseSchema(value.trim()),
+				})
+			).trim() || undefined;
+	}
 
 	// Admin login (GitHub)
 	let adminGithubId = flags.adminGithubId || undefined;
@@ -277,27 +300,39 @@ export async function collectAnswers(
 	let blocks: string[];
 	if (flags.blocks !== undefined) blocks = parseBlocks(flags.blocks);
 	else if (prompter) {
+		const heavy = BLOCK_CHOICES.filter((block) => block.heavy);
 		const mode = await prompter.select({
 			message: QUESTIONS.blocks,
 			options: [
 				{
+					value: "default",
+					label: "The light set",
+					hint: `${DEFAULT_BLOCK_IDS.join(", ")}; the rest is one line away in monti.config.ts`,
+				},
+				{
 					value: "all",
 					label: "All of them",
-					hint: `${BLOCK_CHOICES.length} blocks, one line each in monti.config.ts`,
+					hint: `adds ${heavy.map((block) => block.id).join(" and ")}, which are heavy`,
 				},
 				{ value: "pick", label: "Let me pick" },
 			],
-			initial: "all",
+			initial: "default",
 		});
 		blocks =
-			mode === "all"
-				? [...BLOCK_IDS]
-				: await prompter.multiselect({
-						message: QUESTIONS.blockList,
-						options: BLOCK_CHOICES.map((block) => ({ value: block.id, label: block.id, hint: block.description })),
-						initial: [],
-					});
-	} else blocks = [...BLOCK_IDS];
+			mode === "default"
+				? BLOCK_IDS.filter((id) => DEFAULT_BLOCK_IDS.includes(id))
+				: mode === "all"
+					? [...BLOCK_IDS]
+					: await prompter.multiselect({
+							message: QUESTIONS.blockList,
+							options: BLOCK_CHOICES.map((block) => ({
+								value: block.id,
+								label: block.id,
+								hint: block.heavy ? `${block.description}. Heavy: ${block.heavy}` : block.description,
+							})),
+							initial: BLOCK_IDS.filter((id) => DEFAULT_BLOCK_IDS.includes(id)),
+						});
+	} else blocks = BLOCK_IDS.filter((id) => DEFAULT_BLOCK_IDS.includes(id));
 
 	// Admin path
 	const adminPath =
@@ -318,6 +353,7 @@ export async function collectAnswers(
 
 	return {
 		database,
+		...(databaseSchema ? { databaseSchema } : {}),
 		adminGithubId,
 		siteUrl,
 		locales,

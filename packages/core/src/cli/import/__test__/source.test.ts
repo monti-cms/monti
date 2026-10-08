@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { derivePath, readSource, scanSources } from "../source";
+import { derivePath, folderKeyOf, readSource, scanSources } from "../source";
 
 const LOCALES = ["en", "ko"];
 
@@ -80,5 +80,29 @@ describe("readSource", () => {
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("folderKeyOf", () => {
+	const key = (rel: string, scanned: string) => folderKeyOf({ rel, key: scanned ? `${scanned}/${rel}` : rel }, LOCALES);
+
+	it("is the real folder path from the working directory, whichever folder was scanned", () => {
+		// `monti import content` and `monti import content/posts` name the same folder the same way.
+		expect(key("posts/hello.mdx", "content")).toBe("content/posts");
+		expect(key("hello.mdx", "content/posts")).toBe("content/posts");
+		expect(key("hello.ko.mdx", "content/posts")).toBe("content/posts");
+	});
+
+	it("names the scanned folder itself for files directly in it, not '.'", () => {
+		expect(key("a.md", "content/blog")).toBe("content/blog");
+	});
+
+	it("is '.' only for the working directory itself", () => {
+		expect(key("a.md", "")).toBe(".");
+		expect(key("posts/a.md", "")).toBe("posts");
+	});
+
+	it("leaves the language folder out of the key", () => {
+		expect(key("ko/posts/a.md", "content")).toBe("content/posts");
 	});
 });

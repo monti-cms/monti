@@ -119,6 +119,19 @@ export interface PathInfo {
 
 const INDEX_NAMES = new Set(["index", "_index"]);
 
+/**
+ * The key of a file's folder in the mapping file: the folder's path relative to the working directory (`content/posts`), `.` for the working directory itself.
+ * It does not depend on which folder was scanned, so the same mapping serves `monti import content` and `monti import content/posts`.
+ */
+export function folderKeyOf(source: Pick<ParsedSource, "rel" | "key">, locales: readonly string[]): string {
+	const { folder } = derivePath(source.rel, locales);
+	const root = source.key.endsWith(source.rel) ? source.key.slice(0, source.key.length - source.rel.length) : "";
+	return [root.replace(/\/+$/, ""), folder === "." ? "" : folder].filter(Boolean).join("/") || ".";
+}
+
+/** The key a folder had in the mapping files written before keys were paths from the working directory: relative to the scanned folder. */
+export const legacyFolderKeyOf = (rel: string, locales: readonly string[]): string => derivePath(rel, locales).folder;
+
 /** The site's language code a text names (`KO`, `pt-br`), or `undefined`. */
 export function localeCode(value: string, locales: readonly string[]): string | undefined {
 	const lower = value.toLowerCase().replace(/_/g, "-");

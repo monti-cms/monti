@@ -37,6 +37,15 @@ export interface CollectionCounts {
 	translations: number;
 }
 
+/** A file in a language other than the default one, which is joined to the entry of its source instead of making an entry of its own. */
+export interface TranslationJoin {
+	readonly path: string;
+	readonly collection: string;
+	readonly locale: string;
+	/** The address of the entry it joins (the address of its source). */
+	readonly slug: string;
+}
+
 export interface ImportReport {
 	readonly dryRun: boolean;
 	readonly path: string;
@@ -48,6 +57,8 @@ export interface ImportReport {
 	readonly files: readonly FileResult[];
 	readonly counts: { imported: number; updated: number; skipped: number; failed: number };
 	readonly collections: Readonly<Record<string, CollectionCounts>>;
+	/** The files that are translations of another file, and which entry each joins. */
+	readonly translations: readonly TranslationJoin[];
 	/** Entries created for the values of relation fields (tags), by collection. */
 	readonly createdTargets: Readonly<Record<string, readonly string[]>>;
 	readonly media: { uploaded: number; reused: number; wouldUpload: number; configured: boolean };
@@ -105,10 +116,9 @@ function describeTarget(value: FieldTarget, labels: (field: string) => string): 
 }
 
 /** The mapping as a short table the person can confirm. */
-export function describeMapping(mapping: ImportMapping, scanned: string): string[] {
+export function describeMapping(mapping: ImportMapping): string[] {
 	const lines: string[] = [];
-	for (const [folder, entry] of Object.entries(mapping.folders)) {
-		const place = folder === "." ? scanned : `${scanned}/${folder}`.replace(/\/+/g, "/");
+	for (const [place, entry] of Object.entries(mapping.folders)) {
 		lines.push(entry.collection === null ? `${place}  ->  (not imported)` : `${place}  ->  ${entry.collection}`);
 		for (const [key, value] of Object.entries(entry.fields)) {
 			lines.push(`    ${key}  ->  ${describeTarget(value, (field) => field)}`);
@@ -139,6 +149,54 @@ const NOTICE_LABEL: Readonly<Record<NoticeKind, string>> = {
 	publish: "not published",
 };
 
+/** `1 translation (en of notes) joined to its source`, or the plural, with the first few named. */
+export function describeTranslations(translations: readonly TranslationJoin[]): string | undefined {
+	if (translations.length === 0) return undefined;
+	const shown = translations.slice(0, 5).map((item) => `${item.locale} of ${item.slug}`);
+	const more = translations.length > shown.length ? `, and ${translations.length - shown.length} more` : "";
+	const one = translations.length === 1;
+	return `${plural(translations.length, "translation")} (${shown.join(", ")}${more}) joined to ${one ? "its source" : "their sources"}`;
+}
+
+/** A notice that comes back, word for word, in several files. */
+interface RepeatedNotice {
+	readonly kind: NoticeKind;
+	readonly message: string;
+	readonly files: readonly string[];
+}
+
+/** How many files must share a notice before it is told once instead of under each file. */
+const REPEAT_FROM = 3;
+
+/** Splits the notices of the files into the ones that repeat across files (told once) and the rest (told under their file). */
+function groupNotices(files: readonly FileResult[]): {
+	readonly repeated: readonly RepeatedNotice[];
+	readonly rest: (file: FileResult) => readonly FileNotice[];
+} {
+	const seen = new Map<string, RepeatedNotice & { files: string[] }>();
+	for (const file of files) {
+		for (const notice of file.notices) {
+			const key = `${notice.kind}\u0000${notice.message}`;
+			const entry = seen.get(key) ?? { kind: notice.kind, message: notice.message, files: [] };
+			if (!entry.files.includes(file.path)) entry.files.push(file.path);
+			seen.set(key, entry);
+		}
+	}
+	const repeated = [...seen.values()].filter((entry) => entry.files.length >= REPEAT_FROM);
+	const repeatedKeys = new Set(repeated.map((entry) => `${entry.kind}\u0000${entry.message}`));
+	return {
+		repeated,
+		rest: (file) => file.notices.filter((notice) => !repeatedKeys.has(`${notice.kind}\u0000${notice.message}`)),
+	};
+}
+
+const repeatedLines = (repeated: readonly RepeatedNotice[]): string[] =>
+	repeated.flatMap((entry) => {
+		const names = entry.files.slice(0, 3).join(", ");
+		const more = entry.files.length > 3 ? `, and ${entry.files.length - 3} more` : "";
+		return [`  ${NOTICE_LABEL[entry.kind]}: ${entry.message} (${plural(entry.files.length, "file")}: ${names}${more})`];
+	});
+
 /** The report as text, for a terminal. */
 export function formatReport(report: ImportReport): string {
 	const lines: string[] = [];
@@ -149,10 +207,10 @@ export function formatReport(report: ImportReport): string {
 		lines.push("By collection:");
 		for (const [name, c] of Object.entries(report.collections)) {
 			lines.push(
-				`  ${name}: ${plural(c.files, "file")} (${c.imported} new, ${c.updated} to update, ${c.skipped} unchanged or skipped, ${c.failed} with errors${c.translations > 0 ? `, ${c.translations} in other languages` : ""})`,
+				`  ${name}: ${plural(c.files, "file")} (${c.imported} new, ${c.updated} to update, ${c.skipped} unchanged or skipped, ${c.failed} with errors${c.translations > 0 ? `, ${plural(c.translations, "translation")}` : ""})`,
 			);
 		}
-		lines.push("", "Field mapping:", ...describeMapping(report.mapping, report.path).map((line) => `  ${line}`));
+		lines.push("", "Field mapping:", ...describeMapping(report.mapping).map((line) => `  ${line}`));
 		const targets = Object.entries(report.createdTargets);
 		if (targets.length > 0) {
 			lines.push("", "Would create:");
@@ -161,12 +219,16 @@ export function formatReport(report: ImportReport): string {
 		if (report.media.configured) {
 			lines.push("", `Images: ${report.media.wouldUpload} to upload, ${report.media.reused} already uploaded.`);
 		}
-		const problems = report.files.filter((file) => file.status === "failed" || file.notices.length > 0);
+		const translated = describeTranslations(report.translations);
+		if (translated) lines.push("", `Translations: ${translated}.`);
+		const grouped = groupNotices(report.files);
+		if (grouped.repeated.length > 0) lines.push("", "Repeated in several files:", ...repeatedLines(grouped.repeated));
+		const problems = report.files.filter((file) => file.status === "failed" || grouped.rest(file).length > 0);
 		lines.push("", problems.length > 0 ? "Problem files:" : "Problem files: none");
 		for (const file of problems) {
 			lines.push(`  ${file.path}`);
 			if (file.status === "failed") lines.push(`    error: ${file.reason}`);
-			for (const notice of file.notices) lines.push(`    ${NOTICE_LABEL[notice.kind]}: ${notice.message}`);
+			for (const notice of grouped.rest(file)) lines.push(`    ${NOTICE_LABEL[notice.kind]}: ${notice.message}`);
 		}
 	} else {
 		const sections: [FileStatus, string][] = [
@@ -175,16 +237,20 @@ export function formatReport(report: ImportReport): string {
 			["skipped", tense("Skipped", "Would skip")],
 			["failed", tense("Failed", "Would fail")],
 		];
+		const grouped = groupNotices(report.files);
 		for (const [status, title] of sections) {
 			const files = report.files.filter((file) => file.status === status);
 			if (files.length === 0) continue;
 			lines.push(`${title} (${files.length}):`);
 			for (const file of files) {
 				lines.push(`  ${file.path}: ${file.reason}`);
-				for (const notice of file.notices) lines.push(`    ${NOTICE_LABEL[notice.kind]}: ${notice.message}`);
+				for (const notice of grouped.rest(file)) lines.push(`    ${NOTICE_LABEL[notice.kind]}: ${notice.message}`);
 			}
 			lines.push("");
 		}
+		if (grouped.repeated.length > 0) lines.push("Repeated in several files:", ...repeatedLines(grouped.repeated), "");
+		const translated = describeTranslations(report.translations);
+		if (translated) lines.push(`Translations: ${translated}.`, "");
 		const targets = Object.entries(report.createdTargets);
 		for (const [collection, names] of targets) lines.push(`Created ${collection}: ${names.join(", ")}`);
 		if (report.media.uploaded > 0 || report.media.reused > 0) {

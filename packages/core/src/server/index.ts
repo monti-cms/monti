@@ -64,5 +64,6 @@ export {
 	type CmsServerConfig,
 	type DatabaseAdapter,
 	type MediaAdapter,
+	type MigrationSummary,
 	type RequestHost,
 } from "./define";

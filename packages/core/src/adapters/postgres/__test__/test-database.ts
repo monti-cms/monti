@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
+import { normalizeConnectionString } from "../connection";
 
 let rootPool: Pool | undefined;
 
@@ -10,13 +11,13 @@ export async function createIsolatedTestPool(): Promise<{ pool: Pool; schemaName
 	}
 
 	if (!rootPool) {
-		rootPool = new Pool({ connectionString: url });
+		rootPool = new Pool({ connectionString: normalizeConnectionString(url) });
 	}
 
 	const schemaName = `cms_test_${randomBytes(4).toString("hex")}`;
 	await rootPool.query(`CREATE SCHEMA "${schemaName}"`);
 
-	const pool = new Pool({ connectionString: url, max: 5 });
+	const pool = new Pool({ connectionString: normalizeConnectionString(url), max: 5 });
 
 	return { pool, schemaName };
 }

@@ -10,6 +10,7 @@ const app = () => detectApp(fixtureApp());
 const everything = {
 	[QUESTIONS.database]: "url",
 	"Postgres URL": "postgres://me:pw@db.example.com:5432/blog",
+	[QUESTIONS.databaseSchema]: "blog",
 	[QUESTIONS.adminGithubId]: "583231",
 	[QUESTIONS.locales]: "ko, en",
 	[QUESTIONS.storage]: "s3",
@@ -21,12 +22,13 @@ const everything = {
 };
 
 describe("the questions of monti init", () => {
-	it("asks in the order database, login, locales, storage, extras, blocks, admin path, blog theme", async () => {
+	it("asks in the order database, schema, login, locales, storage, extras, blocks, admin path, blog theme", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
 			QUESTIONS.database,
 			"Postgres URL",
+			QUESTIONS.databaseSchema,
 			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
 			QUESTIONS.storage,
@@ -38,6 +40,7 @@ describe("the questions of monti init", () => {
 		]);
 		expect(answers).toEqual({
 			database: { kind: "url", url: "postgres://me:pw@db.example.com:5432/blog" },
+			databaseSchema: "blog",
 			adminGithubId: "583231",
 			siteUrl: "http://localhost:3000",
 			locales: ["ko", "en"],
@@ -110,6 +113,43 @@ describe("the questions of monti init", () => {
 		expect(answers.blocks).toHaveLength(10);
 	});
 
+	it("the light set is what is offered first, and it leaves out the heavy blocks", async () => {
+		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "default" });
+		const answers = await collectAnswers(app(), {}, prompter);
+		expect(answers.blocks).toEqual(["callout", "collapsible", "tabs", "code-ref", "color"]);
+		expect(answers.blocks).not.toContain("mermaid");
+		expect(answers.blocks).not.toContain("chart");
+	});
+
+	it("the heavy blocks say why they are heavy in the list", async () => {
+		let options: readonly { value: string; hint?: string }[] = [];
+		const prompter = scriptedPrompter(everything);
+		const multiselect = prompter.multiselect.bind(prompter);
+		prompter.multiselect = async (question) => {
+			if (question.message === QUESTIONS.blockList) options = question.options;
+			return multiselect(question);
+		};
+		await collectAnswers(app(), {}, prompter);
+		expect(options.find((option) => option.value === "mermaid")?.hint).toMatch(/Heavy: .*MB/);
+		expect(options.find((option) => option.value === "chart")?.hint).toMatch(/Heavy: .*recharts/);
+		expect(options.find((option) => option.value === "callout")?.hint).not.toMatch(/Heavy/);
+	});
+
+	it("--database-schema skips the question, and a wrong name is refused", async () => {
+		const prompter = scriptedPrompter(everything);
+		const answers = await collectAnswers(app(), { databaseSchema: "preview" }, prompter);
+		expect(prompter.asked).not.toContain(QUESTIONS.databaseSchema);
+		expect(answers.databaseSchema).toBe("preview");
+		await expect(collectAnswers(app(), { databaseSchema: "my-schema" })).rejects.toThrow(/--database-schema/);
+	});
+
+	it("the Docker database is the app's own, so the schema is not asked for it", async () => {
+		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.database]: "docker" });
+		const answers = await collectAnswers(app(), {}, prompter);
+		expect(prompter.asked).not.toContain(QUESTIONS.databaseSchema);
+		expect(answers.databaseSchema).toBeUndefined();
+	});
+
 	it("a docker answer needs no URL; skip needs nothing", async () => {
 		const docker = scriptedPrompter({ ...everything, [QUESTIONS.database]: "docker" });
 		expect((await collectAnswers(app(), {}, docker)).database).toEqual({ kind: "docker" });
@@ -132,6 +172,7 @@ describe("the questions of monti init", () => {
 			app(),
 			{
 				database: "skip",
+				databaseSchema: "",
 				locales: "ja",
 				storage: "none",
 				blocks: "none",
@@ -161,18 +202,8 @@ describe("the questions of monti init", () => {
 			storage: "none",
 			ai: false,
 			gitSync: false,
-			blocks: [
-				"callout",
-				"collapsible",
-				"tabs",
-				"columns",
-				"code-explorer",
-				"mermaid",
-				"chart",
-				"tooltip",
-				"code-ref",
-				"color",
-			],
+			// the light set: no mermaid or chart, which are heavy
+			blocks: ["callout", "collapsible", "tabs", "code-ref", "color"],
 			adminPath: "/studio",
 			blogTheme: false,
 		});

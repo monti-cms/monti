@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { type DoctorCheck, type DoctorContext, fail, ok, skip, warn } from "../../plugin/doctor";
+import { normalizeConnectionString } from "./connection";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain";
 
 /** How long a check waits for the database before it calls it unreachable. */
@@ -22,7 +23,11 @@ const schemaOf = (settings: Settings, ctx: DoctorContext): string =>
 
 /** Opens a short-lived pool of its own (the adapter's pool waits for a connection without end), runs `fn` and closes it. */
 async function withPool<T>(connectionString: string, fn: (pool: Pool) => Promise<T>): Promise<T> {
-	const pool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: CONNECT_TIMEOUT_MS });
+	const pool = new Pool({
+		connectionString: normalizeConnectionString(connectionString),
+		max: 1,
+		connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+	});
 	// A dropped idle connection must not crash the command.
 	pool.on("error", () => undefined);
 	try {

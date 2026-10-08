@@ -494,15 +494,15 @@ describe("the registry of this repo", () => {
 			files: { path: string; target?: string; content: string }[];
 		};
 
-		it("needs article-body and puts its pages under app/(site)/blog through {app}", () => {
+		it("needs article-body and puts its pages under app/(site)/<route base> through {app} and {routeBase}", () => {
 			expect(item.registryDependencies).toContain("article-body");
 			const targets = item.files.flatMap((file) => (file.target ? [file.target] : []));
 			// Every page goes through {app} into app/(site)/..., and the set has the post list, the post page and the draft preview page.
 			expect(targets.length).toBeGreaterThan(0);
 			// Every page goes into app/(site)/...; the one other file is the root proxy.ts, next to the app folder, that gives real 404 and 308 statuses.
 			expect(targets.filter((target) => !target.startsWith("~/{app}/(site)/"))).toEqual(["~/{app}/../proxy.ts"]);
-			expect(targets).toContain("~/{app}/(site)/blog/page.tsx");
-			expect(targets).toContain("~/{app}/(site)/blog/[slug]/page.tsx");
+			expect(targets).toContain("~/{app}/(site)/{routeBase}/page.tsx");
+			expect(targets).toContain("~/{app}/(site)/{routeBase}/[slug]/page.tsx");
 			expect(targets.some((target) => /\(site\)\/preview\/.+\/\[slug\]\/page\.tsx$/.test(target))).toBe(true);
 		});
 
@@ -539,6 +539,105 @@ describe("the registry of this repo", () => {
 			expect(read(host, "src/components/monti/blog-theme/blog-post.tsx")).toContain(
 				`from "@/components/monti/article-body/article-body"`,
 			);
+		});
+
+		describe("shaped by the schema of the app", () => {
+			const schema = (collection: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
+				json({
+					collections: { post: { label: "Post", kind: "document", ...collection }, ...extra },
+					locales: [{ code: "en", name: "English" }],
+					defaultLocale: "en",
+				});
+			const addTheme = (files: Record<string, string>) => {
+				const host = temp("host", {
+					"package.json": json({ name: "site" }),
+					"tsconfig.json": HOST_FILES["tsconfig.json"],
+					...files,
+				});
+				return {
+					host,
+					added: addComponents({ cwd: host, names: ["blog-theme"], registry: registryDir, install: () => {} }),
+				};
+			};
+			const fields = {
+				title: { kind: "text", label: "Title", required: true },
+				slug: { kind: "slug", label: "Slug", from: "title" },
+				description: { kind: "text", label: "Description", role: "summary" },
+				tagIds: { kind: "relation", label: "Tags", to: "tag", many: true },
+				authorId: { kind: "relation", label: "Author", to: "author" },
+			};
+
+			it("puts the pages where the path of the collection says, so the links it makes land on them", async () => {
+				const { host, added } = addTheme({ "monti.schema.json": schema({ path: "/posts/:slug", fields }) });
+				const report = await added;
+				expect(report.created).toContain("app/(site)/posts/page.tsx");
+				expect(report.created).toContain("app/(site)/posts/[slug]/page.tsx");
+				expect(report.created).toContain("app/(site)/preview/posts/[slug]/page.tsx");
+				expect(report.created.some((file) => file.includes("(site)/blog"))).toBe(false);
+				expect(read(host, "app/(site)/posts/[slug]/page.tsx")).toContain("blog-post");
+			});
+
+			it("writes the collection, the route base and the names of the fields the schema has into theme.config.ts", async () => {
+				const { host, added } = addTheme({ "monti.schema.json": schema({ path: "/notes/:slug", fields }) });
+				const report = await added;
+				const config = read(host, "src/components/monti/blog-theme/theme.config.ts");
+				expect(config).toContain('collection: "post",');
+				expect(config).toContain('routeBase: "/notes",');
+				expect(config).toContain('excerptField: "description",');
+				expect(config).toContain('topicsField: "tagIds",');
+				expect(config).toContain('authorField: "authorId",');
+				// The type declarations above the object are not touched.
+				expect(config).toContain("collection: ThemeCollection;");
+				expect(formatAddReport(report)).toContain(
+					"configured: theme.config.ts from monti.schema.json: collection post at /notes",
+				);
+			});
+
+			it("feeds the root proxy the same collection and route base as the pages, through theme.config.ts", async () => {
+				const { host, added } = addTheme({ "monti.schema.json": schema({ path: "/notes/:slug", fields }) });
+				const report = await added;
+				expect(report.created).toContain("proxy.ts");
+				// The proxy looks posts up with blogTheme.collection and blogTheme.routeBase, the values written for the pages.
+				expect(read(host, "src/components/monti/blog-theme/blog-proxy.ts")).toContain('from "./theme.config"');
+				expect(read(host, "src/components/monti/blog-theme/blog-proxy.ts")).toContain("blogTheme.routeBase");
+				expect(read(host, "src/components/monti/blog-theme/theme.config.ts")).toContain('routeBase: "/notes",');
+				expect(report.created).toContain("app/(site)/notes/[slug]/page.tsx");
+			});
+
+			it("turns off the fields the schema does not have, instead of pointing at fields that are not there", async () => {
+				const { host, added } = addTheme({
+					"monti.schema.json": schema({ path: "/blog/:slug", fields: { title: fields.title, slug: fields.slug } }),
+				});
+				await added;
+				const config = read(host, "src/components/monti/blog-theme/theme.config.ts");
+				expect(config).toContain("excerptField: undefined,");
+				expect(config).toContain("topicsField: undefined,");
+				expect(config).toContain("authorField: undefined,");
+			});
+
+			it("serves a path it cannot mount at /blog and says how to make the two agree", async () => {
+				const { host, added } = addTheme({ "monti.schema.json": schema({ path: "/:slug", fields }) });
+				const report = await added;
+				expect(report.created).toContain("app/(site)/blog/page.tsx");
+				expect(report.manual.join("\n")).toContain('Change the path to "/blog/:slug"');
+				expect(read(host, "src/components/monti/blog-theme/theme.config.ts")).toContain('routeBase: "/blog",');
+			});
+
+			it("keeps the theme defaults, and says so, when the app has no schema file", async () => {
+				const { added } = addTheme({});
+				const report = await added;
+				expect(report.created).toContain("app/(site)/blog/page.tsx");
+				expect(report.manual.join("\n")).toContain("No monti.schema.json was found");
+			});
+
+			it("finds the schema under src/ too", async () => {
+				const { added } = addTheme({
+					"src/monti.schema.json": schema({ path: "/writing/:slug", fields }),
+					"src/placeholder.ts": "",
+				});
+				const report = await added;
+				expect(report.created).toContain("src/app/(site)/writing/page.tsx");
+			});
 		});
 	});
 });
