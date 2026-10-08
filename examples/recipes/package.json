@@ -13,7 +13,6 @@
 	"dependencies": {
 		"@monti-cms/admin": "workspace:*",
 		"@monti-cms/auth": "workspace:*",
-		"@monti-cms/blocks": "workspace:*",
 		"@monti-cms/core": "workspace:*",
 		"@monti-cms/mdx": "workspace:*"
 	},

@@ -65,9 +65,6 @@ importers:
       '@monti-cms/auth':
         specifier: workspace:*
         version: link:../../packages/auth
-      '@monti-cms/blocks':
-        specifier: workspace:*
-        version: link:../../packages/blocks
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
