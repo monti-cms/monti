@@ -8,8 +8,6 @@ import { fixtureApp, scriptedPrompter } from "./init-helpers";
 const app = () => detectApp(fixtureApp());
 
 const everything = {
-	[QUESTIONS.database]: "url",
-	"Postgres URL": "postgres://me:pw@db.example.com:5432/blog",
 	[QUESTIONS.databaseSchema]: "blog",
 	[QUESTIONS.adminGithubId]: "583231",
 	[QUESTIONS.locales]: "ko, en",
@@ -18,16 +16,13 @@ const everything = {
 	[QUESTIONS.blocks]: "pick",
 	[QUESTIONS.blockList]: ["callout", "mermaid"],
 	[QUESTIONS.adminPath]: "/cms",
-	[QUESTIONS.blogTheme]: true,
 };
 
 describe("the questions of monti init", () => {
-	it("asks in the order database, schema, login, locales, storage, extras, blocks, admin path, blog theme", async () => {
+	it("asks in the order schema, GitHub id, locales, storage, extras, blocks, admin path", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.database,
-			"Postgres URL",
 			QUESTIONS.databaseSchema,
 			QUESTIONS.adminGithubId,
 			QUESTIONS.locales,
@@ -36,10 +31,8 @@ describe("the questions of monti init", () => {
 			QUESTIONS.blocks,
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
-			QUESTIONS.blogTheme,
 		]);
 		expect(answers).toEqual({
-			database: { kind: "url", url: "postgres://me:pw@db.example.com:5432/blog" },
 			databaseSchema: "blog",
 			adminGithubId: "583231",
 			siteUrl: "http://localhost:3000",
@@ -50,19 +43,7 @@ describe("the questions of monti init", () => {
 			gitSync: true,
 			blocks: ["callout", "mermaid"],
 			adminPath: "/cms",
-			blogTheme: true,
 		});
-	});
-
-	it("explains the GitHub OAuth app with the exact callback URL before asking for the id", async () => {
-		const prompter = scriptedPrompter(everything);
-		await collectAnswers(app(), { siteUrl: "https://blog.example.com" }, prompter);
-		const note = prompter.notes.find((entry) => entry.title === QUESTIONS.adminLogin);
-		expect(note?.body).toContain("https://github.com/settings/developers");
-		expect(note?.body).toContain("Authorization callback URL: https://blog.example.com/api/cms/auth/callback/github");
-		expect(note?.body).toContain("AUTH_GITHUB_ID");
-		expect(note?.body).toContain("AUTH_GITHUB_SECRET");
-		expect(note?.body).toContain("MONTI_ADMIN_GITHUB_ID");
 	});
 
 	it("the offered extras are AI and git-sync; Bareun is not offered", async () => {
@@ -143,21 +124,6 @@ describe("the questions of monti init", () => {
 		await expect(collectAnswers(app(), { databaseSchema: "my-schema" })).rejects.toThrow(/--database-schema/);
 	});
 
-	it("the Docker database is the app's own, so the schema is not asked for it", async () => {
-		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.database]: "docker" });
-		const answers = await collectAnswers(app(), {}, prompter);
-		expect(prompter.asked).not.toContain(QUESTIONS.databaseSchema);
-		expect(answers.databaseSchema).toBeUndefined();
-	});
-
-	it("a docker answer needs no URL; skip needs nothing", async () => {
-		const docker = scriptedPrompter({ ...everything, [QUESTIONS.database]: "docker" });
-		expect((await collectAnswers(app(), {}, docker)).database).toEqual({ kind: "docker" });
-		expect(docker.asked).not.toContain("Postgres URL");
-		const skip = scriptedPrompter({ ...everything, [QUESTIONS.database]: "skip" });
-		expect((await collectAnswers(app(), {}, skip)).database).toEqual({ kind: "skip" });
-	});
-
 	it("an empty GitHub id is allowed (filled in later); a wrong one is refused", async () => {
 		const empty = await collectAnswers(app(), {}, scriptedPrompter({ ...everything, [QUESTIONS.adminGithubId]: "  " }));
 		expect(empty.adminGithubId).toBeUndefined();
@@ -171,13 +137,11 @@ describe("the questions of monti init", () => {
 		const answers = await collectAnswers(
 			app(),
 			{
-				database: "skip",
 				databaseSchema: "",
 				locales: "ja",
 				storage: "none",
 				blocks: "none",
 				adminPath: "/studio",
-				blogTheme: false,
 				timeZone: "Asia/Tokyo",
 			},
 			prompter,
@@ -188,13 +152,11 @@ describe("the questions of monti init", () => {
 			storage: "none",
 			blocks: [],
 			timeZone: "Asia/Tokyo",
-			blogTheme: false,
 		});
 	});
 
 	it("without a prompter every question takes its default", async () => {
 		expect(await collectAnswers(app(), {})).toEqual({
-			database: { kind: "skip" },
 			adminGithubId: undefined,
 			siteUrl: "http://localhost:3000",
 			locales: ["en"],
@@ -205,18 +167,12 @@ describe("the questions of monti init", () => {
 			// the light set: no mermaid or chart, which are heavy
 			blocks: ["callout", "collapsible", "tabs", "code-ref", "color"],
 			adminPath: "/studio",
-			blogTheme: false,
 		});
 	});
 
 	it("the locale list drops duplicates and keeps the first as the default", async () => {
 		const answers = await collectAnswers(app(), { locales: "ko,en,ko" });
 		expect(answers.locales).toEqual(["ko", "en"]);
-	});
-
-	it("the blog theme defaults to no when asked", async () => {
-		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blogTheme]: false });
-		expect((await collectAnswers(app(), {}, prompter)).blogTheme).toBe(false);
 	});
 
 	it("cancelling at any question rejects", async () => {

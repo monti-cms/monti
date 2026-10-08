@@ -31,15 +31,7 @@ describe("a target's defaults", () => {
 			collections: ["post"],
 			mode: "commit",
 			prBranch: "monti/publish",
-			drafts: false,
 		});
-	});
-
-	it("syncs drafts only when the target asks, and keeps the draft branches apart from the branches it works on", () => {
-		expect(resolveTarget(target({ drafts: true }), 0).drafts).toBe(true);
-		expect(() => resolveTarget(target({ drafts: true, branch: "monti/draft/x" }), 0)).toThrow(/for drafts/);
-		expect(() => resolveTarget(target({ drafts: "yes" as never }), 0)).toThrow(/drafts/);
-		expect(() => resolveTargets({ targets: [target()], draftDebounceMs: -1 })).toThrow(/draftDebounceMs/);
 	});
 
 	it("takes the folder, trimmed, into the default id so two folders of one repo are two targets", () => {

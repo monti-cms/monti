@@ -48,7 +48,7 @@ export const cms = defineConfig({
 });
 ```
 
-The barrel `@monti-cms/blocks` is light: it never loads recharts or mermaid. `recharts` and `mermaid` are optional peers of this package; install them (`pnpm add recharts`, `pnpm add mermaid`) only when you use `chart()` or `mermaid()`. If a block is in the config and its library is missing, the error names the package to install, and `monti doctor` fails with the install command (`config/plugin-packages`; a plugin lists what it needs in `requires`). `ALL_BLOCKS` (the definitions only, no libraries) is in `@monti-cms/blocks/definitions`.
+The barrel `@monti-cms/blocks` is light: it never loads recharts or mermaid. `recharts` and `mermaid` are optional peers of this package; install them (`pnpm add recharts`, `pnpm add mermaid`) only when you use `chart()` or `mermaid()`. If you import a block without its library, the bundler stops with its "module not found" error naming the package: install it and restart the dev server. `ALL_BLOCKS` (the definitions only, no libraries) is in `@monti-cms/blocks/definitions`.
 
 There is no function that adds them all: each block is its own plugin, and the list in the config is the list of blocks the site has. Adding the same plugin twice is a config error.
 

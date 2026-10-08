@@ -5,7 +5,7 @@ import { fakeHost, fixtureApp, read } from "./init-helpers";
 const run = async (blocks: string) => {
 	const dir = fixtureApp();
 	const host = fakeHost();
-	await initProject({ cwd: dir, host, env: {}, blocks, database: "skip" });
+	await initProject({ cwd: dir, host, blocks });
 	const install = host.install.mock.calls[0]?.[0].args ?? [];
 	return { config: read(dir, "monti.config.ts"), install };
 };

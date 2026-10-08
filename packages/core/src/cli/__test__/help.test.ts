@@ -13,8 +13,6 @@ const help = async (...argv: string[]) => {
 
 const COMMANDS = [
 	"init",
-	"add",
-	"import",
 	"migrate",
 	"events:retry",
 	"doctor",
@@ -53,7 +51,7 @@ describe("monti help", () => {
 	});
 
 	it("-h is the same as --help, and an unknown command still prints the whole help", async () => {
-		expect((await help("add", "-h")).text).toBe((await help("add", "--help")).text);
+		expect((await help("init", "-h")).text).toBe((await help("init", "--help")).text);
 		const unknown = await help("nope");
 		expect(unknown.code).toBe(1);
 		expect(unknown.text).toContain("Unknown command: nope");

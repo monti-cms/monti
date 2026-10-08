@@ -83,10 +83,6 @@ import "@monti-cms/admin/styles.css";
 한 가지 뜻에는 쓰는 표기가 하나다. 다른 표기도 글을 읽을 때는 받아들이고, 저장되는 것은 문서다. 코드 블록은 Monti 주석(`// @line plus {0-0}`)으로 써서, MDX를 읽는 다른 도구에서도 주석이 그대로 보인다.
 내부 링크는 읽는 사람이 보는 글에서는 대상의 실제 경로(`[x](/en/posts/slug)`)로, 다시 가져올 글(`purpose: "sync"`)에서는 `entry:<id>`로 쓴다.
 
-## `monti doctor`
-
-`mdx()`는 `monti doctor`에 검사 둘을 더한다: `mdx/format`(`mdx` 형식이 등록됐는지)과 `mdx/syntax`(`mdx({ syntax })`의 확장마다 remark 플러그인이 만들어지고 짧은 글이 읽히는지). 실패하면 확장과 고칠 옵션을 짚는다.
-
 ## 그리기
 
 ```tsx

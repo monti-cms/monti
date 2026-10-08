@@ -2,7 +2,6 @@
 	"name": "@monti-cms/blocks",
 	"version": "0.1.0",
 	"private": true,
-	"cmsPlugin": true,
 	"description": "Block extensions for @monti-cms/core: callout, collapsible, tabs, columns, code explorer, Mermaid, chart, and inline marks (tooltip, code link, text color)",
 	"license": "MIT",
 	"type": "module",

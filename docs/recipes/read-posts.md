@@ -2,7 +2,7 @@
 
 Goal: a post list (with a tag filter and paging), a single post, and the tags of a post, on the public pages, with results whose types come from the config, so `post.metadata.title` is a `string` and a collection that does not exist is a compile error.
 
-Code: [`examples/recipes/src/read-posts`](../../examples/recipes/src/read-posts). Test: `read-posts.test.ts` (runs against the database, and its `typedResults` function is the type test: `pnpm typecheck` compiles it, and a `@ts-expect-error` line fails the build if it ever starts to compile).
+The snippets below are a sketch to adapt, not tested code.
 
 ## What you need to know
 
@@ -12,43 +12,30 @@ Code: [`examples/recipes/src/read-posts`](../../examples/recipes/src/read-posts)
 4. **Relations** arrive in `entry.relations.<field>` (published targets only, in order). To filter a list by a relation, pass the target's `id` in `where: { tagIds: tag.id }`.
 5. **Required fields are not optional** in what you read (`PublishedMetadataFor`), because publishing needs them. The optional ones are `T | undefined`.
 
-## The code
+## A sketch
 
-The instance of the app (in an app this is `monti.config.ts`):
+The instance (in an app this is `monti.config.ts`), and its type:
 
-<!-- source: examples/recipes/src/read-posts/cms.ts -->
 ```ts
-import { defineConfig } from "@monti-cms/core/server";
-import type { TestServer } from "@monti-cms/core/testing";
-import { mdx } from "@monti-cms/mdx";
-import { schema } from "../site";
-
-/**
- * In an app this is `monti.config.ts` (`database: postgres()`, `auth: auth(…)`); the recipe takes the server options as a parameter so a test can give it its own
- * database. The type of the instance, `BlogCms`, is what makes `cms.read` typed: it follows the config you pass, with no registration step.
- */
-export const createBlogCms = (server: TestServer["server"]) => defineConfig({ schema, plugins: [mdx()], ...server });
-
-export type BlogCms = ReturnType<typeof createBlogCms>;
+export const cms = defineConfig({ schema, plugins: [mdx()], database: postgres() /* ... */ });
+export type BlogCms = typeof cms;
 ```
 
 The reads, as functions the pages call:
 
-<!-- source: examples/recipes/src/read-posts/read-posts.ts -->
 ```ts
 import type { ReadEntry, ReadRelation } from "@monti-cms/core/read";
-import type { BlogCms } from "./cms";
 
-/** What a list page needs of a post. `ReadEntry<"post", Config>` knows its metadata (`title: string`, `summary?: string`), so nothing here is cast. */
-export interface PostSummary {
-	readonly slug: string;
-	readonly path: string | null;
-	readonly title: string;
-	readonly summary: string | undefined;
-	readonly publishedAt: Date | null;
-	readonly tags: readonly ReadRelation[];
+interface PostSummary {
+	slug: string;
+	path: string | null;
+	title: string;
+	summary: string | undefined;
+	publishedAt: Date | null;
+	tags: readonly ReadRelation[];
 }
 
+// `ReadEntry<"post", Config>` knows its metadata (`title: string`, `summary?: string`), so nothing is cast.
 const summaryOf = (post: ReadEntry<"post", BlogCms["site"]["config"]>): PostSummary => ({
 	slug: post.slug,
 	path: post.path,
@@ -58,8 +45,7 @@ const summaryOf = (post: ReadEntry<"post", BlogCms["site"]["config"]>): PostSumm
 	tags: post.relations.tagIds ?? [],
 });
 
-/** The tag with this slug, or `null`. Tags are an item collection, so the whole list is one small query. */
-export async function findTag(cms: BlogCms, slug: string, locale?: string) {
+async function findTag(cms: BlogCms, slug: string, locale?: string) {
 	const { items } = await cms.read.listEntries({ collection: "tag", locale, pageSize: 100 });
 	return items.find((tag) => tag.slug === slug) ?? null;
 }
@@ -99,18 +85,13 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 }
 ```
 
-## The type test
+## The types
+
+The compiler checks the collection name and the metadata:
 
 ```ts
 const { items } = await cms.read.listEntries({ collection: "post" });
-expectTypeOf(items[0].metadata.title).toEqualTypeOf<string>();
+const title: string = items[0].metadata.title;
 // @ts-expect-error "nope" is not a collection of this site
 await cms.read.listEntries({ collection: "nope" });
 ```
-
-## Found while writing it
-
-- The README showed `(await cms.read.getEntry(…)).entry`, which does not compile: the result is a status union. Fixed in the README.
-- `post.metadata.title` was `string | undefined` even though a published post always has a title. Fixed: reads use `PublishedMetadataFor`.
-- `cms.contentService()` was not typed by the config (any collection, any metadata), and an item collection (a tag) wrongly needed a body. Fixed: `createDraft` and `saveDraft` follow the config, and an item needs no body.
-- `{ summary: undefined }` threw `invalid_metadata_type` without naming the field. Fixed: `undefined` means "not set", and the other metadata errors name the field.

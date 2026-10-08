@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { pushPayload, webhookSignature } from "../testing";
 import { closeGlobalPool, createHarness, type Harness, WEBHOOK_SECRET } from "./harness";
 
-/** A site whose notes keep the title in `headline` (`role: "title"`): the file still calls it `title`, and drafts and conflicts name entries by it. */
+/** A site whose notes keep the title in `headline` (`role: "title"`): the file still calls it `title`, and conflicts name entries by it. */
 const note = defineCollection({
 	label: "Note",
 	kind: "document",
@@ -20,9 +20,7 @@ let h: Harness;
 beforeAll(async () => {
 	h = await createHarness({
 		collections: { note },
-		targets: [
-			{ id: "site", repo: "acme/site", branch: "main", folder: "content", collections: ["note"], drafts: true },
-		],
+		targets: [{ id: "site", repo: "acme/site", branch: "main", folder: "content", collections: ["note"] }],
 	});
 });
 afterAll(async () => {
@@ -87,7 +85,7 @@ describe("git-sync with a title field that is not named title", () => {
 		expect(after.published?.metadata).not.toHaveProperty("title");
 	});
 
-	it("takes a file written by hand with a `title` key, and names the draft's pull request after the title", async () => {
+	it("takes a file written by hand with a `title` key", async () => {
 		const path = "content/note/by-hand.en.mdx";
 		h.repo.commit("main", [{ path, text: composeFile({ title: "By hand", slug: "by-hand" }, "Written in git") }]);
 		expect((await push()).status).toBe(200);
@@ -99,18 +97,5 @@ describe("git-sync with a title field that is not named title", () => {
 		});
 		expect(found.status).toBe("current");
 		expect(found.status === "current" && found.entry.metadata).toMatchObject({ headline: "By hand" });
-
-		const draft = (
-			await h.service.createDraft({
-				collection: "note",
-				slug: "drafted",
-				metadata: { headline: "Drafted headline" },
-				body: "x",
-				format: "mdx",
-			} as never)
-		).entry;
-		expect(draft.status).toBe("draft");
-		const pr = h.repo.pullRequests.find((item) => item.head.endsWith("drafted"));
-		expect(pr?.title).toBe("Draft: Drafted headline");
 	});
 });

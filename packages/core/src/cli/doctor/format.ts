@@ -1,10 +1,10 @@
-import type { CheckStatus } from "../../plugin/doctor";
+import type { CheckStatus } from "./outcome";
 
 /** One line of the report: a check and what it found. */
 export interface DoctorResult {
-	/** `<group>/<check>`, for example `database/migrations` or `git-sync/token`. */
+	/** `<group>/<check>`, for example `database/migrations` or `auth/admins`. */
 	readonly id: string;
-	/** What the check belongs to: a part of the setup (`config`, `database`, ...) or a plugin name. */
+	/** What the check belongs to: a part of the setup (`config`, `database`, ...). */
 	readonly group: string;
 	/** What the check looks at, in a few words. */
 	readonly title: string;
@@ -12,8 +12,6 @@ export interface DoctorResult {
 	readonly message: string;
 	readonly where?: string;
 	readonly fix?: string;
-	/** `true` for a check that needs the network (`--online`). */
-	readonly online?: boolean;
 }
 
 export interface DoctorSummary {
@@ -29,8 +27,6 @@ export interface DoctorReport {
 	readonly ok: boolean;
 	/** The app folder. */
 	readonly cwd: string;
-	/** Whether `--online` was given. */
-	readonly online: boolean;
 	readonly summary: DoctorSummary;
 	readonly checks: readonly DoctorResult[];
 }
@@ -73,12 +69,6 @@ export function formatDoctorReport(report: DoctorReport): string {
 			...(summary.skip > 0 ? [`${summary.skip} not checked`] : []),
 		].join(", "),
 	);
-	const needOnline = report.checks.filter((check) => check.online && check.status === "skip").length;
-	if (needOnline > 0 && !report.online) {
-		out.push(
-			`${plural(needOnline, "check needs", "checks need")} the network: run \`monti doctor --online\` to run them.`,
-		);
-	}
 	if (summary.fail > 0) out.push("Fix the failed checks (marked FAIL) first, then run `monti doctor` again.");
 	else if (summary.warn > 0) out.push("Nothing is broken. The warnings are worth a look before you deploy.");
 	else out.push("Everything checked is in order.");

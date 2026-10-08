@@ -182,18 +182,21 @@ export async function schemaApply(
 ): Promise<SchemaApplyOutcome> {
 	const { cms, file, migrations } = await load(options);
 	try {
-		if (!options.dryRun) await cms.migrate({ log: () => {} });
+		// The migration runs first, as the command says; its lines head the output so the tables it touched are not changed silently.
+		const migrated: string[] = [];
+		if (!options.dryRun) await cms.migrate({ log: (line) => migrated.push(line) });
+		const head = migrated.length > 0 ? `${migrated.join("\n")}\n\n` : "";
 		const store = cms.store();
 		const plan = await planSchemaChange({ site: cms.site, store, migrations });
 		const impact = await checkSchemaChange(store, plan.diff, { site: cms.site, transforms: plan.pending });
 		const preview = formatSchemaPlan(plan, impact);
-		if (plan.problems.length > 0) return { text: `${preview}\nNothing was applied.`, ok: false };
+		if (plan.problems.length > 0) return { text: `${head}${preview}\nNothing was applied.`, ok: false };
 
 		let done: SchemaApplyResult;
 		try {
 			done = await applySchemaChange({ site: cms.site, store, migrations, dryRun: options.dryRun });
 		} catch (error) {
-			if (isMissingTable(error)) return { text: `${preview}\n${MIGRATE_HINT}`, ok: false };
+			if (isMissingTable(error)) return { text: `${head}${preview}\n${MIGRATE_HINT}`, ok: false };
 			throw error;
 		}
 		let wroteVersion = false;
@@ -202,7 +205,7 @@ export async function schemaApply(
 			writeFileSync(target, withSchemaVersion(readFileSync(target, "utf8"), done.schemaVersion));
 			wroteVersion = true;
 		}
-		return { text: `${preview}\n${formatApplyResult(done, wroteVersion, file)}`, ok: true, done };
+		return { text: `${head}${preview}\n${formatApplyResult(done, wroteVersion, file)}`, ok: true, done };
 	} finally {
 		await cms.close();
 	}

@@ -19,7 +19,7 @@ describe("explainDatabaseError", () => {
 	});
 
 	it.each([
-		[{ code: "ECONNREFUSED" }, "database_unreachable", "Nothing is listening", "docker compose up -d"],
+		[{ code: "ECONNREFUSED" }, "database_unreachable", "Nothing is listening", "start Postgres"],
 		[{ code: "ENOTFOUND" }, "database_unreachable", "cannot be found", "typo"],
 		[{ message: "Connection terminated due to connection timeout" }, "database_unreachable", "timed out", "allow-list"],
 		[{ code: "28P01" }, "database_login_failed", "refused the user or password", "percent-encoded"],

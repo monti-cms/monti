@@ -28,7 +28,6 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | (attached for you by the route handler and the admin) | `nextHost` |
-| `@monti-cms/nextjs/proxy` | `proxy.ts` | `cmsProxy(cms)`, `setupResponse(request, cms)`, `loginProblem(cms)` |
 
 ### Route handler
 
@@ -53,7 +52,7 @@ const nextConfig: NextConfig = {};
 export default withCms(nextConfig);
 ```
 
-It links no config file (the one config is `monti.config.ts`, which exports the `cms` instance, and the admin gets the site from that instance). It builds the core package with the app, passes Next's `basePath` to the server and browser bundles, and links an empty module for optional dependencies of the CMS packages that are not installed (see "Optional dependencies" in the core README). Under `next dev` it also warns once per server start when a `"use client"` file imports the server-only config (see "Files").
+It links no config file (the one config is `monti.config.ts`, which exports the `cms` instance, and the admin gets the site from that instance). It builds the core package with the app, and passes Next's `basePath` to the server and browser bundles. That is all it adds to your config, and the list of the table "What Monti decides on its own" in the core README is exactly what it does (remove `withCms` to undo it; add `transpilePackages: ["@monti-cms/core"]` yourself then). It writes no stand-in files: an optional package that is missing (`recharts` for `chart()`) is the bundler's own "module not found" error. Under `next dev` it also warns once per server start when a `"use client"` file imports the server-only config (see "Files").
 
 ### Admin page and layout
 
@@ -84,7 +83,7 @@ export default function AdminPage(props: CmsAdminPageProps) {
 
 `CmsAdminLayout` takes the props of the admin layout (`themeProvider`, `themeStorageKey`, `toaster`; see the `@monti-cms/admin` README) and renders it inside `NextAdminRouter`.
 
-**Cache Components.** The admin works with and without Next's `cacheComponents` (and `partialPrefetching`), which `create-next-app` turns on in new apps. `CmsAdminLayout` waits for the request (`connection()`) inside a `Suspense` boundary with no fallback, so nothing below it is prerendered: the session, the database, the current time and the URL are all request-time data. The page is a child of that boundary and needs none of its own. With `cacheComponents` on, add `export const instant = false` to the page (`monti init` does when `next.config` has `cacheComponents: true`): it keeps the development-only instant validation of Next 16.4 from checking a route that is never instant, and without it the dev overlay reports that the validation could not render the admin. Next fails the build on that export when `cacheComponents` is off, so leave it out then. The admin theme provider sets a class and `color-scheme` on `<html>` before React hydrates, so the root layout needs `suppressHydrationWarning` on its `<html>` tag (`monti init` adds it).
+**Cache Components.** The admin works with and without Next's `cacheComponents` (and `partialPrefetching`), which `create-next-app` turns on in new apps. `CmsAdminLayout` waits for the request (`connection()`) inside a `Suspense` boundary with no fallback, so nothing below it is prerendered: the session, the database, the current time and the URL are all request-time data. The page is a child of that boundary and needs none of its own. With `cacheComponents` on, add `export const instant = false` to the page (`monti init` does when `next.config` has `cacheComponents: true`): it keeps the development-only instant validation of Next 16.4 from checking a route that is never instant, and without it the dev overlay reports that the validation could not render the admin. Next fails the build on that export when `cacheComponents` is off, so leave it out then. The admin theme provider sets a class and `color-scheme` on `<html>` before React hydrates, so the root layout needs `suppressHydrationWarning` on its `<html>` tag (`monti init` prints the line to add; it does not edit your layout).
 
 `NextAdminRouter` is the App Router adapter of the admin: a client component that gives `@monti-cms/admin` a `Link`, `navigate`, `replace`, `usePathname` and `useSearchParams` built on `next/link` and `next/navigation`. `CmsAdminPage` gives the admin's server screens Next's `redirect` and `notFound`. The admin itself imports nothing from Next.
 
@@ -124,11 +123,13 @@ There is no route group and no other admin file: custom admin components are a p
 
 ## Preview pages
 
-A site page that shows drafts (`site.previewPath`, for example `/preview/ko/posts/<slug>`) reads them with `previewEntry(cms, { collection, slug, locale })` from `@monti-cms/nextjs`, not with `cms.read.getPreview` directly. It attaches the request headers to the instance first, so the admin session (or the dev bypass under `next dev`) is read even when the preview is the first request after a cold start, or the only thing a serverless instance has served. It returns `null` for anyone who is not the admin, so the page answers 404. `examples/blog` and the `blog-theme` registry item have such a page.
+A site page that shows drafts (`site.previewPath`, for example `/preview/ko/posts/<slug>`) reads them with `previewEntry(cms, { collection, slug, locale })` from `@monti-cms/nextjs`, not with `cms.read.getPreview` directly. It attaches the request headers to the instance first, so the admin session (or the dev bypass under `next dev`) is read even when the preview is the first request after a cold start, or the only thing a serverless instance has served. It returns `null` for anyone who is not the admin, so the page answers 404. `examples/blog` has such a page.
 
-## Production without the login settings
+## Status codes and the login settings
 
-A page cannot send an error status under Cache Components (it streams after a `200`), so a site in production without `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` or `MONTI_SECRET` would answer the admin and the draft preview with `200` and a logged error. A proxy answers before any page runs: `export const proxy = cmsProxy(cms)` in `proxy.ts` (`monti init` writes it when the app has no proxy; the blog theme's proxy does the same) sends `503` with a page that points to `monti doctor` for the admin path and `site.previewPath`, and logs the full problem once. Every other request goes through, and under `next dev` it does nothing. An app with its own proxy calls `setupResponse(request, cms)` first and returns what it gives when that is not `undefined`.
+**404 and 308.** Monti ships no `proxy.ts`. A page calls `notFound()` and `permanentRedirect()` like any Next page. With `cacheComponents` off that is a real `404` and `308`. With it on, Next has already sent the page's shell with a `200`, so an unknown post is a page marked `noindex` and an old address is a redirect in the browser; search engines may read that as a soft 404. If you need strict statuses, the [strict status recipe](../../docs/recipes/strict-status.md) is a short `proxy.ts` and a tested function.
+
+**Production without the login settings.** If `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` or `MONTI_SECRET` is missing, the admin layout shows a "Not set up yet" screen that points to `monti doctor` and logs the full problem once, instead of Next's error page (which hides the message in production). It is the admin, not a public page, so the status is whatever Next sends (a `200` under Cache Components). Under `next dev` the development login is used and nothing is shown.
 
 ## Upgrading
 

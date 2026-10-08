@@ -4,7 +4,6 @@ import { fakeAuth } from "../../cms/fake-cms";
 import { problemError } from "../../core/problem";
 import type { CmsServerConfig } from "../../server/define";
 import { postgres } from "./adapter";
-import { normalizeConnectionString } from "./connection";
 
 /** What {@link testServer} returns: the server options to spread into `defineConfig`, and the cleanup. */
 export interface TestServer {
@@ -46,7 +45,7 @@ export function testServer(): TestServer {
 			}),
 		},
 		drop: async () => {
-			const pool = new Pool({ connectionString: normalizeConnectionString(connectionString), max: 1 });
+			const pool = new Pool({ connectionString: connectionString, max: 1 });
 			try {
 				await pool.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
 			} finally {

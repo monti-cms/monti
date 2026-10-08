@@ -28,8 +28,6 @@ export const cms = defineConfig({
 
 인자 없이 쓰면 환경 변수를 읽고, 옵션을 주면 옵션이 우선한다(일부만 줘도 되고, 나머지는 환경 변수에서 채운다). 값은 처음 쓸 때 읽으므로 빌드 중에는 비어 있어도 된다. 빠진 값이 있으면 변수 이름과 어디에 설정하는지(변수 또는 `s3Storage({ bucket })`), 어떻게 하는지를 서비스별 예와 함께 알려 주는 오류가 난다. 함수 하나, 변수 접두사 하나(`S3_*`)다.
 
-`monti doctor`는 값을 점검하고(모두 있는지, 주소 형식, R2는 `S3_REGION=auto`, MinIO는 `S3_FORCE_PATH_STYLE=true`), `monti doctor --online`은 키로 버킷에 닿는지 저장소에 물어 없는 버킷·거절된 키·틀린 리전·닿지 않는 주소를 구분해 알려 준다. core README의 "문제 해결: `monti doctor`"를 본다.
-
 ### 변수
 
 | 변수 | 옵션 | 의미 |

@@ -6,10 +6,10 @@ import { initProject } from "../init";
 
 /**
  * Types of the generated project: `monti init` is run with every feature on, and `tsc` checks the result against the sources of this repo's packages.
- * The fixture sits in `registry/` because that folder already has `next` and `react` installed; the `@monti-cms/*` packages are linked into the fixture only.
+ * The fixture sits in `packages/nextjs/` because that folder already has `next` and `react` installed; the `@monti-cms/*` packages are linked into the fixture only.
  */
 const repo = path.resolve(__dirname, "../../../../..");
-const registry = path.join(repo, "registry");
+const fixtureRoot = path.join(repo, "packages/nextjs");
 const dirs: string[] = [];
 
 afterAll(() => {
@@ -17,7 +17,7 @@ afterAll(() => {
 });
 
 function fixture(): string {
-	const dir = mkdtempSync(path.join(registry, ".init-typecheck-"));
+	const dir = mkdtempSync(path.join(fixtureRoot, ".init-typecheck-"));
 	dirs.push(dir);
 	writeFileSync(
 		path.join(dir, "package.json"),
@@ -62,13 +62,7 @@ function fixture(): string {
 }
 
 const host = {
-	run: () => true,
-	dockerAvailable: () => false,
-	freePort: async (port: number) => port,
-	databaseReachable: async () => false,
-	generateSecret: () => "test-secret",
 	install: () => undefined,
-	migrate: async () => true,
 };
 
 describe("the project monti init writes", () => {
@@ -77,14 +71,11 @@ describe("the project monti init writes", () => {
 		const report = await initProject({
 			cwd: dir,
 			host,
-			env: {},
-			database: "docker",
 			locales: "en,ko",
 			storage: "s3",
 			extras: "ai,git-sync",
 			blocks: "all",
 			install: false,
-			dockerStart: false,
 		});
 		expect(report.created).toContain("monti.config.ts");
 		const tsc = path.join(repo, "node_modules/.bin/tsc");

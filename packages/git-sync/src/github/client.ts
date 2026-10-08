@@ -64,24 +64,6 @@ export interface GitHubClient {
 		readonly title: string;
 		readonly body: string;
 	}): Promise<PullRequestRef>;
-	/** Changes the title and body of a pull request. */
-	updatePullRequest(
-		pullRequest: PullRequestRef,
-		params: { readonly title: string; readonly body: string },
-	): Promise<void>;
-	/** Closes a pull request without merging it. */
-	closePullRequest(pullRequest: PullRequestRef): Promise<void>;
-	/**
-	 * Squash-merges a pull request. When GitHub will not merge it right now (a required check has not passed, branch protection, a conflict) this throws a
-	 * {@link GitHubApiError} with status 405, 409 or 422 ({@link isMergeBlocked}); any other failure is something else (a token that cannot merge, GitHub down).
-	 * Returns the sha of the merge commit on the base branch.
-	 */
-	mergePullRequest(
-		pullRequest: PullRequestRef,
-		params: { readonly title: string },
-	): Promise<{ readonly sha: string | null }>;
-	/** Deletes a branch. `false` when it did not exist. */
-	deleteBranch(branch: string): Promise<boolean>;
 	/** Turns on auto-merge (squash or merge, as the repo allows) for a pull request. Throws when GitHub refuses (no required checks, for instance). */
 	enableAutoMerge(pullRequest: PullRequestRef): Promise<void>;
 }
@@ -106,7 +88,3 @@ export class GitHubApiError extends Error {
 		this.status = status;
 	}
 }
-
-/** Whether a failed merge means "not now" (checks, protection, a conflict) rather than a broken setup. */
-export const isMergeBlocked = (error: unknown): boolean =>
-	error instanceof GitHubApiError && (error.status === 405 || error.status === 409 || error.status === 422);

@@ -50,8 +50,6 @@ export class FakeRepo {
 	allowAutoMerge = true;
 	/** Set to make `enableAutoMerge` refuse (a repo with nothing to wait for). */
 	autoMergeError: string | undefined;
-	/** Set to make merging a pull request through the API fail the way GitHub does when a check has not passed or the branch is protected (405). */
-	mergeBlocked: string | undefined;
 	private counter = 0;
 
 	constructor(readonly name: string) {}
@@ -285,29 +283,6 @@ export function createFakeGitHub(): FakeGitHub {
 				target.pullRequests.push(pr);
 				return toRef(pr);
 			},
-			async updatePullRequest(ref, { title, body }) {
-				enter("updatePullRequest");
-				const pr = target.pullRequests.find((item) => item.number === ref.number);
-				if (pr) {
-					pr.title = title;
-					pr.body = body;
-				}
-			},
-			async closePullRequest(ref) {
-				enter("closePullRequest");
-				target.close(ref.number);
-			},
-			async mergePullRequest(ref) {
-				enter("mergePullRequest");
-				if (target.mergeBlocked) throw new GitHubApiError(target.mergeBlocked, 405);
-				const pr = target.pullRequests.find((item) => item.number === ref.number);
-				if (!pr || pr.state !== "open") throw new GitHubApiError("Pull Request is not mergeable", 405);
-				return { sha: target.merge(ref.number) };
-			},
-			async deleteBranch(branch) {
-				enter("deleteBranch");
-				return target.branches.delete(branch);
-			},
 			async enableAutoMerge(ref) {
 				enter("enableAutoMerge");
 				if (target.autoMergeError) throw new GitHubApiError(target.autoMergeError, 422);
@@ -339,21 +314,3 @@ export const webhookSignature = (secret: string, rawBody: string): string =>
 /** The body of a GitHub `push` event for a branch. */
 export const pushPayload = (repo: string, branch: string): string =>
 	JSON.stringify({ ref: `refs/heads/${branch}`, repository: { full_name: repo }, commits: [] });
-
-/** The body of a GitHub `pull_request` event (`closed`, merged or not) for a pull request. */
-export const pullRequestPayload = (
-	repo: string,
-	pullRequest: { readonly number: number; readonly head: string; readonly base: string; readonly merged?: boolean },
-	action = "closed",
-): string =>
-	JSON.stringify({
-		action,
-		number: pullRequest.number,
-		pull_request: {
-			number: pullRequest.number,
-			merged: pullRequest.merged === true,
-			head: { ref: pullRequest.head },
-			base: { ref: pullRequest.base },
-		},
-		repository: { full_name: repo },
-	});

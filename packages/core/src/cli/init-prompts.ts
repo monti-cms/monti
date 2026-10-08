@@ -6,7 +6,6 @@ import {
 	DEFAULT_INIT_ADMIN_PATH,
 	DEFAULT_INIT_LOCALE,
 	DEFAULT_INIT_TIME_ZONE,
-	githubCallbackUrl,
 	type InitAnswers,
 } from "./templates";
 
@@ -51,10 +50,9 @@ export class InitCancelled extends Error {
 
 /** The raw flag values (strings as typed). `undefined` means the flag was not given. */
 export interface InitAnswerFlags {
-	/** A `postgres://` URL, `docker` or `skip`. */
-	readonly database?: string;
-	/** The Postgres schema for the tables (`DATABASE_SCHEMA`). */
+	/** The Postgres schema for the tables, as an example value in `.env.example` (`DATABASE_SCHEMA`). */
 	readonly databaseSchema?: string;
+	/** The numeric GitHub id of the admin, filled in `.env.example` (`MONTI_ADMIN_GITHUB_ID`). */
 	readonly adminGithubId?: string;
 	readonly siteUrl?: string;
 	/** Comma-separated locale codes, the default first. */
@@ -67,11 +65,9 @@ export interface InitAnswerFlags {
 	/** `all`, `none`, `default` (the light set) or comma-separated block names. */
 	readonly blocks?: string;
 	readonly adminPath?: string;
-	readonly blogTheme?: boolean;
 }
 
 const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-const POSTGRES_URL = /^postgres(?:ql)?:\/\/\S+$/;
 
 const isTimeZone = (timeZone: string): boolean => {
 	try {
@@ -101,10 +97,6 @@ const EXTRAS = ["ai", "git-sync"] as const;
 
 /** Every validator returns the error text, or `undefined` when the value is fine. The same text is used for a flag and for a prompt. */
 const check = {
-	database: (value: string) =>
-		["docker", "skip"].includes(value) || POSTGRES_URL.test(value)
-			? undefined
-			: 'must be a postgres:// URL, "docker" (a local Postgres in Docker) or "skip"',
 	databaseSchema: (value: string) =>
 		value === "" || /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value)
 			? undefined
@@ -150,7 +142,6 @@ const parseBlocks = (value: string): string[] => {
 
 /** Checks every flag that was given, before anything is asked. */
 export function validateFlags(flags: InitAnswerFlags): void {
-	checked("database", flags.database, check.database);
 	checked("database-schema", flags.databaseSchema, check.databaseSchema);
 	checked("admin-github-id", flags.adminGithubId, check.githubId);
 	checked("site-url", flags.siteUrl, check.siteUrl);
@@ -162,36 +153,17 @@ export function validateFlags(flags: InitAnswerFlags): void {
 	checked("admin-path", flags.adminPath, check.adminPath);
 }
 
-const databaseOf = (value: string): InitAnswers["database"] =>
-	value === "docker" ? { kind: "docker" } : value === "skip" ? { kind: "skip" } : { kind: "url", url: value };
-
-/** The steps for the GitHub OAuth app, with the callback URL for the site URL. */
-export function oauthInstructions(siteUrl: string): string {
-	return [
-		"Admin login is GitHub. Create an OAuth app (it takes a minute):",
-		"  1. Open https://github.com/settings/developers and choose OAuth Apps > New OAuth App",
-		`  2. Homepage URL:               ${siteUrl}`,
-		`     Authorization callback URL: ${githubCallbackUrl(siteUrl)}`,
-		"  3. Put its Client ID in AUTH_GITHUB_ID and a new client secret in AUTH_GITHUB_SECRET (.env.local)",
-		'  4. Put your numeric GitHub id in MONTI_ADMIN_GITHUB_ID (https://api.github.com/users/<your-name>, the "id" field)',
-		"For a deployed site, make a second OAuth app (or edit this one) with your site URL in the same two places.",
-		"You can do this later: under `next dev` you are signed in as the admin without it.",
-	].join("\n");
-}
-
 /** What the questions ask, for the tests and the docs. */
 export const QUESTIONS = {
-	database: "Where is your Postgres database?",
-	adminLogin: "Admin login",
-	databaseSchema: "Postgres schema for the tables (empty: public). Use one when the database is shared with other apps",
-	adminGithubId: "Your numeric GitHub id (MONTI_ADMIN_GITHUB_ID). Leave empty to fill it in later",
+	databaseSchema:
+		"Postgres schema for the tables (empty: public). Use one when the database is shared with other apps. Goes in .env.example",
+	adminGithubId: "Your numeric GitHub id (MONTI_ADMIN_GITHUB_ID in .env.example). Leave empty to fill it in later",
 	locales: "Languages of the site (comma-separated, the default first)",
 	storage: "Where should uploaded images go?",
 	extras: "Extra features",
 	blocks: "Which body blocks do you want?",
 	blockList: "Pick the blocks",
 	adminPath: "Where should the admin live?",
-	blogTheme: "Install the blog theme pages (monti add blog-theme)? Skip it if your blog already has pages",
 } as const;
 
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
@@ -215,33 +187,9 @@ export async function collectAnswers(
 	validateFlags(flags);
 	const siteUrl = flags.siteUrl ?? `http://localhost:${app.devPort}`;
 
-	// Database
-	let database: InitAnswers["database"];
-	if (flags.database !== undefined) database = databaseOf(flags.database);
-	else if (prompter) {
-		const choice = await prompter.select({
-			message: QUESTIONS.database,
-			options: [
-				{ value: "url", label: "I have a Postgres URL", hint: "paste it next" },
-				{ value: "docker", label: "Use a local Postgres in Docker", hint: "writes docker-compose.yml" },
-				{ value: "skip", label: "Skip, I will fill DATABASE_URL in later" },
-			],
-			initial: "docker",
-		});
-		if (choice === "url") {
-			const url = await prompter.text({
-				message: "Postgres URL",
-				placeholder: "postgres://user:password@host:5432/dbname",
-				validate: (value) =>
-					POSTGRES_URL.test(value.trim()) ? undefined : "must start with postgres:// or postgresql://",
-			});
-			database = { kind: "url", url: url.trim() };
-		} else database = { kind: choice };
-	} else database = { kind: "skip" };
-
-	// Schema of the tables. Not asked for the Docker database, which is yours alone.
+	// Schema of the tables
 	let databaseSchema = flags.databaseSchema?.trim() || undefined;
-	if (flags.databaseSchema === undefined && prompter && database.kind !== "docker") {
+	if (flags.databaseSchema === undefined && prompter) {
 		databaseSchema =
 			(
 				await prompter.text({
@@ -252,10 +200,9 @@ export async function collectAnswers(
 			).trim() || undefined;
 	}
 
-	// Admin login (GitHub)
+	// Admin (GitHub id)
 	let adminGithubId = flags.adminGithubId || undefined;
 	if (flags.adminGithubId === undefined && prompter) {
-		prompter.note(oauthInstructions(siteUrl), QUESTIONS.adminLogin);
 		const id = (
 			await prompter.text({ message: QUESTIONS.adminGithubId, validate: (value) => check.githubId(value.trim()) })
 		).trim();
@@ -359,12 +306,7 @@ export async function collectAnswers(
 				).trim()
 			: DEFAULT_INIT_ADMIN_PATH);
 
-	// Blog theme
-	const blogTheme =
-		flags.blogTheme ?? (prompter ? await prompter.confirm({ message: QUESTIONS.blogTheme, initial: false }) : false);
-
 	return {
-		database,
 		...(databaseSchema ? { databaseSchema } : {}),
 		adminGithubId,
 		siteUrl,
@@ -375,7 +317,6 @@ export async function collectAnswers(
 		gitSync: extras.includes("git-sync"),
 		blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
 		adminPath,
-		blogTheme,
 	};
 }
 

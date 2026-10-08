@@ -8,6 +8,7 @@ import { Toaster } from "../ui/sonner";
 import { TooltipProvider } from "../ui/tooltip";
 import { AdminThemeProvider } from "./admin-theme-provider";
 import { layoutMessages } from "./messages";
+import { SetupProblemScreen, setupProblemOf } from "./setup-problem";
 
 /**
  * Metadata of the admin pages of an instance (title, no indexing), in the shape the framework's metadata export expects (Next's `Metadata` accepts it as is).
@@ -55,6 +56,8 @@ export async function AdminLayout({
 	themeStorageKey,
 	toaster = true,
 }: AdminLayoutProps) {
+	// A server whose login is not set up shows what to do, instead of an error page with the message hidden.
+	if (setupProblemOf(cms) !== undefined) return <SetupProblemScreen cms={cms} />;
 	const plugins = await loadAdminPlugins(cms.site);
 	// Plugin providers wrap from the outside in registration order, inside the server data cache.
 	const content = plugins.reduceRight<ReactNode>(

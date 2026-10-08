@@ -3,7 +3,6 @@ import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
-import type { DoctorCheck } from "./doctor";
 import type { PluginStorage } from "./storage";
 
 /**
@@ -24,20 +23,15 @@ export interface CmsPlugin<
 	readonly nav?: readonly PluginNavItem[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;
-	/**
-	 * npm packages this plugin needs in the app that it does not install itself (optional peers of its package, e.g. `recharts` for the chart block).
-	 * `monti doctor` checks that each one is installed and says which command installs it.
-	 */
-	readonly requires?: readonly string[];
 	/** Validation called when the site config is created. Throws if the config is invalid. */
 	readonly validate?: (config: PluginConfigView) => void;
 	/**
 	 * Write hooks written inline, for a plugin that only needs hooks: `definePlugin({ name, hooks })` needs no `server` module. Inline code loads with
 	 * every server start (the CLI, edge and cold starts included), so keep it light; it may use secrets through `cms.secrets` or the environment. A plugin
-	 * with heavy hooks, or with routes, migrations, commands or checks, puts its hooks in `server` (a lazy module). Not both: a plugin with `hooks` here and in `server` fails when it loads.
+	 * with heavy hooks, or with routes, migrations or commands, puts its hooks in `server` (a lazy module). Not both: a plugin with `hooks` here and in `server` fails when it loads.
 	 */
 	readonly hooks?: WriteHooks;
-	/** Server side (API routes, migrations, hooks, commands, checks). The default export is a `CmsServerPlugin`. Read only on the server. */
+	/** Server side (API routes, migrations, hooks, commands). The default export is a `CmsServerPlugin`. Read only on the server. */
 	readonly server?: () => Promise<{ readonly default: CmsServerPlugin }>;
 	/** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */
 	readonly admin?: () => Promise<{ readonly default: unknown }>;
@@ -122,12 +116,6 @@ export interface CmsServerPlugin {
 	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
 	 */
 	readonly commands?: Readonly<Record<string, PluginCommand>>;
-	/**
-	 * Checks `monti doctor` runs for this plugin, listed under its name (`git-sync/token`): is its token saved, are its settings present, does it reach its service.
-	 * A check says what it found, where, and how to fix it ({@link DoctorCheck}); one that calls out over the network sets `online: true` and runs only with
-	 * `monti doctor --online`. The checks get the app's instance, so they read the plugin's storage and secrets like a route does.
-	 */
-	readonly checks?: readonly DoctorCheck[];
 }
 
 /** One command line option of a plugin command. */

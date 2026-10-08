@@ -1,13 +1,14 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
-import { type CheckOutcome, fail, ok, skip, warn } from "../../plugin/doctor";
-import { detectPackageManager } from "../add";
-import { findRootLayout, hasSuppressHydrationWarning, setupThemeStyles } from "../first-run";
+import { formatDecision } from "../../server/decision";
+import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
-import { isPackageInstalled } from "../installed";
 import { findSchemaFile, generateSchemaTypes, readSchema, SCHEMA_TYPES_FILE } from "../schema-types";
+import { AUTH_CHECKS } from "./auth-checks";
+import { DATABASE_CHECKS } from "./database-checks";
+import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
 
 /** Everything the core checks look at, gathered once before they run. */
 export interface DoctorState {
@@ -126,28 +127,15 @@ const configLoads: CoreCheck = {
 	},
 };
 
-const pluginPackages: CoreCheck = {
+/** Provenance: every value Monti picked on its own, with where it came from (`set in monti.config.ts`, `from env X`, or `auto-detected (reason)`). */
+const automatic: CoreCheck = {
 	group: "config",
-	id: "plugin-packages",
-	title: "Packages the plugins need",
+	id: "automatic",
+	title: "What Monti decided on its own",
 	needsCms: true,
 	run: (state) => {
-		const plugins = state.cms?.site.plugins ?? [];
-		const needs = plugins.flatMap((plugin) => (plugin.requires ?? []).map((name) => ({ plugin: plugin.name, name })));
-		if (needs.length === 0) return ok("none of the plugins needs a package of its own");
-		const missing = needs.filter(({ name }) => !isPackageInstalled(state.cwd, name));
-		if (missing.length === 0) return ok(`installed: ${needs.map(({ name }) => name).join(", ")}`);
-		const names = [...new Set(missing.map(({ name }) => name))];
-		const manager = detectPackageManager(state.cwd);
-		return fail(
-			missing
-				.map(({ plugin, name }) => `the ${plugin} block needs the package ${name}, which is not installed`)
-				.join("; "),
-			{
-				where: "package.json of your app",
-				fix: `${manager} ${manager === "npm" ? "install" : "add"} ${names.join(" ")}, then restart the dev server (or remove the block from the plugins of ${state.configPath ?? "monti.config.ts"})`,
-			},
-		);
+		const decisions = state.cms?.decisions(state.env) ?? [];
+		return ok(decisions.map((decision) => `${formatDecision(decision)}`).join("\n"));
 	},
 };
 
@@ -308,23 +296,6 @@ const legacySecrets: CoreCheck = {
 		);
 	},
 };
-
-// ---- storage ----
-
-const noStorage: CoreCheck = {
-	group: "storage",
-	id: "none",
-	title: "Media storage",
-	needsCms: true,
-	run: (state) =>
-		state.cms?.isMediaConfigured
-			? ok("a media storage is configured")
-			: ok(
-					"no media storage: image upload is off and the admin hides the media menu. Add `storage: s3Storage()` (@monti-cms/storage-s3) to turn it on",
-				),
-};
-
-// ---- next ----
 
 const FILE_EXTENSIONS = ["tsx", "ts", "jsx", "js"] as const;
 
@@ -541,33 +512,6 @@ const nextHydration: CoreCheck = {
 	},
 };
 
-/** The blog theme's article text is drawn by this component; without it there is nothing to style. */
-const THEME_FOLDERS = ["components/monti/article-body", "src/components/monti/article-body"];
-
-const nextThemeStyles: CoreCheck = {
-	group: "next",
-	id: "theme-styles",
-	title: "Styles of the theme pages",
-	run: async (state) => {
-		if (!isNextApp(state)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
-		if (!THEME_FOLDERS.some((folder) => exists(state, folder)))
-			return skip("not checked: the article-body component (monti add blog-theme) is not installed");
-		const manager = detectPackageManager(state.cwd);
-		const install = `${manager} ${manager === "npm" ? "install" : "add"} -D @tailwindcss/typography`;
-		const result = await setupThemeStyles({ cwd: state.cwd, installCommand: install, dryRun: true });
-		if (result.missing.length === 0 && !result.installDevDependency)
-			return ok("the global CSS loads the typography plugin and the render.css files");
-		const lines = [
-			...(result.installDevDependency ? [`install the typography plugin: ${install}`] : []),
-			...(result.missing.length > 0 ? [`add these lines to your global CSS:\n${result.missing.join("\n")}`] : []),
-		];
-		return warn("the theme pages render without prose, code and block styles", {
-			where: result.diff?.file ?? "your global CSS",
-			fix: lines.join("\n"),
-		});
-	},
-};
-
 const adminPathCheck: CoreCheck = {
 	group: "next",
 	id: "admin-path",
@@ -582,13 +526,16 @@ const adminPathCheck: CoreCheck = {
 	},
 };
 
-// ---- leftovers of the old setup ----
+// ---- upgrade/*: migration-only checks ----
+//
+// For sites upgrading from the pre-overhaul setup (two config files, old env names, an `(admin)` route group, `admin-components.tsx`). They are grouped under
+// `upgrade/` so they are easy to find and easy to delete: they will be removed after the owner's blog migration (#93), together with the old-data compatibility (#45).
 
 const OLD_CONFIG_FILES = ["cms.config", "cms.server"] as const;
 const OLD_EXTENSIONS = ["ts", "tsx", "js", "mjs"] as const;
 
 const oldConfigFiles: CoreCheck = {
-	group: "leftovers",
+	group: "upgrade",
 	id: "config-files",
 	title: "cms.config.ts and cms.server.ts",
 	run: (state) => {
@@ -651,7 +598,7 @@ const OLD_CONFIG_TEXT: readonly { readonly pattern: RegExp; readonly what: strin
 ];
 
 const oldConfigText: CoreCheck = {
-	group: "leftovers",
+	group: "upgrade",
 	id: "config-text",
 	title: "Old options in monti.config.ts",
 	run: (state) => {
@@ -679,7 +626,7 @@ const RENAMED_ENV: readonly (readonly [string, string | undefined])[] = [
 ];
 
 const oldEnv: CoreCheck = {
-	group: "leftovers",
+	group: "upgrade",
 	id: "env",
 	title: "Old environment names",
 	run: (state) => {
@@ -708,7 +655,7 @@ const oldEnv: CoreCheck = {
 };
 
 const routeGroups: CoreCheck = {
-	group: "leftovers",
+	group: "upgrade",
 	id: "route-groups",
 	title: "(admin) route folders",
 	run: (state) => {
@@ -757,7 +704,7 @@ const routeGroups: CoreCheck = {
 };
 
 const oldAdminComponents: CoreCheck = {
-	group: "leftovers",
+	group: "upgrade",
 	id: "admin-components",
 	title: "admin-components.tsx",
 	run: (state) => {
@@ -781,17 +728,17 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	envIgnored,
 	configFile,
 	configLoads,
-	pluginPackages,
+	automatic,
 	boundary,
 	schemaFile,
 	schemaTypes,
+	...DATABASE_CHECKS,
 	montiSecret,
 	legacySecrets,
-	noStorage,
+	...AUTH_CHECKS,
 	nextFiles,
 	nextWithCms,
 	nextHydration,
-	nextThemeStyles,
 	adminPathCheck,
 	oldConfigFiles,
 	oldConfigText,
@@ -800,5 +747,5 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	oldAdminComponents,
 ];
 
-/** The order the groups are printed in. Groups not listed (plugins) follow. */
-export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "storage", "next", "leftovers"] as const;
+/** The order the groups are printed in. */
+export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "next", "upgrade"] as const;

@@ -1,5 +1,4 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
-import { gitSyncChecks } from "./checks";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
 import * as routes from "./routes";
@@ -13,7 +12,6 @@ const gitSyncServer: CmsServerPlugin = {
 		{ pattern: "v1/git-sync/settings", module: routes.settings },
 		{ pattern: "v1/git-sync/pull", module: routes.pull },
 		{ pattern: "v1/git-sync/flush", module: routes.flush },
-		{ pattern: "v1/git-sync/drafts", module: routes.drafts },
 		{ pattern: "v1/git-sync/conflicts", module: routes.conflicts },
 		{ pattern: "v1/git-sync/conflicts/resolve", module: routes.resolve },
 		// GitHub calls this without a login; the route checks the webhook signature itself.
@@ -22,8 +20,6 @@ const gitSyncServer: CmsServerPlugin = {
 	// Delivered through the event outbox: a failed push is retried, not lost.
 	hooks: { afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event) },
 	commands,
-	// What `monti doctor` checks: targets, file format, token, webhook secret, and (with --online) the repo.
-	checks: gitSyncChecks,
 	// `features["git-sync"].ready` of the admin meta API: is a token saved?
 	features: async (cms) => ({
 		ready: await settingsView(syncContextFor(cms)).then(

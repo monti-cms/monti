@@ -4,7 +4,7 @@ import type { ResolvedTarget } from "./options";
 import type { SyncRecord } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
 
-/** Writing what a file says into the CMS: the pieces the published import (`inbound.ts`) and the draft import (`draft-inbound.ts`) share. */
+/** Writing what a file says into the CMS: the pieces the import (`inbound.ts`) and the conflict resolution (`conflicts.ts`) share. */
 
 /** A readable description of why a write failed: the error code and what the pipeline found, not a stack trace. */
 export function describeError(error: unknown): string {
@@ -127,37 +127,3 @@ export const recordOf = (
 	contentHash: applied.entry.published.contentHash,
 	syncedAt: new Date(now).toISOString(),
 });
-
-/**
- * Writes a file read from a draft branch into the entry's draft, without publishing it. Same pipeline as {@link applyFile} (hooks, validation, references); the
- * file being written is marked, so the save this causes is not pushed back.
- */
-export async function applyDraftFile(
-	ctx: SyncContext,
-	target: ResolvedTarget,
-	input: FileToApply & { readonly entry: Entry },
-): Promise<Entry> {
-	const { cms } = ctx;
-	const metadata = await resolveRelations(cms, input.file, { collection: input.collection, locale: input.locale });
-	await ctx.state.applying.mark(target.id, input.path, ctx.now());
-	ctx.importing.add(target.id);
-	try {
-		return (
-			await cms.contentService().saveDraft(
-				input.entry.id,
-				{
-					collection: input.collection,
-					slug: input.slug,
-					metadata,
-					body: input.file.body,
-					format: target.format,
-					expectedVersion: input.entry.version,
-				} as never,
-				{ publishImmediately: false },
-			)
-		).entry;
-	} finally {
-		ctx.importing.delete(target.id);
-		await ctx.state.applying.clear(target.id, input.path).catch(() => undefined);
-	}
-}

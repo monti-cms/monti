@@ -15,7 +15,6 @@ describe("detecting the app", () => {
 			packageManager: "pnpm",
 			typescript: true,
 			resolveJsonModule: true,
-			tailwind: { installed: true, typography: false },
 			contentFolders: [],
 			nextConfig: "next.config.ts",
 			devPort: 3000,
@@ -25,18 +24,16 @@ describe("detecting the app", () => {
 		});
 	});
 
-	it("finds src/app, a Tailwind typography plugin and the other package managers", () => {
+	it("finds src/app and the other package managers", () => {
 		const pkg = JSON.stringify({
 			name: "x",
 			dependencies: { next: "16.0.0" },
-			devDependencies: { tailwindcss: "^4", "@tailwindcss/typography": "^0.5" },
 		});
 		const app = detectApp(fixtureApp({ ...SRC_APP, "package.json": pkg, "pnpm-lock.yaml": null, "bun.lock": "" }));
 		expect(app).toMatchObject({
 			src: true,
 			appDir: "src/app",
 			packageManager: "bun",
-			tailwind: { installed: true, typography: true },
 		});
 		expect(detectApp(fixtureApp({ "pnpm-lock.yaml": null, "package-lock.json": "{}" })).packageManager).toBe("npm");
 		expect(detectApp(fixtureApp({ "pnpm-lock.yaml": null })).packageManager).toBe("npm");

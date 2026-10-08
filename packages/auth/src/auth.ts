@@ -1,9 +1,13 @@
 import { Auth, type AuthConfig, skipCSRFCheck } from "@auth/core";
 import { defineMessages, type MessageBundle, problemText } from "@monti-cms/core";
-import { assertDevBypassSafe, isDevAuthBypassEnabled, withBasePath } from "@monti-cms/core/adapters/auth";
-import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "@monti-cms/core/server";
+import {
+	assertDevBypassSafe,
+	isDevAuthBypassEnabled,
+	productionLikeEnvironment,
+	withBasePath,
+} from "@monti-cms/core/adapters/auth";
+import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth, type Decision } from "@monti-cms/core/server";
 import { collectAdmins, ignoredAdminText } from "./admins";
-import { authChecks } from "./checks";
 import { type LoginProvider, qualifyAccountId, splitAccountId } from "./provider";
 
 /**
@@ -126,7 +130,35 @@ export function auth(options: AuthOptions): AuthAdapter {
 
 	return {
 		name: "auth",
-		checks: authChecks(options),
+		decisions: (env): readonly Decision[] => {
+			const explicit = options.devBypass;
+			const nodeEnv = env.NODE_ENV ?? "";
+			const deployed = productionLikeEnvironment(env);
+			const bypassOn = isDevAuthBypassEnabled(explicit, env);
+			return [
+				{
+					topic: "Login",
+					value: providers.map((provider) => provider.name).join(", "),
+					source: providers
+						.map((provider) => provider.provenance?.(env) ?? `set in monti.config.ts (${provider.id})`)
+						.join("; "),
+				},
+				{
+					topic: "Dev login bypass",
+					value: bypassOn ? "on (requests from this machine are the admin, no login)" : "off",
+					source:
+						explicit === false
+							? "set in monti.config.ts (devBypass: false)"
+							: bypassOn
+								? explicit === true
+									? "set in monti.config.ts (devBypass: true)"
+									: 'auto-detected (NODE_ENV is "development" and no hosting platform variable is set)'
+								: nodeEnv !== "development"
+									? `auto-detected (NODE_ENV is "${nodeEnv}", not "development")`
+									: `auto-detected (looks deployed: ${deployed})`,
+				},
+			];
+		},
 		create: ({ site, loginPath, trustHost, secrets, storage, host: attachedHost }): CmsAuth => {
 			// An explicit host wins; else the one the framework integration attaches to the instance.
 			const host: AuthHost = options.host ?? attachedHost;

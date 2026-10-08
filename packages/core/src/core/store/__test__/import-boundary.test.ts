@@ -6,11 +6,17 @@ import { describe, expect, it } from "vitest";
 /**
  * The store is a port (`core/store/ports.ts`) and Postgres is one adapter of it, so nothing outside `adapters/postgres` may reach into it.
  * The exceptions are the public entry points that hand the adapter out (`server/index.ts` exports the `postgres()` factory) and the test helper entry
- * point (`testing.ts`, which builds a real store for tests). A new reach into the adapter has to be a deliberate edit of this list.
+ * point (`testing.ts`, which builds a real store for tests), and the Postgres checks of `monti doctor` (`cli/doctor/database-checks.ts`: the doctor checks the
+ * database directly, no adapter contributes checks). A new reach into the adapter has to be a deliberate edit of this list.
  */
 const CORE_SRC = path.resolve(__dirname, "../../..");
 const ADAPTER = path.join(CORE_SRC, "adapters", "postgres");
-const ALLOWED = new Set([path.join(CORE_SRC, "server", "index.ts"), path.join(CORE_SRC, "testing.ts")]);
+const DOCTOR_DATABASE_CHECKS = path.join(CORE_SRC, "cli", "doctor", "database-checks.ts");
+const ALLOWED = new Set([
+	path.join(CORE_SRC, "server", "index.ts"),
+	path.join(CORE_SRC, "testing.ts"),
+	DOCTOR_DATABASE_CHECKS,
+]);
 
 const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 
@@ -50,7 +56,7 @@ const isTestFile = (file: string) => /(__test__|\.test\.)/.test(file);
 function importsModule(root: string, name: string): string[] {
 	const pattern = new RegExp(`(?:from|import)\\s*\\(?\\s*["']${name}(?:/[^"']*)?["']`);
 	return sourceFiles(root)
-		.filter((file) => !file.startsWith(ADAPTER + path.sep) && !isTestFile(file))
+		.filter((file) => !file.startsWith(ADAPTER + path.sep) && !isTestFile(file) && file !== DOCTOR_DATABASE_CHECKS)
 		.filter((file) => pattern.test(readFileSync(file, "utf8")))
 		.map((file) => path.relative(path.dirname(CORE_SRC), file));
 }

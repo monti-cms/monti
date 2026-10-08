@@ -14,4 +14,4 @@ export {
 	isDevAuthBypassEnabled,
 } from "./auth-gateway";
 export { productionLikeEnvironment } from "./dev-bypass";
-export { detectProxyPlatform, resolveTrustHost } from "./trust-host";
+export { detectProxyPlatform, explainTrustHost, resolveTrustHost } from "./trust-host";

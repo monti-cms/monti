@@ -141,6 +141,13 @@ export function defineConfig(input: MontiServerOptions): Cms {
 	const siteOptions = site.site as { url?: string } | undefined;
 	const envUrl = process.env[SITE_URL_ENV]?.trim();
 	if (!siteOptions?.url && !fileUrl && envUrl) site.site = { ...siteOptions, url: envUrl };
+	const siteUrlSource = siteOptions?.url
+		? "set in monti.config.ts (site.url)"
+		: fileUrl
+			? "set in the schema file (site.url)"
+			: envUrl
+				? `from env ${SITE_URL_ENV}`
+				: undefined;
 	const config = defineSite(site as never);
 	const server: CmsServerConfig = {
 		database: input.database,
@@ -155,5 +162,5 @@ export function defineConfig(input: MontiServerOptions): Cms {
 		...(input.events ? { events: input.events } : {}),
 		...(input.publicApi ? { publicApi: input.publicApi } : {}),
 	};
-	return createCms({ config, server });
+	return createCms({ config, server, ...(siteUrlSource ? { siteUrlSource } : {}) });
 }

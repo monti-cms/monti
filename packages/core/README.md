@@ -9,7 +9,13 @@ The admin UI is `@monti-cms/admin`, everything specific to Next.js is `@monti-cm
 
 You need a Next.js 16 (App Router) app on React 19. Install `@monti-cms/core` first, then run `monti init` through your package manager. Running `npx monti` before the install fetches a different, unrelated npm package named `monti`, so always install first.
 
-Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes the files, installs the other packages and runs the migration when the database is reachable). Copy the block for your package manager:
+The whole flow:
+
+```text
+install → monti init → monti migrate → monti doctor → pnpm dev
+```
+
+Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti's own new files, asks before installing the other packages, and prints what is left; it edits none of your existing files and never touches the database). Copy the block for your package manager:
 
 ```sh
 # pnpm
@@ -29,18 +35,11 @@ bun add @monti-cms/core
 bunx monti init
 ```
 
-**pnpm 12 stops the install until esbuild's install script is allowed or denied** (pnpm 10 only warns), and it also writes the placeholder `esbuild: set this to true or false` into `pnpm-workspace.yaml`. Decide it once, with exactly these lines in `pnpm-workspace.yaml` (keep the other lines, and never add a second `allowBuilds` or `esbuild` key; if the placeholder is there, change its value to `true`):
+With pnpm 12, add `allowBuilds:` with `esbuild: true` to `pnpm-workspace.yaml` first (pnpm 12 stops an install until esbuild's install script is allowed; Monti does not edit that file).
 
-```yaml
-allowBuilds:
-  esbuild: true
-```
-
-`monti init` checks this again when it runs: with pnpm 12 and no decision in `pnpm-workspace.yaml` it shows the change as a diff and asks before making it, before it installs anything.
-
-3. **Check the setup.** `pnpm exec monti doctor` lists every check as `ok`, `warn` or `FAIL`, and every warning says what is wrong, where, and how to fix it.
-4. **Run the app.** `pnpm dev`, then open `http://localhost:3000/studio` (`monti init` writes the admin at `/studio`; `--admin-path` changes it).
-5. **Import existing posts** (optional). `pnpm exec monti import content/posts --dry-run` shows what would happen and writes nothing; run it without `--dry-run` to import. Use your own folder instead of `content/posts`.
+3. **Do the steps init printed.** Init changes none of your files, so it ends with a numbered list with exact content to copy: the `next.config` change (`withCms`), `suppressHydrationWarning` on `<html>`, `"resolveJsonModule": true` in `tsconfig.json` and `.env.local` in `.gitignore` (each only when your app needs it), and `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
+4. **Create the tables and check the setup.** `pnpm exec monti migrate`, then `pnpm exec monti doctor`, which lists every check as `ok`, `warn` or `FAIL`; every warning says what is wrong, where, and how to fix it (it also tells you if one of the init steps above is missing). It also lists what Monti decided on its own, with where each value came from.
+5. **Run the app.** `pnpm dev`, then open `http://localhost:3000/studio` (`monti init` writes the admin at `/studio`; `--admin-path` changes it).
 
 `monti --help` prints every command; `monti <command> --help` (for example `monti init --help`) prints only that command's help. Everything below is the reference.
 
@@ -59,9 +58,32 @@ Next.js (App Router) is the only supported host for now. The code is layered so 
 
 Another host (Astro, Remix, ...) would be a new adapter package, not a change to the core or the admin. Tests keep the boundary: no source file of the core or the admin may import `next/*`.
 
+## What Monti decides on its own, and how to turn it off
+
+Automatic is fine, silent is not. `monti doctor` shows what Monti decided on its own, with where each value came from (`set in monti.config.ts`, `from env NAME`, or `auto-detected (reason)`), under `config/automatic`. Each line has the form `Topic: value [source]`:
+
+```text
+  Database: localhost:5432/monti [from env DATABASE_URL]
+  Login: GitHub [client id from env AUTH_GITHUB_ID, admins from env MONTI_ADMIN_GITHUB_ID]
+  Dev login bypass: on (requests from this machine are the admin) [auto-detected (NODE_ENV is "development" and no hosting platform variable is set)]
+  SITE_URL: http://localhost:3000 [from env SITE_URL]
+  Schema file: monti.schema.json [auto-detected (monti.schema.json in the app folder)]
+```
+
+| Automatic behavior | How to turn it off or override it |
+| --- | --- |
+| The database URL and schema are read from `DATABASE_URL` and `DATABASE_SCHEMA` | pass `postgres({ connectionString, schema })` in `monti.config.ts` |
+| GitHub login settings are read from `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_ADMIN_GITHUB_ID` | pass `github({ clientId, clientSecret, admins })` |
+| The dev login bypass is on under `next dev`, for requests from your machine only | `auth({ devBypass: false })` |
+| Host trust is on behind a known hosting platform and in development, off in other production | `trustHost: true or false` in `defineConfig`, or `AUTH_TRUST_HOST=true or false` |
+| `SITE_URL` fills `site.url` when neither the config nor the schema file sets it | set `site.url` in `monti.config.ts` or `site.url` in the schema file |
+| The schema file is found by name (`monti.schema.json`, also under `src/`), re-read in `next dev` when it changes, and `monti-env.d.ts` is rewritten (a line is printed each time) | hot reload is development only and has no switch (a production server runs the schema it started with); remove `withCms` from `next.config.ts` to stop `monti-env.d.ts` from being rewritten, and run `monti schema:types` yourself |
+| `withCms` adds `transpilePackages`, `env.NEXT_PUBLIC_CMS_BASE_PATH`, and in development the types watcher and a warning when client code imports `monti.config.ts` | remove `withCms` from `next.config.ts` and set `transpilePackages: ["@monti-cms/core"]` yourself |
+| `monti schema:apply` runs `monti migrate` first (its lines are printed first) | run `monti schema:apply --dry-run`, which migrates nothing |
+
 ## Install in an empty Next app
 
-The quick way is the quick start above (step 2 below is `monti init`): it does steps 1 and 2 for you, and asks about step 3's database. The rest of this section is what it does, for reading it or doing it by hand. This assumes a Next 16 (App Router) and React 19 app. The admin needs no Tailwind: its styles are prebuilt, so the app may use any CSS setup. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate`.
+The quick way is the quick start above (step 2 below is `monti init`): it does steps 1 and 2 for you (the install after a confirmation), and prints the rest. The rest of this section is what it does, for reading it or doing it by hand. This assumes a Next 16 (App Router) and React 19 app. The admin needs no Tailwind: its styles are prebuilt, so the app may use any CSS setup. Only Postgres is supported as the store. The order is `monti init` → edit the collections → `monti migrate` → `monti doctor`.
 
 ### 1. Packages
 
@@ -74,35 +96,28 @@ The admin package and the AI plugin must share one copy of React Query, sonner, 
 Login is `@monti-cms/auth` (Auth.js core, no Next.js in it); GitHub login needs no extra package. See its README for providers.
 The `monti` command line ships inside `@monti-cms/core` (TypeScript config files are read by tsx, which is installed with it).
 
-pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses.
-
-```yaml
-# pnpm-workspace.yaml (app folder)
-allowBuilds:
-  esbuild: true
-```
+pnpm 12 fails the install if there are install scripts that have not been allowed (10 only warns). Allow the install script of esbuild, which tsx uses: put `allowBuilds:` with `esbuild: true` in `pnpm-workspace.yaml`.
 
 ### 2. `monti init`
 
-Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes explicit files, installs the packages, and ends with a plain list of what is left. **It never overwrites a file without asking**, and it is safe to run again.
+Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes Monti's own new files, installs the packages (after you confirm), and ends with a plain, numbered list of what is left. **It edits no file your app already has** (`next.config`, the root layout, `tsconfig.json`, `.gitignore`) and writes no `.env.local`: it prints those changes for you to make. It never overwrites a file without asking, and it is safe to run again.
 
-**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, an existing Tailwind and typography setup, the dev port (from the `dev` script), a `.gitignore` that misses `.env.local`, and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below), and the run ends by suggesting `monti import <folder>`. An app with only a `pages/` folder is refused with a message.
+**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, the dev port (from the `dev` script), the shape of an existing `next.config`, `resolveJsonModule` in `tsconfig.json`, a `.gitignore` that misses `.env.local`, whether the root layout's `<html>` has `suppressHydrationWarning` (all only to tailor what it prints), and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below). An app with only a `pages/` folder is refused with a message.
 
 **The questions** (each has a flag, see below):
 
 | Question | Choices | Default |
 | --- | --- | --- |
-| Database | paste a Postgres URL, a local Postgres in Docker (writes `docker-compose.yml` on the first free port from 5432 and starts it when Docker is available), or skip | skip |
-| Database schema | The Postgres schema that holds the tables (`DATABASE_SCHEMA` in `.env.local`), for a database shared with other apps. Not asked for the Docker database | `public` |
-| Admin login | GitHub. It shows the OAuth app steps with the exact callback URL (`<site URL>/api/cms/auth/callback/github`) and asks for your numeric GitHub id (optional) | |
+| Database schema | The Postgres schema that holds the tables, written as the example value of `DATABASE_SCHEMA` in `.env.example`, for a database shared with other apps | `public` |
+| Admin GitHub id | Your numeric GitHub id (optional), written as `MONTI_ADMIN_GITHUB_ID` in `.env.example` (it is public, not a secret) | empty |
 | Locales | language codes, the default first. When the content has file names like `hello.ko.mdx` and `hello.en.mdx`, or language folders like `ko/` and `en/`, those languages are offered, and the default is the one whose files have no pair (else the first). `--yes` takes them | the languages found, else `en` |
 | Image storage | S3-compatible (S3, R2, MinIO; settings come from `S3_*`), or none | none |
 | Extras | AI writing, git sync (Bareun is not offered) | none |
 | Blocks | the light default set (`callout`, `collapsible`, `tabs`, `code-ref`, `color`), all, none, or a list picked from `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color`. `mermaid` and `chart` come from their own entry points and bring their library (`mermaid`, `recharts`) only when chosen | default |
 | Admin path | a path like `/studio` | `/studio` |
-| Blog theme | install the blog theme pages through the registry (`monti add blog-theme`) | no |
+| Install | when the packages are missing: the exact install command for the detected package manager, then "run it?" | yes |
 
-**What it writes** (existing files are kept, or replaced only on a yes or `--overwrite`; edits to `next.config`, `tsconfig.json` and `.gitignore` are shown as diffs and asked in the prompts, and made with `--yes`):
+**What it writes** (only new files; one that already exists is skipped and reported, and replaced only on a yes or `--overwrite`):
 
 | What | File |
 | --- | --- |
@@ -111,64 +126,67 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | The types of the schema file, written from it (not edited by hand) | `monti-env.d.ts` |
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| Config wiring (`withCms`): merged in when the file has the default shape, shown as a diff; otherwise the exact change is printed | `next.config.ts` |
-| `"resolveJsonModule": true` when the tsconfig lacks it: a text insert that keeps comments and formatting, shown as a diff. A tsconfig with `extends`, or an unusual shape, is left alone and the step is printed | `tsconfig.json` |
-| `.env.local` and `.env*.local` when `.gitignore` misses them (the file is created if missing), shown as a diff. `.monti/` too, but only when a step fails and the progress has to be saved (see "After the files") | `.gitignore` |
-| With pnpm 12 and no decision about esbuild's install script: `allowBuilds: esbuild: true` (a missing key is added, the placeholder pnpm writes is replaced, a decision you took is left; never a second key), shown as a diff, before anything is installed | `pnpm-workspace.yaml` |
-| In production without the login settings (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_SECRET`) the admin answers `503` with a page that points to `monti doctor`, instead of `200` with an error in the server log (a page cannot send that status under Cache Components, a proxy can). Not written when the app has a `proxy.ts` or `middleware.ts` (call `setupResponse(request, cms)` from `@monti-cms/nextjs/proxy` first in it) or when the blog theme is chosen (its proxy does this too) | `proxy.ts` (`src/proxy.ts` with `src/`) |
-| Every variable the chosen features read, with no values | `.env.example` |
-| Only values you typed or that were generated: `MONTI_SECRET` (generated), `DATABASE_URL`, `MONTI_ADMIN_GITHUB_ID`. An existing file only gets the names it lacks | `.env.local` |
-| A local Postgres (only when you chose Docker; an existing compose file is left alone and the service is printed) | `docker-compose.yml` |
+| Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, the GitHub OAuth app with its callback URL, your numeric GitHub id, the `S3_*` values). It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
 
 For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
 
-**After the files** it installs the packages the choices need with the detected package manager, starts the Docker database, waits for it and runs `monti migrate` when the database is reachable. When the blog theme is chosen it also installs `@tailwindcss/typography` (the theme's text uses the `prose` classes) as its own step. A step that fails (no network, no Docker, a rejected install) does not undo the files, and the summary does not say "Monti is added": it says the setup is only partly done, lists the failed steps, and then **the exact commands that finish the job, in the order to run them**. The progress is saved in `.monti/init.json` (git-ignored, no secret in it), and `monti init --resume` runs only the steps that did not complete (the packages, the typography plugin, the tables, the theme), without asking again. The summary lists what was done, then what is left as numbered steps with exact values: the GitHub OAuth app, its callback URL and the env names to put the ID and secret in, `monti doctor` for whenever something does not work (it says what is wrong, where, and how to fix it), `pnpm dev`, and the `/studio` address.
+**After the files** it shows the exact install command for the detected package manager (`--package-manager` overrides), asks whether to run it (default yes; `--yes` accepts without asking), and runs it. `--no-install` skips it and puts the command in the list instead. It stops there: **it never starts a database, runs `monti migrate`, installs styles, adds pages, edits your files or touches `pnpm-workspace.yaml`.** If the install fails, the files stay, the summary does not say "Monti is added" (it says the setup is only partly done, with the failed step and the exact install command), and running `monti init` again continues: existing files are kept.
 
-**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `updated`, `skipped`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
+The summary then lists what is left as numbered steps, each with the exact content to copy and each only when your app needs it:
+
+1. the install command, if it did not run (a short TypeScript note comes before it when the app has none);
+2. the `next.config` change: `import { withCms } from "@monti-cms/nextjs/config"` and `export default withCms(nextConfig)`, shown against the shape of your file, or a whole new `next.config.ts` when there is none (skipped when `withCms` is already there);
+3. `suppressHydrationWarning` on the `<html>` of the root layout (skipped when it has it);
+4. `"resolveJsonModule": true` in the `compilerOptions` of `tsconfig.json` (only when missing);
+5. `cp .env.example .env.local`, then fill it in, with the commands that generate `MONTI_SECRET` (`openssl rand -base64 32`, or a one-line `node -e` command);
+6. `.env.local` in `.gitignore` (only when it is not ignored yet);
+7. `monti migrate`;
+8. `monti doctor` (it tells you if any step above is missing);
+9. `pnpm dev`, then open the admin address (`/studio`);
+
+followed by the notes that apply: the git-sync target, and a pointer to `.env.example` for the GitHub OAuth app a deployed site needs.
+
+**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `skipped`, `overwritten`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
 
 ```sh
 pnpm exec monti init                 # interactive
-pnpm exec monti init --yes           # all defaults: no database yet, the light block set, /studio
-pnpm exec monti init --yes --json --database docker --database-schema monti --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
+pnpm exec monti init --yes           # all defaults: the light block set, /studio, packages installed without asking
+pnpm exec monti init --yes --json --database-schema monti --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
 pnpm exec monti init --dry-run --yes # show what would be written and run
+pnpm exec monti init --no-install    # write the files, print the install command
 ```
 
 | Flag | Meaning | Default |
 | --- | --- | --- |
-| `--yes`, `-y` | no prompts; unanswered questions take their default | |
+| `--yes`, `-y` | no prompts; unanswered questions take their default, and the install runs without asking | |
 | `--json` | print the result as JSON (implies `--yes`) | |
 | `--dry-run` | write and run nothing; show the plan | |
-| `--database <v>` | a `postgres://` URL, `docker`, or `skip` | `skip` |
-| `--database-schema <name>` | the Postgres schema that holds the tables, written to `.env.local` as `DATABASE_SCHEMA`; for a database shared with other apps. Also asked as a question unless the database is the Docker one | `public` |
-| `--admin-github-id <n>` | numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`) | none |
-| `--site-url <url>` | public site URL, used for the OAuth callback URL | `http://localhost:<dev port>` |
+| `--database-schema <name>` | the Postgres schema that holds the tables, written to `.env.example` as the example value of `DATABASE_SCHEMA`; for a database shared with other apps. Also asked as a question | `public` |
+| `--admin-github-id <n>` | numeric GitHub id of the admin, filled in `.env.example` as `MONTI_ADMIN_GITHUB_ID` | none |
+| `--site-url <url>` | public site URL, used for the OAuth callback URL in `.env.example` | `http://localhost:<dev port>` |
 | `--locales <list>` | language codes, the default first (`--locale <code>` is the same for one) | the languages found in the content file names or folders, else `en` |
 | `--time-zone <tz>` | IANA time zone | `UTC` |
 | `--storage <s3\|none>` | image storage | `none` |
 | `--extras <list>` | `ai`, `git-sync`, or `none` | `none` |
 | `--blocks <list>` | `default` (the light set), `all`, `none`, or block names (`default,mermaid` adds to the light set) | `default` |
 | `--admin-path <path>` | admin path (letters, digits, `-`, `_`; not `/` and not under `/api`) | `/studio` |
-| `--blog-theme` / `--no-blog-theme` | add the blog theme pages | no |
 | `--overwrite` | replace existing files that differ | keep them |
-| `--no-install` | do not install packages (and so do not migrate or add the theme) | |
-| `--no-migrate` | do not run `monti migrate` | |
-| `--no-docker-start` | write `docker-compose.yml` but do not start it | |
+| `--no-install` | do not install packages; the install command is printed in the list of what is left | |
 | `--package-manager <m>` | `npm`, `pnpm`, `yarn` or `bun` | detected |
-| `--resume` | run again only the steps the last run did not complete, from `.monti/init.json`; asks nothing and writes none of the files init wrote | |
 
 **Light blocks by default.** The default set is `callout`, `collapsible`, `tabs`, `code-ref` and `color`. `mermaid` is opt-in because it brings about 26 MB of `node_modules` and a large browser script; `chart` is opt-in because it adds recharts and d3. Ask for them with `--blocks all`, or name them next to the default set (`--blocks default,mermaid`). The heavy blocks have their own entry points (`import { chart } from "@monti-cms/blocks/chart"`, `import { mermaid } from "@monti-cms/blocks/mermaid"`) and their libraries are optional peers of `@monti-cms/blocks`, so an app that does not choose them installs neither, and nothing of them is loaded: `@monti-cms/blocks` itself stays light. `monti init` writes the import from the right entry and installs the library only for the blocks chosen.
 
-**Languages from the content.** File names like `hello.ko.mdx` + `hello.en.mdx` (two letter language codes), or sibling language folders (`content/ko`, `content/en`, merged into one set of posts), give the languages of the site. Under `--yes` they are used as the locales, the default being the language whose files have no pair (the originals that were not translated), or the first one; interactively they are the offered answer. `--locales` always wins, and the notes say what the files would have given. `monti import` then pairs `hello.ko.mdx` with `hello.en.mdx` as one post in two languages.
+**Languages from the content.** File names like `hello.ko.mdx` + `hello.en.mdx` (two letter language codes), or sibling language folders (`content/ko`, `content/en`, merged into one set of posts), give the languages of the site. Under `--yes` they are used as the locales, the default being the language whose files have no pair (the originals that were not translated), or the first one; interactively they are the offered answer. `--locales` always wins, and the notes say what the files would have given.
 
-**Shaped by your front matter.** When `monti init` finds a content folder, it reads the front matter and shapes the starter schema to agree with `monti import`: `tags` (also `keywords`, `topics`) becomes an item collection `tag` plus a relation field `tagIds`; `category` becomes the collection `category` and the field `categoryId` (a list `categories` becomes `categoryIds`); `date` (and `pubDate`, `publishDate`, ...) is the publish date of the entry and gets no field; `description`, `summary` or `excerpt` becomes the field with the `summary` role; the `path` of the post collection follows the content folder name (`content/blog` gives `/blog/:slug`, `content/posts` gives `/posts/:slug`). Every other key without a matching kind becomes a text field. `monti import` then fills the relations and creates the tag and category entries.
+**Shaped by your front matter.** When `monti init` finds a content folder, it reads the front matter and shapes the starter schema: `tags` (also `keywords`, `topics`) becomes an item collection `tag` plus a relation field `tagIds`; `category` becomes the collection `category` and the field `categoryId` (a list `categories` becomes `categoryIds`); `date` (and `pubDate`, `publishDate`, ...) is the publish date of the entry and gets no field; `description`, `summary` or `excerpt` becomes the field with the `summary` role; the `path` of the post collection follows the content folder name (`content/blog` gives `/blog/:slug`, `content/posts` gives `/posts/:slug`). Every other key without a matching kind becomes a text field.
 
 **Help.** `monti --help` prints the header and every command; `monti <command> --help` (for example `monti init --help`) prints only that command's help.
 
 **The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** `monti init` keeps them together; when you change it later, change both. The admin API path (`/api/cms/v1`) does not change.
 
-**Safety.** Every write goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
+**Safety.** Init edits no existing file. Every write it does make goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
 
-An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file"). `monti.config.ts` imports the JSON, so `tsconfig.json` needs `"resolveJsonModule": true` (`create-next-app` sets it; `monti init` says so when it is missing).
+An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file"). `monti.config.ts` imports the JSON, so `tsconfig.json` needs `"resolveJsonModule": true` (`create-next-app` sets it; `monti init` prints the line when it is missing).
 
 ### 3. Edit the collections
 
@@ -238,14 +256,14 @@ Put them in `.env.local`.
 | Name | Meaning |
 | --- | --- |
 | `DATABASE_URL` | Postgres connection URL (read by `postgres()`) |
-| `DATABASE_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing. `monti init` asks for it (`--database-schema`) and writes it to `.env.local` |
+| `DATABASE_SCHEMA` | Optional. Schema name (`public` if unset). When attaching to a DB that already has app tables, it is safer to keep it separate. `monti migrate` creates it if missing. `monti init` asks for it (`--database-schema`) and writes it as an example value in `.env.example` |
 | `MONTI_SECRET` | A random long value, for example from `openssl rand -base64 32`. The one secret: login sessions are signed with a key derived from it, and plugins' stored values (AI service keys, git-sync tokens) are encrypted under keys derived from it (`defineConfig({ secret })` takes the same value). To change it, keep the old value in `previousSecrets` ("Secrets") |
 | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/cms/auth/callback/github`. Not needed in `next dev` |
 | `MONTI_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID, or several separated by commas (read by `github()`). Not needed in `next dev` |
 | `SITE_URL` | Optional. The public URL of the site (`site.url`), different per environment; `site.url` in code or in the schema file wins |
 | `AUTH_TRUST_HOST` | Optional. `true` only when the server runs behind a proxy you run yourself (nginx, a load balancer) that overwrites `X-Forwarded-Host`; Vercel, Netlify, Cloudflare Pages and the like are detected. See "Host trust" |
 
-**SSL.** A `DATABASE_URL` with `sslmode=require` (also `prefer` or `verify-ca`) is read as `sslmode=verify-full`, which is exactly what the `pg` driver does today (the certificate is verified), so its 9-line SECURITY WARNING no longer prints on every command. A URL that sets `uselibpqcompat` or another mode (`disable`, `no-verify`, `verify-full`) is left as it is.
+**SSL.** `DATABASE_URL` is passed to the `pg` driver exactly as you wrote it. With `sslmode=require` (also `prefer` or `verify-ca`) the driver prints a 9-line SECURITY WARNING on every start: today it reads those modes as `verify-full` (encrypted, certificate checked), and a later major version will switch to the libpq meaning. `monti doctor` explains this (`database/url`) and the way to silence it: write `sslmode=verify-full` in the URL, which is what the driver does today, so the connection stays exactly as secure. Add `uselibpqcompat=true` only if you want the libpq meaning (no certificate check for `require`).
 
 Explicit option values always win over these variables, and nothing is guessed from other names. A missing required value is an error that names the variable (the environment is read when a value is first used, so building without it does not fail). There is no variable for the development login: under `next dev` it is on by itself ("Login bypass for development").
 
@@ -287,13 +305,11 @@ If `basePath` is not the default, the admin API route does not serve `/api/cms/a
 
 ### Optional dependencies
 
-Optional dependencies of the CMS packages (e.g. `mermaid` and `recharts` of the blocks extension) are installed only when you use that feature. For anything not installed, `withCms` (of `@monti-cms/nextjs/config`)
-links a stand-in module (a file of its own per package, written under `node_modules/.cache/monti/missing`) so the build does not stop, and using that feature raises an error that names the package to install (for example "The package "recharts" is not installed, and a block you use needs it").
-After installing, delete the `.next` folder and restart the dev server. A plugin lists the packages it needs in `requires` (`chart()` needs `recharts`, `mermaid()` needs `mermaid`), and `monti doctor` fails with the install command when one is missing (`config/plugin-packages`).
+Optional dependencies of the CMS packages (`mermaid` and `recharts` of the blocks extension) are installed only when you use that feature. They are separate entry points (`@monti-cms/blocks/mermaid`, `@monti-cms/blocks/chart`), so an app that does not import them never loads them. If you import `chart()` without `recharts` (or `mermaid()` without `mermaid`), the bundler stops with its "module not found" error naming the package: install it (`pnpm add recharts`) and restart the dev server.
 
 ### Manual wiring (without `monti init`)
 
-To do by hand what `monti init` does: create `monti.config.ts` (`export const cms = defineConfig({ … })`), wrap `next.config.ts` in
+To do by hand what `monti init` writes and prints: create `monti.config.ts` (`export const cms = defineConfig({ … })`), wrap `next.config.ts` in
 `withCms(nextConfig)` (`import { withCms } from "@monti-cms/nextjs/config"`; there is no alias or `tsconfig.json` `paths` entry to add, and none for tests (Vitest) either),
 add the three Next files (the admin layout and page, and the API route; each imports `cms` from `monti.config.ts`), and import the prebuilt admin stylesheet in the admin layout (`app/studio/layout.tsx`, or the layout at your admin path).
 
@@ -400,7 +416,7 @@ When something does not work, run this first (and after `monti init`, before you
 pnpm exec monti doctor
 ```
 
-It loads the app the way `monti migrate` does (the env files, then `monti.config.ts`), runs the checks of core, of the database, login and storage adapters and of every plugin, and prints each as `ok`, `warn` or `FAIL`. **Every warning and failure says what is wrong, where (a file, an environment variable or an option) and how to fix it**, in plain words. A check that cannot run because something before it is broken is `skip`. The exit code is 1 when a check fails (warnings do not change it). It changes nothing and never prints a secret.
+It loads the app the way `monti migrate` does (the env files, then `monti.config.ts`), runs the checks of core (config, schema, database, secrets, login settings, Next files, upgrade), and prints each as `ok`, `warn` or `FAIL`. **Every warning and failure says what is wrong, where (a file, an environment variable or an option) and how to fix it**, in plain words. A check that cannot run because something before it is broken is `skip`. The exit code is 1 when a check fails (warnings do not change it). It changes nothing and never prints a secret.
 
 ```text
   FAIL  database/migrations   3 of 24 migrations are pending (0022_content_hash, 0023_events, 0024_x)
@@ -411,115 +427,23 @@ It loads the app the way `monti migrate` does (the env files, then `monti.config
                               fix:   put your account id in MONTI_ADMIN_GITHUB_ID (open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id"); ...
 ```
 
-- `--json` prints `{ ok, cwd, online, summary: { ok, warn, fail, skip }, checks: [{ id, group, title, status, message, where?, fix? }] }` for tools and CI. `id` is `<group>/<check>`.
-- `--online` also runs the checks that call out over the network (the git-sync repo with its token, the S3 bucket with its keys). Without it they are `skip`.
-- `--only <list>` runs only the groups or ids named (`config`, `database`, `database/migrations`, `git-sync`). `monti doctor --only config` is the check for CI that needs no database: the config loads, and no client component imports it.
+- `--json` prints `{ ok, cwd, summary: { ok, warn, fail, skip }, checks: [{ id, group, title, status, message, where?, fix? }] }` for tools and CI. `id` is `<group>/<check>`.
+- `--only <list>` runs only the groups or ids named (`config`, `database`, `database/migrations`, `auth`). `monti doctor --only config` is the check for CI that needs no database: the config loads, and no client component imports it.
 - `--env-file <file>`, `--no-env-file`, `--config <file>` work as for `monti migrate`.
 
 What it checks, in the order it prints:
 
 | Group | Checks |
 | --- | --- |
-| `config` | the env files, that `.env.local` is in `.gitignore`, the config file is found, it loads and exports the instance, **the npm packages the plugins need are installed** (`recharts` for `chart()`, `mermaid` for `mermaid()`; the fix is the install command), and **no `"use client"` file imports it or another server-only module** (this replaces `monti check:boundary`) |
+| `config` | the env files, that `.env.local` is in `.gitignore`, the config file is found, it loads and exports the instance, **what Monti decided on its own, with where each value came from** (`config/automatic`), and **no `"use client"` file imports it or another server-only module** (this replaces `monti check:boundary`) |
 | `schema` | the schema file is valid (each problem with its JSON path), and `monti-env.d.ts` is up to date |
-| `database` | `DATABASE_URL` is set and a Postgres URL, the database is reachable (wrong host, port, password and database name are told apart), `DATABASE_SCHEMA` exists, **how many migrations are pending** (`monti migrate`) |
+| `database` | `DATABASE_URL` is set and a Postgres URL (and the `sslmode` warning of the driver explained), the database is reachable (wrong host, port, password and database name are told apart), `DATABASE_SCHEMA` exists, **how many migrations are pending** (`monti migrate`) |
 | `secrets` | `MONTI_SECRET` is set and strong enough; the old `CMS_SECRET` and `AUTH_SECRET` are still set but unused |
-| `auth` | the login methods, the GitHub client id and secret, an admin is listed (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
-| `storage` | with `s3Storage()`: the `S3_*` values are present and well formed, and (`--online`) the keys reach the bucket |
+| `auth` | only the values core knows: the GitHub client id and secret (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), an admin is listed in `MONTI_ADMIN_GITHUB_ID` (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
 | `next` | the three Next files exist at the admin path and use the right component (it points at a folder that does not match `admin.path`), `next.config` uses `withCms`, the admin address |
-| `leftovers` | what is left of the old setup, each with the exact steps: `cms.config.ts` and `cms.server.ts` and the files that import them, old options in `monti.config.ts`, old variable names (`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), an `(admin)` route folder, `admin-components.tsx` |
-| a plugin's name | the checks the plugin adds ("Checks for `monti doctor`" under "Plugins"): git-sync (targets, file format, token, webhook secret, and with `--online` the repo), the AI plugin (a connection is saved), mdx (the format and the syntax extensions load) |
+| `upgrade` | **migration only**, for sites upgrading from the pre-overhaul setup; these checks will be removed after the owner's blog migration (#93), together with the old-data compatibility (#45). What is left of the old setup, each with the exact steps: `cms.config.ts` and `cms.server.ts` and the files that import them, old options in `monti.config.ts`, old variable names (`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), an `(admin)` route folder, `admin-components.tsx` |
 
 The same wording is used by the errors the packages throw: a missing `DATABASE_URL`, `MONTI_SECRET`, GitHub id or `S3_*` value, a database that is down or not migrated, a schema file that is not valid, a format no plugin provides, a Next file that got no instance. Each says what is wrong, where, and how to fix it (`Where:` and `Fix:` mark the parts in the one line of an error message). At run time a request that hits a database that is down or not migrated is answered `503`, and the server log has the full message.
-
-## Import existing posts
-
-`monti import <path>` brings a folder of `.md` and `.mdx` posts (from Astro, Next with contentlayer, Hugo, a notes folder) into the CMS. It is a one-time move that you can also run again: it guesses where things go, asks only about what is unclear, resolves the links between the posts and their images, and writes through the same pipeline as the admin (validation and hooks run, so publishing problems show up). It is called `import`, not `migrate`, because `monti migrate` already creates the database tables.
-
-```sh
-pnpm exec monti import content/posts --dry-run   # look first: counts, field mapping, problem files; nothing is written
-pnpm exec monti import content/posts             # answer the few questions, get drafts
-pnpm exec monti import content/posts --publish   # publish the ones whose front matter is not a draft
-```
-
-**What it needs.** The format of a file comes from its extension, through the formats the config registers (`cms.formats()`, "Formats"). Add the MDX plugin (`plugins: [mdx()]` from `@monti-cms/mdx`, with `directiveSyntax()` for posts in that notation); without it the command stops and says so. A `.md` file is read with the MDX format when no format claims `.md`, so a stray `{` or `<` in a plain Markdown file is a parse error of that file (reported with its line, the other files go on). `--format <name>` reads every file with one format, and `formats` in the mapping file sets one per extension. Local images are uploaded to the media storage of the config (`storage`, for example `s3Storage()`); without one they are copied into `public/media/` (the folder the site serves, found next to the posts or above them) and the posts point to `/media/<name>`, so they show with no storage (an image that is already under `public/` keeps its address, two different images with one name get a hash in the name, and the report says what was copied). Add `storage` and import again to upload them instead. Run `monti migrate` first: the import keeps its memory in the database.
-
-**What it guesses, and when it asks.** A guess is used without asking when a name matches. Anything else is a question (numbered choices; Enter takes the default), and with `--yes` or without a terminal the answer is to leave it out.
-
-| Source | Becomes | Asks when |
-| --- | --- | --- |
-| a folder (`content/posts`) | a collection: the folder name against the collection names and labels, singular or plural (`posts` → `post`) | no collection matches (the choices are the collections, and "do not import this folder") |
-| `slug` in the front matter, else the file name (`hello.mdx`; `hello/index.mdx` is `hello`) | the address | never |
-| the file name `hello.ko.mdx`, a language folder (`ko/hello.mdx`), or `lang`/`locale`/`language` in the front matter | the language; the files of one post in several languages are paired, the default-language file is the source and the others are translations that take its address | never. A file name that ends in a language the site does not have (`hello.ko.mdx` when `ko` is not in `locales`) is skipped with a warning, in the dry run too, and never gets an address like `helloko`: add the language to `locales` in `monti.schema.json` first, and `monti init` offers the languages it finds in the file names |
-| `title` | the field with the title role | never |
-| `date`, `pubDate`, `publishDate`, `publishedAt` | the publish date of the entry (set on publish, so an old post keeps its date) | never |
-| `draft: true`, `published: false` | the entry stays a draft even with `--publish` | never |
-| `description`, `summary`, `excerpt` | the field with the `summary` role | never |
-| `tags`, `categories`, `category`, `keywords`, `series` | a relation field, by slug (a name like `Next.js` is turned into the slug `nextjs`). Missing targets are created when the mapping says `create: true` (the default for item collections such as tags) | several relation fields could match or none does; and once, whether to create missing targets |
-| any other key | the field with the same name | never: a key with no field is skipped and reported (once, when 3 or more files have it) |
-
-`monti init` shapes the starter schema from the same front matter, so these names agree: `tags` already has its `tag` collection and `tagIds` field, `category` its `category` collection and `categoryId` field. `monti import` fills the relations and creates the tag and category entries.
-
-After the questions it prints the mapping and asks once ("Use it and save it for the next run?"). A run whose saved mapping answers everything asks nothing.
-
-**The mapping file** is `monti.import.json` next to where you run the command (`--mapping <file>` picks another). It is written after the first confirmed run (never by `--dry-run`) and read by every run after it; edit it by hand to change a decision, and delete a folder's entry to have it guessed again. Keys the file does not know yet (a new front matter key) are skipped and reported, not asked about. A mapping saved with the old folder keys (relative to the scanned folder) is still read, and moved to the new keys on the next run.
-
-```json
-{
-	"version": 1,
-	"locale": { "from": ["frontMatter", "filename"] },
-	"publicDir": "public",
-	"folders": {
-		"content/posts": {
-			"collection": "post",
-			"fields": {
-				"title": "title",
-				"slug": "@slug",
-				"date": "@publishedAt",
-				"draft": "@draft",
-				"lang": "@locale",
-				"summary": "summary",
-				"tags": { "field": "tagIds", "create": true },
-				"category": { "field": "categoryId", "create": false },
-				"author": "@skip"
-			}
-		},
-		"content/pages": { "collection": null, "fields": {} }
-	}
-}
-```
-
-A folder is the first folder of a file's path under the scanned folder (a language folder and the folder of an `index` file do not count), and its key is its real path relative to the working directory: `content/posts`, and `content` for files directly in the scanned folder. The key `.` only means the working directory itself. `collection: null` leaves a folder out. A key goes to a field name, to `{ "field", "create" }` for a relation, or to `@publishedAt`, `@slug`, `@locale`, `@draft` (a true value keeps a draft), `@published` (a false value keeps a draft) or `@skip`. `locale.from` lists where the language is read from, first match wins (`frontMatter`, `filename`, `folder`; by default the ones the files use). `publicDir` is where `/images/a.png` is looked up (`public` or `static`, found next to the posts or above them). `formats` (extension → format name) is optional.
-
-**Links and images.** An internal link between imported files becomes a link by entry id, so renaming a slug later breaks nothing. Relative paths (`./other.mdx`, `../posts/other`, `other/`, a folder's `index`) and site paths (`/posts/other`, or `/blog/2024/other` of the old site, matched on the last part when only one imported post has that address, using the folders to tell two apart) are both resolved; a link to a post that is not found, or that could be two, stays as written and is reported. A `#section` or `?query` cannot be kept by an entry link and is dropped (counted in the report). Links to files that are created later in the same run are resolved in a second pass. A local image (`![](./cover.png)`, `![](/images/a.png)`, or a media field's path) is uploaded once (by its SHA-256, so two posts using one file share one media item, also across runs) and the body points to the media item. An image that is missing on disk, or of a type the media library does not accept, stays as written with a warning. HTML `<img>` in MDX is not converted.
-
-**Writing.** Every file goes through `cms.contentService()`, the one write pipeline. Pass 1 saves every file as a draft (the default-language files first, then their translations, which are made with `createTranslation` from the source), pass 2 saves again the bodies that linked to a file that had no entry yet, and pass 3 publishes with `--publish`. A publish the pipeline refuses (a required field is missing, `unparsed_body`) is not an import failure: the entry stays a draft and the file says why. `--publish` publishes only entries whose front matter is not a draft, and sets the publish date from `date`; without it everything is created as a draft and the summary says so.
-
-**Running it again.** The command remembers which file became which entry in the plugin storage of the database (`cms.storage("monti-import")`, collection `files`, keyed by the path of the file relative to where you run the command), not in a file in your repo: the memory belongs to the entries, so a second database starts fresh, a restored backup brings it back, and nothing in git can drift from the database. Each record has the entry id, a hash of the file together with the mapping it was read with, whether it was published, and the version the entry had when the import left it. A run then:
-
-- skips a file whose hash is unchanged ("unchanged since the last import"); with `--publish` it publishes a draft that was left behind, without writing again;
-- updates the same entry (never a second one) when the file or its mapping changed, keeping block ids where the blocks pair up;
-- skips a changed file whose entry was edited in the CMS since the last import ("edited in the CMS since the last import"), unless you pass `--overwrite`; the same for a trashed or archived entry;
-- creates the entry again when it was deleted from the CMS;
-- retries a file that failed, and resumes a run that stopped half way (an entry created before the stop is found again, not duplicated).
-
-Images are remembered the same way (`media` collection, by SHA-256), and tags and categories are found by slug before they are created, so nothing is created twice.
-
-| Flag | Meaning |
-| --- | --- |
-| `--dry-run` | Print counts per collection, the field mapping, what would be created, and the problem files (parse errors, unknown fields, missing required fields, links and images that do not resolve); write nothing, not even the mapping |
-| `--publish` | Publish entries whose front matter is not a draft (default: create drafts) |
-| `--collection <name>` | Send every folder to this collection |
-| `--format <name>` | Read every file with this format |
-| `--mapping <file>` | The mapping file (default `./monti.import.json`) |
-| `--yes`, `-y` | Never ask: take the guesses, leave out what is unclear |
-| `--json` | Print the report as JSON (no questions; for scripts and CI) |
-| `--overwrite` | Replace entries that were edited in the CMS since the last import |
-| `--env-file`, `--no-env-file`, `--config` | As for `monti migrate` |
-
-**The report** lists the imported, updated, skipped and failed files, each with the reason, the entries created for tags and categories, the images, the links, and a summary in plain words ("Of 12 files, imported 9 new files, skipped 2 files, 1 file failed. 8 entries are drafts. Run again with --publish ..."). The exit code is 1 when a file failed (not for a dry run), so a script can stop on it. A warning that repeats in 3 or more files is told once under "Repeated in several files" (for example `unknown field: "tags" has no field in post, so it is skipped (5 files: a.md, b.md, c.md, and 2 more)`), and translations are explained as, for example, "1 translation (en of notes) joined to its source".
-
-Not covered yet: other sources (`--from wordpress` is planned), item collections in languages other than the default one, and the origin of a file in hooks (a hook sees the entry, not the file it came from).
 
 ## The CMS instance
 
@@ -807,26 +731,6 @@ Do these steps in order:
 7. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
 8. **Check and migrate.** Run `monti doctor`: it lists what of this guide is left (the old files, the old variable names, an `(admin)` route folder, old options in the config) with the exact steps, and fails when a `"use client"` file reaches the config. Then run `monti migrate`.
 
-## Components as source
-
-`monti add <name...>` copies ready-made components from the Monti registry into your app as source you own: a public `article-body` (the stored document and a table of contents), a `blog-theme` (a paged post list and a post page for a collection, with the `article-body` it needs),
-an admin `entry-editor` screen built on `useEntryEditor` and `useField`, a block edit view for `blockViews`. Imports are rewritten to your alias (`components.json` or `@/components`), the npm packages they
-need are installed with your package manager, and a file you changed is never overwritten unless you pass `--overwrite`.
-
-```sh
-pnpm exec monti add article-body              # -> components/monti/article-body/article-body.tsx
-pnpm exec monti add entry-editor --dry-run    # show the plan, change nothing
-pnpm exec monti add blog-theme --yes          # also add the typography plugin and the render.css imports to your global CSS without asking
-pnpm exec monti add article-body --registry ./registry/r   # another registry (folder or URL)
-```
-
-`monti add` installs from the registry shipped inside the installed `@monti-cms/core` (the `registry/` folder of the package), so the components are the same version as the packages, not the moving GitHub branch; `--registry <url|path>` still reads another registry. In the monorepo checkout it reads `registry/r` first. The registry follows the shadcn registry schema and lives in `registry/` of the repository (built into `registry/r`, committed). The components use the host's Tailwind and only public entry points
-(`@monti-cms/admin/hooks`, `@monti-cms/core/render`, `@monti-cms/core/client`, `@monti-cms/core/read`, `@monti-cms/nextjs`). `examples/blog` installs `blog-theme` this way and uses it for its blog list and article pages.
-For `article-body` and `blog-theme` the command also checks your global CSS for `@tailwindcss/typography` and the `@monti-cms/core/render.css` import (and `@monti-cms/blocks/render.css` when blocks are used), shows the change as a diff and asks before making it, and prints the exact lines when you decline. `monti init` does the same when the blog theme is chosen, and also adds `suppressHydrationWarning` to the `<html>` tag of your root layout (with a diff and a question): the admin theme sets a class on `<html>` before React hydrates, which would otherwise log a hydration mismatch on the first admin screen. The admin route files `monti init` writes work with and without Next's `cacheComponents`; when `next.config` has `cacheComponents: true` the page also gets `export const instant = false` (a segment setting cannot be re-exported from a package, and Next rejects it when the option is off). `monti doctor` warns (`next/hydration`, `next/theme-styles`) when either step is missing.
-Full reference, the list of components and how to add one: [`registry/README.md`](../../registry/README.md).
-
-`blog-theme` (also `monti init --blog-theme`) reads `monti.schema.json`. It writes the pages under `app/(site)/<the collection path without /:slug>`, so the pages and the links the schema's `path` produces agree (`/blog` when there is no schema), and it sets `theme.config.ts` (`collection`, `routeBase`, the summary field `excerptField`, the tags field `topicsField`, the author field `authorField`) to the fields the schema actually has, so there are no field names to edit by hand.
-
 ## Entry points
 
 | Entry point | Used in | Contents |
@@ -851,10 +755,10 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/code-block` | public renderer, editor | The code block annotation model |
 | `@monti-cms/core/document` | screens and plugins that edit or inspect a body | The `StoredDocument` type and the helpers that work on a document without knowing its notation: block ids (`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, link, image and table helpers, the stored code block model. Nothing in it parses or writes a text notation. The admin editor and AI import from here |
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
-| `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync, `monti import`) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
+| `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti add` (install components as source), `monti migrate` (create tables), `monti import` (bring in existing MD/MDX posts, "Import existing posts"), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti migrate` (create tables), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `testServer()` (`{ server, drop }`: the `database` and `auth` options for a real instance on a schema of its own, ["Testing your hooks and plugins"](#testing-your-hooks-and-plugins)), `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
@@ -1225,31 +1129,6 @@ export const myPlugin = () =>
 - `exportBodyText(cms, { format, doc, locale, scope? })` of `@monti-cms/core/plugin/server` writes a stored document as text in a format of the instance for importing again (`purpose: "sync"`, links as the real path of their target), as the admin export does. For a plugin that keeps bodies somewhere else.
 - A plugin's route gets the instance that serves it, so plugin code reads its storage (`cms.storage("<plugin name>")`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(storage, cms)` receive the instance too.
 
-### Checks for `monti doctor`
-
-A server plugin adds checks with `checks` (the database, login and media adapters have the same field). A check has an `id`, a `title`, an optional `online: true` for one that makes a network call (it runs only with `--online`) and `run(context)`, which returns what it found: `ok(message)`, `warn(message, { where, fix })`, `fail(message, { where, fix })` or `skip(message)` (helpers of `@monti-cms/core`). The context has the instance (`cms`: the plugin's storage, secrets, the site), the folder (`cwd`), the environment (`env`) and `online`. The checks are listed under the plugin's name (`git-sync/token`). A check that throws is a failure with the error's message; one that runs longer than 30 seconds is too.
-
-```ts
-import { type CmsServerPlugin, fail, ok, warn } from "@monti-cms/core";
-
-const server: CmsServerPlugin = {
-	checks: [
-		{
-			id: "token",
-			title: "Token",
-			run: async ({ cms }) =>
-				(await hasToken(cms))
-					? ok("a token is saved")
-					: warn("no token is saved", { where: "the Demo screen (/admin/demo)", fix: "paste a token there" }),
-		},
-		{ id: "reachable", title: "Service reachable", online: true, run: async () => (await ping()) ? ok("reachable") : fail("the service does not answer", { fix: "check its status page" }) },
-	],
-};
-export default server;
-```
-
-Write `where` and `fix` as you would tell a person: the file, variable or screen, and the next step with the exact value or command. The errors the plugin throws should say the same (`problemText({ what, where, fix })` of `@monti-cms/core` writes the one-line form).
-
 ### Secrets
 
 There is one secret, `MONTI_SECRET` (or `defineConfig({ secret })`; it replaces `AUTH_SECRET` and `CMS_SECRET`, which are not read any more). Nothing receives the secret itself, only keys derived from it with HKDF-SHA256:
@@ -1305,7 +1184,6 @@ The server options are part of the one `defineConfig({ … })` call, next to the
 |---|---|
 | `database` | Required. Content store. `postgres()` reads `DATABASE_URL` and `DATABASE_SCHEMA`; `postgres({ connectionString, schema })` sets them in code |
 | `auth` | Required. Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). `host` is an explicit override for use outside a Next integration (it wins over the host that `cms.attachHost` attached); in a Next.js app leave it out. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
-| `storage` | Optional. Store for images and attachments: an adapter from any package, for example `s3Storage` (AWS S3, Cloudflare R2, MinIO) from `@monti-cms/storage-s3`, or a connection implementing the `MediaStore` contract (`MediaAdapter`). Without it, media features are unavailable and the admin hides the media menu. |
 | `secret` | Optional. The one secret. If unset, the `MONTI_SECRET` environment variable. Login sessions and plugins' encrypted values (AI service keys, git-sync tokens) get keys derived from it; nothing receives the secret itself ("Secrets"). |
 | `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else on when a known proxy platform is detected or in development, else off |
@@ -1466,7 +1344,7 @@ it("refuses a bad slug", async () => {
 });
 ```
 
-`cms.handle(new Request(url))` runs a route of a plugin with the same checks as the admin, `cms.events.retry({ all: true })` delivers the `afterCommit` events that are waiting, and `runDoctorCommand` of `@monti-cms/core/cli` runs `monti doctor` on a folder. `fakeCms({ store, … })` is the lighter choice for code that only needs an instance over a few parts. A screen of a plugin is tested in a browser-like environment: build the site with `createSite(defineSite({ schema, plugins }))` (`defineConfig` is server-only and refuses to run where `window` exists) and wrap the screen in `<SiteProvider site={site}>`. The recipes show each of these end to end.
+`cms.handle(new Request(url))` runs a route of a plugin with the same checks as the admin, `cms.events.retry({ all: true })` delivers the `afterCommit` events that are waiting, and `runDoctorCommand` of `@monti-cms/core/cli` runs `monti doctor` on a folder. `fakeCms({ store, … })` is the lighter choice for code that only needs an instance over a few parts. A screen of a plugin is tested in a browser-like environment: build the site with `createSite(defineSite({ schema, plugins }))` (`defineConfig` is server-only and refuses to run where `window` exists) and wrap the screen in `<SiteProvider site={site}>`. The [recipes](../../docs/recipes/README.md) sketch some of these.
 
 ## The schema file
 
@@ -1766,7 +1644,7 @@ title with " (copy)" appended). Without it, the title is the original's as is. T
 
 ## Recipes
 
-Small, working, tested examples of the extension surfaces, each written from these docs alone and kept in [`examples/recipes`](../../examples/recipes) with a page in [`docs/recipes`](../../docs/recipes/README.md): a Slack message on publish, your own block (definition, editor view, public component, check), a custom admin field screen, a slug rule before save, a custom format, typed reads on the public site, an admin page of a plugin, and a `monti doctor` check from a plugin. The page of each lists the concepts it needs and the code, and the test beside the code runs it end to end.
+Short pages on the extension surfaces, each with a small illustrative sketch (not tested code), in [`docs/recipes`](../../docs/recipes/README.md): a Slack message on publish, your own block (definition, editor view, public component, check), a custom admin field screen, a slug rule before save, a custom format, typed reads on the public site, an admin page of a plugin, and a strict 404/308 proxy. Each page lists the concepts it needs and shows the sketch.
 
 ## Remaining work
 

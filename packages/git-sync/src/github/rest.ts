@@ -166,30 +166,6 @@ export function createGitHubClient(options: GitHubClientOptions, fetchImpl: Fetc
 			return { number: created.number, url: created.html_url, nodeId: created.node_id };
 		},
 
-		async updatePullRequest(pullRequest, { title, body }) {
-			await call("PATCH", `/pulls/${pullRequest.number}`, { title, body });
-		},
-
-		async closePullRequest(pullRequest) {
-			await call("PATCH", `/pulls/${pullRequest.number}`, { state: "closed" });
-		},
-
-		async mergePullRequest(pullRequest, { title }) {
-			const merged = await call<{ sha?: string }>("PUT", `/pulls/${pullRequest.number}/merge`, {
-				merge_method: "squash",
-				commit_title: title,
-			});
-			return { sha: merged.sha ?? null };
-		},
-
-		async deleteBranch(branch) {
-			// A deleted ref answers 204 with no body, so it is not read as JSON.
-			const response = await send(`${repoUrl}/git/refs/heads/${encodeRef(branch)}`, { method: "DELETE" });
-			if (response.status === 404 || response.status === 422) return false;
-			if (!response.ok) throw await failure(response);
-			return true;
-		},
-
 		async enableAutoMerge(pullRequest: PullRequestRef) {
 			if (!pullRequest.nodeId)
 				throw new GitHubApiError("The pull request has no GraphQL id, so auto-merge cannot be enabled", 0);

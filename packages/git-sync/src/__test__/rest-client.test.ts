@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { blobSha } from "../github/blob-sha";
-import { GitHubApiError, isMergeBlocked } from "../github/client";
+import { GitHubApiError } from "../github/client";
 import { createGitHubClient, type FetchLike } from "../github/rest";
 import { webhookSignature } from "../testing";
 import { verifySignature } from "../webhook";
@@ -137,51 +137,6 @@ describe("the GitHub REST client", () => {
 		await github.enableAutoMerge(opened);
 		const graphql = requests.find((request) => request.url.endsWith("/graphql"));
 		expect(graphql?.body).toMatchObject({ variables: { id: "PR_8", method: "MERGE" } });
-	});
-
-	it("updates, closes and squash-merges a pull request, and deletes a branch", async () => {
-		const { github, requests } = client({
-			"PATCH /repos/acme/site/pulls/8": { number: 8 },
-			"PUT /repos/acme/site/pulls/8/merge": { sha: "m1", merged: true },
-			"DELETE /repos/acme/site/git/refs/heads/monti/draft/hello": { status: 204 },
-		});
-		const pr = { number: 8, url: "https://github.com/acme/site/pull/8", nodeId: "PR_8" };
-		await github.updatePullRequest(pr, { title: "New title", body: "New body" });
-		await github.closePullRequest(pr);
-		expect(await github.mergePullRequest(pr, { title: "Publish: Hello" })).toEqual({ sha: "m1" });
-		expect(await github.deleteBranch("monti/draft/hello")).toBe(true);
-		expect(await github.deleteBranch("monti/draft/missing")).toBe(false);
-		expect(requests.map((request) => [request.method, request.body])).toEqual([
-			["PATCH", { title: "New title", body: "New body" }],
-			["PATCH", { state: "closed" }],
-			["PUT", { merge_method: "squash", commit_title: "Publish: Hello" }],
-			["DELETE", undefined],
-			["DELETE", undefined],
-		]);
-	});
-
-	it("tells a merge that is blocked now (checks, protection, a conflict) from a broken setup", async () => {
-		const { github } = client({
-			"PUT /repos/acme/site/pulls/1/merge": { status: 405, body: { message: "Pull Request is not mergeable" } },
-			"PUT /repos/acme/site/pulls/2/merge": { status: 409, body: { message: "Head branch was modified" } },
-			"PUT /repos/acme/site/pulls/3/merge": {
-				status: 403,
-				body: { message: "Resource not accessible by personal access token" },
-			},
-		});
-		const pr = (number: number) => ({ number, url: `https://github.com/acme/site/pull/${number}` });
-		const failure = async (number: number) => {
-			try {
-				await github.mergePullRequest(pr(number), { title: "T" });
-			} catch (error) {
-				return error;
-			}
-			return undefined;
-		};
-		expect(isMergeBlocked(await failure(1))).toBe(true);
-		expect(isMergeBlocked(await failure(2))).toBe(true);
-		expect(isMergeBlocked(await failure(3))).toBe(false);
-		expect(isMergeBlocked(new Error("nope"))).toBe(false);
 	});
 
 	it("turns a GraphQL refusal of auto-merge into an error", async () => {

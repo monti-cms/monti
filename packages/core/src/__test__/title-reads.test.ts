@@ -56,7 +56,6 @@ describe("the title key", () => {
 		expect(names).toContain("core/src/adapters/postgres/store/list.ts");
 		expect(names).toContain("admin/src/screens/entries/entry-form.ts");
 		expect(names).toContain("seo/src/read.ts");
-		expect(names).toContain("git-sync/src/drafts.ts");
 		expect(hardCodedIn(files, PACKAGES)).toEqual([]);
 	});
 

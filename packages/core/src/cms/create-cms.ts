@@ -1,7 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
-import { resolveTrustHost } from "../adapters/auth/trust-host";
+import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host";
 import { findSchemaFile } from "../cli/schema-types";
 import { problemText } from "../core/problem";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
@@ -15,6 +15,7 @@ import { type CmsRead, createRead } from "../read";
 import { readSchemaFile } from "../schema-file/read";
 import { schemaSourceOf } from "../schema-file/source";
 import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
+import type { Decision } from "../server/decision";
 import type { CmsAuth, CmsServerConfig, DatabaseAdapter, RequestHost } from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
@@ -22,6 +23,7 @@ import { type CmsEvents, createEventDispatcher } from "../services/events";
 import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
+import { coreDecisions } from "./decisions";
 
 /** The content service of any site: input is checked at run time only. */
 type LooseContentService = ReturnType<typeof createContentService<Entry>>;
@@ -80,6 +82,8 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	 * the working directory.
 	 */
 	readonly schemaFile?: string;
+	/** Where the public site URL came from, for `monti doctor` (`defineConfig` knows: the config, the schema file or `SITE_URL`). */
+	readonly siteUrlSource?: string;
 }
 
 /** What {@link Cms.reloadSchema} did. */
@@ -196,6 +200,11 @@ export interface Cms<
 	 * leaves the instance as it was and says why. In production it does nothing: a production server runs the schema it was built with.
 	 */
 	reloadSchema(): SchemaReload;
+	/**
+	 * What this instance decided on its own and why: the database and schema (and which environment variable they came from), the login, whether the development
+	 * bypass is on, whether the host is trusted, the site URL, the schema file and hot reload. `monti doctor` prints these.
+	 */
+	decisions(env?: Readonly<Record<string, string | undefined>>): readonly Decision[];
 }
 
 /**
@@ -311,7 +320,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					problemText({
 						what: "Media storage is not configured, so there is nowhere to keep uploads",
 						where: "`storage` in monti.config.ts",
-						fix: "add a storage adapter, for example `storage: s3Storage()` (@monti-cms/storage-s3, which reads the S3_* values); `monti doctor` checks them",
+						fix: "add a storage adapter, for example `storage: s3Storage()` (@monti-cms/storage-s3, which reads the S3_* values)",
 					}),
 					"media_not_configured",
 				);
@@ -416,6 +425,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			schemaFile,
 			forSchema: (other) => cms.forSchema(other),
 			reloadSchema: () => ({ reloaded: false, reason: "detached" }),
+			decisions: (env) => cms.decisions(env),
 		};
 		return detached;
 	};
@@ -467,18 +477,38 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		else if (seen !== undefined && seen !== stamp) reloadSchema();
 	};
 
+	const decisions = (env: Readonly<Record<string, string | undefined>> = process.env): readonly Decision[] => {
+		const file = schemaFile();
+		return [
+			...(server.database.decisions?.(env) ?? []),
+			...(server.auth.decisions?.(env) ?? []),
+			...coreDecisions({
+				env,
+				trust: explainTrustHost(server.trustHost, env),
+				siteUrl: current.site.config.site?.url,
+				siteUrlSource: options.siteUrlSource,
+				schemaFile: file ? path.relative(process.cwd(), file) || file : undefined,
+				schemaFileGiven: Boolean(options.schemaFile ?? source?.file),
+				hotReload: env.NODE_ENV === "development" && Boolean(source && file),
+			}),
+		];
+	};
+
 	const { site: _first, ...rest } = current;
-	const cms: Cms<Config> = Object.defineProperties({ ...rest, schemaFile, forSchema, reloadSchema } as Cms<Config>, {
-		site: {
-			enumerable: true,
-			get: () => {
-				refresh();
-				return current.site;
+	const cms: Cms<Config> = Object.defineProperties(
+		{ ...rest, schemaFile, forSchema, reloadSchema, decisions } as Cms<Config>,
+		{
+			site: {
+				enumerable: true,
+				get: () => {
+					refresh();
+					return current.site;
+				},
 			},
 		},
-	});
+	);
 	return cms;
 }
 
 /** The members of an instance that are not rebuilt with the site. */
-type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema";
+type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema" | "decisions";

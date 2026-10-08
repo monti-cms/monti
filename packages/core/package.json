@@ -27,7 +27,6 @@
 		"./schema-change": "./src/schema-change/index.ts",
 		"./schema-edit": "./src/schema-edit/index.ts",
 		"./schema.json": "./schema.json",
-		"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 		"./render.css": "./render.css"
 	},
 	"bin": {
@@ -38,7 +37,7 @@
 		"test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
 		"test:other-site": "vitest run -c vitest.othersite.config.ts",
 		"typecheck": "tsc --noEmit -p .",
-		"build": "node ../../scripts/build-package.mjs && node ../../scripts/copy-registry.mjs",
+		"build": "node ../../scripts/build-package.mjs",
 		"schema:build": "tsx scripts/write-json-schema.ts"
 	},
 	"dependencies": {
@@ -78,8 +77,6 @@
 	"files": [
 		"bin",
 		"dist",
-		"registry",
-		"stubs",
 		"README.md",
 		"render.css",
 		"schema.json"
@@ -167,7 +164,6 @@
 				"default": "./dist/schema-edit/index.js"
 			},
 			"./schema.json": "./schema.json",
-			"./stubs/missing-optional": "./stubs/missing-optional.cjs",
 			"./render.css": "./render.css"
 		}
 	},

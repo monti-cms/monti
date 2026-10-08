@@ -1,6 +1,5 @@
 import { type Entry, problemText } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, type FileToApply, readEntry, recordOf } from "./apply";
-import { applyMergedDraft } from "./draft-inbound";
 import { exportEntry, isSyncable, parseEntryFile, sameContent } from "./entry-file";
 import type { ResolvedTarget } from "./options";
 import { enqueue, flushTarget, isKnownBlob } from "./outbound";
@@ -8,7 +7,7 @@ import type { ConflictReason, ConflictRecord, PullSummary, SyncRecord } from "./
 import { entryKey } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
 
-// What a file is applied with lives in `apply.ts` (the draft code shares it); these are re-exported for the callers that always had them here.
+// What a file is applied with lives in `apply.ts` ; these are re-exported for the callers that always had them here.
 export { type Applied, applyFile, describeError, type FileToApply, recordOf } from "./apply";
 
 /**
@@ -58,13 +57,8 @@ export async function pullTarget(ctx: SyncContext, target: ResolvedTarget): Prom
 			);
 		const files = await client.listFiles(head, target.folder);
 		const records = await ctx.state.records.list(target.id);
-		const drafts = target.drafts ? await ctx.state.drafts.list(target.id) : new Map();
 		const byPath = new Map([...records.values()].map((record) => [record.path, record]));
-		const open = new Map(
-			(await ctx.state.conflicts.list(target.id))
-				.filter((conflict) => conflict.scope !== "draft")
-				.map((conflict) => [conflict.entryId, conflict]),
-		);
+		const open = new Map((await ctx.state.conflicts.list(target.id)).map((conflict) => [conflict.entryId, conflict]));
 		const created = new Map<string, string>();
 		const skipped: { path: string; reason: string }[] = [];
 		const errors: { path: string; message: string }[] = [];
@@ -152,16 +146,6 @@ export async function pullTarget(ctx: SyncContext, target: ResolvedTarget): Prom
 						record = own;
 					}
 					record ??= own;
-				}
-
-				// The file is what an entry's draft branch has: its draft pull request was merged on GitHub, which publishes the entry.
-				const draft = entry ? drafts.get(entry.id) : undefined;
-				if (draft && draft.path === path && draft.blobSha === sha) {
-					const merged = await applyMergedDraft(ctx, target, client, draft, sha);
-					if (merged === "applied") applied += 1;
-					else if (merged === "conflict") conflicts += 1;
-					else unchanged += 1;
-					continue;
 				}
 
 				const found = { path, sha, file, collection, locale, slug };

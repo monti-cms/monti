@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { connection } from "next/server";
-import { ArticleBody } from "@/components/monti/article-body/article-body";
-import { PostMeta } from "@/components/monti/blog-theme/post-meta";
+import { ArticleBody } from "@/components/article-body";
+import { PostMeta } from "@/components/post-meta";
 import { cms } from "@/monti.config";
 
 // The page waits for the request before anything is sent; with cacheComponents that needs instant = false.
@@ -21,7 +21,7 @@ async function readMemo({ params }: Props) {
 	return result.entry;
 }
 
-/** The memo is read on each request, before anything is sent: a missing memo is a real 404, an old address a real 308. With cacheComponents that needs `instant = false`. */
+/** The memo is read on each request. `notFound()` and `permanentRedirect()` give a real 404 and 308 when cacheComponents is off (see the post page for the trade-off). */
 export default async function MemoPage(props: Props) {
 	await connection();
 	const entry = await readMemo(props);

@@ -36,6 +36,21 @@ export function detectProxyPlatform(env: Env = process.env): string | undefined 
  * `localhost`), else off. Off means a client-supplied `X-Forwarded-Host` is ignored, so a server behind a proxy that is not detected must say it.
  */
 export function resolveTrustHost(configured: boolean | undefined, env: Env = process.env): boolean {
-	if (configured !== undefined) return configured;
-	return parseFlag(env.AUTH_TRUST_HOST) ?? (detectProxyPlatform(env) !== undefined || env.NODE_ENV !== "production");
+	return explainTrustHost(configured, env).trusted;
+}
+
+/** {@link resolveTrustHost} with the reason for the answer, for `monti doctor`. */
+export function explainTrustHost(
+	configured: boolean | undefined,
+	env: Env = process.env,
+): { readonly trusted: boolean; readonly source: string } {
+	if (configured !== undefined) return { trusted: configured, source: "set in monti.config.ts (trustHost)" };
+	const fromEnv = parseFlag(env.AUTH_TRUST_HOST);
+	if (fromEnv !== undefined) return { trusted: fromEnv, source: "from env AUTH_TRUST_HOST" };
+	const platform = detectProxyPlatform(env);
+	if (platform !== undefined) return { trusted: true, source: `auto-detected (hosting platform: ${platform} is set)` };
+	if (env.NODE_ENV !== "production") {
+		return { trusted: true, source: `auto-detected (NODE_ENV is "${env.NODE_ENV ?? ""}", not production)` };
+	}
+	return { trusted: false, source: "auto-detected (production, and no known hosting platform variable is set)" };
 }
