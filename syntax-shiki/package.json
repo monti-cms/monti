@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/syntax-shiki",
-  "version": "0.2.0-next.0",
+  "version": "0.2.0-next.1",
   "private": true,
   "description": "Shiki code notation for @monti-cms/mdx: reads [!code ++], [!code highlight] and friends in code fences on import (read only)",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "unist-util-visit": "^5.0.0"
   },
   "peerDependencies": {
-    "@monti-cms/mdx": "^0.2.0-next.0"
+    "@monti-cms/mdx": "^0.2.0-next.1"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -32,8 +32,8 @@
     "unified": "^11.0.5",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.2.0-next.0",
-    "@monti-cms/mdx": "0.2.0-next.0"
+    "@monti-cms/core": "0.2.0-next.1",
+    "@monti-cms/mdx": "0.2.0-next.1"
   },
   "files": [
     "dist",

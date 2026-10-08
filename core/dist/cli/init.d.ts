@@ -91,6 +91,11 @@ export declare class ProjectWriter {
 }
 /** The real host: spawns the package manager. */
 export declare const defaultInitHost: InitHost;
+/**
+ * The install specs of the Monti packages: while Monti is not on npm, `@monti-cms/core` is a GitHub address with `path:/core`, and each sibling is that address with its own folder.
+ * With any other spec (or none) the names stay bare. Packages that are not Monti's stay bare.
+ */
+export declare function installSpecs(packages: readonly string[], coreSpec: string | undefined): string[];
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export declare function initProject(options: InitOptions): Promise<InitReport>;
 /** The plain summary: what was done, then what is left, numbered. */

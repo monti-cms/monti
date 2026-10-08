@@ -50,6 +50,8 @@ export interface DetectedApp {
     readonly nextConfig?: string;
     /** The port `next dev` is set to listen on, from the `dev` script. */
     readonly devPort: number;
+    /** The spec package.json gives `@monti-cms/core` (a version range, or a GitHub address while Monti is not on npm), if it lists it. */
+    readonly coreSpec?: string;
     /** Whether the package.json already lists these packages. */
     readonly dependencies: ReadonlySet<string>;
     /** Config files of an earlier Monti setup, which `init` leaves alone. */

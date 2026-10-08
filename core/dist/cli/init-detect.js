@@ -219,6 +219,7 @@ export function detectApp(cwd) {
         contentFolders: findContentFolders(cwd),
         nextConfig: NEXT_CONFIG_FILES.find(exists),
         devPort: port ? Number(port) : 3000,
+        coreSpec: pkg.dependencies?.["@monti-cms/core"] ?? pkg.devDependencies?.["@monti-cms/core"],
         dependencies,
         legacyConfig: configRoots
             .flatMap((root) => ["cms.config.ts", "cms.server.ts"].map((file) => `${root}${file}`))
