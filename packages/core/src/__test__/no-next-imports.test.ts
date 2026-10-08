@@ -30,7 +30,11 @@ function importsOf(source: string): string[] {
 }
 
 /** Files of the `monti init` scaffolding: the Next code they hold is text written into the site, so their import lines are strings, not imports of the core. */
-const GENERATED_CODE = new Set([path.join(SRC, "cli", "templates.ts"), path.join(SRC, "cli", "init.ts")]);
+const GENERATED_CODE = new Set([
+	path.join(SRC, "cli", "templates.ts"),
+	path.join(SRC, "cli", "init.ts"),
+	path.join(SRC, "cli", "proxy-template.ts"),
+]);
 
 /** The source files (tests and test fixtures left out) under `dir`. */
 function sourcesUnder(dir: string): string[] {

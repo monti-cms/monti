@@ -9,9 +9,11 @@ import { addComponents, type InstallCommand } from "./add";
 import { unifiedDiff } from "./diff";
 import { addSuppressHydrationWarning, findRootLayout, hasSuppressHydrationWarning } from "./first-run";
 import { detectApp, type PackageManager } from "./init-detect";
-import { addEnvToGitignore, addResolveJsonModule } from "./init-edits";
-import { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
+import { addEnvToGitignore, addResolveJsonModule, addStateToGitignore, allowEsbuildBuild } from "./init-edits";
+import { collectAnswers, detectedLocales, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
+import { clearInitState, readInitState, STEP_ORDER, type StepId, type StepState, writeInitState } from "./init-state";
 import { migrate } from "./migrate";
+import { INIT_PROXY_TEMPLATE, PROXY_FILES } from "./proxy-template";
 import { SCHEMA_TYPES_FILE, schemaTypesText } from "./schema-types";
 import {
 	adminLayoutTemplate,
@@ -54,6 +56,8 @@ export interface InitHost {
 	install(command: InstallCommand): void | Promise<void>;
 	/** `monti migrate` for the app. */
 	migrate(cwd: string): Promise<boolean>;
+	/** The version of pnpm the app would use (`pnpm --version`), or `undefined` when it cannot be run. */
+	pnpmVersion(cwd: string): string | undefined;
 }
 
 export interface InitOptions extends InitAnswerFlags {
@@ -71,6 +75,8 @@ export interface InitOptions extends InitAnswerFlags {
 	readonly migrate?: boolean;
 	/** `false` (`--no-docker-start`): write docker-compose.yml but do not start it. */
 	readonly dockerStart?: boolean;
+	/** `--resume`: do not ask or write files; run again only the steps the last run did not complete (from `.monti/init.json`). */
+	readonly resume?: boolean;
 	/** Override the detected package manager. */
 	readonly packageManager?: PackageManager;
 	/** Progress lines while the work runs. */
@@ -81,9 +87,12 @@ export interface InitOptions extends InitAnswerFlags {
 }
 
 export interface InitStep {
+	readonly id?: StepId;
 	readonly name: string;
 	readonly status: "done" | "skipped" | "failed" | "planned";
 	readonly detail?: string;
+	/** The step did not complete and `monti init --resume` runs it again (it failed, or something it needs is not there yet). */
+	readonly retry?: boolean;
 }
 
 export interface InitReport {
@@ -118,6 +127,12 @@ export interface InitReport {
 	readonly notes: string[];
 	/** What is left to do, in order, with exact values. */
 	readonly next: string[];
+	/** When a step failed: the exact commands that finish the job, in the order to run them. Empty otherwise. */
+	recovery: string[];
+	/** The command that runs only the steps that did not finish (the progress is saved), when a step failed. */
+	resumeCommand?: string;
+	/** The report is of a `--resume` run. */
+	readonly resumed?: boolean;
 }
 
 /** An error after files were already written. `written` lists them, so the message can say what is on disk. */
@@ -235,6 +250,10 @@ export const defaultInitHost: InitHost = {
 		}
 	},
 	migrate: (cwd) => migrate({ cwd, log: () => undefined }),
+	pnpmVersion: (cwd) => {
+		const result = spawnSync("pnpm", ["--version"], { cwd, encoding: "utf8", timeout: 15000 });
+		return result.error || result.status !== 0 ? undefined : result.stdout.trim() || undefined;
+	},
 };
 
 /** The package manager's command for `monti <args>` and for a package script. */
@@ -294,6 +313,7 @@ function mergeWithCms(text: string): string | undefined {
 
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export async function initProject(options: InitOptions): Promise<InitReport> {
+	if (options.resume) return resumeInit(options);
 	const { cwd } = options;
 	const host: InitHost = { ...defaultInitHost, ...options.host };
 	const log = options.log ?? (() => undefined);
@@ -328,13 +348,15 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		[
 			detectedLine,
 			...app.contentFolders.map(
-				(folder) => `Found ${folder.files} Markdown/MDX file${folder.files === 1 ? "" : "s"} in ${folder.dir}/`,
+				(folder) =>
+					`Found ${folder.files} Markdown/MDX file${folder.files === 1 ? "" : "s"} in ${folder.dir}/${folder.locales ? ` (${folder.locales.map((locale) => locale.code).join(", ")})` : ""}`,
 			),
 		].join("\n"),
 		"Detected",
 	);
 
 	const answers = await collectAnswers(app, options, prompter);
+	const foundLocales = detectedLocales(app);
 
 	// Which database URL goes to .env.local, and the docker port.
 	const docker = answers.database.kind === "docker";
@@ -381,7 +403,17 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		diffs: [],
 		notes: [],
 		next: [],
+		recovery: [],
 	};
+
+	if (foundLocales) {
+		const where = foundLocales.from === "filename" ? "the file names" : "the folders";
+		report.notes.push(
+			options.locales === undefined && answers.locales.join(",") === foundLocales.codes.join(",")
+				? `The site languages are ${answers.locales.join(", ")}, found in ${where} of ${foundLocales.dir}/. ${answers.locales[0]} is the default${foundLocales.codes.length > 1 ? " (its files have no pair)" : ""}; change "defaultLocale" and "locales" in the schema file if that is wrong.`
+				: `${foundLocales.codes.join(", ")} found in ${where} of ${foundLocales.dir}/, but the site languages are ${answers.locales.join(", ")}. Files in a language the site does not have are skipped by \`monti import\` (with a warning).`,
+		);
+	}
 
 	// Next's `cacheComponents` (on by default in the apps `create-next-app` 16.4 makes) validates every page for instant navigation in development; the admin opts out.
 	const usesCacheComponents =
@@ -424,6 +456,16 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		report.notes.push(
 			`${app.existingConfig} already exists, so it was kept and no schema file was written. Add the plugins you want to it by hand; each one is one line (see .env.example for the values).`,
 		);
+	}
+	// Under Cache Components a page cannot send a 503 for a site whose login is not set up, a proxy can. The blog theme brings a proxy that does it too.
+	const proxyFile = `${root}proxy.ts`;
+	const ownProxy = PROXY_FILES.map((name) => `${root}${name}`).find((file) => writer.exists(file));
+	if (ownProxy) {
+		report.notes.push(
+			`${ownProxy} already exists and was left alone. To get a 503 page instead of a 200 with a logged error when the login settings are missing in production, call \`setupResponse(request, cms)\` (from "@monti-cms/nextjs/proxy") at the top of it and return what it gives when that is not undefined.`,
+		);
+	} else if (!answers.blogTheme) {
+		planned.push({ file: proxyFile, content: INIT_PROXY_TEMPLATE });
 	}
 	planned.push(
 		{ file: pageFile, content: adminPageTemplate(configImport(pageFile), { instant: usesCacheComponents }) },
@@ -537,6 +579,20 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		gitignoreManual = !(await propose(".gitignore", before, after, "Add .env.local to .gitignore?", !exists));
 	}
 
+	// pnpm 12 stops an install until the packages that have an install script are allowed or denied (esbuild is one).
+	const pnpmBuilds = planPnpmBuilds(cwd, manager, host, writer);
+	let pnpmBuildsManual = pnpmBuilds.kind === "manual" ? pnpmBuilds.reason : undefined;
+	if (pnpmBuilds.kind === "edit") {
+		const accepted = await propose(
+			pnpmBuilds.file,
+			pnpmBuilds.before,
+			pnpmBuilds.after,
+			`Let pnpm run esbuild's install script (allowBuilds in ${pnpmBuilds.file}; pnpm ${pnpmBuilds.version} asks for it)?`,
+			pnpmBuilds.isNew,
+		);
+		if (!accepted) pnpmBuildsManual = PNPM_BUILDS_HELP;
+	}
+
 	// The admin's theme provider puts its theme class on `<html>` before React hydrates, so the root layout must tell React to expect it.
 	let hydrationManual: string | undefined;
 	const rootLayout = findRootLayout(cwd);
@@ -561,12 +617,9 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	// What gets installed.
 	const missing = packagesFor(answers).filter((name) => !app.dependencies.has(name));
 	const installing = options.install !== false;
+	const typography = answers.blogTheme && !app.tailwind.typography;
 
 	// ---- Apply ----
-	const failed = (message: string, step: string): void => {
-		report.ok = false;
-		report.steps.push({ name: step, status: "failed", detail: message });
-	};
 	try {
 		for (const entry of writes) {
 			if (!dryRun) writer.write(entry.file, entry.content);
@@ -591,138 +644,37 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	report.skipped = [...new Set(report.skipped)];
 	if (!dryRun) log(`Wrote ${writer.written.length} file${writer.written.length === 1 ? "" : "s"}`);
 
-	// Docker database
-	let databaseReady = false;
-	if (docker) {
-		if (options.dockerStart === false) {
-			report.steps.push({ name: "Start Postgres in Docker", status: "skipped", detail: "--no-docker-start" });
-		} else if (dryRun) {
-			report.steps.push({ name: "Start Postgres in Docker", status: "planned", detail: "docker compose up -d" });
-		} else if (!host.dockerAvailable()) {
-			report.steps.push({
-				name: "Start Postgres in Docker",
-				status: "skipped",
-				detail: "Docker is not running or not installed",
-			});
-		} else {
-			log("Starting Postgres with docker compose ...");
-			if (host.run("docker", ["compose", "up", "-d"], cwd)) {
-				report.steps.push({ name: "Start Postgres in Docker", status: "done", detail: `localhost:${dockerPort}` });
-				databaseReady = true;
-			} else failed("`docker compose up -d` failed", "Start Postgres in Docker");
-		}
-	}
-
-	// Packages
-	let installed = false;
-	report.installed = missing;
-	if (missing.length > 0 || answers.blogTheme) {
-		if (!installing) report.steps.push({ name: "Install packages", status: "skipped", detail: "--no-install" });
-		else if (dryRun)
-			report.steps.push({
-				name: "Install packages",
-				status: "planned",
-				detail: commandText(addCommand(manager, missing, cwd)),
-			});
-		else if (missing.length > 0) {
-			const command = addCommand(manager, missing, cwd);
-			log(`Installing ${missing.length} packages with ${manager} ...`);
-			try {
-				await host.install(command);
-				installed = true;
-				report.steps.push({
-					name: "Install packages",
-					status: "done",
-					detail: `${missing.length} packages with ${manager}`,
-				});
-			} catch (error) {
-				failed(error instanceof Error ? error.message : String(error), "Install packages");
-			}
-		} else installed = true;
-	} else installed = true;
-	if (missing.length === 0) report.installed = [];
-
-	// Migrate
+	// Docker, packages, tables, theme: each one a step that is recorded, so a failure is named and `--resume` runs only what did not finish.
 	const envNow = envKeys(envLocalAfter ?? envLocalText ?? "");
-	const envValues = parseEnvSafe(envLocalText ?? "");
 	const hasDatabaseUrl =
 		databaseUrl !== undefined || envNow.has("DATABASE_URL") || Boolean((options.env ?? process.env).DATABASE_URL);
-	let migrated = false;
-	if (dryRun)
-		report.steps.push({
-			name: "Run monti migrate",
-			status: "planned",
-			detail: hasDatabaseUrl ? undefined : "needs DATABASE_URL",
-		});
-	else if (options.migrate === false || !installing) {
-		report.steps.push({
-			name: "Run monti migrate",
-			status: "skipped",
-			detail: options.migrate === false ? "--no-migrate" : "packages not installed",
-		});
-	} else if (!installed) {
-		report.steps.push({ name: "Run monti migrate", status: "skipped", detail: "packages are not installed" });
-	} else if (!hasDatabaseUrl) {
-		report.steps.push({ name: "Run monti migrate", status: "skipped", detail: "DATABASE_URL is not set" });
-	} else {
-		const url = databaseUrl ?? envValues.DATABASE_URL ?? (options.env ?? process.env).DATABASE_URL;
-		const reachable = url ? await host.databaseReachable(url, databaseReady ? 30000 : 0) : false;
-		if (!reachable) {
-			report.steps.push({ name: "Run monti migrate", status: "skipped", detail: "the database is not reachable yet" });
-		} else {
-			log("Running monti migrate ...");
-			try {
-				migrated = await host.migrate(cwd);
-			} catch (error) {
-				failed(error instanceof Error ? error.message : String(error), "Run monti migrate");
-			}
-			if (migrated) report.steps.push({ name: "Run monti migrate", status: "done", detail: "tables created" });
-			else if (!report.steps.some((step) => step.name === "Run monti migrate"))
-				failed("`monti migrate` failed", "Run monti migrate");
-		}
-	}
-
-	// Blog theme (through the registry, like `monti add blog-theme`)
-	if (answers.blogTheme) {
-		if (dryRun) report.steps.push({ name: "Add the blog theme", status: "planned", detail: "monti add blog-theme" });
-		else if (!installing) report.steps.push({ name: "Add the blog theme", status: "skipped", detail: "--no-install" });
-		else {
-			try {
-				const added = await addComponents({
-					cwd,
-					names: ["blog-theme"],
-					install: (command) => host.install(command),
-					prompter,
-					yes: prompter === undefined,
-					blocks: answers.blocks.length > 0,
-				});
-				report.created.push(...added.created);
-				if (added.styles?.updated) report.updated.push(added.styles.updated);
-				if (added.styles?.diff) report.diffs.push(added.styles.diff);
-				report.skipped.push(...added.unchanged);
-				report.notes.push(...added.configured);
-				report.next.push(...added.manual);
-				report.steps.push({
-					name: "Add the blog theme",
-					status: added.conflicts.length > 0 ? "failed" : "done",
-					detail: `${added.created.length} files`,
-				});
-				if (added.conflicts.length > 0) {
-					report.ok = false;
-					report.notes.push(
-						`These blog theme files already exist and differ, so nothing of the theme was written: ${added.conflicts.join(", ")}. Run \`monti add blog-theme --overwrite\` to replace them.`,
-					);
-				}
-			} catch (error) {
-				failed(error instanceof Error ? error.message : String(error), "Add the blog theme");
-			}
-		}
-	}
+	const outcome = await runInitSteps({
+		cwd,
+		host,
+		log,
+		dryRun,
+		prompter,
+		manager,
+		answers,
+		report,
+		docker,
+		dockerPort,
+		dockerStart: options.dockerStart !== false,
+		installing,
+		migrateOn: options.migrate !== false,
+		packages: missing,
+		typography,
+		databaseUrl,
+		hasDatabaseUrl,
+		env: options.env ?? process.env,
+		envValues: parseEnvSafe(envLocalText ?? ""),
+		already: new Set<StepId>(),
+	});
+	const { installed, migrated, databaseReady } = outcome;
 
 	// ---- What is left ----
 	const todo: string[] = [];
 	const siteUrl = answers.siteUrl;
-	const failedStep = (name: string) => report.steps.some((step) => step.name === name && step.status === "failed");
 	if (nextConfigManual) {
 		todo.push(
 			`Wrap the config in ${nextConfigManual}. Add this import at the top and export the result of withCms:\nimport { withCms } from "@monti-cms/nextjs/config";\nexport default withCms(nextConfig);   // wherever you export your config now`,
@@ -745,15 +697,37 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		);
 	}
 	if (gitignoreManual) todo.push("Add .env.local to .gitignore: it holds MONTI_SECRET (and your database URL).");
+	// A step that failed: the exact commands that finish the job, in order. They replace the separate "install" and "create the tables" items below.
+	const hasFailure = report.steps.some((step) => step.status === "failed");
+	if (hasFailure && !dryRun) {
+		report.recovery = [
+			...(pnpmBuildsManual ? [pnpmBuildsManual] : []),
+			...recoveryCommands({ report, manager, cwd, packages: missing, hasDatabaseUrl }),
+		];
+		report.resumeCommand = exec(manager, "init --resume");
+		await ensureStateIgnored(writer, prompter, report);
+		writeInitState(cwd, {
+			version: 1,
+			manager,
+			answers: report.answers,
+			packages: missing,
+			typography,
+			...(docker ? { dockerPort } : {}),
+			steps: stepStates(report.steps, {}),
+		});
+	} else if (!dryRun) {
+		clearInitState(cwd);
+	}
+	if (pnpmBuildsManual && !hasFailure) todo.push(pnpmBuildsManual);
 	const willInstall = installed || (dryRun && installing);
-	if (missing.length > 0 && !willInstall) {
+	if (missing.length > 0 && !willInstall && !hasFailure) {
 		todo.push(`Install the packages:\n${commandText(addCommand(manager, missing, cwd))}`);
 	}
 	if (!hasDatabaseUrl) {
 		todo.push(
 			`Put your Postgres URL in DATABASE_URL in .env.local, then create the tables: ${exec(manager, "migrate")}`,
 		);
-	} else {
+	} else if (!hasFailure) {
 		if (docker && !databaseReady && !dryRun) {
 			todo.push(
 				`Start the database: docker compose up -d${host.dockerAvailable() ? "" : " (install and start Docker first)"}`,
@@ -799,7 +773,449 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		);
 	}
 	report.next.unshift(...todo);
-	if (failedStep("Install packages") && missing.length > 0) report.ok = false;
+	if (hasFailure) report.ok = false;
+	return report;
+}
+
+// ---- pnpm 12: esbuild's install script ----
+
+const PNPM_BUILDS_FILE = "pnpm-workspace.yaml";
+
+/** What to do by hand about `allowBuilds`, with the exact lines. */
+const PNPM_BUILDS_HELP = `pnpm 12 stops an install until esbuild's install script is allowed or denied. In ${PNPM_BUILDS_FILE} (at the root of the workspace) set it once, keeping the other lines and not adding a second allowBuilds key:\nallowBuilds:\n  esbuild: true\n(if the file already has \`esbuild: set this to true or false\`, change that value to true)`;
+
+type PnpmBuilds =
+	| { readonly kind: "none" }
+	| { readonly kind: "manual"; readonly reason: string }
+	| {
+			readonly kind: "edit";
+			readonly file: string;
+			readonly before: string;
+			readonly after: string;
+			readonly isNew: boolean;
+			readonly version: string;
+	  };
+
+/** The version of pnpm: asked of the program, else the `packageManager` field of package.json. */
+function pnpmVersionOf(cwd: string, host: InitHost): string | undefined {
+	const asked = host.pnpmVersion(cwd);
+	if (asked) return asked;
+	try {
+		const field = (JSON.parse(readFileSync(path.join(cwd, "package.json"), "utf8")) as { packageManager?: unknown })
+			.packageManager;
+		return typeof field === "string" && field.startsWith("pnpm@") ? field.slice(5).split("+")[0] : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * With pnpm 12 and no decision about esbuild's install script (`allowBuilds.esbuild` missing, or still the `set this to true or false` placeholder pnpm wrote),
+ * the edit of `pnpm-workspace.yaml` that allows it. Nothing for older pnpm, for other managers, or when the person already decided; the lines to add by hand when the
+ * file is not the app's own or is shaped so that an edit is not safe.
+ */
+function planPnpmBuilds(cwd: string, manager: PackageManager, host: InitHost, writer: ProjectWriter): PnpmBuilds {
+	if (manager !== "pnpm") return { kind: "none" };
+	const version = pnpmVersionOf(cwd, host);
+	const major = Number.parseInt(version ?? "", 10);
+	if (!version || !Number.isFinite(major) || major < 12) return { kind: "none" };
+	const exists = writer.exists(PNPM_BUILDS_FILE);
+	if (!exists) {
+		for (let dir = path.dirname(path.resolve(cwd)); ; dir = path.dirname(dir)) {
+			if (existsSync(path.join(dir, PNPM_BUILDS_FILE))) {
+				return {
+					kind: "manual",
+					reason: `The workspace file is ${path.join(dir, PNPM_BUILDS_FILE)}, outside this app. ${PNPM_BUILDS_HELP}`,
+				};
+			}
+			if (path.dirname(dir) === dir) break;
+		}
+	}
+	const before = exists ? writer.read(PNPM_BUILDS_FILE) : undefined;
+	const after = allowEsbuildBuild(before);
+	if (after === "ok") return { kind: "none" };
+	if (after === undefined) return { kind: "manual", reason: PNPM_BUILDS_HELP };
+	return { kind: "edit", file: PNPM_BUILDS_FILE, before: before ?? "", after, isNew: !exists, version };
+}
+
+/** The progress file is local: `.monti/` goes into `.gitignore` (shown as a diff, and asked first when a person is at the terminal) before the file is written. */
+async function ensureStateIgnored(
+	writer: ProjectWriter,
+	prompter: Prompter | undefined,
+	report: InitReport,
+): Promise<void> {
+	const exists = writer.exists(".gitignore");
+	const before = exists ? writer.read(".gitignore") : "";
+	const after = addStateToGitignore(exists ? before : undefined);
+	if (after === before) return;
+	prompter?.note(unifiedDiff(".gitignore", before, after), "Change to .gitignore");
+	if (
+		prompter &&
+		!(await prompter.confirm({
+			message: "Add .monti/ to .gitignore? (it holds the progress of monti init)",
+			initial: true,
+		}))
+	) {
+		report.notes.push("Add .monti/ to .gitignore: it holds the progress of `monti init` and is for this machine only.");
+		return;
+	}
+	writer.write(".gitignore", after);
+	(exists ? report.updated : report.created).push(".gitignore");
+	report.diffs.push({ file: ".gitignore", diff: unifiedDiff(".gitignore", before, after) });
+}
+
+// ---- The steps after the files are written ----
+
+const TYPOGRAPHY_PACKAGE = "@tailwindcss/typography";
+
+const STEP_NAMES: Record<StepId, string> = {
+	docker: "Start Postgres in Docker",
+	install: "Install packages",
+	migrate: "Run monti migrate",
+	typography: `Install ${TYPOGRAPHY_PACKAGE}`,
+	theme: "Add the blog theme",
+};
+
+interface StepsInput {
+	readonly cwd: string;
+	readonly host: InitHost;
+	readonly log: (message: string) => void;
+	readonly dryRun: boolean;
+	readonly prompter?: Prompter;
+	readonly manager: PackageManager;
+	readonly answers: InitAnswers;
+	readonly report: InitReport;
+	readonly docker: boolean;
+	readonly dockerPort: number;
+	readonly dockerStart: boolean;
+	/** `--no-install` is not given. */
+	readonly installing: boolean;
+	/** `--no-migrate` is not given. */
+	readonly migrateOn: boolean;
+	/** The packages the install step adds. */
+	readonly packages: readonly string[];
+	/** Install the typography plugin (the blog theme was chosen and the app does not have it). */
+	readonly typography: boolean;
+	readonly databaseUrl: string | undefined;
+	readonly hasDatabaseUrl: boolean;
+	readonly env: Record<string, string | undefined>;
+	readonly envValues: Record<string, string | undefined>;
+	/** Steps finished by an earlier run (`--resume`): they are not run again. */
+	readonly already: ReadonlySet<StepId>;
+}
+
+interface StepsOutcome {
+	readonly installed: boolean;
+	readonly migrated: boolean;
+	readonly databaseReady: boolean;
+}
+
+/**
+ * Runs the Docker database, the package install, the tables, the typography plugin and the blog theme, in that order, and records each in `report.steps` with its
+ * id. A step that fails is recorded as failed (and `report.ok` turns false); one that cannot run because an earlier step did not finish is recorded as skipped with
+ * `retry`, which is what `monti init --resume` runs again. Nothing here throws.
+ */
+async function runInitSteps(input: StepsInput): Promise<StepsOutcome> {
+	const { cwd, host, log, dryRun, prompter, manager, answers, report, already } = input;
+	const record = (id: StepId, status: InitStep["status"], detail?: string, retry = false) =>
+		report.steps.push({
+			id,
+			name: STEP_NAMES[id],
+			status,
+			...(detail ? { detail } : {}),
+			...(retry ? { retry: true } : {}),
+		});
+	const fail = (id: StepId, error: unknown) => {
+		report.ok = false;
+		record(id, "failed", error instanceof Error ? error.message : String(error), true);
+	};
+
+	// Docker database
+	let databaseReady = false;
+	if (input.docker && !already.has("docker")) {
+		if (!input.dockerStart) record("docker", "skipped", "--no-docker-start");
+		else if (dryRun) record("docker", "planned", "docker compose up -d");
+		else if (!host.dockerAvailable()) record("docker", "skipped", "Docker is not running or not installed", true);
+		else {
+			log("Starting Postgres with docker compose ...");
+			if (host.run("docker", ["compose", "up", "-d"], cwd)) {
+				record("docker", "done", `localhost:${input.dockerPort}`);
+				databaseReady = true;
+			} else fail("docker", "`docker compose up -d` failed");
+		}
+	}
+
+	// Packages
+	let installed = already.has("install");
+	if (!installed) {
+		report.installed = [...input.packages];
+		if (input.packages.length > 0 || answers.blogTheme) {
+			if (!input.installing) record("install", "skipped", "--no-install");
+			else if (dryRun) record("install", "planned", commandText(addCommand(manager, input.packages, cwd)));
+			else if (input.packages.length > 0) {
+				log(`Installing ${input.packages.length} packages with ${manager} ...`);
+				try {
+					await host.install(addCommand(manager, input.packages, cwd));
+					installed = true;
+					record("install", "done", `${input.packages.length} packages with ${manager}`);
+				} catch (error) {
+					fail("install", error);
+				}
+			} else installed = true;
+		} else installed = true;
+		if (input.packages.length === 0) report.installed = [];
+	}
+
+	// The tables
+	let migrated = already.has("migrate");
+	if (!migrated) {
+		if (dryRun) record("migrate", "planned", input.hasDatabaseUrl ? undefined : "needs DATABASE_URL");
+		else if (!input.migrateOn || !input.installing) {
+			record("migrate", "skipped", !input.migrateOn ? "--no-migrate" : "packages not installed");
+		} else if (!installed) {
+			record("migrate", "skipped", "packages are not installed", true);
+		} else if (!input.hasDatabaseUrl) {
+			record("migrate", "skipped", "DATABASE_URL is not set", true);
+		} else {
+			const url = input.databaseUrl ?? input.envValues.DATABASE_URL ?? input.env.DATABASE_URL;
+			const reachable = url ? await host.databaseReachable(url, databaseReady ? 30000 : 0) : false;
+			if (!reachable) {
+				record("migrate", "skipped", "the database is not reachable yet", true);
+			} else {
+				log("Running monti migrate ...");
+				try {
+					migrated = await host.migrate(cwd);
+					if (migrated) record("migrate", "done", "tables created");
+					else fail("migrate", "`monti migrate` failed");
+				} catch (error) {
+					fail("migrate", error);
+				}
+			}
+		}
+	}
+
+	// The typography plugin, which the theme's text styles (`prose`) need
+	let typographyDone = already.has("typography") || !input.typography;
+	if (!typographyDone) {
+		if (dryRun) record("typography", "planned", commandText(addCommand(manager, [TYPOGRAPHY_PACKAGE], cwd, true)));
+		else if (!input.installing) record("typography", "skipped", "--no-install");
+		else if (!installed) record("typography", "skipped", "packages are not installed", true);
+		else {
+			log(`Installing ${TYPOGRAPHY_PACKAGE} ...`);
+			try {
+				await host.install(addCommand(manager, [TYPOGRAPHY_PACKAGE], cwd, true));
+				typographyDone = true;
+				record("typography", "done", "dev dependency");
+			} catch (error) {
+				fail("typography", error);
+			}
+		}
+	}
+
+	// Blog theme (through the registry, like `monti add blog-theme`)
+	if (answers.blogTheme && !already.has("theme")) {
+		if (dryRun) record("theme", "planned", "monti add blog-theme");
+		else if (!input.installing) record("theme", "skipped", "--no-install");
+		else if (!installed || !typographyDone) record("theme", "skipped", "packages are not installed", true);
+		else {
+			try {
+				const added = await addComponents({
+					cwd,
+					names: ["blog-theme"],
+					// The typography plugin is installed by its own step.
+					install: (command) =>
+						command.args.includes(TYPOGRAPHY_PACKAGE) && typographyDone ? undefined : host.install(command),
+					prompter,
+					yes: prompter === undefined,
+					blocks: answers.blocks.length > 0,
+				});
+				report.created.push(...added.created);
+				if (added.styles?.updated) report.updated.push(added.styles.updated);
+				if (added.styles?.diff) report.diffs.push(added.styles.diff);
+				report.skipped.push(...added.unchanged);
+				report.notes.push(...added.configured);
+				report.next.push(...added.manual);
+				if (added.conflicts.length > 0) {
+					report.ok = false;
+					record("theme", "failed", `${added.created.length} files`, true);
+					report.notes.push(
+						`These blog theme files already exist and differ, so nothing of the theme was written: ${added.conflicts.join(", ")}. Run \`monti add blog-theme --overwrite\` to replace them.`,
+					);
+				} else record("theme", "done", `${added.created.length} files`);
+			} catch (error) {
+				fail("theme", error);
+			}
+		}
+	}
+	return { installed, migrated, databaseReady };
+}
+
+/** What each step ended as, for the saved state: finished, to run again, or left out on purpose. A step the report does not mention keeps its earlier state. */
+function stepStates(
+	steps: readonly InitStep[],
+	before: Partial<Record<StepId, StepState>>,
+): Partial<Record<StepId, StepState>> {
+	const out: Partial<Record<StepId, StepState>> = { ...before };
+	for (const step of steps) {
+		if (!step.id || step.status === "planned") continue;
+		out[step.id] = step.status === "done" ? "done" : step.status === "failed" || step.retry ? "incomplete" : "skipped";
+	}
+	return out;
+}
+
+/** The exact commands for the steps that did not finish, in the order to run them. */
+function recoveryCommands(input: {
+	readonly report: InitReport;
+	readonly manager: PackageManager;
+	readonly cwd: string;
+	readonly packages: readonly string[];
+	readonly hasDatabaseUrl: boolean;
+}): string[] {
+	const { report, manager, cwd } = input;
+	const open = new Set(report.steps.filter((step) => step.status === "failed" || step.retry).map((step) => step.id));
+	const out: string[] = [];
+	for (const id of STEP_ORDER) {
+		if (!open.has(id)) continue;
+		if (id === "docker") out.push("docker compose up -d   (start Docker first if it is not running)");
+		else if (id === "install" && input.packages.length > 0)
+			out.push(commandText(addCommand(manager, input.packages, cwd)));
+		else if (id === "migrate" && input.hasDatabaseUrl) out.push(exec(manager, "migrate"));
+		else if (id === "typography") out.push(commandText(addCommand(manager, [TYPOGRAPHY_PACKAGE], cwd, true)));
+		else if (id === "theme") {
+			const conflict = report.notes.some((note) => note.includes("blog theme files already exist"));
+			out.push(exec(manager, `add blog-theme --yes${conflict ? " --overwrite" : ""}`));
+		}
+	}
+	return out;
+}
+
+/**
+ * `monti init --resume`: runs again only the steps the last run did not complete, from the progress saved in `.monti/init.json`. It asks nothing about the app and
+ * writes none of the files `monti init` wrote; the one file it may edit is `pnpm-workspace.yaml` (pnpm 12 and esbuild), with a diff and a confirmation.
+ */
+async function resumeInit(options: InitOptions): Promise<InitReport> {
+	const { cwd } = options;
+	const host: InitHost = { ...defaultInitHost, ...options.host };
+	const log = options.log ?? (() => undefined);
+	const dryRun = options.dryRun === true;
+	const prompter = options.prompter;
+
+	const state = readInitState(cwd);
+	if (!state) {
+		throw new Error(
+			"Nothing to resume: there is no saved progress in .monti/init.json. `monti init` saves it when a step fails. Run `monti init` to set up the app.",
+		);
+	}
+	const app = detectApp(cwd);
+	const manager = options.packageManager ?? state.manager;
+	const writer = new ProjectWriter(cwd);
+	const answers = state.answers;
+	const done = new Set<StepId>(STEP_ORDER.filter((id) => state.steps[id] === "done"));
+	const packages = state.packages.filter((name) => !app.dependencies.has(name));
+	if (packages.length === 0) done.add("install");
+	if (!state.typography || app.dependencies.has(TYPOGRAPHY_PACKAGE)) done.add("typography");
+
+	const envFile = ".env.local";
+	const envValues = parseEnvSafe(writer.exists(envFile) ? writer.read(envFile) : "");
+	const env = options.env ?? process.env;
+	const hasDatabaseUrl = Boolean(envValues.DATABASE_URL || env.DATABASE_URL);
+
+	prompter?.intro(`Finish adding Monti to ${app.packageName ?? "this app"}`);
+	const report: InitReport = {
+		ok: true,
+		dryRun,
+		resumed: true,
+		app: {
+			name: app.packageName,
+			next: app.next,
+			src: app.src,
+			packageManager: manager,
+			typescript: app.typescript,
+			tailwind: app.tailwind,
+			contentFolders: app.contentFolders.map(({ dir, files }) => ({ dir, files })),
+		},
+		answers,
+		created: [],
+		skipped: [],
+		updated: [],
+		overwritten: [],
+		installed: [],
+		steps: [],
+		diffs: [],
+		notes: [],
+		next: [],
+		recovery: [],
+	};
+
+	// pnpm 12 may be what stopped the install: set esbuild's decision first.
+	let pnpmBuildsManual: string | undefined;
+	const builds = planPnpmBuilds(cwd, manager, host, writer);
+	if (builds.kind === "manual") pnpmBuildsManual = builds.reason;
+	else if (builds.kind === "edit") {
+		prompter?.note(unifiedDiff(builds.file, builds.before, builds.after), `Change to ${builds.file}`);
+		const apply = prompter
+			? await prompter.confirm({
+					message: `Let pnpm run esbuild's install script (allowBuilds in ${builds.file})?`,
+					initial: true,
+				})
+			: true;
+		if (apply) {
+			if (!dryRun) writer.write(builds.file, builds.after);
+			(builds.isNew ? report.created : report.updated).push(builds.file);
+			report.diffs.push({ file: builds.file, diff: unifiedDiff(builds.file, builds.before, builds.after) });
+		} else pnpmBuildsManual = PNPM_BUILDS_HELP;
+	}
+
+	const docker = answers.database.kind === "docker";
+	const outcome = await runInitSteps({
+		cwd,
+		host,
+		log,
+		dryRun,
+		prompter,
+		manager,
+		answers,
+		report,
+		docker,
+		dockerPort: state.dockerPort ?? 5432,
+		dockerStart: options.dockerStart !== false,
+		installing: options.install !== false,
+		migrateOn: options.migrate !== false,
+		packages,
+		typography: state.typography,
+		databaseUrl: undefined,
+		hasDatabaseUrl,
+		env,
+		envValues,
+		already: done,
+	});
+
+	const hasFailure = report.steps.some((step) => step.status === "failed");
+	if (hasFailure && !dryRun) {
+		report.recovery = [
+			...(pnpmBuildsManual ? [pnpmBuildsManual] : []),
+			...recoveryCommands({ report, manager, cwd, packages, hasDatabaseUrl }),
+		];
+		report.resumeCommand = exec(manager, "init --resume");
+		await ensureStateIgnored(writer, prompter, report);
+		writeInitState(cwd, { ...state, steps: stepStates(report.steps, state.steps) });
+	} else if (!dryRun) {
+		clearInitState(cwd);
+	}
+	if (pnpmBuildsManual && !hasFailure) report.next.push(pnpmBuildsManual);
+	if (!hasDatabaseUrl) {
+		report.next.push(
+			`Put your Postgres URL in DATABASE_URL in .env.local, then create the tables: ${exec(manager, "migrate")}`,
+		);
+	} else if (!hasFailure && !outcome.migrated && !done.has("migrate") && !dryRun) {
+		if (docker && !outcome.databaseReady) report.next.push("Start the database: docker compose up -d");
+		report.next.push(`Create the tables: ${exec(manager, "migrate")}`);
+	}
+	report.next.push(
+		`Check the setup whenever something does not work: ${exec(manager, "doctor")}`,
+		`Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`,
+	);
+	if (hasFailure) report.ok = false;
 	return report;
 }
 
@@ -816,7 +1232,17 @@ export function formatInitReport(report: InitReport): string {
 	const list = (title: string, items: readonly string[]) =>
 		items.length === 0 ? [] : [title, ...items.map((item) => `  - ${item}`), ""];
 	const out: string[] = [];
-	out.push(dry ? "Dry run: nothing was written. This is what would happen." : "Monti is added to your app.", "");
+	const failedCount = report.steps.filter((step) => step.status === "failed").length;
+	out.push(
+		dry
+			? "Dry run: nothing was written. This is what would happen."
+			: failedCount > 0
+				? `Monti is only partly added: ${failedCount === 1 ? "1 step failed" : `${failedCount} steps failed`}. The files are written; the steps below did not finish.`
+				: report.resumed
+					? "Resumed: the steps that were left are run."
+					: "Monti is added to your app.",
+		"",
+	);
 	out.push(
 		...list(dry ? "Would create:" : "Created:", report.created),
 		...list(dry ? "Would change:" : "Changed:", report.updated),
@@ -829,6 +1255,16 @@ export function formatInitReport(report: InitReport): string {
 		out.push("Steps:");
 		for (const step of report.steps)
 			out.push(`  - ${step.name}: ${WORDS[step.status]}${step.detail ? ` (${step.detail})` : ""}`);
+		out.push("");
+	}
+	if (report.recovery.length > 0) {
+		out.push("To finish, run these in order:");
+		for (const [index, command] of report.recovery.entries())
+			out.push(`  ${index + 1}. ${command.replaceAll("\n", "\n     ")}`);
+		if (report.resumeCommand)
+			out.push(
+				`Or run ${report.resumeCommand}: it runs only the steps that did not finish (the progress is saved in .monti/init.json).`,
+			);
 		out.push("");
 	}
 	if (report.notes.length > 0) {

@@ -1,4 +1,6 @@
-import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "../index";
+import { chart } from "../chart";
+import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tooltip } from "../index";
+import { mermaid } from "../mermaid";
 
 /**
  * Every block extension of the package, one call each, in the order the tests install them (inline marks: tooltip, then code ref, then text color).

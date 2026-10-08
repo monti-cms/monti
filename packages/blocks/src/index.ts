@@ -9,9 +9,17 @@
  *
  * The order of the inline marks (`tooltip()`, `codeRef()`, `color()`) is the order in which overlapping marks are stored (outermost first), so list them in the order you want.
  * Adding the same block twice is a config error.
+ *
+ * The two heavy blocks are not exported here, so an app that does not use them never loads (or needs) their libraries: `mermaid()` comes from
+ * `@monti-cms/blocks/mermaid` (needs the `mermaid` package) and `chart()` from `@monti-cms/blocks/chart` (needs `recharts`). `ALL_BLOCKS` is in
+ * `@monti-cms/blocks/definitions`.
+ *
+ * ```ts
+ * import { chart } from "@monti-cms/blocks/chart";
+ * import { mermaid } from "@monti-cms/blocks/mermaid";
+ * ```
  */
 export { callout, calloutBlock } from "./callout";
-export { chart, chartBlock } from "./chart";
 export { codeExplorer, codeExplorerBlock } from "./code-explorer";
 export { codeRef, codeRefBlock } from "./code-ref";
 export { collapsible, collapsibleBlock } from "./collapsible";
@@ -25,7 +33,5 @@ export {
 	type PaletteText,
 } from "./color";
 export { columnBlock, columns, columnsBlock } from "./columns";
-export { ALL_BLOCKS } from "./definitions";
-export { mermaid, mermaidBlock } from "./mermaid";
 export { tabBlock, tabs, tabsBlock } from "./tabs";
 export { tooltip, tooltipBlock } from "./tooltip";

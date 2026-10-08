@@ -11,7 +11,12 @@ import type { ParsedSource } from "../source";
 const title = fields.text({ label: "Title", required: true, localized: true });
 const slug = fields.slug({ label: "Slug", from: "title", required: true, localized: "inherit" });
 
-export const importSite = (): Site =>
+export const importSite = (
+	locales: readonly { code: string; name: string }[] = [
+		{ code: "en", name: "English" },
+		{ code: "ko", name: "한국어" },
+	],
+): Site =>
 	createSite({
 		collections: {
 			post: defineCollection({
@@ -55,10 +60,7 @@ export const importSite = (): Site =>
 				},
 			}),
 		},
-		locales: [
-			{ code: "en", name: "English" },
-			{ code: "ko", name: "한국어" },
-		],
+		locales,
 		defaultLocale: "en",
 	} as never) as Site;
 

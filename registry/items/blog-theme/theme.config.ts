@@ -17,6 +17,8 @@ export interface BlogThemeConfig {
 	authorField?: string;
 	/** Name of the relation field that points to the topics (tags), or `undefined` for none. */
 	topicsField?: string;
+	/** Name of the relation field that points to the category (or categories) of a post, shown in the byline, or `undefined` for none. */
+	categoryField?: string;
 	/** Name of the text field with the summary, shown in the list and used as the page description, or `undefined` for none. */
 	excerptField?: string;
 	/** Title of the list page, and the label of the link back to it. */
@@ -35,6 +37,7 @@ export const blogTheme: BlogThemeConfig = {
 	pageSize: 10,
 	authorField: "authorId",
 	topicsField: "tagIds",
+	categoryField: "categoryId",
 	excerptField: "excerpt",
 	blogTitle: "Blog",
 	neighborWindow: 100,

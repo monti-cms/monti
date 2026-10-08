@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/import-boundary";
 import { findSchemaFile, watchSchemaTypes } from "@monti-cms/core/schema-types";
@@ -54,6 +54,34 @@ export function missingOptionalPeers(root: string, boundary?: string): string[] 
 		for (const peer of optional) if (!installedFrom(real, peer, boundary)) missing.add(peer);
 	}
 	return [...missing].sort();
+}
+
+/** The text of the stub that stands in for the missing package `name`: loading it says which package to install. */
+const stubText = (name: string): string =>
+	`// Written by withCms: the optional package ${name} is not installed. Loading it is an error that says so.\n` +
+	`throw new Error(${JSON.stringify(
+		`[monti] The package "${name}" is not installed, and a block you use needs it. Install it with your package manager (for example \`pnpm add ${name}\`), delete the .next folder and restart the dev server. \`monti doctor\` lists what is missing.`,
+	)});\n`;
+
+/**
+ * Where each missing package is redirected to: a stub file of its own that names the package in its error (written under `node_modules/.cache/monti`, the place tools
+ * keep generated files), or core's shared stub when the file cannot be written. The paths are relative to `root`, with `/`.
+ */
+export function missingStubs(root: string, missing: readonly string[]): Record<string, string> {
+	const stubs: Record<string, string> = {};
+	const folder = path.join(root, "node_modules", ".cache", "monti", "missing");
+	for (const name of missing) {
+		// The build error for a missing export names this file, so the name says what is wrong.
+		const file = `${name.replace(/[^A-Za-z0-9._-]+/g, "__")}-not-installed.cjs`;
+		try {
+			mkdirSync(folder, { recursive: true });
+			writeFileSync(path.join(folder, file), stubText(name));
+			stubs[name] = `./node_modules/.cache/monti/missing/${file}`;
+		} catch {
+			stubs[name] = MISSING_OPTIONAL_MODULE;
+		}
+	}
+	return stubs;
 }
 
 const WATCHING = Symbol.for("monti.schema-types.watching");
@@ -134,6 +162,7 @@ export function withCms(nextConfig: NextConfig): NextConfig {
 		process.cwd(),
 		turbopackRoot ? realpathSync(path.resolve(process.cwd(), turbopackRoot)) : undefined,
 	);
+	const stubs = missingStubs(process.cwd(), missing);
 	const userWebpack = nextConfig.webpack;
 	watchSchemaTypesInDev(process.cwd());
 	checkImportBoundaryInDev(process.cwd());
@@ -146,16 +175,21 @@ export function withCms(nextConfig: NextConfig): NextConfig {
 		turbopack: {
 			...nextConfig.turbopack,
 			resolveAlias: {
-				...Object.fromEntries(missing.map((name) => [name, MISSING_OPTIONAL_MODULE])),
+				...stubs,
 				...nextConfig.turbopack?.resolveAlias,
 			},
 		},
 		webpack: (config, context) => {
 			config.resolve ??= {};
-			// Empty module inside the core package the app installed (the same file as `MISSING_OPTIONAL_MODULE`).
-			const stub = path.join(process.cwd(), "node_modules", "@monti-cms", "core", "stubs", "missing-optional.cjs");
+			// The stub of each package: its own file, or the one inside the core package the app installed (the same file as `MISSING_OPTIONAL_MODULE`).
+			const shared = path.join(process.cwd(), "node_modules", "@monti-cms", "core", "stubs", "missing-optional.cjs");
 			config.resolve.alias = {
-				...Object.fromEntries(missing.map((name) => [name, stub])),
+				...Object.fromEntries(
+					missing.map((name) => [
+						name,
+						stubs[name] === MISSING_OPTIONAL_MODULE ? shared : path.resolve(process.cwd(), stubs[name] ?? shared),
+					]),
+				),
 				...config.resolve.alias,
 			};
 			return userWebpack ? userWebpack(config, context) : config;

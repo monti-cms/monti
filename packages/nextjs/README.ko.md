@@ -28,6 +28,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | (라우트 핸들러와 관리자가 알아서 붙인다) | `nextHost` |
+| `@monti-cms/nextjs/proxy` | `proxy.ts` | `cmsProxy(cms)`·`setupResponse(request, cms)`·`loginProblem(cms)` |
 
 ### 라우트 핸들러
 
@@ -124,6 +125,10 @@ export const cms = defineConfig({
 ## 미리보기 페이지
 
 초안을 보여 주는 사이트 페이지(`site.previewPath`, 예: `/preview/ko/posts/<slug>`)는 `cms.read.getPreview`를 직접 부르지 말고 `@monti-cms/nextjs`의 `previewEntry(cms, { collection, slug, locale })`로 읽는다. 읽기 전에 요청 헤더를 인스턴스에 붙이므로, 콜드 스타트 뒤 첫 요청이 미리보기이거나 서버리스 인스턴스가 사이트 페이지만 처리했더라도 관리자 세션(`next dev`에서는 개발용 우회)을 읽을 수 있다. 관리자가 아니면 `null`이라 페이지는 404를 낸다. `examples/blog`와 레지스트리의 `blog-theme`에 이 페이지가 있다.
+
+## 로그인 설정 없이 프로덕션
+
+Cache Components에서는 페이지가 오류 상태를 보낼 수 없으므로(`200`을 보낸 뒤에 스트리밍한다), 프로덕션에서 `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_SECRET`이 없는 사이트는 관리자와 초안 미리보기에 `200`과 로그에 남은 오류로 답하게 된다. 프록시는 어떤 페이지보다 먼저 답한다. `proxy.ts`의 `export const proxy = cmsProxy(cms)`(앱에 프록시가 없으면 `monti init`이 쓰고, 블로그 테마의 프록시도 같은 일을 한다)는 관리자 경로와 `site.previewPath`에 `monti doctor`를 가리키는 페이지와 함께 `503`을 보내고 전체 문제를 한 번 로그에 남긴다. 다른 요청은 그대로 지나가고, `next dev`에서는 아무것도 하지 않는다. 자기 프록시가 있는 앱은 `setupResponse(request, cms)`를 먼저 부르고, `undefined`가 아니면 그 값을 돌려준다.
 
 ## 올리기
 

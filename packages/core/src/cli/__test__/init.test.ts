@@ -45,6 +45,7 @@ describe("monti init in a fresh create-next-app", () => {
 			"monti.config.ts",
 			"monti.schema.json",
 			"monti-env.d.ts",
+			"proxy.ts",
 			"app/studio/[[...path]]/page.tsx",
 			"app/studio/layout.tsx",
 			"app/api/cms/[...path]/route.ts",
@@ -156,11 +157,9 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(command?.args).not.toContain("mermaid");
 		expect(command?.args).not.toContain("recharts");
 		expect(command?.cwd).toBe(dir);
-		expect(report.steps).toContainEqual({
-			name: "Run monti migrate",
-			status: "skipped",
-			detail: "DATABASE_URL is not set",
-		});
+		expect(report.steps).toContainEqual(
+			expect.objectContaining({ name: "Run monti migrate", status: "skipped", detail: "DATABASE_URL is not set" }),
+		);
 	});
 });
 
@@ -168,10 +167,11 @@ describe("monti init in other app shapes", () => {
 	it("a src/ app keeps the config in src and the Next files under src/app", async () => {
 		const dir = fixtureApp(SRC_APP);
 		const report = await initProject({ cwd: dir, ...quiet(), adminPath: "/cms/studio" });
-		expect(report.created.slice(0, 6)).toEqual([
+		expect(report.created.slice(0, 7)).toEqual([
 			"src/monti.config.ts",
 			"src/monti.schema.json",
 			"src/monti-env.d.ts",
+			"src/proxy.ts",
 			"src/app/cms/studio/[[...path]]/page.tsx",
 			"src/app/cms/studio/layout.tsx",
 			"src/app/api/cms/[...path]/route.ts",
@@ -398,11 +398,11 @@ describe("monti init choices", () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host, env: {}, blogTheme: true, database: "skip" });
-		expect(report.steps).toContainEqual({
-			name: "Add the blog theme",
-			status: "done",
-			detail: expect.stringMatching(/files$/),
-		});
+		expect(report.steps).toContainEqual(
+			expect.objectContaining({ name: "Add the blog theme", status: "done", detail: expect.stringMatching(/files$/) }),
+		);
+		// The typography plugin is installed by its own step, before the theme.
+		expect(report.steps.map((step) => step.id)).toEqual(["install", "migrate", "typography", "theme"]);
 		expect(JSON.parse(read(dir, "monti.schema.json")).site.previewPath).toBe("/preview");
 		const next = report.next.join("\n");
 		// The theme was shaped by the schema that was just written: no manual edit of its field names is left.
@@ -439,11 +439,11 @@ describe("monti init choices", () => {
 			blogTheme: true,
 		});
 		expect(read(dir, "app/globals.css")).toBe('@import "tailwindcss";\n');
-		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).not.toContain(
+		// The plugin is installed because the theme was chosen; only the edit of the CSS was declined.
+		expect(host.install.mock.calls.map(([command]) => command.args.join(" "))).toContain(
 			"add -D @tailwindcss/typography",
 		);
 		const next = report.next.join("\n");
-		expect(next).toContain("pnpm add -D @tailwindcss/typography");
 		expect(next).toContain('@import "@monti-cms/core/render.css";');
 		expect(next).toContain('@plugin "@tailwindcss/typography";');
 		expect(next).not.toContain("blocks/render.css");
@@ -694,10 +694,12 @@ describe("monti init when something goes wrong", () => {
 		const host = fakeHost({ install: () => Promise.reject(new Error("`pnpm add` failed")) });
 		const report = await initProject({ cwd: dir, host, env: {}, database: "postgres://a:b@c:5432/d" });
 		expect(report.ok).toBe(false);
-		expect(report.steps).toContainEqual({ name: "Install packages", status: "failed", detail: "`pnpm add` failed" });
+		expect(report.steps).toContainEqual(
+			expect.objectContaining({ name: "Install packages", status: "failed", detail: "`pnpm add` failed" }),
+		);
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
 		expect(host.migrate).not.toHaveBeenCalled();
-		expect(report.next[0]).toMatch(/^Install the packages:\npnpm add @monti-cms\/core/);
+		expect(report.recovery[0]).toMatch(/^pnpm add @monti-cms\/core/);
 	});
 
 	it("a failed migrate marks the run as not ok", async () => {

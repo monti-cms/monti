@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core` 위에 만든 개인 기술 블로그로, 운영자의 실제 블로그를 본떴다. 컬렉션은 Post·Memo·Category·Tag·Series(`collection` 컬렉션)이고 언어는 한국어(기본)와 영어다. 블로그가 쓰는 것을 `monti.config.ts`에 한 줄에 하나씩 모두 붙였다:
-모든 본문 블록(`@monti-cms/blocks`: `callout()`·`collapsible()`·`tabs()`·`columns()`·`mermaid()`·`chart()`·`tooltip()`·`codeRef()`·`color()`·`codeExplorer()`), SEO 필드(`@monti-cms/seo`), AI 플러그인(`@monti-cms/ai`),
+모든 본문 블록(`@monti-cms/blocks`: `callout()`·`collapsible()`·`tabs()`·`columns()`·`mermaid()`와 `chart()`는 각자의 진입점 `@monti-cms/blocks/mermaid`, `@monti-cms/blocks/chart`에서 온다(`mermaid`와 `recharts`가 필요하고 이 앱은 둘 다 설치한다. 쓰지 않는 앱은 설치하지 않는다)·`tooltip()`·`codeRef()`·`color()`·`codeExplorer()`), SEO 필드(`@monti-cms/seo`), AI 플러그인(`@monti-cms/ai`),
 직접 만든 관리자 확장(단어 목록 맞춤법 검사, `plugins/word-list`), 그리고 지시문 표기로 쓰는 MDX(`@monti-cms/mdx`의 `mdx({ syntax: [directiveSyntax()] })`와 `@monti-cms/syntax-directive`, 쓰기 모드 켬이라 글 본문이 `:::callout{…}`로 저장된다).
 패키지는 저장소의 소스가 아니라 **빌드한 묶음**(`vendor/*.tgz`)으로 설치한다.
 

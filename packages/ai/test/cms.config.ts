@@ -1,6 +1,8 @@
 import { defineSite } from "@monti-cms/core";
-import { callout, chart, codeExplorer, collapsible, columns, mermaid, tabs } from "../../blocks/src";
+import { callout, codeExplorer, collapsible, columns, tabs } from "../../blocks/src";
+import { chart } from "../../blocks/src/chart";
 import { ALL_BLOCKS } from "../../blocks/src/definitions";
+import { mermaid } from "../../blocks/src/mermaid";
 import base from "../../core/test/cms.config";
 import { seo } from "../../seo/src";
 import { aiPlugin } from "../src";

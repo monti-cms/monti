@@ -1,5 +1,5 @@
 import { defineSite } from "@monti-cms/core";
-import { chart } from "../../blocks/src";
+import { chart } from "../../blocks/src/chart";
 import { chartBlock } from "../../blocks/src/definitions";
 import base from "../../core/test/other-site.config";
 import { seo } from "../../seo/src";

@@ -33,8 +33,10 @@ bunx monti init
 
 - **질문:** 데이터베이스(URL, 로컬 Docker Postgres, 나중에), GitHub 로그인, 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`), 블로그 테마 페이지 설치 여부.
 - **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
-- **안전:** 묻지 않고 파일을 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다.
-- **기존 글:** Markdown·MDX 폴더가 있으면 끝에서 `monti import <폴더>`를 권한다. 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`).
+- **안전:** 묻지 않고 파일을 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 단계(설치, 테마, typography 플러그인, 테이블)가 실패하면 "Monti를 추가했다"고 하지 않고, 실패한 단계와 일을 끝낼 정확한 명령을 순서대로 적는다. `monti init --resume`은 끝나지 않은 단계만 다시 돌린다.
+- **pnpm 12:** esbuild의 설치 스크립트를 허락할 때까지 설치를 멈춘다. `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다(키를 두 번 쓰지 않는다). `monti init`이 확인하고 diff와 확인을 거쳐 고친다.
+- **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
+- **기존 글:** Markdown·MDX 폴더가 있으면 끝에서 `monti import <폴더>`를 권한다. 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`). 둘은 `@monti-cms/blocks/mermaid`와 `@monti-cms/blocks/chart`에서 오고, 고른 경우에만 `mermaid`와 `recharts`가 따라오므로 고르지 않은 앱은 둘 다 불러오지도 설치하지도 않는다.
 
 공개 릴리스 전에는 `@monti-cms/core`를 먼저 릴리스 번들로 설치하고("설치" 참고), 나머지는 `monti init`이 설치한다. `monti`는 언제나 `@monti-cms/core`를 설치한 뒤에 돌린다. 설치 전의 `npx monti`는 관계없는 다른 패키지를 받는다. 모든 명령을 담은 짧은 안내는 core README의 [빠른 시작](packages/core/README.ko.md#빠른-시작-기존-next-앱)이다.
 

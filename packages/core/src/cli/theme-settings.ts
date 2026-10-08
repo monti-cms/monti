@@ -20,6 +20,8 @@ export interface BlogThemeSettings {
 	readonly topicsField?: string;
 	/** The relation field that points to one author, if any. */
 	readonly authorField?: string;
+	/** The relation field that points to the category (or categories) of a post, if any. */
+	readonly categoryField?: string;
 	/** Where the values come from, as one line for the report (`monti.schema.json: collection post at /posts ...`). */
 	readonly summary: string;
 	/** Things the person should do or know (the path has a shape the theme cannot serve, no schema file, ...). */
@@ -50,6 +52,7 @@ export function routeBaseOf(pathPattern: string): string | undefined {
 
 const TAG_TARGETS = new Set(["tag", "tags", "topic", "topics"]);
 const AUTHOR_TARGETS = /^(author|authors|writer|writers|person|people|user|users)$/i;
+const CATEGORY_TARGETS = /^(category|categories|section|sections)$/i;
 
 /** The collection the theme shows: `post` when it is a document collection, else the first document collection that has a `path`, else the first document collection. */
 function chooseCollection(collections: Record<string, SchemaCollection>): string | undefined {
@@ -113,11 +116,16 @@ export function blogThemeSettings(cwd: string): BlogThemeSettings {
 		([, field]) => field.many !== true && typeof field.to === "string" && AUTHOR_TARGETS.test(field.to),
 	) ?? relations.find(([name, field]) => field.many !== true && /author|writer/i.test(name)))?.[0];
 
+	const categoryField = (relations.find(
+		([, field]) => typeof field.to === "string" && CATEGORY_TARGETS.test(field.to),
+	) ?? relations.find(([name]) => /categor/i.test(name)))?.[0];
+
 	const parts = [
 		`collection ${collection} at ${routeBase}`,
 		excerptField ? `summary ${excerptField}` : "no summary field",
 		topicsField ? `tags ${topicsField}` : "no tags field",
 		authorField ? `author ${authorField}` : "no author field",
+		categoryField ? `category ${categoryField}` : "no category field",
 	];
 	return {
 		collection,
@@ -125,6 +133,7 @@ export function blogThemeSettings(cwd: string): BlogThemeSettings {
 		excerptField,
 		topicsField,
 		authorField,
+		categoryField,
 		summary: `${read.file}: ${parts.join(", ")}`,
 		notes,
 	};
@@ -144,6 +153,7 @@ export function applyBlogThemeSettings(source: string, settings: BlogThemeSettin
 		line("routeBase", quoted(settings.routeBase)),
 		line("authorField", quoted(settings.authorField)),
 		line("topicsField", quoted(settings.topicsField)),
+		line("categoryField", quoted(settings.categoryField)),
 		line("excerptField", quoted(settings.excerptField)),
 	].reduce((text, apply) => apply(text), source);
 }

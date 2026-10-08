@@ -13,11 +13,12 @@ export const relationTitles = (entry: ReadEntry, field: string | undefined): str
 
 const dateOf = (date: Date) => date.toISOString().slice(0, 10);
 
-/** The byline: the publish date, the author and the topics, in a muted line. */
+/** The byline: the publish date, the category, the author and the topics, in a muted line. */
 export function PostMeta({ entry }: { entry: ReadEntry }) {
+	const categories = relationTitles(entry, blogTheme.categoryField);
 	const author = relationTitles(entry, blogTheme.authorField)[0];
 	const topics = relationTitles(entry, blogTheme.topicsField);
-	const parts = [...(author ? [author] : []), ...topics.map((topic) => `#${topic}`)];
+	const parts = [...categories, ...(author ? [author] : []), ...topics.map((topic) => `#${topic}`)];
 	return (
 		<p className="text-neutral-600 text-sm dark:text-neutral-400">
 			{entry.publishedAt ? <time dateTime={dateOf(entry.publishedAt)}>{dateOf(entry.publishedAt)}</time> : null}
