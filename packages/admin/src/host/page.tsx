@@ -47,7 +47,7 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 			case "schema":
 				return <SchemaPage cms={cms} server={server} />;
 			case "login":
-				return <LoginPage cms={cms} server={server} />;
+				return <LoginPage cms={cms} server={server} searchParams={searchParams} />;
 		}
 	}
 	if (path.length === 1 && first) {
