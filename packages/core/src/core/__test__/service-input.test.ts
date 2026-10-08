@@ -94,6 +94,11 @@ describe("types follow the config", () => {
 		type Input = Parameters<Service["createDraft"]>[0];
 		expectTypeOf<{ collection: "tag"; slug: null; metadata: { title: string } }>().toExtend<Input>();
 		expectTypeOf<{ collection: "post"; slug: null; metadata: { title: string } }>().not.toExtend<Input>();
-		expectTypeOf<{ collection: "nope"; slug: null; metadata: {}; doc: unknown }>().not.toExtend<Input>();
+		expectTypeOf<{
+			collection: "nope";
+			slug: null;
+			metadata: Record<string, never>;
+			doc: unknown;
+		}>().not.toExtend<Input>();
 	});
 });

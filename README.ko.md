@@ -90,6 +90,10 @@ pnpm exec monti doctor
 
 MDX(`mdx` 형식, 원문 패널, 문법 확장)와 AI 확장에는 `@monti-cms/mdx`가 필요하며 같은 방식으로 설치한다. 설치 방법과 설정은 각 패키지의 README에 있다. 모두 붙인 예시 앱은 [`examples/blog`](examples/blog/README.ko.md)이며, 설정 파일은 완성된 `cms` 인스턴스를 내보내는 `monti.config.ts` 하나다.
 
+## 레시피
+
+Monti를 확장하는 방법을 보여 주는, 동작하고 테스트된 작은 예제들이다. 모두 문서만 보고 썼다. 발행할 때 Slack 메시지 보내기, 나만의 블록(정의, 편집기 뷰, 공개 컴포넌트, 검사), 관리자 필드 화면 직접 만들기, 저장 전 슬러그 규칙, 나만의 형식, 공개 사이트의 타입 있는 읽기, 플러그인의 관리자 페이지, 플러그인이 더하는 `monti doctor` 검사가 있다. [`docs/recipes`](docs/recipes/README.md)에서 시작하면 된다. 코드는 [`examples/recipes`](examples/recipes)에 있고, 레시피마다 끝에서 끝까지 돌려 보는 테스트가 있다.
+
 ## 개발
 
 ```sh
@@ -100,6 +104,7 @@ pnpm typecheck        # 모든 패키지 타입 검사
 pnpm build            # 모든 패키지 빌드 (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
 pnpm test:run         # 테스트 (Postgres 필요)
 pnpm example:check    # 패키지를 묶어 예시 앱에 설치하고 빌드까지 확인
+pnpm recipes:check    # docs/recipes에 실린 코드가 examples/recipes의 코드와 같은지 확인 (pnpm recipes:docs가 페이지를 갱신)
 ```
 
 커밋할 때 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 자동으로 돈다. 커밋 메시지는 영어로 `type(scope): subject` 꼴로 쓴다(예: `feat(core): add thing`). 범위(scope)는 `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo` 중에서 고르고 생략해도 된다. push할 때는 lint·check:korean·typecheck가 돈다.

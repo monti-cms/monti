@@ -595,7 +595,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 
 **타입.** 타입은 넘긴 설정을 따라가며 등록 단계가 없다. `defineConfig({ … })`(와 `createCms({ config })`)는 `Cms<typeof config>`를 돌려주므로 `cms.read.listEntries({ collection: "post" })`는 컬렉션 이름과 각 컬렉션의 메타데이터를 알고(`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 설정에 없는 컬렉션은 타입 오류다. 라이브러리 타입이 인스턴스를 볼 수 없는 곳에서는 설정 타입을 준다: `DocumentComponentsFor<typeof config>`나 `DocumentComponentsOf<typeof cms>`가 `<CmsContent>`의 `components`(블록 이름과 블록마다의 속성 props)를 타입으로 정하고, AI 플러그인의 동작 이름도 같은 식으로 설정 타입을 받는다.
-그냥 `Cms`나 `Site`는 어떤 설정의 인스턴스든 가리키고 이름은 `string`이다. 설정이 다른 인스턴스 둘은 따로 타입이 정해진다. 데이터를 스키마 파일에 두는 사이트는 `monti schema:types`가 쓰는 선언 파일에서 같은 타입을 얻는다("스키마 파일").
+읽는 값은 발행된 항목 기준으로 타입이 정해진다. `required` 필드는 `entry.metadata`에서 선택 값이 아니다(`post.metadata.title`은 `string`이다). 발행하려면 그 값이 있어야 하기 때문이다(`PublishedMetadataFor`). 쓰는 값도 같은 설정으로 타입이 정해진다. `cms.contentService().createDraft({ collection: "post", … })`는 글의 메타데이터를 알고, 글에는 본문이 필요하며(`doc`, 또는 `format`과 함께 `body`) 항목 컬렉션(태그)에는 필요 없다. `{ summary: undefined }`는 "값 없음"이다. 그냥 `Cms`나 `Site`는 어떤 설정의 인스턴스든 가리키고 이름은 `string`이다. 설정이 다른 인스턴스 둘은 따로 타입이 정해진다. 데이터를 스키마 파일에 두는 사이트는 `monti schema:types`가 쓰는 선언 파일에서 같은 타입을 얻는다("스키마 파일").
 
 ### 서버 전용 설정
 
@@ -844,7 +844,7 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/render` | 공개 화면(서버 컴포넌트) | `CmsContent`(`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>`·`DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, 컴포넌트 props 타입("저장된 문서 그리기"). MDX 글은 `@monti-cms/mdx/render`의 `renderMdx`가 그린다. 사이트 CSS에 `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | 공개 화면(타입) | `ReadEntry`·`MetadataFor` 등 `cms.read`의 타입. `cms.read`가 공개본을 읽는다(`getEntry`·`listEntries`·`getTranslations`·`getPreview`: 관계·주소·옛 주소 이동·원문 대체) |
 | `@monti-cms/core/runtime` | 서버 코드(크론 스크립트·사이트 테스트 포함) | 저장소·서비스 타입, 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`) |
-| `@monti-cms/core/client` | 화면 코드 | `createSite`·`Site`·`SiteProvider`·`useSite`·`useTranslator`, API 모양과 설정이 필요 없는 컬렉션·언어·주소·블록·스키마 도우미(설정에 기대는 것은 `Site`의 멤버다) |
+| `@monti-cms/core/client` | 화면 코드 | `createSite`·`Site`·`SiteProvider`·`useSite`·`useTranslator`, API 모양과 설정이 필요 없는 컬렉션·언어·주소·블록·스키마 도우미(설정에 기대는 것은 `Site`의 멤버다), 그리고 문서의 텍스트: `toPlainText(site, doc)`(읽는 사람에게 보이는 글)와 `documentText(site, doc, { code, media, hidden })`(코드·이미지 텍스트·숨은 텍스트까지 담는다. 검색이나 일반 텍스트 내보내기용) |
 | `@monti-cms/core/code-block` | 공개 렌더러·편집기 | 코드 블록 주석 모델 |
 | `@monti-cms/core/document` | 본문을 고치거나 살피는 화면·플러그인 | `StoredDocument` 타입과, 표기법을 모르고 문서만으로 일하는 도우미: 블록 ID(`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, 링크·이미지·표 도우미, 저장 코드 블록 모델. 글 표기를 읽거나 쓰는 것은 없다. 관리자 편집기와 AI가 여기서 불러온다 |
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
@@ -852,8 +852,8 @@ pnpm exec monti add article-body --registry ./registry/r   # 다른 레지스트
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti doctor`(설정을 점검하고 잘못된 것을 어떻게 고치는지 알려 줌, "문제 해결")·`monti add`(컴포넌트를 소스로 설치)·`monti migrate`(표 만들기)·`monti import`(기존 MD/MDX 글 가져오기, "기존 글 가져오기")·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:types`(스키마 파일의 타입)·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`runDoctor`·`initProject`·`addComponents`·`migrate`·`runImport`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
-| `@monti-cms/core/testing` | 테스트 | `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`runDoctor`·`runDoctorCommand(argv, { cwd, log, error })`(`monti doctor` 명령, 종료 코드를 돌려준다)·`initProject`·`addComponents`·`migrate`·`runImport`·`generateSchemaTypes`·`extractSchema`(명령 `monti`의 코드) |
+| `@monti-cms/core/testing` | 테스트 | `testServer()`(`{ server, drop }`: 자기 스키마 위에 둔 진짜 인스턴스를 위한 `database`와 `auth` 옵션, ["훅과 플러그인 테스트하기"](#훅과-플러그인-테스트하기)), `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
 
@@ -934,6 +934,8 @@ export default defineFormat({
 ```
 
 플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/cms/v1/meta`가 이를 `formats`로 알려 준다.
+
+**문서 모델.** 노드는 `paragraph`, `heading`(`attrs.level`), `bulletList`와 `orderedList`(각각 블록을 담은 `listItem` 노드를 가진다), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`다. 텍스트 노드에는 `marks`(`bold`, `italic`, `code`, `attrs.href`가 있는 `link` 등)가 붙는다. 플러그인의 블록은 블록 이름을 딴 노드이고, 블록의 속성은 `attrs`에 들어간다(`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()`(`@monti-cms/core/document`)가 `content`를 채워 넣을 문서이고, 그 텍스트는 `toPlainText(site, doc)`나 `documentText(site, doc, options)`(`@monti-cms/core/client`)가 준다. 양방향을 모두 갖춘 형식은 [커스텀 형식 레시피](../../docs/recipes/custom-format.md)에 있다.
 
 **형식이 받는 것.** 두 방향 모두 `ctx.locale`, `ctx.blocks`(사이트의 본문 블록), `ctx.codeLineEffects`를 받는다. `export`는 `ctx.purpose`(`"read"`: 읽는 쪽이 글을 쓰므로 데이터베이스 밖에서도 통하는 주소가 필요하다. `"sync"`: 다시 가져올 글이므로 양방향 형식은 돌려받는 데 필요한 것을 유지한다), `ctx.link(entryId)`(링크가 가리키는 항목의 지금 주소 `{ url, title, locale }`, 없으면 `null`), `ctx.media(mediaId)`(`{ url, width?, height?, filename, mimeType, byteSize }` 또는 `null`), 문서가 말하는 대로 쓰지 못한 것을 알리는 `ctx.report(issue)`도 받는다. 코어가 `export`를 부르기 전에 문서의 모든 링크와 미디어를 풀어 두므로, 이 조회는 모두 동기식이다.
 `import`는 글이 말하는 문서를 돌려준다. 블록 ID나 문서 버전은 신경 쓰지 않는다. 코어가 모든 블록에 ID를 달고(글이 바꾸는 본문과 짝지어서, 바뀌지 않은 블록은 ID를 유지한다) 문서를 정해진 모양으로 맞춘다. 경고는 `blockIndex`로 돌려준 문서의 블록을 가리킬 수 있고, 코어가 그것을 블록 ID로 바꾼다.
@@ -1145,7 +1147,9 @@ codeBlock: {
 ```tsx
 import { CmsContent, type DocumentComponentsOf, renderDocument, tableOfContents } from "@monti-cms/core/render";
 
-const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry; // 문서와 refs
+const result = await cms.read.getEntry({ collection: "post", slug, locale }); // { status: "found" | "redirect" | "not_found", entry }
+if (result.status !== "found") return; // "redirect": result.path로 308 이동시킨다
+const { entry } = result; // 문서와 refs
 // 서버 컴포넌트에서는: 이미지와 파일은 entry.refs에서, 언어는 entry.locale에서,
 // 블록·코드 설정·플러그인 컴포넌트는 `cms`의 사이트에서 가져온다
 <CmsContent cms={cms} entry={entry} components={components} />;
@@ -1187,6 +1191,8 @@ export const myPlugin = () =>
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API 경로·표 만들기·메타 표시
 		admin: () => import("my-plugin/admin"), // CmsAdminPlugin(@monti-cms/admin): 화면·공급자
 		formats: () => import("my-plugin/formats"), // CmsFormat 하나 또는 그 목록("형식" 절)
+		render: () => import("my-plugin/render"), // 플러그인 블록의 공개 컴포넌트: `export const documentComponents = (context) => ({ blocks: { name: Component } })`("저장된 문서 그리기")
+		blocks: [], // 플러그인이 더하는 본문 블록(`defineBlock`, "본문 블록")
 	});
 ```
 
@@ -1334,13 +1340,16 @@ export const cms = defineConfig({
 	// schema, plugins, database, auth, ...
 	hooks: {
 		// 본체 준비 전에 돈다. 준비할 데이터를 돌려준다(아무것도 안 돌려주면 그대로).
-		transform: ({ operation, collection, entryId, locale, metadata, doc }) => ({
+		transform: ({ operation, collection, entryId, locale, slug, metadata, doc }) => ({
 			metadata: { ...metadata, title: String(metadata.title ?? "").trim() },
 			doc,
+			slug: slug?.toLowerCase(), // 선택: `slug`를 빼면 주소는 그대로 둔다
 		}),
 		// 본체 준비 뒤, 모든 쓰기에서 돈다. 실패는 쓰기를 막고, 경고는 결과와 함께 돌아간다.
 		validate: ({ metadata, snapshot }) => ({
-			issues: String(metadata.title ?? "").includes("TODO") ? [{ code: "title_has_todo", path: "title" }] : [],
+			issues: String(metadata.title ?? "").includes("TODO")
+				? [{ code: "title_has_todo", path: "title", message: "Remove TODO from the title before saving." }]
+				: [],
 		}),
 		// 같은 방식, 발행에서만.
 		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
@@ -1361,11 +1370,12 @@ export const cms = defineConfig({
 | 7 | `afterCommit` 훅 |
 
 - `operation`은 `create`·`save`·`publish`·`duplicate`·`translate`·`restore`다. 메타데이터·폴더 일괄 변경은 항목마다 `save`, 일괄 발행은 항목마다 `publish`다.
-  글을 만드는 중에는 `entryId`가 없다. `metadata`와 `doc`(저장 문서 형태의 본문, 문서가 될 수 없는 초안은 `unparsed` 노드 하나)은 복사본이라, `transform`이 돌려주지 않으면 바꿔도 아무 일도 없다.
+  글을 만드는 중에는 `entryId`가 없다. `slug`는 이 쓰기가 항목에 주는 주소다(주소를 주지 않으면 `null`이며, `metadata`의 필드에는 들어 있지 않다). `metadata`와 `doc`(저장 문서 형태의 본문, 문서가 될 수 없는 초안은 `unparsed` 노드 하나)은 복사본이라, `transform`이 돌려주지 않으면 바꿔도 아무 일도 없다. `transform`은 `{ metadata, doc }`를 돌려주고, 주소를 바꾸려면 `slug`도 돌려준다. 돌려준 값은 코어가 그래도 정규화하고 검사한다.
   `validate`와 `validatePublish`는 준비된 `snapshot`(복사본)도 받는다.
 - 보관·보관 해제·휴지통·삭제는 내용을 바꾸지 않으므로 2~5단계를 건너뛰고 `afterCommit`만 부른다. 항목(record)을 복원하면 다시 발행되므로 `restore`로 3~5단계를 거친다(`validate`와 `validatePublish`가 돌아서 휴지통에 넣었다 복원하는 식으로 발행 제한을 피할 수 없다. 내용이 그대로이므로 `transform`은 돌지 않는다). 다른 글의 복원은 초안으로 돌려놓을 뿐이라 아무 훅도 돌지 않는다.
 - 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
 - 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 그 글의 `saved` 변경 다음에 `published` 변경이 온다. 바뀐 것이 없는 발행은 `published`만 온다). 만들거나 저장하면서 바로 발행하는 경우(항목)도 같게 `created` 또는 `saved`, 그다음 `published`로 알린다.
+- `validate`나 `validatePublish`가 더하는 이슈는 `{ code, path?, message?, params? }`다. `path`는 편집기가 이슈를 보여 줄 필드(`"slug"`, `"title"`)이고, `message`는 사람이 읽는 문구다. 코어에 문구가 없는 `code`는 `message`가 그대로 보이므로 꼭 써 둔다. 거부된 쓰기가 던지는 `ServiceError`는 이를 `issues`로 담고, 자신의 `message`에는 그 내용을 나열한다(`validation_failed: The slug "A" must be lowercase (slug)`).
 - 훅이 예외를 던지거나 계약에 맞지 않는 값을 돌려주면 쓰기는 `hook_failed`(HTTP 500)로 실패한다. 오류의 `issues[].params`에 훅 이름과 소유자(`server` 또는 `plugin:<이름>`)가 들어가고, 아무것도 저장되지 않는다. `validate` 실패는 `validation_failed`, `validatePublish` 실패는 `publish_validation_failed`(HTTP 422)이며, 더한 이슈가 초안 자체의 이슈 옆에 붙는다.
 - `afterCommit`은 이벤트를 받는다. id·상태·주소·`version`·`contentHash`·`eventId`, 그리고 커밋된 글을 읽는 `read()`다(본문 자체는 아니다). 전달은 아웃박스에서 하며 최소 한 번, 글마다 순서대로, 실패하면 다시 시도한다. "이벤트 전달"을 본다.
 
@@ -1385,7 +1395,7 @@ export const cms = defineConfig({
 - **구독자.** 설정의 `hooks.afterCommit`은 구독자 `server`, 각 플러그인의 `hooks.afterCommit`은 `plugin:<플러그인 이름>`이다. 이름은 바뀌지 않는 값이고 `cms_event_deliveries`의 전달 상태(이벤트와 구독자마다 한 행: `state`, `attempts`, `last_error`, `next_attempt_at`)의 키가 되므로, 구독자가 있는 플러그인의 이름은 바꾸지 않는다. 나중에 생긴 구독자는 생긴 뒤에 커밋된 이벤트부터 받고, 그 전의 기록은 받지 않는다.
 - **전달.** 커밋 뒤에 변경을 만든 프로세스가 같은 호출 안에서 바로 각 구독자에게 보내므로 지연은 이전과 같다. 실패는 기록하고 점점 길어지는 간격(15초에서 시작해 두 배씩, 최대 1시간. `events.backoffMs`로 바꾼다)으로 나중에 다시 시도하며, `events.maxAttempts`번(기본 8) 시도하고도 실패하면 전달이 데드레터(`dead`)가 된다. 쓰기는 되돌리지 않고, 다른 구독자도 막지 않는다.
 - **최소 한 번, 글마다 순서대로.** 이벤트는 두 번 이상 전달될 수 있다(일을 하고 나서 실패한 구독자, 끝나지 못한 시도). 그래서 **구독자는 멱등이어야 한다.** 구독자는 시도마다 같은 `event.eventId`를 받아 처리한 이벤트를 기억한다. 한 글의 이벤트는 커밋 순서로 전달된다. 같은 글의 앞선 이벤트가 대기 중이거나 전달 중이거나 실패해 아직 죽지 않았다면 뒤의 이벤트는 기다린다. 죽었거나 닫은 전달은 순서를 붙들지 않으므로, 죽은 것을 손으로 다시 보내면 뒤의 이벤트보다 늦게 도착할 수 있다. 글을 내보내는 구독자는 글의 현재 상태를 읽고 `version`을 비교한다. 다른 글의 이벤트는 서로 상관없다.
-- **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(본문 문서와 발행 문서가 든 `Entry`)를, 삭제됐다면 `null`을 돌려준다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
+- **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(`Entry`: `working`과, 발행된 뒤에는 `published`가 각각 `{ metadata, doc, … }`로 있고, `publishedSlug`·`workingSlug`·`version`도 있다. `Entry`는 `@monti-cms/core/plugin/server`에서 내보낸다)를, 삭제됐다면 `null`을 돌려준다. 주소가 든 메시지를 만들 때는 `cms.site.contentPath(collection, slug)`(경로, 컬렉션에 경로가 없으면 `null`)와 `cms.site.config.site?.url`(출처, `SITE_URL`에서 온다)을 쓴다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
 - **미루기.** 아직 준비되지 않은 구독자(이벤트를 묶는 중이거나, 요청 제한이 언제 풀리는지 아는 경우)는 `{ retryAt: Date }`을 돌려주거나 `new DeferDelivery(retryAt)`을 던진다(`@monti-cms/core/server`, `@monti-cms/core/plugin/server`). 전달은 `pending`으로 돌아가 `retryAt`에 다시 도래한다. **실패가 아니다.** 로그를 남기지 않고, 이벤트 화면에 나오지 않고, 실패 배지에 들지 않고, 시도 횟수를 쓰지 않으며(`attempts`가 하나 되돌아가므로 몇 번을 미뤄도 그 시도 그대로다) dead letter가 될 수도 없다. 그 글의 뒤 이벤트 순서는 계속 잡고 있다. `cms.events.retry()`는 `deferred`가 몇 개인지 돌려주고, `retry({ all: true })`는 아직 때가 안 된 미뤄진 전달도 시도한다. git-sync가 묶음 창에 이것을 쓴다.
 
 ```ts
@@ -1423,6 +1433,31 @@ defineConfig({
 ```
 
 끝난 이벤트는 `events.retentionDays`일(기본 30) 뒤에 같은 쓰기 쪽 정리에서 지워진다. 관리자의 **이벤트** 화면(설정 기본 경로에서는 `/admin/events`, `monti init` 뒤에는 `/studio/events`)은 실패한 전달과 죽은 전달을 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바가 그 수를 보여 준다.
+
+## 훅과 플러그인 테스트하기
+
+복사본이 아니라 진짜 쓰기 파이프라인에서 테스트한다. `@monti-cms/core/testing`의 `testServer()`는 `defineConfig`에 넘길 `database`와 `auth` 옵션을 돌려준다. `CMS_TEST_DATABASE_URL`(테스트용 데이터베이스이며 운영 DB는 절대 안 된다) 안에 자기만의 스키마를 가진 Postgres 어댑터와, 모든 요청이 로그인한 관리자인 로그인이다. `cms.migrate()`가 표를 만들고 `drop()`이 스키마를 지우므로 테스트끼리 서로의 데이터를 보지 않는다.
+
+```ts
+import { defineConfig } from "@monti-cms/core/server";
+import { testServer } from "@monti-cms/core/testing";
+
+const test = testServer();
+const cms = defineConfig({ schema, plugins: [myPlugin()], hooks, ...test.server });
+
+beforeAll(() => cms.migrate());
+afterAll(async () => {
+	await cms.close();
+	await test.drop();
+});
+
+it("refuses a bad slug", async () => {
+	const draft = cms.contentService().createDraft({ collection: "post", slug: "Bad", metadata: { title: "A" }, body: "Hi.", format: "mdx" });
+	await expect(draft).rejects.toMatchObject({ code: "validation_failed" });
+});
+```
+
+`cms.handle(new Request(url))`은 관리자와 같은 검사를 거쳐 플러그인의 경로를 실행하고, `cms.events.retry({ all: true })`는 기다리는 `afterCommit` 이벤트를 전달하며, `@monti-cms/core/cli`의 `runDoctorCommand`는 폴더에서 `monti doctor`를 실행한다. 인스턴스가 몇 가지 부품 위에서만 필요한 코드라면 `fakeCms({ store, … })`가 더 가볍다. 플러그인의 화면은 브라우저와 비슷한 환경에서 테스트한다. `createSite(defineSite({ schema, plugins }))`로 사이트를 만들고(`defineConfig`는 서버 전용이라 `window`가 있는 곳에서는 실행을 거부한다) 화면을 `<SiteProvider site={site}>`로 감싼다. 레시피가 이 모두를 끝에서 끝까지 보여 준다.
 
 ## 스키마 파일
 
@@ -1719,6 +1754,10 @@ layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭
 
 복제(`POST /api/cms/v1/entries/:id/duplicate`)는 본문에 `{ title }`을 받으면 복제본 제목을 그 값으로 둔다(관리자 화면은 원본
 제목에 "(복사)"를 붙여 보낸다). 없으면 원본 제목 그대로다. 본체는 붙일 말을 정하지 않고, 복제본도 다른 쓰기와 같은 쓰기 파이프라인을 지난다.
+
+## 레시피
+
+확장 지점마다 동작하고 테스트된 작은 예제가 있다. 모두 이 문서만 보고 썼고, 코드는 [`examples/recipes`](../../examples/recipes)에, 설명 페이지는 [`docs/recipes`](../../docs/recipes/README.md)에 있다. 발행할 때 Slack 메시지 보내기, 나만의 블록(정의, 편집기 뷰, 공개 컴포넌트, 검사), 관리자 필드 화면 직접 만들기, 저장 전 슬러그 규칙, 나만의 형식, 공개 사이트의 타입 있는 읽기, 플러그인의 관리자 페이지, 플러그인이 더하는 `monti doctor` 검사다. 레시피 페이지마다 필요한 개념과 코드가 나오고, 코드 옆의 테스트가 끝에서 끝까지 돌려 본다.
 
 ## 아직 남은 일
 

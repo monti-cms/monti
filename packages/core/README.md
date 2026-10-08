@@ -598,7 +598,7 @@ or `contributes`, a text override of `admin.messages` that is a function (string
 
 **Typing.** The types follow the config you pass, with no registration step. `defineConfig({ … })` (and `createCms({ config })`) returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 and a collection that is not in the config is a type error. Where a library type cannot see an instance, give it the config type: `DocumentComponentsFor<typeof config>` or `DocumentComponentsOf<typeof cms>` types the `components` of `<CmsContent>` (block names and the attribute props of each block), and the AI plugin's action names take the config type the same way.
-A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from the declaration file `monti schema:types` writes ("The schema file").
+What you read is typed for a published entry: a `required` field is not optional in `entry.metadata` (`post.metadata.title` is a `string`), because publishing needs it (`PublishedMetadataFor`). What you write is typed by the same config: `cms.contentService().createDraft({ collection: "post", … })` knows the metadata of a post, a post needs a body (`doc`, or `body` with its `format`), and an item collection (a tag) needs none. `{ summary: undefined }` means "not set". A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from the declaration file `monti schema:types` writes ("The schema file").
 
 ### Server-only config
 
@@ -847,7 +847,7 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/render` | public pages (server components) | `CmsContent` (`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>` and `DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/runtime` | server code (including cron scripts and site tests) | store and service types, login types, snapshot helpers. It does not use `server-only`, so it can be loaded outside Next (plain `tsx`) |
-| `@monti-cms/core/client` | UI code | `createSite`, `Site`, `SiteProvider`, `useSite`, `useTranslator`, API shapes and the pure collection, locale, URL, block and schema helpers (the ones that depend on a config are members of the `Site`) |
+| `@monti-cms/core/client` | UI code | `createSite`, `Site`, `SiteProvider`, `useSite`, `useTranslator`, API shapes and the pure collection, locale, URL, block and schema helpers (the ones that depend on a config are members of the `Site`), and the text of a document: `toPlainText(site, doc)` (the prose a reader sees) and `documentText(site, doc, { code, media, hidden })` (also code, image text and hidden text, for search or a plain-text export) |
 | `@monti-cms/core/code-block` | public renderer, editor | The code block annotation model |
 | `@monti-cms/core/document` | screens and plugins that edit or inspect a body | The `StoredDocument` type and the helpers that work on a document without knowing its notation: block ids (`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, link, image and table helpers, the stored code block model. Nothing in it parses or writes a text notation. The admin editor and AI import from here |
 | `@monti-cms/core/format` | plugins that add a format | `defineFormat`, the `CmsFormat` interface with its context and issue types, `createFormatRegistry` ("Formats"). It does not read the site config, so a plugin may import it anywhere |
@@ -855,8 +855,8 @@ Full reference, the list of components and how to add one: [`registry/README.md`
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti add` (install components as source), `monti migrate` (create tables), `monti import` (bring in existing MD/MDX posts, "Import existing posts"), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
-| `@monti-cms/core/testing` | tests | `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
+| `@monti-cms/core/testing` | tests | `testServer()` (`{ server, drop }`: the `database` and `auth` options for a real instance on a schema of its own, ["Testing your hooks and plugins"](#testing-your-hooks-and-plugins)), `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
 
@@ -939,6 +939,8 @@ export default defineFormat({
 A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/cms/v1/meta` lists it as `formats`.
 
 **Legacy bodies.** A format may also give `legacyBodies` (the `LegacyBodies` type of `@monti-cms/core/format`): how to read and write the text that old stores kept bodies in (`read`, `write`, `insertSoftBreaks`, `documentOf`). Only the `mdx` format has it (`@monti-cms/mdx/server` supplies it). The migration steps `0010`, `0011`, `0012`, `0013` and `0015` keep their names in core but parse through it, and ask for it only when a store has a body to read ("Upgrading from MDX in core").
+
+**The document model.** Nodes: `paragraph`, `heading` (`attrs.level`), `bulletList` and `orderedList` (each holds `listItem` nodes that hold blocks), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`; a text node has `marks` (`bold`, `italic`, `code`, `link` with `attrs.href`, ...). A block of a plugin is a node named after the block, with the block's attributes in `attrs` (`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()` (`@monti-cms/core/document`) is the document to put `content` into, and `toPlainText(site, doc)` or `documentText(site, doc, options)` (`@monti-cms/core/client`) give its text. A complete two-way format is in the [custom format recipe](../../docs/recipes/custom-format.md).
 
 **What a format gets.** Both directions get `ctx.locale`, `ctx.blocks` (the body blocks of the site) and `ctx.codeLineEffects`. `export` also gets `ctx.purpose` (`"read"`: a consumer reads the text, so it needs addresses that work outside the database; `"sync"`: it will be imported again, so a two-way format keeps what it needs to round-trip), `ctx.link(entryId)` (`{ url, title, locale }`, the current address of the entry a link points to, or `null`), `ctx.media(mediaId)` (`{ url, width?, height?, filename, mimeType, byteSize }` or `null`) and `ctx.report(issue)` for what it could not write as the document says. Core resolves every link and media item of the document before it calls `export`, so these are plain synchronous lookups.
 `import` returns the document the text says without caring about block ids or the document version: core gives every block an id (pairing it with the body the text replaces, so unchanged blocks keep theirs) and puts the document in its canonical form. A warning may name a block of the returned document by `blockIndex`; core turns it into the block's id.
@@ -1148,7 +1150,9 @@ on the public path. Core renders documents only; text is drawn by reading it int
 ```tsx
 import { CmsContent, type DocumentComponentsOf, renderDocument, tableOfContents } from "@monti-cms/core/render";
 
-const entry = (await cms.read.getEntry({ collection: "post", slug, locale })).entry; // the document and its refs
+const result = await cms.read.getEntry({ collection: "post", slug, locale }); // { status: "found" | "redirect" | "not_found", entry }
+if (result.status !== "found") return; // "redirect": send the reader to result.path with a 308
+const { entry } = result; // the document and its refs
 // in a server component: the images and files come from entry.refs, the language from entry.locale,
 // the blocks, code settings and plugin components from the site of `cms`
 <CmsContent cms={cms} entry={entry} components={components} />;
@@ -1190,6 +1194,8 @@ export const myPlugin = () =>
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display
 		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
 		formats: () => import("my-plugin/formats"), // a CmsFormat or a list of them ("Formats")
+		render: () => import("my-plugin/render"), // the public components of the plugin's blocks: `export const documentComponents = (context) => ({ blocks: { name: Component } })` ("Rendering a stored document")
+		blocks: [], // body blocks the plugin adds (`defineBlock`, "Body blocks")
 	});
 ```
 
@@ -1337,13 +1343,16 @@ export const cms = defineConfig({
 	// schema, plugins, database, auth, ...
 	hooks: {
 		// Runs before core preparation. Return the data to prepare (or nothing to keep it as it is).
-		transform: ({ operation, collection, entryId, locale, metadata, doc }) => ({
+		transform: ({ operation, collection, entryId, locale, slug, metadata, doc }) => ({
 			metadata: { ...metadata, title: String(metadata.title ?? "").trim() },
 			doc,
+			slug: slug?.toLowerCase(), // optional: leave `slug` out to keep the address as it is
 		}),
 		// Runs after core preparation, for every write. Failures block the write, warnings come back with the result.
 		validate: ({ metadata, snapshot }) => ({
-			issues: String(metadata.title ?? "").includes("TODO") ? [{ code: "title_has_todo", path: "title" }] : [],
+			issues: String(metadata.title ?? "").includes("TODO")
+				? [{ code: "title_has_todo", path: "title", message: "Remove TODO from the title before saving." }]
+				: [],
 		}),
 		// The same, for a publish only.
 		validatePublish: ({ metadata }) => ({ warnings: metadata.summary ? [] : [{ code: "no_summary", path: "summary" }] }),
@@ -1364,11 +1373,12 @@ export const cms = defineConfig({
 | 7 | `afterCommit` hooks |
 
 - `operation` is `create`, `save`, `publish`, `duplicate`, `translate` or `restore`. A bulk metadata or folder change is a `save` per item, and a bulk publish is a `publish` per item.
-  `entryId` is absent while the entry is being created. `metadata` and `doc` (the body as a stored document, one `unparsed` node for a draft whose body could not become a document) are copies: changing them does nothing unless a `transform` returns them.
+  `entryId` is absent while the entry is being created. `slug` is the address the write gives the entry (`null` when it gives none; fields of `metadata` do not include it). `metadata` and `doc` (the body as a stored document, one `unparsed` node for a draft whose body could not become a document) are copies: changing them does nothing unless a `transform` returns them. A `transform` returns `{ metadata, doc }` and, to change the address, `slug` too; core still normalises and checks what it returns.
   `validate` and `validatePublish` also get the prepared `snapshot` (a copy).
 - Archiving, trashing, unarchiving and deleting do not change content, so they skip stages 2 to 5 and still fire `afterCommit`. Restoring a record publishes it again, so it runs stages 3 to 5 as a `restore` (`validate` and `validatePublish` run, so a restriction on publishing cannot be bypassed by trash and restore; `transform` does not, the content is unchanged). Restoring any other entry returns it to draft and runs nothing.
 - Hooks run outside the database transaction and get no database client. They may be async. The internal store option `beforePublishCommit` (which does get the transaction's client) is not part of this contract and is unchanged.
 - A `transform` that changes the draft while publishing has the change saved together with the publish, in one transaction (`afterCommit` then gets a `saved` change followed by a `published` one for the entry; a publish that changes nothing gets only `published`). A create or save that publishes at once (records) is reported the same way: `created` or `saved`, then `published`.
+- An issue a `validate` or `validatePublish` adds is `{ code, path?, message?, params? }`. `path` is the field the editor shows it under (`"slug"`, `"title"`), and `message` is the text the person reads: a `code` that core has no text for is shown as its `message`, so write one. The `ServiceError` a refused write throws carries them as `issues`, and its own `message` lists what they say (`validation_failed: The slug "A" must be lowercase (slug)`).
 - A hook that throws, or returns something that is not its contract, fails the write with `hook_failed` (HTTP 500). The error names the hook and its owner (`server` or `plugin:<name>`) in `issues[].params`; nothing is stored. `validate` failures give `validation_failed` and `validatePublish` failures give `publish_validation_failed` (HTTP 422), with the added issues next to the draft's own.
 - `afterCommit` gets the event: ids, status, slugs, `version`, `contentHash`, `eventId`, and `read()` for the committed entry (never the body itself). Delivery is from an outbox: at least once, in order per entry, retried when it fails. See "Event delivery".
 
@@ -1388,7 +1398,7 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 - **Subscribers.** The config's `hooks.afterCommit` is the subscriber `server`; each plugin's `hooks.afterCommit` is `plugin:<plugin name>`. The name is stable and keys the delivery state in `cms_event_deliveries` (one row per event and subscriber: `state`, `attempts`, `last_error`, `next_attempt_at`), so do not rename a plugin that has one. A subscriber added later gets the events committed after it appears, not the history.
 - **Delivery.** After the commit, the process that made the change tries each subscriber right away, in the same call, so latency is what it was before. A failure is recorded and retried later with a growing delay (15 seconds, doubling, at most an hour; `events.backoffMs` changes it) and the delivery is dead-lettered (`dead`) after `events.maxAttempts` tries (default 8). The write is never undone, and the other subscribers are not held back.
 - **At least once, in order per entry.** An event can be delivered more than once (a subscriber that did its work and then failed, a try that never finished), so **a subscriber must be idempotent**: it receives `event.eventId`, the same on every try, to remember what it handled. Events of one entry are delivered in commit order: an event waits while an earlier event of the same entry is pending, in flight or failing and not dead. A dead or dismissed delivery no longer holds the order, so a manual retry of a dead one can arrive after later events; a subscriber that exports the entry reads its current state and compares `version`. Events of different entries are independent.
-- **Reading the committed entry.** `event.read()` returns the entry as it is now (`Entry`, with the working and published documents) or `null` when it was deleted. `event.version` and `event.contentHash` say which change this event is: when `read().version` is higher, a later event for the entry follows. A subscriber that exports an entry through a format (git-sync) reads it, runs the format and skips the event if the version it wrote is already newer.
+- **Reading the committed entry.** `event.read()` returns the entry as it is now (`Entry`: `working` and, once published, `published`, each `{ metadata, doc, … }`, plus `publishedSlug`, `workingSlug`, `version`; `Entry` is exported by `@monti-cms/core/plugin/server`) or `null` when it was deleted. For a message with an address use `cms.site.contentPath(collection, slug)` (the path, `null` if the collection has none) and `cms.site.config.site?.url` (the origin, from `SITE_URL`). `event.version` and `event.contentHash` say which change this event is: when `read().version` is higher, a later event for the entry follows. A subscriber that exports an entry through a format (git-sync) reads it, runs the format and skips the event if the version it wrote is already newer.
 - **Deferring.** A subscriber that is not ready yet (it batches events, or knows when a rate limit ends) returns `{ retryAt: Date }` or throws `new DeferDelivery(retryAt)` (`@monti-cms/core/server`, `@monti-cms/core/plugin/server`). The delivery goes back to `pending`, due at `retryAt`. It is **not a failure**: nothing is logged, it is not listed on the Events screen, it is not in the failed badge, it does not use an attempt (`attempts` goes back by one, so a delivery deferred any number of times is still on its try) and it can never dead-letter. It still holds the order of the entry's later events. `cms.events.retry()` returns how many were `deferred`; `retry({ all: true })` also tries deferred deliveries that are not due yet. git-sync uses this for its batch window.
 
 ```ts
@@ -1426,6 +1436,31 @@ defineConfig({
 ```
 
 Finished events are removed after `events.retentionDays` days (default 30), by the same write-driven pass. The admin's **Events** screen (`/admin/events` at the config default path, `/studio/events` after `monti init`) lists the failed and dead deliveries with their last error, and retries or dismisses each; the sidebar shows how many there are.
+
+## Testing your hooks and plugins
+
+Test them on the real write pipeline, not a copy of it. `testServer()` of `@monti-cms/core/testing` returns the `database` and `auth` options for `defineConfig`: a Postgres adapter on a schema of its own inside `CMS_TEST_DATABASE_URL` (a database for tests, never the production one) and a login where every request is a signed-in admin. `cms.migrate()` creates the tables and `drop()` removes the schema, so tests never see each other's data.
+
+```ts
+import { defineConfig } from "@monti-cms/core/server";
+import { testServer } from "@monti-cms/core/testing";
+
+const test = testServer();
+const cms = defineConfig({ schema, plugins: [myPlugin()], hooks, ...test.server });
+
+beforeAll(() => cms.migrate());
+afterAll(async () => {
+	await cms.close();
+	await test.drop();
+});
+
+it("refuses a bad slug", async () => {
+	const draft = cms.contentService().createDraft({ collection: "post", slug: "Bad", metadata: { title: "A" }, body: "Hi.", format: "mdx" });
+	await expect(draft).rejects.toMatchObject({ code: "validation_failed" });
+});
+```
+
+`cms.handle(new Request(url))` runs a route of a plugin with the same checks as the admin, `cms.events.retry({ all: true })` delivers the `afterCommit` events that are waiting, and `runDoctorCommand` of `@monti-cms/core/cli` runs `monti doctor` on a folder. `fakeCms({ store, … })` is the lighter choice for code that only needs an instance over a few parts. A screen of a plugin is tested in a browser-like environment: build the site with `createSite(defineSite({ schema, plugins }))` (`defineConfig` is server-only and refuses to run where `window` exists) and wrap the screen in `<SiteProvider site={site}>`. The recipes show each of these end to end.
 
 ## The schema file
 
@@ -1722,6 +1757,10 @@ is wrong.
 
 Duplicating (`POST /api/cms/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original
 title with " (copy)" appended). Without it, the title is the original's as is. The core does not decide what to append; the copy goes through the same write pipeline as any other write.
+
+## Recipes
+
+Small, working, tested examples of the extension surfaces, each written from these docs alone and kept in [`examples/recipes`](../../examples/recipes) with a page in [`docs/recipes`](../../docs/recipes/README.md): a Slack message on publish, your own block (definition, editor view, public component, check), a custom admin field screen, a slug rule before save, a custom format, typed reads on the public site, an admin page of a plugin, and a `monti doctor` check from a plugin. The page of each lists the concepts it needs and the code, and the test beside the code runs it end to end.
 
 ## Remaining work
 
