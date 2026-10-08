@@ -154,6 +154,25 @@ describe("write pipeline", () => {
 		expect(error.issues?.map((issue) => issue.code)).toEqual(["first", "second"]);
 	});
 
+	it("saves a text body the format cannot read as an unparsed body, and warns with the field and where the text breaks", async () => {
+		const { snapshot, warnings } = await pipelineWith().run(
+			request({ input: input({ title: "Title" }, "<<<Unclosed") }),
+		);
+		expect(snapshot.doc.content).toEqual([
+			expect.objectContaining({ type: "unparsed", attrs: { format: "paragraphs", source: "<<<Unclosed" } }),
+		]);
+		expect(warnings).toEqual([{ code: "bad_marker", path: "body", position: { line: 1, column: 1 } }]);
+	});
+
+	it("warns the same when hooks are registered, and a text body that reads gives no warning", async () => {
+		const pipeline = pipelineWith({ owner: "server", hooks: { validate: () => undefined } });
+		const bad = await pipeline.run(request({ input: input({ title: "Title" }, "<<<Unclosed") }));
+		expect(bad.warnings.map((warning) => warning.code)).toEqual(["bad_marker"]);
+		const good = await pipeline.run(request({ input: input({ title: "Title" }, "Fine") }));
+		expect(good.warnings).toEqual([]);
+		expect((await pipelineWith().run(request())).warnings).toEqual([]);
+	});
+
 	it("passes warnings through without blocking", async () => {
 		const pipeline = pipelineWith(
 			{ owner: "server", hooks: { validate: () => ({ warnings: [{ code: "check-this" }] }) } },
