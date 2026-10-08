@@ -33,8 +33,10 @@ It looks at the app (App Router, `src/` or not, package manager, TypeScript, Tai
 
 - **Questions:** the database (a URL, a local Docker Postgres, or later), the GitHub login, languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, the admin path (default `/studio`), and whether to install the blog theme pages.
 - **No prompts:** every question has a flag, and `--yes` takes the defaults. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
-- **Safe:** it never overwrites a file without asking, never writes outside the project, and says what it wrote if a run stops partway.
-- **Existing posts:** if it finds Markdown or MDX folders, it ends by suggesting `monti import <folder>`. Its default body blocks are a light set; `mermaid` and `chart` are opt-in (`--blocks all`).
+- **Safe:** it never overwrites a file without asking, never writes outside the project, and says what it wrote if a run stops partway. When a step fails (the install, the theme, the typography plugin, the tables) it does not say "Monti is added": it lists the failed steps and the exact commands that finish the job, in order, and `monti init --resume` runs only the steps that did not complete.
+- **pnpm 12:** it stops an install until esbuild's install script is allowed. Put `allowBuilds:` with `esbuild: true` in `pnpm-workspace.yaml` (never a second key); `monti init` checks it and fixes it with a diff and a confirmation.
+- **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.
+- **Existing posts:** if it finds Markdown or MDX folders, it ends by suggesting `monti import <folder>`. Its default body blocks are a light set; `mermaid` and `chart` are opt-in (`--blocks all`): they come from `@monti-cms/blocks/mermaid` and `@monti-cms/blocks/chart` and bring `mermaid` and `recharts` only when chosen, so an app without them loads and installs neither.
 
 Until the public release, `@monti-cms/core` is installed from the release bundle first (see "Install"); `monti init` then installs the rest. Always install `@monti-cms/core` before running `monti`: `npx monti` without it fetches an unrelated package. The short version with every command is the [Quick start](packages/core/README.md#quick-start-existing-next-app) of the core README.
 

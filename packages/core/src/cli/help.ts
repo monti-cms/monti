@@ -15,7 +15,8 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
               --database-schema <n> Postgres schema for the tables (DATABASE_SCHEMA in .env.local), for a database shared with other apps (default public)
               --admin-github-id <n> Numeric GitHub id of the admin (MONTI_ADMIN_GITHUB_ID in .env.local)
               --site-url <url>      Public site URL, for the GitHub OAuth callback URL (default http://localhost:3000)
-              --locales <list>      Language codes, the default first (default en); --locale <code> is the same for one
+              --locales <list>      Language codes, the default first (default: the languages found in file names like hello.ko.mdx or in folders like ko/, else en);
+                                    --locale <code> is the same for one
               --time-zone <tz>      IANA time zone for dates and times (default UTC)
               --storage <s3|none>   Image storage: an S3-compatible store (S3, R2, MinIO), or none for now (default none)
               --extras <list>       ai, git-sync, or none (default none)
@@ -30,6 +31,7 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
               --no-migrate          Do not run monti migrate
               --no-docker-start     Write docker-compose.yml but do not start it
               --package-manager <m> npm, pnpm, yarn or bun (default: detected)
+              --resume              Run again only the steps the last run did not complete (progress is saved in .monti/init.json, which is git-ignored)
 `;
 
 const ADD_HELP = `  add       Copy components from the registry into the app as source you own, and install their npm packages

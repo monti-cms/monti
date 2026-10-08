@@ -43,6 +43,7 @@ const options = {
 	"no-migrate": { type: "boolean" },
 	"no-docker-start": { type: "boolean" },
 	"package-manager": { type: "string" },
+	resume: { type: "boolean" },
 } as const;
 
 /** Runs `monti init <argv>` and returns the exit code: 0 done, 1 an error or a step that failed, 130 cancelled. */
@@ -73,6 +74,7 @@ export async function runInitCommand(
 			install: values["no-install"] ? false : undefined,
 			migrate: values["no-migrate"] ? false : undefined,
 			dockerStart: values["no-docker-start"] ? false : undefined,
+			resume: values.resume,
 			packageManager: manager as PackageManager | undefined,
 			database: values.database,
 			databaseSchema: values["database-schema"],

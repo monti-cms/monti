@@ -106,6 +106,7 @@ export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {
 		generateSecret: () => "generated-secret",
 		install: vi.fn<InitHost["install"]>(),
 		migrate: vi.fn<InitHost["migrate"]>(async () => true),
+		pnpmVersion: () => undefined,
 		...overrides,
 	} as FakeHost;
 }

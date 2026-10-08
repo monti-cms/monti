@@ -2,6 +2,13 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { detectPackageManager } from "./add";
 import { parseJsonc } from "./config-paths";
+import {
+	type DetectedLocale,
+	defaultFirst,
+	isLanguageCode,
+	localesFromFileNames,
+	normalizeLanguageCode,
+} from "./locale-names";
 
 /** What `monti init` finds out about the app before it asks anything. Read-only: nothing is written here. */
 
@@ -26,6 +33,12 @@ export interface ContentFolder {
 	readonly files: number;
 	/** The front matter keys of up to {@link SAMPLE_FILES} files, most common first. */
 	readonly keys: readonly FrontMatterKey[];
+	/**
+	 * The languages the files are written in, default first, when their names say so: `hello.ko.mdx` and `hello.en.mdx` (`filename`), or sibling folders named
+	 * `ko/` and `en/` that this folder merges (`folder`, then `dir` is their parent).
+	 */
+	readonly locales?: readonly DetectedLocale[];
+	readonly localesFrom?: "filename" | "folder";
 }
 
 export interface DetectedApp {
@@ -99,6 +112,7 @@ export function parseFrontMatterKeys(text: string): Map<string, FrontMatterType>
 /** Folders under the content roots that hold Markdown or MDX files, with the front matter keys of their files. */
 function findContentFolders(cwd: string): ContentFolder[] {
 	const folders: ContentFolder[] = [];
+	const names = new Map<string, string[]>();
 	const seen = new Set<string>();
 	const visit = (dir: string, depth: number) => {
 		if (seen.has(dir)) return;
@@ -133,7 +147,14 @@ function findContentFolders(cwd: string): ContentFolder[] {
 					type: [...types.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "string",
 				}))
 				.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-			folders.push({ dir: posix(dir), files: files.length, keys });
+			names.set(posix(dir), files);
+			const locales = localesFromFileNames(files);
+			folders.push({
+				dir: posix(dir),
+				files: files.length,
+				keys,
+				...(locales ? { locales, localesFrom: "filename" as const } : {}),
+			});
 		}
 		if (depth >= MAX_DEPTH) return;
 		for (const entry of entries) {
@@ -145,7 +166,65 @@ function findContentFolders(cwd: string): ContentFolder[] {
 	for (const root of CONTENT_ROOTS) {
 		if (existsSync(path.join(cwd, root)) && statSync(path.join(cwd, root)).isDirectory()) visit(root, 0);
 	}
-	return folders;
+	return mergeLocaleFolders(folders, names);
+}
+
+/**
+ * Sibling folders named after languages (`content/ko`, `content/en`) are one set of posts in two languages, not two collections: they are merged into their parent,
+ * which then lists the languages. A single folder named like a language is left alone (it may be a name).
+ */
+function mergeLocaleFolders(folders: ContentFolder[], names: ReadonlyMap<string, string[]>): ContentFolder[] {
+	const byParent = new Map<string, ContentFolder[]>();
+	for (const folder of folders) {
+		const base = path.posix.basename(folder.dir);
+		const parent = path.posix.dirname(folder.dir);
+		if (parent === "." || !isLanguageCode(base)) continue;
+		byParent.set(parent, [...(byParent.get(parent) ?? []), folder]);
+	}
+	let result = folders;
+	for (const [parent, children] of byParent) {
+		if (children.length < 2) continue;
+		const stems = (folder: ContentFolder) =>
+			new Set((names.get(folder.dir) ?? []).map((name) => name.replace(/\.(md|mdx)$/i, "").toLowerCase()));
+		const stemSets = children.map(stems);
+		const locales = defaultFirst(
+			children.map((folder, index) => ({
+				code: normalizeLanguageCode(path.posix.basename(folder.dir)),
+				files: folder.files,
+				unpaired: [...(stemSets[index] ?? [])].filter(
+					(stem) => !stemSets.some((other, otherIndex) => otherIndex !== index && other.has(stem)),
+				).length,
+			})),
+		);
+		const own = folders.find((folder) => folder.dir === parent);
+		const members = [...(own ? [own] : []), ...children];
+		const tally = new Map<string, { count: number; types: Map<FrontMatterType, number> }>();
+		for (const member of members) {
+			for (const key of member.keys) {
+				const entry = tally.get(key.name) ?? { count: 0, types: new Map() };
+				entry.count += key.count;
+				entry.types.set(key.type, (entry.types.get(key.type) ?? 0) + key.count);
+				tally.set(key.name, entry);
+			}
+		}
+		const merged: ContentFolder = {
+			dir: parent,
+			files: members.reduce((sum, member) => sum + member.files, 0),
+			keys: [...tally.entries()]
+				.map(([name, { count, types }]) => ({
+					name,
+					count,
+					type: [...types.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ("string" as const),
+				}))
+				.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+			locales,
+			localesFrom: "folder",
+		};
+		const drop = new Set<ContentFolder>(members);
+		const first = result.findIndex((folder) => drop.has(folder));
+		result = result.flatMap((folder, index) => (index === first ? [merged] : drop.has(folder) ? [] : [folder]));
+	}
+	return result;
 }
 
 /** Whether a `.gitignore` line list covers `.env.local`. */

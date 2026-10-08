@@ -194,6 +194,15 @@ export const QUESTIONS = {
 	blogTheme: "Install the blog theme pages (monti add blog-theme)? Skip it if your blog already has pages",
 } as const;
 
+/** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
+export function detectedLocales(
+	app: DetectedApp,
+): { codes: string[]; dir: string; from: "filename" | "folder" } | undefined {
+	const folder = app.contentFolders.find((entry) => entry.locales !== undefined && entry.locales.length > 0);
+	if (!folder?.locales || !folder.localesFrom) return undefined;
+	return { codes: folder.locales.map((locale) => locale.code), dir: folder.dir, from: folder.localesFrom };
+}
+
 /**
  * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link InitCancelled} when the
  * person cancels, and an Error naming the flag when a flag value is wrong.
@@ -255,16 +264,19 @@ export async function collectAnswers(
 
 	// Locales, the default first
 	let locales: string[];
+	const foundLocales = detectedLocales(app);
 	if (flags.locales !== undefined) locales = splitList(flags.locales);
 	else if (prompter) {
 		locales = splitList(
 			await prompter.text({
-				message: QUESTIONS.locales,
-				initial: DEFAULT_INIT_LOCALE,
+				message: foundLocales
+					? `${QUESTIONS.locales}. Found ${foundLocales.codes.join(", ")} in the ${foundLocales.from === "filename" ? "file names" : "folders"} of ${foundLocales.dir}/`
+					: QUESTIONS.locales,
+				initial: foundLocales ? foundLocales.codes.join(",") : DEFAULT_INIT_LOCALE,
 				validate: (value) => check.locales(value),
 			}),
 		);
-	} else locales = [DEFAULT_INIT_LOCALE];
+	} else locales = foundLocales ? foundLocales.codes : [DEFAULT_INIT_LOCALE];
 	locales = [...new Set(locales)];
 
 	// Image storage
