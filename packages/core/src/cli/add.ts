@@ -4,6 +4,7 @@ import path from "node:path";
 import { parseJsonc } from "./config-paths";
 import { setupThemeStyles, type ThemeStylesResult } from "./first-run";
 import type { Prompter } from "./init-prompts";
+import { INIT_PROXY_TEMPLATE } from "./proxy-template";
 import {
 	defaultRegistrySource,
 	describeSource,
@@ -282,7 +283,11 @@ export async function addComponents(options: AddOptions): Promise<AddReport> {
 				writes.push({ absolute, content });
 			} else if (readFileSync(absolute, "utf8") === content) {
 				unchanged.push(relative);
-			} else if (options.overwrite) {
+			} else if (
+				options.overwrite ||
+				(/(^|\/)proxy\.ts$/.test(relative) && readFileSync(absolute, "utf8") === INIT_PROXY_TEMPLATE)
+			) {
+				// `monti init` wrote this proxy.ts, and the theme's proxy does the same and more: it is replaced without asking.
 				overwritten.push(relative);
 				writes.push({ absolute, content });
 			} else {

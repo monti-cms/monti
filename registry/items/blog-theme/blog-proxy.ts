@@ -1,3 +1,4 @@
+import { setupResponse } from "@monti-cms/nextjs/proxy";
 import { type NextRequest, NextResponse } from "next/server";
 import { blogTheme } from "./theme.config";
 
@@ -47,6 +48,8 @@ export async function postStatus(request: NextRequest, route: PostRoute): Promis
  */
 export async function blogProxy(request: NextRequest) {
 	return (
+		// In production without the login settings the admin and the draft preview answer 503 with a page that points to `monti doctor`, not a 200 with a logged error.
+		setupResponse(request, blogTheme.cms) ??
 		(await postStatus(request, { collection: blogTheme.collection, routeBase: blogTheme.routeBase })) ??
 		NextResponse.next()
 	);

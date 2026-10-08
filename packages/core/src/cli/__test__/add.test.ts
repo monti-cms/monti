@@ -477,6 +477,7 @@ describe("the registry of this repo", () => {
 					"@monti-cms/core/client",
 					"@monti-cms/core/read",
 					"@monti-cms/nextjs",
+					"@monti-cms/nextjs/proxy",
 				]).toContain(specifier);
 		}
 		expect(read(host, "src/components/monti/entry-editor/entry-editor-screen.tsx")).toContain(
@@ -602,6 +603,36 @@ describe("the registry of this repo", () => {
 				expect(read(host, "src/components/monti/blog-theme/blog-proxy.ts")).toContain("blogTheme.routeBase");
 				expect(read(host, "src/components/monti/blog-theme/theme.config.ts")).toContain('routeBase: "/notes",');
 				expect(report.created).toContain("app/(site)/notes/[slug]/page.tsx");
+			});
+
+			it("points categoryField at the relation to the categories, and turns it off when the schema has none", async () => {
+				const withCategory = addTheme({
+					"monti.schema.json": schema({
+						path: "/posts/:slug",
+						fields: { ...fields, categoryId: { kind: "relation", label: "Category", to: "category" } },
+					}),
+				});
+				const report = await withCategory.added;
+				expect(read(withCategory.host, "src/components/monti/blog-theme/theme.config.ts")).toContain(
+					'categoryField: "categoryId",',
+				);
+				expect(report.configured.join("\n")).toContain("theme.config.ts from monti.schema.json");
+				// Several categories (a many relation) count too.
+				const many = addTheme({
+					"monti.schema.json": schema({
+						path: "/posts/:slug",
+						fields: { ...fields, categoryIds: { kind: "relation", label: "Categories", to: "category", many: true } },
+					}),
+				});
+				await many.added;
+				expect(read(many.host, "src/components/monti/blog-theme/theme.config.ts")).toContain(
+					'categoryField: "categoryIds",',
+				);
+				const none = addTheme({ "monti.schema.json": schema({ path: "/posts/:slug", fields }) });
+				await none.added;
+				expect(read(none.host, "src/components/monti/blog-theme/theme.config.ts")).toContain(
+					"categoryField: undefined,",
+				);
 			});
 
 			it("turns off the fields the schema does not have, instead of pointing at fields that are not there", async () => {

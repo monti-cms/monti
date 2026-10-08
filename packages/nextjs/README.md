@@ -28,6 +28,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | (attached for you by the route handler and the admin) | `nextHost` |
+| `@monti-cms/nextjs/proxy` | `proxy.ts` | `cmsProxy(cms)`, `setupResponse(request, cms)`, `loginProblem(cms)` |
 
 ### Route handler
 
@@ -124,6 +125,10 @@ There is no route group and no other admin file: custom admin components are a p
 ## Preview pages
 
 A site page that shows drafts (`site.previewPath`, for example `/preview/ko/posts/<slug>`) reads them with `previewEntry(cms, { collection, slug, locale })` from `@monti-cms/nextjs`, not with `cms.read.getPreview` directly. It attaches the request headers to the instance first, so the admin session (or the dev bypass under `next dev`) is read even when the preview is the first request after a cold start, or the only thing a serverless instance has served. It returns `null` for anyone who is not the admin, so the page answers 404. `examples/blog` and the `blog-theme` registry item have such a page.
+
+## Production without the login settings
+
+A page cannot send an error status under Cache Components (it streams after a `200`), so a site in production without `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` or `MONTI_SECRET` would answer the admin and the draft preview with `200` and a logged error. A proxy answers before any page runs: `export const proxy = cmsProxy(cms)` in `proxy.ts` (`monti init` writes it when the app has no proxy; the blog theme's proxy does the same) sends `503` with a page that points to `monti doctor` for the admin path and `site.previewPath`, and logs the full problem once. Every other request goes through, and under `next dev` it does nothing. An app with its own proxy calls `setupResponse(request, cms)` first and returns what it gives when that is not `undefined`.
 
 ## Upgrading
 
