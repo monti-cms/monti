@@ -82,9 +82,11 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner \
-  @tiptap/core @tiptap/pm @tiptap/react lucide-react
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.0&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.0&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs" \
+  next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
+
+공개 릴리스 전에는 Monti 패키지를 GitHub 릴리스 번들에서 받으므로, 패키지마다 GitHub 주소로 추가한다(ref는 같고 `path:/<폴더>`만 다르다). `monti init`이 대신 해 준다.
 
 관리자 패키지와 AI 플러그인은 React Query·sonner·Tiptap·lucide 아이콘을 앱과 같은 하나로 써야 해서 앱이 설치한다(peer).
 로그인은 `@monti-cms/auth`(Auth.js core, Next.js 없음)다. GitHub 로그인에 다른 패키지는 필요 없다. 프로바이더는 그 README를 본다.

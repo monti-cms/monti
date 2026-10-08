@@ -82,9 +82,11 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner \
-  @tiptap/core @tiptap/pm @tiptap/react lucide-react
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.0&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.0&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs" \
+  next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
+
+Until the public release the Monti packages come from the GitHub release bundle, so each one is added by its GitHub address (the same ref, only `path:/<folder>` changes). `monti init` does this for you.
 
 The admin package and the AI plugin must share one copy of React Query, sonner, Tiptap and the lucide icons with the app, so the app installs them (peers).
 Login is `@monti-cms/auth` (Auth.js core, no Next.js in it); GitHub login needs no extra package. See its README for providers.
