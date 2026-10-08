@@ -353,6 +353,20 @@ describe("monti doctor lists ejected packages", () => {
 	});
 });
 
+describe("pnpm-workspace.yaml of a site that already has a workspace", () => {
+	it("leaves a glob that covers the folder, and adds to an existing list otherwise", async () => {
+		const covered = site();
+		write(covered, "pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n  - "registry"\n');
+		await monti(covered, "@monti-cms/admin", "--yes", "--no-install");
+		expect(read(covered, "pnpm-workspace.yaml")).toBe('packages:\n  - "packages/*"\n  - "registry"\n');
+
+		const listed = site();
+		write(listed, "pnpm-workspace.yaml", "packages:\n  - examples/recipes\n");
+		await monti(listed, "@monti-cms/admin", "--yes", "--no-install");
+		expect(read(listed, "pnpm-workspace.yaml")).toBe("packages:\n  - packages/monti-admin\n  - examples/recipes\n");
+	});
+});
+
 describe("compareVersions", () => {
 	it("orders versions, with a prerelease before its release", () => {
 		expect(compareVersions("0.1.0", "0.1.1")).toBeLessThan(0);
