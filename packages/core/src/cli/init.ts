@@ -188,7 +188,24 @@ const addCommand = (
 	args: [manager === "npm" ? "install" : "add", ...(dev ? ["-D"] : []), ...packages],
 	cwd,
 });
-const commandText = (command: InstallCommand) => `${command.command} ${command.args.join(" ")}`;
+/** One argument as a shell word: left as it is when it is plain, else in single quotes (the `&` and `#` of a GitHub spec would end the command or start a comment). */
+const shellWord = (arg: string) => (/^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replaceAll("'", "'\\''")}'`);
+const commandText = (command: InstallCommand) => [command.command, ...command.args.map(shellWord)].join(" ");
+
+/** A git address that points at a folder of a repository (`github:owner/repo#ref&path:/core`), as Monti's release bundles are installed. */
+const CORE_FOLDER_SPEC = /^(?:github:|git\+|git:|git@|ssh:|https?:\/\/).*(?:^|[#&])path:\/core(?=&|$)/;
+
+/**
+ * The install specs of the Monti packages: while Monti is not on npm, `@monti-cms/core` is a GitHub address with `path:/core`, and each sibling is that address with its own folder.
+ * With any other spec (or none) the names stay bare. Packages that are not Monti's stay bare.
+ */
+export function installSpecs(packages: readonly string[], coreSpec: string | undefined): string[] {
+	if (coreSpec === undefined || !CORE_FOLDER_SPEC.test(coreSpec)) return [...packages];
+	return packages.map((name) => {
+		const folder = name.startsWith("@monti-cms/") ? name.slice("@monti-cms/".length) : undefined;
+		return folder ? `${name}@${coreSpec.replace(/(^|[#&])path:\/core(?=&|$)/, `$1path:/${folder}`)}` : name;
+	});
+}
 
 const NEXT_CONFIG_IMPORT = 'import { withCms } from "@monti-cms/nextjs/config";';
 /** The default shape of a Next config: one `export default nextConfig;`. */
@@ -367,7 +384,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 
 	// What gets installed, and whether the person agrees to run it (default yes). `--yes`, `--json` and a missing terminal accept without asking.
 	const missing = packagesFor(answers).filter((name) => !app.dependencies.has(name));
-	const installCommand = addCommand(manager, missing, cwd);
+	const installCommand = addCommand(manager, installSpecs(missing, app.coreSpec), cwd);
 	let installing = options.install !== false;
 	let declined = false;
 	if (installing && missing.length > 0 && prompter && !dryRun) {
@@ -401,6 +418,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		installing,
 		declined,
 		packages: missing,
+		specs: installSpecs(missing, app.coreSpec),
 	});
 
 	// ---- What is left: the changes to files the app owns, then the setup, each with exact content ----
@@ -478,6 +496,8 @@ async function runInstallStep(input: {
 	/** The person answered no to the confirmation. */
 	readonly declined: boolean;
 	readonly packages: readonly string[];
+	/** What is passed to the package manager for each of `packages`. */
+	readonly specs: readonly string[];
 }): Promise<boolean> {
 	const { cwd, host, log, dryRun, manager, report } = input;
 	if (input.packages.length === 0) return true;
@@ -489,12 +509,12 @@ async function runInstallStep(input: {
 		return false;
 	}
 	if (dryRun) {
-		record("planned", commandText(addCommand(manager, input.packages, cwd)));
+		record("planned", commandText(addCommand(manager, input.specs, cwd)));
 		return false;
 	}
 	log(`Installing ${input.packages.length} packages with ${manager} ...`);
 	try {
-		await host.install(addCommand(manager, input.packages, cwd));
+		await host.install(addCommand(manager, input.specs, cwd));
 		record("done", `${input.packages.length} packages with ${manager}`);
 		return true;
 	} catch (error) {

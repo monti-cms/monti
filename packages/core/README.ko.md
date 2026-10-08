@@ -18,24 +18,18 @@ React 19 위의 Next.js 16(App Router) 앱이 필요하다. `@monti-cms/core`를
 1~2단계: `@monti-cms/core`를 **설치**한 다음 **init**을 돌린다(Monti가 새로 만드는 파일을 쓰고, 묻고 나서 나머지 패키지를 설치하고, 남은 일을 적어 준다. 이미 있는 파일은 고치지 않고 데이터베이스는 건드리지 않는다). 쓰는 패키지 매니저의 블록을 그대로 복사한다.
 
 ```sh
-# pnpm
-pnpm add @monti-cms/core
+# 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+# 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
 pnpm exec monti init
-
-# npm
-npm install @monti-cms/core
-npx monti init
-
-# yarn
-yarn add @monti-cms/core
-yarn monti init
-
-# bun
-bun add @monti-cms/core
-bunx monti init
 ```
 
-pnpm 12라면 먼저 `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다(pnpm 12는 esbuild의 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
+pnpm 12라면 1단계 전에 `pnpm-workspace.yaml`에 이렇게 적는다(core가 쓰는 `tsx`가 esbuild를 가져오고, pnpm 12는 그 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
+
+```yaml
+allowBuilds:
+  esbuild: true
+```
 
 3. **init이 적어 준 일을 한다.** init은 내 파일을 하나도 고치지 않으므로, 복사할 내용이 든 번호 목록으로 끝난다. `next.config`의 변경(`withCms`), `<html>`의 `suppressHydrationWarning`, `tsconfig.json`의 `"resolveJsonModule": true`, `.gitignore`의 `.env.local`(앱에 필요한 것만), 그리고 `cp .env.example .env.local`(채워 넣는다. `.env.example`에 각 값이 무엇이고 어디서 얻는지 적혀 있고, `MONTI_SECRET`은 `openssl rand -base64 32`로 만든다)이다.
 4. **표 만들기와 설정 점검.** `pnpm exec monti migrate`를 돌린 다음 `pnpm exec monti doctor`를 돌린다. 모든 검사를 `ok`, `warn`, `FAIL`로 보여 주고, 경고마다 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다(위 init 단계 중 빠진 것이 있으면 그것도 알려 준다). Monti가 스스로 정한 값과 그 출처도 함께 보여 준다.
@@ -88,9 +82,11 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs next-themes @tanstack/react-query sonner \
-  @tiptap/core @tiptap/pm @tiptap/react lucide-react
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.0&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.0&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs" \
+  next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
+
+공개 릴리스 전에는 Monti 패키지를 GitHub 릴리스 번들에서 받으므로, 패키지마다 GitHub 주소로 추가한다(ref는 같고 `path:/<폴더>`만 다르다). `monti init`이 대신 해 준다.
 
 관리자 패키지와 AI 플러그인은 React Query·sonner·Tiptap·lucide 아이콘을 앱과 같은 하나로 써야 해서 앱이 설치한다(peer).
 로그인은 `@monti-cms/auth`(Auth.js core, Next.js 없음)다. GitHub 로그인에 다른 패키지는 필요 없다. 프로바이더는 그 README를 본다.

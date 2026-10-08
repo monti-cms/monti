@@ -11,22 +11,10 @@ The name is short for Montaigne. In Italian, "monti" also means "mountains".
 Run this in the folder of a Next.js (App Router) app:
 
 ```sh
-# Until the public release, install @monti-cms/core from the release bundle first (see "Install")
-# pnpm
-pnpm add @monti-cms/core
+# 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.0&path:/core"
+# 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
-
-# npm
-npm install @monti-cms/core
-npx monti init
-
-# yarn
-yarn add @monti-cms/core
-yarn monti init
-
-# bun
-bun add @monti-cms/core
-bunx monti init
 ```
 
 It looks at the app (App Router, `src/` or not, package manager, TypeScript, existing `content/` folders of Markdown or MDX), asks a few questions, and then writes Monti's own new files, which you can read and change: `monti.config.ts` (one line per feature, each with a comment), `monti.schema.json` (a starter `post` collection, shaped by your front matter if it finds content), the three Next files (`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), and a commented `.env.example` (what each variable is and where to get it). It shows the install command and asks before running it. **It edits none of your files** (`next.config`, the root layout, `tsconfig.json`, `.gitignore`) and writes no `.env.local`: it ends with a plain, numbered list of what is left, with the exact content to copy (the `withCms` change for `next.config`, `suppressHydrationWarning` on `<html>`, `cp .env.example .env.local`, then `monti migrate`, `monti doctor`, `pnpm dev`). It never touches the database.
@@ -37,7 +25,12 @@ The whole flow:
 install → monti init → monti migrate → monti doctor → pnpm dev
 ```
 
-With pnpm 12, add `allowBuilds:` with `esbuild: true` to `pnpm-workspace.yaml` before installing (pnpm 12 stops an install until esbuild's install script is allowed; Monti does not edit that file).
+With pnpm 12, put this in `pnpm-workspace.yaml` before step 1 (core's `tsx` brings esbuild, and pnpm 12 stops an install until its install script is allowed; Monti does not edit that file):
+
+```yaml
+allowBuilds:
+  esbuild: true
+```
 
 - **Questions:** the database schema, your GitHub id, languages, image storage (S3, R2, MinIO or none), extras (AI writing, git sync), which body blocks, and the admin path (default `/studio`).
 - **No prompts:** every question has a flag, and `--yes` takes the defaults (and installs without asking); `--no-install` prints the install command instead. `--json` prints the result for CI and AI tools, `--dry-run` shows what would happen. See `monti init --help`, or "`monti init`" in the [core README](packages/core/README.md).
@@ -45,7 +38,7 @@ With pnpm 12, add `allowBuilds:` with `esbuild: true` to `pnpm-workspace.yaml` b
 - **Languages:** file names like `hello.ko.mdx` + `hello.en.mdx` (or `ko/` and `en/` folders) give the site languages; under `--yes` they are used, the default being the language whose files have no pair.
 - **Blocks:** its default body blocks are a light set; `mermaid` and `chart` are opt-in (`--blocks all`): they come from `@monti-cms/blocks/mermaid` and `@monti-cms/blocks/chart` and bring `mermaid` and `recharts` only when chosen, so an app without them loads and installs neither.
 
-Until the public release, `@monti-cms/core` is installed from the release bundle first (see "Install"); `monti init` then installs the rest. Always install `@monti-cms/core` before running `monti`: `npx monti` without it fetches an unrelated package. The short version with every command is the [Quick start](packages/core/README.md#quick-start-existing-next-app) of the core README.
+Until the public release, `@monti-cms/core` is added by its GitHub address first (step 1 above); `monti init` then installs the other Monti packages from the same release (it reuses the ref in your `package.json`) and the third-party packages from npm. Always install `@monti-cms/core` before running `monti`: `npx monti` without it fetches an unrelated package. The short version with every command is the [Quick start](packages/core/README.md#quick-start-existing-next-app) of the core README.
 
 ## Nothing automatic is silent
 
@@ -90,9 +83,9 @@ Not on npm yet. Until the public release, install the release bundle from the `r
 ```json
 {
 	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.1.0&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.1.0&path:/admin",
-		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.1.0&path:/nextjs"
+		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.0&path:/core",
+		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.0&path:/admin",
+		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.0&path:/nextjs"
 	}
 }
 ```
@@ -129,7 +122,7 @@ git commit -am "chore(release): v0.1.0"
 git tag v0.1.0 && git push origin main v0.1.0
 ```
 
-When a `v*` tag is pushed, the release workflow (`.github/workflows/release.yml`) builds and packs the packages, commits them to the `release` branch and adds a `release/v0.1.0` tag.
+When a `v*` tag is pushed, the release workflow (`.github/workflows/release.yml`) builds and packs the packages, commits them to the `release` branch and adds a `release/v0.2.0-next.0` tag.
 
 ## License
 
