@@ -10,6 +10,7 @@ export * from "./blocks/derive";
 export * from "./core/admin-features";
 export * from "./core/admin-paths";
 export * from "./core/api";
+export { type BodyTextOptions, documentText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
 export * from "./core/collections";
 export * from "./core/file-display";
 export * from "./core/ids";

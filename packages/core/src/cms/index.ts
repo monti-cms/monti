@@ -8,3 +8,4 @@ export {
 	type PublicServerConfig,
 } from "./create-cms";
 export { type FakeCmsParts, fakeCms } from "./fake-cms";
+export { type TestServer, testServer } from "./test-server";

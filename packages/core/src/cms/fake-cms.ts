@@ -63,6 +63,24 @@ const missing = (what: string) => () => {
 	throw new Error(`fakeCms: the test did not provide ${what}`);
 };
 
+/** A login connection for tests: no session, every request is an admin, and `parts` replaces whatever a test needs (`session`, `providers`, ...). */
+export const fakeAuth = (parts?: Partial<CmsAuth>): CmsServerConfig["auth"] => ({
+	name: "fake",
+	create: () =>
+		({
+			basePath: "/api/cms/auth",
+			handlers: { GET: missing("auth.handlers.GET"), POST: missing("auth.handlers.POST") },
+			session: async () => null,
+			providers: [],
+			signIn: async () => undefined,
+			signOut: async () => undefined,
+			isAdmin: () => true,
+			devBypass: false,
+			devUserId: "local-dev",
+			...parts,
+		}) as CmsAuth,
+});
+
 /**
  * A CMS instance for tests that call route handlers, the read API or plugin code directly. It is a real instance (`createCms`) over a server config
  * whose database, media store and login are the parts the test provides, so the code under test goes through `cms` exactly as in the app.
@@ -81,22 +99,7 @@ export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFI
 			migrate: async () => undefined,
 			pluginStorage: (plugin) => storageOf(plugin),
 		},
-		auth: {
-			name: "fake",
-			create: () =>
-				({
-					basePath: "/api/cms/auth",
-					handlers: { GET: missing("auth.handlers.GET"), POST: missing("auth.handlers.POST") },
-					session: async () => null,
-					providers: [],
-					signIn: async () => undefined,
-					signOut: async () => undefined,
-					isAdmin: () => true,
-					devBypass: false,
-					devUserId: "local-dev",
-					...parts.auth,
-				}) as CmsAuth,
-		},
+		auth: fakeAuth(parts.auth),
 		...(parts.mediaStore ? { media: { name: "fake", createStore: () => parts.mediaStore as MediaStore } } : {}),
 		...parts.server,
 	};
@@ -139,7 +142,9 @@ export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFI
 			formats: async () => createFormatRegistry(parts.formats ?? []),
 			verifyAdmin: authGateway.verifyAdmin,
 		}),
-		...(parts.contentService ? { contentService: () => parts.contentService as ContentService } : {}),
+		...(parts.contentService
+			? { contentService: () => parts.contentService as unknown as ContentService<Config> }
+			: {}),
 		...(parts.bulkService ? { bulkService: () => parts.bulkService as BulkService } : {}),
 	};
 	return fake;

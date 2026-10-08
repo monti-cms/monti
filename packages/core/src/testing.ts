@@ -9,7 +9,7 @@ export { legacyBodiesOf, mdxContentHash, mdxSearchText } from "./adapters/postgr
 export { CONTENT_STORE_MIGRATIONS } from "./adapters/postgres/store/schema";
 export { migrateSoftBreaks } from "./adapters/postgres/store/soft-break-migration";
 export { migrateStoredDocuments } from "./adapters/postgres/store/stored-document-migration";
-export { type FakeCmsParts, fakeCms } from "./cms";
+export { type FakeCmsParts, fakeCms, type TestServer, testServer } from "./cms";
 export { type BodyTextOptions, documentText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
 export type { Collection } from "./core/collections";
 export type { Entry } from "./core/store";

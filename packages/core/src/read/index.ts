@@ -12,7 +12,7 @@
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
-import type { CollectionName, MetadataFor } from "../core/types";
+import type { CollectionName, PublishedMetadataFor } from "../core/types";
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
 import { type PublicMediaDeps, resolvePublicMedia, resolvePublicMediaUrl } from "../doc/public-media";
 import type { StoredDocument } from "../doc/stored-document";
@@ -24,7 +24,7 @@ import type { MediaStore } from "../media/store";
 import { RECORD_TRANSLATIONS_KEY } from "../schema/derive";
 import type { AnyCmsConfig, Site } from "../site";
 
-export type { CollectionName, MetadataFor } from "../core/types";
+export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types";
 
 /** A published item a relation field points to. */
 export interface ReadRelation {
@@ -52,7 +52,7 @@ export interface ReadEntry<
 	/** Public URL (if the collection has `path`, including the locale prefix). */
 	readonly path: string | null;
 	readonly title: string | null;
-	readonly metadata: MetadataFor<C, Config>;
+	readonly metadata: PublishedMetadataFor<C, Config>;
 	/** Relation field name -> published targets (in declared/picked order). Unpublished targets are omitted. */
 	readonly relations: Readonly<Record<string, readonly ReadRelation[]>>;
 	/** Publish date (of the source text). */
@@ -299,7 +299,7 @@ async function toReadEntries<C extends string, Config extends AnyCmsConfig>(
 		// Values of fields the site has removed stay stored but are not public: the site code sees the shape its config types.
 		metadata: (site.isCollection(record.collection)
 			? site.schemaMetadata(record.collection, record.metadata)
-			: record.metadata) as MetadataFor<C, Config>,
+			: record.metadata) as PublishedMetadataFor<C, Config>,
 		relations: relations.get(record.id) ?? {},
 		publishedAt: record.publishedAt,
 		updatedAt: record.updatedAt,
