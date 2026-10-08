@@ -1,3 +1,5 @@
+import { sortKeys } from "../core/sort-keys";
+import type { JsonValue } from "../core/types";
 import type { CmsNode } from "./types";
 
 /**
@@ -47,18 +49,17 @@ const withoutIdsNode = (node: CmsNode): CmsNode => {
 /** The same nodes with every block id removed (what the content hash and document comparisons see). */
 export const withoutBlockIds = (nodes: readonly CmsNode[]): CmsNode[] => nodes.map(withoutIdsNode);
 
-/** What identifies a block's own content: its kind, attributes and inline content, but not the blocks inside it. */
-const ownContent = (node: CmsNode): string => {
-	const { id: _id, content, ...rest } = node;
-	const inline = content && TEXTBLOCKS.has(node.type) ? content.map(withoutIdsNode) : undefined;
-	return JSON.stringify({ ...rest, ...(inline ? { content: inline } : {}) });
-};
+/**
+ * What a block reads as: its kind, attributes and everything inside it (two tables with the same attributes differ by their cells). Keys are
+ * sorted at every depth: a stored block and the same block freshly read write their keys (and their attributes' keys) in different orders.
+ */
+const readsAs = (node: CmsNode): string => JSON.stringify(sortKeys(withoutIdsNode(node) as unknown as JsonValue));
 
 interface Slot {
 	readonly node: CmsNode;
 	/** Ancestor block kinds + kind: only blocks in the same place in the tree are paired. */
 	readonly place: string;
-	/** `place` + own content: blocks that read the same. */
+	/** `place` + what the block reads as: blocks that read the same. */
 	readonly key: string;
 }
 
@@ -66,7 +67,7 @@ const slotsOf = (nodes: readonly CmsNode[]): Slot[] => {
 	const slots: Slot[] = [];
 	forEachBlock(nodes, (node, ancestors) => {
 		const place = [...ancestors, node.type].join(">");
-		slots.push({ node, place, key: `${place}|${ownContent(node)}` });
+		slots.push({ node, place, key: `${place}|${readsAs(node)}` });
 	});
 	return slots;
 };
