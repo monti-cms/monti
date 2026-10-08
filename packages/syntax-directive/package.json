@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/syntax-directive",
-	"version": "0.2.0-next.1",
+	"version": "0.2.0-next.2",
 	"private": true,
 	"description": "Directive syntax extension for @monti-cms/mdx: read and write :::callout, ::image{…} and :u[text] in MDX bodies",
 	"license": "MIT",

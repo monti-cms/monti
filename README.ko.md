@@ -12,7 +12,7 @@ Next.js(App Router) 앱 폴더에서 실행한다.
 
 ```sh
 # 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.2&path:/core"
 # 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
 pnpm exec monti init
 ```
@@ -83,9 +83,9 @@ pnpm exec monti doctor
 ```json
 {
 	"dependencies": {
-		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.1&path:/core",
-		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.1&path:/admin",
-		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs"
+		"@monti-cms/core": "github:monti-cms/monti#release/v0.2.0-next.2&path:/core",
+		"@monti-cms/admin": "github:monti-cms/monti#release/v0.2.0-next.2&path:/admin",
+		"@monti-cms/nextjs": "github:monti-cms/monti#release/v0.2.0-next.2&path:/nextjs"
 	}
 }
 ```
@@ -122,7 +122,7 @@ git commit -am "chore(release): v0.1.0"
 git tag v0.1.0 && git push origin main v0.1.0
 ```
 
-`v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.2.0-next.1` 태그를 붙인다.
+`v*` 태그가 올라가면 배포 워크플로(`.github/workflows/release.yml`)가 패키지를 빌드·묶어 `release` 브랜치에 커밋하고 `release/v0.2.0-next.2` 태그를 붙인다.
 
 ## 라이선스
 
