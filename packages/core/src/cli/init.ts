@@ -12,7 +12,7 @@ import {
 	apiRouteTemplate,
 	configTemplate,
 	envExampleTemplate,
-	githubCallbackUrl,
+	githubLoginHowTo,
 	type InitAnswers,
 	nextConfigTemplate,
 	packagesFor,
@@ -471,7 +471,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		);
 	}
 	todo.push(
-		`Before you deploy, create a GitHub OAuth app for the admin login (under \`next dev\` you are signed in without it): the steps are in .env.example. Callback URL: ${githubCallbackUrl(answers.siteUrl)}`,
+		`Before you deploy, add a login (for example GitHub): ${githubLoginHowTo(answers.siteUrl)}. Under \`next dev\` you are the admin without one.`,
 	);
 	report.next.unshift(...todo);
 	if (hasFailure) report.ok = false;

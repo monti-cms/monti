@@ -50,10 +50,6 @@ export class InitCancelled extends Error {
 
 /** The raw flag values (strings as typed). `undefined` means the flag was not given. */
 export interface InitAnswerFlags {
-	/** The Postgres schema for the tables, as an example value in `.env.example` (`DATABASE_SCHEMA`). */
-	readonly databaseSchema?: string;
-	/** The numeric GitHub id of the admin, filled in `.env.example` (`MONTI_ADMIN_GITHUB_ID`). */
-	readonly adminGithubId?: string;
 	readonly siteUrl?: string;
 	/** Comma-separated locale codes, the default first. */
 	readonly locales?: string;
@@ -97,12 +93,6 @@ const EXTRAS = ["ai", "git-sync"] as const;
 
 /** Every validator returns the error text, or `undefined` when the value is fine. The same text is used for a flag and for a prompt. */
 const check = {
-	databaseSchema: (value: string) =>
-		value === "" || /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(value)
-			? undefined
-			: "must be a schema name: letters, digits and _, not starting with a digit (up to 63 characters)",
-	githubId: (value: string) =>
-		value === "" || /^\d+$/.test(value) ? undefined : "must be the numeric GitHub id (digits only), for example 583231",
 	siteUrl: (value: string) => (isHttpUrl(value) ? undefined : "must be an http(s) URL like http://localhost:3000"),
 	locales: (value: string) => {
 		const codes = splitList(value);
@@ -142,8 +132,6 @@ const parseBlocks = (value: string): string[] => {
 
 /** Checks every flag that was given, before anything is asked. */
 export function validateFlags(flags: InitAnswerFlags): void {
-	checked("database-schema", flags.databaseSchema, check.databaseSchema);
-	checked("admin-github-id", flags.adminGithubId, check.githubId);
 	checked("site-url", flags.siteUrl, check.siteUrl);
 	checked("locales", flags.locales, check.locales);
 	checked("time-zone", flags.timeZone, check.timeZone);
@@ -155,9 +143,6 @@ export function validateFlags(flags: InitAnswerFlags): void {
 
 /** What the questions ask, for the tests and the docs. */
 export const QUESTIONS = {
-	databaseSchema:
-		"Postgres schema for the tables (empty: public). Use one when the database is shared with other apps. Goes in .env.example",
-	adminGithubId: "Your numeric GitHub id (MONTI_ADMIN_GITHUB_ID in .env.example). Leave empty to fill it in later",
 	locales: "Languages of the site (comma-separated, the default first)",
 	storage: "Where should uploaded images go?",
 	extras: "Extra features",
@@ -186,28 +171,6 @@ export async function collectAnswers(
 ): Promise<InitAnswers> {
 	validateFlags(flags);
 	const siteUrl = flags.siteUrl ?? `http://localhost:${app.devPort}`;
-
-	// Schema of the tables
-	let databaseSchema = flags.databaseSchema?.trim() || undefined;
-	if (flags.databaseSchema === undefined && prompter) {
-		databaseSchema =
-			(
-				await prompter.text({
-					message: QUESTIONS.databaseSchema,
-					placeholder: "public",
-					validate: (value) => check.databaseSchema(value.trim()),
-				})
-			).trim() || undefined;
-	}
-
-	// Admin (GitHub id)
-	let adminGithubId = flags.adminGithubId || undefined;
-	if (flags.adminGithubId === undefined && prompter) {
-		const id = (
-			await prompter.text({ message: QUESTIONS.adminGithubId, validate: (value) => check.githubId(value.trim()) })
-		).trim();
-		adminGithubId = id || undefined;
-	}
 
 	// Locales, the default first
 	let locales: string[];
@@ -307,8 +270,6 @@ export async function collectAnswers(
 			: DEFAULT_INIT_ADMIN_PATH);
 
 	return {
-		...(databaseSchema ? { databaseSchema } : {}),
-		adminGithubId,
 		siteUrl,
 		locales,
 		timeZone: flags.timeZone ?? DEFAULT_INIT_TIME_ZONE,

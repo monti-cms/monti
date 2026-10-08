@@ -180,6 +180,36 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "auth/trust-host").fix).toContain("AUTH_TRUST_HOST=true");
 	});
 
+	it("warns about a config with no login in development, and fails for production or a known platform, with how to add GitHub", async () => {
+		const noAuth = configText().replace("\tauth: auth({ providers: [github()] }),\n", "");
+		expect(noAuth).not.toContain("auth: ");
+		setEnv({ MONTI_SECRET: STRONG_SECRET });
+		const dev = byId((await doctor(project({ "monti.config.ts": noAuth }))).report, "auth/login");
+		expect(dev.status).toBe("warn");
+		for (const text of [
+			"@monti-cms/auth",
+			"auth: auth({ providers: [github()] })",
+			"AUTH_GITHUB_ID",
+			"AUTH_GITHUB_SECRET",
+			"MONTI_ADMIN_GITHUB_ID",
+			"/api/cms/auth/callback/github",
+		]) {
+			expect(dev.fix, text).toContain(text);
+		}
+
+		setEnv({ NODE_ENV: "production", MONTI_SECRET: STRONG_SECRET });
+		const { report, code } = await doctor(project({ "monti.config.ts": noAuth }));
+		expect(byId(report, "auth/login").status).toBe("fail");
+		expect(code).toBe(1);
+		// The GitHub checks have nothing to say about a site that never chose GitHub.
+		for (const id of ["auth/github-id", "auth/github-secret", "auth/admins", "auth/callback-url"]) {
+			expect(byId(report, id).status, id).toBe("skip");
+		}
+
+		setEnv({ VERCEL: "1", MONTI_SECRET: STRONG_SECRET });
+		expect(byId((await doctor(project({ "monti.config.ts": noAuth }))).report, "auth/login").status).toBe("fail");
+	});
+
 	it("explains a database that cannot be reached, without printing the password", async () => {
 		setEnv({ DATABASE_URL: "postgres://monti:hunter2@127.0.0.1:1/blog", MONTI_SECRET: STRONG_SECRET });
 		const { report } = await doctor(project());

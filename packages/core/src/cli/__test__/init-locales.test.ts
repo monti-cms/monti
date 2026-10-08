@@ -92,8 +92,6 @@ describe("monti init and the languages of the content", () => {
 			cwd: dir,
 			prompter,
 			...quiet(),
-			databaseSchema: "",
-			adminGithubId: "1",
 			siteUrl: "http://localhost:3000",
 			timeZone: "UTC",
 			storage: "none",

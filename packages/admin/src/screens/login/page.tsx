@@ -51,6 +51,11 @@ export default async function AdminLoginPage({ cms, server }: { cms: Cms; server
 								</Button>
 							</form>
 						</Alert>
+					) : providers.length === 0 ? (
+						<Alert variant="danger" layout="stack" className="text-center">
+							<AlertTitle className="text-xs">{t("noLoginTitle")}</AlertTitle>
+							<AlertDescription className="mt-1 text-xs">{t("noLogin")}</AlertDescription>
+						</Alert>
 					) : (
 						<div className="flex flex-col gap-2">
 							{providers.map((authProvider) => (

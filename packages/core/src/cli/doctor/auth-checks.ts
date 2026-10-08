@@ -1,5 +1,6 @@
 import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust-host";
 import { CMS_AUTH_BASE_PATH } from "../../server/define";
+import { githubLoginHowTo } from "../templates";
 import type { CoreCheck, DoctorState } from "./core-checks";
 import { fail, ok, skip, warn } from "./outcome";
 
@@ -53,12 +54,22 @@ function missingGithubValue(name: string, env: Env) {
 	return isProduction(env) ? fail(message, details) : warn(message, details);
 }
 
+/** Whether the config loaded and names no `auth` (the built-in no-login stands in). */
+const hasNoLogin = (state: DoctorState): boolean => state.cms?.server.auth.name === "none";
+
+/** The login-dependent checks have nothing to check when the config names no login. */
+const withLogin = (check: CoreCheck): CoreCheck => ({
+	...check,
+	run: (state) => (hasNoLogin(state) ? skip("not checked: the config has no login") : check.run(state)),
+});
+
 /**
  * False only when the config loaded and its login has providers but none is GitHub, so a site with another login gets no GitHub checks.
  * When the config did not load, or the login cannot be created yet (a missing setting throws), the checks run.
  */
 function usesGithub(state: DoctorState): boolean {
 	if (!state.cms) return true;
+	if (hasNoLogin(state)) return false;
 	try {
 		const providers = state.cms.auth().providers;
 		return providers.length === 0 || providers.some((provider) => provider.id === "github");
@@ -71,6 +82,24 @@ const githubOnly = (check: CoreCheck): CoreCheck => ({
 	...check,
 	run: (state) => (usesGithub(state) ? check.run(state) : skip("not checked: the login has no GitHub provider")),
 });
+
+const login: CoreCheck = {
+	group: "auth",
+	id: "login",
+	title: "Login",
+	needsCms: true,
+	run: (state) => {
+		if (!hasNoLogin(state)) return ok(state.cms?.server.auth.name ?? "set", { where: "auth in monti.config.ts" });
+		const message = "the config has no login (`auth`), so nobody can sign in to the admin";
+		const details = {
+			where: "defineConfig in monti.config.ts",
+			fix: githubLoginHowTo(siteOrigin(state).origin),
+		};
+		return looksDeployed(state.env)
+			? fail(message, details)
+			: warn(`${message} outside \`next dev\` (under \`next dev\` you are the admin without signing in)`, details);
+	},
+};
 
 const githubId: CoreCheck = {
 	group: "auth",
@@ -223,10 +252,11 @@ const callbackUrl: CoreCheck = {
 };
 
 export const AUTH_CHECKS: readonly CoreCheck[] = [
+	login,
 	githubOnly(githubId),
 	githubOnly(githubSecret),
 	githubOnly(admins),
 	siteUrl,
-	trustHost,
-	callbackUrl,
+	withLogin(trustHost),
+	withLogin(callbackUrl),
 ];

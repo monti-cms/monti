@@ -82,14 +82,14 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.1&path:/admin" "@monti-cms/auth@github:monti-cms/monti#release/v0.2.0-next.1&path:/auth" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.1&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.1&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.1&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
 공개 릴리스 전에는 Monti 패키지를 GitHub 릴리스 번들에서 받으므로, 패키지마다 GitHub 주소로 추가한다(ref는 같고 `path:/<폴더>`만 다르다). `monti init`이 대신 해 준다.
 
 관리자 패키지와 AI 플러그인은 React Query·sonner·Tiptap·lucide 아이콘을 앱과 같은 하나로 써야 해서 앱이 설치한다(peer).
-로그인은 `@monti-cms/auth`(Auth.js core, Next.js 없음)다. GitHub 로그인에 다른 패키지는 필요 없다. 프로바이더는 그 README를 본다.
+`monti init`은 로그인을 설치하지 않는다. 로그인을 더할 때 `@monti-cms/auth`(Auth.js core, Next.js 없음)를 설치한다. GitHub 로그인에 다른 패키지는 필요 없고, 프로바이더는 그 README를 본다.
 명령줄 `monti`는 `@monti-cms/core`에 들어 있다(TypeScript 설정 파일은 함께 설치되는 tsx가 읽는다).
 
 pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패로 끝낸다(10은 경고만 한다). tsx가 쓰는 esbuild의 설치 스크립트를 허락한다. `pnpm-workspace.yaml`에 `allowBuilds:`와 `esbuild: true`를 적는다.
@@ -104,8 +104,6 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 
 | 질문 | 고르는 것 | 기본값 |
 | --- | --- | --- |
-| 데이터베이스 스키마 | 표를 담을 Postgres 스키마. `.env.example`의 `DATABASE_SCHEMA` 예시 값으로 적는다. 다른 앱과 같이 쓰는 데이터베이스용이다 | `public` |
-| 관리자 GitHub id | 내 숫자 GitHub id(비워도 된다). `.env.example`의 `MONTI_ADMIN_GITHUB_ID`에 적는다(공개 값이지 비밀이 아니다) | 비어 있음 |
 | 언어 | 언어 코드, 기본 언어가 먼저. 콘텐츠에 `hello.ko.mdx`와 `hello.en.mdx` 같은 파일 이름이나 `ko/`, `en/` 같은 언어 폴더가 있으면 그 언어를 제안하고, 기본 언어는 짝이 없는 파일을 가진 언어(없으면 첫 번째)다. `--yes`는 그대로 쓴다 | 찾은 언어, 없으면 `en` |
 | 이미지 저장소 | S3 호환(S3·R2·MinIO. 설정은 `S3_*`), 또는 없음 | 없음 |
 | 부가 기능 | AI 글쓰기, git 동기화(Bareun은 묻지 않는다) | 없음 |
@@ -122,7 +120,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 | 스키마 파일에서 쓴 타입(손으로 고치지 않는다) | `monti-env.d.ts` |
 | 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| 고른 기능이 읽는 모든 변수와, 변수마다 짧은 주석(무엇이고 어디서 얻는지: 데이터베이스 URL, `MONTI_SECRET`을 만드는 `openssl rand -base64 32`, 콜백 주소가 적힌 GitHub OAuth 앱, 숫자 GitHub id, `S3_*` 값). 자리표시자만 있고 비밀은 없으므로 커밋해도 안전하다 | `.env.example` |
+| 고른 기능이 읽는 모든 변수와, 변수마다 짧은 주석(무엇이고 어디서 얻는지: 데이터베이스 URL, `MONTI_SECRET`을 만드는 `openssl rand -base64 32`, 언제 켜는지 적힌 주석 처리된 `DATABASE_SCHEMA` 줄, `S3_*` 값). 자리표시자만 있고 비밀은 없으므로 커밋해도 안전하다 | `.env.example` |
 
 `src/`를 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
 
@@ -140,14 +138,14 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 8. `monti doctor`(위 단계 중 빠진 것이 있으면 알려 준다),
 9. `pnpm dev`, 그다음 관리자 주소(`/studio`) 열기.
 
-그 뒤에 해당하는 안내가 붙는다: git-sync 대상, 그리고 배포한 사이트에 필요한 GitHub OAuth 앱은 `.env.example`을 보라는 한 줄이다.
+그 뒤에 해당하는 안내가 붙는다: git-sync 대상, 그리고 로그인에 대한 한 줄이다: 배포하기 전에 로그인(예: GitHub)을 더하라는 것이고, 짧은 방법(`@monti-cms/auth` 설치, `auth: auth({ providers: [github()] })` 추가, 환경 값 셋, OAuth 콜백 URL)이 붙는다. **`monti init`은 로그인을 만들지 않고 묻지도 않는다.** 고른 것만 쓰며, `next dev`에서는 로그인 없이도 관리자다.
 
 **질문 없이.** 플래그를 준 질문은 묻지 않는다. `--yes`, `--json`이거나 터미널이 없으면(CI) 아무것도 묻지 않고, 모든 질문이 플래그나 기본값을 쓴다. `--json` 출력은 JSON 문서 하나(`ok`, `created`, `skipped`, `overwritten`, `steps`, `notes`, `next` 등)이고, 오류는 `{ "ok": false, "error": "..." }`다. 종료 코드는 성공 0, 단계 실패나 잘못된 입력 1, 취소 130이다.
 
 ```sh
 pnpm exec monti init                 # 대화형
 pnpm exec monti init --yes           # 전부 기본값: 가벼운 블록 묶음, /studio, 묻지 않고 설치
-pnpm exec monti init --yes --json --database-schema monti --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
+pnpm exec monti init --yes --json --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
 pnpm exec monti init --dry-run --yes # 쓰고 돌릴 일만 보여 준다
 pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 준다
 ```
@@ -157,9 +155,7 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 | `--yes`, `-y` | 질문 없이. 답이 없는 질문은 기본값이고, 설치도 묻지 않고 돌린다 | |
 | `--json` | 결과를 JSON으로 출력(`--yes`를 포함) | |
 | `--dry-run` | 쓰지도 돌리지도 않고 계획만 보인다 | |
-| `--database-schema <이름>` | 표를 담을 Postgres 스키마. `.env.example`에 `DATABASE_SCHEMA` 예시 값으로 적는다. 다른 앱과 같이 쓰는 데이터베이스용이다. 질문으로도 묻는다 | `public` |
-| `--admin-github-id <번호>` | 관리자의 숫자 GitHub id. `.env.example`의 `MONTI_ADMIN_GITHUB_ID`에 적는다 | 없음 |
-| `--site-url <url>` | 공개 사이트 주소. `.env.example`의 OAuth 콜백 주소에 쓴다 | `http://localhost:<개발 포트>` |
+| `--site-url <url>` | 공개 사이트 주소. `.env.example`의 `SITE_URL` 예시 값이다 | `http://localhost:<개발 포트>` |
 | `--locales <목록>` | 언어 코드, 기본 언어가 먼저(하나면 `--locale <코드>`도 같다) | 콘텐츠 파일 이름이나 폴더에서 찾은 언어, 없으면 `en` |
 | `--time-zone <시간대>` | IANA 시간대 | `UTC` |
 | `--storage <s3\|none>` | 이미지 저장소 | `none` |
@@ -213,8 +209,6 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 
 ```ts
 // monti.config.ts
-import { auth } from "@monti-cms/auth";
-import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import schema from "./monti.schema.json";
 
@@ -222,7 +216,7 @@ export const cms = defineConfig({
 	schema, // 데이터는 monti.schema.json에 그대로 둔다
 	plugins: [], // 기능마다 한 줄, 모두 인자 없이 동작한다: mdx(), seo(), callout(), ...
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	// auth: auth({ providers: [github()] }), // 선택 사항인 로그인. 없으면 `next dev`에서만 들어갈 수 있다
 	// storage: <아무 패키지의 어댑터>, // 미디어 올리기. 없으면 관리자가 미디어 메뉴를 숨긴다
 });
 ```
@@ -252,9 +246,9 @@ storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.
 | 이름 | 뜻 |
 | --- | --- |
 | `DATABASE_URL` | Postgres 연결 주소(`postgres()`가 읽는다) |
-| `DATABASE_SCHEMA` | 선택. 스키마 이름(없으면 `public`). 이미 앱 표가 있는 DB에 붙일 때는 따로 두는 편이 안전하다. `monti migrate`가 없으면 만든다. `monti init`이 묻고(`--database-schema`) `.env.example`에 예시 값으로 적는다 |
+| `DATABASE_SCHEMA` | 선택. 스키마 이름(없으면 `public`). 다른 앱과 같이 쓰는 데이터베이스면 표가 섞이지 않게 따로 둔다. `monti migrate`가 없으면 만든다. `monti init`은 묻지 않고, `.env.example`에 주석 처리된 줄로 둔다 |
 | `MONTI_SECRET` | 임의의 긴 값(예: `openssl rand -base64 32`). 하나뿐인 비밀 값이다. 로그인 세션은 이 값에서 만든 키로 서명하고, 플러그인이 저장하는 값(AI 서비스 키, git-sync 토큰)도 이 값에서 만든 키로 암호화한다(`defineConfig({ secret })`에도 같은 값을 줄 수 있다). 바꿀 때는 옛 값을 `previousSecrets`에 남긴다("비밀 값") |
-| `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | GitHub OAuth 앱(`github()`가 읽는다). 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github`. `next dev`에서는 필요 없다 |
+| `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | GitHub 로그인(`auth: auth({ providers: [github()] })`, `@monti-cms/auth` 필요)을 쓸 때만. GitHub OAuth 앱(`github()`가 읽는다). 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github`. `next dev`에서는 필요 없다 |
 | `MONTI_ADMIN_GITHUB_ID` | 관리자 GitHub 숫자 ID. 여럿이면 쉼표로 구분한다(`github()`가 읽는다). `next dev`에서는 필요 없다 |
 | `SITE_URL` | 선택. 사이트의 공개 URL(`site.url`). 환경마다 다르다. 코드나 스키마 파일의 `site.url`이 있으면 그쪽이 이긴다 |
 | `AUTH_TRUST_HOST` | 선택. `X-Forwarded-Host`를 덮어쓰는, 직접 운영하는 프록시(nginx, 로드 밸런서) 뒤에서 돌 때만 `true`. Vercel·Netlify·Cloudflare Pages 같은 플랫폼은 알아서 감지한다("호스트 신뢰" 참고) |
@@ -432,7 +426,7 @@ pnpm exec monti doctor
 | `schema` | 스키마 파일이 올바른지(문제마다 JSON 경로), `monti-env.d.ts`가 최신인지 |
 | `database` | `DATABASE_URL`이 있고 Postgres URL인지, 데이터베이스에 닿는지(틀린 호스트·포트·비밀번호·데이터베이스 이름을 구분한다), `DATABASE_SCHEMA`가 있는지, **미적용 마이그레이션이 몇 개인지**(`monti migrate`) |
 | `secrets` | `MONTI_SECRET`이 있고 충분히 강한지, 옛 `CMS_SECRET`·`AUTH_SECRET`이 아직 있지만 쓰이지 않는지 |
-| `auth` | 본체가 아는 값만: GitHub 클라이언트 id와 시크릿(`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), `MONTI_ADMIN_GITHUB_ID`에 관리자가 있는지(숫자 id가 아니라 로그인 이름을 쓴 항목을 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, OAuth 앱에 **등록할 콜백 URL**(`SITE_URL`에서 만든다) |
+| `auth` | 설정에 로그인이 있는지(없으면 개발에서는 경고, 프로덕션이나 알려진 호스팅 플랫폼에서는 실패이고, GitHub 로그인을 더하는 방법이 붙는다), 그리고 본체가 아는 값만: GitHub 클라이언트 id와 시크릿(`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), `MONTI_ADMIN_GITHUB_ID`에 관리자가 있는지(숫자 id가 아니라 로그인 이름을 쓴 항목을 짚는다), `SITE_URL`, 호스트 신뢰 결과와 이유, OAuth 앱에 **등록할 콜백 URL**(`SITE_URL`에서 만든다) |
 | `next` | 관리자 경로에 Next 파일 셋이 있고 알맞은 컴포넌트를 쓰는지(`admin.path`와 맞지 않는 폴더면 그 폴더를 짚는다), `next.config`가 `withCms`를 쓰는지, 관리자 주소 |
 | `upgrade` | **마이그레이션 전용.** 개편 전 설정에서 올리는 사이트를 위한 검사이며, 소유자의 블로그 마이그레이션(#93) 뒤에 옛 데이터 호환(#45)과 함께 지운다. 옛 설정에서 남은 것과 정확한 단계: `cms.config.ts`·`cms.server.ts`와 그것을 import하는 파일, `monti.config.ts`에 남은 옛 옵션, 옛 변수 이름(`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), `(admin)` 라우트 폴더, `admin-components.tsx` |
 
@@ -457,12 +451,12 @@ export const cms = defineConfig({
 	schema,                                   // 데이터는 monti.schema.json에 그대로 둔다
 	plugins: [mdx(), callout()],              // 기능마다 한 줄, 모두 인자 없이 동작한다
 	database: postgres(),                     // DATABASE_URL, DATABASE_SCHEMA
-	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
+	// auth: auth({ providers: [github()] }), // 선택 사항인 로그인. 없으면 `next dev`에서만 들어갈 수 있다
 	// storage: <아무 패키지의 어댑터>,        // 미디어 올리기. 없으면 관리자가 미디어 메뉴를 숨긴다
 });
 ```
 
-나머지는 모두 이 파일에서 `cms`를 불러다 쓴다. `defineConfig`는 사이트 옵션(`schema`, 또는 `collections`와 `locales`, 그리고 `plugins`·`blocks`·`site`·`admin`·`codeBlock`·`media`·`seed` …)과 서버 옵션("서버 옵션" 절)을 받는다. `database`와 `auth`는 필수이고 나머지는 선택이다.
+나머지는 모두 이 파일에서 `cms`를 불러다 쓴다. `defineConfig`는 사이트 옵션(`schema`, 또는 `collections`와 `locales`, 그리고 `plugins`·`blocks`·`site`·`admin`·`codeBlock`·`media`·`seed` …)과 서버 옵션("서버 옵션" 절)을 받는다. `database`는 필수이고 나머지는 선택이다.
 
 공개된 `defineConfig`는 `@monti-cms/core/server`의 것 하나뿐이다. `@monti-cms/core`(루트 진입점)는 더 이상 `defineConfig`를 내보내지 않는다. 낮은 수준 API인 `createCms({ config, server })`(`server`는 `CmsServerConfig`)는 `@monti-cms/core`의 `defineSite`로 만든 사이트 설정을 받으며, 테스트와 도구가 이것을 쓴다. `defineServerConfig`는 없어졌다.
 
@@ -1183,7 +1177,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | 항목 | 뜻 |
 |---|---|
 | `database` | 필수. 콘텐츠 저장소. `postgres()`는 `DATABASE_URL`과 `DATABASE_SCHEMA`를 읽고, `postgres({ connectionString, schema })`는 코드에서 정한다 |
-| `auth` | 필수. 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). `host`는 Next 통합 밖에서 쓰는 명시적 재정의다(`cms.attachHost`가 붙인 호스트보다 우선한다). Next.js 앱에서는 적지 않는다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
+| `auth` | 선택. 없으면 아무도 로그인할 수 없다. `next dev`에서는 개발 로그인으로 내 컴퓨터에서 관리자에 들어가고, 배포된 관리자는 로그인이 설정되지 않았다고 답한다(`monti doctor`는 개발에서 경고하고 프로덕션에서 실패한다). 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). `host`는 Next 통합 밖에서 쓰는 명시적 재정의다(`cms.attachHost`가 붙인 호스트보다 우선한다). Next.js 앱에서는 적지 않는다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
 | `secret` | 선택. 하나뿐인 비밀 값. 없으면 `MONTI_SECRET` 환경 변수. 로그인 세션과 플러그인이 암호화해 두는 값(AI 서비스 키, git-sync 토큰)이 이 값에서 만든 키를 받는다. 비밀 값 자체는 누구도 받지 않는다("비밀 값"). |
 | `previousSecrets` | 선택. `secret`이 바뀌기 전의 값들(항목이 정의되지 않은 환경 변수 값이어도 된다). 이 값으로 암호화한 저장 값도 계속 읽히고, 다시 저장할 때 `secret`으로 새로 암호화된다. 그래서 `secret`을 바꿔도 저장된 키를 다시 넣지 않아도 된다. |
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 알려진 프록시 플랫폼이 감지되거나 개발일 때 켬, 그 밖에는 끔 |

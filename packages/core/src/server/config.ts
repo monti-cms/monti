@@ -1,3 +1,4 @@
+import { noLogin } from "../adapters/auth/no-login";
 import type { BlockDefinition } from "../blocks/define";
 import { type Cms, createCms } from "../cms";
 import { type CmsConfig, type CollectionsConfig, defineSite, type SchemaCmsConfig } from "../config/define";
@@ -16,15 +17,18 @@ export const SITE_URL_ENV = "SITE_URL";
 export const SECRET_ENV = "MONTI_SECRET";
 
 /**
- * What `monti.config.ts` says about the server, next to the site options (`schema`, `plugins`, ...). Everything but `database` and `auth` is optional.
+ * What `monti.config.ts` says about the server, next to the site options (`schema`, `plugins`, ...). Everything but `database` is optional.
  * It is read on the server only, so it may name secrets; the usual way is to leave them to the environment (`postgres()` reads `DATABASE_URL`, `github()`
  * reads `AUTH_GITHUB_ID`, and `MONTI_SECRET` is the secret).
  */
 export interface MontiServerOptions {
 	/** Where the content lives (`postgres()`). */
 	readonly database: DatabaseAdapter;
-	/** How admins log in (`auth({ providers: [github()] })` of `@monti-cms/auth`). */
-	readonly auth: AuthAdapter;
+	/**
+	 * How admins log in (`auth({ providers: [github()] })` of `@monti-cms/auth`). Without it nobody can sign in: under `next dev` the development login lets you
+	 * into the admin, and a deployed admin answers that no login is configured.
+	 */
+	readonly auth?: AuthAdapter;
 	/**
 	 * Where uploaded images and files go: a storage adapter from any package (for example the S3-compatible one). Without it, media upload and management
 	 * are unavailable and the admin hides the media menu.
@@ -124,15 +128,6 @@ export function defineConfig(input: MontiServerOptions): Cms {
 			}),
 		);
 	}
-	if (!input.auth) {
-		throw new Error(
-			problemText({
-				what: "defineConfig has no `auth`, so there is no way to log in to the admin",
-				where: "defineConfig({ ... }) in monti.config.ts",
-				fix: "add `auth: auth({ providers: [github()] })` (auth is exported by @monti-cms/auth, github by @monti-cms/auth/github)",
-			}),
-		);
-	}
 	const site: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(input as object)) if (!isServerKey(key)) site[key] = value;
 	// The public site URL by convention: `SITE_URL`, unless the code (`site.url`) or the schema file says it.
@@ -151,7 +146,7 @@ export function defineConfig(input: MontiServerOptions): Cms {
 	const config = defineSite(site as never);
 	const server: CmsServerConfig = {
 		database: input.database,
-		auth: input.auth,
+		auth: input.auth ?? noLogin(),
 		...(input.storage ? { media: input.storage } : {}),
 		secret: input.secret || process.env[SECRET_ENV] || undefined,
 		...(input.previousSecrets

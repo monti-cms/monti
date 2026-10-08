@@ -23,8 +23,6 @@ const quiet = () => ({ host: fakeHost(), install: false });
 
 /** Flags for every question of the prompts, so a scripted prompter only has to answer the confirmations. */
 const ANSWERED = {
-	databaseSchema: "",
-	adminGithubId: "12345",
 	siteUrl: "http://localhost:3000",
 	locales: "en",
 	timeZone: "UTC",
@@ -69,7 +67,12 @@ describe("monti init in a fresh create-next-app", () => {
 			expect(config).not.toContain(line);
 		}
 		expect(config).toContain("database: postgres(),");
-		expect(config).toContain("auth: auth({ providers: [github()] }),");
+		// Only what the user chose is written: no login is set up on their behalf.
+		const code = config
+			.split("\n")
+			.filter((line) => !line.trim().startsWith("//"))
+			.join("\n");
+		expect(code).not.toMatch(/\bauth\b|github|@monti-cms\/auth/);
 		expect(config).toContain("// storage: s3Storage(),");
 		expect(config).not.toMatch(/aiPlugin|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
 
@@ -106,26 +109,18 @@ describe("monti init in a fresh create-next-app", () => {
 
 	it("writes a .env.example that says what each variable is and where to get it, without secrets", async () => {
 		const dir = fixtureApp();
-		await initProject({ cwd: dir, ...quiet(), databaseSchema: "blog", adminGithubId: "583231" });
+		await initProject({ cwd: dir, ...quiet() });
 		const example = read(dir, ".env.example");
-		for (const name of [
-			"DATABASE_URL",
-			"DATABASE_SCHEMA",
-			"MONTI_SECRET",
-			"AUTH_GITHUB_ID",
-			"AUTH_GITHUB_SECRET",
-			"MONTI_ADMIN_GITHUB_ID",
-			"SITE_URL",
-			"AUTH_TRUST_HOST",
-		]) {
+		for (const name of ["DATABASE_URL", "MONTI_SECRET", "SITE_URL", "AUTH_TRUST_HOST"]) {
 			expect(example).toContain(name);
 		}
 		expect(example).toContain("openssl rand -base64 32");
-		expect(example).toContain("OAuth Apps > New OAuth App");
-		expect(example).toContain("Authorization callback URL: http://localhost:3000/api/cms/auth/callback/github");
-		expect(example).toContain("https://api.github.com/users/<your-login>");
-		expect(example).toContain("DATABASE_SCHEMA=blog");
-		expect(example).toContain("MONTI_ADMIN_GITHUB_ID=583231");
+		// Nothing about a login the user did not choose.
+		expect(example).not.toMatch(/GITHUB|OAuth/i);
+		// The schema is a commented line with a reason, not a value and not a question.
+		expect(example).toMatch(/^# DATABASE_SCHEMA=/m);
+		expect(example).not.toMatch(/^DATABASE_SCHEMA=/m);
+		expect(example).toMatch(/shared with other apps/);
 		expect(example).toMatch(/^MONTI_SECRET=$/m);
 		expect(example).not.toContain("S3_BUCKET");
 		// Every non-comment line is a name with an empty value or a placeholder, never a real secret.
@@ -164,7 +159,7 @@ describe("monti init in a fresh create-next-app", () => {
 			"Create the tables: pnpm exec monti migrate",
 			"Check the setup: pnpm exec monti doctor",
 			"Start the app: pnpm dev, then open http://localhost:3000/studio",
-			expect.stringContaining("Before you deploy, create a GitHub OAuth app"),
+			expect.stringContaining("Before you deploy, add a login (for example GitHub)"),
 		]);
 		expect(next[0]).toContain('import { withCms } from "@monti-cms/nextjs/config";');
 		expect(next[0]).toContain("-export default nextConfig;\n+export default withCms(nextConfig);");
@@ -173,6 +168,10 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(next[2]).toContain("openssl rand -base64 32");
 		expect(next[2]).toContain("randomBytes(32).toString('base64')");
 		expect(next[4]).toContain("`monti doctor` will tell you if any of the steps above is missing");
+		expect(next[6]).toContain("@monti-cms/auth");
+		expect(next[6]).toContain("auth: auth({ providers: [github()] })");
+		for (const name of ["AUTH_GITHUB_ID", "AUTH_GITHUB_SECRET", "MONTI_ADMIN_GITHUB_ID"])
+			expect(next[6]).toContain(name);
 		expect(next[6]).toContain("http://localhost:3000/api/cms/auth/callback/github");
 		expect(next.join("\n")).not.toContain("monti import");
 
@@ -215,13 +214,13 @@ describe("monti init and the package install", () => {
 			expect.arrayContaining([
 				"@monti-cms/core",
 				"@monti-cms/admin",
-				"@monti-cms/auth",
 				"@monti-cms/nextjs",
 				"@monti-cms/mdx",
 				"@monti-cms/blocks",
 			]),
 		);
 		expect(command?.args).not.toContain("@monti-cms/ai");
+		expect(command?.args).not.toContain("@monti-cms/auth");
 		expect(command?.args).not.toContain("mermaid");
 		expect(command?.cwd).toBe(dir);
 		expect(report.steps.map((step) => [step.name, step.status])).toEqual([["Install packages", "done"]]);
@@ -428,7 +427,7 @@ describe("monti init tailors what is left to the app", () => {
 		});
 		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(report.next.join("\n")).toContain("http://localhost:4000/api/cms/auth/callback/github");
-		expect(read(dir, ".env.example")).toContain("http://localhost:4000/api/cms/auth/callback/github");
+		expect(read(dir, ".env.example")).toContain("# SITE_URL=http://localhost:4000");
 	});
 
 	it("adds the git-sync note when git-sync is chosen", async () => {
@@ -529,7 +528,7 @@ describe("monti init choices", () => {
 			expect.arrayContaining(["@monti-cms/ai", "@monti-cms/git-sync", "@monti-cms/storage-s3", "@monti-cms/blocks"]),
 		);
 		expect(read(dir, ".env.example")).toContain("S3_BUCKET=");
-		expect(read(dir, ".env.example")).toContain("callback URL: https://blog.example.com/api/cms/auth/callback/github");
+		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://blog.example.com");
 	});
 
 	it("no blocks: a short config with just mdx", async () => {
@@ -635,7 +634,7 @@ describe("monti init when something goes wrong", () => {
 	it("cancelling a prompt writes nothing", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
-		const prompter = scriptedPrompter({ Postgres: "cancel" });
+		const prompter = scriptedPrompter({ "Languages of the site": "cancel" });
 		await expect(initProject({ cwd: dir, ...quiet(), prompter })).rejects.toBeInstanceOf(InitCancelled);
 		expect(listFiles(dir)).toEqual(before);
 	});
@@ -652,8 +651,6 @@ describe("monti init when something goes wrong", () => {
 			[{ adminPath: "/" }, /--admin-path "\/" must be a path like "\/studio"/],
 			[{ adminPath: "/api/studio" }, /--admin-path/],
 			[{ adminPath: "/../../etc" }, /--admin-path/],
-			[{ adminGithubId: "octocat" }, /--admin-github-id "octocat" must be the numeric GitHub id/],
-			[{ databaseSchema: "my-schema" }, /--database-schema/],
 			[{ siteUrl: "localhost:3000" }, /--site-url/],
 		];
 		for (const [flags, message] of cases) {

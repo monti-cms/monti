@@ -60,11 +60,7 @@ export const DEFAULT_BLOCK_IDS: readonly string[] = ["callout", "collapsible", "
 
 /** What the questions of `monti init` decided. Every field has a flag. */
 export interface InitAnswers {
-	/** The Postgres schema for the tables (`DATABASE_SCHEMA`), if given: an example value in `.env.example`. Without it the tables go in `public`. */
-	readonly databaseSchema?: string;
-	/** Numeric GitHub id of the admin (`MONTI_ADMIN_GITHUB_ID`), if given: filled in `.env.example` (it is public, not a secret). */
-	readonly adminGithubId?: string;
-	/** Public URL of the site, for the OAuth callback URL. */
+	/** Public URL of the site, for the `SITE_URL` example in `.env.example`. */
 	readonly siteUrl: string;
 	/** Locale codes, the default first. */
 	readonly locales: readonly string[];
@@ -288,8 +284,6 @@ export const chosenBlocks = (ids: readonly string[]): readonly BlockChoice[] =>
 export function configTemplate(answers: InitAnswers): string {
 	const blocks = chosenBlocks(answers.blocks);
 	const imports: { from: string; names: string[] }[] = [
-		{ from: "@monti-cms/auth", names: ["auth"] },
-		{ from: "@monti-cms/auth/github", names: ["github"] },
 		{ from: "@monti-cms/core/server", names: ["defineConfig", "postgres"] },
 		{ from: "@monti-cms/mdx", names: ["mdx"] },
 	];
@@ -372,9 +366,8 @@ export function configTemplate(answers: InitAnswers): string {
 		"\t// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.",
 		"\tdatabase: postgres(),",
 		"",
-		"\t// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (your GitHub OAuth app) and MONTI_ADMIN_GITHUB_ID (the admin's numeric GitHub id).",
-		"\t// Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.",
-		"\tauth: auth({ providers: [github()] }),",
+		"\t// No login yet: under `next dev` you are the admin without one, from this machine only; a deployed admin refuses everyone.",
+		"\t// To add GitHub login see the README of @monti-cms/auth (install it, then `auth: auth({ providers: [github()] })`).",
 		"",
 		...storage,
 		"",
@@ -444,6 +437,16 @@ export default withCms(nextConfig);
 /** The OAuth callback URL of the GitHub login for a site URL. */
 export const githubCallbackUrl = (siteUrl: string) => `${siteUrl.replace(/\/+$/, "")}/api/cms/auth/callback/github`;
 
+/** How to add GitHub login to a config that has none: the one how-to `monti init` and `monti doctor` both print. */
+export function githubLoginHowTo(siteUrl: string): string {
+	return [
+		"install @monti-cms/auth, then add `auth: auth({ providers: [github()] })` to defineConfig in monti.config.ts",
+		'(import { auth } from "@monti-cms/auth" and { github } from "@monti-cms/auth/github"),',
+		"set AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (a GitHub OAuth app: GitHub > Settings > Developer settings > OAuth Apps) and MONTI_ADMIN_GITHUB_ID (your numeric GitHub id, from https://api.github.com/users/<your-login>),",
+		`and register ${githubCallbackUrl(siteUrl)} as the OAuth callback URL`,
+	].join(" ");
+}
+
 /**
  * `.env.example`: every variable the chosen features read, in order, each with what it is and where to get it. Committed to git, so it holds placeholders only,
  * never a secret. The person copies it to `.env.local` (`cp .env.example .env.local`) and fills it in.
@@ -460,30 +463,16 @@ export function envExampleTemplate(answers: InitAnswers): string {
 		"# or use a local Postgres: postgres://postgres:postgres@localhost:5432/monti (create the database first: createdb monti).",
 		"DATABASE_URL=postgres://user:password@localhost:5432/monti",
 		"",
-		"# Postgres schema for the tables. Optional: empty means public. Use one when the database is shared with other apps.",
-		answers.databaseSchema ? `DATABASE_SCHEMA=${answers.databaseSchema}` : "# DATABASE_SCHEMA=monti",
+		"# Set DATABASE_SCHEMA only when the database is shared with other apps and the tables should live in their own schema (default: public).",
+		"# DATABASE_SCHEMA=monti",
 		"",
 		"# --- Secret ---",
 		"",
-		"# A long random value that signs login sessions and encrypts stored values (AI keys, git-sync tokens).",
+		"# A long random value that signs login sessions (once you add a login) and encrypts stored values (AI keys, git-sync tokens).",
 		"# Generate one:  openssl rand -base64 32",
 		"# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
 		"# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
 		"MONTI_SECRET=",
-		"",
-		"# --- Admin login (GitHub) ---",
-		"",
-		"# Under `next dev` you are signed in as the admin without these, from this machine only. A deployed site needs them.",
-		"# Create a GitHub OAuth app:  GitHub > Settings > Developer settings > OAuth Apps > New OAuth App",
-		`#   Homepage URL:               ${site}`,
-		`#   Authorization callback URL: ${githubCallbackUrl(site)}`,
-		"# For the deployed site make a second OAuth app (or add its URL the same way), e.g. https://your-domain.com/api/cms/auth/callback/github",
-		"# Then copy the app's Client ID here, and generate a new client secret and copy it to AUTH_GITHUB_SECRET.",
-		"AUTH_GITHUB_ID=",
-		"AUTH_GITHUB_SECRET=",
-		"",
-		'# Your numeric GitHub id: the only account that may sign in as admin. Open https://api.github.com/users/<your-login> and copy the "id" field.',
-		`MONTI_ADMIN_GITHUB_ID=${answers.adminGithubId ?? ""}`,
 		"",
 		"# --- Site ---",
 		"",
@@ -522,7 +511,6 @@ export function packagesFor(answers: InitAnswers): string[] {
 	return unique([
 		"@monti-cms/core",
 		"@monti-cms/admin",
-		"@monti-cms/auth",
 		"@monti-cms/nextjs",
 		"@monti-cms/mdx",
 		"next-themes",

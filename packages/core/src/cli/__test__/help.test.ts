@@ -44,7 +44,8 @@ describe("monti help", () => {
 
 	it("`monti init --help` names the flags that were added", async () => {
 		const { text } = await help("init", "--help");
-		expect(text).toContain("--database-schema");
+		expect(text).not.toContain("--database-schema");
+		expect(text).not.toContain("--admin-github-id");
 		expect(text).toContain("--blocks <list>");
 		expect(text).toMatch(/mermaid.*opt-in|opt-in.*mermaid/s);
 		expect(text).not.toContain("--registry");
