@@ -8,7 +8,7 @@ import {
 } from "@monti-cms/core/adapters/auth";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth, type Decision } from "@monti-cms/core/server";
 import { collectAdmins, ignoredAdminText } from "./admins";
-import { type LoginProvider, qualifyAccountId, splitAccountId } from "./provider";
+import { type LoginProvider, type LoginProviderContext, qualifyAccountId, splitAccountId } from "./provider";
 
 /**
  * What the host framework supplies, so this package stays free of any framework. The core cannot know the current request on its own,
@@ -187,7 +187,11 @@ export function auth(options: AuthOptions): AuthAdapter {
 			const basePath = (options.basePath ?? CMS_AUTH_BASE_PATH).replace(/\/$/, "");
 			const { sets: admins, ignored } = collectAdmins(options);
 			for (const item of ignored) console.warn(`[cms-auth] ${ignoredAdminText(item)}`);
-			if (![...admins.values()].some((ids) => ids.size > 0) && !isDevAuthBypassEnabled(options.devBypass)) {
+			if (
+				![...admins.values()].some((ids) => ids.size > 0) &&
+				!providers.some((provider) => provider.everyAccountIsAdmin) &&
+				!isDevAuthBypassEnabled(options.devBypass)
+			) {
 				console.warn(
 					`[cms-auth] ${problemText({
 						what: "No admin is set, so nobody can log in",
@@ -197,7 +201,13 @@ export function auth(options: AuthOptions): AuthAdapter {
 				);
 			}
 			const providerOf = (id: string | undefined) => providers.find((provider) => provider.id === id);
-			const authjsProviders = providers.map((provider) => provider.setup({ storage, trustHost }));
+			const providerContext: LoginProviderContext[] = providers.map(() => ({ storage, trustHost }));
+			const authjsProviders = providers.map((provider, index) =>
+				provider.setup(providerContext[index] as LoginProviderContext),
+			);
+			const accounts = providers
+				.map((provider, index) => provider.accounts?.(providerContext[index] as LoginProviderContext))
+				.find((found) => found !== undefined);
 			const authjsConfigProviders = authjsProviders as unknown as AuthConfig["providers"];
 			const isCredentials = new Map(
 				providers.map((provider, index) => {
@@ -290,14 +300,19 @@ export function auth(options: AuthOptions): AuthAdapter {
 				});
 			};
 
-			const flow = async (path: string, request: Request | undefined, redirectTo: string | undefined) => {
+			const flow = async (
+				path: string,
+				request: Request | undefined,
+				redirectTo: string | undefined,
+				fields: Readonly<Record<string, string>> = {},
+			) => {
 				const headers = await headersOf(request);
 				const internal =
 					headers &&
 					internalRequest(
 						path,
 						headers,
-						{ method: "POST", body: new URLSearchParams({ callbackUrl: redirectTo ?? "/" }) },
+						{ method: "POST", body: new URLSearchParams({ ...fields, callbackUrl: redirectTo ?? "/" }) },
 						request?.url,
 					);
 				if (!internal) {
@@ -338,7 +353,9 @@ export function auth(options: AuthOptions): AuthAdapter {
 						return t(`${provider.id}.label`);
 					},
 					...(provider.icon ? { icon: provider.icon } : {}),
+					...(isCredentials.get(provider.id) ? { credentials: true } : {}),
 				})),
+				...(accounts ? { accounts } : {}),
 				signIn: async (providerId = defaultProvider, signInOptions) => {
 					if (!providerOf(providerId)) {
 						throw new Error(
@@ -350,13 +367,13 @@ export function auth(options: AuthOptions): AuthAdapter {
 						);
 					}
 					requireConfigured();
+					// An email and password method posts the form's fields to the callback of its provider; an OAuth one starts the redirect to the service.
 					if (isCredentials.get(providerId)) {
-						throw new Error(
-							`[cms-auth] ${problemText({
-								what: `"${providerId}" is a credentials provider, which needs a form on the login page, and that is not supported yet`,
-								where: "`providers` of auth() in monti.config.ts",
-								fix: "use an OAuth provider such as github() for now",
-							})}`,
+						return flow(
+							`/callback/${providerId}`,
+							signInOptions?.request,
+							signInOptions?.redirectTo,
+							signInOptions?.credentials,
 						);
 					}
 					return flow(`/signin/${providerId}`, signInOptions?.request, signInOptions?.redirectTo);
@@ -367,7 +384,8 @@ export function auth(options: AuthOptions): AuthAdapter {
 					const provider = providerOf(split?.providerId);
 					if (!split || !provider) return false;
 					const normalized = (provider.normalizeId ?? ((id: string) => id.trim() || null))(split.id);
-					return normalized !== null && Boolean(admins.get(provider.id)?.has(normalized));
+					if (normalized === null) return false;
+					return provider.everyAccountIsAdmin === true || Boolean(admins.get(provider.id)?.has(normalized));
 				},
 				get devBypass() {
 					return isDevAuthBypassEnabled(options.devBypass);
