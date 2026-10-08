@@ -9,7 +9,7 @@ import { describeError } from "./errors";
 import { guessCollections, guessFieldMappings, resolveQuestions } from "./guess";
 import { buildLinkIndex, rewriteLinks } from "./links";
 import { type ImportMapping, loadMapping, saveMapping } from "./mapping";
-import { createMediaImporter, imageSources, type MediaImporter, withMediaIds } from "./media";
+import { createMediaImporter, imageSources, type MediaImporter, withImageUrls, withMediaIds } from "./media";
 import { type FilePlan, formatForExtension, groupId, type Notice, planFiles } from "./plan";
 import { confirm, type Prompter } from "./prompt";
 import { createRelationResolver, type RelationResolver } from "./relations";
@@ -177,7 +177,9 @@ export async function runImport(options: ImportOptions): Promise<ImportReport> {
 	const publicDirs = [mapping.publicDir ? path.resolve(cwd, mapping.publicDir) : undefined, root].filter(
 		(dir): dir is string => dir !== undefined,
 	);
-	const media = createMediaImporter({ cms, state, publicDirs, dryRun });
+	// Without media storage, images are copied into the folder the site serves files from.
+	const copyTo = mapping.publicDir ? path.resolve(cwd, mapping.publicDir) : undefined;
+	const media = createMediaImporter({ cms, state, publicDirs, copyTo, dryRun });
 	const relations = createRelationResolver({ cms, dryRun });
 	const index = buildLinkIndex(site, importable);
 
@@ -232,12 +234,15 @@ export async function runImport(options: ImportOptions): Promise<ImportReport> {
 		let doc = imported.doc;
 		const sources = imageSources(doc.content);
 		const mediaIds = new Map<string, string>();
+		const urls = new Map<string, string>();
 		for (const src of sources) {
 			const found = await media.resolve(src, plan.source.abs);
 			if (found?.mediaId) mediaIds.set(src, found.mediaId);
+			else if (found?.url && found.url !== src) urls.set(src, found.url);
 			if (found?.warning) notices.push({ kind: "image", message: found.warning });
 		}
 		if (mediaIds.size > 0) doc = { ...doc, content: [...withMediaIds(doc.content, mediaIds)] };
+		if (urls.size > 0) doc = { ...doc, content: [...withImageUrls(doc.content, urls)] };
 
 		const metadata: Record<string, string | string[]> = { ...plan.values };
 		for (const use of plan.relations) {
@@ -573,6 +578,11 @@ function buildReport(input: {
 				]
 			: [],
 	);
+	const unknownSuffixes = new Map<string, number>();
+	for (const plan of input.plans) {
+		const code = plan.path.unknownLocaleSuffix;
+		if (code) unknownSuffixes.set(code, (unknownSuffixes.get(code) ?? 0) + 1);
+	}
 	const base = {
 		dryRun: input.options.dryRun === true,
 		path: input.scanned,
@@ -589,16 +599,27 @@ function buildReport(input: {
 			uploaded: input.media.stats.uploaded,
 			reused: input.media.stats.reused,
 			wouldUpload: input.media.stats.wouldUpload,
+			copied: input.media.stats.copied,
+			wouldCopy: input.media.stats.wouldCopy,
 			configured: input.media.configured,
 		},
 		links: { resolved: input.linksResolved, unresolved: input.linksUnresolved },
 		notes: [
 			...input.notes,
+			...[...unknownSuffixes].map(
+				([code, count]) =>
+					`Warning: ${count === 1 ? "1 file ends" : `${count} files end`} in ".${code}" and ${input.options.dryRun ? "would be" : "were"} skipped, because ${code} is not one of the site's languages (${input.options.cms.site.LOCALES.join(", ")}). Add ${code} to "locales" in monti.schema.json, then import again to bring ${count === 1 ? "it" : "them"} in as ${count === 1 ? "a translation" : "translations"}.`,
+			),
+			...(input.media.configured || input.media.stats.copied + input.media.stats.wouldCopy === 0
+				? []
+				: [
+						`No media storage is configured, so ${input.options.dryRun ? "local images would be" : "local images were"} copied into ${input.mapping.publicDir ?? "public"}/media and the posts point to those addresses. Add \`storage\` to monti.config.ts (for example s3Storage()) and import again to upload them instead.`,
+					]),
 			...(input.media.configured ||
 			!files.some((file) => file.notices.some((n) => n.kind === "image" && n.message.includes("no media storage")))
 				? []
 				: [
-						"Local images stayed URLs because no media storage is configured (add `storage` to monti.config.ts, for example s3Storage()).",
+						"Some local images stay URLs because no media storage is configured and no public folder was found to copy them to (add `storage` to monti.config.ts, for example s3Storage()).",
 					]),
 		],
 	};

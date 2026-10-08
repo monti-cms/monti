@@ -61,7 +61,15 @@ export interface ImportReport {
 	readonly translations: readonly TranslationJoin[];
 	/** Entries created for the values of relation fields (tags), by collection. */
 	readonly createdTargets: Readonly<Record<string, readonly string[]>>;
-	readonly media: { uploaded: number; reused: number; wouldUpload: number; configured: boolean };
+	readonly media: {
+		uploaded: number;
+		reused: number;
+		wouldUpload: number;
+		/** Without storage: images copied into the public folder (or, in a dry run, that would be). */
+		copied: number;
+		wouldCopy: number;
+		configured: boolean;
+	};
 	readonly links: { resolved: number; unresolved: number };
 	/** Decisions the run took without asking, worth reading. */
 	readonly notes: readonly string[];
@@ -218,6 +226,11 @@ export function formatReport(report: ImportReport): string {
 		}
 		if (report.media.configured) {
 			lines.push("", `Images: ${report.media.wouldUpload} to upload, ${report.media.reused} already uploaded.`);
+		} else if (report.media.wouldCopy > 0) {
+			lines.push(
+				"",
+				`Images: ${report.media.wouldCopy} to copy into the public folder (no media storage is configured).`,
+			);
 		}
 		const translated = describeTranslations(report.translations);
 		if (translated) lines.push("", `Translations: ${translated}.`);
@@ -256,6 +269,7 @@ export function formatReport(report: ImportReport): string {
 		if (report.media.uploaded > 0 || report.media.reused > 0) {
 			lines.push(`Images: ${report.media.uploaded} uploaded, ${report.media.reused} already in the library.`);
 		}
+		if (report.media.copied > 0) lines.push(`Images: ${report.media.copied} copied into the public folder.`);
 		if (report.links.resolved > 0 || report.links.unresolved > 0) {
 			lines.push(
 				`Links between posts: ${report.links.resolved} turned into entry links, ${report.links.unresolved} left as written.`,

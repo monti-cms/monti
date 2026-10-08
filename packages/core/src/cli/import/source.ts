@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { parseFile } from "../../front-matter";
+import { isLanguageCode } from "../locale-names";
 
 /** The files of the source: finding them, reading their front matter, and what their path says (language, folder, address). */
 
@@ -107,6 +108,8 @@ export interface PathInfo {
 	readonly folder: string;
 	/** The language in the file name (`hello.ko.mdx`), as the site writes the code. */
 	readonly localeFromFilename?: string;
+	/** The file name ends in what looks like a language (`hello.ko.mdx`) that the site does not have. The file is not imported: it would get a mangled address. */
+	readonly unknownLocaleSuffix?: string;
 	/** The language in a folder of the path (`ko/hello.mdx`). */
 	readonly localeFromFolder?: string;
 	/** The file name without extension and language (`index` files take the name of their folder). It is the address when the front matter has none. */
@@ -144,11 +147,16 @@ export function derivePath(rel: string, locales: readonly string[]): PathInfo {
 	const file = segments.pop() ?? rel;
 	let stem = file.replace(/\.(md|mdx)$/i, "");
 	let localeFromFilename: string | undefined;
+	let unknownLocaleSuffix: string | undefined;
 	const suffix = /^(.*)\.([A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})?)$/.exec(stem);
 	if (suffix) {
 		const code = localeCode(suffix[2] ?? "", locales);
 		if (code) {
 			localeFromFilename = code;
+			stem = suffix[1] ?? stem;
+		} else if (isLanguageCode(suffix[2] ?? "")) {
+			// Not imported, but its name is still the post's name without the language, never `helloko`.
+			unknownLocaleSuffix = (suffix[2] ?? "").toLowerCase();
 			stem = suffix[1] ?? stem;
 		}
 	}
@@ -165,6 +173,7 @@ export function derivePath(rel: string, locales: readonly string[]): PathInfo {
 	return {
 		folder: dirs[0] ?? ".",
 		...(localeFromFilename ? { localeFromFilename } : {}),
+		...(unknownLocaleSuffix ? { unknownLocaleSuffix } : {}),
 		...(localeFromFolder ? { localeFromFolder } : {}),
 		name,
 		groupKey: [...dirs, name].join("/"),

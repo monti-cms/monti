@@ -197,6 +197,16 @@ function planFile(source: ParsedSource, options: PlanOptions): FilePlan {
 		warnings,
 	};
 
+	if (path.unknownLocaleSuffix) {
+		// `hello.ko.mdx` with no `ko` language: importing it would make a second, unrelated post with a mangled address (`helloko`).
+		warnings.push({
+			kind: "unknown_locale",
+			message: `the file name ends in ".${path.unknownLocaleSuffix}", but ${path.unknownLocaleSuffix} is not one of the site's languages (${site.LOCALES.join(", ")}), so the file is skipped. To import it as a translation, add ${path.unknownLocaleSuffix} to "locales" in monti.schema.json first`,
+		});
+		return Object.assign(plan, {
+			skip: `its language ".${path.unknownLocaleSuffix}" is not one of the site's languages (${site.LOCALES.join(", ")})`,
+		});
+	}
 	if (source.error) {
 		errors.push({ kind: "front_matter", message: source.error });
 		return plan;
