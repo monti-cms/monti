@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/ai",
-	"version": "0.1.0",
+	"version": "0.2.0-next.0",
 	"private": true,
 	"description": "AI plugin for @monti-cms/core: named AI actions, a decision model (System One), and the admin AI screen",
 	"license": "MIT",

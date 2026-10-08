@@ -97,5 +97,36 @@ for (const file of files) {
 	if (out !== source) writeFileSync(file, out);
 }
 
+// Test files only the tests use are not shipped. `__test__` files the exports reach (e.g. `./testing`) stay.
+const importOf = new RegExp(SPEC.source, "g");
+const reached = new Set();
+const visit = (file) => {
+	const base = file.replace(/(\.d)?\.[cm]?js$|\.d\.ts$/, "");
+	if (reached.has(base)) return;
+	reached.add(base);
+	for (const ext of [".js", ".d.ts"]) {
+		if (!existsSync(base + ext)) continue;
+		for (const match of readFileSync(base + ext, "utf8").matchAll(importOf)) {
+			if (match[3].startsWith(".")) visit(path.resolve(path.dirname(base), match[3]));
+		}
+	}
+};
+for (const target of JSON.stringify(publishExports).match(/\.\/dist\/[^"]+/g) ?? []) visit(path.join(root, target));
+let dropped = 0;
+for (const file of files) {
+	if (!file.split(path.sep).includes("__test__")) continue;
+	if (reached.has(file.replace(/(\.d)?\.js$|\.d\.ts$/, ""))) continue;
+	rmSync(file, { force: true });
+	dropped += 1;
+}
+const prune = (dir) => {
+	for (const name of readdirSync(dir)) {
+		const full = path.join(dir, name);
+		if (statSync(full).isDirectory()) prune(full);
+	}
+	if (dir !== dist && readdirSync(dir).length === 0) rmSync(dir, { recursive: true });
+};
+prune(dist);
+
 for (const folder of copies) cpSync(path.join(root, "src", folder), path.join(dist, folder), { recursive: true });
-console.log(`built ${pkg.name}: ${files.length} files`);
+console.log(`built ${pkg.name}: ${files.length - dropped} files`);

@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/auth",
-	"version": "0.1.0",
+	"version": "0.2.0-next.0",
 	"private": true,
 	"description": "Framework-neutral admin login for @monti-cms/core on standard Request/Response (Auth.js core), with pluggable providers: GitHub today, OAuth and password providers by adding a package",
 	"license": "MIT",

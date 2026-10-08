@@ -1,6 +1,6 @@
 {
 	"name": "@monti-cms/storage-s3",
-	"version": "0.1.0",
+	"version": "0.2.0-next.0",
 	"private": true,
 	"description": "Media storage for @monti-cms/core on the S3 API: AWS S3, Cloudflare R2 and MinIO, configured from conventional environment variables",
 	"license": "MIT",
