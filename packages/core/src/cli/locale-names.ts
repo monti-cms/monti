@@ -80,7 +80,7 @@ export function localesFromFileNames(names: readonly string[]): DetectedLocale[]
 
 /** The languages `monti init` offers in its picker, by their own names. */
 export const COMMON_LOCALES: readonly { readonly code: string; readonly name: string }[] = [
-	{ code: "ko", name: "한국어" },
+	{ code: "ko", name: "한국어" }, // cms-allow-korean: a language is named in its own script
 	{ code: "en", name: "English" },
 	{ code: "ja", name: "日本語" },
 	{ code: "zh", name: "中文" },
