@@ -33,6 +33,7 @@ function importsOf(source: string): string[] {
 const GENERATED_CODE = new Set([
 	path.join(SRC, "cli", "templates.ts"),
 	path.join(SRC, "cli", "init.ts"),
+	path.join(SRC, "cli", "init-edit.ts"),
 	path.join(SRC, "cli", "proxy-template.ts"),
 ]);
 

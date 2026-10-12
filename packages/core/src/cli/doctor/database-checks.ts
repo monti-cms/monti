@@ -102,7 +102,7 @@ const url: CoreCheck = {
 		}
 		const where = settings.connectionString ? "postgres({ connectionString })" : "DATABASE_URL";
 		const ssl = sslmodeWarning(value);
-		if (ssl) return warn(`Postgres at ${target}; ${ssl}`, { where, fix: SSLMODE_FIX });
+		if (ssl) return warn(`Postgres at ${target}. ${ssl}`, { where, fix: SSLMODE_FIX });
 		return ok(`Postgres at ${target}`, { where });
 	},
 };

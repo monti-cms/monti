@@ -15,7 +15,7 @@ import { findSchemaFile } from "../schema-file/locate";
 import { schemaSourceOf } from "../schema-file/source";
 import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
 import type { Decision } from "../server/decision";
-import type { CmsAuth, CmsServerConfig, DatabaseAdapter, RequestHost } from "../server/define";
+import type { CmsAuth, CmsServerConfig, DatabaseAdapter, RequestHost, UnreadableBody } from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import { type CmsEvents, createEventDispatcher } from "../services/events";
@@ -23,6 +23,7 @@ import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
 import { coreDecisions } from "./decisions";
+import { describeUnreadable, mergeUnreadable, unreadableLine } from "./migration-report";
 
 /** The content service of any site: input is checked at run time only. */
 type LooseContentService = ReturnType<typeof createContentService<Entry>>;
@@ -178,7 +179,18 @@ export interface Cms<
 	 * Creates the tables in the store, or brings them up to date (core tables, then plugin tables). Running it repeatedly gives the same result.
 	 * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
 	 */
-	migrate(options?: { readonly log?: (message: string) => void }): Promise<void>;
+	migrate(options?: {
+		readonly log?: (message: string) => void;
+		/** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
+		readonly verbose?: boolean;
+		/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti migrate --reconvert-bodies`). */
+		readonly reconvertBodies?: boolean;
+		/**
+		 * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
+		 * with that place.
+		 */
+		readonly saveDetail?: (lines: readonly string[]) => string | undefined;
+	}): Promise<void>;
 	/** Closes the database connection (when a command-line tool or a test is done). */
 	close(): Promise<void>;
 	/**
@@ -379,16 +391,42 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				formats: plugins.formats,
 				verifyAdmin: () => authGateway.verifyAdmin(),
 			}),
-			migrate: async ({ log = console.log } = {}) => {
+			migrate: async ({ log = console.log, verbose = false, reconvertBodies = false, saveDetail } = {}) => {
 				const target = connections.database.describeTarget?.();
 				log(`Migrating the ${connections.database.name} database${target ? `: ${target}` : ""}`);
-				const summary = await connections.database.migrate({ site, formats: await plugins.formats() });
+				// The steps report each body they keep as unreadable; one body can be reported by several steps.
+				const unreadable = new Map<string, UnreadableBody>();
+				const detailLines: string[] = [];
+				const summary = await connections.database.migrate({
+					site,
+					formats: await plugins.formats(),
+					reconvertBodies,
+					onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
+					detail: (line) => {
+						detailLines.push(line);
+						if (verbose) log(line);
+					},
+				});
 				await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
+				if (summary?.reconverted) {
+					const { converted, remaining } = summary.reconverted;
+					log(
+						converted === 0 && remaining === 0
+							? "No body was kept as unreadable, so there was nothing to read again."
+							: `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`,
+					);
+				}
+				const found = [...unreadable.values()];
+				if (verbose) for (const body of found) log(unreadableLine(body));
+				for (const line of describeUnreadable(found, { again: reconvertBodies })) log(line);
+				const everything = [...detailLines, ...found.map(unreadableLine)];
+				const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
 				log(
 					summary
 						? `Applied ${summary.applied} step${summary.applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
 						: "Migration completed.",
 				);
+				if (saved) log(`Full details: ${saved}`);
 			},
 			close: async () => {
 				await connections.database.close?.();

@@ -1,9 +1,11 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
 import type { LegacyBodies } from "../../../format/types";
+import type { UnreadableBody } from "../../../server/define";
 import type { Site } from "../../../site";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
 import { readDoc } from "./rows";
+import { hasDirectiveBlock, kindOfState } from "./unreadable";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -15,6 +17,8 @@ export interface StoredDocumentMigrationOptions {
 	readonly batchSize?: number;
 	/** Called for each body that gets no document and is left as it is. Default: `console.warn`. */
 	readonly log?: (message: string) => void;
+	/** Called instead of `log` for each body that gets no document. */
+	readonly onUnreadable?: (body: UnreadableBody) => void;
 }
 
 interface BodyRow {
@@ -46,10 +50,12 @@ export async function migrateStoredDocuments(
 	const { bodies, site } = options;
 	const log = options.log ?? ((message: string) => console.warn(message));
 
-	const withoutDocument = (where: string) =>
-		log(
-			`[monti] no stored document for ${where}: it does not parse, has front matter, or would not read back the same; left as it is`,
-		);
+	const withoutDocument = (where: string, kind: UnreadableBody["kind"], text: string) =>
+		options.onUnreadable
+			? options.onUnreadable({ where, kind, hasDirective: hasDirectiveBlock(text) })
+			: log(
+					`[monti] no stored document for ${where}: it does not parse, has front matter, or would not read back the same; left as it is`,
+				);
 
 	let last: { entry_id: string; state: string } | undefined;
 	for (;;) {
@@ -64,7 +70,8 @@ export async function migrateStoredDocuments(
 		const next = res.rows.map((row) => {
 			// A document already there (the step ran before) keeps its block ids.
 			const body = bodies.read(row.mdx, { previous: readDoc(row.doc) });
-			if (body.doc === null) withoutDocument(`entry_bodies ${row.entry_id}/${row.state}`);
+			if (body.doc === null)
+				withoutDocument(`entry_bodies ${row.entry_id}/${row.state}`, kindOfState(row.state), row.mdx);
 			const base = row.translation?.baseSource;
 			const baseSource = typeof base === "string" ? bodies.read(base).text : undefined;
 			return {
@@ -107,7 +114,7 @@ export async function migrateStoredDocuments(
 
 		const next = res.rows.map((row) => {
 			const body = bodies.read(row.mdx, { previous: readDoc(row.doc) });
-			if (body.doc === null) withoutDocument(`body_templates ${row.id}`);
+			if (body.doc === null) withoutDocument(`body_templates ${row.id}`, "template", row.mdx);
 			return { mdx: body.text, doc: body.doc === null ? null : JSON.stringify(body.doc) };
 		});
 		await client.query(

@@ -15,7 +15,7 @@ React 19 위의 Next.js 16(App Router) 앱이 필요하다. `@monti-cms/core`를
 설치 → monti init → monti migrate → monti doctor → pnpm dev
 ```
 
-1~2단계: `@monti-cms/core`를 **설치**한 다음 **init**을 돌린다(Monti가 새로 만드는 파일을 쓰고, 묻고 나서 나머지 패키지를 설치하고, 남은 일을 적어 준다. 이미 있는 파일은 고치지 않고 데이터베이스는 건드리지 않는다). 쓰는 패키지 매니저의 블록을 그대로 복사한다.
+1~2단계: `@monti-cms/core`를 **설치**한 다음 **init**을 돌린다(Monti가 새로 만드는 파일을 쓰고, 묻고 나서 나머지 패키지를 설치하고, 남은 일을 적어 준다. `next.config`, 루트 레이아웃, `.gitignore`는 필요한 만큼만 고치고 어떤 파일을 어떻게 고쳤는지 적어 준다. 데이터베이스는 건드리지 않는다). 쓰는 패키지 매니저의 블록을 그대로 복사한다.
 
 ```sh
 # 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
@@ -31,7 +31,7 @@ allowBuilds:
   esbuild: true
 ```
 
-3. **init이 적어 준 일을 한다.** init은 내 파일을 하나도 고치지 않으므로, 복사할 내용이 든 번호 목록으로 끝난다. `next.config`의 변경(`withCms`), `<html>`의 `suppressHydrationWarning`, `.gitignore`의 `.env.local`(앱에 필요한 것만), 그리고 `cp .env.example .env.local`(채워 넣는다. `.env.example`에 각 값이 무엇이고 어디서 얻는지 적혀 있고, `MONTI_SECRET`은 `openssl rand -base64 32`로 만든다)이다.
+3. **init이 적어 준 일을 한다.** init이 `next.config`(`withCms`), `<html>`(`suppressHydrationWarning`), `.gitignore`(`.env.local`, `.monti/`)를 직접 고치고 "Changed:"에 적어 준다(안전하게 고칠 수 없던 파일은 이유와 함께 번호 목록에 있다). 남은 일은 `cp .env.example .env.local`(채워 넣는다. `.env.example`에 각 값이 무엇이고 어디서 얻는지 적혀 있고, `MONTI_SECRET`은 `openssl rand -base64 32`로 만든다)이다.
 4. **표 만들기와 설정 점검.** `pnpm exec monti migrate`를 돌린 다음 `pnpm exec monti doctor`를 돌린다. 모든 검사를 `ok`, `warn`, `FAIL`로 보여 주고, 경고마다 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다(위 init 단계 중 빠진 것이 있으면 그것도 알려 준다). Monti가 스스로 정한 값과 그 출처도 함께 보여 준다.
 5. **앱 실행.** `pnpm dev`로 띄우고 `http://localhost:3000/studio`를 연다(`monti init`은 관리자를 `/studio`에 쓴다. `--admin-path`로 바꾼다).
 
@@ -96,7 +96,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 
 ### 2. `monti init`
 
-`@monti-cms/core`를 설치한 뒤 앱 폴더(`package.json`이 있는 곳)에서 `pnpm exec monti init`으로 돌린다(다른 패키지 매니저는 빠른 시작을 본다. 설치 전에 `npx monti`를 돌리면 다른 패키지를 받는다). 기존 Next.js(App Router) 앱에 Monti를 더한다. 앱을 읽고, 몇 가지를 묻고, Monti가 새로 만드는 파일을 적고, (확인을 받은 뒤) 패키지를 설치하고, 남은 일을 번호를 붙여 쉬운 말로 적어 준다. **앱에 이미 있는 파일은 하나도 고치지 않고**(`next.config`, 루트 레이아웃, `tsconfig.json`, `.gitignore`) `.env.local`도 쓰지 않는다. 그 변경은 적어 줄 테니 직접 한다. 묻지 않고 파일을 덮어쓰지 않고, 다시 돌려도 안전하다.
+`@monti-cms/core`를 설치한 뒤 앱 폴더(`package.json`이 있는 곳)에서 `pnpm exec monti init`으로 돌린다(다른 패키지 매니저는 빠른 시작을 본다. 설치 전에 `npx monti`를 돌리면 다른 패키지를 받는다). 기존 Next.js(App Router) 앱에 Monti를 더한다. 앱을 읽고, 몇 가지를 묻고, Monti가 새로 만드는 파일을 적고, (확인을 받은 뒤) 패키지를 설치하고, 남은 일을 번호를 붙여 쉬운 말로 적어 준다. **앱의 파일 셋을 고치고 어떤 파일을 어떻게 고쳤는지 요약의 "Changed:" 목록에 한 줄씩 적어 준다.** `next.config`의 export를 `withCms(...)`로 감싸고, 루트 레이아웃 `<html>`에 `suppressHydrationWarning`을 달고, `.gitignore`에 `.env.local`과 `.monti/`를 더한다. 이에 대해서는 묻지 않는다. 안전하게 바꿀 수 없는 모양의 파일(함수를 export하는 설정, `<html>`이 없는 레이아웃 등)은 건드리지 않고, 이유와 함께 남은 일 목록에 넣는다. `.env.local`은 쓰지 않는다. 묻지 않고 파일을 덮어쓰지 않고, 다시 돌려도 안전하다.
 
 **알아내는 것:** App Router 폴더(`app/` 또는 `src/app/`), 패키지 매니저(락 파일이나 `packageManager`), TypeScript, 개발 포트(`dev` 스크립트), 이미 있는 `next.config`의 모양, `.env.local`을 빠뜨린 `.gitignore`, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`(모두 적어 줄 내용을 맞추는 데만 쓴다), Markdown·MDX 폴더(`content/`, `posts/`, `_posts/`, `blog/` 등). 그 폴더의 front matter 키가 시작용 `post` 컬렉션의 모양이 되고(아래 "front matter에 맞춘 모양" 참고). `pages/`만 있는 앱은 이유를 알리고 멈춘다.
 
@@ -109,6 +109,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 | 부가 기능 | AI 글쓰기, git 동기화(Bareun은 묻지 않는다) | 없음 |
 | 블록 | 가벼운 기본 묶음(`callout`, `collapsible`, `tabs`, `code-ref`, `color`), 전부, 없음, 또는 `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color` 중에서 고르기. `mermaid`와 `chart`는 별도 진입점에서 오고, 고른 경우에만 라이브러리(`mermaid`, `recharts`)가 따라온다 | 기본 |
 | 관리자 경로 | `/studio` 같은 경로 | `/studio` |
+| 블록 문법 | "Markdown에서 블록을 어떻게 쓰나요?": `:::callout` 같은 `:::` 블록(디렉티브 문법, `@monti-cms/syntax-directive`. 설정에 `mdx({ syntax: [directiveSyntax()] })`가 들어간다), 또는 일반 MDX만 | 블록을 설치하면 디렉티브 문법, 아니면 일반 MDX |
 | 로그인 | "관리자에 어떻게 로그인할까?": 이메일과 비밀번호(내장, 다른 서비스 불필요) 또는 GitHub(GitHub OAuth 앱 필요). "없음" 선택지는 없다 | 이메일과 비밀번호 |
 | 설치 | 패키지가 빠져 있으면 찾아낸 패키지 매니저의 설치 명령을 그대로 보여 주고 "돌릴까요?"를 묻는다 | 예 |
 
@@ -120,7 +121,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 | 스키마 파일: 시작용 `post` 컬렉션(콘텐츠를 찾으면 그 front matter대로), 언어, 시간대, 관리자 경로, 관리자 스키마 화면이 쓰는 것과 같은 모양으로 쓴다 | `monti.schema.ts` |
 | 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | 관리자 API와 로그인(`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| 고른 기능이 읽는 모든 변수와, 변수마다 짧은 주석(무엇이고 어디서 얻는지: 데이터베이스 URL, `MONTI_SECRET`을 만드는 `openssl rand -base64 32`, 언제 켜는지 적힌 주석 처리된 `DATABASE_SCHEMA` 줄, `S3_*` 값). 자리표시자만 있고 비밀은 없으므로 커밋해도 안전하다 | `.env.example` |
+| 고른 기능이 읽는 모든 변수와, 변수마다 짧은 주석(무엇이고 어디서 얻는지: 데이터베이스 URL, `MONTI_SECRET`을 만드는 `openssl rand -base64 32`, `S3_*` 값). 컴퓨터에서 지금 필요한 값이 먼저 오고, `SITE_URL`·`AUTH_TRUST_HOST`·`DATABASE_SCHEMA`는 "When you deploy (not needed on your computer)" 아래에 주석 처리되어 한 문장씩 설명이 붙는다. `DATABASE_URL` 옆에는 `sslmode=require` 대신 `sslmode=verify-full`을 쓰라는 안내가 있다. 자리표시자만 있고 비밀은 없으므로 커밋해도 안전하다 | `.env.example` |
 
 `src/`를 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
 
@@ -129,17 +130,15 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 요약은 남은 일을 번호 붙은 단계로, 복사할 내용 그대로, 앱에 필요한 것만 보여 준다:
 
 1. 설치 명령(돌리지 않았을 때만. 앱에 TypeScript가 없으면 그 짧은 안내가 앞에 온다),
-2. `next.config` 변경: `import { withCms } from "@monti-cms/nextjs/config"`와 `export default withCms(nextConfig)`를 내 파일의 모양에 맞춰 보여 주고, 파일이 없으면 새 `next.config.ts` 전체를 보여 준다(이미 `withCms`가 있으면 건너뛴다),
-3. 루트 레이아웃 `<html>`의 `suppressHydrationWarning`(이미 있으면 건너뛴다),
-4. `cp .env.example .env.local`을 하고 채워 넣기, `MONTI_SECRET`을 만드는 명령(`openssl rand -base64 32`, 또는 한 줄짜리 `node -e` 명령)과 함께,
-5. `.gitignore`의 `.env.local`(아직 무시하지 않을 때만),
-6. `monti migrate`,
-7. `monti doctor`(위 단계 중 빠진 것이 있으면 알려 준다),
-8. `pnpm dev`, 그다음 관리자 주소(`/studio`) 열기.
+2. `next.config` 변경과 `<html>`의 `suppressHydrationWarning`. init이 직접 하지 못한 것만, 이유와 정확한 변경과 함께 나온다. 직접 고쳤으면 "Changed:"에 파일과 변경이 적히고, 이미 되어 있는 파일은 그대로 두고 "이미 있음"으로 적는다. `next.config`가 없으면 `next.config.ts`를 만든다,
+3. `cp .env.example .env.local`을 하고 채워 넣기, `MONTI_SECRET`을 만드는 명령(`openssl rand -base64 32`, 또는 한 줄짜리 `node -e` 명령)과 함께,
+4. `monti migrate`,
+5. `monti doctor`(위 단계 중 빠진 것이 있으면 알려 준다),
+6. `pnpm dev`, 그다음 관리자 주소(`/studio`) 열기.
 
 그 뒤에 해당하는 안내가 붙는다: git-sync 대상, 그리고 로그인에 대한 한 항목이다. **이메일과 비밀번호**(기본)이면 배포한 직후 관리자를 열어 첫 관리자를 만들라는 것이고(또는 운영 데이터베이스를 가리키게 해서 내 컴퓨터에서 앱을 프로덕션 모드로 돌려 미리 만든다. `next dev`에서는 로그인 없이 관리자라서 그 화면이 나오지 않는다), 비밀번호를 잊었을 때는 `monti admin:reset-password`다. **GitHub**이면 홈페이지·콜백 URL과 함께 OAuth 앱을 만들고 `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_ADMIN_GITHUB_ID`를 채우라는 것이다. 어느 쪽이든 `monti.config.ts`에는 이미 `auth: auth({ providers: [...] })` 줄이 있고 `@monti-cms/auth`는 설치돼 있다.
 
-**질문 없이.** 플래그를 준 질문은 묻지 않는다. `--yes`, `--json`이거나 터미널이 없으면(CI) 아무것도 묻지 않고, 모든 질문이 플래그나 기본값을 쓴다. `--json` 출력은 JSON 문서 하나(`ok`, `created`, `skipped`, `overwritten`, `steps`, `notes`, `next` 등)이고, 오류는 `{ "ok": false, "error": "..." }`다. 종료 코드는 성공 0, 단계 실패나 잘못된 입력 1, 취소 130이다.
+**질문 없이.** 플래그를 준 질문은 묻지 않는다. `--yes`, `--json`이거나 터미널이 없으면(CI) 아무것도 묻지 않고, 모든 질문이 플래그나 기본값을 쓴다. `--json` 출력은 JSON 문서 하나(`ok`, `created`, `changed`, `skipped`, `overwritten`, `steps`, `notes`, `next` 등)이고, 오류는 `{ "ok": false, "error": "..." }`다. 종료 코드는 성공 0, 단계 실패나 잘못된 입력 1, 취소 130이다.
 
 ```sh
 pnpm exec monti init                 # 대화형
@@ -161,6 +160,7 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 | `--extras <목록>` | `ai`, `git-sync`, `none` | `none` |
 | `--blocks <목록>` | `default`(가벼운 묶음), `all`, `none`, 블록 이름(`default,mermaid`는 가벼운 묶음에 더한다) | `default` |
 | `--admin-path <경로>` | 관리자 경로(영문자·숫자·`-`·`_`. `/`와 `/api` 아래는 안 된다) | `/studio` |
+| `--directive-syntax` (`--no-directive-syntax`) | 블록을 `:::` 블록(디렉티브 문법)으로 쓸지(또는 일반 MDX로 둘지)를 묻지 않고 정한다 | 묻는다. 블록을 설치하면 예 |
 | `--login <password\|github>` | 관리자 로그인 방법: 내장 이메일·비밀번호 로그인 또는 GitHub | `password` |
 | `--overwrite` | 다른 내용인 기존 파일을 바꾼다 | 그대로 둔다 |
 | `--no-install` | 패키지를 설치하지 않고, 설치 명령을 남은 일 목록에 적는다 | |
@@ -176,7 +176,7 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 
 **관리자 경로는 `admin.path`(스키마 파일 또는 사이트 설정)와 라우트 폴더가 같아야 한다.** `monti init`은 둘을 함께 맞춘다. 나중에 바꿀 때는 둘을 함께 바꾼다. 관리자 API 경로(`/api/cms/v1`)는 바뀌지 않는다.
 
-**안전.** init은 이미 있는 파일을 고치지 않는다. 쓰는 파일은 모두 프로젝트 밖의 경로(`..` 경로, 절대 경로, 밖으로 나가는 심볼릭 링크)를 거부하는 한 곳을 지난다. 모든 질문에 답하기 전에는 아무것도 쓰지 않으므로 Ctrl+C로 멈추면 프로젝트는 그대로다. 쓰다가 실패하면 오류가 이미 쓴 파일을 알려 주고(되돌리지 않는다) `monti init`을 다시 돌리라고 안내한다. 다시 돌리면 그 파일들은 그대로 둔다.
+**안전.** init이 이미 있는 파일에서 고치는 것은 위의 세 가지뿐이다. 쓰는 파일은 모두 프로젝트 밖의 경로(`..` 경로, 절대 경로, 밖으로 나가는 심볼릭 링크)를 거부하는 한 곳을 지난다. 모든 질문에 답하기 전에는 아무것도 쓰지 않으므로 Ctrl+C로 멈추면 프로젝트는 그대로다. 쓰다가 실패하면 오류가 이미 쓴 파일을 알려 주고(되돌리지 않는다) `monti init`을 다시 돌리라고 안내한다. 다시 돌리면 그 파일들은 그대로 둔다.
 
 이미 `cms.config.ts`나 `cms.server.ts`가 있는 앱은 그대로 둔다. `monti init`은 두 번째 설정을 만들지 않고, 자기가 만들지 않은 설정 옆에는 스키마 파일도 만들지 않는다. 대신 둘을 `monti.config.ts`로 옮기라고("`cms.config.ts` + `cms.server.ts`에서 올리기") 알리고 `monti schema:extract`를 돌리라고 알린다("스키마 파일").
 
@@ -256,7 +256,7 @@ storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.
 | `SITE_URL` | 선택. 사이트의 공개 URL(`site.url`). 환경마다 다르다. 코드나 스키마 파일의 `site.url`이 있으면 그쪽이 이긴다 |
 | `AUTH_TRUST_HOST` | 선택. `X-Forwarded-Host`를 덮어쓰는, 직접 운영하는 프록시(nginx, 로드 밸런서) 뒤에서 돌 때만 `true`. Vercel·Netlify·Cloudflare Pages 같은 플랫폼은 알아서 감지한다("호스트 신뢰" 참고) |
 
-**SSL.** `DATABASE_URL`은 쓴 그대로 `pg` 드라이버에 넘긴다. `sslmode=require`(`prefer`, `verify-ca`도)이면 드라이버가 시작할 때마다 9줄짜리 SECURITY WARNING을 출력한다. 지금은 그 모드들을 `verify-full`(암호화, 인증서 확인)로 읽고, 다음 메이저 버전에서 libpq의 의미로 바뀔 예정이기 때문이다. `monti doctor`가 이를 설명하고(`database/url`) 끄는 법도 알려 준다: URL에 `sslmode=verify-full`을 적는다. 드라이버가 지금 하는 것과 같아서 연결의 안전성은 그대로다. libpq의 의미(`require`에서 인증서를 확인하지 않음)를 원할 때만 `uselibpqcompat=true`를 URL에 더한다.
+**SSL.** `DATABASE_URL`은 쓴 그대로 `pg` 드라이버에 넘긴다. `sslmode=require`(`prefer`, `verify-ca`도)이면 드라이버가 앱이 시작할 때마다 긴 SECURITY WARNING을 출력한다. 알림일 뿐이다. 지금은 드라이버가 그 모드들을 `verify-full`(암호화, 인증서 확인)로 읽으므로 연결은 안전하고, 다음 메이저 버전에서 libpq의 의미로 바뀔 예정이다. `monti doctor`가 이를 쉬운 말로 설명하고(`database/url`) 한 줄짜리 해결책을 알려 준다: URL에 `sslmode=verify-full`을 적는다(같은 보안, 알림 없음). libpq의 의미(`require`에서 인증서를 확인하지 않음)를 원할 때만 `uselibpqcompat=true`를 더한다.
 
 옵션에 명시한 값이 항상 이 환경 변수보다 앞서고, 다른 이름에서 값을 짐작하지 않는다. 필요한 값이 없으면 변수 이름을 알려 주는 오류가 난다(환경 변수는 값이 처음 쓰일 때 읽으므로 환경 변수 없이 빌드해도 실패하지 않는다). 개발용 로그인을 위한 변수는 없다. `next dev`에서는 저절로 켜진다("개발용 로그인 우회").
 
@@ -267,6 +267,8 @@ pnpm exec monti migrate
 표를 만들거나 최신 모양으로 맞춘다(플러그인 표 포함). 여러 번 돌려도 결과가 같고, 패키지를 올린 뒤에도 다시 돌린다. 시작 전에 대상을(`Migrating the postgres database: host:port/db, schema "public"`), 끝에 결과를(`Applied N steps, M already up to date.`) 출력한다.
 본체 변경은 번호 붙은 단계로 `cms_migrations`에 남아 아직 돌지 않은 단계만 돌고(한 트랜잭션), 같은 스키마에 동시에 돌려도
 하나씩 돈다. 플러그인은 한 번만 할 일을 `storage.once(이름, 단계)`로 맡긴다("플러그인 저장소").
+단계가 문서로 읽지 못한 본문은 있는 그대로 보관되고(잃는 것은 없다), `monti migrate`는 몇 줄의 쉬운 말로 알려 준다: 몇 개인지(발행·초안·템플릿), 가장 흔한 이유, 그리고 그 본문에 `:::` 블록이 있을 때만 디렉티브 문법(`mdx({ syntax: [directiveSyntax()] })`, `@monti-cms/syntax-directive`를 설치)이 읽을 수 있다는 안내. 본문마다 한 줄과 단계의 다른 경고는 앱 폴더의 `.monti/logs/migrate-<시각>.log`에 쓰고 마지막 줄에 `Full details: <경로>`를 적는다. 알릴 것이 있을 때만 파일이 생기고, `monti init`이 `.monti/`를 `.gitignore`에 넣는다. `--verbose`는 그 줄들을 화면에도 보여 준다.
+`monti migrate --reconvert-bodies`는 읽지 못해 원문으로 보관된 본문을 지금의 설정으로 다시 읽는다(문법을 켠 뒤에 쓴다). 읽히면 보통 본문이 된다(옛 소프트 줄바꿈은 그때처럼 명시하고, 블록 ID·ID 링크·해시·검색 텍스트를 다시 계산하며 `version`과 `updated_at`은 그대로다). 나머지는 그대로 두고, 다시 돌려도 그 사이 읽을 수 있게 된 것만 바뀐다.
 `monti migrate`(와 `cms.migrate()`)는 인스턴스의 형식(플러그인이 주는 것)을 마이그레이션에 넘긴다. MDX 글로 저장해 둔 본문을 읽는 옛 단계는 저장소에 그런 본문이 있을 때만 `@monti-cms/mdx`의 `mdx` 형식을 필요로 한다("코어에 있던 MDX에서 올리기").
 
 - 환경 파일: 기본으로 `.env.local`·`.env`(있는 것만)를 읽는다. 셸에서 준 값이 이기고 앞 파일이 뒤 파일을 이긴다.

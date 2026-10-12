@@ -71,4 +71,5 @@ export {
 	type MediaAdapter,
 	type MigrationSummary,
 	type RequestHost,
+	type UnreadableBody,
 } from "./define";

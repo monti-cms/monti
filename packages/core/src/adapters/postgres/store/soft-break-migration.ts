@@ -1,8 +1,10 @@
 import type { PoolClient } from "pg";
 import type { JsonValue } from "../../../core/types";
 import type { LegacyBodies } from "../../../format/types";
+import type { UnreadableBody } from "../../../server/define";
 import type { Site } from "../../../site";
 import { mdxContentHash, mdxSearchText } from "./mdx-body";
+import { hasDirectiveBlock, kindOfState } from "./unreadable";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -14,16 +16,27 @@ export interface SoftBreakMigrationOptions {
 	readonly batchSize?: number;
 	/** Called for each body that is left as it is (it does not parse, or the edit could not be made safely). Default: `console.warn`. */
 	readonly log?: (message: string) => void;
+	/** Called instead of `log` for each body (not a translation base source) the edit could not be made in. */
+	readonly onUnreadable?: (body: UnreadableBody) => void;
 }
 
 /** What one body rewrite did. Bodies that are skipped are left as they are and are named in the log. */
-const rewritten = (bodies: LegacyBodies, mdx: string, where: string, log: (message: string) => void): string => {
+const rewritten = (
+	bodies: LegacyBodies,
+	mdx: string,
+	where: string,
+	log: (message: string) => void,
+	onUnreadable?: (reason: string, detail: string | undefined) => void,
+): string => {
 	const result = bodies.insertSoftBreaks(mdx);
 	if (result.status === "changed") return result.text;
 	if (result.status === "skipped") {
-		log(
-			`[monti] soft line endings left as they are in ${where}: ${result.reason}${result.detail ? ` (${result.detail})` : ""}`,
-		);
+		if (onUnreadable) onUnreadable(result.reason, result.detail);
+		else {
+			log(
+				`[monti] soft line endings left as they are in ${where}: ${result.reason}${result.detail ? ` (${result.detail})` : ""}`,
+			);
+		}
 	}
 	return mdx;
 };
@@ -67,7 +80,21 @@ export async function migrateSoftBreaks(
 
 		const next = res.rows.map((row) => {
 			const where = `entry_bodies ${row.entry_id}/${row.state}`;
-			const mdx = rewritten(bodies, row.mdx, where, log);
+			const mdx = rewritten(
+				bodies,
+				row.mdx,
+				where,
+				log,
+				options.onUnreadable &&
+					((reason, detail) =>
+						options.onUnreadable?.({
+							where,
+							kind: kindOfState(row.state),
+							reason,
+							...(detail === undefined ? {} : { detail }),
+							hasDirective: hasDirectiveBlock(row.mdx),
+						})),
+			);
 			const base = row.translation?.baseSource;
 			const baseSource =
 				typeof base === "string" ? rewritten(bodies, base, `${where} (translation base source)`, log) : undefined;
@@ -107,7 +134,22 @@ export async function migrateSoftBreaks(
 		);
 		if (res.rows.length === 0) break;
 		for (const row of res.rows) {
-			const mdx = rewritten(bodies, row.mdx, `body_templates ${row.id}`, log);
+			const where = `body_templates ${row.id}`;
+			const mdx = rewritten(
+				bodies,
+				row.mdx,
+				where,
+				log,
+				options.onUnreadable &&
+					((reason, detail) =>
+						options.onUnreadable?.({
+							where,
+							kind: "template",
+							reason,
+							...(detail === undefined ? {} : { detail }),
+							hasDirective: hasDirectiveBlock(row.mdx),
+						})),
+			);
 			if (mdx !== row.mdx)
 				await client.query(`UPDATE "${qSchema}".body_templates SET mdx = $1 WHERE id = $2`, [mdx, row.id]);
 		}

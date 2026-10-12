@@ -15,7 +15,7 @@ The whole flow:
 install → monti init → monti migrate → monti doctor → pnpm dev
 ```
 
-Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti's own new files, asks before installing the other packages, and prints what is left; it edits none of your existing files and never touches the database). Copy the block for your package manager:
+Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti's own new files, asks before installing the other packages, and prints what is left; it makes the two small edits Monti needs, says which, and never touches the database). Copy the block for your package manager:
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
@@ -31,7 +31,7 @@ allowBuilds:
   esbuild: true
 ```
 
-3. **Do the steps init printed.** Init changes none of your files, so it ends with a numbered list with exact content to copy: the `next.config` change (`withCms`), `suppressHydrationWarning` on `<html>` and `.env.local` in `.gitignore` (each only when your app needs it), and `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
+3. **Do the steps init printed.** Init wrapped `next.config` in `withCms`, added `suppressHydrationWarning` to `<html>`, and added `.env.local` and `.monti/` to `.gitignore` itself (the summary lists each edited file under "Changed:"; a file it could not edit safely is in the numbered list with the reason). What is left is `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
 4. **Create the tables and check the setup.** `pnpm exec monti migrate`, then `pnpm exec monti doctor`, which lists every check as `ok`, `warn` or `FAIL`; every warning says what is wrong, where, and how to fix it (it also tells you if one of the init steps above is missing). It also lists what Monti decided on its own, with where each value came from.
 5. **Run the app.** `pnpm dev`, then open `http://localhost:3000/studio` (`monti init` writes the admin at `/studio`; `--admin-path` changes it).
 
@@ -96,9 +96,9 @@ pnpm 12 fails the install if there are install scripts that have not been allowe
 
 ### 2. `monti init`
 
-Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes Monti's own new files, installs the packages (after you confirm), and ends with a plain, numbered list of what is left. **It edits no file your app already has** (`next.config`, the root layout, `tsconfig.json`, `.gitignore`) and writes no `.env.local`: it prints those changes for you to make. It never overwrites a file without asking, and it is safe to run again.
+Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes Monti's own new files, installs the packages (after you confirm), and ends with a plain, numbered list of what is left. **It edits three files your app already has, and tells you exactly which** (a "Changed:" list in the summary, one line per file): it wraps the export of `next.config` in `withCms(...)`, adds `suppressHydrationWarning` to the `<html>` of the root layout, and adds `.env.local` and `.monti/` to `.gitignore`. It asks nothing about them. A file in a shape it cannot change safely (a config that exports a function, a layout with no `<html>`, ...) is left alone and its step is in the list of what is left, with the reason. It writes no `.env.local`. It never overwrites a file without asking, and it is safe to run again.
 
-**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, the dev port (from the `dev` script), the shape of an existing `next.config`, a `.gitignore` that misses `.env.local`, whether the root layout's `<html>` has `suppressHydrationWarning` (all only to tailor what it prints), and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below). An app with only a `pages/` folder is refused with a message.
+**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, the dev port (from the `dev` script), the shape of an existing `next.config`, a `.gitignore` that misses `.env.local`, whether the root layout's `<html>` has `suppressHydrationWarning` (the files it edits and what it prints), and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below). An app with only a `pages/` folder is refused with a message.
 
 **The questions** (each has a flag, see below):
 
@@ -109,6 +109,7 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | Extras | AI writing, git sync (Bareun is not offered) | none |
 | Blocks | the light default set (`callout`, `collapsible`, `tabs`, `code-ref`, `color`), all, none, or a list picked from `callout`, `collapsible`, `tabs`, `columns`, `code-explorer`, `mermaid`, `chart`, `tooltip`, `code-ref`, `color`. `mermaid` and `chart` come from their own entry points and bring their library (`mermaid`, `recharts`) only when chosen | default |
 | Admin path | a path like `/studio` | `/studio` |
+| Block syntax | "How are blocks written in Markdown?": with `:::` blocks such as `:::callout` (the directive syntax, `@monti-cms/syntax-directive`; the config gets `mdx({ syntax: [directiveSyntax()] })`), or plain MDX only | the directive syntax when blocks are installed, else plain MDX |
 | Login | "How should people sign in to the admin?": email and password (built in, no other service needed), or GitHub (needs a GitHub OAuth app). There is no "none" choice | email and password |
 | Install | when the packages are missing: the exact install command for the detected package manager, then "run it?" | yes |
 
@@ -120,26 +121,24 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, written the way the admin's schema screen would write it | `monti.schema.ts` |
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
-| Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, a commented `DATABASE_SCHEMA` line saying when to set it, the `S3_*` values). It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
+| Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, the `S3_*` values). What is needed on your computer comes first; `SITE_URL`, `AUTH_TRUST_HOST` and `DATABASE_SCHEMA` sit commented out under "When you deploy (not needed on your computer)", one plain sentence each. A note next to `DATABASE_URL` says to use `sslmode=verify-full` instead of `sslmode=require`. It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
 
 For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
 
-**After the files** it shows the exact install command for the detected package manager (`--package-manager` overrides), asks whether to run it (default yes; `--yes` accepts without asking), and runs it. `--no-install` skips it and puts the command in the list instead. It stops there: **it never starts a database, runs `monti migrate`, installs styles, adds pages, edits your files or touches `pnpm-workspace.yaml`.** If the install fails, the files stay, the summary does not say "Monti is added" (it says the setup is only partly done, with the failed step and the exact install command), and running `monti init` again continues: existing files are kept.
+**After the files** it shows the exact install command for the detected package manager (`--package-manager` overrides), asks whether to run it (default yes; `--yes` accepts without asking), and runs it. `--no-install` skips it and puts the command in the list instead. It stops there: **it never starts a database, runs `monti migrate`, installs styles, adds pages, edits any file other than the three above or touches `pnpm-workspace.yaml`.** If the install fails, the files stay, the summary does not say "Monti is added" (it says the setup is only partly done, with the failed step and the exact install command), and running `monti init` again continues: existing files are kept.
 
 The summary then lists what is left as numbered steps, each with the exact content to copy and each only when your app needs it:
 
 1. the install command, if it did not run (a short TypeScript note comes before it when the app has none);
-2. the `next.config` change: `import { withCms } from "@monti-cms/nextjs/config"` and `export default withCms(nextConfig)`, shown against the shape of your file, or a whole new `next.config.ts` when there is none (skipped when `withCms` is already there);
-3. `suppressHydrationWarning` on the `<html>` of the root layout (skipped when it has it);
-4. `cp .env.example .env.local`, then fill it in, with the commands that generate `MONTI_SECRET` (`openssl rand -base64 32`, or a one-line `node -e` command);
-5. `.env.local` in `.gitignore` (only when it is not ignored yet);
-6. `monti migrate`;
-7. `monti doctor` (it tells you if any step above is missing);
-8. `pnpm dev`, then open the admin address (`/studio`);
+2. the `next.config` change and the `suppressHydrationWarning` on `<html>`, only when init could not make them itself (each with the reason and the exact change). When it edits, it lists the file and the change under "Changed:" instead; a file that already has the change is left as it is and listed as already there. With no `next.config`, init creates `next.config.ts`;
+3. `cp .env.example .env.local`, then fill it in, with the commands that generate `MONTI_SECRET` (`openssl rand -base64 32`, or a one-line `node -e` command);
+4. `monti migrate`;
+5. `monti doctor` (it tells you if any step above is missing);
+6. `pnpm dev`, then open the admin address (`/studio`);
 
 followed by the notes that apply: the git-sync target, and one item about the login. With **email and password** (the default): right after you deploy, open the admin and create the first admin (or create it beforehand by running the app in production mode against the production database; under `next dev` you are the admin without signing in, so the screen does not show), and `monti admin:reset-password` for a forgotten password. With **GitHub**: create the OAuth app, with its homepage and callback URL, and fill `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID`. Either way `monti.config.ts` already has the `auth: auth({ providers: [...] })` line, and `@monti-cms/auth` is installed.
 
-**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `skipped`, `overwritten`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
+**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `changed`, `skipped`, `overwritten`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
 
 ```sh
 pnpm exec monti init                 # interactive
@@ -161,6 +160,7 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 | `--extras <list>` | `ai`, `git-sync`, or `none` | `none` |
 | `--blocks <list>` | `default` (the light set), `all`, `none`, or block names (`default,mermaid` adds to the light set) | `default` |
 | `--admin-path <path>` | admin path (letters, digits, `-`, `_`; not `/` and not under `/api`) | `/studio` |
+| `--directive-syntax` (`--no-directive-syntax`) | write blocks as `:::` blocks with the directive syntax (or keep plain MDX), without asking | asked; yes when blocks are installed |
 | `--login <password\|github>` | how people sign in to the admin: the built-in email and password login, or GitHub | `password` |
 | `--overwrite` | replace existing files that differ | keep them |
 | `--no-install` | do not install packages; the install command is printed in the list of what is left | |
@@ -176,7 +176,7 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 
 **The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** `monti init` keeps them together; when you change it later, change both. The admin API path (`/api/cms/v1`) does not change.
 
-**Safety.** Init edits no existing file. Every write it does make goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
+**Safety.** The only changes init makes to an existing file are the three edits above. Every write it does make goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
 
 An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file").
 
@@ -256,7 +256,7 @@ Put them in `.env.local`.
 | `SITE_URL` | Optional. The public URL of the site (`site.url`), different per environment; `site.url` in code or in the schema file wins |
 | `AUTH_TRUST_HOST` | Optional. `true` only when the server runs behind a proxy you run yourself (nginx, a load balancer) that overwrites `X-Forwarded-Host`; Vercel, Netlify, Cloudflare Pages and the like are detected. See "Host trust" |
 
-**SSL.** `DATABASE_URL` is passed to the `pg` driver exactly as you wrote it. With `sslmode=require` (also `prefer` or `verify-ca`) the driver prints a 9-line SECURITY WARNING on every start: today it reads those modes as `verify-full` (encrypted, certificate checked), and a later major version will switch to the libpq meaning. `monti doctor` explains this (`database/url`) and the way to silence it: write `sslmode=verify-full` in the URL, which is what the driver does today, so the connection stays exactly as secure. Add `uselibpqcompat=true` only if you want the libpq meaning (no certificate check for `require`).
+**SSL.** `DATABASE_URL` is passed to the `pg` driver exactly as you wrote it. With `sslmode=require` (also `prefer` or `verify-ca`) the driver prints a long SECURITY WARNING every time the app starts. It is only a notice: today the driver reads those modes as `verify-full` (encrypted, certificate checked), so the connection is safe, and a later major version will switch to the libpq meaning. `monti doctor` explains this in plain words (`database/url`) with the one-line fix: write `sslmode=verify-full` in the URL (same security, no notice). Add `uselibpqcompat=true` only if you want the libpq meaning (no certificate check for `require`).
 
 Explicit option values always win over these variables, and nothing is guessed from other names. A missing required value is an error that names the variable (the environment is read when a value is first used, so building without it does not fail). There is no variable for the development login: under `next dev` it is on by itself ("Login bypass for development").
 
@@ -267,6 +267,8 @@ pnpm exec monti migrate
 It creates the tables or brings them to the latest shape (including plugin tables). Running it several times gives the same result, and you run it again after upgrading the packages. It prints the target before it starts (`Migrating the postgres database: host:port/db, schema "public"`) and the result at the end (`Applied N steps, M already up to date.`).
 Core changes are recorded in `cms_migrations` as numbered steps, and only steps that have not run yet are run (in one transaction); even when run concurrently
 against the same schema, they run one at a time. A plugin hands over once-only work with `storage.once(name, step)` (see "Plugin storage").
+Bodies that a step cannot read as documents are kept exactly as they were (nothing is lost), and `monti migrate` says so in a few plain lines: how many (published, drafts, templates), the most common reason, and, only when those bodies contain `:::` blocks, that the directive syntax (`mdx({ syntax: [directiveSyntax()] })`, installed from `@monti-cms/syntax-directive`) reads them. It then writes one row per body, and every other per-body warning of the steps, to `.monti/logs/migrate-<time>.log` in the app folder and ends with `Full details: <path>`; the file exists only when there is something to report, and `monti init` puts `.monti/` (and `.env.local`) in `.gitignore`. `--verbose` also prints those rows on screen.
+`monti migrate --reconvert-bodies` reads the bodies that are kept as unreadable source again, with the config as it is now (after you turned on a syntax): a body that reads becomes a normal body (soft line endings made explicit as at the time, block ids, links by id, hash and search text recomputed; `version` and `updated_at` do not change), the rest stay as they are, and running it again changes only what has become readable since.
 `monti migrate` (and `cms.migrate()`) hand the instance's formats (the ones its plugins provide) to the migration. The old steps that read bodies kept as MDX text need the `mdx` format of `@monti-cms/mdx` only when a store has such a body ("Upgrading from MDX in core").
 
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.

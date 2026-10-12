@@ -73,6 +73,8 @@ export interface InitAnswers {
 	readonly adminPath: string;
 	/** How people sign in to the admin: the built-in email and password login, or GitHub (an OAuth app). */
 	readonly login: "password" | "github";
+	/** Read and write `:::callout` blocks (`@monti-cms/syntax-directive`), because the posts use them. */
+	readonly directiveSyntax: boolean;
 }
 
 /** The language's name in that language for a locale code (e.g. `ko` -> `한국어`). Falls back to the code itself. */
@@ -294,6 +296,7 @@ export function configTemplate(answers: InitAnswers): string {
 		{ from: "@monti-cms/core/server", names: ["defineConfig", "postgres"] },
 		{ from: "@monti-cms/mdx", names: ["mdx"] },
 	];
+	if (answers.directiveSyntax) imports.push({ from: "@monti-cms/syntax-directive", names: ["directiveSyntax"] });
 	if (answers.ai) imports.push({ from: "@monti-cms/ai", names: ["aiPlugin"] });
 	if (answers.gitSync) imports.push({ from: "@monti-cms/git-sync", names: ["gitSync"] });
 	if (answers.storage === "s3") imports.push({ from: "@monti-cms/storage-s3", names: ["s3Storage"] });
@@ -316,10 +319,13 @@ export function configTemplate(answers: InitAnswers): string {
 		'import schema from "./monti.schema";',
 	];
 
-	const plugins: string[] = [
-		"// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.",
-		"mdx(),",
-	];
+	const plugins: string[] = answers.directiveSyntax
+		? [
+				"// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.",
+				"// directiveSyntax() reads and writes the ::: blocks (:::callout, :::tabs) your posts use. Without it they are read as code and kept as source.",
+				"mdx({ syntax: [directiveSyntax()] }),",
+			]
+		: ["// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.", "mdx(),"];
 	if (blocks.length > 0) {
 		plugins.push(
 			"// The body blocks, one line each: delete a line and the block is gone. The inline marks (tooltip, code-ref, color) are stored in this order when they overlap.",
@@ -469,18 +475,21 @@ export function githubLoginHowTo(siteUrl: string): string {
  */
 export function envExampleTemplate(answers: InitAnswers): string {
 	const site = answers.siteUrl.replace(/\/+$/, "");
+	// A local address is no example of a deployed site.
+	const deployedSite = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(site)
+		? "https://example.com"
+		: site;
 	const lines: string[] = [
 		"# Copy this file to .env.local and fill it in:  cp .env.example .env.local",
 		"# .env.local is for this machine only: keep it out of git. This example file is safe to commit, so never put a real secret in it.",
+		"# The values right below are the ones you need to run the app on your computer.",
 		"",
 		"# --- Database ---",
 		"",
 		"# Postgres connection URL. Get it from your database host's dashboard (Neon, Supabase, Vercel Postgres, RDS, ...),",
 		"# or use a local Postgres: postgres://postgres:postgres@localhost:5432/monti (create the database first: createdb monti).",
+		"# Neon/Supabase-style URLs with sslmode=require: use sslmode=verify-full instead (same security, no warning from the database driver).",
 		"DATABASE_URL=postgres://user:password@localhost:5432/monti",
-		"",
-		"# Set DATABASE_SCHEMA only when the database is shared with other apps and the tables should live in their own schema (default: public).",
-		"# DATABASE_SCHEMA=monti",
 		"",
 		"# --- Secret ---",
 		"",
@@ -489,14 +498,6 @@ export function envExampleTemplate(answers: InitAnswers): string {
 		"# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
 		"# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
 		"MONTI_SECRET=",
-		"",
-		"# --- Site ---",
-		"",
-		"# Public URL of the site. Links in bodies written as full URLs to it count as internal links.",
-		`# SITE_URL=${site}`,
-		"",
-		"# Set to true only behind a proxy you run yourself (nginx, a load balancer). Vercel, Netlify and Cloudflare Pages are detected.",
-		"# AUTH_TRUST_HOST=true",
 	];
 	if (answers.login === "github") {
 		lines.push(
@@ -536,6 +537,20 @@ export function envExampleTemplate(answers: InitAnswers): string {
 			"# S3_FORCE_PATH_STYLE=true",
 		);
 	}
+	lines.push(
+		"",
+		"# --- When you deploy (not needed on your computer) ---",
+		"# Leave these commented out while you work locally. Remove the # when your deployed site needs one.",
+		"",
+		"# Your site's public address, e.g. https://example.com. Used for login links and to recognise links to your own site.",
+		`# SITE_URL=${deployedSite}`,
+		"",
+		"# Only if you run your own proxy such as nginx. Not needed on Vercel, Netlify or Cloudflare.",
+		"# AUTH_TRUST_HOST=true",
+		"",
+		"# Only if the database is shared with other apps: Monti's tables then live in their own schema instead of public.",
+		"# DATABASE_SCHEMA=monti",
+	);
 	return `${lines.join("\n")}\n`;
 }
 
@@ -556,6 +571,7 @@ export function packagesFor(answers: InitAnswers): string[] {
 		"@tiptap/react",
 		...(blocks.length > 0 ? ["@monti-cms/blocks", "lucide-react"] : []),
 		...blocks.flatMap((block) => (block.needs ? [block.needs] : [])),
+		...(answers.directiveSyntax ? ["@monti-cms/syntax-directive"] : []),
 		...(answers.ai ? ["@monti-cms/ai"] : []),
 		...(answers.gitSync ? ["@monti-cms/git-sync"] : []),
 		...(answers.storage === "s3" ? ["@monti-cms/storage-s3"] : []),

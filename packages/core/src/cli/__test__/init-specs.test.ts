@@ -50,6 +50,18 @@ describe("monti init with a GitHub spec for core", () => {
 		}
 	});
 
+	it("installs @monti-cms/syntax-directive from the same ref when the directive syntax is on", async () => {
+		const host = fakeHost();
+		await initProject({ cwd: appWithCore(GITHUB), host, directiveSyntax: true });
+		const args = host.install.mock.calls[0]?.[0].args ?? [];
+		expect(args).toContain(
+			"@monti-cms/syntax-directive@github:monti-cms/monti#release/v0.2.0-next.4&path:/syntax-directive",
+		);
+		const without = fakeHost();
+		await initProject({ cwd: appWithCore(GITHUB), host: without, directiveSyntax: false });
+		expect((without.install.mock.calls[0]?.[0].args ?? []).join(" ")).not.toContain("syntax-directive");
+	});
+
 	it("installs bare names when core has a version range", async () => {
 		const host = fakeHost();
 		await initProject({ cwd: appWithCore("^0.2.0"), host });

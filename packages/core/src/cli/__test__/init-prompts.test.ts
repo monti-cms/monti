@@ -16,6 +16,7 @@ const everything = {
 	[QUESTIONS.blockList]: ["callout", "mermaid"],
 	[QUESTIONS.adminPath]: "/cms",
 	[QUESTIONS.login]: "github",
+	[QUESTIONS.directive]: "mdx",
 };
 
 describe("the questions of monti init", () => {
@@ -31,6 +32,7 @@ describe("the questions of monti init", () => {
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
 			QUESTIONS.login,
+			QUESTIONS.directive,
 		]);
 		expect(answers).toEqual({
 			siteUrl: "http://localhost:3000",
@@ -42,6 +44,7 @@ describe("the questions of monti init", () => {
 			blocks: ["callout", "mermaid"],
 			adminPath: "/cms",
 			login: "github",
+			directiveSyntax: false,
 		});
 	});
 
@@ -196,7 +199,7 @@ describe("the questions of monti init", () => {
 
 	it("--login takes password or github, skips the question, and refuses anything else", async () => {
 		const prompter = scriptedPrompter({ [QUESTIONS.extras]: [] });
-		const flags = { locales: "en", storage: "none", blocks: "none", adminPath: "/studio" };
+		const flags = { locales: "en", storage: "none", blocks: "none", adminPath: "/studio", directiveSyntax: false };
 		expect((await collectAnswers(app(), { ...flags, login: "github" }, prompter)).login).toBe("github");
 		expect(prompter.asked).toEqual([QUESTIONS.extras]);
 		expect((await collectAnswers(app(), { login: "password" })).login).toBe("password");
@@ -215,6 +218,7 @@ describe("the questions of monti init", () => {
 				blocks: "none",
 				adminPath: "/studio",
 				login: "password",
+				directiveSyntax: false,
 				timeZone: "Asia/Tokyo",
 			},
 			prompter,
@@ -240,6 +244,43 @@ describe("the questions of monti init", () => {
 			blocks: ["callout", "collapsible", "tabs", "code-ref", "color"],
 			adminPath: "/studio",
 			login: "password",
+			directiveSyntax: true,
+		});
+	});
+
+	describe("the directive syntax", () => {
+		it("is asked after the blocks, and the answer decides", async () => {
+			const yes = scriptedPrompter({ ...everything, [QUESTIONS.directive]: "directive" });
+			expect((await collectAnswers(app(), {}, yes)).directiveSyntax).toBe(true);
+			const questions = yes.asked;
+			expect(questions.indexOf(QUESTIONS.directive)).toBeGreaterThan(questions.indexOf(QUESTIONS.blockList));
+			const no = scriptedPrompter({ ...everything, [QUESTIONS.directive]: "mdx" });
+			expect((await collectAnswers(app(), {}, no)).directiveSyntax).toBe(false);
+		});
+
+		it("defaults to the directive syntax when blocks are installed, and to plain MDX when none is", async () => {
+			const seen: Record<string, string | undefined> = {};
+			const record = (blocks: string) => {
+				const prompter = scriptedPrompter({ ...everything, [QUESTIONS.blocks]: "default" });
+				const select = prompter.select.bind(prompter);
+				prompter.select = (async (question: { message: string; initial?: string }) => {
+					if (question.message === QUESTIONS.directive) seen[blocks] = question.initial;
+					return select(question as never);
+				}) as never;
+				return collectAnswers(app(), blocks === "none" ? { blocks } : {}, prompter);
+			};
+			await record("default");
+			await record("none");
+			expect(seen).toEqual({ default: "directive", none: "mdx" });
+		});
+
+		it("a flag answers it without asking; without a prompter the default follows the blocks", async () => {
+			const prompter = scriptedPrompter(everything);
+			expect((await collectAnswers(app(), { directiveSyntax: false }, prompter)).directiveSyntax).toBe(false);
+			expect(prompter.asked).not.toContain(QUESTIONS.directive);
+			expect((await collectAnswers(app(), {})).directiveSyntax).toBe(true);
+			expect((await collectAnswers(app(), { blocks: "none" })).directiveSyntax).toBe(false);
+			expect((await collectAnswers(app(), { blocks: "none", directiveSyntax: true })).directiveSyntax).toBe(true);
 		});
 	});
 
