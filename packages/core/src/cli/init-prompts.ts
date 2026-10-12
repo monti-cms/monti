@@ -1,5 +1,6 @@
 import { isAdminPath } from "../config/define";
 import type { DetectedApp } from "./init-detect";
+import { COMMON_LOCALES, languageLabel } from "./locale-names";
 import {
 	BLOCK_CHOICES,
 	DEFAULT_BLOCK_IDS,
@@ -147,7 +148,9 @@ export function validateFlags(flags: InitAnswerFlags): void {
 
 /** What the questions ask, for the tests and the docs. */
 export const QUESTIONS = {
-	locales: "Languages of the site (comma-separated, the default first)",
+	defaultLocale: "Default language of the site",
+	otherLocales: "Other languages (optional)",
+	localesOther: "Language code (or several, comma-separated, like pt-BR or sv)",
 	storage: "Where should uploaded images go?",
 	extras: "Extra features",
 	blocks: "Which body blocks do you want?",
@@ -163,6 +166,40 @@ export function detectedLocales(
 	const folder = app.contentFolders.find((entry) => entry.locales !== undefined && entry.locales.length > 0);
 	if (!folder?.locales || !folder.localesFrom) return undefined;
 	return { codes: folder.locales.map((locale) => locale.code), dir: folder.dir, from: folder.localesFrom };
+}
+
+/** The "Other..." entry of the language picker. It is not a language code (it has no valid one's shape), so it cannot collide with one. */
+const OTHER_LOCALES = "Other...";
+
+/** Asks for the default language, then the others; the default is first in the result. */
+async function askLocales(prompter: Prompter, found: ReturnType<typeof detectedLocales>): Promise<string[]> {
+	const detected = found?.codes ?? [];
+	const known = new Set(COMMON_LOCALES.map((locale) => locale.code));
+	const label = (code: string) => `${languageLabel(code)} (${code})`;
+	const languages = [...COMMON_LOCALES.map((locale) => locale.code), ...detected.filter((code) => !known.has(code))];
+	const other = { value: OTHER_LOCALES, label: "Other...", hint: "type a language code" };
+	const askCodes = async (message: string) =>
+		splitList(await prompter.text({ message, validate: (value) => check.locales(value) }));
+
+	const foundNote = found
+		? ` (found ${found.codes.join(", ")} in the ${found.from === "filename" ? "file names" : "folders"} of ${found.dir}/)`
+		: "";
+	const first = await prompter.select({
+		message: `${QUESTIONS.defaultLocale}${foundNote}`,
+		options: [...languages.map((code) => ({ value: code, label: label(code) })), other],
+		initial: detected[0] ?? DEFAULT_INIT_LOCALE,
+	});
+	const defaultLocale =
+		first === OTHER_LOCALES ? ((await askCodes(QUESTIONS.localesOther))[0] ?? DEFAULT_INIT_LOCALE) : first;
+
+	const remaining = languages.filter((code) => code !== defaultLocale);
+	const more = await prompter.multiselect({
+		message: QUESTIONS.otherLocales,
+		options: [...remaining.map((code) => ({ value: code, label: label(code) })), other],
+		initial: detected.filter((code) => code !== defaultLocale),
+	});
+	const typed = more.includes(OTHER_LOCALES) ? await askCodes(QUESTIONS.localesOther) : [];
+	return [...new Set([defaultLocale, ...more.filter((code) => code !== OTHER_LOCALES), ...typed])];
 }
 
 /**
@@ -181,17 +218,8 @@ export async function collectAnswers(
 	let locales: string[];
 	const foundLocales = detectedLocales(app);
 	if (flags.locales !== undefined) locales = splitList(flags.locales);
-	else if (prompter) {
-		locales = splitList(
-			await prompter.text({
-				message: foundLocales
-					? `${QUESTIONS.locales}. Found ${foundLocales.codes.join(", ")} in the ${foundLocales.from === "filename" ? "file names" : "folders"} of ${foundLocales.dir}/`
-					: QUESTIONS.locales,
-				initial: foundLocales ? foundLocales.codes.join(",") : DEFAULT_INIT_LOCALE,
-				validate: (value) => check.locales(value),
-			}),
-		);
-	} else locales = foundLocales ? foundLocales.codes : [DEFAULT_INIT_LOCALE];
+	else if (prompter) locales = await askLocales(prompter, foundLocales);
+	else locales = foundLocales ? foundLocales.codes : [DEFAULT_INIT_LOCALE];
 	locales = [...new Set(locales)];
 
 	// Image storage

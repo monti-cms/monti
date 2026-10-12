@@ -77,3 +77,36 @@ export function localesFromFileNames(names: readonly string[]): DetectedLocale[]
 	}
 	return defaultFirst([...tally].map(([code, counts]) => ({ code, ...counts })));
 }
+
+/** The languages `monti init` offers in its picker, by their own names. */
+export const COMMON_LOCALES: readonly { readonly code: string; readonly name: string }[] = [
+	{ code: "ko", name: "한국어" },
+	{ code: "en", name: "English" },
+	{ code: "ja", name: "日本語" },
+	{ code: "zh", name: "中文" },
+	{ code: "es", name: "Español" },
+	{ code: "fr", name: "Français" },
+	{ code: "de", name: "Deutsch" },
+	{ code: "pt", name: "Português" },
+	{ code: "it", name: "Italiano" },
+	{ code: "ru", name: "Русский" },
+	{ code: "ar", name: "العربية" },
+	{ code: "hi", name: "हिन्दी" },
+	{ code: "id", name: "Bahasa Indonesia" },
+	{ code: "vi", name: "Tiếng Việt" },
+	{ code: "th", name: "ไทย" },
+	{ code: "tr", name: "Türkçe" },
+	{ code: "nl", name: "Nederlands" },
+	{ code: "pl", name: "Polski" },
+];
+
+/** The name of a language in that language, from the table or the runtime's data; the code itself when neither knows it. */
+export function languageLabel(code: string): string {
+	const common = COMMON_LOCALES.find((locale) => locale.code === code);
+	if (common) return common.name;
+	try {
+		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
+	} catch {
+		return code;
+	}
+}
