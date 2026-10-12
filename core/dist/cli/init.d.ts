@@ -98,6 +98,8 @@ export declare const defaultInitHost: InitHost;
 export declare function installSpecs(packages: readonly string[], coreSpec: string | undefined): string[];
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export declare function initProject(options: InitOptions): Promise<InitReport>;
+/** Where Monti's files go and why, so the paths in the lists below make sense. */
+export declare const placementLine: (src: boolean) => string;
 /** The plain summary: what was done, then what is left, numbered. */
 export declare function formatInitReport(report: InitReport): string;
 export { InitCancelled };

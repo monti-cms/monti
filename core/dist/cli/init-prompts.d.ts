@@ -66,7 +66,9 @@ export declare const validAdminPath: (value: string) => boolean;
 export declare function validateFlags(flags: InitAnswerFlags): void;
 /** What the questions ask, for the tests and the docs. */
 export declare const QUESTIONS: {
-    readonly locales: "Languages of the site (comma-separated, the default first)";
+    readonly defaultLocale: "Default language of the site";
+    readonly otherLocales: "Other languages (optional)";
+    readonly localesOther: "Language code (or several, comma-separated, like pt-BR or sv)";
     readonly storage: "Where should uploaded images go?";
     readonly extras: "Extra features";
     readonly blocks: "Which body blocks do you want?";

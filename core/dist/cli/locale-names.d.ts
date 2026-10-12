@@ -24,3 +24,10 @@ export declare function defaultFirst(locales: readonly DetectedLocale[]): Detect
  * (a lone `notes.it.md` is more likely a name than a language).
  */
 export declare function localesFromFileNames(names: readonly string[]): DetectedLocale[] | undefined;
+/** The languages `monti init` offers in its picker, by their own names. */
+export declare const COMMON_LOCALES: readonly {
+    readonly code: string;
+    readonly name: string;
+}[];
+/** The name of a language in that language, from the table or the runtime's data; the code itself when neither knows it. */
+export declare function languageLabel(code: string): string;

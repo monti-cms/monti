@@ -350,6 +350,10 @@ const WORDS = {
     failed: "FAILED",
     planned: "planned",
 };
+/** Where Monti's files go and why, so the paths in the lists below make sense. */
+export const placementLine = (src) => src
+    ? "Your app uses src/app, so Monti's files are in src/ (next to app/)."
+    : "Your app uses app/, so Monti's files are in the project root (next to app/).";
 /** The plain summary: what was done, then what is left, numbered. */
 export function formatInitReport(report) {
     const dry = report.dryRun;
@@ -361,6 +365,7 @@ export function formatInitReport(report) {
         : failedCount > 0
             ? `Monti is only partly added: ${failedCount === 1 ? "1 step failed" : `${failedCount} steps failed`}. The files are written; the steps below did not finish.`
             : "Monti is added to your app.", "");
+    out.push(placementLine(report.app.src), "");
     out.push(...list(dry ? "Would create:" : "Created:", report.created), ...list(dry ? "Would replace:" : "Replaced (you said yes):", report.overwritten), ...list("Already there, left as they are:", report.skipped));
     if (report.steps.length > 0) {
         out.push("Steps:");
