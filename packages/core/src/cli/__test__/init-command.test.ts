@@ -162,10 +162,10 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.blockList]: ["callout", "tabs"],
 			[QUESTIONS.adminPath]: "/studio",
 			[QUESTIONS.login]: "password",
+			[QUESTIONS.directive]: "mdx",
 			"Install the": true,
 		});
 		const host = fakeHost();
-		const before = read(dir, "next.config.ts");
 		const result = run(dir, [], { interactive: true, prompter, host });
 		expect(await result.code).toBe(0);
 		expect(prompter.asked).toEqual([
@@ -177,13 +177,14 @@ describe("monti init on the command line", () => {
 			QUESTIONS.blockList,
 			QUESTIONS.adminPath,
 			QUESTIONS.login,
+			QUESTIONS.directive,
 			expect.stringContaining("Install the"),
 		]);
 		expect(prompter.notes[0]).toMatchObject({ title: "Detected" });
 		expect(prompter.notes[0]?.body).toContain("App Router");
 		expect(prompter.notes[0]?.body).toContain("Found 1 Markdown/MDX file in content/posts/");
 		expect(host.install).toHaveBeenCalled();
-		expect(read(dir, "next.config.ts")).toBe(before);
+		expect(result.out.join("\n")).toContain("Changed:\n  - next.config.ts \u2014 wrapped the export in withCms()");
 		expect(result.out.join("\n")).toContain("Start the app: pnpm dev, then open http://localhost:3000/studio");
 	});
 
@@ -197,6 +198,7 @@ describe("monti init on the command line", () => {
 			[QUESTIONS.blocks]: "all",
 			[QUESTIONS.adminPath]: "/studio",
 			[QUESTIONS.login]: "github",
+			[QUESTIONS.directive]: "mdx",
 			"Install the": false,
 		});
 		const host = fakeHost();

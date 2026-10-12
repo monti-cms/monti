@@ -64,6 +64,8 @@ export interface InitAnswerFlags {
 	readonly adminPath?: string;
 	/** `password` or `github`. */
 	readonly login?: string;
+	/** `--directive-syntax` (true) or `--no-directive-syntax` (false): write blocks as `:::callout` (the directive syntax), without asking. */
+	readonly directiveSyntax?: boolean;
 }
 
 const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
@@ -157,6 +159,7 @@ export const QUESTIONS = {
 	blockList: "Pick the blocks",
 	adminPath: "Where should the admin live?",
 	login: "How should people sign in to the admin?",
+	directive: "How are blocks written in Markdown?",
 } as const;
 
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
@@ -317,6 +320,21 @@ export async function collectAnswers(
 					})
 				: "password";
 
+	// Directive syntax (`:::callout`): the default follows the blocks that get installed (a callout or tabs is written as a ::: block), so a site without blocks stays plain MDX.
+	const blocksInstalled = blocks.filter((id) => BLOCK_IDS.includes(id)).length > 0;
+	const directiveSyntax =
+		flags.directiveSyntax ??
+		(prompter
+			? (await prompter.select<"directive" | "mdx">({
+					message: QUESTIONS.directive,
+					options: [
+						{ value: "directive", label: "With ::: blocks, e.g. :::callout (directive syntax)" },
+						{ value: "mdx", label: "Plain MDX only" },
+					],
+					initial: blocksInstalled ? "directive" : "mdx",
+				})) === "directive"
+			: blocksInstalled);
+
 	return {
 		siteUrl,
 		locales,
@@ -327,6 +345,7 @@ export async function collectAnswers(
 		blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
 		adminPath,
 		login,
+		directiveSyntax,
 	};
 }
 

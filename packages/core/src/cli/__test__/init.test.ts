@@ -10,6 +10,7 @@ import { InitCancelled } from "../init-prompts";
 import {
 	CREATE_NEXT_APP,
 	CREATE_NEXT_APP_LAYOUT,
+	DEFAULT_NEXT_CONFIG,
 	fakeHost,
 	fixtureApp,
 	listFiles,
@@ -33,6 +34,7 @@ const ANSWERED = {
 	blocks: "none",
 	adminPath: "/studio",
 	login: "password",
+	directiveSyntax: false,
 } as const;
 
 /** Every file of the project with its content, for "nothing existing was touched". */
@@ -61,7 +63,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config).toContain('import { defineConfig, postgres } from "@monti-cms/core/server";');
 		expect(config).toContain('import schema from "./monti.schema";');
 		expect(config).toContain("export const cms = defineConfig({\n\tschema,");
-		expect(config).toMatch(/\/\/ Bodies as MDX.*\n\t\tmdx\(\),/);
+		expect(config).toMatch(/\/\/ Bodies as MDX.*\n.*\n\t\tmdx\(\{ syntax: \[directiveSyntax\(\)\] \}\),/);
 		for (const line of ["callout(), //", "collapsible(), //", "tabs(), //", "codeRef(), //", "color(), //"]) {
 			expect(config).toContain(line);
 		}
@@ -101,16 +103,30 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config + layout).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 	});
 
-	it("changes no file the app already has and writes no .env.local", async () => {
+	it("edits only next.config and the root layout, says so, and writes no .env.local", async () => {
 		const dir = fixtureApp({ ".gitignore": "node_modules\n.next\n", "tsconfig.json": '{ "compilerOptions": {} }' });
 		const before = snapshot(dir);
 		const report = await initProject({ cwd: dir, host: fakeHost() });
 		const after = snapshot(dir);
 
-		for (const [file, content] of Object.entries(before)) expect(after[file]).toBe(content);
+		const edited = Object.keys(before).filter((file) => after[file] !== before[file]);
+		expect(edited.sort()).toEqual([".gitignore", "app/layout.tsx", "next.config.ts"]);
+		expect(report.changed.map((item) => item.file).sort()).toEqual(edited.sort());
 		expect(listFiles(dir)).not.toContain(".env.local");
 		expect(listFiles(dir).filter((file) => !(file in before))).toEqual(report.created.slice().sort());
 		expect(report.created).not.toContain("next.config.ts");
+
+		// The wiring is in place: the export is wrapped, the import is added, and <html> has the attribute.
+		expect(after["next.config.ts"]).toContain('import { withCms } from "@monti-cms/nextjs/config";');
+		expect(after["next.config.ts"]).toContain("export default withCms(nextConfig);");
+		expect(after["app/layout.tsx"]).toContain('<html lang="en" suppressHydrationWarning>');
+
+		// The summary names each edited file with the exact change, next to "Created:".
+		const text = formatInitReport(report);
+		expect(text).toContain(
+			"Changed:\n  - next.config.ts \u2014 wrapped the export in withCms(), added the import from @monti-cms/nextjs/config\n  - app/layout.tsx \u2014 added suppressHydrationWarning to <html>\n  - .gitignore \u2014 added .monti/ (monti migrate writes its logs there)",
+		);
+		expect(text.indexOf("Created:")).toBeLessThan(text.indexOf("Changed:"));
 	});
 
 	it("writes a .env.example that says what each variable is and where to get it, without secrets", async () => {
@@ -135,6 +151,41 @@ describe("monti init in a fresh create-next-app", () => {
 		}
 	});
 
+	it(".env.example lists what is needed now first, and the deploy-time values apart under their own heading", async () => {
+		for (const login of ["password", "github"] as const) {
+			const dir = fixtureApp();
+			await initProject({ cwd: dir, ...quiet(), login, storage: "s3" });
+			const example = read(dir, ".env.example");
+			const deploy = example.indexOf("# --- When you deploy (not needed on your computer) ---");
+			expect(deploy).toBeGreaterThan(0);
+			const now = example.slice(0, deploy);
+			const later = example.slice(deploy);
+
+			// Needed now: before the heading, set (not commented out), with the sslmode hint next to DATABASE_URL.
+			const needed = [
+				"DATABASE_URL",
+				"MONTI_SECRET",
+				...(login === "github" ? ["AUTH_GITHUB_ID", "AUTH_GITHUB_SECRET", "MONTI_ADMIN_GITHUB_ID"] : []),
+				"S3_BUCKET",
+			];
+			for (const name of needed) expect(now).toMatch(new RegExp(`^${name}=`, "m"));
+			expect(now.indexOf("sslmode=verify-full")).toBeGreaterThan(now.indexOf("# Postgres connection URL"));
+			expect(now.indexOf("sslmode=verify-full")).toBeLessThan(now.indexOf("DATABASE_URL="));
+			expect(now).toContain("no warning from the database driver");
+			for (const name of ["SITE_URL", "AUTH_TRUST_HOST", "DATABASE_SCHEMA"]) expect(now).not.toContain(name);
+
+			// When you deploy: after the heading, each commented out with one plain sentence above it.
+			expect(later).toContain(
+				"# Your site's public address, e.g. https://example.com. Used for login links and to recognise links to your own site.\n# SITE_URL=",
+			);
+			expect(later).toContain(
+				"# Only if you run your own proxy such as nginx. Not needed on Vercel, Netlify or Cloudflare.\n# AUTH_TRUST_HOST=true",
+			);
+			expect(later).toMatch(/^# DATABASE_SCHEMA=monti$/m);
+			expect(later).not.toMatch(/^[A-Z_]+=/m);
+		}
+	});
+
 	it("with --login github writes the GitHub provider, its variables with how to get them, and the OAuth app step", async () => {
 		const dir = fixtureApp();
 		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
@@ -153,6 +204,35 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(step).toContain("OAuth");
 		expect(step).toContain("http://localhost:3000/api/cms/auth/callback/github");
 		expect(report.next.join("\n")).not.toContain("create the first admin");
+	});
+
+	it("writes mdx({ syntax: [directiveSyntax()] }) and installs the package by default, since blocks are installed", async () => {
+		const dir = fixtureApp();
+		const host = fakeHost();
+		const report = await initProject({ cwd: dir, host });
+		const config = read(dir, "monti.config.ts");
+		expect(config).toContain('import { directiveSyntax } from "@monti-cms/syntax-directive";');
+		expect(config).toMatch(/\n\t\tmdx\(\{ syntax: \[directiveSyntax\(\)\] \}\),/);
+		expect(host.install.mock.calls[0]?.[0].args).toContain("@monti-cms/syntax-directive");
+		expect(report.answers.directiveSyntax).toBe(true);
+	});
+
+	it("--no-directive-syntax, or no blocks, keeps plain mdx() and installs nothing extra", async () => {
+		for (const options of [{ directiveSyntax: false }, { blocks: "none" }]) {
+			const dir = fixtureApp();
+			const host = fakeHost();
+			await initProject({ cwd: dir, host, ...options });
+			const config = read(dir, "monti.config.ts");
+			expect(config).not.toContain("directiveSyntax");
+			expect(config).toMatch(/\n\t\tmdx\(\),/);
+			expect(host.install.mock.calls[0]?.[0].args).not.toContain("@monti-cms/syntax-directive");
+		}
+	});
+
+	it("--directive-syntax turns it on even without blocks", async () => {
+		const dir = fixtureApp();
+		await initProject({ cwd: dir, ...quiet(), blocks: "none", directiveSyntax: true });
+		expect(read(dir, "monti.config.ts")).toContain("mdx({ syntax: [directiveSyntax()] }),");
 	});
 
 	it("installs @monti-cms/auth for either login", async () => {
@@ -185,32 +265,27 @@ describe("monti init in a fresh create-next-app", () => {
 		const report = await initProject({ cwd: fixtureApp(), host: fakeHost() });
 		const next = report.next;
 
-		// The install ran, so it is not in the list. Otherwise the order is: next.config, layout, .env.local, migrate, doctor, dev, then the notes.
+		// The install ran and init edited next.config and the layout, so neither is in the list. The order is: .env.local, migrate, doctor, dev, then the notes.
 		expect(next.map((step) => step.split("\n")[0])).toEqual([
-			"Wrap the config in next.config.ts. Add this import at the top:",
-			"Add suppressHydrationWarning to the <html> tag in app/layout.tsx:",
 			"Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",
 			"Create the tables: pnpm exec monti migrate",
 			"Check the setup: pnpm exec monti doctor",
 			"Start the app: pnpm dev, then open http://localhost:3000/studio",
 			expect.stringContaining("Right after you deploy, open http://localhost:3000/studio and create the first admin"),
 		]);
-		expect(next[0]).toContain('import { withCms } from "@monti-cms/nextjs/config";');
-		expect(next[0]).toContain("-export default nextConfig;\n+export default withCms(nextConfig);");
-		expect(next[1]).toContain('<html lang="en" suppressHydrationWarning>');
-		expect(next[2]).toContain("cp .env.example .env.local");
-		expect(next[2]).toContain("openssl rand -base64 32");
-		expect(next[2]).toContain("randomBytes(32).toString('base64')");
-		expect(next[4]).toContain("`monti doctor` will tell you if any of the steps above is missing");
-		expect(next[6]).toContain("That screen closes as soon as one admin exists");
-		expect(next[6]).toContain("monti admin:reset-password");
-		expect(next[6]).not.toMatch(/GitHub|OAuth/);
+		expect(next[0]).toContain("cp .env.example .env.local");
+		expect(next[0]).toContain("openssl rand -base64 32");
+		expect(next[0]).toContain("randomBytes(32).toString('base64')");
+		expect(next[2]).toContain("`monti doctor` will tell you if any of the steps above is missing");
+		expect(next[4]).toContain("That screen closes as soon as one admin exists");
+		expect(next[4]).toContain("monti admin:reset-password");
+		expect(next[4]).not.toMatch(/GitHub|OAuth/);
 		expect(next.join("\n")).not.toContain("monti import");
 
 		const text = formatInitReport(report);
 		expect(text).toContain("What is left");
-		expect(text).toMatch(/\n {2}1\. Wrap the config/);
-		expect(text).toMatch(/\n {2}7\. Right after you deploy/);
+		expect(text).toMatch(/\n {2}1\. Create \.env\.local/);
+		expect(text).toMatch(/\n {2}5\. Right after you deploy/);
 	});
 
 	it("does not touch the database or list the removed steps", async () => {
@@ -294,7 +369,7 @@ describe("monti init and the package install", () => {
 		expect(host.install).not.toHaveBeenCalled();
 		expect(report.steps).toEqual([{ name: "Install packages", status: "skipped", detail: "--no-install" }]);
 		expect(report.next[0]).toMatch(/^Install the packages:\npnpm add @monti-cms\/core /);
-		expect(index(report.next, "Install the packages")).toBeLessThan(index(report.next, "Wrap the config"));
+		expect(index(report.next, "Install the packages")).toBeLessThan(index(report.next, "Create .env.local"));
 	});
 
 	it("a failed install turns ok off, names the step and keeps the command in the list; the files stay", async () => {
@@ -341,70 +416,189 @@ describe("monti init tailors what is left to the app", () => {
 		expect(read(dir, "src/app/cms/studio/layout.tsx")).toContain('import { cms } from "../../../monti.config";');
 		expect(schemaOf(dir, "src/monti.schema.ts").admin).toEqual({ path: "/cms/studio" });
 		expect(listFiles(dir).filter((file) => file.startsWith("app/"))).toEqual([]);
-		// The layout step names the src/ layout.
-		expect(report.next.join("\n")).toContain("<html> tag in src/app/layout.tsx");
+		// The edit names the src/ layout.
+		expect(report.changed.map((item) => item.file)).toContain("src/app/layout.tsx");
+		expect(read(dir, "src/app/layout.tsx")).toContain("suppressHydrationWarning");
 		expect(report.next.join("\n")).toContain("then open http://localhost:3000/cms/studio");
 	});
 
-	it("an existing next.config with the default shape gets the change against that shape", async () => {
-		const report = await initProject({ cwd: fixtureApp(), ...quiet() });
-		const step = report.next.find((line) => line.startsWith("Wrap the config in next.config.ts")) ?? "";
-		expect(step).toContain('import { withCms } from "@monti-cms/nextjs/config";');
-		expect(step).toContain("-export default nextConfig;");
-		expect(step).toContain("+export default withCms(nextConfig);");
-	});
-
-	it("a next.config of another shape gets the import and a sentence about wrapping what it exports", async () => {
-		const custom = `import type { NextConfig } from "next";\nexport default (phase: string): NextConfig => ({});\n`;
-		const dir = fixtureApp({ "next.config.ts": custom });
+	it("an existing next.config of the default shape is edited, not listed", async () => {
+		const dir = fixtureApp();
 		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, "next.config.ts")).toBe(custom);
-		const step = report.next.find((line) => line.startsWith("Wrap the config in next.config.ts")) ?? "";
-		expect(step).toContain('import { withCms } from "@monti-cms/nextjs/config";');
-		expect(step).toContain("export default withCms(");
-		expect(step).not.toContain("-export default nextConfig;");
-	});
-
-	it("without a next.config the list shows a whole new next.config.ts, and none is created", async () => {
-		const dir = fixtureApp({ "next.config.ts": null });
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(listFiles(dir)).not.toContain("next.config.ts");
-		const step = report.next.find((line) => line.startsWith("Create next.config.ts")) ?? "";
-		expect(step).toContain('import { withCms } from "@monti-cms/nextjs/config";');
-		expect(step).toContain("const nextConfig: NextConfig = {};");
-		expect(step).toContain("export default withCms(nextConfig);");
-	});
-
-	it("an existing withCms in the next.config means no next.config step", async () => {
-		const dir = fixtureApp({
-			"next.config.ts": 'import { withCms } from "@monti-cms/nextjs/config";\nexport default withCms({});\n',
+		expect(read(dir, "next.config.ts")).toBe(
+			DEFAULT_NEXT_CONFIG.replace(
+				'import type { NextConfig } from "next";',
+				'import type { NextConfig } from "next";\nimport { withCms } from "@monti-cms/nextjs/config";',
+			).replace("export default nextConfig;", "export default withCms(nextConfig);"),
+		);
+		expect(report.changed[0]).toEqual({
+			file: "next.config.ts",
+			change: "wrapped the export in withCms(), added the import from @monti-cms/nextjs/config",
 		});
-		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(report.next.join("\n")).not.toContain("next.config");
 	});
 
-	it("an existing suppressHydrationWarning means no layout step; a missing one is printed, never added", async () => {
+	it("wraps an object export and a call export, and puts the import below the last import", async () => {
+		const object = fixtureApp({
+			"next.config.mjs": `import path from "node:path";\n\nexport default {\n  reactStrictMode: true,\n  outputFileTracingRoot: path.join(process.cwd(), "}"),\n};\n`,
+			"next.config.ts": null,
+		});
+		await initProject({ cwd: object, ...quiet() });
+		expect(read(object, "next.config.mjs")).toBe(
+			`import path from "node:path";\nimport { withCms } from "@monti-cms/nextjs/config";\n\nexport default withCms({\n  reactStrictMode: true,\n  outputFileTracingRoot: path.join(process.cwd(), "}"),\n});\n`,
+		);
+
+		const call = fixtureApp({
+			"next.config.ts": `import type { NextConfig } from "next";\nimport bundleAnalyzer from "@next/bundle-analyzer";\n\nconst withAnalyzer = bundleAnalyzer({ enabled: true });\nconst config: NextConfig = {};\n\nexport default withAnalyzer(config) // done\n`,
+		});
+		await initProject({ cwd: call, ...quiet() });
+		expect(read(call, "next.config.ts")).toBe(
+			`import type { NextConfig } from "next";\nimport bundleAnalyzer from "@next/bundle-analyzer";\nimport { withCms } from "@monti-cms/nextjs/config";\n\nconst withAnalyzer = bundleAnalyzer({ enabled: true });\nconst config: NextConfig = {};\n\nexport default withCms(withAnalyzer(config)) // done\n`,
+		);
+	});
+
+	it("a next.config init cannot wrap safely is left as it is and its step says why", async () => {
+		const shapes: Record<string, string> = {
+			function: `import type { NextConfig } from "next";\nexport default (phase: string): NextConfig => ({});\n`,
+			satisfies: `import type { NextConfig } from "next";\nexport default { reactStrictMode: true } satisfies NextConfig;\n`,
+			commonjs: `module.exports = { reactStrictMode: true };\n`,
+		};
+		for (const [name, custom] of Object.entries(shapes)) {
+			const dir = fixtureApp({ "next.config.ts": custom });
+			const report = await initProject({ cwd: dir, ...quiet() });
+			expect(read(dir, "next.config.ts"), name).toBe(custom);
+			expect(
+				report.changed.map((item) => item.file),
+				name,
+			).not.toContain("next.config.ts");
+			const step = report.next.find((line) => line.startsWith("Wrap the config in next.config.ts")) ?? "";
+			expect(step, name).toContain("init did not edit it:");
+			expect(step, name).toContain('import { withCms } from "@monti-cms/nextjs/config";');
+			expect(step, name).toContain("export default withCms(");
+		}
+		const commonjs = fixtureApp({ "next.config.ts": shapes.commonjs ?? "" });
+		const text = formatInitReport(await initProject({ cwd: commonjs, ...quiet() }));
+		expect(text).toContain("uses module.exports (CommonJS)");
+		expect(text).not.toContain("Changed:\n  - next.config.ts");
+	});
+
+	it("without a next.config it creates next.config.ts with withCms, and lists it under Created", async () => {
+		const dir = fixtureApp({ "next.config.ts": null });
+		const report = await initProject({ cwd: dir, ...quiet() });
+		expect(report.created).toContain("next.config.ts");
+		const config = read(dir, "next.config.ts");
+		expect(config).toContain('import { withCms } from "@monti-cms/nextjs/config";');
+		expect(config).toContain("export default withCms(nextConfig);");
+		expect(report.next.join("\n")).not.toContain("next.config");
+	});
+
+	it("is safe to run twice: the second run changes nothing and says it is already there", async () => {
+		const dir = fixtureApp();
+		await initProject({ cwd: dir, ...quiet() });
+		const after = snapshot(dir);
+		const again = await initProject({ cwd: dir, ...quiet() });
+		expect(snapshot(dir)).toEqual(after);
+		expect(again.changed).toEqual([]);
+		expect(again.skipped).toEqual(expect.arrayContaining(["next.config.ts", "app/layout.tsx"]));
+		const text = formatInitReport(again);
+		expect(text).not.toContain("Changed:");
+		expect(text).toMatch(/Already there, left as they are:[\s\S]*next\.config\.ts[\s\S]*app\/layout\.tsx/);
+		expect(again.next.join("\n")).not.toMatch(/withCms|suppressHydrationWarning/);
+	});
+
+	it("adds .monti/ to .gitignore once, keeps a line that already covers it, and reports it", async () => {
+		const dir = fixtureApp({ ".gitignore": "node_modules" });
+		const first = await initProject({ cwd: dir, ...quiet() });
+		expect(read(dir, ".gitignore")).toBe("node_modules\n.monti/\n");
+		expect(first.changed).toContainEqual({
+			file: ".gitignore",
+			change: "added .monti/ (monti migrate writes its logs there)",
+		});
+		const second = await initProject({ cwd: dir, ...quiet() });
+		expect(read(dir, ".gitignore")).toBe("node_modules\n.monti/\n");
+		expect(second.changed.map((item) => item.file)).not.toContain(".gitignore");
+		for (const covered of [".monti", "/.monti/", ".monti/*"]) {
+			const other = fixtureApp({ ".gitignore": `${covered}\n` });
+			const report = await initProject({ cwd: other, ...quiet() });
+			expect(read(other, ".gitignore")).toBe(`${covered}\n`);
+			expect(report.changed.map((item) => item.file)).not.toContain(".gitignore");
+		}
+	});
+
+	it("a dry run reports the edits as planned and writes nothing", async () => {
+		const dir = fixtureApp();
+		const before = snapshot(dir);
+		const report = await initProject({ cwd: dir, ...quiet(), dryRun: true });
+		expect(snapshot(dir)).toEqual(before);
+		expect(report.changed.map((item) => item.file)).toEqual(["next.config.ts", "app/layout.tsx", ".gitignore"]);
+		expect(formatInitReport(report)).toContain("Would change:\n  - next.config.ts \u2014");
+	});
+
+	it("puts suppressHydrationWarning after the other attributes of <html>, whichever way they are written", async () => {
+		const cases: [string, string][] = [
+			["<html>", "<html suppressHydrationWarning>"],
+			[
+				'<html lang={locale} className={cn("a", b > c)}>',
+				'<html lang={locale} className={cn("a", b > c)} suppressHydrationWarning>',
+			],
+		];
+		for (const [from, to] of cases) {
+			const dir = fixtureApp({ "app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace('<html lang="en">', from) });
+			const report = await initProject({ cwd: dir, ...quiet() });
+			if (from.includes("b > c")) {
+				// A `>` inside an attribute: init cannot find the end of the tag, so it does not touch it.
+				expect(read(dir, "app/layout.tsx")).toContain(from);
+				expect(report.next.join("\n")).toContain("init could not read the <html> tag");
+			} else {
+				expect(read(dir, "app/layout.tsx")).toContain(to);
+			}
+		}
+	});
+
+	it("a layout init cannot edit (no <html>, or suppressHydrationWarning={false}) gets a step with the reason", async () => {
+		const noHtml = fixtureApp({
+			"app/layout.tsx": "export default function L({ children }: { children: React.ReactNode }) { return children; }\n",
+		});
+		const first = await initProject({ cwd: noHtml, ...quiet() });
+		expect(first.next.join("\n")).toContain("app/layout.tsx has no <html> tag");
+		const off = fixtureApp({
+			"app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace(
+				'<html lang="en">',
+				'<html lang="en" suppressHydrationWarning={false}>',
+			),
+		});
+		const second = await initProject({ cwd: off, ...quiet() });
+		expect(second.next.join("\n")).toContain("suppressHydrationWarning={false}");
+		expect(read(off, "app/layout.tsx")).toContain("suppressHydrationWarning={false}");
+	});
+
+	it("an existing withCms and an existing suppressHydrationWarning are left alone and need no step", async () => {
+		const withCms = 'import { withCms } from "@monti-cms/nextjs/config";\nexport default withCms({});\n';
 		const done = fixtureApp({
+			"next.config.ts": withCms,
 			"app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace('<html lang="en">', '<html lang="en" suppressHydrationWarning>'),
 		});
-		expect((await initProject({ cwd: done, ...quiet() })).next.join("\n")).not.toContain("suppressHydrationWarning");
-
-		const missing = fixtureApp();
-		const report = await initProject({ cwd: missing, ...quiet() });
-		expect(read(missing, "app/layout.tsx")).toBe(CREATE_NEXT_APP_LAYOUT);
-		expect(report.next.join("\n")).toContain('<html lang="en" suppressHydrationWarning>');
+		const report = await initProject({ cwd: done, ...quiet() });
+		expect(read(done, "next.config.ts")).toBe(withCms);
+		expect(report.changed.map((item) => item.file)).toEqual([".gitignore"]);
+		expect(report.next.join("\n")).not.toMatch(/next\.config|suppressHydrationWarning/);
 	});
 
 	it("a missing .gitignore gets a step that creates it; one that covers .env.local gets none", async () => {
 		const none = fixtureApp({ ".gitignore": null });
 		const report = await initProject({ cwd: none, ...quiet() });
-		expect(listFiles(none)).not.toContain(".gitignore");
+		// init creates it for the .monti/ logs folder and says so; .env.local is still the person's step.
+		expect(read(none, ".gitignore")).toBe(".monti/\n");
+		expect(report.changed).toContainEqual({
+			file: ".gitignore",
+			change: "created it with .monti/ (monti migrate writes its logs there)",
+		});
 		const step = report.next.find((line) => line.startsWith("Keep .env.local out of git")) ?? "";
-		expect(step).toBe("Keep .env.local out of git: add this line to .gitignore (create the file):\n.env.local");
+		expect(step).toBe("Keep .env.local out of git: add this line to .gitignore:\n.env.local");
 
 		const uncovered = fixtureApp({ ".gitignore": "node_modules\n" });
 		const second = await initProject({ cwd: uncovered, ...quiet() });
-		expect(read(uncovered, ".gitignore")).toBe("node_modules\n");
+		expect(read(uncovered, ".gitignore")).toBe("node_modules\n.monti/\n");
 		expect(second.next).toContain("Keep .env.local out of git: add this line to .gitignore:\n.env.local");
 
 		const covered = fixtureApp({ ".gitignore": ".env*.local\n" });
@@ -445,7 +639,7 @@ describe("monti init tailors what is left to the app", () => {
 		});
 		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
 		expect(report.next.join("\n")).toContain("http://localhost:4000/api/cms/auth/callback/github");
-		expect(read(dir, ".env.example")).toContain("# SITE_URL=http://localhost:4000");
+		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://example.com");
 	});
 
 	it("adds the git-sync note when git-sync is chosen", async () => {

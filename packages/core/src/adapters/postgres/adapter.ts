@@ -103,6 +103,9 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 					...schemaOptions(),
 					site: migrateOptions.site,
 					formats: migrateOptions.formats,
+					reconvertBodies: migrateOptions.reconvertBodies,
+					onUnreadableBody: migrateOptions.onUnreadableBody,
+					detail: migrateOptions.detail,
 				});
 			} catch (error) {
 				throw explain(error) ?? error;

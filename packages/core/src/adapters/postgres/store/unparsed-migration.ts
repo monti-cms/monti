@@ -3,6 +3,8 @@ import { computeContentHash } from "../../../core/content-hash";
 import { parseTranslationState } from "../../../core/translation/state";
 import type { JsonValue } from "../../../core/types";
 import { unparsedDocument } from "../../../doc/stored-document";
+import type { UnreadableBody } from "../../../server/define";
+import { hasDirectiveBlock, kindOfState } from "./unreadable";
 
 const DEFAULT_BATCH_SIZE = 200;
 
@@ -10,6 +12,8 @@ export interface UnparsedMigrationOptions {
 	readonly batchSize?: number;
 	/** Called once per kind of finding with the ids involved. Default: `console.warn`. */
 	readonly log?: (message: string) => void;
+	/** Called for each body or template that has no document, and the lists by id are not logged. */
+	readonly onUnreadable?: (body: UnreadableBody) => void;
 }
 
 interface BodyRow {
@@ -55,6 +59,11 @@ export async function migrateUnparsedBodies(
 			const doc = unparsedDocument(row.mdx);
 			if (row.state === "published") published.push(row.entry_id);
 			else drafts += 1;
+			options.onUnreadable?.({
+				where: `entry_bodies ${row.entry_id}/${row.state}`,
+				kind: kindOfState(row.state),
+				hasDirective: hasDirectiveBlock(row.mdx),
+			});
 			return { doc: JSON.stringify(doc), contentHash: computeContentHash(row.metadata, doc) };
 		});
 		await client.query(
@@ -79,7 +88,14 @@ export async function migrateUnparsedBodies(
 			[lastTemplate ?? null, batchSize],
 		);
 		if (res.rows.length === 0) break;
-		for (const row of res.rows) templates.push(row.id);
+		for (const row of res.rows) {
+			templates.push(row.id);
+			options.onUnreadable?.({
+				where: `body_templates ${row.id}`,
+				kind: "template",
+				hasDirective: hasDirectiveBlock(row.mdx),
+			});
+		}
 		await client.query(
 			`UPDATE "${qSchema}".body_templates AS t SET doc = v.doc::jsonb
 			 FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::text[]) AS doc) AS v
@@ -121,6 +137,7 @@ export async function migrateUnparsedBodies(
 		if (res.rows.length < batchSize) break;
 	}
 
+	if (options.onUnreadable) return { drafts, published, templates };
 	if (published.length > 0) {
 		log(
 			`[monti] ${published.length} published bodies have no document and are kept as unparsed (they read as unparsed until fixed): ${published.join(", ")}`,

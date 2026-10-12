@@ -1,8 +1,15 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { findRootLayout, hasSuppressHydrationWarning } from "./first-run";
+import { findRootLayout } from "./first-run";
 import { detectApp, type PackageManager } from "./init-detect";
+import {
+	addSuppressHydrationWarning,
+	ignoreMontiFolder,
+	NEXT_CONFIG_IMPORT,
+	type TextEdit,
+	wrapNextConfig,
+} from "./init-edit";
 import { collectAnswers, detectedLocales, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
 import {
 	adminLayoutTemplate,
@@ -20,12 +27,15 @@ import {
 } from "./templates";
 
 /**
- * `monti init`: adds Monti to an existing Next app. It reads the app, asks (or takes flags, or defaults), writes only Monti's own new files (the config, the schema,
- * the three Next files, `.env.example`), installs the packages after a confirmation, and ends with a plain summary of what is left, numbered, with exact content to
- * copy. It edits no file the app already has, writes no `.env.local` and never touches the database.
+ * `monti init`: adds Monti to an existing Next app. It reads the app, asks (or takes flags, or defaults), writes Monti's own new files (the config, the schema,
+ * the three Next files, `.env.example`), makes the two edits Monti needs in the app's own files (`withCms` in `next.config`, `suppressHydrationWarning` on the root
+ * layout's `<html>`) and says exactly what it changed, installs the packages after a confirmation, and ends with a plain summary of what is left, numbered, with exact
+ * content to copy. A file whose shape init cannot edit safely is not touched: its step is in that list, with the reason. It writes no `.env.local` and never touches
+ * the database.
  *
  * Safety: every write goes through {@link ProjectWriter}, which refuses a path outside the project. An existing file is never overwritten unless the person says yes
- * (or passes `overwrite`). Nothing is written until every question is answered, so cancelling leaves the project as it was.
+ * (or passes `overwrite`); the two edits are the only change to a file that already exists. Nothing is written until every question is answered, so cancelling leaves
+ * the project as it was.
  */
 
 /** A package manager command `monti init` runs to install packages. */
@@ -85,6 +95,8 @@ export interface InitReport {
 	skipped: string[];
 	/** Existing files that were replaced (only on a yes or `overwrite`). */
 	readonly overwritten: string[];
+	/** Files of the app that init edited (or would, on a dry run), with the change in one line. */
+	readonly changed: { readonly file: string; readonly change: string }[];
 	/** Packages installed (or to install, on a dry run). */
 	installed: string[];
 	readonly steps: InitStep[];
@@ -205,21 +217,17 @@ export function installSpecs(packages: readonly string[], coreSpec: string | und
 	});
 }
 
-const NEXT_CONFIG_IMPORT = 'import { withCms } from "@monti-cms/nextjs/config";';
-/** The default shape of a Next config: one `export default nextConfig;`. */
-const DEFAULT_EXPORT = /^export default nextConfig;?[ \t]*$/gm;
-
-/** The `next.config` item of the list: the change against the shape of the existing file, or a whole new file when there is none. `undefined` when `withCms` is there. */
-function nextConfigStep(file: string | undefined, text: string | undefined): string | undefined {
-	if (file === undefined || text === undefined) {
-		return `Create next.config.ts with this content (the admin needs withCms):\n${nextConfigTemplate().trimEnd()}`;
-	}
-	if (text.includes("withCms")) return undefined;
-	if ((text.match(DEFAULT_EXPORT) ?? []).length === 1) {
-		return `Wrap the config in ${file}. Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand change the export:\n-export default nextConfig;\n+export default withCms(nextConfig);`;
-	}
-	return `Wrap the config in ${file}. Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand export the result of withCms around the config you export now:\nexport default withCms(nextConfig);   // wherever you export your config`;
+/** The `next.config` item of the list when init did not edit the file: the reason, then the change by hand against the shape of the file. */
+function nextConfigManualStep(file: string, reason: string): string {
+	return `Wrap the config in ${file} (init did not edit it: ${reason}). Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand export the result of withCms around the config you export now:\nexport default withCms(nextConfig);   // wherever you export your config`;
 }
+
+/** The root layout item of the list when init did not edit the file. */
+const layoutManualStep = (file: string, reason: string): string =>
+	`Add suppressHydrationWarning to the <html> tag in ${file} (init did not edit it: ${reason}):\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`;
+
+/** `next.config` files init cannot edit, or must not create a second one next to. */
+const OTHER_NEXT_CONFIGS = ["next.config.cjs", "next.config.mts", "next.config.cts"] as const;
 
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export async function initProject(options: InitOptions): Promise<InitReport> {
@@ -289,6 +297,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		created: [],
 		skipped: [],
 		overwritten: [],
+		changed: [],
 		installed: [],
 		steps: [],
 		notes: [],
@@ -304,7 +313,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		);
 	}
 
-	// The next config is only read, never changed: it tells the admin page whether to opt out of the instant navigation check, and which change to print.
+	// The next config tells the admin page whether to opt out of the instant navigation check, and is the file init wraps in `withCms` (below).
 	// Next's `cacheComponents` (on by default in the apps `create-next-app` 16.4 makes) validates every page for instant navigation in development; the admin opts out.
 	const nextConfigText = app.nextConfig === undefined ? undefined : writer.read(app.nextConfig);
 	const usesCacheComponents = nextConfigText !== undefined && /\bcacheComponents\s*:\s*true\b/.test(nextConfigText);
@@ -315,6 +324,11 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	if (app.legacyConfig.length > 0 && app.existingConfig === undefined) {
 		report.notes.push(
 			`${app.legacyConfig.join(" and ")} from the earlier setup ${app.legacyConfig.length > 1 ? "are" : "is"} left alone, and no ${configFile} was created. They are one ${configFile} now: move them into it (see "Upgrading" in the core README).`,
+		);
+	}
+	if (answers.directiveSyntax && keepConfig) {
+		report.notes.push(
+			"The directive syntax is on: add mdx({ syntax: [directiveSyntax()] }) (from @monti-cms/syntax-directive) to your existing config.",
 		);
 	}
 	if (!keepConfig) {
@@ -334,6 +348,38 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			`${app.existingConfig} already exists, so it was kept and no schema file was written. Add the plugins you want to it by hand; each one is one line (see .env.example for the values).`,
 		);
 	}
+	// The two edits to files the app owns, planned with the new files: an edit is applied only when the file is in a shape init can change safely, else its
+	// step goes to the list of what is left, with the reason.
+	const edits: { file: string; text: string; change: string }[] = [];
+	const manual: string[] = [];
+	const planEdit = (file: string, edit: TextEdit, manualStep: (reason: string) => string) => {
+		if (edit.status === "edit") edits.push({ file, text: edit.text, change: edit.change });
+		else if (edit.status === "present") report.skipped.push(file);
+		else manual.push(manualStep(edit.reason));
+	};
+	if (app.nextConfig !== undefined && nextConfigText !== undefined) {
+		const file = app.nextConfig;
+		planEdit(file, wrapNextConfig(file, nextConfigText), (reason) => nextConfigManualStep(file, reason));
+	} else {
+		const other = OTHER_NEXT_CONFIGS.find((candidate) => writer.exists(candidate));
+		if (other) {
+			manual.push(
+				nextConfigManualStep(
+					other,
+					"it is not a file init can edit, and a second next.config next to it would be ignored or conflict",
+				),
+			);
+		} else planned.push({ file: "next.config.ts", content: nextConfigTemplate() });
+	}
+	const rootLayout = findRootLayout(cwd);
+	if (rootLayout) {
+		planEdit(rootLayout, addSuppressHydrationWarning(rootLayout, writer.read(rootLayout)), (reason) =>
+			layoutManualStep(rootLayout, reason),
+		);
+	}
+	// migrate writes its logs under .monti/, which does not belong in git.
+	const gitignore = writer.exists(".gitignore") ? writer.read(".gitignore") : undefined;
+	planEdit(".gitignore", ignoreMontiFolder(gitignore), () => "");
 	planned.push(
 		{ file: pageFile, content: adminPageTemplate(configImport(pageFile), { instant: usesCacheComponents }) },
 		{ file: layoutFile, content: adminLayoutTemplate(configImport(layoutFile), { blocks: answers.blocks.length > 0 }) },
@@ -385,6 +431,10 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			if (!dryRun) writer.write(entry.file, entry.content);
 			(entry.replace ? report.overwritten : report.created).push(entry.file);
 		}
+		for (const edit of edits) {
+			if (!dryRun) writer.write(edit.file, edit.text);
+			report.changed.push({ file: edit.file, change: edit.change });
+		}
 	} catch (error) {
 		throw new InitError(error instanceof Error ? error.message : String(error), writer.written);
 	}
@@ -416,14 +466,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	const hasFailure = report.steps.some((step) => step.status === "failed");
 	const willInstall = installed || (dryRun && installing);
 	if (missing.length > 0 && !willInstall) todo.push(`Install the packages:\n${commandText(installCommand)}`);
-	const nextConfig = nextConfigStep(app.nextConfig, nextConfigText);
-	if (nextConfig) todo.push(nextConfig);
-	const rootLayout = findRootLayout(cwd);
-	if (rootLayout && hasSuppressHydrationWarning(writer.read(rootLayout)) === false) {
-		todo.push(
-			`Add suppressHydrationWarning to the <html> tag in ${rootLayout}:\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`,
-		);
-	}
+	todo.push(...manual);
 	todo.push(
 		[
 			"Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",
@@ -550,6 +593,13 @@ export function formatInitReport(report: InitReport): string {
 	out.push(placementLine(report.app.src), "");
 	out.push(
 		...list(dry ? "Would create:" : "Created:", report.created),
+		...(report.changed.length === 0
+			? []
+			: [
+					dry ? "Would change:" : "Changed:",
+					...report.changed.map((item) => `  - ${item.file} \u2014 ${item.change}`),
+					"",
+				]),
 		...list(dry ? "Would replace:" : "Replaced (you said yes):", report.overwritten),
 		...list("Already there, left as they are:", report.skipped),
 	);

@@ -15,7 +15,7 @@ import { extractSchema, formatExtractReport } from "./schema-extract";
  *
  * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
  * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
- * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: creates the DB tables.
+ * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: creates the DB tables. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
  * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
@@ -137,12 +137,16 @@ export async function runCli(
 					"env-file": { type: "string", multiple: true },
 					"no-env-file": { type: "boolean" },
 					config: { type: "string" },
+					verbose: { type: "boolean" },
+					"reconvert-bodies": { type: "boolean" },
 				},
 			});
 			const ok = await migrate({
 				cwd: io.cwd,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
 				config: values.config,
+				verbose: values.verbose,
+				reconvertBodies: values["reconvert-bodies"],
 				log: io.log,
 			});
 			return ok ? 0 : 1;

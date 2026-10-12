@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import { type FormatRegistry, NO_FORMATS } from "../../../format/registry";
+import type { UnreadableBody } from "../../../server/define";
 import type { Site } from "../../../site";
 import { migrateBlockIds } from "./block-id-migration";
 import { migrateCodeAnnotations } from "./code-annotation-migration";
@@ -7,6 +8,7 @@ import { recomputeContentHashes } from "./content-hash-backfill";
 import { validateSchemaName, withTransaction } from "./context";
 import { migrateLinkEntryIds } from "./link-id-migration";
 import { legacyBodiesOf } from "./mdx-body";
+import { reconvertUnparsedBodies } from "./reconvert-migration";
 import { seedTemplateDocument } from "./seed-templates";
 import { migrateSoftBreaks } from "./soft-break-migration";
 import { migrateStoredDocuments } from "./stored-document-migration";
@@ -22,6 +24,10 @@ interface MigrationContext {
 	 * MDX text of old bodies with the `mdx` format (`@monti-cms/mdx`), only when there is a body to read.
 	 */
 	readonly formats: FormatRegistry;
+	/** Where a step reports a body it keeps as unreadable. Without it the step logs one line for each. */
+	readonly onUnreadable?: (body: UnreadableBody) => void;
+	/** Where the steps send the per-body detail lines. Without it they are logged as warnings. */
+	readonly detail?: (line: string) => void;
 }
 
 /** One migration step. Once its name is recorded in `cms_migrations`, it does not run again. */
@@ -324,7 +330,12 @@ const STEPS: readonly MigrationStep[] = [
 		 * `content_hash` and `search_text` of every body. A body that does not parse is left as it is and logged.
 		 */
 		run: (client, qSchema, context) =>
-			migrateSoftBreaks(client, qSchema, { site: context.site, bodies: legacyBodiesOf(context.formats, context.site) }),
+			migrateSoftBreaks(client, qSchema, {
+				site: context.site,
+				bodies: legacyBodiesOf(context.formats, context.site),
+				log: context.detail,
+				onUnreadable: context.onUnreadable,
+			}),
 	},
 	{
 		name: "0013_stored_documents",
@@ -341,6 +352,8 @@ const STEPS: readonly MigrationStep[] = [
 			await migrateStoredDocuments(client, qSchema, {
 				site: context.site,
 				bodies: legacyBodiesOf(context.formats, context.site),
+				log: context.detail,
+				onUnreadable: context.onUnreadable,
 			});
 		},
 	},
@@ -365,6 +378,7 @@ const STEPS: readonly MigrationStep[] = [
 			migrateCodeAnnotations(client, qSchema, {
 				site: context.site,
 				bodies: legacyBodiesOf(context.formats, context.site),
+				log: context.detail,
 			}),
 	},
 	{
@@ -392,7 +406,8 @@ const STEPS: readonly MigrationStep[] = [
 		 * translation state to version 4 (a source document, no MDX text) and logs the published bodies and templates among them by id. Nothing here fails
 		 * because of such a body: the data of an existing store always migrates.
 		 */
-		run: (client, qSchema) => migrateUnparsedBodies(client, qSchema),
+		run: (client, qSchema, context) =>
+			migrateUnparsedBodies(client, qSchema, { log: context.detail, onUnreadable: context.onUnreadable }),
 	},
 	{
 		name: "0018_link_entry_ids",
@@ -403,7 +418,7 @@ const STEPS: readonly MigrationStep[] = [
 		 * A link that resolves to nothing stays as it is and is logged. `version`, `updated_at` and block ids are kept.
 		 */
 		run: async (client, qSchema, context) => {
-			await migrateLinkEntryIds(context.site, client, qSchema);
+			await migrateLinkEntryIds(context.site, client, qSchema, { log: context.detail });
 		},
 	},
 	{
@@ -412,7 +427,7 @@ const STEPS: readonly MigrationStep[] = [
 		 * A body template is a document: `doc` is its only source and `mdx` is no longer written. A template with no readable document becomes the document of
 		 * one `unparsed` node holding its MDX as it was, and `mdx` stops being required. Nothing here fails because of a template.
 		 */
-		run: (client, qSchema) => migrateTemplatesToDocuments(client, qSchema),
+		run: (client, qSchema, context) => migrateTemplatesToDocuments(client, qSchema, { log: context.detail }),
 	},
 	{
 		name: "0020_mdx_columns_optional",
@@ -537,10 +552,27 @@ export async function prepare(client: PoolClient, qSchema: string): Promise<void
  */
 export async function migrateContentStore(
 	pool: Pool,
-	options: { site: Site; schema?: string; formats?: FormatRegistry },
-): Promise<{ applied: number; upToDate: number }> {
+	options: {
+		site: Site;
+		schema?: string;
+		formats?: FormatRegistry;
+		/** Read the bodies kept as unreadable again after the steps (see `reconvertUnparsedBodies`). */
+		reconvertBodies?: boolean;
+		onUnreadableBody?: (body: UnreadableBody) => void;
+		detail?: (line: string) => void;
+	},
+): Promise<{
+	applied: number;
+	upToDate: number;
+	reconverted?: { converted: number; remaining: number };
+}> {
 	const qSchema = validateSchemaName(options.schema);
-	const context: MigrationContext = { site: options.site, formats: options.formats ?? NO_FORMATS };
+	const context: MigrationContext = {
+		site: options.site,
+		formats: options.formats ?? NO_FORMATS,
+		onUnreadable: options.onUnreadableBody,
+		detail: options.detail,
+	};
 	return withTransaction(pool, async (client) => {
 		await prepare(client, qSchema);
 		const applied = new Set(
@@ -555,7 +587,16 @@ export async function migrateContentStore(
 			await client.query(`INSERT INTO "${qSchema}".cms_migrations (name) VALUES ($1)`, [step.name]);
 			ran++;
 		}
-		return { applied: ran, upToDate: STEPS.length - ran };
+		const summary = { applied: ran, upToDate: STEPS.length - ran };
+		if (!options.reconvertBodies) return summary;
+		const reconverted = await reconvertUnparsedBodies(client, qSchema, {
+			site: context.site,
+			bodies: legacyBodiesOf(context.formats, context.site),
+			onUnreadable: context.onUnreadable,
+		});
+		// A body that reads now links to other entries by id, like every stored body (this also rebuilds the references of those links).
+		if (reconverted.converted > 0) await migrateLinkEntryIds(context.site, client, qSchema, { log: context.detail });
+		return { ...summary, reconverted };
 	});
 }
 
