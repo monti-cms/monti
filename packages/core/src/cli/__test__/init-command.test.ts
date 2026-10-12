@@ -19,6 +19,19 @@ function run(dir: string, argv: string[], extras: Parameters<typeof runInitComma
 }
 
 describe("monti init on the command line", () => {
+	it("--directive-syntax and --no-directive-syntax decide the block syntax, and --no-install still installs nothing", async () => {
+		for (const [flag, on] of [
+			["--directive-syntax", true],
+			["--no-directive-syntax", false],
+		] as const) {
+			const dir = fixtureApp();
+			const result = run(dir, ["--yes", "--no-install", flag]);
+			expect(await result.code).toBe(0);
+			expect(read(dir, "monti.config.ts").includes("directiveSyntax()")).toBe(on);
+			expect(result.host.install).not.toHaveBeenCalled();
+		}
+	});
+
 	it("--yes takes every default and prints a plain summary", async () => {
 		const dir = fixtureApp();
 		const result = run(dir, ["--yes", "--no-install"]);

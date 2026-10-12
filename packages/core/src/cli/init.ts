@@ -326,7 +326,8 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			`${app.legacyConfig.join(" and ")} from the earlier setup ${app.legacyConfig.length > 1 ? "are" : "is"} left alone, and no ${configFile} was created. They are one ${configFile} now: move them into it (see "Upgrading" in the core README).`,
 		);
 	}
-	if (answers.directiveSyntax && keepConfig) {
+	const existingText = app.existingConfig === undefined ? "" : writer.read(app.existingConfig);
+	if (answers.directiveSyntax && keepConfig && !existingText.includes("directiveSyntax")) {
 		report.notes.push(
 			"The directive syntax is on: add mdx({ syntax: [directiveSyntax()] }) (from @monti-cms/syntax-directive) to your existing config.",
 		);

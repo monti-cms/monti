@@ -35,6 +35,7 @@ const options = {
 	"admin-path": { type: "string" },
 	login: { type: "string" },
 	"directive-syntax": { type: "boolean" },
+	"no-directive-syntax": { type: "boolean" },
 	overwrite: { type: "boolean" },
 	"no-install": { type: "boolean" },
 	"package-manager": { type: "string" },
@@ -48,7 +49,7 @@ export async function runInitCommand(
 ): Promise<number> {
 	const json = argv.includes("--json");
 	try {
-		const { values } = parseArgs({ args: [...argv], options, allowNegative: true });
+		const { values } = parseArgs({ args: [...argv], options });
 		const manager = values["package-manager"];
 		if (manager !== undefined && !(PACKAGE_MANAGERS as readonly string[]).includes(manager)) {
 			throw new Error(`--package-manager "${manager}" must be one of ${PACKAGE_MANAGERS.join(", ")}`);
@@ -72,7 +73,7 @@ export async function runInitCommand(
 			blocks: values.blocks,
 			adminPath: values["admin-path"],
 			login: values.login,
-			directiveSyntax: values["directive-syntax"],
+			directiveSyntax: values["no-directive-syntax"] ? false : values["directive-syntax"],
 			log: json ? undefined : io.log,
 			host: extras.host,
 		});
