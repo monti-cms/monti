@@ -2,11 +2,15 @@ import path from "node:path";
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
+import { configSensitiveTests } from "../core/test/config-sensitive";
+
 /**
- * Regression guard: reruns the admin UI tests with a config whose collections, fields, languages and blocks differ from the reference blog (`../core/test/other-site.config.ts`).
- * New tests join this bundle automatically. Collections, fields and blocks are looked up from the config
- * (e.g. `src/screens/__test__/any-site-screens.test.tsx`, `src/editor/__test__/any-site-blocks.test.ts`).
- * Only tests that use the reference blog config's collections, fields, blocks and languages as-is (post, tag, summary, callout, ko/ja...) are excluded below.
+ * Regression guard: reruns the config-sensitive admin UI tests with a config whose collections, fields, languages and blocks differ from the reference blog (`../core/test/other-site.config.ts`).
+ *
+ * Which tests run: only those that read the site config (`any-site`, `testConfig`, or the config-derived lookups of `testSite` such as `COLLECTIONS` and `schemaOf`;
+ * the exact rule is `READS_CONFIG` in `../core/test/config-sensitive.ts`). A test that only renders with `testSite` and names no collection, field or block
+ * gives the same result under any config, and the default run covers it. A new test joins by itself once it reads the config that way.
+ * Of those, the tests that use the reference blog config's collections, fields, blocks and languages as-is (post, tag, summary, callout, ko/ja...) are skipped below.
  */
 const BLOG_FIXTURE_TESTS = [
 	// Renders screens with the reference blog's collections and fields (post, memo, category, tag, collection, summary) and its Korean and Japanese translations.
@@ -50,8 +54,19 @@ export default defineConfig(({ mode }) => ({
 		name: "admin (other-site)",
 		environment: "jsdom",
 		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		exclude: BLOG_FIXTURE_TESTS,
+		include: configSensitiveTests({
+			packageDir: __dirname,
+			siteFile: path.resolve(__dirname, "../core/test/site.ts"),
+			// The admin helpers (`src/test/*`) render with `testSite` for every test, so following them would select all tests.
+			transitive: false,
+			// These hand `testSite` to a component that reads the config (the schema screen, link targets) without naming a collection themselves.
+			also: [
+				"src/screens/schema/__test__/schema-screen.test.tsx",
+				"src/editor/__test__/internal-link-display.test.tsx",
+				"src/editor/__test__/internal-link-search.test.tsx",
+			],
+			skip: (file) => BLOG_FIXTURE_TESTS.includes(path.relative(__dirname, file).split(path.sep).join("/")),
+		}),
 		setupFiles: ["./src/test/setup-dom.ts"],
 		sequence: { groupOrder: 2 },
 		testTimeout: 60000,
