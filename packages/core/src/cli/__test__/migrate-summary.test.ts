@@ -43,7 +43,7 @@ describe("monti migrate says where it migrates and what it did", () => {
 			if (!allowed.includes(secret)) expect(rest).not.toContain(secret);
 		}
 		expect(first.text).not.toMatch(/@/);
-		expect(first.text).not.toContain(`${target.username}:`);
+		if (target.username) expect(first.text).not.toContain(`${target.username}:`);
 		const applied = /Applied (\d+) steps?, (\d+) already up to date\./.exec(first.text);
 		expect(Number(applied?.[1])).toBeGreaterThan(0);
 		expect(applied?.[2]).toBe("0");

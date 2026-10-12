@@ -2,7 +2,7 @@ import type { ContentStore } from "../../ports";
 
 /**
  * What a store adapter gives the contract tests. The contract (`store-contract.ts`) holds the behavior every `ContentStore` has to show, whatever database
- * is behind it; a test file for an adapter calls `runStoreContract(factory)` with its own factory. Behavior that depends on how an adapter stores things
+ * is behind it; a test file for an adapter calls `runStoreContractSuite(name, factory)` with its own factory, one file per suite. Behavior that depends on how an adapter stores things
  * (tables, migrations, transactions seen from a second connection) is tested in the adapter's own folder.
  */
 export interface StoreFactory {
