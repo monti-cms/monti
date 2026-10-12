@@ -31,7 +31,7 @@ allowBuilds:
   esbuild: true
 ```
 
-3. **init이 적어 준 일을 한다.** init이 `next.config`(`withCms`), `<html>`(`suppressHydrationWarning`), `.gitignore`(`.monti/`)를 직접 고치고 "Changed:"에 적어 준다(안전하게 고칠 수 없던 파일은 이유와 함께 번호 목록에 있다). 남은 일은 `.gitignore`의 `.env.local`(앱에 필요한 것만), 그리고 `cp .env.example .env.local`(채워 넣는다. `.env.example`에 각 값이 무엇이고 어디서 얻는지 적혀 있고, `MONTI_SECRET`은 `openssl rand -base64 32`로 만든다)이다.
+3. **init이 적어 준 일을 한다.** init이 `next.config`(`withCms`), `<html>`(`suppressHydrationWarning`), `.gitignore`(`.env.local`, `.monti/`)를 직접 고치고 "Changed:"에 적어 준다(안전하게 고칠 수 없던 파일은 이유와 함께 번호 목록에 있다). 남은 일은 `cp .env.example .env.local`(채워 넣는다. `.env.example`에 각 값이 무엇이고 어디서 얻는지 적혀 있고, `MONTI_SECRET`은 `openssl rand -base64 32`로 만든다)이다.
 4. **표 만들기와 설정 점검.** `pnpm exec monti migrate`를 돌린 다음 `pnpm exec monti doctor`를 돌린다. 모든 검사를 `ok`, `warn`, `FAIL`로 보여 주고, 경고마다 무엇이 잘못됐는지, 어디인지, 어떻게 고치는지를 알려 준다(위 init 단계 중 빠진 것이 있으면 그것도 알려 준다). Monti가 스스로 정한 값과 그 출처도 함께 보여 준다.
 5. **앱 실행.** `pnpm dev`로 띄우고 `http://localhost:3000/studio`를 연다(`monti init`은 관리자를 `/studio`에 쓴다. `--admin-path`로 바꾼다).
 
@@ -96,7 +96,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 
 ### 2. `monti init`
 
-`@monti-cms/core`를 설치한 뒤 앱 폴더(`package.json`이 있는 곳)에서 `pnpm exec monti init`으로 돌린다(다른 패키지 매니저는 빠른 시작을 본다. 설치 전에 `npx monti`를 돌리면 다른 패키지를 받는다). 기존 Next.js(App Router) 앱에 Monti를 더한다. 앱을 읽고, 몇 가지를 묻고, Monti가 새로 만드는 파일을 적고, (확인을 받은 뒤) 패키지를 설치하고, 남은 일을 번호를 붙여 쉬운 말로 적어 준다. **앱의 파일 셋을 고치고 어떤 파일을 어떻게 고쳤는지 요약의 "Changed:" 목록에 한 줄씩 적어 준다.** `next.config`의 export를 `withCms(...)`로 감싸고, 루트 레이아웃 `<html>`에 `suppressHydrationWarning`을 달고, `.gitignore`에 `.monti/`를 더한다. 이에 대해서는 묻지 않는다. 안전하게 바꿀 수 없는 모양의 파일(함수를 export하는 설정, `<html>`이 없는 레이아웃 등)은 건드리지 않고, 이유와 함께 남은 일 목록에 넣는다. `.env.local`은 쓰지 않는다. 묻지 않고 파일을 덮어쓰지 않고, 다시 돌려도 안전하다.
+`@monti-cms/core`를 설치한 뒤 앱 폴더(`package.json`이 있는 곳)에서 `pnpm exec monti init`으로 돌린다(다른 패키지 매니저는 빠른 시작을 본다. 설치 전에 `npx monti`를 돌리면 다른 패키지를 받는다). 기존 Next.js(App Router) 앱에 Monti를 더한다. 앱을 읽고, 몇 가지를 묻고, Monti가 새로 만드는 파일을 적고, (확인을 받은 뒤) 패키지를 설치하고, 남은 일을 번호를 붙여 쉬운 말로 적어 준다. **앱의 파일 셋을 고치고 어떤 파일을 어떻게 고쳤는지 요약의 "Changed:" 목록에 한 줄씩 적어 준다.** `next.config`의 export를 `withCms(...)`로 감싸고, 루트 레이아웃 `<html>`에 `suppressHydrationWarning`을 달고, `.gitignore`에 `.env.local`과 `.monti/`를 더한다. 이에 대해서는 묻지 않는다. 안전하게 바꿀 수 없는 모양의 파일(함수를 export하는 설정, `<html>`이 없는 레이아웃 등)은 건드리지 않고, 이유와 함께 남은 일 목록에 넣는다. `.env.local`은 쓰지 않는다. 묻지 않고 파일을 덮어쓰지 않고, 다시 돌려도 안전하다.
 
 **알아내는 것:** App Router 폴더(`app/` 또는 `src/app/`), 패키지 매니저(락 파일이나 `packageManager`), TypeScript, 개발 포트(`dev` 스크립트), 이미 있는 `next.config`의 모양, `.env.local`을 빠뜨린 `.gitignore`, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`(모두 적어 줄 내용을 맞추는 데만 쓴다), Markdown·MDX 폴더(`content/`, `posts/`, `_posts/`, `blog/` 등). 그 폴더의 front matter 키가 시작용 `post` 컬렉션의 모양이 되고(아래 "front matter에 맞춘 모양" 참고). `pages/`만 있는 앱은 이유를 알리고 멈춘다.
 
@@ -132,10 +132,9 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 1. 설치 명령(돌리지 않았을 때만. 앱에 TypeScript가 없으면 그 짧은 안내가 앞에 온다),
 2. `next.config` 변경과 `<html>`의 `suppressHydrationWarning`. init이 직접 하지 못한 것만, 이유와 정확한 변경과 함께 나온다. 직접 고쳤으면 "Changed:"에 파일과 변경이 적히고, 이미 되어 있는 파일은 그대로 두고 "이미 있음"으로 적는다. `next.config`가 없으면 `next.config.ts`를 만든다,
 3. `cp .env.example .env.local`을 하고 채워 넣기, `MONTI_SECRET`을 만드는 명령(`openssl rand -base64 32`, 또는 한 줄짜리 `node -e` 명령)과 함께,
-4. `.gitignore`의 `.env.local`(아직 무시하지 않을 때만),
-5. `monti migrate`,
-6. `monti doctor`(위 단계 중 빠진 것이 있으면 알려 준다),
-7. `pnpm dev`, 그다음 관리자 주소(`/studio`) 열기.
+4. `monti migrate`,
+5. `monti doctor`(위 단계 중 빠진 것이 있으면 알려 준다),
+6. `pnpm dev`, 그다음 관리자 주소(`/studio`) 열기.
 
 그 뒤에 해당하는 안내가 붙는다: git-sync 대상, 그리고 로그인에 대한 한 항목이다. **이메일과 비밀번호**(기본)이면 배포한 직후 관리자를 열어 첫 관리자를 만들라는 것이고(또는 운영 데이터베이스를 가리키게 해서 내 컴퓨터에서 앱을 프로덕션 모드로 돌려 미리 만든다. `next dev`에서는 로그인 없이 관리자라서 그 화면이 나오지 않는다), 비밀번호를 잊었을 때는 `monti admin:reset-password`다. **GitHub**이면 홈페이지·콜백 URL과 함께 OAuth 앱을 만들고 `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_ADMIN_GITHUB_ID`를 채우라는 것이다. 어느 쪽이든 `monti.config.ts`에는 이미 `auth: auth({ providers: [...] })` 줄이 있고 `@monti-cms/auth`는 설치돼 있다.
 

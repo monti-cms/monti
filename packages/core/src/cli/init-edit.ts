@@ -4,6 +4,8 @@
  * the result says why, so the step can be listed for the person to do by hand. Nothing here reads or writes a file.
  */
 
+import { ignoresEnvLocal } from "./init-detect";
+
 /** What an edit decided. */
 export type TextEdit =
 	/** The file now reads `text`; `change` says what changed, in one line. */
@@ -196,21 +198,25 @@ const MONTI_FOLDER_LINES = [
 	"/.monti/**",
 ];
 
-/** Adds `.monti/` to the text of a `.gitignore` (`undefined`: there is none, so it is created). Left alone when a line already covers it. */
-export function ignoreMontiFolder(text: string | undefined): TextEdit {
-	if (text === undefined) {
-		return {
-			status: "edit",
-			text: ".monti/\n",
-			change: "created it with .monti/ (monti migrate writes its logs there)",
-		};
-	}
-	if (text.split(/\r?\n/).some((line) => MONTI_FOLDER_LINES.includes(line.trim()))) return { status: "present" };
-	const eol = text.includes("\r\n") ? "\r\n" : "\n";
-	const separator = text === "" || text.endsWith("\n") ? "" : eol;
+/**
+ * Adds what Monti needs kept out of git to the text of a `.gitignore` (`undefined`: there is none, so it is created): `.env.local` (it holds the secrets) and
+ * `.monti/` (where `monti migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
+ */
+export function ignoreForMonti(text: string | undefined): TextEdit {
+	const lines = (text ?? "").split(/\r?\n/).map((line) => line.trim());
+	const missing = [
+		...(ignoresEnvLocal(text ?? "") ? [] : [{ line: ".env.local", why: "it holds your secrets" }]),
+		...(lines.some((line) => MONTI_FOLDER_LINES.includes(line))
+			? []
+			: [{ line: ".monti/", why: "monti migrate writes its logs there" }]),
+	];
+	if (missing.length === 0) return { status: "present" };
+	const eol = text?.includes("\r\n") ? "\r\n" : "\n";
+	const separator = text === undefined || text === "" || text.endsWith("\n") ? "" : eol;
+	const what = missing.map((item) => `${item.line} (${item.why})`).join(" and ");
 	return {
 		status: "edit",
-		text: `${text}${separator}.monti/${eol}`,
-		change: "added .monti/ (monti migrate writes its logs there)",
+		text: `${text ?? ""}${separator}${missing.map((item) => item.line).join(eol)}${eol}`,
+		change: text === undefined ? `created it with ${what}` : `added ${what}`,
 	};
 }

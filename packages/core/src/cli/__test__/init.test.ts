@@ -124,7 +124,7 @@ describe("monti init in a fresh create-next-app", () => {
 		// The summary names each edited file with the exact change, next to "Created:".
 		const text = formatInitReport(report);
 		expect(text).toContain(
-			"Changed:\n  - next.config.ts \u2014 wrapped the export in withCms(), added the import from @monti-cms/nextjs/config\n  - app/layout.tsx \u2014 added suppressHydrationWarning to <html>\n  - .gitignore \u2014 added .monti/ (monti migrate writes its logs there)",
+			"Changed:\n  - next.config.ts \u2014 wrapped the export in withCms(), added the import from @monti-cms/nextjs/config\n  - app/layout.tsx \u2014 added suppressHydrationWarning to <html>\n  - .gitignore \u2014 added .env.local (it holds your secrets) and .monti/ (monti migrate writes its logs there)",
 		);
 		expect(text.indexOf("Created:")).toBeLessThan(text.indexOf("Changed:"));
 	});
@@ -271,7 +271,7 @@ describe("monti init in a fresh create-next-app", () => {
 			"Create the tables: pnpm exec monti migrate",
 			"Check the setup: pnpm exec monti doctor",
 			"Start the app: pnpm dev, then open http://localhost:3000/studio",
-			expect.stringContaining("Right after you deploy, open http://localhost:3000/studio and create the first admin"),
+			expect.stringContaining("Right after you deploy, open <your site>/studio and create the first admin"),
 		]);
 		expect(next[0]).toContain("cp .env.example .env.local");
 		expect(next[0]).toContain("openssl rand -base64 32");
@@ -507,20 +507,20 @@ describe("monti init tailors what is left to the app", () => {
 	});
 
 	it("adds .monti/ to .gitignore once, keeps a line that already covers it, and reports it", async () => {
-		const dir = fixtureApp({ ".gitignore": "node_modules" });
+		const dir = fixtureApp({ ".gitignore": "node_modules\n.env.local" });
 		const first = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, ".gitignore")).toBe("node_modules\n.monti/\n");
+		expect(read(dir, ".gitignore")).toBe("node_modules\n.env.local\n.monti/\n");
 		expect(first.changed).toContainEqual({
 			file: ".gitignore",
 			change: "added .monti/ (monti migrate writes its logs there)",
 		});
 		const second = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, ".gitignore")).toBe("node_modules\n.monti/\n");
+		expect(read(dir, ".gitignore")).toBe("node_modules\n.env.local\n.monti/\n");
 		expect(second.changed.map((item) => item.file)).not.toContain(".gitignore");
 		for (const covered of [".monti", "/.monti/", ".monti/*"]) {
-			const other = fixtureApp({ ".gitignore": `${covered}\n` });
+			const other = fixtureApp({ ".gitignore": `${covered}\n.env.local\n` });
 			const report = await initProject({ cwd: other, ...quiet() });
-			expect(read(other, ".gitignore")).toBe(`${covered}\n`);
+			expect(read(other, ".gitignore")).toBe(`${covered}\n.env.local\n`);
 			expect(report.changed.map((item) => item.file)).not.toContain(".gitignore");
 		}
 	});
@@ -584,25 +584,36 @@ describe("monti init tailors what is left to the app", () => {
 		expect(report.next.join("\n")).not.toMatch(/next\.config|suppressHydrationWarning/);
 	});
 
-	it("a missing .gitignore gets a step that creates it; one that covers .env.local gets none", async () => {
+	it("a missing .gitignore is created, and one that misses .env.local gets it; none of it is left to the person", async () => {
 		const none = fixtureApp({ ".gitignore": null });
 		const report = await initProject({ cwd: none, ...quiet() });
-		// init creates it for the .monti/ logs folder and says so; .env.local is still the person's step.
-		expect(read(none, ".gitignore")).toBe(".monti/\n");
+		expect(read(none, ".gitignore")).toBe(".env.local\n.monti/\n");
 		expect(report.changed).toContainEqual({
 			file: ".gitignore",
-			change: "created it with .monti/ (monti migrate writes its logs there)",
+			change: "created it with .env.local (it holds your secrets) and .monti/ (monti migrate writes its logs there)",
 		});
-		const step = report.next.find((line) => line.startsWith("Keep .env.local out of git")) ?? "";
-		expect(step).toBe("Keep .env.local out of git: add this line to .gitignore:\n.env.local");
+		expect(report.next.join("\n")).not.toContain("out of git");
 
 		const uncovered = fixtureApp({ ".gitignore": "node_modules\n" });
 		const second = await initProject({ cwd: uncovered, ...quiet() });
-		expect(read(uncovered, ".gitignore")).toBe("node_modules\n.monti/\n");
-		expect(second.next).toContain("Keep .env.local out of git: add this line to .gitignore:\n.env.local");
+		expect(read(uncovered, ".gitignore")).toBe("node_modules\n.env.local\n.monti/\n");
+		expect(second.next.join("\n")).not.toContain("out of git");
 
 		const covered = fixtureApp({ ".gitignore": ".env*.local\n" });
-		expect((await initProject({ cwd: covered, ...quiet() })).next.join("\n")).not.toContain("out of git");
+		const third = await initProject({ cwd: covered, ...quiet() });
+		expect(read(covered, ".gitignore")).toBe(".env*.local\n.monti/\n");
+		expect(third.changed).toContainEqual({
+			file: ".gitignore",
+			change: "added .monti/ (monti migrate writes its logs there)",
+		});
+	});
+
+	it("the deploy step names the site only when it is not a local address", async () => {
+		const local = await initProject({ cwd: fixtureApp(), ...quiet() });
+		expect(local.next.join("\n")).toContain("open <your site>/studio and create the first admin");
+		expect(local.next.join("\n")).not.toContain("Right after you deploy, open http://localhost");
+		const real = await initProject({ cwd: fixtureApp(), ...quiet(), siteUrl: "https://blog.example.com/" });
+		expect(real.next.join("\n")).toContain("open https://blog.example.com/studio and create the first admin");
 	});
 
 	it("an app without TypeScript gets the install note before everything else", async () => {

@@ -5,7 +5,7 @@ import { findRootLayout } from "./first-run";
 import { detectApp, type PackageManager } from "./init-detect";
 import {
 	addSuppressHydrationWarning,
-	ignoreMontiFolder,
+	ignoreForMonti,
 	NEXT_CONFIG_IMPORT,
 	type TextEdit,
 	wrapNextConfig,
@@ -378,9 +378,9 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			layoutManualStep(rootLayout, reason),
 		);
 	}
-	// migrate writes its logs under .monti/, which does not belong in git.
+	// .env.local holds the secrets and migrate writes its logs under .monti/: neither belongs in git.
 	const gitignore = writer.exists(".gitignore") ? writer.read(".gitignore") : undefined;
-	planEdit(".gitignore", ignoreMontiFolder(gitignore), () => "");
+	planEdit(".gitignore", ignoreForMonti(gitignore), () => "");
 	planned.push(
 		{ file: pageFile, content: adminPageTemplate(configImport(pageFile), { instant: usesCacheComponents }) },
 		{ file: layoutFile, content: adminLayoutTemplate(configImport(layoutFile), { blocks: answers.blocks.length > 0 }) },
@@ -478,11 +478,6 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`,
 		].join("\n"),
 	);
-	if (!app.envLocalIgnored) {
-		todo.push(
-			`Keep .env.local out of git: add this line to .gitignore${writer.exists(".gitignore") ? "" : " (create the file)"}:\n.env.local`,
-		);
-	}
 	todo.push(
 		`Create the tables: ${exec(manager, "migrate")}`,
 		`Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`,
@@ -493,6 +488,9 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/git-sync to save the GitHub token.`,
 		);
 	}
+	const siteBase = answers.siteUrl.replace(/\/+$/, "");
+	const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(siteBase);
+	const deployedAdmin = `${local ? "<your site>" : siteBase}${answers.adminPath}`;
 	if (answers.login === "github") {
 		todo.push(
 			[
@@ -506,7 +504,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	} else {
 		todo.push(
 			[
-				`Right after you deploy, open ${answers.siteUrl.replace(/\/+$/, "")}${answers.adminPath} and create the first admin (an email and a password). That screen closes as soon as one admin exists.`,
+				`Right after you deploy, open ${deployedAdmin} and create the first admin (an email and a password). That screen closes as soon as one admin exists.`,
 				`Or create it beforehand: run the app in production mode (\`${script(manager, "build")}\` then \`${manager === "npm" || manager === "bun" ? `${manager} run start` : `${manager} start`}\`) pointed at the production database (its DATABASE_URL) and open ${answers.adminPath} on this machine. (Under \`next dev\` you are the admin without signing in, so that screen does not show.)`,
 				`A forgotten password: ${exec(manager, "admin:reset-password")}`,
 			].join("\n"),
