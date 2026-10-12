@@ -152,7 +152,7 @@ describe("two schema files in one process", () => {
 	};
 
 	const metaOf = async (cms: Cms) => {
-		const response = await cms.handle(new Request("http://localhost/api/cms/v1/meta"));
+		const response = await cms.handle(new Request("http://localhost/api/monti/v1/meta"));
 		expect(response.status).toBe(200);
 		return (await response.json()) as { collections: string[] };
 	};

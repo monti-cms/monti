@@ -37,7 +37,7 @@ describe("Relations API Contract", () => {
 	});
 
 	it("GET /entries/:id/relations returns incoming references for existing entry", async () => {
-		const req = new Request("http://localhost/api/cms/v1/entries/tag-1/relations");
+		const req = new Request("http://localhost/api/monti/v1/entries/tag-1/relations");
 		const res = await getRelations(req, { params: Promise.resolve({ id: "tag-1" }), cms });
 
 		expect(res.status).toBe(200);
@@ -50,13 +50,13 @@ describe("Relations API Contract", () => {
 
 	it("GET /entries/:id/relations requires admin access", async () => {
 		verifyAdmin.mockRejectedValueOnce(new AuthError("unauthorized", "Not logged in"));
-		const req = new Request("http://localhost/api/cms/v1/entries/tag-1/relations");
+		const req = new Request("http://localhost/api/monti/v1/entries/tag-1/relations");
 		const res = await getRelations(req, { params: Promise.resolve({ id: "tag-1" }), cms });
 		expect(res.status).toBe(401);
 	});
 
 	it("GET /entries/:id/relations returns 404 for nonexistent entry", async () => {
-		const req = new Request("http://localhost/api/cms/v1/entries/non-existent/relations");
+		const req = new Request("http://localhost/api/monti/v1/entries/non-existent/relations");
 		const res = await getRelations(req, { params: Promise.resolve({ id: "non-existent" }), cms });
 
 		expect(res.status).toBe(404);

@@ -41,8 +41,8 @@ import * as r34 from "./v1/templates/[id]/route";
 import * as r33 from "./v1/templates/route";
 
 /**
- * Admin API (`/api/cms/v1/*`) route table, served by `cms.handle(request)` (a Next app mounts it with `createRouteHandler(cms)` of `@monti-cms/nextjs` from a single catch-all route,
- * `app/api/cms/[...path]/route.ts`). Paths mirror the route folders (`[id]` is one segment).
+ * Admin API (`/api/monti/v1/*`) route table, served by `cms.handle(request)` (a Next app mounts it with `createRouteHandler(cms)` of `@monti-cms/nextjs` from a single catch-all route,
+ * `app/api/monti/[...path]/route.ts`). Paths mirror the route folders (`[id]` is one segment).
  * Every route gets the CMS instance in its context (`{ params, cms }`).
  */
 
@@ -139,7 +139,7 @@ export const CMS_ROUTE_PATTERNS: readonly string[] = ROUTES.map((route) => route
 const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
 
 /**
- * The path segments after the API prefix (`/api/cms/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/cms/v1/entries/<id>`.
+ * The path segments after the API prefix (`/api/monti/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/monti/v1/entries/<id>`.
  * The site's `basePath` is skipped when the URL has it. `null` if the URL is not under the API prefix.
  */
 export function pathFromRequest(request: Request): string[] | null {
@@ -162,7 +162,7 @@ export function pathFromRequest(request: Request): string[] | null {
 
 /**
  * The request handler of one CMS instance (`cms.handle()` calls it): standard `Request` in, `Response` out, no framework types.
- * `auth/*` is forwarded to the auth handler when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
+ * `auth/*` is forwarded to the auth handler when the auth base path is the default (`/api/monti/auth`), so no separate auth route file is needed.
  */
 export function createRequestHandler(cms: Cms): (request: Request, options?: HandleOptions) => Promise<Response> {
 	let pluginCompiled: Promise<CompiledRoute[]> | undefined;

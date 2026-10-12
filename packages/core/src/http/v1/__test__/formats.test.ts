@@ -109,7 +109,7 @@ describe("the format option of the admin API", () => {
 
 	const post = async (body: Record<string, unknown>) =>
 		postEntries(
-			send("http://localhost/api/cms/v1/entries", "POST", {
+			send("http://localhost/api/monti/v1/entries", "POST", {
 				collection: contentCollection,
 				slug: unique("post"),
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
@@ -125,13 +125,13 @@ describe("the format option of the admin API", () => {
 	};
 
 	const patch = (id: string, body: Record<string, unknown>) =>
-		patchEntry(send(`http://localhost/api/cms/v1/entries/${id}`, "PATCH", body), {
+		patchEntry(send(`http://localhost/api/monti/v1/entries/${id}`, "PATCH", body), {
 			params: Promise.resolve({ id }),
 			cms,
 		});
 
 	const read = async (id: string, query = "") => {
-		const res = await getEntry(new Request(`http://localhost/api/cms/v1/entries/${id}${query}`), {
+		const res = await getEntry(new Request(`http://localhost/api/monti/v1/entries/${id}${query}`), {
 			params: Promise.resolve({ id }),
 			cms,
 		});
@@ -258,7 +258,7 @@ describe("the format option of the admin API", () => {
 			});
 			const write = async (body: Record<string, unknown>) =>
 				postEntries(
-					send("http://localhost/api/cms/v1/entries", "POST", {
+					send("http://localhost/api/monti/v1/entries", "POST", {
 						collection: contentCollection,
 						slug: unique("bare"),
 						metadata: await requiredMetadata(contentCollection, unique("Bare"), relationTarget),
@@ -400,7 +400,7 @@ describe("the format option of the admin API", () => {
 
 	describe("meta", () => {
 		it("lists the formats with what a client needs: the file facts, and whether the format can be read back", async () => {
-			const res = await getMeta(new Request("http://localhost/api/cms/v1/meta"), { cms });
+			const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 			const { formats } = await res.json();
 
 			expect(formats).toEqual(
@@ -415,7 +415,10 @@ describe("the format option of the admin API", () => {
 	describe("templates", () => {
 		it("takes a document, or a text with its format, and returns the document", async () => {
 			const fromDoc = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", { name: unique("from doc"), doc: docOf("## From doc") }),
+				send("http://localhost/api/monti/v1/templates", "POST", {
+					name: unique("from doc"),
+					doc: docOf("## From doc"),
+				}),
 				{ cms },
 			);
 			expect(fromDoc.status).toBe(201);
@@ -424,7 +427,7 @@ describe("the format option of the admin API", () => {
 			expect(a).not.toHaveProperty("mdx");
 
 			const fromText = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", {
+				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("from text"),
 					format: "paragraphs",
 					body: "Template one\n\nTemplate two",
@@ -438,9 +441,12 @@ describe("the format option of the admin API", () => {
 		});
 
 		it("creates an empty template when it gets no body", async () => {
-			const res = await postTemplate(send("http://localhost/api/cms/v1/templates", "POST", { name: unique("empty") }), {
-				cms,
-			});
+			const res = await postTemplate(
+				send("http://localhost/api/monti/v1/templates", "POST", { name: unique("empty") }),
+				{
+					cms,
+				},
+			);
 
 			expect(res.status).toBe(201);
 			expect((await res.json()).doc.content).toEqual([]);
@@ -453,11 +459,11 @@ describe("the format option of the admin API", () => {
 				{ name, body: "x" },
 				{ name, format: "paragraphs" },
 			]) {
-				const res = await postTemplate(send("http://localhost/api/cms/v1/templates", "POST", body), { cms });
+				const res = await postTemplate(send("http://localhost/api/monti/v1/templates", "POST", body), { cms });
 				expect(res.status, JSON.stringify(body)).toBe(400);
 			}
 			const notADoc = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", { name, doc: "## text" }),
+				send("http://localhost/api/monti/v1/templates", "POST", { name, doc: "## text" }),
 				{
 					cms,
 				},
@@ -468,14 +474,14 @@ describe("the format option of the admin API", () => {
 
 		it("an unknown format is a 400, and a text the format rejects is a 422 with its findings (a template cannot hold unparsed text)", async () => {
 			const unknown = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", { name: unique("u"), format: "hugo", body: "x" }),
+				send("http://localhost/api/monti/v1/templates", "POST", { name: unique("u"), format: "hugo", body: "x" }),
 				{ cms },
 			);
 			expect(unknown.status).toBe(400);
 			expect((await unknown.json()).code).toBe("unknown_format");
 
 			const rejected = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", {
+				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("r"),
 					format: "paragraphs",
 					body: "Bad <<< text",
@@ -491,7 +497,7 @@ describe("the format option of the admin API", () => {
 
 		it("a patch with a text keeps the ids of the blocks that stay, and a patch without a body keeps the body", async () => {
 			const createdRes = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", {
+				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("patch"),
 					format: "paragraphs",
 					body: "Keep\n\nChange",
@@ -501,7 +507,7 @@ describe("the format option of the admin API", () => {
 			const template = await createdRes.json();
 
 			const edited = await patchTemplate(
-				send(`http://localhost/api/cms/v1/templates/${template.id}`, "PATCH", {
+				send(`http://localhost/api/monti/v1/templates/${template.id}`, "PATCH", {
 					expectedVersion: template.version,
 					format: "paragraphs",
 					body: "Keep\n\nChanged!",
@@ -515,7 +521,7 @@ describe("the format option of the admin API", () => {
 			);
 
 			const renamed = await patchTemplate(
-				send(`http://localhost/api/cms/v1/templates/${template.id}`, "PATCH", {
+				send(`http://localhost/api/monti/v1/templates/${template.id}`, "PATCH", {
 					expectedVersion: next.version,
 					name: unique("renamed"),
 				}),
@@ -526,7 +532,7 @@ describe("the format option of the admin API", () => {
 
 		it("?format= adds the text of each template to a list and to one template", async () => {
 			const createdRes = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", {
+				send("http://localhost/api/monti/v1/templates", "POST", {
 					name: unique("text"),
 					format: "paragraphs",
 					body: "Alpha\n\nBeta",
@@ -536,7 +542,7 @@ describe("the format option of the admin API", () => {
 			const template = await createdRes.json();
 
 			const one = await getTemplate(
-				new Request(`http://localhost/api/cms/v1/templates/${template.id}?format=paragraphs`),
+				new Request(`http://localhost/api/monti/v1/templates/${template.id}?format=paragraphs`),
 				{
 					params: Promise.resolve({ id: template.id }),
 					cms,
@@ -544,22 +550,24 @@ describe("the format option of the admin API", () => {
 			);
 			expect((await one.json()).body).toBe("Alpha\n\nBeta");
 
-			const list = await getTemplates(new Request("http://localhost/api/cms/v1/templates?format=paragraphs"), { cms });
+			const list = await getTemplates(new Request("http://localhost/api/monti/v1/templates?format=paragraphs"), {
+				cms,
+			});
 			const items = (await list.json()).items as { id: string; body?: string }[];
 			expect(items.find((item) => item.id === template.id)?.body).toBe("Alpha\n\nBeta");
 			for (const item of items) expect(typeof item.body).toBe("string");
 
-			const plain = await getTemplates(new Request("http://localhost/api/cms/v1/templates"), { cms });
+			const plain = await getTemplates(new Request("http://localhost/api/monti/v1/templates"), { cms });
 			for (const item of (await plain.json()).items) expect(item).not.toHaveProperty("body");
 
-			const unknown = await getTemplates(new Request("http://localhost/api/cms/v1/templates?format=hugo"), { cms });
+			const unknown = await getTemplates(new Request("http://localhost/api/monti/v1/templates?format=hugo"), { cms });
 			expect(unknown.status).toBe(400);
 			expect((await unknown.json()).code).toBe("unknown_format");
 		});
 
 		it("deleting a template still needs its version", async () => {
 			const createdRes = await postTemplate(
-				send("http://localhost/api/cms/v1/templates", "POST", { name: unique("del") }),
+				send("http://localhost/api/monti/v1/templates", "POST", { name: unique("del") }),
 				{
 					cms,
 				},
@@ -567,7 +575,7 @@ describe("the format option of the admin API", () => {
 			const template = await createdRes.json();
 
 			const res = await deleteTemplate(
-				new Request(`http://localhost/api/cms/v1/templates/${template.id}?expectedVersion=${template.version}`, {
+				new Request(`http://localhost/api/monti/v1/templates/${template.id}?expectedVersion=${template.version}`, {
 					method: "DELETE",
 					headers: { origin: "http://localhost" },
 				}),

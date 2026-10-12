@@ -39,7 +39,7 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET";
-		if (method === "GET" && input.startsWith("/api/cms/v1/events?"))
+		if (method === "GET" && input.startsWith("/api/monti/v1/events?"))
 			return json({
 				items: [item("e1", "search-index", "failed"), item("e2", "webhook", "dead", "deleted")],
 				total: 2,
@@ -87,7 +87,7 @@ describe("EventsScreen", () => {
 			await screen.findByRole("button", { name: t("action.retryLabel", { subscriber: "search-index" }) }),
 		);
 
-		await waitFor(() => expect(posts()).toEqual([["/api/cms/v1/events/e1/retry", { subscriber: "search-index" }]]));
+		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/e1/retry", { subscriber: "search-index" }]]));
 	});
 
 	it("asks before dismissing, then posts", async () => {
@@ -98,7 +98,7 @@ describe("EventsScreen", () => {
 		const dialog = await screen.findByRole("alertdialog");
 		fireEvent.click(within(dialog).getByRole("button", { name: t("action.dismiss") }));
 
-		await waitFor(() => expect(posts()).toEqual([["/api/cms/v1/events/e2/dismiss", { subscriber: "webhook" }]]));
+		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/e2/dismiss", { subscriber: "webhook" }]]));
 	});
 
 	it("retries everything due", async () => {
@@ -109,7 +109,7 @@ describe("EventsScreen", () => {
 		renderScreen();
 		fireEvent.click(await screen.findByRole("button", { name: t("action.retryAll") }));
 
-		await waitFor(() => expect(posts()).toEqual([["/api/cms/v1/events/retry", {}]]));
+		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.empty"))).toBeTruthy();
 	});

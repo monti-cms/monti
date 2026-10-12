@@ -82,7 +82,7 @@ export const markdown = () => definePlugin({ name: "markdown", options: {}, form
 
 ## How it behaves
 
-- `cms.read.getEntry({ collection: "post", slug, format: "markdown" })` returns `entry.body = { format, text }`. The public JSON API (`/api/cms/v1/public/entries/post/<slug>?format=markdown`, when `publicApi` is on) and the export do the same.
+- `cms.read.getEntry({ collection: "post", slug, format: "markdown" })` returns `entry.body = { format, text }`. The public JSON API (`/api/monti/v1/public/entries/post/<slug>?format=markdown`, when `publicApi` is on) and the export do the same.
 - Writing `{ body, format: "markdown" }` reads the text into the document. An address of this site in a link (`/posts/target`) becomes a link by entry id, and reads back as the address (core's job, not the format's).
 - `format: "text"` reads, but a write with it fails with `format_not_importable`. An unknown name fails with `unknown_format`.
 - Because `export` and `import` are pure, you can test a format with plain unit tests: round-trip a document and check that what `import` returns is real blocks and marks.

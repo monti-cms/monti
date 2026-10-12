@@ -5,7 +5,7 @@ English | [한국어](README.ko.md)
 Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, body templates, failed event deliveries (`/admin/events`), trash and login screens.
 It is framework-neutral: it imports nothing from Next.js and reaches the router through an adapter it is given (see "Router adapter"). Next.js (App Router) is the supported host for now, through `@monti-cms/nextjs`.
 Plugins (e.g. `@monti-cms/ai`) add screens, sidebar items, field-side buttons and edit screen actions.
-The screens only call the core's admin API (`/api/cms/v1/*`). You can also skip installing it and build your own screens against the same API.
+The screens only call the core's admin API (`/api/monti/v1/*`). You can also skip installing it and build your own screens against the same API.
 
 ## Setup
 
@@ -14,7 +14,7 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 - **Admin path.** Defaults to `/admin`; change it with the site config's `admin.path` (e.g. `/studio`). The app's admin route folder
   (`app/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
   plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/core/client`).
-  The admin API (`/api/cms/v1`) does not change.
+  The admin API (`/api/monti/v1`) does not change.
 - **View site.** `View site` below the sidebar opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
 - **Preview.** `Preview` on the edit screen appends the public path to `site.previewPath` and passes the language as `site.previewLocaleParam` (default
   `?locale=`). The URL in the search preview follows `site.localePrefix`.
@@ -143,7 +143,7 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Schema screen
 
-`<admin path>/schema` (sidebar: Manage > Schema) rewrites `monti.schema.ts` on the development server while that file is plain data (the `defineSchema` import and `export default defineSchema({ ... })`, nothing else). It is read-only everywhere else, and for a file that has code in it (an import, a spread, a call), with the reason. Saving writes the whole file again, so comments in it are dropped (the screen says so). It is the screen of the `GET/PUT /api/cms/v1/schema` and `POST /api/cms/v1/schema/preview` routes of the core (see "Editing the schema in the admin" in the `@monti-cms/core` README for who may write, the order of a save and how the running instance reloads).
+`<admin path>/schema` (sidebar: Manage > Schema) rewrites `monti.schema.ts` on the development server while that file is plain data (the `defineSchema` import and `export default defineSchema({ ... })`, nothing else). It is read-only everywhere else, and for a file that has code in it (an import, a spread, a call), with the reason. Saving writes the whole file again, so comments in it are dropped (the screen says so). It is the screen of the `GET/PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` routes of the core (see "Editing the schema in the admin" in the `@monti-cms/core` README for who may write, the order of a save and how the running instance reloads).
 
 - **Collections**: label, icon, kind, public address, body, and the allowed blocks, marks and heading levels (a switch per list: off allows everything, on shows a checkbox per name the site knows). Fields of every kind open in place: name, kind, label, help text, required, languages, the options of the kind (text length and rows, a slug's source, a relation's target, media kind, a back link's relation, a view's name), the options of a select with their labels, default and order, and the dependent fields of each choice of a conditional field. Fields move up and down and can be removed; a field renamed here keeps the layout, list columns and slug source that name it. Layout groups (title, tab, collapsed, fields in order) and list columns are edited as ordered lists.
 - **Locales**: the content locales (a saved locale's code is a stored value, so only new locales get a code), the default locale and the time zone.

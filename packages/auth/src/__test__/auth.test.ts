@@ -29,7 +29,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 
 		expect(authorize.origin + authorize.pathname).toBe("https://github.com/login/oauth/authorize");
 		expect(authorize.searchParams.get("client_id")).toBe("id");
-		expect(authorize.searchParams.get("redirect_uri")).toBe(`${ORIGIN}/api/cms/auth/callback/github`);
+		expect(authorize.searchParams.get("redirect_uri")).toBe(`${ORIGIN}/api/monti/auth/callback/github`);
 		expect(callback.status).toBe(302);
 		expect(new URL(callback.headers.get("location") ?? "", ORIGIN).pathname).toBe("/studio");
 		expect(jar.names()).toContain("authjs.session-token");
@@ -90,7 +90,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		stubOAuthServers(githubUser(Number(ADMIN_ID)));
 		const cmsAuth = connection();
 		const callback = await cmsAuth.handlers.GET(
-			new Request(`${ORIGIN}/api/cms/auth/callback/github?code=code&state=forged`),
+			new Request(`${ORIGIN}/api/monti/auth/callback/github?code=code&state=forged`),
 		);
 		const jar = new CookieJar();
 		jar.store(callback);
@@ -104,7 +104,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 		const { jar } = await loginThrough(cmsAuth, "github");
 		const signOut = (await cmsAuth.signOut({
 			redirectTo: "/studio/login",
-			request: new Request(`${ORIGIN}/api/cms/v1/session/sign-out`, {
+			request: new Request(`${ORIGIN}/api/monti/v1/session/sign-out`, {
 				method: "POST",
 				headers: { cookie: jar.header() },
 			}),
@@ -118,7 +118,7 @@ describe("the OAuth flow (GitHub, mocked)", () => {
 	it("network requests keep the CSRF check: a plain POST to sign in is refused", async () => {
 		const cmsAuth = connection();
 		const response = await cmsAuth.handlers.POST(
-			new Request(`${ORIGIN}/api/cms/auth/signin/github`, {
+			new Request(`${ORIGIN}/api/monti/auth/signin/github`, {
 				method: "POST",
 				headers: { "content-type": "application/x-www-form-urlencoded" },
 				body: "callbackUrl=%2Fstudio",
@@ -259,7 +259,7 @@ describe("host trust", () => {
 	const signInAt = (cmsAuth: ReturnType<typeof connect>, headers: Record<string, string>) =>
 		cmsAuth.signIn("github", {
 			redirectTo: "/studio",
-			request: new Request(`${ORIGIN}/api/cms/v1/session/sign-in/github`, { method: "POST", headers }),
+			request: new Request(`${ORIGIN}/api/monti/v1/session/sign-in/github`, { method: "POST", headers }),
 		}) as Promise<Response>;
 	const redirectUri = (response: Response) =>
 		new URL(response.headers.get("location") ?? "").searchParams.get("redirect_uri");
@@ -281,14 +281,14 @@ describe("host trust", () => {
 			"x-forwarded-host": "cms.example.com",
 			"x-forwarded-proto": "https",
 		});
-		expect(redirectUri(response)).toBe("https://cms.example.com/api/cms/auth/callback/github");
+		expect(redirectUri(response)).toBe("https://cms.example.com/api/monti/auth/callback/github");
 	});
 
 	it("AUTH_URL pins the origin, and a forwarded host is then ignored", async () => {
 		vi.stubEnv("AUTH_URL", "https://cms.example.com");
 		const cmsAuth = connect({ providers: [github1()] }, { trustHost: false });
 		const response = await signInAt(cmsAuth, { host: "evil.example", "x-forwarded-host": "evil.example" });
-		expect(redirectUri(response)).toBe("https://cms.example.com/api/cms/auth/callback/github");
+		expect(redirectUri(response)).toBe("https://cms.example.com/api/monti/auth/callback/github");
 	});
 
 	it("warns in production when the host is not trusted and there is no AUTH_URL", () => {
@@ -303,7 +303,7 @@ describe("host trust", () => {
 
 describe("the login path", () => {
 	it("is under the admin API by default, and another path can be chosen", () => {
-		expect(connect({ providers: [github()] }).basePath).toBe("/api/cms/auth");
+		expect(connect({ providers: [github()] }).basePath).toBe("/api/monti/auth");
 		expect(connect({ providers: [github()], basePath: "/api/auth/" }).basePath).toBe("/api/auth");
 	});
 });

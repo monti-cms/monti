@@ -278,7 +278,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	const adminDir = posix(path.join(app.appDir, ...answers.adminPath.split("/").filter(Boolean)));
 	const pageFile = `${adminDir}/[[...path]]/page.tsx`;
 	const layoutFile = `${adminDir}/layout.tsx`;
-	const routeFile = `${app.appDir}/api/cms/[...path]/route.ts`;
+	const routeFile = `${app.appDir}/api/monti/[...path]/route.ts`;
 	const configImport = (from: string) =>
 		dotted(posix(path.relative(path.dirname(from), configFile.replace(/\.ts$/, ""))));
 

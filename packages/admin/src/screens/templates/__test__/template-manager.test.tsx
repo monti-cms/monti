@@ -42,11 +42,11 @@ beforeEach(() => {
 	saved = [];
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET";
-		if (input === "/api/cms/v1/templates" && method === "GET")
+		if (input === "/api/monti/v1/templates" && method === "GET")
 			return listFails
 				? json({ code: "internal", message: "서버 오류" }, 500)
 				: json({ items: [template("a", "일반 게시글"), template("b", "메모")] });
-		if (input === "/api/cms/v1/templates/a" && method === "PATCH") {
+		if (input === "/api/monti/v1/templates/a" && method === "PATCH") {
 			const body = JSON.parse(String(init?.body));
 			saved.push(body);
 			return json({ ...template("a", body.name, 2), doc: body.doc });

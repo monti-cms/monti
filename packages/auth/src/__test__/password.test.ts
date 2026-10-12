@@ -16,7 +16,7 @@ const setup = () => {
 	const signIn = async (email: string, secret: string, jar = new CookieJar()) => {
 		const response = (await cmsAuth.signIn("password", {
 			redirectTo: "/studio",
-			request: new Request(`${ORIGIN}/api/cms/v1/session/sign-in/password`, { method: "POST" }),
+			request: new Request(`${ORIGIN}/api/monti/v1/session/sign-in/password`, { method: "POST" }),
 			credentials: { email, password: secret },
 		})) as Response;
 		jar.store(response);

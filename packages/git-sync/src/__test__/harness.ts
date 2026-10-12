@@ -14,7 +14,7 @@ export const WEBHOOK_SECRET = "hook-secret";
 export const TOKEN = "ghp_test_token_1234";
 
 const adminAuth = (): CmsAuth => ({
-	basePath: "/api/cms/auth",
+	basePath: "/api/monti/auth",
 	handlers: { GET: async () => new Response("auth"), POST: async () => new Response("auth") },
 	session: async () => ({ user: { id: "admin", accountId: "admin" } }),
 	providers: [],

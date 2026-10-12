@@ -34,7 +34,7 @@ function fakeDatabase(tag: string) {
 }
 
 const fakeAuth = (tag: string, devUserId = tag): CmsAuth => ({
-	basePath: "/api/cms/auth",
+	basePath: "/api/monti/auth",
 	handlers: {
 		GET: async () => new Response(`auth-${tag}`),
 		POST: async () => new Response(`auth-${tag}`),
@@ -111,12 +111,12 @@ describe("createCms: an instance owns its server resources", () => {
 
 		// Each serves its own requests: `handle`, the login connection and the read API all go through the instance.
 		const preferences = async (cms: typeof cmsA) => {
-			const response = await cms.handle(new Request("http://localhost/api/cms/v1/preferences"));
+			const response = await cms.handle(new Request("http://localhost/api/monti/v1/preferences"));
 			return { status: response.status, editor: (await response.json()).editor };
 		};
 		expect(await preferences(cmsA)).toEqual({ status: 200, editor: { inspectorOpen: true } });
 		expect(await preferences(cmsB)).toEqual({ status: 200, editor: { inspectorOpen: false } });
-		const authSession = (cms: typeof cmsA) => cms.handle(new Request("http://localhost/api/cms/auth/session"));
+		const authSession = (cms: typeof cmsA) => cms.handle(new Request("http://localhost/api/monti/auth/session"));
 		expect(await (await authSession(cmsA)).text()).toBe("auth-a");
 		expect(await (await authSession(cmsB)).text()).toBe("auth-b");
 		// A login route file of the app (for a login path that is not the default) uses the instance's own handlers, created on the first request.

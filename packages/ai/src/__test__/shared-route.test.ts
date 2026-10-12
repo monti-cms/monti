@@ -35,7 +35,7 @@ const call = (
 	query = "",
 ) =>
 	handler(
-		new Request(`http://localhost/api/cms/v1/ai/shared${query}`, {
+		new Request(`http://localhost/api/monti/v1/ai/shared${query}`, {
 			method,
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			...(body === undefined ? {} : { body: JSON.stringify(body) }),

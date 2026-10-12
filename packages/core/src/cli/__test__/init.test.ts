@@ -53,7 +53,7 @@ describe("monti init in a fresh create-next-app", () => {
 			"monti.schema.ts",
 			"app/studio/[[...path]]/page.tsx",
 			"app/studio/layout.tsx",
-			"app/api/cms/[...path]/route.ts",
+			"app/api/monti/[...path]/route.ts",
 			".env.example",
 		]);
 		expect(report.overwritten).toEqual([]);
@@ -99,7 +99,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(layout).toContain('import { cms } from "../../monti.config";');
 		expect(layout).toContain('import "@monti-cms/admin/styles.css";');
 		expect(layout).toContain('import "@monti-cms/blocks/styles.css";');
-		expect(read(dir, "app/api/cms/[...path]/route.ts")).toContain('import { cms } from "../../../../monti.config";');
+		expect(read(dir, "app/api/monti/[...path]/route.ts")).toContain('import { cms } from "../../../../monti.config";');
 		expect(config + layout).not.toMatch(/[가-힣]/); // cms-allow-korean: checks that the generated files have no Korean
 	});
 
@@ -199,10 +199,10 @@ describe("monti init in a fresh create-next-app", () => {
 			expect(example).toMatch(new RegExp(`^${name}=$`, "m"));
 		}
 		expect(example).toContain("api.github.com/users/<your-github-login>");
-		expect(example).toContain("http://localhost:3000/api/cms/auth/callback/github");
+		expect(example).toContain("http://localhost:3000/api/monti/auth/callback/github");
 		const step = report.next.at(-1) ?? "";
 		expect(step).toContain("OAuth");
-		expect(step).toContain("http://localhost:3000/api/cms/auth/callback/github");
+		expect(step).toContain("http://localhost:3000/api/monti/auth/callback/github");
 		expect(report.next.join("\n")).not.toContain("create the first admin");
 	});
 
@@ -410,7 +410,7 @@ describe("monti init tailors what is left to the app", () => {
 			"src/monti.schema.ts",
 			"src/app/cms/studio/[[...path]]/page.tsx",
 			"src/app/cms/studio/layout.tsx",
-			"src/app/api/cms/[...path]/route.ts",
+			"src/app/api/monti/[...path]/route.ts",
 			".env.example",
 		]);
 		expect(read(dir, "src/app/cms/studio/layout.tsx")).toContain('import { cms } from "../../../monti.config";');
@@ -649,7 +649,7 @@ describe("monti init tailors what is left to the app", () => {
 			}),
 		});
 		const report = await initProject({ cwd: dir, ...quiet(), login: "github" });
-		expect(report.next.join("\n")).toContain("http://localhost:4000/api/cms/auth/callback/github");
+		expect(report.next.join("\n")).toContain("http://localhost:4000/api/monti/auth/callback/github");
 		expect(read(dir, ".env.example")).toContain("# SITE_URL=https://example.com");
 	});
 

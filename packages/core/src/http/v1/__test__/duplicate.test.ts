@@ -35,7 +35,7 @@ const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 
 describe("Duplicate API Route", () => {
 	it("duplicates entry with 201 Created", async () => {
-		const res = await postDuplicate(postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate"), {
+		const res = await postDuplicate(postReq("http://localhost/api/monti/v1/entries/orig-1/duplicate"), {
 			params: Promise.resolve({ id: "orig-1" }),
 			cms,
 		});
@@ -49,7 +49,9 @@ describe("Duplicate API Route", () => {
 
 	it("passes the caller's copy title to the service", async () => {
 		const res = await postDuplicate(
-			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://localhost", { title: "Original (copy)" }),
+			postReq("http://localhost/api/monti/v1/entries/orig-1/duplicate", "http://localhost", {
+				title: "Original (copy)",
+			}),
 			{ params: Promise.resolve({ id: "orig-1" }), cms },
 		);
 		expect(res.status).toBe(201);
@@ -59,14 +61,14 @@ describe("Duplicate API Route", () => {
 
 	it("rejects a non-string title with 400", async () => {
 		const res = await postDuplicate(
-			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://localhost", { title: 1 }),
+			postReq("http://localhost/api/monti/v1/entries/orig-1/duplicate", "http://localhost", { title: 1 }),
 			{ params: Promise.resolve({ id: "orig-1" }), cms },
 		);
 		expect(res.status).toBe(400);
 	});
 
 	it("returns 404 when entry does not exist", async () => {
-		const res = await postDuplicate(postReq("http://localhost/api/cms/v1/entries/ghost/duplicate"), {
+		const res = await postDuplicate(postReq("http://localhost/api/monti/v1/entries/ghost/duplicate"), {
 			params: Promise.resolve({ id: "ghost" }),
 			cms,
 		});
@@ -77,7 +79,7 @@ describe("Duplicate API Route", () => {
 
 	it("rejects cross-origin requests with 403", async () => {
 		const res = await postDuplicate(
-			postReq("http://localhost/api/cms/v1/entries/orig-1/duplicate", "http://evil.com"),
+			postReq("http://localhost/api/monti/v1/entries/orig-1/duplicate", "http://evil.com"),
 			{
 				params: Promise.resolve({ id: "orig-1" }),
 				cms,

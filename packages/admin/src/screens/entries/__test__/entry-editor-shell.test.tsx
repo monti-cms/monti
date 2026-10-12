@@ -140,10 +140,10 @@ function serve(handler: Handler, current: unknown = entry) {
 	fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
 		const handled = await handler(input, init);
 		if (handled !== undefined) return handled;
-		if (input.startsWith("/api/cms/v1/entries?")) return json({ items: [], total: 0 });
-		if (input.startsWith("/api/cms/v1/entries/search?")) return json({ items: [] });
+		if (input.startsWith("/api/monti/v1/entries?")) return json({ items: [], total: 0 });
+		if (input.startsWith("/api/monti/v1/entries/search?")) return json({ items: [] });
 		if (input.endsWith("/relations")) return json({ incomingReferences: [] });
-		if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(current);
+		if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(current);
 		throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${input}`);
 	});
 }
@@ -296,7 +296,7 @@ describe("entry editor shell", () => {
 
 	it("creates a new entry only after an explicit Save", async () => {
 		serve((input, init) => {
-			if (input === "/api/cms/v1/entries" && init?.method === "POST") {
+			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
 				const body = JSON.parse(String(init.body));
 				return json(
 					{
@@ -324,16 +324,16 @@ describe("entry editor shell", () => {
 		vi.useFakeTimers();
 		await act(async () => vi.advanceTimersByTimeAsync(11_000));
 		vi.useRealTimers();
-		expect(methodCalls("POST", "/api/cms/v1/entries")).toHaveLength(0);
+		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "저장" }));
-		await waitFor(() => expect(methodCalls("POST", "/api/cms/v1/entries")).toHaveLength(1));
+		await waitFor(() => expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(1));
 		await waitFor(() => expect(deleteLocalBackup).toHaveBeenCalledWith(`${ADMIN}:new:post`));
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
 	});
 
 	it("creates and publishes a local new entry when Publish is clicked", async () => {
 		serve((input, init) => {
-			if (input === "/api/cms/v1/entries" && init?.method === "POST") {
+			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
 				const body = JSON.parse(String(init.body));
 				return json({
 					entry: {
@@ -347,7 +347,7 @@ describe("entry editor shell", () => {
 					warnings: [],
 				});
 			}
-			if (input === "/api/cms/v1/entries/published-entry/publish" && init?.method === "POST") {
+			if (input === "/api/monti/v1/entries/published-entry/publish" && init?.method === "POST") {
 				return json({
 					entry: { ...entry, id: "published-entry", collection: "memo", status: "published", version: 2 },
 					warnings: [],
@@ -358,10 +358,10 @@ describe("entry editor shell", () => {
 		fireEvent.change(await editorTitle(), { target: { value: "바로 발행" } });
 		window.dispatchEvent(new Event("pagehide"));
 		await waitFor(() => expect(saveLocalBackup).toHaveBeenCalled());
-		expect(methodCalls("POST", "/api/cms/v1/entries")).toHaveLength(0);
+		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(0);
 		fireEvent.click(screen.getByRole("button", { name: "발행" }));
 		await waitFor(() => expect(methodCalls("POST", "/publish")).toHaveLength(1));
-		expect(methodCalls("POST", "/api/cms/v1/entries")).toHaveLength(1);
+		expect(methodCalls("POST", "/api/monti/v1/entries")).toHaveLength(1);
 		expect(JSON.parse(String(methodCalls("POST", "/publish")[0]?.[1]?.body))).toEqual({ expectedVersion: 1 });
 	});
 
@@ -685,7 +685,7 @@ describe("entry editor shell", () => {
 	it("adds categories and tags through the add panel, prefilled with the typed name", async () => {
 		serve((input, init) => {
 			if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
-			if (input === "/api/cms/v1/entries" && init?.method === "POST") {
+			if (input === "/api/monti/v1/entries" && init?.method === "POST") {
 				const data = JSON.parse(String(init.body));
 				return json(
 					{
@@ -734,7 +734,7 @@ describe("entry editor shell", () => {
 		await typeAndPickAdd("태그", "새 태그");
 		await saveIn("태그 추가");
 		await waitFor(() => expect(screen.getAllByText("새 태그").length).toBeGreaterThan(0), { timeout: 10_000 });
-		const creations = methodCalls("POST", "/api/cms/v1/entries").map(([, init]) => JSON.parse(String(init?.body)));
+		const creations = methodCalls("POST", "/api/monti/v1/entries").map(([, init]) => JSON.parse(String(init?.body)));
 		expect(creations).toMatchObject([
 			{ collection: "category", metadata: { title: "새 카테고리" }, doc: emptyStoredDocument() },
 			{ collection: "tag", metadata: { title: "새 태그" }, doc: emptyStoredDocument() },
@@ -766,7 +766,7 @@ describe("entry editor shell", () => {
 		async function conflicted(latest: typeof newer = newer) {
 			let server: typeof entry = { ...entry };
 			serve((input, init) => {
-				if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(server);
+				if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(server);
 				if (init?.method === "PATCH") {
 					const body = JSON.parse(String(init.body));
 					if (body.expectedVersion !== server.version)
@@ -880,7 +880,7 @@ describe("entry editor shell", () => {
 			return true;
 		});
 		serve((input, init) => {
-			if (input === "/api/cms/v1/entries/entry-1" && !init?.method) return json(server);
+			if (input === "/api/monti/v1/entries/entry-1" && !init?.method) return json(server);
 			if (init?.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
 				// Only the title changed, so the body text the server holds is the one it had.
@@ -1043,7 +1043,7 @@ describe("templates", () => {
 	};
 
 	it("inserts the chosen template right away into an empty body", async () => {
-		serve((input) => (input === "/api/cms/v1/templates" ? json(templates) : undefined), {
+		serve((input) => (input === "/api/monti/v1/templates" ? json(templates) : undefined), {
 			...entry,
 			working: { ...entry.working, doc: emptyStoredDocument() },
 		});
@@ -1057,7 +1057,7 @@ describe("templates", () => {
 	});
 
 	it("asks before replacing existing body text, and replaces only when applied", async () => {
-		serve((input) => (input === "/api/cms/v1/templates" ? json(templates) : undefined));
+		serve((input) => (input === "/api/monti/v1/templates" ? json(templates) : undefined));
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
@@ -1087,7 +1087,7 @@ describe("templates", () => {
 		const before = JSON.stringify(template.doc);
 		serve(
 			(input, init) => {
-				if (input === "/api/cms/v1/templates") return json({ items: [template] });
+				if (input === "/api/monti/v1/templates") return json({ items: [template] });
 				if (init?.method === "PATCH") return json({ entry: { ...entry, version: 5 }, warnings: [] });
 			},
 			{ ...entry, working: { ...entry.working, doc: emptyStoredDocument() } },
@@ -1115,7 +1115,7 @@ describe("templates", () => {
 	});
 
 	it("says so when there are no templates", async () => {
-		serve((input) => (input === "/api/cms/v1/templates" ? json({ items: [] }) : undefined));
+		serve((input) => (input === "/api/monti/v1/templates" ? json({ items: [] }) : undefined));
 		renderEdit();
 		await editorTitle();
 		fireEvent.click(screen.getByRole("button", { name: "템플릿" }));
@@ -1163,7 +1163,7 @@ describe("language tabs", () => {
 
 	it("creates a translation from the missing-language button and opens it", async () => {
 		serve((input, init) => {
-			if (input === "/api/cms/v1/entries/entry-1/translations" && init?.method === "POST") {
+			if (input === "/api/monti/v1/entries/entry-1/translations" && init?.method === "POST") {
 				return json({ entry: { id: "entry-ja" }, warnings: [] }, 201);
 			}
 		}, source);
@@ -1185,8 +1185,8 @@ describe("language tabs", () => {
 
 	it("trashes a translation from its tab menu and goes back to the source", async () => {
 		serve((input, init) => {
-			if (input === "/api/cms/v1/entries/entry-en" && !init?.method) return json(translation);
-			if (input === "/api/cms/v1/entries/entry-en/trash" && init?.method === "POST") {
+			if (input === "/api/monti/v1/entries/entry-en" && !init?.method) return json(translation);
+			if (input === "/api/monti/v1/entries/entry-en/trash" && init?.method === "POST") {
 				return json({ ...translation, status: "trashed" });
 			}
 		}, translation);
@@ -1204,7 +1204,7 @@ describe("language tabs", () => {
 
 	it("does not offer duplicate on a translation", async () => {
 		serve((input, init) => {
-			if (input === "/api/cms/v1/entries/entry-en" && !init?.method) return json(translation);
+			if (input === "/api/monti/v1/entries/entry-en" && !init?.method) return json(translation);
 		}, translation);
 		renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-en" adminId={ADMIN} />);
 		await screen.findByRole("navigation", { name: "언어" });

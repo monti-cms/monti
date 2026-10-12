@@ -23,7 +23,7 @@ BAREUN_API_KEY=…
 ```
 
 - Once registered, the editor toolbar gets a "Spell check" button. It only appears for Korean text.
-- The browser sends only paragraphs to the site route `/api/cms/v1/text-check/bareun`, and that route calls Bareun with the key. The key is never
+- The browser sends only paragraphs to the site route `/api/monti/v1/text-check/bareun`, and that route calls Bareun with the key. The key is never
   sent to the browser. Only admins can call it. Without a key it returns 503 (`text_check_unavailable`) and does not call Bareun.
 - What is sent: only the text of paragraphs (headings, list items, table cells, and so on). Code blocks, formulas and block attributes are left out, and inline code and
   URLs are replaced by the editor with a single `￼` character. Results that touch that spot are dropped.

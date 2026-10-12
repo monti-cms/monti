@@ -77,7 +77,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 
 	it("returns 401 when user is unauthorized", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Not logged in"));
-		const res = await getMeta(new Request("http://localhost/api/cms/v1/meta"), { cms });
+		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 		expect(res.status).toBe(401);
 		const data = await res.json();
 		expect(data.code).toBe("unauthorized");
@@ -85,14 +85,14 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 
 	it("returns 403 when user is forbidden", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("forbidden", "Wrong admin id"));
-		const res = await getMeta(new Request("http://localhost/api/cms/v1/meta"), { cms });
+		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 		expect(res.status).toBe(403);
 		const data = await res.json();
 		expect(data.code).toBe("forbidden");
 	});
 
 	it("rejects cross-origin mutations with 403", async () => {
-		const req = new Request("http://localhost/api/cms/v1/entries", {
+		const req = new Request("http://localhost/api/monti/v1/entries", {
 			method: "POST",
 			headers: {
 				origin: "http://attacker.com",
@@ -107,7 +107,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	});
 
 	it("POST /entries creates a new draft atomically with folderId", async () => {
-		const req = new Request("http://localhost/api/cms/v1/entries", {
+		const req = new Request("http://localhost/api/monti/v1/entries", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -130,7 +130,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	});
 
 	it("PATCH /entries/:id rejects without version with 428 version_required", async () => {
-		const req = new Request("http://localhost/api/cms/v1/entries/test-id", {
+		const req = new Request("http://localhost/api/monti/v1/entries/test-id", {
 			method: "PATCH",
 			headers: {
 				origin: "http://localhost",
@@ -148,7 +148,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	});
 
 	it("PATCH /entries/:id maps optimistic lock conflict to 409 and returns serverVersion", async () => {
-		const req = new Request("http://localhost/api/cms/v1/entries/test-id", {
+		const req = new Request("http://localhost/api/monti/v1/entries/test-id", {
 			method: "PATCH",
 			headers: {
 				origin: "http://localhost",
@@ -169,7 +169,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 
 	describe("GET /entries/search", () => {
 		const search = (query: string) =>
-			searchEntries(new Request(`http://localhost/api/cms/v1/entries/search?${query}`), { cms });
+			searchEntries(new Request(`http://localhost/api/monti/v1/entries/search?${query}`), { cms });
 
 		it("passes the query, locale, publishedOnly and limit to the store and answers the hits", async () => {
 			mockStore.searchEntries.mockClear();

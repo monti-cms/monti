@@ -67,7 +67,7 @@ function fakeStore(tag: string, collection: string, slug: string, locales: reado
 }
 
 const fakeAuth = (): CmsAuth => ({
-	basePath: "/api/cms/auth",
+	basePath: "/api/monti/auth",
 	handlers: { GET: async () => new Response("auth"), POST: async () => new Response("auth") },
 	session: async () => ({ user: { id: "u", accountId: "u" } }),
 	providers: [],
@@ -101,7 +101,7 @@ function stubServer(tag: string) {
 }
 
 const metaOf = async (cms: Cms) => {
-	const response = await cms.handle(new Request("http://localhost/api/cms/v1/meta"));
+	const response = await cms.handle(new Request("http://localhost/api/monti/v1/meta"));
 	expect(response.status).toBe(200);
 	return (await response.json()) as {
 		collections: string[];

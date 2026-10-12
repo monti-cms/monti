@@ -7,7 +7,7 @@ import { POST as signOut } from "../sign-out/route";
 const FORM = "application/x-www-form-urlencoded";
 
 const post = (path: string, headers: Record<string, string> = { origin: "http://localhost", "content-type": FORM }) =>
-	new Request(`http://localhost/api/cms/${path}`, { method: "POST", headers, body: "" });
+	new Request(`http://localhost/api/monti/${path}`, { method: "POST", headers, body: "" });
 
 /** What a host framework throws to leave a handler (Next.js throws a redirect). Only the login connection knows it is one. */
 class HostRedirect extends Error {}

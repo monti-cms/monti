@@ -68,7 +68,7 @@ export const fakeAuth = (parts?: Partial<CmsAuth>): CmsServerConfig["auth"] => (
 	name: "fake",
 	create: () =>
 		({
-			basePath: "/api/cms/auth",
+			basePath: "/api/monti/auth",
 			handlers: { GET: missing("auth.handlers.GET"), POST: missing("auth.handlers.POST") },
 			session: async () => null,
 			providers: [],

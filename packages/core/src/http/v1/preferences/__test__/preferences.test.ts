@@ -22,9 +22,9 @@ const cms = fakeCms({
 	verifyAdmin: async () => ({ userId: "user-42", accountId: "user-42", isAdmin: true }),
 });
 
-const getReq = () => new Request("http://localhost/api/cms/v1/preferences");
+const getReq = () => new Request("http://localhost/api/monti/v1/preferences");
 const putReq = (body: unknown) =>
-	new Request("http://localhost/api/cms/v1/preferences", {
+	new Request("http://localhost/api/monti/v1/preferences", {
 		method: "PUT",
 		headers: { origin: "http://localhost", "content-type": "application/json" },
 		body: JSON.stringify(body),

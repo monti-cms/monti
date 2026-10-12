@@ -30,7 +30,7 @@ const cms = fakeCms({
 
 const run = (body: unknown) =>
 	postRun(
-		new Request("http://localhost/api/cms/v1/ai/run", {
+		new Request("http://localhost/api/monti/v1/ai/run", {
 			method: "POST",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify(body),

@@ -83,7 +83,7 @@ export const cms = defineConfig({
 	// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.
 	database: postgres(),
 
-	// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (the OAuth app; its callback URL is `<site URL>/api/cms/auth/callback/github`) and MONTI_ADMIN_GITHUB_ID (the admin's
+	// The admin login: AUTH_GITHUB_ID and AUTH_GITHUB_SECRET (the OAuth app; its callback URL is `<site URL>/api/monti/auth/callback/github`) and MONTI_ADMIN_GITHUB_ID (the admin's
 	// numeric GitHub id). Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.
 	auth: auth({ providers: [github()] }),
 

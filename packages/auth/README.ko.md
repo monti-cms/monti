@@ -39,7 +39,7 @@ export const cms = defineConfig({
 
 값을 직접 넘기면 변수보다 우선한다(`github({ clientId, clientSecret, admins: ["12345678"] })`). 다른 이름에서 값을 짐작해 가져오지 않으며, 꼭 필요한 값이 없으면 변수 이름을 알려 주는 오류가 난다. GitHub 앱은 로그인 연결을 만들 때 확인하고, 개발용 우회(아래)에서는 로그인을 시도할 때만 확인하므로 `next dev`는 이 변수가 하나도 없어도 돈다.
 
-GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/cms/auth/callback/github`다.
+GitHub OAuth 앱의 콜백 URL은 NextAuth 때와 같은 `<사이트>/api/monti/auth/callback/github`다.
 
 ### 이메일과 비밀번호: `password()`
 
@@ -59,7 +59,7 @@ export const cms = defineConfig({
 
 - **계정**은 Monti 데이터베이스, 곧 인스턴스의 플러그인 저장소(플러그인 `auth`, 컬렉션 `password-accounts`와 `password-setup`)에 있으므로 `monti migrate`가 설정의 전부다. 계정은 이메일(앞뒤 공백 제거, 소문자)과 비밀번호 해시다. 해시는 `node:crypto`의 scrypt이고, 계정마다 무작위 salt를 쓰며, 비용은 해시와 함께 저장하고, 일정한 시간으로 비교한다. 모르는 이메일도 틀린 비밀번호만큼 시간이 걸려서 거절한다. 비밀번호는 10자 이상이다. 해시 의존성을 더하지 않는다.
 - **모든 계정이 관리자**다(`LoginProvider.everyAccountIsAdmin`). 계정 ID는 `password:<이메일>`이고, 세션은 로그인에 성공해야만 만들어진다. 관리자 목록이 필요 없고, 이 프로바이더에는 "관리자가 없다" 경고를 내지 않는다.
-- **첫 관리자**는 계정이 하나도 없는 동안 관리자 로그인 화면에서 만든다: 이메일, 비밀번호, 확인을 넣으면 만들고 바로 로그인시킨다. 화면이 아니라 서버가 막는다. `POST /api/cms/v1/session/first-admin`이 `cms.auth().accounts.createFirst`를 부르는데, 계정이 하나라도 있으면 `closed`로 거절한다. `expectedVersion: 0`으로 쓰는 표지 행 하나 덕분에 동시에 두 번 시도해도 하나만 성공한다. 설정 코드는 없다. 배포한 직후 관리자를 열어 만들거나, 운영 데이터베이스를 가리키게 해서 내 컴퓨터에서 앱을 프로덕션 모드로 돌려 미리 만든다(`next dev`에서는 로그인 없이 관리자이므로 그 화면이 나오지 않는다).
+- **첫 관리자**는 계정이 하나도 없는 동안 관리자 로그인 화면에서 만든다: 이메일, 비밀번호, 확인을 넣으면 만들고 바로 로그인시킨다. 화면이 아니라 서버가 막는다. `POST /api/monti/v1/session/first-admin`이 `cms.auth().accounts.createFirst`를 부르는데, 계정이 하나라도 있으면 `closed`로 거절한다. `expectedVersion: 0`으로 쓰는 표지 행 하나 덕분에 동시에 두 번 시도해도 하나만 성공한다. 설정 코드는 없다. 배포한 직후 관리자를 열어 만들거나, 운영 데이터베이스를 가리키게 해서 내 컴퓨터에서 앱을 프로덕션 모드로 돌려 미리 만든다(`next dev`에서는 로그인 없이 관리자이므로 그 화면이 나오지 않는다).
 - **세션**은 다른 프로바이더와 같은 서명된 JWT 쿠키다(8시간, 갱신식, 키는 `MONTI_SECRET`에서 만든다). Auth.js의 `Credentials` 프로바이더는 JWT 전략이 필요한데, 이 패키지가 이미 그것을 쓴다.
 - **실패한 시도는 단순하게 늦춘다:** 한 이메일로 1분 안에 5번 실패하면 그 1분의 나머지 동안 거절한다(서버 프로세스의 메모리에 세므로 인스턴스마다이고 서버끼리 공유하지 않는다). 완전한 방어가 아니라 제동이니 긴 비밀번호를 쓴다.
 - **비밀번호를 잊었을 때**는 `monti admin:reset-password [--email <이메일>]`(코어)로 새로 정한다. 메일은 없다. 이미 로그인한 세션은 만료될 때까지 유효하다.
@@ -74,7 +74,7 @@ export const cms = defineConfig({
 | `providers` | 로그인 방법. 로그인 버튼 순서가 된다. 하나 이상이어야 하고 id가 서로 달라야 한다 |
 | `admins` | 프로바이더를 붙인 계정 ID(`"github:12345678"`)로 적은 관리자. 프로바이더에 적은 것(`github({ admins })`)도 같이 센다 |
 | `devBypass` | 로컬 개발에서만. 이 컴퓨터에서 온 요청을 첫 번째 관리자로 본다. `next dev`에서는 기본으로 켜져 있고 `false`로 끈다("개발용 우회" 참고) |
-| `basePath` | 로그인 API 경로. 기본 `/api/cms/auth`(관리자 API 라우트가 같이 처리한다. 코어 README의 "로그인 경로") |
+| `basePath` | 로그인 API 경로. 기본 `/api/monti/auth`(관리자 API 라우트가 같이 처리한다. 코어 README의 "로그인 경로") |
 | `host` | Next.js에서는 `@monti-cms/nextjs`가 붙여 주므로 필요 없다. 다른 프레임워크에서는 `{ requestHeaders, rethrow }`를 넘긴다. 붙여진 것보다 우선한다. `requestHeaders`가 없으면 `session()`에 요청을 넘겨야 하고 개발용 우회는 적용되지 않는다 |
 
 `secret` 옵션은 없다. 세션 키는 `MONTI_SECRET`에서 나온다("비밀 값" 참고). 호스트 신뢰(`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`)는 "호스트 신뢰"에 있다. 세션은 서명한 JWT 쿠키(8시간, 갱신형)라 따로 저장하는 것이 없다.
@@ -155,7 +155,7 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 });
 ```
 
-그다음 `providers: [github({ ... }), gitlab({ ... })]`로 쓴다. 로그인 화면에 프로바이더마다 버튼이 하나씩 생기고, 콜백은 `/api/cms/auth/callback/gitlab`, 관리자는 `gitlab:<id>`다. 이 패키지의 테스트가 이런 프로바이더를 가짜 서버로 등록해 본다.
+그다음 `providers: [github({ ... }), gitlab({ ... })]`로 쓴다. 로그인 화면에 프로바이더마다 버튼이 하나씩 생기고, 콜백은 `/api/monti/auth/callback/gitlab`, 관리자는 `gitlab:<id>`다. 이 패키지의 테스트가 이런 프로바이더를 가짜 서버로 등록해 본다.
 
 ### 다른 credentials 프로바이더
 
@@ -163,7 +163,7 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 
 ## 로그인 흐름
 
-로그인 화면이 코어에 일반 폼을 보낸다(`POST /api/cms/v1/session/sign-in/<id>`). 코어가 같은 출처인지 확인한 뒤 `signIn`을 부르고, `signIn`은 상태 쿠키를 실은 프로바이더 리다이렉트(`Response`, 그대로 돌려준다)로 답한다. 프로바이더가 브라우저를 `/api/cms/auth/callback/<id>`로 돌려보내면 Auth.js가 상태를 확인하고 세션 쿠키를 세팅하며, 브라우저는 관리자로 들어간다. 로그아웃도 같은 모양이다. 네트워크에서 오는 요청(`handlers`)은 Auth.js의 CSRF 검사를 그대로 거친다. 서버가 직접 하는 로그인·로그아웃 호출만, 코어의 출처 확인 뒤에 이 검사를 건너뛴다.
+로그인 화면이 코어에 일반 폼을 보낸다(`POST /api/monti/v1/session/sign-in/<id>`). 코어가 같은 출처인지 확인한 뒤 `signIn`을 부르고, `signIn`은 상태 쿠키를 실은 프로바이더 리다이렉트(`Response`, 그대로 돌려준다)로 답한다. 프로바이더가 브라우저를 `/api/monti/auth/callback/<id>`로 돌려보내면 Auth.js가 상태를 확인하고 세션 쿠키를 세팅하며, 브라우저는 관리자로 들어간다. 로그아웃도 같은 모양이다. 네트워크에서 오는 요청(`handlers`)은 Auth.js의 CSRF 검사를 그대로 거친다. 서버가 직접 하는 로그인·로그아웃 호출만, 코어의 출처 확인 뒤에 이 검사를 건너뛴다.
 
 ## `githubAuth`(NextAuth)에서 올리기
 

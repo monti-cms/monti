@@ -40,16 +40,16 @@ const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as 
 beforeEach(() => {
 	view = VIEW;
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		if (input === "/api/cms/v1/ai/shared" && !init?.method) return json(view);
-		if (input === "/api/cms/v1/ai/shared" && init?.method === "POST") {
+		if (input === "/api/monti/v1/ai/shared" && !init?.method) return json(view);
+		if (input === "/api/monti/v1/ai/shared" && init?.method === "POST") {
 			const body = JSON.parse(String(init.body));
 			return json(
 				{ version: 3, items: [...view.items, { source: "added", key: body.key, label: body.label, text: body.text }] },
 				201,
 			);
 		}
-		if (input === "/api/cms/v1/ai/shared" && init?.method === "PATCH") return json({ ...view, version: 3 });
-		if (input.startsWith("/api/cms/v1/ai/shared?") && init?.method === "DELETE") {
+		if (input === "/api/monti/v1/ai/shared" && init?.method === "PATCH") return json({ ...view, version: 3 });
+		if (input.startsWith("/api/monti/v1/ai/shared?") && init?.method === "DELETE") {
 			return json({ code: "ai_invalid_input", message: "Actions use this text, so it can't be deleted: Summary" }, 400);
 		}
 		throw new Error(`Unexpected fetch ${init?.method ?? "GET"} ${input}`);
@@ -161,7 +161,7 @@ describe("AI screen shared texts tab", () => {
 		expect((await screen.findByRole("alert")).textContent).toBe(
 			"Actions use this text, so it can't be deleted: Summary",
 		);
-		expect(calls("DELETE")[0]?.[0]).toBe("/api/cms/v1/ai/shared?key=tone&expectedVersion=2");
+		expect(calls("DELETE")[0]?.[0]).toBe("/api/monti/v1/ai/shared?key=tone&expectedVersion=2");
 	});
 
 	it("shows a one-line notice in the list when there are no texts", async () => {

@@ -65,7 +65,7 @@ describe("a second provider through the same interface", () => {
 		const { authorize, jar } = await loginThrough(cmsAuth, "gitlab");
 
 		expect(authorize.origin).toBe("https://gitlab.test");
-		expect(authorize.searchParams.get("redirect_uri")).toContain("/api/cms/auth/callback/gitlab");
+		expect(authorize.searchParams.get("redirect_uri")).toContain("/api/monti/auth/callback/gitlab");
 		expect((await cmsAuth.session(requestWith(jar)))?.user).toEqual({
 			id: "gitlab:77",
 			accountId: "gitlab:77",

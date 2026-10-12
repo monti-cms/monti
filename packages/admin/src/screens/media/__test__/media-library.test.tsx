@@ -52,7 +52,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 const mediaRequests = () =>
 	fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
-		.filter((url) => url.pathname === "/api/cms/v1/media");
+		.filter((url) => url.pathname === "/api/monti/v1/media");
 const calls = (method: string, path: string) =>
 	fetchMock.mock.calls.filter(([input, init]) => (init?.method ?? "GET") === method && String(input) === path);
 
@@ -61,11 +61,11 @@ beforeEach(() => {
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = new URL(input, "http://localhost");
 		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/cms/v1/media" && method === "GET") return json({ items: ITEMS, total: ITEMS.length });
-		if (url.pathname.startsWith("/api/cms/v1/media/") && method === "PATCH") return json({});
-		if (url.pathname.startsWith("/api/cms/v1/media/") && method === "DELETE") return json({});
-		if (url.pathname === "/api/cms/v1/entries") return json({ items: [], total: 0 });
-		if (url.pathname.startsWith("/api/cms/v1/ai/")) return json({ items: [] });
+		if (url.pathname === "/api/monti/v1/media" && method === "GET") return json({ items: ITEMS, total: ITEMS.length });
+		if (url.pathname.startsWith("/api/monti/v1/media/") && method === "PATCH") return json({});
+		if (url.pathname.startsWith("/api/monti/v1/media/") && method === "DELETE") return json({});
+		if (url.pathname === "/api/monti/v1/entries") return json({ items: [], total: 0 });
+		if (url.pathname.startsWith("/api/monti/v1/ai/")) return json({ items: [] });
 		throw new Error(`Unexpected fetch ${method} ${input}`);
 	});
 	vi.stubGlobal("fetch", fetchMock);
@@ -129,8 +129,8 @@ describe("media library", () => {
 		});
 		fireEvent.click(within(detail).getByRole("button", { name: t("common.save") }));
 
-		await waitFor(() => expect(calls("PATCH", "/api/cms/v1/media/cat")).toHaveLength(1));
-		expect(JSON.parse(String(calls("PATCH", "/api/cms/v1/media/cat")[0]?.[1]?.body))).toEqual({
+		await waitFor(() => expect(calls("PATCH", "/api/monti/v1/media/cat")).toHaveLength(1));
+		expect(JSON.parse(String(calls("PATCH", "/api/monti/v1/media/cat")[0]?.[1]?.body))).toEqual({
 			defaultAlt: "창가의 고양이",
 			defaultCaption: "캡션",
 		});
@@ -171,7 +171,7 @@ describe("media library", () => {
 		let fail = true;
 		const ok = fetchMock.getMockImplementation() as (input: string, init?: RequestInit) => Promise<unknown>;
 		fetchMock.mockImplementation(async (input: string, init?: RequestInit) =>
-			fail && new URL(input, "http://localhost").pathname === "/api/cms/v1/media"
+			fail && new URL(input, "http://localhost").pathname === "/api/monti/v1/media"
 				? json({ code: "internal", message: "서버 오류" }, 500)
 				: ok(input, init),
 		);
@@ -203,7 +203,7 @@ describe("media library", () => {
 		const dialog = await screen.findByRole("alertdialog", { name: t("library.delete.title") });
 		fireEvent.click(within(dialog).getByRole("button", { name: t("common.delete") }));
 
-		await waitFor(() => expect(calls("DELETE", "/api/cms/v1/media/dog")).toHaveLength(1));
+		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/media/dog")).toHaveLength(1));
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("library.deleted", { name: "dog.png" })));
 	});
 

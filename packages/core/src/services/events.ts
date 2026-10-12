@@ -49,7 +49,7 @@ export interface EventDeliveryOptions {
 	/** How long finished events are kept, in days. Default 30. */
 	readonly retentionDays?: number;
 	/**
-	 * A secret for `POST /api/cms/v1/events/retry` (`Authorization: Bearer <secret>`), so a cron job can start the retries without an admin login.
+	 * A secret for `POST /api/monti/v1/events/retry` (`Authorization: Bearer <secret>`), so a cron job can start the retries without an admin login.
 	 * Without it the route needs an admin session. Keep it in an environment variable.
 	 */
 	readonly retrySecret?: string;

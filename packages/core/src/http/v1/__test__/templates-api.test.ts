@@ -75,7 +75,7 @@ const req = (url: string, method = "GET", body?: unknown, origin = "http://local
 
 describe("Templates API Route Contract", () => {
 	it("GET /templates lists templates for both editors", async () => {
-		const allRes = await getTemplates(req("http://localhost/api/cms/v1/templates"), { cms });
+		const allRes = await getTemplates(req("http://localhost/api/monti/v1/templates"), { cms });
 		expect(allRes.status).toBe(200);
 		const allData = await allRes.json();
 		expect(allData.items).toHaveLength(2);
@@ -85,7 +85,7 @@ describe("Templates API Route Contract", () => {
 
 	it("POST /templates creates a template and validates body", async () => {
 		const res = await postTemplate(
-			req("http://localhost/api/cms/v1/templates", "POST", {
+			req("http://localhost/api/monti/v1/templates", "POST", {
 				name: "새 템플릿",
 				mdx: "## 내용",
 			}),
@@ -97,7 +97,7 @@ describe("Templates API Route Contract", () => {
 
 		// Conflict handling (e.g. duplicate name)
 		const conflictRes = await postTemplate(
-			req("http://localhost/api/cms/v1/templates", "POST", {
+			req("http://localhost/api/monti/v1/templates", "POST", {
 				name: "중복",
 			}),
 			{ cms },
@@ -106,7 +106,7 @@ describe("Templates API Route Contract", () => {
 	});
 
 	it("GET /templates/:id returns single template or 404", async () => {
-		const res = await getTemplate(req("http://localhost/api/cms/v1/templates/t-1"), {
+		const res = await getTemplate(req("http://localhost/api/monti/v1/templates/t-1"), {
 			params: Promise.resolve({ id: "t-1" }),
 			cms,
 		});
@@ -114,7 +114,7 @@ describe("Templates API Route Contract", () => {
 		const data = await res.json();
 		expect(data.name).toBe("알고리즘 풀이");
 
-		const missingRes = await getTemplate(req("http://localhost/api/cms/v1/templates/ghost"), {
+		const missingRes = await getTemplate(req("http://localhost/api/monti/v1/templates/ghost"), {
 			params: Promise.resolve({ id: "ghost" }),
 			cms,
 		});
@@ -123,7 +123,7 @@ describe("Templates API Route Contract", () => {
 
 	it("PATCH /templates/:id updates template and checks expectedVersion", async () => {
 		const res = await patchTemplate(
-			req("http://localhost/api/cms/v1/templates/t-1", "PATCH", {
+			req("http://localhost/api/monti/v1/templates/t-1", "PATCH", {
 				expectedVersion: 1,
 				name: "수정된 템플릿",
 			}),
@@ -135,7 +135,7 @@ describe("Templates API Route Contract", () => {
 
 		// Conflict on stale expectedVersion
 		const conflictRes = await patchTemplate(
-			req("http://localhost/api/cms/v1/templates/t-1", "PATCH", {
+			req("http://localhost/api/monti/v1/templates/t-1", "PATCH", {
 				expectedVersion: 99,
 				name: "충돌 테스트",
 			}),
@@ -145,7 +145,7 @@ describe("Templates API Route Contract", () => {
 	});
 
 	it("DELETE /templates/:id deletes template with optional expectedVersion", async () => {
-		const res = await deleteTemplate(req("http://localhost/api/cms/v1/templates/t-1?expectedVersion=1", "DELETE"), {
+		const res = await deleteTemplate(req("http://localhost/api/monti/v1/templates/t-1?expectedVersion=1", "DELETE"), {
 			params: Promise.resolve({ id: "t-1" }),
 			cms,
 		});
@@ -154,7 +154,7 @@ describe("Templates API Route Contract", () => {
 
 		// Conflict on stale expectedVersion
 		const conflictRes = await deleteTemplate(
-			req("http://localhost/api/cms/v1/templates/t-1?expectedVersion=99", "DELETE"),
+			req("http://localhost/api/monti/v1/templates/t-1?expectedVersion=99", "DELETE"),
 			{ params: Promise.resolve({ id: "t-1" }), cms },
 		);
 		expect(conflictRes.status).toBe(409);

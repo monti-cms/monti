@@ -41,7 +41,7 @@ describe("AI plugin registration", () => {
 	it("the core API handler looks up paths missing from core routes in the plugin route table", async () => {
 		const cms = fakeCms({ config: testConfig, plugins: [{ name: "ai", ...aiServer }] });
 		const call = (path: string) =>
-			cms.handle(new Request(`http://localhost/api/cms/${path}`, { headers: { origin: "http://localhost" } }));
+			cms.handle(new Request(`http://localhost/api/monti/${path}`, { headers: { origin: "http://localhost" } }));
 		const actions = await call("v1/ai/actions");
 		expect(actions.status).toBe(200);
 		expect(((await actions.json()) as { items: { key: string }[] }).items.map((item) => item.key)).toContain("summary");
@@ -52,7 +52,7 @@ describe("AI plugin registration", () => {
 		const cms = fakeCms({ config: testConfig, plugins: [{ name: "ai", ...aiServer }] });
 		const request = (method: "POST" | "DELETE", path: string, body?: unknown) =>
 			cms.handle(
-				new Request(`http://localhost/api/cms/${path}`, {
+				new Request(`http://localhost/api/monti/${path}`, {
 					method,
 					headers: { origin: "http://localhost", "content-type": "application/json" },
 					...(body ? { body: JSON.stringify(body) } : {}),

@@ -51,7 +51,7 @@ function stubApi(patchStatus: number) {
 		"fetch",
 		vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
-			if (url.startsWith("/api/cms/v1/entries/search?")) {
+			if (url.startsWith("/api/monti/v1/entries/search?")) {
 				return json({
 					items: [
 						{ id: "c1", title: "시리즈 A", slug: "a" },
@@ -60,17 +60,17 @@ function stubApi(patchStatus: number) {
 				});
 			}
 			// Reads the kind each collection holds (default is post).
-			if (url === "/api/cms/v1/entries/c1" && !init?.method) {
+			if (url === "/api/monti/v1/entries/c1" && !init?.method) {
 				return json({
 					version: 1,
 					workingSlug: "a",
 					working: { metadata: { title: "시리즈 A", itemIds: ["post-1"] } },
 				});
 			}
-			if (url === "/api/cms/v1/entries/c2" && !init?.method) {
+			if (url === "/api/monti/v1/entries/c2" && !init?.method) {
 				return json({ version: 1, workingSlug: "b", working: { metadata: { title: "시리즈 B", itemIds: [] } } });
 			}
-			if (url === "/api/cms/v1/entries/c2" && init?.method === "PATCH") {
+			if (url === "/api/monti/v1/entries/c2" && init?.method === "PATCH") {
 				await held;
 				return patchStatus < 400 ? json({ version: 2 }) : json({ code: "internal", message: "실패" }, patchStatus);
 			}
@@ -129,11 +129,11 @@ describe("adding a memo to a collection", () => {
 	beforeEach(() => {
 		fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
-			if (url.startsWith("/api/cms/v1/entries/search?"))
+			if (url.startsWith("/api/monti/v1/entries/search?"))
 				return json({
 					items: Object.entries(records).map(([id, record]) => ({ id, title: record.title, slug: id })),
 				});
-			const id = url.match(/^\/api\/cms\/v1\/entries\/(c\d)$/)?.[1];
+			const id = url.match(/^\/api\/monti\/v1\/entries\/(c\d)$/)?.[1];
 			if (id && !init?.method) {
 				const { title, itemKind } = records[id] as { title: string; itemKind?: string };
 				return json({
@@ -142,7 +142,7 @@ describe("adding a memo to a collection", () => {
 					working: { metadata: { title, ...(itemKind ? { itemKind } : {}) } },
 				});
 			}
-			if (url === "/api/cms/v1/entries" && init?.method === "POST") return json({ id: "c9" }, 201);
+			if (url === "/api/monti/v1/entries" && init?.method === "POST") return json({ id: "c9" }, 201);
 			throw new Error(`Unexpected fetch: ${url}`);
 		});
 		vi.stubGlobal("fetch", fetchMock);
@@ -171,16 +171,16 @@ describe("adding a memo to a collection", () => {
 		// Does not create from the name alone; opens the add sheet with the name filled in.
 		const panel = await screen.findByRole("complementary", { name: "모음집 추가" });
 		expect(within(panel).getByDisplayValue("새 메모 시리즈")).toBeTruthy();
-		expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/cms/v1/entries" && init?.method === "POST")).toBe(
+		expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST")).toBe(
 			false,
 		);
 		fireEvent.click(within(panel).getByRole("button", { name: "저장" }));
 		await waitFor(() =>
-			expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/cms/v1/entries" && init?.method === "POST")).toBe(
-				true,
-			),
+			expect(
+				fetchMock.mock.calls.some(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST"),
+			).toBe(true),
 		);
-		const post = fetchMock.mock.calls.find(([url, init]) => url === "/api/cms/v1/entries" && init?.method === "POST");
+		const post = fetchMock.mock.calls.find(([url, init]) => url === "/api/monti/v1/entries" && init?.method === "POST");
 		expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
 			collection: "collection",
 			metadata: { title: "새 메모 시리즈", itemKind: "memo", memoIds: ["memo-1"] },

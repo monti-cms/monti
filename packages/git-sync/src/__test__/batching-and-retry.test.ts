@@ -153,7 +153,7 @@ describe("a failed push is retried through the outbox, not lost", () => {
 
 		// Saving the token (the Settings tab) sends what waited, and delivers the deferred events.
 		const saved = await h.cms.handle(
-			new Request("http://localhost/api/cms/v1/git-sync/settings", {
+			new Request("http://localhost/api/monti/v1/git-sync/settings", {
 				method: "PUT",
 				headers: { origin: "http://localhost", "content-type": "application/json" },
 				body: JSON.stringify({ token: "ghp_late_token", expectedVersion: 0 }),

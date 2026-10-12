@@ -2,7 +2,7 @@ import { handleApiError } from "../../error-handler";
 import type { RouteContext } from "../../handler";
 import { validateSameOrigin } from "../../security";
 
-/** `POST /api/cms/v1/session/sign-out`: signs out and sends the browser to the login screen. A plain form post from the login screen, with the same-origin check. */
+/** `POST /api/monti/v1/session/sign-out`: signs out and sends the browser to the login screen. A plain form post from the login screen, with the same-origin check. */
 export const POST = async (request: Request, context: RouteContext) => {
 	try {
 		const { cms } = context;

@@ -65,7 +65,7 @@ plugins: [slackOnPublish()], // reads SLACK_WEBHOOK_URL, or slackOnPublish({ web
 ## How it behaves
 
 - `kind` is `published` for a publish (a draft save is `saved`), so a draft announces nothing.
-- The message is sent inside `event.once`, and the event is marked done when the function returns. If Slack answers `500` the function throws, nothing is marked, the publish stays, and the delivery is retried (`monti events:retry`, the next write in the process, or a cron call to `/api/cms/v1/events/retry`).
+- The message is sent inside `event.once`, and the event is marked done when the function returns. If Slack answers `500` the function throws, nothing is marked, the publish stays, and the delivery is retried (`monti events:retry`, the next write in the process, or a cron call to `/api/monti/v1/events/retry`).
 - `once` is "at most once unless the process dies between the end of the function and the mark". A crash in that gap sends the message twice, which is what at-least-once delivery means. The marks are kept as long as the events are (`events.retentionDays`).
 - The webhook URL is a secret, so it stays in the plugin's closure and never goes in `options` (the browser reads `options`).
 - To test it, build a server with `testServer()` from `@monti-cms/core/testing`, publish a post and give the plugin a fake `fetch`.

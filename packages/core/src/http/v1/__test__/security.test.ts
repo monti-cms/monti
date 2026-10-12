@@ -17,15 +17,15 @@ describe("same-origin check", () => {
 
 	it("accepts only the same origin as Host", () => {
 		expect(() =>
-			validateSameOrigin(cms, post("http://cms.local/api/cms/v1/x", { origin: "http://cms.local" })),
+			validateSameOrigin(cms, post("http://cms.local/api/monti/v1/x", { origin: "http://cms.local" })),
 		).not.toThrow();
 		expect(() =>
-			validateSameOrigin(cms, post("http://cms.local/api/cms/v1/x", { origin: "https://evil.example" })),
+			validateSameOrigin(cms, post("http://cms.local/api/monti/v1/x", { origin: "https://evil.example" })),
 		).toThrow(/Cross-origin/);
 	});
 
 	it("behind a trusted proxy that rewrites Host, matches X-Forwarded-Host (first value)", () => {
-		const behindProxy = post("http://internal:3000/api/cms/v1/x", {
+		const behindProxy = post("http://internal:3000/api/monti/v1/x", {
 			host: "internal:3000",
 			"x-forwarded-host": "www.example.com, edge.internal",
 			origin: "https://www.example.com",
@@ -35,7 +35,7 @@ describe("same-origin check", () => {
 
 	it("ignores a client-supplied X-Forwarded-Host unless the host is trusted", () => {
 		const forged = () =>
-			post("http://cms.local/api/cms/v1/x", {
+			post("http://cms.local/api/monti/v1/x", {
 				host: "cms.local",
 				"x-forwarded-host": "evil.example",
 				origin: "https://evil.example",
@@ -44,13 +44,13 @@ describe("same-origin check", () => {
 		// The same request passes only when a trusted proxy is configured to set that header.
 		expect(() => validateSameOrigin(cmsWith(true), forged())).not.toThrow();
 		// A request without it is unaffected either way.
-		const direct = post("http://cms.local/api/cms/v1/x", { origin: "http://cms.local" });
+		const direct = post("http://cms.local/api/monti/v1/x", { origin: "http://cms.local" });
 		expect(() => validateSameOrigin(cmsWith(false), direct)).not.toThrow();
 	});
 
 	it("trusts the forwarded host by the server config and AUTH_TRUST_HOST when no option is passed", () => {
 		const behindProxy = () =>
-			post("http://internal:3000/api/cms/v1/x", {
+			post("http://internal:3000/api/monti/v1/x", {
 				host: "internal:3000",
 				"x-forwarded-host": "www.example.com",
 				origin: "https://www.example.com",
@@ -63,12 +63,15 @@ describe("same-origin check", () => {
 
 	it.skipIf(!testConfig.site?.url)("also accepts the host of the site URL (site.url)", () => {
 		const siteHost = new URL(testConfig.site?.url ?? "").host;
-		const request = post("http://internal:3000/api/cms/v1/x", { host: "internal:3000", origin: `https://${siteHost}` });
+		const request = post("http://internal:3000/api/monti/v1/x", {
+			host: "internal:3000",
+			origin: `https://${siteHost}`,
+		});
 		expect(() => validateSameOrigin(cms, request)).not.toThrow();
 	});
 
 	it("rejects when there is no origin signal, and does not check read requests", () => {
-		expect(() => validateSameOrigin(cms, post("http://cms.local/api/cms/v1/x", {}))).toThrow(/Missing origin/);
-		expect(() => validateSameOrigin(cms, new Request("http://cms.local/api/cms/v1/x"))).not.toThrow();
+		expect(() => validateSameOrigin(cms, post("http://cms.local/api/monti/v1/x", {}))).toThrow(/Missing origin/);
+		expect(() => validateSameOrigin(cms, new Request("http://cms.local/api/monti/v1/x"))).not.toThrow();
 	});
 });

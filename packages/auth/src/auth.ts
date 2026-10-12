@@ -36,7 +36,7 @@ export interface AuthOptions {
 	 */
 	readonly devBypass?: boolean;
 	/**
-	 * Login API path. Default `/api/cms/auth`, which the admin API route handles too, so no login route file is needed.
+	 * Login API path. Default `/api/monti/auth`, which the admin API route handles too, so no login route file is needed.
 	 * The callback URL of an OAuth app is `<site>/<basePath>/callback/<provider id>`.
 	 */
 	readonly basePath?: string;

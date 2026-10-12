@@ -42,12 +42,12 @@ const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 
 /** How to get the two values. */
 const OAUTH_APP_FIX =
-	"create a GitHub OAuth app (https://github.com/settings/developers, OAuth Apps, New OAuth App) whose callback URL is <your site>/api/cms/auth/callback/github (`monti doctor` prints it), then copy its Client ID into AUTH_GITHUB_ID and a new client secret into AUTH_GITHUB_SECRET";
+	"create a GitHub OAuth app (https://github.com/settings/developers, OAuth Apps, New OAuth App) whose callback URL is <your site>/api/monti/auth/callback/github (`monti doctor` prints it), then copy its Client ID into AUTH_GITHUB_ID and a new client secret into AUTH_GITHUB_SECRET";
 
 /**
  * Log in with GitHub. It works with no arguments: the OAuth app comes from `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET`, the admin from `MONTI_ADMIN_GITHUB_ID`,
  * and a value passed here wins. A missing id or secret is an error that names the variable. The account id is the numeric GitHub id, so `github:12345678`
- * is the same person after a rename. The callback URL of the OAuth app is `<site>/api/cms/auth/callback/github`.
+ * is the same person after a rename. The callback URL of the OAuth app is `<site>/api/monti/auth/callback/github`.
  */
 export function github(options: GithubOptions = {}): LoginProvider {
 	const clientId = () => options.clientId || fromEnv(GITHUB_ENV.clientId);

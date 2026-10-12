@@ -25,7 +25,7 @@ async function targetId(cms: Cms, collection: string, field: string, slug: strin
 	return found.status === "not_found" ? null : found.entry.translationGroupId;
 }
 
-/** `GET /api/cms/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
+/** `GET /api/monti/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
 export async function GET(request: Request, { cms }: { cms: Cms }): Promise<Response> {
 	const config: PublicApiOptions | undefined = cms.server.publicApi;
 	if (!config) return publicError("not_found", "Not found");
@@ -63,7 +63,7 @@ export async function GET(request: Request, { cms }: { cms: Cms }): Promise<Resp
 	}
 }
 
-/** `GET /api/cms/v1/public/entries/:collection/:slug?locale` — a single published entry. For an old address, reports the canonical address as `address`. */
+/** `GET /api/monti/v1/public/entries/:collection/:slug?locale` — a single published entry. For an old address, reports the canonical address as `address`. */
 export async function getOne(
 	request: Request,
 	params: { collection: string; slug: string },

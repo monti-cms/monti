@@ -100,9 +100,9 @@ beforeEach(() => {
 		const handled = await handle(url, init);
 		if (handled !== undefined) return handled;
 		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/cms/v1/preferences") return json({});
-		if (url.pathname === "/api/cms/v1/folders" && method === "GET") return json([]);
-		if (url.pathname === "/api/cms/v1/entries" && method === "GET") {
+		if (url.pathname === "/api/monti/v1/preferences") return json({});
+		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return json([]);
+		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
 			const items = url.searchParams.get("collection") === content ? listed : [];
 			return json({ items, total: items.length });
 		}
@@ -169,7 +169,7 @@ describe("any site: list screen", () => {
 		nav.setSearch(`collection=${content}`);
 		listed = [item("e1", "Alpha")];
 		handle = (url, init) =>
-			url.pathname === "/api/cms/v1/entries/e1/duplicate" && init?.method === "POST"
+			url.pathname === "/api/monti/v1/entries/e1/duplicate" && init?.method === "POST"
 				? json({ entry: { id: "copy-1" }, warnings: [] }, 201)
 				: undefined;
 		render(
@@ -182,8 +182,8 @@ describe("any site: list screen", () => {
 			fireEvent.contextMenu(row);
 		});
 		fireEvent.click(await screen.findByRole("menuitem", { name: t("menu.duplicate") }));
-		await waitFor(() => expect(calls("POST", "/api/cms/v1/entries/e1/duplicate")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/cms/v1/entries/e1/duplicate")[0])).toEqual({
+		await waitFor(() => expect(calls("POST", "/api/monti/v1/entries/e1/duplicate")).toHaveLength(1));
+		expect(bodyOf(calls("POST", "/api/monti/v1/entries/e1/duplicate")[0])).toEqual({
 			title: copyTitle(testSite, content, "Alpha"),
 		});
 		await waitFor(() => expect(nav.navigate).toHaveBeenCalledWith(testSite.adminEntryEditHref("copy-1")));
@@ -208,7 +208,7 @@ describe("any site: copy title", () => {
 describe("any site: record panel", () => {
 	it("creates a record from its title field alone", async () => {
 		handle = (url, init) =>
-			url.pathname === "/api/cms/v1/entries" && init?.method === "POST"
+			url.pathname === "/api/monti/v1/entries" && init?.method === "POST"
 				? json({
 						entry: {
 							id: "r1",
@@ -229,8 +229,8 @@ describe("any site: record panel", () => {
 			target: { value: "New record" },
 		});
 		fireEvent.click(within(panel).getByRole("button", { name: t("common.save") }));
-		await waitFor(() => expect(calls("POST", "/api/cms/v1/entries")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/cms/v1/entries")[0])).toEqual({
+		await waitFor(() => expect(calls("POST", "/api/monti/v1/entries")).toHaveLength(1));
+		expect(bodyOf(calls("POST", "/api/monti/v1/entries")[0])).toEqual({
 			collection: record,
 			slug: null,
 			metadata: { title: "New record" },
@@ -256,7 +256,7 @@ describe("any site: entry editor", () => {
 
 	it("opens an entry with the title field's label and saves only schema fields", async () => {
 		handle = (url, init) => {
-			if (url.pathname !== "/api/cms/v1/entries/entry-1") return undefined;
+			if (url.pathname !== "/api/monti/v1/entries/entry-1") return undefined;
 			if (!init?.method) return json(entry);
 			if (init.method === "PATCH") {
 				const body = JSON.parse(String(init.body));
@@ -280,8 +280,8 @@ describe("any site: entry editor", () => {
 
 		fireEvent.change(title, { target: { value: "Changed title" } });
 		fireEvent.click(screen.getByRole("button", { name: tShell("save") }));
-		await waitFor(() => expect(calls("PATCH", "/api/cms/v1/entries/entry-1")).toHaveLength(1));
-		const body = bodyOf(calls("PATCH", "/api/cms/v1/entries/entry-1")[0]);
+		await waitFor(() => expect(calls("PATCH", "/api/monti/v1/entries/entry-1")).toHaveLength(1));
+		const body = bodyOf(calls("PATCH", "/api/monti/v1/entries/entry-1")[0]);
 		expect(body.metadata.title).toBe("Changed title");
 		const known = new Set(testSite.storedFields(content).map(({ name }) => name));
 		for (const key of Object.keys(body.metadata)) expect(known.has(key), key).toBe(true);

@@ -24,7 +24,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
-| `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, `CmsRouteHandler` 타입 |
+| `@monti-cms/nextjs` | `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)`, `CmsRouteHandler` 타입 |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | (라우트 핸들러와 관리자가 알아서 붙인다) | `nextHost` |
@@ -32,14 +32,14 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 ### 라우트 핸들러
 
 ```ts
-// app/api/cms/[...path]/route.ts
+// app/api/monti/[...path]/route.ts
 import { createRouteHandler } from "@monti-cms/nextjs";
 import { cms } from "@/monti.config";
 
 export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 ```
 
-요청과, Next가 이미 나눈 경로 조각을 `cms.handle(request)`에 넘길 뿐이다. 이 라우트 하나가 관리자 API(`/api/cms/v1/*`)·로그인(`/api/cms/auth/*`)·플러그인 라우트를 맡는다.
+요청과, Next가 이미 나눈 경로 조각을 `cms.handle(request)`에 넘길 뿐이다. 이 라우트 하나가 관리자 API(`/api/monti/v1/*`)·로그인(`/api/monti/auth/*`)·플러그인 라우트를 맡는다.
 
 ### `next.config.ts`
 
@@ -113,7 +113,7 @@ export const cms = defineConfig({
 | --- | --- |
 | `app/<관리자 경로>/layout.tsx` | `CmsAdminLayout`과 `generateMetadata`(`cmsAdminMetadata`), 관리자 스타일시트 import |
 | `app/<관리자 경로>/[[...path]]/page.tsx` | `CmsAdminPage` |
-| `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`: 관리자 API·로그인·플러그인 라우트 |
+| `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)`: 관리자 API·로그인·플러그인 라우트 |
 
 라우트 그룹도, 그 밖의 관리자 파일도 없다. 직접 만든 관리자 컴포넌트는 관리자 쪽을 가진 플러그인이다(`@monti-cms/admin` README의 "사이트 컴포넌트 넣기"). 세 파일 모두 `monti.config.ts`에서 `cms`를 불러온다.
 
