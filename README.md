@@ -106,13 +106,22 @@ pnpm lint             # lint (fix with pnpm lint:fix)
 pnpm check:korean     # check that Korean strings in runtime code live only in the message dictionaries
 pnpm typecheck        # type check all packages
 pnpm build            # build all packages (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
-pnpm test:run         # tests (needs Postgres)
+pnpm test:run         # all tests, including the other-site and configured re-runs (needs Postgres)
+pnpm test:quick       # default projects only, for local work (needs Postgres)
 pnpm example:check    # pack the packages, install them into the example app and build it
 ```
 
 On commit, the code check (lint-staged) and the commit message check (commitlint) run automatically. Write commit messages in English as `type(scope): subject` (for example `feat(core): add thing`). Pick the scope from `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo`, or leave it out. On push, lint, check:korean and typecheck run.
 
 All tests run only if `.env.local` has a test DB URL (`CMS_TEST_DATABASE_URL`). The tests create a temporary schema in this DB and drop it when finished.
+
+A Postgres on your own machine makes the suite much faster than a remote one. Any local Postgres works; set its time zone to UTC (`ALTER DATABASE monti_test SET timezone = 'UTC'`) and pass the URL for a run, which wins over `.env.local`:
+
+```sh
+CMS_TEST_DATABASE_URL=postgres://localhost/monti_test pnpm test:run
+```
+
+CI runs `pnpm test:run`. Only the tests that read the site config are re-run against the other-site example config (`packages/core/test/config-sensitive.ts` picks them), so a config-agnostic test belongs in the default run and costs nothing twice.
 
 ## Releasing
 
