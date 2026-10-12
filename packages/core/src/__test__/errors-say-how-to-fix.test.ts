@@ -103,11 +103,11 @@ describe("errors of core", () => {
 		expect(noDatabase).toContain("DATABASE_URL");
 	});
 
-	it("a schema file with a wrong value lists the JSON paths and ends with how to fix them", () => {
-		const message = messageOf(() => parseSchemaFile({ collections: { post: { kind: "nope" } } }, "monti.schema.json"));
-		expect(message).toContain("monti.schema.json is not a valid schema file");
+	it("a schema file with a wrong value lists the paths and ends with how to fix them", () => {
+		const message = messageOf(() => parseSchemaFile({ collections: { post: { kind: "nope" } } }, "monti.schema.ts"));
+		expect(message).toContain("monti.schema.ts is not a valid schema file");
 		expect(message).toContain("collections.post");
-		expect(message).toContain("Fix: correct the lines above in monti.schema.json");
-		expect(message).toContain("$schema");
+		expect(message).toContain("Fix: correct the lines above in monti.schema.ts");
+		expect(message).toContain("defineSchema");
 	});
 });

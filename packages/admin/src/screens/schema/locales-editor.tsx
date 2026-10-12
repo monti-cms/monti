@@ -131,7 +131,6 @@ export function LocalesEditor({
 					onChange={(value) =>
 						update((current) =>
 							setProp(current, "timeZone", orUndefined(value), [
-								"$schema",
 								"schemaVersion",
 								"collections",
 								"migrations",

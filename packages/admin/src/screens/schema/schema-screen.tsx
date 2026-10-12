@@ -42,6 +42,7 @@ const READ_ONLY_KEY = {
 	production: "readonly.production",
 	no_schema_file: "readonly.noFile",
 	not_writable: "readonly.notWritable",
+	has_code: "readonly.hasCode",
 } as const;
 
 function AddCollection({
@@ -218,7 +219,19 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
-								<AlertDescription>{t(READ_ONLY_KEY[reason])}</AlertDescription>
+								<AlertDescription className="flex flex-col gap-1">
+									<span>{t(READ_ONLY_KEY[reason])}</span>
+									{reason === "has_code" && state.access.detail && (
+										<code className="text-xs" data-testid="schema-code-detail">
+											{state.access.detail}
+										</code>
+									)}
+								</AlertDescription>
+							</Alert>
+						)}
+						{writable && state.comments && (
+							<Alert layout="stack" data-testid="schema-comments-note">
+								<AlertDescription>{t("comments.note")}</AlertDescription>
 							</Alert>
 						)}
 						{applyFailed && (
@@ -362,7 +375,7 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 	);
 }
 
-/** The schema settings screen: edits `monti.schema.json` on the development server, shows it read-only everywhere else. */
+/** The schema settings screen: edits `monti.schema.ts` on the development server, shows it read-only everywhere else. */
 export function SchemaScreen() {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);

@@ -21,8 +21,10 @@ export default defineConfig(({ mode }) => ({
 		},
 	},
 	resolve: {
-		alias: {
-			"server-only": path.resolve(__dirname, "./test/server-only.ts"),
-		},
+		alias: [
+			{ find: "server-only", replacement: path.resolve(__dirname, "./test/server-only.ts") },
+			// A schema file written in a temporary folder imports `defineSchema` from the package by name, as a site's does.
+			{ find: /^@monti-cms\/core$/, replacement: path.resolve(__dirname, "./src/index.ts") },
+		],
 	},
 }));

@@ -6,6 +6,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
+import { parseSchemaLiteral } from "../../schema-file/literal";
+import { loadSchemaFile } from "../../schema-file/locate";
+import { printSchemaFile } from "../../schema-file/print";
+import type { SchemaTypes } from "../../schema-file/types";
 import { postgres } from "../../server";
 import type { CmsAuth } from "../../server/define";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
@@ -65,7 +69,7 @@ describe("schema settings API", () => {
 	beforeAll(async () => {
 		await freshDatabase();
 		dir = mkdtempSync(path.join(tmpdir(), "monti-schema-edit-"));
-		file = path.join(dir, "monti.schema.json");
+		file = path.join(dir, "monti.schema.ts");
 	});
 
 	afterAll(async () => {
@@ -76,15 +80,20 @@ describe("schema settings API", () => {
 
 	afterEach(() => vi.unstubAllEnvs());
 
-	const write = (value: unknown, indent: string | number = "\t") =>
-		writeFileSync(file, `${JSON.stringify(value, null, indent)}\n`);
+	const write = (value: Record<string, unknown>) => writeFileSync(file, printSchemaFile(value));
 	const text = () => readFileSync(file, "utf8");
-	const types = () => readFileSync(path.join(dir, "monti-env.d.ts"), "utf8");
+	/** The data in the file, read as text (the file is a pure literal). */
+	// biome-ignore lint/suspicious/noExplicitAny: a test reads any part of the data
+	const onDiskData = (): Record<string, any> => {
+		const literal = parseSchemaLiteral(text());
+		if (!literal.ok) throw new Error(literal.message);
+		return literal.value;
+	};
 
 	const newCms = (admin = true) =>
 		createCms({
 			id: `schema-edit-${++serial}`,
-			config: defineSite({ schema: JSON.parse(text()) }),
+			config: defineSite({ schema: onDiskData() as SchemaTypes }),
 			schemaFile: file,
 			server: {
 				database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),
@@ -118,7 +127,7 @@ describe("schema settings API", () => {
 		expect(production).toMatchObject({
 			access: { writable: false, reason: "production" },
 			source: "file",
-			file: expect.stringContaining("monti.schema.json"),
+			file: expect.stringContaining("monti.schema.ts"),
 		});
 		expect(production.schema.collections.post.label).toBe("Post");
 
@@ -162,16 +171,18 @@ describe("schema settings API", () => {
 		expect((await call(cms, "PUT", "schema", { schema: schemaOf({}), baseHash: "x" })).status).toBe(403);
 	});
 
-	it("adds a field through the API: it is in the file, in the types, and the running instance has it", async () => {
+	it("adds a field through the API: the whole file is printed again, a later load sees the field, and the running instance has it", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		await freshDatabase();
-		// A hand-formatted array and a key order the save must keep.
+		// A hand-formatted file with comments: saving writes it again in the printer's form, in the key order of the data.
 		writeFileSync(
 			file,
-			`{\n\t"schemaVersion": 1,\n\t"collections": {\n\t\t"post": {\n\t\t\t"label": "Post",\n\t\t\t"kind": "document",\n\t\t\t"fields": {\n\t\t\t\t"title": { "kind": "text", "label": "Title", "required": true },\n\t\t\t\t"slug": { "kind": "slug", "label": "Address", "from": "title" }\n\t\t\t},\n\t\t\t"path": "/posts/:slug",\n\t\t\t"layout": [{ "fields": ["title", "slug"] }]\n\t\t}\n\t},\n\t"locales": [{ "code": "en", "name": "English" }],\n\t"defaultLocale": "en"\n}\n`,
+			`// my schema\nimport { defineSchema } from '@monti-cms/core'\n\nexport default defineSchema({\n\tschemaVersion: 1,\n\tcollections: {\n\t\tpost: {\n\t\t\tlabel: 'Post', kind: 'document',\n\t\t\tfields: {\n\t\t\t\ttitle: { kind: 'text', label: 'Title', required: true },\n\t\t\t\tslug: { kind: 'slug', label: 'Address', from: 'title' },\n\t\t\t},\n\t\t\tpath: '/posts/:slug',\n\t\t\tlayout: [{ fields: ['title', 'slug'] }],\n\t\t},\n\t},\n\tlocales: [{ code: 'en', name: 'English' }],\n\tdefaultLocale: 'en',\n})\n`,
 		);
 		const cms = newCms();
-		const { hash, schema } = await read(cms);
+		const state = await (await call(cms, "GET", "schema")).json();
+		expect(state).toMatchObject({ access: { writable: true }, source: "file", comments: true });
+		const { hash, schema } = state;
 		const edited = structuredClone(schema) as { collections: { post: { fields: Record<string, unknown> } } };
 		edited.collections.post.fields.rating = {
 			kind: "select",
@@ -189,16 +200,19 @@ describe("schema settings API", () => {
 		const saved = await res.json();
 		expect(saved).toMatchObject({ saved: true, reloaded: true, schemaVersion: 2 });
 
-		const onDisk = JSON.parse(text());
+		// The file is the printer's output for the saved data, with the new field in place and the version raised.
+		const onDisk = onDiskData();
+		expect(text()).toBe(printSchemaFile(onDisk));
+		expect(text()).not.toContain("// my schema");
+		expect(text()).toContain('\t\t\t\trating: {\n\t\t\t\t\tkind: "select",');
 		expect(onDisk.collections.post.fields.rating.options).toEqual({ good: "Good", bad: "Bad" });
 		expect(onDisk.schemaVersion).toBe(2);
-		// Unchanged parts keep their text; the new field is written in the file's indentation.
-		expect(text()).toContain(`"title": { "kind": "text", "label": "Title", "required": true },`);
-		expect(text()).toContain(`"layout": [{ "fields": ["title", "slug"] }]`);
-		expect(text()).toContain(`\t\t\t\t"rating": {\n\t\t\t\t\t"kind": "select"`);
+		expect(Object.keys(onDisk)).toEqual(["schemaVersion", "collections", "locales", "defaultLocale"]);
 		expect(Object.keys(onDisk.collections.post)).toEqual(["label", "kind", "fields", "path", "layout"]);
-		// The generated types know the field.
-		expect(types()).toContain("readonly rating:");
+		// A later load of the module sees the change.
+		const loaded = await loadSchemaFile(dir, file, { fresh: true });
+		expect(Object.keys(loaded.collections.post?.fields ?? {})).toEqual(["title", "slug", "rating"]);
+		expect(loaded.schemaVersion).toBe(2);
 		// The instance runs the new schema without a restart.
 		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("rating");
 	});
@@ -258,7 +272,7 @@ describe("schema settings API", () => {
 
 		expect(await metadataOf("one")).toEqual({ title: "one", excerpt: "First" });
 		expect(await metadataOf("three")).toEqual({ title: "three" });
-		const onDisk = JSON.parse(text());
+		const onDisk = onDiskData();
 		expect(onDisk.migrations).toHaveLength(1);
 		expect(onDisk.migrations[0]).toMatchObject({
 			op: "renameField",
@@ -267,8 +281,8 @@ describe("schema settings API", () => {
 			to: "excerpt",
 		});
 		expect(onDisk.schemaVersion).toBeGreaterThanOrEqual(2);
-		expect(types()).toContain("readonly excerpt:");
-		expect(types()).not.toContain("readonly summary:");
+		expect(Object.keys(onDisk.collections.post.fields)).toContain("excerpt");
+		expect(Object.keys(onDisk.collections.post.fields)).not.toContain("summary");
 	});
 
 	it("lets the writer pick a transform: dropping a field deletes its values only when picked", async () => {
@@ -282,7 +296,7 @@ describe("schema settings API", () => {
 		const res = await call(cms, "PUT", "schema", { schema: edited, transforms: [drop], baseHash: hash });
 		expect(res.status).toBe(200);
 		expect(await metadataOf("one")).toEqual({ title: "one" });
-		expect(JSON.parse(text()).migrations.map((item: { op: string }) => item.op)).toEqual(["renameField", "dropField"]);
+		expect(onDiskData().migrations.map((item: { op: string }) => item.op)).toEqual(["renameField", "dropField"]);
 	});
 
 	it("refuses a file that changed since the edit started", async () => {
@@ -297,7 +311,7 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
-	it("reports what is wrong with the JSON path, and writes nothing", async () => {
+	it("reports what is wrong with the path of the value, and writes nothing", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const cms = newCms();
 		const { hash, schema } = await read(cms);
@@ -320,27 +334,49 @@ describe("schema settings API", () => {
 		expect(text()).toBe(before);
 	});
 
-	it("runs a schema file edited by hand, without a restart", async () => {
+	it("is read-only when the file holds code: the screen says why, both write routes answer 403, and the file is untouched", async () => {
 		vi.stubEnv("NODE_ENV", "development");
+		const withSpread = printSchemaFile(schemaOf({})).replace(
+			"export default defineSchema({\n",
+			"const base = { schemaVersion: 1 };\n\nexport default defineSchema({\n\t...base,\n",
+		);
+		write(schemaOf({}));
 		const cms = newCms();
-		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).not.toContain("handmade");
-		const current = JSON.parse(text());
-		current.collections.post.fields.handmade = { kind: "text", label: "Hand made" };
-		writeFileSync(file, `${JSON.stringify(current, null, "\t")}\n`);
-		await new Promise((resolve) => setTimeout(resolve, 300));
-		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("handmade");
-		// A half-written file leaves the running schema as it was.
-		const report = vi.spyOn(console, "error").mockImplementation(() => undefined);
-		writeFileSync(file, "{ not json");
-		await new Promise((resolve) => setTimeout(resolve, 300));
-		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("handmade");
-		expect(report).toHaveBeenCalledWith(expect.stringContaining("the schema file was not reloaded"));
-		report.mockRestore();
+		writeFileSync(file, withSpread);
+		const state = await (await call(cms, "GET", "schema")).json();
+		expect(state).toMatchObject({
+			access: { writable: false, reason: "has_code", detail: expect.stringContaining("line 3") },
+			source: "site",
+		});
+		// The screen still shows what the instance runs.
+		expect(state.schema.collections.post.label).toBe("Post");
+		const save = await call(cms, "PUT", "schema", { schema: state.schema, baseHash: state.hash });
+		expect(save.status).toBe(403);
+		expect(await save.json()).toMatchObject({
+			code: "schema_read_only",
+			reason: "has_code",
+			message: "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead",
+		});
+		expect((await call(cms, "POST", "schema/preview", { schema: state.schema })).status).toBe(403);
+		expect(text()).toBe(withSpread);
 	});
 
 	it("does not reload in production", async () => {
 		write(schemaOf({}));
 		const cms = newCms();
-		expect(cms.reloadSchema()).toEqual({ reloaded: false, reason: "production" });
+		expect(cms.reloadSchema(schemaOf({}))).toEqual({ reloaded: false, reason: "production" });
+	});
+
+	it("reloads the instance in place with the schema it is given, and keeps the last good one for a schema that does not check", async () => {
+		vi.stubEnv("NODE_ENV", "development");
+		write(schemaOf({}));
+		const cms = newCms();
+		expect(cms.reloadSchema(schemaOf({ handmade: { kind: "text", label: "Hand made" } }))).toEqual({ reloaded: true });
+		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("handmade");
+		const report = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		expect(cms.reloadSchema({ nope: true })).toMatchObject({ reloaded: false });
+		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("handmade");
+		expect(report).toHaveBeenCalledWith(expect.stringContaining("the schema was not reloaded"));
+		report.mockRestore();
 	});
 });

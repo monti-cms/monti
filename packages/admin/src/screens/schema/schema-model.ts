@@ -1,5 +1,5 @@
 /**
- * The schema file as the settings screen edits it: plain JSON, changed by small pure functions that return a new copy. Key order is part of the file, so every
+ * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
 import { DEFAULT_TITLE_FIELD, TITLE_ROLE } from "@monti-cms/core/client";
@@ -14,7 +14,7 @@ export type FieldKindName = (typeof FIELD_KINDS)[number];
 /** The kinds a conditional field can show (the ones that store one value). */
 export const VALUE_KINDS = ["text", "relation", "select", "media"] as const;
 
-/** The order a field's properties are written in: the common ones, then the ones of the kind (the order of `schema.json`). */
+/** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
 export const FIELD_KEY_ORDER = [
 	"kind",
 	"label",

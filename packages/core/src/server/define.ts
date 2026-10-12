@@ -11,7 +11,7 @@ import type { Decision } from "./decision";
 
 /**
  * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, hooks and the public API. Read on the server only.
- * Unlike the site data (`monti.schema.json`), it may hold secrets, and usually reads them from environment variables.
+ * Unlike the site data (`monti.schema.ts`), it may hold secrets, and usually reads them from environment variables.
  * An app writes these options in `defineConfig({ database, auth, storage, ... })` of `@monti-cms/core/server`, which hands them to `createCms` as this shape.
  *
  * Connections are created on first use. Reading the config where environment variables are absent, such as during a build, does not fail.

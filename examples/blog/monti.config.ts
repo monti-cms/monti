@@ -10,7 +10,7 @@ import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
 import { seo } from "@monti-cms/seo";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 import { siteCallout } from "./plugins/site-callout";
 import { wordList } from "./plugins/word-list";
 
@@ -19,9 +19,9 @@ import { wordList } from "./plugins/word-list";
  * It is server-only (it holds the database and login settings): it is never imported by a client component, and `monti doctor` checks that.
  *
  * A personal tech blog, modelled on the maintainer's own blog: posts, memos, categories, tags and series (the `collection` collection), in Korean (the default) and
- * English. The data of the site is in `monti.schema.json`: the collections and their fields and layouts (the SEO fields included), the locales, the time zone, the
- * site and admin settings, and the seed templates. Edit it there (editors autocomplete it through its `$schema`). `monti schema:types` writes `monti-env.d.ts` from
- * it, so `cms.read` and the admin know the collections without any type written by hand; `next dev` keeps that file up to date.
+ * English. The data of the site is in `monti.schema.ts`: the collections and their fields and layouts (the SEO fields included), the locales, the time zone, the
+ * site and admin settings, and the seed templates. Edit it there (`defineSchema` types it, so the editor autocompletes it), or in the admin schema screen, which
+ * writes the file again while it is plain data. `cms.read` and the admin know the collections from its types, without any type written by hand.
  * This file keeps what needs code: the plugins, the database and the login. Their values come from the environment (`.env.example` lists them).
  */
 export const cms = defineConfig({

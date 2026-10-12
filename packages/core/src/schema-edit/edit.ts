@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { generateSchemaTypes } from "../cli/schema-types";
 import type { Cms } from "../cms";
 import type { SchemaChangeStore } from "../core/store/ports";
 import type { SchemaState } from "../core/store/schema-change";
@@ -23,14 +22,15 @@ import {
 	type TransformProblem,
 } from "../schema-change";
 import { parseSchemaFile, SchemaFileError, type SchemaIssue } from "../schema-file/format";
-import { formatSchemaText } from "../schema-file/text";
+import { parseSchemaLiteral } from "../schema-file/literal";
+import { printSchemaFile } from "../schema-file/print";
 import type { SchemaFile, SchemaMigration } from "../schema-file/types";
 import { type SchemaEditAccess, schemaEditAccess } from "./access";
 
 /**
- * What the settings screen does with the schema file: it reads it (`readSchemaScreen`), checks an edit against the stored content (`previewSchemaEdit`: the
+ * What the settings screen does with the schema file (`monti.schema.ts`): it reads it (`readSchemaScreen`), checks an edit against the stored content (`previewSchemaEdit`: the
  * diff, the entries each change touches, and the data transforms the writer can pick), and saves it (`saveSchemaEdit`: the file, its migrations and version,
- * the generated types, the dev database and the running instance). The two that need a writable file are guarded by `schemaEditAccess`; the routes answer 403 when it
+ * the dev database and the running instance). The two that need a writable file are guarded by `schemaEditAccess`; the routes answer 403 when it
  * says no. All of it is data in, data out; the admin routes and the tests call these.
  */
 
@@ -43,14 +43,16 @@ export const hashOf = (text: string): string => createHash("sha256").update(text
 
 /** The schema file as the screen shows it. */
 export interface SchemaScreenState {
-	readonly access: { readonly writable: boolean; readonly reason?: string };
+	readonly access: { readonly writable: boolean; readonly reason?: string; readonly detail?: string };
 	/** The path of the schema file relative to the working directory (what the screen calls the file), or `null` when there is none. */
 	readonly file: string | null;
 	/** Hash of the file's text: a save names the hash it was edited from, and is refused when the file changed since. `null` without a file. */
 	readonly hash: string | null;
-	/** The file's content, or (without a file) the schema the instance runs. */
+	/** The file's content, or (without a file, or when the file has code) the schema the instance runs. */
 	readonly schema: unknown;
 	readonly source: "file" | "site";
+	/** The file has comments; saving writes it again without them. */
+	readonly comments: boolean;
 	/** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
 	readonly issues: readonly SchemaIssue[];
 	/** The version the instance runs. */
@@ -89,9 +91,13 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 	}
 	let schema: unknown;
 	let issues: SchemaIssue[] = [];
-	if (text !== undefined) {
+	let comments = false;
+	// A file with code is not read as data (the instance runs it; the screen shows what the instance runs and is read-only).
+	const literal = text === undefined ? undefined : parseSchemaLiteral(text);
+	if (literal?.ok) {
+		comments = literal.comments;
+		schema = literal.value;
 		try {
-			schema = JSON.parse(text);
 			parseSchemaFile(schema, relativeToCwd(file as string));
 		} catch (error) {
 			issues =
@@ -102,6 +108,7 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 	}
 	const { config } = cms.site;
 	if (schema === undefined && issues.length === 0) {
+		// Without a file, or with code in it: the schema the instance runs.
 		schema = {
 			schemaVersion: config.schemaVersion ?? 1,
 			collections: config.collections,
@@ -113,15 +120,18 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 	const applied = await appliedState(cms);
 	const inFile = isRecord(schema) && isRecord(schema.collections) ? Object.keys(schema.collections) : [];
 	return {
-		access: access.writable ? { writable: true } : { writable: false, reason: access.reason },
+		access: access.writable
+			? { writable: true }
+			: { writable: false, reason: access.reason, ...(access.detail ? { detail: access.detail } : {}) },
 		file: file ? relativeToCwd(file) : null,
 		hash: text === undefined ? null : hashOf(text),
 		schema: schema ?? null,
-		source: text === undefined ? "site" : "file",
+		source: literal?.ok ? "file" : "site",
+		comments,
 		issues,
 		schemaVersion: config.schemaVersion ?? 1,
 		applied: applied ? { schemaVersion: applied.schemaVersion, appliedAt: applied.appliedAt.toISOString() } : null,
-		codeCollections: text === undefined ? [] : Object.keys(config.collections).filter((name) => !inFile.includes(name)),
+		codeCollections: !literal?.ok ? [] : Object.keys(config.collections).filter((name) => !inFile.includes(name)),
 		vocabulary: bodyVocabulary(cms.site),
 		collections: Object.keys(config.collections),
 	};
@@ -395,7 +405,8 @@ async function evaluate(
 
 	const current = (() => {
 		try {
-			return JSON.stringify(JSON.parse(readFileSync(cms.schemaFile() ?? "", "utf8")));
+			const literal = parseSchemaLiteral(readFileSync(cms.schemaFile() ?? "", "utf8"));
+			return literal.ok ? JSON.stringify(literal.value) : undefined;
 		} catch {
 			return undefined;
 		}
@@ -459,7 +470,6 @@ export type SchemaSaveResult =
 			readonly transforms: readonly SchemaMigration[];
 			/** Entries the apply rewrote. */
 			readonly entriesRewritten: number;
-			readonly types: { readonly file: string; readonly changed: boolean };
 			/** The running instance now runs the new schema. */
 			readonly reloaded: boolean;
 			/** Entries where a rename found a value under the new name already: both were kept. */
@@ -495,10 +505,10 @@ function withKey(
  *
  * 1. Checks the edit (format, then the rules between collections) and the transforms; refuses a file that changed since the edit started (`baseHash`).
  * 2. Dry-runs the transforms on the dev database (nothing written) so an entry that cannot be rewritten stops the save before the file is touched.
- * 3. Writes `monti.schema.json` with the chosen transforms appended to `migrations` and `schemaVersion` raised, keeping the file's formatting and key order.
- * 4. Writes the generated types (`monti-env.d.ts`).
- * 5. Runs `applySchemaChange` against the dev database (creating the tables first when the store has none) with the schema as written.
- * 6. Reloads the running instance from the file (`cms.reloadSchema()`).
+ * 3. Writes `monti.schema.ts` whole (`printSchemaFile`) with the chosen transforms appended to `migrations` and `schemaVersion` raised, in the key order of the edit.
+ *    Comments in the file are dropped; a file that has code is never written (`schemaEditAccess` refuses it).
+ * 4. Runs `applySchemaChange` against the dev database (creating the tables first when the store has none) with the schema as written.
+ * 5. Makes the running instance run the new schema (`cms.reloadSchema(schema)`); the dev server evaluates the config again because the file changed.
  *
  * The caller has checked `schemaEditAccess`.
  */
@@ -524,13 +534,13 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 	}
 	const version = preview.nextVersion;
 	if (version !== (typeof raw.schemaVersion === "number" ? raw.schemaVersion : 1)) {
-		content = withKey(content, "schemaVersion", version, ["$schema"]);
+		content = withKey(content, "schemaVersion", version, []);
 	}
 	const final = content;
-	const text = formatSchemaText(previousText, final);
+	const text = printSchemaFile(final);
 
 	// The schema as it will be written, for the apply and the dry run.
-	const written = JSON.parse(text) as unknown;
+	const written = JSON.parse(JSON.stringify(final)) as unknown;
 	const target = cms.forSchema(written);
 	const migrations = (parseSchemaFile(written).migrations ?? []) as readonly SchemaMigration[];
 	const options = { site: target.site, store: target.store(), migrations, schemaVersion: version };
@@ -548,7 +558,6 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 	}
 
 	writeFileSync(file, text);
-	const types = generateSchemaTypes({ cwd: path.dirname(file), schema: path.basename(file) });
 	const hash = hashOf(text);
 
 	let applied: Awaited<ReturnType<typeof applySchemaChange>>;
@@ -561,7 +570,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 			applied = await applySchemaChange(options);
 		}
 	} catch (error) {
-		cms.reloadSchema();
+		cms.reloadSchema(written);
 		return {
 			saved: false,
 			reason: "apply_failed",
@@ -570,7 +579,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 			hash,
 		};
 	}
-	const reload = cms.reloadSchema();
+	const reload = cms.reloadSchema(written);
 	return {
 		saved: true,
 		file: relativeToCwd(file),
@@ -578,7 +587,6 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 		schemaVersion: applied.schemaVersion,
 		transforms: preview.transforms,
 		entriesRewritten: applied.result.entries,
-		types: { file: relativeToCwd(path.resolve(path.dirname(file), types.out)), changed: types.changed },
 		reloaded: reload.reloaded,
 		conflicts: applied.conflicts.length,
 	};

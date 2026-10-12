@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, wr
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, vi } from "vitest";
+import { parseSchemaLiteral } from "../../schema-file/literal";
 import type { InitHost } from "../init";
 import { InitCancelled, type Prompter } from "../init-prompts";
 
@@ -46,7 +47,7 @@ export const CREATE_NEXT_APP: Record<string, string> = {
 		2,
 	),
 	"tsconfig.json": JSON.stringify({
-		compilerOptions: { strict: true, resolveJsonModule: true, paths: { "@/*": ["./*"] } },
+		compilerOptions: { strict: true, paths: { "@/*": ["./*"] } },
 	}),
 	"app/layout.tsx": CREATE_NEXT_APP_LAYOUT,
 	"app/page.tsx": "export default function Home() { return null; }\n",
@@ -80,7 +81,7 @@ export const SRC_APP: Record<string, string | null> = {
 	"src/app/page.tsx": "export default function Home() { return null; }\n",
 	"src/app/globals.css": '@import "tailwindcss";\n',
 	"tsconfig.json": JSON.stringify({
-		compilerOptions: { strict: true, resolveJsonModule: true, paths: { "@/*": ["./src/*"] } },
+		compilerOptions: { strict: true, paths: { "@/*": ["./src/*"] } },
 	}),
 };
 
@@ -88,6 +89,14 @@ export const POST_MDX = (title: string) =>
 	`---\ntitle: ${title}\ndate: 2024-05-01\ndescription: About ${title}\ntags:\n  - web\ncover: /images/${title}.png\ndraft: false\nauthor: Me\n---\n\nBody of ${title}.\n`;
 
 export const read = (dir: string, file: string) => readFileSync(path.join(dir, file), "utf8");
+
+/** The data of the schema file `monti init` wrote (a pure literal, read without running it). */
+// biome-ignore lint/suspicious/noExplicitAny: a test reads any part of the data
+export const schemaOf = (dir: string, file = "monti.schema.ts"): Record<string, any> => {
+	const literal = parseSchemaLiteral(read(dir, file));
+	if (!literal.ok) throw new Error(`${file} is not a pure literal: ${literal.message}`);
+	return literal.value;
+};
 
 /** Every file under `dir` (relative, `/`-separated, sorted). */
 export function listFiles(dir: string, prefix = ""): string[] {

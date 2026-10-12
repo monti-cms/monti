@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { runCli } from "../index";
 import { runInitCommand } from "../init-command";
 import { QUESTIONS } from "../init-prompts";
-import { fakeHost, fixtureApp, listFiles, read, scriptedPrompter } from "./init-helpers";
+import { fakeHost, fixtureApp, listFiles, read, schemaOf, scriptedPrompter } from "./init-helpers";
 
 /** The command line: flags, `--yes`, `--json`, the interactive run, and the exit codes. */
 
@@ -102,7 +102,7 @@ describe("monti init on the command line", () => {
 		]);
 		expect(await result.code).toBe(0);
 		expect(read(dir, ".env.example")).toContain("https://x.dev");
-		expect(JSON.parse(read(dir, "monti.schema.json")).admin).toEqual({ path: "/cms" });
+		expect(schemaOf(dir).admin).toEqual({ path: "/cms" });
 		expect(result.out.join("\n")).toContain("npx monti");
 	});
 
@@ -131,7 +131,7 @@ describe("monti init on the command line", () => {
 	it("--locale still sets the one default language", async () => {
 		const dir = fixtureApp();
 		await run(dir, ["--yes", "--no-install", "--locale", "ko"]).code;
-		expect(JSON.parse(read(dir, "monti.schema.json")).defaultLocale).toBe("ko");
+		expect(schemaOf(dir).defaultLocale).toBe("ko");
 	});
 
 	it("exits 1 when a step failed, with the files still written", async () => {

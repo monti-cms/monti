@@ -35,7 +35,6 @@ function fixture(): string {
 				esModuleInterop: true,
 				module: "esnext",
 				moduleResolution: "bundler",
-				resolveJsonModule: true,
 				isolatedModules: true,
 				jsx: "react-jsx",
 				types: ["node"],

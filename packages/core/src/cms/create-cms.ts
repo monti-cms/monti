@@ -1,8 +1,7 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host";
-import { findSchemaFile } from "../cli/schema-types";
 import { problemText } from "../core/problem";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
@@ -12,7 +11,7 @@ import type { OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
 import { type CmsRead, createRead } from "../read";
-import { readSchemaFile } from "../schema-file/read";
+import { findSchemaFile } from "../schema-file/locate";
 import { schemaSourceOf } from "../schema-file/source";
 import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
 import type { Decision } from "../server/decision";
@@ -77,9 +76,8 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 	 */
 	readonly id?: string;
 	/**
-	 * The schema file of a site whose config was made with `defineSite({ schema })` (path relative to the working directory). The settings screen edits it
-	 * and the dev server reads it again when it changes. Default: the path the config was given, else `monti.schema.json` (or `src/monti.schema.json`) in
-	 * the working directory.
+	 * The schema file of a site whose config was made with `defineSite({ schema })` (path relative to the working directory). The settings screen edits it.
+	 * Default: `monti.schema.ts` (or `src/monti.schema.ts`) in the working directory.
 	 */
 	readonly schemaFile?: string;
 	/** Where the public site URL came from, for `monti doctor` (`defineConfig` knows: the config, the schema file or `SITE_URL`). */
@@ -88,9 +86,9 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 
 /** What {@link Cms.reloadSchema} did. */
 export interface SchemaReload {
-	/** Whether the instance now runs the schema file as it is on disk. */
+	/** Whether the instance now runs the schema it was given. */
 	readonly reloaded: boolean;
-	/** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the file. */
+	/** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the schema. */
 	readonly reason?: string;
 }
 
@@ -189,17 +187,18 @@ export interface Cms<
 	 */
 	schemaFile(): string | undefined;
 	/**
-	 * Another instance of the same site over a different schema (the parsed content of the schema file), sharing this instance's connections. It is not
+	 * Another instance of the same site over a different schema (the data of the schema file), sharing this instance's connections. It is not
 	 * installed: this instance keeps running the old schema. The settings screen uses it to check a change (diff, impact, a dry run of the transforms)
 	 * before the file is written. Throws what `defineSite` throws when the schema is not valid, and when the config has no schema file.
 	 */
 	forSchema(schema: unknown): Cms<Config>;
 	/**
-	 * Development only: reads the schema file again and makes this instance run it, in place (the same object, with a new site, store, services and read API).
-	 * The dev server calls it after the settings screen saved, and on its own when it finds the file changed on disk. A file that does not read or check
-	 * leaves the instance as it was and says why. In production it does nothing: a production server runs the schema it was built with.
+	 * Development only: makes this instance run `schema` (the data of the schema file), in place (the same object, with a new site, store, services and read API).
+	 * The settings screen calls it after it saved the file. A hand edit of the file needs no call: the dev server evaluates `monti.config.ts` again (hot module
+	 * reload) and that makes a new instance. A schema that does not check leaves the instance as it was and says why. In production it does nothing: a production
+	 * server runs the schema it was built with.
 	 */
-	reloadSchema(): SchemaReload;
+	reloadSchema(schema: unknown): SchemaReload;
 	/**
 	 * What this instance decided on its own and why: the database and schema (and which environment variable they came from), the login, whether the development
 	 * bypass is on, whether the host is trusted, the site URL, the schema file and hot reload. `monti doctor` prints these.
@@ -403,10 +402,9 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 	const schemaFile = (): string | undefined => {
 		if (schemaPath === undefined) {
 			schemaPath = null;
-			const given = options.schemaFile ?? source?.file;
 			if (source) {
 				try {
-					schemaPath = path.resolve(process.cwd(), given ?? findSchemaFile(process.cwd()));
+					schemaPath = path.resolve(process.cwd(), options.schemaFile ?? findSchemaFile(process.cwd()));
 					if (!existsSync(schemaPath)) schemaPath = null;
 				} catch {
 					schemaPath = null;
@@ -430,26 +428,14 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		return detached;
 	};
 
-	// The part of the instance that changes when the schema is reloaded. `site` is read through a getter that also finds a schema file edited on disk.
+	// The part of the instance that changes when the schema is reloaded.
 	let current = build(options.config, () => cms);
-	let stamp: string | undefined;
-	let checkedAt = Number.NEGATIVE_INFINITY;
-	const stampOf = (file: string): string | undefined => {
-		try {
-			const stat = statSync(file);
-			return `${stat.mtimeMs}:${stat.size}`;
-		} catch {
-			return undefined;
-		}
-	};
 	let reported: string | undefined;
-	const reloadSchema = (): SchemaReload => {
+	const reloadSchema = (schema: unknown): SchemaReload => {
 		if (process.env.NODE_ENV !== "development") return { reloaded: false, reason: "production" };
-		const file = schemaFile();
-		if (!source || !file) return { reloaded: false, reason: "no_schema_file" };
-		stamp = stampOf(file);
+		if (!source) return { reloaded: false, reason: "no_schema_file" };
 		try {
-			const next = build(source.rebuild(readSchemaFile(file)) as Config, () => cms);
+			const next = build(source.rebuild(schema) as Config, () => cms);
 			const { site: _site, ...parts } = next;
 			current = next;
 			Object.assign(cms, parts);
@@ -457,24 +443,11 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			return { reloaded: true };
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			// A schema that is half written or invalid is reported once; the instance keeps running the last good one until the file changes again.
-			if (message !== reported) console.error(`monti: the schema file was not reloaded: ${message}`);
+			// A schema that is invalid is reported once; the instance keeps running the last good one.
+			if (message !== reported) console.error(`monti: the schema was not reloaded: ${message}`);
 			reported = message;
 			return { reloaded: false, reason: message };
 		}
-	};
-	/** In development, runs the schema file again when it changed on disk since the instance last read it (a hand edit, or a save from another process). */
-	const refresh = () => {
-		if (process.env.NODE_ENV !== "development" || !source) return;
-		// A monotonic clock, not `Date.now()`: Next's Cache Components rejects the wall clock in a render (this runs on every `cms.site` read, in a layout or a page).
-		const now = performance.now();
-		if (now - checkedAt < 250) return;
-		checkedAt = now;
-		const file = schemaFile();
-		if (!file) return;
-		const seen = stampOf(file);
-		if (stamp === undefined) stamp = seen;
-		else if (seen !== undefined && seen !== stamp) reloadSchema();
 	};
 
 	const decisions = (env: Readonly<Record<string, string | undefined>> = process.env): readonly Decision[] => {
@@ -488,7 +461,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				siteUrl: current.site.config.site?.url,
 				siteUrlSource: options.siteUrlSource,
 				schemaFile: file ? path.relative(process.cwd(), file) || file : undefined,
-				schemaFileGiven: Boolean(options.schemaFile ?? source?.file),
+				schemaFileGiven: Boolean(options.schemaFile),
 				hotReload: env.NODE_ENV === "development" && Boolean(source && file),
 			}),
 		];
@@ -498,13 +471,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 	const cms: Cms<Config> = Object.defineProperties(
 		{ ...rest, schemaFile, forSchema, reloadSchema, decisions } as Cms<Config>,
 		{
-			site: {
-				enumerable: true,
-				get: () => {
-					refresh();
-					return current.site;
-				},
-			},
+			site: { enumerable: true, get: () => current.site },
 		},
 	);
 	return cms;

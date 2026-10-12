@@ -31,7 +31,7 @@ allowBuilds:
   esbuild: true
 ```
 
-3. **Do the steps init printed.** Init changes none of your files, so it ends with a numbered list with exact content to copy: the `next.config` change (`withCms`), `suppressHydrationWarning` on `<html>`, `"resolveJsonModule": true` in `tsconfig.json` and `.env.local` in `.gitignore` (each only when your app needs it), and `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
+3. **Do the steps init printed.** Init changes none of your files, so it ends with a numbered list with exact content to copy: the `next.config` change (`withCms`), `suppressHydrationWarning` on `<html>` and `.env.local` in `.gitignore` (each only when your app needs it), and `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
 4. **Create the tables and check the setup.** `pnpm exec monti migrate`, then `pnpm exec monti doctor`, which lists every check as `ok`, `warn` or `FAIL`; every warning says what is wrong, where, and how to fix it (it also tells you if one of the init steps above is missing). It also lists what Monti decided on its own, with where each value came from.
 5. **Run the app.** `pnpm dev`, then open `http://localhost:3000/studio` (`monti init` writes the admin at `/studio`; `--admin-path` changes it).
 
@@ -61,7 +61,7 @@ Automatic is fine, silent is not. `monti doctor` shows what Monti decided on its
   Login: GitHub [client id from env AUTH_GITHUB_ID, admins from env MONTI_ADMIN_GITHUB_ID]
   Dev login bypass: on (requests from this machine are the admin) [auto-detected (NODE_ENV is "development" and no hosting platform variable is set)]
   SITE_URL: http://localhost:3000 [from env SITE_URL]
-  Schema file: monti.schema.json [auto-detected (monti.schema.json in the app folder)]
+  Schema file: monti.schema.ts [auto-detected (monti.schema.ts in the app folder)]
 ```
 
 | Automatic behavior | How to turn it off or override it |
@@ -71,8 +71,8 @@ Automatic is fine, silent is not. `monti doctor` shows what Monti decided on its
 | The dev login bypass is on under `next dev`, for requests from your machine only | `auth({ devBypass: false })` |
 | Host trust is on behind a known hosting platform and in development, off in other production | `trustHost: true or false` in `defineConfig`, or `AUTH_TRUST_HOST=true or false` |
 | `SITE_URL` fills `site.url` when neither the config nor the schema file sets it | set `site.url` in `monti.config.ts` or `site.url` in the schema file |
-| The schema file is found by name (`monti.schema.json`, also under `src/`), re-read in `next dev` when it changes, and `monti-env.d.ts` is rewritten (a line is printed each time) | hot reload is development only and has no switch (a production server runs the schema it started with); remove `withCms` from `next.config.ts` to stop `monti-env.d.ts` from being rewritten, and run `monti schema:types` yourself |
-| `withCms` adds `transpilePackages`, `env.NEXT_PUBLIC_CMS_BASE_PATH`, and in development the types watcher and a warning when client code imports `monti.config.ts` | remove `withCms` from `next.config.ts` and set `transpilePackages: ["@monti-cms/core"]` yourself |
+| The schema file is found by name (`monti.schema.ts`, also under `src/`); in development the dev server evaluates `monti.config.ts` again when it changes | hot reload is development only and has no switch (a production server runs the schema it started with) |
+| `withCms` adds `transpilePackages`, `env.NEXT_PUBLIC_CMS_BASE_PATH`, and in development a warning when client code imports `monti.config.ts` | remove `withCms` from `next.config.ts` and set `transpilePackages: ["@monti-cms/core"]` yourself |
 | `monti schema:apply` runs `monti migrate` first (its lines are printed first) | run `monti schema:apply --dry-run`, which migrates nothing |
 
 ## Install in an empty Next app
@@ -98,7 +98,7 @@ pnpm 12 fails the install if there are install scripts that have not been allowe
 
 Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes Monti's own new files, installs the packages (after you confirm), and ends with a plain, numbered list of what is left. **It edits no file your app already has** (`next.config`, the root layout, `tsconfig.json`, `.gitignore`) and writes no `.env.local`: it prints those changes for you to make. It never overwrites a file without asking, and it is safe to run again.
 
-**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, the dev port (from the `dev` script), the shape of an existing `next.config`, `resolveJsonModule` in `tsconfig.json`, a `.gitignore` that misses `.env.local`, whether the root layout's `<html>` has `suppressHydrationWarning` (all only to tailor what it prints), and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below). An app with only a `pages/` folder is refused with a message.
+**What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, the dev port (from the `dev` script), the shape of an existing `next.config`, a `.gitignore` that misses `.env.local`, whether the root layout's `<html>` has `suppressHydrationWarning` (all only to tailor what it prints), and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below). An app with only a `pages/` folder is refused with a message.
 
 **The questions** (each has a flag, see below):
 
@@ -117,8 +117,7 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | What | File |
 | --- | --- |
 | The one config: one line per feature you chose, each with a short comment, then the database, the login and storage. Nothing is hidden behind a preset: deleting a line removes the feature | `monti.config.ts` |
-| The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, with a `$schema` link for editors | `monti.schema.json` |
-| The types of the schema file, written from it (not edited by hand) | `monti-env.d.ts` |
+| The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, written the way the admin's schema screen would write it | `monti.schema.ts` |
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
 | Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, a commented `DATABASE_SCHEMA` line saying when to set it, the `S3_*` values). It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
@@ -132,12 +131,11 @@ The summary then lists what is left as numbered steps, each with the exact conte
 1. the install command, if it did not run (a short TypeScript note comes before it when the app has none);
 2. the `next.config` change: `import { withCms } from "@monti-cms/nextjs/config"` and `export default withCms(nextConfig)`, shown against the shape of your file, or a whole new `next.config.ts` when there is none (skipped when `withCms` is already there);
 3. `suppressHydrationWarning` on the `<html>` of the root layout (skipped when it has it);
-4. `"resolveJsonModule": true` in the `compilerOptions` of `tsconfig.json` (only when missing);
-5. `cp .env.example .env.local`, then fill it in, with the commands that generate `MONTI_SECRET` (`openssl rand -base64 32`, or a one-line `node -e` command);
-6. `.env.local` in `.gitignore` (only when it is not ignored yet);
-7. `monti migrate`;
-8. `monti doctor` (it tells you if any step above is missing);
-9. `pnpm dev`, then open the admin address (`/studio`);
+4. `cp .env.example .env.local`, then fill it in, with the commands that generate `MONTI_SECRET` (`openssl rand -base64 32`, or a one-line `node -e` command);
+5. `.env.local` in `.gitignore` (only when it is not ignored yet);
+6. `monti migrate`;
+7. `monti doctor` (it tells you if any step above is missing);
+8. `pnpm dev`, then open the admin address (`/studio`);
 
 followed by the notes that apply: the git-sync target, and one item about the login. With **email and password** (the default): right after you deploy, open the admin and create the first admin (or create it beforehand by running the app in production mode against the production database; under `next dev` you are the admin without signing in, so the screen does not show), and `monti admin:reset-password` for a forgotten password. With **GitHub**: create the OAuth app, with its homepage and callback URL, and fill `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID`. Either way `monti.config.ts` already has the `auth: auth({ providers: [...] })` line, and `@monti-cms/auth` is installed.
 
@@ -180,42 +178,45 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 
 **Safety.** Init edits no existing file. Every write it does make goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
 
-An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file"). `monti.config.ts` imports the JSON, so `tsconfig.json` needs `"resolveJsonModule": true` (`create-next-app` sets it; `monti init` prints the line when it is missing).
+An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file").
 
 ### 3. Edit the collections
 
-The site's data lives in `monti.schema.json`; `monti.config.ts` loads it and adds what needs code ("The schema file"). The admin UI gets the site from the instance as a JSON snapshot, so the schema file holds no secrets; `monti.config.ts` itself is server-only. The generated starting point is this.
+The site's data lives in `monti.schema.ts`; `monti.config.ts` imports it and adds what needs code ("The schema file"). The admin UI gets the site from the instance as a JSON snapshot, so the schema file holds no secrets; `monti.config.ts` itself is server-only. The generated starting point is this.
 
-```json
-{
-	"$schema": "./node_modules/@monti-cms/core/schema.json",
-	"collections": {
-		"post": {
-			"label": "Post",
-			"kind": "document",
-			"path": "/posts/:slug",
-			"icon": "file-text",
-			"fields": {
-				"title": { "kind": "text", "label": "Title", "required": true, "max": 200 },
-				"slug": { "kind": "slug", "label": "Slug", "from": "title", "required": true },
-				"summary": { "kind": "text", "label": "Summary", "role": "summary", "multiline": true, "fillFromBody": true }
-			}
-		}
+```ts
+// monti.schema.ts
+import { defineSchema } from "@monti-cms/core";
+
+export default defineSchema({
+	schemaVersion: 1,
+	collections: {
+		post: {
+			label: "Post",
+			kind: "document",
+			path: "/posts/:slug",
+			icon: "file-text",
+			fields: {
+				title: { kind: "text", label: "Title", required: true, max: 200 },
+				slug: { kind: "slug", label: "Slug", from: "title", required: true },
+				summary: { kind: "text", label: "Summary", role: "summary", multiline: true, fillFromBody: true },
+			},
+		},
 	},
-	"locales": [{ "code": "en", "name": "English" }],
-	"defaultLocale": "en",
-	"timeZone": "UTC",
-	"site": { "name": "My site" }
-}
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en",
+	timeZone: "UTC",
+	site: { name: "My site" },
+});
 ```
 
 ```ts
 // monti.config.ts
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 
 export const cms = defineConfig({
-	schema, // the data stays in monti.schema.json
+	schema, // the data stays in monti.schema.ts
 	plugins: [], // one line per feature, each works with no arguments: mdx(), seo(), callout(), ...
 	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
 	// auth: auth({ providers: [password()] }), // the login: password() (built in) or github(); without it only `next dev` lets you in
@@ -226,7 +227,7 @@ export const cms = defineConfig({
 `defineConfig` here is the one from `@monti-cms/core/server`: it takes the site options (`schema`, `plugins`, `blocks`, `site`, `admin`, `codeBlock`, `media`, `seed`, ...) and the server options (`database`, `auth`, `storage`, `secret`, ...) in one object, and returns the CMS instance (see "The CMS instance"). Every plugin and adapter works with no arguments and reads the conventional environment variables (see below); an explicit option always wins.
 
 The collection name (`post`) is stored in the DB, so do not change it in production. `kind` is `document` (a body, drafts and publishing) or `item` (a small entry such as a tag); `path` is the public URL, used for internal links in the body and for preview URLs; the title field is the one with `role: "title"` (or, without one, the field named `title`).
-Without `layout` and `list`, fields are drawn in field order with the default list columns ("Collections"). Run `pnpm exec monti schema:types` (or keep `next dev` running, which does it for you) after editing the file. See "The schema file" and "Config" below for the rules.
+Without `layout` and `list`, fields are drawn in field order with the default list columns ("Collections"). See "The schema file" and "Config" below for the rules.
 
 `monti.config.ts` creates the CMS instance and is only read on the server. The server options hold the store, media and login connections and the secret.
 Connections are created on first use and the environment is read when a value is first needed, so the environment variables may be empty during the build. To use image uploads, install `@monti-cms/storage-s3` and pass its store as `storage` (only for sites that use media; the AWS SDK comes with it):
@@ -428,7 +429,7 @@ What it checks, in the order it prints:
 | Group | Checks |
 | --- | --- |
 | `config` | the env files, that `.env.local` is in `.gitignore`, the config file is found, it loads and exports the instance, **what Monti decided on its own, with where each value came from** (`config/automatic`), **the media storage can be set up** (`config/storage`: a missing `S3_*` value fails here, because the public pages draw an image they cannot address as "unavailable" and say nothing), and **no `"use client"` file imports it or another server-only module** (this replaces `monti check:boundary`) |
-| `schema` | the schema file is valid (each problem with its JSON path), and `monti-env.d.ts` is up to date |
+| `schema` | `schema/file`: the schema file is found, loads and is valid (each problem with its path); it also says when the file contains code, so the admin schema screen is read-only for it |
 | `database` | `DATABASE_URL` is set and a Postgres URL (and the `sslmode` warning of the driver explained), the database is reachable (wrong host, port, password and database name are told apart), `DATABASE_SCHEMA` exists, **how many migrations are pending** (`monti migrate`) |
 | `secrets` | `MONTI_SECRET` is set and strong enough; the old `CMS_SECRET` and `AUTH_SECRET` are still set but unused |
 | `auth` | whether the config has a login (a warning in development and a failure for production or a known host platform, with how to add GitHub login); with the email and password login, a warning while no admin account exists yet (open the admin and create the first admin); with GitHub, only the values core knows: the GitHub client id and secret (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), an admin is listed in `MONTI_ADMIN_GITHUB_ID` (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
@@ -451,10 +452,10 @@ import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
 import { callout } from "@monti-cms/blocks";
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 
 export const cms = defineConfig({
-	schema,                                   // data stays in monti.schema.json
+	schema,                                   // data stays in monti.schema.ts
 	plugins: [mdx(), callout()],              // one line per feature, each works with no arguments
 	database: postgres(),                     // DATABASE_URL, DATABASE_SCHEMA
 	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
@@ -514,7 +515,7 @@ or `contributes`, a text override of `admin.messages` that is a function (string
 
 **Typing.** The types follow the config you pass, with no registration step. `defineConfig({ … })` (and `createCms({ config })`) returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 and a collection that is not in the config is a type error. Where a library type cannot see an instance, give it the config type: `DocumentComponentsFor<typeof config>` or `DocumentComponentsOf<typeof cms>` types the `components` of `<CmsContent>` (block names and the attribute props of each block), and the AI plugin's action names take the config type the same way.
-What you read is typed for a published entry: a `required` field is not optional in `entry.metadata` (`post.metadata.title` is a `string`), because publishing needs it (`PublishedMetadataFor`). What you write is typed by the same config: `cms.contentService().createDraft({ collection: "post", … })` knows the metadata of a post, a post needs a body (`doc`, or `body` with its `format`), and an item collection (a tag) needs none. `{ summary: undefined }` means "not set". Every write of the service answers `{ entry, warnings }` ("Hook contract"). A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from the declaration file `monti schema:types` writes ("The schema file").
+What you read is typed for a published entry: a `required` field is not optional in `entry.metadata` (`post.metadata.title` is a `string`), because publishing needs it (`PublishedMetadataFor`). What you write is typed by the same config: `cms.contentService().createDraft({ collection: "post", … })` knows the metadata of a post, a post needs a body (`doc`, or `body` with its `format`), and an item collection (a tag) needs none. `{ summary: undefined }` means "not set". Every write of the service answers `{ entry, warnings }` ("Hook contract"). A plain `Cms` or `Site` is an instance of any config, with `string` names. Two instances with different configs are typed independently. A site that keeps its data in a schema file gets the same types from `defineSchema` ("The schema file").
 
 ### Server-only config
 
@@ -621,7 +622,7 @@ The site was set up in two files, `cms.config.ts` (the site config, `export defa
 -import { mdx } from "@monti-cms/mdx";
 -import { seo } from "@monti-cms/seo";
 -import { directiveSyntax } from "@monti-cms/syntax-directive";
--import schema from "./monti.schema.json";
+-import schema from "./monti.schema";
 -
 -export default defineConfig({
 -	schema,
@@ -672,7 +673,7 @@ The site was set up in two files, `cms.config.ts` (the site config, `export defa
 +import { mdx } from "@monti-cms/mdx";
 +import { seo } from "@monti-cms/seo";
 +import { directiveSyntax } from "@monti-cms/syntax-directive";
-+import schema from "./monti.schema.json";
++import schema from "./monti.schema";
 +import { wordList } from "./plugins/word-list";
 +
 +export const cms = defineConfig({
@@ -734,11 +735,9 @@ Three things the steps above do not show:
 
 | Entry point | Used in | Contents |
 | --- | --- | --- |
-| `@monti-cms/core` | tests, tools, schema code | `defineSite` (the site-config-only part, with `schema`; no `defineConfig` here, apps use the one of `/server`)·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
-| `@monti-cms/core/schema.json` | editors, `$schema` | The JSON Schema of `monti.schema.json` ("The schema file") |
-| `@monti-cms/core/schema-types` | dev tooling (`withCms`) | `generateSchemaTypes`, `watchSchemaTypes`: write `monti-env.d.ts` from the schema file |
+| `@monti-cms/core` | tests, tools, schema code | `defineSite` (the site-config-only part, with `schema`; no `defineConfig` here, apps use the one of `/server`)·`defineSchema`·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, the `SchemaFile` types |
 | `@monti-cms/core/schema-change` | settings screen, command line | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange` ("Changing the schema") |
-| `@monti-cms/core/schema-edit` | settings screen (server side) | `schemaEditAccess` (who may write the schema file), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `formatSchemaText` ("Editing the schema in the admin") |
+| `@monti-cms/core/schema-edit` | settings screen (server side) | `schemaEditAccess` (who may write the schema file), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `printSchemaFile`, `parseSchemaLiteral` ("Editing the schema in the admin") |
 | `@monti-cms/core/server` | `monti.config.ts` | `defineConfig` (site and server options in one, returns the instance), `postgres`, `createCms` (the low-level API), store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
 | `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
@@ -757,8 +756,8 @@ Three things the steps above do not show:
 | `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
-| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti migrate` (create tables), `monti admin:reset-password` (set a new password for an admin of the email and password login), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:types` (types of the schema file), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `generateSchemaTypes`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
+| `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti migrate` (create tables), `monti admin:reset-password` (set a new password for an admin of the email and password login), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `loadSchemaFile`, `findSchemaFile`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `testServer()` (`{ server, drop }`: the `database` and `auth` options for a real instance on a schema of its own, ["Testing your hooks and plugins"](#testing-your-hooks-and-plugins)), `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
@@ -1006,7 +1005,7 @@ codeBlock: {
 
 ### Allowed blocks and marks per body
 
-A body can limit the blocks and marks a writer may add. Write the object form of `body` on the collection, in `monti.schema.json` or in code with `defineCollection`:
+A body can limit the blocks and marks a writer may add. Write the object form of `body` on the collection, in `monti.schema.ts` or in code with `defineCollection`:
 
 ```json
 "memo": {
@@ -1356,55 +1355,58 @@ it("refuses a bad slug", async () => {
 
 ## The schema file
 
-`monti.schema.json` at the site root holds the plain-data part of the site config: the collections with their fields and layouts, the locales and the default locale, the time zone, the plain-data `site` settings, `admin` (the path, the language and string text overrides), the seed templates (stored documents, or a text and its format), the `schemaVersion` and the data transforms (`migrations`, see "Changing the schema").
-It is a repo file, not code the bundler runs, so a tool can read and write it, and types are generated from it.
+`monti.schema.ts` at the site root (or under `src/`) holds the plain-data part of the site config: the collections with their fields and layouts, the locales and the default locale, the time zone, the plain-data `site` settings, `admin` (the path, the language and string text overrides), the seed templates (stored documents, or a text and its format), the `schemaVersion` and the data transforms (`migrations`, see "Changing the schema").
+It is a TypeScript file whose default export is one object literal passed to `defineSchema`. `defineSchema` is a typed identity with const generics: the collection, field and locale names flow into `defineConfig`, and a wrong `kind` or option value is a type error in the file.
 
-```json
-{
-	"$schema": "./node_modules/@monti-cms/core/schema.json",
-	"collections": {
-		"post": {
-			"label": "Post",
-			"kind": "document",
-			"path": "/posts/:slug",
-			"fields": {
-				"title": { "kind": "text", "label": "Title", "required": true, "max": 200 },
-				"slug": { "kind": "slug", "label": "Address", "from": "title", "required": true },
-				"categoryId": { "kind": "relation", "label": "Category", "to": "category", "required": true },
-				"stage": { "kind": "select", "label": "Stage", "options": { "idea": "Idea", "done": "Done" }, "defaultValue": "idea" }
+```ts
+// monti.schema.ts
+import { defineSchema } from "@monti-cms/core";
+
+export default defineSchema({
+	schemaVersion: 1,
+	collections: {
+		post: {
+			label: "Post",
+			kind: "document",
+			path: "/posts/:slug",
+			fields: {
+				title: { kind: "text", label: "Title", required: true, max: 200 },
+				slug: { kind: "slug", label: "Address", from: "title", required: true },
+				categoryId: { kind: "relation", label: "Category", to: "category", required: true },
+				stage: { kind: "select", label: "Stage", options: { idea: "Idea", done: "Done" }, defaultValue: "idea" },
 			},
-			"layout": [{ "fields": ["title", "slug"] }, { "group": "Classification", "fields": ["categoryId", "stage"] }]
+			layout: [{ fields: ["title", "slug"] }, { group: "Classification", fields: ["categoryId", "stage"] }],
 		},
-		"category": {
-			"label": "Category",
-			"kind": "item",
-			"fields": {
-				"title": { "kind": "text", "label": "Name", "required": true },
-				"slug": { "kind": "slug", "label": "Address", "from": "title" }
-			}
-		}
+		category: {
+			label: "Category",
+			kind: "item",
+			fields: {
+				title: { kind: "text", label: "Name", required: true },
+				slug: { kind: "slug", label: "Address", from: "title" },
+			},
+		},
 	},
-	"locales": [{ "code": "en", "name": "English" }, { "code": "fr", "name": "Français" }],
-	"defaultLocale": "en",
-	"timeZone": "Europe/Paris",
-	"site": { "name": "My blog", "localePrefix": "always" },
-	"admin": { "path": "/studio" }
-}
+	locales: [{ code: "en", name: "English" }, { code: "fr", name: "Français" }],
+	defaultLocale: "en",
+	timeZone: "Europe/Paris",
+	site: { name: "My blog", localePrefix: "always" },
+	admin: { path: "/studio" },
+});
 ```
 
-**Format.** Each part is the options object of the matching builder, with its `kind`: a collection is what `defineCollection` takes (`label`, `kind`, `body`, `fields`, `path`, `icon`, `layout`, `list`), and a field is what `fields.<kind>` takes with `"kind"` added. The field kinds are `text`, `slug`, `relation` (`many`, `ordered`, `createInline`, `publishedOnly`, `allowUnpublished`),
+**Format.** Each part is the options object of the matching builder, with its `kind`: a collection is what `defineCollection` takes (`label`, `kind`, `body`, `fields`, `path`, `icon`, `layout`, `list`), and a field is what `fields.<kind>` takes with `kind` added. Field objects stay plain literals. The field kinds are `text`, `slug`, `relation` (`many`, `ordered`, `createInline`, `publishedOnly`, `allowUnpublished`),
 `select` (`options` and `defaultValue`), `media` (`accept: "image" | "file"`: the image field), `conditional` (a `discriminant` select and the `values` that show for each option), `backlink` and `view`: every kind `fields.*` has. `fields.*` has no date, boolean or number kind today, so the file has none. A collection that holds a date keeps it in a text field.
-`$schema` points to `@monti-cms/core/schema.json`, a JSON Schema generated from the same definition the runtime check uses, so editors autocomplete keys and flag a wrong `kind` or a misspelt option as you type (rules between collections, such as a relation to a collection that exists, are checked when the config loads).
+The types of `defineSchema` show a wrong `kind` or a misspelt option value in the editor; an unknown extra key is caught at run time by the strict check, and so are rules between collections, such as a relation to a collection that exists (checked when the config loads).
 **There are no retired aliases:** `workflow` and `required: "publish"` are errors (use `kind` and `required: true`).
 
-**Loading.** `monti.config.ts` passes the parsed file to `defineConfig`. An `import` is what the bundler ships with the build, so the file is read-only in production (needs `"resolveJsonModule": true`, which `create-next-app` sets). A path string (`schema: "./monti.schema.json"`) is read at run time, relative to the working directory, and works in Node only (scripts, tests):
+**Loading.** `monti.config.ts` imports the module and passes its default export to `defineConfig`. An `import` is what the bundler ships with the build, so the file is read-only in production. Scripts and the `monti` command load the file through tsx (`bin/monti.mjs` registers it).
 
 ```ts
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import { mdx } from "@monti-cms/mdx";
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 
 export const cms = defineConfig({
 	schema,
@@ -1414,13 +1416,14 @@ export const cms = defineConfig({
 });
 ```
 
-The low-level `createCms({ config: defineSite({ … }), server })` takes the site part alone, built with `defineSite` of `@monti-cms/core` (no database or login; for tests and tools; `@monti-cms/core` no longer exports `defineConfig`). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its JSON path:
+The low-level `createCms({ config: defineSite({ … }), server })` takes the site part alone, built with `defineSite` of `@monti-cms/core` (no database or login; for tests and tools; `@monti-cms/core` no longer exports `defineConfig`). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its path:
 
 ```text
-monti.schema.json is not a valid schema file:
+monti.schema.ts is not a valid schema file:
   collections.post.fields.title.kind: a field needs a "kind" of text, slug, relation, select, media, conditional, backlink or view
   collections.post.workflow: is not part of the schema format
   locales[1].code: must look like "en", "pt-BR" or "zh-Hant"
+Fix: correct the lines above in monti.schema.ts; the types of defineSchema show most of them in the editor. monti doctor checks the file again.
 ```
 
 **How the file and the code config merge.** Code adds to the file and may override what differs per environment, but it never silently replaces the file's data:
@@ -1436,27 +1439,16 @@ monti.schema.json is not a valid schema file:
 
 **What stays in code.** Anything that needs code: plugins (so syntax extensions, formats, AI actions), block definitions with their components, hooks and the server options (database, storage, login, secrets), `codeBlock` (line effects hold labels and functions), `media`, and any option that is a function. `site.url` stays in code because it differs per environment.
 
-**Plugins that add fields.** `seoFields()` and the like return plain field objects, so their fields already have a JSON form: they are written into the file as ordinary fields (`monti schema:extract` does it), and the plugin (`seo()`) stays in `plugins` and checks them by role as before.
+**Plugins that add fields.** `seoFields()` and the like return plain field objects, so their fields are plain data: they are written into the file as ordinary fields (`monti schema:extract` does it), and the plugin (`seo()`) stays in `plugins` and checks them by role as before.
 There is no separate "plugin field" in the format. A collection written in code can still spread `seoFields()`. Labels in the file are one language's text (`monti schema:extract --locale` picks it).
-
-### Types: `monti schema:types`
-
-`monti schema:types` reads the file and writes `monti-env.d.ts` next to it (`--schema <file>`, `--out <file>`): a declaration that registers the collections, their fields and the locales in the `MontiRegister` interface of `@monti-cms/core`. With it, `defineConfig({ schema })` returns the same types a TypeScript config does,
-and `createCms`, `cms.read`, `MetadataFor`, `CollectionName` and `DocumentComponentsFor<typeof config>` know the collection names, the metadata of each (a select's options, a many relation as `readonly string[]`, the fields of a conditional field) and the locale codes. The site writes no types. The file holds types only (no import at run time), is not edited by hand, and is committed like `next-env.d.ts`.
-
-- `monti schema:types --watch` keeps running and rewrites the file when the schema changes (a half-written file is reported and the last good types stay).
-- `withCms` (`@monti-cms/nextjs/config`) does that inside `next dev`, so the types follow the file with no extra command. A production build does not touch it.
-- `monti schema:types --check` writes nothing and exits with 1 if the file is out of date (for CI).
-- Without the generated file the names are plain `string`s. An app has one registered schema; a second schema in the same app passes its content with literal types (`defineConfig({ schema: { ... } as const })`) to be typed.
 
 ### Moving a TypeScript config: `monti schema:extract`
 
-`monti schema:extract` loads `monti.config.ts` (the `cms` it exports) or the default export of an old-style `cms.config.ts` whose default export is `defineSite(...)` (`--config <file>`; code-first configs work as before), writes its data part to `monti.schema.json` (`--out <file>`, `--overwrite` to replace an existing one, `--locale <code>` for the language of plugin-provided labels) and `monti-env.d.ts` (`--no-types` skips it), and prints what stays in code.
+`monti schema:extract` loads `monti.config.ts` (the `cms` it exports) or the default export of an old-style `cms.config.ts` whose default export is `defineSite(...)` (`--config <file>`; code-first configs work as before), writes its data part to `monti.schema.ts` (`--out <file>`, `--overwrite` to replace an existing one, `--locale <code>` for the language of plugin-provided labels), and prints what stays in code.
 It never edits the config file; it prints the slim config to put there:
 
 ```text
-Wrote monti.schema.json (5 collections, 2 locales, 3 seed templates).
-Wrote monti-env.d.ts (the types of the schema; run `monti schema:types --watch` while you edit it).
+Wrote monti.schema.ts (5 collections, 2 locales, 3 seed templates).
 
 Stays in code (monti.config.ts):
   - site.url: differs per environment, so it is read from `SITE_URL` by convention (no line in code)
@@ -1503,8 +1495,10 @@ Moving a field into or out of a conditional branch needs no transform: every sto
 
 **Commands.**
 
+Both commands load the TypeScript schema file through tsx.
+
 - `monti schema:diff [--schema <file>] [--check]` (read-only) compares the schema of the app with the applied one and prints every change with the entries it touches and what happens to them: kept as orphans, rewritten by a transform, deleted by a `dropField`, cannot be published until filled, and so on. With `--check` it exits 1 when there is anything to apply.
-- `monti schema:apply [--schema <file>] [--dry-run]` migrates the store (`monti migrate`), runs the transforms that did not run yet, records the schema and its version, and raises `schemaVersion` in the file when needed. It is idempotent. `--dry-run` runs everything in a transaction that is rolled back and writes nothing, not even the file.
+- `monti schema:apply [--schema <file>] [--dry-run]` migrates the store (`monti migrate`), runs the transforms that did not run yet, records the schema and its version, and raises `schemaVersion` in the file when needed (it edits the number in the file text in place). It is idempotent. `--dry-run` runs everything in a transaction that is rolled back and writes nothing, not even the file.
 
 ```text
 $ monti schema:diff
@@ -1531,30 +1525,33 @@ The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchem
 
 ### Editing the schema in the admin (development only)
 
-The admin has a **Schema** screen (`<admin path>/schema`, in the sidebar under "Manage") that edits `monti.schema.json`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
+The admin has a **Schema** screen (`<admin path>/schema`, in the sidebar under "Manage") that edits `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
 
-**Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists and can be written. The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/cms/v1/schema` and `POST /api/cms/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file` or `not_writable`), and the screen shows the schema read-only with a short explanation. `GET /api/cms/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
+**Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists, can be written and is a pure literal (below). The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/cms/v1/schema` and `POST /api/cms/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file`, `not_writable` or `has_code`), and the screen shows the schema read-only with a short explanation. `GET /api/cms/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
 
 **The routes** (`/api/cms/v1/schema`, served by `cms.handle()`):
 
 | Route | What it does |
 | --- | --- |
-| `GET` | The file's content and `hash`, whether it can be written (`access`), its `issues` if it does not check (with JSON paths), the applied version, the collections the config adds in code, and the block and mark names a body list can use |
-| `POST /preview` | Body `{ schema, transforms?, renames? }`. Checks an edit and writes nothing: `valid` and `issues` (JSON path and message), the `impacts` of every change (entries touched, a sample of ids and titles, the consequence), the `decisions` (changes whose stored values can be treated in more than one way, with the `suggestTransforms` choices and the one in effect), the `transforms` that would be recorded and their `problems`, and `nextVersion` |
+| `GET` | The file's content and `hash`, whether it can be written (`access`, with a `detail` for `has_code`), whether the file has comments (`comments`), its `issues` if it does not check (with paths), the applied version, the collections the config adds in code, and the block and mark names a body list can use |
+| `POST /preview` | Body `{ schema, transforms?, renames? }`. Checks an edit and writes nothing: `valid` and `issues` (path and message), the `impacts` of every change (entries touched, a sample of ids and titles, the consequence), the `decisions` (changes whose stored values can be treated in more than one way, with the `suggestTransforms` choices and the one in effect), the `transforms` that would be recorded and their `problems`, and `nextVersion` |
 | `PUT` | Body `{ schema, transforms?, renames?, baseHash }`. Saves the edit (below). `409 schema_conflict` when the file changed since `baseHash`, `400 invalid_schema` with `issues`, `422 invalid_transforms`, `500 schema_apply_failed` (the file was written, the database was not changed) |
 
 `transforms` are the picks of the writer, without ids (the server names them `v<version>-<op>-<collection>-<field>`). Left out, the server picks for each decision: a rename when the screen reports one in `renames` (a field or option the writer renamed), a mapping or a drop only where **no stored entry** holds the value (a drop that would delete values is never picked for the writer), a default only where it has a value. Without a pick the values stay as orphans, as before.
 
 **What a save does, in this order**, stopping at the first failure:
 
-1. Checks the file format and `defineConfig`'s rules on the edited content, and the transforms against it. The save is refused if the file changed on disk since the edit started.
+1. Checks the file format and `defineConfig`'s rules on the edited content, and the transforms against it. The save is refused if the file changed on disk since the edit started (its hash).
 2. Dry-runs the transforms on the dev database, so an entry that cannot be rewritten stops the save before the file is touched.
-3. Writes `monti.schema.json` with the picked transforms appended to `migrations` and `schemaVersion` raised. The old text is kept wherever it did not change (hand-formatted arrays, spacing, key order, the trailing newline) and the new parts are written in the file's own indentation, so the change is a small diff (`formatSchemaText`).
-4. Writes the generated types (`monti-env.d.ts`), as `monti schema:types` does.
-5. Runs `applySchemaChange` against the dev database (creating the tables first if there are none), which also records the schema as applied.
-6. Reloads the running instance (`cms.reloadSchema()`); the screen then reloads the admin page.
+3. Writes `monti.schema.ts`, the whole file, printed from the schema data with the picked transforms appended to `migrations` and `schemaVersion` raised.
+4. Runs `applySchemaChange` against the dev database (creating the tables first if there are none), which also records the schema as applied.
+5. Makes the running instance run the new schema with `cms.reloadSchema(schema)`; the screen then reloads the admin page.
 
-**How the running instance picks up the schema.** An instance made from `defineConfig({ schema })` remembers how to rebuild its config with another schema, and the schema file's path (`cms.schemaFile()`, found as `monti.schema.json` or `src/monti.schema.json` in the working directory, or given as `schemaFile` to `createCms`). In development it swaps its site, store, services, read API and handlers **in place** (the same `cms` object, the database connections shared) when the settings screen saved, and also on its own when it finds the file changed on disk (a hand edit, or a save from another process; it looks at most every 250 ms). A file that does not read or check is reported once and the instance keeps the last good schema. So the admin shows a saved change without restarting `next dev`; the types are kept by the watcher of `withCms` and by the save itself. In production `cms.reloadSchema()` does nothing: a production server runs the schema it was built with. `cms.forSchema(schema)` builds another instance over a schema without installing it; the settings screen uses it to check an edit.
+**The printer.** The file is written by a deterministic printer (`printSchemaFile` of `@monti-cms/core/schema-edit`): the one import line, `export default defineSchema({ ... });`, keys in the order of the data, tabs, trailing commas, unquoted keys where they are valid names, and double-quoted strings. Short lists and small objects of plain values stay on one line; everything else has a line per entry. **Comments in the file are dropped on save** (the screen shows a note when the file has comments).
+
+**When the screen can write.** Only when the file is a pure literal: the `defineSchema` import, `export default defineSchema(<object literal>)`, and nothing else (no other imports, identifiers, spreads, function calls, computed keys or template expressions). Comments, single quotes, trailing commas and any hand formatting are accepted (`parseSchemaLiteral` reads that subset). When the file has code, the screen is read-only with the reason `has_code`, the message "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead" and the line of the first piece of code, and the write routes answer 403 `schema_read_only` with `reason: "has_code"`.
+
+**How the running instance picks up the schema.** An instance made from `defineConfig({ schema })` remembers how to rebuild its config with another schema, and the schema file's path (`cms.schemaFile()`, found as `monti.schema.ts` or `src/monti.schema.ts` in the working directory, or given as `schemaFile` to `createCms`). `cms.reloadSchema(schema)` takes the schema data and swaps the site, store, services, read API and handlers **in place** (the same `cms` object, the database connections shared). It works in development only; in production it does nothing, because a production server runs the schema it was built with. A hand edit of `monti.schema.ts` is picked up by the dev server's hot module reload (Next evaluates `monti.config.ts` again because it imports the schema), and the admin save calls `cms.reloadSchema(schema)` on the running instance. A schema that does not check is reported once and the instance keeps the last good schema. So the admin shows a saved change without restarting `next dev`. `cms.forSchema(schema)` builds another instance over a schema without installing it; the settings screen uses it to check an edit.
 
 The screen edits collections (label, icon, kind, public address, body and the allowed blocks, marks and heading levels), every kind of field with its options (add, remove, rename, reorder, required and languages, select options, conditional branches), layout groups, list columns, the locales and the time zone. It does not edit what is plain data but rarely changes (`site`, `admin`, `seed`, recorded `migrations`): they are shown, and edited in the file. A collection written in code (in `monti.config.ts`) is not in the file, so the screen lists it as not editable.
 

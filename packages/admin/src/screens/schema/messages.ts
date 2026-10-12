@@ -18,13 +18,15 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"status.readOnly": "Read-only",
 		"readonly.title": "This schema is read-only",
 		"readonly.production":
-			"The schema can only be edited on the development server (next dev). This server only reads monti.schema.json: edit the file in your repository and deploy it.",
+			"The schema can only be edited on the development server (next dev). This server only reads monti.schema.ts: edit the file in your repository and deploy it.",
 		"readonly.noFile":
-			"This site has no schema file to edit: its collections are written in code (cms.config.ts). Run monti schema:extract to move them into monti.schema.json.",
-		"readonly.notWritable": "The server process cannot write monti.schema.json, so it is shown read-only.",
+			"This site has no schema file to edit: its collections are written in code (cms.config.ts). Run monti schema:extract to move them into monti.schema.ts.",
+		"readonly.notWritable": "The server process cannot write monti.schema.ts, so it is shown read-only.",
+		"readonly.hasCode": "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead.",
+		"comments.note": "This file has comments. Saving writes it again from the schema, and the comments are dropped.",
 		"invalid.title": "The schema file does not check",
 		"invalid.description":
-			"Fix these problems in the file. The dev server reads it again when you save it, and this screen then opens normally.",
+			"Fix these problems in the file. The dev server runs it again when you save it, and this screen then opens normally.",
 		"issues.title": "These problems stop the schema from being saved",
 		"code.collections": "These collections are defined in cms.config.ts and cannot be edited here: {names}.",
 		"load.failed": "Couldn't load the schema.",
@@ -175,12 +177,12 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"locales.timeZone": "Time zone",
 		"locales.timeZoneHint": "IANA name; dates are entered and shown in it.",
 		"file.hint":
-			"Site and admin settings, seed data and recorded transforms are part of the file but not edited on this screen. Edit them in monti.schema.json.",
+			"Site and admin settings, seed data and recorded transforms are part of the file but not edited on this screen. Edit them in monti.schema.ts.",
 		"file.migrations": "Recorded data transforms",
 		"file.noMigrations": "None yet.",
 		"review.title": "Review changes",
 		"review.description":
-			"Nothing is written until you save. Saving updates monti.schema.json, the generated types and the development database.",
+			"Nothing is written until you save. Saving rewrites monti.schema.ts and updates the development database.",
 		"review.loadFailed": "Couldn't check the changes.",
 		"review.invalid": "The schema does not check",
 		"review.problems": "A data transform does not fit the new schema",
@@ -264,13 +266,15 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"status.readOnly": "읽기 전용",
 		"readonly.title": "이 스키마는 읽기 전용입니다",
 		"readonly.production":
-			"스키마는 개발 서버(next dev)에서만 편집할 수 있습니다. 이 서버는 monti.schema.json을 읽기만 합니다. 저장소의 파일을 고친 뒤 배포하세요.",
+			"스키마는 개발 서버(next dev)에서만 편집할 수 있습니다. 이 서버는 monti.schema.ts을 읽기만 합니다. 저장소의 파일을 고친 뒤 배포하세요.",
 		"readonly.noFile":
-			"편집할 스키마 파일이 없습니다. 컬렉션이 코드(cms.config.ts)에 적혀 있습니다. monti schema:extract로 monti.schema.json에 옮길 수 있습니다.",
-		"readonly.notWritable": "서버 프로세스가 monti.schema.json에 쓸 수 없어 읽기 전용으로 보여 줍니다.",
+			"편집할 스키마 파일이 없습니다. 컬렉션이 코드(cms.config.ts)에 적혀 있습니다. monti schema:extract로 monti.schema.ts에 옮길 수 있습니다.",
+		"readonly.notWritable": "서버 프로세스가 monti.schema.ts에 쓸 수 없어 읽기 전용으로 보여 줍니다.",
+		"readonly.hasCode": "monti.schema.ts에 코드가 들어 있어 관리자가 파일을 다시 쓸 수 없습니다. 파일을 직접 고치세요.",
+		"comments.note": "이 파일에는 주석이 있습니다. 저장하면 스키마로 파일을 다시 쓰므로 주석이 사라집니다.",
 		"invalid.title": "스키마 파일이 올바르지 않습니다",
 		"invalid.description":
-			"파일에서 아래 문제를 고치세요. 저장하면 개발 서버가 파일을 다시 읽고, 이 화면이 정상으로 열립니다.",
+			"파일에서 아래 문제를 고치세요. 저장하면 개발 서버가 파일을 다시 실행하고, 이 화면이 정상으로 열립니다.",
 		"issues.title": "아래 문제 때문에 스키마를 저장할 수 없습니다",
 		"code.collections": "다음 컬렉션은 cms.config.ts에 정의되어 있어 여기서 편집할 수 없습니다: {names}.",
 		"load.failed": "스키마를 불러오지 못했습니다.",
@@ -422,12 +426,12 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"locales.timeZone": "시간대",
 		"locales.timeZoneHint": "IANA 이름이며 날짜를 이 시간대로 입력하고 보여 줍니다.",
 		"file.hint":
-			"사이트와 관리자 설정, 시드 데이터, 기록된 변환은 파일의 일부지만 이 화면에서 편집하지 않습니다. monti.schema.json에서 고치세요.",
+			"사이트와 관리자 설정, 시드 데이터, 기록된 변환은 파일의 일부지만 이 화면에서 편집하지 않습니다. monti.schema.ts에서 고치세요.",
 		"file.migrations": "기록된 데이터 변환",
 		"file.noMigrations": "아직 없습니다.",
 		"review.title": "변경 검토",
 		"review.description":
-			"저장하기 전에는 아무것도 쓰지 않습니다. 저장하면 monti.schema.json, 생성된 타입, 개발 데이터베이스를 갱신합니다.",
+			"저장하기 전에는 아무것도 쓰지 않습니다. 저장하면 monti.schema.ts를 다시 쓰고 개발 데이터베이스를 갱신합니다.",
 		"review.loadFailed": "변경을 확인하지 못했습니다.",
 		"review.invalid": "스키마가 올바르지 않습니다",
 		"review.problems": "데이터 변환이 새 스키마와 맞지 않습니다",

@@ -6,7 +6,7 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
 import { type DoctorReport, runDoctor } from "../doctor";
 import { runCli } from "../index";
 import { migrate } from "../migrate";
-import { byId, configText, project, setEnv, statusesOf } from "./doctor-helpers";
+import { byId, configText, project, SCHEMA_TEXT, setEnv, statusesOf } from "./doctor-helpers";
 
 // The pg driver warns about sslmode=require; verify-full is what it means today, so the healthy project has no warning.
 const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
@@ -67,7 +67,6 @@ describe("monti doctor on a healthy project", () => {
 			"config/loads": "ok",
 			"config/boundary": "ok",
 			"schema/file": "ok",
-			"schema/types": "ok",
 			"database/url": "ok",
 			"database/connect": "ok",
 			"database/schema": "ok",
@@ -289,27 +288,42 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "config/file").fix).toContain("monti init");
 	});
 
-	it("names the JSON path of what is wrong in the schema file", async () => {
+	it("names the path of what is wrong in the schema file", async () => {
 		setEnv();
 		const dir = project();
-		writeFileSync(path.join(dir, "monti.schema.json"), '{ "collections": { "post": { "kind": "nope" } } }');
+		writeFileSync(
+			path.join(dir, "monti.schema.ts"),
+			'export default { collections: { post: { kind: "nope" } }, locales: [], defaultLocale: "en" };\n',
+		);
 		const { report } = await doctor(dir);
 		const schema = byId(report, "schema/file");
 		expect(schema.status).toBe("fail");
 		expect(schema.message).toContain("collections.post");
-		expect(schema.where).toBe("monti.schema.json");
-		expect(schema.fix).toContain("$schema");
-		expect(byId(report, "schema/types").status).toBe("skip");
+		expect(schema.where).toBe("monti.schema.ts");
+		expect(schema.fix).toContain("defineSchema");
 	});
 
-	it("warns when the generated types are stale", async () => {
+	it("reports a schema file that is valid but holds code: the admin cannot rewrite it", async () => {
 		setEnv();
 		const dir = project();
-		writeFileSync(path.join(dir, "monti-env.d.ts"), "// stale\n");
+		writeFileSync(
+			path.join(dir, "monti.schema.ts"),
+			SCHEMA_TEXT.replace(
+				"export default defineSchema({\n",
+				"const base = { schemaVersion: 1 };\nexport default defineSchema({\n\t...base,\n",
+			),
+		);
 		const { report } = await doctor(dir);
-		const types = byId(report, "schema/types");
-		expect(types.status).toBe("warn");
-		expect(types.fix).toContain("monti schema:types");
+		const schema = byId(report, "schema/file");
+		expect(schema.status).toBe("ok");
+		expect(schema.message).toContain("contains code");
+		expect(schema.message).toContain("read-only");
+	});
+
+	it("says a missing schema file is missing", async () => {
+		setEnv();
+		const { report } = await doctor(project({ "monti.schema.ts": null }));
+		expect(byId(report, "schema/file").status).not.toBe("ok");
 	});
 
 	it("checks the three Next files and the admin path", async () => {
@@ -355,7 +369,7 @@ describe("monti doctor on a project with missing settings", () => {
 		const files = byId(report, "next/files");
 		expect(files.status).toBe("fail");
 		expect(files.fix).toContain("serves /admin");
-		expect(files.fix).toContain('"path": "/admin"');
+		expect(files.fix).toContain('admin: { path: "/admin" }');
 	});
 });
 

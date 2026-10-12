@@ -67,7 +67,7 @@ describe("monti command helpers", () => {
 		expect(out.at(-1)).toContain("--locale <code>");
 		expect(out.at(-1)).toContain("--time-zone <tz>");
 		// One config file: the commands that load the app take `--config`, and there is no separate server file any more.
-		const migrateHelp = out.at(-1)?.split("  migrate")[1]?.split("  schema:types")[0];
+		const migrateHelp = out.at(-1)?.split("  migrate")[1]?.split("  schema:extract")[0];
 		expect(migrateHelp).toContain("--config <file>");
 		expect(migrateHelp).not.toContain("--server");
 		expect(out.at(-1)).toContain("schema:extract");

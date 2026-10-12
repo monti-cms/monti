@@ -4,8 +4,8 @@ import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/all
 import type { SchemaFile } from "./types";
 
 /**
- * The runtime check of the schema file, written with zod. The JSON Schema editors read (`schema.json`) is generated from it too, so the file's format has one
- * definition. Objects are strict: a key the format does not have is an error (this is how the retired `workflow` option and a misspelt option are caught).
+ * The runtime check of the schema file, written with zod. The editor types come from `defineSchema`; this is the check that runs when the schema is loaded, and
+ * it applies the rules a type cannot say (a default option that exists, a time zone that exists). Objects are strict: a key the format does not have is an error (this is how the retired `workflow` option and a misspelt option are caught).
  *
  * Only the shape and the rules that name one value are checked here. Rules between collections (a relation to a collection that exists, one URL pattern per
  * collection, layout names) are checked by `defineSite`, which every schema goes through.
@@ -315,10 +315,9 @@ const migration = z.discriminatedUnion(
 	{ error: 'a migration needs an "op" of renameField, mapOption, dropField or setDefault' },
 );
 
-/** The schema file. Exported for the JSON Schema build; use `parseSchemaFile` to read one. */
-export const schemaFileShape = z
+/** The schema file; use `parseSchemaFile` to read one. */
+const schemaFileShape = z
 	.strictObject({
-		$schema: text.optional().describe("Link to this schema, for editor autocomplete."),
 		schemaVersion: z
 			.number()
 			.int()
@@ -378,20 +377,20 @@ export const schemaFileShape = z
 		}
 	});
 
-/** A problem in a schema file, with the JSON path of the value. */
+/** A problem in a schema file, with the path of the value. */
 export interface SchemaIssue {
 	/** Path from the root, e.g. `collections.post.fields.title.kind` or `locales[1].code`. Empty for the root. */
 	readonly path: string;
 	readonly message: string;
 }
 
-/** A schema file that is not valid. `message` lists every problem with its JSON path. */
+/** A schema file that is not valid. `message` lists every problem with its path. */
 export class SchemaFileError extends Error {
 	readonly issues: readonly SchemaIssue[];
 	readonly source: string;
 	constructor(source: string, issues: readonly SchemaIssue[]) {
 		super(
-			`${source} is not a valid schema file:\n${issues.map((issue) => `  ${issue.path || "(root)"}: ${issue.message}`).join("\n")}\nFix: correct the lines above in ${source}; the "$schema" link at its top gives an editor autocomplete and shows these errors as you type. \`monti doctor\` checks the file again.`,
+			`${source} is not a valid schema file:\n${issues.map((issue) => `  ${issue.path || "(root)"}: ${issue.message}`).join("\n")}\nFix: correct the lines above in ${source}; the types of \`defineSchema\` show most of them in the editor. \`monti doctor\` checks the file again.`,
 		);
 		this.name = "SchemaFileError";
 		this.source = source;
@@ -409,12 +408,12 @@ const formatPath = (path: readonly PropertyKey[]): string =>
 	}, "");
 
 /**
- * Checks a schema file's content (already parsed from JSON) and returns a copy of it. Throws a {@link SchemaFileError} naming the JSON path of every problem.
+ * Checks a schema file's content (the object `defineSchema` was given) and returns a copy of it. Throws a {@link SchemaFileError} naming the path of every problem.
  * `source` is what error messages call the file (its path).
  */
-export function parseSchemaFile(input: unknown, source = "monti.schema.json"): SchemaFile {
+export function parseSchemaFile(input: unknown, source = "monti.schema.ts"): SchemaFile {
 	if (typeof input !== "object" || input === null || Array.isArray(input)) {
-		throw new SchemaFileError(source, [{ path: "", message: "must be a JSON object" }]);
+		throw new SchemaFileError(source, [{ path: "", message: "must be an object" }]);
 	}
 	const result = schemaFileShape.safeParse(input);
 	if (result.success) return result.data as unknown as SchemaFile;

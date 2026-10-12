@@ -99,8 +99,8 @@ writeFileSync(
 
 run("pnpm", ["install", "--no-frozen-lockfile"], app);
 
-// The types of the schema file (`monti-env.d.ts`) are committed, like `next-env.d.ts`: they must be in step with `monti.schema.json`, and the schema must be valid.
-run("pnpm", ["exec", "monti", "schema:types", "--check"], app);
+// The schema file (`monti.schema.ts`) must load and be valid (its types come from `defineSchema`, so there is no generated file to keep in step).
+run("pnpm", ["exec", "monti", "doctor", "--only", "schema"], app);
 
 // `monti.config.ts` holds the database and login settings and is server-only: no client component may import it (directly or through other files).
 run("pnpm", ["exec", "monti", "doctor", "--only", "config"], app);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineSite } from "../../config/define";
 import { parseSchemaFile, SchemaFileError } from "../format";
-import type { SchemaInput } from "../types";
+import type { SchemaTypes } from "../types";
 import { cloneSchema, type EditableSchema } from "./fixture";
 
 const issues = (edit: (schema: EditableSchema) => void) => {
@@ -81,7 +81,7 @@ describe("defineSite with a schema version", () => {
 	const fromFile = (edit: (schema: EditableSchema) => void = () => {}) => {
 		const schema = cloneSchema();
 		edit(schema);
-		return schema as SchemaInput;
+		return schema as SchemaTypes;
 	};
 
 	it("takes the version from the schema file, and leaves the transforms out of the config", () => {

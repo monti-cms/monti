@@ -40,10 +40,11 @@ const schema = () => ({
 
 const screenState = (over: Record<string, unknown> = {}) => ({
 	access: { writable: true },
-	file: "monti.schema.json",
+	file: "monti.schema.ts",
 	hash: "hash-1",
 	schema: schema(),
 	source: "file",
+	comments: false,
 	issues: [],
 	schemaVersion: 2,
 	applied: { schemaVersion: 2, appliedAt: "2026-01-01T00:00:00.000Z" },
@@ -81,7 +82,7 @@ beforeEach(() => {
 		status: 200,
 		body: {
 			saved: true,
-			file: "monti.schema.json",
+			file: "monti.schema.ts",
 			hash: "hash-2",
 			schemaVersion: 3,
 			transforms: [],
@@ -134,6 +135,28 @@ describe("SchemaScreen", () => {
 		expect(review().disabled).toBe(true);
 		expect(screen.queryByTestId("add-collection")).toBeNull();
 		expect(requests.every((request) => request.method === "GET")).toBe(true);
+	});
+
+	it("is read-only when the file holds code: it says the admin cannot rewrite it, names the line, and nothing can be reviewed", async () => {
+		state = screenState({
+			access: { writable: false, reason: "has_code", detail: "line 3: a spread `...`" },
+			source: "site",
+		});
+		renderScreen();
+
+		expect(await screen.findByTestId("schema-read-only")).toBeTruthy();
+		expect(screen.getByText(t("readonly.hasCode"))).toBeTruthy();
+		expect(screen.getByTestId("schema-code-detail").textContent).toBe("line 3: a spread `...`");
+		expect(t("readonly.hasCode")).toContain("monti.schema.ts");
+		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).disabled).toBe(true);
+		expect(review().disabled).toBe(true);
+	});
+
+	it("tells that saving drops the comments of a file that has them", async () => {
+		state = screenState({ comments: true });
+		renderScreen();
+		expect(await screen.findByTestId("schema-comments-note")).toBeTruthy();
+		expect(screen.getByText(t("comments.note"))).toBeTruthy();
 	});
 
 	it("shows the collections of the file and opens the editor of the first one", async () => {

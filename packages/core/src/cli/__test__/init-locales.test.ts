@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { initProject } from "../init";
 import { detectApp } from "../init-detect";
 import { localesFromFileNames } from "../locale-names";
-import { fakeHost, fixtureApp, POST_MDX, read, scriptedPrompter } from "./init-helpers";
+import { fakeHost, fixtureApp, POST_MDX, schemaOf, scriptedPrompter } from "./init-helpers";
 
 const quiet = () => ({ host: fakeHost(), install: false });
 
@@ -76,7 +76,7 @@ describe("monti init and the languages of the content", () => {
 	it("with --yes (no prompts) the site languages are the ones found, the default being the unpaired one", async () => {
 		const dir = fixtureApp(PAIR);
 		const report = await initProject({ cwd: dir, ...quiet() });
-		const schema = JSON.parse(read(dir, "monti.schema.json"));
+		const schema = schemaOf(dir);
 		expect(schema.locales.map((locale: { code: string }) => locale.code)).toEqual(["ko", "en"]);
 		expect(schema.defaultLocale).toBe("ko");
 		expect(report.answers.locales).toEqual(["ko", "en"]);

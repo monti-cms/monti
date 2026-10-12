@@ -5,7 +5,7 @@ import { type CmsConfig, type CollectionsConfig, defineSite, type SchemaCmsConfi
 import { problemText } from "../core/problem";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { CmsPlugin } from "../plugin/define";
-import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
+import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
 import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";
 import type { AuthAdapter, CmsServerConfig, DatabaseAdapter, MediaAdapter } from "./define";
@@ -82,7 +82,7 @@ const isServerKey = (key: string): key is (typeof SERVER_KEYS)[number] =>
  *
  * ```ts
  * export const cms = defineConfig({
- *   schema,                                  // monti.schema.json: collections, fields, locales (the data)
+ *   schema,                                  // monti.schema.ts: collections, fields, locales (the data)
  *   plugins: [mdx(), callout(), seo()],      // one line per feature, each works with no arguments
  *   database: postgres(),                    // DATABASE_URL, DATABASE_SCHEMA
  *   auth: auth({ providers: [github()] }),   // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
@@ -94,7 +94,7 @@ const isServerKey = (key: string): key is (typeof SERVER_KEYS)[number] =>
  * The file is server-only: the admin gets a JSON snapshot of the site, never the file, and importing it into a client bundle throws.
  */
 export function defineConfig<
-	const Schema extends SchemaInput,
+	const Schema extends SchemaTypes,
 	const Collections extends CollectionsConfig = Record<never, never>,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
@@ -131,8 +131,8 @@ export function defineConfig(input: MontiServerOptions): Cms {
 	const site: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(input as object)) if (!isServerKey(key)) site[key] = value;
 	// The public site URL by convention: `SITE_URL`, unless the code (`site.url`) or the schema file says it.
-	const schema = site.schema as { site?: { url?: unknown } } | string | undefined;
-	const fileUrl = typeof schema === "object" ? schema?.site?.url : undefined;
+	const schema = site.schema as { site?: { url?: unknown } } | undefined;
+	const fileUrl = schema?.site?.url;
 	const siteOptions = site.site as { url?: string } | undefined;
 	const envUrl = process.env[SITE_URL_ENV]?.trim();
 	if (!siteOptions?.url && !fileUrl && envUrl) site.site = { ...siteOptions, url: envUrl };

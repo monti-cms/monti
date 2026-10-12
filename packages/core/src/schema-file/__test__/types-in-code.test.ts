@@ -1,15 +1,15 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { defineCollection, defineSite, fields } from "../..";
+import { defineCollection, defineSchema, defineSite, fields } from "../..";
 import type { Cms } from "../../cms";
 import type { CollectionName, MetadataFor } from "../../core/types";
 import type { DocumentComponentsFor } from "../../render";
 
 /**
- * The types of a config built from a schema written in code with literal types (an inline `as const` object). A schema file imported from JSON gets the same
- * types from the generated declaration file; that path is tested in `cli/__test__/schema-types.test.ts`.
+ * The types of a config built from a schema made with `defineSchema` (what `monti.schema.ts` exports): the collection, field and locale names flow into the config
+ * with nothing written by hand, and a wrong `kind` or option is a type error in the schema file.
  */
 
-const schema = {
+const schema = defineSchema({
 	collections: {
 		post: {
 			label: "Post",
@@ -53,7 +53,7 @@ const schema = {
 		{ code: "en", name: "English" },
 	],
 	defaultLocale: "ko",
-} as const;
+});
 
 describe("defineSite({ schema }) types", () => {
 	const config = defineSite({ schema });
@@ -113,5 +113,53 @@ describe("defineSite({ schema }) types", () => {
 		});
 		const merged = defineSite({ schema, collections: { note } });
 		expectTypeOf<CollectionName<typeof merged>>().toEqualTypeOf<"post" | "tag" | "note">();
+	});
+});
+
+describe("defineSchema types", () => {
+	it("is the identity at run time", () => {
+		const given = { collections: {}, locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
+		expect(defineSchema(given)).toBe(given);
+	});
+
+	it("keeps names as literal types, and the schema it returns is the type of its argument", () => {
+		expectTypeOf(schema.defaultLocale).toEqualTypeOf<"ko">();
+		expectTypeOf(schema.collections.post.kind).toEqualTypeOf<"document">();
+		expectTypeOf(schema.locales[0].code).toEqualTypeOf<"ko">();
+	});
+
+	it("reports a wrong kind or a wrong option as a type error", () => {
+		const base = { locales: [{ code: "en", name: "English" }], defaultLocale: "en" } as const;
+		defineSchema({
+			...base,
+			collections: {
+				post: {
+					label: "Post",
+					// @ts-expect-error a field kind that does not exist
+					kind: "page",
+					fields: { title: { kind: "text", label: "Title" } },
+				},
+			},
+		});
+		defineSchema({
+			...base,
+			collections: {
+				post: {
+					label: "Post",
+					kind: "document",
+					fields: {
+						// @ts-expect-error "date" is not a field kind
+						when: { kind: "date", label: "When" },
+						// @ts-expect-error `rows` is a number
+						body: { kind: "text", label: "Body", rows: "3" },
+						// @ts-expect-error a relation needs the collection it points to
+						author: { kind: "relation", label: "Author" },
+					},
+				},
+			},
+		});
+		// @ts-expect-error `locales` is required
+		defineSchema({ collections: {}, defaultLocale: "en" });
+		expect(true).toBe(true);
 	});
 });

@@ -111,13 +111,13 @@ export {
 	valueFieldsOf,
 	valueWithRole,
 } from "./schema/walk";
+export { defineSchema } from "./schema-file/define";
 export { parseSchemaFile, SchemaFileError, type SchemaIssue } from "./schema-file/format";
 export type {
-	MontiRegister,
 	SchemaAdmin,
 	SchemaCollection,
 	SchemaFile,
-	SchemaInput,
+	SchemaMigration,
 	SchemaTypes,
 } from "./schema-file/types";
 // Entry validator contract (also used by extensions the config file reads, so it must not read the site config).
