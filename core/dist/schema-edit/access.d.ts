@@ -1,7 +1,8 @@
 import type { Cms } from "../cms/index.js";
 /**
  * Whether the settings screen may write the schema file of an instance. The decision is the server's: a production server never writes the file (it runs the schema
- * it was built with), and a development server writes it only when the file is there and can be written. The write routes of the admin API answer 403 otherwise,
+ * it was built with), and a development server writes it only when the file is there, can be written, and is a pure literal (the `defineSchema` import and
+ * `export default defineSchema({ ... })` with data only). A file that has code is never rewritten. The write routes of the admin API answer 403 otherwise,
  * whatever the screen shows.
  */
 /** Why the screen is read-only. */
@@ -11,7 +12,9 @@ export type SchemaReadOnlyReason =
 /** The instance's config has no schema file (it is written in code only), or the file cannot be found. */
  | "no_schema_file"
 /** The file exists but this process cannot write it. */
- | "not_writable";
+ | "not_writable"
+/** The file has code in it (an import, a spread, a call, a variable), so the admin cannot rewrite it without losing that code. */
+ | "has_code";
 export type SchemaEditAccess = {
     readonly writable: true;
     readonly file: string;
@@ -19,6 +22,8 @@ export type SchemaEditAccess = {
     readonly writable: false;
     readonly reason: SchemaReadOnlyReason;
     readonly file?: string;
+    /** For `has_code`: what in the file is code, with its line. */
+    readonly detail?: string;
 };
 /**
  * Whether the server runs in development (`next dev`). Read at call time. A development-mode process that looks deployed (a hosting platform's variables, a public

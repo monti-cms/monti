@@ -3,7 +3,7 @@ import { DOCTOR_HELP } from "./doctor/command.js";
  * The help texts of the `monti` command line. Each command has its own section, so `monti <command> --help` prints only that command's, and `monti --help`
  * prints the header and every section. A section is a two-space indented block that starts with the command name, the way `DOCTOR_HELP` is.
  */
-const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): asks a few questions, writes Monti's own new files (monti.config.ts, monti.schema.json, the
+const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): asks a few questions, writes Monti's own new files (monti.config.ts, monti.schema.ts, the
             admin pages, the API route and a commented .env.example), installs the packages, and prints what is left (next.config, .env.local, migrate).
             It edits none of your existing files and writes no .env.local. A file that already exists is never overwritten without a yes.
             Every question has a flag; with --yes, --json, or no terminal nothing is asked.
@@ -44,26 +44,19 @@ const EVENTS_RETRY_HELP = `  events:retry    Deliver the afterCommit events that
 `;
 const PLUGIN_HELP = `  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for migrate (for example git-sync:pull). Add --help for its options
 `;
-const SCHEMA_TYPES_HELP = `  schema:types    Write the types of the schema file (monti-env.d.ts), so collections and locales are typed without writing types
-              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
-              --out <file>          Declaration file (default: monti-env.d.ts next to the schema file)
-              --watch               Keep running and rewrite the types when the schema file changes
-              --check               Write nothing; exit 1 if the declaration file is out of date
-`;
-const SCHEMA_EXTRACT_HELP = `  schema:extract  Write the data part of the config file to monti.schema.json and list what stays in code
+const SCHEMA_EXTRACT_HELP = `  schema:extract  Write the data part of the config file to monti.schema.ts and list what stays in code
               --config <file>       Config file (default: ./monti.config.ts, then ./cms.config.ts; each also under ./src)
-              --out <file>          Schema file to write (default: monti.schema.json next to the config file)
+              --out <file>          Schema file to write (default: monti.schema.ts next to the config file)
               --overwrite           Replace the schema file if it exists
               --locale <code>       Language for labels plugins provide (default: the admin language)
-              --no-types            Do not write the declaration file
 `;
 const SCHEMA_DIFF_HELP = `  schema:diff     Compare the schema with the one last applied to the database and list the stored entries each change touches (read-only)
-              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
+              --schema <file>       Schema file (default: ./monti.schema.ts, ./src/monti.schema.ts)
               --check               Exit 1 when there is anything to apply
               --env-file <file>, --no-env-file, --config <file>   As for migrate
 `;
 const SCHEMA_APPLY_HELP = `  schema:apply    Run the data transforms of the schema file (migrations) once each, record the schema, and raise schemaVersion in the file when the schema changed
-              --schema <file>       Schema file (default: ./monti.schema.json, ./src/monti.schema.json)
+              --schema <file>       Schema file (default: ./monti.schema.ts, ./src/monti.schema.ts)
               --dry-run             Run everything in a transaction that is rolled back, and write nothing
               --env-file <file>, --no-env-file, --config <file>   As for migrate
 `;
@@ -75,7 +68,6 @@ const SECTIONS = [
     ["events:retry", EVENTS_RETRY_HELP],
     ["<plugin>", PLUGIN_HELP],
     ["doctor", DOCTOR_HELP],
-    ["schema:types", SCHEMA_TYPES_HELP],
     ["schema:extract", SCHEMA_EXTRACT_HELP],
     ["schema:diff", SCHEMA_DIFF_HELP],
     ["schema:apply", SCHEMA_APPLY_HELP],

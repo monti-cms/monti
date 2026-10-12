@@ -8,7 +8,6 @@ import { migrate } from "./migrate.js";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
 import { schemaApply, schemaDiff } from "./schema-apply.js";
 import { extractSchema, formatExtractReport } from "./schema-extract.js";
-import { generateSchemaTypes, watchSchemaTypes } from "./schema-types.js";
 /**
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
@@ -18,11 +17,11 @@ import { generateSchemaTypes, watchSchemaTypes } from "./schema-types.js";
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
  * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
- * - `monti schema:types [--schema <file>] [--out <file>] [--watch] [--check]`: writes the types of `monti.schema.json`.
- * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>] [--no-types]`: writes the data part of the config file to `monti.schema.json`.
+ * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>]`: writes the data part of the config file to `monti.schema.ts`.
  * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
  * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
  */
+export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate.js";
 export { adminResetPassword } from "./admin-command.js";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths.js";
 export { unifiedDiff } from "./diff.js";
@@ -37,7 +36,6 @@ export { migrate } from "./migrate.js";
 export { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
 export { formatApplyResult, formatSchemaPlan, schemaApply, schemaDiff, withSchemaVersion, } from "./schema-apply.js";
 export { CONFIG_FILE_CANDIDATES, extractSchema, extractSchemaData, formatExtractReport, schemaFileText, } from "./schema-extract.js";
-export { findSchemaFile, generateSchemaTypes, SCHEMA_FILE_CANDIDATES, SCHEMA_LINK, SCHEMA_TYPES_FILE, schemaTypesText, toTypeLiteral, watchSchemaTypes, } from "./schema-types.js";
 /** Runs the command and returns the exit code. */
 export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, error: console.error }) {
     const [command, ...rest] = argv;
@@ -119,38 +117,6 @@ export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, 
         if (command === "doctor") {
             return await runDoctorCommand(rest, io);
         }
-        if (command === "schema:types") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    schema: { type: "string" },
-                    out: { type: "string" },
-                    watch: { type: "boolean" },
-                    check: { type: "boolean" },
-                },
-            });
-            const options = { cwd: io.cwd, schema: values.schema, out: values.out, log: io.log };
-            if (values.watch) {
-                const stop = watchSchemaTypes(options);
-                io.log("monti: watching the schema file (Ctrl+C stops)");
-                await new Promise((resolve) => {
-                    process.once("SIGINT", resolve);
-                    process.once("SIGTERM", resolve);
-                });
-                stop();
-                return 0;
-            }
-            const result = generateSchemaTypes({ ...options, check: values.check });
-            if (values.check) {
-                if (result.changed)
-                    io.error(`${result.out} is out of date; run \`monti schema:types\``);
-                else
-                    io.log(`${result.out} is up to date`);
-                return result.changed ? 1 : 0;
-            }
-            io.log(result.changed ? `Wrote ${result.out} from ${result.schema}` : `${result.out} is up to date`);
-            return 0;
-        }
         if (command === "schema:extract") {
             const { values } = parseArgs({
                 args: [...rest],
@@ -159,7 +125,6 @@ export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, 
                     out: { type: "string" },
                     overwrite: { type: "boolean" },
                     locale: { type: "string" },
-                    "no-types": { type: "boolean" },
                 },
             });
             const report = await extractSchema({
@@ -168,7 +133,6 @@ export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, 
                 out: values.out,
                 overwrite: values.overwrite,
                 locale: values.locale,
-                types: !values["no-types"],
             });
             io.log(formatExtractReport(report));
             return 0;

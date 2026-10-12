@@ -3,7 +3,7 @@ import { type Cms } from "../cms/index.js";
 import { type CmsConfig, type CollectionsConfig, type SchemaCmsConfig } from "../config/define.js";
 import type { PublicApiOptions } from "../http/v1/public/options.js";
 import type { CmsPlugin } from "../plugin/define.js";
-import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types.js";
+import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types.js";
 import type { EventDeliveryOptions } from "../services/events.js";
 import type { WriteHooks } from "../services/hooks.js";
 import type { AuthAdapter, DatabaseAdapter, MediaAdapter } from "./define.js";
@@ -61,7 +61,7 @@ export interface MontiServerOptions {
  *
  * ```ts
  * export const cms = defineConfig({
- *   schema,                                  // monti.schema.json: collections, fields, locales (the data)
+ *   schema,                                  // monti.schema.ts: collections, fields, locales (the data)
  *   plugins: [mdx(), callout(), seo()],      // one line per feature, each works with no arguments
  *   database: postgres(),                    // DATABASE_URL, DATABASE_SCHEMA
  *   auth: auth({ providers: [github()] }),   // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
@@ -72,5 +72,5 @@ export interface MontiServerOptions {
  * server options ({@link MontiServerOptions}). Connections are created on first use, so importing this file where the environment is absent (a build) does not fail.
  * The file is server-only: the admin gets a JSON snapshot of the site, never the file, and importing it into a client bundle throws.
  */
-export declare function defineConfig<const Schema extends SchemaInput, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>>;
+export declare function defineConfig<const Schema extends SchemaTypes, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>>;
 export declare function defineConfig<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<Collections, Locale, Plugins, Blocks>>;

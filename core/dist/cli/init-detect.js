@@ -196,11 +196,6 @@ export function detectApp(cwd) {
     const exists = (file) => existsSync(path.join(cwd, file));
     const src = exists("src/app") || (exists("src") && !exists("app"));
     const appDir = exists("src/app") ? "src/app" : exists("app") ? "app" : src ? "src/app" : "app";
-    const tsconfig = exists("tsconfig.json")
-        ? parseJsonc(readFileSync(path.join(cwd, "tsconfig.json"), "utf8"))
-        : undefined;
-    const compilerOptions = tsconfig
-        ?.compilerOptions;
     const configRoots = src ? ["src/", ""] : [""];
     const dev = typeof pkg.scripts?.dev === "string" ? pkg.scripts.dev : "";
     const port = /(?:-p|--port)[ =]+(\d{2,5})/.exec(dev)?.[1];
@@ -215,7 +210,6 @@ export function detectApp(cwd) {
         pagesRouterOnly: !(exists("app") || exists("src/app")) && (exists("pages") || exists("src/pages")),
         packageManager: detectPackageManager(cwd),
         typescript: exists("tsconfig.json") || dependencies.has("typescript"),
-        resolveJsonModule: tsconfig === undefined ? undefined : compilerOptions?.resolveJsonModule === true,
         contentFolders: findContentFolders(cwd),
         nextConfig: NEXT_CONFIG_FILES.find(exists),
         devPort: port ? Number(port) : 3000,

@@ -39,7 +39,7 @@ export function defineConfig(input) {
             site[key] = value;
     // The public site URL by convention: `SITE_URL`, unless the code (`site.url`) or the schema file says it.
     const schema = site.schema;
-    const fileUrl = typeof schema === "object" ? schema?.site?.url : undefined;
+    const fileUrl = schema?.site?.url;
     const siteOptions = site.site;
     const envUrl = process.env[SITE_URL_ENV]?.trim();
     if (!siteOptions?.url && !fileUrl && envUrl)

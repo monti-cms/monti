@@ -19,7 +19,7 @@ pnpm add @monti-cms/auth
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 
 export const cms = defineConfig({
 	schema,

@@ -56,9 +56,8 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
      */
     readonly id?: string;
     /**
-     * The schema file of a site whose config was made with `defineSite({ schema })` (path relative to the working directory). The settings screen edits it
-     * and the dev server reads it again when it changes. Default: the path the config was given, else `monti.schema.json` (or `src/monti.schema.json`) in
-     * the working directory.
+     * The schema file of a site whose config was made with `defineSite({ schema })` (path relative to the working directory). The settings screen edits it.
+     * Default: `monti.schema.ts` (or `src/monti.schema.ts`) in the working directory.
      */
     readonly schemaFile?: string;
     /** Where the public site URL came from, for `monti doctor` (`defineConfig` knows: the config, the schema file or `SITE_URL`). */
@@ -66,9 +65,9 @@ export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
 }
 /** What {@link Cms.reloadSchema} did. */
 export interface SchemaReload {
-    /** Whether the instance now runs the schema file as it is on disk. */
+    /** Whether the instance now runs the schema it was given. */
     readonly reloaded: boolean;
-    /** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the file. */
+    /** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the schema. */
     readonly reason?: string;
 }
 /**
@@ -165,17 +164,18 @@ export interface Cms<Config extends AnyCmsConfig = any> {
      */
     schemaFile(): string | undefined;
     /**
-     * Another instance of the same site over a different schema (the parsed content of the schema file), sharing this instance's connections. It is not
+     * Another instance of the same site over a different schema (the data of the schema file), sharing this instance's connections. It is not
      * installed: this instance keeps running the old schema. The settings screen uses it to check a change (diff, impact, a dry run of the transforms)
      * before the file is written. Throws what `defineSite` throws when the schema is not valid, and when the config has no schema file.
      */
     forSchema(schema: unknown): Cms<Config>;
     /**
-     * Development only: reads the schema file again and makes this instance run it, in place (the same object, with a new site, store, services and read API).
-     * The dev server calls it after the settings screen saved, and on its own when it finds the file changed on disk. A file that does not read or check
-     * leaves the instance as it was and says why. In production it does nothing: a production server runs the schema it was built with.
+     * Development only: makes this instance run `schema` (the data of the schema file), in place (the same object, with a new site, store, services and read API).
+     * The settings screen calls it after it saved the file. A hand edit of the file needs no call: the dev server evaluates `monti.config.ts` again (hot module
+     * reload) and that makes a new instance. A schema that does not check leaves the instance as it was and says why. In production it does nothing: a production
+     * server runs the schema it was built with.
      */
-    reloadSchema(): SchemaReload;
+    reloadSchema(schema: unknown): SchemaReload;
     /**
      * What this instance decided on its own and why: the database and schema (and which environment variable they came from), the login, whether the development
      * bypass is on, whether the host is trusted, the site URL, the schema file and hot reload. `monti doctor` prints these.

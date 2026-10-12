@@ -43,8 +43,6 @@ export interface DetectedApp {
     readonly pagesRouterOnly: boolean;
     readonly packageManager: PackageManager;
     readonly typescript: boolean;
-    /** `undefined` when there is no tsconfig. */
-    readonly resolveJsonModule?: boolean;
     readonly contentFolders: readonly ContentFolder[];
     /** The next config file (`next.config.ts`, `.mjs` or `.js`), if any. */
     readonly nextConfig?: string;

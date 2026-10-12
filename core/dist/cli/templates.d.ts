@@ -68,15 +68,14 @@ export declare function starterCollections(keys: readonly FrontMatterKey[], mult
 /** The public address shape for a content folder: its last folder name (`content/blog` -> `/blog/:slug`), else `/posts/:slug`. */
 export declare function pathFor(folder: ContentFolder | undefined): string;
 /**
- * The schema file `monti init` creates (`monti.schema.json`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
+ * The schema file `monti init` creates (`monti.schema.ts`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
  * time zone, the site name and the admin path when it is not the default. It holds the plain data of the site;
- * `monti.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete). With `folder` (a content folder the app
+ * `monti.config.ts` imports it. It is the text `printSchemaFile` writes, so the admin can rewrite it. With `folder` (a content folder the app
  * already has) the fields follow its front matter, and `path` follows its name.
  */
 export declare function schemaTemplate(answers: Pick<InitAnswers, "adminPath" | "locales" | "timeZone">, options?: {
     readonly siteName?: string;
     readonly folder?: ContentFolder;
-    readonly link?: string;
 }): string;
 /** The module a block's function is imported from. */
 export declare const blockEntry: (block: BlockChoice) => string;

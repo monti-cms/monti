@@ -1,11 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { parseSchemaFile } from "../schema-file/format.js";
 import { findRootLayout, hasSuppressHydrationWarning } from "./first-run.js";
 import { detectApp } from "./init-detect.js";
 import { collectAnswers, detectedLocales, InitCancelled } from "./init-prompts.js";
-import { SCHEMA_TYPES_FILE, schemaTypesText } from "./schema-types.js";
 import { adminLayoutTemplate, adminPageTemplate, apiRouteTemplate, configTemplate, envExampleTemplate, githubCallbackUrl, nextConfigTemplate, packagesFor, pathFor, schemaTemplate, starterCollections, } from "./templates.js";
 /** An error after files were already written. `written` lists them, so the message can say what is on disk. */
 export class InitError extends Error {
@@ -143,8 +141,7 @@ export async function initProject(options) {
     const writer = new ProjectWriter(cwd);
     const root = app.src ? "src/" : "";
     const configFile = `${root}monti.config.ts`;
-    const schemaFile = `${root}monti.schema.json`;
-    const typesFile = `${root}${SCHEMA_TYPES_FILE}`;
+    const schemaFile = `${root}monti.schema.ts`;
     const adminDir = posix(path.join(app.appDir, ...answers.adminPath.split("/").filter(Boolean)));
     const pageFile = `${adminDir}/[[...path]]/page.tsx`;
     const layoutFile = `${adminDir}/layout.tsx`;
@@ -189,18 +186,7 @@ export async function initProject(options) {
     if (!keepConfig) {
         planned.push({ file: configFile, content: configTemplate(answers) });
         const folder = app.contentFolders[0];
-        const schemaText = schemaTemplate(answers, {
-            siteName: app.packageName,
-            folder,
-            link: dotted(posix(path.join(path.relative(path.dirname(schemaFile), "."), "node_modules/@monti-cms/core/schema.json"))),
-        });
-        planned.push({ file: schemaFile, content: schemaText });
-        // The types are written from the schema (and this also checks the schema we generated is valid).
-        const parsed = parseSchemaFile(JSON.parse(schemaText), schemaFile);
-        planned.push({
-            file: typesFile,
-            content: schemaTypesText(parsed, posix(path.relative(path.dirname(typesFile), schemaFile))),
-        });
+        planned.push({ file: schemaFile, content: schemaTemplate(answers, { siteName: app.packageName, folder }) });
         if (folder) {
             const keys = folder.keys.map((key) => key.name);
             report.notes.push(`The post collection follows the front matter of ${folder.dir}/ (${keys.length > 0 ? keys.slice(0, 8).join(", ") : "no front matter found"}), at the path ${pathFor(folder)}. Keys that have no matching field kind are text fields; edit ${schemaFile} to fit.`, ...starterCollections(folder.keys, answers.locales.length > 1).notes);
@@ -290,9 +276,6 @@ export async function initProject(options) {
     const rootLayout = findRootLayout(cwd);
     if (rootLayout && hasSuppressHydrationWarning(writer.read(rootLayout)) === false) {
         todo.push(`Add suppressHydrationWarning to the <html> tag in ${rootLayout}:\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`);
-    }
-    if (app.resolveJsonModule === false && !keepConfig) {
-        todo.push(`Set "resolveJsonModule" in the compilerOptions of tsconfig.json (${configFile} imports ${schemaFile}):\n"resolveJsonModule": true`);
     }
     todo.push([
         "Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",

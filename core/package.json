@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/core",
-  "version": "0.2.0-next.2",
+  "version": "0.2.0-next.3",
   "private": true,
   "description": "DB-backed CMS core: config, schema, stores, the stored document, its renderer and plugins",
   "license": "MIT",
@@ -74,10 +74,6 @@
       "types": "./dist/cli/import-boundary.d.ts",
       "default": "./dist/cli/import-boundary.js"
     },
-    "./schema-types": {
-      "types": "./dist/cli/schema-types.d.ts",
-      "default": "./dist/cli/schema-types.js"
-    },
     "./schema-change": {
       "types": "./dist/schema-change/index.d.ts",
       "default": "./dist/schema-change/index.js"
@@ -86,7 +82,6 @@
       "types": "./dist/schema-edit/index.d.ts",
       "default": "./dist/schema-edit/index.js"
     },
-    "./schema.json": "./schema.json",
     "./render.css": "./render.css"
   },
   "bin": {
@@ -130,8 +125,7 @@
     "bin",
     "dist",
     "README.md",
-    "render.css",
-    "schema.json"
+    "render.css"
   ],
   "sideEffects": false,
   "scripts": {
@@ -139,7 +133,6 @@
     "test:run": "vitest run && vitest run -c vitest.othersite.config.ts",
     "test:other-site": "vitest run -c vitest.othersite.config.ts",
     "typecheck": "tsc --noEmit -p .",
-    "build": "node ../../scripts/build-package.mjs",
-    "schema:build": "tsx scripts/write-json-schema.ts"
+    "build": "node ../../scripts/build-package.mjs"
   }
 }

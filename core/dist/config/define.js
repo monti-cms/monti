@@ -280,7 +280,6 @@ export function defineSite(input) {
         // Hidden: lets an instance rebuild the config with another schema (see `schema-file/source.ts`).
         Object.defineProperty(normalized, SCHEMA_SOURCE, {
             value: {
-                ...(typeof schemaInput.schema === "string" ? { file: schemaInput.schema } : {}),
                 rebuild: (schema) => defineSite({ ...schemaInput, schema }),
             },
         });

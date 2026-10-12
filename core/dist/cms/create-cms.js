@@ -1,13 +1,12 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { CmsAuthGateway } from "../adapters/auth/auth-gateway.js";
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host.js";
-import { findSchemaFile } from "../cli/schema-types.js";
 import { problemText } from "../core/problem.js";
 import { CmsError, withEventDispatch } from "../core/store/index.js";
 import { createServerPlugins } from "../plugin/server.js";
 import { createRead } from "../read/index.js";
-import { readSchemaFile } from "../schema-file/read.js";
+import { findSchemaFile } from "../schema-file/locate.js";
 import { schemaSourceOf } from "../schema-file/source.js";
 import { createSecretsVault } from "../secrets/index.js";
 import { createBulkService } from "../services/bulk-service.js";
@@ -182,10 +181,9 @@ export function createCms(options) {
     const schemaFile = () => {
         if (schemaPath === undefined) {
             schemaPath = null;
-            const given = options.schemaFile ?? source?.file;
             if (source) {
                 try {
-                    schemaPath = path.resolve(process.cwd(), given ?? findSchemaFile(process.cwd()));
+                    schemaPath = path.resolve(process.cwd(), options.schemaFile ?? findSchemaFile(process.cwd()));
                     if (!existsSync(schemaPath))
                         schemaPath = null;
                 }
@@ -209,29 +207,16 @@ export function createCms(options) {
         };
         return detached;
     };
-    // The part of the instance that changes when the schema is reloaded. `site` is read through a getter that also finds a schema file edited on disk.
+    // The part of the instance that changes when the schema is reloaded.
     let current = build(options.config, () => cms);
-    let stamp;
-    let checkedAt = Number.NEGATIVE_INFINITY;
-    const stampOf = (file) => {
-        try {
-            const stat = statSync(file);
-            return `${stat.mtimeMs}:${stat.size}`;
-        }
-        catch {
-            return undefined;
-        }
-    };
     let reported;
-    const reloadSchema = () => {
+    const reloadSchema = (schema) => {
         if (process.env.NODE_ENV !== "development")
             return { reloaded: false, reason: "production" };
-        const file = schemaFile();
-        if (!source || !file)
+        if (!source)
             return { reloaded: false, reason: "no_schema_file" };
-        stamp = stampOf(file);
         try {
-            const next = build(source.rebuild(readSchemaFile(file)), () => cms);
+            const next = build(source.rebuild(schema), () => cms);
             const { site: _site, ...parts } = next;
             current = next;
             Object.assign(cms, parts);
@@ -240,30 +225,12 @@ export function createCms(options) {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            // A schema that is half written or invalid is reported once; the instance keeps running the last good one until the file changes again.
+            // A schema that is invalid is reported once; the instance keeps running the last good one.
             if (message !== reported)
-                console.error(`monti: the schema file was not reloaded: ${message}`);
+                console.error(`monti: the schema was not reloaded: ${message}`);
             reported = message;
             return { reloaded: false, reason: message };
         }
-    };
-    /** In development, runs the schema file again when it changed on disk since the instance last read it (a hand edit, or a save from another process). */
-    const refresh = () => {
-        if (process.env.NODE_ENV !== "development" || !source)
-            return;
-        // A monotonic clock, not `Date.now()`: Next's Cache Components rejects the wall clock in a render (this runs on every `cms.site` read, in a layout or a page).
-        const now = performance.now();
-        if (now - checkedAt < 250)
-            return;
-        checkedAt = now;
-        const file = schemaFile();
-        if (!file)
-            return;
-        const seen = stampOf(file);
-        if (stamp === undefined)
-            stamp = seen;
-        else if (seen !== undefined && seen !== stamp)
-            reloadSchema();
     };
     const decisions = (env = process.env) => {
         const file = schemaFile();
@@ -276,20 +243,14 @@ export function createCms(options) {
                 siteUrl: current.site.config.site?.url,
                 siteUrlSource: options.siteUrlSource,
                 schemaFile: file ? path.relative(process.cwd(), file) || file : undefined,
-                schemaFileGiven: Boolean(options.schemaFile ?? source?.file),
+                schemaFileGiven: Boolean(options.schemaFile),
                 hotReload: env.NODE_ENV === "development" && Boolean(source && file),
             }),
         ];
     };
     const { site: _first, ...rest } = current;
     const cms = Object.defineProperties({ ...rest, schemaFile, forSchema, reloadSchema, decisions }, {
-        site: {
-            enumerable: true,
-            get: () => {
-                refresh();
-                return current.site;
-            },
-        },
+        site: { enumerable: true, get: () => current.site },
     });
     return cms;
 }

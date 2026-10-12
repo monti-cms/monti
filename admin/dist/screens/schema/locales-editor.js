@@ -38,7 +38,6 @@ export function LocalesEditor({ file, savedCodes, update, }) {
                             value: locale.code,
                             label: `${locale.label ?? locale.name} (${locale.code})`,
                         })), onChange: (value) => update((current) => ({ ...current, defaultLocale: value })) }), _jsx(TextInput, { label: t("locales.timeZone"), hint: t("locales.timeZoneHint"), placeholder: "Asia/Seoul", value: file.timeZone, onChange: (value) => update((current) => setProp(current, "timeZone", orUndefined(value), [
-                            "$schema",
                             "schemaVersion",
                             "collections",
                             "migrations",

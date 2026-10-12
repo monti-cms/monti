@@ -9,14 +9,17 @@ export interface SchemaScreenState {
     readonly access: {
         readonly writable: boolean;
         readonly reason?: string;
+        readonly detail?: string;
     };
     /** The path of the schema file relative to the working directory (what the screen calls the file), or `null` when there is none. */
     readonly file: string | null;
     /** Hash of the file's text: a save names the hash it was edited from, and is refused when the file changed since. `null` without a file. */
     readonly hash: string | null;
-    /** The file's content, or (without a file) the schema the instance runs. */
+    /** The file's content, or (without a file, or when the file has code) the schema the instance runs. */
     readonly schema: unknown;
     readonly source: "file" | "site";
+    /** The file has comments; saving writes it again without them. */
+    readonly comments: boolean;
     /** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
     readonly issues: readonly SchemaIssue[];
     /** The version the instance runs. */
@@ -124,10 +127,6 @@ export type SchemaSaveResult = {
     readonly transforms: readonly SchemaMigration[];
     /** Entries the apply rewrote. */
     readonly entriesRewritten: number;
-    readonly types: {
-        readonly file: string;
-        readonly changed: boolean;
-    };
     /** The running instance now runs the new schema. */
     readonly reloaded: boolean;
     /** Entries where a rename found a value under the new name already: both were kept. */
@@ -145,10 +144,10 @@ export type SchemaSaveResult = {
  *
  * 1. Checks the edit (format, then the rules between collections) and the transforms; refuses a file that changed since the edit started (`baseHash`).
  * 2. Dry-runs the transforms on the dev database (nothing written) so an entry that cannot be rewritten stops the save before the file is touched.
- * 3. Writes `monti.schema.json` with the chosen transforms appended to `migrations` and `schemaVersion` raised, keeping the file's formatting and key order.
- * 4. Writes the generated types (`monti-env.d.ts`).
- * 5. Runs `applySchemaChange` against the dev database (creating the tables first when the store has none) with the schema as written.
- * 6. Reloads the running instance from the file (`cms.reloadSchema()`).
+ * 3. Writes `monti.schema.ts` whole (`printSchemaFile`) with the chosen transforms appended to `migrations` and `schemaVersion` raised, in the key order of the edit.
+ *    Comments in the file are dropped; a file that has code is never written (`schemaEditAccess` refuses it).
+ * 4. Runs `applySchemaChange` against the dev database (creating the tables first when the store has none) with the schema as written.
+ * 5. Makes the running instance run the new schema (`cms.reloadSchema(schema)`); the dev server evaluates the config again because the file changed.
  *
  * The caller has checked `schemaEditAccess`.
  */

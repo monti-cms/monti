@@ -15,6 +15,7 @@ export { definePlugin, } from "./plugin/define.js";
 export { defineCollection, SYSTEM_LIST_COLUMNS, } from "./schema/collection.js";
 export { fields, SUMMARY_ROLE, TITLE_ROLE, } from "./schema/fields.js";
 export { fieldWithRole, findTitleField, titleFieldOf, titleValue, valueFieldsOf, valueWithRole, } from "./schema/walk.js";
+export { defineSchema } from "./schema-file/define.js";
 export { parseSchemaFile, SchemaFileError } from "./schema-file/format.js";
 // Entry validator contract (also used by extensions the config file reads, so it must not read the site config).
 export * from "./text-check/normalize.js";

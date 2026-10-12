@@ -4,7 +4,7 @@ export declare const FIELD_KINDS: readonly ["text", "slug", "relation", "select"
 export type FieldKindName = (typeof FIELD_KINDS)[number];
 /** The kinds a conditional field can show (the ones that store one value). */
 export declare const VALUE_KINDS: readonly ["text", "relation", "select", "media"];
-/** The order a field's properties are written in: the common ones, then the ones of the kind (the order of `schema.json`). */
+/** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
 export declare const FIELD_KEY_ORDER: readonly ["kind", "label", "description", "required", "localized", "input", "inputOptions", "hidden", "role", "tab", "fillFromBody", "multiline", "rows", "max", "from", "to", "many", "createInline", "publishedOnly", "allowUnpublished", "ordered", "view", "via", "accept", "options", "defaultValue", "discriminant", "values", "placeholder"];
 export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "body", "fields", "layout", "list"];
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */

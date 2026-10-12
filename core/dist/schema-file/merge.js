@@ -1,5 +1,6 @@
 import { parseSchemaFile } from "./format.js";
-import { readSchemaFile } from "./read.js";
+/** What error messages call the schema. */
+const SCHEMA_SOURCE_NAME = "monti.schema.ts";
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /** The keys of `over` that are set (not `undefined`) laid over `base`: `site: { url: process.env.X || undefined }` keeps the file's `url`. */
 const overlay = (base, over) => {
@@ -10,12 +11,6 @@ const overlay = (base, over) => {
     const set = Object.fromEntries(Object.entries(over).filter(([, value]) => value !== undefined));
     return { ...base, ...set };
 };
-/** Reads the schema of a config's `schema` option: the parsed JSON, or the path of the file (relative to the working directory). */
-export function loadSchemaOption(schema) {
-    if (typeof schema === "string")
-        return parseSchemaFile(readSchemaFile(schema), schema);
-    return parseSchemaFile(schema);
-}
 /**
  * Merges the schema file into the code part of a config, and returns the config `defineSite` checks like any other. The rule is that code adds to the file
  * and may override its environment-specific settings, but never silently replaces its data:
@@ -29,8 +24,8 @@ export function loadSchemaOption(schema) {
  */
 export function resolveSchemaConfig(config) {
     const { schema: option, ...code } = config;
-    const file = loadSchemaOption(option);
-    const source = typeof option === "string" ? option : "monti.schema.json";
+    const file = parseSchemaFile(option, SCHEMA_SOURCE_NAME);
+    const source = SCHEMA_SOURCE_NAME;
     for (const key of ["locales", "defaultLocale", "schemaVersion"]) {
         if (code[key] !== undefined) {
             throw new Error(`cms.config: \`${key}\` is set in the config and in ${source}; keep it in the schema file (a site's locales, default locale and schema version have one place)`);

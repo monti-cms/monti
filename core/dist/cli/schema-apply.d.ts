@@ -2,7 +2,7 @@ import type { Cms } from "../cms/index.js";
 import { type SchemaApplyResult, type SchemaImpact, type SchemaPlan } from "../schema-change/index.js";
 import { type AppOptions } from "./app.js";
 export interface SchemaCommandOptions extends AppOptions {
-    /** Schema file (relative to `cwd`). Default: `monti.schema.json`, then `src/monti.schema.json`. */
+    /** Schema file (relative to `cwd`). Default: `monti.schema.ts`, then `src/monti.schema.ts`. */
     readonly schema?: string;
     /** Loads the CMS instance (default: the server file of the app, see `loadApp`). Tests pass their own. */
     readonly loadCms?: (options: AppOptions) => Promise<Cms>;
@@ -12,8 +12,8 @@ export declare function formatSchemaPlan(plan: SchemaPlan, impact: SchemaImpact)
 /** The text for a finished (or dry) apply. */
 export declare function formatApplyResult(done: SchemaApplyResult, wroteVersion: boolean, schemaFile: string): string;
 /**
- * Sets `schemaVersion` in the text of a schema file without reformatting it: the existing number is replaced; a file without one gets the line after `$schema` (or
- * first). Works on the text so the file's own formatting stays.
+ * Sets `schemaVersion` in the text of a schema file without reformatting it: the existing number is replaced; a file without one gets the line first in the
+ * object passed to `defineSchema`. Works on the text so the file's own formatting stays (and whatever else the file holds).
  */
 export declare function withSchemaVersion(text: string, version: number): string;
 export interface SchemaDiffResult {

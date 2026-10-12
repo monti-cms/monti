@@ -15,14 +15,14 @@ export function coreDecisions(input) {
             source: input.schemaFile
                 ? input.schemaFileGiven
                     ? "set in monti.config.ts"
-                    : "auto-detected (monti.schema.json in the app folder)"
+                    : "auto-detected (monti.schema.ts in the app folder)"
                 : "no schema file found",
         },
         {
             topic: "Schema hot reload",
             value: input.hotReload ? "on" : "off",
             source: input.hotReload
-                ? 'auto-detected (NODE_ENV is "development": the schema file is read again when it changes)'
+                ? 'auto-detected (NODE_ENV is "development": the dev server evaluates monti.config.ts again when the schema file changes)'
                 : input.schemaFile
                     ? `auto-detected (NODE_ENV is "${env.NODE_ENV ?? ""}": a server runs the schema it started with)`
                     : "no schema file to reload",

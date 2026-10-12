@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { applySchemaChange, checkSchemaChange, describeSchemaChange, planSchemaChange, } from "../schema-change/index.js";
+import { findSchemaFile, loadSchemaFile } from "../schema-file/locate.js";
 import { loadApp } from "./app.js";
-import { findSchemaFile, readSchema } from "./schema-types.js";
 /** What the apply does to entries that a change touches, in words. */
 const CONSEQUENCE = {
     none: "",
@@ -80,27 +80,24 @@ export function formatApplyResult(done, wroteVersion, schemaFile) {
     return lines.join("\n");
 }
 /**
- * Sets `schemaVersion` in the text of a schema file without reformatting it: the existing number is replaced; a file without one gets the line after `$schema` (or
- * first). Works on the text so the file's own formatting stays.
+ * Sets `schemaVersion` in the text of a schema file without reformatting it: the existing number is replaced; a file without one gets the line first in the
+ * object passed to `defineSchema`. Works on the text so the file's own formatting stays (and whatever else the file holds).
  */
 export function withSchemaVersion(text, version) {
-    const present = /("schemaVersion"\s*:\s*)\d+/;
+    const present = /(\bschemaVersion\s*:\s*)\d+/;
     if (present.test(text))
         return text.replace(present, `$1${version}`);
-    const lines = text.split("\n");
-    const open = lines.findIndex((line) => line.trim().startsWith("{"));
-    if (open === -1)
-        throw new Error("the schema file is not a JSON object");
-    const next = lines.find((line, index) => index > open && line.trim() !== "") ?? "";
-    const indent = /^\s*/.exec(next)?.[0] || "\t";
-    const link = lines.findIndex((line, index) => index > open && /^\s*"\$schema"\s*:/.test(line));
-    const at = link === -1 ? open + 1 : link + 1;
-    lines.splice(at, 0, `${indent}"schemaVersion": ${version},`);
-    return lines.join("\n");
+    const open = /defineSchema\(\s*\{[^\S\n]*\n/.exec(text);
+    if (!open)
+        throw new Error("the schema file does not have `defineSchema({` followed by a new line");
+    const rest = text.slice(open.index + open[0].length);
+    const indent = /^[ \t]*/.exec(rest)?.[0] || "\t";
+    const at = open.index + open[0].length;
+    return `${text.slice(0, at)}${indent}schemaVersion: ${version},\n${text.slice(at)}`;
 }
 async function load(options) {
     const file = findSchemaFile(options.cwd, options.schema);
-    const schema = readSchema(options.cwd, file);
+    const schema = await loadSchemaFile(options.cwd, file, { fresh: true });
     const cms = await (options.loadCms ?? loadApp)(options);
     return { cms, file, migrations: schema.migrations ?? [] };
 }
