@@ -652,7 +652,7 @@ describe("monti init when something goes wrong", () => {
 	it("cancelling a prompt writes nothing", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
-		const prompter = scriptedPrompter({ "Languages of the site": "cancel" });
+		const prompter = scriptedPrompter({ "Default language of the site": "cancel" });
 		await expect(initProject({ cwd: dir, ...quiet(), prompter })).rejects.toBeInstanceOf(InitCancelled);
 		expect(listFiles(dir)).toEqual(before);
 	});

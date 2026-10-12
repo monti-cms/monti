@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { runCli } from "../index";
 import { runInitCommand } from "../init-command";
 import { QUESTIONS } from "../init-prompts";
-import { fakeHost, fixtureApp, listFiles, read, schemaOf, scriptedPrompter } from "./init-helpers";
+import { fakeHost, fixtureApp, listFiles, read, SRC_APP, schemaOf, scriptedPrompter } from "./init-helpers";
 
 /** The command line: flags, `--yes`, `--json`, the interactive run, and the exit codes. */
 
@@ -26,9 +26,17 @@ describe("monti init on the command line", () => {
 		const text = result.out.join("\n");
 		expect(text).toContain("Monti is added to your app.");
 		expect(text).toContain("Created:\n  - monti.config.ts");
+		expect(text).toContain("Monti's files are in the project root (next to app/).");
 		expect(text).toContain("What is left:");
 		expect(text).toMatch(/\n {2}1\. /);
 		expect(read(dir, "monti.config.ts")).toContain("defineConfig");
+	});
+
+	it("says that the files go to src/ when the app uses src/app", async () => {
+		const dir = fixtureApp(SRC_APP);
+		const result = run(dir, ["--yes", "--no-install"]);
+		expect(await result.code).toBe(0);
+		expect(result.out.join("\n")).toContain("Your app uses src/app, so Monti's files are in src/ (next to app/).");
 	});
 
 	it("without a terminal nothing is asked, even without --yes", async () => {
@@ -146,7 +154,8 @@ describe("monti init on the command line", () => {
 	it("an interactive run: the questions, the install confirmation, and the final summary", async () => {
 		const dir = fixtureApp({ "content/posts/a.md": "---\ntitle: A\ndate: 2024-01-01\n---\nx\n" });
 		const prompter = scriptedPrompter({
-			[QUESTIONS.locales]: "ko,en",
+			[QUESTIONS.defaultLocale]: "ko",
+			[QUESTIONS.otherLocales]: ["en"],
 			[QUESTIONS.storage]: "s3",
 			[QUESTIONS.extras]: ["ai"],
 			[QUESTIONS.blocks]: "pick",
@@ -160,7 +169,8 @@ describe("monti init on the command line", () => {
 		const result = run(dir, [], { interactive: true, prompter, host });
 		expect(await result.code).toBe(0);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.locales,
+			QUESTIONS.defaultLocale,
+			QUESTIONS.otherLocales,
 			QUESTIONS.storage,
 			QUESTIONS.extras,
 			QUESTIONS.blocks,
@@ -180,7 +190,8 @@ describe("monti init on the command line", () => {
 	it("answering no to the install runs nothing and lists the command", async () => {
 		const dir = fixtureApp();
 		const prompter = scriptedPrompter({
-			[QUESTIONS.locales]: "en",
+			[QUESTIONS.defaultLocale]: "en",
+			[QUESTIONS.otherLocales]: [],
 			[QUESTIONS.storage]: "none",
 			[QUESTIONS.extras]: [],
 			[QUESTIONS.blocks]: "all",
@@ -198,7 +209,7 @@ describe("monti init on the command line", () => {
 	it("Ctrl+C leaves the project as it was and exits 130", async () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
-		const prompter = scriptedPrompter({ [QUESTIONS.locales]: "cancel" });
+		const prompter = scriptedPrompter({ [QUESTIONS.defaultLocale]: "cancel" });
 		const result = run(dir, [], { interactive: true, prompter });
 		expect(await result.code).toBe(130);
 		expect(result.err).toEqual(["Cancelled. Nothing was written."]);

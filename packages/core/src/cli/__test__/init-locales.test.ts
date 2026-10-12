@@ -86,7 +86,8 @@ describe("monti init and the languages of the content", () => {
 	it("offers them in the question, and the person can change them", async () => {
 		const dir = fixtureApp(PAIR);
 		const prompter = scriptedPrompter({
-			"Languages of the site": "ko,en,ja",
+			"Default language of the site": "ko",
+			"Other languages": ["en", "ja"],
 		});
 		const report = await initProject({
 			cwd: dir,
@@ -100,8 +101,8 @@ describe("monti init and the languages of the content", () => {
 			adminPath: "/studio",
 			login: "password",
 		});
-		expect(prompter.asked.find((question) => question.includes("Languages of the site"))).toMatch(
-			/Found ko, en in the file names of content\/posts\//,
+		expect(prompter.asked.find((question) => question.includes("Default language of the site"))).toMatch(
+			/found ko, en in the file names of content\/posts\//,
 		);
 		expect(report.answers.locales).toEqual(["ko", "en", "ja"]);
 		expect(report.notes.join("\n")).toMatch(

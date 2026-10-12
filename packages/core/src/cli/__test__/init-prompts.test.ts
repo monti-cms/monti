@@ -8,7 +8,8 @@ import { fixtureApp, scriptedPrompter } from "./init-helpers";
 const app = () => detectApp(fixtureApp());
 
 const everything = {
-	[QUESTIONS.locales]: "ko, en",
+	[QUESTIONS.defaultLocale]: "ko",
+	[QUESTIONS.otherLocales]: ["en"],
 	[QUESTIONS.storage]: "s3",
 	[QUESTIONS.extras]: ["ai", "git-sync"],
 	[QUESTIONS.blocks]: "pick",
@@ -22,7 +23,8 @@ describe("the questions of monti init", () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter);
 		expect(prompter.asked).toEqual([
-			QUESTIONS.locales,
+			QUESTIONS.defaultLocale,
+			QUESTIONS.otherLocales,
 			QUESTIONS.storage,
 			QUESTIONS.extras,
 			QUESTIONS.blocks,
@@ -41,6 +43,56 @@ describe("the questions of monti init", () => {
 			adminPath: "/cms",
 			login: "github",
 		});
+	});
+
+	it("the default is first, the others follow, and none is fine", async () => {
+		const many = await collectAnswers(
+			app(),
+			{},
+			scriptedPrompter({ ...everything, [QUESTIONS.defaultLocale]: "en", [QUESTIONS.otherLocales]: ["ko", "ja"] }),
+		);
+		expect(many.locales).toEqual(["en", "ko", "ja"]);
+		const single = await collectAnswers(
+			app(),
+			{},
+			scriptedPrompter({ ...everything, [QUESTIONS.defaultLocale]: "ja", [QUESTIONS.otherLocales]: [] }),
+		);
+		expect(single.locales).toEqual(["ja"]);
+	});
+
+	it("Other... asks for codes as text, for the default and for the others", async () => {
+		const prompter = scriptedPrompter({
+			...everything,
+			[QUESTIONS.defaultLocale]: "Other...",
+			[QUESTIONS.otherLocales]: ["en", "Other..."],
+			[QUESTIONS.localesOther]: "pt-BR",
+		});
+		const answers = await collectAnswers(app(), {}, prompter);
+		expect(answers.locales).toEqual(["pt-BR", "en"]);
+		expect(prompter.asked.filter((message) => message.includes(QUESTIONS.localesOther))).toHaveLength(2);
+	});
+
+	it("Other... rejects a bad code", async () => {
+		const prompter = scriptedPrompter({
+			...everything,
+			[QUESTIONS.defaultLocale]: "Other...",
+			[QUESTIONS.localesOther]: "english",
+		});
+		await expect(collectAnswers(app(), {}, prompter)).rejects.toThrow(/language code/);
+	});
+
+	it("offers the common languages by their own names, with the detected one preselected", async () => {
+		const prompter = scriptedPrompter({ ...everything, [QUESTIONS.defaultLocale]: "en", [QUESTIONS.otherLocales]: [] });
+		const select = prompter.select.bind(prompter);
+		let seen: { initial?: string; labels: string[] } = { labels: [] };
+		prompter.select = async (question) => {
+			if (question.message.includes(QUESTIONS.defaultLocale))
+				seen = { initial: question.initial, labels: question.options.map((option) => option.label) };
+			return select(question);
+		};
+		await collectAnswers(app(), {}, prompter);
+		expect(seen.initial).toBe("en");
+		expect(seen.labels).toEqual(expect.arrayContaining(["한국어 (ko)", "English (en)", "日本語 (ja)", "Other..."]));
 	});
 
 	it("the offered extras are AI and git-sync; Bareun is not offered", async () => {
