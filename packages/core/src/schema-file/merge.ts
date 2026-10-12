@@ -1,6 +1,8 @@
 import { parseSchemaFile } from "./format";
-import { readSchemaFile } from "./read";
 import type { SchemaFile } from "./types";
+
+/** What error messages call the schema. */
+const SCHEMA_SOURCE_NAME = "monti.schema.ts";
 
 /** What `defineSite` takes next to `schema`: the code part of the config (anything the config has, except what the file owns). */
 type CodeConfig = { readonly schema: unknown } & { readonly [key: string]: unknown };
@@ -16,12 +18,6 @@ const overlay = <T extends object>(base: T | undefined, over: unknown): T | unde
 	return { ...base, ...set } as T;
 };
 
-/** Reads the schema of a config's `schema` option: the parsed JSON, or the path of the file (relative to the working directory). */
-export function loadSchemaOption(schema: unknown): SchemaFile {
-	if (typeof schema === "string") return parseSchemaFile(readSchemaFile(schema), schema);
-	return parseSchemaFile(schema);
-}
-
 /**
  * Merges the schema file into the code part of a config, and returns the config `defineSite` checks like any other. The rule is that code adds to the file
  * and may override its environment-specific settings, but never silently replaces its data:
@@ -35,8 +31,8 @@ export function loadSchemaOption(schema: unknown): SchemaFile {
  */
 export function resolveSchemaConfig(config: CodeConfig): Record<string, unknown> {
 	const { schema: option, ...code } = config;
-	const file = loadSchemaOption(option);
-	const source = typeof option === "string" ? option : "monti.schema.json";
+	const file = parseSchemaFile(option, SCHEMA_SOURCE_NAME);
+	const source = SCHEMA_SOURCE_NAME;
 
 	for (const key of ["locales", "defaultLocale", "schemaVersion"] as const) {
 		if (code[key] !== undefined) {

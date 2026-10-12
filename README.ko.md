@@ -17,7 +17,7 @@ pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.2&path:/cor
 pnpm exec monti init
 ```
 
-앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.json`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **이미 있는 파일은 하나도 고치지 않고**(`next.config`, 루트 레이아웃, `tsconfig.json`, `.gitignore`) `.env.local`도 쓰지 않는다. 대신 남은 일을 복사할 내용 그대로 번호를 붙여 쉬운 말로 적어 준다(`next.config`의 `withCms` 변경, `<html>`의 `suppressHydrationWarning`, `cp .env.example .env.local`, 그다음 `monti migrate`, `monti doctor`, `pnpm dev`). 데이터베이스는 건드리지 않는다.
+앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.ts`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **이미 있는 파일은 하나도 고치지 않고**(`next.config`, 루트 레이아웃, `tsconfig.json`, `.gitignore`) `.env.local`도 쓰지 않는다. 대신 남은 일을 복사할 내용 그대로 번호를 붙여 쉬운 말로 적어 준다(`next.config`의 `withCms` 변경, `<html>`의 `suppressHydrationWarning`, `cp .env.example .env.local`, 그다음 `monti migrate`, `monti doctor`, `pnpm dev`). 데이터베이스는 건드리지 않는다.
 
 전체 흐름:
 

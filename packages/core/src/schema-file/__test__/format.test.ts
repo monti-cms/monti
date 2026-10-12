@@ -7,7 +7,7 @@ function problems(edit: (schema: EditableSchema) => void): { path: string; messa
 	const schema = cloneSchema();
 	edit(schema);
 	try {
-		parseSchemaFile(schema, "monti.schema.json");
+		parseSchemaFile(schema, "monti.schema.ts");
 	} catch (error) {
 		expect(error).toBeInstanceOf(SchemaFileError);
 		return [...(error as SchemaFileError).issues];
@@ -31,7 +31,7 @@ describe("parseSchemaFile", () => {
 		expect(parseSchemaFile(schema).collections.post?.body).toEqual(schema.collections.post.body);
 	});
 
-	it("names the JSON path of a problem in the allowed list of a body", () => {
+	it("names the path of a problem in the allowed list of a body", () => {
 		const keys = problems((schema) => {
 			schema.collections.post.body = { block: ["callout"] };
 		});
@@ -42,7 +42,7 @@ describe("parseSchemaFile", () => {
 		expect(level[0]?.path).toMatch(/^collections\.post\.body/);
 	});
 
-	it("names the JSON path of a field with an unknown kind", () => {
+	it("names the path of a field with an unknown kind", () => {
 		const [issue] = problems((schema) => {
 			schema.collections.post.fields.title.kind = "date";
 		});
@@ -144,19 +144,19 @@ describe("parseSchemaFile", () => {
 		schema.locales[0].code = "KO";
 		schema.collections.post.fields.cover.accept = "video";
 		try {
-			parseSchemaFile(schema, "site/monti.schema.json");
+			parseSchemaFile(schema, "site/monti.schema.ts");
 			expect.unreachable();
 		} catch (error) {
 			const message = (error as Error).message;
-			expect(message).toContain("site/monti.schema.json is not a valid schema file:");
+			expect(message).toContain("site/monti.schema.ts is not a valid schema file:");
 			expect(message).toContain("locales[0].code:");
 			expect(message).toContain("collections.post.fields.cover.accept:");
 		}
 	});
 
 	it("rejects something that is not an object", () => {
-		expect(() => parseSchemaFile([])).toThrow(/\(root\): must be a JSON object/);
-		expect(() => parseSchemaFile(null, "x.json")).toThrow(/x\.json is not a valid schema file/);
+		expect(() => parseSchemaFile([])).toThrow(/\(root\): must be an object/);
+		expect(() => parseSchemaFile(null, "x.ts")).toThrow(/x\.ts is not a valid schema file/);
 	});
 
 	it("quotes a key that is not a plain name in the path", () => {

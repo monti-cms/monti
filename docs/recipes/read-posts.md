@@ -7,7 +7,7 @@ The snippets below are a sketch to adapt, not tested code.
 ## What you need to know
 
 1. **`cms.read`** reads published content only (`getEntry`, `listEntries`, `getTranslations`, `getPreview`). It resolves relations, public addresses and old addresses ("The CMS instance" in the [core README](../../packages/core/README.md)).
-2. **The types follow the config** you pass to `defineConfig`, with no registration step: `Cms<typeof config>`. With a schema file, `monti schema:types` writes the same types into `monti-env.d.ts`.
+2. **The types follow the config** you pass to `defineConfig`, with no registration step: `Cms<typeof config>`. With a schema file, `defineSchema` (in `monti.schema.ts`) keeps the collection and field names as types, so the same types reach `defineConfig` with no generated file.
 3. **`getEntry` returns a status**, not an entry: `found`, `redirect` (an old address: redirect with 308 to `path`) or `not_found`.
 4. **Relations** arrive in `entry.relations.<field>` (published targets only, in order). To filter a list by a relation, pass the target's `id` in `where: { tagIds: tag.id }`.
 5. **Required fields are not optional** in what you read (`PublishedMetadataFor`), because publishing needs them. The optional ones are `T | undefined`.

@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, vi } from "vitest";
+import { printSchemaFile } from "../../schema-file/print";
 import type { DoctorReport, DoctorResult } from "../doctor";
-import { generateSchemaTypes } from "../schema-types";
 
 /** Shared by the tests of `monti doctor`: fixture Next apps in temp folders whose config file is the real thing, and a way to set the environment they read. */
 
@@ -56,26 +56,22 @@ afterEach(() => {
 });
 
 /** A schema file with one collection; `admin.path` is `/studio`. */
-export const SCHEMA_TEXT = `${JSON.stringify(
-	{
-		collections: {
-			post: {
-				label: "Post",
-				kind: "document",
-				path: "/posts/:slug",
-				fields: {
-					title: { kind: "text", label: "Title", required: true },
-					slug: { kind: "slug", label: "Slug", from: "title" },
-				},
+export const SCHEMA_TEXT = printSchemaFile({
+	collections: {
+		post: {
+			label: "Post",
+			kind: "document",
+			path: "/posts/:slug",
+			fields: {
+				title: { kind: "text", label: "Title", required: true },
+				slug: { kind: "slug", label: "Slug", from: "title" },
 			},
 		},
-		locales: [{ code: "en", name: "English" }],
-		defaultLocale: "en",
-		admin: { path: "/studio" },
 	},
-	null,
-	"\t",
-)}\n`;
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en",
+	admin: { path: "/studio" },
+});
 
 /** A config file made of the real `defineConfig`, `postgres()`, `auth()` and `github()`, loaded from their sources. `plugins` is source text for the list. */
 export const configText = (
@@ -85,7 +81,7 @@ export const configText = (
 import { auth } from ${JSON.stringify(path.join(AUTH_SRC, "index.ts"))};
 import { github } from ${JSON.stringify(path.join(AUTH_SRC, "github.ts"))};
 ${imports}
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 
 export const cms = defineConfig({
 	schema,
@@ -105,13 +101,13 @@ export const NEXT_FILES: Record<string, string> = {
 	".gitignore": "node_modules\n.env*\n",
 };
 
-/** A healthy app folder: config, schema, generated types, the Next files. Extra files replace or (with `null`) remove these. */
+/** A healthy app folder: config, schema, the Next files. Extra files replace or (with `null`) remove these. */
 export function project(files: Record<string, string | null> = {}): string {
 	const dir = mkdtempSync(path.join(tmpdir(), "monti-doctor-"));
 	dirs.push(dir);
 	const all: Record<string, string | null> = {
 		"monti.config.ts": configText(),
-		"monti.schema.json": SCHEMA_TEXT,
+		"monti.schema.ts": SCHEMA_TEXT,
 		...NEXT_FILES,
 		...files,
 	};
@@ -120,7 +116,6 @@ export function project(files: Record<string, string | null> = {}): string {
 		mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
 		writeFileSync(path.join(dir, file), content);
 	}
-	if (all["monti.schema.json"] !== null) generateSchemaTypes({ cwd: dir });
 	return dir;
 }
 

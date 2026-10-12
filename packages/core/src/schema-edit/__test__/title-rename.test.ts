@@ -6,6 +6,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
+import { parseSchemaLiteral } from "../../schema-file/literal";
+import { printSchemaFile } from "../../schema-file/print";
+import type { SchemaTypes } from "../../schema-file/types";
 import { postgres } from "../../server";
 import type { CmsAuth } from "../../server/define";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
@@ -52,8 +55,8 @@ describe("renaming the title field", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 		dir = mkdtempSync(path.join(tmpdir(), "monti-title-rename-"));
-		file = path.join(dir, "monti.schema.json");
-		writeFileSync(file, `${JSON.stringify(schema, null, "\t")}\n`);
+		file = path.join(dir, "monti.schema.ts");
+		writeFileSync(file, printSchemaFile(schema));
 	});
 
 	afterEach(() => vi.unstubAllEnvs());
@@ -64,10 +67,18 @@ describe("renaming the title field", () => {
 		await closeGlobalPool();
 	});
 
+	/** The data in the file, read as text. */
+	// biome-ignore lint/suspicious/noExplicitAny: a test reads any part of the data
+	const literal = (): Record<string, any> => {
+		const parsed = parseSchemaLiteral(readFileSync(file, "utf8"));
+		if (!parsed.ok) throw new Error(parsed.message);
+		return parsed.value;
+	};
+
 	const cms = () =>
 		createCms({
 			id: "title-rename",
-			config: defineSite({ schema: JSON.parse(readFileSync(file, "utf8")) }),
+			config: defineSite({ schema: literal() as SchemaTypes }),
 			schemaFile: file,
 			server: {
 				database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),
@@ -117,7 +128,7 @@ describe("renaming the title field", () => {
 		expect(res.status).toBe(200);
 		expect(await res.json()).toMatchObject({ saved: true, entriesRewritten: 3 });
 
-		const onDisk = JSON.parse(readFileSync(file, "utf8"));
+		const onDisk = literal();
 		expect(onDisk.collections.post.fields.headline).toMatchObject({ kind: "text", role: "title" });
 		expect(onDisk.migrations[0]).toMatchObject({
 			op: "renameField",

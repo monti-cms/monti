@@ -3,9 +3,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CmsConfig } from "../config/define";
 import { parseSchemaFile } from "../schema-file/format";
+import { SCHEMA_FILE_CANDIDATES } from "../schema-file/locate";
+import { printSchemaFile } from "../schema-file/print";
 import type { SchemaFile } from "../schema-file/types";
 import { createSite } from "../site";
-import { generateSchemaTypes, SCHEMA_FILE_CANDIDATES, SCHEMA_LINK } from "./schema-types";
 
 /**
  * Where a site keeps its config, in the order `monti schema:extract` looks for it: `monti.config.ts` (a config whose data is still written in code), then the
@@ -34,7 +35,7 @@ export interface ExtractedSchema {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** JSON paths of the functions inside a value (what a JSON file cannot hold). */
+/** Paths of the functions inside a value (what a schema file cannot hold: it is data only). */
 function functionPaths(value: unknown, at: string): string[] {
 	if (typeof value === "function") return [at];
 	if (Array.isArray(value)) return value.flatMap((item, index) => functionPaths(item, `${at}[${index}]`));
@@ -68,7 +69,7 @@ export function extractSchemaData(config: CmsConfig, options: { readonly locale?
 	if (lost.length > 0) {
 		stays.push({
 			what: "collection options that are functions",
-			detail: `${lost.join(", ")} (a JSON file cannot hold a function; the value is left out of the schema)`,
+			detail: `${lost.join(", ")} (a schema file is data only, so it cannot hold a function; the value is left out of the schema)`,
 		});
 	}
 
@@ -125,24 +126,22 @@ export function extractSchemaData(config: CmsConfig, options: { readonly locale?
 		...(admin && Object.keys(admin).length > 0 ? { admin } : {}),
 		...(config.seed?.templates?.length ? { seed: { templates: config.seed.templates } } : {}),
 	};
-	// JSON drops `undefined`; reading it back through the format check also proves the result is a valid schema file.
+	// JSON drops `undefined` (and the printer does too); reading it back through the format check also proves the result is a valid schema file.
 	return { schema: parseSchemaFile(JSON.parse(JSON.stringify(schema))), stays };
 }
 
-/** The text of a schema file: the link to the JSON Schema first, then the data, indented with tabs. */
-export const schemaFileText = (schema: SchemaFile, link = SCHEMA_LINK): string =>
-	`${JSON.stringify({ $schema: link, ...schema }, null, "\t")}\n`;
+/** The text of a schema file: the `defineSchema` import, then the data, indented with tabs. */
+export const schemaFileText = (schema: SchemaFile): string =>
+	printSchemaFile(schema as unknown as Record<string, unknown>);
 
 export interface ExtractOptions {
 	readonly cwd: string;
 	/** Config file to read (relative to `cwd`). Default: `monti.config.ts`, then `cms.config.ts` (each also under `src/`). */
 	readonly config?: string;
-	/** Schema file to write (relative to `cwd`). Default: `monti.schema.json` next to the config file. */
+	/** Schema file to write (relative to `cwd`). Default: `monti.schema.ts` next to the config file. */
 	readonly out?: string;
 	/** Replace the schema file if it exists. */
 	readonly overwrite?: boolean;
-	/** Also write the declaration file (default true). */
-	readonly types?: boolean;
 	/** Language the labels that plugins provide in the admin language (the SEO fields) are written in. Default: the admin language of the site. */
 	readonly locale?: string;
 	/** Loads the config module (absolute path). Default: `import()`, which runs TypeScript through tsx when the `monti` command registered it. Tests pass their own. */
@@ -155,8 +154,6 @@ export interface ExtractReport {
 	readonly config: string;
 	/** The schema file written, relative to `cwd`. */
 	readonly schema: string;
-	/** The declaration file written, relative to `cwd`. */
-	readonly types?: string;
 	readonly collections: number;
 	readonly locales: number;
 	readonly templates: number;
@@ -164,8 +161,8 @@ export interface ExtractReport {
 }
 
 /**
- * `monti schema:extract`: loads the site's config file (TypeScript is read by tsx, which `bin/monti.mjs` registers), writes its data part to `monti.schema.json`
- * and the types of that file, and reports what stays in code. It reads the site config as the default export (`defineSite` of `@monti-cms/core`) or, for
+ * `monti schema:extract`: loads the site's config file (TypeScript is read by tsx, which `bin/monti.mjs` registers), writes its data part to `monti.schema.ts`
+ * and reports what stays in code. It reads the site config as the default export (`defineSite` of `@monti-cms/core`) or, for
  * `monti.config.ts`, from the `cms` it exports. It never changes the config file; the report shows how to load the schema from it.
  */
 export async function extractSchema(options: ExtractOptions): Promise<ExtractReport> {
@@ -196,14 +193,11 @@ export async function extractSchema(options: ExtractOptions): Promise<ExtractRep
 	const { schema, stays } = extractSchemaData(config, { locale: options.locale });
 
 	const target = path.resolve(cwd, out);
-	const link = path.relative(path.dirname(target), path.join(cwd, SCHEMA_LINK)).split(path.sep).join("/");
 	mkdirSync(path.dirname(target), { recursive: true });
-	writeFileSync(target, schemaFileText(schema, link.startsWith(".") ? link : `./${link}`));
-	const types = options.types === false ? undefined : generateSchemaTypes({ cwd, schema: out }).out;
+	writeFileSync(target, schemaFileText(schema));
 	return {
 		config: configFile,
 		schema: out,
-		...(types ? { types } : {}),
 		collections: Object.keys(schema.collections).length,
 		locales: schema.locales.length,
 		templates: schema.seed?.templates?.length ?? 0,
@@ -213,14 +207,11 @@ export async function extractSchema(options: ExtractOptions): Promise<ExtractRep
 
 /** Turns the report into human-readable text, ending with the slim config to put in the config file. */
 export function formatExtractReport(report: ExtractReport): string {
-	const relative = path.posix.relative(path.posix.dirname(report.config), report.schema);
+	const relative = path.posix.relative(path.posix.dirname(report.config), report.schema).replace(/\.ts$/, "");
 	const schemaImport = relative.startsWith(".") ? relative : `./${relative}`;
 	const plugins = report.stays.some((item) => item.what === "plugins");
 	const lines = [
 		`Wrote ${report.schema} (${report.collections} collections, ${report.locales} locales, ${report.templates} seed templates).`,
-		...(report.types
-			? [`Wrote ${report.types} (the types of the schema; run \`monti schema:types --watch\` while you edit it).`]
-			: []),
 		"",
 		report.stays.length > 0 ? `Stays in code (${report.config}):` : `Nothing needs to stay in code (${report.config}).`,
 		...report.stays.map((item) => `  - ${item.what}: ${item.detail}`),

@@ -28,8 +28,9 @@ export default defineConfig(({ mode }) => ({
 		},
 	},
 	resolve: {
-		alias: {
-			"server-only": path.resolve(__dirname, "./test/server-only.ts"),
-		},
+		alias: [
+			{ find: "server-only", replacement: path.resolve(__dirname, "./test/server-only.ts") },
+			{ find: /^@monti-cms\/core$/, replacement: path.resolve(__dirname, "./src/index.ts") },
+		],
 	},
 }));

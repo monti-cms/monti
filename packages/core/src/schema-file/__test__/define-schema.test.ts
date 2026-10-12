@@ -1,22 +1,13 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
 import type { Cms } from "../../cms";
 import { fakeCms } from "../../cms/fake-cms";
 import { SchemaFileError } from "../format";
-import type { SchemaInput } from "../types";
+import type { SchemaTypes } from "../types";
 import { blogSchema, cloneSchema, type EditableSchema } from "./fixture";
 
-/** The content of the schema file as `JSON.parse` returns it: loosely typed, the way a site passes an imported JSON file. */
-const fileSchema = (edit: EditableSchema = cloneSchema()): SchemaInput => edit as SchemaInput;
-
-let dirs: string[] = [];
-afterEach(() => {
-	for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
-	dirs = [];
-});
+/** The content of the schema as a test edits it: loosely typed, so a test can break any part of it. */
+const fileSchema = (edit: EditableSchema = cloneSchema()): SchemaTypes => edit as SchemaTypes;
 
 describe("defineSite with a schema file", () => {
 	it("builds the config from the file: normalized collections, locales, default locale, time zone, site, admin and seed", () => {
@@ -31,7 +22,6 @@ describe("defineSite with a schema file", () => {
 		expect(config.admin).toEqual(blogSchema.admin);
 		expect(config.seed?.templates).toHaveLength(1);
 		expect(config).not.toHaveProperty("schema");
-		expect(config).not.toHaveProperty("$schema");
 	});
 
 	it("does not touch the file's content, and two configs from the same content share nothing", () => {
@@ -92,7 +82,7 @@ describe("defineSite with a schema file", () => {
 		const config = defineSite({ schema: fileSchema(), collections: { note } });
 		expect(Object.keys(config.collections)).toEqual(["post", "category", "tag", "series", "note"]);
 		expect(() => defineSite({ schema: fileSchema(), collections: { tag: note } })).toThrow(
-			/collection "tag" is defined in monti\.schema\.json and in the config/,
+			/collection "tag" is defined in monti\.schema\.ts and in the config/,
 		);
 	});
 
@@ -108,14 +98,14 @@ describe("defineSite with a schema file", () => {
 
 	it("keeps locales and the default locale in the file only", () => {
 		expect(() => defineSite({ schema: fileSchema(), locales: [{ code: "en", name: "English" }] as never })).toThrow(
-			/`locales` is set in the config and in monti\.schema\.json/,
+			/`locales` is set in the config and in monti\.schema\.ts/,
 		);
 		expect(() => defineSite({ schema: fileSchema(), defaultLocale: "en" as never })).toThrow(
-			/`defaultLocale` is set in the config and in monti\.schema\.json/,
+			/`defaultLocale` is set in the config and in monti\.schema\.ts/,
 		);
 	});
 
-	it("rejects an invalid file with the JSON path, and a relation to a collection that does not exist", () => {
+	it("rejects an invalid schema with the path of the value, and a relation to a collection that does not exist", () => {
 		const broken = cloneSchema();
 		broken.collections.post.fields.title.kind = "date";
 		expect(() => defineSite({ schema: fileSchema(broken) })).toThrow(SchemaFileError);
@@ -128,24 +118,6 @@ describe("defineSite with a schema file", () => {
 		const noTitle = cloneSchema();
 		delete noTitle.collections.tag.fields.title;
 		expect(() => defineSite({ schema: fileSchema(noTitle) })).toThrow(/tag needs a title field/);
-	});
-
-	it("reads the file from a path, and says what is wrong with a missing or malformed one", () => {
-		const dir = mkdtempSync(path.join(tmpdir(), "monti-schema-"));
-		dirs.push(dir);
-		const file = path.join(dir, "monti.schema.json");
-		writeFileSync(file, JSON.stringify(blogSchema));
-		const config = defineSite({ schema: file });
-		expect(Object.keys(config.collections)).toContain("post");
-		expect(() => defineSite({ schema: path.join(dir, "missing.json") })).toThrow(/missing\.json.*does not exist.*Fix:/);
-		const malformed = path.join(dir, "bad.json");
-		writeFileSync(malformed, "{ not json");
-		expect(() => defineSite({ schema: malformed })).toThrow(/bad\.json is not valid JSON/);
-		const invalid = path.join(dir, "invalid.json");
-		writeFileSync(invalid, JSON.stringify({ ...blogSchema, defaultLocale: "ja" }));
-		expect(() => defineSite({ schema: invalid })).toThrow(
-			new RegExp(`${invalid.replaceAll("\\", "\\\\")} is not a valid schema file`),
-		);
 	});
 
 	it("still checks plugin validation against the file's collections", () => {

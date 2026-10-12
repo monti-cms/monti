@@ -19,7 +19,7 @@ Next.js 앱에서는 `monti init`이 설정해 준다. `@monti-cms/core`는 peer
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { defineConfig, postgres } from "@monti-cms/core/server";
-import schema from "./monti.schema.json";
+import schema from "./monti.schema";
 
 export const cms = defineConfig({
 	schema,

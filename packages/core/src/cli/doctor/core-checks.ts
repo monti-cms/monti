@@ -1,11 +1,12 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
+import { parseSchemaLiteral } from "../../schema-file/literal";
+import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { formatDecision } from "../../server/decision";
 import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
-import { findSchemaFile, generateSchemaTypes, readSchema, SCHEMA_TYPES_FILE } from "../schema-types";
 import { AUTH_CHECKS } from "./auth-checks";
 import { DATABASE_CHECKS } from "./database-checks";
 import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
@@ -207,54 +208,33 @@ const schemaFile: CoreCheck = {
 	group: "schema",
 	id: "file",
 	title: "Schema file",
-	run: (state) => {
+	run: async (state) => {
 		const file = schemaFileOf(state);
 		if (!file) {
 			if (state.cms && state.cms.site.COLLECTIONS.length > 0) {
 				return ok(
-					`no monti.schema.json: the collections (${state.cms.site.COLLECTIONS.join(", ")}) are written in the config file`,
+					`no monti.schema.ts: the collections (${state.cms.site.COLLECTIONS.join(", ")}) are written in the config file`,
 				);
 			}
-			return warn("no monti.schema.json found", {
+			return warn("no monti.schema.ts found", {
 				where: state.cwd,
 				fix: "`monti init` writes one; or `monti schema:extract` makes it from collections written in code",
 			});
 		}
 		try {
-			const schema = readSchema(state.cwd, file);
+			const schema = await loadSchemaFile(state.cwd, file);
 			const collections = Object.keys(schema.collections ?? {});
-			return ok(
-				`${file} is valid (${collections.length} collection${collections.length === 1 ? "" : "s"}: ${collections.join(", ") || "none"})`,
-			);
+			const summary = `${file} is valid (${collections.length} collection${collections.length === 1 ? "" : "s"}: ${collections.join(", ") || "none"})`;
+			// The admin rewrites the file only when it is plain data; say when it will not.
+			const literal = parseSchemaLiteral(readFileSync(path.join(state.cwd, file), "utf8"));
+			return literal.ok
+				? ok(summary)
+				: ok(`${summary}; it contains code (${literal.message}), so the admin schema screen is read-only for it`);
 		} catch (error) {
 			return fail(messageOf(error), {
 				where: file,
-				fix: `correct the lines above in ${file}; the "$schema" link at the top of the file gives your editor autocomplete and shows these errors as you type`,
+				fix: `correct the lines above in ${file}; the types of \`defineSchema\` show most of them in your editor as you type`,
 			});
-		}
-	},
-};
-
-const schemaTypes: CoreCheck = {
-	group: "schema",
-	id: "types",
-	title: "Generated types are fresh",
-	run: (state) => {
-		const file = schemaFileOf(state);
-		if (!file) return skip("not checked: no schema file");
-		try {
-			const result = generateSchemaTypes({ cwd: state.cwd, schema: file, check: true });
-			return result.changed
-				? warn(
-						`${result.out} is ${exists(state, result.out) ? "out of date" : "missing"}, so collection names and fields are not typed from ${file}`,
-						{
-							where: result.out,
-							fix: `run \`monti schema:types\` (\`next dev\` also keeps ${SCHEMA_TYPES_FILE} fresh while it runs); commit the result`,
-						},
-					)
-				: ok(`${result.out} matches ${file}`);
-		} catch {
-			return skip("not checked: the schema file is not valid (see above)");
 		}
 	},
 };
@@ -478,7 +458,7 @@ const nextFiles: CoreCheck = {
 				const elsewhere = routesUsing(state, appDir, item.marker, item.base)[0];
 				if (elsewhere) {
 					fixes.push(
-						`the ${item.what} is at ${elsewhere.file}, which serves ${elsewhere.route}, but the admin path in your config is ${adminPath}. Either set "admin": { "path": "${elsewhere.route}" } in monti.schema.json, or move the folder to ${appDir}${adminPath}`,
+						`the ${item.what} is at ${elsewhere.file}, which serves ${elsewhere.route}, but the admin path in your config is ${adminPath}. Either set admin: { path: "${elsewhere.route}" } in monti.schema.ts, or move the folder to ${appDir}${adminPath}`,
 					);
 					continue;
 				}
@@ -546,7 +526,7 @@ const adminPathCheck: CoreCheck = {
 		const adminPath = state.cms?.site.ADMIN_PATH ?? "/admin";
 		const site = (state.env.SITE_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
 		return ok(`the admin is at ${adminPath} (${site}${adminPath})`, {
-			where: 'admin.path in monti.schema.json (default "/admin")',
+			where: 'admin.path in monti.schema.ts (default "/admin")',
 		});
 	},
 };
@@ -757,7 +737,6 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	boundary,
 	storageConfigured,
 	schemaFile,
-	schemaTypes,
 	...DATABASE_CHECKS,
 	montiSecret,
 	legacySecrets,

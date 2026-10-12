@@ -1,4 +1,5 @@
-export { formatSchemaText } from "../schema-file/text";
+export { parseSchemaLiteral, type SchemaLiteral } from "../schema-file/literal";
+export { printSchemaFile } from "../schema-file/print";
 export {
 	isDevelopmentServer,
 	READ_ONLY_MESSAGE,

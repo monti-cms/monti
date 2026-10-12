@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineSite } from "../../config/define";
-import { blogSchema } from "../../schema-file/__test__/fixture";
+import { asSchema, blogSchema } from "../../schema-file/__test__/fixture";
 import type { SchemaMigration } from "../../schema-file/types";
 import { createSite } from "../../site";
 import { applyTransforms, checkTransforms, suggestTransforms } from "../transforms";
@@ -8,7 +8,7 @@ import { applyTransforms, checkTransforms, suggestTransforms } from "../transfor
 /** The site of the schema after the change the transforms below follow. */
 const site = createSite(
 	defineSite({
-		schema: {
+		schema: asSchema({
 			...blogSchema,
 			collections: {
 				...blogSchema.collections,
@@ -26,7 +26,7 @@ const site = createSite(
 					list: undefined,
 				},
 			},
-		},
+		}),
 	}),
 );
 

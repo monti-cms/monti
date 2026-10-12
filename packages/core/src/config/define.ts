@@ -13,7 +13,7 @@ import { DEFAULT_TITLE_FIELD, RESERVED_METADATA_KEYS, SUMMARY_ROLE, TITLE_ROLE }
 import { findTitleField, valueFieldsOf } from "../schema/walk";
 import { resolveSchemaConfig } from "../schema-file/merge";
 import { SCHEMA_SOURCE } from "../schema-file/source";
-import type { SchemaCollectionsOf, SchemaInput, SchemaLocalesOf } from "../schema-file/types";
+import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
 import {
 	DEFAULT_ADMIN_PATH,
 	isAdminPath,
@@ -148,7 +148,7 @@ export interface CmsConfig<
 	readonly seed?: SeedConfig;
 	/**
 	 * The version of the schema (a whole number from 1, 1 if unset). Every entry written from now on records it (`entry_bodies.schema_version`), so a stored entry shows which
-	 * schema it was written or transformed under. A site with a schema file keeps it there (`schemaVersion` of `monti.schema.json`), where `monti schema:apply` raises it
+	 * schema it was written or transformed under. A site with a schema file keeps it there (`schemaVersion` of `monti.schema.ts`), where `monti schema:apply` raises it
 	 * when the schema changes. It is not part of an entry's content hash.
 	 */
 	readonly schemaVersion?: number;
@@ -452,21 +452,21 @@ function validate(
 }
 
 /**
- * The config of a site that keeps its plain data in a schema file (`monti.schema.json`): the same options as {@link CmsConfig}, plus `schema`, and without the
+ * The config of a site that keeps its plain data in a schema file (`monti.schema.ts`): the same options as {@link CmsConfig}, plus `schema`, and without the
  * collections' and locales' own place (they come from the file; `collections` here adds collections written in code).
  */
 export interface SchemaCmsConfig<
-	Schema extends SchemaInput = SchemaInput,
+	Schema extends SchemaTypes = SchemaTypes,
 	Collections extends CollectionsConfig = CollectionsConfig,
 	Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[],
 	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 > extends Omit<CmsConfig<Collections, string, Plugins, Blocks>, "collections" | "locales" | "defaultLocale"> {
 	/**
-	 * The schema file: its parsed content (`import schema from "./monti.schema.json"`), or its path (read at run time, relative to the working directory).
+	 * The schema file's default export (`import schema from "./monti.schema"`, made with `defineSchema`).
 	 * Collections, fields, layouts, locales, the default locale, the time zone, site and admin settings and seed templates come from it. The code config adds
 	 * what needs code (`plugins`, `blocks`, `codeBlock`, `media`) and may override the environment-specific `site`, `admin` and `timeZone` values.
 	 */
-	readonly schema: Schema | string;
+	readonly schema: Schema;
 	/** Collections written in code, next to the file's. A name the file also has is an error. */
 	readonly collections?: Collections;
 	/** Set in the schema file only. */
@@ -480,12 +480,11 @@ export interface SchemaCmsConfig<
 /**
  * Defines the site config. Preserves collection and locale names as types and reports inconsistent config right away.
  *
- * With a `schema` (the plain-data part of the config in `monti.schema.json`), the config is the file merged with what is written here; see {@link SchemaCmsConfig}.
- * The collection and locale names and the metadata types come from the generated types of the file (`monti schema:types`), or from the file's content when
- * it is written in code with literal types.
+ * With a `schema` (the plain-data part of the config in `monti.schema.ts`, made with `defineSchema`), the config is the file merged with what is written here; see
+ * {@link SchemaCmsConfig}. The collection and locale names and the metadata types come from the types of the schema.
  */
 export function defineSite<
-	const Schema extends SchemaInput,
+	const Schema extends SchemaTypes,
 	const Collections extends CollectionsConfig = Record<never, never>,
 	const Plugins extends readonly CmsPlugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
@@ -517,7 +516,6 @@ export function defineSite(
 		// Hidden: lets an instance rebuild the config with another schema (see `schema-file/source.ts`).
 		Object.defineProperty(normalized, SCHEMA_SOURCE, {
 			value: {
-				...(typeof schemaInput.schema === "string" ? { file: schemaInput.schema } : {}),
 				rebuild: (schema: unknown) => defineSite({ ...schemaInput, schema } as never),
 			},
 		});

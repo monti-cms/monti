@@ -6,6 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createCms } from "../../cms";
 import { defineSite } from "../../config/define";
 import { docOfText } from "../../doc/__test__/doc-text";
+import { loadSchemaFile } from "../../schema-file/locate";
+import { printSchemaFile } from "../../schema-file/print";
 import type { SchemaFile } from "../../schema-file/types";
 import { postgres } from "../../server";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
@@ -14,19 +16,20 @@ import { schemaApply, schemaDiff, withSchemaVersion } from "../schema-apply";
 
 describe("withSchemaVersion", () => {
 	it("replaces the number and leaves the rest of the file as it is", () => {
-		const text = '{\n\t"$schema": "./x.json",\n\t"schemaVersion": 3,\n\t"collections": {}\n}\n';
+		const text = "export default defineSchema({\n\t// keep me\n\tschemaVersion: 3,\n\tcollections: {},\n});\n";
 		expect(withSchemaVersion(text, 4)).toBe(
-			'{\n\t"$schema": "./x.json",\n\t"schemaVersion": 4,\n\t"collections": {}\n}\n',
+			"export default defineSchema({\n\t// keep me\n\tschemaVersion: 4,\n\tcollections: {},\n});\n",
 		);
 	});
 
-	it("adds the line after $schema (or first), in the file's indentation", () => {
-		expect(withSchemaVersion('{\n  "$schema": "./x.json",\n  "collections": {}\n}\n', 2)).toBe(
-			'{\n  "$schema": "./x.json",\n  "schemaVersion": 2,\n  "collections": {}\n}\n',
+	it("adds the line first in the object, in the file's indentation", () => {
+		expect(withSchemaVersion("export default defineSchema({\n  collections: {},\n});\n", 2)).toBe(
+			"export default defineSchema({\n  schemaVersion: 2,\n  collections: {},\n});\n",
 		);
-		expect(withSchemaVersion('{\n\t"collections": {}\n}\n', 2)).toBe(
-			'{\n\t"schemaVersion": 2,\n\t"collections": {}\n}\n',
+		expect(withSchemaVersion("export default defineSchema({\n\tcollections: {},\n});\n", 2)).toBe(
+			"export default defineSchema({\n\tschemaVersion: 2,\n\tcollections: {},\n});\n",
 		);
+		expect(() => withSchemaVersion("export default 1;\n", 2)).toThrow(/defineSchema/);
 	});
 });
 
@@ -42,17 +45,13 @@ const post = (fields: Record<string, unknown>) => ({
 });
 
 const schema = (fields: Record<string, unknown>, extra: Partial<SchemaFile> = {}): string =>
-	`${JSON.stringify(
-		{
-			schemaVersion: 1,
-			collections: { post: post(fields) },
-			locales: [{ code: "en", name: "English" }],
-			defaultLocale: "en",
-			...extra,
-		},
-		null,
-		"\t",
-	)}\n`;
+	printSchemaFile({
+		schemaVersion: 1,
+		collections: { post: post(fields) },
+		locales: [{ code: "en", name: "English" }],
+		defaultLocale: "en",
+		...extra,
+	});
 
 /** The `monti schema:diff` and `monti schema:apply` commands, end to end: a schema file in a folder, a real database, a CMS instance built from the file on every run. */
 describe("schema:diff and schema:apply", () => {
@@ -67,7 +66,7 @@ describe("schema:diff and schema:apply", () => {
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
 		dir = mkdtempSync(path.join(tmpdir(), "monti-schema-"));
-		file = path.join(dir, "monti.schema.json");
+		file = path.join(dir, "monti.schema.ts");
 	});
 
 	afterAll(async () => {
@@ -80,7 +79,7 @@ describe("schema:diff and schema:apply", () => {
 	const loadCms = async () =>
 		createCms({
 			id: `schema-apply-${++serial}`,
-			config: defineSite({ schema: JSON.parse(readFileSync(file, "utf8")) }),
+			config: defineSite({ schema: await loadSchemaFile(dir, file, { fresh: true }) }),
 			server: {
 				database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),
 				auth: { name: "test", create: () => ({}) as never },
@@ -155,10 +154,10 @@ describe("schema:diff and schema:apply", () => {
 		const outcome = await schemaApply(options());
 		expect(outcome.ok).toBe(true);
 		expect(outcome.text).toContain("Ran rename-summary: 2 entries");
-		expect(outcome.text).toContain("Raised schemaVersion in monti.schema.json to 2");
-		expect(JSON.parse(fileText()).schemaVersion).toBe(2);
+		expect(outcome.text).toContain("Raised schemaVersion in");
+		expect((await loadSchemaFile(dir, file, { fresh: true })).schemaVersion).toBe(2);
 		// The rest of the file keeps its formatting.
-		expect(fileText().startsWith('{\n\t"schemaVersion": 2,\n\t"collections"')).toBe(true);
+		expect(fileText()).toContain("\tschemaVersion: 2,\n\tcollections: {");
 		const one = await metadataOf("one");
 		expect(one?.metadata).toEqual({ title: "one", excerpt: "First" });
 		expect(one?.schema_version).toBe(2);
@@ -200,7 +199,7 @@ describe("schema:diff and schema:apply", () => {
 	it("runs through the monti command line", async () => {
 		const lines: string[] = [];
 		// Without a server file the command reports it, like any command that needs the app.
-		const code = await runCli(["schema:diff", "--schema", "monti.schema.json", "--no-env-file"], {
+		const code = await runCli(["schema:diff", "--schema", "monti.schema.ts", "--no-env-file"], {
 			cwd: dir,
 			log: (message) => lines.push(message),
 			error: (message) => lines.push(message),

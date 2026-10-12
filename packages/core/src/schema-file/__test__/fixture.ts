@@ -1,9 +1,10 @@
+import type { SchemaTypes } from "../types";
+
 /**
  * A small blog schema as JSON (a plain object, the way `JSON.parse` returns it), used by the schema file tests. It uses every field kind the format has:
  * text, slug, relation (one and many), select, media, conditional, backlink and view.
  */
 export const blogSchema = {
-	$schema: "./node_modules/@monti-cms/core/schema.json",
 	collections: {
 		post: {
 			label: "Post",
@@ -96,3 +97,6 @@ export const blogSchema = {
 // biome-ignore lint/suspicious/noExplicitAny: a test edits any part of the parsed JSON
 export type EditableSchema = Record<string, any>;
 export const cloneSchema = (): EditableSchema => JSON.parse(JSON.stringify(blogSchema));
+
+/** Content a test built by hand, as the type `defineConfig` takes: the tests edit schemas freely, so they do not carry the literal types `defineSchema` keeps. */
+export const asSchema = (schema: unknown): SchemaTypes => schema as SchemaTypes;

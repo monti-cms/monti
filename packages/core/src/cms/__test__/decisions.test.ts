@@ -3,13 +3,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineSite } from "../../config/define";
+import { defineSchema } from "../../schema-file/define";
+import { printSchemaFile } from "../../schema-file/print";
 import { defineConfig } from "../../server/config";
 import type { Decision } from "../../server/decision";
 import type { AuthAdapter, DatabaseAdapter } from "../../server/define";
 import { createCms } from "../create-cms";
 import { fakeAuth, fakeCms } from "../fake-cms";
 
-const schema = {
+const schema = defineSchema({
 	schemaVersion: 1,
 	collections: {
 		page: {
@@ -24,7 +26,7 @@ const schema = {
 	},
 	locales: [{ code: "en", name: "English" }],
 	defaultLocale: "en",
-};
+});
 
 let dir: string;
 beforeEach(() => {
@@ -40,8 +42,8 @@ afterEach(() => {
 
 const writeSchema = (siteUrl?: string) =>
 	writeFileSync(
-		path.join(dir, "monti.schema.json"),
-		JSON.stringify(siteUrl ? { ...schema, site: { url: siteUrl } } : schema),
+		path.join(dir, "monti.schema.ts"),
+		printSchemaFile(siteUrl ? { ...schema, site: { url: siteUrl } } : schema),
 	);
 const topics = (decisions: readonly { topic: string }[]) => decisions.map((item) => item.topic);
 const find = (decisions: readonly { topic: string; value: string; source: string }[], topic: string) =>
@@ -82,7 +84,7 @@ describe("Cms.decisions", () => {
 		writeSchema();
 		const cms = createCms({ config: defineSite({ schema }), server: fakeCms().server });
 		const file = find(cms.decisions({ NODE_ENV: "production" }), "Schema file");
-		expect(file?.value).toBe("monti.schema.json");
+		expect(file?.value).toBe("monti.schema.ts");
 		expect(file?.source).toContain("auto-detected");
 	});
 
@@ -91,7 +93,7 @@ describe("Cms.decisions", () => {
 		const cms = createCms({
 			config: defineSite({ schema }),
 			server: fakeCms().server,
-			schemaFile: "monti.schema.json",
+			schemaFile: "monti.schema.ts",
 		});
 		expect(find(cms.decisions({ NODE_ENV: "production" }), "Schema file")?.source).toBe("set in monti.config.ts");
 	});
@@ -104,7 +106,7 @@ describe("Cms.decisions", () => {
 		expect(production?.value).toBe("off");
 		expect(production?.source).toContain('NODE_ENV is "production"');
 
-		rmSync(path.join(dir, "monti.schema.json"));
+		rmSync(path.join(dir, "monti.schema.ts"));
 		const bare = createCms({ config: defineSite({ schema }), server: fakeCms().server });
 		expect(find(bare.decisions({ NODE_ENV: "development" }), "Schema hot reload")?.value).toBe("off");
 	});

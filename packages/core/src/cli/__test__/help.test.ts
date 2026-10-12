@@ -17,7 +17,6 @@ const COMMANDS = [
 	"migrate",
 	"events:retry",
 	"doctor",
-	"schema:types",
 	"schema:extract",
 	"schema:diff",
 	"schema:apply",

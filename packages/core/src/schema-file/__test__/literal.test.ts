@@ -1,0 +1,102 @@
+import { describe, expect, it } from "vitest";
+import { parseSchemaLiteral } from "../literal";
+import { printSchemaFile } from "../print";
+import { blogSchema } from "./fixture";
+
+const IMPORT = 'import { defineSchema } from "@monti-cms/core";';
+const file = (body: string, before = "") => `${IMPORT}\n${before}\nexport default defineSchema(${body});\n`;
+const refusal = (text: string) => {
+	const result = parseSchemaLiteral(text);
+	if (result.ok) throw new Error("the file was accepted");
+	return result.message;
+};
+
+describe("parseSchemaLiteral: a file that is plain data", () => {
+	it("accepts what the printer writes, with the same data and no comments", () => {
+		const result = parseSchemaLiteral(printSchemaFile(blogSchema));
+		expect(result).toMatchObject({ ok: true, comments: false });
+		expect(result.ok && result.value).toEqual(blogSchema);
+	});
+
+	it("accepts a hand-formatted literal: comments, single quotes, trailing commas, odd spacing, quoted and numeric keys", () => {
+		const text = `// The schema of my blog.
+import { defineSchema } from '@monti-cms/core'
+
+/* a block
+   comment */
+export default defineSchema(
+	{
+		schemaVersion: 2, // bump on change
+		"collections": {
+			post: { label: 'Post', kind: "document", fields: { title: { kind: 'text', label: \`Title\`, max: 200, }, }, },
+		},
+		locales: [ { code: 'en', name: 'English' }, ],
+		defaultLocale: 'en',
+		3: 'three',
+		site: { name: 'It\\'s "mine"\\n', ok: true, none: null, ratio: -1.5e2 },
+	}
+)
+`;
+		const result = parseSchemaLiteral(text);
+		expect(result).toMatchObject({ ok: true, comments: true });
+		expect(result.ok && result.value).toEqual({
+			schemaVersion: 2,
+			collections: {
+				post: { label: "Post", kind: "document", fields: { title: { kind: "text", label: "Title", max: 200 } } },
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+			3: "three",
+			site: { name: 'It\'s "mine"\n', ok: true, none: null, ratio: -150 },
+		});
+	});
+
+	it("tells comments from slashes inside strings", () => {
+		const result = parseSchemaLiteral(file('{ url: "http://example.com/*x*/" }'));
+		expect(result).toMatchObject({ ok: true, comments: false, value: { url: "http://example.com/*x*/" } });
+	});
+});
+
+describe("parseSchemaLiteral: a file that has code", () => {
+	it.each([
+		["a second import", file("{}", 'import { other } from "./other";'), /second import|line 2/],
+		[
+			"an import from another module",
+			`import { defineSchema } from "somewhere-else";\nexport default defineSchema({});`,
+			/module other than/,
+		],
+		["a variable before the export", file("{}", "const x = 1;"), /code before the schema|expected `export`/],
+		["a spread in an object", file("{ ...base, schemaVersion: 1 }"), /spread/],
+		["a spread in a list", file("{ locales: [...more] }"), /spread/],
+		["a function call", file("{ site: { url: process.env.SITE_URL } }"), /property access on `process`/],
+		["a call of a function", file("{ locales: build() }"), /function call `build\(\.\.\.\)`/],
+		["an identifier", file("{ defaultLocale: locale }"), /identifier `locale`/],
+		["undefined", file("{ timeZone: undefined }"), /identifier `undefined`/],
+		["a computed key", file('{ ["a" + "b"]: 1 }'), /computed key/],
+		["a shorthand property", file("{ schemaVersion }"), /shorthand property `schemaVersion`/],
+		["a method", file("{ build() { return 1; } }"), /method or accessor/],
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the text under test is a template literal
+		["a template expression", file("{ label: `Hello ${name}` }"), /template expression/],
+		["a binary expression", file("{ schemaVersion: 1 + 1 }"), /expected `,` or `}`/],
+		["a cast", file("{ schemaVersion: 1 } as const"), /expected `\)`/],
+		["code after the export", `${file("{}")}\nconsole.log("x");\n`, /code after the schema/],
+		["a second export", `${file("{}")}\nexport const x = 1;\n`, /code after the schema/],
+		["another export", `${IMPORT}\nexport const schema = defineSchema({});`, /expected `default`/],
+		["a call of another function", `${IMPORT}\nexport default define({});`, /expected `defineSchema`/],
+		["an array as the schema", file("[]"), /schema object/],
+		["a duplicate key", file("{ a: 1, a: 2 }"), /written twice/],
+		["the __proto__ key", file("{ __proto__: { a: 1 } }"), /__proto__/],
+		["an unclosed string", file('{ a: "oops }'), /never closed/],
+		["an unclosed comment", `${IMPORT}\n/* oops\nexport default defineSchema({});`, /comment that is never closed/],
+		["an empty file", "", /expected `import/],
+	])("refuses %s", (_name, text, expected) => {
+		expect(refusal(text)).toMatch(expected);
+	});
+
+	it("names the line the code is on", () => {
+		const text = file("{\n\tschemaVersion: 1,\n\tlocales: [...more],\n}");
+		const result = parseSchemaLiteral(text);
+		expect(result).toMatchObject({ ok: false, line: 5 });
+		expect(refusal(text)).toMatch(/^line 5:/);
+	});
+});

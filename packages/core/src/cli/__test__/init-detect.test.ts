@@ -14,7 +14,6 @@ describe("detecting the app", () => {
 			pagesRouterOnly: false,
 			packageManager: "pnpm",
 			typescript: true,
-			resolveJsonModule: true,
 			contentFolders: [],
 			nextConfig: "next.config.ts",
 			devPort: 3000,
@@ -50,7 +49,6 @@ describe("detecting the app", () => {
 	it("knows a JavaScript app, a pages-only app and a missing tsconfig", () => {
 		const js = detectApp(fixtureApp({ "tsconfig.json": null, "package.json": '{"dependencies":{"next":"16"}}' }));
 		expect(js.typescript).toBe(false);
-		expect(js.resolveJsonModule).toBeUndefined();
 		const pages = detectApp(
 			fixtureApp({ "app/layout.tsx": null, "app/page.tsx": null, "app/globals.css": null, "pages/index.js": "" }),
 		);

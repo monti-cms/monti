@@ -6,7 +6,7 @@ import type { SchemaMigration } from "../schema-file/types";
  * transform (`SchemaMigration`) says what happens to the data.
  */
 
-/** The part of a schema the diff reads: the shape of `monti.schema.json` and of the normalized site config (`site.config`). */
+/** The part of a schema the diff reads: the shape of `monti.schema.ts` and of the normalized site config (`site.config`). */
 export interface SchemaLike {
 	readonly collections: Readonly<Record<string, unknown>>;
 	readonly locales: readonly { readonly code: string }[];

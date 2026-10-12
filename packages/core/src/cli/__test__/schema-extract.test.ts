@@ -6,10 +6,12 @@ import blog from "../../../test/cms.config";
 import otherSite from "../../../test/other-site.config";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
 import type { CmsConfig } from "../../config/define";
+import { importSchemaText } from "../../schema-file/__test__/import-text";
+import { parseSchemaLiteral } from "../../schema-file/literal";
+import type { SchemaTypes } from "../../schema-file/types";
 import { createSite } from "../../site";
 import { runCli } from "..";
 import { extractSchema, extractSchemaData, formatExtractReport, schemaFileText } from "../schema-extract";
-import { generateSchemaTypes } from "../schema-types";
 
 let dirs: string[] = [];
 afterEach(() => {
@@ -39,10 +41,10 @@ describe("extract -> load round trip", () => {
 		["the reference blog", blog],
 		["the other site (different fields, tabs and list columns)", otherSite],
 	] as const) {
-		it(`loads ${name} back to the same site`, () => {
+		it(`loads ${name} back to the same site`, async () => {
 			const { schema } = extractSchemaData(config as CmsConfig);
-			// Through text, the way the file is written and read.
-			const file = JSON.parse(schemaFileText(schema));
+			// Through text and an import, the way the file is written and read.
+			const file = (await importSchemaText(schemaFileText(schema))) as never;
 			const loaded = defineSite({ schema: file, ...codePart(config as CmsConfig) });
 			const original = config as CmsConfig;
 
@@ -66,11 +68,15 @@ describe("extract -> load round trip", () => {
 		});
 	}
 
-	it("writes the link to the JSON Schema first, and omits a body flag that is the default", () => {
+	it("writes the defineSchema import first, and omits a body flag that is the default", () => {
 		const { schema } = extractSchemaData(blog as CmsConfig);
 		const text = schemaFileText(schema);
-		expect(text.startsWith('{\n\t"$schema": "./node_modules/@monti-cms/core/schema.json",')).toBe(true);
-		const file = JSON.parse(text);
+		expect(text.startsWith('import { defineSchema } from "@monti-cms/core";\n\nexport default defineSchema({\n')).toBe(
+			true,
+		);
+		const literal = parseSchemaLiteral(text);
+		if (!literal.ok) throw new Error(literal.message);
+		const file = literal.value as { collections: Record<string, object> };
 		expect(file.collections.post).not.toHaveProperty("body");
 		expect(file.collections.category).not.toHaveProperty("body");
 		const withBody = defineSite({
@@ -88,7 +94,7 @@ describe("extract -> load round trip", () => {
 		expect(extractSchemaData(withBody).schema.collections.note?.body).toBe(true);
 	});
 
-	it("writes the allowed list of a body as the object form of `body`, and loads it back as the same list", () => {
+	it("writes the allowed list of a body as the object form of `body`, and loads it back as the same list", async () => {
 		const allowed = { blocks: ["table"], marks: ["bold", "link"], headings: [2, 3] } as const;
 		const limited = defineSite({
 			collections: {
@@ -104,7 +110,7 @@ describe("extract -> load round trip", () => {
 		});
 		const { schema } = extractSchemaData(limited);
 		expect(schema.collections.memo?.body).toEqual(allowed);
-		const loaded = defineSite({ schema: JSON.parse(schemaFileText(schema)) });
+		const loaded = defineSite({ schema: (await importSchemaText(schemaFileText(schema))) as SchemaTypes });
 		expect(loaded.collections.memo).toMatchObject({ body: true, allowed });
 	});
 
@@ -182,7 +188,7 @@ describe("what stays in code", () => {
 		expect(stays).toEqual([]);
 		const text = formatExtractReport({
 			config: "cms.config.ts",
-			schema: "monti.schema.json",
+			schema: "monti.schema.ts",
 			collections: 1,
 			locales: 1,
 			templates: 0,
@@ -194,9 +200,9 @@ describe("what stays in code", () => {
 			formatExtractReport({ config, schema, collections: 1, locales: 1, templates: 0, stays }).match(
 				/import schema from "(.*)";/,
 			)?.[1];
-		expect(importOf("cms.config.ts", "monti.schema.json")).toBe("./monti.schema.json");
-		expect(importOf("src/cms.config.ts", "src/monti.schema.json")).toBe("./monti.schema.json");
-		expect(importOf("src/cms.config.ts", "monti.schema.json")).toBe("../monti.schema.json");
+		expect(importOf("cms.config.ts", "monti.schema.ts")).toBe("./monti.schema");
+		expect(importOf("src/cms.config.ts", "src/monti.schema.ts")).toBe("./monti.schema");
+		expect(importOf("src/cms.config.ts", "monti.schema.ts")).toBe("../monti.schema");
 	});
 });
 
@@ -234,46 +240,36 @@ describe("monti schema:extract", () => {
 		};
 	}
 
-	it("writes the schema file and its types, and reports what stays in code and how to load the schema", async () => {
+	it("writes the schema file, and reports what stays in code and how to load the schema", async () => {
 		const { dir } = site();
 		const report = await extractSchema({ cwd: dir, load });
-		expect(report).toMatchObject({ schema: "monti.schema.json", types: "monti-env.d.ts", collections: 1, locales: 1 });
-		const file = JSON.parse(readFileSync(path.join(dir, "monti.schema.json"), "utf8"));
-		expect(file.$schema).toBe("./node_modules/@monti-cms/core/schema.json");
-		expect(file.site).toEqual({ name: "Notes" });
-		expect(readFileSync(path.join(dir, "monti-env.d.ts"), "utf8")).toContain("interface MontiRegister");
+		expect(report).toMatchObject({ schema: "monti.schema.ts", collections: 1, locales: 1 });
+		const file = parseSchemaLiteral(readFileSync(path.join(dir, "monti.schema.ts"), "utf8"));
+		expect(file.ok && file.value.site).toEqual({ name: "Notes" });
 		const text = formatExtractReport(report);
 		expect(text).toContain("Stays in code (cms.config.ts):");
 		expect(text).toContain("site.url");
 		expect(text).toContain("plugins: my-plugin");
-		expect(text).toContain('import schema from "./monti.schema.json";');
-		// The types are in step with the schema it wrote.
-		expect(generateSchemaTypes({ cwd: dir, check: true }).changed).toBe(false);
+		expect(text).toContain('import schema from "./monti.schema";');
 	});
 
 	it("does not replace an existing schema file unless asked, and writes next to a config in src/", async () => {
 		const { dir } = site();
 		await extractSchema({ cwd: dir, load });
 		await expect(extractSchema({ cwd: dir, load })).rejects.toThrow(
-			/monti\.schema\.json already exists; pass --overwrite/,
+			/monti\.schema\.ts already exists; pass --overwrite/,
 		);
 		await expect(extractSchema({ cwd: dir, load, overwrite: true })).resolves.toMatchObject({
-			schema: "monti.schema.json",
+			schema: "monti.schema.ts",
 		});
 		mkdirSync(path.join(dir, "src"));
 		writeFileSync(path.join(dir, "src/cms.config.ts"), "export default {};\n");
 		const report = await extractSchema({ cwd: dir, load, config: "src/cms.config.ts" });
-		expect(report.schema).toBe("src/monti.schema.json");
-		expect(report.types).toBe("src/monti-env.d.ts");
-		expect(JSON.parse(readFileSync(path.join(dir, "src/monti.schema.json"), "utf8")).$schema).toBe(
-			"../node_modules/@monti-cms/core/schema.json",
-		);
+		expect(report.schema).toBe("src/monti.schema.ts");
 	});
 
-	it("can skip the types, and says what is wrong with a missing or wrong config file", async () => {
+	it("says what is wrong with a missing or wrong config file", async () => {
 		const { dir } = site();
-		const report = await extractSchema({ cwd: dir, load, types: false });
-		expect(report.types).toBeUndefined();
 		const empty = tempDir();
 		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find monti\.config\.ts; pass --config/);
 		await expect(extractSchema({ cwd: dir, load, config: "nope.ts", overwrite: true })).rejects.toThrow(

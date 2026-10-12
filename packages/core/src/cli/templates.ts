@@ -1,7 +1,7 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define";
+import { printSchemaFile } from "../schema-file/print";
 import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys";
 import type { ContentFolder, FrontMatterKey } from "./init-detect";
-import { SCHEMA_LINK } from "./schema-types";
 
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
 
@@ -234,20 +234,20 @@ export function pathFor(folder: ContentFolder | undefined): string {
 }
 
 /**
- * The schema file `monti init` creates (`monti.schema.json`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
+ * The schema file `monti init` creates (`monti.schema.ts`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
  * time zone, the site name and the admin path when it is not the default. It holds the plain data of the site;
- * `monti.config.ts` loads it. `link` is the path of the JSON Schema from the schema file (editors use it for autocomplete). With `folder` (a content folder the app
+ * `monti.config.ts` imports it. It is the text `printSchemaFile` writes, so the admin can rewrite it. With `folder` (a content folder the app
  * already has) the fields follow its front matter, and `path` follows its name.
  */
 export function schemaTemplate(
 	answers: Pick<InitAnswers, "adminPath" | "locales" | "timeZone">,
-	options: { readonly siteName?: string; readonly folder?: ContentFolder; readonly link?: string } = {},
+	options: { readonly siteName?: string; readonly folder?: ContentFolder } = {},
 ): string {
 	const [defaultLocale = DEFAULT_INIT_LOCALE] = answers.locales;
 	const { collections } = starterCollections(options.folder?.keys ?? [], answers.locales.length > 1);
 	const { post, ...related } = collections;
 	const schema = {
-		$schema: options.link ?? SCHEMA_LINK,
+		schemaVersion: 1,
 		collections: {
 			post: {
 				label: "Post",
@@ -266,7 +266,7 @@ export function schemaTemplate(
 		site: { name: options.siteName || "My site" },
 		...(answers.adminPath === DEFAULT_ADMIN_PATH ? {} : { admin: { path: answers.adminPath } }),
 	};
-	return `${JSON.stringify(schema, null, "\t")}\n`;
+	return printSchemaFile(schema);
 }
 
 /** The module a block's function is imported from. */
@@ -313,7 +313,7 @@ export function configTemplate(answers: InitAnswers): string {
 			const line = `import { ${names.join(", ")} } from "${from}";`;
 			return line.length <= 100 ? line : `import {\n${names.map((name) => `\t${name},`).join("\n")}\n} from "${from}";`;
 		}),
-		'import schema from "./monti.schema.json";',
+		'import schema from "./monti.schema";',
 	];
 
 	const plugins: string[] = [
@@ -359,7 +359,7 @@ export function configTemplate(answers: InitAnswers): string {
 		" * The one config of the site, and the CMS instance it makes. The admin API route, the admin screens, your pages (cms.read.getEntry(...)) and the `monti` command all use it.",
 		" * It is server-only (it holds the database and login settings): never import it from a client component. `monti doctor` checks that.",
 		" *",
-		" * The data (collections, fields, locales, time zone, admin path) is in monti.schema.json: edit it there. This file keeps what needs code. Values come from the",
+		" * The data (collections, fields, locales, time zone, admin path) is in monti.schema.ts: edit it there. This file keeps what needs code. Values come from the",
 		" * environment (.env.local); .env.example lists them.",
 		" */",
 		"export const cms = defineConfig({",

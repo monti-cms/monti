@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { parseSchemaFile } from "../../schema-file/format";
+import { printSchemaFile } from "../../schema-file/print";
 import { unifiedDiff } from "../diff";
 import { formatInitReport, InitError, initProject, ProjectWriter } from "../init";
 import { InitCancelled } from "../init-prompts";
@@ -15,6 +16,7 @@ import {
 	POST_MDX,
 	read,
 	SRC_APP,
+	schemaOf,
 	scriptedPrompter,
 } from "./init-helpers";
 
@@ -46,8 +48,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(report.ok).toBe(true);
 		expect(report.created).toEqual([
 			"monti.config.ts",
-			"monti.schema.json",
-			"monti-env.d.ts",
+			"monti.schema.ts",
 			"app/studio/[[...path]]/page.tsx",
 			"app/studio/layout.tsx",
 			"app/api/cms/[...path]/route.ts",
@@ -58,7 +59,7 @@ describe("monti init in a fresh create-next-app", () => {
 		// One line per feature, each with a comment; nothing hidden behind a preset.
 		const config = read(dir, "monti.config.ts");
 		expect(config).toContain('import { defineConfig, postgres } from "@monti-cms/core/server";');
-		expect(config).toContain('import schema from "./monti.schema.json";');
+		expect(config).toContain('import schema from "./monti.schema";');
 		expect(config).toContain("export const cms = defineConfig({\n\tschema,");
 		expect(config).toMatch(/\/\/ Bodies as MDX.*\n\t\tmdx\(\),/);
 		for (const line of ["callout(), //", "collapsible(), //", "tabs(), //", "codeRef(), //", "color(), //"]) {
@@ -76,14 +77,19 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config).toContain("// storage: s3Storage(),");
 		expect(config).not.toMatch(/aiPlugin|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
 
-		const schema = JSON.parse(read(dir, "monti.schema.json"));
+		const schema = schemaOf(dir);
 		expect(() => parseSchemaFile(schema)).not.toThrow();
 		expect(schema.collections.post).toMatchObject({ kind: "document", path: "/posts/:slug" });
 		expect(schema.locales).toEqual([{ code: "en", name: "English" }]);
 		expect(schema.defaultLocale).toBe("en");
 		expect(schema.timeZone).toBe("UTC");
 		expect(schema.admin).toEqual({ path: "/studio" });
-		expect(read(dir, "monti-env.d.ts")).toContain('readonly defaultLocale: "en";');
+		// The schema is what the admin writes: a pure literal that the printer would write the same, so the schema screen can save it.
+		const written = read(dir, "monti.schema.ts");
+		expect(
+			written.startsWith('import { defineSchema } from "@monti-cms/core";\n\nexport default defineSchema({\n'),
+		).toBe(true);
+		expect(printSchemaFile(schema)).toBe(written);
 
 		// The three Next files import the config by a relative path.
 		expect(read(dir, "app/studio/[[...path]]/page.tsx")).toContain('import { cms } from "../../../monti.config";');
@@ -326,15 +332,14 @@ describe("monti init tailors what is left to the app", () => {
 		const report = await initProject({ cwd: dir, ...quiet(), adminPath: "/cms/studio" });
 		expect(report.created).toEqual([
 			"src/monti.config.ts",
-			"src/monti.schema.json",
-			"src/monti-env.d.ts",
+			"src/monti.schema.ts",
 			"src/app/cms/studio/[[...path]]/page.tsx",
 			"src/app/cms/studio/layout.tsx",
 			"src/app/api/cms/[...path]/route.ts",
 			".env.example",
 		]);
 		expect(read(dir, "src/app/cms/studio/layout.tsx")).toContain('import { cms } from "../../../monti.config";');
-		expect(JSON.parse(read(dir, "src/monti.schema.json")).admin).toEqual({ path: "/cms/studio" });
+		expect(schemaOf(dir, "src/monti.schema.ts").admin).toEqual({ path: "/cms/studio" });
 		expect(listFiles(dir).filter((file) => file.startsWith("app/"))).toEqual([]);
 		// The layout step names the src/ layout.
 		expect(report.next.join("\n")).toContain("<html> tag in src/app/layout.tsx");
@@ -388,19 +393,6 @@ describe("monti init tailors what is left to the app", () => {
 		const report = await initProject({ cwd: missing, ...quiet() });
 		expect(read(missing, "app/layout.tsx")).toBe(CREATE_NEXT_APP_LAYOUT);
 		expect(report.next.join("\n")).toContain('<html lang="en" suppressHydrationWarning>');
-	});
-
-	it("a tsconfig without resolveJsonModule gets a step with the line, and is not edited", async () => {
-		const tsconfig = '{\n  // my options\n  "compilerOptions": {\n    "strict": true\n  }\n}\n';
-		const dir = fixtureApp({ "tsconfig.json": tsconfig });
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, "tsconfig.json")).toBe(tsconfig);
-		const step = report.next.find((line) => line.includes("resolveJsonModule")) ?? "";
-		expect(step).toContain('"resolveJsonModule": true');
-		expect(step).toContain("compilerOptions of tsconfig.json");
-
-		const ready = await initProject({ cwd: fixtureApp(), ...quiet() });
-		expect(ready.next.join("\n")).not.toContain("resolveJsonModule");
 	});
 
 	it("a missing .gitignore gets a step that creates it; one that covers .env.local gets none", async () => {
@@ -508,7 +500,7 @@ describe("monti init choices", () => {
 			"content/posts/second.md": POST_MDX("second"),
 		});
 		const report = await initProject({ cwd: dir, ...quiet() });
-		const post = JSON.parse(read(dir, "monti.schema.json")).collections.post;
+		const post = schemaOf(dir).collections.post;
 		expect(post.path).toBe("/posts/:slug");
 		expect(Object.keys(post.fields)).toEqual(["title", "slug", "author", "cover", "description", "tagIds"]);
 		expect(post.fields.tagIds).toMatchObject({ kind: "relation", to: "tag", many: true });
@@ -544,7 +536,7 @@ describe("monti init choices", () => {
 		expect(config.indexOf("callout(),")).toBeLessThan(config.indexOf("tabs(),"));
 		expect(config.indexOf("tabs(),")).toBeLessThan(config.indexOf("color(),"));
 
-		const schema = JSON.parse(read(dir, "monti.schema.json"));
+		const schema = schemaOf(dir);
 		expect(schema.locales.map((entry: { code: string }) => entry.code)).toEqual(["ko", "en"]);
 		expect(schema.defaultLocale).toBe("ko");
 		expect(schema.timeZone).toBe("Asia/Seoul");
@@ -572,7 +564,7 @@ describe("monti init and files that already exist", () => {
 		const dir = fixtureApp({ "monti.config.ts": "// mine\nexport const cms = {};\n" });
 		const report = await initProject({ cwd: dir, ...quiet() });
 		expect(read(dir, "monti.config.ts")).toBe("// mine\nexport const cms = {};\n");
-		expect(() => read(dir, "monti.schema.json")).toThrow();
+		expect(() => read(dir, "monti.schema.ts")).toThrow();
 		expect(report.created).not.toContain("monti.config.ts");
 		expect(report.skipped).toContain("monti.config.ts");
 		expect(report.created).toContain("app/studio/layout.tsx");
@@ -652,7 +644,7 @@ describe("monti init when something goes wrong", () => {
 		const failure = initProject({ cwd: dir, ...quiet() });
 		await expect(failure).rejects.toBeInstanceOf(InitError);
 		await expect(failure).rejects.toThrow(
-			/These files were written before it failed \(nothing was undone\):\n {2}- monti\.config\.ts\n {2}- monti\.schema\.json\n/,
+			/These files were written before it failed \(nothing was undone\):\n {2}- monti\.config\.ts\n {2}- monti\.schema\.ts\n/,
 		);
 		await expect(failure).rejects.toThrow(/Run `monti init` again to continue/);
 	});
