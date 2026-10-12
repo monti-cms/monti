@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import type { LegacyBodies } from "../../../format/types.js";
+import type { UnreadableBody } from "../../../server/define.js";
 import type { Site } from "../../../site/index.js";
 export interface StoredDocumentMigrationOptions {
     /** The site the store is migrated for (its blocks decide the search text of a body). */
@@ -9,6 +10,8 @@ export interface StoredDocumentMigrationOptions {
     readonly batchSize?: number;
     /** Called for each body that gets no document and is left as it is. Default: `console.warn`. */
     readonly log?: (message: string) => void;
+    /** Called instead of `log` for each body that gets no document. */
+    readonly onUnreadable?: (body: UnreadableBody) => void;
 }
 /**
  * Gives every stored body its document (`doc`) and writes its MDX from it with the site's syntax (see `bodyFromMdx`). Covers the working and published

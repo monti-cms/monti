@@ -4,8 +4,10 @@ import { DOCTOR_HELP } from "./doctor/command.js";
  * prints the header and every section. A section is a two-space indented block that starts with the command name, the way `DOCTOR_HELP` is.
  */
 const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): asks a few questions, writes Monti's own new files (monti.config.ts, monti.schema.ts, the
-            admin pages, the API route and a commented .env.example), installs the packages, and prints what is left (next.config, .env.local, migrate).
-            It edits none of your existing files and writes no .env.local. A file that already exists is never overwritten without a yes.
+            admin pages, the API route and a commented .env.example), installs the packages, and prints what is left (.env.local, migrate).
+            It makes two edits to your own files and lists them under "Changed:": it wraps the export of next.config in withCms() and adds
+            suppressHydrationWarning to the <html> of the root layout (a file in a shape it cannot edit safely is left alone and the step is in the list).
+            It writes no .env.local. A file that already exists is never overwritten without a yes.
             Every question has a flag; with --yes, --json, or no terminal nothing is asked.
               --yes, -y             Take the default for every question that has no flag, and run the package install without asking
               --json                Print the result as JSON (implies --yes)
@@ -22,6 +24,8 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
               --login <password|github>   How people sign in to the admin: the built-in email and password login (default), or GitHub (needs an OAuth app).
                                     The first one is created on the admin screen; GitHub's values go in .env.local
               --admin-path <path>   Admin screen path (default /studio)
+              --directive-syntax    Write blocks as ::: blocks (:::callout, :::tabs) with @monti-cms/syntax-directive, without asking. --no-directive-syntax
+                                    keeps plain MDX. Without either: asked, and the default is yes when blocks are installed
               --overwrite           Replace existing files that differ (default: keep them)
               --no-install          Do not install packages: the install command is printed in the list of what is left
               --package-manager <m> npm, pnpm, yarn or bun (default: detected)
@@ -36,6 +40,9 @@ const MIGRATE_HELP = `  migrate   Create or update the tables in the database of
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
               --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
+              --verbose             List every body that could not be read, with its reason, instead of a short summary
+              --reconvert-bodies    Read the bodies that were kept as unreadable (source only) again, with the config as it is now: use it after you turn on a
+                                    syntax such as mdx({ syntax: [directiveSyntax()] }). Bodies that read now become normal bodies; the rest stay as they are
 `;
 const EVENTS_RETRY_HELP = `  events:retry    Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)
               --all                 Also try the failed deliveries that are not due yet

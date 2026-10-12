@@ -155,6 +155,15 @@ export interface Cms<Config extends AnyCmsConfig = any> {
      */
     migrate(options?: {
         readonly log?: (message: string) => void;
+        /** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
+        readonly verbose?: boolean;
+        /** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti migrate --reconvert-bodies`). */
+        readonly reconvertBodies?: boolean;
+        /**
+         * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
+         * with that place.
+         */
+        readonly saveDetail?: (lines: readonly string[]) => string | undefined;
     }): Promise<void>;
     /** Closes the database connection (when a command-line tool or a test is done). */
     close(): Promise<void>;

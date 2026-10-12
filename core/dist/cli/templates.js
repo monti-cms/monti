@@ -234,6 +234,8 @@ export function configTemplate(answers) {
         { from: "@monti-cms/core/server", names: ["defineConfig", "postgres"] },
         { from: "@monti-cms/mdx", names: ["mdx"] },
     ];
+    if (answers.directiveSyntax)
+        imports.push({ from: "@monti-cms/syntax-directive", names: ["directiveSyntax"] });
     if (answers.ai)
         imports.push({ from: "@monti-cms/ai", names: ["aiPlugin"] });
     if (answers.gitSync)
@@ -258,10 +260,13 @@ export function configTemplate(answers) {
         }),
         'import schema from "./monti.schema";',
     ];
-    const plugins = [
-        "// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.",
-        "mdx(),",
-    ];
+    const plugins = answers.directiveSyntax
+        ? [
+            "// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.",
+            "// directiveSyntax() reads and writes the ::: blocks (:::callout, :::tabs) your posts use. Without it they are read as code and kept as source.",
+            "mdx({ syntax: [directiveSyntax()] }),",
+        ]
+        : ["// Bodies as MDX (and Markdown) text: read, write and export. Also the source panel in the editor.", "mdx(),"];
     if (blocks.length > 0) {
         plugins.push("// The body blocks, one line each: delete a line and the block is gone. The inline marks (tooltip, code-ref, color) are stored in this order when they overlap.");
         for (const block of blocks)
@@ -385,18 +390,21 @@ export function githubLoginHowTo(siteUrl) {
  */
 export function envExampleTemplate(answers) {
     const site = answers.siteUrl.replace(/\/+$/, "");
+    // A local address is no example of a deployed site.
+    const deployedSite = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(site)
+        ? "https://example.com"
+        : site;
     const lines = [
         "# Copy this file to .env.local and fill it in:  cp .env.example .env.local",
         "# .env.local is for this machine only: keep it out of git. This example file is safe to commit, so never put a real secret in it.",
+        "# The values right below are the ones you need to run the app on your computer.",
         "",
         "# --- Database ---",
         "",
         "# Postgres connection URL. Get it from your database host's dashboard (Neon, Supabase, Vercel Postgres, RDS, ...),",
         "# or use a local Postgres: postgres://postgres:postgres@localhost:5432/monti (create the database first: createdb monti).",
+        "# Neon/Supabase-style URLs with sslmode=require: use sslmode=verify-full instead (same security, no warning from the database driver).",
         "DATABASE_URL=postgres://user:password@localhost:5432/monti",
-        "",
-        "# Set DATABASE_SCHEMA only when the database is shared with other apps and the tables should live in their own schema (default: public).",
-        "# DATABASE_SCHEMA=monti",
         "",
         "# --- Secret ---",
         "",
@@ -405,14 +413,6 @@ export function envExampleTemplate(answers) {
         "# or, without openssl:  node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\"",
         "# Keep the same value on every server of the site; changing it signs everyone out and makes stored values unreadable.",
         "MONTI_SECRET=",
-        "",
-        "# --- Site ---",
-        "",
-        "# Public URL of the site. Links in bodies written as full URLs to it count as internal links.",
-        `# SITE_URL=${site}`,
-        "",
-        "# Set to true only behind a proxy you run yourself (nginx, a load balancer). Vercel, Netlify and Cloudflare Pages are detected.",
-        "# AUTH_TRUST_HOST=true",
     ];
     if (answers.login === "github") {
         lines.push("", "# --- Login with GitHub ---", "", "# A GitHub OAuth app: GitHub > Settings > Developer settings > OAuth Apps > New OAuth App.", `# Homepage URL: ${site}`, `# Authorization callback URL: ${githubCallbackUrl(site)}`, "# Register one app per address (the local one and the deployed one), or one callback URL per app.", "# Its Client ID, then a client secret you generate on the same page:", "AUTH_GITHUB_ID=", "AUTH_GITHUB_SECRET=", "", "# Who is an admin: your numeric GitHub id, not your login (a login can be renamed and then taken by someone else).", '# Open https://api.github.com/users/<your-github-login> in a browser and copy the number after "id". Several ids go in one value, separated by commas.', "MONTI_ADMIN_GITHUB_ID=");
@@ -420,6 +420,7 @@ export function envExampleTemplate(answers) {
     if (answers.storage === "s3") {
         lines.push("", "# --- Image storage (S3, Cloudflare R2, MinIO) ---", "", "# Where the S3 API lives. AWS S3: leave empty. Cloudflare R2: https://<account-id>.r2.cloudflarestorage.com (R2 dashboard > bucket > Settings). MinIO: http://localhost:9000.", "S3_ENDPOINT=", "# The bucket's region (AWS: e.g. us-east-1). Cloudflare R2: auto.", "S3_REGION=", "# The bucket name; create the bucket in your storage dashboard first.", "S3_BUCKET=", "# An access key with read and write on that bucket. AWS: IAM > Users > Security credentials. R2: R2 > Manage API tokens. MinIO: the console's Access Keys.", "S3_ACCESS_KEY_ID=", "S3_SECRET_ACCESS_KEY=", "# The start of the public address of uploaded files: a CDN in front of the bucket, or the bucket's public URL (R2: Settings > Public access).", "S3_PUBLIC_URL=", "# MinIO and some other S3-compatible stores need path-style addresses: true.", "# S3_FORCE_PATH_STYLE=true");
     }
+    lines.push("", "# --- When you deploy (not needed on your computer) ---", "# Leave these commented out while you work locally. Remove the # when your deployed site needs one.", "", "# Your site's public address, e.g. https://example.com. Used for login links and to recognise links to your own site.", `# SITE_URL=${deployedSite}`, "", "# Only if you run your own proxy such as nginx. Not needed on Vercel, Netlify or Cloudflare.", "# AUTH_TRUST_HOST=true", "", "# Only if the database is shared with other apps: Monti's tables then live in their own schema instead of public.", "# DATABASE_SCHEMA=monti");
     return `${lines.join("\n")}\n`;
 }
 /** The npm packages the answers need, besides what the app already lists. */
@@ -439,6 +440,7 @@ export function packagesFor(answers) {
         "@tiptap/react",
         ...(blocks.length > 0 ? ["@monti-cms/blocks", "lucide-react"] : []),
         ...blocks.flatMap((block) => (block.needs ? [block.needs] : [])),
+        ...(answers.directiveSyntax ? ["@monti-cms/syntax-directive"] : []),
         ...(answers.ai ? ["@monti-cms/ai"] : []),
         ...(answers.gitSync ? ["@monti-cms/git-sync"] : []),
         ...(answers.storage === "s3" ? ["@monti-cms/storage-s3"] : []),

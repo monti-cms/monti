@@ -1,5 +1,6 @@
 import { mdxContentHash, mdxSearchText } from "./mdx-body.js";
 import { readDoc } from "./rows.js";
+import { hasDirectiveBlock, kindOfState } from "./unreadable.js";
 const DEFAULT_BATCH_SIZE = 200;
 /**
  * Gives every stored body its document (`doc`) and writes its MDX from it with the site's syntax (see `bodyFromMdx`). Covers the working and published
@@ -15,7 +16,9 @@ export async function migrateStoredDocuments(client, qSchema, options) {
     const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
     const { bodies, site } = options;
     const log = options.log ?? ((message) => console.warn(message));
-    const withoutDocument = (where) => log(`[monti] no stored document for ${where}: it does not parse, has front matter, or would not read back the same; left as it is`);
+    const withoutDocument = (where, kind, text) => options.onUnreadable
+        ? options.onUnreadable({ where, kind, hasDirective: hasDirectiveBlock(text) })
+        : log(`[monti] no stored document for ${where}: it does not parse, has front matter, or would not read back the same; left as it is`);
     let last;
     for (;;) {
         const res = await client.query(`SELECT entry_id, state, metadata, mdx, doc, schema_version, translation FROM "${qSchema}".entry_bodies
@@ -27,7 +30,7 @@ export async function migrateStoredDocuments(client, qSchema, options) {
             // A document already there (the step ran before) keeps its block ids.
             const body = bodies.read(row.mdx, { previous: readDoc(row.doc) });
             if (body.doc === null)
-                withoutDocument(`entry_bodies ${row.entry_id}/${row.state}`);
+                withoutDocument(`entry_bodies ${row.entry_id}/${row.state}`, kindOfState(row.state), row.mdx);
             const base = row.translation?.baseSource;
             const baseSource = typeof base === "string" ? bodies.read(base).text : undefined;
             return {
@@ -64,7 +67,7 @@ export async function migrateStoredDocuments(client, qSchema, options) {
         const next = res.rows.map((row) => {
             const body = bodies.read(row.mdx, { previous: readDoc(row.doc) });
             if (body.doc === null)
-                withoutDocument(`body_templates ${row.id}`);
+                withoutDocument(`body_templates ${row.id}`, "template", row.mdx);
             return { mdx: body.text, doc: body.doc === null ? null : JSON.stringify(body.doc) };
         });
         await client.query(`UPDATE "${qSchema}".body_templates AS t SET mdx = v.mdx, doc = v.doc::jsonb

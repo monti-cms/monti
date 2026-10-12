@@ -83,6 +83,9 @@ export function postgres(options = {}) {
                     ...schemaOptions(),
                     site: migrateOptions.site,
                     formats: migrateOptions.formats,
+                    reconvertBodies: migrateOptions.reconvertBodies,
+                    onUnreadableBody: migrateOptions.onUnreadableBody,
+                    detail: migrateOptions.detail,
                 });
             }
             catch (error) {

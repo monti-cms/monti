@@ -15,6 +15,7 @@ import { createEventDispatcher } from "../services/events.js";
 import { mediaUrlResolver } from "../services/media-urls.js";
 import { createSite } from "../site/index.js";
 import { coreDecisions } from "./decisions.js";
+import { describeUnreadable, mergeUnreadable, unreadableLine } from "./migration-report.js";
 const DEV_CONNECTIONS = Symbol.for("monti.cms.dev-connections");
 function connectionsFor(id, server) {
     if (process.env.NODE_ENV !== "development")
@@ -161,14 +162,43 @@ export function createCms(options) {
                 formats: plugins.formats,
                 verifyAdmin: () => authGateway.verifyAdmin(),
             }),
-            migrate: async ({ log = console.log } = {}) => {
+            migrate: async ({ log = console.log, verbose = false, reconvertBodies = false, saveDetail } = {}) => {
                 const target = connections.database.describeTarget?.();
                 log(`Migrating the ${connections.database.name} database${target ? `: ${target}` : ""}`);
-                const summary = await connections.database.migrate({ site, formats: await plugins.formats() });
+                // The steps report each body they keep as unreadable; one body can be reported by several steps.
+                const unreadable = new Map();
+                const detailLines = [];
+                const summary = await connections.database.migrate({
+                    site,
+                    formats: await plugins.formats(),
+                    reconvertBodies,
+                    onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
+                    detail: (line) => {
+                        detailLines.push(line);
+                        if (verbose)
+                            log(line);
+                    },
+                });
                 await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
+                if (summary?.reconverted) {
+                    const { converted, remaining } = summary.reconverted;
+                    log(converted === 0 && remaining === 0
+                        ? "No body was kept as unreadable, so there was nothing to read again."
+                        : `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`);
+                }
+                const found = [...unreadable.values()];
+                if (verbose)
+                    for (const body of found)
+                        log(unreadableLine(body));
+                for (const line of describeUnreadable(found, { again: reconvertBodies }))
+                    log(line);
+                const everything = [...detailLines, ...found.map(unreadableLine)];
+                const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
                 log(summary
                     ? `Applied ${summary.applied} step${summary.applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
                     : "Migration completed.");
+                if (saved)
+                    log(`Full details: ${saved}`);
             },
             close: async () => {
                 await connections.database.close?.();

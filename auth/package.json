@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/auth",
-  "version": "0.2.0-next.4",
+  "version": "0.2.0-next.5",
   "private": true,
   "description": "Framework-neutral admin login for @monti-cms/core on standard Request/Response (Auth.js core), with pluggable providers: GitHub and a built-in email and password login, and OAuth providers by adding a package",
   "license": "MIT",
@@ -23,13 +23,13 @@
     "@auth/core": "0.41.3"
   },
   "peerDependencies": {
-    "@monti-cms/core": "^0.2.0-next.4"
+    "@monti-cms/core": "^0.2.0-next.5"
   },
   "devDependencies": {
     "@types/node": "^20",
     "typescript": "^7.0.2",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.2.0-next.4"
+    "@monti-cms/core": "0.2.0-next.5"
   },
   "files": [
     "dist",

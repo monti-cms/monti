@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import type { LegacyBodies } from "../../../format/types.js";
+import type { UnreadableBody } from "../../../server/define.js";
 import type { Site } from "../../../site/index.js";
 export interface SoftBreakMigrationOptions {
     /** The site the store is migrated for (its blocks decide the search text of a body). */
@@ -9,6 +10,8 @@ export interface SoftBreakMigrationOptions {
     readonly batchSize?: number;
     /** Called for each body that is left as it is (it does not parse, or the edit could not be made safely). Default: `console.warn`. */
     readonly log?: (message: string) => void;
+    /** Called instead of `log` for each body (not a translation base source) the edit could not be made in. */
+    readonly onUnreadable?: (body: UnreadableBody) => void;
 }
 /**
  * Makes the soft line endings of stored bodies explicit (`<br />`), because the public page no longer turns a single newline into a line break

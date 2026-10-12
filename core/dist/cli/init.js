@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { findRootLayout, hasSuppressHydrationWarning } from "./first-run.js";
+import { findRootLayout } from "./first-run.js";
 import { detectApp } from "./init-detect.js";
+import { addSuppressHydrationWarning, ignoreForMonti, NEXT_CONFIG_IMPORT, wrapNextConfig, } from "./init-edit.js";
 import { collectAnswers, detectedLocales, InitCancelled } from "./init-prompts.js";
 import { adminLayoutTemplate, adminPageTemplate, apiRouteTemplate, configTemplate, envExampleTemplate, githubCallbackUrl, nextConfigTemplate, packagesFor, pathFor, schemaTemplate, starterCollections, } from "./templates.js";
 /** An error after files were already written. `written` lists them, so the message can say what is on disk. */
@@ -95,21 +96,14 @@ export function installSpecs(packages, coreSpec) {
         return folder ? `${name}@${coreSpec.replace(/(^|[#&])path:\/core(?=&|$)/, `$1path:/${folder}`)}` : name;
     });
 }
-const NEXT_CONFIG_IMPORT = 'import { withCms } from "@monti-cms/nextjs/config";';
-/** The default shape of a Next config: one `export default nextConfig;`. */
-const DEFAULT_EXPORT = /^export default nextConfig;?[ \t]*$/gm;
-/** The `next.config` item of the list: the change against the shape of the existing file, or a whole new file when there is none. `undefined` when `withCms` is there. */
-function nextConfigStep(file, text) {
-    if (file === undefined || text === undefined) {
-        return `Create next.config.ts with this content (the admin needs withCms):\n${nextConfigTemplate().trimEnd()}`;
-    }
-    if (text.includes("withCms"))
-        return undefined;
-    if ((text.match(DEFAULT_EXPORT) ?? []).length === 1) {
-        return `Wrap the config in ${file}. Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand change the export:\n-export default nextConfig;\n+export default withCms(nextConfig);`;
-    }
-    return `Wrap the config in ${file}. Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand export the result of withCms around the config you export now:\nexport default withCms(nextConfig);   // wherever you export your config`;
+/** The `next.config` item of the list when init did not edit the file: the reason, then the change by hand against the shape of the file. */
+function nextConfigManualStep(file, reason) {
+    return `Wrap the config in ${file} (init did not edit it: ${reason}). Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand export the result of withCms around the config you export now:\nexport default withCms(nextConfig);   // wherever you export your config`;
 }
+/** The root layout item of the list when init did not edit the file. */
+const layoutManualStep = (file, reason) => `Add suppressHydrationWarning to the <html> tag in ${file} (init did not edit it: ${reason}):\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`;
+/** `next.config` files init cannot edit, or must not create a second one next to. */
+const OTHER_NEXT_CONFIGS = ["next.config.cjs", "next.config.mts", "next.config.cts"];
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export async function initProject(options) {
     const { cwd } = options;
@@ -162,6 +156,7 @@ export async function initProject(options) {
         created: [],
         skipped: [],
         overwritten: [],
+        changed: [],
         installed: [],
         steps: [],
         notes: [],
@@ -173,7 +168,7 @@ export async function initProject(options) {
             ? `The site languages are ${answers.locales.join(", ")}, found in ${where} of ${foundLocales.dir}/. ${answers.locales[0]} is the default${foundLocales.codes.length > 1 ? " (its files have no pair)" : ""}; change "defaultLocale" and "locales" in the schema file if that is wrong.`
             : `${foundLocales.codes.join(", ")} found in ${where} of ${foundLocales.dir}/, but the site languages are ${answers.locales.join(", ")}.`);
     }
-    // The next config is only read, never changed: it tells the admin page whether to opt out of the instant navigation check, and which change to print.
+    // The next config tells the admin page whether to opt out of the instant navigation check, and is the file init wraps in `withCms` (below).
     // Next's `cacheComponents` (on by default in the apps `create-next-app` 16.4 makes) validates every page for instant navigation in development; the admin opts out.
     const nextConfigText = app.nextConfig === undefined ? undefined : writer.read(app.nextConfig);
     const usesCacheComponents = nextConfigText !== undefined && /\bcacheComponents\s*:\s*true\b/.test(nextConfigText);
@@ -182,6 +177,10 @@ export async function initProject(options) {
     const keepConfig = app.existingConfig !== undefined || app.legacyConfig.length > 0;
     if (app.legacyConfig.length > 0 && app.existingConfig === undefined) {
         report.notes.push(`${app.legacyConfig.join(" and ")} from the earlier setup ${app.legacyConfig.length > 1 ? "are" : "is"} left alone, and no ${configFile} was created. They are one ${configFile} now: move them into it (see "Upgrading" in the core README).`);
+    }
+    const existingText = app.existingConfig === undefined ? "" : writer.read(app.existingConfig);
+    if (answers.directiveSyntax && keepConfig && !existingText.includes("directiveSyntax")) {
+        report.notes.push("The directive syntax is on: add mdx({ syntax: [directiveSyntax()] }) (from @monti-cms/syntax-directive) to your existing config.");
     }
     if (!keepConfig) {
         planned.push({ file: configFile, content: configTemplate(answers) });
@@ -196,6 +195,37 @@ export async function initProject(options) {
         report.skipped.push(app.existingConfig);
         report.notes.push(`${app.existingConfig} already exists, so it was kept and no schema file was written. Add the plugins you want to it by hand; each one is one line (see .env.example for the values).`);
     }
+    // The two edits to files the app owns, planned with the new files: an edit is applied only when the file is in a shape init can change safely, else its
+    // step goes to the list of what is left, with the reason.
+    const edits = [];
+    const manual = [];
+    const planEdit = (file, edit, manualStep) => {
+        if (edit.status === "edit")
+            edits.push({ file, text: edit.text, change: edit.change });
+        else if (edit.status === "present")
+            report.skipped.push(file);
+        else
+            manual.push(manualStep(edit.reason));
+    };
+    if (app.nextConfig !== undefined && nextConfigText !== undefined) {
+        const file = app.nextConfig;
+        planEdit(file, wrapNextConfig(file, nextConfigText), (reason) => nextConfigManualStep(file, reason));
+    }
+    else {
+        const other = OTHER_NEXT_CONFIGS.find((candidate) => writer.exists(candidate));
+        if (other) {
+            manual.push(nextConfigManualStep(other, "it is not a file init can edit, and a second next.config next to it would be ignored or conflict"));
+        }
+        else
+            planned.push({ file: "next.config.ts", content: nextConfigTemplate() });
+    }
+    const rootLayout = findRootLayout(cwd);
+    if (rootLayout) {
+        planEdit(rootLayout, addSuppressHydrationWarning(rootLayout, writer.read(rootLayout)), (reason) => layoutManualStep(rootLayout, reason));
+    }
+    // .env.local holds the secrets and migrate writes its logs under .monti/: neither belongs in git.
+    const gitignore = writer.exists(".gitignore") ? writer.read(".gitignore") : undefined;
+    planEdit(".gitignore", ignoreForMonti(gitignore), () => "");
     planned.push({ file: pageFile, content: adminPageTemplate(configImport(pageFile), { instant: usesCacheComponents }) }, { file: layoutFile, content: adminLayoutTemplate(configImport(layoutFile), { blocks: answers.blocks.length > 0 }) }, { file: routeFile, content: apiRouteTemplate(configImport(routeFile)) }, { file: ".env.example", content: envExampleTemplate(answers) });
     // Existing files: skipped, unless the person says to replace them.
     const writes = [];
@@ -240,6 +270,11 @@ export async function initProject(options) {
                 writer.write(entry.file, entry.content);
             (entry.replace ? report.overwritten : report.created).push(entry.file);
         }
+        for (const edit of edits) {
+            if (!dryRun)
+                writer.write(edit.file, edit.text);
+            report.changed.push({ file: edit.file, change: edit.change });
+        }
     }
     catch (error) {
         throw new InitError(error instanceof Error ? error.message : String(error), writer.written);
@@ -270,13 +305,7 @@ export async function initProject(options) {
     const willInstall = installed || (dryRun && installing);
     if (missing.length > 0 && !willInstall)
         todo.push(`Install the packages:\n${commandText(installCommand)}`);
-    const nextConfig = nextConfigStep(app.nextConfig, nextConfigText);
-    if (nextConfig)
-        todo.push(nextConfig);
-    const rootLayout = findRootLayout(cwd);
-    if (rootLayout && hasSuppressHydrationWarning(writer.read(rootLayout)) === false) {
-        todo.push(`Add suppressHydrationWarning to the <html> tag in ${rootLayout}:\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`);
-    }
+    todo.push(...manual);
     todo.push([
         "Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",
         "cp .env.example .env.local",
@@ -285,13 +314,13 @@ export async function initProject(options) {
         "or, without openssl:",
         `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`,
     ].join("\n"));
-    if (!app.envLocalIgnored) {
-        todo.push(`Keep .env.local out of git: add this line to .gitignore${writer.exists(".gitignore") ? "" : " (create the file)"}:\n.env.local`);
-    }
     todo.push(`Create the tables: ${exec(manager, "migrate")}`, `Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`, `Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`);
     if (answers.gitSync) {
         todo.push(`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/git-sync to save the GitHub token.`);
     }
+    const siteBase = answers.siteUrl.replace(/\/+$/, "");
+    const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(siteBase);
+    const deployedAdmin = `${local ? "<your site>" : siteBase}${answers.adminPath}`;
     if (answers.login === "github") {
         todo.push([
             "Create the GitHub OAuth app that signs people in (GitHub > Settings > Developer settings > OAuth Apps > New OAuth App):",
@@ -303,7 +332,7 @@ export async function initProject(options) {
     }
     else {
         todo.push([
-            `Right after you deploy, open ${answers.siteUrl.replace(/\/+$/, "")}${answers.adminPath} and create the first admin (an email and a password). That screen closes as soon as one admin exists.`,
+            `Right after you deploy, open ${deployedAdmin} and create the first admin (an email and a password). That screen closes as soon as one admin exists.`,
             `Or create it beforehand: run the app in production mode (\`${script(manager, "build")}\` then \`${manager === "npm" || manager === "bun" ? `${manager} run start` : `${manager} start`}\`) pointed at the production database (its DATABASE_URL) and open ${answers.adminPath} on this machine. (Under \`next dev\` you are the admin without signing in, so that screen does not show.)`,
             `A forgotten password: ${exec(manager, "admin:reset-password")}`,
         ].join("\n"));
@@ -366,7 +395,13 @@ export function formatInitReport(report) {
             ? `Monti is only partly added: ${failedCount === 1 ? "1 step failed" : `${failedCount} steps failed`}. The files are written; the steps below did not finish.`
             : "Monti is added to your app.", "");
     out.push(placementLine(report.app.src), "");
-    out.push(...list(dry ? "Would create:" : "Created:", report.created), ...list(dry ? "Would replace:" : "Replaced (you said yes):", report.overwritten), ...list("Already there, left as they are:", report.skipped));
+    out.push(...list(dry ? "Would create:" : "Created:", report.created), ...(report.changed.length === 0
+        ? []
+        : [
+            dry ? "Would change:" : "Changed:",
+            ...report.changed.map((item) => `  - ${item.file} \u2014 ${item.change}`),
+            "",
+        ]), ...list(dry ? "Would replace:" : "Replaced (you said yes):", report.overwritten), ...list("Already there, left as they are:", report.skipped));
     if (report.steps.length > 0) {
         out.push("Steps:");
         for (const step of report.steps)

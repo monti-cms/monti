@@ -7,5 +7,5 @@
  * Returns the explanation, or `undefined` when the URL has no mode the driver warns about (or already chose `uselibpqcompat`).
  */
 export declare function sslmodeWarning(connectionString: string): string | undefined;
-/** What to write in the URL to say what the driver already does, so the warning has nothing left to warn about. */
-export declare const SSLMODE_FIX = "change sslmode=... to sslmode=verify-full in DATABASE_URL (the connection stays exactly as secure as it is now). Only if you want the libpq meaning (no certificate check for require), add uselibpqcompat=true to the URL instead";
+/** The one-line fix for the notice above. */
+export declare const SSLMODE_FIX = "in DATABASE_URL, change sslmode=require (or prefer, verify-ca) to sslmode=verify-full. It is the same security, and the notice goes away";

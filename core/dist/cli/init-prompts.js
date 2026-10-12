@@ -95,6 +95,7 @@ export const QUESTIONS = {
     blockList: "Pick the blocks",
     adminPath: "Where should the admin live?",
     login: "How should people sign in to the admin?",
+    directive: "How are blocks written in Markdown?",
 };
 /** The languages found in the names of the content files (`hello.ko.mdx`) or in language folders (`ko/`), default first, and where they were found. */
 export function detectedLocales(app) {
@@ -239,6 +240,19 @@ export async function collectAnswers(app, flags, prompter) {
                 initial: "password",
             })
             : "password";
+    // Directive syntax (`:::callout`): the default follows the blocks that get installed (a callout or tabs is written as a ::: block), so a site without blocks stays plain MDX.
+    const blocksInstalled = blocks.filter((id) => BLOCK_IDS.includes(id)).length > 0;
+    const directiveSyntax = flags.directiveSyntax ??
+        (prompter
+            ? (await prompter.select({
+                message: QUESTIONS.directive,
+                options: [
+                    { value: "directive", label: "With ::: blocks, e.g. :::callout (directive syntax)" },
+                    { value: "mdx", label: "Plain MDX only" },
+                ],
+                initial: blocksInstalled ? "directive" : "mdx",
+            })) === "directive"
+            : blocksInstalled);
     return {
         siteUrl,
         locales,
@@ -249,6 +263,7 @@ export async function collectAnswers(app, flags, prompter) {
         blocks: blocks.filter((id) => BLOCK_IDS.includes(id)),
         adminPath,
         login,
+        directiveSyntax,
     };
 }
 /** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */

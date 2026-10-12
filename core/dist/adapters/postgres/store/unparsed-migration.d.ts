@@ -1,8 +1,11 @@
 import type { PoolClient } from "pg";
+import type { UnreadableBody } from "../../../server/define.js";
 export interface UnparsedMigrationOptions {
     readonly batchSize?: number;
     /** Called once per kind of finding with the ids involved. Default: `console.warn`. */
     readonly log?: (message: string) => void;
+    /** Called for each body or template that has no document, and the lists by id are not logged. */
+    readonly onUnreadable?: (body: UnreadableBody) => void;
 }
 /**
  * Every stored body is a document now. A body that had none (its MDX did not parse, had front matter, or would not read back the same)

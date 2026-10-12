@@ -2,12 +2,15 @@ import { type PackageManager } from "./init-detect.js";
 import { type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts.js";
 import { type InitAnswers } from "./templates.js";
 /**
- * `monti init`: adds Monti to an existing Next app. It reads the app, asks (or takes flags, or defaults), writes only Monti's own new files (the config, the schema,
- * the three Next files, `.env.example`), installs the packages after a confirmation, and ends with a plain summary of what is left, numbered, with exact content to
- * copy. It edits no file the app already has, writes no `.env.local` and never touches the database.
+ * `monti init`: adds Monti to an existing Next app. It reads the app, asks (or takes flags, or defaults), writes Monti's own new files (the config, the schema,
+ * the three Next files, `.env.example`), makes the two edits Monti needs in the app's own files (`withCms` in `next.config`, `suppressHydrationWarning` on the root
+ * layout's `<html>`) and says exactly what it changed, installs the packages after a confirmation, and ends with a plain summary of what is left, numbered, with exact
+ * content to copy. A file whose shape init cannot edit safely is not touched: its step is in that list, with the reason. It writes no `.env.local` and never touches
+ * the database.
  *
  * Safety: every write goes through {@link ProjectWriter}, which refuses a path outside the project. An existing file is never overwritten unless the person says yes
- * (or passes `overwrite`). Nothing is written until every question is answered, so cancelling leaves the project as it was.
+ * (or passes `overwrite`); the two edits are the only change to a file that already exists. Nothing is written until every question is answered, so cancelling leaves
+ * the project as it was.
  */
 /** A package manager command `monti init` runs to install packages. */
 export interface InstallCommand {
@@ -65,6 +68,11 @@ export interface InitReport {
     skipped: string[];
     /** Existing files that were replaced (only on a yes or `overwrite`). */
     readonly overwritten: string[];
+    /** Files of the app that init edited (or would, on a dry run), with the change in one line. */
+    readonly changed: {
+        readonly file: string;
+        readonly change: string;
+    }[];
     /** Packages installed (or to install, on a dry run). */
     installed: string[];
     readonly steps: InitStep[];

@@ -12,7 +12,7 @@ export function sslmodeWarning(connectionString) {
     const mode = /[?&]sslmode=(prefer|require|verify-ca)(?=&|#|$)/i.exec(connectionString)?.[1];
     if (!mode)
         return undefined;
-    return `sslmode=${mode.toLowerCase()} makes the pg driver print a SECURITY WARNING at every start: today it treats ${mode.toLowerCase()} as verify-full (encrypted, certificate checked), and a later major version will switch to the libpq meaning`;
+    return `DATABASE_URL has sslmode=${mode.toLowerCase()}, so the database driver prints a long SECURITY WARNING every time the app starts. It is only a notice and your connection is safe: it is encrypted and the certificate is checked`;
 }
-/** What to write in the URL to say what the driver already does, so the warning has nothing left to warn about. */
-export const SSLMODE_FIX = "change sslmode=... to sslmode=verify-full in DATABASE_URL (the connection stays exactly as secure as it is now). Only if you want the libpq meaning (no certificate check for require), add uselibpqcompat=true to the URL instead";
+/** The one-line fix for the notice above. */
+export const SSLMODE_FIX = "in DATABASE_URL, change sslmode=require (or prefer, verify-ca) to sslmode=verify-full. It is the same security, and the notice goes away";

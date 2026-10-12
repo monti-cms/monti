@@ -415,14 +415,14 @@ const nextWithCms = {
         if (!file) {
             return fail("there is no next.config.ts", {
                 where: state.cwd,
-                fix: "create one that exports `withCms(nextConfig)` (withCms is exported by the package @monti-cms/nextjs/config); `monti init` writes it",
+                fix: "run `monti init`, which creates next.config.ts with the withCms wrapper (withCms comes from the package @monti-cms/nextjs/config)",
             });
         }
         return readFileSync(path.join(state.cwd, file), "utf8").includes("withCms")
             ? ok(`${file} wraps the config in withCms`)
             : fail(`${file} does not use withCms, so the build cannot transpile Monti's packages`, {
                 where: file,
-                fix: "import withCms from the package @monti-cms/nextjs/config and export `withCms(nextConfig)` instead of `nextConfig`",
+                fix: "run `monti init`, which wraps the export for you. By hand: import withCms from @monti-cms/nextjs/config and export `withCms(nextConfig)` instead of `nextConfig`",
             });
     },
 };
@@ -443,7 +443,7 @@ const nextHydration = {
             ? ok(`${layout} has suppressHydrationWarning on <html>`)
             : warn("the admin theme sets a class on <html> before React hydrates, so the first admin screen logs a hydration mismatch", {
                 where: layout,
-                fix: `add suppressHydrationWarning to the <html> tag: <html lang="en" suppressHydrationWarning>`,
+                fix: `run \`monti init\`, which adds it for you. By hand: <html lang="en" suppressHydrationWarning>`,
             });
     },
 };

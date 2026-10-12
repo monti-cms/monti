@@ -41,6 +41,8 @@ export interface InitAnswers {
     readonly adminPath: string;
     /** How people sign in to the admin: the built-in email and password login, or GitHub (an OAuth app). */
     readonly login: "password" | "github";
+    /** Read and write `:::callout` blocks (`@monti-cms/syntax-directive`), because the posts use them. */
+    readonly directiveSyntax: boolean;
 }
 /** A key from front matter as a field name: kept as it is when it is one word of letters and digits, else camel-cased. `undefined` if nothing usable is left. */
 export declare function fieldNameOf(key: string): string | undefined;

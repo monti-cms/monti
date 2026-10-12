@@ -15,6 +15,8 @@ const options = {
     blocks: { type: "string" },
     "admin-path": { type: "string" },
     login: { type: "string" },
+    "directive-syntax": { type: "boolean" },
+    "no-directive-syntax": { type: "boolean" },
     overwrite: { type: "boolean" },
     "no-install": { type: "boolean" },
     "package-manager": { type: "string" },
@@ -46,6 +48,7 @@ export async function runInitCommand(argv, io, extras = {}) {
             blocks: values.blocks,
             adminPath: values["admin-path"],
             login: values.login,
+            directiveSyntax: values["no-directive-syntax"] ? false : values["directive-syntax"],
             log: json ? undefined : io.log,
             host: extras.host,
         });

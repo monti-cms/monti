@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import { type FormatRegistry } from "../../../format/registry.js";
+import type { UnreadableBody } from "../../../server/define.js";
 import type { Site } from "../../../site/index.js";
 /** List of step names (for tests and docs). */
 export declare const CONTENT_STORE_MIGRATIONS: readonly string[];
@@ -13,9 +14,17 @@ export declare function migrateContentStore(pool: Pool, options: {
     site: Site;
     schema?: string;
     formats?: FormatRegistry;
+    /** Read the bodies kept as unreadable again after the steps (see `reconvertUnparsedBodies`). */
+    reconvertBodies?: boolean;
+    onUnreadableBody?: (body: UnreadableBody) => void;
+    detail?: (line: string) => void;
 }): Promise<{
     applied: number;
     upToDate: number;
+    reconverted?: {
+        converted: number;
+        remaining: number;
+    };
 }>;
 /**
  * Run-once job (for example, a plugin moving legacy data). Calls `run` and records the name only when the name is not in `cms_migrations`.

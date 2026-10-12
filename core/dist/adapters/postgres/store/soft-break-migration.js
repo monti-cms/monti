@@ -1,12 +1,17 @@
 import { mdxContentHash, mdxSearchText } from "./mdx-body.js";
+import { hasDirectiveBlock, kindOfState } from "./unreadable.js";
 const DEFAULT_BATCH_SIZE = 200;
 /** What one body rewrite did. Bodies that are skipped are left as they are and are named in the log. */
-const rewritten = (bodies, mdx, where, log) => {
+const rewritten = (bodies, mdx, where, log, onUnreadable) => {
     const result = bodies.insertSoftBreaks(mdx);
     if (result.status === "changed")
         return result.text;
     if (result.status === "skipped") {
-        log(`[monti] soft line endings left as they are in ${where}: ${result.reason}${result.detail ? ` (${result.detail})` : ""}`);
+        if (onUnreadable)
+            onUnreadable(result.reason, result.detail);
+        else {
+            log(`[monti] soft line endings left as they are in ${where}: ${result.reason}${result.detail ? ` (${result.detail})` : ""}`);
+        }
     }
     return mdx;
 };
@@ -32,7 +37,14 @@ export async function migrateSoftBreaks(client, qSchema, options) {
             break;
         const next = res.rows.map((row) => {
             const where = `entry_bodies ${row.entry_id}/${row.state}`;
-            const mdx = rewritten(bodies, row.mdx, where, log);
+            const mdx = rewritten(bodies, row.mdx, where, log, options.onUnreadable &&
+                ((reason, detail) => options.onUnreadable?.({
+                    where,
+                    kind: kindOfState(row.state),
+                    reason,
+                    ...(detail === undefined ? {} : { detail }),
+                    hasDirective: hasDirectiveBlock(row.mdx),
+                })));
             const base = row.translation?.baseSource;
             const baseSource = typeof base === "string" ? rewritten(bodies, base, `${where} (translation base source)`, log) : undefined;
             return {
@@ -65,7 +77,15 @@ export async function migrateSoftBreaks(client, qSchema, options) {
         if (res.rows.length === 0)
             break;
         for (const row of res.rows) {
-            const mdx = rewritten(bodies, row.mdx, `body_templates ${row.id}`, log);
+            const where = `body_templates ${row.id}`;
+            const mdx = rewritten(bodies, row.mdx, where, log, options.onUnreadable &&
+                ((reason, detail) => options.onUnreadable?.({
+                    where,
+                    kind: "template",
+                    reason,
+                    ...(detail === undefined ? {} : { detail }),
+                    hasDirective: hasDirectiveBlock(row.mdx),
+                })));
             if (mdx !== row.mdx)
                 await client.query(`UPDATE "${qSchema}".body_templates SET mdx = $1 WHERE id = $2`, [mdx, row.id]);
         }

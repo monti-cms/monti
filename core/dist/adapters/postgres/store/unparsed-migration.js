@@ -1,6 +1,7 @@
 import { computeContentHash } from "../../../core/content-hash.js";
 import { parseTranslationState } from "../../../core/translation/state.js";
 import { unparsedDocument } from "../../../doc/stored-document.js";
+import { hasDirectiveBlock, kindOfState } from "./unreadable.js";
 const DEFAULT_BATCH_SIZE = 200;
 /**
  * Every stored body is a document now. A body that had none (its MDX did not parse, had front matter, or would not read back the same)
@@ -32,6 +33,11 @@ export async function migrateUnparsedBodies(client, qSchema, options = {}) {
                 published.push(row.entry_id);
             else
                 drafts += 1;
+            options.onUnreadable?.({
+                where: `entry_bodies ${row.entry_id}/${row.state}`,
+                kind: kindOfState(row.state),
+                hasDirective: hasDirectiveBlock(row.mdx),
+            });
             return { doc: JSON.stringify(doc), contentHash: computeContentHash(row.metadata, doc) };
         });
         await client.query(`UPDATE "${qSchema}".entry_bodies AS b SET doc = v.doc::jsonb, content_hash = v.content_hash
@@ -51,8 +57,14 @@ export async function migrateUnparsedBodies(client, qSchema, options = {}) {
         const res = await client.query(`SELECT id, mdx FROM "${qSchema}".body_templates WHERE doc IS NULL AND ($1::uuid IS NULL OR id > $1::uuid) ORDER BY id LIMIT $2`, [lastTemplate ?? null, batchSize]);
         if (res.rows.length === 0)
             break;
-        for (const row of res.rows)
+        for (const row of res.rows) {
             templates.push(row.id);
+            options.onUnreadable?.({
+                where: `body_templates ${row.id}`,
+                kind: "template",
+                hasDirective: hasDirectiveBlock(row.mdx),
+            });
+        }
         await client.query(`UPDATE "${qSchema}".body_templates AS t SET doc = v.doc::jsonb
 			 FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::text[]) AS doc) AS v
 			 WHERE t.id = v.id`, [res.rows.map((row) => row.id), res.rows.map((row) => JSON.stringify(unparsedDocument(row.mdx)))]);
@@ -86,6 +98,8 @@ export async function migrateUnparsedBodies(client, qSchema, options = {}) {
         if (res.rows.length < batchSize)
             break;
     }
+    if (options.onUnreadable)
+        return { drafts, published, templates };
     if (published.length > 0) {
         log(`[monti] ${published.length} published bodies have no document and are kept as unparsed (they read as unparsed until fixed): ${published.join(", ")}`);
     }
