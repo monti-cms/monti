@@ -106,13 +106,22 @@ pnpm lint             # 코드 검사 (고치려면 pnpm lint:fix)
 pnpm check:korean     # 실행 코드의 한국어 문구가 문구 사전에만 있는지 검사
 pnpm typecheck        # 모든 패키지 타입 검사
 pnpm build            # 모든 패키지 빌드 (core → auth → storage-s3 → mdx → syntax-directive → syntax-shiki → admin → nextjs → ai → blocks → bareun → seo → git-sync)
-pnpm test:run         # 테스트 (Postgres 필요)
+pnpm test:run         # 전체 테스트, other-site·configured 재실행 포함 (Postgres 필요)
+pnpm test:quick       # 기본 프로젝트만, 로컬 작업용 (Postgres 필요)
 pnpm example:check    # 패키지를 묶어 예시 앱에 설치하고 빌드까지 확인
 ```
 
 커밋할 때 코드 검사(lint-staged)와 커밋 메시지 검사(commitlint)가 자동으로 돈다. 커밋 메시지는 영어로 `type(scope): subject` 꼴로 쓴다(예: `feat(core): add thing`). 범위(scope)는 `core`, `storage-s3`, `admin`, `nextjs`, `ai`, `blocks`, `mdx`, `seo`, `bareun`, `git-sync`, `syntax`, `example`, `scripts`, `ci`, `deps`, `release`, `repo` 중에서 고르고 생략해도 된다. push할 때는 lint·check:korean·typecheck가 돈다.
 
 테스트는 `.env.local`에 테스트용 DB 주소(`CMS_TEST_DATABASE_URL`)가 있어야 전부 돈다. 테스트는 이 DB에 임시 스키마를 만들고 끝나면 지운다.
+
+내 컴퓨터의 Postgres를 쓰면 원격 DB보다 훨씬 빠르다. 어떤 로컬 Postgres든 되고, 시간대는 UTC로 맞춘다(`ALTER DATABASE monti_test SET timezone = 'UTC'`). 실행할 때 주소를 넘기면 `.env.local`보다 우선한다.
+
+```sh
+CMS_TEST_DATABASE_URL=postgres://localhost/monti_test pnpm test:run
+```
+
+CI는 `pnpm test:run`을 돌린다. other-site 예시 설정으로 다시 도는 것은 사이트 설정을 읽는 테스트뿐이다(`packages/core/test/config-sensitive.ts`가 고른다). 설정과 무관한 테스트는 기본 실행에만 들어가 두 번 돌지 않는다.
 
 ## 버전 내기
 

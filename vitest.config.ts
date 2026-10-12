@@ -1,15 +1,22 @@
 import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
+// `pnpm test:quick` sets this: only the default project of each package, without the other-site and configured variants (CI runs everything).
+const QUICK = process.env.MONTI_TEST_QUICK === "1";
+
 export default defineConfig(({ mode }) => ({
 	test: {
 		// Runs all packages (`packages/*`) at once. Each package uses its own config file.
 		projects: [
 			"packages/*",
-			// Regression guard: re-runs the core, admin and AI tests with the other-site example config.
-			"packages/*/vitest.othersite.config.ts",
-			// Re-runs the tests that need a syntax extension switched on in the site config (`mdx({ syntax })`).
-			"packages/*/vitest.configured.config.ts",
+			...(QUICK
+				? []
+				: [
+						// Regression guard: re-runs the config-sensitive core and admin tests (and the small AI, SEO and syntax sets) with the other-site example config.
+						"packages/*/vitest.othersite.config.ts",
+						// Re-runs the tests that need a syntax extension switched on in the site config (`mdx({ syntax })`).
+						"packages/*/vitest.configured.config.ts",
+					]),
 		],
 		testTimeout: 60000,
 		hookTimeout: 60000,
