@@ -1,3 +1,4 @@
+import { placementsOf } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -753,6 +754,9 @@ describe("SchemaScreen", () => {
 
 	describe("layout in the fields tree", () => {
 		const defaultTabName = testSite.createTranslator(entriesMessages)("tab.default");
+		/** The tab the SEO plugin of the site under test places its fields in. */
+		const seoTab =
+			placementsOf(testSite.plugins).find((placement) => placement.roles?.includes("seoTitle"))?.tab ?? "SEO";
 		const savedPost = () =>
 			(lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown>; layout?: unknown } } })
 				.collections.post;
@@ -904,7 +908,7 @@ describe("SchemaScreen", () => {
 			expect(within(seo).getByText(t("layout.pluginPlaced"))).toBeTruthy();
 			expect(within(seo).getByRole("button", { name: t("row.remove", { name: "seoTitle" }) })).toBeTruthy();
 			// The tab is the plugin's: it cannot be renamed.
-			expect((screen.getByDisplayValue("SEO") as HTMLInputElement).disabled).toBe(true);
+			expect((screen.getByDisplayValue(seoTab) as HTMLInputElement).disabled).toBe(true);
 			// The plugin places it: it cannot be moved, only removed.
 			expect(within(seo).queryByRole("button", { name: t("layout.move", { name: "seoTitle" }) })).toBeNull();
 			expect(
@@ -993,7 +997,7 @@ describe("SchemaScreen", () => {
 
 			// A plugin's own tab is a real tab of the panel.
 			expect(within(preview).queryByLabelText("SEO title")).toBeNull();
-			fireEvent.click(within(preview).getByRole("tab", { name: "SEO" }));
+			fireEvent.click(within(preview).getByRole("tab", { name: seoTab }));
 			expect(await within(preview).findByLabelText("SEO title")).toBeTruthy();
 
 			// Nothing typed or picked reached the server: only reads were made.
