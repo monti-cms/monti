@@ -37,6 +37,8 @@ import { nounVars } from "./shared/noun.messages";
 import { useFolderActions } from "./shared/use-folder-actions";
 import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
 
+const PREFERENCES_KEY = ["preferences"] as const;
+
 export type ListMode = "list" | "trash";
 
 /**
@@ -53,7 +55,16 @@ function useListState(mode: ListMode) {
 		() => parseListState(site, new URLSearchParams(searchParams.toString())),
 		[searchParams, site],
 	);
-	const [preferences, setPreferences] = useState<PreferencesBody | null>(null);
+	const queryClient = useQueryClient();
+	// Cached for the session: the list is not drawn until the settings are known, and a later fetch never reorders it under the user.
+	// A failed load falls back to the defaults (the list still works); saving a setting reports its own failure.
+	const preferencesQuery = useQuery({
+		queryKey: PREFERENCES_KEY,
+		queryFn: ({ signal }) =>
+			cmsFetch<PreferencesBody>(site, cmsApiUrl("/v1/preferences"), { signal }).catch((): PreferencesBody => ({})),
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+	const preferences = preferencesQuery.data ?? null;
 
 	const collectionPrefs: CollectionPreferences = preferences?.collections?.[parsed.collection] ?? {};
 	const state: ListState = useMemo(
@@ -79,15 +90,9 @@ function useListState(mode: ListMode) {
 		[navigate, state],
 	);
 
-	useEffect(() => {
-		cmsFetch<PreferencesBody>(site, cmsApiUrl("/v1/preferences"))
-			.then(setPreferences)
-			.catch(() => setPreferences({}));
-	}, [site]);
-
 	const collection = state.collection;
 	const savePreferences = (patch: CollectionPreferences) => {
-		setPreferences((current) => ({
+		queryClient.setQueryData<PreferencesBody>(PREFERENCES_KEY, (current) => ({
 			...current,
 			collections: { ...current?.collections, [collection]: { ...current?.collections?.[collection], ...patch } },
 		}));
@@ -97,14 +102,16 @@ function useListState(mode: ListMode) {
 		}).catch(() => toast.error(t("list.prefsSaveFailed")));
 	};
 
-	return { state, update, columnSettings: collectionPrefs.columns, savePreferences };
+	// The saved sort and page size only matter when the address does not say them.
+	const ready = preferences !== null || (parsed.explicit.pageSize && parsed.explicit.sort);
+	return { state, ready, update, columnSettings: collectionPrefs.columns, savePreferences };
 }
 
 /**
  * One page of the list plus folders. Draws from cache right away and refetches in the background. Keeps the previous rows while conditions change
  * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
-function useEntriesData(state: ListState, mode: ListMode) {
+function useEntriesData(state: ListState, mode: ListMode, ready: boolean) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const isTrash = mode === "trash";
@@ -123,6 +130,8 @@ function useEntriesData(state: ListState, mode: ListMode) {
 		queryKey: listKey,
 		queryFn: ({ signal }) =>
 			cmsFetch<EntriesPage>(site, cmsApiUrl(`/v1/entries?${apiQuery}`), { signal, fallback: t("list.loadFailed") }),
+		// Waits for the saved sort and page size, so the list is requested once with them instead of twice.
+		enabled: ready,
 		// Rows from another collection have a different column layout, so they are not kept.
 		placeholderData: (previous, previousQuery) =>
 			previousQuery && new URLSearchParams(String(previousQuery.queryKey.at(-1))).get("collection") === collection
@@ -274,13 +283,13 @@ export function useEntryList(mode: ListMode) {
 	const router = useAdminRouter();
 	const queryClient = useQueryClient();
 	const isTrash = mode === "trash";
-	const { state, update, columnSettings, savePreferences } = useListState(mode);
+	const { state, ready, update, columnSettings, savePreferences } = useListState(mode);
 	const collection = state.collection;
 	const isRecord = site.isItemCollection(collection);
 	const isContent = site.isDocumentCollection(collection);
 	const options = useTaxonomyOptions(collection, !isTrash);
 
-	const data = useEntriesData(state, mode);
+	const data = useEntriesData(state, mode, ready);
 	const { items, folders } = data;
 
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
