@@ -6,6 +6,7 @@ import {
 	type PageSize,
 	type Site,
 } from "@monti-cms/core/client";
+import { pageParam, pageSizeParam } from "../lib/hooks/use-url-state";
 import type { EntryStatus } from "./shared/entry-status";
 
 /** Statuses that can be filtered in the list. Trash is seen only in its dedicated screen. */
@@ -107,8 +108,6 @@ export function parseListState(
 	params: URLSearchParams,
 ): ListState & { explicit: { pageSize: boolean; sort: boolean } } {
 	const collection = params.get("collection");
-	const pageSize = Number(params.get("pageSize"));
-	const page = Number(params.get("page"));
 	const sortField = params.get("sortField") ?? "";
 	const statuses = [...new Set(params.getAll("status"))].filter((status): status is ListStatus =>
 		(LIST_STATUSES as readonly string[]).includes(status),
@@ -134,8 +133,8 @@ export function parseListState(
 			? (sortField as ListSortField)
 			: DEFAULT_LIST_STATE.sortField,
 		sortDirection: params.get("sortDirection") === "asc" ? "asc" : "desc",
-		page: Number.isInteger(page) && page > 0 ? page : 1,
-		pageSize: pageSize === 50 || pageSize === 100 ? pageSize : 25,
+		page: pageParam.parse(params.get("page")),
+		pageSize: pageSizeParam.parse(params.get("pageSize")),
 	};
 	for (const key of DATE_KEYS) {
 		const value = params.get(key) ?? "";
