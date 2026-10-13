@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { commonMessages } from "../../../lib/common.messages";
 import { nounVars } from "../../shared/noun.messages";
 import { lifecycleConfirm, lifecycleSuccess } from "../lifecycle-confirm";
 import { entriesMessages } from "../messages";
 
 const t = testSite.createTranslator(entriesMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 const source = {
 	id: "src",
@@ -36,9 +38,9 @@ describe("status transition confirmation text", () => {
 	it("moving the original to trash reports translation languages not in trash", () => {
 		const confirm = lifecycleConfirm(testSite, "trash", source, [], collection);
 		expect(confirm).toEqual({
-			title: t("lifecycle.trash"),
+			title: tc("lifecycle.trash"),
 			description: `${t("lifecycle.trash.ask", { translation: 0, ...noun })}${t("lifecycle.trash.group", { locales: "EN" })}`,
-			confirmLabel: t("lifecycle.trash"),
+			confirmLabel: tc("lifecycle.trash"),
 			destructive: true,
 		});
 	});

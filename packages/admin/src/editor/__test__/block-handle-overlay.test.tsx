@@ -1,11 +1,13 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { renderWithSite } from "../../test/site";
 import { BlockHandleOverlay } from "../block-handle-overlay";
 import { editorMessages } from "../messages";
 
 const t = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 describe("BlockHandleOverlay DropdownMenu and drag behavior", () => {
 	it("the handle button is draggable and forwards dragstart/dragend events", () => {
@@ -75,7 +77,7 @@ describe("BlockHandleOverlay DropdownMenu and drag behavior", () => {
 		expect(onDuplicate).toHaveBeenCalledOnce();
 
 		fireEvent.click(trigger);
-		const delItem = await screen.findByRole("menuitem", { name: new RegExp(t("blockHandle.delete")) });
+		const delItem = await screen.findByRole("menuitem", { name: new RegExp(tc("delete")) });
 		fireEvent.click(delItem);
 		expect(onDelete).toHaveBeenCalledOnce();
 

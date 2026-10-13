@@ -1,14 +1,14 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { commonMessages } from "../../../lib/common.messages";
 import { renderWithSite as render } from "../../__test__/site-wrapper";
-import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateManager } from "../template-manager";
 
 const t = testSite.createTranslator(templatesMessages);
-const tShared = testSite.createTranslator(sharedMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
@@ -83,9 +83,9 @@ describe("TemplateManager", () => {
 		expect(screen.getByRole("button", { name: /^일반 게시글/ }).getAttribute("aria-current")).toBe("true");
 
 		fireEvent.change(name, { target: { value: "긴 글" } });
-		fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
+		fireEvent.click(screen.getByRole("button", { name: tc("save") }));
 
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("common.saved")));
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(tc("saved")));
 		expect((screen.getByRole("textbox", { name: t("edit.nameLabel") }) as HTMLInputElement).value).toBe("긴 글");
 	});
 
@@ -95,7 +95,7 @@ describe("TemplateManager", () => {
 		fireEvent.change(await screen.findByRole("textbox", { name: t("edit.nameLabel") }), {
 			target: { value: "긴 글" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: t("common.save") }));
+		fireEvent.click(screen.getByRole("button", { name: tc("save") }));
 
 		await waitFor(() => expect(saved).toHaveLength(1));
 		expect(saved[0]).toMatchObject({ name: "긴 글", expectedVersion: 1, doc: DOC });
@@ -110,8 +110,8 @@ describe("TemplateManager", () => {
 		});
 
 		fireEvent.click(screen.getByRole("button", { name: /^메모/ }));
-		const dialog = await screen.findByRole("alertdialog", { name: tShared("discard.title") });
-		fireEvent.click(within(dialog).getByRole("button", { name: tShared("discard.confirm") }));
+		const dialog = await screen.findByRole("alertdialog", { name: tc("discard.title") });
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("discard.confirm") }));
 
 		await waitFor(() =>
 			expect((screen.getByRole("textbox", { name: t("edit.nameLabel") }) as HTMLInputElement).value).toBe("메모"),
@@ -125,7 +125,7 @@ describe("TemplateManager", () => {
 		const alert = await screen.findByRole("alert", undefined, { timeout: 3000 });
 		expect(alert.textContent).toContain("서버 오류");
 		listFails = false;
-		fireEvent.click(within(alert).getByRole("button", { name: t("common.retry") }));
+		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
 		expect(await screen.findByText("일반 게시글")).toBeTruthy();
 	});
 });

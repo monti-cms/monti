@@ -8,6 +8,9 @@ import { Lock, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
@@ -15,19 +18,21 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
-import { errorText } from "../admin-api";
 import type { SchemaTab } from "../settings/tabs";
-import { useConfirm } from "../shared/confirm-dialog";
+import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { PageBody } from "../shared/page-body";
+import { Section } from "../shared/section";
+import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
+import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
 import { ReviewDialog } from "./review-dialog";
-import { fetchSchema, type SavedSchema, SCHEMA_KEY } from "./schema-api";
 import {
 	addCollection,
 	changeCount,
@@ -42,7 +47,6 @@ import {
 	setCollection,
 	settingChanges,
 } from "./schema-model";
-import { Section } from "./section";
 import { SiteEditor } from "./site-editor";
 
 /** Why a schema file may not be edited here, as the key of the sentence that says it. */
@@ -122,8 +126,10 @@ function SchemaEditor({
 	const names = Object.keys(collections);
 	const [selectedName, setSelected] = useState<string | undefined>(names[0]);
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
+	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
 	const dirty = !sameJson(draft, base);
+	const { dialog: guardDialog } = useUnsavedGuard(dirty);
 	const pending = changeCount(base, draft);
 	const savedNames = Object.keys(collectionsOf(base));
 
@@ -131,12 +137,6 @@ function SchemaEditor({
 		const message = takeSavedMessage();
 		if (message) toast.success(message);
 	}, []);
-	useEffect(() => {
-		if (!dirty) return;
-		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-		window.addEventListener("beforeunload", warn);
-		return () => window.removeEventListener("beforeunload", warn);
-	}, [dirty]);
 
 	const updateFile = (change: (file: Obj) => Obj) => setDraft((current) => change(current));
 	const context = useMemo(
@@ -152,12 +152,7 @@ function SchemaEditor({
 	);
 
 	const discard = async () => {
-		const ok = await confirm({
-			title: t("discard.title"),
-			description: t("discard.description"),
-			confirmLabel: t("discard.confirm"),
-			destructive: true,
-		});
+		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
 		setDraft(base);
 		setRenames([]);
@@ -214,9 +209,9 @@ function SchemaEditor({
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
 								<AlertDescription className="flex flex-col gap-1">
 									<span>{t(READ_ONLY_KEY[reason])}</span>
-									{reason === "has_code" && state.access.detail && (
+									{reason === "has_code" && (state.access.issue || state.access.detail) && (
 										<code className="text-xs" data-testid="schema-code-detail">
-											{state.access.detail}
+											{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
 										</code>
 									)}
 								</AlertDescription>
@@ -228,12 +223,12 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{applyFailed && (
-							<Alert variant="danger" layout="stack">
+							<Alert variant="destructive" layout="stack">
 								<AlertDescription>{t("save.applyFailedNote")}</AlertDescription>
 							</Alert>
 						)}
 						{state.issues.length > 0 && (
-							<Alert variant="danger" layout="stack" data-testid="schema-file-invalid">
+							<Alert variant="destructive" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
 								<AlertDescription className="flex flex-col gap-2">
 									<span>{t("invalid.description")}</span>
@@ -242,7 +237,7 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{issues.length > 0 && !reviewing && (
-							<Alert variant="danger" layout="stack">
+							<Alert variant="destructive" layout="stack">
 								<AlertTitle>{t("issues.title")}</AlertTitle>
 								<AlertDescription>
 									<IssueList issues={issues} />
@@ -343,6 +338,7 @@ function SchemaEditor({
 				</div>
 			</div>
 			{dialog}
+			{guardDialog}
 			<NewCollectionDialog
 				open={creating}
 				onOpenChange={setCreating}
@@ -385,7 +381,7 @@ export function SchemaSettings({ tab, actionsSlot }: { tab: SchemaTab; actionsSl
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
 	const query = useQuery({
-		queryKey: SCHEMA_KEY,
+		queryKey: schemaKeys.state(),
 		queryFn: ({ signal }) => fetchSchema(site, signal),
 		// The file is the truth: a screen that was open while it changed would edit a stale copy.
 		staleTime: 0,
@@ -397,14 +393,7 @@ export function SchemaSettings({ tab, actionsSlot }: { tab: SchemaTab; actionsSl
 	return (
 		<div className="flex flex-col gap-3 p-4 lg:p-10">
 			{error ? (
-				<Alert variant="danger" layout="stack">
-					<AlertDescription className="flex items-center gap-3">
-						{error}
-						<Button type="button" variant="outline" size="sm" onClick={() => void query.refetch()}>
-							{t("load.retry")}
-						</Button>
-					</AlertDescription>
-				</Alert>
+				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
 			) : (
 				<Skeleton className="h-40 w-full" />
 			)}

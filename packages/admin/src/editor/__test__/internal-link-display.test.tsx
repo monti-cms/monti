@@ -3,6 +3,7 @@ import { Editor } from "@tiptap/core";
 import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { storedDoc, text } from "../../test/stored-doc";
@@ -15,6 +16,7 @@ import { storedToTiptap, tiptapToStored } from "../tiptap-content";
 
 const { LINKABLE_COLLECTIONS, DEFAULT_LOCALE, PREFIXED_LOCALES, adminUrl, contentPath, localizePath } = testSite;
 const t = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 vi.mock("../../ui/tooltip", () => ({
 	Tooltip: ({ children }: { children: React.ReactNode }) => children,
@@ -182,7 +184,7 @@ describe("where an internal link goes, shown in the editor", () => {
 		expect(await screen.findByText(t("link.target", { title: "안녕하세요" }))).toBeTruthy();
 		// The address input is empty: the display address is not what the link holds.
 		expect((screen.getByLabelText(t("link.href")) as HTMLInputElement).value).toBe("");
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("popoverForm.apply") })));
+		act(() => fireEvent.click(screen.getByRole("button", { name: tc("apply") })));
 
 		expect(screen.queryByText(t("link.invalid"))).toBeNull();
 		const saved = tiptapToStored(testSite, editor.getJSON());
@@ -196,7 +198,7 @@ describe("where an internal link goes, shown in the editor", () => {
 
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("link.edit") })));
 		act(() => fireEvent.change(screen.getByLabelText(t("link.href")), { target: { value: "https://example.com" } }));
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("popoverForm.apply") })));
+		act(() => fireEvent.click(screen.getByRole("button", { name: tc("apply") })));
 
 		const saved = JSON.stringify(tiptapToStored(testSite, editor.getJSON()));
 		expect(saved).not.toContain(TARGET);

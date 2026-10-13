@@ -1,12 +1,13 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/client";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import type { TranslatorFor } from "../translator";
 import { type LinkTarget, useLinkTarget } from "./link-targets";
 import { editorMessages } from "./messages";
 
-const nameOf = (t: TranslatorFor<typeof editorMessages>, target: LinkTarget) => target.title || t("toolbar.untitled");
+const nameOf = (tc: TranslatorFor<typeof commonMessages>, target: LinkTarget) => target.title || tc("untitled");
 
 /**
  * Where an internal link goes, shown in the link bubble: the title and the address of the entry, which opens the entry (its page on the site when it is
@@ -14,6 +15,7 @@ const nameOf = (t: TranslatorFor<typeof editorMessages>, target: LinkTarget) => 
  */
 export function LinkTargetAnchor({ entryId, className }: { entryId: string; className?: string }) {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const state = useLinkTarget(entryId);
 	if (!state || state.status === "loading") {
 		return <span className={cn("px-1 text-cms-muted-foreground text-xs", className)}>{t("link.targetLoading")}</span>;
@@ -28,8 +30,8 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 	}
 	const { target } = state;
 	const label = target.published
-		? t("link.targetOpenSite", { title: nameOf(t, target) })
-		: t("link.targetOpenAdmin", { title: nameOf(t, target) });
+		? t("link.targetOpenSite", { title: nameOf(tc, target) })
+		: t("link.targetOpenAdmin", { title: nameOf(tc, target) });
 	return (
 		<a
 			href={target.href}
@@ -41,7 +43,7 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 			onMouseDown={(event) => event.preventDefault()}
 			className={cn("flex min-w-0 max-w-64 flex-col px-1 text-xs", className)}
 		>
-			<span className="truncate text-cms-primary underline underline-offset-2">{nameOf(t, target)}</span>
+			<span className="truncate text-cms-primary underline underline-offset-2">{nameOf(tc, target)}</span>
 			<span className="truncate text-cms-muted-foreground">
 				{target.path ?? ""}
 				{target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}
@@ -53,12 +55,13 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 /** A line in the link form saying where the link goes now. */
 export function LinkTargetSummary({ entryId }: { entryId: string }) {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const state = useLinkTarget(entryId);
 	let text: string;
 	if (!state || state.status === "loading") text = t("link.targetLoading");
 	else if (state.status === "missing") text = t("link.targetMissing");
 	else if (state.status === "error") text = t("link.targetUnavailable");
-	else text = t("link.target", { title: nameOf(t, state.target) });
+	else text = t("link.target", { title: nameOf(tc, state.target) });
 	const path = state?.status === "ready" ? state.target.path : null;
 	return (
 		<div className="grid gap-0.5 text-xs">

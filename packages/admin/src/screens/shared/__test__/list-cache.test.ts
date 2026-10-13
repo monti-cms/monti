@@ -1,6 +1,7 @@
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { describe, expect, it } from "vitest";
-import { applyOptimistic, type EntriesPage, type OptimisticContext } from "../list-cache";
+import type { EntriesPage } from "../../../api/entries";
+import { applyOptimistic, type OptimisticContext } from "../list-cache";
 
 const row = (id: string, patch: Partial<ListEntriesItem> = {}): ListEntriesItem => ({
 	id,

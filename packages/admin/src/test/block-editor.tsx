@@ -1,7 +1,11 @@
 import { type BlockDefinition, SiteProvider } from "@monti-cms/core/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { NodeViewProps } from "@tiptap/react";
 import { testSite } from "../../../core/test/site";
 import { BlockEditorProvider, type BlockView } from "../editor/blocks/use-block-editor";
+
+/** The views look media up through the query cache; no retries so a failed lookup shows at once. */
+const testQueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 /**
  * Renders a block view without a Tiptap node view renderer: the view gets its `useBlockEditor` context from the node view props a test builds
@@ -9,8 +13,10 @@ import { BlockEditorProvider, type BlockView } from "../editor/blocks/use-block-
  */
 export const withBlockEditor = (View: BlockView, definition: BlockDefinition) => (props: NodeViewProps) => (
 	<SiteProvider site={testSite}>
-		<BlockEditorProvider nodeView={props} definition={definition}>
-			<View />
-		</BlockEditorProvider>
+		<QueryClientProvider client={testQueryClient}>
+			<BlockEditorProvider nodeView={props} definition={definition}>
+				<View />
+			</BlockEditorProvider>
+		</QueryClientProvider>
 	</SiteProvider>
 );

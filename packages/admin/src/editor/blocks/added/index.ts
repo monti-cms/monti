@@ -1,4 +1,4 @@
-export { addedBlockConverters, addedBlockConvertersOf, parentOnlyTypes } from "./converter";
+export { addedBlockConvertersOf, parentOnlyTypes } from "./converter";
 export { addedBlockInsertActions, insertContentOf } from "./inserts";
-export { addedBlockNodes, createAddedBlockNode } from "./nodes";
-export { addedBlockOfNode, addedNodeBlocks, blockNodeName, isBodyContainer } from "./shared";
+export { addedBlockNodes } from "./nodes";
+export { addedNodeBlocks, blockNodeName } from "./shared";

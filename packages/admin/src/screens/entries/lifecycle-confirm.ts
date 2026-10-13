@@ -1,5 +1,6 @@
 import type { Site } from "@monti-cms/core/client";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import { commonMessages } from "../../lib/common.messages";
 import type { ConfirmRequest } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";
 import { type EntryData, isTranslationEntry } from "./entry-form";
@@ -13,12 +14,12 @@ export type ConfirmedLifecycleAction = Extract<LifecycleAction, "archive" | "tra
 
 /** Name of the transition. Buttons and the "save first" hint use the same words. */
 export const lifecycleLabel = (site: Site): Record<LifecycleAction, string> => {
-	const t = site.createTranslator(entriesMessages);
+	const tc = site.createTranslator(commonMessages);
 	return {
-		archive: t("lifecycle.archive"),
-		unarchive: t("lifecycle.unarchive"),
-		trash: t("lifecycle.trash"),
-		restore: t("lifecycle.restore"),
+		archive: tc("lifecycle.archive"),
+		unarchive: tc("lifecycle.unarchive"),
+		trash: tc("lifecycle.trash"),
+		restore: tc("lifecycle.restore"),
 	};
 };
 
@@ -30,17 +31,6 @@ export const lifecycleSuccess = (site: Site): Record<LifecycleAction, string> =>
 		unarchive: t("lifecycle.success.unarchive"),
 		trash: t("lifecycle.success.trash"),
 		restore: t("lifecycle.success.restore"),
-	};
-};
-
-/** Text to announce when the transition fails. */
-export const lifecycleFailed = (site: Site): Record<LifecycleAction, string> => {
-	const t = site.createTranslator(entriesMessages);
-	return {
-		archive: t("lifecycle.failed.archive"),
-		unarchive: t("lifecycle.failed.unarchive"),
-		trash: t("lifecycle.failed.trash"),
-		restore: t("lifecycle.failed.restore"),
 	};
 };
 

@@ -334,8 +334,11 @@ export function StatsPage() {
 자리에는 `SlotRegistryProvider`(`@monti-cms/admin/slots`)로 동작을 붙인다.
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
-`cn`, 확인 대화상자(`useConfirm`), 제목 줄 동작(`PageActions`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
-(`EntryForm`·`EntryData`)이 들어 있다. 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
+`cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`), 제목 줄 동작(`PageActions`)과 관리자 틀 안의 페이지(`ShellPage`),
+목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`·`DialogFormFooter`), 상태 부품(`StatusIndicator`·`Badge`·
+`Alert`·`LoadErrorAlert`·`FieldError`), `commonMessages`(저장·취소·다시 시도 등), `usePreference`, 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
+(`EntryForm`·`EntryData`)이 들어 있다. 색은 `--cms-success`·`--cms-warning`·`--cms-destructive` 토큰(`-soft`·`-foreground` 포함)에서 오며 원색 클래스는 쓰지 않는다.
+관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
 | 진입점 | 내용 |
 |---|---|
@@ -348,7 +351,7 @@ export function StatsPage() {
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
-| `/api` | 관리자 API 부르기(`cmsFetch`) |
+| `/api` | 관리자 API 부르기(`cmsFetch`·`CmsApiError`·`errorText`·`isConflict`)와 그것으로 쓰기(`useCmsMutation`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
 
@@ -405,6 +408,18 @@ Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않�
 그 아래에서 `useEntryEditorContext()`로 편집기를 읽고, 값 하나만 보고 다시 그리려면 `useEntryEditorContext((editor) => editor.saveStatus)`처럼 쓴다.
 서버 호출과 복구본 저장소는 테스트를 위해 `client`·`recoveryStore` 옵션으로 바꿀 수 있다. 기본 항목 편집 화면(`EntryEditorShell`)이 이 훅 위에 만들어져 있고,
 토스트·확인 대화상자·화면 이동은 그 화면이 맡는다.
+
+## 데이터 계층과 기억하는 상태
+
+화면은 `fetch`를 직접 부르지 않는다. 자원마다 `src/api/`에 모듈이 하나씩 있고(`entries`, `media`, `folders`, `templates`, `events`, `api-keys`, `schema`, `preferences`), 타입이 붙은 요청 함수와 쿼리 키 팩토리 하나(`entriesKeys`, `mediaKeys` 등)를 내보낸다. 플러그인 화면도 자기 `api.ts`로 같은 모양을 따른다. 쓰기는 `useCmsMutation({ fn, success, failure, invalidate, optimistic })`(`@monti-cms/admin/api`)로 하며, 토스트와 낙관적 갱신·되돌리기, 무효화를 이 훅이 맡는다. 오류를 글로 바꾸는 곳은 `errorText(site, error, fallback)` 하나이고, `isConflict(error)`는 오래된 값으로 쓴 충돌을 다른 실패와 가른다.
+
+화면이 기억하는 것은 세 곳 중 하나에 둔다.
+
+| 종류 | 위치 | 읽는 법 |
+| --- | --- | --- |
+| 기기별(패널 너비, 미디어 격자·목록, 본문 너비, 창 열림 여부) | 브라우저 `localStorage`, 사이트별 | `usePreference(name, codec, default)` |
+| 사람별(컬렉션의 목록 열, 정렬, 쪽당 개수) | 서버 `/v1/preferences` | `api/preferences` |
+| 보기별(쪽, 쪽당 개수, 필터, 검색) | 주소 | `useUrlState({ page: pageParam, ... })` |
 
 ## 스타일
 

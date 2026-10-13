@@ -1,24 +1,7 @@
 import { toast } from "sonner";
+import type { MediaItem } from "../../api/media";
 import type { TranslatorFor } from "../../translator";
 import type { mediaMessages } from "./messages";
-
-/** One item of the media list API. */
-export interface MediaItem {
-	id: string;
-	status: "ready" | "deleting" | "pending" | "failed";
-	filename: string;
-	mimeType: string | null;
-	byteSize: number | null;
-	width: number | null;
-	height: number | null;
-	publicUrl: string | null;
-	original: { mimeType: string | null; byteSize: number | null; width: number | null; height: number | null } | null;
-	defaultAlt: string;
-	defaultCaption: string;
-	createdAt: string;
-	referencesCount: number;
-	references: { entryId: string; title: string | null; collection: string; state: "working" | "published" }[];
-}
 
 /** One post that uses the media. Counts previously tallied separately for the draft being edited and the published post are merged into one per post. */
 export interface MediaUsage {
@@ -70,12 +53,12 @@ export const usageLabel = (t: TranslatorFor<typeof mediaMessages>, media: MediaI
 export const usageNoteLabel = (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) =>
 	t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
 
-export async function copyText(t: TranslatorFor<typeof mediaMessages>, text: string, success: string) {
+export async function copyText(text: string, success: string, failure: string) {
 	try {
 		await navigator.clipboard.writeText(text);
 		toast.success(success);
 	} catch {
-		toast.error(t("common.copyFailed"));
+		toast.error(failure);
 	}
 }
 

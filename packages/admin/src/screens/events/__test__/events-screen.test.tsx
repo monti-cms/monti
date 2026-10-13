@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { createTestRouter } from "../../../test/router";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
@@ -11,9 +11,6 @@ const t = testSite.createTranslator(eventsMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
-vi.mock("../../../router", () => ({
-	AdminLink: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
-}));
 
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (
@@ -40,7 +37,10 @@ const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json:
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// The filter and page live in the address, so every test gets an address of its own.
+let render: ReturnType<typeof createTestRouter>["render"];
 beforeEach(() => {
+	render = createTestRouter().render;
 	vi.clearAllMocks();
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET";
@@ -122,9 +122,15 @@ describe("EventsScreen", () => {
 	});
 
 	it("retries everything due", async () => {
+		let retried = false;
 		fetchMock.mockImplementation(async (_input: string, init?: RequestInit) => {
-			if (init?.method === "POST") return json({ delivered: 1, failed: 0, dead: 0, counts });
-			return json({ items: [], total: 0, counts });
+			if (init?.method === "POST") {
+				retried = true;
+				return json({ delivered: 1, failed: 0, dead: 0, counts });
+			}
+			return retried
+				? json({ items: [], total: 0, counts })
+				: json({ items: [item("e1", "search-index", "failed")], total: 1, counts });
 		});
 		renderScreen();
 		fireEvent.click(await screen.findByRole("button", { name: t("action.retryAll") }));
@@ -132,6 +138,8 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
+		// With nothing listed there is nothing to retry.
+		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
 
 	it("opens on all recent events, not only the failed ones", async () => {
@@ -161,8 +169,11 @@ describe("EventsScreen", () => {
 	});
 
 	it("filters by delivery status and returns to all from the empty state", async () => {
+		// The sidebar's failed-delivery count is a request without a state; the list is the one that names states.
 		const requested = () =>
-			fetchMock.mock.calls.map(([input]) => new URL(String(input), "http://localhost").searchParams.getAll("state"));
+			fetchMock.mock.calls
+				.map(([input]) => new URL(String(input), "http://localhost").searchParams.getAll("state"))
+				.filter((states) => states.length > 0);
 		fetchMock.mockImplementation(async (input: string) => {
 			const states = new URL(input, "http://localhost").searchParams.getAll("state");
 			const onlyFailed = states.length === 2 && states.includes("failed");

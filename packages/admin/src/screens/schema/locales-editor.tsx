@@ -3,15 +3,20 @@
 import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { Button } from "../../ui/button";
+import { Panel } from "../../ui/card";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
-import { Labeled, Pick, TextInput, useSchemaEdit } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { Section } from "../shared/section";
+import { Pick, useSchemaEdit } from "./controls";
+import { schemaLocalesMessages } from "./locales.messages";
 import { schemaMessages } from "./messages";
 import { collectionsOf, type Locale, localesOf, moveItem, type Obj, sectionOf, setProp } from "./schema-model";
-import { Section } from "./section";
 
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
 const zonesWith = (current: string | undefined): string[] => {
@@ -46,7 +51,7 @@ function TimeZonePick({
 	value: string | undefined;
 	onChange: (value: string | undefined) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaLocalesMessages);
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	const zones = useMemo(() => zonesWith(value), [value]);
@@ -96,7 +101,8 @@ function LocaleDialog({
 	onSave: (locale: Locale) => void;
 	onClose: () => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaLocalesMessages);
+	const tc = useTranslator(commonMessages);
 	const [code, setCode] = useState(locale?.code ?? "");
 	const [name, setName] = useState(locale?.name ?? "");
 	const [label, setLabel] = useState(locale?.label ?? "");
@@ -140,14 +146,12 @@ function LocaleDialog({
 					<Labeled label={t("locales.label")} hint={t("locales.labelHint")}>
 						<Input value={label} aria-label={t("locales.label")} onChange={(event) => setLabel(event.target.value)} />
 					</Labeled>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("locales.cancel")}
-						</Button>
-						<Button type="submit" disabled={!ok}>
-							{locale ? t("locales.save") : t("locales.add")}
-						</Button>
-					</DialogFooter>
+					<DialogFormFooter
+						onCancel={onClose}
+						cancelLabel={tc("cancel")}
+						submitLabel={locale ? tc("save") : t("locales.add")}
+						disabled={!ok}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>
@@ -175,7 +179,8 @@ export function LocalesEditor({
 	savedCodes?: readonly string[];
 	update: (change: (file: Obj) => Obj) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaLocalesMessages);
+	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	const locales = localesOf(file);
 	const [dialog, setDialog] = useState<{ code: string | null } | null>(null);
@@ -195,14 +200,14 @@ export function LocalesEditor({
 		},
 		{
 			kind: "item",
-			label: t("row.up", { name: locale.code }),
+			label: ts("row.up", { name: locale.code }),
 			icon: ArrowUp,
 			disabled: disabled || index === 0,
 			onSelect: () => change(moveItem(locales, index, -1)),
 		},
 		{
 			kind: "item",
-			label: t("row.down", { name: locale.code }),
+			label: ts("row.down", { name: locale.code }),
 			icon: ArrowDown,
 			disabled: disabled || index === locales.length - 1,
 			onSelect: () => change(moveItem(locales, index, 1)),
@@ -210,7 +215,7 @@ export function LocalesEditor({
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: t("row.remove", { name: locale.code }),
+			label: ts("row.remove", { name: locale.code }),
 			icon: Trash2,
 			destructive: true,
 			disabled,
@@ -227,7 +232,7 @@ export function LocalesEditor({
 				note={t("locales.contentNote")}
 				testId="locales-content"
 			>
-				<div className="overflow-hidden rounded-lg border bg-cms-card">
+				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
 						<span className="text-cms-muted-foreground text-sm">{t("locales.count", { count: locales.length })}</span>
 						<Button
@@ -272,7 +277,7 @@ export function LocalesEditor({
 							</li>
 						))}
 					</ul>
-				</div>
+				</Panel>
 			</Section>
 			<Section
 				wide

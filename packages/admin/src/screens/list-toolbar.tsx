@@ -2,7 +2,8 @@
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { Search, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
@@ -14,6 +15,7 @@ import { type ColumnFilter, columnLabel, columnsFor, filterFor, isColumnFiltered
 import { clearFiltersPatch, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { statusLabels } from "./shared/entry-status";
+import { useDebouncedInput } from "./shared/use-debounced";
 import type { TaxonomyOption, TaxonomyOptions } from "./shared/use-taxonomy";
 
 export interface FilterChip {
@@ -52,11 +54,12 @@ function describe(site: Site, filter: ColumnFilter, state: ListState, options: T
  */
 export function filterChips(site: Site, state: ListState, options: TaxonomyOptions): FilterChip[] {
 	const t = site.createTranslator(screensMessages);
+	const tc = site.createTranslator(commonMessages);
 	const chips: FilterChip[] = [];
 	if (state.search.trim()) {
 		chips.push({
 			key: "search",
-			label: `${state.includeBody ? t("toolbar.chipBodySearch") : t("toolbar.chipSearch")}: "${state.search.trim()}"`,
+			label: `${state.includeBody ? t("toolbar.chipBodySearch") : tc("search")}: "${state.search.trim()}"`,
 			clear: { search: "", includeBody: false },
 		});
 	}
@@ -84,13 +87,7 @@ export function ListSearch({
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const [search, setSearch] = useState(state.search);
-	useEffect(() => setSearch(state.search), [state.search]);
-	useEffect(() => {
-		if (search === state.search) return;
-		const timer = setTimeout(() => onChange({ search }), 300);
-		return () => clearTimeout(timer);
-	}, [search, state.search, onChange]);
+	const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange({ search: text }));
 
 	const isContent = site.isDocumentCollection(state.collection);
 	return (

@@ -13,6 +13,7 @@ import {
 import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { commonMessages } from "../lib/common.messages";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
@@ -33,6 +34,7 @@ const clamp = (val: number, min: number, max: number) => Math.min(max, Math.max(
 
 export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply }: ImageCropDialogProps) {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const imgRef = useRef<HTMLImageElement>(null);
 	const activeDragCleanupRef = useRef<(() => void) | null>(null);
@@ -381,13 +383,13 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 
 					<DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
 						<Button type="button" variant="ghost" disabled={isFull && rotateDraft === 0} onClick={handleResetAll}>
-							{t("imageCrop.reset")}
+							{tc("reset")}
 						</Button>
 						<div className="flex items-center gap-2">
 							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-								{t("imageCrop.cancel")}
+								{tc("cancel")}
 							</Button>
-							<Button type="submit">{t("imageCrop.apply")}</Button>
+							<Button type="submit">{tc("apply")}</Button>
 						</div>
 					</DialogFooter>
 				</form>

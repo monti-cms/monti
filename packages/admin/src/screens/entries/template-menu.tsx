@@ -1,9 +1,13 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/document";
+import type { BodyTemplate } from "@monti-cms/core/runtime";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
+import { listTemplates, templatesKeys } from "../../api/templates";
+import { commonMessages } from "../../lib/common.messages";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -12,11 +16,10 @@ import {
 	DropdownMenuTrigger,
 } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
-import { cmsFetch } from "../admin-api";
 import { useConfirm } from "../shared/confirm-dialog";
 import { entriesMessages } from "./messages";
 
-type Template = { id: string; name: string; doc: StoredDocument };
+type Template = BodyTemplate;
 
 /**
  * Template menu at the end of the editor toolbar. Fetches the list on first open.
@@ -34,25 +37,22 @@ export function TemplateMenu({
 	onApply: (doc: StoredDocument) => void;
 }) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const [open, setOpen] = useState(false);
-	const [templates, setTemplates] = useState<Template[] | null>(null);
-	const [loadFailed, setLoadFailed] = useState(false);
 	const { confirm, dialog } = useConfirm();
-
-	const load = async () => {
-		setLoadFailed(false);
-		try {
-			const data = await cmsFetch<{ items: Template[] }>(site, cmsApiUrl("/v1/templates"));
-			setTemplates(data.items);
-		} catch {
-			setLoadFailed(true);
-		}
-	};
+	// Fetched on first open, then kept: the manager page shares the same cache.
+	const templatesQuery = useQuery({
+		queryKey: templatesKeys.list(),
+		queryFn: ({ signal }) => listTemplates(site, signal),
+		enabled: open,
+	});
+	const templates = templatesQuery.data ?? null;
+	const loadFailed = templatesQuery.isError && templates === null;
 
 	const openMenu = (next: boolean) => {
 		setOpen(next);
-		if (next && !templates) void load();
+		if (next && templatesQuery.isError) void templatesQuery.refetch();
 	};
 
 	const choose = async (template: Template) => {
@@ -62,7 +62,7 @@ export function TemplateMenu({
 			!(await confirm({
 				title: t("template.applyTitle"),
 				description: t("template.applyAsk", { name: template.name }),
-				confirmLabel: t("template.apply"),
+				confirmLabel: tc("apply"),
 				destructive: true,
 			}))
 		) {
@@ -85,13 +85,13 @@ export function TemplateMenu({
 					{loadFailed ? (
 						<>
 							<DropdownMenuItem disabled>{t("template.loadFailed")}</DropdownMenuItem>
-							<DropdownMenuItem closeOnClick={false} onClick={() => void load()}>
+							<DropdownMenuItem closeOnClick={false} onClick={() => void templatesQuery.refetch()}>
 								<RefreshCw aria-hidden />
 								{t("retry")}
 							</DropdownMenuItem>
 						</>
 					) : templates === null ? (
-						<DropdownMenuItem disabled>{t("loading")}</DropdownMenuItem>
+						<DropdownMenuItem disabled>{tc("loading")}</DropdownMenuItem>
 					) : templates.length === 0 ? (
 						<DropdownMenuItem disabled>{t("template.none")}</DropdownMenuItem>
 					) : (

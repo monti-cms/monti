@@ -1,9 +1,10 @@
 import { vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { CmsApiError } from "../../../api/client";
+import type { EntryEditorClient, EntryWriteResult } from "../../../api/entries";
+import type { CmsIssue } from "../../../api/error-message";
 import { docOf } from "../../../test/mdx";
-import { CmsApiError } from "../../admin-api";
-import type { CmsIssue } from "../../api-error-message";
-import type { EntryEditorClient, EntryWriteResult, RecoveryRecord, RecoveryStore } from "../entry-editor-client";
+import type { RecoveryRecord, RecoveryStore } from "../entry-editor-client";
 import { type EntryData, type EntryForm, type EntryFormPatch, formFingerprint, formFromEntry } from "../entry-form";
 
 /**

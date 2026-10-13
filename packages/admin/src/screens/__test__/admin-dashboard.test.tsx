@@ -45,10 +45,16 @@ const server = {
 };
 let fetchMock: ReturnType<typeof vi.fn>;
 
+/** The requests for the list itself: the sidebar's trash count asks for the same collection with the trashed status. */
 const entryRequests = () =>
 	fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
-		.filter((url) => url.pathname === "/api/monti/v1/entries" && url.searchParams.get("collection") === "post");
+		.filter(
+			(url) =>
+				url.pathname === "/api/monti/v1/entries" &&
+				url.searchParams.get("collection") === "post" &&
+				!url.searchParams.getAll("status").includes("trashed"),
+		);
 const calls = (method: string, path: string) =>
 	fetchMock.mock.calls.filter(
 		([input, init]) => (init?.method ?? "GET") === method && String(input).split("?")[0] === path,

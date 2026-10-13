@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText } from "@monti-cms/admin/api";
 import {
 	Combobox,
 	ComboboxContent,
@@ -10,14 +10,12 @@ import {
 	ComboboxList,
 	cn,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import type { AiModelInfo } from "../connection";
 import { aiCommonMessages } from "./ai-common.messages";
-
-/** Where to fetch the model list from. A saved connection by id; before saving, by URL and key. */
-export type ModelSource = { providerId: string } | { url: string; apiKey?: string; keyId?: string };
+import { aiKeys, listAiModels, type ModelSource } from "./api";
 
 /**
  * Model list of a generation connection. A list fetched once is not fetched again for 10 minutes, and is reused after saving or reopening.
@@ -27,16 +25,10 @@ export function useModelList(source: ModelSource | null) {
 	const site = useSite();
 	const t = useTranslator(aiCommonMessages);
 	const query = useQuery({
-		queryKey: ["cms", "ai", "models", source],
+		queryKey: aiKeys.models(source),
+		// `enabled` keeps the call from running without a source.
 		queryFn: async ({ signal }) =>
-			(
-				await cmsFetch<{ items: AiModelInfo[] }>(site, cmsApiUrl("/v1/ai/models"), {
-					method: "POST",
-					json: source,
-					signal,
-					fallback: t("modelsFailed"),
-				})
-			).items,
+			source ? (await listAiModels(site, source, { signal, fallback: t("modelsFailed") })).items : [],
 		enabled: source !== null,
 		staleTime: 10 * 60_000,
 		retry: false,

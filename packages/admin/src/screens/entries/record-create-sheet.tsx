@@ -2,7 +2,6 @@
 
 import { type Collection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useCallback, useRef, useState } from "react";
-import type { TranslatorFor } from "../../translator";
 import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet";
 import { RecordPanel } from "../record-panel";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -13,14 +12,9 @@ import { entriesMessages } from "./messages";
 type Request = { collection: Collection; initial: EntryFormPatch };
 
 /** The saved item in the shape of a relation option. */
-export const optionOf = (
-	site: Site,
-	t: TranslatorFor<typeof entriesMessages>,
-	collection: string,
-	saved: EntryData,
-) => ({
+export const optionOf = (site: Site, untitled: string, collection: string, saved: EntryData) => ({
 	id: saved.id,
-	title: site.titleOfValues(collection, saved.working?.metadata ?? {}) || saved.workingSlug || t("untitled"),
+	title: site.titleOfValues(collection, saved.working?.metadata ?? {}) || saved.workingSlug || untitled,
 	slug: saved.publishedSlug ?? saved.workingSlug ?? null,
 });
 

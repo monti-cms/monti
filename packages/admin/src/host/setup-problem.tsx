@@ -32,7 +32,7 @@ export function SetupProblemScreen({ cms }: { cms: Pick<Cms, "site"> }) {
 	const t = cms.site.createTranslator(layoutMessages);
 	return (
 		<div className="cms-admin flex min-h-screen items-center justify-center bg-cms-background p-4 text-cms-foreground">
-			<Alert variant="danger" layout="stack" className="max-w-md">
+			<Alert variant="destructive" layout="stack" className="max-w-md">
 				<AlertTitle>{t("setupTitle")}</AlertTitle>
 				<AlertDescription className="mt-1">{t("setupBody")}</AlertDescription>
 			</Alert>

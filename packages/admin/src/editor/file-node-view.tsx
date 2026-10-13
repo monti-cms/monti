@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	cmsApiUrl,
 	type FileKind,
 	fileKindOf,
 	fileTypeLabel,
@@ -9,37 +8,32 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/client";
+import { useQuery } from "@tanstack/react-query";
 import { FileArchive, FileText, FileType } from "lucide-react";
-import { useEffect, useState } from "react";
+import { getMedia, mediaKeys } from "../api/media";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
-import { cmsFetch } from "../screens/admin-api";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { editorMessages } from "./messages";
 
 const ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };
 
-type MediaInfo = { filename: string; byteSize: number | null; mimeType: string | null; status?: string };
-
 /** Edit view of the core file block (`blockViews.file`): the attached file card. Same look as the public view card, and the name can be edited directly. */
 export function FileBlockView() {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const block = useBlockEditor();
 	const mediaId = typeof block.values.mediaId === "string" ? block.values.mediaId : "";
 	const label = typeof block.values.label === "string" ? block.values.label : "";
-	const [media, setMedia] = useState<MediaInfo | null | "failed">(null);
 	const { editable } = block;
-
-	useEffect(() => {
-		if (!mediaId) return;
-		let cancelled = false;
-		cmsFetch<MediaInfo>(site, cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`))
-			.then((result) => !cancelled && setMedia(result))
-			.catch(() => !cancelled && setMedia("failed"));
-		return () => {
-			cancelled = true;
-		};
-	}, [mediaId, site]);
+	const lookup = useQuery({
+		queryKey: mediaKeys.detail(mediaId),
+		queryFn: ({ signal }) => getMedia(site, mediaId, signal),
+		enabled: mediaId !== "",
+		retry: false,
+	});
+	const media = lookup.isError ? "failed" : (lookup.data ?? null);
 
 	const info = media && media !== "failed" ? media : null;
 	const filename = info?.filename ?? "";
@@ -51,7 +45,7 @@ export function FileBlockView() {
 				? [fileTypeLabel(filename, info.mimeType), info.byteSize ? formatFileSize(info.byteSize) : null]
 						.filter(Boolean)
 						.join(" · ")
-				: t("fileNode.loading");
+				: tc("loading");
 
 	return (
 		<BlockFrame

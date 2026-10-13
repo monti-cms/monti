@@ -1,58 +1,59 @@
 "use client";
 
-import {
-	type ApiKeyList,
-	type ApiKeySlotView,
-	type ApiKeyView,
-	cmsApiUrl,
-	useSite,
-	useTranslator,
-} from "@monti-cms/core/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/client";
 import { KeyRound, Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import { toast } from "sonner";
+import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";
+import { errorText } from "../../api/client";
+import { useCmsMutation } from "../../api/use-cms-mutation";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Panel } from "../../ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
-import { cmsFetch, errorText } from "../admin-api";
-import { Labeled } from "../schema/controls";
-import { Section } from "../schema/section";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
-import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { useConfirm } from "../shared/confirm-dialog";
+import { Labeled } from "../shared/labeled";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { PageBody } from "../shared/page-body";
+import { Section } from "../shared/section";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
-import { API_KEYS_KEY, useApiKeys } from "./api-keys-api";
 import { apiKeysMessages } from "./messages";
 
 type Editing = { mode: "add" } | { mode: "rename" | "replace"; key: ApiKeyView };
 
-/** Assigns a key to a plugin slot, or clears it (`none`). A typed key is saved in the same request. */
-async function putSlot(site: ReturnType<typeof useSite>, plugin: string, slot: string, key: unknown, fallback: string) {
-	return cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), { method: "PUT", json: { plugin, slot, key }, fallback });
-}
-
 /** The API keys page: one card with a row per key, the one primary action ("Add key") in the page header, and the dialogs to add, rename, replace and delete. */
 export function ApiKeysSettings() {
 	const t = useTranslator(apiKeysMessages);
-	const site = useSite();
 	const query = useApiKeys();
-	const queryClient = useQueryClient();
 	const [editing, setEditing] = useState<Editing | null>(null);
 	const [slotEditing, setSlotEditing] = useState<ApiKeySlotView | null>(null);
-	const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
-	const refresh = () => queryClient.invalidateQueries({ queryKey: API_KEYS_KEY });
+	const { confirm, dialog } = useConfirm();
+	const remove = useCmsMutation({
+		fn: (key: ApiKeyView, { site }) =>
+			deleteApiKey(site, key, { force: key.uses.length > 0, fallback: t("error.delete") }),
+		success: t("toast.deleted"),
+		failure: t("error.delete"),
+		invalidate: [apiKeysKeys.all],
+	});
+	const clearSlot = useCmsMutation({
+		fn: ({ plugin, slot }: { plugin: string; slot: string; label: string }, { site }) =>
+			putApiKeySlot(site, plugin, slot, { use: "none" }, t("error.save")),
+		success: (_result, { label }) => t("toast.slotCleared", { label }),
+		failure: t("error.save"),
+		invalidate: [apiKeysKeys.all],
+	});
 	const list: ApiKeyList | undefined = query.data;
 
-	const askDelete = (key: ApiKeyView) => {
+	const askDelete = async (key: ApiKeyView) => {
 		const used = key.uses.length > 0;
-		setConfirmRequest({
+		const ok = await confirm({
 			title: t("delete.title", { name: key.name }),
 			description: used ? (
 				<div className="flex flex-col gap-2">
@@ -68,30 +69,9 @@ export function ApiKeysSettings() {
 			),
 			confirmLabel: t("delete.confirm"),
 			destructive: true,
-			onConfirm: async () => {
-				try {
-					await cmsFetch(
-						site,
-						cmsApiUrl(`/v1/api-keys/${key.id}?expectedVersion=${key.version}${used ? "&force=true" : ""}`),
-						{ method: "DELETE", fallback: t("error.delete") },
-					);
-					toast.success(t("toast.deleted"));
-				} catch (error) {
-					toast.error(errorText(site, error, t("error.delete")));
-				}
-				await refresh();
-			},
 		});
-	};
-
-	const clearSlot = async (plugin: string, slot: string, label: string) => {
-		try {
-			await putSlot(site, plugin, slot, { use: "none" }, t("error.save"));
-			toast.success(t("toast.slotCleared", { label }));
-		} catch (error) {
-			toast.error(errorText(site, error, t("error.save")));
-		}
-		await refresh();
+		// A failure is toasted by the mutation.
+		if (ok) await remove.mutateAsync(key).catch(() => {});
 	};
 
 	const rowMenu = (key: ApiKeyView): MenuAction[] => [
@@ -102,7 +82,7 @@ export function ApiKeysSettings() {
 				kind: "item",
 				label: t("menu.clearSlot", { label: use.label }),
 				icon: Unplug,
-				onSelect: () => void clearSlot(use.plugin, use.ref, use.label),
+				onSelect: () => clearSlot.mutate({ plugin: use.plugin, slot: use.ref, label: use.label }),
 			}),
 		),
 		{ kind: "separator" },
@@ -118,13 +98,13 @@ export function ApiKeysSettings() {
 				</Button>
 			</PageActions>
 			{list && !list.secretsAvailable && (
-				<Alert variant="danger" layout="stack">
+				<Alert variant="destructive" layout="stack">
 					<AlertTitle>{t("secret.title")}</AlertTitle>
 					<AlertDescription>{t("secret.description")}</AlertDescription>
 				</Alert>
 			)}
 			<Section wide card={false} title={t("title")} description={t("description")} note={t("note")}>
-				<div className="overflow-hidden rounded-lg border bg-cms-card">
+				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-3 border-b px-4 py-3">
 						<span className="text-cms-muted-foreground text-sm">
 							{list
@@ -138,7 +118,7 @@ export function ApiKeysSettings() {
 						</span>
 					</div>
 					<KeyRows query={query} menu={rowMenu} onAssign={setSlotEditing} onRetry={() => void query.refetch()} />
-				</div>
+				</Panel>
 			</Section>
 			{editing && (
 				<KeyDialog
@@ -146,7 +126,6 @@ export function ApiKeysSettings() {
 					editing={editing}
 					taken={(list?.items ?? []).filter((item) => editing.mode === "add" || item.id !== editing.key.id)}
 					onClose={() => setEditing(null)}
-					onSaved={() => void refresh()}
 				/>
 			)}
 			{slotEditing && (
@@ -154,10 +133,9 @@ export function ApiKeysSettings() {
 					key={`${slotEditing.plugin}:${slotEditing.slot}`}
 					slot={slotEditing}
 					onClose={() => setSlotEditing(null)}
-					onSaved={() => void refresh()}
 				/>
 			)}
-			<ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
+			{dialog}
 		</PageBody>
 	);
 }
@@ -179,14 +157,11 @@ function KeyRows({
 	if (!list) {
 		if (query.error) {
 			return (
-				<Alert variant="danger" className="m-3 flex w-auto items-center justify-between gap-3">
-					<AlertDescription className="col-start-auto">
-						{errorText(site, query.error, t("load.failed"))}
-					</AlertDescription>
-					<Button type="button" variant="outline" size="xs" onClick={onRetry}>
-						{t("load.retry")}
-					</Button>
-				</Alert>
+				<LoadErrorAlert
+					message={errorText(site, query.error, t("load.failed"))}
+					onRetry={onRetry}
+					className="m-3 w-auto"
+				/>
 			);
 		}
 		return <Skeleton className="m-4 h-12" />;
@@ -264,7 +239,7 @@ function KeyRows({
 }
 
 /** Pick a saved key or enter a new one for a plugin's key slot; a typed key is saved together with the assignment. */
-function SlotDialog({ slot, onClose, onSaved }: { slot: ApiKeySlotView; onClose: () => void; onSaved: () => void }) {
+function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => void }) {
 	const t = useTranslator(apiKeysMessages);
 	const site = useSite();
 	const query = useApiKeys();
@@ -272,21 +247,20 @@ function SlotDialog({ slot, onClose, onSaved }: { slot: ApiKeySlotView; onClose:
 	const [choice, setChoice] = useState<ApiKeyChoice | null>(null);
 	const current: ApiKeyChoice =
 		choice ?? (hasKeys ? { use: "saved", keyId: query.data?.items[0]?.id ?? "" } : { use: "new", value: "" });
-	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const save = async () => {
-		setSaving(true);
+	const assign = useCmsMutation({
+		fn: (choice: ApiKeyChoice, { site }) => putApiKeySlot(site, slot.plugin, slot.slot, choice, t("error.save")),
+		success: t("toast.slotAssigned"),
+		failure: t("error.save"),
+		inline: true,
+		invalidate: [apiKeysKeys.all],
+		onSuccess: onClose,
+		onError: (saveError) => setError(errorText(site, saveError, t("error.save"))),
+	});
+	const saving = assign.isPending;
+	const save = () => {
 		setError(null);
-		try {
-			await putSlot(site, slot.plugin, slot.slot, current, t("error.save"));
-			toast.success(t("toast.slotAssigned"));
-			onSaved();
-			onClose();
-		} catch (saveError) {
-			setError(errorText(site, saveError, t("error.save")));
-		} finally {
-			setSaving(false);
-		}
+		assign.mutate(current);
 	};
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -303,19 +277,13 @@ function SlotDialog({ slot, onClose, onSaved }: { slot: ApiKeySlotView; onClose:
 						<DialogDescription>{t("slot.dialog.description")}</DialogDescription>
 					</DialogHeader>
 					<ApiKeyField value={current} onChange={setChoice} baseName={slot.service} />
-					{error && (
-						<p role="alert" className="text-cms-destructive text-xs">
-							{error}
-						</p>
-					)}
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("dialog.cancel")}
-						</Button>
-						<Button type="submit" disabled={!choiceReady(current) || saving}>
-							{saving ? t("dialog.saving") : t("slot.dialog.confirm")}
-						</Button>
-					</DialogFooter>
+					{error && <FieldError>{error}</FieldError>}
+					<DialogFormFooter
+						onCancel={onClose}
+						busy={saving}
+						disabled={!choiceReady(current)}
+						submitLabel={t("slot.dialog.confirm")}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>
@@ -326,12 +294,10 @@ function KeyDialog({
 	editing,
 	taken,
 	onClose,
-	onSaved,
 }: {
 	editing: Editing;
 	taken: readonly ApiKeyView[];
 	onClose: () => void;
-	onSaved: () => void;
 }) {
 	const t = useTranslator(apiKeysMessages);
 	const site = useSite();
@@ -340,45 +306,39 @@ function KeyDialog({
 	const key = editing.mode === "add" ? null : editing.key;
 	const [name, setName] = useState(key?.name ?? "");
 	const [value, setValue] = useState("");
-	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const needsName = editing.mode !== "replace";
 	const needsValue = editing.mode !== "rename";
 	const nameTaken = needsName && taken.some((item) => item.name.toLowerCase() === name.trim().toLowerCase());
 	const ready = (!needsName || (name.trim() !== "" && !nameTaken)) && (!needsValue || value.trim() !== "");
 
-	const save = async () => {
-		if (!ready || saving) return;
-		setSaving(true);
-		setError(null);
-		try {
-			if (key) {
-				await cmsFetch(site, cmsApiUrl(`/v1/api-keys/${key.id}`), {
-					method: "PATCH",
-					json: {
-						expectedVersion: key.version,
-						...(editing.mode === "rename" ? { name: name.trim() } : { value: value.trim() }),
-					},
-					fallback: t("error.save"),
-				});
-			} else {
-				await cmsFetch(site, cmsApiUrl("/v1/api-keys"), {
-					method: "POST",
-					json: { name: name.trim(), value: value.trim() },
-					fallback: t("error.save"),
-				});
-			}
-			toast.success(
-				t(editing.mode === "add" ? "toast.added" : editing.mode === "rename" ? "toast.renamed" : "toast.replaced"),
+	const saveKey = useCmsMutation({
+		fn: (_: void, { site }) => {
+			if (!key) return createApiKey(site, { name: name.trim(), value: value.trim() }, t("error.save"));
+			return updateApiKey(
+				site,
+				key.id,
+				{
+					expectedVersion: key.version,
+					...(editing.mode === "rename" ? { name: name.trim() } : { value: value.trim() }),
+				},
+				t("error.save"),
 			);
-			onSaved();
-			onClose();
-		} catch (saveError) {
-			setError(errorText(site, saveError, t("error.save")));
-			onSaved();
-		} finally {
-			setSaving(false);
-		}
+		},
+		success: t(editing.mode === "add" ? "toast.added" : editing.mode === "rename" ? "toast.renamed" : "toast.replaced"),
+		failure: t("error.save"),
+		inline: true,
+		// A failed save can mean the key changed meanwhile, so the list is refetched either way.
+		invalidate: [apiKeysKeys.all],
+		onSuccess: onClose,
+		onError: (saveError) => setError(errorText(site, saveError, t("error.save"))),
+	});
+	const saving = saveKey.isPending;
+
+	const save = () => {
+		if (!ready || saving) return;
+		setError(null);
+		saveKey.mutate();
 	};
 
 	const title =
@@ -433,27 +393,19 @@ function KeyDialog({
 							/>
 						</Labeled>
 					)}
-					{error && (
-						<p role="alert" className="text-cms-destructive text-xs">
-							{error}
-						</p>
-					)}
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("dialog.cancel")}
-						</Button>
-						<Button type="submit" disabled={!ready || saving}>
-							{saving
-								? t("dialog.saving")
-								: t(
-										editing.mode === "add"
-											? "dialog.add.confirm"
-											: editing.mode === "rename"
-												? "dialog.rename.confirm"
-												: "dialog.replace.confirm",
-									)}
-						</Button>
-					</DialogFooter>
+					{error && <FieldError>{error}</FieldError>}
+					<DialogFormFooter
+						onCancel={onClose}
+						busy={saving}
+						disabled={!ready}
+						submitLabel={t(
+							editing.mode === "add"
+								? "dialog.add.confirm"
+								: editing.mode === "rename"
+									? "dialog.rename.confirm"
+									: "dialog.replace.confirm",
+						)}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>

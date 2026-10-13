@@ -1,45 +1,44 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
-	Empty,
-	EmptyContent,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
+	commonMessages,
+	DETAIL_PANE_FRAME,
+	EditorFooter,
+	EmptyState,
 	Field,
 	FieldGroup,
 	FieldLabel,
 	FieldTitle,
 	IconButton,
 	Input,
+	ListPane,
+	ListRow,
+	LoadErrorAlert,
+	MasterDetail,
 	Textarea,
 	useConfirm,
+	useDraftEditor,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, type Translator, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Translator, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { toast } from "sonner";
+import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
+import { useId, useState } from "react";
 import type { AiSharedItem, AiSharedView } from "../shared";
-import { DETAIL_PANE, InlineError, ListRow, ListSkeleton, LoadError } from "./connection-editor";
+import { aiKeys, createAiShared, deleteAiShared, getAiShared, updateAiShared } from "./api";
 import { sharedMessages } from "./shared-editor.messages";
-
-export const AI_SHARED_KEY = ["cms", "ai", "shared"] as const;
 
 /** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
 export const PROMPT_ROWS = 8;
 export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
 
-const SHARED_API = cmsApiUrl("/v1/ai/shared");
-
 export function useAiShared() {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
 	return useQuery({
-		queryKey: AI_SHARED_KEY,
-		queryFn: ({ signal }) => cmsFetch<AiSharedView>(site, SHARED_API, { signal, fallback: t("error.load") }),
+		queryKey: aiKeys.shared(),
+		queryFn: ({ signal }) => getAiShared(site, { signal, fallback: t("error.load") }),
 	});
 }
 
@@ -74,72 +73,64 @@ export function SharedManager({
 	const query = useAiShared();
 	const view = query.data;
 	const current = view?.items.find((item) => item.key === selected) ?? null;
-	const applySaved = (saved: AiSharedView) => queryClient.setQueryData(AI_SHARED_KEY, saved);
+	const applySaved = (saved: AiSharedView) => queryClient.setQueryData(aiKeys.shared(), saved);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			{query.error && !view && (
-				<LoadError message={errorText(site, query.error, t("error.load"))} onRetry={() => void query.refetch()} />
+				<LoadErrorAlert
+					className="m-3"
+					message={errorText(site, query.error, t("error.load"))}
+					onRetry={() => void query.refetch()}
+				/>
 			)}
-			<div className="flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex w-72 shrink-0 flex-col border-r">
-					<ul className="min-h-0 flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
-						{query.isPending ? (
-							<ListSkeleton rows={2} />
-						) : view?.items.length === 0 ? (
-							<li className="px-3 py-6 text-center text-cms-muted-foreground text-xs">{t("list.empty")}</li>
-						) : (
-							view?.items.map((item) => (
-								<ListRow
-									key={item.key}
-									title={item.label}
-									detail={detailOf(t, item)}
-									current={selected === item.key}
-									onClick={() => onOpen(item.key)}
-								/>
-							))
-						)}
-					</ul>
-				</div>
-
-				<div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-					{view && (selected === "new" || current) ? (
-						<SharedEditor
-							key={selected ?? "none"}
-							version={view.version}
-							item={current}
-							onSaved={(saved, key) => {
-								applySaved(saved);
-								onSelectedChange(key);
-							}}
-							onDeleted={(saved) => {
-								applySaved(saved);
-								onSelectedChange(null);
-							}}
-							onCancel={() => onSelectedChange(null)}
-							onConflict={() => void query.refetch()}
-							onDirtyChange={onDirtyChange}
+			<MasterDetail
+				list={
+					<ListPane
+						label={t("list.label")}
+						loading={query.isPending}
+						skeletonRows={2}
+						empty={view?.items.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
+					>
+						{view?.items.map((item) => (
+							<ListRow
+								key={item.key}
+								title={item.label}
+								detail={detailOf(t, item)}
+								current={selected === item.key}
+								onClick={() => onOpen(item.key)}
+							/>
+						))}
+					</ListPane>
+				}
+			>
+				{view && (selected === "new" || current) ? (
+					<SharedEditor
+						key={selected ?? "none"}
+						version={view.version}
+						item={current}
+						onSaved={(saved, key) => {
+							applySaved(saved);
+							onSelectedChange(key);
+						}}
+						onDeleted={(saved) => {
+							applySaved(saved);
+							onSelectedChange(null);
+						}}
+						onCancel={() => onSelectedChange(null)}
+						onConflict={() => void query.refetch()}
+						onDirtyChange={onDirtyChange}
+					/>
+				) : (
+					view && (
+						<EmptyState
+							icon={Quote}
+							title={t("empty.title")}
+							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
 						/>
-					) : (
-						view && (
-							<Empty className="flex-1">
-								<EmptyHeader>
-									<EmptyMedia variant="icon">
-										<Quote aria-hidden />
-									</EmptyMedia>
-									<EmptyTitle>{t("empty.title")}</EmptyTitle>
-								</EmptyHeader>
-								<EmptyContent>
-									<Button type="button" size="sm" onClick={() => onOpen("new")}>
-										<Plus aria-hidden />
-										{t("action.add")}
-									</Button>
-								</EmptyContent>
-							</Empty>
-						)
-					)}
-				</div>
-			</div>
+					)
+				)}
+			</MasterDetail>
 		</div>
 	);
 }
@@ -151,8 +142,6 @@ interface Draft {
 }
 
 const NEW_DRAFT: Draft = { key: "", label: "", text: "" };
-
-const sameDraft = (a: Draft, b: Draft) => a.key === b.key && a.label === b.label && a.text === b.text;
 
 /** Shows the shape to put into instructions and copies it. */
 function PlaceholderChip({ shareKey }: { shareKey: string }) {
@@ -198,50 +187,68 @@ function SharedEditor({
 }) {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
-	const initial: Draft = item ? { key: item.key, label: item.label, text: item.text } : NEW_DRAFT;
-	const [draft, setDraft] = useState<Draft>(initial);
-	const [saving, setSaving] = useState(false);
-	const [deleting, setDeleting] = useState(false);
+	const tc = useTranslator(commonMessages);
 	const [error, setError] = useState<string | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const ids = { label: useId(), key: useId(), keyTitle: useId(), text: useId() };
-	const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
+	const {
+		draft,
+		update: set,
+		dirty,
+	} = useDraftEditor({
+		saved: item ? { key: item.key, label: item.label, text: item.text } : null,
+		empty: NEW_DRAFT,
+		onDirtyChange,
+	});
 	const fromConfig = item?.source === "config";
-	const dirty = item === null || !sameDraft(draft, initial);
-	// A new text with nothing entered has nothing to discard.
-	const unsaved = item === null ? !sameDraft(draft, NEW_DRAFT) : dirty;
-	useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
-	useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
-	const save = async () => {
-		setSaving(true);
-		setError(null);
-		try {
+	const saveMutation = useCmsMutation({
+		fn: (_: undefined, { site }) => {
 			const key = item?.key ?? draft.key.trim();
-			const saved = item
-				? await cmsFetch<AiSharedView>(site, SHARED_API, {
-						method: "PATCH",
-						json: {
+			return item
+				? updateAiShared(
+						site,
+						{
 							expectedVersion: version,
 							key,
 							text: draft.text,
 							...(fromConfig ? {} : { label: draft.label.trim() }),
 						},
-						fallback: t("error.save"),
-					})
-				: await cmsFetch<AiSharedView>(site, SHARED_API, {
-						method: "POST",
-						json: { expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
-						fallback: t("error.save"),
-					});
-			onSaved(saved, key);
-			toast.success(t("toast.saved"));
-		} catch (saveError) {
-			setError(errorText(site, saveError, t("error.save")));
+						tc("saveFailed"),
+					)
+				: createAiShared(
+						site,
+						{ expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
+						tc("saveFailed"),
+					);
+		},
+		success: tc("saved"),
+		failure: tc("saveFailed"),
+		inline: true,
+		onSuccess: (saved) => onSaved(saved, item?.key ?? draft.key.trim()),
+		onError: (saveError) => {
+			setError(errorText(site, saveError, tc("saveFailed")));
 			onConflict();
-		} finally {
-			setSaving(false);
-		}
+		},
+	});
+
+	const deleteMutation = useCmsMutation({
+		fn: (target: AiSharedItem, { site }) => deleteAiShared(site, target.key, version, tc("deleteFailed")),
+		success: tc("deleted"),
+		failure: tc("deleteFailed"),
+		inline: true,
+		onSuccess: (saved) => onDeleted(saved),
+		onError: (deleteError) => {
+			setError(errorText(site, deleteError, tc("deleteFailed")));
+			onConflict();
+		},
+	});
+	const saving = saveMutation.isPending;
+	const deleting = deleteMutation.isPending;
+
+	const save = () => {
+		setError(null);
+		saveMutation.mutate(undefined);
 	};
 
 	const remove = async () => {
@@ -249,36 +256,18 @@ function SharedEditor({
 		const ok = await confirm({
 			title: t("confirm.title"),
 			description: t("confirm.description", { name: item.label }),
-			confirmLabel: t("action.delete"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (!ok) return;
-		setDeleting(true);
 		setError(null);
-		try {
-			onDeleted(
-				await cmsFetch<AiSharedView>(
-					site,
-					`${SHARED_API}?key=${encodeURIComponent(item.key)}&expectedVersion=${version}`,
-					{
-						method: "DELETE",
-						fallback: t("error.delete"),
-					},
-				),
-			);
-			toast.success(t("toast.deleted"));
-		} catch (deleteError) {
-			setError(errorText(site, deleteError, t("error.delete")));
-			onConflict();
-		} finally {
-			setDeleting(false);
-		}
+		deleteMutation.mutate(item);
 	};
 
 	const shownKey = item?.key ?? draft.key.trim();
 
 	return (
-		<div className={DETAIL_PANE}>
+		<div className={DETAIL_PANE_FRAME}>
 			<div className="min-w-0">
 				<h2 className="truncate font-medium text-base">{(item ? item.label : draft.label.trim()) || t("new.title")}</h2>
 				{(shownKey || item?.source === "added") && (
@@ -331,23 +320,17 @@ function SharedEditor({
 				</Field>
 			</FieldGroup>
 
-			{error && <InlineError>{error}</InlineError>}
-
-			<div className="flex flex-wrap items-center gap-2">
-				<Button
-					type="button"
-					size="sm"
-					disabled={saving || !dirty || !draft.label.trim() || !draft.key.trim()}
-					onClick={() => void save()}
-				>
-					<Save aria-hidden />
-					{saving ? t("action.saving") : t("action.save")}
-				</Button>
-				{!item && (
-					<Button type="button" size="sm" variant="outline" onClick={onCancel}>
-						{t("action.cancel")}
-					</Button>
-				)}
+			<EditorFooter
+				dirty={dirty}
+				saving={saving}
+				deleting={deleting}
+				canSave={Boolean(draft.label.trim() && draft.key.trim())}
+				error={error}
+				saveIcon={<Save aria-hidden />}
+				onSave={save}
+				onCancel={item ? undefined : onCancel}
+				onDelete={item?.source === "added" ? () => void remove() : undefined}
+			>
 				{item?.source === "config" && (
 					<Button
 						type="button"
@@ -360,20 +343,7 @@ function SharedEditor({
 						{t("action.resetDefault")}
 					</Button>
 				)}
-				{item?.source === "added" && (
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						className="ml-auto text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
-						disabled={deleting}
-						onClick={() => void remove()}
-					>
-						<Trash2 aria-hidden />
-						{deleting ? t("action.deleting") : t("action.delete")}
-					</Button>
-				)}
-			</div>
+			</EditorFooter>
 			{dialog}
 		</div>
 	);

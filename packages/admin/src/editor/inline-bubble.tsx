@@ -26,6 +26,7 @@ import {
 	type EditorSelectionAction,
 	useCmsAdminComponents,
 } from "../admin-components";
+import { isComposingKey } from "../lib/keyboard";
 import { cn } from "../lib/utils/cn";
 import type { TranslatorFor } from "../translator";
 import { IconButton } from "../ui/icon-button";
@@ -554,7 +555,7 @@ export function InlineBubble({
 					panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-2" : "w-80",
 				)}
 				onKeyDown={(event) => {
-					if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+					if (event.key === "Escape" && !isComposingKey(event)) {
 						event.preventDefault();
 						closePanel();
 					}

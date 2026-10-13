@@ -1,0 +1,64 @@
+import { defineMessages } from "@monti-cms/core";
+
+/** Text of the languages tab of the schema screen. */
+export const schemaLocalesMessages = defineMessages("cms-admin.schema.locales", {
+	en: {
+		"locales.contentTitle": "Content languages",
+		"locales.contentDescription":
+			"The languages entries can be written in. From the top, they are the order of the language tabs on the edit screen.",
+		"locales.contentNote":
+			"A language code is stored with every entry, so it cannot be changed after the language is added.",
+		"locales.count": "Languages: {count}",
+		"locales.defaultBadge": "Default",
+		"locales.adminName": "Shown as {label} in the admin",
+		"locales.menu": "Actions for {name}",
+		"locales.edit": "Edit",
+		"locales.addTitle": "Add language",
+		"locales.editTitle": "Edit {name}",
+		"locales.labelHint": "Optional. The name the admin uses for this language when it differs from the name above.",
+		"locales.codeHint": "Letters such as en or pt-BR.",
+		"locales.defaultTitle": "Default language and time zone",
+		"locales.defaultDescription":
+			"The language new entries start in, and the time zone for dates and scheduled publishing on the site.",
+		"locales.addresses.except-default":
+			"Entries in the default language have no language in their address. For example {path}; {other}: /{other}{path}",
+		"locales.addresses.always": "Every address starts with its language. For example /{default}{path}, /{other}{path}",
+		"locales.addresses.never": "Addresses never carry the language. For example {path} in every language",
+		"locales.timeZoneHelp": "It starts as the time zone of the computer that ran init.",
+		"locales.code": "Code",
+		"locales.name": "Name (in its language)",
+		"locales.label": "Label in the admin",
+		"locales.add": "Add language",
+		"locales.default": "Default language",
+		"locales.timeZone": "Time zone",
+		"locales.timeZoneNone": "No matching time zone.",
+	},
+	ko: {
+		"locales.contentTitle": "콘텐츠 언어",
+		"locales.contentDescription": "글을 쓸 수 있는 언어예요. 위에서부터 편집 화면의 언어 탭 순서가 돼요.",
+		"locales.contentNote": "언어 코드는 저장된 글에 쓰이는 값이라 추가한 뒤에는 바꿀 수 없어요.",
+		"locales.count": "언어 {count}개",
+		"locales.defaultBadge": "기본",
+		"locales.adminName": "관리자에서의 이름: {label}",
+		"locales.menu": "{name} 작업",
+		"locales.edit": "편집",
+		"locales.addTitle": "언어 추가",
+		"locales.editTitle": "{name} 편집",
+		"locales.labelHint": "선택. 위의 이름과 다르게 관리자에서 부를 이름이에요.",
+		"locales.codeHint": "en, pt-BR처럼 적어요.",
+		"locales.defaultTitle": "기본 언어와 시간대",
+		"locales.defaultDescription": "새 글이 처음 쓰이는 언어와, 사이트의 날짜와 예약 발행에 쓰는 시간대예요.",
+		"locales.addresses.except-default":
+			"기본 언어 글의 주소에는 언어가 붙지 않아요. 예: {path} · {other}: /{other}{path}",
+		"locales.addresses.always": "모든 주소가 언어로 시작해요. 예: /{default}{path}, /{other}{path}",
+		"locales.addresses.never": "주소에 언어가 붙지 않아요. 예: 모든 언어에서 {path}",
+		"locales.timeZoneHelp": "처음에는 init을 실행한 컴퓨터의 시간대로 정해져요.",
+		"locales.code": "코드",
+		"locales.name": "이름(그 언어로)",
+		"locales.label": "관리자에 보이는 이름",
+		"locales.add": "언어 추가",
+		"locales.default": "기본 언어",
+		"locales.timeZone": "시간대",
+		"locales.timeZoneNone": "맞는 시간대가 없습니다.",
+	},
+});

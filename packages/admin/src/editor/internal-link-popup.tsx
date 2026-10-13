@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/utils/cn";
 import { CollectionIcon } from "../screens/shared/collection-icon";
+import { FieldError } from "../ui/field";
 import { Spinner } from "../ui/spinner";
 import { type InternalLinkItem, internalLinkHref } from "./internal-link";
 import { editorMessages } from "./messages";
@@ -118,9 +119,7 @@ export function InternalLinkPopup({
 					{t("internalLink.searching")}
 				</output>
 			) : error ? (
-				<p role="alert" className="px-2 py-1.5 text-cms-destructive text-xs">
-					{error}
-				</p>
+				<FieldError className="px-2 py-1.5">{error}</FieldError>
 			) : (
 				items.length === 0 && <p className="px-2 py-1.5 text-cms-muted-foreground text-xs">{t("internalLink.empty")}</p>
 			)}

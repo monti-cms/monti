@@ -1,9 +1,9 @@
 "use client";
 
-import { CmsApiError, cmsFetch } from "@monti-cms/admin/api";
+import { CmsApiError } from "@monti-cms/admin/api";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
-import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
@@ -11,29 +11,18 @@ import type { AiActionView } from "../actions";
 import type { AiRunContext, AiRunResult } from "../definition";
 import { attachedTo } from "../registry";
 import { aiCommonMessages } from "./ai-common.messages";
+import { type AiRunManyResult, aiKeys, listAiActions, openAiRunStream, runAiMany, runAiOnce } from "./api";
 import { useMdxFormat } from "./mdx-format";
 
 /** What the request functions need of a site: its admin language for the failure text. */
 type RequestSite = Pick<Site, "createTranslator">;
 
-export const AI_ACTIONS_KEY = ["cms", "ai", "actions"] as const;
-
-export interface AiActionsResponse {
-	/** Names of actions that are ready to use now because their connection is ready. */
-	usable: string[];
-	items: AiActionView[];
-}
-
 export function useAiActions(enabled = true) {
 	const site = useSite();
 	const t = useTranslator(aiCommonMessages);
 	return useQuery({
-		queryKey: AI_ACTIONS_KEY,
-		queryFn: ({ signal }) =>
-			cmsFetch<AiActionsResponse>(site, cmsApiUrl("/v1/ai/actions"), {
-				signal,
-				fallback: t("listFailed"),
-			}),
+		queryKey: aiKeys.actions(),
+		queryFn: ({ signal }) => listAiActions(site, { signal, fallback: t("listFailed") }),
 		enabled,
 		staleTime: 60_000,
 	});
@@ -74,12 +63,11 @@ export async function runAiAction(
 	options: AiRunOptions = {},
 ): Promise<AiRunResult> {
 	const t = site.createTranslator(aiCommonMessages);
-	const response = await cmsFetch<{ result: AiRunResult }>(site, cmsApiUrl("/v1/ai/run"), {
-		method: "POST",
-		json: { ...requestBody(action, options), input },
-		signal: options.signal,
-		fallback: t("runFailed"),
-	});
+	const response = await runAiOnce(
+		site,
+		{ ...requestBody(action, options), input },
+		{ signal: options.signal, fallback: t("runFailed") },
+	);
 	return response.result;
 }
 
@@ -95,12 +83,7 @@ export async function streamAiAction(
 ): Promise<AiRunResult> {
 	const t = site.createTranslator(aiCommonMessages);
 	const fallback = t("runFailed");
-	const response = await fetch(cmsApiUrl("/v1/ai/run"), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ ...requestBody(action, options), input, stream: true }),
-		signal: options.signal,
-	});
+	const response = await openAiRunStream({ ...requestBody(action, options), input, stream: true }, options.signal);
 	if (!response.ok || !response.body) {
 		const { error } = (await response.json().catch(() => ({}))) as { error?: Record<string, unknown> };
 		const message = typeof error?.message === "string" ? error.message : fallback;
@@ -143,17 +126,12 @@ export async function runAiActionMany(
 	action: string,
 	inputs: ReadonlyArray<Readonly<Record<string, unknown>>>,
 	options: AiRunOptions = {},
-): Promise<Array<{ result: AiRunResult } | { error: string }>> {
+): Promise<AiRunManyResult[]> {
 	const t = site.createTranslator(aiCommonMessages);
-	const response = await cmsFetch<{ results: Array<{ result: AiRunResult } | { error: string }> }>(
+	const response = await runAiMany(
 		site,
-		cmsApiUrl("/v1/ai/run"),
-		{
-			method: "POST",
-			json: { ...requestBody(action, options), inputs },
-			signal: options.signal,
-			fallback: t("runFailed"),
-		},
+		{ ...requestBody(action, options), inputs },
+		{ signal: options.signal, fallback: t("runFailed") },
 	);
 	return response.results;
 }

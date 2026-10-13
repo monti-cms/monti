@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { commonMessages } from "../lib/common.messages";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -41,6 +42,7 @@ export function BlockHandleOverlay({
 	actions = [],
 }: BlockHandleOverlayProps) {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const [open, setOpen] = useState(false);
 	if (typeof window === "undefined") return null;
 
@@ -105,7 +107,7 @@ export function BlockHandleOverlay({
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={onDelete}>
 						<Trash2 aria-hidden />
-						{t("blockHandle.delete")}
+						{tc("delete")}
 						<DropdownMenuShortcut>⇧⌘⌫</DropdownMenuShortcut>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

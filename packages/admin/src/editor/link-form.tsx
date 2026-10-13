@@ -5,7 +5,10 @@ import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
+import { commonMessages } from "../lib/common.messages";
+import { isComposingKey } from "../lib/keyboard";
 import { Button } from "../ui/button";
+import { FieldError } from "../ui/field";
 import { Input } from "../ui/input";
 import { LinkTargetSummary } from "./link-target-view";
 import { editorMessages } from "./messages";
@@ -53,10 +56,6 @@ export const collapseToEnd = (chain: ChainedCommands) =>
 		return true;
 	});
 
-/** Whether this Enter finishes Korean composition. The form is not submitted then. */
-export const isComposingKey = (event: KeyboardEvent) =>
-	event.nativeEvent.isComposing || event.key === "Process" || event.keyCode === 229;
-
 /**
  * Enter handling for popover input forms (link, tooltip). Enter during Korean composition is ignored, and Enter submits even in multi-line fields (Shift+Enter inserts a line break).
  * Attach it as `<form onKeyDown={submitOnEnter}>`.
@@ -87,6 +86,7 @@ export function PopoverFormFooter({
 	onCancel: () => void;
 }) {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	return (
 		<div className="flex items-center gap-2">
 			{onRemove && (
@@ -103,10 +103,10 @@ export function PopoverFormFooter({
 			)}
 			<div className="ml-auto flex items-center gap-2">
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
-					{t("popoverForm.cancel")}
+					{tc("cancel")}
 				</Button>
 				<Button type="submit" size="sm">
-					{t("popoverForm.apply")}
+					{tc("apply")}
 				</Button>
 			</div>
 		</div>
@@ -115,11 +115,7 @@ export function PopoverFormFooter({
 
 /** One-line red error of a popover input form. */
 export function PopoverFormError({ id, children }: { id: string; children: ReactNode }) {
-	return (
-		<p id={id} role="alert" className="text-cms-destructive text-xs">
-			{children}
-		</p>
-	);
+	return <FieldError id={id}>{children}</FieldError>;
 }
 
 interface LinkFormProps {

@@ -2,13 +2,14 @@
 
 import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { Button } from "../../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
+import { LineTabs, Tabs, TabsContent, TabsTrigger } from "../../ui/tabs";
+import { Labeled } from "../shared/labeled";
 import {
 	FlagSwitch,
 	IssueList,
-	Labeled,
 	orUndefined,
 	Pick,
 	Segmented,
@@ -17,7 +18,7 @@ import {
 	useSchemaEdit,
 } from "./controls";
 import { type CollectionEditing, InputOptionsEditor, KindOptions, LOCALIZED_KINDS } from "./field-editor";
-import { schemaMessages } from "./messages";
+import { schemaFieldsMessages } from "./fields.messages";
 import {
 	FIELD_KEY_ORDER,
 	FIELD_KINDS,
@@ -52,7 +53,8 @@ export function FieldSheet({
 	name: string;
 	onClose: () => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
+	const tc = useTranslator(commonMessages);
 	const { disabled, collectionNames } = useSchemaEdit();
 	const [draft, setDraft] = useState<Obj>(editing.collection);
 	// Renames of options made in the copy are recorded for the review only when the copy is applied.
@@ -112,14 +114,14 @@ export function FieldSheet({
 						<SheetDescription className="text-xs">
 							<code>{name}</code> · {t(`kind.${kind}`)}
 						</SheetDescription>
-						<TabsList variant="line" className="mt-4 h-auto w-full justify-start gap-5 rounded-none border-b p-0">
+						<LineTabs className="mt-4 h-auto gap-5 rounded-none p-0">
 							<TabsTrigger value="basic" className="h-9 flex-none px-0">
 								{t("sheet.tabBasic")}
 							</TabsTrigger>
 							<TabsTrigger value="advanced" className="h-9 flex-none px-0">
 								{t("sheet.tabAdvanced")}
 							</TabsTrigger>
-						</TabsList>
+						</LineTabs>
 					</SheetHeader>
 					<div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
 						<IssueList issues={issues} />
@@ -232,10 +234,10 @@ export function FieldSheet({
 					</Button>
 					<div className="flex-1" />
 					<Button type="button" variant="outline" size="sm" onClick={onClose}>
-						{t("sheet.cancel")}
+						{tc("cancel")}
 					</Button>
 					<Button type="button" size="sm" disabled={disabled} onClick={apply}>
-						{t("sheet.apply")}
+						{tc("apply")}
 					</Button>
 				</SheetFooter>
 			</SheetContent>

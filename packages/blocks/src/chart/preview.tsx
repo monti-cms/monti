@@ -43,7 +43,7 @@ function ChartErrorCard({ errors }: { errors: ChartRenderError[] }) {
 	const t = useTranslator(chartMessages);
 	return (
 		<div className="not-prose my-6">
-			<Alert variant="danger">
+			<Alert variant="destructive">
 				<AlertOctagon />
 				<AlertTitle>{t("error.title")}</AlertTitle>
 				<AlertDescription>

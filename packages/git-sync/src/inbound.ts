@@ -9,9 +9,6 @@ import type { ConflictReason, ConflictRecord, PullSummary, SyncRecord } from "./
 import { entryKey } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
 
-// What a file is applied with lives in `apply.ts` ; these are re-exported for the callers that always had them here.
-export { type Applied, applyFile, describeError, type FileToApply, recordOf } from "./apply";
-
 /**
  * Inbound: from the repo to the CMS.
  *

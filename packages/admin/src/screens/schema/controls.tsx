@@ -12,8 +12,9 @@ import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Switch } from "../../ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
+import { type CONTROL_WIDTH, HELP, Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
-import { moveItem, nameProblem, type Obj } from "./schema-model";
+import { nameProblem, type Obj } from "./schema-model";
 
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */
 export interface SchemaEditContext {
@@ -58,37 +59,6 @@ export function IssueList({ issues }: { issues: readonly Issue[] }) {
 				</li>
 			))}
 		</ul>
-	);
-}
-
-/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
-const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" } as const;
-/** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
-const HELP = "max-w-[70ch] text-xs";
-
-export function Labeled({
-	label,
-	hint,
-	children,
-	htmlFor,
-	className,
-	control = "normal",
-}: {
-	label: ReactNode;
-	hint?: ReactNode;
-	htmlFor?: string;
-	children: ReactNode;
-	className?: string;
-	control?: keyof typeof CONTROL_WIDTH;
-}) {
-	return (
-		<UiField className={cn("gap-2", className)}>
-			<FieldLabel htmlFor={htmlFor} className="font-medium text-sm">
-				{label}
-			</FieldLabel>
-			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
-			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
-		</UiField>
 	);
 }
 
@@ -409,75 +379,6 @@ export function RowActions({
 				<IconButton label={t("row.remove", { name })} size="icon-xs" destructive disabled={disabled} onClick={onRemove}>
 					<X aria-hidden />
 				</IconButton>
-			)}
-		</div>
-	);
-}
-
-/** An ordered list of names picked from `options`: add from the options not in the list yet, move, remove. Used for layout groups and list columns. */
-export function OrderedNames({
-	label,
-	names,
-	options,
-	onChange,
-	nameOf,
-}: {
-	label: string;
-	names: readonly string[];
-	options: readonly string[];
-	onChange: (names: string[]) => void;
-	nameOf?: (name: string) => string;
-}) {
-	const t = useTranslator(schemaMessages);
-	const { disabled } = useSchemaEdit();
-	const rest = options.filter((name) => !names.includes(name));
-	const [adding, setAdding] = useState("");
-	const show = nameOf ?? ((name: string) => name);
-	return (
-		<div className="flex flex-col gap-2">
-			<span className="font-medium text-sm">{label}</span>
-			{names.length === 0 && <p className="text-cms-muted-foreground text-xs">{t("names.none")}</p>}
-			<ul className={cn("flex flex-col divide-y overflow-hidden rounded-md border", names.length === 0 && "hidden")}>
-				{names.map((name, index) => (
-					<li key={name} className="flex items-center justify-between px-3 py-1 text-sm">
-						<span className="truncate">{show(name)}</span>
-						<RowActions
-							index={index}
-							count={names.length}
-							name={show(name)}
-							onMove={(delta) => onChange(moveItem(names, index, delta))}
-							onRemove={() => onChange(names.filter((item) => item !== name))}
-						/>
-					</li>
-				))}
-			</ul>
-			{rest.length > 0 && !disabled && (
-				<div className="flex items-center gap-1.5">
-					<Select
-						value={adding}
-						items={rest.map((name) => ({ value: name, label: show(name) }))}
-						onValueChange={(next) => {
-							if (typeof next === "string" && next) {
-								onChange([...names, next]);
-								setAdding("");
-							}
-						}}
-					>
-						<SelectTrigger size="sm" className="w-full" aria-label={t("names.add", { label })}>
-							<span className="flex items-center gap-1.5 text-cms-muted-foreground">
-								<Plus aria-hidden className="size-3.5" />
-								<SelectValue placeholder={t("names.addPlaceholder")} />
-							</span>
-						</SelectTrigger>
-						<SelectContent>
-							{rest.map((name) => (
-								<SelectItem key={name} value={name}>
-									{show(name)}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
 			)}
 		</div>
 	);

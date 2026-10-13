@@ -10,7 +10,6 @@ import TemplatesPage from "../templates/page";
 
 vi.mock("../require-admin", () => ({ requireAdminPage: async () => undefined }));
 vi.mock("../settings/settings-screen", () => ({ SettingsScreen: () => <p>settings screen</p> }));
-vi.mock("../templates/templates-screen", () => ({ TemplatesScreen: () => <p>templates screen</p> }));
 
 afterEach(cleanup);
 

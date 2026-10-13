@@ -1,5 +1,5 @@
-import { CmsApiError } from "../screens/admin-api";
-import type { CmsIssue } from "../screens/api-error-message";
+import { CmsApiError, isConflict } from "../api/client";
+import type { CmsIssue } from "../api/error-message";
 
 /**
  * Codes the editor hooks produce. Server codes pass through (`CmsApiError.code`), so the union stays open.
@@ -77,7 +77,7 @@ export function toEditorError(error: unknown, fallback: string): EditorError {
 	if (error instanceof CmsApiError) {
 		const base = { message: error.message || fallback, status: error.status, issues: error.issues, cause: error };
 		if (error.status === 401) return { ...base, code: "session_expired", retryable: false };
-		if (error.status === 409 && error.code === "conflict") return { ...base, code: "conflict", retryable: false };
+		if (isConflict(error)) return { ...base, code: "conflict", retryable: false };
 		if (error.status === 404) return { ...base, code: "not_found", retryable: false };
 		if (error.status < 500 && error.issues.length > 0) return { ...base, code: "validation", retryable: false };
 		return { ...base, code: error.code ?? "failed", retryable: error.status >= 500 };

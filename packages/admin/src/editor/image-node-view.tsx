@@ -1,14 +1,16 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
+import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { getMedia, mediaKeys } from "../api/media";
 import { cn } from "../lib/utils/cn";
-import { cmsFetch } from "../screens/admin-api";
 import { type SlotRequest, useSlot } from "../slots/slots";
 import type { TranslatorFor } from "../translator";
+import { FieldError } from "../ui/field";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
@@ -107,7 +109,6 @@ export function ImageBlockView() {
 	});
 	const altSlot = useSlot(imageSlot("alt"));
 	const captionSlot = useSlot(imageSlot("caption"));
-	const [mediaState, setMediaState] = useState<{ status: string; publicUrl: string | null } | null>(null);
 
 	const transform = computeImageTransform({
 		crop,
@@ -115,27 +116,21 @@ export function ImageBlockView() {
 		aspectRatio,
 	});
 
-	useEffect(() => {
-		if (!mediaId || src) {
-			setMediaState(null);
-			return;
-		}
-		let cancelled = false;
-		setMediaState({ status: "checking", publicUrl: null });
-		cmsFetch<{ status?: string; publicUrl?: string | null }>(
-			site,
-			cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`),
-		)
-			.then((result) => {
-				if (!cancelled) setMediaState({ status: result.status ?? "unknown", publicUrl: result.publicUrl ?? null });
-			})
-			.catch(() => {
-				if (!cancelled) setMediaState({ status: "lookup-failed", publicUrl: null });
-			});
-		return () => {
-			cancelled = true;
-		};
-	}, [mediaId, src, site]);
+	// An image kept as a library media (no `src` in the document) looks its status and public address up.
+	const lookup = useQuery({
+		queryKey: mediaKeys.detail(mediaId),
+		queryFn: ({ signal }) => getMedia(site, mediaId, signal),
+		enabled: mediaId !== "" && !src,
+		retry: false,
+	});
+	const mediaState =
+		!mediaId || src
+			? null
+			: lookup.isError
+				? { status: "lookup-failed", publicUrl: null }
+				: lookup.data
+					? { status: lookup.data.status ?? "unknown", publicUrl: lookup.data.publicUrl ?? null }
+					: { status: "checking", publicUrl: null };
 
 	const imageSrc = typeof src === "string" && src ? src : mediaState?.publicUrl;
 	const resolved = resolveImageUrl(typeof imageSrc === "string" ? imageSrc : undefined);
@@ -285,11 +280,7 @@ export function ImageBlockView() {
 								className="h-7 text-xs"
 								placeholder={t("imageNode.widthPlaceholder")}
 							/>
-							{widthInvalid && (
-								<p id={widthErrorId} role="alert" className="text-cms-destructive">
-									{t("imageNode.widthInvalid")}
-								</p>
-							)}
+							{widthInvalid && <FieldError id={widthErrorId}>{t("imageNode.widthInvalid")}</FieldError>}
 						</BlockSettingsField>
 						<BlockSettingsField
 							label={t("imageDialog.alt")}
@@ -306,11 +297,7 @@ export function ImageBlockView() {
 								onChange={(e) => block.setValues({ alt: e.target.value })}
 								className="min-h-0 text-xs md:text-xs"
 							/>
-							{altMissing && (
-								<p id={altErrorId} role="alert" className="text-cms-destructive">
-									{altRequiredMessage(t)}
-								</p>
-							)}
+							{altMissing && <FieldError id={altErrorId}>{altRequiredMessage(t)}</FieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
 						<label htmlFor={decorativeId} className="flex items-center justify-between gap-2">

@@ -4,12 +4,14 @@ import { createSite, SiteProvider } from "@monti-cms/core/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { commonMessages } from "../../../../admin/src/lib/common.messages";
 import config from "../../../test/cms.config";
 import { ConflictDiff, GitSyncPage } from "../git-sync-page";
 import { gitSyncMessages } from "../page.messages";
 
 const site = createSite(config);
 const t = site.createTranslator(gitSyncMessages);
+const common = site.createTranslator(commonMessages);
 /** The API key field belongs to the admin package; its texts are looked up by their English wording (the test site is English). */
 const keyT = (key: "field.useNew" | "field.newInput") => (key === "field.useNew" ? "Enter a new key" : "New API key");
 
@@ -237,20 +239,20 @@ describe("Git sync screen: settings tab", () => {
 		await openSettings();
 		expect(await screen.findByText(t("settings.token.state.set", { hint: "GitHub ••••1234" }))).toBeTruthy();
 		// Nothing to save while the field shows the key the token uses now.
-		expect((screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLButtonElement).disabled).toBe(true);
+		expect((screen.getAllByRole("button", { name: common("save") })[0] as HTMLButtonElement).disabled).toBe(true);
 		fireEvent.click(screen.getByRole("radio", { name: new RegExp(keyT("field.useNew")) }));
 		const input = screen.getByLabelText(keyT("field.newInput")) as HTMLInputElement;
 		expect(input.type).toBe("password");
 		expect(input.value).toBe("");
 		fireEvent.change(input, { target: { value: "ghp_brand_new" } });
-		fireEvent.click(screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLElement);
+		fireEvent.click(screen.getAllByRole("button", { name: common("save") })[0] as HTMLElement);
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
 				"/api/monti/v1/api-keys/slots",
 				{ plugin: "git-sync", slot: "token", key: { use: "new", value: "ghp_brand_new" } },
 			]),
 		);
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("settings.saved")));
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(common("saved")));
 	});
 
 	it("shows the webhook URL, makes a webhook secret that can be seen and copied, and saves it into its slot", async () => {
@@ -271,7 +273,7 @@ describe("Git sync screen: settings tab", () => {
 		expect(secret.type).toBe("text");
 		fireEvent.click(screen.getByRole("button", { name: t("settings.copy") }));
 		await waitFor(() => expect(writeText).toHaveBeenCalledWith(generated));
-		fireEvent.click(screen.getAllByRole("button", { name: t("settings.save") })[1] as HTMLElement);
+		fireEvent.click(screen.getAllByRole("button", { name: common("save") })[1] as HTMLElement);
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
 				"/api/monti/v1/api-keys/slots",
@@ -304,7 +306,7 @@ describe("Git sync screen: settings tab", () => {
 		expect(await screen.findByText(t("settings.secretMissing"))).toBeTruthy();
 		fireEvent.click(screen.getByRole("radio", { name: new RegExp(keyT("field.useNew")) }));
 		fireEvent.change(screen.getByLabelText(keyT("field.newInput")), { target: { value: "x" } });
-		expect((screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLButtonElement).disabled).toBe(true);
+		expect((screen.getAllByRole("button", { name: common("save") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 });
 

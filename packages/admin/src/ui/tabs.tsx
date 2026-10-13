@@ -67,4 +67,20 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
 	);
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
+/** A bar of line tabs under a header, edge to edge with a bottom border (inside a panel or a sheet). */
+function LineTabs({ className, ...props }: Omit<TabsPrimitive.List.Props, "variant">) {
+	return (
+		<TabsList
+			variant="line"
+			className={cn("h-10 w-full shrink-0 justify-start gap-4 border-b", className)}
+			{...props}
+		/>
+	);
+}
+
+/** The line tabs that sit at the top of a page or a screen's main area. */
+function PageTabs({ className, ...props }: Omit<TabsPrimitive.List.Props, "variant">) {
+	return <LineTabs className={cn("px-4", className)} {...props} />;
+}
+
+export { Tabs, TabsList, TabsTrigger, TabsContent, LineTabs, PageTabs, tabsListVariants };

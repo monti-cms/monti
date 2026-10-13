@@ -2,11 +2,13 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { useId, useState } from "react";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { commonMessages } from "../../lib/common.messages";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
-import { Labeled } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { schemaCollectionMessages } from "./collection.messages";
 import { schemaMessages } from "./messages";
 import { defaultPath, idFromName, nameProblem, pathProblem } from "./schema-model";
 
@@ -42,7 +44,9 @@ function NewCollectionForm({
 	onCancel: () => void;
 	onCreate: (id: string, kind: Kind, path: string, label: string) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaCollectionMessages);
+	const tc = useTranslator(commonMessages);
+	const ts = useTranslator(schemaMessages);
 	const nameId = useId();
 	const idFieldId = useId();
 	const pathId = useId();
@@ -58,8 +62,8 @@ function NewCollectionForm({
 	const pathIssue = pathProblem(path);
 	const ready = name.trim() !== "" && id !== "" && idIssue === null && pathIssue === null;
 	const kinds: { value: Kind; label: string; explain: string }[] = [
-		{ value: "document", label: t("collection.kindDocument"), explain: t("collection.kindDocumentExplain") },
-		{ value: "item", label: t("collection.kindItem"), explain: t("collection.kindItemExplain") },
+		{ value: "document", label: ts("collection.kindDocument"), explain: t("collection.kindDocumentExplain") },
+		{ value: "item", label: ts("collection.kindItem"), explain: t("collection.kindItemExplain") },
 	];
 	const submit = () => {
 		if (ready) onCreate(id, kind, path.trim(), name.trim());
@@ -94,7 +98,7 @@ function NewCollectionForm({
 					aria-invalid={idIssue ? true : undefined}
 					onChange={(event) => setTypedId(event.target.value)}
 				/>
-				{idIssue && <FieldError className="text-xs">{t(`name.${idIssue}`)}</FieldError>}
+				{idIssue && <FieldError className="text-xs">{ts(`name.${idIssue}`)}</FieldError>}
 			</Labeled>
 			<fieldset className="flex flex-col gap-2">
 				<legend className="mb-1.5 font-medium text-xs">{t("collection.kind")}</legend>
@@ -133,14 +137,12 @@ function NewCollectionForm({
 				/>
 				{pathIssue && <FieldError className="text-xs">{t(`path.${pathIssue}`)}</FieldError>}
 			</Labeled>
-			<DialogFooter>
-				<Button type="button" variant="outline" onClick={onCancel}>
-					{t("collection.createCancel")}
-				</Button>
-				<Button type="submit" disabled={!ready}>
-					{t("collection.createConfirm")}
-				</Button>
-			</DialogFooter>
+			<DialogFormFooter
+				onCancel={onCancel}
+				cancelLabel={tc("cancel")}
+				submitLabel={t("collection.createConfirm")}
+				disabled={!ready}
+			/>
 		</form>
 	);
 }

@@ -1,22 +1,26 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import { createEntryTranslation } from "../../api/entries";
+import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import { Button } from "../../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
-import { cmsFetch, errorText } from "../admin-api";
+import { StatusIndicator, type StatusTone } from "../../ui/status-indicator";
 import { statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
 
-const STATUS_DOT: Record<string, string> = {
-	published: "bg-emerald-500",
-	draft: "bg-amber-500",
+const STATUS_TONE: Record<string, StatusTone> = {
+	published: "success",
+	draft: "warning",
 };
 
 /**
@@ -36,6 +40,7 @@ export function LanguageTabs({
 	onTrashTranslation: () => void;
 }) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const router = useAdminRouter();
 	const [creating, setCreating] = useState<string | null>(null);
@@ -43,30 +48,32 @@ export function LanguageTabs({
 	const isTranslation = isTranslationEntry(entry);
 	const createDisabled = disabled || entry.status === "trashed" || creating !== null;
 
+	const translate = useCmsMutation<(typeof site.LOCALES)[number], { entry: { id: string } }>({
+		fn: (target, { site }) => createEntryTranslation(site, entry.id, target, t("lang.createFailed")),
+		success: (_created, target) => t("lang.created", { lang: site.localeLabel(target) }),
+		failure: t("lang.createFailed"),
+		onSuccess: (created) => {
+			setCreating(null);
+			router.navigate(site.adminEntryEditHref(created.entry.id));
+		},
+		onError: () => setCreating(null),
+	});
+
 	const create = async (target: (typeof site.LOCALES)[number]) => {
 		if (creating) return;
 		setCreating(target);
 		try {
 			if (!(await onBeforeCreate())) {
 				toast.error(t("lang.saveFirst"));
+				setCreating(null);
 				return;
 			}
-			const created = await cmsFetch<{ entry: { id: string } }>(
-				site,
-				cmsApiUrl(`/v1/entries/${entry.id}/translations`),
-				{
-					method: "POST",
-					json: { locale: target },
-					fallback: t("lang.createFailed"),
-				},
-			);
-			toast.success(t("lang.created", { lang: site.localeLabel(target) }));
-			router.navigate(site.adminEntryEditHref(created.entry.id));
 		} catch (error) {
 			toast.error(errorText(site, error, t("lang.createFailed")));
-		} finally {
 			setCreating(null);
+			return;
 		}
+		translate.mutate(target);
 	};
 
 	return (
@@ -110,10 +117,7 @@ export function LanguageTabs({
 								if (!current) router.navigate(site.adminEntryEditHref(member.id));
 							}}
 						>
-							<span
-								aria-hidden
-								className={cn("size-1.5 rounded-full", STATUS_DOT[member.status] ?? "bg-cms-muted-foreground/50")}
-							/>
+							<StatusIndicator size="xs" tone={STATUS_TONE[member.status] ?? "neutral"} />
 							<span aria-hidden className="font-medium">
 								{target.toUpperCase()}
 							</span>
@@ -135,7 +139,7 @@ export function LanguageTabs({
 								<DropdownMenuContent align="start">
 									<DropdownMenuItem variant="destructive" onClick={onTrashTranslation}>
 										<Trash2 aria-hidden />
-										{t("lang.trash")}
+										{tc("lifecycle.trash")}
 									</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>

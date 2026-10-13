@@ -1,21 +1,37 @@
-import { placementsOf } from "@monti-cms/core/client";
+import { fieldSetsOf, placementsOf } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { editorMessages } from "../../../editor/messages";
+import { commonMessages } from "../../../lib/common.messages";
 import { pressOption } from "../../../test/base-ui";
 import { createTestRouter } from "../../../test/router";
 import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
+import { schemaAdminMessages } from "../admin.messages";
+import { schemaCollectionMessages } from "../collection.messages";
+import { schemaFieldsMessages } from "../fields.messages";
+import { schemaLocalesMessages } from "../locales.messages";
 import { schemaMessages } from "../messages";
+import { schemaReviewMessages } from "../review.messages";
 import type { Obj } from "../schema-model";
 import { SchemaSettings } from "../schema-screen";
+import { schemaSiteMessages } from "../site.messages";
 
 const nav = createTestRouter();
 const { render } = nav;
 const t = testSite.createTranslator(schemaMessages);
+const te = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
+const tSite = testSite.createTranslator(schemaSiteMessages);
+const tLocales = testSite.createTranslator(schemaLocalesMessages);
+const tCollection = testSite.createTranslator(schemaCollectionMessages);
+const tFields = testSite.createTranslator(schemaFieldsMessages);
+const tAdmin = testSite.createTranslator(schemaAdminMessages);
+const tReview = testSite.createTranslator(schemaReviewMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
@@ -128,7 +144,7 @@ function SchemaTabs() {
 			<div role="tablist">
 				{SCHEMA_TABS.map((name) => (
 					<button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>
-						{t(`tabs.${name}`)}
+						{name}
 					</button>
 				))}
 			</div>
@@ -152,30 +168,32 @@ const review = () =>
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
 /** Picks the kind in the dialog that adds a field (the last "Kind" box on the screen). */
 async function pickNewFieldKind(optionName: string) {
-	fireEvent.click(screen.getAllByRole("combobox", { name: t("field.kind") }).at(-1) as HTMLElement);
+	fireEvent.click(screen.getAllByRole("combobox", { name: tFields("field.kind") }).at(-1) as HTMLElement);
 	pressOption(await screen.findByRole("option", { name: optionName }));
 }
 /** Opens the dialog of the "Add field" button and fills the name (and kind). */
 async function startAddingField(name: string, kindName?: string) {
-	fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+	fireEvent.click(screen.getByRole("button", { name: tFields("field.add") }));
 	const dialog = await screen.findByTestId("add-field-dialog");
-	type(within(dialog).getByLabelText(t("field.newName")), name);
+	type(within(dialog).getByLabelText(tFields("field.newName")), name);
 	if (kindName) await pickNewFieldKind(kindName);
 	return dialog;
 }
-const confirmAdd = (dialog: HTMLElement) =>
-	fireEvent.click(within(dialog).getByRole("button", { name: t("field.addConfirm") }));
+const confirmAdd = (dialog: HTMLElement) => fireEvent.click(within(dialog).getByRole("button", { name: tc("add") }));
 /** The sheet of a field: opened by its row of the tree. */
 async function openFieldSheet(field: string) {
-	fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: field }) }));
+	fireEvent.click(await screen.findByRole("button", { name: tFields("field.toggle", { name: field }) }));
 	return screen.findByTestId("field-sheet");
 }
 const applySheet = async (sheet: HTMLElement) => {
-	fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.apply") }));
+	fireEvent.click(within(sheet).getByRole("button", { name: tc("apply") }));
 	await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 };
 const openTab = (name: "basics" | "fields" | "editor") =>
-	fireEvent.click(screen.getByRole("tab", { name: t(`collection.tabs.${name}`) }));
+	fireEvent.click(screen.getByRole("tab", { name: tCollection(`collection.tabs.${name}`) }));
+/** The name of the action that adds the SEO plugin's fields (the plugin's tab name differs between the site configs). */
+const addSetName = () =>
+	tFields("fields.addSet", { name: fieldSetsOf(testSite.plugins).find((set) => set.id === "seo")?.label ?? "SEO" });
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
 
 describe("SchemaScreen", () => {
@@ -188,7 +206,7 @@ describe("SchemaScreen", () => {
 		expect(schemaMessages.messages.en["readonly.production"]).toBe(
 			"Settings are saved to monti.schema.ts. Change them on your computer (pnpm dev), then commit and deploy.",
 		);
-		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).disabled).toBe(true);
+		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).disabled).toBe(true);
 		expect(review().disabled).toBe(true);
 		expect(screen.queryByRole("button", { name: t("collection.create") })).toBeNull();
 		expect(requests.every((request) => request.method === "GET")).toBe(true);
@@ -196,16 +214,24 @@ describe("SchemaScreen", () => {
 
 	it("is read-only when the file holds code: it says the admin cannot rewrite it, names the line, and nothing can be reviewed", async () => {
 		state = screenState({
-			access: { writable: false, reason: "has_code", detail: "line 3: a spread `...`" },
+			access: {
+				writable: false,
+				reason: "has_code",
+				detail: "line 3: a spread `...`",
+				issue: { code: "spread", params: {}, line: 3, column: 5 },
+			},
 			source: "site",
 		});
 		renderScreen();
 
 		expect(await screen.findByTestId("schema-read-only")).toBeTruthy();
 		expect(screen.getByText(t("readonly.hasCode"))).toBeTruthy();
-		expect(screen.getByTestId("schema-code-detail").textContent).toBe("line 3: a spread `...`");
+		// The sentence is in the admin language, built from the issue's code (the server's English sentence is not shown).
+		expect(screen.getByTestId("schema-code-detail").textContent).toBe(
+			t("literal.line", { line: 3, message: t("literal.spread") }),
+		);
 		expect(t("readonly.hasCode")).toContain("monti.schema.ts");
-		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).disabled).toBe(true);
+		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).disabled).toBe(true);
 		expect(review().disabled).toBe(true);
 	});
 
@@ -219,8 +245,8 @@ describe("SchemaScreen", () => {
 	it("shows the collections of the file and opens the editor of the first one", async () => {
 		renderScreen();
 		expect(await screen.findByTestId("collection-post")).toBeTruthy();
-		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).value).toBe("Post");
-		expect((screen.getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/posts/:slug");
+		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).value).toBe("Post");
+		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("/posts/:slug");
 		expect(review().disabled).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: /^Tag/ }));
 		expect(await screen.findByTestId("collection-tag")).toBeTruthy();
@@ -228,7 +254,7 @@ describe("SchemaScreen", () => {
 
 	it("checks an edit before saving: the request carries the edited file, and the save sends the hash it started from", async () => {
 		renderScreen();
-		type(await screen.findByLabelText(t("collection.label")), "Article");
+		type(await screen.findByLabelText(tCollection("collection.label")), "Article");
 		expect(review().disabled).toBe(false);
 		fireEvent.click(review());
 
@@ -236,7 +262,7 @@ describe("SchemaScreen", () => {
 		expect(lastPreview()?.body).toMatchObject({ schema: { collections: { post: { label: "Article" } } } });
 		expect(screen.getByTestId("review-summary").textContent).toContain("2");
 
-		fireEvent.click(screen.getByRole("button", { name: t("review.save") }));
+		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
 		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
 		const put = requests.find((request) => request.method === "PUT");
 		expect(put?.body).toMatchObject({ baseHash: "hash-1", schema: { collections: { post: { label: "Article" } } } });
@@ -261,19 +287,58 @@ describe("SchemaScreen", () => {
 		expect(fields.rating).toEqual({ kind: "text", label: "Rating" });
 	});
 
+	it("offers the SEO plugin's fields on the Fields tab until the collection has them, and adds them to the draft as plain fields", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		const seoName = addSetName();
+		fireEvent.click(screen.getByRole("button", { name: seoName }));
+		// The collection now has fields with the SEO roles, so the action goes away.
+		await waitFor(() => expect(screen.queryByRole("button", { name: seoName })).toBeNull());
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown> } } })
+			.collections.post.fields;
+		expect(Object.keys(fields).slice(0, 4)).toEqual(["title", "slug", "summary", "status"]);
+		expect(fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle", input: "seo-title" });
+		expect(fields.seoPreview).toMatchObject({ kind: "view", view: "search" });
+		// Plain data: nothing but JSON values reaches the file.
+		expect(JSON.parse(JSON.stringify(fields))).toEqual(fields);
+	});
+
+	it("does not offer the SEO fields for a collection that already has them", async () => {
+		state = screenState({
+			schema: {
+				...schema(),
+				collections: {
+					...schema().collections,
+					post: {
+						...schema().collections.post,
+						fields: {
+							...schema().collections.post.fields,
+							metaTitle: { kind: "text", label: "Meta title", role: "seoTitle" },
+						},
+					},
+				},
+			},
+		});
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		expect(screen.queryByRole("button", { name: addSetName() })).toBeNull();
+	});
+
 	it("refuses a field name that is taken or malformed", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
 		const dialog = await startAddingField("summary");
-		expect((within(dialog).getByRole("button", { name: t("field.addConfirm") }) as HTMLButtonElement).disabled).toBe(
-			true,
-		);
-		type(within(dialog).getByLabelText(t("field.newName")), "1bad");
-		expect((within(dialog).getByRole("button", { name: t("field.addConfirm") }) as HTMLButtonElement).disabled).toBe(
-			true,
-		);
+		expect((within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement).disabled).toBe(true);
+		type(within(dialog).getByLabelText(tFields("field.newName")), "1bad");
+		expect((within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
 	it("lists the fields as one tree: kind, required mark and settings per line, the title marked", async () => {
@@ -335,7 +400,7 @@ describe("SchemaScreen", () => {
 		const card = await screen.findByTestId("fields-card");
 		const row = (field: string) => within(card).getByTestId(`field-${field}`);
 		expect(within(row("tagIds")).getByText("→ Tag[]")).toBeTruthy();
-		expect(within(row("tagIds")).getByText(new RegExp(t("sum.ordered")))).toBeTruthy();
+		expect(within(row("tagIds")).getByText(new RegExp(tFields("sum.ordered")))).toBeTruthy();
 		expect(within(row("series")).getByText("← Series")).toBeTruthy();
 		expect(within(row("cover")).getByText("media")).toBeTruthy();
 		const policy = row("policy");
@@ -344,7 +409,7 @@ describe("SchemaScreen", () => {
 		// Each option is a branch; the field of an option sits under it, and an option without fields says so.
 		expect(within(policy).getByText('= "normal"')).toBeTruthy();
 		expect(within(policy).getByText('= "deprecated"')).toBeTruthy();
-		expect(within(policy).getByText(t("fields.noExtra"))).toBeTruthy();
+		expect(within(policy).getByText(tFields("fields.noExtra"))).toBeTruthy();
 		const branch = within(policy).getByTestId("field-replacementId");
 		expect(within(branch).getByText("→ Post")).toBeTruthy();
 		const order = [...policy.querySelectorAll("[data-testid^='field-'], span")]
@@ -352,7 +417,7 @@ describe("SchemaScreen", () => {
 			.filter((text) => text === '= "deprecated"' || text === "replacementId");
 		expect(order).toEqual(['= "deprecated"', "replacementId"]);
 		// A field of a branch opens in the same sheet.
-		fireEvent.click(within(branch).getByRole("button", { name: t("field.toggle", { name: "replacementId" }) }));
+		fireEvent.click(within(branch).getByRole("button", { name: tFields("field.toggle", { name: "replacementId" }) }));
 		expect(await screen.findByTestId("field-sheet")).toBeTruthy();
 	});
 
@@ -361,10 +426,10 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		const sheet = await openFieldSheet("summary");
-		expect(within(sheet).getByText(t("sheet.nameHint"))).toBeTruthy();
-		expect(within(sheet).queryByRole("textbox", { name: t("sheet.name") })).toBeNull();
-		type(within(sheet).getByLabelText(t("sheet.label")), "Teaser");
-		fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.cancel") }));
+		expect(within(sheet).getByText(tFields("sheet.nameHint"))).toBeTruthy();
+		expect(within(sheet).queryByRole("textbox", { name: tFields("sheet.name") })).toBeNull();
+		type(within(sheet).getByLabelText(tFields("sheet.label")), "Teaser");
+		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 		expect(review().disabled).toBe(true);
 	});
@@ -374,8 +439,8 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		const sheet = await openFieldSheet("summary");
-		type(within(sheet).getByLabelText(t("sheet.label")), "Teaser");
-		fireEvent.click(within(sheet).getByRole("switch", { name: t("field.required") }));
+		type(within(sheet).getByLabelText(tFields("sheet.label")), "Teaser");
+		fireEvent.click(within(sheet).getByRole("switch", { name: tFields("field.required") }));
 		await applySheet(sheet);
 		expect(review().disabled).toBe(false);
 		fireEvent.click(review());
@@ -390,7 +455,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		const sheet = await openFieldSheet("summary");
-		fireEvent.click(within(sheet).getByRole("switch", { name: t("field.isTitle") }));
+		fireEvent.click(within(sheet).getByRole("switch", { name: tFields("field.isTitle") }));
 		await applySheet(sheet);
 		expect(within(screen.getByTestId("field-summary")).getByTestId("title-badge")).toBeTruthy();
 		expect(within(screen.getByTestId("field-title")).queryByTestId("title-badge")).toBeNull();
@@ -458,7 +523,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		const sheet = await openFieldSheet("status");
-		const value = within(sheet).getAllByLabelText(t("options.value"))[0] as HTMLElement;
+		const value = within(sheet).getAllByLabelText(tFields("options.value"))[0] as HTMLElement;
 		type(value, "idea");
 		fireEvent.keyDown(value, { key: "Enter" });
 		await applySheet(sheet);
@@ -468,7 +533,7 @@ describe("SchemaScreen", () => {
 		expect(lastPreview()?.body?.renames).toEqual([
 			{ kind: "option", collection: "post", field: "status", from: "draft", to: "idea" },
 		]);
-		expect(within(decision).getByText(t("review.entriesCount", { count: 3 }))).toBeTruthy();
+		expect(within(decision).getByText(tReview("review.entriesCount", { count: 3 }))).toBeTruthy();
 		const radios = within(decision).getAllByRole("radio") as HTMLInputElement[];
 		expect(radios).toHaveLength(3);
 		// The server's pick (the rename) is the one selected.
@@ -481,7 +546,7 @@ describe("SchemaScreen", () => {
 		fireEvent.click(radios[2] as HTMLInputElement);
 		await waitFor(() => expect((lastPreview()?.body?.transforms as unknown[])?.length).toBe(1));
 		expect(lastPreview()?.body?.transforms).toEqual([{ op: "dropField", collection: "post", field: "summary" }]);
-		fireEvent.click(await screen.findByRole("button", { name: t("review.save") }));
+		fireEvent.click(await screen.findByRole("button", { name: tReview("review.save") }));
 		await waitFor(() => expect(requests.some((request) => request.method === "PUT")).toBe(true));
 		expect(requests.find((request) => request.method === "PUT")?.body?.transforms).toEqual([
 			{ op: "dropField", collection: "post", field: "summary" },
@@ -496,21 +561,21 @@ describe("SchemaScreen", () => {
 				issues: [{ path: "collections.post.fields.summary.max", message: "Too small: expected number to be >=1" }],
 			});
 		renderScreen();
-		type(await screen.findByLabelText(t("collection.label")), "Article");
+		type(await screen.findByLabelText(tCollection("collection.label")), "Article");
 		fireEvent.click(review());
 		const list = await screen.findByTestId("schema-issues");
 		expect(within(list).getByText("collections.post.fields.summary.max")).toBeTruthy();
-		expect((screen.getByRole("button", { name: t("review.save") }) as HTMLButtonElement).disabled).toBe(true);
+		expect((screen.getByRole("button", { name: tReview("review.save") }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
 	it("says when the file changed since it was opened", async () => {
 		saveAnswer = () => ({ status: 409, body: { error: { code: "schema_conflict", message: "changed" } } });
 		renderScreen();
-		type(await screen.findByLabelText(t("collection.label")), "Article");
+		type(await screen.findByLabelText(tCollection("collection.label")), "Article");
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
-		fireEvent.click(screen.getByRole("button", { name: t("review.save") }));
-		expect(await screen.findByText(t("save.conflict"))).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
+		expect(await screen.findByText(tReview("save.conflict"))).toBeTruthy();
 		expect(reload.reloadPage).not.toHaveBeenCalled();
 	});
 
@@ -529,10 +594,10 @@ describe("SchemaScreen", () => {
 	it("ends the basics tab with the remove section, which says what removing does", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		expect(screen.getByText(t("collection.nameHint"))).toBeTruthy();
-		expect(screen.getByText(t("collection.dangerDescription"))).toBeTruthy();
+		expect(screen.getByText(tCollection("collection.nameHint"))).toBeTruthy();
+		expect(screen.getByText(tCollection("collection.dangerDescription"))).toBeTruthy();
 		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
-		expect(sections.at(-1)).toBe(t("collection.dangerTitle"));
+		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
 		const button = screen.getByRole("button", { name: t("collection.remove") });
 		expect(button.closest("section")?.querySelector(".bg-cms-card")).toBeNull();
 	});
@@ -542,13 +607,15 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("editor");
 		fireEvent.click(
-			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
+			screen.getByRole("switch", {
+				name: tCollection("allowed.limit", { label: tCollection("allowed.blocks").toLowerCase() }),
+			}),
 		);
-		const table = await screen.findByRole("checkbox", { name: t("allowed.name.table") });
+		const table = await screen.findByRole("checkbox", { name: te("toolbar.table") });
 		expect(table).toBeTruthy();
-		expect(screen.getByText(t("allowed.name.table")).getAttribute("title")).toBe("table");
+		expect(screen.getByText(te("toolbar.table")).getAttribute("title")).toBe("table");
 		expect(screen.queryByRole("checkbox", { name: "table" })).toBeNull();
-		expect(screen.getByRole("checkbox", { name: t("allowed.name.image") })).toBeTruthy();
+		expect(screen.getByRole("checkbox", { name: te("toolbar.image") })).toBeTruthy();
 		// A block without a dictionary label falls back to its definition's label, or its id.
 		expect(screen.getByTitle("callout").textContent).toBe(testSite.BLOCK_BY_NAME.get("callout")?.label ?? "callout");
 	});
@@ -556,9 +623,9 @@ describe("SchemaScreen", () => {
 	it("shows the editor tab only for a collection with a body", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		expect(screen.getByRole("tab", { name: t("collection.tabs.editor") })).toBeTruthy();
-		fireEvent.click(screen.getByRole("switch", { name: t("collection.body") }));
-		expect(screen.queryByRole("tab", { name: t("collection.tabs.editor") })).toBeNull();
+		expect(screen.getByRole("tab", { name: tCollection("collection.tabs.editor") })).toBeTruthy();
+		fireEvent.click(screen.getByRole("switch", { name: tCollection("collection.body") }));
+		expect(screen.queryByRole("tab", { name: tCollection("collection.tabs.editor") })).toBeNull();
 	});
 
 	it("limits the body of a collection to the blocks that are ticked", async () => {
@@ -566,7 +633,9 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("editor");
 		fireEvent.click(
-			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
+			screen.getByRole("switch", {
+				name: tCollection("allowed.limit", { label: tCollection("allowed.blocks").toLowerCase() }),
+			}),
 		);
 		// Everything is ticked at first; untick one.
 		fireEvent.click(
@@ -587,30 +656,36 @@ describe("SchemaScreen", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
 
-		const confirm = within(dialog).getByRole("button", { name: t("collection.createConfirm") }) as HTMLButtonElement;
+		const confirm = within(dialog).getByRole("button", {
+			name: tCollection("collection.createConfirm"),
+		}) as HTMLButtonElement;
 		expect(confirm.disabled).toBe(true);
 		// A name that is taken is refused with the reason.
-		type(within(dialog).getByLabelText(t("collection.newName")), "post");
+		type(within(dialog).getByLabelText(tCollection("collection.newName")), "post");
 		expect(within(dialog).getByText(t("name.taken"))).toBeTruthy();
 		expect(confirm.disabled).toBe(true);
 
-		type(within(dialog).getByLabelText(t("collection.newName")), "note");
-		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
+		type(within(dialog).getByLabelText(tCollection("collection.newName")), "note");
+		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe(
+			"/notes/:slug",
+		);
 		// Each kind says what it is for.
-		expect(within(dialog).getByText(t("collection.kindDocumentExplain"))).toBeTruthy();
-		expect(within(dialog).getByText(t("collection.kindItemExplain"))).toBeTruthy();
+		expect(within(dialog).getByText(tCollection("collection.kindDocumentExplain"))).toBeTruthy();
+		expect(within(dialog).getByText(tCollection("collection.kindItemExplain"))).toBeTruthy();
 		// An address of the writer's own stays when the name changes; a wrong one is refused.
-		type(within(dialog).getByLabelText(t("collection.path")), "/notes");
-		expect(within(dialog).getByText(t("path.slug"))).toBeTruthy();
+		type(within(dialog).getByLabelText(tCollection("collection.path")), "/notes");
+		expect(within(dialog).getByText(tCollection("path.slug"))).toBeTruthy();
 		expect(confirm.disabled).toBe(true);
-		type(within(dialog).getByLabelText(t("collection.path")), "/notes/:slug");
-		type(within(dialog).getByLabelText(t("collection.newName")), "notes");
-		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
+		type(within(dialog).getByLabelText(tCollection("collection.path")), "/notes/:slug");
+		type(within(dialog).getByLabelText(tCollection("collection.newName")), "notes");
+		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe(
+			"/notes/:slug",
+		);
 
 		fireEvent.click(confirm);
 		await waitFor(() => expect(screen.queryByTestId("new-collection-dialog")).toBeNull());
 		expect(await screen.findByTestId("collection-notes")).toBeTruthy();
-		expect((screen.getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
+		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
 		openTab("fields");
 		expect(screen.getByTestId("field-title")).toBeTruthy();
 		expect(screen.getByTestId("field-slug")).toBeTruthy();
@@ -634,9 +709,9 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
-		const name = within(dialog).getByLabelText(t("collection.newName"));
-		const id = () => (within(dialog).getByLabelText(t("collection.newId")) as HTMLInputElement).value;
-		const path = () => (within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value;
+		const name = within(dialog).getByLabelText(tCollection("collection.newName"));
+		const id = () => (within(dialog).getByLabelText(tCollection("collection.newId")) as HTMLInputElement).value;
+		const path = () => (within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value;
 
 		type(name, "Memo");
 		expect([id(), path()]).toEqual(["memo", "/memos/:slug"]);
@@ -649,15 +724,17 @@ describe("SchemaScreen", () => {
 		type(name, "메모");
 		expect(id()).toBe("");
 		expect(within(dialog).getByText(t("name.idEmpty"))).toBeTruthy();
-		const confirm = within(dialog).getByRole("button", { name: t("collection.createConfirm") }) as HTMLButtonElement;
+		const confirm = within(dialog).getByRole("button", {
+			name: tCollection("collection.createConfirm"),
+		}) as HTMLButtonElement;
 		expect(confirm.disabled).toBe(true);
-		type(within(dialog).getByLabelText(t("collection.newId")), "memo");
+		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memo");
 		expect(path()).toBe("/memos/:slug");
 		expect(confirm.disabled).toBe(false);
 
 		// Once the address is edited it stops following the identifier.
-		type(within(dialog).getByLabelText(t("collection.path")), "/my/:slug");
-		type(within(dialog).getByLabelText(t("collection.newId")), "memos");
+		type(within(dialog).getByLabelText(tCollection("collection.path")), "/my/:slug");
+		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memos");
 		expect(path()).toBe("/my/:slug");
 
 		fireEvent.click(confirm);
@@ -674,12 +751,12 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
 		const dialog = await screen.findByTestId("new-collection-dialog");
-		type(within(dialog).getByLabelText(t("collection.newName")), "category");
+		type(within(dialog).getByLabelText(tCollection("collection.newName")), "category");
 		fireEvent.click(within(dialog).getByRole("radio", { name: new RegExp(t("collection.kindItem")) }));
-		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("");
-		fireEvent.click(within(dialog).getByRole("button", { name: t("collection.createConfirm") }));
+		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("");
+		fireEvent.click(within(dialog).getByRole("button", { name: tCollection("collection.createConfirm") }));
 		expect(await screen.findByTestId("collection-category")).toBeTruthy();
-		expect((screen.getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("");
+		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("");
 	});
 
 	it("cannot delete the title field, and the slug field only while the address does not use :slug", async () => {
@@ -690,20 +767,20 @@ describe("SchemaScreen", () => {
 			const sheet = await openFieldSheet(field);
 			return {
 				sheet,
-				button: within(sheet).getByRole("button", { name: t("sheet.delete") }) as HTMLButtonElement,
+				button: within(sheet).getByRole("button", { name: tFields("sheet.delete") }) as HTMLButtonElement,
 			};
 		};
 		const close = async (sheet: HTMLElement) => {
-			fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.cancel") }));
+			fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
 			await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 		};
 		let opened = await deleteOf("title");
 		expect(opened.button.disabled).toBe(true);
-		expect(opened.button.getAttribute("title")).toBe(t("field.removeBlocked.title"));
+		expect(opened.button.getAttribute("title")).toBe(tFields("field.removeBlocked.title"));
 		await close(opened.sheet);
 		opened = await deleteOf("slug");
 		expect(opened.button.disabled).toBe(true);
-		expect(opened.button.getAttribute("title")).toBe(t("field.removeBlocked.slug"));
+		expect(opened.button.getAttribute("title")).toBe(tFields("field.removeBlocked.slug"));
 		await close(opened.sheet);
 		opened = await deleteOf("summary");
 		expect(opened.button.disabled).toBe(false);
@@ -711,7 +788,7 @@ describe("SchemaScreen", () => {
 
 		// Without :slug in the address the slug field can go.
 		openTab("basics");
-		type(screen.getByLabelText(t("collection.path")), "");
+		type(screen.getByLabelText(tCollection("collection.path")), "");
 		openTab("fields");
 		opened = await deleteOf("slug");
 		expect(opened.button.disabled).toBe(false);
@@ -724,7 +801,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		const body = () => screen.getByTestId("schema-screen").querySelector("[class*='max-w-']") as HTMLElement;
 		expect(body().className).toContain("max-w-none");
-		fireEvent.click(screen.getByRole("tab", { name: t("tabs.site") }));
+		fireEvent.click(screen.getByRole("tab", { name: "site" }));
 		await screen.findByTestId("site-settings");
 		expect(body().className).toContain("max-w-[1160px]");
 	});
@@ -734,22 +811,24 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
 		expect(tabs).toEqual(
-			expect.arrayContaining(["basics", "fields", "editor"].map((name) => t(`collection.tabs.${name as "basics"}`))),
+			expect.arrayContaining(
+				["basics", "fields", "editor"].map((name) => tCollection(`collection.tabs.${name as "basics"}`)),
+			),
 		);
 		// List columns are chosen on the list screen, so there is no list tab here.
 		expect(tabs).not.toContain("List");
 		expect(tabs).not.toContain("목록");
 		// Basics is open: the address is there, the settings of the other tabs are not.
-		expect(screen.getByLabelText(t("collection.path"))).toBeTruthy();
-		expect(screen.queryByText(t("allowed.title"))).toBeNull();
+		expect(screen.getByLabelText(tCollection("collection.path"))).toBeTruthy();
+		expect(screen.queryByText(tCollection("allowed.title"))).toBeNull();
 		expect(screen.queryByTestId("field-title")).toBeNull();
 
 		openTab("editor");
-		expect(await screen.findByText(t("allowed.title"))).toBeTruthy();
-		expect(screen.getByText(t("allowed.hint"))).toBeTruthy();
+		expect(await screen.findByText(tCollection("allowed.title"))).toBeTruthy();
+		expect(screen.getByText(tCollection("allowed.hint"))).toBeTruthy();
 		// Everything is allowed until a list is limited.
-		expect(screen.getAllByText(t("allowed.everything"))).toHaveLength(3);
-		expect(screen.queryByLabelText(t("collection.path"))).toBeNull();
+		expect(screen.getAllByText(tCollection("allowed.everything"))).toHaveLength(3);
+		expect(screen.queryByLabelText(tCollection("collection.path"))).toBeNull();
 	});
 
 	describe("layout in the fields tree", () => {
@@ -762,7 +841,7 @@ describe("SchemaScreen", () => {
 				.collections.post;
 		/** Moves a field with the row's move button: it opens a list of places. */
 		const moveTo = async (field: string, destination: string) => {
-			fireEvent.click(await screen.findByRole("button", { name: t("layout.move", { name: field }) }));
+			fireEvent.click(await screen.findByRole("button", { name: tFields("layout.move", { name: field }) }));
 			const dialog = await screen.findByTestId("move-dialog");
 			fireEvent.click(within(dialog).getByRole("button", { name: destination }));
 		};
@@ -801,27 +880,29 @@ describe("SchemaScreen", () => {
 			await waitFor(() => expect(screen.queryByTestId("field-summary")).toBeNull());
 
 			// A group and a tab have the same buttons.
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addTab") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addTab") }));
 			await screen.findByTestId("tab-1");
 			for (const label of [
-				t("layout.upGroup", { name: t("layout.newGroup") }),
-				t("layout.downGroup", { name: t("layout.newGroup") }),
-				t("layout.removeGroup", { name: t("layout.newGroup") }),
-				t("layout.upTab", { name: t("layout.newTab") }),
-				t("layout.downTab", { name: t("layout.newTab") }),
-				t("layout.removeTab", { name: t("layout.newTab") }),
+				tFields("layout.upGroup", { name: tFields("layout.newGroup") }),
+				tFields("layout.downGroup", { name: tFields("layout.newGroup") }),
+				tFields("layout.removeGroup", { name: tFields("layout.newGroup") }),
+				tFields("layout.upTab", { name: tFields("layout.newTab") }),
+				tFields("layout.downTab", { name: tFields("layout.newTab") }),
+				tFields("layout.removeTab", { name: tFields("layout.newTab") }),
 			]) {
 				expect(screen.getByRole("button", { name: label })).toBeTruthy();
 			}
-			fireEvent.click(screen.getByRole("button", { name: t("layout.removeTab", { name: t("layout.newTab") }) }));
+			fireEvent.click(
+				screen.getByRole("button", { name: tFields("layout.removeTab", { name: tFields("layout.newTab") }) }),
+			);
 			await waitFor(() => expect(screen.queryByTestId("tab-1")).toBeNull());
 		});
 
 		it("adds a group, renames it in place, and saves the group with the order of the fields", async () => {
 			await openFields();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			const title = (await screen.findByDisplayValue(t("layout.newGroup"))) as HTMLInputElement;
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			const title = (await screen.findByDisplayValue(tFields("layout.newGroup"))) as HTMLInputElement;
 			type(title, "Details");
 			fireEvent.blur(title);
 			await screen.findByDisplayValue("Details");
@@ -838,29 +919,33 @@ describe("SchemaScreen", () => {
 
 		it("collapses a group at first", async () => {
 			await openFields();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			await screen.findByDisplayValue(t("layout.newGroup"));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			await screen.findByDisplayValue(tFields("layout.newGroup"));
 			fireEvent.click(
-				await screen.findByRole("button", { name: t("layout.collapseToggle", { name: t("layout.newGroup") }) }),
+				await screen.findByRole("button", {
+					name: tFields("layout.collapseToggle", { name: tFields("layout.newGroup") }),
+				}),
 			);
-			expect(await screen.findByText(t("layout.collapsedMark"))).toBeTruthy();
+			expect(await screen.findByText(tFields("layout.collapsedMark"))).toBeTruthy();
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
 			expect(savedPost().layout).toEqual([
 				{ fields: ["slug", "summary", "status"] },
-				{ group: t("layout.newGroup"), fields: [], collapsed: true },
+				{ group: tFields("layout.newGroup"), fields: [], collapsed: true },
 			]);
 		});
 
 		it("deletes a group, sending its fields back to no group", async () => {
 			await openFields();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			await screen.findByDisplayValue(t("layout.newGroup"));
-			await moveTo("summary", t("layout.newGroup"));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			await screen.findByDisplayValue(tFields("layout.newGroup"));
+			await moveTo("summary", tFields("layout.newGroup"));
 			fireEvent.click(
-				await screen.findByRole("button", { name: t("layout.removeGroup", { name: t("layout.newGroup") }) }),
+				await screen.findByRole("button", {
+					name: tFields("layout.removeGroup", { name: tFields("layout.newGroup") }),
+				}),
 			);
-			await waitFor(() => expect(screen.queryByDisplayValue(t("layout.newGroup"))).toBeNull());
+			await waitFor(() => expect(screen.queryByDisplayValue(tFields("layout.newGroup"))).toBeNull());
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
 			const post = savedPost();
@@ -871,29 +956,33 @@ describe("SchemaScreen", () => {
 		it("shows the tab level only once a second tab exists, and moves a group into it", async () => {
 			await openFields();
 			expect(screen.queryByTestId("tab-0")).toBeNull();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			await screen.findByDisplayValue(t("layout.newGroup"));
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addTab") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			await screen.findByDisplayValue(tFields("layout.newGroup"));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addTab") }));
 			await screen.findByTestId("tab-1");
 			expect(screen.getByDisplayValue(defaultTabName)).toBeTruthy();
 
 			fireEvent.click(
-				await screen.findByRole("button", { name: t("layout.moveGroup", { name: t("layout.newGroup") }) }),
+				await screen.findByRole("button", { name: tFields("layout.moveGroup", { name: tFields("layout.newGroup") }) }),
 			);
 			fireEvent.click(
-				within(await screen.findByTestId("move-dialog")).getByRole("button", { name: t("layout.newTab") }),
+				within(await screen.findByTestId("move-dialog")).getByRole("button", { name: tFields("layout.newTab") }),
 			);
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
-			expect(savedPost().layout).toEqual([{ group: t("layout.newGroup"), fields: [], tab: t("layout.newTab") }]);
+			expect(savedPost().layout).toEqual([
+				{ group: tFields("layout.newGroup"), fields: [], tab: tFields("layout.newTab") },
+			]);
 		});
 
 		it("marks the title as not in the properties panel and cannot move it into a group", async () => {
 			await openFields();
 			const row = screen.getByTestId("field-title");
-			expect(within(row).getByText(t("layout.notInPanel"))).toBeTruthy();
-			expect(within(row).getByText(t("layout.notInPanel")).getAttribute("title")).toBe(t("layout.notInPanel.title"));
-			expect(within(row).queryByRole("button", { name: t("layout.move", { name: "title" }) })).toBeNull();
+			expect(within(row).getByText(tFields("layout.notInPanel"))).toBeTruthy();
+			expect(within(row).getByText(tFields("layout.notInPanel")).getAttribute("title")).toBe(
+				tFields("layout.notInPanel.title"),
+			);
+			expect(within(row).queryByRole("button", { name: tFields("layout.move", { name: "title" }) })).toBeNull();
 		});
 
 		it("shows a field a plugin placed inside its own tab, locked there", async () => {
@@ -905,12 +994,12 @@ describe("SchemaScreen", () => {
 			await openFields();
 			expect(screen.getByTestId("tab-1")).toBeTruthy();
 			const seo = screen.getByTestId("field-seoTitle");
-			expect(within(seo).getByText(t("layout.pluginPlaced"))).toBeTruthy();
+			expect(within(seo).getByText(tFields("layout.pluginPlaced"))).toBeTruthy();
 			expect(within(seo).getByRole("button", { name: t("row.remove", { name: "seoTitle" }) })).toBeTruthy();
 			// The tab is the plugin's: it cannot be renamed.
 			expect((screen.getByDisplayValue(seoTab) as HTMLInputElement).disabled).toBe(true);
 			// The plugin places it: it cannot be moved, only removed.
-			expect(within(seo).queryByRole("button", { name: t("layout.move", { name: "seoTitle" }) })).toBeNull();
+			expect(within(seo).queryByRole("button", { name: tFields("layout.move", { name: "seoTitle" }) })).toBeNull();
 			expect(
 				(within(seo).getByRole("button", { name: t("row.up", { name: "seoTitle" }) }) as HTMLButtonElement).disabled,
 			).toBe(true);
@@ -940,7 +1029,7 @@ describe("SchemaScreen", () => {
 			expect(previewLabels().slice(0, 2)).toEqual(["Address", "Summary"]);
 
 			// Moving another field does not move them.
-			await moveTo("status", t("layout.moveOut"));
+			await moveTo("status", tFields("layout.moveOut"));
 			await waitFor(() => expect(order().filter((id) => id !== "field-title")[0]).toBe("field-slug"));
 			expect(previewLabels().slice(0, 2)).toEqual(["Address", "Summary"]);
 			fireEvent.click(review());
@@ -953,7 +1042,7 @@ describe("SchemaScreen", () => {
 			wideWindow();
 			await openFields();
 			const preview = await screen.findByTestId("layout-preview");
-			expect(within(preview).getByText(t("layout.previewLabel"))).toBeTruthy();
+			expect(within(preview).getByText(tFields("layout.previewLabel"))).toBeTruthy();
 			// The title is above the body, so the panel does not draw it.
 			expect(within(preview).queryByLabelText(/^Title/)).toBeNull();
 			// Real inputs of each kind work: a text box takes typing, a select opens its options.
@@ -1008,11 +1097,11 @@ describe("SchemaScreen", () => {
 		it("follows the draft without saving: a moved field shows in its group in the preview", async () => {
 			wideWindow();
 			await openFields();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			await moveTo("summary", t("layout.newGroup"));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
+			await moveTo("summary", tFields("layout.newGroup"));
 			const group = await within(screen.getByTestId("layout-preview")).findByRole("region", {
-				name: t("layout.newGroup"),
+				name: tFields("layout.newGroup"),
 			});
 			expect(within(group).getByLabelText("Summary")).toBeTruthy();
 			expect(requests.filter((request) => request.method !== "GET")).toEqual([]);
@@ -1057,7 +1146,7 @@ describe("SchemaScreen", () => {
 						}
 					}
 				});
-			const settingsHeader = () => within(card).getByText(t("fields.colSettings"));
+			const settingsHeader = () => within(card).getByText(tFields("fields.colSettings"));
 			resizeTo(500);
 			await waitFor(() => expect(settingsHeader().className).toContain("hidden"));
 			expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/);
@@ -1083,12 +1172,12 @@ describe("SchemaScreen", () => {
 			wideWindow();
 			await openFields();
 			await screen.findByTestId("layout-preview");
-			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.preview") }));
 			await waitFor(() => expect(screen.queryByTestId("layout-preview")).toBeNull());
 			cleanup();
 			await openFields();
 			expect(screen.queryByTestId("layout-preview")).toBeNull();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.preview") }));
 			expect(await screen.findByTestId("layout-preview")).toBeTruthy();
 			vi.unstubAllGlobals();
 		});
@@ -1096,18 +1185,20 @@ describe("SchemaScreen", () => {
 		it("opens the preview in a side panel on a narrow window", async () => {
 			await openFields();
 			expect(screen.queryByTestId("layout-preview")).toBeNull();
-			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			fireEvent.click(screen.getByRole("button", { name: tFields("layout.preview") }));
 			const drawer = await screen.findByTestId("layout-preview-drawer");
 			expect(within(drawer).getByTestId("layout-preview")).toBeTruthy();
-			fireEvent.click(within(drawer).getByRole("button", { name: t("layout.previewClose") }));
+			fireEvent.click(within(drawer).getByRole("button", { name: tFields("layout.previewClose") }));
 			expect(screen.queryByTestId("layout-preview-drawer")).toBeNull();
 		});
 
 		it("cannot change the layout when the schema is read-only", async () => {
 			state = screenState({ access: { writable: false, reason: "production" } });
 			await openFields();
-			expect((screen.getByRole("button", { name: t("layout.addGroup") }) as HTMLButtonElement).disabled).toBe(true);
-			expect((screen.getByRole("button", { name: t("layout.addTab") }) as HTMLButtonElement).disabled).toBe(true);
+			expect((screen.getByRole("button", { name: tFields("layout.addGroup") }) as HTMLButtonElement).disabled).toBe(
+				true,
+			);
+			expect((screen.getByRole("button", { name: tFields("layout.addTab") }) as HTMLButtonElement).disabled).toBe(true);
 		});
 	});
 
@@ -1116,20 +1207,20 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		confirmAdd(await startAddingField("extra", t("kind.conditional")));
+		confirmAdd(await startAddingField("extra", tFields("kind.conditional")));
 
 		const dialog = await screen.findByTestId("new-field-dialog");
 		// Nothing is in the collection yet.
 		expect(screen.queryByTestId("field-extra")).toBeNull();
-		expect(within(dialog).getByText(t("field.needs.branches"))).toBeTruthy();
-		const add = within(dialog).getByRole("button", { name: t("field.addConfirm") }) as HTMLButtonElement;
+		expect(within(dialog).getByText(tFields("field.needs.branches"))).toBeTruthy();
+		const add = within(dialog).getByRole("button", { name: tc("add") }) as HTMLButtonElement;
 		expect(add.disabled).toBe(true);
 
 		// Add a field to the first option.
-		const inputs = within(dialog).getAllByLabelText(t("field.newName"));
+		const inputs = within(dialog).getAllByLabelText(tFields("field.newName"));
 		type(inputs[0] as HTMLElement, "detail");
-		fireEvent.click(within(dialog).getAllByRole("button", { name: t("field.add") })[0] as HTMLElement);
-		await waitFor(() => expect(within(dialog).queryByText(t("field.needs.branches"))).toBeNull());
+		fireEvent.click(within(dialog).getAllByRole("button", { name: tFields("field.add") })[0] as HTMLElement);
+		await waitFor(() => expect(within(dialog).queryByText(tFields("field.needs.branches"))).toBeNull());
 		expect(add.disabled).toBe(false);
 		fireEvent.click(add);
 
@@ -1139,7 +1230,7 @@ describe("SchemaScreen", () => {
 		const row = await screen.findByTestId("field-extra");
 		expect(within(row).getByText('= "a"')).toBeTruthy();
 		expect(within(row).getByTestId("field-detail")).toBeTruthy();
-		expect(within(row).getByText(t("fields.noExtra"))).toBeTruthy();
+		expect(within(row).getByText(tFields("fields.noExtra"))).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
@@ -1152,20 +1243,20 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		confirmAdd(await startAddingField("related", t("kind.relation")));
+		confirmAdd(await startAddingField("related", tFields("kind.relation")));
 
 		const dialog = await screen.findByTestId("new-field-dialog");
-		expect(within(dialog).getByLabelText(t("field.relationTo"))).toBeTruthy();
-		fireEvent.click(within(dialog).getByRole("button", { name: t("field.newCancel") }));
+		expect(within(dialog).getByLabelText(tFields("field.relationTo"))).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("cancel") }));
 		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
 		expect(screen.queryByTestId("field-related")).toBeNull();
 		expect(screen.queryByTestId("field-sheet")).toBeNull();
 		expect(review().disabled).toBe(true);
 
 		// Do it again and add it: the first collection is the target.
-		confirmAdd(await startAddingField("related", t("kind.relation")));
+		confirmAdd(await startAddingField("related", tFields("kind.relation")));
 		const again = await screen.findByTestId("new-field-dialog");
-		fireEvent.click(within(again).getByRole("button", { name: t("field.addConfirm") }));
+		fireEvent.click(within(again).getByRole("button", { name: tc("add") }));
 		await applySheet(await screen.findByTestId("field-sheet"));
 		expect(await screen.findByTestId("field-related")).toBeTruthy();
 		// The tree names the collection it points to.
@@ -1179,19 +1270,21 @@ describe("SchemaScreen", () => {
 
 	it("discards the edits after a confirmation", async () => {
 		renderScreen();
-		const label = await screen.findByLabelText(t("collection.label"));
+		const label = await screen.findByLabelText(tCollection("collection.label"));
 		type(label, "Article");
 		fireEvent.click(screen.getByRole("button", { name: t("actions.discard") }));
 		await act(async () => {
-			fireEvent.click(await screen.findByRole("button", { name: t("discard.confirm") }));
+			fireEvent.click(await screen.findByRole("button", { name: tc("discard.confirm") }));
 		});
-		await waitFor(() => expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).value).toBe("Post"));
+		await waitFor(() =>
+			expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).value).toBe("Post"),
+		);
 	});
 	/** Edits through the site or admin tab, then returns the file the review would send. */
 	const openSettingsTab = async (name: "site" | "admin") => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		fireEvent.click(screen.getByRole("tab", { name: t(`tabs.${name}`) }));
+		fireEvent.click(screen.getByRole("tab", { name }));
 	};
 	const reviewedFile = async () => {
 		fireEvent.click(review());
@@ -1204,7 +1297,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		expect(review().textContent).toBe(t("actions.noChanges"));
 		expect(screen.queryByText(t("header.pending", { count: 1 }))).toBeNull();
-		type(screen.getByLabelText(t("collection.label")), "Article");
+		type(screen.getByLabelText(tCollection("collection.label")), "Article");
 		expect(review().textContent).toBe(t("actions.review"));
 		expect(screen.getByText(t("header.pending", { count: 1 }))).toBeTruthy();
 	});
@@ -1213,7 +1306,7 @@ describe("SchemaScreen", () => {
 		const openLocales = async () => {
 			renderScreen();
 			await screen.findByTestId("collection-post");
-			fireEvent.click(screen.getByRole("tab", { name: t("tabs.locales") }));
+			fireEvent.click(screen.getByRole("tab", { name: "locales" }));
 			return screen.findByTestId("locales-content");
 		};
 
@@ -1222,41 +1315,41 @@ describe("SchemaScreen", () => {
 			const row = within(content).getByTestId("locale-en");
 			expect(within(row).getByText("en")).toBeTruthy();
 			expect(within(row).getByText("English")).toBeTruthy();
-			expect(within(row).getByText(t("locales.defaultBadge"))).toBeTruthy();
-			expect(within(row).getByText(t("locales.adminName", { label: "English" }))).toBeTruthy();
-			expect(within(content).getByText(t("locales.count", { count: 1 }))).toBeTruthy();
+			expect(within(row).getByText(tLocales("locales.defaultBadge"))).toBeTruthy();
+			expect(within(row).getByText(tLocales("locales.adminName", { label: "English" }))).toBeTruthy();
+			expect(within(content).getByText(tLocales("locales.count", { count: 1 }))).toBeTruthy();
 			// Two sections, each with its title and description.
-			expect(within(content).getByRole("heading", { name: t("locales.contentTitle") })).toBeTruthy();
+			expect(within(content).getByRole("heading", { name: tLocales("locales.contentTitle") })).toBeTruthy();
 			const defaults = screen.getByTestId("locales-default");
-			expect(within(defaults).getByRole("heading", { name: t("locales.defaultTitle") })).toBeTruthy();
-			expect(within(defaults).getByLabelText(t("locales.timeZone"))).toBeTruthy();
+			expect(within(defaults).getByRole("heading", { name: tLocales("locales.defaultTitle") })).toBeTruthy();
+			expect(within(defaults).getByLabelText(tLocales("locales.timeZone"))).toBeTruthy();
 			// The default language says what its addresses look like, with an example from the first collection address.
 			expect(within(defaults).getByText(/\/posts\/hello/)).toBeTruthy();
 		});
 
 		it("adds a language from a small dialog, and the code of a saved language cannot be edited", async () => {
 			const content = await openLocales();
-			fireEvent.click(within(content).getByRole("button", { name: t("locales.add") }));
+			fireEvent.click(within(content).getByRole("button", { name: tLocales("locales.add") }));
 			const dialog = await screen.findByTestId("locale-dialog");
-			const add = within(dialog).getByRole("button", { name: t("locales.add") }) as HTMLButtonElement;
+			const add = within(dialog).getByRole("button", { name: tLocales("locales.add") }) as HTMLButtonElement;
 			expect(add.disabled).toBe(true);
-			type(within(dialog).getByLabelText(t("locales.code")), "en");
-			type(within(dialog).getByLabelText(t("locales.name")), "Again");
+			type(within(dialog).getByLabelText(tLocales("locales.code")), "en");
+			type(within(dialog).getByLabelText(tLocales("locales.name")), "Again");
 			// The code is taken.
 			expect(add.disabled).toBe(true);
-			type(within(dialog).getByLabelText(t("locales.code")), "fr");
-			type(within(dialog).getByLabelText(t("locales.name")), "Français");
-			type(within(dialog).getByLabelText(t("locales.label")), "French");
+			type(within(dialog).getByLabelText(tLocales("locales.code")), "fr");
+			type(within(dialog).getByLabelText(tLocales("locales.name")), "Français");
+			type(within(dialog).getByLabelText(tLocales("locales.label")), "French");
 			expect(add.disabled).toBe(false);
 			fireEvent.click(add);
 			const row = await screen.findByTestId("locale-fr");
-			expect(within(row).getByText(t("locales.adminName", { label: "French" }))).toBeTruthy();
+			expect(within(row).getByText(tLocales("locales.adminName", { label: "French" }))).toBeTruthy();
 
-			fireEvent.click(within(row).getByRole("button", { name: t("locales.menu", { name: "Français" }) }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("locales.edit") }));
+			fireEvent.click(within(row).getByRole("button", { name: tLocales("locales.menu", { name: "Français" }) }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: tLocales("locales.edit") }));
 			const edit = await screen.findByTestId("locale-dialog");
-			expect((within(edit).getByLabelText(t("locales.code")) as HTMLInputElement).disabled).toBe(true);
-			fireEvent.click(within(edit).getByRole("button", { name: t("locales.cancel") }));
+			expect((within(edit).getByLabelText(tLocales("locales.code")) as HTMLInputElement).disabled).toBe(true);
+			fireEvent.click(within(edit).getByRole("button", { name: tc("cancel") }));
 
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
@@ -1268,19 +1361,21 @@ describe("SchemaScreen", () => {
 
 		it("changes the default language and removes a language from the row menu", async () => {
 			const content = await openLocales();
-			fireEvent.click(within(content).getByRole("button", { name: t("locales.add") }));
+			fireEvent.click(within(content).getByRole("button", { name: tLocales("locales.add") }));
 			const dialog = await screen.findByTestId("locale-dialog");
-			type(within(dialog).getByLabelText(t("locales.code")), "ko");
-			type(within(dialog).getByLabelText(t("locales.name")), "한국어");
-			fireEvent.click(within(dialog).getByRole("button", { name: t("locales.add") }));
+			type(within(dialog).getByLabelText(tLocales("locales.code")), "ko");
+			type(within(dialog).getByLabelText(tLocales("locales.name")), "한국어");
+			fireEvent.click(within(dialog).getByRole("button", { name: tLocales("locales.add") }));
 			await screen.findByTestId("locale-ko");
-			fireEvent.click(screen.getByRole("combobox", { name: t("locales.default") }));
+			fireEvent.click(screen.getByRole("combobox", { name: tLocales("locales.default") }));
 			pressOption(await screen.findByRole("option", { name: "한국어 (ko)" }));
 			const ko = screen.getByTestId("locale-ko");
-			expect(within(ko).getByText(t("locales.defaultBadge"))).toBeTruthy();
-			expect(within(screen.getByTestId("locale-en")).queryByText(t("locales.defaultBadge"))).toBeNull();
+			expect(within(ko).getByText(tLocales("locales.defaultBadge"))).toBeTruthy();
+			expect(within(screen.getByTestId("locale-en")).queryByText(tLocales("locales.defaultBadge"))).toBeNull();
 			fireEvent.click(
-				within(screen.getByTestId("locale-en")).getByRole("button", { name: t("locales.menu", { name: "English" }) }),
+				within(screen.getByTestId("locale-en")).getByRole("button", {
+					name: tLocales("locales.menu", { name: "English" }),
+				}),
 			);
 			fireEvent.click(await screen.findByRole("menuitem", { name: t("row.remove", { name: "en" }) }));
 			await waitFor(() => expect(screen.queryByTestId("locale-en")).toBeNull());
@@ -1290,28 +1385,28 @@ describe("SchemaScreen", () => {
 	it("groups the site and admin settings into titled sections instead of one long form", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		fireEvent.click(screen.getByRole("tab", { name: t("tabs.site") }));
+		fireEvent.click(screen.getByRole("tab", { name: "site" }));
 		const site = await screen.findByTestId("site-settings");
 		for (const key of ["site.identityTitle", "site.previewTitle", "site.addressTitle"] as const) {
-			expect(within(site).getByRole("heading", { name: t(key) })).toBeTruthy();
+			expect(within(site).getByRole("heading", { name: tSite(key) })).toBeTruthy();
 		}
-		fireEvent.click(screen.getByRole("tab", { name: t("tabs.admin") }));
+		fireEvent.click(screen.getByRole("tab", { name: "admin" }));
 		const admin = await screen.findByTestId("admin-settings");
 		for (const key of ["admin.languageTitle", "admin.featuresTitle", "admin.addressTitle"] as const) {
-			expect(within(admin).getByRole("heading", { name: t(key) })).toBeTruthy();
+			expect(within(admin).getByRole("heading", { name: tAdmin(key) })).toBeTruthy();
 		}
 	});
 
 	it("edits the site settings: each control writes its own key under site", async () => {
 		await openSettingsTab("site");
 		type(await screen.findByLabelText(t("site.name")), "My blog");
-		type(screen.getByLabelText(t("site.home")), "https://example.com");
-		type(screen.getByLabelText(t("site.previewPath")), "/preview");
-		type(screen.getByLabelText(t("site.previewParam")), "lang");
-		type(screen.getByLabelText(t("site.alias.new")), "www.example.com");
-		fireEvent.click(screen.getByRole("button", { name: t("site.alias.add") }));
-		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
-		pressOption(await screen.findByRole("option", { name: new RegExp(`^${t("site.prefix.always")}`) }));
+		type(screen.getByLabelText(tSite("site.home")), "https://example.com");
+		type(screen.getByLabelText(tSite("site.previewPath")), "/preview");
+		type(screen.getByLabelText(tSite("site.previewParam")), "lang");
+		type(screen.getByLabelText(tSite("site.alias.new")), "www.example.com");
+		fireEvent.click(screen.getByRole("button", { name: tSite("site.alias.add") }));
+		fireEvent.click(screen.getByRole("combobox", { name: tSite("site.localePrefix") }));
+		pressOption(await screen.findByRole("option", { name: new RegExp(`^${tSite("site.prefix.always")}`) }));
 
 		const file = await reviewedFile();
 		expect(file.site).toEqual({
@@ -1328,18 +1423,18 @@ describe("SchemaScreen", () => {
 		state = screenState({ schema: { ...schema(), site: { name: "Blog" } } });
 		await openSettingsTab("site");
 		type(await screen.findByLabelText(t("site.name")), "Journal");
-		fireEvent.click(screen.getByRole("tab", { name: t("tabs.admin") }));
-		fireEvent.click(await screen.findByRole("switch", { name: t("admin.templates") }));
+		fireEvent.click(screen.getByRole("tab", { name: "admin" }));
+		fireEvent.click(await screen.findByRole("switch", { name: tAdmin("admin.templates") }));
 		fireEvent.click(review());
 		const list = await screen.findByTestId("review-settings");
 		expect(list.textContent).toContain('site.name: "Blog" -> "Journal"');
-		expect(list.textContent).toContain(`admin.templates: ${t("review.unset")} -> false`);
+		expect(list.textContent).toContain(`admin.templates: ${tReview("review.unset")} -> false`);
 	});
 
 	it("puts the preview language in the path with a switch, and empties the site section when everything is cleared", async () => {
 		state = screenState({ schema: { ...schema(), site: { name: "Blog" } } });
 		await openSettingsTab("site");
-		fireEvent.click(await screen.findByRole("switch", { name: t("site.previewInPath") }));
+		fireEvent.click(await screen.findByRole("switch", { name: tSite("site.previewInPath") }));
 		type(screen.getByLabelText(t("site.name")), "");
 		const file = await reviewedFile();
 		expect(file.site).toEqual({ previewLocaleParam: false });
@@ -1349,16 +1444,16 @@ describe("SchemaScreen", () => {
 		await openSettingsTab("site");
 		const explanation = await screen.findByTestId("locale-prefix-explanations");
 		const text = (mode: "except-default" | "always" | "never") =>
-			t(`site.prefix.${mode}.text`, { default: "en", other: "fr" });
+			tSite(`site.prefix.${mode}.text`, { default: "en", other: "fr" });
 		expect(explanation.textContent).toBe(text("except-default"));
 		expect(explanation.textContent).toContain("/fr/posts/a");
 
-		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
+		fireEvent.click(screen.getByRole("combobox", { name: tSite("site.localePrefix") }));
 		for (const mode of ["except-default", "always", "never"] as const) {
-			const option = await screen.findByRole("option", { name: new RegExp(`^${t(`site.prefix.${mode}`)}`) });
+			const option = await screen.findByRole("option", { name: new RegExp(`^${tSite(`site.prefix.${mode}`)}`) });
 			expect(option.textContent).toContain(text(mode));
 		}
-		pressOption(await screen.findByRole("option", { name: new RegExp(`^${t("site.prefix.never")}`) }));
+		pressOption(await screen.findByRole("option", { name: new RegExp(`^${tSite("site.prefix.never")}`) }));
 		await waitFor(() => expect(screen.getByTestId("locale-prefix-explanations").textContent).toBe(text("never")));
 	});
 
@@ -1367,20 +1462,20 @@ describe("SchemaScreen", () => {
 		await openSettingsTab("site");
 		const row = await screen.findByTestId("site-url");
 		expect(row.textContent).toContain("https://blog.example");
-		expect(row.textContent).toContain(t("site.url.env"));
+		expect(row.textContent).toContain(tSite("site.url.env"));
 		cleanup();
 		state = screenState();
 		await openSettingsTab("site");
-		expect((await screen.findByTestId("site-url")).textContent).toContain(t("site.url.none"));
-		expect(schemaMessages.messages.en["site.url.none"]).toContain("set SITE_URL where you deploy");
+		expect((await screen.findByTestId("site-url")).textContent).toContain(tSite("site.url.none"));
+		expect(schemaSiteMessages.messages.en["site.url.none"]).toContain("set SITE_URL where you deploy");
 	});
 
 	it("edits the admin settings: the language is picked from the dictionaries and the switches write false", async () => {
 		await openSettingsTab("admin");
-		fireEvent.click(await screen.findByRole("combobox", { name: t("admin.locale") }));
+		fireEvent.click(await screen.findByRole("combobox", { name: tAdmin("admin.locale") }));
 		pressOption(await screen.findByRole("option", { name: /ko/ }));
-		fireEvent.click(screen.getByRole("switch", { name: t("admin.templates") }));
-		fireEvent.click(screen.getByRole("switch", { name: t("admin.translations") }));
+		fireEvent.click(screen.getByRole("switch", { name: tAdmin("admin.templates") }));
+		fireEvent.click(screen.getByRole("switch", { name: tAdmin("admin.translations") }));
 
 		const file = await reviewedFile();
 		expect(file.admin).toEqual({ locale: "ko", templates: false, translations: false });
@@ -1389,7 +1484,7 @@ describe("SchemaScreen", () => {
 	it("turns an admin switch back on by removing its key", async () => {
 		state = screenState({ schema: { ...schema(), admin: { templates: false } } });
 		await openSettingsTab("admin");
-		fireEvent.click(await screen.findByRole("switch", { name: t("admin.templates") }));
+		fireEvent.click(await screen.findByRole("switch", { name: tAdmin("admin.templates") }));
 		const file = await reviewedFile();
 		expect(file.admin).toBeUndefined();
 	});
@@ -1398,17 +1493,17 @@ describe("SchemaScreen", () => {
 		state = screenState({ schema: { ...schema(), admin: { path: "/studio" } } });
 		await openSettingsTab("admin");
 		expect((await screen.findByTestId("admin-path")).textContent).toBe("/studio");
-		expect(screen.getByText(t("admin.pathNote"))).toBeTruthy();
-		expect(schemaMessages.messages.en["admin.pathNote"]).toBe(
+		expect(screen.getByText(tAdmin("admin.pathNote"))).toBeTruthy();
+		expect(schemaAdminMessages.messages.en["admin.pathNote"]).toBe(
 			"Change it in monti.schema.ts and move the admin route folder.",
 		);
-		expect(screen.queryByLabelText(t("admin.path"), { selector: "input" })).toBeNull();
+		expect(screen.queryByLabelText(tAdmin("admin.path"), { selector: "input" })).toBeNull();
 	});
 
 	it("keeps the site and admin controls disabled when the screen is read-only", async () => {
 		state = screenState({ access: { writable: false, reason: "production" } });
 		await openSettingsTab("site");
 		expect(((await screen.findByLabelText(t("site.name"))) as HTMLInputElement).disabled).toBe(true);
-		expect(screen.queryByRole("button", { name: t("site.alias.add") })).toBeNull();
+		expect(screen.queryByRole("button", { name: tSite("site.alias.add") })).toBeNull();
 	});
 });

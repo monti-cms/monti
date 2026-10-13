@@ -4,9 +4,9 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { useTranslator } from "@monti-cms/core/client";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
-import { uiMessages } from "./messages";
 import { type PanelResizeConfig, PanelResizeHandle, usePanelResize } from "./panel-resize";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
@@ -52,7 +52,7 @@ function SheetContent({
 	/** A right-side sheet the writer can widen by dragging its left edge. Replaces any width class on `className`. */
 	resize?: PanelResizeConfig;
 }) {
-	const t = useTranslator(uiMessages);
+	const t = useTranslator(commonMessages);
 	const resizable = usePanelResize(resize ?? { name: "unused", defaultWidth: 0, minWidth: 0 });
 	const sized = resize !== undefined && side === "right";
 	return (

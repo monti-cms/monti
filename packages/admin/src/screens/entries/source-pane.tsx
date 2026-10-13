@@ -10,6 +10,7 @@ import { useCmsAdminComponents, useSourceFormat } from "../../admin-components";
 import { documentKey } from "../../editor/document-key";
 import { buildEditorExtensions } from "../../editor/extensions";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { entriesMessages } from "./messages";
@@ -66,6 +67,7 @@ export function SourcePane({
 	ref?: Ref<HTMLElement>;
 }) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	return (
 		<aside
 			ref={ref}
@@ -77,7 +79,7 @@ export function SourcePane({
 				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-cms-background/95 px-4 backdrop-blur"
 			>
 				<h2 className="flex-1 font-medium text-sm">{t("sourcePane.heading", { locale: locale.toUpperCase() })}</h2>
-				<IconButton label={t("close")} side="bottom" onClick={onClose}>
+				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
 					<X aria-hidden className="size-4" />
 				</IconButton>
 			</div>
@@ -87,7 +89,7 @@ export function SourcePane({
 					!title && "text-cms-muted-foreground/40",
 				)}
 			>
-				{title || t("untitled")}
+				{title || tc("untitled")}
 			</h1>
 			<div className="px-6 pt-6 pb-[35vh]">
 				<DocPreview doc={doc} label={t("sourcePane.body")} />

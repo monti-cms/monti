@@ -1,7 +1,24 @@
 import { defineMessages } from "@monti-cms/core";
 
+/** Instructions for the model: the same in every language, and the result language follows the body. */
+const modelText = {
+	"ai.draft.prompt": [
+		"Create one Mermaid diagram from the request and the title and body of the content.",
+		"- Answer with a single ```mermaid code fence only. Write nothing outside the fence",
+		"- Pick the type that fits the request (flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, gantt, etc.)",
+		"- Write node text in the same language as the body, and wrap text containing parentheses, quotes or commas in double quotes",
+		"- Do not invent facts that are not in the body",
+	].join("\n"),
+	"ai.edit.prompt": [
+		"Edit the Mermaid diagram (```mermaid code fence) as requested.",
+		"- Answer with the edited ```mermaid code fence only. Write nothing outside the fence",
+		"- Leave the parts unrelated to the request as they are",
+		"- If there is no request, fix syntax errors and tidy it up so it is easy to read",
+	].join("\n"),
+} as const;
+
 /**
- * Labels, descriptions, and AI feature text of the Mermaid block. AI instructions are text given to the model, so they exist in English only, and the result language follows the body.
+ * Labels, descriptions, and AI feature text of the Mermaid block. AI instructions are text given to the model, so they are the same English text in every language, and the result language follows the body.
  */
 export const mermaidMessages = defineMessages("cms-blocks.mermaid", {
 	en: {
@@ -20,19 +37,7 @@ export const mermaidMessages = defineMessages("cms-blocks.mermaid", {
 		"ai.error.empty": "The diagram is empty.",
 		"ai.error.unknownType": "Unknown diagram type: {type}",
 		"ai.fake.title": "Diagram",
-		"ai.draft.prompt": [
-			"Create one Mermaid diagram from the request and the title and body of the content.",
-			"- Answer with a single ```mermaid code fence only. Write nothing outside the fence",
-			"- Pick the type that fits the request (flowchart, sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, gantt, etc.)",
-			"- Write node text in the same language as the body, and wrap text containing parentheses, quotes or commas in double quotes",
-			"- Do not invent facts that are not in the body",
-		].join("\n"),
-		"ai.edit.prompt": [
-			"Edit the Mermaid diagram (```mermaid code fence) as requested.",
-			"- Answer with the edited ```mermaid code fence only. Write nothing outside the fence",
-			"- Leave the parts unrelated to the request as they are",
-			"- If there is no request, fix syntax errors and tidy it up so it is easy to read",
-		].join("\n"),
+		...modelText,
 	},
 	ko: {
 		label: "다이어그램",
@@ -50,5 +55,6 @@ export const mermaidMessages = defineMessages("cms-blocks.mermaid", {
 		"ai.error.empty": "다이어그램이 비었습니다.",
 		"ai.error.unknownType": "알 수 없는 다이어그램 종류입니다: {type}",
 		"ai.fake.title": "다이어그램",
+		...modelText,
 	},
 });

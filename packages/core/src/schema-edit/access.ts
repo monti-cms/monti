@@ -1,7 +1,7 @@
 import { accessSync, constants, readFileSync } from "node:fs";
 import { productionLikeEnvironment } from "../adapters/auth/dev-bypass";
 import type { Cms } from "../cms";
-import { parseSchemaLiteral } from "../schema-file/literal";
+import { parseSchemaLiteral, type SchemaLiteralIssue } from "../schema-file/literal";
 
 /**
  * Whether the settings screen may write the schema file of an instance. The decision is the server's: a production server never writes the file (it runs the schema
@@ -27,8 +27,10 @@ export type SchemaEditAccess =
 			readonly writable: false;
 			readonly reason: SchemaReadOnlyReason;
 			readonly file?: string;
-			/** For `has_code`: what in the file is code, with its line. */
+			/** For `has_code`: what in the file is code, with its line, in English (the command line and logs read this). */
 			readonly detail?: string;
+			/** For `has_code`: the same as a code and values, which the screen translates. */
+			readonly issue?: SchemaLiteralIssue;
 	  };
 
 /**
@@ -54,7 +56,16 @@ export function schemaEditAccess(cms: Pick<Cms, "schemaFile">): SchemaEditAccess
 		return { writable: false, reason: "not_writable", file };
 	}
 	const literal = parseSchemaLiteral(text);
-	if (!literal.ok) return { writable: false, reason: "has_code", file, detail: literal.message };
+	if (!literal.ok) {
+		const { code, params, line, column } = literal;
+		return {
+			writable: false,
+			reason: "has_code",
+			file,
+			detail: literal.message,
+			issue: { code, params, line, column },
+		};
+	}
 	return { writable: true, file };
 }
 

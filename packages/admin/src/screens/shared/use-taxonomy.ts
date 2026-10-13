@@ -1,9 +1,9 @@
 "use client";
 
-import { cmsApiUrl, type Site, useSite } from "@monti-cms/core/client";
+import { type Site, useSite } from "@monti-cms/core/client";
 import { useQueries } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { cmsFetch } from "../admin-api";
+import { entriesKeys, listEntries } from "../../api/entries";
 import { sharedMessages } from "./messages";
 
 /** Name of the record collection. Used for relation field options and adding. */
@@ -21,7 +21,7 @@ export interface TaxonomyOption {
 type ListResponse = { items: { id: string; title: string | null; slug: string | null }[]; total: number };
 
 /** All active (public) records. If over 100, reads the next page too. */
-async function loadAll(site: Site, collection: RecordCollection): Promise<TaxonomyOption[]> {
+async function loadAll(site: Site, collection: RecordCollection, signal?: AbortSignal): Promise<TaxonomyOption[]> {
 	const t = site.createTranslator(sharedMessages);
 	const options: TaxonomyOption[] = [];
 	for (let page = 1; page < 50; page++) {
@@ -33,7 +33,7 @@ async function loadAll(site: Site, collection: RecordCollection): Promise<Taxono
 			sortDirection: "asc",
 		});
 		params.append("status", "published");
-		const data = await cmsFetch<ListResponse>(site, cmsApiUrl(`/v1/entries?${params.toString()}`));
+		const data = await listEntries<ListResponse>(site, params, signal);
 		options.push(
 			...data.items.map((item) => ({
 				id: item.id,
@@ -61,9 +61,9 @@ export function useTaxonomyOptions(collection: string, enabled = true): Taxonomy
 	);
 	return useQueries({
 		queries: targets.map((target) => ({
-			// Place it under the list cache so it is refetched together when the list is refetched.
-			queryKey: ["cms", "entries", "taxonomy", target],
-			queryFn: () => loadAll(site, target),
+			// Under the list cache's prefix, so it is refetched together when the list is refetched.
+			queryKey: entriesKeys.taxonomy(target),
+			queryFn: ({ signal }: { signal: AbortSignal }) => loadAll(site, target, signal),
 			enabled,
 		})),
 		combine,

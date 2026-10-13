@@ -4,9 +4,9 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { useTranslator } from "@monti-cms/core/client";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
-import { uiMessages } from "./messages";
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -45,7 +45,7 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
 	showCloseButton?: boolean;
 }) {
-	const t = useTranslator(uiMessages);
+	const t = useTranslator(commonMessages);
 	return (
 		<DialogPortal>
 			<DialogOverlay />

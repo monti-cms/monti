@@ -6,6 +6,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { CmsAdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
+import { commonMessages } from "../../lib/common.messages";
 import { renderWithSite } from "../../test/site";
 import { addedMarkName, createAddedMark } from "../added-marks";
 import { buildEditorExtensions } from "../extensions";
@@ -14,6 +15,7 @@ import { inlineBubbleTarget } from "../inline-marks";
 import { editorMessages } from "../messages";
 
 const t = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 /**
  * Text decoration used for testing regardless of site config (the `:note[text]{text="…"}` an extension adds). Adds the mark to the editor directly and
@@ -167,7 +169,7 @@ describe("InlineBubble", () => {
 		const input = screen.getByLabelText(t("link.href")) as HTMLInputElement;
 		expect(input.value).toBe("https://example.com");
 		act(() => fireEvent.change(input, { target: { value: "https://changed.dev" } }));
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("popoverForm.apply") })));
+		act(() => fireEvent.click(screen.getByRole("button", { name: tc("apply") })));
 
 		expect(editor.getHTML()).toContain('href="https://changed.dev/"');
 		expect(editor.getHTML()).toContain(">마바</a>");
@@ -261,7 +263,7 @@ describe("InlineBubble", () => {
 
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("link.add") })));
 		act(() => fireEvent.change(screen.getByLabelText(t("link.href")), { target: { value: "/posts/hello" } }));
-		act(() => fireEvent.click(screen.getByRole("button", { name: t("popoverForm.apply") })));
+		act(() => fireEvent.click(screen.getByRole("button", { name: tc("apply") })));
 		expect(editor.getHTML()).toMatch(/<a [^>]*href="\/posts\/hello"[^>]*>가나<\/a>/);
 	});
 

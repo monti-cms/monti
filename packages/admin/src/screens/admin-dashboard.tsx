@@ -5,17 +5,18 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { Button, buttonVariants } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { AdminEntriesTable } from "./admin-entries-table";
-import { BulkBar, runBulk } from "./entries/bulk-bar";
+import { BulkBar } from "./entries/bulk-bar";
 import { toSelection } from "./list-row-menu";
 import { FilterChipBar, ListSearch } from "./list-toolbar";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
-import { AdminNavProvider, AdminShell } from "./shared/admin-shell";
+import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
 import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
@@ -38,8 +39,8 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 
 /** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
 function EntryListBody({ list }: { list: EntryList }) {
-	const site = useSite();
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const { state, data, mode } = list;
 	const isTrash = mode === "trash";
 	const { items } = data;
@@ -55,9 +56,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
 						folders={data.folders}
 						onClearSelection={() => list.setSelectedIds(new Set())}
-						onRun={(op, targets, params) =>
-							list.mutations.mutateEntries(op, targets, () => runBulk(site, op, targets, params), params)
-						}
+						onRun={(op, targets, params) => list.mutations.run(op, targets, params)}
 					/>
 					<AdminEntriesTable
 						collection={state.collection}
@@ -94,7 +93,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 								: [
 										{
 											kind: "item",
-											label: state.folder === "all" ? t("list.folderAdd") : t("list.folderAddChild"),
+											label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
 											icon: FolderPlus,
 											onSelect: () => list.folderActions.requestCreate(state.folder === "all" ? null : state.folder),
 										},
@@ -126,7 +125,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 							onSaved={(saved) => {
 								// Keep the saved item open as is. For a new item, switch to editing the created item.
 								if (!record.id) list.showRecord({ collection: record.collection, id: saved.id });
-								toast.success(t("common.saved"));
+								toast.success(tc("saved"));
 								void list.invalidateEntries();
 								list.reloadTaxonomies();
 							}}
@@ -149,10 +148,10 @@ function useDashboardMounted() {
 
 /** Placeholder before the first render. Mimics the shape of the sidebar, header and list rows. */
 function DashboardLoading() {
-	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	return (
 		<div aria-busy="true" className="flex h-svh overflow-hidden">
-			<span className="sr-only">{t("dashboard.loading")}</span>
+			<span className="sr-only">{tc("loading")}</span>
 			<div aria-hidden className="hidden w-64 shrink-0 space-y-2 border-r p-3 md:block">
 				<Skeleton className="mb-4 h-7 w-32" />
 				{Array.from({ length: 6 }, (_, index) => (
@@ -206,34 +205,28 @@ function TrashPage() {
 	const list = useEntryList("trash");
 	const { state } = list;
 	return (
-		<AdminShell
-			title={t("dashboard.trash")}
-			count={list.data.total}
-			sidebar={{ activeNav: "trash" }}
-			headerActions={
-				<>
-					<EntryListHeaderActions list={list} />
-					<nav
-						aria-label={t("dashboard.trashCollections")}
-						className="flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]"
-					>
-						{site.COLLECTIONS.map((item) => (
-							<Link
-								key={item}
-								href={site.adminHref(`/trash?collection=${item}`)}
-								aria-current={state.collection === item ? "page" : undefined}
-								className={cn(
-									buttonVariants({ variant: "ghost", size: "xs" }),
-									"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground",
-								)}
-							>
-								{site.COLLECTION_DEFINITIONS[item].label}
-							</Link>
-						))}
-					</nav>
-				</>
-			}
-		>
+		<AdminShell title={t("dashboard.trash")} count={list.data.total} sidebar={{ activeNav: "trash" }}>
+			<PageActions>
+				<EntryListHeaderActions list={list} />
+				<nav
+					aria-label={t("dashboard.trashCollections")}
+					className="flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]"
+				>
+					{site.COLLECTIONS.map((item) => (
+						<Link
+							key={item}
+							href={site.adminHref(`/trash?collection=${item}`)}
+							aria-current={state.collection === item ? "page" : undefined}
+							className={cn(
+								buttonVariants({ variant: "ghost", size: "xs" }),
+								"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground",
+							)}
+						>
+							{site.COLLECTION_DEFINITIONS[item].label}
+						</Link>
+					))}
+				</nav>
+			</PageActions>
 			<EntryListBody list={list} />
 		</AdminShell>
 	);
@@ -249,7 +242,6 @@ function ListPage() {
 		<AdminShell
 			title={`${list.label}${folderLabel}`}
 			count={list.data.total}
-			headerActions={<EntryListHeaderActions list={list} />}
 			sidebar={{
 				activeNav: state.collection,
 				folderNav: {
@@ -265,6 +257,9 @@ function ListPage() {
 				},
 			}}
 		>
+			<PageActions>
+				<EntryListHeaderActions list={list} />
+			</PageActions>
 			<EntryListBody list={list} />
 		</AdminShell>
 	);

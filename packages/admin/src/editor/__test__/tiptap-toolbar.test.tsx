@@ -3,12 +3,14 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { editorMessages } from "../messages";
 import { CmsEditor } from "../tiptap-editor";
 
 const t = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 // jsdom has no coordinates for text ranges. ProseMirror uses them to measure the cursor position after formatting is applied.
 beforeAll(() => {
@@ -255,7 +257,7 @@ describe("formatting toolbar group", () => {
 				t("toolbar.link"),
 				t("toolbar.list"),
 				t("toolbar.codeBlock"),
-				t("toolbar.upload"),
+				tc("upload"),
 				t("customBlockMenu.label"),
 				t("toolbarRow.more"),
 				t("editorWidth.label"),

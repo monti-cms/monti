@@ -19,6 +19,8 @@ import {
 	isFieldInputParts,
 	useCmsAdminComponents,
 } from "../../admin-components";
+import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
+import { commonMessages } from "../../lib/common.messages";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
@@ -28,7 +30,6 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Textarea } from "../../ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
 import {
 	BacklinkInput,
@@ -152,6 +153,7 @@ function SlotFieldRow({
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const relation = field as RelationField;
 	const selected = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
 	// Published records, searched on the server as the user types; the picked ones are looked up by id so they keep their names.
@@ -171,7 +173,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 				id={id}
 				multiple={Boolean(relation.many)}
 				aria-label={relation.label}
-				placeholder={relation.placeholder ?? (relation.createInline ? t("relation.searchOrAdd") : t("relation.search"))}
+				placeholder={relation.placeholder ?? (relation.createInline ? t("relation.searchOrAdd") : tc("search"))}
 				options={options}
 				known={known}
 				onSearch={records.search}
@@ -186,17 +188,13 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 						? async (title) => {
 								const saved = await creator.create(relation.to as Collection, title);
 								if (!saved) return null;
-								records.remember({ ...optionOf(site, t, relation.to, saved), status: saved.status });
+								records.remember({ ...optionOf(site, tc("untitled"), relation.to, saved), status: saved.status });
 								return saved.id;
 							}
 						: undefined
 				}
 			/>
-			{records.error && (
-				<p role="alert" className="text-cms-destructive text-xs">
-					{t("entry.loadFailed")}
-				</p>
-			)}
+			{records.error && <FieldError>{t("entry.loadFailed")}</FieldError>}
 			{creator.sheet}
 		</>
 	);

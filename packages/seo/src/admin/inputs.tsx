@@ -20,7 +20,7 @@ function Counter({ length, limit }: { length: number; limit: number }) {
 		<span
 			className={cn(
 				"text-[11px] text-cms-muted-foreground tabular-nums",
-				length > limit && "cms-dark:text-amber-400 text-amber-600",
+				length > limit && "text-cms-warning-foreground",
 			)}
 		>
 			{length}/{limit}

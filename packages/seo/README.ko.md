@@ -7,32 +7,48 @@
 
 ## 등록
 
+설정에 플러그인을 더한다. 필드는 `monti.schema.ts`의 평범한 필드이고 역할로 찾으므로, 스키마 파일은 설정 화면이 고칠 수 있는 평범한 데이터로 남는다.
+
 ```ts
 // monti.config.ts
-import { defineConfig } from "@monti-cms/core/server";
-import { seo, seoFields } from "@monti-cms/seo";
-
-const article = defineCollection({
-	label: "Article",
-	kind: "document",
-	fields: {
-		title: fields.text({ label: "Title" }),
-		slug: fields.slug({ label: "Slug", from: "title" }),
-		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
-		...seoFields(),
-	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO 필드는 적지 않아도 플러그인이 SEO 탭에 둔다
-});
+import { seo } from "@monti-cms/seo";
 
 export const cms = defineConfig({
+	schema,
 	// …
 	plugins: [seo()],
 });
 ```
 
-SEO 패널은 자기 스타일시트가 필요 없다. `@monti-cms/admin/styles.css`가 이미 담고 있다(앱에 Tailwind가 필요 없다).
+설정 화면에서 컬렉션의 **필드** 탭을 열고 **SEO 필드 추가**를 고른다. `seo()` 플러그인이 켜져 있고 컬렉션에 SEO 역할 필드가 아직 없을 때 나오는 동작이며, 아래 필드를 평소의 초안·검토 단계로 `monti.schema.ts`에 쓴다(이미 쓰인 이름에는 숫자가 붙는다). 같은 필드를 손으로 적어도 된다.
 
-## 필드 묶음 `seoFields(options?)`
+```ts
+// monti.schema.ts
+fields: {
+	title: { kind: "text", label: "제목" },
+	summary: { kind: "text", label: "요약", role: "summary" },
+	searchPreview: { kind: "view", view: "search" },
+	seoTitle: { kind: "text", label: "검색 제목", localized: true, role: "seoTitle", input: "seo-title", inputOptions: { limit: 60 } },
+	seoDescription: { kind: "text", label: "검색 설명", localized: true, multiline: true, role: "seoDescription", input: "seo-description", inputOptions: { limit: 155 } },
+	ogImageId: { kind: "media", label: "공유 이미지", localized: true, role: "ogImage", accept: "image" },
+	seoRobots: { kind: "select", label: "검색엔진에서 숨기기", role: "noindex", input: "seo-noindex", options: { index: "보임", noindex: "숨김" }, defaultValue: "index" },
+	canonicalUrl: { kind: "text", label: "원문 주소", localized: true, role: "canonical", placeholder: "https://" },
+},
+```
+
+플러그인은 `layout`에 적지 않아도 이 필드들을 자기 탭에 둔다. SEO 패널은 자기 스타일시트가 필요 없다. `@monti-cms/admin/styles.css`가 이미 담고 있다(앱에 Tailwind가 필요 없다).
+
+## 필드 묶음 `seoFields(options?)` (코드로 쓴 컬렉션)
+
+코드로 정의한 컬렉션(`monti.config.ts`의 `defineCollection`)은 같은 필드를 `seoFields()`로 펼칠 수 있다. 거기서 함수를 부르면 스키마가 평범한 리터럴이 아니게 되어 설정 화면에서 읽기 전용으로 보인다. 컬렉션을 코드에 두어야 할 이유가 없으면 스키마 파일을 쓰는 편이 낫다.
+
+```ts
+const article = defineCollection({
+	label: "Article",
+	kind: "document",
+	fields: { title, slug, ...seoFields() },
+});
+```
 
 | 자리 | 기본 이름 | 필드 | 역할(`role`) | 편집 화면 |
 | --- | --- | --- | --- | --- |

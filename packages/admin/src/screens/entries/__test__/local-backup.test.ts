@@ -6,7 +6,6 @@ import {
 	backupDatabaseName,
 	deleteLocalBackup,
 	getLocalBackup,
-	LEGACY_DB_NAME,
 	type LocalBackupRecord,
 	saveLocalBackup,
 } from "../local-backup";
@@ -92,7 +91,6 @@ describe("browser recovery copy per site", () => {
 		expect(backupDatabaseName(blog)).toBe(`cms_backup:Blog${blog.ADMIN_PATH}`);
 		await saveLocalBackup(record("u1:e1"), blog);
 		expect(idb.recordsOf(backupDatabaseName(blog))?.has("u1:e1")).toBe(true);
-		expect(idb.recordsOf(LEGACY_DB_NAME)).toBeUndefined();
 	});
 
 	it("keeps two sites on one origin apart, even for the same key", async () => {
@@ -103,47 +101,6 @@ describe("browser recovery copy per site", () => {
 		await deleteLocalBackup("u1:e1", blog);
 		expect(await getLocalBackup("u1:e1", blog)).toBeNull();
 		expect(await getLocalBackup("u1:e1", shop)).not.toBeNull();
-	});
-
-	it("still finds a copy written before the databases were per site, and moves it to the site's database", async () => {
-		idb.databases_.set(LEGACY_DB_NAME, new Map([["u1:e1", record("u1:e1", "예전 내용")]]));
-		const found = await getLocalBackup("u1:e1", blog);
-		expect(found?.snapshot).toEqual({ title: "예전 내용" });
-		expect(idb.recordsOf(backupDatabaseName(blog))?.get("u1:e1")).toMatchObject({ snapshot: { title: "예전 내용" } });
-		expect(idb.recordsOf(LEGACY_DB_NAME)?.has("u1:e1")).toBe(false);
-		// Found again from the site's own database.
-		expect((await getLocalBackup("u1:e1", blog))?.snapshot).toEqual({ title: "예전 내용" });
-	});
-
-	it("moves only the copy that was asked for, so another site's old copies stay readable", async () => {
-		idb.databases_.set(
-			LEGACY_DB_NAME,
-			new Map([
-				["u1:e1", record("u1:e1", "블로그 글")],
-				["u1:e2", record("u1:e2", "상점 글")],
-			]),
-		);
-		await getLocalBackup("u1:e1", blog);
-		expect((await getLocalBackup("u1:e2", shop))?.snapshot).toEqual({ title: "상점 글" });
-	});
-
-	it("a discarded copy is gone from the old database too, so it does not come back", async () => {
-		idb.databases_.set(LEGACY_DB_NAME, new Map([["u1:e1", record("u1:e1")]]));
-		await deleteLocalBackup("u1:e1", blog);
-		expect(await getLocalBackup("u1:e1", blog)).toBeNull();
-		expect(idb.recordsOf(LEGACY_DB_NAME)?.has("u1:e1")).toBe(false);
-	});
-
-	it("does not create an old database for a site that never had one", async () => {
-		expect(await getLocalBackup("u1:missing", blog)).toBeNull();
-		await deleteLocalBackup("u1:missing", blog);
-		expect(idb.recordsOf(LEGACY_DB_NAME)).toBeUndefined();
-	});
-
-	it("finds an old copy in a browser that cannot list its databases", async () => {
-		install(false);
-		idb.databases_.set(LEGACY_DB_NAME, new Map([["u1:e1", record("u1:e1", "예전 내용")]]));
-		expect((await getLocalBackup("u1:e1", blog))?.snapshot).toEqual({ title: "예전 내용" });
 	});
 
 	it("reports that recovery is unavailable when the browser has no IndexedDB", async () => {

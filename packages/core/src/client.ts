@@ -37,6 +37,7 @@ export * from "./i18n";
 export * from "./schema/allowed";
 export * from "./schema/collection";
 export * from "./schema/derive";
+export * from "./schema/field-sets";
 export * from "./schema/fields";
 export * from "./schema/layout";
 export * from "./schema/walk";

@@ -6,19 +6,7 @@ import type { ChangeImpact } from "@monti-cms/core/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/schema-edit";
 import { TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { AdminLink } from "../../router";
-import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
-import { Badge } from "../../ui/badge";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { Input } from "../../ui/input";
-import { Skeleton } from "../../ui/skeleton";
-import { CmsApiError, errorText } from "../admin-api";
-import { entryHref } from "../shared/entry-href";
-import { describeChange, describeNoTransform, describeTransform } from "./change-text";
-import { IssueList } from "./controls";
-import { schemaMessages } from "./messages";
-import { reloadPage } from "./reload";
+import { CmsApiError, errorText } from "../../api/client";
 import {
 	type EditRequest,
 	previewSchema,
@@ -26,7 +14,21 @@ import {
 	type SchemaEditPreview,
 	type SuggestedTransform,
 	saveSchema,
-} from "./schema-api";
+} from "../../api/schema";
+import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
+import { AdminLink } from "../../router";
+import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
+import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Input } from "../../ui/input";
+import { Skeleton } from "../../ui/skeleton";
+import { entryHref } from "../shared/entry-href";
+import { describeChange, describeNoTransform, describeTransform } from "./change-text";
+import { IssueList } from "./controls";
+import { reloadPage } from "./reload";
+import { schemaReviewMessages } from "./review.messages";
 import type { Rename, SettingChange } from "./schema-model";
 
 type Picks = Record<string, SuggestedTransform | null>;
@@ -53,7 +55,7 @@ function Decision({
 	picked: SuggestedTransform | null;
 	onPick: (pick: SuggestedTransform | null) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaReviewMessages);
 	const site = useSite();
 	const name = `decision-${decision.key}`;
 	const freeText =
@@ -108,7 +110,7 @@ function Sample({
 	entries: number;
 	site: ReturnType<typeof useSite>;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaReviewMessages);
 	return (
 		<div className="text-xs">
 			<span className="text-cms-muted-foreground">{t("review.sample")} </span>
@@ -138,7 +140,7 @@ function Sample({
 }
 
 function Impact({ impact }: { impact: ChangeImpact }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaReviewMessages);
 	const site = useSite();
 	return (
 		<li className="flex flex-col gap-1 rounded-md border px-3 py-2" data-testid={`impact-${impact.key}`}>
@@ -195,13 +197,13 @@ export function ReviewDialog({
 	onSaved,
 	onApplyFailed,
 }: ReviewDialogProps) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaReviewMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const [preview, setPreview] = useState<SchemaEditPreview | null>(null);
 	const [picks, setPicks] = useState<Picks | undefined>(undefined);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [saving, setSaving] = useState(false);
 	const [saveError, setSaveError] = useState<{ message: string; conflict?: boolean; applyFailed?: boolean } | null>(
 		null,
 	);
@@ -256,14 +258,16 @@ export function ReviewDialog({
 		};
 	}, [open, draft, renames, picks, site, onIssues, t]);
 
-	const save = async () => {
-		setSaving(true);
-		setSaveError(null);
-		try {
-			const result = await saveSchema(site, { ...request(picks), baseHash });
+	const saveMutation = useCmsMutation({
+		fn: (current: Picks | undefined, { site }) => saveSchema(site, { ...request(current), baseHash }),
+		failure: t("save.failed"),
+		// Each failure has its own text and effect in the dialog.
+		inline: true,
+		onSuccess: (result) => {
 			if (result.saved) onSaved(result);
 			else onOpenChange(false);
-		} catch (reason) {
+		},
+		onError: (reason) => {
 			if (reason instanceof CmsApiError) {
 				if (reason.code === "schema_conflict") setSaveError({ message: t("save.conflict"), conflict: true });
 				else if (reason.code === "schema_apply_failed") {
@@ -275,9 +279,12 @@ export function ReviewDialog({
 					setSaveError({ message: reason.message });
 				}
 			} else setSaveError({ message: errorText(site, reason, t("save.failed")) });
-		} finally {
-			setSaving(false);
-		}
+		},
+	});
+	const saving = saveMutation.isPending;
+	const save = () => {
+		setSaveError(null);
+		saveMutation.mutate(picks);
 	};
 
 	const problems = preview?.problems ?? [];
@@ -293,13 +300,13 @@ export function ReviewDialog({
 				</DialogHeader>
 				<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1" data-testid="review-body">
 					{error && (
-						<Alert variant="danger" layout="stack">
+						<Alert variant="destructive" layout="stack">
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
 					{loading && !preview && <Skeleton className="h-24 w-full" />}
 					{preview && !preview.valid && (
-						<Alert variant="danger" layout="stack">
+						<Alert variant="destructive" layout="stack">
 							<AlertTitle>{t("review.invalid")}</AlertTitle>
 							<AlertDescription>
 								<IssueList issues={preview.issues} />
@@ -307,7 +314,7 @@ export function ReviewDialog({
 						</Alert>
 					)}
 					{problems.length > 0 && (
-						<Alert variant="danger" layout="stack">
+						<Alert variant="destructive" layout="stack">
 							<AlertTitle>{t("review.problems")}</AlertTitle>
 							<AlertDescription>
 								<ul className="list-disc pl-4">
@@ -377,7 +384,7 @@ export function ReviewDialog({
 						</>
 					)}
 					{saveError && (
-						<Alert variant="danger" layout="stack">
+						<Alert variant="destructive" layout="stack">
 							<TriangleAlert aria-hidden />
 							<AlertDescription>{saveError.message}</AlertDescription>
 						</Alert>
@@ -391,10 +398,10 @@ export function ReviewDialog({
 					) : (
 						<>
 							<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-								{t("review.cancel")}
+								{tc("cancel")}
 							</Button>
 							<Button type="button" disabled={!ready} onClick={() => void save()}>
-								{saving ? t("review.saving") : t("review.save")}
+								{saving ? tc("saving") : t("review.save")}
 							</Button>
 						</>
 					)}

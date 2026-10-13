@@ -12,7 +12,7 @@ import { tabsMessages } from "./messages";
 const TAB_TRIGGER =
 	"relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-cms-foreground/60 text-sm transition-all hover:text-cms-foreground cms-dark:text-cms-muted-foreground cms-dark:hover:text-cms-foreground";
 const TAB_TRIGGER_ACTIVE =
-	"border-cms-border! bg-cms-background text-cms-foreground shadow-sm cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:text-cms-foreground";
+	"border-cms-border! bg-cms-background text-cms-foreground shadow-cms-pop cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:text-cms-foreground";
 
 const labelOf = (values: Readonly<Record<string, unknown>>) => (typeof values.label === "string" ? values.label : "");
 

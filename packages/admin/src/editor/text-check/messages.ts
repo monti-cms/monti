@@ -5,7 +5,6 @@ export const textCheckMessages = defineMessages("cms-admin.text-check", {
 	en: {
 		running: "Checking…",
 		results: "Results",
-		delete: "Delete",
 		explain: "Details",
 		ignore: "Ignore",
 		nothingToCheck: "There is no text to check.",
@@ -15,7 +14,6 @@ export const textCheckMessages = defineMessages("cms-admin.text-check", {
 	ko: {
 		running: "검사 중…",
 		results: "검사 결과",
-		delete: "삭제",
 		explain: "설명",
 		ignore: "무시",
 		nothingToCheck: "검사할 글이 없습니다.",

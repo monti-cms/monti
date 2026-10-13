@@ -3,6 +3,7 @@
 import { useTranslator } from "@monti-cms/core/client";
 import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { isComposingKey } from "../../lib/keyboard";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
@@ -83,7 +84,7 @@ export function AttributeInput({
 				commit(event.currentTarget.value);
 			}}
 			onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-				if (event.nativeEvent.isComposing || composingRef.current) return;
+				if (isComposingKey(event) || composingRef.current) return;
 				if (event.key === "Enter") {
 					event.preventDefault();
 					commit(draft);

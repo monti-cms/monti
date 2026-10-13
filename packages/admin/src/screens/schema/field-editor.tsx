@@ -3,19 +3,21 @@
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
+import { Labeled } from "../shared/labeled";
 import {
 	AddButton,
 	countOrUndefined,
 	FlagSwitch,
 	IssueList,
-	Labeled,
 	NameInput,
 	orUndefined,
 	Pick,
@@ -24,7 +26,7 @@ import {
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
-import { schemaMessages } from "./messages";
+import { schemaFieldsMessages } from "./fields.messages";
 import {
 	addField,
 	addOption,
@@ -81,7 +83,7 @@ function OptionsEditor({
 	editing: CollectionEditing;
 	change: (update: (field: Obj) => Obj) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const { disabled } = useSchemaEdit();
 	const options = optionsOf(field);
 	const values = Object.keys(options);
@@ -170,7 +172,7 @@ export function InputOptionsEditor({
 	value: unknown;
 	onChange: (value: Obj | undefined) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	const [text, setText] = useState(isObj(value) ? JSON.stringify(value) : "");
@@ -203,7 +205,7 @@ export function InputOptionsEditor({
 				onChange={(event) => setText(event.target.value)}
 				onBlur={commit}
 			/>
-			{bad && <p className="text-cms-destructive text-xs">{t("field.inputOptionsBad")}</p>}
+			{bad && <FieldError>{t("field.inputOptionsBad")}</FieldError>}
 		</Labeled>
 	);
 }
@@ -222,7 +224,7 @@ export function KindOptions({
 	set: (key: string, value: unknown) => void;
 	change: (update: (field: Obj) => Obj) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const { collectionNames, file } = useSchemaEdit();
 	const placeholder = (
 		<TextInput
@@ -437,7 +439,7 @@ export function FieldEditor({
 	index: number;
 	count: number;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const { disabled, collectionNames } = useSchemaEdit();
 	const [open, setOpen] = useState(false);
 	const path = place.branch
@@ -619,7 +621,8 @@ export function NewFieldDialog({
 	kind: FieldKindName;
 	onClose: (added: boolean) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
+	const tc = useTranslator(commonMessages);
 	const { collectionNames } = useSchemaEdit();
 	const [draft, setDraft] = useState<Obj>(() =>
 		addField(
@@ -671,7 +674,7 @@ export function NewFieldDialog({
 				</div>
 				<DialogFooter>
 					<Button type="button" variant="outline" onClick={() => onClose(false)}>
-						{t("field.newCancel")}
+						{tc("cancel")}
 					</Button>
 					<Button
 						type="button"
@@ -681,7 +684,7 @@ export function NewFieldDialog({
 							onClose(true);
 						}}
 					>
-						{t("field.addConfirm")}
+						{tc("add")}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
@@ -701,7 +704,7 @@ export function FieldList({
 	fields: Record<string, Obj>;
 	kinds: readonly FieldKindName[];
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const { collectionNames, disabled } = useSchemaEdit();
 	const names = Object.keys(fields);
 	const [name, setName] = useState("");

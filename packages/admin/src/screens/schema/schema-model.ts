@@ -2,6 +2,7 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
+
 import {
 	checkField,
 	checkPathPattern,
@@ -9,11 +10,14 @@ import {
 	defaultCollectionPath,
 	type Field,
 	fieldTraits,
+	freshSetFields,
 	IssueList,
 	NAME_PATTERN,
+	type PluginFieldSet,
 	RESERVED_METADATA_KEYS,
 	TITLE_ROLE,
 } from "@monti-cms/core/client";
+import { moveWithin } from "../../lib/utils/move-within";
 
 export type Obj = Record<string, unknown>;
 
@@ -152,20 +156,12 @@ export function renameKey<T>(record: Record<string, T>, from: string, to: string
 export function moveKey<T>(record: Record<string, T>, key: string, delta: number): Record<string, T> {
 	const entries = Object.entries(record);
 	const from = entries.findIndex(([name]) => name === key);
-	const to = Math.min(entries.length - 1, Math.max(0, from + delta));
-	if (from === -1 || from === to) return record;
-	const [moved] = entries.splice(from, 1);
-	if (moved) entries.splice(to, 0, moved);
-	return Object.fromEntries(entries);
+	return from === -1 ? record : Object.fromEntries(moveWithin(entries, from, from + delta));
 }
 
+/** `list` with the item at `index` moved by `delta` places (negative: up). */
 export function moveItem<T>(list: readonly T[], index: number, delta: number): T[] {
-	const next = [...list];
-	const to = Math.min(next.length - 1, Math.max(0, index + delta));
-	if (index < 0 || index >= next.length || to === index) return next;
-	const [moved] = next.splice(index, 1);
-	if (moved !== undefined) next.splice(to, 0, moved);
-	return next;
+	return moveWithin(list, index, index + delta);
 }
 
 /** Whether two JSON values are the same, key order included. */
@@ -239,19 +235,6 @@ export function removeCollection(file: Obj, name: string): Obj {
 }
 
 // ----- fields -----
-
-/** The names of the fields that store a value, including the fields a conditional field shows (the order the entry form has them). */
-export function storedFieldNames(collection: Obj): string[] {
-	const names: string[] = [];
-	for (const [name, field] of Object.entries(fieldsOf(collection))) {
-		if (field.kind === "view" || field.kind === "backlink") continue;
-		names.push(name);
-		if (field.kind === "conditional" && isObj(field.values)) {
-			for (const branch of Object.values(field.values)) if (isObj(branch)) names.push(...Object.keys(branch));
-		}
-	}
-	return names;
-}
 
 /** Every name in `fields` or inside a conditional field, for the uniqueness of a new name (the stored values share one namespace). */
 export function allFieldNames(collection: Obj): string[] {
@@ -376,6 +359,12 @@ function updateFields(
 
 export function addField(collection: Obj, place: FieldPlace, name: string, field: Obj): Obj {
 	return updateFields(collection, place, (fields) => ({ ...fields, [name]: field }));
+}
+
+/** The fields of a plugin's field set added after the others, under names the collection does not use yet. */
+export function addFieldSet(collection: Obj, set: Pick<PluginFieldSet, "fields">): Obj {
+	const added = freshSetFields(set, fieldsOf(collection)) as Record<string, Obj>;
+	return updateFields(collection, {}, (fields) => ({ ...fields, ...added }));
 }
 
 export function setField(collection: Obj, place: FieldPlace, name: string, update: (field: Obj) => Obj): Obj {
@@ -548,9 +537,6 @@ export interface LayoutGroup {
 	collapsed?: boolean;
 	tab?: string;
 }
-
-export const layoutOf = (collection: Obj): LayoutGroup[] =>
-	Array.isArray(collection.layout) ? (collection.layout as LayoutGroup[]) : [];
 
 export function withLayout(collection: Obj, layout: LayoutGroup[]): Obj {
 	return setProp(collection, "layout", layout.length > 0 ? layout : undefined, COLLECTION_KEY_ORDER);

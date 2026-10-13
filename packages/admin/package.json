@@ -15,7 +15,7 @@
 		"./plugins": "./src/plugins.ts",
 		"./media": "./src/media.ts",
 		"./slots": "./src/slots/slots.tsx",
-		"./api": "./src/screens/admin-api.ts",
+		"./api": "./src/api/index.ts",
 		"./kit": "./src/kit.ts",
 		"./styles.css": "./dist/styles.css"
 	},
@@ -126,8 +126,8 @@
 				"default": "./dist/slots/slots.js"
 			},
 			"./api": {
-				"types": "./dist/screens/admin-api.d.ts",
-				"default": "./dist/screens/admin-api.js"
+				"types": "./dist/api/index.d.ts",
+				"default": "./dist/api/index.js"
 			},
 			"./kit": {
 				"types": "./dist/kit.d.ts",

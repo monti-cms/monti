@@ -23,7 +23,7 @@ import {
 	type TransformProblem,
 } from "../schema-change";
 import { parseSchemaFile } from "../schema-file/format";
-import { parseSchemaLiteral } from "../schema-file/literal";
+import { parseSchemaLiteral, type SchemaLiteralIssue } from "../schema-file/literal";
 import { printSchemaFile } from "../schema-file/print";
 import type { SchemaFile, SchemaMigration } from "../schema-file/types";
 import { type SchemaEditAccess, schemaEditAccess } from "./access";
@@ -44,7 +44,12 @@ export const hashOf = (text: string): string => createHash("sha256").update(text
 
 /** The schema file as the screen shows it. */
 export interface SchemaScreenState {
-	readonly access: { readonly writable: boolean; readonly reason?: string; readonly detail?: string };
+	readonly access: {
+		readonly writable: boolean;
+		readonly reason?: string;
+		readonly detail?: string;
+		readonly issue?: SchemaLiteralIssue;
+	};
 	/** The path of the schema file relative to the working directory (what the screen calls the file), or `null` when there is none. */
 	readonly file: string | null;
 	/** Hash of the file's text: a save names the hash it was edited from, and is refused when the file changed since. `null` without a file. */
@@ -136,7 +141,12 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 	return {
 		access: access.writable
 			? { writable: true }
-			: { writable: false, reason: access.reason, ...(access.detail ? { detail: access.detail } : {}) },
+			: {
+					writable: false,
+					reason: access.reason,
+					...(access.detail ? { detail: access.detail } : {}),
+					...(access.issue ? { issue: access.issue } : {}),
+				},
 		file: file ? relativeToCwd(file) : null,
 		hash: text === undefined ? null : hashOf(text),
 		schema: schema ?? null,

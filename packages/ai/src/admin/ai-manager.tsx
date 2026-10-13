@@ -1,57 +1,55 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
 	Checkbox,
 	cn,
+	commonMessages,
+	DETAIL_PANE_FRAME,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-	Empty,
-	EmptyContent,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
+	EditorFooter,
+	EmptyState,
 	Field,
+	FieldError,
 	FieldGroup,
 	FieldLabel,
 	FieldTitle,
 	IconButton,
 	Input,
+	isComposingKey,
 	Label,
+	ListPane,
+	ListRow,
+	LoadErrorAlert,
+	MasterDetail,
 	PageActions,
+	PageTabs,
 	Switch,
 	Tabs,
 	TabsContent,
-	TabsList,
 	TabsTrigger,
 	Textarea,
 	useConfirm,
+	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
-import { toast } from "sonner";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
 import type { CustomBase } from "../custom";
 import { ADDABLE_CHECKS, type AddableCheckKind, type AiCheck, type AiRunResult, checkKey } from "../definition";
 import { aiManagerMessages } from "./ai-manager.messages";
-import { AI_ACTIONS_KEY, type AiActionsResponse, runAiAction, useAiActions } from "./ai-slot-provider";
+import { runAiAction, useAiActions } from "./ai-slot-provider";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample";
-import {
-	ConnectionManager,
-	DETAIL_PANE,
-	InlineError,
-	ListRow,
-	ListSkeleton,
-	LoadError,
-	useAiSettings,
-} from "./connection-editor";
+import { type AiActionsResponse, aiKeys, createAiAction, deleteAiAction, updateAiAction } from "./api";
+import { ConnectionManager, useAiSettings } from "./connection-editor";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor";
 import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
@@ -114,12 +112,34 @@ const editableOf = (action: AiActionView): Editable => ({
 	checks: action.checks,
 });
 
-/** Comparison key of the edited values. If it differs from the values at open time, there is unsaved content. */
-const snapshotOf = (spec: Editable, base: CustomBase | undefined) => JSON.stringify({ spec, base });
+/** What the editor holds: the action as shown, the values being edited and, for a screen action, its basic info. */
+interface FeatureDraft {
+	feature: AiActionView;
+	spec: Editable;
+	base?: CustomBase;
+}
+
+const draftOfFeature = (feature: AiActionView): FeatureDraft => ({
+	feature,
+	spec: editableOf(feature),
+	...(feature.custom ? { base: feature.custom } : {}),
+});
+
+/** Two drafts read the same when the edited values and the action's version are the same. A different version means the server's copy moved on. */
+const sameFeatureDraft = (a: FeatureDraft | null, b: FeatureDraft | null) =>
+	a === b ||
+	(a !== null &&
+		b !== null &&
+		a.feature.key === b.feature.key &&
+		a.feature.version === b.feature.version &&
+		JSON.stringify({ spec: a.spec, base: a.base }) === JSON.stringify({ spec: b.spec, base: b.base }));
 
 /** Sample input for the test (input name -> value) and the extra request. Fields are built from the action's input types (`ai-test-sample`). */
 type Sample = { values: Record<string, string>; request: string };
 const EMPTY_SAMPLE: Sample = { values: {}, request: "" };
+
+/** The open action as the screen uses it: the draft and whether it is new. */
+type Editing = FeatureDraft & { isNew: boolean };
 
 type AiTab = "features" | "connections" | "shared";
 
@@ -132,6 +152,7 @@ type AiTab = "features" | "connections" | "shared";
 export function AiManager() {
 	const site = useSite();
 	const t = useTranslator(aiManagerMessages);
+	const tc = useTranslator(commonMessages);
 	const { engineLabel } = useLabels();
 	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
@@ -141,16 +162,8 @@ export function AiManager() {
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
 	const [tab, setTab] = useState<AiTab>("features");
-	/** The action being edited. If `isNew`, it is a new screen action not yet saved (saving creates it). `initial` is the value at open time. */
-	const [editing, setEditing] = useState<{
-		feature: AiActionView;
-		spec: Editable;
-		base?: CustomBase;
-		isNew?: boolean;
-		initial: string;
-	} | null>(null);
-	const [saving, setSaving] = useState(false);
-	const [deleting, setDeleting] = useState(false);
+	/** The action opened for editing, as it was at open time. If `isNew`, it is a new screen action not yet saved (saving creates it). */
+	const [opened, setOpened] = useState<{ saved: FeatureDraft; isNew: boolean } | null>(null);
 	const [formError, setFormError] = useState<string | null>(null);
 	/** The open connection. The header's Add connection changes it, so it lives outside the Connections tab. */
 	const [connection, setConnection] = useState<string | "new" | null>(null);
@@ -160,22 +173,78 @@ export function AiManager() {
 	const [sharedDirty, setSharedDirty] = useState(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
 
-	const featureDirty = editing !== null && snapshotOf(editing.spec, editing.base) !== editing.initial;
-
 	const replaceInCache = (feature: AiActionView) =>
-		queryClient.setQueryData<AiActionsResponse>(AI_ACTIONS_KEY, (data) =>
+		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
 			data ? { ...data, items: data.items.map((item) => (item.key === feature.key ? feature : item)) } : data,
 		);
 
+	const removeMutation = useCmsMutation({
+		fn: (feature: AiActionView, { site }) => deleteAiAction(site, feature.key, feature.version, tc("deleteFailed")),
+		success: tc("deleted"),
+		failure: tc("deleteFailed"),
+		inline: true,
+		onSuccess: (_result, feature) => {
+			queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+				data ? { ...data, items: data.items.filter((item) => item.key !== feature.key) } : data,
+			);
+			setOpened(null);
+		},
+		onError: (error) => setFormError(errorText(site, error, tc("deleteFailed"))),
+	});
+
+	const saveMutation = useCmsMutation({
+		fn: (current: Editing, { site }) =>
+			current.isNew && current.base
+				? createAiAction(
+						site,
+						{ base: { ...current.base, label: current.base.label.trim() }, value: current.spec },
+						tc("saveFailed"),
+					)
+				: updateAiAction(
+						site,
+						current.feature.key,
+						{
+							expectedVersion: current.feature.version,
+							value: current.spec,
+							...(current.base ? { base: { ...current.base, label: current.base.label.trim() } } : {}),
+						},
+						tc("saveFailed"),
+					),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
+		inline: true,
+		invalidate: [aiKeys.actions()],
+		onSuccess: (saved, current) => {
+			if (current.isNew && current.base) {
+				queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+					data ? { ...data, items: [...data.items, saved] } : data,
+				);
+			} else replaceInCache(saved);
+			open(saved);
+		},
+		onError: (error) => setFormError(errorText(site, error, tc("saveFailed"))),
+	});
+	const saving = saveMutation.isPending;
+	const deleting = removeMutation.isPending;
+
+	// The draft follows what was opened; a closed editor holds no draft.
+	const editor = useDraftEditor<FeatureDraft | null>({
+		saved: opened && !opened.isNew ? opened.saved : null,
+		empty: opened?.isNew ? opened.saved : null,
+		equals: sameFeatureDraft,
+		saving,
+		deleting,
+	});
+	// Until the draft catches up with a newly opened action, show the action as opened.
+	const shown = opened ? (editor.draft ?? opened.saved) : null;
+	const editing: Editing | null = opened && shown ? { ...shown, isNew: opened.isNew } : null;
+	const featureDirty = opened !== null && editor.dirty;
+	const changeDraft = (change: (draft: FeatureDraft) => FeatureDraft) =>
+		editor.update((draft) => change(draft ?? (opened as { saved: FeatureDraft }).saved));
+
 	/** Opens without asking (e.g. after saving). */
 	const open = (feature: AiActionView) => {
-		const spec = editableOf(feature);
-		setEditing({
-			feature,
-			spec,
-			...(feature.custom ? { base: feature.custom } : {}),
-			initial: snapshotOf(spec, feature.custom),
-		});
+		setOpened({ saved: draftOfFeature(feature), isNew: false });
 		setFormError(null);
 	};
 
@@ -190,8 +259,7 @@ export function AiManager() {
 		if (!(await confirmDiscard(featureDirty))) return;
 		const base = NEW_CUSTOM_BASE(site);
 		const feature = draftCustomView(site, base);
-		const spec = editableOf(feature);
-		setEditing({ feature, spec, base, isNew: true, initial: snapshotOf(spec, base) });
+		setOpened({ saved: { feature, spec: editableOf(feature), base }, isNew: true });
 		setFormError(null);
 	};
 
@@ -220,7 +288,7 @@ export function AiManager() {
 		const { label: _before, ...restBefore } = editing.base ?? base;
 		const { label: _after, ...restAfter } = base;
 		if (JSON.stringify(restBefore) === JSON.stringify(restAfter)) {
-			setEditing({ ...editing, base });
+			changeDraft((draft) => ({ ...draft, base }));
 			return;
 		}
 		const draft = draftCustomView(site, base);
@@ -229,8 +297,7 @@ export function AiManager() {
 			: { ...draft, key: editing.feature.key, version: editing.feature.version, updatedAt: editing.feature.updatedAt };
 		const sameEngine = feature.engine === editing.feature.engine;
 		const { spec } = editing;
-		setEditing({
-			...editing,
+		changeDraft(() => ({
 			base,
 			feature,
 			spec: {
@@ -241,71 +308,25 @@ export function AiManager() {
 				prompt: spec.prompt,
 				...(sameEngine ? { providerId: spec.providerId, modelName: spec.modelName } : {}),
 			},
-		});
+		}));
 	};
 
 	const remove = async (feature: AiActionView) => {
 		const ok = await confirm({
 			title: t("remove.title"),
 			description: t("remove.description", { label: feature.label }),
-			confirmLabel: t("remove.confirm"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (!ok) return;
-		setDeleting(true);
 		setFormError(null);
-		try {
-			await cmsFetch(site, cmsApiUrl(`/v1/ai/actions/${feature.key}?expectedVersion=${feature.version}`), {
-				method: "DELETE",
-				fallback: t("remove.failed"),
-			});
-			queryClient.setQueryData<AiActionsResponse>(AI_ACTIONS_KEY, (data) =>
-				data ? { ...data, items: data.items.filter((item) => item.key !== feature.key) } : data,
-			);
-			setEditing(null);
-			toast.success(t("remove.done"));
-		} catch (error) {
-			setFormError(errorText(site, error, t("remove.failed")));
-		} finally {
-			setDeleting(false);
-		}
+		removeMutation.mutate(feature);
 	};
 
-	const save = async () => {
+	const save = () => {
 		if (!editing) return;
-		setSaving(true);
 		setFormError(null);
-		try {
-			if (editing.isNew && editing.base) {
-				const created = await cmsFetch<AiActionView>(site, cmsApiUrl("/v1/ai/actions"), {
-					method: "POST",
-					json: { base: { ...editing.base, label: editing.base.label.trim() }, value: editing.spec },
-					fallback: t("save.failed"),
-				});
-				queryClient.setQueryData<AiActionsResponse>(AI_ACTIONS_KEY, (data) =>
-					data ? { ...data, items: [...data.items, created] } : data,
-				);
-				open(created);
-			} else {
-				const saved = await cmsFetch<AiActionView>(site, cmsApiUrl(`/v1/ai/actions/${editing.feature.key}`), {
-					method: "PATCH",
-					json: {
-						expectedVersion: editing.feature.version,
-						value: editing.spec,
-						...(editing.base ? { base: { ...editing.base, label: editing.base.label.trim() } } : {}),
-					},
-					fallback: t("save.failed"),
-				});
-				replaceInCache(saved);
-				open(saved);
-			}
-			toast.success(t("save.done"));
-			void queryClient.invalidateQueries({ queryKey: AI_ACTIONS_KEY });
-		} catch (error) {
-			setFormError(errorText(site, error, t("save.failed")));
-		} finally {
-			setSaving(false);
-		}
+		saveMutation.mutate(editing);
 	};
 
 	const onConnectionDirty = useCallback((dirty: boolean) => setConnectionDirty(dirty), []);
@@ -336,7 +357,7 @@ export function AiManager() {
 				onValueChange={(value) => void changeTab(value as AiTab)}
 				className="flex min-h-0 flex-1 flex-col gap-0"
 			>
-				<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
+				<PageTabs>
 					<TabsTrigger value="features" className="flex-none px-0 text-xs">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
@@ -349,99 +370,94 @@ export function AiManager() {
 						<Quote aria-hidden />
 						{t("tab.shared")}
 					</TabsTrigger>
-				</TabsList>
+				</PageTabs>
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
 					{featuresQuery.error && !featuresQuery.data && (
-						<LoadError
+						<LoadErrorAlert
+							className="m-3"
 							message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
 							onRetry={() => void featuresQuery.refetch()}
 						/>
 					)}
-					<div className="flex min-h-0 flex-1 overflow-hidden">
-						<div className="flex w-72 shrink-0 flex-col border-r">
-							<ul className="min-h-0 flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
-								{featuresQuery.isPending ? (
-									<ListSkeleton rows={4} />
-								) : (
-									<>
-										{featuresQuery.data && features.length === 0 && !editing?.isNew && (
-											<li className="px-3 py-6 text-center text-cms-muted-foreground text-xs">{t("list.empty")}</li>
-										)}
-										{features.map((feature) => (
-											<ListRow
-												key={feature.key}
-												title={feature.label}
-												status={
-													!feature.enabled
-														? t("status.off")
-														: usable.has(feature.key)
-															? null
-															: t("status.needsConnection")
-												}
-												detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
-												// While a new unsaved action is open, no other row in the list is shown as open.
-												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
-												onClick={() => void openFeature(feature)}
-											/>
-										))}
-										{editing?.isNew && (
-											<ListRow
-												title={editing.base?.label.trim() || t("title.new")}
-												status={t("status.unsaved")}
-												detail={`${placeLabel(editing.feature)} · ${engineLabel(editing.feature.engine)}`}
-												current
-												onClick={() => {}}
-											/>
-										)}
-									</>
-								)}
-							</ul>
-						</div>
-
-						<div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-							{editing ? (
-								<FeatureEditor
-									key={editing.isNew ? "new" : editing.feature.key}
-									feature={editing.feature}
-									spec={editing.spec}
-									saving={saving}
-									deleting={deleting}
-									dirty={featureDirty}
-									error={formError}
-									onChange={(spec) => setEditing({ ...editing, spec })}
-									onSave={() => void save()}
-									custom={
-										editing.base
-											? {
-													base: editing.base,
-													onBaseChange: changeBase,
-													isNew: editing.isNew === true,
-													onCancel: () => setEditing(null),
-													onDelete: () => void remove(editing.feature),
-												}
-											: undefined
-									}
+					<MasterDetail
+						list={
+							<ListPane
+								label={t("list.label")}
+								loading={featuresQuery.isPending}
+								skeletonRows={4}
+								empty={
+									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
+										<EmptyState compact title={t("list.empty")} />
+									) : null
+								}
+							>
+								{[
+									...features.map((feature) => (
+										<ListRow
+											key={feature.key}
+											title={feature.label}
+											status={
+												!feature.enabled
+													? t("status.off")
+													: usable.has(feature.key)
+														? null
+														: t("status.needsConnection")
+											}
+											detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
+											// While a new unsaved action is open, no other row in the list is shown as open.
+											current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
+											onClick={() => void openFeature(feature)}
+										/>
+									)),
+									...(editing?.isNew
+										? [
+												<ListRow
+													key="new"
+													title={editing.base?.label.trim() || t("title.new")}
+													status={t("status.unsaved")}
+													detail={`${placeLabel(editing.feature)} · ${engineLabel(editing.feature.engine)}`}
+													current
+													onClick={() => {}}
+												/>,
+											]
+										: []),
+								]}
+							</ListPane>
+						}
+					>
+						{editing ? (
+							<FeatureEditor
+								key={editing.isNew ? "new" : editing.feature.key}
+								feature={editing.feature}
+								spec={editing.spec}
+								saving={saving}
+								deleting={deleting}
+								dirty={featureDirty}
+								error={formError}
+								onChange={(spec) => changeDraft((draft) => ({ ...draft, spec }))}
+								onSave={() => void save()}
+								custom={
+									editing.base
+										? {
+												base: editing.base,
+												onBaseChange: changeBase,
+												isNew: editing.isNew === true,
+												onCancel: () => setOpened(null),
+												onDelete: () => void remove(editing.feature),
+											}
+										: undefined
+								}
+							/>
+						) : (
+							featuresQuery.data && (
+								<EmptyState
+									icon={Sparkles}
+									title={t("empty.pick")}
+									action={{ label: t("add.feature"), onClick: () => void startNew(), icon: Plus }}
 								/>
-							) : (
-								featuresQuery.data && (
-									<Empty className="flex-1">
-										<EmptyHeader>
-											<EmptyMedia variant="icon">
-												<Sparkles aria-hidden />
-											</EmptyMedia>
-											<EmptyTitle>{t("empty.pick")}</EmptyTitle>
-										</EmptyHeader>
-										<EmptyContent>
-											<Button type="button" size="sm" onClick={() => void startNew()}>
-												<Plus aria-hidden />
-												{t("add.feature")}
-											</Button>
-										</EmptyContent>
-									</Empty>
-								)
-							)}
-						</div>
-					</div>
+							)
+						)}
+					</MasterDetail>
 				</TabsContent>
 				<TabsContent value="shared" className="flex min-h-0 flex-1 flex-col">
 					<SharedManager
@@ -657,7 +673,7 @@ function FeatureEditor({
 	};
 
 	return (
-		<div className={DETAIL_PANE}>
+		<div className={DETAIL_PANE_FRAME}>
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 				<div className="min-w-0 flex-1">
 					<h2 className="truncate font-medium text-base">
@@ -825,23 +841,17 @@ function FeatureEditor({
 				</Field>
 			</FieldGroup>
 
-			{error && <InlineError>{error}</InlineError>}
-
-			<div className="flex flex-wrap items-center gap-2">
-				<Button
-					type="button"
-					size="sm"
-					disabled={saving || !dirty || (custom?.isNew === true && !custom.base.label.trim())}
-					onClick={onSave}
-				>
-					<Save aria-hidden />
-					{saving ? t("button.saving") : t("button.save")}
-				</Button>
-				{custom?.isNew && (
-					<Button type="button" size="sm" variant="outline" onClick={custom.onCancel}>
-						{t("button.cancel")}
-					</Button>
-				)}
+			<EditorFooter
+				dirty={dirty}
+				saving={saving}
+				deleting={deleting}
+				canSave={!(custom?.isNew === true && !custom.base.label.trim())}
+				error={error}
+				saveIcon={<Save aria-hidden />}
+				onSave={onSave}
+				onCancel={custom?.isNew ? custom.onCancel : undefined}
+				onDelete={custom && !custom.isNew ? custom.onDelete : undefined}
+			>
 				{defaults && (
 					<Button
 						type="button"
@@ -855,7 +865,7 @@ function FeatureEditor({
 					</Button>
 				)}
 				{!custom?.isNew && (
-					<span className="ml-auto text-cms-muted-foreground text-xs">
+					<span className="flex-1 text-right text-cms-muted-foreground text-xs">
 						{feature.updatedAt
 							? t("meta.edited", {
 									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
@@ -863,20 +873,7 @@ function FeatureEditor({
 							: t("meta.default")}
 					</span>
 				)}
-				{custom && !custom.isNew && (
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						className="text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
-						disabled={deleting}
-						onClick={custom.onDelete}
-					>
-						<Trash2 aria-hidden />
-						{deleting ? t("button.deleting") : t("button.delete")}
-					</Button>
-				)}
-			</div>
+			</EditorFooter>
 
 			<section
 				className="flex flex-col gap-2 rounded-md border bg-cms-muted/30 p-3 text-xs"
@@ -905,7 +902,7 @@ function FeatureEditor({
 						onChange={(event) => setSample({ ...sample, request: event.target.value })}
 						onKeyDown={(event) => {
 							// Enter inserts a newline; Cmd/Ctrl+Enter runs.
-							if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+							if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
 								event.preventDefault();
 								void runTest();
 							}
@@ -919,11 +916,7 @@ function FeatureEditor({
 					defaults={sampleStart}
 					onChange={(name, value) => setSample({ ...sample, values: { ...sample.values, [name]: value } })}
 				/>
-				{test?.status === "error" && (
-					<p role="alert" className="text-cms-destructive">
-						{test.message}
-					</p>
-				)}
+				{test?.status === "error" && <FieldError>{test.message}</FieldError>}
 				{test?.status === "done" &&
 					(test.result.kind === "candidates" ? (
 						test.result.items.length === 0 ? (

@@ -5,6 +5,7 @@ import { useTranslator } from "@monti-cms/core/client";
 import { posToDOMRect } from "@tiptap/core";
 import { CircleAlert, EyeOff, Info, Loader2, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { useIconByName } from "../../screens/shared/collection-icon";
 import { Button } from "../../ui/button";
@@ -67,7 +68,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<span className="tabular rounded-full bg-cms-muted px-1.5 font-medium text-xs leading-5">
+						<span className="tabular rounded-sm bg-cms-muted px-1.5 font-medium text-xs leading-5">
 							{count > 99 ? "99+" : count}
 						</span>
 					</IconButton>
@@ -139,6 +140,7 @@ export function TextIssuePopover({ controller }: { controller: TextCheckControll
 
 function IssueCard({ controller, issue }: { controller: TextCheckController; issue: DocTextIssue }) {
 	const t = useTranslator(textCheckMessages);
+	const tc = useTranslator(commonMessages);
 	const checker = controller.checkers.find((item) => item.id === issue.checkerId);
 	const editable = controller.editor.isEditable;
 	return (
@@ -159,7 +161,7 @@ function IssueCard({ controller, issue }: { controller: TextCheckController; iss
 							className="max-w-full"
 							onClick={() => controller.apply(issue, suggestion)}
 						>
-							<span className="truncate">{suggestion || t("delete")}</span>
+							<span className="truncate">{suggestion || tc("delete")}</span>
 						</Button>
 					))}
 				</div>

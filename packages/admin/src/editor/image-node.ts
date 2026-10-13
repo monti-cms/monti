@@ -2,18 +2,6 @@ import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { BlockNodeView } from "./blocks/block-node-view";
 
-export interface CmsImageAttributes {
-	mediaId?: string;
-	src?: string;
-	alt?: string;
-	width?: string;
-	align?: "left" | "center" | "right";
-	caption?: string;
-	decorative?: boolean;
-	crop?: string;
-	rotate?: string | number;
-}
-
 export const CmsImageNode = Node.create({
 	name: "image",
 	group: "block",

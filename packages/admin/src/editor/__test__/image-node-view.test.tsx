@@ -4,6 +4,7 @@ import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { withBlockEditor } from "../../test/block-editor";
 import { renderWithSite } from "../../test/site";
 import { blocksMessages } from "../blocks/messages";
@@ -12,6 +13,7 @@ import { ImageBlockView } from "../image-node-view";
 import { editorMessages } from "../messages";
 
 const t = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 const tBlocks = testSite.createTranslator(blocksMessages);
 
 vi.mock("@tiptap/react", async (importOriginal) => {
@@ -138,7 +140,7 @@ describe("CmsImageNodeView", () => {
 		expect(screen.getByText("90°")).toBeDefined();
 
 		// Click the apply button
-		const applyBtn = screen.getByRole("button", { name: t("imageCrop.apply") });
+		const applyBtn = screen.getByRole("button", { name: tc("apply") });
 		fireEvent.click(applyBtn);
 
 		expect(updateAttributes).toHaveBeenCalledWith({
@@ -194,7 +196,7 @@ describe("CmsImageNodeView", () => {
 		fireEvent.change(inputH, { target: { value: "60" } });
 
 		// Click the apply button
-		const applyBtn = screen.getByRole("button", { name: t("imageCrop.apply") });
+		const applyBtn = screen.getByRole("button", { name: tc("apply") });
 		fireEvent.click(applyBtn);
 
 		expect(updateAttributes).toHaveBeenCalledWith({
@@ -214,11 +216,11 @@ describe("CmsImageNodeView", () => {
 		fireEvent.click(cropBtn);
 
 		// Click the reset button
-		const resetAllBtn = screen.getByRole("button", { name: t("imageCrop.reset") });
+		const resetAllBtn = screen.getByRole("button", { name: tc("reset") });
 		fireEvent.click(resetAllBtn);
 
 		// Click the apply button
-		const applyBtn = screen.getByRole("button", { name: t("imageCrop.apply") });
+		const applyBtn = screen.getByRole("button", { name: tc("apply") });
 		fireEvent.click(applyBtn);
 
 		expect(updateAttributes).toHaveBeenCalledWith({

@@ -1,8 +1,8 @@
 import type { SchemaChange, SuggestedTransform } from "@monti-cms/core/schema-change";
 import type { TranslatorFor } from "../../translator";
-import type { schemaMessages } from "./messages";
+import type { schemaReviewMessages } from "./review.messages";
 
-type T = TranslatorFor<typeof schemaMessages>;
+type T = TranslatorFor<typeof schemaReviewMessages>;
 
 const branchText = (branch: { field: string; value: string } | null, none: string) =>
 	branch ? `${branch.field}=${branch.value}` : none;

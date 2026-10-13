@@ -1,15 +1,15 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { commonMessages } from "../../../lib/common.messages";
 import { preferenceKey } from "../../../lib/utils/site-storage";
-import { renderInRouter as render } from "../../../test/router";
-import { sharedMessages } from "../../shared/messages";
+import { createTestRouter } from "../../../test/router";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
 import { mediaMessages } from "../messages";
 
 const t = testSite.createTranslator(mediaMessages);
-const tShared = testSite.createTranslator(sharedMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
@@ -56,7 +56,11 @@ const mediaRequests = () =>
 const calls = (method: string, path: string) =>
 	fetchMock.mock.calls.filter(([input, init]) => (init?.method ?? "GET") === method && String(input) === path);
 
+// The filters live in the address, so every test gets an address of its own.
+let host: ReturnType<typeof createTestRouter>;
+const render: ReturnType<typeof createTestRouter>["render"] = (ui, options) => host.render(ui, options);
 beforeEach(() => {
+	host = createTestRouter();
 	vi.clearAllMocks();
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = new URL(input, "http://localhost");
@@ -115,7 +119,7 @@ describe("media library", () => {
 				.getAttribute("href"),
 		).toBe(testSite.adminEntryEditHref("e1"));
 		// A file in use cannot be deleted.
-		expect((within(detail).getByRole("button", { name: t("common.delete") }) as HTMLButtonElement).disabled).toBe(true);
+		expect((within(detail).getByRole("button", { name: tc("delete") }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
 	it("saves the image's default alt text and caption", async () => {
@@ -127,14 +131,14 @@ describe("media library", () => {
 		fireEvent.change(within(detail).getByRole("textbox", { name: t("detail.defaultCaption") }), {
 			target: { value: "캡션" },
 		});
-		fireEvent.click(within(detail).getByRole("button", { name: t("common.save") }));
+		fireEvent.click(within(detail).getByRole("button", { name: tc("save") }));
 
 		await waitFor(() => expect(calls("PATCH", "/api/monti/v1/media/cat")).toHaveLength(1));
 		expect(JSON.parse(String(calls("PATCH", "/api/monti/v1/media/cat")[0]?.[1]?.body))).toEqual({
 			defaultAlt: "창가의 고양이",
 			defaultCaption: "캡션",
 		});
-		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("library.saved")));
+		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(tc("saved")));
 	});
 
 	it("opening another file with an edited default description asks whether to discard", async () => {
@@ -145,10 +149,10 @@ describe("media library", () => {
 		});
 
 		fireEvent.click(screen.getByRole("button", { name: /dog\.png$/ }));
-		const dialog = await screen.findByRole("alertdialog", { name: tShared("discard.title") });
+		const dialog = await screen.findByRole("alertdialog", { name: tc("discard.title") });
 		// While the confirm dialog is up, the detail panel is covered but the edited value remains.
 		expect(screen.getByDisplayValue("고친 캡션")).toBeTruthy();
-		fireEvent.click(within(dialog).getByRole("button", { name: tShared("discard.confirm") }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("discard.confirm") }));
 		await waitFor(() =>
 			expect(
 				within(screen.getByRole("complementary", { name: t("detail.label") })).getByRole("heading", {
@@ -185,7 +189,7 @@ describe("media library", () => {
 		expect(alert.textContent).toContain("서버 오류");
 		expect(toast.error).not.toHaveBeenCalled();
 		fail = false;
-		fireEvent.click(within(alert).getByRole("button", { name: t("common.retry") }));
+		fireEvent.click(within(alert).getByRole("button", { name: tc("retry") }));
 		expect(await screen.findByRole("button", { name: /cat\.png$/ })).toBeTruthy();
 	});
 
@@ -199,9 +203,9 @@ describe("media library", () => {
 	it("an unused file is deleted after confirmation", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/dog\.png$/);
-		fireEvent.click(within(detail).getByRole("button", { name: t("common.delete") }));
+		fireEvent.click(within(detail).getByRole("button", { name: tc("delete") }));
 		const dialog = await screen.findByRole("alertdialog", { name: t("library.delete.title") });
-		fireEvent.click(within(dialog).getByRole("button", { name: t("common.delete") }));
+		fireEvent.click(within(dialog).getByRole("button", { name: tc("delete") }));
 
 		await waitFor(() => expect(calls("DELETE", "/api/monti/v1/media/dog")).toHaveLength(1));
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("library.deleted", { name: "dog.png" })));
@@ -213,7 +217,7 @@ describe("media library", () => {
 			fireEvent.contextMenu(screen.getByRole("button", { name: /cat\.png$/ }));
 		});
 		const items = (await screen.findAllByRole("menuitem")).map((item) => item.textContent);
-		expect(items).toEqual([t("common.open"), t("library.menu.usage"), `${t("common.delete")}Del`]);
+		expect(items).toEqual([tc("open"), t("library.menu.usage"), `${tc("delete")}Del`]);
 	});
 
 	it("switching to list view shows name, type, size, dimensions, usage and upload date in a table, and clicking a row opens the detail", async () => {
@@ -284,6 +288,26 @@ describe("media library", () => {
 			const footer = pager.parentElement?.parentElement;
 			expect(footer?.nextElementSibling).toBeNull();
 			expect(footer?.previousElementSibling?.querySelector('[data-slot="empty"]')).not.toBeNull();
+		});
+
+		it("keeps the search and the page in the address", async () => {
+			mockEmpty();
+			render(
+				<AdminQueryProvider>
+					<MediaLibrary />
+				</AdminQueryProvider>,
+			);
+			await screen.findByText(t("library.emptyYet"));
+			fireEvent.change(screen.getByRole("searchbox", { name: t("library.search") }), { target: { value: "zzz" } });
+			await waitFor(() => expect(host.search.get("search")).toBe("zzz"));
+			cleanup();
+			// A reload at that address opens with the search in place.
+			render(
+				<AdminQueryProvider>
+					<MediaLibrary />
+				</AdminQueryProvider>,
+			);
+			expect((screen.getByRole("searchbox", { name: t("library.search") }) as HTMLInputElement).value).toBe("zzz");
 		});
 
 		it("says nothing matches when filtered and clears the filters from the empty state", async () => {

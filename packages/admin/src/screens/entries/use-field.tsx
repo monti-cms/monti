@@ -3,6 +3,7 @@
 import type { Site, SlugField, ValueField } from "@monti-cms/core/client";
 import { type SchemaCollection, useSite } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
+import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import {
 	assignStateSilently,
 	createStateStore,
@@ -11,7 +12,6 @@ import {
 	useStoreSelector,
 } from "../../hooks/store";
 import type { SlotRequest } from "../../slots/registry";
-import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { isSandboxSite } from "../shared/preview-sandbox";
 import { type EntryData, type EntryForm, type EntryFormPatch, type FormValue, formTitle } from "./entry-form";
 

@@ -12,6 +12,8 @@ const badgeVariants = cva(
 				secondary: "bg-cms-secondary text-cms-secondary-foreground [a]:hover:bg-cms-secondary/80",
 				destructive:
 					"bg-cms-destructive/10 text-cms-destructive focus-visible:ring-cms-destructive/20 cms-dark:bg-cms-destructive/20 cms-dark:focus-visible:ring-cms-destructive/40 [a]:hover:bg-cms-destructive/20",
+				success: "bg-cms-success-soft text-cms-success-foreground",
+				warning: "bg-cms-warning-soft text-cms-warning-foreground",
 				outline: "border-cms-border text-cms-foreground [a]:hover:bg-cms-muted [a]:hover:text-cms-muted-foreground",
 				ghost: "hover:bg-cms-muted hover:text-cms-muted-foreground cms-dark:hover:bg-cms-muted/50",
 				link: "text-cms-primary underline-offset-4 hover:underline",

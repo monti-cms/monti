@@ -5,10 +5,12 @@ import type { SiteUrlState } from "@monti-cms/core/schema-edit";
 import { useState } from "react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
-import { FlagSwitch, Labeled, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { Section } from "../shared/section";
+import { FlagSwitch, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls";
 import { schemaMessages } from "./messages";
 import { localesOf, moveItem, type Obj, sectionOf, setSetting } from "./schema-model";
-import { Section } from "./section";
+import { schemaSiteMessages } from "./site.messages";
 
 const PREFIX_MODES = ["except-default", "always", "never"] as const;
 type PrefixMode = (typeof PREFIX_MODES)[number];
@@ -30,7 +32,8 @@ export function SiteEditor({
 	siteUrl: SiteUrlState;
 	update: (change: (file: Obj) => Obj) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaSiteMessages);
+	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	const site = sectionOf(file, "site");
 	const set = (key: string, value: unknown) => update((current) => setSetting(current, "site", key, value));
@@ -50,7 +53,7 @@ export function SiteEditor({
 			<Section wide title={t("site.identityTitle")} description={t("site.identityDescription")}>
 				<div className="flex flex-col gap-6">
 					<TextInput
-						label={t("site.name")}
+						label={ts("site.name")}
 						hint={t("site.nameHint")}
 						value={site.name as string | undefined}
 						onChange={(value) => set("name", orUndefined(value))}

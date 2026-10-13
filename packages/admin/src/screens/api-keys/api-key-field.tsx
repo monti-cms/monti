@@ -2,10 +2,10 @@
 
 import { type ApiKeyView, useTranslator } from "@monti-cms/core/client";
 import { useId } from "react";
+import { useApiKeys } from "../../api/api-keys";
 import { cn } from "../../lib/utils/cn";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { useApiKeys } from "./api-keys-api";
 import { apiKeysMessages } from "./messages";
 
 /**

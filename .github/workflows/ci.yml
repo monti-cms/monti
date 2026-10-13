@@ -1,4 +1,4 @@
-# Automated checks. On every push: lint, type check and package build; tests (Postgres service); and the example app bundle check.
+# Automated checks. On every push: lint, type check, unused code and package build; tests (Postgres service); and the example app bundle check.
 name: CI
 
 # Runs on push only (the PR page shows the result of that commit). Also triggering on PRs would run the same checks twice.
@@ -29,6 +29,8 @@ jobs:
       # Korean strings in package runtime code live only in the message dictionaries (messages.ts).
       - run: pnpm check:korean
       - run: pnpm typecheck
+      # Files and exports of the admin and the plugin admin packages that nothing uses.
+      - run: pnpm knip
       - run: pnpm build
 
   test:

@@ -9,6 +9,7 @@ import {
 } from "@monti-cms/core/client";
 import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { documentKey } from "../../editor/document-key";
+import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";
 
 /**
@@ -53,9 +54,10 @@ export const titlePatch = (site: Site, collection: string, title: string): Entry
  */
 export function copyTitle(site: Site, collection: string, title: string | null | undefined): string {
 	const t = site.createTranslator(entriesMessages);
+	const tc = site.createTranslator(commonMessages);
 	// The suffix added to a duplicate's title and the name for an untitled source are screen text, so the admin screen decides them, not the repository.
 	const copySuffix = t("copy.suffix");
-	const base = title?.trim() ? title : t("untitled");
+	const base = title?.trim() ? title : tc("untitled");
 	const field = site.isCollection(collection) ? site.titleField(collection).field : undefined;
 	const max = field?.kind === "text" ? field.max : undefined;
 	const room = max === undefined ? Number.POSITIVE_INFINITY : max - Array.from(copySuffix).length;

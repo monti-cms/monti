@@ -2,18 +2,22 @@
 
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { Copy, ExternalLink } from "lucide-react";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
+import { errorText } from "../../api/client";
+import type { MediaItem } from "../../api/media";
 import { formatBytes } from "../../editor/upload-helper";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { Button, buttonVariants } from "../../ui/button";
 import { Field, FieldLabel } from "../../ui/field";
 import { Textarea } from "../../ui/textarea";
-import { errorText } from "../admin-api";
+import { EditorFooter } from "../shared/editor-footer";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { SidePanelHeader } from "../shared/side-panel";
-import { copyText, type MediaItem, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
+import { useDraftEditor } from "../shared/use-draft-editor";
+import { copyText, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
 import { MediaThumb } from "./media-views";
 import { mediaMessages } from "./messages";
 
@@ -63,16 +67,15 @@ export function MediaDetailPanel({
 }) {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
+	const tc = useTranslator(commonMessages);
 	const altId = useId();
 	const captionId = useId();
 	// The last saved (initially loaded) value. If the edited value differs, there are unsaved changes.
 	const [saved, setSaved] = useState({ alt: media.defaultAlt, caption: media.defaultCaption });
-	const [draft, setDraft] = useState(saved);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const isImage = site.api.isImageMime(media.mimeType);
-	const isDirty = draft.alt !== saved.alt || draft.caption !== saved.caption;
-	useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
+	const { draft, update: setDraft, dirty } = useDraftEditor({ saved, empty: saved, onDirtyChange, saving: isSaving });
 
 	const saveDefaults = async () => {
 		setIsSaving(true);
@@ -81,7 +84,7 @@ export function MediaDetailPanel({
 			await onSaveDefaults(draft);
 			setSaved(draft);
 		} catch (error) {
-			setSaveError(errorText(site, error, t("library.saveFailed")));
+			setSaveError(errorText(site, error, tc("saveFailed")));
 		} finally {
 			setIsSaving(false);
 		}
@@ -128,7 +131,7 @@ export function MediaDetailPanel({
 									type="button"
 									variant="outline"
 									size="xs"
-									onClick={() => void copyText(t, media.publicUrl as string, t("detail.copiedUrl"))}
+									onClick={() => void copyText(media.publicUrl as string, t("detail.copiedUrl"), tc("copyFailed"))}
 								>
 									<Copy aria-hidden />
 									{t("detail.copyUrl")}
@@ -140,7 +143,7 @@ export function MediaDetailPanel({
 									className={buttonVariants({ variant: "outline", size: "xs" })}
 								>
 									<ExternalLink aria-hidden />
-									{t("common.open")}
+									{tc("open")}
 								</a>
 							</>
 						)}
@@ -149,7 +152,7 @@ export function MediaDetailPanel({
 							variant="outline"
 							size="xs"
 							aria-label={t("detail.copyIdLabel")}
-							onClick={() => void copyText(t, media.id, t("detail.copiedId"))}
+							onClick={() => void copyText(media.id, t("detail.copiedId"), tc("copyFailed"))}
 						>
 							<Copy aria-hidden />
 							{t("detail.copyId")}
@@ -208,10 +211,7 @@ export function MediaDetailPanel({
 								void saveDefaults();
 							}}
 						>
-							<SlotScope
-								key={`alt-${media.id}`}
-								request={slot("defaultAlt", (alt) => setDraft((current) => ({ ...current, alt })))}
-							>
+							<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
 								{({ trigger, panel }) => (
 									<Field>
 										<div className="flex items-center justify-between gap-2">
@@ -223,7 +223,7 @@ export function MediaDetailPanel({
 											rows={2}
 											value={draft.alt}
 											disabled={isSaving}
-											onChange={(event) => setDraft({ ...draft, alt: event.target.value })}
+											onChange={(event) => setDraft({ alt: event.target.value })}
 											className="min-h-14 text-xs md:text-xs"
 										/>
 										{panel}
@@ -232,7 +232,7 @@ export function MediaDetailPanel({
 							</SlotScope>
 							<SlotScope
 								key={`caption-${media.id}`}
-								request={slot("defaultCaption", (caption) => setDraft((current) => ({ ...current, caption })))}
+								request={slot("defaultCaption", (caption) => setDraft({ caption }))}
 							>
 								{({ trigger, panel }) => (
 									<Field>
@@ -245,23 +245,20 @@ export function MediaDetailPanel({
 											rows={2}
 											value={draft.caption}
 											disabled={isSaving}
-											onChange={(event) => setDraft({ ...draft, caption: event.target.value })}
+											onChange={(event) => setDraft({ caption: event.target.value })}
 											className="min-h-14 text-xs md:text-xs"
 										/>
 										{panel}
 									</Field>
 								)}
 							</SlotScope>
-							{saveError && (
-								<p role="alert" className="text-cms-destructive">
-									{saveError}
-								</p>
-							)}
-							<div className="flex justify-end">
-								<Button type="submit" size="sm" disabled={media.status !== "ready" || isSaving}>
-									{isSaving ? t("common.saving") : t("common.save")}
-								</Button>
-							</div>
+							<EditorFooter
+								dirty={dirty}
+								saving={isSaving}
+								canSave={media.status === "ready"}
+								error={saveError}
+								align="end"
+							/>
 						</form>
 					</Section>
 				)}
@@ -277,7 +274,7 @@ export function MediaDetailPanel({
 										href={withBasePath(entryHref(site, usage.collection, usage.entryId))}
 										className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-cms-accent"
 									>
-										<span className="min-w-0 flex-1 truncate">{usage.title || t("common.untitled")}</span>
+										<span className="min-w-0 flex-1 truncate">{usage.title || tc("untitled")}</span>
 										{usage.note && (
 											<span className="shrink-0 text-cms-muted-foreground text-xs">
 												{usageNoteLabel(t, usage.note)}
@@ -300,7 +297,7 @@ export function MediaDetailPanel({
 					disabled={media.referencesCount > 0}
 					onClick={onRequestDelete}
 				>
-					{media.status === "deleting" ? t("detail.retryDelete") : t("common.delete")}
+					{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
 				</Button>
 				{media.referencesCount > 0 && (
 					<p className="text-center text-[11px] text-cms-muted-foreground">{t("detail.inUse")}</p>

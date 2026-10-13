@@ -1,14 +1,14 @@
 "use client";
 
-import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { entriesKeys, listEntries } from "../../api/entries";
+import { countFailedEvents, eventsKeys } from "../../api/events";
+import { foldersKeys, listFolders } from "../../api/folders";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
-import { cmsFetch } from "../admin-api";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
-import { countFailedEvents, EVENTS_COUNT_KEY } from "../events/events-api";
-import { fetchFolders, foldersKey, TRASH_COUNT_KEY } from "./list-cache";
 import { sharedMessages } from "./messages";
 
 interface AdminNavContextValue {
@@ -35,6 +35,31 @@ export function PageActions({ children }: { children: ReactNode }) {
 	return slot ? createPortal(children, slot) : null;
 }
 
+/**
+ * A page inside the admin frame: the sidebar with `nav` active, `title` in the title bar, and the page below. The generic form of the pages that
+ * only wrap a screen (event log, API keys, templates, a plugin's page); a page's own actions go in the title bar through {@link PageActions}.
+ */
+export function ShellPage({
+	title,
+	nav,
+	count,
+	bare,
+	children,
+}: {
+	title: ReactNode;
+	/** The sidebar item to mark as current (`events`, `tools:<path>`, ...). */
+	nav: AdminSidebarProps["activeNav"];
+	count?: number;
+	bare?: boolean;
+	children: ReactNode;
+}) {
+	return (
+		<AdminShell title={title} count={count} sidebar={{ activeNav: nav }} bare={bare}>
+			{children}
+		</AdminShell>
+	);
+}
+
 /** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export const useAdminNav = (): AdminNavContextValue =>
 	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {}, eventsCount: null, folderCounts: {} };
@@ -43,30 +68,64 @@ async function countTrash(site: Site): Promise<number> {
 	const totals = await Promise.all(
 		site.COLLECTIONS.map(async (collection) => {
 			const query = new URLSearchParams({ collection, status: "trashed", pageSize: "25" });
-			const data = await cmsFetch<{ total: number }>(site, cmsApiUrl(`/v1/entries?${query.toString()}`));
+			const data = await listEntries<{ total: number }>(site, query);
 			return data.total;
 		}),
 	);
 	return totals.reduce((sum, total) => sum + total, 0);
 }
 
+/** The longest the sidebar's background counts wait for the page's own requests. */
+const NAV_QUERIES_MAX_WAIT_MS = 2500;
+
+const startsWith = (key: readonly unknown[], prefix: readonly unknown[]) =>
+	prefix.every((part, index) => key[index] === part);
+
+/** The sidebar's counts are background work (a request per collection for the trash and for the folders). */
+const isNavQuery = (key: readonly unknown[]) =>
+	startsWith(key, foldersKeys.all) || startsWith(key, eventsKeys.count()) || startsWith(key, entriesKeys.trashCount());
+
+/**
+ * Whether the sidebar's counts may start. A screen's own list is what the person waits for, and a browser sends only a handful of requests to one host at a
+ * time, so the counts (two requests per collection) wait until the page's requests have finished, or a short while at most.
+ */
+function useNavQueriesReady(): boolean {
+	const queryClient = useQueryClient();
+	const [ready, setReady] = useState(false);
+	useEffect(() => {
+		const idle = () => queryClient.isFetching({ predicate: (query) => !isNavQuery(query.queryKey) }) === 0;
+		const started = Date.now();
+		const timer = setInterval(() => {
+			if (idle() || Date.now() - started > NAV_QUERIES_MAX_WAIT_MS) {
+				setReady(true);
+				clearInterval(timer);
+			}
+		}, 60);
+		return () => clearInterval(timer);
+	}, [queryClient]);
+	return ready;
+}
+
 /** Trash badge state. The screen's list logic must update this value too, so it lives outside the shell. */
 export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
 	const queryClient = useQueryClient();
-	const { data } = useQuery({ queryKey: TRASH_COUNT_KEY, queryFn: () => countTrash(site) });
+	const ready = useNavQueriesReady();
+	const { data } = useQuery({ queryKey: entriesKeys.trashCount(), queryFn: () => countTrash(site), enabled: ready });
 	// A light background fetch. Errors (for example no access) are ignored so the sidebar never breaks.
 	const { data: eventsCount } = useQuery({
-		queryKey: EVENTS_COUNT_KEY,
-		queryFn: () => countFailedEvents(site),
+		queryKey: eventsKeys.count(),
+		queryFn: ({ signal }) => countFailedEvents(site, signal),
 		retry: false,
+		enabled: ready,
 	});
 	// The sidebar needs to know which collections have folders, not only the open one. The list screen reads the same cache entries.
 	const folderCounts = useQueries({
 		queries: site.COLLECTIONS.map((collection) => ({
-			queryKey: foldersKey(collection),
-			queryFn: ({ signal }: { signal: AbortSignal }) => fetchFolders(site, collection, signal),
+			queryKey: foldersKeys.list(collection),
+			queryFn: ({ signal }: { signal: AbortSignal }) => listFolders(site, collection, signal),
 			retry: false,
+			enabled: ready,
 		})),
 		combine: (results) =>
 			Object.fromEntries(
@@ -78,7 +137,7 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 	});
 	const folderKey = JSON.stringify(folderCounts);
 	const refreshTrashCount = useCallback(
-		() => void queryClient.invalidateQueries({ queryKey: TRASH_COUNT_KEY }),
+		() => void queryClient.invalidateQueries({ queryKey: entriesKeys.trashCount() }),
 		[queryClient],
 	);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `folderKey` is the stable identity of `folderCounts`
@@ -97,7 +156,6 @@ export function AdminShell({
 	title,
 	count,
 	sidebar,
-	headerActions,
 	bare,
 	children,
 }: {
@@ -105,7 +163,6 @@ export function AdminShell({
 	/** Item count shown dimmed next to the title. */
 	count?: number;
 	sidebar: AdminSidebarProps;
-	headerActions?: ReactNode;
 	/** The screen draws its own page header (the Settings page): the shell then has no title bar of its own. */
 	bare?: boolean;
 	children: ReactNode;
@@ -116,7 +173,7 @@ export function AdminShell({
 	if (!nav) {
 		return (
 			<AdminNavProvider>
-				<AdminShell title={title} count={count} sidebar={sidebar} headerActions={headerActions} bare={bare}>
+				<AdminShell title={title} count={count} sidebar={sidebar} bare={bare}>
 					{children}
 				</AdminShell>
 			</AdminNavProvider>
@@ -141,9 +198,7 @@ export function AdminShell({
 								<span className="tabular font-normal text-cms-muted-foreground text-sm">{count}</span>
 							)}
 						</h1>
-						<div ref={setActionsSlot} className="flex items-center gap-2">
-							{headerActions}
-						</div>
+						<div ref={setActionsSlot} className="flex items-center gap-2" />
 					</header>
 				)}
 				<ActionsSlotContext.Provider value={actionsSlot}>

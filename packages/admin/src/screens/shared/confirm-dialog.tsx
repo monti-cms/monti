@@ -2,6 +2,7 @@
 
 import { type Translator, useTranslator } from "@monti-cms/core/client";
 import { type ReactNode, useCallback, useRef, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -12,7 +13,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "../../ui/alert-dialog";
-import { sharedMessages } from "./messages";
 
 export interface ConfirmRequest {
 	title: string;
@@ -24,7 +24,7 @@ export interface ConfirmRequest {
 
 /** Confirm dialog for hard-to-undo actions. On cancel, focus returns to the button that opened it. */
 export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | null; onClose: () => void }) {
-	const t = useTranslator(sharedMessages);
+	const t = useTranslator(commonMessages);
 	return (
 		<AlertDialog open={request !== null} onOpenChange={(open) => !open && onClose()}>
 			<AlertDialogContent>
@@ -35,7 +35,7 @@ export function ConfirmDialog({ request, onClose }: { request: ConfirmRequest | 
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
-					<AlertDialogCancel type="button">{t("common.cancel")}</AlertDialogCancel>
+					<AlertDialogCancel type="button">{t("cancel")}</AlertDialogCancel>
 					<AlertDialogAction
 						type="button"
 						variant={request?.destructive ? "destructive" : "default"}
@@ -67,7 +67,7 @@ export const discardConfirm = (t: Translator<"discard.title" | "discard.descript
  * Render `dialog` once somewhere on the screen.
  */
 export function useConfirm() {
-	const t = useTranslator(sharedMessages);
+	const t = useTranslator(commonMessages);
 	const [request, setRequest] = useState<ConfirmRequest | null>(null);
 	const resolveRef = useRef<((ok: boolean) => void) | null>(null);
 	const confirm = useCallback(

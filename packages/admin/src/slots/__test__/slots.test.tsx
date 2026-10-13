@@ -1,12 +1,14 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { renderWithSite } from "../../test/site";
 import { TooltipProvider } from "../../ui/tooltip";
 import { slotsMessages } from "../messages";
 import { type SlotAction, SlotRegistryProvider, type SlotRequest, type SlotSource, useSlot } from "../slots";
 
 const t = testSite.createTranslator(slotsMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 afterEach(cleanup);
 
@@ -83,7 +85,7 @@ describe("screen slots", () => {
 		const button = screen.getByRole("button", { name: "주소 추천" }) as HTMLButtonElement;
 		fireEvent.click(button);
 		await waitFor(() => expect(button.disabled).toBe(true));
-		expect(screen.queryByRole("button", { name: t("close") })).toBeNull();
+		expect(screen.queryByRole("button", { name: tc("close") })).toBeNull();
 		finish({ kind: "text", text: "결과" });
 		expect(await screen.findByText("결과")).toBeTruthy();
 	});

@@ -1,33 +1,28 @@
 "use client";
 
 import type { BulkOp, Site } from "@monti-cms/core/client";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { errorText } from "../../api/client";
+import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
+import { cmsIssueMessage } from "../../api/error-message";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
+import { FieldError } from "../../ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { cmsFetch, errorText } from "../admin-api";
-import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
-import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { useConfirm } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
 
-export type BulkUsage = { entryId: string; title: string | null; collection: string; state: string };
-
-export type BulkItemResult =
-	| { id: string; ok: true; version: number }
-	| { id: string; ok: false; error: string; issues?: CmsIssue[]; usages?: BulkUsage[] };
-
-export type BulkSelection = { id: string; expectedVersion: number; title?: string | null };
-
-type RunBulkArgs = Parameters<typeof runBulk> extends [unknown, ...infer Rest] ? Rest : never;
+type RunBulkArgs = [op: BulkOp, items: BulkSelection[], params?: BulkParams];
 
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 
@@ -94,23 +89,45 @@ export function taxonomyActions(site: Site, collection: string): ActionDef[] {
 	];
 }
 
-const listActions = (t: TranslatorFor<typeof bulkBarMessages>, noun: { noun: string }): ActionDef[] => [
+const listActions = (
+	t: TranslatorFor<typeof bulkBarMessages>,
+	tc: TranslatorFor<typeof commonMessages>,
+	noun: { noun: string },
+): ActionDef[] => [
 	{
 		value: "folder.move",
 		label: t("folder.move"),
 		ask: (count, target) =>
 			target === null ? t("ask.folder.root", { count }) : t("ask.folder.move", { count, target }),
 	},
-	{ value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count, ...noun }), content: true },
-	{ value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count, ...noun }), content: true },
-	{ value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count, ...noun }), content: true },
-	{ value: "trash", label: t("trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
+	{
+		value: "publish",
+		label: tc("lifecycle.publish"),
+		ask: (count) => t("ask.publish", { count, ...noun }),
+		content: true,
+	},
+	{
+		value: "archive",
+		label: tc("lifecycle.archive"),
+		ask: (count) => t("ask.archive", { count, ...noun }),
+		content: true,
+	},
+	{
+		value: "unarchive",
+		label: tc("lifecycle.unarchive"),
+		ask: (count) => t("ask.unarchive", { count, ...noun }),
+		content: true,
+	},
+	{ value: "trash", label: tc("lifecycle.trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
 
-const trashActions = (t: TranslatorFor<typeof bulkBarMessages>): ActionDef[] => [
+const trashActions = (
+	t: TranslatorFor<typeof bulkBarMessages>,
+	tc: TranslatorFor<typeof commonMessages>,
+): ActionDef[] => [
 	{
 		value: "permanentDelete",
-		label: t("permanentDelete"),
+		label: tc("lifecycle.deletePermanently"),
 		ask: (count) => t("ask.permanentDelete", { count }),
 		destructive: true,
 	},
@@ -131,8 +148,9 @@ const FAILURE_CODES = new Set([
 /** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
 export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult, { ok: false }>): string {
 	const t = site.createTranslator(bulkBarMessages);
+	const tc = site.createTranslator(commonMessages);
 	if (failure.error === "in_use" && failure.usages?.length) {
-		const names = [...new Set(failure.usages.map((usage) => usage.title || t("untitled")))];
+		const names = [...new Set(failure.usages.map((usage) => usage.title || tc("untitled")))];
 		const shown = names.slice(0, 3).join(", ");
 		return t("failure.usedBy", {
 			names: names.length > 3 ? t("failure.more", { names: shown, more: names.length - 3 }) : shown,
@@ -145,20 +163,6 @@ export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult,
 				.map((issue) => cmsIssueMessage(site, issue))
 				.join(" ")}`
 		: base;
-}
-
-export async function runBulk(
-	site: Site,
-	op: BulkOp,
-	items: BulkSelection[],
-	params: { field?: string; ids?: string[]; id?: string | null; folderId?: string | null } = {},
-): Promise<BulkItemResult[]> {
-	const data = await cmsFetch<{ results: BulkItemResult[] }>(site, cmsApiUrl("/v1/bulk"), {
-		method: "POST",
-		json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
-		fallback: site.createTranslator(bulkBarMessages)("requestFailed"),
-	});
-	return data.results;
 }
 
 /**
@@ -249,21 +253,22 @@ export function BulkBar({
 	mode?: "list" | "trash";
 	onClearSelection: () => void;
 	/** Action request. The list screen passes a request that updates the list first (optimistic update). */
-	onRun?: (...args: RunBulkArgs) => ReturnType<typeof runBulk>;
+	onRun?: (...args: RunBulkArgs) => Promise<BulkItemResult[]>;
 	onDone?: (failedIds: string[]) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(bulkBarMessages);
+	const tc = useTranslator(commonMessages);
 	const isRecord = site.isItemCollection(collection);
 	const actions = useMemo(
 		() =>
 			mode === "trash"
-				? trashActions(t)
+				? trashActions(t, tc)
 				: [
 						...taxonomyActions(site, collection),
-						...listActions(t, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
+						...listActions(t, tc, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
 					],
-		[isRecord, collection, mode, site, t],
+		[isRecord, collection, mode, site, t, tc],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
 	const [checked, setChecked] = useState<string[]>([]);
@@ -272,7 +277,7 @@ export function BulkBar({
 	const [results, setResults] = useState<BulkItemResult[] | null>(null);
 	const [ranItems, setRanItems] = useState<BulkSelection[]>([]);
 	const [error, setError] = useState<string | null>(null);
-	const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+	const { confirm, dialog } = useConfirm();
 	const options = useTaxonomyOptions(collection, mode === "list");
 
 	useEffect(() => {
@@ -306,7 +311,7 @@ export function BulkBar({
 					: action === "folder.move"
 						? { folderId: single === "__unfiled__" ? null : single }
 						: {};
-			const out = await (onRun ?? ((...args: RunBulkArgs) => runBulk(site, ...args)))(
+			const out = await (onRun ?? ((...args: RunBulkArgs) => bulkEntries(site, ...args)))(
 				relation?.op ?? (action as BulkOp),
 				items,
 				params,
@@ -332,15 +337,15 @@ export function BulkBar({
 	};
 
 	// Actions that change many items at once always ask.
-	const start = () => {
+	const start = async () => {
 		if (!activeAction) return;
-		setConfirm({
+		const ok = await confirm({
 			title: activeAction.label,
 			description: activeAction.ask(selected.length, targetName()),
 			confirmLabel: activeAction.label,
 			destructive: activeAction.destructive,
-			onConfirm: () => run(selected),
 		});
+		if (ok) await run(selected);
 	};
 
 	const failures = (results ?? []).filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
@@ -441,11 +446,7 @@ export function BulkBar({
 				)}
 			</div>
 
-			{error && (
-				<p role="alert" className="pt-2 text-cms-destructive text-xs">
-					{error}
-				</p>
-			)}
+			{error && <FieldError className="pt-2">{error}</FieldError>}
 			{failures.length > 0 && (
 				<ul className="flex flex-col gap-1 pt-2 text-cms-destructive text-xs">
 					{failures.map((failure) => (
@@ -455,7 +456,7 @@ export function BulkBar({
 					))}
 				</ul>
 			)}
-			<ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+			{dialog}
 		</section>
 	);
 }

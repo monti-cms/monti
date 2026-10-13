@@ -93,6 +93,19 @@ describe("parseSchemaLiteral: a file that has code", () => {
 		expect(refusal(text)).toMatch(expected);
 	});
 
+	it.each([
+		["a second import", file("{}", 'import { other } from "./other";'), "second_import", {}],
+		["a spread", file("{ ...base }"), "spread", {}],
+		["a function call", file("{ locales: build() }"), "call", { name: "build" }],
+		["a property access", file("{ site: { url: process.env.SITE_URL } }"), "access", { name: "process" }],
+		["an identifier", file("{ defaultLocale: locale }"), "identifier", { name: "locale" }],
+		["a duplicate key", file("{ a: 1, a: 2 }"), "duplicate_key", { name: "a" }],
+		["code after the schema", `${file("{}")}\nconsole.log("x");\n`, "code_after", {}],
+		["a missing comma", file("{ schemaVersion: 1 + 1 }"), "expected_token", { what: "`,` or `}`" }],
+	])("gives %s a code and the names it mentions, for the screen to translate", (_name, text, code, params) => {
+		expect(parseSchemaLiteral(text)).toMatchObject({ ok: false, code, params: expect.objectContaining(params) });
+	});
+
 	it("names the line the code is on", () => {
 		const text = file("{\n\tschemaVersion: 1,\n\tlocales: [...more],\n}");
 		const result = parseSchemaLiteral(text);

@@ -4,6 +4,7 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { Code2 } from "lucide-react";
+import { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { codeEffectsKey } from "./effects-plugin";
@@ -22,6 +23,7 @@ const lineLabel = (t: TranslatorFor<typeof codeBlockMessages>, lines: { start: n
 export function CodeLinkBar({ editor }: { editor: Editor }) {
 	const site = useSite();
 	const t = useTranslator(codeBlockMessages);
+	const tc = useTranslator(commonMessages);
 	const status = useEditorState({
 		editor,
 		selector: ({ editor: current }) => {
@@ -83,7 +85,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 					onMouseDown={(event) => event.preventDefault()}
 					onClick={() => cancelLink(editor.view)}
 				>
-					{t("linkBar.cancel")}
+					{tc("cancel")}
 				</Button>
 			</div>
 		</div>

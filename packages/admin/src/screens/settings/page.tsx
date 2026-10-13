@@ -2,7 +2,7 @@ import type { Cms } from "@monti-cms/core/runtime";
 import type { AdminServer } from "../../host/server";
 import { requireAdminPage } from "../require-admin";
 import { SettingsScreen } from "./settings-screen";
-import { isSettingsTab, SETTINGS_TABS } from "./tabs";
+import { isSchemaTab, SCHEMA_TABS } from "./tabs";
 
 /**
  * `<admin path>/settings/<tab>`: one of the tabs (the schema file's `site`, `locales`, `collections`, `file`, and `admin`).
@@ -18,7 +18,7 @@ export default async function AdminSettingsPage({
 	tab: string | undefined;
 }) {
 	await requireAdminPage(cms, server);
-	if (tab === undefined) return server.redirect(cms.site.adminHref(`/settings/${SETTINGS_TABS[0]}`));
-	if (!isSettingsTab(tab)) return server.notFound();
+	if (tab === undefined) return server.redirect(cms.site.adminHref(`/settings/${SCHEMA_TABS[0]}`));
+	if (!isSchemaTab(tab)) return server.notFound();
 	return <SettingsScreen tab={tab} />;
 }

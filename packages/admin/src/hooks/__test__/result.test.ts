@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CmsApiError } from "../../screens/admin-api";
+import { CmsApiError } from "../../api/client";
 import { toEditorError } from "../result";
 
 const api = (status: number, code?: string, issues: CmsApiError["issues"] = []) =>
