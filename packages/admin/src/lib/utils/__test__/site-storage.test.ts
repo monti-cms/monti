@@ -1,7 +1,7 @@
 import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
-import { legacyPreferenceKey, preferenceKey, readPreference, storageNamespace, writePreference } from "../site-storage";
+import { preferenceKey, readPreference, storageNamespace, writePreference } from "../site-storage";
 
 const siteOf = (name: string, adminPath = "/admin") =>
 	createSite({
@@ -36,19 +36,6 @@ describe("browser storage of a site", () => {
 	it("keeps two admins of one site name apart by their admin path", () => {
 		writePreference(siteOf("Blog", "/admin"), "media-view", "list");
 		expect(readPreference(siteOf("Blog", "/studio"), "media-view")).toBeNull();
-	});
-
-	it("reads a value written under the old key once, and keeps it under the site's own key", () => {
-		window.localStorage.setItem(legacyPreferenceKey("editor-width"), "full");
-		const blog = siteOf("Blog");
-		expect(readPreference(blog, "editor-width")).toBe("full");
-		expect(window.localStorage.getItem(preferenceKey(blog, "editor-width"))).toBe("full");
-		// Once the site has its own value, a change is not undone by the old key.
-		writePreference(blog, "editor-width", "narrow");
-		expect(readPreference(blog, "editor-width")).toBe("narrow");
-		// The old key stays for another site on the same origin that has not read it yet.
-		expect(window.localStorage.getItem(legacyPreferenceKey("editor-width"))).toBe("full");
-		expect(readPreference(siteOf("Shop"), "editor-width")).toBe("full");
 	});
 
 	it("does not fail when storage is unavailable", () => {

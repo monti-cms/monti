@@ -2,8 +2,8 @@
 
 import { type EditorWidthStep as EditorWidthStepConfig, useSite, useTranslator } from "@monti-cms/core/client";
 import { MoveHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { readPreference, writePreference } from "../lib/utils/site-storage";
+import { useMemo } from "react";
+import { stringCodec, usePreference } from "../lib/hooks/use-preference";
 import type { TranslatorFor } from "../translator";
 import {
 	DropdownMenu,
@@ -45,7 +45,7 @@ export function resolveEditorWidths(
 	return [...steps, { key: FULL_KEY, label: t("editorWidth.full"), width: FULL_EDITOR_WIDTH }];
 }
 
-/** Name of the remembered width in the site's browser storage (`lib/utils/site-storage.ts`). */
+/** Name of the remembered width in the site's browser preferences (per device, see `usePreference`). */
 const STORAGE_NAME = "editor-width";
 
 /**
@@ -57,15 +57,8 @@ export function useEditorWidth(): { steps: EditorWidthStep[]; step: EditorWidthS
 	const t = useTranslator(editorMessages);
 	const configured = site.config.editor?.widths;
 	const steps = useMemo(() => resolveEditorWidths(configured, t), [configured, t]);
-	const [key, setKey] = useState<string | null>(null);
-	useEffect(() => {
-		setKey(readPreference(site, STORAGE_NAME));
-	}, [site]);
+	const [key, choose] = usePreference(STORAGE_NAME, stringCodec, "");
 	const step = steps.find((candidate) => candidate.key === key) ?? (steps[0] as EditorWidthStep);
-	const choose = (next: string) => {
-		setKey(next);
-		writePreference(site, STORAGE_NAME, next);
-	};
 	return { steps, step, choose };
 }
 

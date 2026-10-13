@@ -1,4 +1,5 @@
 import { SiteProvider } from "@monti-cms/core/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
@@ -31,7 +32,12 @@ afterEach(() => {
 
 const editor = <CmsEditor doc={docOf("안녕하세요")} onChange={() => {}} titleField={<input aria-label="제목" />} />;
 const renderEditor = async (editorConfig?: { widths: typeof widths }) => {
-	if (editorConfig) render(<SiteProvider config={{ ...testConfig, editor: editorConfig }}>{editor}</SiteProvider>);
+	if (editorConfig)
+		render(
+			<SiteProvider config={{ ...testConfig, editor: editorConfig }}>
+				<QueryClientProvider client={new QueryClient()}>{editor}</QueryClientProvider>
+			</SiteProvider>,
+		);
 	else renderWithSite(editor);
 	await screen.findByRole("toolbar", { name: t("toolbar.format") });
 };
@@ -68,13 +74,6 @@ describe(t("editorWidth.label"), () => {
 		await renderEditor();
 		expect(editorWidth()).toBe(DEFAULT_EDITOR_WIDTH);
 		expect(await openMenu()).toHaveLength(2);
-	});
-
-	it("still uses the width remembered under the key from before keys were per site", async () => {
-		window.localStorage.setItem("cms:editor-width", "full");
-		await renderEditor();
-		await waitFor(() => expect(editorWidth()).toBe(FULL_EDITOR_WIDTH));
-		window.localStorage.removeItem("cms:editor-width");
 	});
 
 	it("starts at the first configured step and lists the steps in config order, full last", async () => {
