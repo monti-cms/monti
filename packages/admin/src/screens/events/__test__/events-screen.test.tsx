@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { renderInRouter as render } from "../../../test/router";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
@@ -11,9 +11,6 @@ const t = testSite.createTranslator(eventsMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
-vi.mock("../../../router", () => ({
-	AdminLink: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
-}));
 
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (

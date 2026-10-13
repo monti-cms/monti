@@ -421,6 +421,18 @@ return (
 );
 ```
 
+## Data layer and remembered state
+
+Screens never call `fetch` themselves. Each resource has one module in `src/api/` (`entries`, `media`, `folders`, `templates`, `events`, `api-keys`, `schema`, `preferences`) that exports typed request functions and one query-key factory (`entriesKeys`, `mediaKeys`, ...). Plugin pages follow the same shape with an `api.ts` of their own. A write goes through `useCmsMutation({ fn, success, failure, invalidate, optimistic })` (`@monti-cms/admin/api`), which owns the toast, the optimistic update and its rollback, and the invalidation. `errorText(site, error, fallback)` is the one place an error becomes text, and `isConflict(error)` tells a stale write from other failures.
+
+What a screen remembers lives in one of three places:
+
+| Kind | Where | Read with |
+| --- | --- | --- |
+| Per device (panel widths, media grid or list, editor width, whether a pane is open) | the browser, `localStorage`, per site | `usePreference(name, codec, default)` |
+| Per person (list columns, sort and page size of a collection) | the server, `/v1/preferences` | `api/preferences` |
+| Per view (page, page size, filters, search) | the address | `useUrlState({ page: pageParam, ... })` |
+
 ## Styles
 
 The admin UI's CSS is **prebuilt**: `@monti-cms/admin/styles.css` is compiled with Tailwind 4 when the package is built, so the app needs no Tailwind, `@tailwindcss/typography`

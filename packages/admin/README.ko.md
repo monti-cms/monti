@@ -406,6 +406,18 @@ Tiptap·ProseMirror 타입이 나오는 유일한 곳이며 안정적이지 않�
 서버 호출과 복구본 저장소는 테스트를 위해 `client`·`recoveryStore` 옵션으로 바꿀 수 있다. 기본 항목 편집 화면(`EntryEditorShell`)이 이 훅 위에 만들어져 있고,
 토스트·확인 대화상자·화면 이동은 그 화면이 맡는다.
 
+## 데이터 계층과 기억하는 상태
+
+화면은 `fetch`를 직접 부르지 않는다. 자원마다 `src/api/`에 모듈이 하나씩 있고(`entries`, `media`, `folders`, `templates`, `events`, `api-keys`, `schema`, `preferences`), 타입이 붙은 요청 함수와 쿼리 키 팩토리 하나(`entriesKeys`, `mediaKeys` 등)를 내보낸다. 플러그인 화면도 자기 `api.ts`로 같은 모양을 따른다. 쓰기는 `useCmsMutation({ fn, success, failure, invalidate, optimistic })`(`@monti-cms/admin/api`)로 하며, 토스트와 낙관적 갱신·되돌리기, 무효화를 이 훅이 맡는다. 오류를 글로 바꾸는 곳은 `errorText(site, error, fallback)` 하나이고, `isConflict(error)`는 오래된 값으로 쓴 충돌을 다른 실패와 가른다.
+
+화면이 기억하는 것은 세 곳 중 하나에 둔다.
+
+| 종류 | 위치 | 읽는 법 |
+| --- | --- | --- |
+| 기기별(패널 너비, 미디어 격자·목록, 본문 너비, 창 열림 여부) | 브라우저 `localStorage`, 사이트별 | `usePreference(name, codec, default)` |
+| 사람별(컬렉션의 목록 열, 정렬, 쪽당 개수) | 서버 `/v1/preferences` | `api/preferences` |
+| 보기별(쪽, 쪽당 개수, 필터, 검색) | 주소 | `useUrlState({ page: pageParam, ... })` |
+
 ## 스타일
 
 관리자 화면의 CSS는 **미리 만들어져(prebuilt)** 나온다. `@monti-cms/admin/styles.css`는 패키지를 빌드할 때 Tailwind 4로 컴파일하므로 앱에는 Tailwind·`@tailwindcss/typography`·

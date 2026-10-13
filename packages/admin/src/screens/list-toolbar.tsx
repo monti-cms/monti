@@ -2,7 +2,7 @@
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { Search, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
@@ -14,6 +14,7 @@ import { type ColumnFilter, columnLabel, columnsFor, filterFor, isColumnFiltered
 import { clearFiltersPatch, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { statusLabels } from "./shared/entry-status";
+import { useDebouncedInput } from "./shared/use-debounced";
 import type { TaxonomyOption, TaxonomyOptions } from "./shared/use-taxonomy";
 
 export interface FilterChip {
@@ -84,13 +85,7 @@ export function ListSearch({
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
-	const [search, setSearch] = useState(state.search);
-	useEffect(() => setSearch(state.search), [state.search]);
-	useEffect(() => {
-		if (search === state.search) return;
-		const timer = setTimeout(() => onChange({ search }), 300);
-		return () => clearTimeout(timer);
-	}, [search, state.search, onChange]);
+	const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange({ search: text }));
 
 	const isContent = site.isDocumentCollection(state.collection);
 	return (

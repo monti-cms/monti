@@ -1,9 +1,8 @@
 "use client";
 
-import { type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
-import { useState } from "react";
 import { errorText } from "../../api/client";
 import {
 	type DeliveryKey,
@@ -17,6 +16,7 @@ import {
 	retryEvent,
 } from "../../api/events";
 import { useCmsMutation } from "../../api/use-cms-mutation";
+import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { Alert, AlertDescription } from "../../ui/alert";
@@ -31,6 +31,13 @@ import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { eventsMessages } from "./messages";
+
+/** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
+const EVENTS_PARAMS = {
+	filter: enumParam(EVENTS_FILTERS, "all"),
+	page: pageParam,
+	pageSize: pageSizeParam,
+};
 
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text: string) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
@@ -125,19 +132,14 @@ export function EventsScreen() {
 	const t = useTranslator(eventsMessages);
 	const { confirm, dialog } = useConfirm();
 
-	const [filter, setFilter] = useState<EventsFilter>("all");
-	const [page, setPage] = useState(1);
-	const [pageSize, setPageSize] = useState<PageSize>(25);
+	const [{ filter, page, pageSize }, update] = useUrlState(EVENTS_PARAMS);
 	const listQuery = useQuery({
 		queryKey: eventsKeys.list(filter, page, pageSize),
 		queryFn: ({ signal }) => listEvents(site, filter, page, pageSize, signal, t("list.loadFailed")),
 		placeholderData: keepPreviousData,
 	});
 	const items = listQuery.data?.items ?? [];
-	const changeFilter = (next: EventsFilter) => {
-		setFilter(next);
-		setPage(1);
-	};
+	const changeFilter = (filter: EventsFilter) => update({ filter });
 	const filterOptions = EVENTS_FILTERS.map((value) => ({ value, label: t(`filter.${value}`) }));
 	const error = listQuery.error && !listQuery.data ? errorText(site, listQuery.error, t("list.loadFailed")) : null;
 
@@ -300,11 +302,8 @@ export function EventsScreen() {
 				shown={items.length}
 				page={page}
 				pageSize={pageSize}
-				onPageChange={setPage}
-				onPageSizeChange={(size) => {
-					setPageSize(size);
-					setPage(1);
-				}}
+				onPageChange={(next) => update({ page: next })}
+				onPageSizeChange={(size) => update({ pageSize: size })}
 			/>
 			{dialog}
 		</div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { type PageSize, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
 	FileText,
@@ -28,8 +28,10 @@ import {
 } from "../../api/media";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
+import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
+import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
-import { readPreference, writePreference } from "../../lib/utils/site-storage";
+import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
@@ -48,7 +50,7 @@ import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
 import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
-import { useDebounced } from "../shared/use-debounced";
+import { useDebouncedInput } from "../shared/use-debounced";
 import { MediaDetailPanel } from "./media-detail-panel";
 import { mediaUsages, usageNoteLabel } from "./media-item";
 import { MediaGrid, MediaTable } from "./media-views";
@@ -71,22 +73,18 @@ const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 ];
 
 type MediaView = "grid" | "list";
-/** Name of the remembered view in the site's browser storage (`lib/utils/site-storage.ts`). */
-const VIEW_STORAGE_NAME = "media-view";
+const VIEW_CODEC = enumCodec<MediaView>(["grid", "list"]);
 
-/** Grid or list view choice. Remembered in this browser, per site; if storage is unavailable, starts with the grid. */
-function useMediaView(): [MediaView, (view: MediaView) => void] {
-	const site = useSite();
-	const [view, setView] = useState<MediaView>("grid");
-	useEffect(() => {
-		if (readPreference(site, VIEW_STORAGE_NAME) === "list") setView("list");
-	}, [site]);
-	const change = (next: MediaView) => {
-		setView(next);
-		writePreference(site, VIEW_STORAGE_NAME, next);
-	};
-	return [view, change];
-}
+/** The library's filters and page live in the address, so a refresh keeps them and the address can be shared. */
+const LIBRARY_PARAMS = {
+	page: pageParam,
+	pageSize: pageSizeParam,
+	search: textParam,
+	used: enumParam(["all", "used", "unused"] as const, "all"),
+	kind: enumParam(["all", "image", "file"] as const, "all"),
+	uploadedFrom: textParam,
+	uploadedTo: textParam,
+};
 
 /**
  * Media library. Grid and list views, file name search, filters for type, upload date and usage, newest upload first.
@@ -95,20 +93,17 @@ function useMediaView(): [MediaView, (view: MediaView) => void] {
 export function MediaLibrary() {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
-	const [page, setPage] = useState(1);
-	const [pageSize, setPageSize] = useState<PageSize>(25);
-	const [search, setSearch] = useState("");
-	const [used, setUsed] = useState<"all" | "used" | "unused">("all");
-	const [kind, setKind] = useState<"all" | "image" | "file">("all");
-	const [uploadedFrom, setUploadedFrom] = useState("");
-	const [uploadedTo, setUploadedTo] = useState("");
+	const router = useAdminRouter();
+	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo }, update] = useUrlState(LIBRARY_PARAMS);
+	const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	/** Whether the detail panel's default description has unsaved changes. The detail panel reports it. */
 	const detailDirtyRef = useRef(false);
 	const [optimize, setOptimize] = useState(false);
 	const [upload, setUpload] = useState<{ current: number; total: number; percent: number } | null>(null);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
-	const [view, setView] = useMediaView();
+	// The view is a per-device choice (browser preference), unlike the filters, which belong to the address.
+	const [view, setView] = usePreference("media-view", VIEW_CODEC, "grid");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
@@ -122,10 +117,9 @@ export function MediaLibrary() {
 		if (to) params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
 		return params.toString();
 	}, [page, pageSize, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
-	const debouncedQuery = useDebounced(query, 200);
 	const mediaQuery = useQuery({
-		queryKey: mediaKeys.list(debouncedQuery),
-		queryFn: ({ signal }) => listMedia(site, debouncedQuery, signal),
+		queryKey: mediaKeys.list(query),
+		queryFn: ({ signal }) => listMedia(site, query, signal),
 		placeholderData: keepPreviousData,
 	});
 	const items = mediaQuery.data?.items ?? [];
@@ -159,7 +153,7 @@ export function MediaLibrary() {
 		// A failed upload does not become available. It can be retried with the same file.
 		failure: t("library.unknownError"),
 		inline: true,
-		onSuccess: () => setPage(1),
+		onSuccess: () => update({ page: 1 }),
 		onError: (error) =>
 			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
 		invalidate: [mediaKeys.all],
@@ -273,7 +267,7 @@ export function MediaLibrary() {
 				kind: "item" as const,
 				label: `${usage.title || t("common.untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
 				icon: FileText,
-				onSelect: () => window.location.assign(withBasePath(entryHref(site, usage.collection, usage.entryId))),
+				onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
 			})),
 		},
 		{ kind: "separator" },
@@ -297,19 +291,8 @@ export function MediaLibrary() {
 		onDeleteKey: (media: MediaItem) => void requestDelete(media),
 	};
 
-	const setFilter = (apply: () => void) => {
-		apply();
-		setPage(1);
-	};
 	const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
-	const clearFilters = () =>
-		setFilter(() => {
-			setSearch("");
-			setUsed("all");
-			setKind("all");
-			setUploadedFrom("");
-			setUploadedTo("");
-		});
+	const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
 
 	return (
 		<AdminShell
@@ -349,15 +332,15 @@ export function MediaLibrary() {
 				<Input
 					type="search"
 					aria-label={t("library.search")}
-					value={search}
+					value={searchText}
 					placeholder={t("library.search")}
-					onChange={(event) => setFilter(() => setSearch(event.target.value))}
+					onChange={(event) => setSearchText(event.target.value)}
 					className="h-8 w-56"
 				/>
 				<Select
 					value={kind}
 					items={kindOptions(t)}
-					onValueChange={(value) => value && setFilter(() => setKind(value as typeof kind))}
+					onValueChange={(value) => value && update({ kind: value as typeof kind })}
 				>
 					<SelectTrigger size="sm" aria-label={t("library.kindLabel")}>
 						<SelectValue />
@@ -373,7 +356,7 @@ export function MediaLibrary() {
 				<Select
 					value={used}
 					items={usedOptions(t)}
-					onValueChange={(value) => value && setFilter(() => setUsed(value as typeof used))}
+					onValueChange={(value) => value && update({ used: value as typeof used })}
 				>
 					<SelectTrigger size="sm" aria-label={t("library.usedLabel")}>
 						<SelectValue />
@@ -390,12 +373,7 @@ export function MediaLibrary() {
 					label={t("library.uploadedDate")}
 					from={uploadedFrom}
 					to={uploadedTo}
-					onChange={(from, to) =>
-						setFilter(() => {
-							setUploadedFrom(from);
-							setUploadedTo(to);
-						})
-					}
+					onChange={(from, to) => update({ uploadedFrom: from, uploadedTo: to })}
 				/>
 				<ToggleGroup
 					aria-label={t("library.view")}
@@ -469,11 +447,8 @@ export function MediaLibrary() {
 						shown={items.length}
 						page={page}
 						pageSize={pageSize}
-						onPageChange={setPage}
-						onPageSizeChange={(size) => {
-							setPageSize(size);
-							setPage(1);
-						}}
+						onPageChange={(next) => update({ page: next })}
+						onPageSizeChange={(size) => update({ pageSize: size })}
 					/>
 				</div>
 

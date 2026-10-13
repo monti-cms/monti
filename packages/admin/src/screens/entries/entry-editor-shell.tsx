@@ -30,8 +30,8 @@ import { cmsEntryClient } from "../../api/entries";
 import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
+import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { cn } from "../../lib/utils/cn";
-import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
 import type { TranslatorFor } from "../../translator";
@@ -87,7 +87,7 @@ interface EntryEditorShellProps {
 }
 
 /** Name of the remembered source pane state in the site's browser storage (`lib/utils/site-storage.ts`). */
-const SOURCE_PANE_STORAGE_NAME = "translation-source-pane";
+const SOURCE_PANE_CODEC = enumCodec(["open", "closed"] as const);
 
 function ToolbarAction({
 	label,
@@ -258,7 +258,14 @@ export function EntryEditorShell({
 	const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 	const inspectorResize = usePanelResize(INSPECTOR_PANEL_RESIZE);
 	const [isNarrowScreen, setIsNarrowScreen] = useState(false);
-	const [isSourcePaneOpen, setIsSourcePaneOpen] = useState(true);
+	// Whether the source pane was left open is remembered in this browser (a per-device preference); a narrow window closes it for as long as it stays narrow.
+	const [sourcePanePreference, setSourcePanePreference] = usePreference(
+		"translation-source-pane",
+		SOURCE_PANE_CODEC,
+		"open",
+	);
+	const [narrowClosedSourcePane, setNarrowClosedSourcePane] = useState(false);
+	const isSourcePaneOpen = sourcePanePreference === "open" && !narrowClosedSourcePane;
 	const [isSourceCompareOpen, setIsSourceCompareOpen] = useState(false);
 	const editorScrollRef = useRef<HTMLDivElement>(null);
 	const sourcePaneRef = useRef<HTMLElement>(null);
@@ -314,7 +321,7 @@ export function EntryEditorShell({
 			// At 1024px and below, the body takes priority.
 			if (media.matches) {
 				setIsInspectorOpen(false);
-				setIsSourcePaneOpen(false);
+				setNarrowClosedSourcePane(true);
 			}
 		};
 		update();
@@ -322,13 +329,9 @@ export function EntryEditorShell({
 		return () => media.removeEventListener?.("change", update);
 	}, []);
 
-	// Whether the source pane was left open is remembered in the browser, per site. If storage is unavailable, it always starts open.
-	useEffect(() => {
-		if (readPreference(site, SOURCE_PANE_STORAGE_NAME) === "closed") setIsSourcePaneOpen(false);
-	}, [site]);
 	const toggleSourcePane = (open: boolean) => {
-		setIsSourcePaneOpen(open);
-		writePreference(site, SOURCE_PANE_STORAGE_NAME, open ? "open" : "closed");
+		setNarrowClosedSourcePane(false);
+		setSourcePanePreference(open ? "open" : "closed");
 	};
 
 	const translationSource = translation?.source ?? null;

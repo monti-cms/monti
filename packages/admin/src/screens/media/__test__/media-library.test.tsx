@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { preferenceKey } from "../../../lib/utils/site-storage";
-import { renderInRouter as render } from "../../../test/router";
+import { createTestRouter } from "../../../test/router";
 import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
@@ -56,7 +56,11 @@ const mediaRequests = () =>
 const calls = (method: string, path: string) =>
 	fetchMock.mock.calls.filter(([input, init]) => (init?.method ?? "GET") === method && String(input) === path);
 
+// The filters live in the address, so every test gets an address of its own.
+let host: ReturnType<typeof createTestRouter>;
+const render: ReturnType<typeof createTestRouter>["render"] = (ui, options) => host.render(ui, options);
 beforeEach(() => {
+	host = createTestRouter();
 	vi.clearAllMocks();
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const url = new URL(input, "http://localhost");
@@ -284,6 +288,26 @@ describe("media library", () => {
 			const footer = pager.parentElement?.parentElement;
 			expect(footer?.nextElementSibling).toBeNull();
 			expect(footer?.previousElementSibling?.querySelector('[data-slot="empty"]')).not.toBeNull();
+		});
+
+		it("keeps the search and the page in the address", async () => {
+			mockEmpty();
+			render(
+				<AdminQueryProvider>
+					<MediaLibrary />
+				</AdminQueryProvider>,
+			);
+			await screen.findByText(t("library.emptyYet"));
+			fireEvent.change(screen.getByRole("searchbox", { name: t("library.search") }), { target: { value: "zzz" } });
+			await waitFor(() => expect(host.search.get("search")).toBe("zzz"));
+			cleanup();
+			// A reload at that address opens with the search in place.
+			render(
+				<AdminQueryProvider>
+					<MediaLibrary />
+				</AdminQueryProvider>,
+			);
+			expect((screen.getByRole("searchbox", { name: t("library.search") }) as HTMLInputElement).value).toBe("zzz");
 		});
 
 		it("says nothing matches when filtered and clears the filters from the empty state", async () => {

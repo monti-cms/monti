@@ -19,8 +19,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, ChevronsDownUp, Eye, GripVertical, MoveRight, Plus, Trash2, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { cn } from "../../lib/utils/cn";
-import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { IconButton } from "../../ui/icon-button";
@@ -889,21 +889,15 @@ function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () =
 	);
 }
 
-/** Whether the preview is open: remembered in this browser; open on a wide window until the writer closes it. */
+const PREVIEW_OPEN_CODEC: PreferenceCodec<boolean | null> = {
+	parse: (raw) => booleanCodec.parse(raw),
+	serialize: (value) => booleanCodec.serialize(value === true),
+};
+
+/** Whether the preview is open: remembered in this browser (per device); open on a wide window until the writer closes it. */
 function usePreviewOpen(wide: boolean): [boolean, (open: boolean) => void] {
-	const site = useSite();
-	const [chosen, setChosen] = useState<boolean | null>(null);
-	useEffect(() => {
-		const saved = readPreference(site, "layout-preview-open");
-		setChosen(saved === "1" ? true : saved === "0" ? false : null);
-	}, [site]);
-	return [
-		chosen ?? wide,
-		(open) => {
-			setChosen(open);
-			writePreference(site, "layout-preview-open", open ? "1" : "0");
-		},
-	];
+	const [chosen, setChosen] = usePreference("layout-preview-open", PREVIEW_OPEN_CODEC, null);
+	return [chosen ?? wide, setChosen];
 }
 
 /**
