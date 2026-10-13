@@ -13,12 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Skeleton } from "../../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { cmsFetch, errorText } from "../admin-api";
+import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
-import { SettingsPanel } from "../shared/settings-panel";
 import {
 	EVENTS_FILTERS,
 	EVENTS_KEY,
@@ -110,9 +110,8 @@ export function EventsScreen() {
 	};
 
 	return (
-		<SettingsPanel
-			count={listQuery.data?.total}
-			actions={
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+			<PageActions>
 				<Button
 					type="button"
 					size="sm"
@@ -123,8 +122,7 @@ export function EventsScreen() {
 					<RotateCw aria-hidden />
 					{t("action.retryAll")}
 				</Button>
-			}
-		>
+			</PageActions>
 			{error && (
 				<Alert variant="danger" className="mx-5 mt-3 flex w-auto items-center justify-between">
 					<AlertDescription className="col-start-auto">{error}</AlertDescription>
@@ -272,6 +270,6 @@ export function EventsScreen() {
 				}}
 			/>
 			{dialog}
-		</SettingsPanel>
+		</div>
 	);
 }

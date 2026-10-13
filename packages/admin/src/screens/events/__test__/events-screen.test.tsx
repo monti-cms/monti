@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { chooseSelectOption } from "../../../test/base-ui";
 import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
 import { eventsMessages } from "../messages";
@@ -64,7 +65,9 @@ afterEach(() => {
 const renderScreen = () =>
 	render(
 		<AdminQueryProvider>
-			<EventsScreen />
+			<AdminShell title="Events" sidebar={{ activeNav: "events" }}>
+				<EventsScreen />
+			</AdminShell>
 		</AdminQueryProvider>,
 	);
 

@@ -143,11 +143,12 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has four parts: **Content** (each collection, then Media and Templates; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (one item per plugin page, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
+The sidebar has four parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (Templates, one item per plugin page, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
 
 | Screen | Address | Contents |
 |---|---|---|
 | Collections, Languages, Site, Admin, File | `<admin path>/settings/collections` (`locales`, `site`, `admin`, `file`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
+| API keys | `<admin path>/settings/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. AI connections, the spell checker and git sync pick a saved key or enter a new one (saved here) in their own forms. |
 | Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
 | Event log | `<admin path>/events` | Event deliveries. |
 | One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
@@ -314,19 +315,18 @@ export default defineAdminPlugin({
 });
 ```
 
-A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `SettingsPanel` (`@monti-cms/admin/kit`) is an optional body with a count and actions in a slim toolbar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
+A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
 
 ```tsx
 "use client";
 import { cmsFetch } from "@monti-cms/admin/api";
-import { SettingsPanel } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
 	const site = useSite();
 	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
-	return <SettingsPanel>{stats.data?.published}</SettingsPanel>;
+	return <div>{stats.data?.published}</div>;
 }
 ```
 
@@ -336,7 +336,7 @@ Edit screen extensions (`editorExtensions`) are hooks that add an element at the
 attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`), the page body (`SettingsPanel`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
+`cn`, the confirm dialog (`useConfirm`), the title bar actions (`PageActions`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
 (`EntryForm`, `EntryData`). Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |

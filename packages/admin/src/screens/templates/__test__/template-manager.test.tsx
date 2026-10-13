@@ -68,11 +68,11 @@ const renderManager = () =>
 	);
 
 describe("TemplateManager", () => {
-	it("loads templates from the API items envelope and shows the count in the panel toolbar", async () => {
+	it("loads templates from the API items envelope", async () => {
 		renderManager();
 
 		expect(await screen.findByText("일반 게시글")).toBeTruthy();
-		expect(screen.getByTestId("settings-panel").firstElementChild?.textContent).toContain("2");
+		expect(screen.getByText("포스트용".replace("포스트용", "일반 게시글"))).toBeTruthy();
 		expect(screen.queryByText("포스트용")).toBeNull();
 	});
 

@@ -21,7 +21,7 @@ import {
 	IconButton,
 	Input,
 	Label,
-	SettingsPanel,
+	PageActions,
 	Switch,
 	Tabs,
 	TabsContent,
@@ -328,15 +328,9 @@ export function AiManager() {
 				{t("add.shared")}
 			</Button>
 		);
-	const count =
-		tab === "features"
-			? featuresQuery.data?.items.length
-			: tab === "connections"
-				? settingsQuery.data?.providers.length
-				: sharedQuery.data?.items.length;
-
 	return (
-		<SettingsPanel count={count} actions={headerActions}>
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+			<PageActions>{headerActions}</PageActions>
 			<Tabs
 				value={tab}
 				onValueChange={(value) => void changeTab(value as AiTab)}
@@ -467,7 +461,7 @@ export function AiManager() {
 				</TabsContent>
 			</Tabs>
 			{dialog}
-		</SettingsPanel>
+		</div>
 	);
 }
 

@@ -23,10 +23,10 @@ import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch, errorText } from "../admin-api";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
+import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";
 import { formatDateOnly } from "../shared/format-date";
-import { SettingsPanel } from "../shared/settings-panel";
 import { OPEN_ITEM } from "../shared/side-panel";
 import { templatesMessages } from "./messages";
 
@@ -213,15 +213,13 @@ export function TemplateManager() {
 	];
 
 	return (
-		<SettingsPanel
-			count={templatesQuery.data ? templates.length : undefined}
-			actions={
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />
 					{t("common.add")}
 				</Button>
-			}
-		>
+			</PageActions>
 			{error && (
 				<Alert variant="danger" className="mx-5 mt-3 flex w-auto items-center justify-between">
 					<AlertDescription className="col-start-auto">{error}</AlertDescription>
@@ -339,6 +337,6 @@ export function TemplateManager() {
 				</div>
 			</div>
 			{dialog}
-		</SettingsPanel>
+		</div>
 	);
 }
