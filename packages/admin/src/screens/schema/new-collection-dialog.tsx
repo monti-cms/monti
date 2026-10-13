@@ -8,11 +8,11 @@ import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Labeled } from "./controls";
 import { schemaMessages } from "./messages";
-import { defaultPath, nameProblem, pathProblem } from "./schema-model";
+import { defaultPath, idFromName, nameProblem, pathProblem } from "./schema-model";
 
 type Kind = "document" | "item";
 
-/** Name, kind and public address of a new collection. The address follows the name until the writer types one of their own. */
+/** Display name, identifier, kind and public address of a new collection. The identifier follows the name and the address follows the identifier, each until the writer types one of their own. */
 export function NewCollectionDialog({
 	open,
 	onOpenChange,
@@ -22,7 +22,7 @@ export function NewCollectionDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	taken: readonly string[];
-	onCreate: (name: string, kind: Kind, path: string) => void;
+	onCreate: (id: string, kind: Kind, path: string, label: string) => void;
 }) {
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -40,25 +40,29 @@ function NewCollectionForm({
 }: {
 	taken: readonly string[];
 	onCancel: () => void;
-	onCreate: (name: string, kind: Kind, path: string) => void;
+	onCreate: (id: string, kind: Kind, path: string, label: string) => void;
 }) {
 	const t = useTranslator(schemaMessages);
 	const nameId = useId();
+	const idFieldId = useId();
 	const pathId = useId();
 	const [name, setName] = useState("");
+	// `null`: not typed yet, so the identifier is the one the name suggests.
+	const [typedId, setTypedId] = useState<string | null>(null);
 	const [kind, setKind] = useState<Kind>("document");
-	// `null`: not typed yet, so the address is the one the name and kind suggest.
+	// `null`: not typed yet, so the address is the one the identifier and kind suggest.
 	const [typedPath, setTypedPath] = useState<string | null>(null);
-	const path = typedPath ?? (kind === "document" ? defaultPath(name) : "");
-	const nameIssue = name === "" ? null : nameProblem(name, taken);
+	const id = typedId ?? idFromName(name);
+	const path = typedPath ?? (kind === "document" ? defaultPath(id) : "");
+	const idIssue = id === "" ? (name.trim() === "" ? null : "idEmpty") : nameProblem(id, taken);
 	const pathIssue = pathProblem(path);
-	const ready = name !== "" && nameIssue === null && pathIssue === null;
+	const ready = name.trim() !== "" && id !== "" && idIssue === null && pathIssue === null;
 	const kinds: { value: Kind; label: string; explain: string }[] = [
 		{ value: "document", label: t("collection.kindDocument"), explain: t("collection.kindDocumentExplain") },
 		{ value: "item", label: t("collection.kindItem"), explain: t("collection.kindItemExplain") },
 	];
 	const submit = () => {
-		if (ready) onCreate(name, kind, path.trim());
+		if (ready) onCreate(id, kind, path.trim(), name.trim());
 	};
 	return (
 		<form
@@ -76,12 +80,21 @@ function NewCollectionForm({
 				<Input
 					id={nameId}
 					value={name}
-					placeholder="article"
+					placeholder="Blog posts"
 					autoComplete="off"
-					aria-invalid={nameIssue ? true : undefined}
 					onChange={(event) => setName(event.target.value)}
 				/>
-				{nameIssue && <FieldError className="text-xs">{t(`name.${nameIssue}`)}</FieldError>}
+			</Labeled>
+			<Labeled label={t("collection.newId")} htmlFor={idFieldId} hint={t("collection.newIdHint")}>
+				<Input
+					id={idFieldId}
+					value={id}
+					placeholder="blog-posts"
+					autoComplete="off"
+					aria-invalid={idIssue ? true : undefined}
+					onChange={(event) => setTypedId(event.target.value)}
+				/>
+				{idIssue && <FieldError className="text-xs">{t(`name.${idIssue}`)}</FieldError>}
 			</Labeled>
 			<fieldset className="flex flex-col gap-2">
 				<legend className="mb-1.5 font-medium text-xs">{t("collection.kind")}</legend>

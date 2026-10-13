@@ -50,6 +50,7 @@
 		"katex": "^0.16.45",
 		"kysely": "^0.29.6",
 		"pg": "^8.23.0",
+		"pluralize": "^8.0.0",
 		"server-only": "^0.0.1",
 		"shiki": "^3.21.0",
 		"tsx": "^4.21.0",
@@ -62,6 +63,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^20",
+		"@types/pluralize": "^0.0.33",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
 		"ajv": "^8.20.0",

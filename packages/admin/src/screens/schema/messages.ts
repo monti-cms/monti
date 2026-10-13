@@ -55,7 +55,11 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.createConfirm": "Create collection",
 		"collection.createCancel": "Cancel",
 		"collection.newName": "Collection name",
-		"collection.newNameHint": "Letters, digits, - and _. Stored with every entry and cannot be changed here later.",
+		"collection.newNameHint": "What the admin shows, e.g. Blog posts.",
+		"collection.newId": "Identifier",
+		"collection.newIdHint":
+			"Used in code and addresses. Letters, digits, - and _. Stored with every entry and cannot be changed here later.",
+		"name.idEmpty": "Type an identifier with letters and digits.",
 		"collection.kindDocumentExplain": "Posts with a body, e.g. posts, notes",
 		"collection.kindItemExplain": "Short entries without a body, e.g. categories, tags",
 		"collection.newPathHint": "Leave empty if these entries have no public page.",
@@ -343,8 +347,11 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.createConfirm": "컬렉션 만들기",
 		"collection.createCancel": "취소",
 		"collection.newName": "컬렉션 이름",
-		"collection.newNameHint":
-			"영문자, 숫자, -, _만 쓸 수 있습니다. 모든 항목에 저장되므로 나중에 여기서 바꿀 수 없습니다.",
+		"collection.newNameHint": "관리자 화면에 보이는 이름입니다. 예: 블로그 글",
+		"collection.newId": "식별자",
+		"collection.newIdHint":
+			"코드와 주소에 쓰입니다. 영문자, 숫자, -, _만 쓸 수 있습니다. 모든 항목에 저장되므로 나중에 여기서 바꿀 수 없습니다.",
+		"name.idEmpty": "영문자와 숫자로 식별자를 입력하세요.",
 		"collection.kindDocumentExplain": "본문이 있는 글. 예: 게시글, 노트",
 		"collection.kindItemExplain": "본문 없는 짧은 항목. 예: 카테고리, 태그",
 		"collection.newPathHint": "이 항목들에 공개 페이지가 없으면 비워 두세요.",
