@@ -20,11 +20,24 @@ import { lineOfBlock, MdxSourcePanel } from "./source-panel";
 
 const mocks = vi.hoisted(() => ({ cmsFetch: vi.fn() }));
 
-// The lookups of the entries a link points to go through the admin API; the panel reads the answers the test gives.
-vi.mock("@monti-cms/admin/api", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/admin/api")>()),
-	cmsFetch: mocks.cmsFetch,
-}));
+// The lookups of the entries a link points to go through the admin API (`fetch`); the panel reads the answers the test gives: a resolved
+// value is the entry, a `CmsApiError` is the error answer the server sends.
+beforeEach(() => {
+	vi.stubGlobal("fetch", async (input: string) => {
+		try {
+			const body = await mocks.cmsFetch(input);
+			return { ok: true, status: 200, json: async () => body };
+		} catch (error) {
+			const failure = error as { status?: number; code?: string; message?: string };
+			return {
+				ok: false,
+				status: failure.status ?? 500,
+				json: async () => ({ error: { code: failure.code, message: failure.message } }),
+			};
+		}
+	});
+});
+afterEach(() => vi.unstubAllGlobals());
 
 const mdxBrowserFormat = createMdxBrowserFormat(testSite);
 const mdxOfDoc = (doc: StoredDocument): string => mdxBrowserFormat.export(doc);
