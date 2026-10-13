@@ -26,7 +26,7 @@ import {
 	type SuggestedTransform,
 	saveSchema,
 } from "./schema-api";
-import type { Rename } from "./schema-model";
+import type { Rename, SettingChange } from "./schema-model";
 
 type Picks = Record<string, SuggestedTransform | null>;
 
@@ -158,11 +158,17 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 	);
 }
 
+/** A setting's value as one short piece of text. */
+const settingText = (value: unknown, unset: string): string =>
+	value === undefined ? unset : typeof value === "string" ? `"${value}"` : JSON.stringify(value);
+
 export interface ReviewDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	draft: unknown;
 	renames: readonly Rename[];
+	/** The site and admin settings that differ from the file, which the entries do not care about but the writer should still see. */
+	settings?: readonly SettingChange[];
 	baseHash: string;
 	/** The problems of the last check, for the screen to mark. */
 	onIssues: (issues: readonly SchemaIssue[]) => void;
@@ -182,6 +188,7 @@ export function ReviewDialog({
 	onOpenChange,
 	draft,
 	renames,
+	settings = [],
 	baseHash,
 	onIssues,
 	onSaved,
@@ -332,6 +339,23 @@ export function ReviewDialog({
 											onPick={(pick) => setPicks((current) => ({ ...current, [decision.key]: pick }))}
 										/>
 									))}
+								</section>
+							)}
+							{settings.length > 0 && (
+								<section
+									className="flex flex-col gap-2"
+									aria-label={t("review.settings")}
+									data-testid="review-settings"
+								>
+									<h3 className="font-medium text-sm">{t("review.settings")}</h3>
+									<ul className="flex flex-col gap-1">
+										{settings.map((setting) => (
+											<li key={setting.path} className="text-xs">
+												<code>{setting.path}</code>: {settingText(setting.from, t("review.unset"))} {"->"}{" "}
+												{settingText(setting.to, t("review.unset"))}
+											</li>
+										))}
+									</ul>
 								</section>
 							)}
 							{preview.impacts.length > 0 && (

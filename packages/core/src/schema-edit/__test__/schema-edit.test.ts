@@ -135,6 +135,37 @@ describe("schema settings API", () => {
 		expect(await (await call(cms, "GET", "schema")).json()).toMatchObject({ access: { writable: true } });
 	});
 
+	it("says where the site URL comes from, and that it is not set when no one set it", async () => {
+		write(schemaOf({}));
+		const withUrl = (siteUrlSource: string | undefined, url: string | undefined) =>
+			createCms({
+				id: `schema-edit-${++serial}`,
+				config: defineSite({ schema: onDiskData() as SchemaTypes, ...(url ? { site: { url } } : {}) }),
+				schemaFile: file,
+				...(siteUrlSource ? { siteUrlSource } : {}),
+				server: {
+					database: postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: schemaName }),
+					auth: { name: "test", create: () => auth(true) },
+					secret: "test-secret",
+				},
+			});
+		const urlOf = async (cms: ReturnType<typeof newCms>) =>
+			((await (await call(cms, "GET", "schema")).json()) as { siteUrl: unknown }).siteUrl;
+		expect(await urlOf(withUrl(undefined, undefined))).toEqual({ url: null, from: "none" });
+		expect(await urlOf(withUrl("from env SITE_URL", "https://a.example"))).toEqual({
+			url: "https://a.example",
+			from: "env",
+		});
+		expect(await urlOf(withUrl("set in the schema file (site.url)", "https://b.example"))).toEqual({
+			url: "https://b.example",
+			from: "schema",
+		});
+		expect(await urlOf(withUrl("set in monti.config.ts (site.url)", "https://c.example"))).toEqual({
+			url: "https://c.example",
+			from: "config",
+		});
+	});
+
 	it("refuses to write outside development: 403 from both write routes, and the file is untouched", async () => {
 		write(schemaOf({}));
 		const before = text();
