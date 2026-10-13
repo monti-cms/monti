@@ -68,6 +68,15 @@ export interface InitAnswerFlags {
 	readonly directiveSyntax?: boolean;
 }
 
+/** The time zone of this computer (what the OS says, as an IANA name), or `undefined` when it cannot be read. */
+export const detectSystemTimeZone = (): string | undefined => {
+	try {
+		return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+	} catch {
+		return undefined;
+	}
+};
+
 const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 
 const isTimeZone = (timeZone: string): boolean => {
@@ -213,6 +222,7 @@ export async function collectAnswers(
 	app: DetectedApp,
 	flags: InitAnswerFlags,
 	prompter?: Prompter,
+	systemTimeZone: () => string | undefined = detectSystemTimeZone,
 ): Promise<InitAnswers> {
 	validateFlags(flags);
 	const siteUrl = flags.siteUrl ?? `http://localhost:${app.devPort}`;
@@ -338,7 +348,7 @@ export async function collectAnswers(
 	return {
 		siteUrl,
 		locales,
-		timeZone: flags.timeZone ?? DEFAULT_INIT_TIME_ZONE,
+		...resolveTimeZone(flags.timeZone, systemTimeZone),
 		storage,
 		ai: extras.includes("ai"),
 		gitSync: extras.includes("git-sync"),
@@ -347,6 +357,18 @@ export async function collectAnswers(
 		login,
 		directiveSyntax,
 	};
+}
+
+/** `--time-zone` wins; else this computer's time zone; else UTC when that cannot be read or is not an IANA name. */
+function resolveTimeZone(
+	flag: string | undefined,
+	systemTimeZone: () => string | undefined,
+): Pick<InitAnswers, "timeZone" | "timeZoneSource"> {
+	if (flag !== undefined) return { timeZone: flag, timeZoneSource: "flag" };
+	const system = systemTimeZone();
+	return system !== undefined && isTimeZone(system)
+		? { timeZone: system, timeZoneSource: "computer" }
+		: { timeZone: DEFAULT_INIT_TIME_ZONE, timeZoneSource: "fallback" };
 }
 
 /** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */
