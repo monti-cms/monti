@@ -1,5 +1,6 @@
 import { LIST_ARRAY_QUERY_KEYS } from "../../../core/api";
 import { emptyStoredDocument } from "../../../doc/stored-document";
+import { bodyInputOf } from "../../../services/body-input";
 import type { ServiceInput } from "../../../services/types";
 import { adminRoute, ok, parseWith, readJsonBody, readQuery } from "../handler";
 
@@ -42,11 +43,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 		slug: body.slug ?? null,
 		metadata: body.metadata,
 		// The body: a document, a text with its format, or none (an empty body).
-		...(body.doc !== undefined
-			? { doc: body.doc }
-			: body.body !== undefined
-				? { body: body.body, format: body.format }
-				: { doc: emptyStoredDocument() }),
+		...bodyInputOf(body, emptyStoredDocument()),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 	} as ServiceInput;
 	return ok(await cms.contentService().createDraft(input), { status: 201 });

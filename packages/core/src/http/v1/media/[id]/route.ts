@@ -33,13 +33,6 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
  * If storage deletion fails, the `deleting` row stays and can be retried.
  */
 export const DELETE = adminRoute<IdParams>(async ({ params, cms }) => {
-	const store = cms.store();
-	const media = await store.beginMediaDelete(params.id);
-	const mediaStore = cms.mediaStore();
-	const keys = [media.storageKey, media.stagingKey, media.original?.storageKey, media.original?.stagingKey];
-	for (const key of keys) {
-		if (key) await mediaStore.deleteFile({ key });
-	}
-	await store.finalizeMediaDelete(params.id);
+	await cms.mediaService().delete(params.id);
 	return deleted();
 });

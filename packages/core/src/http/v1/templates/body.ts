@@ -1,8 +1,8 @@
 import type { Cms } from "../../../cms";
 import { normalizeImportedDoc } from "../../../core/import-normalize";
 import { readStoredDocument, type StoredDocument } from "../../../doc/stored-document";
-import { exportText, importText } from "../../../format/convert";
-import { createExportRefs } from "../../../read";
+import { importText } from "../../../format/convert";
+import { createBodyExporter } from "../../../services/body-export";
 import { mediaUrlResolver } from "../../../services/media-urls";
 import { linkResolverOf } from "../../../services/write-pipeline";
 
@@ -46,16 +46,11 @@ export async function templatesJson<T extends { readonly doc: StoredDocument }>(
 	format: string | undefined,
 ): Promise<(T & { body?: string })[]> {
 	if (format === undefined) return [...templates];
-	const formats = await cms.formats();
-	const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, "working");
+	const exporter = await createBodyExporter(cms, { format });
 	return Promise.all(
-		templates.map(async (template) => {
-			const { text } = await exportText(cms.site, formats, format, template.doc, {
-				locale: cms.site.DEFAULT_LOCALE,
-				purpose: "sync",
-				refs: await refsOf(template.doc, cms.site.DEFAULT_LOCALE),
-			});
-			return { ...template, body: text };
-		}),
+		templates.map(async (template) => ({
+			...template,
+			body: await exporter.text(template.doc, cms.site.DEFAULT_LOCALE),
+		})),
 	);
 }

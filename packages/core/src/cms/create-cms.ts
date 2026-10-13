@@ -23,7 +23,9 @@ import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import { type CmsEvents, createEventDispatcher } from "../services/events";
 import type { HookSource } from "../services/hooks";
+import { createMediaService, type MediaService } from "../services/media-service";
 import { mediaUrlResolver } from "../services/media-urls";
+import { createPreferencesService, type PreferencesService } from "../services/preferences-service";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
 import { coreDecisions } from "./decisions";
 
@@ -130,6 +132,10 @@ export interface Cms<
 	contentService(): ContentService<Config>;
 	/** Bulk write operations. Runs the write hooks. */
 	bulkService(): BulkService;
+	/** Deleting media files and cleaning up uploads that never completed. */
+	mediaService(): MediaService;
+	/** The admin's saved settings (list columns, sort, editor layout), per user. */
+	preferencesService(): PreferencesService;
 	/** Whether the server config has a media store. Without one, the admin hides the media menu and uploads. */
 	readonly isMediaConfigured: boolean;
 	/** The media store. Throws `media_not_configured` if the server config has none. */
@@ -355,6 +361,8 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		let store: ContentStore | undefined;
 		let service: LooseContentService | undefined;
 		let bulk: BulkService | undefined;
+		let media: MediaService | undefined;
+		let preferences: PreferencesService | undefined;
 		let auth: CmsAuth | undefined;
 
 		const getAuth = (): CmsAuth => {
@@ -452,6 +460,14 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					imageChecks: imageChecks(),
 				});
 				return bulk;
+			},
+			mediaService: () => {
+				media ??= createMediaService({ store: getStore, mediaStore: getMediaStore });
+				return media;
+			},
+			preferencesService: () => {
+				preferences ??= createPreferencesService(site, getStore);
+				return preferences;
 			},
 			isMediaConfigured: Boolean(server.media),
 			mediaStore: getMediaStore,
