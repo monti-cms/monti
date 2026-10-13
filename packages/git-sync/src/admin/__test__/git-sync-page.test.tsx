@@ -89,14 +89,14 @@ beforeEach(() => {
 	conflicts = [conflict];
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET";
-		if (input === "/api/cms/v1/git-sync/status") return json(status);
-		if (input === "/api/cms/v1/git-sync/conflicts") return json({ items: conflicts });
-		if (method === "POST" && input === "/api/cms/v1/git-sync/pull")
+		if (input === "/api/monti/v1/git-sync/status") return json(status);
+		if (input === "/api/monti/v1/git-sync/conflicts") return json({ items: conflicts });
+		if (method === "POST" && input === "/api/monti/v1/git-sync/pull")
 			return json({ results: [{ target: "site", summary: target.lastPull }] });
-		if (method === "POST" && input === "/api/cms/v1/git-sync/flush")
+		if (method === "POST" && input === "/api/monti/v1/git-sync/flush")
 			return json({ results: [{ written: 2, removed: 0 }] });
-		if (method === "POST" && input === "/api/cms/v1/git-sync/conflicts/resolve") return json({ resolution: "git" });
-		if (method === "PUT" && input === "/api/cms/v1/git-sync/settings") return json(status);
+		if (method === "POST" && input === "/api/monti/v1/git-sync/conflicts/resolve") return json({ resolution: "git" });
+		if (method === "PUT" && input === "/api/monti/v1/git-sync/settings") return json(status);
 		// The sidebar badges the shell asks for.
 		return json({ total: 0, items: [], counts: { failed: 0, dead: 0 } });
 	});
@@ -147,7 +147,7 @@ describe("Git sync screen: sync tab", () => {
 	it('"Pull now" pulls the target and reports the result', async () => {
 		renderPage();
 		fireEvent.click(await screen.findByRole("button", { name: t("pull.now") }));
-		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/cms/v1/git-sync/pull", { target: "site" }]));
+		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/monti/v1/git-sync/pull", { target: "site" }]));
 		await waitFor(() =>
 			expect(toast.success).toHaveBeenCalledWith(t("pull.done", { created: 2, applied: 1, conflicts: 1, errors: 1 })),
 		);
@@ -156,7 +156,7 @@ describe("Git sync screen: sync tab", () => {
 	it("commits the queue now when something waits", async () => {
 		renderPage();
 		fireEvent.click(await screen.findByRole("button", { name: t("flush.now") }));
-		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/cms/v1/git-sync/flush", { target: "site" }]));
+		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/monti/v1/git-sync/flush", { target: "site" }]));
 	});
 
 	it("says when no target is set up and when no token is saved", async () => {
@@ -206,7 +206,7 @@ describe("Git sync screen: conflicts tab", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: t("conflicts.useGit") }));
 		await waitFor(() =>
 			expect(requests("POST")).toContainEqual([
-				"/api/cms/v1/git-sync/conflicts/resolve",
+				"/api/monti/v1/git-sync/conflicts/resolve",
 				{ target: "site", entryId: "e1", resolution: "git", gitSha: "a".repeat(40) },
 			]),
 		);
@@ -220,7 +220,7 @@ describe("Git sync screen: conflicts tab", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: t("conflicts.useServer") }));
 		await waitFor(() =>
 			expect(requests("POST")).toContainEqual([
-				"/api/cms/v1/git-sync/conflicts/resolve",
+				"/api/monti/v1/git-sync/conflicts/resolve",
 				expect.objectContaining({ resolution: "server" }),
 			]),
 		);
@@ -250,7 +250,7 @@ describe("Git sync screen: settings tab", () => {
 		fireEvent.click(screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLElement);
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
-				"/api/cms/v1/git-sync/settings",
+				"/api/monti/v1/git-sync/settings",
 				{ token: "ghp_brand_new", expectedVersion: 3 },
 			]),
 		);
@@ -261,7 +261,7 @@ describe("Git sync screen: settings tab", () => {
 	it("shows the webhook URL, makes a webhook secret and saves it", async () => {
 		await openSettings();
 		const url = (await screen.findByLabelText(t("settings.webhook.url"))) as HTMLInputElement;
-		expect(url.value).toMatch(/\/api\/cms\/v1\/git-sync\/webhook$/);
+		expect(url.value).toMatch(/\/api\/monti\/v1\/git-sync\/webhook$/);
 		fireEvent.click(screen.getByRole("button", { name: t("settings.generate") }));
 		const secret = screen.getByLabelText(t("settings.webhook")) as HTMLInputElement;
 		const generated = secret.value;
@@ -269,7 +269,7 @@ describe("Git sync screen: settings tab", () => {
 		fireEvent.click(screen.getAllByRole("button", { name: t("settings.save") })[1] as HTMLElement);
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
-				"/api/cms/v1/git-sync/settings",
+				"/api/monti/v1/git-sync/settings",
 				{ webhookSecret: generated, expectedVersion: 3 },
 			]),
 		);
@@ -279,7 +279,7 @@ describe("Git sync screen: settings tab", () => {
 		await openSettings();
 		fireEvent.click(await screen.findByRole("button", { name: t("settings.remove") }));
 		await waitFor(() =>
-			expect(requests("PUT")).toContainEqual(["/api/cms/v1/git-sync/settings", { token: null, expectedVersion: 3 }]),
+			expect(requests("PUT")).toContainEqual(["/api/monti/v1/git-sync/settings", { token: null, expectedVersion: 3 }]),
 		);
 	});
 

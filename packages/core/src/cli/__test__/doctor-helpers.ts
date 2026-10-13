@@ -97,7 +97,7 @@ export const NEXT_FILES: Record<string, string> = {
 	"next.config.ts": 'import { withCms } from "@monti-cms/nextjs/config";\nexport default withCms({});\n',
 	"app/studio/layout.tsx": "export default function L() { return <CmsAdminLayout cms={cms} />; }\n",
 	"app/studio/[[...path]]/page.tsx": "export default function P() { return <CmsAdminPage cms={cms} />; }\n",
-	"app/api/cms/[...path]/route.ts": "export const { GET } = createRouteHandler(cms);\n",
+	"app/api/monti/[...path]/route.ts": "export const { GET } = createRouteHandler(cms);\n",
 	".gitignore": "node_modules\n.env*\n",
 };
 

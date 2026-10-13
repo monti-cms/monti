@@ -70,7 +70,7 @@ describe("defineConfig: one config, one instance", () => {
 		vi.stubEnv("NODE_ENV", "production");
 		expect(await cms.authGateway.isDevBypassActive()).toBe(false);
 		await expect(cms.authGateway.verifyAdmin()).rejects.toThrow(AuthError);
-		const handled = await cms.authHandlers.GET(new Request("http://localhost:3000/api/cms/auth/session"));
+		const handled = await cms.authHandlers.GET(new Request("http://localhost:3000/api/monti/auth/session"));
 		expect(handled.status).toBe(404);
 	});
 

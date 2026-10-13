@@ -32,7 +32,7 @@ async function actorWhileSaving(auth: AuthContext): Promise<string | null> {
 		verifyAdmin: async () => auth,
 	});
 	const response = await patchEntry(
-		new Request(`http://localhost/api/cms/v1/entries/${ID}`, {
+		new Request(`http://localhost/api/monti/v1/entries/${ID}`, {
 			method: "PATCH",
 			headers: { "content-type": "application/json", origin: "http://localhost", host: "localhost" },
 			body: JSON.stringify({ expectedVersion: 1, metadata: { title: "T2" } }),

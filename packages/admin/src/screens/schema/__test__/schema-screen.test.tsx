@@ -97,9 +97,9 @@ beforeEach(() => {
 			const method = init?.method ?? "GET";
 			const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : undefined;
 			requests.push({ method, url: input, body });
-			if (input === "/api/cms/v1/schema" && method === "GET") return json(state);
-			if (input === "/api/cms/v1/schema/preview" && method === "POST") return json(previewAnswer(body ?? {}));
-			if (input === "/api/cms/v1/schema" && method === "PUT") {
+			if (input === "/api/monti/v1/schema" && method === "GET") return json(state);
+			if (input === "/api/monti/v1/schema/preview" && method === "POST") return json(previewAnswer(body ?? {}));
+			if (input === "/api/monti/v1/schema" && method === "PUT") {
 				const answer = saveAnswer(body ?? {});
 				return json(answer.body, answer.status);
 			}

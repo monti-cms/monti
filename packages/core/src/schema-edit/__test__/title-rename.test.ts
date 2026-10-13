@@ -14,7 +14,7 @@ import type { CmsAuth } from "../../server/define";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 
 const auth = (): CmsAuth => ({
-	basePath: "/api/cms/auth",
+	basePath: "/api/monti/auth",
 	handlers: { GET: async () => new Response(), POST: async () => new Response() },
 	session: async () => ({ user: { id: "u", accountId: "u" } }),
 	providers: [],
@@ -88,7 +88,7 @@ describe("renaming the title field", () => {
 		});
 	const call = (instance: ReturnType<typeof cms>, method: string, route: string, body?: unknown) =>
 		instance.handle(
-			new Request(`http://localhost/api/cms/v1/${route}`, {
+			new Request(`http://localhost/api/monti/v1/${route}`, {
 				method,
 				headers: { "content-type": "application/json", "sec-fetch-site": "same-origin" },
 				body: body === undefined ? undefined : JSON.stringify(body),

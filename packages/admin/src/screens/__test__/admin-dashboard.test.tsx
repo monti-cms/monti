@@ -48,7 +48,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 const entryRequests = () =>
 	fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
-		.filter((url) => url.pathname === "/api/cms/v1/entries" && url.searchParams.get("collection") === "post");
+		.filter((url) => url.pathname === "/api/monti/v1/entries" && url.searchParams.get("collection") === "post");
 const calls = (method: string, path: string) =>
 	fetchMock.mock.calls.filter(
 		([input, init]) => (init?.method ?? "GET") === method && String(input).split("?")[0] === path,
@@ -68,9 +68,9 @@ beforeEach(() => {
 		const handled = await server.handle(url, init);
 		if (handled !== undefined) return handled;
 		const method = init?.method ?? "GET";
-		if (url.pathname === "/api/cms/v1/preferences") return json(method === "GET" ? server.preferences : {});
-		if (url.pathname === "/api/cms/v1/folders" && method === "GET") return json(server.folders);
-		if (url.pathname === "/api/cms/v1/entries" && method === "GET") {
+		if (url.pathname === "/api/monti/v1/preferences") return json(method === "GET" ? server.preferences : {});
+		if (url.pathname === "/api/monti/v1/folders" && method === "GET") return json(server.folders);
+		if (url.pathname === "/api/monti/v1/entries" && method === "GET") {
 			const collection = url.searchParams.get("collection");
 			const trash = url.searchParams.getAll("status").includes("trashed");
 			const items = collection !== "post" ? [] : trash ? server.trashed : server.posts;
@@ -136,8 +136,8 @@ describe("list screen — list settings", () => {
 		fireEvent.click(screen.getByRole("button", { name: /^제목/ }));
 		fireEvent.click(await screen.findByRole("button", { name: "오름차순" }));
 
-		await waitFor(() => expect(calls("PUT", "/api/cms/v1/preferences")).toHaveLength(1));
-		expect(bodyOf(calls("PUT", "/api/cms/v1/preferences")[0])).toEqual({
+		await waitFor(() => expect(calls("PUT", "/api/monti/v1/preferences")).toHaveLength(1));
+		expect(bodyOf(calls("PUT", "/api/monti/v1/preferences")[0])).toEqual({
 			collections: { post: { sort: { field: "title", direction: "asc" } } },
 		});
 		await waitFor(() => expect(entryRequests().at(-1)?.searchParams.get("sortField")).toBe("title"));
@@ -156,7 +156,7 @@ describe("list screen — row menu and bulk actions", () => {
 
 	it("opening the menu of a selected row with several rows selected targets all selected rows", async () => {
 		server.handle = (url, init) =>
-			url.pathname === "/api/cms/v1/bulk" && init?.method === "POST"
+			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
 				? json({ results: bodyOf([url, init]).items.map(({ id }: { id: string }) => ({ id, ok: true, version: 4 })) })
 				: undefined;
 		renderList();
@@ -172,8 +172,8 @@ describe("list screen — row menu and bulk actions", () => {
 			within(await screen.findByRole("alertdialog", { name: "보관" })).getByRole("button", { name: "보관" }),
 		);
 
-		await waitFor(() => expect(calls("POST", "/api/cms/v1/bulk")).toHaveLength(1));
-		expect(bodyOf(calls("POST", "/api/cms/v1/bulk")[0])).toEqual({
+		await waitFor(() => expect(calls("POST", "/api/monti/v1/bulk")).toHaveLength(1));
+		expect(bodyOf(calls("POST", "/api/monti/v1/bulk")[0])).toEqual({
 			op: "archive",
 			items: [
 				{ id: "가", expectedVersion: 3 },
@@ -197,7 +197,7 @@ describe("list screen — row menu and bulk actions", () => {
 	it("actions are applied to the list first, and failed rows stay selected", async () => {
 		let respond: (value: unknown) => void = () => {};
 		server.handle = (url, init) =>
-			url.pathname === "/api/cms/v1/bulk" && init?.method === "POST"
+			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
 				? new Promise((resolve) => {
 						respond = resolve;
 					})
@@ -235,7 +235,7 @@ describe("list screen — row menu and bulk actions", () => {
 
 	it("when it ends, successful rows are removed from the selection and only failed rows remain", async () => {
 		server.handle = (url, init) =>
-			url.pathname === "/api/cms/v1/bulk" && init?.method === "POST"
+			url.pathname === "/api/monti/v1/bulk" && init?.method === "POST"
 				? json({
 						results: [
 							{ id: "가", ok: true, version: 4 },
@@ -261,12 +261,12 @@ describe("list screen — row menu and bulk actions", () => {
 	it("if the request itself fails, the list is rolled back before refetching", async () => {
 		let bulkFailed = false;
 		server.handle = (url, init) => {
-			if (url.pathname === "/api/cms/v1/bulk" && init?.method === "POST") {
+			if (url.pathname === "/api/monti/v1/bulk" && init?.method === "POST") {
 				bulkFailed = true;
 				return json({ code: "internal", message: "서버 오류" }, 500);
 			}
 			// The refetch after the failure never finishes. If the rows come back, it is thanks to the rollback.
-			if (bulkFailed && url.pathname === "/api/cms/v1/entries") return new Promise(() => {});
+			if (bulkFailed && url.pathname === "/api/monti/v1/entries") return new Promise(() => {});
 			return undefined;
 		};
 		renderList();
@@ -296,8 +296,9 @@ describe("list screen — folders", () => {
 		nav.setSearch("collection=post&folder=f1");
 		server.folders = [folder];
 		server.handle = (url, init) => {
-			if (url.pathname === "/api/cms/v1/folders/f1" && !init?.method) return json({ entryCount: 0, childFolders: [] });
-			if (url.pathname === "/api/cms/v1/folders/f1" && init?.method === "DELETE") return json({});
+			if (url.pathname === "/api/monti/v1/folders/f1" && !init?.method)
+				return json({ entryCount: 0, childFolders: [] });
+			if (url.pathname === "/api/monti/v1/folders/f1" && init?.method === "DELETE") return json({});
 			return undefined;
 		};
 		renderList();
@@ -310,7 +311,7 @@ describe("list screen — folders", () => {
 		fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
 
 		await waitFor(() => expect(nav.search.get("folder")).toBeNull());
-		expect(calls("DELETE", "/api/cms/v1/folders/f1")).toHaveLength(1);
+		expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1);
 	});
 });
 
@@ -327,14 +328,14 @@ describe("trash screen", () => {
 	it("restore requests per item and reports the result", async () => {
 		server.trashed = [item("trashed-1", { title: "버린 글", status: "trashed" })];
 		server.handle = (url, init) =>
-			url.pathname === "/api/cms/v1/entries/trashed-1/restore" && init?.method === "POST" ? json({}) : undefined;
+			url.pathname === "/api/monti/v1/entries/trashed-1/restore" && init?.method === "POST" ? json({}) : undefined;
 		renderTrash();
 		await screen.findByRole("row", { name: /버린 글/ });
 
 		fireEvent.click(within(row("버린 글")).getByRole("button", { name: "복원" }));
 
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith("1개 항목을 복원했습니다."));
-		expect(bodyOf(calls("POST", "/api/cms/v1/entries/trashed-1/restore")[0])).toEqual({ expectedVersion: 3 });
+		expect(bodyOf(calls("POST", "/api/monti/v1/entries/trashed-1/restore")[0])).toEqual({ expectedVersion: 3 });
 	});
 });
 
@@ -356,10 +357,10 @@ describe("taxonomy edit panel — unsaved changes", () => {
 			item("t2", { collection: "tag", title: "뷰", status: "published" }),
 		];
 		server.handle = (url, init) => {
-			if (url.pathname === "/api/cms/v1/entries" && url.searchParams.get("collection") === "tag" && !init?.method)
+			if (url.pathname === "/api/monti/v1/entries" && url.searchParams.get("collection") === "tag" && !init?.method)
 				return json({ items: tags, total: tags.length });
-			if (url.pathname === "/api/cms/v1/entries/t1") return json(record("t1", "리액트"));
-			if (url.pathname === "/api/cms/v1/entries/t2") return json(record("t2", "뷰"));
+			if (url.pathname === "/api/monti/v1/entries/t1") return json(record("t1", "리액트"));
+			if (url.pathname === "/api/monti/v1/entries/t2") return json(record("t2", "뷰"));
 			return undefined;
 		};
 	});

@@ -44,7 +44,7 @@ describe("Public JSON API", () => {
 			store,
 			server: { publicApi },
 			formats: [paragraphsFormat],
-		}).handle(new Request(`http://localhost/api/cms/${pathname}${query ? `?${query}` : ""}`));
+		}).handle(new Request(`http://localhost/api/monti/${pathname}${query ? `?${query}` : ""}`));
 		return { status: response.status, cache: response.headers.get("cache-control"), body: await response.json() };
 	};
 

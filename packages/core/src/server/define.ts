@@ -129,15 +129,15 @@ export interface LoginAccounts {
 }
 
 /**
- * Base path of the login API. The admin API catch-all (`app/api/cms/[...path]/route.ts`) hands everything under it (`/api/cms/auth/*`) to the
+ * Base path of the login API. The admin API catch-all (`app/api/monti/[...path]/route.ts`) hands everything under it (`/api/monti/auth/*`) to the
  * login connection, so no separate login route file is needed.
  */
-export const CMS_AUTH_BASE_PATH = "/api/cms/auth";
+export const CMS_AUTH_BASE_PATH = "/api/monti/auth";
 
 /** Admin login. Provides the Next routes (`handlers`) and the admin check together. */
 export interface CmsAuth {
 	/**
-	 * Login API path (e.g. `/api/cms/auth`). If it is `CMS_AUTH_BASE_PATH`, the admin API catch-all hands requests to `handlers`.
+	 * Login API path (e.g. `/api/monti/auth`). If it is `CMS_AUTH_BASE_PATH`, the admin API catch-all hands requests to `handlers`.
 	 * For another path, the app puts a route file at that path and exports `handlers` from `@monti-cms/core/runtime`.
 	 */
 	readonly basePath?: string;
@@ -254,6 +254,6 @@ export interface CmsServerConfig {
 	 * in any other production (a proxy you run yourself needs `true`).
 	 */
 	readonly trustHost?: boolean;
-	/** Public JSON API (`/api/cms/v1/public/*`). Off if unset (404). */
+	/** Public JSON API (`/api/monti/v1/public/*`). Off if unset (404). */
 	readonly publicApi?: PublicApiOptions;
 }

@@ -208,7 +208,7 @@ describe("editor accessibility", () => {
 		fireEvent.click(screen.getByRole("button", { name: "삭제" }));
 		await waitFor(() => expect(onChanged).toHaveBeenCalledWith("folder-1"));
 		expect(fetchMock).toHaveBeenCalledWith(
-			"/api/cms/v1/folders/folder-1?expectedVersion=1",
+			"/api/monti/v1/folders/folder-1?expectedVersion=1",
 			expect.objectContaining({ method: "DELETE" }),
 		);
 		vi.unstubAllGlobals();

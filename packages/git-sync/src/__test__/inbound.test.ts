@@ -14,7 +14,7 @@ afterAll(async () => {
 	await closeGlobalPool();
 });
 
-const WEBHOOK = "http://localhost/api/cms/v1/git-sync/webhook";
+const WEBHOOK = "http://localhost/api/monti/v1/git-sync/webhook";
 
 const hook = (body: string, headers: Record<string, string> = {}) =>
 	h.cms.handle(

@@ -44,7 +44,7 @@ const storeOf = (overrides: Partial<Record<keyof ContentStore, unknown>> = {}) =
 	}) as unknown as ContentStore;
 
 const post = (path: string, init: { headers?: Record<string, string>; body?: unknown } = {}) =>
-	new Request(`http://localhost/api/cms/v1/${path}`, {
+	new Request(`http://localhost/api/monti/v1/${path}`, {
 		method: "POST",
 		headers: { origin: "http://localhost", "content-type": "application/json", ...init.headers },
 		body: init.body === undefined ? undefined : JSON.stringify(init.body),
@@ -53,7 +53,7 @@ const post = (path: string, init: { headers?: Record<string, string>; body?: unk
 describe("GET /v1/events", () => {
 	it("lists the failed and dead deliveries with the counts, and asks the store for them by default", async () => {
 		const store = storeOf();
-		const response = await list(new Request("http://localhost/api/cms/v1/events"), { cms: fakeCms({ store }) });
+		const response = await list(new Request("http://localhost/api/monti/v1/events"), { cms: fakeCms({ store }) });
 		expect(response.status).toBe(200);
 		const body = await response.json();
 		expect(body.total).toBe(1);
@@ -70,9 +70,9 @@ describe("GET /v1/events", () => {
 	it("passes the state filter and the paging on, and rejects an unknown state", async () => {
 		const store = storeOf();
 		const cms = fakeCms({ store });
-		await list(new Request("http://localhost/api/cms/v1/events?state=dead&state=failed&limit=10&offset=20"), { cms });
+		await list(new Request("http://localhost/api/monti/v1/events?state=dead&state=failed&limit=10&offset=20"), { cms });
 		expect(store.listEventDeliveries).toHaveBeenCalledWith({ states: ["dead", "failed"], limit: 10, offset: 20 });
-		const bad = await list(new Request("http://localhost/api/cms/v1/events?state=nope"), { cms });
+		const bad = await list(new Request("http://localhost/api/monti/v1/events?state=nope"), { cms });
 		expect(bad.status).toBe(400);
 	});
 
@@ -83,7 +83,7 @@ describe("GET /v1/events", () => {
 				throw new AuthError("unauthorized", "no session");
 			},
 		});
-		expect((await list(new Request("http://localhost/api/cms/v1/events"), { cms })).status).toBe(401);
+		expect((await list(new Request("http://localhost/api/monti/v1/events"), { cms })).status).toBe(401);
 	});
 });
 
@@ -120,7 +120,7 @@ describe("POST /v1/events/retry", () => {
 				throw new AuthError("unauthorized", "no session");
 			},
 		});
-		const request = new Request("http://localhost/api/cms/v1/events/retry", {
+		const request = new Request("http://localhost/api/monti/v1/events/retry", {
 			method: "POST",
 			headers: { authorization: "Bearer cron-secret" },
 		});

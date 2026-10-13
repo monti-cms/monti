@@ -12,7 +12,7 @@ import { MAX_ENTRY_SEARCH_LIMIT } from "./store/types";
 export * from "./media-types";
 
 /**
- * Request contract of `/api/cms/v1`. The routes and the admin UI see the same definitions.
+ * Request contract of `/api/monti/v1`. The routes and the admin UI see the same definitions.
  */
 
 export const ENTRY_STATUSES = ["draft", "published", "archived", "trashed"] as const;

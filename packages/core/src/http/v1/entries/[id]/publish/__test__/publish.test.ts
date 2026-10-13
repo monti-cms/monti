@@ -24,7 +24,7 @@ const cms = fakeCms({
 vi.mock("../../../../../../core/snapshot", () => ({ imageWarningsForSnapshot }));
 
 function request(body: unknown = { expectedVersion: 4 }, origin = "http://localhost") {
-	return new Request("http://localhost/api/cms/v1/entries/entry-1/publish", {
+	return new Request("http://localhost/api/monti/v1/entries/entry-1/publish", {
 		method: "POST",
 		headers: { origin, "content-type": "application/json" },
 		body: JSON.stringify(body),

@@ -43,7 +43,7 @@ const findFile = (zip: Uint8Array, path: string): string => {
 	return decoder.decode(entry.data);
 };
 
-describe("GET/POST /api/cms/v1/export", () => {
+describe("GET/POST /api/monti/v1/export", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockVerifyAdmin.mockResolvedValue({ userId: "123", accountId: "123", isAdmin: true });
@@ -52,19 +52,19 @@ describe("GET/POST /api/cms/v1/export", () => {
 
 	it("returns 401 for an unauthenticated request", async () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
-		const res = await GET(request("http://localhost/api/cms/v1/export"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(401);
 		expect((await res.json()).code).toBe("unauthorized");
 	});
 
 	it("returns 400 for an invalid scope", async () => {
-		const res = await GET(request("http://localhost/api/cms/v1/export?scope=everything"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export?scope=everything"), { cms });
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("invalid_input");
 	});
 
 	it("default (admin) export returns a ZIP with a digest header and includes draft bodies", async () => {
-		const res = await GET(request("http://localhost/api/cms/v1/export"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("application/zip");
 		expect(res.headers.get("content-disposition")).toContain("cms-export-admin-");
@@ -86,7 +86,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 	});
 
 	it("an export with ?format= also writes every body as text in that format", async () => {
-		const res = await GET(request("http://localhost/api/cms/v1/export?format=paragraphs"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export?format=paragraphs"), { cms });
 		expect(res.status).toBe(200);
 
 		const zip = new Uint8Array(await res.arrayBuffer());
@@ -101,7 +101,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 
 	it("a public export with a format holds the published text only, with no draft text in it", async () => {
 		const res = await POST(
-			request("http://localhost/api/cms/v1/export", {
+			request("http://localhost/api/monti/v1/export", {
 				method: "POST",
 				headers: { origin: "http://localhost", "content-type": "application/json", host: "localhost" },
 				body: JSON.stringify({ scope: "public", format: "paragraphs" }),
@@ -120,17 +120,17 @@ describe("GET/POST /api/cms/v1/export", () => {
 	});
 
 	it("an export in a format nobody provides is a 400 unknown_format, and no archive", async () => {
-		const res = await GET(request("http://localhost/api/cms/v1/export?format=hugo"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export?format=hugo"), { cms });
 		expect(res.status).toBe(400);
 		expect((await res.json()).code).toBe("unknown_format");
 
-		const bad = await GET(request("http://localhost/api/cms/v1/export?format=Not%20A%20Name"), { cms });
+		const bad = await GET(request("http://localhost/api/monti/v1/export?format=Not%20A%20Name"), { cms });
 		expect(bad.status).toBe(400);
 		expect((await bad.json()).code).toBe("invalid_input");
 	});
 
 	it("public export excludes drafts and does not include working values", async () => {
-		const res = await GET(request("http://localhost/api/cms/v1/export?scope=public"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export?scope=public"), { cms });
 		expect(res.status).toBe(200);
 		expect(res.headers.get("x-cms-export-scope")).toBe("public");
 
@@ -148,7 +148,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 
 	it("POST blocks cross-origin requests with 403", async () => {
 		const res = await POST(
-			request("http://localhost/api/cms/v1/export", {
+			request("http://localhost/api/monti/v1/export", {
 				method: "POST",
 				headers: { origin: "http://attacker.com", "content-type": "application/json", host: "localhost" },
 				body: JSON.stringify({ scope: "public" }),
@@ -160,7 +160,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 
 	it("POST accepts scope from the same origin and creates an archive", async () => {
 		const res = await POST(
-			request("http://localhost/api/cms/v1/export", {
+			request("http://localhost/api/monti/v1/export", {
 				method: "POST",
 				headers: { origin: "http://localhost", "content-type": "application/json", host: "localhost" },
 				body: JSON.stringify({ scope: "public" }),
@@ -173,7 +173,7 @@ describe("GET/POST /api/cms/v1/export", () => {
 
 	it("maps a store error to 500 and does not expose the digest header", async () => {
 		mockReadExportSnapshot.mockRejectedValue(new Error("db down"));
-		const res = await GET(request("http://localhost/api/cms/v1/export"), { cms });
+		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(500);
 		expect(res.headers.get("x-cms-export-digest")).toBeNull();
 	});

@@ -61,7 +61,7 @@ const store = {
 const cms = fakeCms({ config: testConfig, store, bulkService: createBulkService(store as never, { site: testSite }) });
 
 const postReq = (body: unknown) =>
-	new Request("http://localhost/api/cms/v1/bulk", {
+	new Request("http://localhost/api/monti/v1/bulk", {
 		method: "POST",
 		headers: { origin: "http://localhost", "content-type": "application/json" },
 		body: JSON.stringify(body),

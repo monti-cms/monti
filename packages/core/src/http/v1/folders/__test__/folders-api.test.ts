@@ -27,7 +27,7 @@ const cms = fakeCms({ config: testConfig, store: mockStore });
 
 describe("Folders HTTP API Contract", () => {
 	it("GET /folders returns list", async () => {
-		const req = new Request(`http://localhost/api/cms/v1/folders?collection=${contentCollection}`);
+		const req = new Request(`http://localhost/api/monti/v1/folders?collection=${contentCollection}`);
 		const res = await getFolders(req, { cms });
 		expect(res.status).toBe(200);
 		const data = await res.json();
@@ -35,7 +35,7 @@ describe("Folders HTTP API Contract", () => {
 	});
 
 	it("PATCH /folders/:id rejects without expectedVersion with 428", async () => {
-		const req = new Request("http://localhost/api/cms/v1/folders/f-1", {
+		const req = new Request("http://localhost/api/monti/v1/folders/f-1", {
 			method: "PATCH",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify({ name: "Updated Name" }),
@@ -47,7 +47,7 @@ describe("Folders HTTP API Contract", () => {
 	});
 
 	it("PATCH /folders/:id maps conflict to 409", async () => {
-		const req = new Request("http://localhost/api/cms/v1/folders/f-1", {
+		const req = new Request("http://localhost/api/monti/v1/folders/f-1", {
 			method: "PATCH",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify({ name: "Updated Name", expectedVersion: 1 }),

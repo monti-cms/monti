@@ -90,7 +90,7 @@ export interface LoginProvider {
 	readonly adminSource?: { readonly env: string; readonly findId: string };
 	/** Where this provider's settings come from, for `monti doctor` (`client id from env AUTH_GITHUB_ID, ...`). */
 	provenance?(env: Readonly<Record<string, string | undefined>>): string;
-	/** `true` for an OAuth-style provider: the app registered at the provider must list the callback URL (`<site>/api/cms/auth/callback/<id>`), which `monti doctor` prints. */
+	/** `true` for an OAuth-style provider: the app registered at the provider must list the callback URL (`<site>/api/monti/auth/callback/<id>`), which `monti doctor` prints. */
 	readonly usesCallbackUrl?: boolean;
 	/**
 	 * Throws a clear error that names the missing setting (an unset `AUTH_GITHUB_ID`). Called when the login connection is created in a server that

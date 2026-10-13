@@ -3,7 +3,7 @@
 English | [한국어](README.ko.md)
 
 The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and decide), AI buttons next to fields, AI translation in the
-translation editor, the admin AI screen (`<admin path>/ai`, `/admin/ai` by default), the AI API (`/api/cms/v1/ai/*`), and the AI data in the plugin storage
+translation editor, the admin AI screen (`<admin path>/ai`, `/admin/ai` by default), the AI API (`/api/monti/v1/ai/*`), and the AI data in the plugin storage
 (`cms.storage("ai")`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
 
 The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `aiPlugin()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
@@ -75,7 +75,7 @@ and `seoDescription` attach this way.
 - The admin AI screen only edits enabled, request intake, connection, model, inputs to send, instruction, threshold, and check values.
   Only the edited values are kept in the DB (the `action-overrides` collection of the plugin storage). "Reset to default" only resets the input fields; saving is a
   separate click.
-- Running: `POST /api/cms/v1/ai/run { action, input | inputs, env }`. In the admin UI, call by name, as in
+- Running: `POST /api/monti/v1/ai/run { action, input | inputs, env }`. In the admin UI, call by name, as in
   `useAiAction("summary").run({ title, body })` or
   `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />` (`@monti-cms/ai/admin`). Called as they are, any name is
   accepted; `const { useAiAction, AiButton } = aiClient<typeof config>()` gives both with the name, input, and result types of the site config (an unknown name is a type

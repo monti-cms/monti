@@ -35,7 +35,7 @@ const call = (
 	headers: Record<string, string> = {},
 ) =>
 	cms.handle(
-		new Request(`${ORIGIN}/api/cms/${path}`, {
+		new Request(`${ORIGIN}/api/monti/${path}`, {
 			method,
 			headers: { "content-type": "application/json", ...headers },
 			...(method === "POST" ? { body: "{}" } : {}),

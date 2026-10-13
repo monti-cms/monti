@@ -36,10 +36,10 @@ The shape is what `monti init` generates, plus this site's collections and exten
 | `app/(site)/[locale]/memos/` | The memo list and memo page, written the same way with `cms.read` and `ArticleBody` |
 | `components/article-body.tsx` | The article body: draws an entry's document with `CmsContent` and an optional table of contents. Plain app code used by the article and memo pages; edit it freely. `tsconfig.json` has the `@/*` alias it is imported through |
 | `showcase/` | The sample content (`*.mdx`) and `seed.ts`, which `pnpm preview:example` runs to put it into the preview database: the "CMS elements" post (every element and every block, in directive notation), a second post that links back, a memo, a category, tags, a series and one unpublished draft |
-| `app/api/cms/[...path]/route.ts` | Admin API and login (`/api/cms/auth/*`), served by `createRouteHandler(cms)` of `@monti-cms/nextjs`. There is no separate login route file. With the two files under `app/studio/` these are the three Next files the admin needs |
+| `app/api/monti/[...path]/route.ts` | Admin API and login (`/api/monti/auth/*`), served by `createRouteHandler(cms)` of `@monti-cms/nextjs`. There is no separate login route file. With the two files under `app/studio/` these are the three Next files the admin needs |
 | `app/globals.css` | The public site's own styles: Tailwind with typography, and the public page styles of the packages (`@monti-cms/core/render.css`, `@monti-cms/blocks/render.css`). It has no admin lines: the admin styles are prebuilt and scoped to the admin, so the site needs no Tailwind setup for them |
 
-To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/cms/auth/callback/github`.
+To use GitHub login, set the OAuth app's callback URL to `http://localhost:3000/api/monti/auth/callback/github`.
 
 ## Using your own components
 

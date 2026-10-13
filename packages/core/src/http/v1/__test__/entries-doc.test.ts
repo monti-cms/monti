@@ -84,7 +84,7 @@ describe("entry API with a stored document", () => {
 
 	const post = async (body: Record<string, unknown>) =>
 		postEntries(
-			send("http://localhost/api/cms/v1/entries", "POST", {
+			send("http://localhost/api/monti/v1/entries", "POST", {
 				collection: contentCollection,
 				slug: unique("post"),
 				metadata: await requiredMetadata(contentCollection, unique("Post"), relationTarget),
@@ -94,13 +94,13 @@ describe("entry API with a stored document", () => {
 		);
 
 	const patch = (id: string, body: Record<string, unknown>) =>
-		patchEntry(send(`http://localhost/api/cms/v1/entries/${id}`, "PATCH", body), {
+		patchEntry(send(`http://localhost/api/monti/v1/entries/${id}`, "PATCH", body), {
 			params: Promise.resolve({ id }),
 			cms,
 		});
 
 	const read = async (id: string) => {
-		const res = await getEntry(new Request(`http://localhost/api/cms/v1/entries/${id}`), {
+		const res = await getEntry(new Request(`http://localhost/api/monti/v1/entries/${id}`), {
 			params: Promise.resolve({ id }),
 			cms,
 		});
@@ -349,7 +349,7 @@ describe("entry API with a stored document", () => {
 			doc: sampleDoc(),
 		});
 
-		const res = await getTemplates(new Request("http://localhost/api/cms/v1/templates"), { cms });
+		const res = await getTemplates(new Request("http://localhost/api/monti/v1/templates"), { cms });
 
 		const { items } = await res.json();
 		const listed = items.find((item: { id: string }) => item.id === template.id);

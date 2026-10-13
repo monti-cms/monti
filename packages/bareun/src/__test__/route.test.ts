@@ -27,7 +27,7 @@ const cmsWith = (options: BareunOptions) =>
 
 const post = (body: unknown, cms = cmsWith({ apiKeyEnv: KEY_ENV })) =>
 	bareunRoute().POST(
-		new Request("http://localhost/api/cms/v1/text-check/bareun", {
+		new Request("http://localhost/api/monti/v1/text-check/bareun", {
 			method: "POST",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify(body),

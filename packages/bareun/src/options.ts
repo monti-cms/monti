@@ -11,7 +11,7 @@ export const BAREUN_PLUGIN_NAME = "text-check-bareun";
 /** Checker name (the source shown on results). */
 export const BAREUN_CHECKER_ID = "bareun";
 
-/** Server route. Appended to the core API base (`/api/cms/`). */
+/** Server route. Appended to the core API base (`/api/monti/`). */
 export const BAREUN_ROUTE = "v1/text-check/bareun";
 
 export interface BareunOptions {

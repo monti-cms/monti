@@ -8,7 +8,7 @@ const handlers = {
 };
 
 const store = { getPreferences: async () => null };
-const cms = fakeCms({ store, auth: { basePath: "/api/cms/auth", handlers } });
+const cms = fakeCms({ store, auth: { basePath: "/api/monti/auth", handlers } });
 
 describe("admin API route table", () => {
 	it("named segments match before [name] segments, and params are extracted", () => {
@@ -33,15 +33,17 @@ describe("admin API route table", () => {
 
 	it("an unknown path is 404, an unknown method is 405, and a matching path goes to that route", async () => {
 		const call = (method: "GET" | "DELETE", path: string) =>
-			cms.handle(new Request(`http://localhost/api/cms/${path}`, { method, headers: { origin: "http://localhost" } }));
+			cms.handle(
+				new Request(`http://localhost/api/monti/${path}`, { method, headers: { origin: "http://localhost" } }),
+			);
 		expect((await call("GET", "v1/nope")).status).toBe(404);
 		expect((await call("DELETE", "v1/preferences")).status).toBe(405);
 		expect((await call("GET", "v1/preferences")).status).toBe(200);
 	});
 
-	it("when the auth path is the default (`/api/cms/auth`), forwards `auth/*` to the auth handler", async () => {
+	it("when the auth path is the default (`/api/monti/auth`), forwards `auth/*` to the auth handler", async () => {
 		const call = (instance: typeof cms, method: "GET" | "POST" | "DELETE", path: string) =>
-			instance.handle(new Request(`http://localhost/api/cms/${path}`, { method }));
+			instance.handle(new Request(`http://localhost/api/monti/${path}`, { method }));
 		expect(await (await call(cms, "GET", "auth/session")).text()).toBe("auth-get");
 		expect(await (await call(cms, "POST", "auth/signin/github")).text()).toBe("auth-post");
 		expect(handlers.GET).toHaveBeenCalledTimes(1);
@@ -54,12 +56,12 @@ describe("admin API route table", () => {
 	});
 
 	it("`handle` reads the path from the request URL, with no framework in between", async () => {
-		const response = await cms.handle(new Request("http://localhost/api/cms/v1/preferences"));
+		const response = await cms.handle(new Request("http://localhost/api/monti/v1/preferences"));
 		expect(response).toBeInstanceOf(Response);
 		expect(response.status).toBe(200);
 		expect((await cms.handle(new Request("http://localhost/elsewhere/v1/preferences"))).status).toBe(404);
 		expect(
-			(await cms.handle(new Request("http://localhost/api/cms/v1/preferences", { method: "OPTIONS" }))).status,
+			(await cms.handle(new Request("http://localhost/api/monti/v1/preferences", { method: "OPTIONS" }))).status,
 		).toBe(405);
 	});
 
@@ -71,13 +73,13 @@ describe("admin API route table", () => {
 	});
 
 	it("the path comes from the URL: decoded, query ignored, empty segments dropped", () => {
-		expect(pathFromRequest(new Request("http://localhost/api/cms/v1/entries/a%20b?x=1"))).toEqual([
+		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/entries/a%20b?x=1"))).toEqual([
 			"v1",
 			"entries",
 			"a b",
 		]);
-		expect(pathFromRequest(new Request("http://localhost/api/cms/v1//meta/"))).toEqual(["v1", "meta"]);
-		expect(pathFromRequest(new Request("http://localhost/api/cms"))).toBeNull();
-		expect(pathFromRequest(new Request("http://localhost/api/cms/v1/%E0%A4%A"))).toBeNull();
+		expect(pathFromRequest(new Request("http://localhost/api/monti/v1//meta/"))).toEqual(["v1", "meta"]);
+		expect(pathFromRequest(new Request("http://localhost/api/monti"))).toBeNull();
+		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/%E0%A4%A"))).toBeNull();
 	});
 });

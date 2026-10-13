@@ -11,7 +11,7 @@ describe("createRouteHandler", () => {
 	it("serves the path segments Next split, for each HTTP method the API uses", async () => {
 		const handler = createRouteHandler(cms);
 		expect(Object.keys(handler).sort()).toEqual(["DELETE", "GET", "PATCH", "POST", "PUT"]);
-		const response = await handler.GET(new Request("http://localhost/api/cms/v1/preferences"), {
+		const response = await handler.GET(new Request("http://localhost/api/monti/v1/preferences"), {
 			params: Promise.resolve({ path: ["v1", "preferences"] }),
 		});
 		expect(response.status).toBe(200);
@@ -19,12 +19,12 @@ describe("createRouteHandler", () => {
 
 	it("answers 404 for an unknown path and 405 for a known path with another method", async () => {
 		const handler = createRouteHandler(cms);
-		const unknown = await handler.GET(new Request("http://localhost/api/cms/v1/nope"), {
+		const unknown = await handler.GET(new Request("http://localhost/api/monti/v1/nope"), {
 			params: Promise.resolve({ path: ["v1", "nope"] }),
 		});
 		expect(unknown.status).toBe(404);
 		const wrongMethod = await handler.DELETE(
-			new Request("http://localhost/api/cms/v1/preferences", {
+			new Request("http://localhost/api/monti/v1/preferences", {
 				method: "DELETE",
 				headers: { origin: "http://localhost" },
 			}),

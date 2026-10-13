@@ -94,7 +94,7 @@ export async function loginThrough(cmsAuth: CmsAuth, providerId: string, origin 
 	const jar = new CookieJar();
 	const signIn = await cmsAuth.signIn(providerId, {
 		redirectTo: "/studio",
-		request: new Request(`${origin}/api/cms/v1/session/sign-in/${providerId}`, { method: "POST" }),
+		request: new Request(`${origin}/api/monti/v1/session/sign-in/${providerId}`, { method: "POST" }),
 	});
 	const redirect = signIn as Response;
 	jar.store(redirect);

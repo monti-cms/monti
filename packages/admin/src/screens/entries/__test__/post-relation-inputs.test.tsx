@@ -30,7 +30,7 @@ beforeEach(() => {
 		"fetch",
 		vi.fn(async (input: RequestInfo | URL) => {
 			const url = new URL(String(input), "http://localhost");
-			if (url.pathname === "/api/cms/v1/entries/search") {
+			if (url.pathname === "/api/monti/v1/entries/search") {
 				searches.push(url);
 				const ids = url.searchParams.getAll("id");
 				const query = (url.searchParams.get("query") ?? "").toLowerCase();

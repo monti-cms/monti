@@ -8,7 +8,7 @@ import { POST as signIn } from "../sign-in/[provider]/route";
 const FORM = "application/x-www-form-urlencoded";
 
 const form = (path: string, fields: Record<string, string>, headers: Record<string, string> = {}) =>
-	new Request(`http://localhost/api/cms/${path}`, {
+	new Request(`http://localhost/api/monti/${path}`, {
 		method: "POST",
 		headers: { origin: "http://localhost", "content-type": FORM, ...headers },
 		body: new URLSearchParams(fields),

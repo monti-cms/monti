@@ -21,11 +21,11 @@ function stubBulkApi(results: unknown[] = [{ id: "entry-1", ok: true, version: 4
 		"fetch",
 		vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
-			if (url.startsWith("/api/cms/v1/entries?")) {
+			if (url.startsWith("/api/monti/v1/entries?")) {
 				const items = url.includes("collection=tag") ? [{ id: "tag-1", title: "Tag One", slug: "tag-one" }] : [];
 				return { ok: true, status: 200, json: async () => ({ items, total: items.length }) };
 			}
-			if (url === "/api/cms/v1/bulk") {
+			if (url === "/api/monti/v1/bulk") {
 				payloads.push(JSON.parse(String(init?.body)));
 				return { ok: true, status: 200, json: async () => ({ results }) };
 			}

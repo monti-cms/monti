@@ -18,7 +18,7 @@ const call = (
 	headers: Record<string, string> = { origin: "http://localhost" },
 ) =>
 	h.cms.handle(
-		new Request(`http://localhost/api/cms/v1/git-sync/${path}`, {
+		new Request(`http://localhost/api/monti/v1/git-sync/${path}`, {
 			method,
 			headers: { "content-type": "application/json", ...headers },
 			...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -152,7 +152,7 @@ describe("status, pull now and the queue", () => {
 			await publish("waits-in-queue");
 			expect(queued.repo.files("main").has("content/memo/waits-in-queue.en.mdx")).toBe(false);
 			const response = await queued.cms.handle(
-				new Request("http://localhost/api/cms/v1/git-sync/flush", {
+				new Request("http://localhost/api/monti/v1/git-sync/flush", {
 					method: "POST",
 					headers: { origin: "http://localhost", "content-type": "application/json" },
 					body: "{}",

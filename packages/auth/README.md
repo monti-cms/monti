@@ -39,7 +39,7 @@ export const cms = defineConfig({
 
 An explicit value overrides the variable (`github({ clientId, clientSecret, admins: ["12345678"] })`). Nothing is guessed from other names, and a missing required value is an error that names the variable. The GitHub app is checked when the login connection is created; under the dev bypass (below) only when a sign-in is attempted, so `next dev` runs with none of them set.
 
-The callback URL of the GitHub OAuth app is `<site>/api/cms/auth/callback/github`, as it was with NextAuth.
+The callback URL of the GitHub OAuth app is `<site>/api/monti/auth/callback/github`, as it was with NextAuth.
 
 ### Email and password: `password()`
 
@@ -59,7 +59,7 @@ It needs no other service and no environment variable besides the ones every sit
 
 - **Accounts** live in the Monti database, in the plugin storage of the instance (plugin `auth`, collections `password-accounts` and `password-setup`), so `monti migrate` is all the setup there is. An account is an email (trimmed, lower case) and a password hash: scrypt from `node:crypto`, a random salt per account, the cost stored with the hash, compared in constant time; an unknown email takes as long to refuse as a wrong password. A password has at least 10 characters. No hashing dependency is added.
 - **Every account is an admin** (`LoginProvider.everyAccountIsAdmin`): the account id is `password:<email>`, and a session is only made by a successful sign-in. No admin list is needed, and the "no admin is set" warning is not given for this provider.
-- **The first admin** is created on the admin's login screen while no account exists: email, password, confirmation, then it signs you in. It is guarded on the server, not only in the UI: `POST /api/cms/v1/session/first-admin` calls `cms.auth().accounts.createFirst`, which refuses with `closed` as soon as any account exists, and one marker row written with `expectedVersion: 0` makes two simultaneous attempts safe (only one wins). There is no setup code. Right after deploying, open the admin and create it; or create it beforehand by running the app in production mode on your machine against the production database (under `next dev` you are the admin without signing in, so the screen does not show).
+- **The first admin** is created on the admin's login screen while no account exists: email, password, confirmation, then it signs you in. It is guarded on the server, not only in the UI: `POST /api/monti/v1/session/first-admin` calls `cms.auth().accounts.createFirst`, which refuses with `closed` as soon as any account exists, and one marker row written with `expectedVersion: 0` makes two simultaneous attempts safe (only one wins). There is no setup code. Right after deploying, open the admin and create it; or create it beforehand by running the app in production mode on your machine against the production database (under `next dev` you are the admin without signing in, so the screen does not show).
 - **Sessions** are the same signed JWT cookie as for any provider (8 hours, rolling, key derived from `MONTI_SECRET`); Auth.js's `Credentials` provider needs the JWT strategy, which this package already uses.
 - **Failed attempts are slowed down simply:** 5 failures for one email within a minute are followed by refusals for the rest of that minute (counted in the memory of the server process, so it is per instance, not shared between servers). It is a brake, not a full defence; use a long password.
 - **A forgotten password** is replaced with `monti admin:reset-password [--email <email>]` (core). There is no mail. Sessions already signed in stay valid until they expire.
@@ -74,7 +74,7 @@ It needs no other service and no environment variable besides the ones every sit
 | `providers` | The ways to log in, in the order of the login buttons. At least one; ids must differ |
 | `admins` | Admins as qualified account ids (`"github:12345678"`). The ones on a provider (`github({ admins })`) count too |
 | `devBypass` | Local development only: treat requests from this machine as the first admin. On by default under `next dev`; `false` turns it off (see "Dev bypass") |
-| `basePath` | Login API path, default `/api/cms/auth` (served by the admin API route; see "Login path" in the core README) |
+| `basePath` | Login API path, default `/api/monti/auth` (served by the admin API route; see "Login path" in the core README) |
 | `host` | Not needed in Next.js, where `@monti-cms/nextjs` attaches it. For other frameworks pass `{ requestHeaders, rethrow }`; it wins over the attached one. Without `requestHeaders`, `session()` needs the request passed in and the development bypass never applies |
 
 There is no `secret` option: the session key comes from `MONTI_SECRET` (see "Secret"). Host trust (`trustHost`, `AUTH_TRUST_HOST`, `AUTH_URL`) is described under "Host trust". The session is a signed JWT cookie (8 hours, rolling), so nothing is stored for it.
@@ -155,7 +155,7 @@ export const gitlab = (options: { clientId?: string; clientSecret?: string; admi
 });
 ```
 
-Then `providers: [github({ ... }), gitlab({ ... })]`. The login page shows one button per provider, the callback is `/api/cms/auth/callback/gitlab`, and admins are `gitlab:<id>`. A test in this package registers such a provider against a fake server.
+Then `providers: [github({ ... }), gitlab({ ... })]`. The login page shows one button per provider, the callback is `/api/monti/auth/callback/gitlab`, and admins are `gitlab:<id>`. A test in this package registers such a provider against a fake server.
 
 ### Other credentials providers
 
@@ -163,7 +163,7 @@ Then `providers: [github({ ... }), gitlab({ ... })]`. The login page shows one b
 
 ## Sign-in flow
 
-The login screen posts a plain form to the core (`POST /api/cms/v1/session/sign-in/<id>`). The core checks the same origin and calls `signIn`, which answers with a redirect to the provider that carries the state cookies (a `Response`, returned as it is). The provider sends the browser back to `/api/cms/auth/callback/<id>`, Auth.js checks the state and sets the session cookie, and the browser lands in the admin. Sign-out is the same shape. Requests that come from the network (`handlers`) keep Auth.js's CSRF check; only the server's own sign-in and sign-out calls skip it, after the core's origin check.
+The login screen posts a plain form to the core (`POST /api/monti/v1/session/sign-in/<id>`). The core checks the same origin and calls `signIn`, which answers with a redirect to the provider that carries the state cookies (a `Response`, returned as it is). The provider sends the browser back to `/api/monti/auth/callback/<id>`, Auth.js checks the state and sets the session cookie, and the browser lands in the admin. Sign-out is the same shape. Requests that come from the network (`handlers`) keep Auth.js's CSRF check; only the server's own sign-in and sign-out calls skip it, after the core's origin check.
 
 ## Upgrading from `githubAuth` (NextAuth)
 

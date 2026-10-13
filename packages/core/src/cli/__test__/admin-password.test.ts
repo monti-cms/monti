@@ -113,7 +113,7 @@ describe("the email and password login on the command line", () => {
 		const signIn = async (secret: string) => {
 			const response = (await cms.auth().signIn("password", {
 				redirectTo: "/studio",
-				request: new Request("https://blog.example.com/api/cms/v1/session/sign-in/password", {
+				request: new Request("https://blog.example.com/api/monti/v1/session/sign-in/password", {
 					method: "POST",
 					headers: { host: "blog.example.com" },
 				}),

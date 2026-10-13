@@ -84,7 +84,7 @@ describe("monti doctor on a healthy project", () => {
 			"next/admin-path": "ok",
 		});
 		expect(byId(report, "auth/callback-url").message).toContain(
-			"https://blog.example.com/api/cms/auth/callback/github",
+			"https://blog.example.com/api/monti/auth/callback/github",
 		);
 		expect(byId(report, "next/admin-path").message).toContain("/studio");
 		expect(byId(report, "auth/admins").message).toContain("github:12345678");
@@ -191,7 +191,7 @@ describe("monti doctor on a project with missing settings", () => {
 			"AUTH_GITHUB_ID",
 			"AUTH_GITHUB_SECRET",
 			"MONTI_ADMIN_GITHUB_ID",
-			"/api/cms/auth/callback/github",
+			"/api/monti/auth/callback/github",
 		]) {
 			expect(dev.fix, text).toContain(text);
 		}
@@ -330,7 +330,7 @@ describe("monti doctor on a project with missing settings", () => {
 		setEnv();
 		const dir = project({
 			"app/studio/layout.tsx": null,
-			"app/api/cms/[...path]/route.ts": null,
+			"app/api/monti/[...path]/route.ts": null,
 			"next.config.ts": "export default {};\n",
 		});
 		const { report } = await doctor(dir);
@@ -338,9 +338,28 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(files.status).toBe("fail");
 		expect(files.message).toContain("admin layout is missing");
 		expect(files.message).toContain("API route is missing");
-		expect(files.fix).toContain("app/api/cms/[...path]/route.ts");
+		expect(files.fix).toContain("app/api/monti/[...path]/route.ts");
 		expect(byId(report, "next/with-cms").status).toBe("fail");
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
+	});
+
+	it("notices a Monti route file left at the old app/api/cms folder", async () => {
+		setEnv();
+		const dir = project({
+			"app/api/monti/[...path]/route.ts": null,
+			"app/api/cms/[...path]/route.ts": 'import { createRouteHandler } from "@monti-cms/nextjs";\n',
+		});
+		const { report } = await doctor(dir);
+		const old = byId(report, "upgrade/api-route");
+		expect(old.status).toBe("warn");
+		expect(old.fix).toContain('git mv "app/api/cms" "app/api/monti"');
+		expect(byId(report, "upgrade/api-route").where).toContain("app/api/cms/[...path]/route.ts");
+	});
+
+	it("is quiet when there is no route file at the old api/cms folder", async () => {
+		setEnv();
+		const { report } = await doctor(project());
+		expect(byId(report, "upgrade/api-route").status).toBe("ok");
 	});
 
 	it("warns about a root layout without suppressHydrationWarning, and is quiet once it has it", async () => {

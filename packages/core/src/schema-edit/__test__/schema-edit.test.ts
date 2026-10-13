@@ -35,7 +35,7 @@ const schemaOf = (fields: Record<string, unknown>, extra: Record<string, unknown
 
 /** A login connection that knows one user. `admin: false` makes it a signed-in user who is not an admin. */
 const auth = (admin: boolean): CmsAuth => ({
-	basePath: "/api/cms/auth",
+	basePath: "/api/monti/auth",
 	handlers: { GET: async () => new Response(), POST: async () => new Response() },
 	session: async () => ({ user: { id: "u", accountId: "u" } }),
 	providers: [],
@@ -104,7 +104,7 @@ describe("schema settings API", () => {
 
 	const call = (cms: ReturnType<typeof newCms>, method: string, route: string, body?: unknown) =>
 		cms.handle(
-			new Request(`http://localhost/api/cms/v1/${route}`, {
+			new Request(`http://localhost/api/monti/v1/${route}`, {
 				method,
 				headers: { "content-type": "application/json", "sec-fetch-site": "same-origin" },
 				body: body === undefined ? undefined : JSON.stringify(body),

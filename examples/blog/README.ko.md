@@ -36,10 +36,10 @@ pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈�
 | `app/(site)/[locale]/memos/` | 메모 목록과 메모 페이지. 같은 방식으로 `cms.read`와 `ArticleBody`로 썼습니다 |
 | `components/article-body.tsx` | 글 본문. 문서를 `CmsContent`로 그리고 목차를 선택적으로 붙입니다. 글 페이지와 메모 페이지가 쓰는 평범한 앱 코드이며 자유롭게 고쳐도 됩니다. 가져올 때 쓰는 `@/*` 별칭이 `tsconfig.json`에 있습니다 |
 | `showcase/` | 샘플 콘텐츠(`*.mdx`)와, `pnpm preview:example`이 그것을 미리보기 DB에 넣으려고 돌리는 `seed.ts`: 모든 요소와 블록을 지시문 표기로 담은 "CMS elements" 글, 되돌아 링크하는 두 번째 글, 메모, 카테고리, 태그, 시리즈, 발행하지 않은 초안 하나 |
-| `app/api/cms/[...path]/route.ts` | 관리자 API와 로그인(`/api/cms/auth/*`). `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 맡는다. 로그인 라우트 파일이 따로 없다. `app/studio/`의 두 파일과 합쳐 관리자에 필요한 Next 파일은 세 개다 |
+| `app/api/monti/[...path]/route.ts` | 관리자 API와 로그인(`/api/monti/auth/*`). `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 맡는다. 로그인 라우트 파일이 따로 없다. `app/studio/`의 두 파일과 합쳐 관리자에 필요한 Next 파일은 세 개다 |
 | `app/globals.css` | 공개 사이트 자신의 스타일: typography를 쓴 Tailwind와 패키지의 공개 페이지 스타일(`@monti-cms/core/render.css`, `@monti-cms/blocks/render.css`). 관리자 줄이 없다. 관리자 스타일은 미리 만들어져 관리자 안으로 한정되므로 사이트에 Tailwind 설정이 필요 없다 |
 
-GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:3000/api/cms/auth/callback/github`로 둔다.
+GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:3000/api/monti/auth/callback/github`로 둔다.
 
 ## 내 컴포넌트 사용하기
 
