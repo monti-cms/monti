@@ -11,7 +11,7 @@ import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { clearPatchFor } from "./column-header";
 import { type ColumnFilter, columnLabel, columnsFor, filterFor, isColumnFiltered } from "./list-columns";
-import { clearFilters, type ListState } from "./list-state";
+import { clearFiltersPatch, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { statusLabels } from "./shared/entry-status";
 import type { TaxonomyOption, TaxonomyOptions } from "./shared/use-taxonomy";
@@ -159,14 +159,7 @@ export function FilterChipBar({
 					size="xs"
 					className="text-cms-muted-foreground"
 					onClick={() => {
-						const {
-							collection: _c,
-							folder: _f,
-							includeDescendants: _d,
-							pageSize: _p,
-							...cleared
-						} = clearFilters(state);
-						onChange(cleared);
+						onChange(clearFiltersPatch(state));
 					}}
 				>
 					{t("filter.clearAll")}

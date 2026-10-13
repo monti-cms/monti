@@ -18,6 +18,7 @@ import {
 	ComboboxValue,
 	useComboboxAnchor,
 } from "../../ui/combobox";
+import { EmptyState } from "../shared/empty-state";
 import { entriesMessages } from "./messages";
 
 export interface RelationOption {
@@ -147,7 +148,9 @@ export function RelationCombobox({
 
 	const list = (
 		<ComboboxContent anchor={multiple ? anchor : undefined}>
-			<ComboboxEmpty>{loading ? t("loading") : t("relation.empty")}</ComboboxEmpty>
+			<ComboboxEmpty>
+				<EmptyState compact title={loading ? t("loading") : t("relation.empty")} />
+			</ComboboxEmpty>
 			<ComboboxList>
 				{(item: Item) => (
 					<ComboboxItem key={item.value} value={item} className={cn(item.create && "text-cms-primary")}>

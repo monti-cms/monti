@@ -113,6 +113,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 							list.savePreferences({ pageSize });
 						}}
 						onRetry={data.retry}
+						addAction={isTrash ? undefined : { label: t("list.add", { label: list.label }), run: list.createNew }}
 					/>
 				</div>
 				{record && (

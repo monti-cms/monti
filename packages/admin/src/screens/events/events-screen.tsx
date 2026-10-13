@@ -1,22 +1,32 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, RotateCw } from "lucide-react";
+import { cmsApiUrl, type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BellRing, RotateCw, SearchX } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AdminLink as Link } from "../../router";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Skeleton } from "../../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { cmsFetch, errorText } from "../admin-api";
 import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
+import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
-import { EVENTS_KEY, EVENTS_LIST_KEY, type EventsList } from "./events-api";
+import { ListPagination } from "../shared/list-pager";
+import {
+	EVENTS_FILTERS,
+	EVENTS_KEY,
+	EVENTS_LIST_KEY,
+	type EventsFilter,
+	type EventsList,
+	eventsQuery,
+} from "./events-api";
 import { eventsMessages } from "./messages";
 
 const ERROR_MAX_LENGTH = 80;
@@ -33,15 +43,24 @@ export function EventsScreen() {
 	const queryClient = useQueryClient();
 	const { confirm, dialog } = useConfirm();
 
+	const [filter, setFilter] = useState<EventsFilter>("all");
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState<PageSize>(25);
 	const listQuery = useQuery({
-		queryKey: EVENTS_LIST_KEY,
+		queryKey: [...EVENTS_LIST_KEY, filter, page, pageSize],
 		queryFn: ({ signal }) =>
-			cmsFetch<EventsList>(site, cmsApiUrl("/v1/events?state=failed&state=dead&limit=50&offset=0"), {
+			cmsFetch<EventsList>(site, cmsApiUrl(`/v1/events?${eventsQuery(filter, page, pageSize)}`), {
 				signal,
 				fallback: t("list.loadFailed"),
 			}),
+		placeholderData: keepPreviousData,
 	});
 	const items = listQuery.data?.items ?? [];
+	const changeFilter = (next: EventsFilter) => {
+		setFilter(next);
+		setPage(1);
+	};
+	const filterOptions = EVENTS_FILTERS.map((value) => ({ value, label: t(`filter.${value}`) }));
 	const error = listQuery.error && !listQuery.data ? errorText(site, listQuery.error, t("list.loadFailed")) : null;
 	const refresh = () => queryClient.invalidateQueries({ queryKey: EVENTS_KEY });
 
@@ -116,7 +135,25 @@ export function EventsScreen() {
 					</Button>
 				</Alert>
 			)}
-			<div className="min-h-0 flex-1 overflow-auto">
+			<div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6">
+				<Select
+					value={filter}
+					items={filterOptions}
+					onValueChange={(value) => value && changeFilter(value as EventsFilter)}
+				>
+					<SelectTrigger size="sm" aria-label={t("filter.label")}>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{filterOptions.map((option) => (
+							<SelectItem key={option.value} value={option.value}>
+								{option.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
 					<div className="space-y-2 p-5" aria-hidden>
 						<Skeleton className="h-8 w-full" />
@@ -124,16 +161,17 @@ export function EventsScreen() {
 						<Skeleton className="h-8 w-full" />
 					</div>
 				) : items.length === 0 ? (
-					!error && (
-						<Empty className="h-full">
-							<EmptyHeader>
-								<EmptyMedia variant="icon">
-									<BellRing aria-hidden />
-								</EmptyMedia>
-								<EmptyTitle>{t("list.empty")}</EmptyTitle>
-							</EmptyHeader>
-						</Empty>
-					)
+					!error &&
+					(filter === "all" ? (
+						<EmptyState icon={BellRing} title={t("list.emptyYet")} description={t("list.emptyYetHint")} />
+					) : (
+						<EmptyState
+							icon={SearchX}
+							title={t("list.emptyNoMatch")}
+							description={t("list.emptyNoMatchHint")}
+							action={{ label: t("list.clearFilters"), onClick: () => changeFilter("all") }}
+						/>
+					))
 				) : (
 					<Table aria-label={t("list.label")}>
 						<TableHeader>
@@ -171,7 +209,11 @@ export function EventsScreen() {
 											)}
 										</TableCell>
 										<TableCell>
-											<Badge variant={item.state === "dead" ? "destructive" : "secondary"}>
+											<Badge
+												variant={
+													item.state === "dead" ? "destructive" : item.state === "delivered" ? "outline" : "secondary"
+												}
+											>
 												{t(`state.${item.state}`)}
 											</Badge>
 										</TableCell>
@@ -183,25 +225,29 @@ export function EventsScreen() {
 											{item.state === "failed" && item.nextAttemptAt ? formatDateTime(site, item.nextAttemptAt) : ""}
 										</TableCell>
 										<TableCell className="whitespace-nowrap text-right">
-											<Button
-												type="button"
-												variant="outline"
-												size="xs"
-												aria-label={t("action.retryLabel", { subscriber: item.subscriber })}
-												disabled={retry.isPending}
-												onClick={() => retry.mutate(key)}
-											>
-												{t("action.retry")}
-											</Button>{" "}
-											<Button
-												type="button"
-												variant="ghost"
-												size="xs"
-												aria-label={t("action.dismissLabel", { subscriber: item.subscriber })}
-												onClick={() => void requestDismiss(key)}
-											>
-												{t("action.dismiss")}
-											</Button>
+											{(item.state === "failed" || item.state === "dead") && (
+												<>
+													<Button
+														type="button"
+														variant="outline"
+														size="xs"
+														aria-label={t("action.retryLabel", { subscriber: item.subscriber })}
+														disabled={retry.isPending}
+														onClick={() => retry.mutate(key)}
+													>
+														{t("action.retry")}
+													</Button>{" "}
+													<Button
+														type="button"
+														variant="ghost"
+														size="xs"
+														aria-label={t("action.dismissLabel", { subscriber: item.subscriber })}
+														onClick={() => void requestDismiss(key)}
+													>
+														{t("action.dismiss")}
+													</Button>
+												</>
+											)}
 										</TableCell>
 									</TableRow>
 								);
@@ -210,6 +256,17 @@ export function EventsScreen() {
 					</Table>
 				)}
 			</div>
+			<ListPagination
+				total={listQuery.data?.total ?? 0}
+				shown={items.length}
+				page={page}
+				pageSize={pageSize}
+				onPageChange={setPage}
+				onPageSizeChange={(size) => {
+					setPageSize(size);
+					setPage(1);
+				}}
+			/>
 			{dialog}
 		</AdminShell>
 	);
