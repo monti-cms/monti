@@ -119,7 +119,9 @@ describe("Cms.decisions", () => {
 
 	it("explains host trust from the environment passed in", () => {
 		const cms = fakeCms();
-		expect(find(cms.decisions({ NODE_ENV: "production" }), "Trust host")).toMatchObject({ value: "off" });
+		expect(find(cms.decisions({ NODE_ENV: "production" }), "Trust host")).toMatchObject({
+			value: expect.stringMatching(/^off \(login links use AUTH_URL\)/),
+		});
 		expect(find(cms.decisions({ NODE_ENV: "production", AUTH_TRUST_HOST: "1" }), "Trust host")?.source).toBe(
 			"from env AUTH_TRUST_HOST",
 		);

@@ -1,85 +1,11 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define";
-import { defaultCollectionPath } from "../core/plural";
 import { printSchemaFile } from "../schema-file/print";
-import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys";
-import type { ContentFolder, FrontMatterKey } from "./init-detect";
+import { blockEntry, chosenBlocks } from "./block-choices";
+import { pathFor, starterCollections } from "./field-mapping";
+import { DEFAULT_INIT_LOCALE, type InitAnswers } from "./init-answers";
+import type { ContentFolder } from "./init-detect";
 
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
-
-/** Defaults `monti init` writes into a new config. */
-export const DEFAULT_INIT_LOCALE = "en";
-/** The time zone `monti init` falls back to when it cannot read the computer's (and the one it was before init followed the computer). */
-export const DEFAULT_INIT_TIME_ZONE = "UTC";
-/** The admin path `monti init` asks for and writes by default. */
-export const DEFAULT_INIT_ADMIN_PATH = "/studio";
-export const DEFAULT_SITE_URL = "http://localhost:3000";
-
-/** A body block or inline mark of `@monti-cms/blocks`, as `monti init` offers it. */
-export interface BlockChoice {
-	/** The name used in flags (`--blocks callout,tabs`). */
-	readonly id: string;
-	/** The function listed in `plugins`: exported by `@monti-cms/blocks`, or by `@monti-cms/blocks/<id>` for a block with a `needs` (the heavy ones, so the barrel never loads their library). */
-	readonly fn: string;
-	/** One line for the list and for the comment in the config. */
-	readonly description: string;
-	/** An npm package the block needs besides `@monti-cms/blocks`. */
-	readonly needs?: string;
-	/** Why the block is not in the default set: what it adds to the app. Set only for blocks that are opt-in. */
-	readonly heavy?: string;
-}
-
-/** Every block of `@monti-cms/blocks`, in the order the plugins are listed (the inline marks last: overlapping marks are stored in this order). */
-export const BLOCK_CHOICES: readonly BlockChoice[] = [
-	{ id: "callout", fn: "callout", description: "note, tip and warning boxes" },
-	{ id: "collapsible", fn: "collapsible", description: "a section that opens and closes" },
-	{ id: "tabs", fn: "tabs", description: "content split into tabs" },
-	{ id: "columns", fn: "columns", description: "side-by-side columns" },
-	{ id: "code-explorer", fn: "codeExplorer", description: "code with a file tree and several files" },
-	{
-		id: "mermaid",
-		fn: "mermaid",
-		description: "diagrams written in Mermaid",
-		needs: "mermaid",
-		heavy: "the mermaid package alone is about 26 MB in node_modules and loads a large script in the browser",
-	},
-	{
-		id: "chart",
-		fn: "chart",
-		description: "bar, line and pie charts",
-		needs: "recharts",
-		heavy: "it adds recharts and its dependencies (d3), which is a large script for the pages that show a chart",
-	},
-	{ id: "tooltip", fn: "tooltip", description: "inline text with a hover explanation" },
-	{ id: "code-ref", fn: "codeRef", description: "inline link from a phrase to a line of code" },
-	{ id: "color", fn: "color", description: "inline text color" },
-];
-
-/**
- * The blocks `monti init` turns on when nobody chose: the light ones. The heavy ones (`mermaid`, `chart`) are opt-in (`--blocks all` or a list that names them),
- * because each adds a large package to the app. `columns`, `code-explorer` and `tooltip` are also left out: they are small, but a first blog rarely needs them.
- */
-export const DEFAULT_BLOCK_IDS: readonly string[] = ["callout", "collapsible", "tabs", "code-ref", "color"];
-
-/** What the questions of `monti init` decided. Every field has a flag. */
-export interface InitAnswers {
-	/** Public URL of the site, for the `SITE_URL` example in `.env.example`. */
-	readonly siteUrl: string;
-	/** Locale codes, the default first. */
-	readonly locales: readonly string[];
-	readonly timeZone: string;
-	/** Where `timeZone` came from: `--time-zone`, this computer, or UTC because the computer's time zone could not be read. */
-	readonly timeZoneSource: "flag" | "computer" | "fallback";
-	readonly storage: "none" | "s3";
-	readonly ai: boolean;
-	readonly gitSync: boolean;
-	/** Ids of {@link BLOCK_CHOICES}. */
-	readonly blocks: readonly string[];
-	readonly adminPath: string;
-	/** How people sign in to the admin: the built-in email and password login, or GitHub (an OAuth app). */
-	readonly login: "password" | "github";
-	/** Read and write `:::callout` blocks (`@monti-cms/syntax-directive`), because the posts use them. */
-	readonly directiveSyntax: boolean;
-}
 
 /** The language's name in that language for a locale code (e.g. `ko` gives the Korean name of Korean, written in Hangul). Falls back to the code itself. */
 function languageName(code: string): string {
@@ -88,155 +14,6 @@ function languageName(code: string): string {
 	} catch {
 		return code;
 	}
-}
-
-const sentenceCase = (key: string): string => {
-	const words = key
-		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-		.replace(/[-_]+/g, " ")
-		.trim()
-		.toLowerCase();
-	return words.charAt(0).toUpperCase() + words.slice(1);
-};
-
-/** The field names the starter collection always has. */
-const STARTER_FIELDS = new Set(["title", "slug"]);
-const IMAGE_KEYS = ["image", "cover", "coverimage", "thumbnail", "heroimage", "ogimage", "banner", "featuredimage"];
-
-/** A key from front matter as a field name: kept as it is when it is one word of letters and digits, else camel-cased. `undefined` if nothing usable is left. */
-export function fieldNameOf(key: string): string | undefined {
-	if (/^[A-Za-z][A-Za-z0-9]*$/.test(key)) return key;
-	const words = key.split(/[^A-Za-z0-9]+/).filter(Boolean);
-	if (words.length === 0 || !/^[A-Za-z]/.test(words[0] ?? "")) return undefined;
-	return words.map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))).join("");
-}
-
-type SchemaField = Record<string, unknown>;
-
-/** What the starter schema holds, and what was decided on the way (for the init report). */
-export interface StarterSchema {
-	/** `post` first, then the collections its relations point to. */
-	readonly collections: Record<string, { readonly fields: Record<string, SchemaField> } & Record<string, unknown>>;
-	/** Plain-words lines about front matter keys that got a relation, or that need no field. */
-	readonly notes: string[];
-}
-
-const itemCollection = (label: string, icon: string, multiLocale: boolean) => ({
-	label,
-	// small entries that posts point to (see "item" in the collection docs)
-	kind: "item",
-	icon,
-	fields: {
-		title: { kind: "text", label: "Name", required: true, ...(multiLocale ? { localized: true } : {}), max: 200 },
-		slug: { kind: "slug", label: "Address", required: true, from: "title" },
-	} as Record<string, SchemaField>,
-});
-
-/**
- * The collections of the starter schema: `post` with the fields every blog has, then (when a content folder was found) one field per front matter key, read by the
- * table in `front-matter-keys.ts`:
- *
- * - `date` and the other publish date keys get no field: the entry has its own publish date.
- * - `description`, `summary`, `excerpt` and the like become the field with the `summary` role.
- * - `tags` (also `keywords`, `topics`) become the collection `tag` and a relation `tagIds`. `category` becomes `category` and `categoryId`, and `categories` (a list)
- *   `categoryIds`.
- * - `draft`, `published` and the language keys are the CMS's own and get no field.
- */
-export function starterCollections(keys: readonly FrontMatterKey[], multiLocale: boolean): StarterSchema {
-	const localized = multiLocale ? { localized: true } : {};
-	const fields: Record<string, SchemaField> = {
-		// the title field is named `title` (the label is up to you)
-		title: { kind: "text", label: "Title", required: true, ...localized, max: 200 },
-		slug: {
-			kind: "slug",
-			label: "Slug",
-			required: true,
-			...(multiLocale ? { localized: "inherit" } : {}),
-			from: "title",
-		},
-	};
-	const notes: string[] = [];
-	const relationKeys = new Map<string, string>();
-	let summaryName: string | undefined;
-	const extra: Record<string, SchemaField> = {};
-	for (const key of keys.slice(0, 16)) {
-		const name = fieldNameOf(key.name);
-		const lower = key.name.toLowerCase();
-		if (!name || STARTER_FIELDS.has(name) || STARTER_FIELDS.has(lower) || CMS_STATE_KEYS.has(lower) || name in extra)
-			continue;
-		if (DATE_KEYS.has(lower)) {
-			notes.push(
-				`"${key.name}" is the publish date of an entry, so it has no field of its own (import fills the date).`,
-			);
-			continue;
-		}
-		if (LOCALE_KEYS.has(lower)) continue;
-		const target = RELATION_KEYS[lower];
-		if (target === "tag" || target === "category") {
-			if (relationKeys.has(target)) {
-				notes.push(
-					`"${key.name}" also means ${target}, which "${relationKeys.get(target)}" already fills, so import skips it.`,
-				);
-				continue;
-			}
-			const many = target === "tag" || key.type === "list";
-			relationKeys.set(target, key.name);
-			extra[`${target}${many ? "Ids" : "Id"}`] = {
-				kind: "relation",
-				label: target === "tag" ? "Tags" : many ? "Categories" : "Category",
-				to: target,
-				...(many ? { many: true } : {}),
-				createInline: true,
-			};
-			continue;
-		}
-		if (summaryName === undefined && SUMMARY_KEYS.has(lower)) {
-			summaryName = name;
-			extra[name] = {
-				kind: "text",
-				label: sentenceCase(key.name),
-				role: "summary",
-				multiline: true,
-				fillFromBody: true,
-				...localized,
-			};
-		} else if (IMAGE_KEYS.includes(lower) && key.type === "string") {
-			extra[name] = { kind: "media", label: sentenceCase(key.name), accept: "image" };
-		} else {
-			const note =
-				key.type === "list"
-					? "A list in your front matter; kept as text (one value per line) until you model it"
-					: key.type === "date"
-						? "A date in your front matter; kept as text (YYYY-MM-DD)"
-						: undefined;
-			extra[name] = { kind: "text", label: sentenceCase(key.name), ...(note ? { description: note } : {}) };
-		}
-	}
-	if (summaryName === undefined) {
-		fields.summary = {
-			kind: "text",
-			label: "Summary",
-			role: "summary",
-			multiline: true,
-			fillFromBody: true,
-			...localized,
-		};
-	}
-	const collections: StarterSchema["collections"] = { post: { fields: { ...fields, ...extra } } };
-	if (relationKeys.has("tag")) collections.tag = itemCollection("Tag", "tag", multiLocale);
-	if (relationKeys.has("category")) collections.category = itemCollection("Category", "shapes", multiLocale);
-	for (const [target, key] of relationKeys) {
-		notes.push(`"${key}" becomes the ${target} collection and a relation field on post.`);
-	}
-	return { collections, notes };
-}
-
-/** The public address shape for a content folder: its last folder name (`content/blog` -> `/blog/:slug`), else `/posts/:slug`. */
-export function pathFor(folder: ContentFolder | undefined): string {
-	const last = folder?.dir.split("/").at(-1) ?? "";
-	return /^[A-Za-z][\w-]*$/.test(last) && !["content", "data", "src", "_posts"].includes(last)
-		? `/${last}/:slug`
-		: defaultCollectionPath("post");
 }
 
 /**
@@ -274,16 +51,6 @@ export function schemaTemplate(
 	};
 	return printSchemaFile(schema);
 }
-
-/** The module a block's function is imported from. */
-export const blockEntry = (block: BlockChoice): string =>
-	block.needs ? `@monti-cms/blocks/${block.id}` : "@monti-cms/blocks";
-
-const unique = <T>(values: readonly T[]) => [...new Set(values)];
-
-/** The block choices for the ids, in the order of {@link BLOCK_CHOICES}. */
-export const chosenBlocks = (ids: readonly string[]): readonly BlockChoice[] =>
-	BLOCK_CHOICES.filter((block) => ids.includes(block.id));
 
 /**
  * The config file `monti init` creates: the one place the site is set up. It loads the schema file and lists the plugins, the database and the login, one line each
@@ -556,28 +323,4 @@ export function envExampleTemplate(answers: InitAnswers): string {
 		"# DATABASE_SCHEMA=monti",
 	);
 	return `${lines.join("\n")}\n`;
-}
-
-/** The npm packages the answers need, besides what the app already lists. */
-export function packagesFor(answers: InitAnswers): string[] {
-	const blocks = chosenBlocks(answers.blocks);
-	return unique([
-		"@monti-cms/core",
-		"@monti-cms/auth",
-		"@monti-cms/admin",
-		"@monti-cms/nextjs",
-		"@monti-cms/mdx",
-		"next-themes",
-		"@tanstack/react-query",
-		"sonner",
-		"@tiptap/core",
-		"@tiptap/pm",
-		"@tiptap/react",
-		...(blocks.length > 0 ? ["@monti-cms/blocks", "lucide-react"] : []),
-		...blocks.flatMap((block) => (block.needs ? [block.needs] : [])),
-		...(answers.directiveSyntax ? ["@monti-cms/syntax-directive"] : []),
-		...(answers.ai ? ["@monti-cms/ai"] : []),
-		...(answers.gitSync ? ["@monti-cms/git-sync"] : []),
-		...(answers.storage === "s3" ? ["@monti-cms/storage-s3"] : []),
-	]);
 }

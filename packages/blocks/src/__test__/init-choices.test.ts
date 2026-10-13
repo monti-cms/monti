@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BLOCK_CHOICES } from "../../../core/src/cli/templates";
+import { BLOCK_CHOICES } from "../../../core/src/cli/block-choices";
 import { callout } from "../callout";
 import { chart } from "../chart";
 import { codeExplorer } from "../code-explorer";

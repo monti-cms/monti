@@ -1,3 +1,4 @@
+import { describeNodeEnv } from "../../core/env";
 import { problemText } from "../../core/problem";
 import type { AuthContext, CmsAuth } from "../../server/define";
 import { isLoopbackRequest, productionLikeEnvironment } from "./dev-bypass";
@@ -60,7 +61,7 @@ export function assertDevBypassSafe(
 ): void {
 	if (enabled !== true) return;
 	if (env.NODE_ENV !== "development") {
-		console.warn(`[cms-auth] devBypass is ignored because NODE_ENV is "${env.NODE_ENV ?? ""}", not "development".`);
+		console.warn(`[cms-auth] devBypass is ignored because ${describeNodeEnv(env)}, not "development".`);
 		return;
 	}
 	const reason = productionLikeEnvironment(env);

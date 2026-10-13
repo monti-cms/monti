@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { CONFIG_CANDIDATES, parseJsonc } from "./config-paths";
+import { parseJsonc } from "./jsonc";
+import { CONFIG_CANDIDATES } from "./locate";
 
 /**
  * The import-boundary check: `monti.config.ts` holds the database and login settings and makes the server-side CMS instance, so it must never reach a client

@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
+import { WHERE_TO_SET_ENV } from "../core/env";
 import { problemText } from "../core/problem";
 import { CmsError } from "../core/store";
 
@@ -41,7 +42,7 @@ const unavailable = () =>
 	new CmsError(
 		problemText({
 			what: "MONTI_SECRET is not set, so values (AI keys, tokens) cannot be encrypted",
-			where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+			where: `${WHERE_TO_SET_ENV}, or \`secret\` in defineConfig`,
 			fix: "set it to a long random value (`openssl rand -base64 32`) and restart the server; `monti doctor` checks it",
 		}),
 		"secret_not_configured",

@@ -1,3 +1,5 @@
+import type { Problem } from "../../core/problem";
+
 /**
  * What a `monti doctor` check reports. A check says what it found, where (a file, an environment variable or an option), and for a warn or a fail how to fix
  * it, in plain words. It never changes anything, and it never prints a secret.
@@ -9,19 +11,25 @@
  */
 export type CheckStatus = "ok" | "warn" | "fail" | "skip";
 
-/** What a check found. */
-export interface CheckOutcome {
+/**
+ * What a check found. Beside the status, the finding is a {@link Problem} told the way core's own setup errors tell it: `message` is its `what`, and `where` and `fix`
+ * are the same parts with the same meaning. A check that is `ok` or skipped has nothing to fix, so `fix` is optional here.
+ */
+export interface CheckOutcome extends Partial<Pick<Problem, "where" | "fix">> {
 	readonly status: CheckStatus;
-	/** What was found, in one plain sentence. */
+	/** What was found, in one plain sentence (a `Problem`'s `what`). */
 	readonly message: string;
-	/** Where it is: a file, an environment variable, or an option of the config. */
-	readonly where?: string;
-	/** What to do about it (for a warn or a fail): the next step, with the exact command or value when there is one. */
-	readonly fix?: string;
 }
 
-type Details = Pick<CheckOutcome, "where" | "fix">;
+type Details = Partial<Pick<Problem, "where" | "fix">>;
 
+/** A warn or a fail that tells a {@link Problem} an error already carries (a `SetupError`'s `problem`). */
+export const fromProblem = (status: "warn" | "fail", problem: Problem): CheckOutcome => ({
+	status,
+	message: problem.what,
+	...(problem.where ? { where: problem.where } : {}),
+	fix: problem.fix,
+});
 /** Everything is as it should be. */
 export const ok = (message: string, details: Pick<CheckOutcome, "where"> = {}): CheckOutcome => ({
 	status: "ok",

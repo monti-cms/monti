@@ -31,6 +31,10 @@ describe("explainTrustHost", () => {
 		const result = explainTrustHost(undefined, { NODE_ENV: "development" });
 		expect(result.trusted).toBe(true);
 		expect(result.source).toContain('NODE_ENV is "development"');
+		// An unset NODE_ENV is said in words, not as an empty string.
+		const unset = explainTrustHost(undefined, {});
+		expect(unset.source).toContain("NODE_ENV is not set");
+		expect(unset.source).not.toContain('""');
 	});
 
 	it("explains the production default", () => {

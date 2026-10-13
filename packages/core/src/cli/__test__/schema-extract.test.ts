@@ -271,9 +271,9 @@ describe("monti schema:extract", () => {
 	it("says what is wrong with a missing or wrong config file", async () => {
 		const { dir } = site();
 		const empty = tempDir();
-		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find monti\.config\.ts; pass --config/);
+		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/Cannot find monti\.config\.ts.*--config/);
 		await expect(extractSchema({ cwd: dir, load, config: "nope.ts", overwrite: true })).rejects.toThrow(
-			/config file not found: nope\.ts/,
+			/config file nope\.ts does not exist.*--config/,
 		);
 		await expect(
 			extractSchema({ cwd: dir, load: async () => ({ default: { not: "a config" } }), overwrite: true }),
@@ -284,6 +284,6 @@ describe("monti schema:extract", () => {
 		const { run } = site();
 		const missing = await run("schema:extract", "--config", "missing.config.ts");
 		expect(missing.code).toBe(1);
-		expect(missing.err).toContain("config file not found: missing.config.ts");
+		expect(missing.err).toContain("The config file missing.config.ts does not exist");
 	});
 });

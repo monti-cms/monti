@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { timeZoneNote } from "../init";
 import { detectApp } from "../init-detect";
+import { timeZoneNote } from "../init-plan";
 import { collectAnswers, QUESTIONS } from "../init-prompts";
 import { fixtureApp, scriptedPrompter } from "./init-helpers";
 

@@ -3,11 +3,12 @@ import path from "node:path";
 import { parseEnv } from "node:util";
 import type { Cms } from "../../cms";
 import { importCms } from "../app";
-import { resolveConfigPath } from "../config-paths";
 import { DEFAULT_ENV_FILES, loadEnvFiles } from "../env";
-import { CORE_CHECKS, type DoctorState, GROUP_ORDER } from "./core-checks";
+import { locateConfig } from "../locate";
+import { CORE_CHECKS, GROUP_ORDER } from "./checks";
 import { type DoctorReport, type DoctorResult, summarize } from "./format";
 import type { CheckOutcome } from "./outcome";
+import type { DoctorState } from "./types";
 
 export interface DoctorOptions {
 	/** The app folder. */
@@ -107,7 +108,7 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 	let configPath: string | undefined;
 	let configError: Error | undefined;
 	try {
-		configPath = resolveConfigPath(cwd, options.config, env);
+		configPath = locateConfig(cwd, options.config, env);
 	} catch (error) {
 		configError = error instanceof Error ? error : new Error(String(error));
 	}

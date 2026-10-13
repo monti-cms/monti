@@ -1,5 +1,5 @@
 import { Auth, type AuthConfig, skipCSRFCheck } from "@auth/core";
-import { defineMessages, type MessageBundle, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
+import { defineMessages, describeNodeEnv, type MessageBundle, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
 import {
 	assertDevBypassSafe,
 	isDevAuthBypassEnabled,
@@ -154,7 +154,7 @@ export function auth(options: AuthOptions): AuthAdapter {
 									? "set in monti.config.ts (devBypass: true)"
 									: 'auto-detected (NODE_ENV is "development" and no hosting platform variable is set)'
 								: nodeEnv !== "development"
-									? `auto-detected (NODE_ENV is "${nodeEnv}", not "development")`
+									? `auto-detected (${describeNodeEnv(env)}, not "development")`
 									: `auto-detected (looks deployed: ${deployed})`,
 				},
 			];

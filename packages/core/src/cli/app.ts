@@ -2,17 +2,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Cms } from "../cms";
 import { problemError } from "../core/problem";
-import { resolveConfigPath } from "./config-paths";
+import type { AppFlags, CliContext } from "./command";
 import { loadEnvFiles } from "./env";
+import { locateConfig } from "./locate";
 
-/** What the commands that run against the app's own configuration (`migrate`) take. */
-export interface AppOptions {
-	readonly cwd: string;
-	/** Env files to read. If unset, `.env.local` and `.env` (only those that exist); an empty array reads none. */
-	readonly envFiles?: readonly string[];
-	/** Config file (`monti.config.ts`): the module that exports the CMS instance. */
-	readonly config?: string;
-	readonly log?: (message: string) => void;
+/** What the commands that run against the app's own configuration (`db:migrate`, `events:retry`, ...) take: the context, and the app options. */
+export interface AppOptions extends CliContext, AppFlags {
 	/** Do not print the `env:` and `config:` lines (the commands that open with a line of their own). */
 	readonly quiet?: boolean;
 }
@@ -47,10 +42,10 @@ export async function importCms(cwd: string, configPath: string): Promise<Cms> {
  * Reads env files, then loads the app's config file and returns the CMS instance it exports (see {@link importCms}).
  */
 export async function loadApp(options: AppOptions): Promise<Cms> {
-	const log = options.log ?? console.log;
+	const { log } = options;
 	const loaded = loadEnvFiles(options.cwd, options.envFiles);
 	if (loaded.length > 0 && !options.quiet) log(`env: ${loaded.join(", ")}`);
-	const configPath = resolveConfigPath(options.cwd, options.config);
+	const configPath = locateConfig(options.cwd, options.config);
 	if (!options.quiet) log(`config: ${configPath}`);
 	return importCms(options.cwd, configPath);
 }
