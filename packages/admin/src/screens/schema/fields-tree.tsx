@@ -272,11 +272,7 @@ function Row({
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn(
-				"relative",
-				top?.member && "before:absolute before:inset-y-0 before:left-1.5 before:w-0.5 before:bg-cms-foreground/15",
-				isDragging && "z-10 bg-cms-card opacity-80",
-			)}
+			className={cn("relative", isDragging && "z-10 bg-cms-card opacity-80")}
 			data-testid={`field-${name}`}
 		>
 			<div className="group/row relative">
