@@ -14,7 +14,7 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 			contentEditable={false}
 			data-cms-block-issues=""
 			aria-label={t("issues.label")}
-			className="not-prose m-0 list-none space-y-1 border-amber-500/40 border-t bg-amber-500/10 px-3 py-2 cms-dark:text-amber-400 text-amber-800 text-xs"
+			className="not-prose m-0 list-none space-y-1 border-cms-warning/30 border-t bg-cms-warning-soft px-3 py-2 text-cms-warning-foreground text-xs"
 		>
 			{texts.map((text) => (
 				<li key={text} className="flex items-start gap-1.5">

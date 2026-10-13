@@ -3,6 +3,7 @@
 import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import { useEffect, useMemo, useState } from "react";
+import { StatusIndicator } from "../../ui/status-indicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { SidePanelHeader } from "../shared/side-panel";
 import { tabLabel } from "./layout-groups";
@@ -99,7 +100,7 @@ export function InspectorPanel({
 					{tabs.map((name) => (
 						<TabsTrigger key={name} value={name} className="flex-none px-0 text-xs">
 							{tabLabel(site, name)}
-							{issuesIn(name) > 0 && <span aria-hidden className="size-1.5 rounded-full bg-cms-destructive" />}
+							{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="destructive" />}
 						</TabsTrigger>
 					))}
 				</TabsList>

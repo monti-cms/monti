@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/client";
-
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -18,6 +17,7 @@ import {
 	ComboboxValue,
 	useComboboxAnchor,
 } from "../../ui/combobox";
+import { FieldError } from "../../ui/field";
 import { EmptyState } from "../shared/empty-state";
 import { entriesMessages } from "./messages";
 
@@ -168,11 +168,7 @@ export function RelationCombobox({
 		</ComboboxContent>
 	);
 
-	const errorText = error && (
-		<p role="alert" className="text-cms-destructive text-xs">
-			{error}
-		</p>
-	);
+	const errorText = error && <FieldError>{error}</FieldError>;
 
 	if (multiple) {
 		return (

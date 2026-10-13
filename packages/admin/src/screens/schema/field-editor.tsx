@@ -8,14 +8,15 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
+import { Labeled } from "../shared/labeled";
 import {
 	AddButton,
 	countOrUndefined,
 	FlagSwitch,
 	IssueList,
-	Labeled,
 	NameInput,
 	orUndefined,
 	Pick,
@@ -203,7 +204,7 @@ export function InputOptionsEditor({
 				onChange={(event) => setText(event.target.value)}
 				onBlur={commit}
 			/>
-			{bad && <p className="text-cms-destructive text-xs">{t("field.inputOptionsBad")}</p>}
+			{bad && <FieldError>{t("field.inputOptionsBad")}</FieldError>}
 		</Labeled>
 	);
 }

@@ -31,6 +31,7 @@ import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
+import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
@@ -44,11 +45,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "../../ui/dropdown-menu";
-import { FieldLabel } from "../../ui/field";
+import { FieldError, FieldLabel } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { Skeleton } from "../../ui/skeleton";
+import { StatusIndicator, type StatusTone } from "../../ui/status-indicator";
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -190,16 +192,16 @@ const saveStatusLabels = (tc: TranslatorFor<typeof entriesMessages>): Record<Sav
 	"session-expired": tc("save.session-expired"),
 });
 
-/** Color of the save status dot. When adding a status, its color must be chosen here. */
-const SAVE_STATUS_DOT: Record<SaveStatus, string> = {
-	new: "bg-cms-muted-foreground/50",
-	saved: "bg-emerald-500",
-	dirty: "bg-cms-muted-foreground/50",
-	saving: "animate-pulse bg-amber-500",
-	"local-only": "bg-cms-muted-foreground/50",
-	failed: "bg-cms-destructive",
-	conflict: "bg-cms-destructive",
-	"session-expired": "bg-cms-destructive",
+/** Tone of the save status dot. When adding a status, its tone must be chosen here. */
+const SAVE_STATUS_TONE: Record<SaveStatus, StatusTone> = {
+	new: "neutral",
+	saved: "success",
+	dirty: "neutral",
+	saving: "warning",
+	"local-only": "neutral",
+	failed: "destructive",
+	conflict: "destructive",
+	"session-expired": "destructive",
 };
 
 /** Save status in the header. On narrow screens only the dot shows, and the name is announced to screen readers. */
@@ -213,7 +215,7 @@ function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; 
 			aria-label={label}
 			className="mr-1 flex items-center gap-1.5 text-cms-muted-foreground text-xs"
 		>
-			<span aria-hidden className={cn("size-2 rounded-full", SAVE_STATUS_DOT[status])} />
+			<StatusIndicator size="sm" tone={SAVE_STATUS_TONE[status]} pulse={status === "saving"} />
 			<span className="hidden lg:inline">{label}</span>
 		</output>
 	);
@@ -600,19 +602,8 @@ export function EntryEditorShell({
 	// This is a URL opened in a new tab, so Next does not prepend `basePath`.
 	const previewHref = previewPath === null ? null : withBasePath(previewPath);
 
-	// Cmd/Ctrl+S saves immediately. Re-registered so it uses the latest state on every render.
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.isComposing) return;
-			const key = event.key.toLowerCase();
-			if (key === "s") {
-				event.preventDefault();
-				void handleSaveNow();
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	});
+	// Cmd/Ctrl+S saves immediately.
+	useSaveShortcut(() => void handleSaveNow());
 
 	const canResetPublishedAt = Boolean(entry?.publishedAt);
 
@@ -924,14 +915,12 @@ export function EntryEditorShell({
 					</section>
 				)}
 				{!canUseVisual && sourcePanel && (
-					<output className="border-b bg-amber-500/10 px-4 py-2 text-sm">
+					<output className="border-b bg-cms-warning-soft px-4 py-2 text-cms-warning-foreground text-sm">
 						{t("visualUnavailable")} {sourceProblems[0] ? cmsIssueMessage(site, sourceProblems[0]) : ""}
 					</output>
 				)}
 				{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
-					<p role="alert" className="border-b px-4 py-2 text-cms-destructive text-sm">
-						{editor.saveError.message}
-					</p>
+					<FieldError className="border-b px-4 py-2 text-sm">{editor.saveError.message}</FieldError>
 				)}
 				{publishIssues.length > 0 && (
 					<ul className="max-h-36 overflow-y-auto border-b px-4 py-2 text-sm" aria-label={t("publishProblems")}>
@@ -952,8 +941,8 @@ export function EntryEditorShell({
 				)}
 
 				{sourceChanged && translationSource && (
-					<output className="flex flex-wrap items-center gap-2 border-b bg-amber-500/10 px-4 py-1.5 text-sm">
-						<span className="flex-1 font-medium cms-dark:text-amber-400 text-amber-700">{t("sourceChanged")}</span>
+					<output className="flex flex-wrap items-center gap-2 border-b bg-cms-warning-soft px-4 py-1.5 text-sm">
+						<span className="flex-1 font-medium text-cms-warning-foreground">{t("sourceChanged")}</span>
 						<Button type="button" size="sm" variant="outline" onClick={() => setIsSourceCompareOpen(true)}>
 							{t("compare")}
 						</Button>
@@ -977,7 +966,7 @@ export function EntryEditorShell({
 							title={translationSource.title}
 							locale={translationSource.locale}
 							onClose={() => toggleSourcePane(false)}
-							className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-[0_1px_2px_rgba(0,0,0,0.1)] lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
+							className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-cms-pop lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
 						/>
 					)}
 					<div
@@ -1025,7 +1014,7 @@ export function EntryEditorShell({
 						// On narrow screens it overlays the body; on wide screens it sits beside it at the width the writer dragged it to.
 						<div
 							className={cn(
-								"absolute inset-y-0 right-0 z-20 max-w-full shadow-[0_1px_2px_rgba(0,0,0,0.1)] lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",
+								"absolute inset-y-0 right-0 z-20 max-w-full shadow-cms-pop lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",
 								SIDE_PANEL_WIDTH,
 							)}
 							style={inspectorResize.style}

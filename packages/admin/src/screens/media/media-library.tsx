@@ -33,7 +33,6 @@ import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
-import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
@@ -43,12 +42,13 @@ import { Skeleton } from "../../ui/skeleton";
 import { Switch } from "../../ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group";
 import type { MenuAction } from "../shared/action-menu";
-import { AdminShell } from "../shared/admin-shell";
+import { AdminShell, PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { DateRangePicker } from "../shared/date-range-picker";
 import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
 import { useDebouncedInput } from "../shared/use-debounced";
 import { MediaDetailPanel } from "./media-detail-panel";
@@ -295,11 +295,8 @@ export function MediaLibrary() {
 	const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
 
 	return (
-		<AdminShell
-			title={t("title")}
-			count={mediaQuery.data ? total : undefined}
-			sidebar={{ activeNav: "media" }}
-			headerActions={
+		<AdminShell title={t("title")} count={mediaQuery.data ? total : undefined} sidebar={{ activeNav: "media" }}>
+			<PageActions>
 				<div className="flex flex-wrap items-center gap-2">
 					<Label className="font-normal text-cms-muted-foreground text-xs">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
@@ -326,8 +323,7 @@ export function MediaLibrary() {
 						<RefreshCw className={cn(mediaQuery.isFetching && "animate-spin")} aria-hidden />
 					</IconButton>
 				</div>
-			}
-		>
+			</PageActions>
 			<div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6">
 				<Input
 					type="search"
@@ -400,12 +396,7 @@ export function MediaLibrary() {
 				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 					<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 lg:p-6">
 						{loadError && (
-							<Alert variant="destructive" className="mb-4 flex w-auto items-center justify-between">
-								<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
-								<Button type="button" variant="outline" size="xs" onClick={() => void mediaQuery.refetch()}>
-									{t("common.retry")}
-								</Button>
-							</Alert>
+							<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} className="mb-4" />
 						)}
 						{items.length === 0 ? (
 							loadError ? null : mediaQuery.isPending ? (

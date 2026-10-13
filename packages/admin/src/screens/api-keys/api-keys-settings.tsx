@@ -9,17 +9,20 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Panel } from "../../ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
-import { Labeled } from "../schema/controls";
-import { Section } from "../schema/section";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
+import { Labeled } from "../shared/labeled";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { PageBody } from "../shared/page-body";
+import { Section } from "../shared/section";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
 import { apiKeysMessages } from "./messages";
 
@@ -101,7 +104,7 @@ export function ApiKeysSettings() {
 				</Alert>
 			)}
 			<Section wide card={false} title={t("title")} description={t("description")} note={t("note")}>
-				<div className="overflow-hidden rounded-lg border bg-cms-card">
+				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-3 border-b px-4 py-3">
 						<span className="text-cms-muted-foreground text-sm">
 							{list
@@ -115,7 +118,7 @@ export function ApiKeysSettings() {
 						</span>
 					</div>
 					<KeyRows query={query} menu={rowMenu} onAssign={setSlotEditing} onRetry={() => void query.refetch()} />
-				</div>
+				</Panel>
 			</Section>
 			{editing && (
 				<KeyDialog
@@ -154,14 +157,11 @@ function KeyRows({
 	if (!list) {
 		if (query.error) {
 			return (
-				<Alert variant="destructive" className="m-3 flex w-auto items-center justify-between gap-3">
-					<AlertDescription className="col-start-auto">
-						{errorText(site, query.error, t("load.failed"))}
-					</AlertDescription>
-					<Button type="button" variant="outline" size="xs" onClick={onRetry}>
-						{t("load.retry")}
-					</Button>
-				</Alert>
+				<LoadErrorAlert
+					message={errorText(site, query.error, t("load.failed"))}
+					onRetry={onRetry}
+					className="m-3 w-auto"
+				/>
 			);
 		}
 		return <Skeleton className="m-4 h-12" />;
@@ -277,19 +277,13 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 						<DialogDescription>{t("slot.dialog.description")}</DialogDescription>
 					</DialogHeader>
 					<ApiKeyField value={current} onChange={setChoice} baseName={slot.service} />
-					{error && (
-						<p role="alert" className="text-cms-destructive text-xs">
-							{error}
-						</p>
-					)}
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("dialog.cancel")}
-						</Button>
-						<Button type="submit" disabled={!choiceReady(current) || saving}>
-							{saving ? t("dialog.saving") : t("slot.dialog.confirm")}
-						</Button>
-					</DialogFooter>
+					{error && <FieldError>{error}</FieldError>}
+					<DialogFormFooter
+						onCancel={onClose}
+						busy={saving}
+						disabled={!choiceReady(current)}
+						submitLabel={t("slot.dialog.confirm")}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>
@@ -399,27 +393,19 @@ function KeyDialog({
 							/>
 						</Labeled>
 					)}
-					{error && (
-						<p role="alert" className="text-cms-destructive text-xs">
-							{error}
-						</p>
-					)}
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("dialog.cancel")}
-						</Button>
-						<Button type="submit" disabled={!ready || saving}>
-							{saving
-								? t("dialog.saving")
-								: t(
-										editing.mode === "add"
-											? "dialog.add.confirm"
-											: editing.mode === "rename"
-												? "dialog.rename.confirm"
-												: "dialog.replace.confirm",
-									)}
-						</Button>
-					</DialogFooter>
+					{error && <FieldError>{error}</FieldError>}
+					<DialogFormFooter
+						onCancel={onClose}
+						busy={saving}
+						disabled={!ready}
+						submitLabel={t(
+							editing.mode === "add"
+								? "dialog.add.confirm"
+								: editing.mode === "rename"
+									? "dialog.rename.confirm"
+									: "dialog.replace.confirm",
+						)}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>

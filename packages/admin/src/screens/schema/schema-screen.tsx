@@ -19,8 +19,10 @@ import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
 import type { SchemaTab } from "../settings/tabs";
 import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { sharedMessages } from "../shared/messages";
 import { PageBody } from "../shared/page-body";
+import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
@@ -44,7 +46,6 @@ import {
 	setCollection,
 	settingChanges,
 } from "./schema-model";
-import { Section } from "./section";
 import { SiteEditor } from "./site-editor";
 
 /** Why a schema file may not be edited here, as the key of the sentence that says it. */
@@ -391,14 +392,7 @@ export function SchemaSettings({ tab, actionsSlot }: { tab: SchemaTab; actionsSl
 	return (
 		<div className="flex flex-col gap-3 p-4 lg:p-10">
 			{error ? (
-				<Alert variant="destructive" layout="stack">
-					<AlertDescription className="flex items-center gap-3">
-						{error}
-						<Button type="button" variant="outline" size="sm" onClick={() => void query.refetch()}>
-							{t("load.retry")}
-						</Button>
-					</AlertDescription>
-				</Alert>
+				<LoadErrorAlert message={error} onRetry={() => void query.refetch()} />
 			) : (
 				<Skeleton className="h-40 w-full" />
 			)}

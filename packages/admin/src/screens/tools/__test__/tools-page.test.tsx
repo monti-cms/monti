@@ -7,9 +7,9 @@ import { testConfig } from "../../../../../core/test/site";
 import type { AdminServer } from "../../../host/server";
 import { renderInRouter } from "../../../test/router";
 import { withSite } from "../../__test__/site-wrapper";
+import { ShellPage } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import ToolsPage from "../page";
-import { ToolsScreen } from "../tools-screen";
 
 vi.mock("../../require-admin", () => ({ requireAdminPage: async () => undefined }));
 
@@ -50,9 +50,9 @@ describe("tools page", () => {
 		renderInRouter(
 			withSite(
 				<AdminQueryProvider>
-					<ToolsScreen path="stats">
+					<ShellPage title="Post stats" nav="tools:stats">
 						<Stats />
-					</ToolsScreen>
+					</ShellPage>
 				</AdminQueryProvider>,
 				site,
 			),

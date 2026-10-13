@@ -5,10 +5,11 @@ import type { SiteUrlState } from "@monti-cms/core/schema-edit";
 import { useState } from "react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
-import { FlagSwitch, Labeled, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { Section } from "../shared/section";
+import { FlagSwitch, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls";
 import { schemaMessages } from "./messages";
 import { localesOf, moveItem, type Obj, sectionOf, setSetting } from "./schema-model";
-import { Section } from "./section";
 
 const PREFIX_MODES = ["except-default", "always", "never"] as const;
 type PrefixMode = (typeof PREFIX_MODES)[number];

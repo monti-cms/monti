@@ -8,6 +8,7 @@ import { Checkbox } from "../../ui/checkbox";
 import { Label } from "../../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { COLLECTION_ICON_NAMES } from "../shared/collection-icon";
+import { Section } from "../shared/section";
 import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
 import { FieldsCard } from "./fields-tree";
 import { schemaMessages } from "./messages";
@@ -22,7 +23,6 @@ import {
 	setProp,
 	withBody,
 } from "./schema-model";
-import { Section } from "./section";
 
 const HEADINGS = [1, 2, 3, 4, 5, 6] as const;
 

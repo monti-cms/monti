@@ -10,6 +10,7 @@ import { getMedia, mediaKeys } from "../api/media";
 import { cn } from "../lib/utils/cn";
 import { type SlotRequest, useSlot } from "../slots/slots";
 import type { TranslatorFor } from "../translator";
+import { FieldError } from "../ui/field";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
 import { Skeleton } from "../ui/skeleton";
@@ -279,11 +280,7 @@ export function ImageBlockView() {
 								className="h-7 text-xs"
 								placeholder={t("imageNode.widthPlaceholder")}
 							/>
-							{widthInvalid && (
-								<p id={widthErrorId} role="alert" className="text-cms-destructive">
-									{t("imageNode.widthInvalid")}
-								</p>
-							)}
+							{widthInvalid && <FieldError id={widthErrorId}>{t("imageNode.widthInvalid")}</FieldError>}
 						</BlockSettingsField>
 						<BlockSettingsField
 							label={t("imageDialog.alt")}
@@ -300,11 +297,7 @@ export function ImageBlockView() {
 								onChange={(e) => block.setValues({ alt: e.target.value })}
 								className="min-h-0 text-xs md:text-xs"
 							/>
-							{altMissing && (
-								<p id={altErrorId} role="alert" className="text-cms-destructive">
-									{altRequiredMessage(t)}
-								</p>
-							)}
+							{altMissing && <FieldError id={altErrorId}>{altRequiredMessage(t)}</FieldError>}
 							{altSlot.panel}
 						</BlockSettingsField>
 						<label htmlFor={decorativeId} className="flex items-center justify-between gap-2">

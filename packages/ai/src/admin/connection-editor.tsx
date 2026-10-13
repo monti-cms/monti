@@ -2,24 +2,22 @@
 
 import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
-	Alert,
-	AlertDescription,
 	type ApiKeyChoice,
 	ApiKeyField,
 	Button,
 	choiceReady,
-	cn,
+	DETAIL_PANE_FRAME,
 	EditorFooter,
-	Empty,
-	EmptyContent,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
+	EmptyState,
 	Field,
+	FieldError,
 	FieldGroup,
 	FieldLabel,
 	Input,
-	Skeleton,
+	ListPane,
+	ListRow,
+	LoadErrorAlert,
+	MasterDetail,
 	useConfirm,
 	useDebounced,
 	useDraftEditor,
@@ -27,7 +25,7 @@ import {
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, PlugZap, Plus, Save } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import {
 	AI_PROVIDER_KINDS,
 	type AiCheckResult,
@@ -59,70 +57,6 @@ export function useAiSettings() {
 		// Not re-fetched every time an action is opened. Saving a connection updates the cache from the response.
 		staleTime: 60_000,
 	});
-}
-
-/** Pieces shared by the three tabs of the AI screen. The open-item shape of the list is the same as the admin screen's `OPEN_ITEM`. */
-export const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";
-
-/** Frame of the detail pane (shared by actions, connections and shared texts). */
-export const DETAIL_PANE = "mx-auto flex w-full max-w-3xl flex-col gap-5 p-6 text-sm";
-
-/** Load failure. Reports it in place and allows fetching again. */
-export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
-	const t = useTranslator(connectionMessages);
-	return (
-		<Alert variant="destructive" className="m-3 flex w-auto items-center justify-between gap-3">
-			<AlertDescription className="col-start-auto">{message}</AlertDescription>
-			<Button type="button" variant="outline" size="xs" onClick={onRetry}>
-				{t("action.retry")}
-			</Button>
-		</Alert>
-	);
-}
-
-/** One list row. Status text to the right of the name, and a dim description below. */
-export function ListRow({
-	title,
-	status,
-	detail,
-	current,
-	onClick,
-}: {
-	title: string;
-	status?: string | null;
-	detail: ReactNode;
-	current: boolean;
-	onClick: () => void;
-}) {
-	return (
-		<li>
-			<button
-				type="button"
-				aria-current={current ? "true" : undefined}
-				onClick={onClick}
-				className={cn(
-					"flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors",
-					current ? OPEN_ITEM : "hover:bg-cms-accent/50",
-				)}
-			>
-				<span className="flex w-full items-center gap-2">
-					<span className="truncate font-medium text-sm">{title}</span>
-					{status && <span className="ml-auto shrink-0 text-cms-muted-foreground text-xs">{status}</span>}
-				</span>
-				<span className="w-full truncate text-cms-muted-foreground text-xs">{detail}</span>
-			</button>
-		</li>
-	);
-}
-
-/** Placeholder while the list loads. */
-export function ListSkeleton({ rows }: { rows: number }) {
-	return Array.from({ length: rows }, (_, index) => (
-		// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-		<li key={index} className="p-3" aria-hidden>
-			<Skeleton className="h-9 w-full" />
-		</li>
-	));
 }
 
 /** Time to wait for URL/key input to pause before fetching the model list. */
@@ -184,72 +118,65 @@ export function ConnectionManager({
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			{settingsQuery.error && !settings && (
-				<LoadError
+				<LoadErrorAlert
+					className="m-3"
 					message={errorText(site, settingsQuery.error, t("error.loadList"))}
 					onRetry={() => void settingsQuery.refetch()}
 				/>
 			)}
-			<div className="flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex w-72 shrink-0 flex-col border-r">
-					{settings?.fake && <p className="border-b px-3 py-2 text-cms-muted-foreground text-xs">{t("badge.fake")}</p>}
-					<ul className="min-h-0 flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
-						{settingsQuery.isPending ? (
-							<ListSkeleton rows={2} />
-						) : settings?.providers.length === 0 ? (
-							<li className="px-3 py-6 text-center text-cms-muted-foreground text-xs">{t("list.empty")}</li>
-						) : (
-							settings?.providers.map((provider) => (
-								<ListRow
-									key={provider.id}
-									title={provider.name}
-									status={provider.ready ? null : t("status.needsSetup")}
-									detail={`${providerKindLabel(provider.kind)} · ${provider.defaultModel || t("model.none")}`}
-									current={selected === provider.id}
-									onClick={() => onOpen(provider.id)}
-								/>
-							))
-						)}
-					</ul>
-				</div>
-
-				<div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-					{settings && (selected === "new" || current) ? (
-						<ProviderEditor
-							key={selected ?? "none"}
-							version={settings.version}
-							provider={current}
-							onSaved={(saved, id) => {
-								applySaved(saved);
-								onSelectedChange(id);
-							}}
-							onDeleted={(saved) => {
-								applySaved(saved);
-								onSelectedChange(null);
-							}}
-							onCancel={() => onSelectedChange(null)}
-							onConflict={() => void settingsQuery.refetch()}
-							onDirtyChange={onDirtyChange}
+			<MasterDetail
+				list={
+					<ListPane
+						label={t("list.label")}
+						loading={settingsQuery.isPending}
+						skeletonRows={2}
+						header={
+							settings?.fake && (
+								<p className="border-b px-3 py-2 text-cms-muted-foreground text-xs">{t("badge.fake")}</p>
+							)
+						}
+						empty={settings?.providers.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
+					>
+						{settings?.providers.map((provider) => (
+							<ListRow
+								key={provider.id}
+								title={provider.name}
+								status={provider.ready ? null : t("status.needsSetup")}
+								detail={`${providerKindLabel(provider.kind)} · ${provider.defaultModel || t("model.none")}`}
+								current={selected === provider.id}
+								onClick={() => onOpen(provider.id)}
+							/>
+						))}
+					</ListPane>
+				}
+			>
+				{settings && (selected === "new" || current) ? (
+					<ProviderEditor
+						key={selected ?? "none"}
+						version={settings.version}
+						provider={current}
+						onSaved={(saved, id) => {
+							applySaved(saved);
+							onSelectedChange(id);
+						}}
+						onDeleted={(saved) => {
+							applySaved(saved);
+							onSelectedChange(null);
+						}}
+						onCancel={() => onSelectedChange(null)}
+						onConflict={() => void settingsQuery.refetch()}
+						onDirtyChange={onDirtyChange}
+					/>
+				) : (
+					settings && (
+						<EmptyState
+							icon={Plug}
+							title={t("empty.title")}
+							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
 						/>
-					) : (
-						settings && (
-							<Empty className="flex-1">
-								<EmptyHeader>
-									<EmptyMedia variant="icon">
-										<Plug aria-hidden />
-									</EmptyMedia>
-									<EmptyTitle>{t("empty.title")}</EmptyTitle>
-								</EmptyHeader>
-								<EmptyContent>
-									<Button type="button" size="sm" onClick={() => onOpen("new")}>
-										<Plus aria-hidden />
-										{t("action.add")}
-									</Button>
-								</EmptyContent>
-							</Empty>
-						)
-					)}
-				</div>
-			</div>
+					)
+				)}
+			</MasterDetail>
 		</div>
 	);
 }
@@ -365,7 +292,7 @@ function ProviderEditor({
 	const runCheck = () => checkMutation.mutate(undefined);
 
 	return (
-		<div className={DETAIL_PANE}>
+		<div className={DETAIL_PANE_FRAME}>
 			<div className="min-w-0">
 				<h2 className="truncate font-medium text-base">
 					{(provider ? provider.name : draft.name.trim()) || t("new.title")}
@@ -448,14 +375,14 @@ function ProviderEditor({
 					{checking ? t("action.checking") : t("action.check")}
 				</Button>
 			</EditorFooter>
-			{check && (
-				<p
-					className={cn("text-xs", check.ok ? "text-cms-muted-foreground" : "text-cms-destructive")}
-					role={check.ok ? undefined : "alert"}
-				>
-					{check.ok ? t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) }) : check.message}
-				</p>
-			)}
+			{check &&
+				(check.ok ? (
+					<p className="text-cms-muted-foreground text-xs">
+						{t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) })}
+					</p>
+				) : (
+					<FieldError>{check.message}</FieldError>
+				))}
 			{dialog}
 		</div>
 	);

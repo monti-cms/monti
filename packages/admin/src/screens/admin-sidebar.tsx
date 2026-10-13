@@ -39,12 +39,12 @@ import { Switch } from "../ui/switch";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { screensMessages } from "./messages";
-import { toolsPages } from "./settings/tabs";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { useAdminFeatures } from "./shared/admin-features";
 import { CollectionIcon, NamedIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
+import { toolsPages } from "./tools/tools-pages";
 
 /** Value that points to the current screen in the sidebar. Every Settings tab is the one `settings` entry; a plugin page is `tools:<path>`. */
 export type AdminNavId =

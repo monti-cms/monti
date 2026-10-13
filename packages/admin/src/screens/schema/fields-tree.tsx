@@ -22,11 +22,13 @@ import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
+import { Panel } from "../../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { tabLabel } from "../entries/layout-groups";
+import { TREE_MAX_WIDTH } from "../shared/layout";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
@@ -40,7 +42,6 @@ import {
 	editGroup,
 	hasTabLevel,
 	moveFieldBy,
-	moveFieldToTab,
 	moveGroup,
 	moveGroupBy,
 	moveGroupToTab,
@@ -914,7 +915,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const [sheet, setSheet] = useState<{ place: FieldPlace; name: string } | null>(null);
 	const [adding, setAdding] = useState(false);
 	const wide = useWide();
-	const [cardRef, cardWidth] = useElementWidth<HTMLElement>();
+	const [cardRef, cardWidth] = useElementWidth<HTMLDivElement>();
 	const showSettings = cardWidth === null || cardWidth >= SETTINGS_MIN_WIDTH;
 	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
 	const sideResize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview-side", minWidth: 320 });
@@ -952,11 +953,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
-		<section
-			ref={cardRef}
-			className="min-w-0 max-w-[1000px] overflow-hidden rounded-lg border bg-cms-card"
-			data-testid="fields-card"
-		>
+		<Panel ref={cardRef} className={cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH)} data-testid="fields-card">
 			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
@@ -1040,7 +1037,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					onClose={() => setSheet(null)}
 				/>
 			)}
-		</section>
+		</Panel>
 	);
 	const preview = (
 		<LayoutPreview

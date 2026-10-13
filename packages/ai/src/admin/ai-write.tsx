@@ -9,6 +9,8 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	FieldError,
+	isComposingKey,
 	Tabs,
 	TabsList,
 	TabsTrigger,
@@ -203,7 +205,7 @@ function WriteDialog({
 							onChange={(event) => setRequest(event.target.value)}
 							onKeyDown={(event) => {
 								// Enter inserts a newline; Cmd/Ctrl+Enter runs.
-								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
 									event.preventDefault();
 									if (!running) void run();
 								}
@@ -242,9 +244,7 @@ function WriteDialog({
 					</Tabs>
 				)}
 				{(state.status === "error" || blockProblem) && (
-					<p role="alert" className="text-cms-destructive text-xs">
-						{state.status === "error" ? state.message : blockProblem}
-					</p>
+					<FieldError>{state.status === "error" ? state.message : blockProblem}</FieldError>
 				)}
 				<DialogFooter>
 					{!askRequest && (
@@ -285,12 +285,12 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<del key={index} className="bg-cms-destructive/15 text-cms-destructive line-through">
+			<del key={index} className="bg-cms-destructive-soft text-cms-destructive-foreground line-through">
 				{part.text}
 			</del>
 		) : (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<ins key={index} className="bg-emerald-500/15 cms-dark:text-emerald-400 text-emerald-700 no-underline">
+			<ins key={index} className="bg-cms-success-soft text-cms-success-foreground no-underline">
 				{part.text}
 			</ins>
 		),

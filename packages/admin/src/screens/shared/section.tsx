@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils/cn";
+import { Panel } from "../../ui/card";
 
 /**
  * One section of a settings screen: the title and a one-line description in a column on the left, the content in a card on the right (stacked on a narrow
@@ -42,7 +43,7 @@ export function Section({
 				{note && <p className="mt-2.5 text-cms-muted-foreground text-xs leading-relaxed">{note}</p>}
 			</div>
 			{card ? (
-				<div className="flex min-w-0 flex-col gap-6 rounded-lg border bg-cms-card p-5">{children}</div>
+				<Panel className="flex min-w-0 flex-col gap-6 p-5">{children}</Panel>
 			) : (
 				<div className="min-w-0">{children}</div>
 			)}

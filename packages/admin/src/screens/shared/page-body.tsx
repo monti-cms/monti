@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { cn } from "../../lib/utils/cn";
+import { PAGE_MAX_WIDTH } from "./layout";
 
 /**
  * The body of a settings or tools page: left-aligned under the page header, one maximum width and one padding, so no page can drift from the others.
@@ -11,7 +12,7 @@ export function PageBody({ className, wide, ...props }: ComponentProps<"div"> & 
 		<div
 			className={cn(
 				"flex w-full flex-col gap-6 px-4 py-6 lg:px-10 lg:py-8",
-				wide ? "max-w-none" : "max-w-[1160px]",
+				wide ? "max-w-none" : PAGE_MAX_WIDTH,
 				className,
 			)}
 			{...props}

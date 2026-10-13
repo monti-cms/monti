@@ -67,7 +67,7 @@ export function TextCheckToolbar({ controller }: { controller: TextCheckControll
 						onMouseDown={(event) => event.preventDefault()}
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
-						<span className="tabular rounded-full bg-cms-muted px-1.5 font-medium text-xs leading-5">
+						<span className="tabular rounded-sm bg-cms-muted px-1.5 font-medium text-xs leading-5">
 							{count > 99 ? "99+" : count}
 						</span>
 					</IconButton>

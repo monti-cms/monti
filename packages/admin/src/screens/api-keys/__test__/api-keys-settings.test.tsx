@@ -2,8 +2,9 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { ShellPage } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
-import { ApiKeysPageScreen } from "../api-keys-page-screen";
+import { ApiKeysSettings } from "../api-keys-settings";
 import { apiKeysMessages } from "../messages";
 
 const t = testSite.createTranslator(apiKeysMessages);
@@ -65,7 +66,9 @@ afterEach(() => {
 const renderTab = () =>
 	render(
 		<AdminQueryProvider>
-			<ApiKeysPageScreen />
+			<ShellPage title={t("title")} nav="api-keys">
+				<ApiKeysSettings />
+			</ShellPage>
 		</AdminQueryProvider>,
 	);
 

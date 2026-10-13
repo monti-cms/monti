@@ -12,6 +12,8 @@ import type { TranslatorFor } from "../translator";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
+import { DialogFormFooter } from "../ui/dialog-form-footer";
+import { FieldError } from "../ui/field";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Skeleton } from "../ui/skeleton";
@@ -325,11 +327,7 @@ export function ImageInsertDialog({
 							onBlur={() => setAltTouched(true)}
 							className="min-h-0"
 						/>
-						{showAltError && (
-							<p id={altErrorId} role="alert" className="text-cms-destructive text-xs">
-								{altRequiredMessage(t)}
-							</p>
-						)}
+						{showAltError && <FieldError id={altErrorId}>{altRequiredMessage(t)}</FieldError>}
 						<Label htmlFor={decorativeId} className="font-normal">
 							<Switch
 								id={decorativeId}
@@ -355,18 +353,13 @@ export function ImageInsertDialog({
 							<Spinner /> {t("imageDialog.uploading", { percent: progress ?? 0 })}
 						</output>
 					)}
-					{error && (
-						<p role="alert" className="text-cms-destructive text-sm">
-							{error}
-						</p>
-					)}
+					{error && <FieldError className="text-sm">{error}</FieldError>}
 
-					<DialogFooter>
-						<Button type="button" variant="outline" disabled={isUploading} onClick={onClose}>
-							{t("imageDialog.cancel")}
-						</Button>
-						<Button type="submit" disabled={isUploading || !hasImage}>
-							{tab === "upload"
+					<DialogFormFooter
+						onCancel={() => !isUploading && onClose()}
+						disabled={isUploading || !hasImage}
+						submitLabel={
+							tab === "upload"
 								? error
 									? t("imageDialog.reupload")
 									: picking
@@ -374,9 +367,10 @@ export function ImageInsertDialog({
 										: t("imageDialog.insert")
 								: picking
 									? t("imageDialog.pick")
-									: t("imageDialog.insert")}
-						</Button>
-					</DialogFooter>
+									: t("imageDialog.insert")
+						}
+						cancelLabel={t("imageDialog.cancel")}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>

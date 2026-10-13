@@ -15,7 +15,7 @@ import { toSelection } from "./list-row-menu";
 import { FilterChipBar, ListSearch } from "./list-toolbar";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
-import { AdminNavProvider, AdminShell } from "./shared/admin-shell";
+import { AdminNavProvider, AdminShell, PageActions } from "./shared/admin-shell";
 import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
@@ -203,34 +203,28 @@ function TrashPage() {
 	const list = useEntryList("trash");
 	const { state } = list;
 	return (
-		<AdminShell
-			title={t("dashboard.trash")}
-			count={list.data.total}
-			sidebar={{ activeNav: "trash" }}
-			headerActions={
-				<>
-					<EntryListHeaderActions list={list} />
-					<nav
-						aria-label={t("dashboard.trashCollections")}
-						className="flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]"
-					>
-						{site.COLLECTIONS.map((item) => (
-							<Link
-								key={item}
-								href={site.adminHref(`/trash?collection=${item}`)}
-								aria-current={state.collection === item ? "page" : undefined}
-								className={cn(
-									buttonVariants({ variant: "ghost", size: "xs" }),
-									"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground",
-								)}
-							>
-								{site.COLLECTION_DEFINITIONS[item].label}
-							</Link>
-						))}
-					</nav>
-				</>
-			}
-		>
+		<AdminShell title={t("dashboard.trash")} count={list.data.total} sidebar={{ activeNav: "trash" }}>
+			<PageActions>
+				<EntryListHeaderActions list={list} />
+				<nav
+					aria-label={t("dashboard.trashCollections")}
+					className="flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]"
+				>
+					{site.COLLECTIONS.map((item) => (
+						<Link
+							key={item}
+							href={site.adminHref(`/trash?collection=${item}`)}
+							aria-current={state.collection === item ? "page" : undefined}
+							className={cn(
+								buttonVariants({ variant: "ghost", size: "xs" }),
+								"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground",
+							)}
+						>
+							{site.COLLECTION_DEFINITIONS[item].label}
+						</Link>
+					))}
+				</nav>
+			</PageActions>
 			<EntryListBody list={list} />
 		</AdminShell>
 	);
@@ -246,7 +240,6 @@ function ListPage() {
 		<AdminShell
 			title={`${list.label}${folderLabel}`}
 			count={list.data.total}
-			headerActions={<EntryListHeaderActions list={list} />}
 			sidebar={{
 				activeNav: state.collection,
 				folderNav: {
@@ -262,6 +255,9 @@ function ListPage() {
 				},
 			}}
 		>
+			<PageActions>
+				<EntryListHeaderActions list={list} />
+			</PageActions>
 			<EntryListBody list={list} />
 		</AdminShell>
 	);

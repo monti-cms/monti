@@ -1,10 +1,11 @@
 "use client";
 
 import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/client";
-import { FlagSwitch, Labeled, Pick } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { Section } from "../shared/section";
+import { FlagSwitch, Pick } from "./controls";
 import { schemaMessages } from "./messages";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
-import { Section } from "./section";
 
 const DEFAULT_CHOICE = "__default";
 

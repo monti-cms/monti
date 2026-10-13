@@ -18,7 +18,8 @@ import {
 	AlertDialogTitle,
 } from "../../ui/alert-dialog";
 import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Field, FieldError, FieldLabel } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
@@ -279,14 +280,14 @@ export function useFolderActions({
 							/>
 							{shownError && <FieldError>{shownError}</FieldError>}
 						</Field>
-						<DialogFooter>
-							<Button type="button" variant="outline" onClick={() => setNameDialog(null)}>
-								{t("common.cancel")}
-							</Button>
-							<Button type="submit" disabled={!name.trim() || isBusy}>
-								{isBusy ? t("common.saving") : t("common.save")}
-							</Button>
-						</DialogFooter>
+						<DialogFormFooter
+							onCancel={() => setNameDialog(null)}
+							cancelLabel={t("common.cancel")}
+							submitLabel={t("common.save")}
+							busyLabel={t("common.saving")}
+							busy={isBusy}
+							disabled={!name.trim()}
+						/>
 					</form>
 				</DialogContent>
 			</Dialog>
@@ -314,11 +315,7 @@ export function useFolderActions({
 							</div>
 						)
 					)}
-					{shownError && (
-						<p role="alert" className="text-cms-destructive text-sm">
-							{shownError}
-						</p>
-					)}
+					{shownError && <FieldError>{shownError}</FieldError>}
 					<AlertDialogFooter>
 						<AlertDialogCancel type="button">{t("common.cancel")}</AlertDialogCancel>
 						<Button

@@ -12,6 +12,7 @@ import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Switch } from "../../ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
+import { type CONTROL_WIDTH, HELP, Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
 import { nameProblem, type Obj } from "./schema-model";
 
@@ -58,37 +59,6 @@ export function IssueList({ issues }: { issues: readonly Issue[] }) {
 				</li>
 			))}
 		</ul>
-	);
-}
-
-/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
-const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" } as const;
-/** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
-const HELP = "max-w-[70ch] text-xs";
-
-export function Labeled({
-	label,
-	hint,
-	children,
-	htmlFor,
-	className,
-	control = "normal",
-}: {
-	label: ReactNode;
-	hint?: ReactNode;
-	htmlFor?: string;
-	children: ReactNode;
-	className?: string;
-	control?: keyof typeof CONTROL_WIDTH;
-}) {
-	return (
-		<UiField className={cn("gap-2", className)}>
-			<FieldLabel htmlFor={htmlFor} className="font-medium text-sm">
-				{label}
-			</FieldLabel>
-			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
-			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
-		</UiField>
 	);
 }
 

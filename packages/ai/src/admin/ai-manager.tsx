@@ -5,28 +5,31 @@ import {
 	Button,
 	Checkbox,
 	cn,
+	DETAIL_PANE_FRAME,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	EditorFooter,
-	Empty,
-	EmptyContent,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
+	EmptyState,
 	Field,
+	FieldError,
 	FieldGroup,
 	FieldLabel,
 	FieldTitle,
 	IconButton,
 	Input,
+	isComposingKey,
 	Label,
+	ListPane,
+	ListRow,
+	LoadErrorAlert,
+	MasterDetail,
 	PageActions,
+	PageTabs,
 	Switch,
 	Tabs,
 	TabsContent,
-	TabsList,
 	TabsTrigger,
 	Textarea,
 	useConfirm,
@@ -45,7 +48,7 @@ import { aiManagerMessages } from "./ai-manager.messages";
 import { runAiAction, useAiActions } from "./ai-slot-provider";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample";
 import { type AiActionsResponse, aiKeys, createAiAction, deleteAiAction, updateAiAction } from "./api";
-import { ConnectionManager, DETAIL_PANE, ListRow, ListSkeleton, LoadError, useAiSettings } from "./connection-editor";
+import { ConnectionManager, useAiSettings } from "./connection-editor";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor";
 import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
@@ -352,7 +355,7 @@ export function AiManager() {
 				onValueChange={(value) => void changeTab(value as AiTab)}
 				className="flex min-h-0 flex-1 flex-col gap-0"
 			>
-				<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
+				<PageTabs>
 					<TabsTrigger value="features" className="flex-none px-0 text-xs">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
@@ -365,99 +368,94 @@ export function AiManager() {
 						<Quote aria-hidden />
 						{t("tab.shared")}
 					</TabsTrigger>
-				</TabsList>
+				</PageTabs>
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
 					{featuresQuery.error && !featuresQuery.data && (
-						<LoadError
+						<LoadErrorAlert
+							className="m-3"
 							message={errorText(site, featuresQuery.error, t("list.loadFailed"))}
 							onRetry={() => void featuresQuery.refetch()}
 						/>
 					)}
-					<div className="flex min-h-0 flex-1 overflow-hidden">
-						<div className="flex w-72 shrink-0 flex-col border-r">
-							<ul className="min-h-0 flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
-								{featuresQuery.isPending ? (
-									<ListSkeleton rows={4} />
-								) : (
-									<>
-										{featuresQuery.data && features.length === 0 && !editing?.isNew && (
-											<li className="px-3 py-6 text-center text-cms-muted-foreground text-xs">{t("list.empty")}</li>
-										)}
-										{features.map((feature) => (
-											<ListRow
-												key={feature.key}
-												title={feature.label}
-												status={
-													!feature.enabled
-														? t("status.off")
-														: usable.has(feature.key)
-															? null
-															: t("status.needsConnection")
-												}
-												detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
-												// While a new unsaved action is open, no other row in the list is shown as open.
-												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
-												onClick={() => void openFeature(feature)}
-											/>
-										))}
-										{editing?.isNew && (
-											<ListRow
-												title={editing.base?.label.trim() || t("title.new")}
-												status={t("status.unsaved")}
-												detail={`${placeLabel(editing.feature)} · ${engineLabel(editing.feature.engine)}`}
-												current
-												onClick={() => {}}
-											/>
-										)}
-									</>
-								)}
-							</ul>
-						</div>
-
-						<div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-							{editing ? (
-								<FeatureEditor
-									key={editing.isNew ? "new" : editing.feature.key}
-									feature={editing.feature}
-									spec={editing.spec}
-									saving={saving}
-									deleting={deleting}
-									dirty={featureDirty}
-									error={formError}
-									onChange={(spec) => changeDraft((draft) => ({ ...draft, spec }))}
-									onSave={() => void save()}
-									custom={
-										editing.base
-											? {
-													base: editing.base,
-													onBaseChange: changeBase,
-													isNew: editing.isNew === true,
-													onCancel: () => setOpened(null),
-													onDelete: () => void remove(editing.feature),
-												}
-											: undefined
-									}
+					<MasterDetail
+						list={
+							<ListPane
+								label={t("list.label")}
+								loading={featuresQuery.isPending}
+								skeletonRows={4}
+								empty={
+									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
+										<EmptyState compact title={t("list.empty")} />
+									) : null
+								}
+							>
+								{[
+									...features.map((feature) => (
+										<ListRow
+											key={feature.key}
+											title={feature.label}
+											status={
+												!feature.enabled
+													? t("status.off")
+													: usable.has(feature.key)
+														? null
+														: t("status.needsConnection")
+											}
+											detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
+											// While a new unsaved action is open, no other row in the list is shown as open.
+											current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
+											onClick={() => void openFeature(feature)}
+										/>
+									)),
+									...(editing?.isNew
+										? [
+												<ListRow
+													key="new"
+													title={editing.base?.label.trim() || t("title.new")}
+													status={t("status.unsaved")}
+													detail={`${placeLabel(editing.feature)} · ${engineLabel(editing.feature.engine)}`}
+													current
+													onClick={() => {}}
+												/>,
+											]
+										: []),
+								]}
+							</ListPane>
+						}
+					>
+						{editing ? (
+							<FeatureEditor
+								key={editing.isNew ? "new" : editing.feature.key}
+								feature={editing.feature}
+								spec={editing.spec}
+								saving={saving}
+								deleting={deleting}
+								dirty={featureDirty}
+								error={formError}
+								onChange={(spec) => changeDraft((draft) => ({ ...draft, spec }))}
+								onSave={() => void save()}
+								custom={
+									editing.base
+										? {
+												base: editing.base,
+												onBaseChange: changeBase,
+												isNew: editing.isNew === true,
+												onCancel: () => setOpened(null),
+												onDelete: () => void remove(editing.feature),
+											}
+										: undefined
+								}
+							/>
+						) : (
+							featuresQuery.data && (
+								<EmptyState
+									icon={Sparkles}
+									title={t("empty.pick")}
+									action={{ label: t("add.feature"), onClick: () => void startNew(), icon: Plus }}
 								/>
-							) : (
-								featuresQuery.data && (
-									<Empty className="flex-1">
-										<EmptyHeader>
-											<EmptyMedia variant="icon">
-												<Sparkles aria-hidden />
-											</EmptyMedia>
-											<EmptyTitle>{t("empty.pick")}</EmptyTitle>
-										</EmptyHeader>
-										<EmptyContent>
-											<Button type="button" size="sm" onClick={() => void startNew()}>
-												<Plus aria-hidden />
-												{t("add.feature")}
-											</Button>
-										</EmptyContent>
-									</Empty>
-								)
-							)}
-						</div>
-					</div>
+							)
+						)}
+					</MasterDetail>
 				</TabsContent>
 				<TabsContent value="shared" className="flex min-h-0 flex-1 flex-col">
 					<SharedManager
@@ -673,7 +671,7 @@ function FeatureEditor({
 	};
 
 	return (
-		<div className={DETAIL_PANE}>
+		<div className={DETAIL_PANE_FRAME}>
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 				<div className="min-w-0 flex-1">
 					<h2 className="truncate font-medium text-base">
@@ -902,7 +900,7 @@ function FeatureEditor({
 						onChange={(event) => setSample({ ...sample, request: event.target.value })}
 						onKeyDown={(event) => {
 							// Enter inserts a newline; Cmd/Ctrl+Enter runs.
-							if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+							if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
 								event.preventDefault();
 								void runTest();
 							}
@@ -916,11 +914,7 @@ function FeatureEditor({
 					defaults={sampleStart}
 					onChange={(name, value) => setSample({ ...sample, values: { ...sample.values, [name]: value } })}
 				/>
-				{test?.status === "error" && (
-					<p role="alert" className="text-cms-destructive">
-						{test.message}
-					</p>
-				)}
+				{test?.status === "error" && <FieldError>{test.message}</FieldError>}
 				{test?.status === "done" &&
 					(test.result.kind === "candidates" ? (
 						test.result.items.length === 0 ? (

@@ -3,9 +3,11 @@
 import { useTranslator } from "@monti-cms/core/client";
 import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { isComposingKey } from "../lib/keyboard";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { FieldError } from "../ui/field";
 import { IconButton } from "../ui/icon-button";
 import { Spinner } from "../ui/spinner";
 import { Textarea } from "../ui/textarea";
@@ -36,7 +38,7 @@ export {
 const defaultIcon = <Zap aria-hidden />;
 
 /** Shape of one result candidate. The AI screen's test results use the same shape. */
-export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-full border bg-cms-background px-2 py-0.5";
+export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-sm border bg-cms-background px-2 py-0.5";
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -131,7 +133,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 							onKeyDown={(event) => {
 								// Keeps keys from leaking into the body even inside the editor. Enter is a newline; Cmd/Ctrl+Enter runs.
 								event.stopPropagation();
-								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+								if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
 									event.preventDefault();
 									if (state.status !== "running") void run(state.action.id);
 								}
@@ -150,11 +152,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 						</Button>
 					</form>
 				)}
-				{state.status === "error" && (
-					<p role="alert" className="text-cms-destructive">
-						{state.error.message}
-					</p>
-				)}
+				{state.status === "error" && <FieldError>{state.error.message}</FieldError>}
 				{state.status === "done" && <SlotResult state={state} onApply={apply} />}
 			</div>
 		);

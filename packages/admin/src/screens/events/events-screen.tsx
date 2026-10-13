@@ -19,10 +19,10 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
-import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Skeleton } from "../../ui/skeleton";
+import { StatusIndicator, type StatusTone } from "../../ui/status-indicator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -30,6 +30,7 @@ import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
+import { LoadErrorAlert } from "../shared/load-error-alert";
 import { eventsMessages } from "./messages";
 
 /** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
@@ -42,33 +43,15 @@ const EVENTS_PARAMS = {
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text: string) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
 
-const STATE_TONE: Record<EventDeliveryItem["state"], string> = {
-	delivered: "text-emerald-600 cms-dark:text-emerald-400",
-	failed: "text-red-600 cms-dark:text-red-400",
-	dead: "text-red-600 cms-dark:text-red-400",
-	pending: "text-amber-600 cms-dark:text-amber-400",
-	delivering: "text-amber-600 cms-dark:text-amber-400",
-	dismissed: "text-cms-muted-foreground",
-	recorded: "text-cms-muted-foreground",
+const STATE_TONE: Record<EventDeliveryItem["state"], StatusTone> = {
+	delivered: "success",
+	failed: "destructive",
+	dead: "destructive",
+	pending: "warning",
+	delivering: "warning",
+	dismissed: "neutral",
+	recorded: "neutral",
 };
-
-/** Colored dot plus the state name, like the entries list status column (never color alone). */
-function StateLabel({ state, label }: { state: EventDeliveryItem["state"]; label: string }) {
-	return (
-		<span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-cms-foreground/80">
-			<svg
-				aria-hidden="true"
-				focusable="false"
-				viewBox="0 0 16 16"
-				className={cn("size-3.5 shrink-0", STATE_TONE[state])}
-				fill="currentColor"
-			>
-				<circle cx="8" cy="8" r="5.5" />
-			</svg>
-			{label}
-		</span>
-	);
-}
 
 /** Status column header; its popup filters deliveries by status, like the entries list column headers. */
 function StateHeader({
@@ -188,14 +171,7 @@ export function EventsScreen() {
 					</Button>
 				</PageActions>
 			)}
-			{error && (
-				<Alert variant="destructive" className="mx-5 mt-3 flex w-auto items-center justify-between">
-					<AlertDescription className="col-start-auto">{error}</AlertDescription>
-					<Button type="button" variant="outline" size="xs" onClick={() => void listQuery.refetch()}>
-						{t("action.retry")}
-					</Button>
-				</Alert>
-			)}
+			{error && <LoadErrorAlert message={error} onRetry={() => void listQuery.refetch()} className="mx-5 mt-3" />}
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
 					<div className="space-y-2 p-5" aria-hidden>
@@ -242,7 +218,7 @@ export function EventsScreen() {
 								return (
 									<TableRow key={`${change.eventId}:${item.subscriber ?? ""}`}>
 										<TableCell>
-											<StateLabel state={item.state} label={t(`state.${item.state}`)} />
+											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
 										</TableCell>
 										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
 										<TableCell>{item.subscriber ?? ""}</TableCell>

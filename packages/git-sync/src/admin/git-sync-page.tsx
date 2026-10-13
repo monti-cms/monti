@@ -10,16 +10,16 @@ import {
 	Badge,
 	Button,
 	choiceReady,
-	Empty,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
+	EmptyState,
+	Field,
+	FieldLabel,
 	Input,
-	Label,
+	LoadErrorAlert,
+	PageTabs,
+	Panel,
 	Skeleton,
 	Tabs,
 	TabsContent,
-	TabsList,
 	TabsTrigger,
 	useConfirm,
 } from "@monti-cms/admin/kit";
@@ -64,7 +64,7 @@ export function GitSyncPage() {
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
-				<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
+				<PageTabs>
 					<TabsTrigger value="sync" className="flex-none px-0 text-xs">
 						<GitBranch aria-hidden />
 						{t("tab.sync")}
@@ -78,7 +78,7 @@ export function GitSyncPage() {
 						<KeyRound aria-hidden />
 						{t("tab.settings")}
 					</TabsTrigger>
-				</TabsList>
+				</PageTabs>
 				<TabsContent value="sync" className="min-h-0 flex-1 overflow-auto">
 					<SyncTab
 						status={status.data}
@@ -101,20 +101,6 @@ export function GitSyncPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
-	);
-}
-
-function ErrorBar({ message, onRetry }: { message: string; onRetry?: () => void }) {
-	const t = useTranslator(gitSyncMessages);
-	return (
-		<Alert variant="destructive" className="m-5 flex w-auto items-center justify-between">
-			<AlertDescription className="col-start-auto">{message}</AlertDescription>
-			{onRetry && (
-				<Button type="button" variant="outline" size="xs" onClick={onRetry}>
-					{t("load.retry")}
-				</Button>
-			)}
-		</Alert>
 	);
 }
 
@@ -170,19 +156,10 @@ function SyncTab({
 	});
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <ErrorBar message={error} onRetry={onRetry} />;
+	if (error) return <LoadErrorAlert className="m-5" message={error} onRetry={onRetry} />;
 	if (!status) return null;
 	if (status.targets.length === 0) {
-		return (
-			<Empty className="h-full">
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<GitBranch aria-hidden />
-					</EmptyMedia>
-					<EmptyTitle>{t("sync.empty")}</EmptyTitle>
-				</EmptyHeader>
-			</Empty>
-		);
+		return <EmptyState className="h-full" icon={GitBranch} title={t("sync.empty")} />;
 	}
 
 	return (
@@ -193,7 +170,7 @@ function SyncTab({
 				</Alert>
 			)}
 			{status.targets.map((target) => (
-				<section key={target.id} aria-label={target.id} className="space-y-3 rounded-lg border border-cms-border p-4">
+				<Panel key={target.id} role="region" aria-label={target.id} className="space-y-3 p-4">
 					<div className="flex flex-wrap items-center gap-2">
 						<h2 className="min-w-0 flex-1 truncate font-medium text-sm">
 							{target.repo}
@@ -283,7 +260,7 @@ function SyncTab({
 							<h3 className="font-medium">{t("summary.errors")}</h3>
 							<ul className="space-y-0.5">
 								{target.lastPull.errors.map((item) => (
-									<li key={item.path} className="text-cms-destructive">
+									<li key={item.path} className="text-cms-destructive-foreground">
 										<span className="font-mono">{item.path}</span>: {item.message}
 									</li>
 								))}
@@ -302,7 +279,7 @@ function SyncTab({
 							</ul>
 						</div>
 					)}
-				</section>
+				</Panel>
 			))}
 		</div>
 	);
@@ -313,7 +290,7 @@ function SyncTab({
 
 const LINE_STYLE: Record<DiffLine["type"], string> = {
 	same: "text-cms-muted-foreground",
-	remove: "bg-cms-destructive/15 text-cms-destructive",
+	remove: "bg-cms-destructive-soft text-cms-destructive-foreground",
 	add: "bg-cms-primary/10 text-cms-foreground",
 };
 const LINE_MARK: Record<DiffLine["type"], string> = { same: " ", remove: "-", add: "+" };
@@ -387,27 +364,14 @@ function ConflictsTab({
 	};
 
 	if (loading) return <ListSkeleton />;
-	if (error) return <ErrorBar message={error} />;
+	if (error) return <LoadErrorAlert className="m-5" message={error} />;
 	if (!items || items.length === 0) {
-		return (
-			<Empty className="h-full">
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<GitBranch aria-hidden />
-					</EmptyMedia>
-					<EmptyTitle>{t("conflicts.empty")}</EmptyTitle>
-				</EmptyHeader>
-			</Empty>
-		);
+		return <EmptyState className="h-full" icon={GitBranch} title={t("conflicts.empty")} />;
 	}
 	return (
 		<div className="space-y-4 p-5">
 			{items.map((conflict) => (
-				<section
-					key={conflict.id}
-					aria-label={conflict.label}
-					className="space-y-3 rounded-lg border border-cms-border p-4"
-				>
+				<Panel key={conflict.id} role="region" aria-label={conflict.label} className="space-y-3 p-4">
 					<div className="space-y-1">
 						<h2 className="font-medium text-sm">{conflict.label}</h2>
 						<p className="text-cms-muted-foreground text-xs">
@@ -436,7 +400,7 @@ function ConflictsTab({
 							{t("conflicts.useServer")}
 						</Button>
 					</div>
-				</section>
+				</Panel>
 			))}
 			{dialog}
 		</div>
@@ -538,18 +502,18 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
 				}}
 			>
-				<Label htmlFor="git-sync-secret" className="font-medium text-sm">
+				<FieldLabel htmlFor="git-sync-secret" className="font-medium text-sm">
 					{t("settings.webhook")}
-				</Label>
+				</FieldLabel>
 				<p className="text-xs">
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</p>
-				<div className="space-y-1">
-					<Label htmlFor="git-sync-url" className="text-cms-muted-foreground text-xs">
+				<Field className="gap-1">
+					<FieldLabel htmlFor="git-sync-url" className="text-cms-muted-foreground text-xs">
 						{t("settings.webhook.url")}
-					</Label>
+					</FieldLabel>
 					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-xs" />
-				</div>
+				</Field>
 				<p className="text-cms-muted-foreground text-xs">{t("settings.webhook.help")}</p>
 				<div className="flex flex-wrap gap-2">
 					<Input

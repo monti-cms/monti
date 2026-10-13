@@ -26,6 +26,7 @@ import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api
 import { cn } from "../../lib/utils/cn";
 import { moveWithin } from "../../lib/utils/move-within";
 import type { TranslatorFor } from "../../translator";
+import { FieldError } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import type { EntryForm, FormValue } from "./entry-form";
 import { entriesMessages } from "./messages";
@@ -99,11 +100,7 @@ function relationOptions(
 /** The failure of a search, under the input like the other relation inputs. */
 function SearchError({ failed }: { failed: boolean }) {
 	const t = useTranslator(entriesMessages);
-	return failed ? (
-		<p role="alert" className="text-cms-destructive text-xs">
-			{t("entry.loadFailed")}
-		</p>
-	) : null;
+	return failed ? <FieldError>{t("entry.loadFailed")}</FieldError> : null;
 }
 
 /** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
@@ -167,7 +164,7 @@ function SortableEntryRow({
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
 				"flex items-center gap-1 rounded-md border bg-cms-background px-1 py-1 text-xs",
-				isDragging && "relative z-10 shadow-[0_1px_2px_rgba(0,0,0,0.1)]",
+				isDragging && "relative z-10 shadow-cms-pop",
 			)}
 		>
 			<IconButton
@@ -185,7 +182,7 @@ function SortableEntryRow({
 				{index + 1}. {title}
 				{/* Unpublished posts are missing from the collection's public list. */}
 				{option && option.status !== "published" && option.status !== "missing" && (
-					<span className="ml-1 cms-dark:text-amber-400 text-amber-700">{t("entry.unpublished")}</span>
+					<span className="ml-1 text-cms-warning-foreground">{t("entry.unpublished")}</span>
 				)}
 			</span>
 			<IconButton
@@ -549,11 +546,7 @@ export function BacklinkInput({
 						: undefined
 				}
 			/>
-			{(error ?? loadError) && (
-				<p role="alert" className="text-cms-destructive text-xs">
-					{error ?? loadError}
-				</p>
-			)}
+			{(error ?? loadError) && <FieldError>{error ?? loadError}</FieldError>}
 			<SearchError failed={records.error} />
 			{creator.sheet}
 		</>

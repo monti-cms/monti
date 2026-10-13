@@ -16,6 +16,7 @@ import { createEntry, type EntryWriteResult, entriesKeys, getEntry, updateEntry 
 import { cmsIssueMessage } from "../api/error-message";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { cn } from "../lib/utils/cn";
+import { StatusIndicator } from "../ui/status-indicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
 	EMPTY_FORM,
@@ -219,12 +220,10 @@ export function RecordPanel({
 										>
 											{name}
 											{option !== site.DEFAULT_LOCALE && (
-												<span
-													aria-hidden
-													className={cn(
-														"size-1.5 rounded-full",
-														filled ? "bg-emerald-500" : "border border-cms-muted-foreground/50",
-													)}
+												<StatusIndicator
+													size="xs"
+													tone={filled ? "success" : "neutral"}
+													shape={filled ? "dot" : "ring"}
 												/>
 											)}
 										</TabsTrigger>

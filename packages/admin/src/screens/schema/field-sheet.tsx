@@ -4,11 +4,11 @@ import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
 import { Button } from "../../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
+import { LineTabs, Tabs, TabsContent, TabsTrigger } from "../../ui/tabs";
+import { Labeled } from "../shared/labeled";
 import {
 	FlagSwitch,
 	IssueList,
-	Labeled,
 	orUndefined,
 	Pick,
 	Segmented,
@@ -112,14 +112,14 @@ export function FieldSheet({
 						<SheetDescription className="text-xs">
 							<code>{name}</code> · {t(`kind.${kind}`)}
 						</SheetDescription>
-						<TabsList variant="line" className="mt-4 h-auto w-full justify-start gap-5 rounded-none border-b p-0">
+						<LineTabs className="mt-4 h-auto gap-5 rounded-none p-0">
 							<TabsTrigger value="basic" className="h-9 flex-none px-0">
 								{t("sheet.tabBasic")}
 							</TabsTrigger>
 							<TabsTrigger value="advanced" className="h-9 flex-none px-0">
 								{t("sheet.tabAdvanced")}
 							</TabsTrigger>
-						</TabsList>
+						</LineTabs>
 					</SheetHeader>
 					<div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
 						<IssueList issues={issues} />

@@ -12,13 +12,14 @@ import { useAdminRouter } from "../../router";
 import { Button } from "../../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
+import { StatusIndicator, type StatusTone } from "../../ui/status-indicator";
 import { statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
 
-const STATUS_DOT: Record<string, string> = {
-	published: "bg-emerald-500",
-	draft: "bg-amber-500",
+const STATUS_TONE: Record<string, StatusTone> = {
+	published: "success",
+	draft: "warning",
 };
 
 /**
@@ -114,10 +115,7 @@ export function LanguageTabs({
 								if (!current) router.navigate(site.adminEntryEditHref(member.id));
 							}}
 						>
-							<span
-								aria-hidden
-								className={cn("size-1.5 rounded-full", STATUS_DOT[member.status] ?? "bg-cms-muted-foreground/50")}
-							/>
+							<StatusIndicator size="xs" tone={STATUS_TONE[member.status] ?? "neutral"} />
 							<span aria-hidden className="font-medium">
 								{target.toUpperCase()}
 							</span>

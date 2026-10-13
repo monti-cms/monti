@@ -34,8 +34,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"secret.description":
 			"MONTI_SECRET is not set, so there is nothing to encrypt keys with. Set it to a long random value (openssl rand -base64 32) in .env.local and in your host's environment, then restart the server.",
 		"load.failed": "Couldn't load the keys.",
-		"load.retry": "Retry",
-		"dialog.cancel": "Cancel",
 		"dialog.add.title": "Add a key",
 		"dialog.add.description":
 			"The value is encrypted when it is saved. It is not shown again, only its last four characters.",
@@ -46,7 +44,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"dialog.replace.title": "Replace the value of {name}",
 		"dialog.replace.description": "Everything that uses this key switches to the new value at once.",
 		"dialog.replace.confirm": "Replace value",
-		"dialog.saving": "Saving…",
 		"field.name": "Name",
 		"field.namePlaceholder": "Anthropic",
 		"field.nameTaken": "Another key already has this name.",
@@ -109,8 +106,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"secret.description":
 			"MONTI_SECRET이 없어서 키를 암호화할 수 없어요. 긴 무작위 값(openssl rand -base64 32)으로 .env.local과 호스팅 환경 변수에 넣고 서버를 다시 켜 주세요.",
 		"load.failed": "키를 불러오지 못했어요.",
-		"load.retry": "다시 시도",
-		"dialog.cancel": "취소",
 		"dialog.add.title": "키 추가",
 		"dialog.add.description": "값은 저장할 때 암호화해요. 다시 보여 주지 않고 끝 네 글자만 보여 줘요.",
 		"dialog.add.confirm": "키 추가",
@@ -120,7 +115,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"dialog.replace.title": "{name} 값 바꾸기",
 		"dialog.replace.description": "이 키를 쓰는 곳이 모두 바로 새 값으로 바뀌어요.",
 		"dialog.replace.confirm": "값 바꾸기",
-		"dialog.saving": "저장하는 중…",
 		"field.name": "이름",
 		"field.namePlaceholder": "Anthropic",
 		"field.nameTaken": "같은 이름의 키가 이미 있어요.",

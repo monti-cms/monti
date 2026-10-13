@@ -4,14 +4,17 @@ import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client"
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { Button } from "../../ui/button";
+import { Panel } from "../../ui/card";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
-import { Labeled, Pick, TextInput, useSchemaEdit } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { Section } from "../shared/section";
+import { Pick, useSchemaEdit } from "./controls";
 import { schemaMessages } from "./messages";
 import { collectionsOf, type Locale, localesOf, moveItem, type Obj, sectionOf, setProp } from "./schema-model";
-import { Section } from "./section";
 
 /** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
 const zonesWith = (current: string | undefined): string[] => {
@@ -140,14 +143,12 @@ function LocaleDialog({
 					<Labeled label={t("locales.label")} hint={t("locales.labelHint")}>
 						<Input value={label} aria-label={t("locales.label")} onChange={(event) => setLabel(event.target.value)} />
 					</Labeled>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("locales.cancel")}
-						</Button>
-						<Button type="submit" disabled={!ok}>
-							{locale ? t("locales.save") : t("locales.add")}
-						</Button>
-					</DialogFooter>
+					<DialogFormFooter
+						onCancel={onClose}
+						cancelLabel={t("locales.cancel")}
+						submitLabel={locale ? t("locales.save") : t("locales.add")}
+						disabled={!ok}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>
@@ -227,7 +228,7 @@ export function LocalesEditor({
 				note={t("locales.contentNote")}
 				testId="locales-content"
 			>
-				<div className="overflow-hidden rounded-lg border bg-cms-card">
+				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
 						<span className="text-cms-muted-foreground text-sm">{t("locales.count", { count: locales.length })}</span>
 						<Button
@@ -272,7 +273,7 @@ export function LocalesEditor({
 							</li>
 						))}
 					</ul>
-				</div>
+				</Panel>
 			</Section>
 			<Section
 				wide

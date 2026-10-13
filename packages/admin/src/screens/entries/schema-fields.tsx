@@ -192,11 +192,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 						: undefined
 				}
 			/>
-			{records.error && (
-				<p role="alert" className="text-cms-destructive text-xs">
-					{t("entry.loadFailed")}
-				</p>
-			)}
+			{records.error && <FieldError>{t("entry.loadFailed")}</FieldError>}
 			{creator.sheet}
 		</>
 	);

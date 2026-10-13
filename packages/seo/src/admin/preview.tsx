@@ -2,7 +2,7 @@
 
 import type { FieldViewProps } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
-import { cn } from "@monti-cms/admin/kit";
+import { cn, Panel } from "@monti-cms/admin/kit";
 import { MediaThumbnail } from "@monti-cms/admin/media";
 import { type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { SEO_ROLES } from "../fields";
@@ -64,7 +64,7 @@ export function SeoPreview({
 
 	return (
 		<div className="space-y-3">
-			<section aria-label={t("preview.search")} className="space-y-1 rounded-lg border bg-cms-muted/30 p-3">
+			<Panel role="region" aria-label={t("preview.search")} className="space-y-1 bg-cms-muted/30 p-3">
 				<p className="truncate text-[11px] text-cms-muted-foreground">
 					{site.SITE_NAME}
 					{path
@@ -78,13 +78,11 @@ export function SeoPreview({
 				<p className={cn("line-clamp-2 text-xs leading-relaxed", !description && "text-cms-muted-foreground italic")}>
 					{description || t("preview.noDescription")}
 				</p>
-				{noindex && (
-					<p className="pt-1 font-medium cms-dark:text-amber-400 text-[11px] text-amber-700">{t("preview.hidden")}</p>
-				)}
-			</section>
+				{noindex && <p className="pt-1 font-medium text-[11px] text-cms-warning-foreground">{t("preview.hidden")}</p>}
+			</Panel>
 
 			{hasImageField && (
-				<section aria-label={t("preview.share")} className="overflow-hidden rounded-lg border">
+				<Panel role="region" aria-label={t("preview.share")} className="overflow-hidden">
 					{imageId && <MediaThumbnail mediaId={imageId} className="aspect-[1.91/1] w-full border-b" />}
 					<div className="space-y-0.5 p-3">
 						<p className="truncate text-[11px] text-cms-muted-foreground">{site.SITE_NAME}</p>
@@ -93,7 +91,7 @@ export function SeoPreview({
 							<p className="line-clamp-2 text-cms-muted-foreground text-xs leading-relaxed">{description}</p>
 						)}
 					</div>
-				</section>
+				</Panel>
 			)}
 		</div>
 	);

@@ -9,6 +9,7 @@ import { ImageInsertDialog } from "../../editor/image-insert-dialog";
 import { uploadAttachment } from "../../editor/upload-helper";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
+import { FieldError } from "../../ui/field";
 import type { FieldInputProps } from "./field-inputs";
 import { entriesMessages } from "./messages";
 
@@ -202,11 +203,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 					if (file) void upload(file);
 				}}
 			/>
-			{error && (
-				<p role="alert" className="text-cms-destructive text-xs">
-					{error}
-				</p>
-			)}
+			{error && <FieldError>{error}</FieldError>}
 		</>
 	);
 }

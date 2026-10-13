@@ -6,25 +6,25 @@ import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { SidebarTrigger } from "../../ui/sidebar";
 import { SchemaSettings } from "../schema/schema-screen";
-import { AdminShell } from "../shared/admin-shell";
+import { ShellPage } from "../shared/admin-shell";
 import { sharedMessages } from "../shared/messages";
 import { settingsMessages } from "./messages";
-import { type SettingsTabId, settingsTabs } from "./tabs";
+import { type SchemaTab, settingsTabs } from "./tabs";
 
 /**
  * The Settings page: its own header (title, one line about where it is saved, the pending changes and the review button) over a row of tabs, each its own address
  * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: site, languages, collections, file and admin. They share one draft.
  */
-export function SettingsScreen({ tab }: { tab: SettingsTabId }) {
+export function SettingsScreen({ tab }: { tab: SchemaTab }) {
 	const t = useTranslator(settingsMessages);
 	return (
-		<AdminShell title={t("title")} sidebar={{ activeNav: "settings" }} bare>
+		<ShellPage title={t("title")} nav="settings" bare>
 			<SettingsBody tab={tab} />
-		</AdminShell>
+		</ShellPage>
 	);
 }
 
-function SettingsBody({ tab }: { tab: SettingsTabId }) {
+function SettingsBody({ tab }: { tab: SchemaTab }) {
 	const site = useSite();
 	const t = useTranslator(settingsMessages);
 	const shared = useTranslator(sharedMessages);

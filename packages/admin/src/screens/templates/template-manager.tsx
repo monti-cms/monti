@@ -11,25 +11,26 @@ import {
 import type { BodyTemplate } from "@monti-cms/core/runtime";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createTemplate, deleteTemplate, listTemplates, templatesKeys, updateTemplate } from "../../api/templates";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { documentKey } from "../../editor/document-key";
 import { CmsEditor } from "../../editor/tiptap-editor";
-import { cn } from "../../lib/utils/cn";
+import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
+import { isComposingKey } from "../../lib/keyboard";
 import type { TranslatorFor } from "../../translator";
-import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
+import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
-import { Skeleton } from "../../ui/skeleton";
-import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
+import type { MenuAction } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EditorFooter } from "../shared/editor-footer";
 import { EmptyState } from "../shared/empty-state";
 import { formatDateOnly } from "../shared/format-date";
-import { OPEN_ITEM } from "../shared/side-panel";
+import { LoadErrorAlert } from "../shared/load-error-alert";
+import { ListPane, ListRow, MasterDetail } from "../shared/master-detail";
 import { useDraftEditor } from "../shared/use-draft-editor";
 import { templatesMessages } from "./messages";
 
@@ -105,19 +106,7 @@ function TemplateEditPanel({
 		save.mutate({ name: draft.name.trim(), doc: draft.doc });
 	};
 
-	// Save with ⌘S or Ctrl+S. The function is kept in a ref so it saves the latest values.
-	const saveRef = useRef(handleSave);
-	saveRef.current = handleSave;
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.isComposing) return;
-			if (event.key.toLowerCase() !== "s") return;
-			event.preventDefault();
-			saveRef.current();
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, []);
+	useSaveShortcut(handleSave);
 
 	return (
 		// The body editor also contains buttons and inputs, so it is not wrapped in a <form>. Enter in the name field and ⌘S save.
@@ -133,7 +122,7 @@ function TemplateEditPanel({
 					onChange={(e) => update({ name: e.target.value })}
 					onKeyDown={(event) => {
 						// Enter during Korean IME composition ends the character. Do not save.
-						if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+						if (event.key !== "Enter" || isComposingKey(event)) return;
 						event.preventDefault();
 						handleSave();
 					}}
@@ -142,11 +131,7 @@ function TemplateEditPanel({
 				/>
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</div>
-			{saveError && (
-				<p role="alert" className="border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs">
-					{saveError}
-				</p>
-			)}
+			{saveError && <FieldError className="border-b bg-cms-destructive-soft px-6 py-2">{saveError}</FieldError>}
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
 			</div>
@@ -255,92 +240,48 @@ export function TemplateManager() {
 				</Button>
 			</PageActions>
 			{error && (
-				<Alert variant="destructive" className="mx-5 mt-3 flex w-auto items-center justify-between">
-					<AlertDescription className="col-start-auto">{error}</AlertDescription>
-					<Button type="button" variant="outline" size="xs" onClick={() => void templatesQuery.refetch()}>
-						{t("common.retry")}
-					</Button>
-				</Alert>
+				<LoadErrorAlert message={error} onRetry={() => void templatesQuery.refetch()} className="mx-5 mt-3 w-auto" />
 			)}
-			<div className="flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex w-72 shrink-0 flex-col border-r">
-					<ul className="flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
-						{templatesQuery.isPending
-							? Array.from({ length: 3 }, (_, index) => (
-									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-									<li key={index} className="p-4" aria-hidden>
-										<Skeleton className="h-10 w-full" />
-									</li>
-								))
-							: templates.length === 0
-								? !error && (
-										<li>
-											<EmptyState compact title={t("list.empty")} />
-										</li>
-									)
-								: templates.map((row) => {
-										const isSelected = activeTemplate?.id === row.id;
-										return (
-											<ActionContextMenu
-												key={row.id}
-												actions={templateMenu(row)}
-												trigger={
-													<li
-														className={cn(
-															"group flex items-center justify-between gap-2 px-3 py-2 transition-colors",
-															isSelected ? OPEN_ITEM : "hover:bg-cms-accent/50",
-														)}
-													/>
-												}
-											>
-												<Button
-													variant="ghost"
-													type="button"
-													aria-current={isSelected ? "true" : undefined}
-													onClick={() => void openTemplate(row)}
-													onKeyDown={(event) => {
-														if (event.key === "Delete") {
-															event.preventDefault();
-															void requestDelete(row);
-														}
-													}}
-													className="h-auto min-w-0 flex-1 flex-col items-start gap-1.5 px-1 py-1 text-left font-normal hover:bg-transparent"
-												>
-													<span className="truncate font-medium text-sm">{row.name}</span>
-													<span className="text-[11px] text-cms-muted-foreground">
-														{formatDateOnly(site, row.updatedAt)}
-													</span>
-												</Button>
-												<MoreActionsButton
-													actions={templateMenu(row)}
-													label={t("list.itemActions", { name: row.name })}
-												/>
-											</ActionContextMenu>
-										);
-									})}
-					</ul>
-				</div>
-
-				<div className="flex flex-1 flex-col overflow-hidden">
-					{activeTemplate ? (
-						<TemplateEditPanel
-							key={activeTemplate.id ?? `new-${newCount}`}
-							template={activeTemplate}
-							onSaved={saved}
-							onCancel={() => void closeEditor()}
-							onDirtyChange={(dirty) => {
-								dirtyRef.current = dirty;
-							}}
-						/>
-					) : (
-						<EmptyState
-							icon={LayoutTemplate}
-							title={t("edit.empty")}
-							action={{ label: t("common.add"), icon: Plus, onClick: () => void openNew() }}
-						/>
-					)}
-				</div>
-			</div>
+			<MasterDetail
+				list={
+					<ListPane
+						label={t("list.label")}
+						loading={templatesQuery.isPending}
+						empty={error ? null : <EmptyState compact title={t("list.empty")} />}
+					>
+						{templates.map((row) => (
+							<ListRow
+								key={row.id}
+								title={row.name}
+								detail={formatDateOnly(site, row.updatedAt)}
+								current={activeTemplate?.id === row.id}
+								onClick={() => void openTemplate(row)}
+								actions={templateMenu(row)}
+								actionsLabel={t("list.itemActions", { name: row.name })}
+								onDelete={() => void requestDelete(row)}
+							/>
+						))}
+					</ListPane>
+				}
+			>
+				{activeTemplate ? (
+					<TemplateEditPanel
+						key={activeTemplate.id ?? `new-${newCount}`}
+						template={activeTemplate}
+						onSaved={saved}
+						onCancel={() => void closeEditor()}
+						onDirtyChange={(dirty) => {
+							dirtyRef.current = dirty;
+						}}
+					/>
+				) : (
+					<EmptyState
+						icon={LayoutTemplate}
+						title={t("edit.empty")}
+						action={{ label: t("common.add"), icon: Plus, onClick: () => void openNew() }}
+					/>
+				)}
+			</MasterDetail>
 			{dialog}
 		</div>
 	);

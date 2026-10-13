@@ -2,11 +2,11 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { useId, useState } from "react";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
-import { Labeled } from "./controls";
+import { Labeled } from "../shared/labeled";
 import { schemaMessages } from "./messages";
 import { defaultPath, idFromName, nameProblem, pathProblem } from "./schema-model";
 
@@ -133,14 +133,12 @@ function NewCollectionForm({
 				/>
 				{pathIssue && <FieldError className="text-xs">{t(`path.${pathIssue}`)}</FieldError>}
 			</Labeled>
-			<DialogFooter>
-				<Button type="button" variant="outline" onClick={onCancel}>
-					{t("collection.createCancel")}
-				</Button>
-				<Button type="submit" disabled={!ready}>
-					{t("collection.createConfirm")}
-				</Button>
-			</DialogFooter>
+			<DialogFormFooter
+				onCancel={onCancel}
+				cancelLabel={t("collection.createCancel")}
+				submitLabel={t("collection.createConfirm")}
+				disabled={!ready}
+			/>
 		</form>
 	);
 }

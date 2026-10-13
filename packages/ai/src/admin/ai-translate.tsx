@@ -3,7 +3,7 @@
 import type { EditorExtension } from "@monti-cms/admin";
 import { errorText } from "@monti-cms/admin/api";
 import type { BlockAction } from "@monti-cms/admin/editor";
-import { Button, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
+import { Button, isComposingKey, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Editor } from "@tiptap/react";
 import { Languages, Square } from "lucide-react";
@@ -280,7 +280,7 @@ export function useAiTranslate(locales: { sourceLocale: string; targetLocale: st
 								onChange={(event) => setRequest(event.target.value)}
 								onKeyDown={(event) => {
 									// Enter inserts a newline; Cmd/Ctrl+Enter runs.
-									if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+									if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
 										event.preventDefault();
 										void translateAll();
 									}

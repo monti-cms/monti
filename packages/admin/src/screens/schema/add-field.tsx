@@ -2,10 +2,11 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { useState } from "react";
-import { Button } from "../../ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
-import { Labeled, Pick, useSchemaEdit } from "./controls";
+import { Labeled } from "../shared/labeled";
+import { Pick, useSchemaEdit } from "./controls";
 import { type CollectionEditing, NewFieldDialog } from "./field-editor";
 import { schemaMessages } from "./messages";
 import {
@@ -105,14 +106,12 @@ export function AddFieldDialog({
 						items={kinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 						onChange={(next) => setKind(next as FieldKindName)}
 					/>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={onClose}>
-							{t("field.newCancel")}
-						</Button>
-						<Button type="submit" disabled={Boolean(problem)}>
-							{t("field.addConfirm")}
-						</Button>
-					</DialogFooter>
+					<DialogFormFooter
+						onCancel={onClose}
+						cancelLabel={t("field.newCancel")}
+						submitLabel={t("field.addConfirm")}
+						disabled={Boolean(problem)}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>

@@ -6,7 +6,7 @@ import {
 	panelGroupsOf,
 } from "@monti-cms/core/client";
 import { moveWithin } from "../../lib/utils/move-within";
-import { fieldsOf, layoutOf, type Obj, setProp, withLayout } from "./schema-model";
+import { fieldsOf, type Obj, setProp, withLayout } from "./schema-model";
 
 /**
  * The properties panel of the edit screen as the fields tree shows it: tab, then an ordered list of blocks, each a titled group or a run of fields in no group.

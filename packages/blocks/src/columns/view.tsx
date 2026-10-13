@@ -169,7 +169,7 @@ export function ColumnsNodeView() {
 									nudge(boundary.index, event.key === "ArrowLeft" ? -5 : 5);
 								}}
 								className={cn(
-									"pointer-events-auto absolute top-0 left-0 flex h-3 w-6 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center rounded-full border bg-cms-popover opacity-0 shadow-sm transition-opacity",
+									"pointer-events-auto absolute top-0 left-0 flex h-3 w-6 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center rounded-sm border bg-cms-popover opacity-0 shadow-cms-pop transition-opacity",
 									"focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-cms-ring group-hover/container:opacity-100",
 									draft && "opacity-100",
 								)}

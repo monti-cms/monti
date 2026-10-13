@@ -3,18 +3,19 @@
 import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
+	DETAIL_PANE_FRAME,
 	EditorFooter,
-	Empty,
-	EmptyContent,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
+	EmptyState,
 	Field,
 	FieldGroup,
 	FieldLabel,
 	FieldTitle,
 	IconButton,
 	Input,
+	ListPane,
+	ListRow,
+	LoadErrorAlert,
+	MasterDetail,
 	Textarea,
 	useConfirm,
 	useDraftEditor,
@@ -25,7 +26,6 @@ import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
 import { useId, useState } from "react";
 import type { AiSharedItem, AiSharedView } from "../shared";
 import { aiKeys, createAiShared, deleteAiShared, getAiShared, updateAiShared } from "./api";
-import { DETAIL_PANE, ListRow, ListSkeleton, LoadError } from "./connection-editor";
 import { sharedMessages } from "./shared-editor.messages";
 
 /** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
@@ -77,67 +77,59 @@ export function SharedManager({
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			{query.error && !view && (
-				<LoadError message={errorText(site, query.error, t("error.load"))} onRetry={() => void query.refetch()} />
+				<LoadErrorAlert
+					className="m-3"
+					message={errorText(site, query.error, t("error.load"))}
+					onRetry={() => void query.refetch()}
+				/>
 			)}
-			<div className="flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex w-72 shrink-0 flex-col border-r">
-					<ul className="min-h-0 flex-1 divide-y overflow-y-auto" aria-label={t("list.label")}>
-						{query.isPending ? (
-							<ListSkeleton rows={2} />
-						) : view?.items.length === 0 ? (
-							<li className="px-3 py-6 text-center text-cms-muted-foreground text-xs">{t("list.empty")}</li>
-						) : (
-							view?.items.map((item) => (
-								<ListRow
-									key={item.key}
-									title={item.label}
-									detail={detailOf(t, item)}
-									current={selected === item.key}
-									onClick={() => onOpen(item.key)}
-								/>
-							))
-						)}
-					</ul>
-				</div>
-
-				<div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-					{view && (selected === "new" || current) ? (
-						<SharedEditor
-							key={selected ?? "none"}
-							version={view.version}
-							item={current}
-							onSaved={(saved, key) => {
-								applySaved(saved);
-								onSelectedChange(key);
-							}}
-							onDeleted={(saved) => {
-								applySaved(saved);
-								onSelectedChange(null);
-							}}
-							onCancel={() => onSelectedChange(null)}
-							onConflict={() => void query.refetch()}
-							onDirtyChange={onDirtyChange}
+			<MasterDetail
+				list={
+					<ListPane
+						label={t("list.label")}
+						loading={query.isPending}
+						skeletonRows={2}
+						empty={view?.items.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
+					>
+						{view?.items.map((item) => (
+							<ListRow
+								key={item.key}
+								title={item.label}
+								detail={detailOf(t, item)}
+								current={selected === item.key}
+								onClick={() => onOpen(item.key)}
+							/>
+						))}
+					</ListPane>
+				}
+			>
+				{view && (selected === "new" || current) ? (
+					<SharedEditor
+						key={selected ?? "none"}
+						version={view.version}
+						item={current}
+						onSaved={(saved, key) => {
+							applySaved(saved);
+							onSelectedChange(key);
+						}}
+						onDeleted={(saved) => {
+							applySaved(saved);
+							onSelectedChange(null);
+						}}
+						onCancel={() => onSelectedChange(null)}
+						onConflict={() => void query.refetch()}
+						onDirtyChange={onDirtyChange}
+					/>
+				) : (
+					view && (
+						<EmptyState
+							icon={Quote}
+							title={t("empty.title")}
+							action={{ label: t("action.add"), onClick: () => onOpen("new"), icon: Plus }}
 						/>
-					) : (
-						view && (
-							<Empty className="flex-1">
-								<EmptyHeader>
-									<EmptyMedia variant="icon">
-										<Quote aria-hidden />
-									</EmptyMedia>
-									<EmptyTitle>{t("empty.title")}</EmptyTitle>
-								</EmptyHeader>
-								<EmptyContent>
-									<Button type="button" size="sm" onClick={() => onOpen("new")}>
-										<Plus aria-hidden />
-										{t("action.add")}
-									</Button>
-								</EmptyContent>
-							</Empty>
-						)
-					)}
-				</div>
-			</div>
+					)
+				)}
+			</MasterDetail>
 		</div>
 	);
 }
@@ -273,7 +265,7 @@ function SharedEditor({
 	const shownKey = item?.key ?? draft.key.trim();
 
 	return (
-		<div className={DETAIL_PANE}>
+		<div className={DETAIL_PANE_FRAME}>
 			<div className="min-w-0">
 				<h2 className="truncate font-medium text-base">{(item ? item.label : draft.label.trim()) || t("new.title")}</h2>
 				{(shownKey || item?.source === "added") && (

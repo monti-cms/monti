@@ -40,7 +40,7 @@ import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } fr
 import { useCmsAdminComponents } from "../admin-components";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
-import { Alert, AlertDescription } from "../ui/alert";
+import { Badge, badgeVariants } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { IconButton } from "../ui/icon-button";
@@ -48,6 +48,7 @@ import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
+import { StatusIndicator } from "../ui/status-indicator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { folderKeyHandler } from "./admin-sidebar";
 import { ColumnHeader } from "./column-header";
@@ -69,7 +70,9 @@ import { writeDraggedEntries } from "./shared/entry-drag";
 import { describeEntryStatus, statusLabels } from "./shared/entry-status";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
 import { ListPagination } from "./shared/list-pager";
+import { LoadErrorAlert } from "./shared/load-error-alert";
 import { OPEN_ITEM } from "./shared/side-panel";
+import { useDebouncedCallback } from "./shared/use-debounced";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 
@@ -194,15 +197,6 @@ function ColumnResizeHandle({
 	);
 }
 
-const BADGE_CLASS = "inline-flex h-5 items-center rounded border px-1.5 font-medium text-[11px] leading-none";
-
-const BADGE_TONE: Record<"published" | "changed" | "draft" | "archived", string> = {
-	published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 cms-dark:text-emerald-400",
-	changed: "border-amber-500/30 bg-amber-500/10 text-amber-700 cms-dark:text-amber-400",
-	draft: "border-amber-500/30 bg-amber-500/10 text-amber-700 cms-dark:text-amber-400",
-	archived: "border-transparent bg-cms-muted text-cms-muted-foreground",
-};
-
 /** Per-locale status of a translation group. Existing locales link to their edit screen; missing ones show only as dashed. Status is also readable as text, not just color. */
 function LocaleBadges({ translations }: { translations: readonly ListTranslationMember[] }) {
 	const site = useSite();
@@ -214,26 +208,20 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						<span key={locale} className={cn(BADGE_CLASS, "border-dashed text-cms-muted-foreground/70")}>
+						<Badge key={locale} variant="outline" className="border-dashed text-cms-muted-foreground/70">
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<span className="sr-only">{t("locale.hasNot", { name })}</span>
-						</span>
+						</Badge>
 					);
 				}
-				const tone =
-					member.status === "published"
-						? member.hasUnpublishedChanges
-							? "changed"
-							: "published"
-						: member.status === "draft"
-							? "draft"
-							: "archived";
+				const variant =
+					member.status === "published" && !member.hasUnpublishedChanges
+						? "success"
+						: member.status === "published" || member.status === "draft"
+							? "warning"
+							: "secondary";
 				return (
-					<Link
-						key={locale}
-						href={site.adminEntryEditHref(member.id)}
-						className={cn(BADGE_CLASS, BADGE_TONE[tone], "cms-dark:hover:brightness-125 hover:brightness-95")}
-					>
+					<Link key={locale} href={site.adminEntryEditHref(member.id)} className={badgeVariants({ variant })}>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<span className="sr-only">
 							{name} · {statusLabels(site)[member.status]}
@@ -254,15 +242,16 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 			{site.LOCALES.map((locale) => {
 				const named = locales.includes(locale);
 				return (
-					<span
+					<Badge
 						key={locale}
-						className={cn(BADGE_CLASS, named ? BADGE_TONE.published : "border-dashed text-cms-muted-foreground/70")}
+						variant={named ? "success" : "outline"}
+						className={cn(!named && "border-dashed text-cms-muted-foreground/70")}
 					>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<span className="sr-only">
 							{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}
 						</span>
-					</span>
+					</Badge>
 				);
 			})}
 		</span>
@@ -274,47 +263,17 @@ function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: bool
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
-	const tone =
-		item.status === "published"
-			? item.hasUnpublishedChanges
-				? "text-amber-600 cms-dark:text-amber-400"
-				: "text-emerald-600 cms-dark:text-emerald-400"
-			: "text-cms-muted-foreground";
-	const icon =
-		item.status === "published" ? (
-			item.hasUnpublishedChanges ? (
-				<>
-					<circle cx="8" cy="8" r="5.5" />
-					<path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor" stroke="none" />
-				</>
-			) : (
-				<circle cx="8" cy="8" r="5.5" fill="currentColor" stroke="none" />
-			)
-		) : item.status === "archived" || item.status === "trashed" ? (
-			<>
-				<circle cx="8" cy="8" r="5.5" />
-				<path d="M5 8h6" />
-			</>
-		) : (
-			<circle cx="8" cy="8" r="5.5" strokeDasharray="2.4 2.4" />
-		);
+	const published = item.status === "published";
+	const gone = item.status === "archived" || item.status === "trashed";
 	return (
-		<span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-cms-foreground/80">
-			<svg
-				aria-hidden="true"
-				focusable="false"
-				viewBox="0 0 16 16"
-				className={cn("size-3.5 shrink-0", tone)}
-				fill="none"
-				stroke="currentColor"
-				strokeWidth="1.6"
-			>
-				{icon}
-			</svg>
-			{label}
-		</span>
+		<StatusIndicator
+			tone={published ? (item.hasUnpublishedChanges ? "warning" : "success") : "neutral"}
+			shape={published ? (item.hasUnpublishedChanges ? "half" : "dot") : gone ? "minus" : "dashed"}
+			label={label}
+		/>
 	);
 }
+
 const resolve = <T,>(updater: Updater<T>, current: T): T =>
 	typeof updater === "function" ? (updater as (old: T) => T)(current) : updater;
 
@@ -603,18 +562,14 @@ export function AdminEntriesTable({
 	);
 	const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(savedSizes ?? {});
 	useEffect(() => setColumnSizing(savedSizes ?? {}), [savedSizes]);
-	const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const persistSizes = (next: ColumnSizingState) => {
-		if (saveTimer.current) clearTimeout(saveTimer.current);
-		saveTimer.current = setTimeout(() => {
-			const sizes = Object.fromEntries(
-				Object.entries(next)
-					.filter(([id]) => available.includes(id as AdminListColumn))
-					.map(([id, size]) => [id, Math.round(Math.min(MAX_COLUMN_SIZE, Math.max(MIN_COLUMN_SIZE, size)))]),
-			);
-			onColumnSettingsChange({ order, visibility, sizes });
-		}, 400);
-	};
+	const persistSizes = useDebouncedCallback((next: ColumnSizingState) => {
+		const sizes = Object.fromEntries(
+			Object.entries(next)
+				.filter(([id]) => available.includes(id as AdminListColumn))
+				.map(([id, size]) => [id, Math.round(Math.min(MAX_COLUMN_SIZE, Math.max(MIN_COLUMN_SIZE, size)))]),
+		);
+		onColumnSettingsChange({ order, visibility, sizes });
+	}, 400);
 	const updateSizing = (updater: Updater<ColumnSizingState>) =>
 		setColumnSizing((current) => {
 			const next = resolve(updater, current);
@@ -741,14 +696,7 @@ export function AdminEntriesTable({
 
 	return (
 		<section aria-label={t("list.label")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			{errorMessage && (
-				<Alert variant="destructive" className="mx-5 mt-3 flex w-auto items-center justify-between">
-					<AlertDescription className="col-start-auto">{errorMessage}</AlertDescription>
-					<Button type="button" variant="outline" size="xs" onClick={onRetry}>
-						{t("common.retry")}
-					</Button>
-				</Alert>
-			)}
+			{errorMessage && <LoadErrorAlert message={errorMessage} onRetry={onRetry} className="mx-5 mt-3" />}
 
 			<div ref={scrollRef} className="flex min-h-0 flex-1 flex-col overflow-auto">
 				<Table

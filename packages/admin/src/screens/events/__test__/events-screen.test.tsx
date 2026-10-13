@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { renderInRouter as render } from "../../../test/router";
+import { createTestRouter } from "../../../test/router";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
@@ -37,7 +37,10 @@ const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json:
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+// The filter and page live in the address, so every test gets an address of its own.
+let render: ReturnType<typeof createTestRouter>["render"];
 beforeEach(() => {
+	render = createTestRouter().render;
 	vi.clearAllMocks();
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
 		const method = init?.method ?? "GET";
@@ -166,8 +169,11 @@ describe("EventsScreen", () => {
 	});
 
 	it("filters by delivery status and returns to all from the empty state", async () => {
+		// The sidebar's failed-delivery count is a request without a state; the list is the one that names states.
 		const requested = () =>
-			fetchMock.mock.calls.map(([input]) => new URL(String(input), "http://localhost").searchParams.getAll("state"));
+			fetchMock.mock.calls
+				.map(([input]) => new URL(String(input), "http://localhost").searchParams.getAll("state"))
+				.filter((states) => states.length > 0);
 		fetchMock.mockImplementation(async (input: string) => {
 			const states = new URL(input, "http://localhost").searchParams.getAll("state");
 			const onlyFailed = states.length === 2 && states.includes("failed");
