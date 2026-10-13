@@ -394,13 +394,12 @@ describe("SchemaScreen", () => {
 		expect(within(screen.getByTestId("field-title")).queryByTestId("title-badge")).toBeNull();
 	});
 
-	it("changes the order from the row menu", async () => {
+	it("changes the order from the row buttons", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		fireEvent.click(screen.getByRole("button", { name: t("fields.menu", { name: "summary" }) }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("row.up", { name: "summary" }) }));
+		fireEvent.click(screen.getByRole("button", { name: t("row.up", { name: "summary" }) }));
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown> } } })
@@ -746,8 +745,11 @@ describe("SchemaScreen", () => {
 		const savedPost = () =>
 			(lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown>; layout?: unknown } } })
 				.collections.post;
-		const menuOf = async (name: string) => {
-			fireEvent.click(await screen.findByRole("button", { name }));
+		/** Moves a field with the row's move button: it opens a list of places. */
+		const moveTo = async (field: string, destination: string) => {
+			fireEvent.click(await screen.findByRole("button", { name: t("layout.move", { name: field }) }));
+			const dialog = await screen.findByTestId("move-dialog");
+			fireEvent.click(within(dialog).getByRole("button", { name: destination }));
 		};
 		const openFields = async () => {
 			renderScreen();
@@ -755,6 +757,38 @@ describe("SchemaScreen", () => {
 			openTab("fields");
 			await screen.findByTestId("fields-card");
 		};
+
+		it("moves, reorders and deletes with buttons on every row, named after the row, and keeps no menu", async () => {
+			await openFields();
+			expect(screen.queryByRole("button", { name: /^(Actions for|.* 작업$)/ })).toBeNull();
+			// The ends of the run are disabled.
+			const first = screen.getByRole("button", { name: t("row.up", { name: "slug" }) }) as HTMLButtonElement;
+			expect(first.disabled).toBe(true);
+			expect(
+				(screen.getByRole("button", { name: t("row.down", { name: "slug" }) }) as HTMLButtonElement).disabled,
+			).toBe(false);
+
+			// Delete is a staged change: the row goes and the review has it.
+			fireEvent.click(screen.getByRole("button", { name: t("row.remove", { name: "summary" }) }));
+			await waitFor(() => expect(screen.queryByTestId("field-summary")).toBeNull());
+
+			// A group and a tab have the same buttons.
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addTab") }));
+			await screen.findByTestId("tab-1");
+			for (const label of [
+				t("layout.upGroup", { name: t("layout.newGroup") }),
+				t("layout.downGroup", { name: t("layout.newGroup") }),
+				t("layout.removeGroup", { name: t("layout.newGroup") }),
+				t("layout.upTab", { name: t("layout.newTab") }),
+				t("layout.downTab", { name: t("layout.newTab") }),
+				t("layout.removeTab", { name: t("layout.newTab") }),
+			]) {
+				expect(screen.getByRole("button", { name: label })).toBeTruthy();
+			}
+			fireEvent.click(screen.getByRole("button", { name: t("layout.removeTab", { name: t("layout.newTab") }) }));
+			await waitFor(() => expect(screen.queryByTestId("tab-1")).toBeNull());
+		});
 
 		it("adds a group, renames it in place, and saves the group with the order of the fields", async () => {
 			await openFields();
@@ -764,9 +798,7 @@ describe("SchemaScreen", () => {
 			fireEvent.blur(title);
 			await screen.findByDisplayValue("Details");
 
-			await menuOf(t("fields.menu", { name: "summary" }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveFieldToGroup") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: "Details" }));
+			await moveTo("summary", "Details");
 
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
@@ -780,8 +812,9 @@ describe("SchemaScreen", () => {
 			await openFields();
 			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
 			await screen.findByDisplayValue(t("layout.newGroup"));
-			await menuOf(t("layout.groupMenu", { name: t("layout.newGroup") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.collapsed") }));
+			fireEvent.click(
+				await screen.findByRole("button", { name: t("layout.collapseToggle", { name: t("layout.newGroup") }) }),
+			);
 			expect(await screen.findByText(t("layout.collapsedMark"))).toBeTruthy();
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
@@ -795,11 +828,10 @@ describe("SchemaScreen", () => {
 			await openFields();
 			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
 			await screen.findByDisplayValue(t("layout.newGroup"));
-			await menuOf(t("fields.menu", { name: "summary" }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveFieldToGroup") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newGroup") }));
-			await menuOf(t("layout.groupMenu", { name: t("layout.newGroup") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.removeGroup") }));
+			await moveTo("summary", t("layout.newGroup"));
+			fireEvent.click(
+				await screen.findByRole("button", { name: t("layout.removeGroup", { name: t("layout.newGroup") }) }),
+			);
 			await waitFor(() => expect(screen.queryByDisplayValue(t("layout.newGroup"))).toBeNull());
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
@@ -817,9 +849,12 @@ describe("SchemaScreen", () => {
 			await screen.findByTestId("tab-1");
 			expect(screen.getByDisplayValue(defaultTabName)).toBeTruthy();
 
-			await menuOf(t("layout.groupMenu", { name: t("layout.newGroup") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveGroupToTab") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newTab") }));
+			fireEvent.click(
+				await screen.findByRole("button", { name: t("layout.moveGroup", { name: t("layout.newGroup") }) }),
+			);
+			fireEvent.click(
+				within(await screen.findByTestId("move-dialog")).getByRole("button", { name: t("layout.newTab") }),
+			);
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
 			expect(savedPost().layout).toEqual([{ group: t("layout.newGroup"), fields: [], tab: t("layout.newTab") }]);
@@ -830,9 +865,7 @@ describe("SchemaScreen", () => {
 			const row = screen.getByTestId("field-title");
 			expect(within(row).getByText(t("layout.notInPanel"))).toBeTruthy();
 			expect(within(row).getByText(t("layout.notInPanel")).getAttribute("title")).toBe(t("layout.notInPanel.title"));
-			await menuOf(t("fields.menu", { name: "title" }));
-			await screen.findByRole("menuitem", { name: t("fields.edit") });
-			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToGroup") })).toBeNull();
+			expect(within(row).queryByRole("button", { name: t("layout.move", { name: "title" }) })).toBeNull();
 		});
 
 		it("shows a field a plugin placed inside its own tab, locked there, and hidden fields as not in the panel", async () => {
@@ -846,16 +879,15 @@ describe("SchemaScreen", () => {
 			expect(screen.getByTestId("tab-1")).toBeTruthy();
 			const seo = screen.getByTestId("field-seoTitle");
 			expect(within(seo).getByText(t("layout.pluginPlaced"))).toBeTruthy();
-			expect(
-				within(seo).getByRole("button", { name: t("fields.menu", { name: "seoTitle" }) }) as HTMLElement,
-			).toBeTruthy();
+			expect(within(seo).getByRole("button", { name: t("row.remove", { name: "seoTitle" }) })).toBeTruthy();
 			// The tab is the plugin's: it cannot be renamed.
 			expect((screen.getByDisplayValue("SEO") as HTMLInputElement).disabled).toBe(true);
 			expect(within(screen.getByTestId("field-internal")).getByText(t("layout.notInPanel"))).toBeTruthy();
-			await menuOf(t("fields.menu", { name: "seoTitle" }));
-			await screen.findByRole("menuitem", { name: t("fields.edit") });
-			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToGroup") })).toBeNull();
-			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToTab") })).toBeNull();
+			// The plugin places it: it cannot be moved, only removed.
+			expect(within(seo).queryByRole("button", { name: t("layout.move", { name: "seoTitle" }) })).toBeNull();
+			expect(
+				(within(seo).getByRole("button", { name: t("row.up", { name: "seoTitle" }) }) as HTMLButtonElement).disabled,
+			).toBe(true);
 		});
 
 		it("shows fields in no group where the panel draws them, and an unrelated move leaves them in place", async () => {
@@ -890,8 +922,7 @@ describe("SchemaScreen", () => {
 			expect(previewOrder()).toEqual(["preview-field-slug", "preview-field-summary", "preview-field-status"]);
 
 			// Moving another field does not move them.
-			await menuOf(t("fields.menu", { name: "status" }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveOut") }));
+			await moveTo("status", t("layout.moveOut"));
 			await waitFor(() => expect(order().filter((id) => id !== "field-title")[0]).toBe("field-slug"));
 			expect(previewOrder().slice(0, 2)).toEqual(["preview-field-slug", "preview-field-summary"]);
 			fireEvent.click(review());
@@ -937,9 +968,7 @@ describe("SchemaScreen", () => {
 
 			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
 			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
-			await menuOf(t("fields.menu", { name: "summary" }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveFieldToGroup") }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newGroup") }));
+			await moveTo("summary", t("layout.newGroup"));
 			const grouped = await within(screen.getByTestId("layout-preview")).findByRole("region", {
 				name: t("layout.newGroup"),
 			});

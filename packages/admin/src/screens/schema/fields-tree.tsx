@@ -9,17 +9,23 @@ import {
 	useSensor,
 	useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+	SortableContext,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/client";
-import { ArrowDown, ArrowUp, Eye, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsDownUp, Eye, GripVertical, MoveRight, Plus, Trash2, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { defaultTab } from "../entries/layout-groups";
-import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { AddFieldDialog } from "./add-field";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
@@ -98,10 +104,88 @@ type Locked =
 	| { readonly kind: "plugin"; readonly tab: string }
 	| { readonly kind: "panel"; readonly reason: NoPanelReason };
 
+/** A place a row can be moved to from the move dialog (the keyboard and touch alternative to dragging). */
+interface Destination {
+	readonly label: string;
+	readonly disabled?: boolean;
+	readonly run: () => void;
+}
+
+/** One icon button of a row: shown on hover and while focus is inside the row, without moving anything. */
+interface RowButton {
+	readonly label: string;
+	readonly icon: typeof ArrowUp;
+	readonly onClick: () => void;
+	readonly disabled?: boolean;
+	readonly destructive?: boolean;
+	readonly pressed?: boolean;
+}
+
+function RowButtons({ buttons }: { buttons: RowButton[] }) {
+	return (
+		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-cms-card/95 opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+			{buttons.map((button) => (
+				<IconButton
+					key={button.label}
+					label={button.label}
+					size="icon-xs"
+					destructive={button.destructive}
+					pressed={button.pressed}
+					disabled={button.disabled}
+					onClick={button.onClick}
+				>
+					<button.icon aria-hidden />
+				</IconButton>
+			))}
+		</div>
+	);
+}
+
+/** Where a row can go, as a list to pick from. */
+function MoveDialog({
+	title,
+	destinations,
+	onClose,
+}: {
+	title: string;
+	destinations: Destination[];
+	onClose: () => void;
+}) {
+	return (
+		<Dialog open onOpenChange={(open) => !open && onClose()}>
+			<DialogContent className="max-w-sm" data-testid="move-dialog">
+				<DialogHeader>
+					<DialogTitle>{title}</DialogTitle>
+				</DialogHeader>
+				<ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+					{destinations.map((destination) => (
+						<li key={destination.label}>
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								className="w-full justify-start"
+								disabled={destination.disabled}
+								onClick={() => {
+									destination.run();
+									onClose();
+								}}
+							>
+								{destination.label}
+							</Button>
+						</li>
+					))}
+				</ul>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
 /** What a top-level row does besides what a field in a conditional branch does: it moves through the tree of tabs and groups. */
 interface TopRow {
 	readonly locked: Locked | null;
-	readonly extra: MenuAction[];
+	/** Places the row can be moved to without dragging. */
+	readonly destinations: Destination[];
 	readonly up: () => void;
 	readonly down: () => void;
 	readonly canUp: boolean;
@@ -156,31 +240,29 @@ function Row({
 			open();
 		}
 	};
-	const actions: MenuAction[] = [
-		{ kind: "item", label: t("fields.edit"), icon: Pencil, onSelect: open },
+	const [moving, setMoving] = useState(false);
+	const buttons: RowButton[] = [
 		{
-			kind: "item",
 			label: t("row.up", { name }),
 			icon: ArrowUp,
 			disabled: disabled || (top ? !top.canUp || locked !== null : index === 0),
-			onSelect: () => (top ? top.up() : editing.update((collection) => moveField(collection, place, name, -1))),
+			onClick: () => (top ? top.up() : editing.update((collection) => moveField(collection, place, name, -1))),
 		},
 		{
-			kind: "item",
 			label: t("row.down", { name }),
 			icon: ArrowDown,
 			disabled: disabled || (top ? !top.canDown || locked !== null : index === count - 1),
-			onSelect: () => (top ? top.down() : editing.update((collection) => moveField(collection, place, name, 1))),
+			onClick: () => (top ? top.down() : editing.update((collection) => moveField(collection, place, name, 1))),
 		},
-		...(top && !locked ? top.extra : []),
-		{ kind: "separator" },
+		...(top && !locked
+			? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
+			: []),
 		{
-			kind: "item",
 			label: t("row.remove", { name }),
 			icon: Trash2,
 			destructive: true,
 			disabled: disabled || blocked !== null,
-			onSelect: () => editing.update((collection) => removeField(collection, place, name)),
+			onClick: () => editing.update((collection) => removeField(collection, place, name)),
 		},
 	];
 	const options = field.kind === "conditional" ? Object.keys(optionsOf(field)) : [];
@@ -270,11 +352,14 @@ function Row({
 				>
 					<GripVertical aria-hidden className="size-4" />
 				</button>
-				<MoreActionsButton
-					actions={actions}
-					label={t("fields.menu", { name })}
-					className="absolute top-1/2 right-2 size-6 -translate-y-1/2 text-cms-muted-foreground opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100"
-				/>
+				<RowButtons buttons={buttons} />
+				{moving && top && (
+					<MoveDialog
+						title={t("layout.moveTitle", { name })}
+						destinations={top.destinations}
+						onClose={() => setMoving(false)}
+					/>
+				)}
 			</div>
 			{options.map((option, at) => {
 				const last = at === options.length - 1;
@@ -442,36 +527,25 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	if (!tab) return null;
 	const editable = tabIsEditable(ops.tree, index);
 	const count = ops.tree.tabs.length;
-	const actions: MenuAction[] = [
+	const buttons: RowButton[] = [
 		{
-			kind: "item",
-			label: t("layout.rename"),
-			icon: Pencil,
-			disabled: ops.disabled || !editable,
-			onSelect: () => inputRef.current?.focus(),
-		},
-		{
-			kind: "item",
-			label: `${t("layout.upTab")}`,
+			label: t("layout.upTab", { name: tab.name }),
 			icon: ArrowUp,
 			disabled: ops.disabled || index < 2,
-			onSelect: () => ops.change((tree) => moveTab(tree, index, -1)),
+			onClick: () => ops.change((tree) => moveTab(tree, index, -1)),
 		},
 		{
-			kind: "item",
-			label: `${t("layout.downTab")}`,
+			label: t("layout.downTab", { name: tab.name }),
 			icon: ArrowDown,
 			disabled: ops.disabled || index === 0 || index === count - 1,
-			onSelect: () => ops.change((tree) => moveTab(tree, index, 1)),
+			onClick: () => ops.change((tree) => moveTab(tree, index, 1)),
 		},
-		{ kind: "separator" },
 		{
-			kind: "item",
-			label: t("layout.removeTab"),
+			label: t("layout.removeTab", { name: tab.name }),
 			icon: Trash2,
 			destructive: true,
 			disabled: ops.disabled || !editable,
-			onSelect: () => ops.change((tree) => removeTab(tree, index)),
+			onClick: () => ops.change((tree) => removeTab(tree, index)),
 		},
 	];
 	return (
@@ -495,11 +569,7 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 				</span>
 			)}
 			<span className="flex-1" />
-			<MoreActionsButton
-				actions={actions}
-				label={t("layout.tabMenu", { name: tab.name })}
-				className="size-6 text-cms-muted-foreground"
-			/>
+			<RowButtons buttons={buttons} />
 		</div>
 	);
 }
@@ -513,65 +583,46 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 		disabled: ops.disabled,
 	});
 	const inputRef = useRef<HTMLInputElement | null>(null);
+	const [moving, setMoving] = useState(false);
 	if (!group || group.title === null) return null;
 	const ref = { tab, block };
 	const count = ops.tree.tabs[tab]?.blocks.length ?? 0;
-	const actions: MenuAction[] = [
+	const buttons: RowButton[] = [
 		{
-			kind: "item",
-			label: t("layout.rename"),
-			icon: Pencil,
+			label: t("layout.collapseToggle", { name: group.title }),
+			icon: ChevronsDownUp,
+			pressed: group.collapsed === true,
 			disabled: ops.disabled,
-			onSelect: () => inputRef.current?.focus(),
+			onClick: () => ops.change((tree) => editGroup(tree, ref, { collapsed: !group.collapsed })),
 		},
 		{
-			kind: "item",
-			label: t("layout.collapsed"),
-			icon: group.collapsed ? X : Eye,
-			disabled: ops.disabled,
-			onSelect: () => ops.change((tree) => editGroup(tree, ref, { collapsed: !group.collapsed })),
-		},
-		{
-			kind: "item",
-			label: t("layout.upGroup"),
+			label: t("layout.upGroup", { name: group.title }),
 			icon: ArrowUp,
 			disabled: ops.disabled || block === 0,
-			onSelect: () => ops.change((tree) => moveGroupBy(tree, ref, -1)),
+			onClick: () => ops.change((tree) => moveGroupBy(tree, ref, -1)),
 		},
 		{
-			kind: "item",
-			label: t("layout.downGroup"),
+			label: t("layout.downGroup", { name: group.title }),
 			icon: ArrowDown,
 			disabled: ops.disabled || block === count - 1,
-			onSelect: () => ops.change((tree) => moveGroupBy(tree, ref, 1)),
+			onClick: () => ops.change((tree) => moveGroupBy(tree, ref, 1)),
 		},
 		...(ops.showTabs
 			? [
 					{
-						kind: "sub" as const,
-						label: t("layout.moveGroupToTab"),
-						items: ops.tree.tabs.flatMap((item, at): MenuAction[] =>
-							at === tab
-								? []
-								: [
-										{
-											kind: "item",
-											label: item.name,
-											onSelect: () => ops.change((tree) => moveGroupToTab(tree, ref, at)),
-										},
-									],
-						),
+						label: t("layout.moveGroup", { name: group.title }),
+						icon: MoveRight,
+						disabled: ops.disabled,
+						onClick: () => setMoving(true),
 					},
 				]
 			: []),
-		{ kind: "separator" },
 		{
-			kind: "item",
-			label: t("layout.removeGroup"),
+			label: t("layout.removeGroup", { name: group.title }),
 			icon: Trash2,
 			destructive: true,
 			disabled: ops.disabled,
-			onSelect: () => ops.change((tree) => removeGroup(tree, ref)),
+			onClick: () => ops.change((tree) => removeGroup(tree, ref)),
 		},
 	];
 	return (
@@ -596,11 +647,16 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 					<span className="shrink-0 text-cms-muted-foreground text-xs">{t("layout.collapsedMark")}</span>
 				)}
 				<span className="flex-1" />
-				<MoreActionsButton
-					actions={actions}
-					label={t("layout.groupMenu", { name: group.title })}
-					className="size-6 text-cms-muted-foreground opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100"
-				/>
+				<RowButtons buttons={buttons} />
+				{moving && (
+					<MoveDialog
+						title={t("layout.moveGroupTitle", { name: group.title })}
+						destinations={ops.tree.tabs.flatMap((item, at): Destination[] =>
+							at === tab ? [] : [{ label: item.name, run: () => ops.change((tree) => moveGroupToTab(tree, ref, at)) }],
+						)}
+						onClose={() => setMoving(false)}
+					/>
+				)}
 			</div>
 			<button
 				type="button"
@@ -652,7 +708,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	const ops: LayoutOps = { change, tree, showTabs, disabled };
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-		useSensor(KeyboardSensor),
+		useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
 	);
 	const fields = fieldsOf(collection);
 
@@ -663,56 +719,28 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 		const moveUp = locked ? tree : moveFieldBy(tree, name, -1);
 		const moveDown = locked ? tree : moveFieldBy(tree, name, 1);
 		const same = (other: Tree) => JSON.stringify(other) === JSON.stringify(tree);
-		const extra: MenuAction[] = locked
+		const destinations: Destination[] = locked
 			? []
 			: [
-					{
-						kind: "sub",
-						label: t("layout.moveFieldToGroup"),
-						items: tree.tabs.flatMap((tab, at): MenuAction[] => [
-							...tab.blocks.flatMap((block, g): MenuAction[] =>
-								block.title === null
-									? []
-									: [
-											{
-												kind: "item",
-												label: showTabs ? `${tab.name} / ${block.title}` : block.title,
-												disabled: here?.tab === at && here.block === g,
-												onSelect: () => change((current) => placeField(current, name, at, g)),
-											},
-										],
-							),
-							{
-								kind: "item",
-								label: showTabs ? `${tab.name} / ${t("layout.noGroup")}` : t("layout.noGroup"),
-								onSelect: () => change((current) => placeUngrouped(current, name, at)),
-							},
-						]),
-					},
+					...tree.tabs.flatMap((tab, at): Destination[] => [
+						...tab.blocks.flatMap((block, g): Destination[] =>
+							block.title === null
+								? []
+								: [
+										{
+											label: showTabs ? `${tab.name} / ${block.title}` : block.title,
+											disabled: here?.tab === at && here.block === g,
+											run: () => change((current) => placeField(current, name, at, g)),
+										},
+									],
+						),
+						{
+							label: showTabs ? `${tab.name} / ${t("layout.noGroup")}` : t("layout.noGroup"),
+							run: () => change((current) => placeUngrouped(current, name, at)),
+						},
+					]),
 					...(inGroup
-						? [
-								{
-									kind: "item" as const,
-									label: t("layout.moveOut"),
-									onSelect: () => change((current) => moveOutOfGroup(current, name)),
-								},
-							]
-						: []),
-					...(showTabs
-						? [
-								{
-									kind: "sub" as const,
-									label: t("layout.moveFieldToTab"),
-									items: tree.tabs.map(
-										(tab, at): MenuAction => ({
-											kind: "item",
-											label: tab.name,
-											disabled: here?.tab === at,
-											onSelect: () => change((current) => moveFieldToTab(current, name, at)),
-										}),
-									),
-								},
-							]
+						? [{ label: t("layout.moveOut"), run: () => change((current) => moveOutOfGroup(current, name)) }]
 						: []),
 				];
 		rows.push({
@@ -731,7 +759,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 					count={1}
 					top={{
 						locked,
-						extra,
+						destinations,
 						up: () => change((current) => moveFieldBy(current, name, -1)),
 						down: () => change((current) => moveFieldBy(current, name, 1)),
 						canUp: !same(moveUp),
