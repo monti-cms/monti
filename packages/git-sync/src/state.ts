@@ -18,8 +18,6 @@ export const COLLECTIONS = {
 
 /** The saved settings (one item, `default`). */
 export interface StoredSettings {
-	/** The id of the key in the central API key store (`cms.apiKeys`) that holds the GitHub token. `null`: none chosen. */
-	readonly tokenKeyId: string | null;
 	/** The secret the push webhook is signed with, encrypted with the plugin's key (`cms.secrets("git-sync")`). */
 	readonly webhookSecret: string | null;
 }

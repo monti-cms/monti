@@ -1,11 +1,11 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Texts the server shows in the admin, in the site's language. */
+/** Texts the plugin shows in the admin outside its own screen, in the admin language. */
 export const settingsMessages = defineMessages("cms-git-sync.settings", {
 	en: {
-		keyUse: "Git sync (GitHub token)",
+		keyLabel: "GitHub token",
 	},
 	ko: {
-		keyUse: "git-sync (GitHub 토큰)",
+		keyLabel: "GitHub 토큰",
 	},
 });

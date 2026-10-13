@@ -1,4 +1,3 @@
-import { apiKeyChoiceSchema } from "@monti-cms/core/client";
 import {
 	type AdminRequest,
 	adminRoute,
@@ -10,6 +9,7 @@ import {
 import { listConflicts, type Resolution, resolveConflict } from "./conflicts";
 import { GitHubApiError } from "./github/client";
 import { pullTarget } from "./inbound";
+import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT } from "./options";
 import { flushTarget, resumeAfterToken } from "./outbound";
 import { saveSettings, settingsView } from "./settings";
 import { statusView } from "./status";
@@ -60,24 +60,17 @@ export const settings = {
 		if (typeof expectedVersion !== "number" || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
 			throw new HttpError(428, "version_required", "expectedVersion is required");
 		}
-		const parsedToken = body.token === undefined ? undefined : apiKeyChoiceSchema.safeParse(body.token);
-		if (parsedToken && !parsedToken.success) {
-			throw new HttpError(
-				400,
-				"invalid_input",
-				'`token` must be `{ use: "saved", keyId }`, `{ use: "new", value }` or `{ use: "none" }`',
-			);
-		}
 		const webhookSecret = body.webhookSecret === null ? null : text(body, "webhookSecret");
-		const ctx = syncContextFor(cms);
-		const saved = await saveSettings(ctx, {
-			...(parsedToken?.success ? { token: parsedToken.data } : {}),
-			webhookSecret,
-			expectedVersion,
-		});
-		// A key was just chosen for the token: what waited for it goes out now.
-		if (saved.tokenChanged) await resumeAfterToken(ctx);
-		return json(saved.view);
+		return json(await saveSettings(syncContextFor(cms), { webhookSecret, expectedVersion }));
+	}),
+};
+
+/** The admin screen calls this after it assigned a key to the token slot: what waited for a token goes out now. */
+export const tokenChanged = {
+	POST: adminRoute(async ({ cms }) => {
+		if (await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT))
+			await resumeAfterToken(syncContextFor(cms));
+		return json({ ok: true });
 	}),
 };
 

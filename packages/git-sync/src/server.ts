@@ -11,6 +11,7 @@ const gitSyncServer: CmsServerPlugin = {
 	routes: [
 		{ pattern: "v1/git-sync/status", module: routes.status },
 		{ pattern: "v1/git-sync/settings", module: routes.settings },
+		{ pattern: "v1/git-sync/token-changed", module: routes.tokenChanged },
 		{ pattern: "v1/git-sync/pull", module: routes.pull },
 		{ pattern: "v1/git-sync/flush", module: routes.flush },
 		{ pattern: "v1/git-sync/conflicts", module: routes.conflicts },

@@ -99,6 +99,8 @@ beforeEach(() => {
 			return json({ results: [{ written: 2, removed: 0 }] });
 		if (method === "POST" && input === "/api/monti/v1/git-sync/conflicts/resolve") return json({ resolution: "git" });
 		if (method === "PUT" && input === "/api/monti/v1/git-sync/settings") return json(status);
+		if (method === "PUT" && input === "/api/monti/v1/api-keys/slots") return json({ ok: true });
+		if (method === "POST" && input === "/api/monti/v1/git-sync/token-changed") return json({ ok: true });
 		// The sidebar badges the shell asks for.
 		return json({ total: 0, items: [], counts: { failed: 0, dead: 0 } });
 	});
@@ -255,10 +257,11 @@ describe("Git sync screen: settings tab", () => {
 		fireEvent.click(screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLElement);
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
-				"/api/monti/v1/git-sync/settings",
-				{ token: { use: "new", value: "ghp_brand_new" }, expectedVersion: 3 },
+				"/api/monti/v1/api-keys/slots",
+				{ plugin: "git-sync", slot: "token", key: { use: "new", value: "ghp_brand_new" } },
 			]),
 		);
+		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/monti/v1/git-sync/token-changed", {}]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("settings.saved")));
 	});
 
@@ -284,10 +287,11 @@ describe("Git sync screen: settings tab", () => {
 		fireEvent.click(await screen.findByRole("button", { name: t("settings.remove") }));
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
-				"/api/monti/v1/git-sync/settings",
-				{ token: { use: "none" }, expectedVersion: 3 },
+				"/api/monti/v1/api-keys/slots",
+				{ plugin: "git-sync", slot: "token", key: { use: "none" } },
 			]),
 		);
+		expect(requests("POST").filter(([url]) => String(url).endsWith("/token-changed"))).toEqual([]);
 	});
 
 	it("explains that nothing can be saved when the server has no CMS secret", async () => {

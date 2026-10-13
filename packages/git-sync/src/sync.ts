@@ -6,11 +6,13 @@ import { githubClientFactory } from "./github/rest";
 import {
 	DEFAULT_DEBOUNCE_MS,
 	GIT_SYNC_PLUGIN_NAME,
+	GIT_SYNC_TOKEN_SLOT,
 	type GitSyncOptions,
 	type ResolvedTarget,
 	resolveTargets,
 } from "./options";
 import { createPathPattern, type PathPattern } from "./path-pattern";
+import { tokenKeyOf } from "./settings";
 import { createState, type SyncState } from "./state";
 
 /** An error a person can fix (a token that is not saved, a format that is not installed). It is thrown like any other, so the event outbox retries and then keeps it. */
@@ -109,11 +111,10 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			return found;
 		},
 		client: async (target) => {
-			const keyId = (await state.settings.get())?.value.tokenKeyId ?? null;
-			const token = keyId ? await cms.apiKeys.read(keyId) : null;
+			const token = await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT);
 			if (!token) {
 				// A key that is there but cannot be read is another problem than a key that was never chosen (or was deleted).
-				const unreadable = keyId ? (await cms.apiKeys.get(keyId)) !== null : false;
+				const unreadable = (await tokenKeyOf(cms)) !== null;
 				throw new GitSyncNotConfigured(
 					unreadable
 						? problemText({
