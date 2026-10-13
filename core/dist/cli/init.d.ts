@@ -22,6 +22,8 @@ export interface InstallCommand {
 export interface InitHost {
     /** Installs packages with the package manager. Throws when it fails. */
     install(command: InstallCommand): void | Promise<void>;
+    /** The time zone of this computer (an IANA name), or `undefined` when it cannot be read. */
+    systemTimeZone(): string | undefined;
 }
 export interface InitOptions extends InitAnswerFlags {
     /** Next app folder (where `package.json` is). */
@@ -104,6 +106,8 @@ export declare const defaultInitHost: InitHost;
  * With any other spec (or none) the names stay bare. Packages that are not Monti's stay bare.
  */
 export declare function installSpecs(packages: readonly string[], coreSpec: string | undefined): string[];
+/** The one line that says which time zone the site got and why: automatic is fine, silent is not. */
+export declare const timeZoneNote: (answers: Pick<InitAnswers, "timeZone" | "timeZoneSource">, schemaFile: string) => string;
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
 export declare function initProject(options: InitOptions): Promise<InitReport>;
 /** Where Monti's files go and why, so the paths in the lists below make sense. */

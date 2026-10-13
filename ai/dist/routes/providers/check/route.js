@@ -16,7 +16,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
             providerId,
             kind: provider.kind,
             url: provider.url,
-            apiKey: provider.apiKey,
+            key: provider.key,
             model: provider.defaultModel,
         });
         if (target.generator) {

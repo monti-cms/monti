@@ -29,6 +29,7 @@ function snapshotOf(config, blocks) {
         ...(config.timeZone !== undefined ? { timeZone: config.timeZone } : {}),
         ...(config.admin ? { admin: { ...config.admin, ...(stringMessages ? { messages: stringMessages } : {}) } } : {}),
         ...(config.media ? { media: config.media } : {}),
+        ...(config.editor ? { editor: config.editor } : {}),
         ...(config.codeBlock
             ? {
                 codeBlock: {

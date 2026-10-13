@@ -3,7 +3,7 @@ export { type BareunIssueSegment, type BareunResponse, type BareunRevisedBlock, 
 export { BAREUN_PLUGIN_NAME, type BareunOptions, type ResolvedBareunOptions } from "./options.js";
 /**
  * Bareun spell and sentence checker. Add it to the site config `plugins` and the editor gets a "Spell check" button,
- * and the server route (`/api/monti/v1/text-check/bareun`) calls Bareun with the API key. The key lives in a server environment variable (default `BAREUN_API_KEY`).
+ * and the server route (`/api/monti/v1/text-check/bareun`) calls Bareun with the API key. The key is assigned under Tools > API keys (the plugin declares one key slot).
  *
  * ```ts
  * plugins: [bareun()]

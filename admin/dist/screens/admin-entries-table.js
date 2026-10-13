@@ -1,8 +1,8 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { PAGE_SIZES, useSite, useTranslator, } from "@monti-cms/core/client";
+import { useSite, useTranslator, } from "@monti-cms/core/client";
 import { columnOrderingFeature, columnResizingFeature, columnSizingFeature, columnVisibilityFeature, createColumnHelper, rowSelectionFeature, tableFeatures, useTable, } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, Columns3, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Columns3, Folder as FolderIcon, FolderOpen, FolderUp, Inbox, Plus, SearchX, Trash2, } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useCmsAdminComponents } from "../admin-components.js";
 import { cn } from "../lib/utils/cn.js";
@@ -10,23 +10,23 @@ import { AdminLink as Link } from "../router/index.js";
 import { Alert, AlertDescription } from "../ui/alert.js";
 import { Button } from "../ui/button.js";
 import { Checkbox } from "../ui/checkbox.js";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../ui/empty.js";
 import { IconButton } from "../ui/icon-button.js";
 import { Label } from "../ui/label.js";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "../ui/pagination.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover.js";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select.js";
 import { Skeleton } from "../ui/skeleton.js";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table.js";
 import { folderKeyHandler } from "./admin-sidebar.js";
 import { ColumnHeader } from "./column-header.js";
 import { customListCell, DefaultFieldCell } from "./list-cells.js";
 import { columnConfig, columnLabel, columnsFor, fieldColumnOf, filterFor, knownColumnRecord, } from "./list-columns.js";
+import { clearFiltersPatch, isFiltered } from "./list-state.js";
 import { screensMessages } from "./messages.js";
 import { ActionContextMenu, MoreActionsButton } from "./shared/action-menu.js";
+import { EmptyState } from "./shared/empty-state.js";
 import { writeDraggedEntries } from "./shared/entry-drag.js";
 import { describeEntryStatus, statusLabels } from "./shared/entry-status.js";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date.js";
+import { ListPagination } from "./shared/list-pager.js";
 import { OPEN_ITEM } from "./shared/side-panel.js";
 import { folderMenuActions } from "./shared/use-folder-actions.js";
 export { columnsFor };
@@ -159,7 +159,7 @@ function StatusLabel({ item, isRecord }) {
     return (_jsxs("span", { className: "inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-cms-foreground/80", children: [_jsx("svg", { "aria-hidden": "true", focusable: "false", viewBox: "0 0 16 16", className: cn("size-3.5 shrink-0", tone), fill: "none", stroke: "currentColor", strokeWidth: "1.6", children: icon }), label] }));
 }
 const resolve = (updater, current) => typeof updater === "function" ? updater(current) : updater;
-export function AdminEntriesTable({ collection, items, folders, explorer, state, options, onStateChange, columnSettings, onColumnSettingsChange, selectedIds, onSelectionChange, total, isLoading, isRefreshing = false, errorMessage, mode = "list", folderActions, rowMenu, blankMenu, onDeleteKey, onSelectFolder, onOpenRecord, openRecordId = null, onRestore, onPermanentDelete, onPageChange, onPageSizeChange, onRetry, }) {
+export function AdminEntriesTable({ collection, items, folders, explorer, state, options, onStateChange, columnSettings, onColumnSettingsChange, selectedIds, onSelectionChange, total, isLoading, isRefreshing = false, errorMessage, mode = "list", folderActions, rowMenu, blankMenu, onDeleteKey, onSelectFolder, onOpenRecord, openRecordId = null, onRestore, onPermanentDelete, onPageChange, onPageSizeChange, onRetry, addAction, }) {
     const site = useSite();
     const t = useTranslator(screensMessages);
     const isTrash = mode === "trash";
@@ -171,7 +171,6 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
     const savedVisibility = knownColumnRecord(columnSettings?.visibility, available);
     const order = [...new Set([...savedOrder, ...defaults, ...available])];
     const visibility = Object.fromEntries(available.map((column) => [column, column === "title" || (savedVisibility?.[column] ?? defaults.includes(column))]));
-    const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
     /** Folder path from the top level, like `상위 / 하위`. `—` for items outside folders. */
     const folderName = (id) => {
         const names = [];
@@ -409,29 +408,24 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
                                                                 const { [header.column.id]: _removed, ...rest } = current;
                                                                 return rest;
                                                             }) }))] })] }, header.id));
-                                    }) }, group.id))) }), _jsxs(TableBody, { "aria-busy": isRefreshing || undefined, className: cn("transition-opacity", isRefreshing && "opacity-60"), children: [explorer && explorer.parent !== null && (_jsxs(TableRow, { children: [_jsx(TableCell, { className: "text-center text-cms-muted-foreground", children: _jsx(FolderUp, { "aria-hidden": true, className: "mx-auto size-4" }) }), _jsx(TableCell, { colSpan: visibleCount - 1, children: _jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onSelectFolder(explorer.parent ?? "all"), className: "h-auto p-0 text-cms-muted-foreground hover:text-cms-foreground", children: t("list.folderUp") }) })] })), explorer?.folders.map((folder) => (_jsxs(ActionContextMenu, { actions: folderRowMenu(folder), trigger: _jsx(TableRow, {}), children: [_jsx(TableCell, { className: "text-center text-cms-muted-foreground", children: _jsx(FolderIcon, { "aria-hidden": true, className: "mx-auto size-4" }) }), _jsx(TableCell, { colSpan: visibleCount - 2, className: "font-medium", children: _jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onSelectFolder(folder.id), onKeyDown: folderActions ? folderKeyHandler(folder, folderActions) : undefined, className: "h-auto p-0 font-medium text-cms-foreground", children: folder.name }) }), _jsx(TableCell, { className: "text-right", children: _jsx(MoreActionsButton, { actions: folderRowMenu(folder), label: t("list.folderActions", { name: folder.name }) }) })] }, `folder-${folder.id}`))), isLoading ? (Array.from({ length: 5 }, (_, index) => (_jsx(TableRow, { "aria-hidden": true, children: _jsx(TableCell, { colSpan: visibleCount, children: _jsx(Skeleton, { className: "h-5 w-full" }) }) }, index)))) : items.length === 0 && !explorer?.folders.length ? (_jsx(TableRow, { children: _jsx(TableCell, { colSpan: visibleCount, className: "p-0", children: _jsx(Empty, { className: "py-10", children: _jsxs(EmptyHeader, { children: [_jsx(EmptyTitle, { children: isTrash ? t("list.emptyTrash") : t("list.emptyNone") }), !isTrash && _jsx(EmptyDescription, { children: t("list.emptyHint") })] }) }) }) })) : (table.getRowModel().rows.map((row) => (_jsx(ActionContextMenu, { actions: rowMenu(row.original), trigger: _jsx(TableRow, { className: cn("h-11 data-[state=selected]:bg-cms-primary/5", row.original.id === openRecordId && OPEN_ITEM), "aria-current": row.original.id === openRecordId ? "true" : undefined, "data-state": row.getIsSelected() ? "selected" : undefined, draggable: !isTrash, onDragStart: (event) => {
-                                                // Dragging a selected row moves the whole selection; otherwise just this row.
-                                                const group = selectedIds.has(row.original.id)
-                                                    ? items.filter((item) => selectedIds.has(item.id))
-                                                    : [row.original];
-                                                writeDraggedEntries(event, group.map((item) => ({ id: item.id, expectedVersion: item.version })), group.length === 1
-                                                    ? group[0]?.title || t("common.untitled")
-                                                    : t("list.itemsCount", { count: group.length }));
-                                            }, onKeyDown: rowKeyDown(row.original) }), children: row
-                                            .getVisibleCells()
-                                            .filter((cell) => isShown(cell.column.id))
-                                            .map((cell) => (_jsxs(Fragment, { children: [cell.column.id === "actions" && _jsx(TableCell, { "aria-hidden": true, className: "p-0" }), _jsx(TableCell, { className: "overflow-hidden text-ellipsis whitespace-nowrap", children: _jsx(table.FlexRender, { cell: cell }) })] }, cell.id))) }, row.id))))] })] }), blankMenu && (_jsx(ActionContextMenu, { actions: blankMenu, trigger: _jsx("div", { className: "min-h-12 flex-1", "aria-hidden": true }) }))] }), _jsxs("div", { className: "flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-cms-muted-foreground text-xs", children: [_jsx("span", { className: "tabular", children: t("list.range", {
-                            total,
-                            range: items.length > 0
-                                ? `${(state.page - 1) * state.pageSize + 1}–${Math.min(state.page * state.pageSize, total)}`
-                                : "0",
-                        }) }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsxs(Popover, { children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-muted-foreground" }), children: [_jsx(Columns3, { "aria-hidden": true }), t("list.columnSettings")] }), _jsx(PopoverContent, { align: "end", className: "w-64 p-3", children: _jsx("ul", { className: "space-y-1", children: order.map((column, index) => (_jsxs("li", { className: "flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-cms-accent", children: [_jsxs(Label, { className: "font-normal", children: [_jsx(Checkbox, { checked: visibility[column] ?? false, disabled: column === "title", onCheckedChange: (checked) => table.getColumn(column)?.toggleVisibility(checked === true) }), columnLabel(site, collection, column)] }), _jsxs("span", { className: "flex gap-1", children: [_jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnUp", { label: columnLabel(site, collection, column) }), disabled: index === 0, onClick: () => moveColumn(column, -1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnDown", { label: columnLabel(site, collection, column) }), disabled: index === order.length - 1, onClick: () => moveColumn(column, 1), children: _jsx(ArrowDown, { "aria-hidden": true }) })] })] }, column))) }) })] }), _jsxs(Select, { value: String(state.pageSize), items: PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) })), onValueChange: (value) => value && onPageSizeChange(Number(value)), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("list.pageSize"), className: "h-7 border-0 text-xs shadow-none", children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: PAGE_SIZES.map((size) => (_jsx(SelectItem, { value: String(size), children: t("list.pageSizeOption", { size }) }, size))) })] }), _jsx(Pagination, { className: "mx-0 w-auto", children: _jsxs(PaginationContent, { children: [_jsx(PaginationItem, { children: _jsx(PaginationPrevious, { href: pageHref(state.page - 1), "aria-disabled": state.page <= 1, className: cn(state.page <= 1 && "pointer-events-none opacity-50"), onClick: (event) => {
-                                                    event.preventDefault();
-                                                    if (state.page > 1)
-                                                        onPageChange(state.page - 1);
-                                                } }) }), _jsx(PaginationItem, { children: _jsxs("span", { className: "px-2 tabular-nums", children: [state.page, " / ", totalPages] }) }), _jsx(PaginationItem, { children: _jsx(PaginationNext, { href: pageHref(state.page + 1), "aria-disabled": state.page >= totalPages, className: cn(state.page >= totalPages && "pointer-events-none opacity-50"), onClick: (event) => {
-                                                    event.preventDefault();
-                                                    if (state.page < totalPages)
-                                                        onPageChange(state.page + 1);
-                                                } }) })] }) })] })] })] }));
+                                    }) }, group.id))) }), _jsxs(TableBody, { "aria-busy": isRefreshing || undefined, className: cn("transition-opacity", isRefreshing && "opacity-60"), children: [explorer && explorer.parent !== null && (_jsxs(TableRow, { children: [_jsx(TableCell, { className: "text-center text-cms-muted-foreground", children: _jsx(FolderUp, { "aria-hidden": true, className: "mx-auto size-4" }) }), _jsx(TableCell, { colSpan: visibleCount - 1, children: _jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onSelectFolder(explorer.parent ?? "all"), className: "h-auto p-0 text-cms-muted-foreground hover:text-cms-foreground", children: t("list.folderUp") }) })] })), explorer?.folders.map((folder) => (_jsxs(ActionContextMenu, { actions: folderRowMenu(folder), trigger: _jsx(TableRow, {}), children: [_jsx(TableCell, { className: "text-center text-cms-muted-foreground", children: _jsx(FolderIcon, { "aria-hidden": true, className: "mx-auto size-4" }) }), _jsx(TableCell, { colSpan: visibleCount - 2, className: "font-medium", children: _jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onSelectFolder(folder.id), onKeyDown: folderActions ? folderKeyHandler(folder, folderActions) : undefined, className: "h-auto p-0 font-medium text-cms-foreground", children: folder.name }) }), _jsx(TableCell, { className: "text-right", children: _jsx(MoreActionsButton, { actions: folderRowMenu(folder), label: t("list.folderActions", { name: folder.name }) }) })] }, `folder-${folder.id}`))), isLoading
+                                        ? Array.from({ length: 5 }, (_, index) => (_jsx(TableRow, { "aria-hidden": true, children: _jsx(TableCell, { colSpan: visibleCount, children: _jsx(Skeleton, { className: "h-5 w-full" }) }) }, index)))
+                                        : items.length === 0
+                                            ? null
+                                            : table.getRowModel().rows.map((row) => (_jsx(ActionContextMenu, { actions: rowMenu(row.original), trigger: _jsx(TableRow, { className: cn("h-11 data-[state=selected]:bg-cms-primary/5", row.original.id === openRecordId && OPEN_ITEM), "aria-current": row.original.id === openRecordId ? "true" : undefined, "data-state": row.getIsSelected() ? "selected" : undefined, draggable: !isTrash, onDragStart: (event) => {
+                                                        // Dragging a selected row moves the whole selection; otherwise just this row.
+                                                        const group = selectedIds.has(row.original.id)
+                                                            ? items.filter((item) => selectedIds.has(item.id))
+                                                            : [row.original];
+                                                        writeDraggedEntries(event, group.map((item) => ({ id: item.id, expectedVersion: item.version })), group.length === 1
+                                                            ? group[0]?.title || t("common.untitled")
+                                                            : t("list.itemsCount", { count: group.length }));
+                                                    }, onKeyDown: rowKeyDown(row.original) }), children: row
+                                                    .getVisibleCells()
+                                                    .filter((cell) => isShown(cell.column.id))
+                                                    .map((cell) => (_jsxs(Fragment, { children: [cell.column.id === "actions" && _jsx(TableCell, { "aria-hidden": true, className: "p-0" }), _jsx(TableCell, { className: "overflow-hidden text-ellipsis whitespace-nowrap", children: _jsx(table.FlexRender, { cell: cell }) })] }, cell.id))) }, row.id)))] })] }), !isLoading &&
+                        !errorMessage &&
+                        items.length === 0 &&
+                        !explorer?.folders.length &&
+                        (isTrash ? (_jsx(EmptyState, { icon: Trash2, title: t("list.emptyTrash") })) : isFiltered(state) ? (_jsx(EmptyState, { icon: SearchX, title: t("list.emptyNoMatch"), description: t("list.emptyNoMatchHint"), action: { label: t("list.clearFilters"), onClick: () => onStateChange(clearFiltersPatch(state)) } })) : (_jsx(EmptyState, { icon: Inbox, title: t("list.emptyYet"), description: t("list.emptyYetHint"), action: addAction && { label: addAction.label, icon: Plus, onClick: addAction.run } }))), blankMenu && (_jsx(ActionContextMenu, { actions: blankMenu, trigger: _jsx("div", { className: "min-h-12 flex-1", "aria-hidden": true }) }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: state.page, pageSize: state.pageSize, onPageChange: onPageChange, onPageSizeChange: onPageSizeChange, hrefFor: pageHref, leading: _jsxs(Popover, { children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-muted-foreground" }), children: [_jsx(Columns3, { "aria-hidden": true }), t("list.columnSettings")] }), _jsx(PopoverContent, { align: "end", className: "w-64 p-3", children: _jsx("ul", { className: "space-y-1", children: order.map((column, index) => (_jsxs("li", { className: "flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-cms-accent", children: [_jsxs(Label, { className: "font-normal", children: [_jsx(Checkbox, { checked: visibility[column] ?? false, disabled: column === "title", onCheckedChange: (checked) => table.getColumn(column)?.toggleVisibility(checked === true) }), columnLabel(site, collection, column)] }), _jsxs("span", { className: "flex gap-1", children: [_jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnUp", { label: columnLabel(site, collection, column) }), disabled: index === 0, onClick: () => moveColumn(column, -1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { size: "icon-xs", variant: "outline", label: t("list.columnDown", { label: columnLabel(site, collection, column) }), disabled: index === order.length - 1, onClick: () => moveColumn(column, 1), children: _jsx(ArrowDown, { "aria-hidden": true }) })] })] }, column))) }) })] }) })] }));
 }

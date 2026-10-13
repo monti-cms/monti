@@ -1,5 +1,6 @@
 import type { Site } from "@monti-cms/core/client";
-import type { Cms, PluginSecrets, PluginStorage } from "@monti-cms/core/plugin/server";
+import type { ApiKeys, Cms, PluginStorage } from "@monti-cms/core/plugin/server";
+import type { AiSettingsStore } from "./settings.js";
 /** Row name in the AI settings (collection `settings`). */
 export type AiSettingsId = "default" | "shared";
 /** One row of edited values per action name. */
@@ -13,14 +14,18 @@ export interface AiActionOverrideRow {
 /** Edited AI action values, connection settings and UI actions, kept in the AI plugin's storage. */
 export declare function createAiStore(storage: PluginStorage, 
 /**
- * `site`: the site the store works for (the language of its errors). `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it,
- * keys cannot be stored or read.
+ * `site`: the site the store works for (the language of its errors). `apiKeys`: the instance's API key store (`() => cms.apiKeys`) the connections' keys live in.
+ * Without it, keys cannot be stored or read.
  */
 options: {
     readonly site: Pick<Site, "createTranslator">;
-    readonly secrets?: () => PluginSecrets;
+    readonly apiKeys?: () => ApiKeys;
+    /** Runs work over one transaction (`cms.transaction`): the plugin's storage and the key store inside it. Without it the work runs on this store, not atomically. */
+    readonly transaction?: <T>(work: (storage: PluginStorage, apiKeys: ApiKeys) => Promise<T>) => Promise<T>;
 }): {
-    secrets: () => PluginSecrets;
+    apiKeys: () => ApiKeys;
+    /** Runs `work` with a store whose writes (settings and the key store) are one transaction: all kept, or none if it throws. */
+    transaction: <T>(work: (scoped: AiSettingsStore) => Promise<T>) => Promise<T>;
     /** All edited values, by action name. Actions never edited have none. */
     listAiActionOverrides: () => Promise<AiActionOverrideRow[]>;
     /**

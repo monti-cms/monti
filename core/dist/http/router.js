@@ -1,6 +1,9 @@
 import { CMS_API_PATH, cmsBasePath } from "../core/base-path.js";
 import { assertPluginRoutesFree } from "../plugin/collisions.js";
 import { CMS_AUTH_BASE_PATH } from "../server/define.js";
+import * as rApiKey from "./v1/api-keys/[id]/route.js";
+import * as rApiKeys from "./v1/api-keys/route.js";
+import * as rApiKeySlots from "./v1/api-keys/slots/route.js";
 import * as r9 from "./v1/bulk/route.js";
 import * as r12 from "./v1/entries/[id]/archive/route.js";
 import * as r13 from "./v1/entries/[id]/duplicate/route.js";
@@ -41,6 +44,11 @@ import * as r33 from "./v1/templates/route.js";
 const METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"];
 const isMethod = (value) => METHODS.includes(value);
 const ROUTES = [
+    // The central API key store: names, masked tails and the places that use each key. A value goes in on save and never comes back.
+    { pattern: "v1/api-keys", module: rApiKeys },
+    // Named before `[id]`, so `slots` is not read as a key id.
+    { pattern: "v1/api-keys/slots", module: rApiKeySlots },
+    { pattern: "v1/api-keys/[id]", module: rApiKey },
     { pattern: "v1/bulk", module: r9 },
     { pattern: "v1/entries", module: r10 },
     // Named before `[id]`, so `search` is not read as an entry id.

@@ -6,7 +6,7 @@ import { z } from "zod";
  * - Decisions (`decisions`): a System One model that assigns a probability to each choice (e.g. Jev). Addresses like TypeSafe `…/v1/systemone`,
  *   OpenRouter `…/api/alpha/decisions`. Both use the `state`, `model`, `questions` -> `answers` shape.
  *
- * Keys are encrypted and stored on the server, and only the last four characters are shown on screen. Both server and browser use this file.
+ * Keys live in the central API key store (Tools → API keys); a connection only refers to one, and only the last four characters are shown on screen. Both server and browser use this file.
  */
 export declare const AI_PROVIDER_KINDS: readonly ["chat", "decisions"];
 export type AiProviderKind = (typeof AI_PROVIDER_KINDS)[number];
@@ -22,7 +22,15 @@ export declare const aiProviderInputSchema: z.ZodObject<{
         decisions: "decisions";
     }>;
     url: z.ZodUnion<readonly [z.ZodLiteral<"">, z.ZodString]>;
-    apiKey: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    key: z.ZodOptional<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        use: z.ZodLiteral<"saved">;
+        keyId: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        use: z.ZodLiteral<"new">;
+        value: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        use: z.ZodLiteral<"none">;
+    }, z.core.$strip>], "use">>;
     defaultModel: z.ZodString;
 }, z.core.$strip>;
 export type AiProviderInput = z.output<typeof aiProviderInputSchema>;
@@ -36,7 +44,15 @@ export declare const aiProviderRequestSchema: z.ZodObject<{
             decisions: "decisions";
         }>;
         url: z.ZodUnion<readonly [z.ZodLiteral<"">, z.ZodString]>;
-        apiKey: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        key: z.ZodOptional<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            use: z.ZodLiteral<"saved">;
+            keyId: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            use: z.ZodLiteral<"new">;
+            value: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            use: z.ZodLiteral<"none">;
+        }, z.core.$strip>], "use">>;
         defaultModel: z.ZodString;
     }, z.core.$strip>;
 }, z.core.$strip>;
@@ -46,7 +62,13 @@ export interface AiProviderView {
     name: string;
     kind: AiProviderKind;
     url: string;
-    keyHint: string | null;
+    /** The key in the API key store this connection uses (name and last four characters only), or `null`. */
+    key: {
+        id: string;
+        name: string;
+        tail: string;
+        readable: boolean;
+    } | null;
     defaultModel: string;
     /** Is it usable, i.e. address, key and default model are all present? */
     ready: boolean;
@@ -66,7 +88,15 @@ export declare const aiProviderCheckSchema: z.ZodObject<{
             decisions: "decisions";
         }>;
         url: z.ZodUnion<readonly [z.ZodLiteral<"">, z.ZodString]>;
-        apiKey: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        key: z.ZodOptional<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            use: z.ZodLiteral<"saved">;
+            keyId: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            use: z.ZodLiteral<"new">;
+            value: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            use: z.ZodLiteral<"none">;
+        }, z.core.$strip>], "use">>;
         defaultModel: z.ZodString;
         name: z.ZodString;
     }, z.core.$strip>;
@@ -74,6 +104,7 @@ export declare const aiProviderCheckSchema: z.ZodObject<{
 export declare const aiModelsQuerySchema: z.ZodObject<{
     providerId: z.ZodOptional<z.ZodString>;
     url: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<"">, z.ZodString]>>;
+    keyId: z.ZodOptional<z.ZodString>;
     apiKey: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export interface AiModelInfo {

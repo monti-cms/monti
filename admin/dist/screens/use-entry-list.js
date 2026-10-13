@@ -12,7 +12,7 @@ import { isExplorerMode, listStateToApiQuery, listStateToSearchParams, parseList
 import { screensMessages } from "./messages.js";
 import { useConfirm } from "./shared/confirm-dialog.js";
 import { OPEN_ITEM_PARAM } from "./shared/entry-href.js";
-import { applyOptimistic, ENTRIES_KEY, entriesKey, foldersKey, } from "./shared/list-cache.js";
+import { applyOptimistic, ENTRIES_KEY, entriesKey, fetchFolders, foldersKey, } from "./shared/list-cache.js";
 import { nounVars } from "./shared/noun.messages.js";
 import { useFolderActions } from "./shared/use-folder-actions.js";
 import { useTaxonomyOptions } from "./shared/use-taxonomy.js";
@@ -69,7 +69,7 @@ function useEntriesData(state, mode) {
     const collection = state.collection;
     const foldersQuery = useQuery({
         queryKey: foldersKey(collection),
-        queryFn: ({ signal }) => cmsFetch(site, cmsApiUrl(`/v1/folders?collection=${collection}`), { signal }),
+        queryFn: ({ signal }) => fetchFolders(site, collection, signal),
         enabled: !isTrash,
     });
     const folders = useMemo(() => (isTrash ? [] : (foldersQuery.data ?? [])), [isTrash, foldersQuery.data]);

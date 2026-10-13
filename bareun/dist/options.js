@@ -4,6 +4,8 @@ import { bareunMessages } from "./messages.js";
 const t = createActiveTranslator(bareunMessages);
 /** Name used to find the Bareun checker in the site config `plugins`. */
 export const BAREUN_PLUGIN_NAME = "text-check-bareun";
+/** Id of the plugin's one API key slot. */
+export const BAREUN_KEY_SLOT = "key";
 /** Checker name (the source shown on results). */
 export const BAREUN_CHECKER_ID = "bareun";
 /** Server route. Appended to the core API base (`/api/monti/`). */
@@ -11,9 +13,6 @@ export const BAREUN_ROUTE = "v1/text-check/bareun";
 const DEFAULT_LIMITS = { maxSegments: 100, maxChars: 10_000 };
 /** Fills in defaults and rejects invalid values. */
 export function resolveBareunOptions(options = {}) {
-    const apiKeyEnv = options.apiKeyEnv ?? "BAREUN_API_KEY";
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(apiKeyEnv))
-        throw new Error(`bareun: invalid apiKeyEnv "${apiKeyEnv}"`);
     const baseUrl = (options.baseUrl ?? "https://api.bareun.ai").replace(/\/+$/, "");
     if (!/^https?:\/\//.test(baseUrl))
         throw new Error(`bareun: baseUrl must be an http(s) URL`);
@@ -24,7 +23,6 @@ export function resolveBareunOptions(options = {}) {
     }
     const label = options.label?.trim();
     return {
-        apiKeyEnv,
         baseUrl,
         get label() {
             return label || t("label");

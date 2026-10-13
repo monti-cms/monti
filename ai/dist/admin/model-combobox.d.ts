@@ -5,6 +5,7 @@ export type ModelSource = {
 } | {
     url: string;
     apiKey?: string;
+    keyId?: string;
 };
 /**
  * Model list of a generation connection. A list fetched once is not fetched again for 10 minutes, and is reused after saving or reopening.

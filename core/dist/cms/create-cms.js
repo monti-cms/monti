@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { CmsAuthGateway } from "../adapters/auth/auth-gateway.js";
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host.js";
+import { API_KEYS_SCOPE, createApiKeys, migrateKeyUses } from "../api-keys/api-keys.js";
 import { problemText } from "../core/problem.js";
 import { CmsError, withEventDispatch } from "../core/store/index.js";
 import { createServerPlugins } from "../plugin/server.js";
@@ -68,6 +69,33 @@ export function createCms(options) {
         const plugins = createServerPlugins(site.plugins, () => server, 
         // The plugins and the handler take the instance as the loose `Cms`, whatever the type of its config.
         () => self());
+        const keyLabels = async (plugin, refs) => {
+            const owner = (await plugins.load()).find((candidate) => candidate.name === plugin);
+            if (!owner?.keyUses)
+                return Object.fromEntries(refs.map((ref) => [ref, plugin]));
+            return owner.keyUses(self(), refs);
+        };
+        const declaredSlots = () => site.plugins.flatMap((plugin) => (plugin.keySlots ?? []).map((slot) => ({
+            plugin: plugin.name,
+            slot: slot.id,
+            service: slot.service,
+            label: typeof slot.label === "function" ? slot.label(site) : slot.label,
+        })));
+        const inTransaction = (work) => {
+            const { transaction } = connections.database;
+            if (!transaction) {
+                throw new CmsError(`The ${connections.database.name} database adapter has no transactions, so a new key cannot be saved together with the item that uses it`, "invalid_state");
+            }
+            return transaction.call(connections.database, work);
+        };
+        const keysOn = (storage, atomic) => createApiKeys({
+            storage,
+            secrets: vault.forPlugin(API_KEYS_SCOPE),
+            labels: keyLabels,
+            declared: declaredSlots,
+            ...(atomic ? { atomic } : {}),
+        });
+        const apiKeys = keysOn(() => connections.database.pluginStorage(API_KEYS_SCOPE), (work) => inTransaction((tx) => work(keysOn(() => tx.pluginStorage(API_KEYS_SCOPE)))));
         let store;
         let service;
         let bulk;
@@ -130,6 +158,7 @@ export function createCms(options) {
                         log(line);
                 },
             });
+            await migrateKeyUses(connections.database.pluginStorage(API_KEYS_SCOPE));
             await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), pluginLog);
             if (summary?.reconverted) {
                 const { converted, remaining } = summary.reconverted;
@@ -173,6 +202,11 @@ export function createCms(options) {
             mediaStore: getMediaStore,
             storage: (plugin) => connections.database.pluginStorage(plugin),
             secrets: (plugin, secretsOptions) => vault.forPlugin(plugin, secretsOptions),
+            apiKeys,
+            transaction: (work) => inTransaction((tx) => work({
+                storage: (plugin) => tx.pluginStorage(plugin),
+                apiKeys: keysOn(() => tx.pluginStorage(API_KEYS_SCOPE)),
+            })),
             auth: getAuth,
             authHandlers: {
                 GET: (request) => getAuth().handlers.GET(request),

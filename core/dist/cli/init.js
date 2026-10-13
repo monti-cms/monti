@@ -4,7 +4,7 @@ import path from "node:path";
 import { findRootLayout } from "./first-run.js";
 import { detectApp } from "./init-detect.js";
 import { addSuppressHydrationWarning, ignoreForMonti, NEXT_CONFIG_IMPORT, wrapNextConfig, } from "./init-edit.js";
-import { collectAnswers, detectedLocales, InitCancelled } from "./init-prompts.js";
+import { collectAnswers, detectedLocales, detectSystemTimeZone, InitCancelled, } from "./init-prompts.js";
 import { adminLayoutTemplate, adminPageTemplate, apiRouteTemplate, configTemplate, envExampleTemplate, githubCallbackUrl, nextConfigTemplate, packagesFor, pathFor, schemaTemplate, starterCollections, } from "./templates.js";
 /** An error after files were already written. `written` lists them, so the message can say what is on disk. */
 export class InitError extends Error {
@@ -58,6 +58,7 @@ export class ProjectWriter {
 }
 /** The real host: spawns the package manager. */
 export const defaultInitHost = {
+    systemTimeZone: detectSystemTimeZone,
     install: (command) => {
         const result = spawnSync(command.command, [...command.args], { cwd: command.cwd, stdio: "inherit" });
         if (result.error || result.status !== 0) {
@@ -100,6 +101,15 @@ export function installSpecs(packages, coreSpec) {
 function nextConfigManualStep(file, reason) {
     return `Wrap the config in ${file} (init did not edit it: ${reason}). Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand export the result of withCms around the config you export now:\nexport default withCms(nextConfig);   // wherever you export your config`;
 }
+/** The one line that says which time zone the site got and why: automatic is fine, silent is not. */
+export const timeZoneNote = (answers, schemaFile) => {
+    const from = answers.timeZoneSource === "flag"
+        ? "from --time-zone"
+        : answers.timeZoneSource === "computer"
+            ? "from this computer"
+            : "this computer's time zone could not be read";
+    return `Time zone: ${answers.timeZone} (${from}). Dates on your site and scheduled publishing use it; change \`timeZone\` in ${schemaFile} if your readers are elsewhere.`;
+};
 /** The root layout item of the list when init did not edit the file. */
 const layoutManualStep = (file, reason) => `Add suppressHydrationWarning to the <html> tag in ${file} (init did not edit it: ${reason}):\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`;
 /** `next.config` files init cannot edit, or must not create a second one next to. */
@@ -129,7 +139,7 @@ export async function initProject(options) {
         detectedLine,
         ...app.contentFolders.map((folder) => `Found ${folder.files} Markdown/MDX file${folder.files === 1 ? "" : "s"} in ${folder.dir}/${folder.locales ? ` (${folder.locales.map((locale) => locale.code).join(", ")})` : ""}`),
     ].join("\n"), "Detected");
-    const answers = await collectAnswers(app, options, prompter);
+    const answers = await collectAnswers(app, options, prompter, host.systemTimeZone);
     const foundLocales = detectedLocales(app);
     // Plan the files.
     const writer = new ProjectWriter(cwd);
@@ -186,6 +196,7 @@ export async function initProject(options) {
         planned.push({ file: configFile, content: configTemplate(answers) });
         const folder = app.contentFolders[0];
         planned.push({ file: schemaFile, content: schemaTemplate(answers, { siteName: app.packageName, folder }) });
+        report.notes.push(timeZoneNote(answers, schemaFile));
         if (folder) {
             const keys = folder.keys.map((key) => key.name);
             report.notes.push(`The post collection follows the front matter of ${folder.dir}/ (${keys.length > 0 ? keys.slice(0, 8).join(", ") : "no front matter found"}), at the path ${pathFor(folder)}. Keys that have no matching field kind are text fields; edit ${schemaFile} to fit.`, ...starterCollections(folder.keys, answers.locales.length > 1).notes);
@@ -316,7 +327,7 @@ export async function initProject(options) {
     ].join("\n"));
     todo.push(`Create Monti's tables in your database (once): ${exec(manager, "db:setup")}`, `Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`, `Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`);
     if (answers.gitSync) {
-        todo.push(`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/git-sync to save the GitHub token.`);
+        todo.push(`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/tools/git-sync to save the GitHub token.`);
     }
     const siteBase = answers.siteUrl.replace(/\/+$/, "");
     const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(siteBase);

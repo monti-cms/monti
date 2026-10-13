@@ -10,6 +10,8 @@ export interface SchemaEditContext {
     };
     readonly issues: readonly SchemaIssue[];
     readonly collectionNames: readonly string[];
+    /** Collections defined in code: the preview keeps them next to the file's. */
+    readonly codeCollections: readonly string[];
     /** The file as edited, for editors that look at another collection (a relation's target, a backlink's relation). */
     readonly file: Obj;
 }
@@ -20,14 +22,22 @@ export declare function useIssuesUnder(path: string, exclude?: string): readonly
 export declare function IssueList({ issues }: {
     issues: readonly SchemaIssue[];
 }): import("react").JSX.Element | null;
-export declare function Labeled({ label, hint, children, htmlFor, className, }: {
+/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
+declare const CONTROL_WIDTH: {
+    readonly narrow: "max-w-sm";
+    readonly normal: "max-w-xl";
+    readonly wide: "max-w-2xl";
+    readonly full: "";
+};
+export declare function Labeled({ label, hint, children, htmlFor, className, control, }: {
     label: ReactNode;
     hint?: ReactNode;
     htmlFor?: string;
     children: ReactNode;
     className?: string;
+    control?: keyof typeof CONTROL_WIDTH;
 }): import("react").JSX.Element;
-export declare function TextInput({ label, value, onChange, placeholder, hint, type, className, }: {
+export declare function TextInput({ label, value, onChange, placeholder, hint, type, className, optional, }: {
     label: string;
     value: string | number | undefined;
     onChange: (value: string) => void;
@@ -35,6 +45,8 @@ export declare function TextInput({ label, value, onChange, placeholder, hint, t
     hint?: ReactNode;
     type?: "text" | "number";
     className?: string;
+    /** Marks the field as optional with a muted "optional" next to the label (the form marks what is optional, not what is required). */
+    optional?: boolean;
 }): import("react").JSX.Element;
 /** A text value that is `undefined` when empty (an optional property of the file). */
 export declare const orUndefined: (value: string) => string | undefined;
@@ -45,17 +57,28 @@ export declare function FlagSwitch({ label, checked, onChange, hint, }: {
     onChange: (value: boolean) => void;
     hint?: ReactNode;
 }): import("react").JSX.Element;
+/** A few exclusive choices side by side in one rounded strip (a segmented control). */
+export declare function Segmented({ label, value, items, onChange, hint, }: {
+    label: string;
+    value: string;
+    items: readonly PickItem[];
+    onChange: (value: string) => void;
+    hint?: ReactNode;
+}): import("react").JSX.Element;
 export interface PickItem {
     readonly value: string;
     readonly label: string;
+    /** A muted line under the label in the list of choices (the closed select shows the label only). */
+    readonly description?: string;
 }
-export declare function Pick({ label, value, items, onChange, hint, className, }: {
+export declare function Pick({ label, value, items, onChange, hint, className, control, }: {
     label: string;
     value: string;
     items: readonly PickItem[];
     onChange: (value: string) => void;
     hint?: ReactNode;
     className?: string;
+    control?: keyof typeof CONTROL_WIDTH;
 }): import("react").JSX.Element;
 /**
  * An input for a name (a field, an option, a collection): the change is taken when the writer leaves the input or presses Enter, and a name that cannot be used
@@ -94,3 +117,4 @@ export declare function AddButton({ children, onClick, disabled: off, }: {
     onClick: () => void;
     disabled?: boolean;
 }): import("react").JSX.Element;
+export {};

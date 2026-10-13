@@ -13,11 +13,9 @@ export declare const COLLECTIONS: {
     readonly locks: "locks";
     readonly applying: "applying";
 };
-/** The saved settings (one item, `default`). The values are encrypted with the plugin's key (`cms.secrets("git-sync")`). */
+/** The saved settings (one item, `default`). */
 export interface StoredSettings {
-    /** The GitHub token. */
-    readonly token: string | null;
-    /** The secret the push webhook is signed with. */
+    /** The secret the push webhook is signed with, encrypted with the plugin's key (`cms.secrets("git-sync")`). */
     readonly webhookSecret: string | null;
 }
 /**

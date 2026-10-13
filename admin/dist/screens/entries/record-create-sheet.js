@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet.js";
 import { RecordPanel } from "../record-panel.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
+import { RECORD_PANEL_RESIZE } from "../shared/side-panel.js";
 import { titlePatch } from "./entry-form.js";
 import { entriesMessages } from "./messages.js";
 /** The saved item in the shape of a relation option. */
@@ -41,7 +42,7 @@ export function useRecordCreator() {
                     // Esc and outside clicks also ask about unsaved content, like the sheet's close button.
                     if (!open)
                         void confirmDiscard(dirtyRef.current).then((ok) => ok && finish(null));
-                }, children: _jsxs(SheetContent, { showCloseButton: false, className: "gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:w-[22rem] data-[side=right]:sm:max-w-none", children: [_jsx(SheetTitle, { className: "sr-only", children: t("record.add") }), request && (_jsx(RecordPanel, { target: { collection: request.collection, id: null }, initial: request.initial, className: "border-l-0", onDirtyChange: (dirty) => {
+                }, children: _jsxs(SheetContent, { showCloseButton: false, resize: RECORD_PANEL_RESIZE, className: "gap-0 p-0", children: [_jsx(SheetTitle, { className: "sr-only", children: t("record.add") }), request && (_jsx(RecordPanel, { target: { collection: request.collection, id: null }, initial: request.initial, className: "border-l-0", onDirtyChange: (dirty) => {
                                 dirtyRef.current = dirty;
                             }, onClose: () => finish(null), onSaved: (saved) => finish(saved) }))] }) }), dialog] }));
     return { create, sheet };

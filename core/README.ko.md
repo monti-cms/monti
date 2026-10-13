@@ -19,7 +19,7 @@ React 19 위의 Next.js 16(App Router) 앱이 필요하다. `@monti-cms/core`를
 
 ```sh
 # 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.7&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.8&path:/core"
 # 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.7&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.7&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.7&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.8&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.8&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.8&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
@@ -118,7 +118,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 | 내용 | 파일 |
 | --- | --- |
 | 하나뿐인 설정: 고른 기능마다 한 줄과 짧은 주석, 그다음 데이터베이스·로그인·저장소. 프리셋 뒤에 숨기는 것이 없다. 줄을 지우면 기능이 빠진다 | `monti.config.ts` |
-| 스키마 파일: 시작용 `post` 컬렉션(콘텐츠를 찾으면 그 front matter대로), 언어, 시간대, 관리자 경로, 관리자 스키마 화면이 쓰는 것과 같은 모양으로 쓴다 | `monti.schema.ts` |
+| 스키마 파일: 시작용 `post` 컬렉션(콘텐츠를 찾으면 그 front matter대로), 언어, 시간대, 관리자 경로, 관리자 스키마 설정이 쓰는 것과 같은 모양으로 쓴다 | `monti.schema.ts` |
 | 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | 관리자 API와 로그인(`/api/monti/v1/*`, `/api/monti/auth/*`) | `app/api/monti/[...path]/route.ts` |
 | 고른 기능이 읽는 모든 변수와, 변수마다 짧은 주석(무엇이고 어디서 얻는지: 데이터베이스 URL, `MONTI_SECRET`을 만드는 `openssl rand -base64 32`, `S3_*` 값). 컴퓨터에서 지금 필요한 값이 먼저 오고, `SITE_URL`·`AUTH_TRUST_HOST`·`DATABASE_SCHEMA`는 "When you deploy (not needed on your computer)" 아래에 주석 처리되어 한 문장씩 설명이 붙는다. `DATABASE_URL` 옆에는 `sslmode=require` 대신 `sslmode=verify-full`을 쓰라는 안내가 있다. 자리표시자만 있고 비밀은 없으므로 커밋해도 안전하다 | `.env.example` |
@@ -155,7 +155,7 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 | `--dry-run` | 쓰지도 돌리지도 않고 계획만 보인다 | |
 | `--site-url <url>` | 공개 사이트 주소. `.env.example`의 `SITE_URL` 예시 값이다 | `http://localhost:<개발 포트>` |
 | `--locales <목록>` | 언어 코드, 기본 언어가 먼저(하나면 `--locale <코드>`도 같다) | 콘텐츠 파일 이름이나 폴더에서 찾은 언어, 없으면 `en` |
-| `--time-zone <시간대>` | IANA 시간대 | `UTC` |
+| `--time-zone <시간대>` | 사이트의 날짜와 예약 발행에 쓰는 IANA 시간대 | 이 컴퓨터의 시간대(읽을 수 없으면 `UTC`). 어느 쪽인지 요약에 나오고, `monti.schema.ts`의 `timeZone`(또는 관리자의 스키마 설정)으로 바꾼다 |
 | `--storage <s3\|none>` | 이미지 저장소 | `none` |
 | `--extras <목록>` | `ai`, `git-sync`, `none` | `none` |
 | `--blocks <목록>` | `default`(가벼운 묶음), `all`, `none`, 블록 이름(`default,mermaid`는 가벼운 묶음에 더한다) | `default` |
@@ -479,7 +479,7 @@ export const cms = defineConfig({
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`, 레이아웃 파일의 `export const generateMetadata = () => cmsAdminMetadata(cms);`(`@monti-cms/nextjs/admin`) |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)`(`format: "mdx"`를 넘기면 본문을 그 형식의 글로도 받는다. `entry.body`, "형식" 절) |
 | 공개 미디어와 링크 | `entry.refs`(`entry.doc`에 쓰인 미디어의 URL과 내부 링크의 주소. `<CmsContent cms={cms} entry={entry} />`가 그린다), `cms.read.mediaUrl(mediaId)` |
-| 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
+| 저장소·설정 | `cms.store()`·`cms.contentService()`·`cms.bulkService()`·`cms.mediaStore()`·`cms.storage(플러그인이름)`·`cms.secrets(플러그인이름)`·`cms.apiKeys`·`cms.auth()`·`cms.authGateway`·`cms.authHandlers`·`cms.isMediaConfigured` |
 | 스크립트·명령줄 | `cms.migrate()`·`cms.close()` |
 | 플러그인 라우트 | `adminRoute(async ({ request, params, auth, cms }) => …)`: 라우트는 자신을 맡은 인스턴스를 받는다 |
 | 사이트 | `cms.site`: 컬렉션과 그 규칙·언어·URL·블록·코드 블록 설정·관리자 주소와 언어("사이트 설정은 인스턴스에 속한다") |
@@ -512,7 +512,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | 공개 렌더러 | `<CmsContent cms={cms} entry={entry} />`와 `renderDocument(doc, { site: cms.site })`: 사이트가 어떤 블록·마크·코드 펜스가 있는지, 줄 효과와 하이라이트 테마, 더해지는 플러그인 컴포넌트를 정한다 |
 | 직접 짠 코드 | 서버에서는 `cms.site`, 클라이언트 컴포넌트에서는 `useSite()`. 사이트가 필요한 도우미는 매개변수로 받는다 |
 
-**브라우저로 가는 것.** `site.snapshot()`은 설정을 일반 데이터로 만든 것이다. 컬렉션·언어·`site`·`admin`·`timeZone`·`media`·`codeBlock` 설정, 모든 블록(플러그인 블록 포함), 플러그인마다 `name`·`nav`·`options`·`contributes`를 JSON으로 담는다. 플러그인의 `options`나
+**브라우저로 가는 것.** `site.snapshot()`은 설정을 일반 데이터로 만든 것이다. 컬렉션·언어·`site`·`admin`·`timeZone`·`media`·`editor`·`codeBlock` 설정, 모든 블록(플러그인 블록 포함), 플러그인마다 `name`·`nav`·`options`·`contributes`를 JSON으로 담는다. 플러그인의 `options`나
 `contributes` 안의 함수, 함수인 `admin.messages` 문구(문자열은 간다), 플러그인의 `server`·`admin`·`render`·`formats`·`validate`는 가지 않는다. 관리자 레이아웃이 플러그인의 관리자 모듈을 서버에서 불러 그 프로바이더를 직접 그린다. 브라우저에 필요한 `options` 값은 JSON으로 둔다.
 
 **타입.** 타입은 넘긴 설정을 따라가며 등록 단계가 없다. `defineConfig({ … })`(와 `createCms({ config })`)는 `Cms<typeof config>`를 돌려주므로 `cms.read.listEntries({ collection: "post" })`는 컬렉션 이름과 각 컬렉션의 메타데이터를 알고(`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
@@ -1093,7 +1093,7 @@ export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
 		options: {}, // JSON 값. 서버·브라우저가 함께 읽는다
-		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 "관리" 묶음
+		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 도구 묶음의 페이지: <관리자 경로>/tools/my
 		validate: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API 경로·표 만들기·메타 표시, 서버 코드가 필요한 훅
 		hooks: { validate: () => undefined }, // 인라인으로 쓴 쓰기 훅: 훅만 더하는 플러그인은 `server` 모듈이 필요 없다(`options`도 생략할 수 있다)
@@ -1156,6 +1156,28 @@ secrets.deriveKey("signing");               // 다른 용도(HMAC, 해시)용 32
 - `cms.server`는 `secret`과 `previousSecrets`를 뺀 서버 설정이다.
 - `MONTI_SECRET`을 바꾸면 로그인 세션 키도 바뀌어 모두 한 번 다시 로그인한다. `previousSecrets`는 저장된 값을 계속 읽게 할 뿐 옛 로그인 세션을 살려 주지는 않는다.
 
+#### API 키 저장소
+
+외부 서비스용 키(AI 제공자, 맞춤법 검사기, GitHub 토큰)는 플러그인마다 따로 두지 않고 `cms.apiKeys`에 한 번만 둔다. 키마다 이름이 있고, 플러그인 저장소 범위 `core-keys`에 core 자신의 키(`cms.secrets("core-keys")`)로 암호화해서 저장하며, 관리자(도구 > API 키)에는 이름과 끝 네 글자만 보인다.
+
+```ts
+const key = await cms.apiKeys.add({ name: "Anthropic", value });          // 또는 addNamed({ baseName: "Anthropic", value }) -> 이름이 있으면 "Anthropic 2"
+const id = await cms.apiKeys.choose(choice, { baseName: "Anthropic" });    // 폼이 보낸 값: { use: "saved", keyId } | { use: "new", value } | { use: "none" }
+const value = await cms.apiKeys.read(id);                                  // 서버에서만. 키가 지워졌거나 풀 수 없으면 null
+await cms.apiKeys.setUses("my-plugin", [{ ref: "item:42", keyId: id }]);   // 플러그인의 어느 항목이 키를 쓰는지, 전체를 통째로 바꾼다
+await cms.apiKeys.readSlot("my-plugin", "key");                            // 플러그인이 선언한 슬롯(`keySlots`)에 정해진 키
+await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...)와 tx.storage("my-plugin") 쓰기: 모두 남거나 모두 사라진다 */ });
+```
+
+- 플러그인은 키의 **id**만 들고 있고 값은 서비스를 부를 때 `read`로 읽는다. 이름을 바꾸거나 값을 바꿔도 id는 같으므로 그 키를 쓰는 곳이 모두 따라간다.
+- `setUses`는 관리자가 키를 어디서 쓰는지 아는 방법이다. 글자가 아니라 **참조**(`ref`, `connection:<id>` 같은 바뀌지 않는 값)를 받는다. 항목이 바뀔 때마다(연결 저장·삭제 등) 부른다. 관리자에 보이는 글자는 키를 읽을 때 `CmsServerPlugin`의 `keyUses(cms, refs)`가 만든다. `ref`마다 관리자 언어(`cms.site.createTranslator`)로, 항목의 지금 이름을 담은 라벨을 돌려주고, 더는 없는 항목은 `null`을 돌려주어 그 사용을 지운다. `keyUses`가 없는 플러그인은 플러그인 이름으로 보인다.
+- **키 슬롯**: 정해진 키 하나가 필요한 플러그인(맞춤법 검사기 등)은 플러그인 정의에 `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })`로 선언하고(`service`는 슬롯에 넣은 키가 저장되는 언어와 무관한 이름으로, `Bareun`, 있으면 `Bareun 2`이며 이전 작업도 같은 이름을 쓴다. `label`은 표시용이고 관리자 언어를 따르도록 site를 받는 함수로 쓴다), `cms.apiKeys.readSlot(<플러그인 이름>, "key")`로 읽는다. 도구 > API 키는 설치된 플러그인의 슬롯을 모두 보여 준다. 키가 정해졌으면 그 키의 "사용 중" 줄에 이름이 나오고, 비어 있으면 저장된 키를 고르거나 새 키를 넣는 줄(새 키는 지정과 같은 트랜잭션으로 저장)이 나오며, 정해진 슬롯은 키 줄 메뉴에서 뺄 수 있다. 관리자는 `PUT /v1/api-keys/slots`에 `{ plugin, slot, key }`(`key`는 `choose`가 받는 값, `{ use: "none" }`은 비운다)를 보낸다. 플러그인 페이지도 부를 수 있다. 설치되지 않은 플러그인의 슬롯은 보이지 않고 사용으로 세지도 않는다.
+- **한 번에 저장**: `cms.transaction(work)`는 `work`를 데이터베이스 트랜잭션 하나로 돌린다(Postgres: 어느 플러그인 저장소와 키 저장소든 한 번의 `BEGIN`/`COMMIT`. 데이터베이스 어댑터의 `transaction` 포트). 안에서 `tx.apiKeys.choose(...)`로 키를 만들고 `tx.storage("my-plugin")`으로 그 키를 가리키는 항목을 쓰면, 저장이 실패해도 남는 키가 없다. 안에서 `once`는 쓸 수 없다.
+- 관리자 API로 지울 때(`DELETE /v1/api-keys/<id>?expectedVersion=`) 쓰는 곳이 있으면 `409 key_in_use`와 `details.uses`로 답한다. `&force=true`를 붙이면 그래도 지우고, 쓰던 곳은 키를 찾지 못해 멈춘다. `cms.apiKeys.remove`는 항상 지운다.
+- 서버 `secret`이 없으면 저장할 수 없다(`secret_not_configured`). 더는 나열되지 않은 비밀 값으로 만든 키는 `readable: false`로 나온다.
+- 경로: `GET/POST /v1/api-keys`, `PATCH/DELETE /v1/api-keys/<id>`. 어느 응답에도 값은 없다.
+- 키를 직접 저장하던 플러그인은 `migrate(storage, cms)`에서 옮긴다(AI 플러그인의 `moveKeysToStore` 참고). 값이 같은 키가 있으면 새로 만들지 않고 재사용하고, 다시 돌려도 안전하게 만든다.
+
 ### 플러그인 저장소
 
 플러그인은 자기 데이터(설정, 글마다의 동기화 상태, 캐시한 결과)를 자기 표나 데이터베이스 드라이버가 아니라 인스턴스의 플러그인 저장소에 둔다.
@@ -1189,7 +1211,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 알려진 프록시 플랫폼이 감지되거나 개발일 때 켬, 그 밖에는 끔 |
 | `publicApi` | 선택. 공개 JSON API(`/api/monti/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
 | `hooks` | 선택. 모든 콘텐츠 쓰기에 거는 훅: `transform`·`validate`·`validatePublish`·`afterCommit`(변경이 커밋된 뒤 알림이며 두 번째 인자로 인스턴스를 받는다: 캐시 갱신·웹훅·검색 색인. 실패하면 다시 시도하므로, 반복되면 안 되는 일은 `event.once`로 감싼다). "훅 계약"과 "이벤트 전달"을 본다. 플러그인도 `hooks`를 둘 수 있다 |
-| `events` | 선택. `afterCommit` 전달을 다시 시도하고 보관하는 방식: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. "이벤트 전달"을 본다 |
+| `events` | 선택. `afterCommit` 전달을 다시 시도하고 보관하는 방식: `{ maxAttempts?, backoffMs?(attempt), retrySecret? }`. "이벤트 전달"을 본다 |
 
 다른 저장소·로그인을 쓰려면 `DatabaseAdapter`·`MediaAdapter`(`storage`로)·`AuthAdapter`를 직접 만들어 넣는다. 낮은 수준의 `createCms({ config, server })`는 같은 옵션을 `CmsServerConfig`로 받고(`storage` 대신 `media`) 사이트 설정은 따로 받는다.
 
@@ -1289,7 +1311,7 @@ export const cms = defineConfig({
 - **구독자.** 설정의 `hooks.afterCommit`은 구독자 `server`, 각 플러그인의 `hooks.afterCommit`은 `plugin:<플러그인 이름>`이다. 이름은 바뀌지 않는 값이고 `cms_event_deliveries`의 전달 상태(이벤트와 구독자마다 한 행: `state`, `attempts`, `last_error`, `next_attempt_at`)의 키가 되므로, 구독자가 있는 플러그인의 이름은 바꾸지 않는다. 나중에 생긴 구독자는 생긴 뒤에 커밋된 이벤트부터 받고, 그 전의 기록은 받지 않는다.
 - **전달.** 커밋 뒤에 변경을 만든 프로세스가 같은 호출 안에서 바로 각 구독자에게 보내므로 지연은 이전과 같다. 실패는 기록하고 점점 길어지는 간격(15초에서 시작해 두 배씩, 최대 1시간. `events.backoffMs`로 바꾼다)으로 나중에 다시 시도하며, `events.maxAttempts`번(기본 8) 시도하고도 실패하면 전달이 데드레터(`dead`)가 된다. 쓰기는 되돌리지 않고, 다른 구독자도 막지 않는다.
 - **최소 한 번, 글마다 순서대로.** 이벤트는 두 번 이상 전달될 수 있다(일을 하고 나서 실패한 구독자, 끝나지 못한 시도). 그래서 **구독자는 멱등이어야 한다.** `event.eventId`는 시도마다 같고, "이미 했다"는 표시는 `event.once`(아래)가 대신 남겨 준다. 한 글의 이벤트는 커밋 순서로 전달된다. 같은 글의 앞선 이벤트가 대기 중이거나 전달 중이거나 실패해 아직 죽지 않았다면 뒤의 이벤트는 기다린다. 죽었거나 닫은 전달은 순서를 붙들지 않으므로, 죽은 것을 손으로 다시 보내면 뒤의 이벤트보다 늦게 도착할 수 있다. 글을 내보내는 구독자는 글의 현재 상태를 읽고 `version`을 비교한다. 다른 글의 이벤트는 서로 상관없다.
-- **한 번만 하기.** `await event.once(run)`은 이벤트와 구독자마다 `run`을 한 번만 돌리고 돌았는지를 알려 준다. 앞선 시도가 `run`을 끝냈다면 건너뛰고 `false`를 돌려준다. `run`이 예외를 던지면 표시하지 않으므로 다시 시도할 때 또 돈다. 표시는 `run`이 끝난 뒤에 쓰므로, 둘 사이에서 프로세스가 죽을 때만 일이 반복된다. 메시지를 보내거나 API를 부르는 구독자에게 필요한 멱등 코드는 이것이 전부다. 표시는 코어의 플러그인 저장소(`core-events`, 어떤 플러그인도 쓸 수 없는 이름)에 있고 이벤트와 함께 지워진다(`events.retentionDays`). 반복해도 해가 없는 일에는 `once`가 필요 없다.
+- **한 번만 하기.** `await event.once(run)`은 이벤트와 구독자마다 `run`을 한 번만 돌리고 돌았는지를 알려 준다. 앞선 시도가 `run`을 끝냈다면 건너뛰고 `false`를 돌려준다. `run`이 예외를 던지면 표시하지 않으므로 다시 시도할 때 또 돈다. 표시는 `run`이 끝난 뒤에 쓰므로, 둘 사이에서 프로세스가 죽을 때만 일이 반복된다. 메시지를 보내거나 API를 부르는 구독자에게 필요한 멱등 코드는 이것이 전부다. 표시는 코어의 플러그인 저장소(`core-events`, 어떤 플러그인도 쓸 수 없는 이름)에 있고 이벤트와 함께 지워진다(90일 뒤). 반복해도 해가 없는 일에는 `once`가 필요 없다.
 - **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(`Entry`: `working`과, 발행된 뒤에는 `published`가 각각 `{ metadata, doc, … }`로 있고, `publishedSlug`·`workingSlug`·`version`도 있다. `Entry`는 `@monti-cms/core/plugin/server`에서 내보낸다)를, 삭제됐다면 `null`을 돌려준다. 주소가 든 메시지를 만들 때는 `cms.site.contentPath(collection, slug)`(경로, 컬렉션에 경로가 없으면 `null`)와 `cms.site.config.site?.url`(출처, `SITE_URL`에서 온다)을 쓴다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
 - **미루기.** 아직 준비되지 않은 구독자(이벤트를 묶는 중이거나, 요청 제한이 언제 풀리는지 아는 경우)는 `{ retryAt: Date }`을 돌려주거나 `new DeferDelivery(retryAt)`을 던진다(`@monti-cms/core/server`, `@monti-cms/core/plugin/server`). 전달은 `pending`으로 돌아가 `retryAt`에 다시 도래한다. **실패가 아니다.** 로그를 남기지 않고, 이벤트 화면에 나오지 않고, 실패 배지에 들지 않고, 시도 횟수를 쓰지 않으며(`attempts`가 하나 되돌아가므로 몇 번을 미뤄도 그 시도 그대로다) dead letter가 될 수도 없다. 그 글의 뒤 이벤트 순서는 계속 잡고 있다. `cms.events.retry()`는 `deferred`가 몇 개인지 돌려주고, `retry({ all: true })`는 아직 때가 안 된 미뤄진 전달도 시도한다. git-sync가 묶음 창에 이것을 쓴다.
 
@@ -1328,7 +1350,7 @@ defineConfig({
 });
 ```
 
-끝난 이벤트는 `events.retentionDays`일(기본 30) 뒤에 같은 쓰기 쪽 정리에서 지워진다. 관리자의 **이벤트** 화면(설정 기본 경로에서는 `/admin/events`, `monti init` 뒤에는 `/studio/events`)은 실패한 전달과 죽은 전달을 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바가 그 수를 보여 준다.
+커밋된 모든 변경은 구독자가 있든 없든 이벤트 로그에 기록된다(전달이 없는 이벤트는 "기록됨 (구독자 없음)"으로 보이고, 요청에서 온 변경이면 작업자도 담긴다). 90일(옵션이 아닌 고정 기간)이 지난 이벤트는 같은 쓰기 쪽 정리에서 프로세스당 시간당 한 번 이하로 전달과 함께 지워지며, 아직 기다리는 전달이 있으면 남는다. `pending`·`delivering`·`failed`·`dead` 전달은 전달되거나 무시될 때까지 이벤트를 붙들고 있다. 관리자의 **이벤트 기록**(도구 > 이벤트 기록: 설정 기본 경로에서는 `/admin/events`, `monti init` 뒤에는 `/studio/events`)은 모든 이벤트를 전달 상태와 함께 보여 주는 로그이며, 실패한 전달과 죽은 전달은 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바의 이벤트 기록 항목이 그 수를 보여 준다.
 
 ## 훅과 플러그인 테스트하기
 
@@ -1437,7 +1459,7 @@ Fix: correct the lines above in monti.schema.ts; the types of defineSchema show 
 | `site`, `admin` | 키마다 코드 값이 이긴다. `undefined`로 둔 키(비어 있는 환경 변수)는 파일 값을 그대로 둔다. `site.url`은 보통 코드에 둔다 |
 | `timeZone` | 코드 값이 이긴다 |
 | `seed.templates` | 파일의 템플릿 뒤에 코드의 템플릿 |
-| `plugins`, `blocks`, `codeBlock`, `media` | 코드에만 있다 |
+| `plugins`, `blocks`, `codeBlock`, `media`, `editor` | 코드에만 있다 |
 
 **코드에 남는 것.** 코드가 필요한 모든 것: 플러그인(문법 확장·형식·AI 동작 포함), 컴포넌트가 딸린 블록 정의, 훅과 서버 옵션(데이터베이스·저장소·로그인·비밀 값), `codeBlock`(줄 효과에 이름표와 함수가 있다), `media`, 함수인 옵션. `site.url`은 환경마다 달라서 코드에 남는다.
 
@@ -1527,7 +1549,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 ### 관리자에서 스키마 편집하기 (개발 서버 전용)
 
-관리자에는 `monti.schema.ts`를 편집하는 **스키마** 화면(`<관리자 경로>/schema`, 사이드바 "관리" 아래)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
+관리자에는 `monti.schema.ts`를 편집하는 스키마 설정(`<관리자 경로>/settings/collections`, 사이드바 맨 아래 설정. 언어·사이트·관리자·파일 탭도 여기에 속한다)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
 
 **누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/monti/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
 
@@ -1559,7 +1581,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 ## 설정
 
-`codeBlock`과 `media`를 뺀 이 표의 항목은 스키마 파일에 대신 적을 수 있고("스키마 파일"), `plugins`와 `blocks`는 언제나 코드다. 아래 규칙은 어느 쪽이든 같다.
+`codeBlock`·`media`·`editor`를 뺀 이 표의 항목은 스키마 파일에 대신 적을 수 있고("스키마 파일"), `plugins`와 `blocks`는 언제나 코드다. 아래 규칙은 어느 쪽이든 같다.
 
 | 항목 | 뜻 |
 |---|---|
@@ -1569,7 +1591,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `site.url` | 공개 사이트 주소. 본문에 전체 주소로 적은 링크도 내부 링크로 알아본다. 환경 변수에서 읽어도 된다. |
 | `site.aliases` | 같은 사이트로 볼 다른 호스트 이름(예: `www.example.com`). |
 | `site.name` | 관리자 화면에 보이는 사이트 이름. 없으면 `site.url`의 호스트 이름. |
-| `site.home` | 관리자 사이드바 `사이트 보기` 주소. 경로나 전체 주소. 기본 `/`. |
+| `site.home` | 관리자 사이드바의 `사이트 보기` 아이콘 단추(사이트 이름 옆)가 여는 주소. 경로나 전체 주소. 기본 `/`. |
 | `site.localePrefix` | 공개 주소에 언어를 붙이는 방식. `except-default`(기본: 기본 언어는 그대로, 다른 언어는 `/{code}`)·`always`(모든 언어에 `/{code}`)·`never`(붙이지 않음). 검색 미리보기·초안 미리보기·`localizePath`가 따른다. |
 | `site.previewPath` | 초안 미리보기 주소 앞부분(예: `/preview`). 없으면 미리보기 단추가 없다. |
 | `site.previewLocaleParam` | 미리보기 주소에 언어를 넘기는 쿼리 이름(기본 `locale`, 기본 언어가 아닐 때만 `?locale=en`). `false`면 `localePrefix` 규칙대로 경로에 넣는다(`/preview/en/posts/a`). |
@@ -1578,9 +1600,10 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `codeBlock.lineEffects` | 코드 블록 줄 효과 더하기·바꾸기("코드 블록 줄 효과"). |
 | `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | 편집기의 줄 효과·도구 감추기, 강조 테마, 언어 더하기("코드 블록 도구 끄기·테마·언어"). |
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
+| `editor.widths` | 편집기 본문 폭 메뉴의 단계: `{ label, width }`의 목록이고 `width`는 CSS 길이(`"720px"`, `"48rem"`)다. 메뉴는 이 순서대로 보여 주고 편집기는 첫 단계에서 시작한다. "전체"(폭 제한 없음, 이름은 관리자 언어를 따른다)는 항상 맨 끝에 붙는다. 공개 페이지의 본문 폭에 맞추고, 휴대폰 폭(`{ label: "모바일", width: "375px" }`)을 더해 글이 어떻게 접히는지 확인한다. 없으면 메뉴에는 "보통"(`48rem`)과 "전체"만 있다. 이름표는 비어 있지 않고 서로 달라야 하며, CSS 길이가 아닌 폭은 설정을 읽을 때 오류다. 고른 단계는 사이트별로 브라우저가 기억하고, 설정에서 사라진 단계는 첫 단계로 돌아간다. |
 | `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |
 | `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.core"`·`"cms.translation"`이다(MDX를 읽을 때의 문구는 `@monti-cms/mdx`의 `"cms.mdx"`). |
-| `admin.templates` | `false`면 관리자에서 본문 템플릿을 감춘다: 편집기의 템플릿 메뉴, 사이드바 링크, 템플릿 화면(404). 기본 `true`. 저장된 템플릿은 그대로 남는다. |
+| `admin.templates` | `false`면 관리자에서 본문 템플릿을 감춘다: 편집기의 템플릿 메뉴, 설정 > 템플릿 탭(그 주소는 404). 기본 `true`. 저장된 템플릿은 그대로 남는다. |
 | `admin.translations` | `false`면 관리자에서 번역 UI를 감춘다: 편집기의 언어 탭, 목록의 언어 열·필터, 항목 패널의 언어 탭. 기본 `true`. 언어가 하나인 사이트는 이 값과 상관없이 보이지 않는다. |
 
 ### 컬렉션
@@ -1589,8 +1612,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
   곧바로 공개 값에 반영한다(발행·보관·번역본이 없고, 언어별 값은 `translations`에 둔다). 본문(`body`)은 없으면 문서만 쓴다. `body`를 객체로 쓰면 본문이 허용하는 블록·마크·제목 단계를 제한한다("본문별 허용 블록·마크").
   예전 이름 `workflow: "publish" | "record"`는 없앴다. 아직 쓰는 설정은 써야 할 `kind`를 알려 주며 실패한다(`publish` → `document`, `record` → `item`).
 - **배치(`layout`).** 없으면 필드 선언 순서대로 한 묶음이고, 제 `tab`을 가진 필드는 그 탭에 모인다.
-- **목록(`list.columns`).** 없으면 기본 컬럼이다. 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는
-  관계)·수정일·발행일, 항목은 제목·주소(주소 필드가 있을 때)·언어·상태·수정일.
+- **목록 열.** 스키마에 속하지 않는다. 열은 각 관리자가 목록 화면의 컬럼 설정에서 고르고, 계정마다 저장된다. 고르기 전에는 기본 열이 보인다. 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는 관계)·수정일·발행일, 항목은 제목·주소(주소 필드가 있을 때)·언어·상태·수정일. 아직 `list`가 있는 설정은 지우라는 메시지와 함께 실패한다.
 
 컬렉션의 `path`(예: `/posts/:slug`)는 공개 주소 모양이다. 주소로 쓴 내부 링크를 알아보고(항목의 id로 저장된다. 공개 읽기 API 참고) 편집기가 링크를 만들 때 쓴다. `path`가 없는 컬렉션은 본문 링크로 가리킬 수 없다.
 

@@ -56,6 +56,7 @@ export function fakeCms(parts = {}) {
             createStore: () => (parts.store ?? new Proxy({}, { get: (_t, name) => missing(`store.${String(name)}`) })),
             migrate: async () => undefined,
             pluginStorage: (plugin) => storageOf(plugin),
+            transaction: (work) => (parts.storage ? work({ pluginStorage: storageOf }) : memory.transaction(work)),
         },
         auth: fakeAuth(parts.auth),
         ...(parts.mediaStore ? { media: { name: "fake", createStore: () => parts.mediaStore } } : {}),

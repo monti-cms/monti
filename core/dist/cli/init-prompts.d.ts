@@ -62,6 +62,8 @@ export interface InitAnswerFlags {
     /** `--directive-syntax` (true) or `--no-directive-syntax` (false): write blocks as `:::callout` (the directive syntax), without asking. */
     readonly directiveSyntax?: boolean;
 }
+/** The time zone of this computer (what the OS says, as an IANA name), or `undefined` when it cannot be read. */
+export declare const detectSystemTimeZone: () => string | undefined;
 /** An admin path becomes a folder in the app, so it is plain path segments only. */
 export declare const validAdminPath: (value: string) => boolean;
 /** Checks every flag that was given, before anything is asked. */
@@ -89,6 +91,6 @@ export declare function detectedLocales(app: DetectedApp): {
  * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link InitCancelled} when the
  * person cancels, and an Error naming the flag when a flag value is wrong.
  */
-export declare function collectAnswers(app: DetectedApp, flags: InitAnswerFlags, prompter?: Prompter): Promise<InitAnswers>;
+export declare function collectAnswers(app: DetectedApp, flags: InitAnswerFlags, prompter?: Prompter, systemTimeZone?: () => string | undefined): Promise<InitAnswers>;
 /** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */
 export declare function createClackPrompter(): Promise<Prompter>;

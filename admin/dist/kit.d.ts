@@ -3,9 +3,11 @@
  * that look like the admin UI. Internal admin file paths (`ui/*`, `screens/*`) are not public.
  */
 export { cn } from "./lib/utils/cn.js";
+export { type ApiKeyChoice, ApiKeyField, choiceReady } from "./screens/api-keys/api-key-field.js";
+export { API_KEYS_KEY, useApiKeys } from "./screens/api-keys/api-keys-api.js";
 export type { EntryData, EntryForm, FormValue } from "./screens/entries/entry-form.js";
 export { EMPTY_FORM, formList, formText, metadataFromForm } from "./screens/entries/entry-form.js";
-export { AdminShell, useAdminNav } from "./screens/shared/admin-shell.js";
+export { PageActions, useAdminNav } from "./screens/shared/admin-shell.js";
 export { NamedIcon, useIconByName } from "./screens/shared/collection-icon.js";
 export type { ConfirmRequest } from "./screens/shared/confirm-dialog.js";
 export { ConfirmDialog, discardConfirm, useConfirm } from "./screens/shared/confirm-dialog.js";

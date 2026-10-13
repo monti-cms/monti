@@ -48,13 +48,13 @@ export declare function fieldColumnOf(site: Site, collection: string, column: Ad
 export declare function columnConfig(site: Site, collection: string, column: AdminListColumn): ColumnConfig;
 export declare const columnLabel: (site: Site, collection: string, column: AdminListColumn) => string;
 /**
- * Default columns when there is no list setting (`list.columns`). Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
+ * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
  * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
  */
 export declare function defaultListColumns(site: Site, collection: string): AdminListColumn[];
 /**
- * Columns available in a collection and their default visibility. Built from the fields of the collection definition and `list.columns` (default columns if absent).
- * Besides system columns and taxonomy fields, fields listed in `list.columns` (text, select, relation, etc.) can also be columns.
+ * Columns available in a collection and their default visibility. Built from the fields of the collection definition.
+ * Besides system columns and taxonomy fields, the other stored fields (text, select, relation, etc.) can also be columns; the defaults are `defaultListColumns`.
  */
 export declare function columnsFor(site: Site, collection: string): {
     available: AdminListColumn[];

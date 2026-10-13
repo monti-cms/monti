@@ -7,11 +7,13 @@ export interface EventDeliveryItem {
         entryId: string;
         collection: string;
         occurredAt: string;
+        actor?: string | null;
         publishedSlug?: string | null;
         workingSlug?: string | null;
     };
-    subscriber: string;
-    state: "failed" | "dead";
+    /** `null` for an event no subscriber was made a delivery for (`recorded`). */
+    subscriber: string | null;
+    state: "pending" | "delivering" | "delivered" | "failed" | "dead" | "dismissed" | "recorded";
     attempts: number;
     lastError: string | null;
     nextAttemptAt: string | null;
@@ -29,6 +31,11 @@ export interface EventsList {
     total: number;
     counts: EventCounts;
 }
+/** Which deliveries the events screen lists. */
+export type EventsFilter = "all" | "failed" | "pending" | "delivered";
+export declare const EVENTS_FILTERS: readonly EventsFilter[];
+/** Query string of `GET /v1/events` for a filter and page (newest event first). */
+export declare function eventsQuery(filter: EventsFilter, page: number, pageSize: number): string;
 /** Everything under this prefix is refetched after an action. */
 export declare const EVENTS_KEY: readonly ["cms", "events"];
 export declare const EVENTS_LIST_KEY: readonly ["cms", "events", "list"];

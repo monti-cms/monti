@@ -17,7 +17,7 @@ import { cmsIssueMessage } from "../api-error-message.js";
 import { recordTranslationKey } from "./entry-form.js";
 import { BacklinkInput, EntryPicker, inputClass, multilineProps, OrderedEntryList, } from "./field-inputs.js";
 import { FieldView } from "./field-views.js";
-import { layoutGroupsOf } from "./layout-groups.js";
+import { isDrawnField, layoutGroupsOf } from "./layout-groups.js";
 import { MediaInput } from "./media-image-input.js";
 import { entriesMessages } from "./messages.js";
 import { optionOf, useRecordCreator } from "./record-create-sheet.js";
@@ -232,7 +232,7 @@ export function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlaceholder, 
     return (_jsx(_Fragment, { children: groups.map((group, index) => {
             const visible = group.fields.filter((name) => {
                 const field = schema.fields[name];
-                return field && !omit.includes(name) && !(field.kind !== "conditional" && "hidden" in field && field.hidden);
+                return field && !omit.includes(name) && isDrawnField(field);
             });
             if (visible.length === 0)
                 return null;

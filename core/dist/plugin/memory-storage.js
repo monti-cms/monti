@@ -121,8 +121,28 @@ export function createMemoryPluginStorage() {
             },
         };
     };
+    const transaction = async (work) => {
+        const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
+        try {
+            return await work({
+                pluginStorage: (plugin) => ({
+                    ...storage(plugin),
+                    once: async () => {
+                        throw new Error("plugin storage: `once` cannot run inside a transaction");
+                    },
+                }),
+            });
+        }
+        catch (error) {
+            collections.clear();
+            for (const [key, docs] of before)
+                collections.set(key, docs);
+            throw error;
+        }
+    };
     return {
         storage,
+        transaction,
         seedLegacyTable: (table, rows) => {
             legacyTables.set(table, rows);
         },

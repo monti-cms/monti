@@ -1,4 +1,5 @@
 import { type AuthGateway } from "../adapters/auth/auth-gateway.js";
+import { type ApiKeys } from "../api-keys/api-keys.js";
 import { type ContentStore, type Entry } from "../core/store/index.js";
 import type { SaveDraftInput, ServiceInput } from "../core/types.js";
 import type { FormatRegistry } from "../format/registry.js";
@@ -70,6 +71,11 @@ export interface SchemaReload {
     /** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the schema. */
     readonly reason?: string;
 }
+/** What `cms.transaction` hands the work: the storage of any plugin and the API key store, all inside one transaction. */
+export interface CmsTransaction {
+    storage(plugin: string): PluginStorage;
+    readonly apiKeys: ApiKeys;
+}
 /** What `cms.migrate()` takes. */
 export interface MigrateRunOptions {
     readonly log?: (message: string) => void;
@@ -119,6 +125,17 @@ export interface Cms<Config extends AnyCmsConfig = any> {
      * with it. `options.legacy` lets the plugin keep reading values it stored in an older format.
      */
     secrets(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
+    /**
+     * The central API key store: named keys kept encrypted, with the places that use each. A plugin keeps a key's id (not its value) and reads the value with
+     * `cms.apiKeys.read(id)` when it calls a service; see {@link ApiKeys}. The admin's Tools → API keys page manages the same keys.
+     */
+    readonly apiKeys: ApiKeys;
+    /**
+     * Runs `work` in one database transaction: everything written through `tx` (any plugin's storage, and the API key store) is kept together, and nothing of it
+     * if `work` throws. Use it to create a key and the item that uses it in one step: `tx.apiKeys.choose(...)` then write the item with `tx.storage("my-plugin")`.
+     * `once` is not available on `tx.storage`.
+     */
+    transaction<T>(work: (tx: CmsTransaction) => Promise<T>): Promise<T>;
     /**
      * Gives the login the request headers of the framework serving this instance (Next.js: `nextHost`). `@monti-cms/nextjs` calls it from the route handler and the admin
      * layout and page, so a site never does. An explicit `host` of `auth()` wins over it.

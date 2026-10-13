@@ -2,9 +2,9 @@
 
 English | [한국어](README.ko.md)
 
-Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, body templates, failed event deliveries (`/admin/events`), trash and login screens.
+Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, trash, login and Settings screens (Settings holds the schema editor at `/admin/settings/<tab>`; templates, the event log and plugin pages have their own addresses).
 It is framework-neutral: it imports nothing from Next.js and reaches the router through an adapter it is given (see "Router adapter"). Next.js (App Router) is the supported host for now, through `@monti-cms/nextjs`.
-Plugins (e.g. `@monti-cms/ai`) add screens, sidebar items, field-side buttons and edit screen actions.
+Plugins (e.g. `@monti-cms/ai`) add Tools pages, field-side buttons and edit screen actions.
 The screens only call the core's admin API (`/api/monti/v1/*`). You can also skip installing it and build your own screens against the same API.
 
 ## Setup
@@ -15,7 +15,7 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
   (`app/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
   plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/core/client`).
   The admin API (`/api/monti/v1`) does not change.
-- **View site.** `View site` below the sidebar opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
+- **View site.** The external-link icon button next to the site name in the sidebar header (tooltip `View site`) opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
 - **Preview.** `Preview` on the edit screen appends the public path to `site.previewPath` and passes the language as `site.previewLocaleParam` (default
   `?locale=`). The URL in the search preview follows `site.localePrefix`.
 
@@ -59,7 +59,7 @@ A fence nobody registers shows its source as is.
 
 ### Icons
 
-A block definition's `editor.icon`, a plugin sidebar item's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
+A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
 The admin package includes only the commonly used icons, so register other names with the same provider's `icons`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
@@ -141,9 +141,23 @@ label (e.g. "Choose a post"). An entry of an item collection (`kind: "item"`) op
 collections, such as media usage, open that entry's cell with `<admin path>?collection=<collection>&open=<ID>`, and opening `<admin path>/entries/<ID>/edit` also
 redirects there. Saved list column names that are no longer columns are dropped (old names are not guessed and remapped).
 
+## Navigation and Settings
+
+The sidebar has four parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (Templates, one item per plugin page, then API keys, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
+
+| Screen | Address | Contents |
+|---|---|---|
+| Site, Languages, Collections, File, Admin | `<admin path>/settings` (opens the Site tab; `site`, `locales`, `collections`, `file`, `admin`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
+| API keys | `<admin path>/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and git sync pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
+| Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
+| Event log | `<admin path>/events` | Event deliveries. |
+| One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
+
+`<admin path>/settings` goes to the first tab.
+
 ## Schema screen
 
-`<admin path>/schema` (sidebar: Manage > Schema) rewrites `monti.schema.ts` on the development server while that file is plain data (the `defineSchema` import and `export default defineSchema({ ... })`, nothing else). It is read-only everywhere else, and for a file that has code in it (an import, a spread, a call), with the reason. Saving writes the whole file again, so comments in it are dropped (the screen says so). It is the screen of the `GET/PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` routes of the core (see "Editing the schema in the admin" in the `@monti-cms/core` README for who may write, the order of a save and how the running instance reloads).
+`<admin path>/settings/collections` (sidebar: Settings > Collections; the editor also spans the Site, Languages, File and Admin tabs) rewrites `monti.schema.ts` on the development server while that file is plain data (the `defineSchema` import and `export default defineSchema({ ... })`, nothing else). It is read-only everywhere else, and for a file that has code in it (an import, a spread, a call), with the reason. Saving writes the whole file again, so comments in it are dropped (the screen says so). It is the screen of the `GET/PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` routes of the core (see "Editing the schema in the admin" in the `@monti-cms/core` README for who may write, the order of a save and how the running instance reloads).
 
 - **Collections**: label, icon, kind, public address, body, and the allowed blocks, marks and heading levels (a switch per list: off allows everything, on shows a checkbox per name the site knows). Fields of every kind open in place: name, kind, label, help text, required, languages, the options of the kind (text length and rows, a slug's source, a relation's target, media kind, a back link's relation, a view's name), the options of a select with their labels, default and order, and the dependent fields of each choice of a conditional field. Fields move up and down and can be removed; a field renamed here keeps the layout, list columns and slug source that name it. Layout groups (title, tab, collapsed, fields in order) and list columns are edited as ordered lists.
 - **Locales**: the content locales (a saved locale's code is a stored value, so only new locales get a code), the default locale and the time zone.
@@ -296,24 +310,23 @@ The module that a plugin definition's `admin` loads provides `defineAdminPlugin(
 
 ```ts
 export default defineAdminPlugin({
-	pages: { my: MyPage }, // <admin path>/my (default /admin/my, a client component). The admin UI handles the login check
+	pages: { my: MyPage }, // the "my" page of Tools: <admin path>/tools/my (default /admin/tools/my, a client component). The admin UI handles the login check
 	Provider: MyProvider, // wraps the whole admin UI. Inside it, add input and edit screen extensions with CmsAdminComponentsProvider
 });
 ```
 
-A page is a client component. It draws its frame with `AdminShell` (the sidebar and the title; `sidebar.activeNav` is the `path` of the plugin's `nav` item) and calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
+A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
 
 ```tsx
 "use client";
 import { cmsFetch } from "@monti-cms/admin/api";
-import { AdminShell } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
 	const site = useSite();
 	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
-	return <AdminShell title="Post stats" sidebar={{ activeNav: "post-stats" }}>{stats.data?.published}</AdminShell>;
+	return <div>{stats.data?.published}</div>;
 }
 ```
 
@@ -323,7 +336,7 @@ Edit screen extensions (`editorExtensions`) are hooks that add an element at the
 attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`), the plugin screen frame (`AdminShell`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
+`cn`, the confirm dialog (`useConfirm`), the title bar actions (`PageActions`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
 (`EntryForm`, `EntryData`). Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |

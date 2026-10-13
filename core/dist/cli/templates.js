@@ -1,9 +1,11 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define.js";
+import { defaultCollectionPath } from "../core/plural.js";
 import { printSchemaFile } from "../schema-file/print.js";
 import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys.js";
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
 /** Defaults `monti init` writes into a new config. */
 export const DEFAULT_INIT_LOCALE = "en";
+/** The time zone `monti init` falls back to when it cannot read the computer's (and the one it was before init followed the computer). */
 export const DEFAULT_INIT_TIME_ZONE = "UTC";
 /** The admin path `monti init` asks for and writes by default. */
 export const DEFAULT_INIT_ADMIN_PATH = "/studio";
@@ -180,7 +182,7 @@ export function pathFor(folder) {
     const last = folder?.dir.split("/").at(-1) ?? "";
     return /^[A-Za-z][\w-]*$/.test(last) && !["content", "data", "src", "_posts"].includes(last)
         ? `/${last}/:slug`
-        : "/posts/:slug";
+        : defaultCollectionPath("post");
 }
 /**
  * The schema file `monti init` creates (`monti.schema.ts`): the `post` collection (and the tag and category collections its front matter asks for), the locales and

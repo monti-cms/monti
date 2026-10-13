@@ -107,7 +107,7 @@ function Sidebar({ side = "left", variant = "sidebar", collapsible = "offcanvas"
                 // Adjust the padding for floating and inset variants.
                 variant === "floating" || variant === "inset"
                     ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-                    : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l", className), ...props, children: _jsx("div", { "data-sidebar": "sidebar", "data-slot": "sidebar-inner", className: "flex size-full flex-col bg-cms-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-cms-sidebar-border", children: children }) })] }));
+                    : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l", className), ...props, children: _jsx("div", { "data-sidebar": "sidebar", "data-slot": "sidebar-inner", className: "group-data-[ flex size-full flex-col bg-cms-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-cms-sidebar-border", children: children }) })] }));
 }
 function SidebarTrigger({ className, onClick, ...props }) {
     const t = useTranslator(uiMessages);
@@ -123,7 +123,7 @@ function SidebarRail({ className, ...props }) {
     return (_jsx("button", { "data-sidebar": "rail", "data-slot": "sidebar-rail", "aria-label": t("sidebar.toggle"), tabIndex: -1, onClick: toggleSidebar, title: t("sidebar.toggle"), className: cn("absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-cms-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2", "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize", "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize", "group-data-[collapsible=offcanvas]:translate-x-0 hover:group-data-[collapsible=offcanvas]:bg-cms-sidebar group-data-[collapsible=offcanvas]:after:left-full", "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2", "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2", className), ...props }));
 }
 function SidebarInset({ className, ...props }) {
-    return (_jsx("main", { "data-slot": "sidebar-inset", className: cn("relative flex w-full flex-1 flex-col bg-cms-background md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm", className), ...props }));
+    return (_jsx("main", { "data-slot": "sidebar-inset", className: cn("md:peer-data-[ relative flex w-full flex-1 flex-col bg-cms-background md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl", className), ...props }));
 }
 function SidebarInput({ className, ...props }) {
     return (_jsx(Input, { "data-slot": "sidebar-input", "data-sidebar": "input", className: cn("h-8 w-full bg-cms-background shadow-none", className), ...props }));
@@ -135,7 +135,7 @@ function SidebarFooter({ className, ...props }) {
     return (_jsx("div", { "data-slot": "sidebar-footer", "data-sidebar": "footer", className: cn("flex flex-col gap-2 p-2", className), ...props }));
 }
 function SidebarSeparator({ className, ...props }) {
-    return (_jsx(Separator, { "data-slot": "sidebar-separator", "data-sidebar": "separator", className: cn("mx-2 w-auto bg-cms-sidebar-border", className), ...props }));
+    return (_jsx(Separator, { "data-slot": "sidebar-separator", "data-sidebar": "separator", className: cn("mx-2 cms-horizontal:w-auto bg-cms-sidebar-border", className), ...props }));
 }
 function SidebarContent({ className, ...props }) {
     return (_jsx("div", { "data-slot": "sidebar-content", "data-sidebar": "content", className: cn("no-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden", className), ...props }));

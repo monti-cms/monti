@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import { problemError } from "../../core/problem.js";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain.js";
-import { createPluginStorage } from "./plugin-storage.js";
+import { createPluginStorage, inPluginTransaction } from "./plugin-storage.js";
 /** The environment variable `postgres()` reads the connection string from when `connectionString` is not given. */
 export const DATABASE_URL_ENV = "DATABASE_URL";
 /** The environment variable `postgres()` reads the schema name from when `schema` is not given. */
@@ -137,6 +137,7 @@ export function postgres(options = {}) {
             return where ? `${where}, schema "${schemaOptions()?.schema ?? "public"}"` : undefined;
         },
         pluginStorage: (plugin) => createPluginStorage(getPool(), schemaOptions()?.schema, plugin),
+        transaction: (work) => inPluginTransaction(getPool(), schemaOptions()?.schema, work),
         close: async () => {
             await pool?.end();
             pool = undefined;

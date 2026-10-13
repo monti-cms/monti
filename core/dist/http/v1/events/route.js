@@ -7,6 +7,7 @@ const STATES = [
     "failed",
     "dead",
     "dismissed",
+    "recorded",
 ];
 const querySchema = z.object({
     state: z.array(z.enum(STATES)).optional(),

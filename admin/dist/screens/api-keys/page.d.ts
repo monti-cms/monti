@@ -1,6 +1,7 @@
 import type { Cms } from "@monti-cms/core/runtime";
 import type { AdminServer } from "../../host/server.js";
-export default function AdminSchemaPage({ cms, server }: {
+/** `<admin path>/api-keys`: the central key store. */
+export default function AdminApiKeysPage({ cms, server }: {
     cms: Cms;
     server: AdminServer;
 }): Promise<import("react").JSX.Element>;

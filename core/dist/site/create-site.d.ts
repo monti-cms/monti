@@ -20,7 +20,7 @@ export type AnyCmsConfig = CmsConfig;
  * The config a site's browser code works from: the same shape as the site config, with nothing that cannot cross from the server to the browser as data. It is
  * what `site.snapshot()` returns and what `createSite` and `<SiteProvider config={...}>` accept.
  *
- * Collections, locales, `site`, `admin`, `timeZone`, `media` and `codeBlock` are the config's own (with the labels written as text). `blocks` holds every block of the site
+ * Collections, locales, `site`, `admin`, `timeZone`, `media`, `editor` and `codeBlock` are the config's own (with the labels written as text). `blocks` holds every block of the site
  * (the blocks the plugins add included) and each plugin keeps its `name`, `nav`, `options` and `contributes` as JSON: a function inside `options` or `contributes`
  * does not reach the browser, and neither do the plugin's `server`, `admin`, `render`, `formats`, `validate` loaders.
  * Text overrides of `admin.messages` that are functions are left out the same way (strings stay).

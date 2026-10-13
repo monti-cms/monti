@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cmsApiUrl, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, Trash2, Upload } from "lucide-react";
+import { FileText, Image as ImageIcon, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, SearchX, Trash2, Upload, } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper.js";
@@ -10,7 +10,6 @@ import { cn } from "../../lib/utils/cn.js";
 import { readPreference, writePreference } from "../../lib/utils/site-storage.js";
 import { Alert, AlertDescription } from "../../ui/alert.js";
 import { Button } from "../../ui/button.js";
-import { Empty, EmptyHeader, EmptyTitle } from "../../ui/empty.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { Input } from "../../ui/input.js";
 import { Label } from "../../ui/label.js";
@@ -22,14 +21,15 @@ import { cmsFetch, errorText } from "../admin-api.js";
 import { AdminShell } from "../shared/admin-shell.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
 import { DateRangePicker } from "../shared/date-range-picker.js";
+import { EmptyState } from "../shared/empty-state.js";
 import { entryHref } from "../shared/entry-href.js";
-import { SIDE_PANEL_DOCK } from "../shared/side-panel.js";
+import { ListPagination } from "../shared/list-pager.js";
+import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel.js";
 import { useDebounced } from "../shared/use-debounced.js";
 import { MediaDetailPanel } from "./media-detail-panel.js";
 import { mediaUsages, usageNoteLabel } from "./media-item.js";
 import { MediaGrid, MediaTable } from "./media-views.js";
 import { mediaMessages } from "./messages.js";
-const PAGE_SIZE = 30;
 const kindOptions = (t) => [
     { value: "all", label: t("library.kind.all") },
     { value: "image", label: t("library.kind.image") },
@@ -68,6 +68,7 @@ export function MediaLibrary() {
     const t = useTranslator(mediaMessages);
     const queryClient = useQueryClient();
     const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
     const [search, setSearch] = useState("");
     const [used, setUsed] = useState("all");
     const [kind, setKind] = useState("all");
@@ -83,7 +84,7 @@ export function MediaLibrary() {
     const fileInputRef = useRef(null);
     // Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
     const query = useMemo(() => {
-        const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE), used });
+        const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
         if (search.trim())
             params.set("search", search.trim());
         if (kind !== "all")
@@ -95,7 +96,7 @@ export function MediaLibrary() {
         if (to)
             params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
         return params.toString();
-    }, [page, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
+    }, [page, pageSize, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
     const debouncedQuery = useDebounced(query, 200);
     const mediaQuery = useQuery({
         queryKey: [...MEDIA_KEY, debouncedQuery],
@@ -227,7 +228,6 @@ export function MediaLibrary() {
             toast.error(errorText(site, error, t("library.cleanup.failed")));
         }
     };
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const setDetailDirty = useCallback((dirty) => {
         detailDirtyRef.current = dirty;
     }, []);
@@ -279,6 +279,14 @@ export function MediaLibrary() {
         apply();
         setPage(1);
     };
+    const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
+    const clearFilters = () => setFilter(() => {
+        setSearch("");
+        setUsed("all");
+        setKind("all");
+        setUploadedFrom("");
+        setUploadedTo("");
+    });
     return (_jsxs(AdminShell, { title: t("title"), count: mediaQuery.data ? total : undefined, sidebar: { activeNav: "media" }, headerActions: _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Label, { className: "font-normal text-cms-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: optimize, onCheckedChange: (checked) => setOptimize(checked === true) }), t("library.optimize")] }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, hidden: true, accept: uploadAccept(site), onChange: (event) => void handleFiles(event.target.files) }), _jsxs(Button, { type: "button", size: "sm", disabled: upload !== null, onClick: () => fileInputRef.current?.click(), children: [_jsx(Upload, { "aria-hidden": true }), upload
                             ? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
                             : t("library.upload")] }), _jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: () => void cleanup(), children: t("library.cleanup") }), _jsx(IconButton, { label: t("library.refresh"), variant: "outline", onClick: () => void mediaQuery.refetch(), children: _jsx(RefreshCw, { className: cn(mediaQuery.isFetching && "animate-spin"), "aria-hidden": true }) })] }), children: [_jsxs("div", { className: "flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6", children: [_jsx(Input, { type: "search", "aria-label": t("library.search"), value: search, placeholder: t("library.search"), onChange: (event) => setFilter(() => setSearch(event.target.value)), className: "h-8 w-56" }), _jsxs(Select, { value: kind, items: kindOptions(t), onValueChange: (value) => value && setFilter(() => setKind(value)), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.kindLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: kindOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsxs(Select, { value: used, items: usedOptions(t), onValueChange: (value) => value && setFilter(() => setUsed(value)), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.usedLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: usedOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsx(DateRangePicker, { label: t("library.uploadedDate"), from: uploadedFrom, to: uploadedTo, onChange: (from, to) => setFilter(() => {
@@ -288,5 +296,12 @@ export function MediaLibrary() {
                             const picked = next[0];
                             if (picked === "grid" || picked === "list")
                                 setView(picked);
-                        }, className: "ml-auto", children: [_jsx(ToggleGroupItem, { value: "grid", "aria-label": t("library.viewGrid"), children: _jsx(LayoutGrid, { "aria-hidden": true }) }), _jsx(ToggleGroupItem, { value: "list", "aria-label": t("library.viewList"), children: _jsx(List, { "aria-hidden": true }) })] })] }), _jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex-1 overflow-y-auto p-4 lg:p-6", children: [loadError && (_jsxs(Alert, { variant: "danger", className: "mb-4 flex w-auto items-center justify-between", children: [_jsx(AlertDescription, { className: "col-start-auto", children: loadError }), _jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void mediaQuery.refetch(), children: t("common.retry") })] })), items.length === 0 ? (loadError ? null : mediaQuery.isPending ? (_jsx("ul", { "aria-hidden": true, className: "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6", children: Array.from({ length: 6 }, (_, index) => (_jsx("li", { children: _jsx(Skeleton, { className: "aspect-square w-full rounded-lg" }) }, index))) })) : (_jsx(Empty, { className: "py-16", children: _jsx(EmptyHeader, { children: _jsx(EmptyTitle, { children: t("library.empty") }) }) }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps })), _jsxs("nav", { "aria-label": t("library.pageNav"), className: "mt-4 flex items-center justify-end gap-2 text-xs", children: [_jsx(Button, { type: "button", size: "sm", variant: "outline", disabled: page <= 1, onClick: () => setPage(page - 1), children: t("library.prev") }), _jsxs("span", { className: "tabular-nums", children: [page, " / ", totalPages] }), _jsx(Button, { type: "button", size: "sm", variant: "outline", disabled: page >= totalPages, onClick: () => setPage(page + 1), children: t("library.next") })] })] }), selected && (_jsx(MediaDetailPanel, { media: selected, className: SIDE_PANEL_DOCK, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaults(selected, defaults), onRename: (filename) => void rename(selected, filename), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id))] }), dialog] }));
+                        }, className: "ml-auto", children: [_jsx(ToggleGroupItem, { value: "grid", "aria-label": t("library.viewGrid"), children: _jsx(LayoutGrid, { "aria-hidden": true }) }), _jsx(ToggleGroupItem, { value: "list", "aria-label": t("library.viewList"), children: _jsx(List, { "aria-hidden": true }) })] })] }), _jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto p-4 lg:p-6", children: [loadError && (_jsxs(Alert, { variant: "danger", className: "mb-4 flex w-auto items-center justify-between", children: [_jsx(AlertDescription, { className: "col-start-auto", children: loadError }), _jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void mediaQuery.refetch(), children: t("common.retry") })] })), items.length === 0 ? (loadError ? null : mediaQuery.isPending ? (_jsx("ul", { "aria-hidden": true, className: "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6", children: Array.from({ length: 6 }, (_, index) => (_jsx("li", { children: _jsx(Skeleton, { className: "aspect-square w-full rounded-lg" }) }, index))) })) : filtered ? (_jsx(EmptyState, { icon: SearchX, title: t("library.emptyNoMatch"), description: t("library.emptyNoMatchHint"), action: { label: t("library.clearFilters"), onClick: clearFilters } })) : (_jsx(EmptyState, { icon: ImageIcon, title: t("library.emptyYet"), description: t("library.emptyYetHint"), action: {
+                                            label: t("library.upload"),
+                                            icon: Upload,
+                                            onClick: () => fileInputRef.current?.click(),
+                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: setPage, onPageSizeChange: (size) => {
+                                    setPageSize(size);
+                                    setPage(1);
+                                } })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaults(selected, defaults), onRename: (filename) => void rename(selected, filename), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog] }));
 }

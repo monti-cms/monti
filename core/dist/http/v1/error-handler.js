@@ -27,6 +27,8 @@ const CMS_ERROR_STATUS = {
     conflict: 409,
     slug_conflict: 409,
     in_use: 409,
+    key_name_taken: 409,
+    key_in_use: 409,
     invalid_status: 409,
     locked: 409,
     folder_name_conflict: 409,

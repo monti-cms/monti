@@ -6,9 +6,26 @@ export type FieldKindName = (typeof FIELD_KINDS)[number];
 export declare const VALUE_KINDS: readonly ["text", "relation", "select", "media"];
 /** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
 export declare const FIELD_KEY_ORDER: readonly ["kind", "label", "description", "required", "localized", "input", "inputOptions", "hidden", "role", "tab", "fillFromBody", "multiline", "rows", "max", "from", "to", "many", "createInline", "publishedOnly", "allowUnpublished", "ordered", "view", "via", "accept", "options", "defaultValue", "discriminant", "values", "placeholder"];
-export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "body", "fields", "layout", "list"];
+export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "body", "fields", "layout"];
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export declare function setProp(obj: Obj, key: string, value: unknown, order?: readonly string[]): Obj;
+/** The `site` or `admin` settings of the file (empty when it has none). */
+export declare const sectionOf: (file: Obj, section: "site" | "admin") => Obj;
+/** `file` with one setting of `site` or `admin` set (or removed when `value` is `undefined`); a section left empty is removed. */
+export declare function setSetting(file: Obj, section: "site" | "admin", key: string, value: unknown): Obj;
+/** One changed setting of `site` or `admin`: its path (`site.name`) and the value before and after (`undefined` when not set). */
+export interface SettingChange {
+    readonly path: string;
+    readonly from: unknown;
+    readonly to: unknown;
+}
+/** The settings of `site` and `admin` that differ between the saved file and the draft, in the order of the draft. */
+export declare function settingChanges(base: Obj, draft: Obj): SettingChange[];
+/**
+ * How many things differ between the saved file and the draft: each collection that was added, removed or edited, each of the language settings
+ * (`locales`, `defaultLocale`, `timeZone`) and each changed `site` or `admin` setting. The number shown as unsaved changes.
+ */
+export declare function changeCount(base: Obj, draft: Obj): number;
 /** `record` with the key `from` named `to`, in the same place. */
 export declare function renameKey<T>(record: Record<string, T>, from: string, to: string): Record<string, T>;
 /** `record` with `key` moved by `delta` places (negative: up). */
@@ -24,11 +41,13 @@ export declare const collectionsOf: (file: Obj) => Record<string, Obj>;
 export declare const fieldsOf: (collection: Obj) => Record<string, Obj>;
 export declare function setCollection(file: Obj, name: string, update: (collection: Obj) => Obj): Obj;
 /** The public address a new document collection starts with, from its name. */
-export declare const defaultPath: (name: string) => string;
+export declare const defaultPath: (id: string) => string;
+/** The identifier a display name suggests: lowercase ASCII words joined with `-` ("Blog posts" -> "blog-posts"). Empty when the name has no ASCII letters or digits (Korean). */
+export declare const idFromName: (name: string) => string;
 /** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
 export declare function pathProblem(path: string): "slash" | "slug" | null;
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
-export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string): Obj;
+export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj;
 export declare function removeCollection(file: Obj, name: string): Obj;
 /** The names of the fields that store a value, including the fields a conditional field shows (the order the entry form has them). */
 export declare function storedFieldNames(collection: Obj): string[];
@@ -64,6 +83,8 @@ export declare function addField(collection: Obj, place: FieldPlace, name: strin
 export declare function setField(collection: Obj, place: FieldPlace, name: string, update: (field: Obj) => Obj): Obj;
 export declare function removeField(collection: Obj, place: FieldPlace, name: string): Obj;
 export declare function moveField(collection: Obj, place: FieldPlace, name: string, delta: number): Obj;
+/** Puts `name` where `over` is (a field dropped on another one of the same list); any other name leaves the list as it is. */
+export declare function reorderField(collection: Obj, place: FieldPlace, name: string, over: string): Obj;
 /**
  * The name of the title field of a collection: the field with the `title` role, else the one named `title` (the file only has it at the top level of `fields`).
  * `undefined` when there is none.
@@ -102,10 +123,6 @@ export interface LayoutGroup {
 }
 export declare const layoutOf: (collection: Obj) => LayoutGroup[];
 export declare function withLayout(collection: Obj, layout: LayoutGroup[]): Obj;
-export declare const columnsOf: (collection: Obj) => string[] | undefined;
-export declare function withColumns(collection: Obj, columns: string[] | undefined): Obj;
-/** The system columns a list can show next to the fields. */
-export declare const SYSTEM_COLUMNS: readonly ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"];
 export interface Locale {
     code: string;
     name: string;

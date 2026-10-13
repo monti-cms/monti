@@ -15,7 +15,7 @@ import { FilterChipBar, ListSearch } from "./list-toolbar.js";
 import { screensMessages } from "./messages.js";
 import { RecordPanel } from "./record-panel.js";
 import { AdminNavProvider, AdminShell } from "./shared/admin-shell.js";
-import { SIDE_PANEL_DOCK } from "./shared/side-panel.js";
+import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel.js";
 import { useEntryList } from "./use-entry-list.js";
 /** Top right above the list: search and add button (trash has no add). */
 function EntryListHeaderActions({ list }) {
@@ -54,14 +54,14 @@ function EntryListBody({ list }) {
                                     ], onDeleteKey: list.onDeleteKey, onSelectFolder: (folder) => list.update({ folder }), openRecordId: record?.collection === state.collection ? record.id : null, onOpenRecord: (item) => void list.openRecord({ collection: state.collection, id: item.id }), onRestore: (item) => void list.restore([toSelection(item)]), onPermanentDelete: (item) => list.confirmPermanentDelete([toSelection(item)]), onPageChange: (page) => list.update({ page }, { resetPage: false }), onPageSizeChange: (pageSize) => {
                                     list.update({ pageSize });
                                     list.savePreferences({ pageSize });
-                                }, onRetry: data.retry })] }), record && (_jsx(RecordPanel, { target: record, className: SIDE_PANEL_DOCK, onDirtyChange: list.setRecordDirty, onClose: list.closeRecord, onSaved: (saved) => {
-                            // Keep the saved item open as is. For a new item, switch to editing the created item.
-                            if (!record.id)
-                                list.showRecord({ collection: record.collection, id: saved.id });
-                            toast.success(t("common.saved"));
-                            void list.invalidateEntries();
-                            list.reloadTaxonomies();
-                        } }, `${record.collection}:${record.id ?? "new"}`))] }), list.folderActions.dialogs, list.confirmDialog] }));
+                                }, onRetry: data.retry, addAction: isTrash ? undefined : { label: t("list.add", { label: list.label }), run: list.createNew } })] }), record && (_jsx(DockedPanel, { resize: RECORD_PANEL_RESIZE, children: _jsx(RecordPanel, { target: record, onDirtyChange: list.setRecordDirty, onClose: list.closeRecord, onSaved: (saved) => {
+                                // Keep the saved item open as is. For a new item, switch to editing the created item.
+                                if (!record.id)
+                                    list.showRecord({ collection: record.collection, id: saved.id });
+                                toast.success(t("common.saved"));
+                                void list.invalidateEntries();
+                                list.reloadTaxonomies();
+                            } }, `${record.collection}:${record.id ?? "new"}`) }))] }), list.folderActions.dialogs, list.confirmDialog] }));
 }
 // The admin list fetches data in the browser. Render after hydration so Base UI's auto IDs do not mismatch the server HTML.
 function useDashboardMounted() {
@@ -93,7 +93,7 @@ function TrashPage() {
     const t = useTranslator(screensMessages);
     const list = useEntryList("trash");
     const { state } = list;
-    return (_jsx(AdminShell, { title: t("dashboard.trash"), count: list.data.total, sidebar: { activeNav: "trash" }, headerActions: _jsxs(_Fragment, { children: [_jsx(EntryListHeaderActions, { list: list }), _jsx("nav", { "aria-label": t("dashboard.trashCollections"), className: "flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]", children: site.COLLECTIONS.map((item) => (_jsx(Link, { href: site.adminHref(`/trash?collection=${item}`), "aria-current": state.collection === item ? "page" : undefined, className: cn(buttonVariants({ variant: "ghost", size: "xs" }), "text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground aria-[current=page]:shadow-sm"), children: site.COLLECTION_DEFINITIONS[item].label }, item))) })] }), children: _jsx(EntryListBody, { list: list }) }));
+    return (_jsx(AdminShell, { title: t("dashboard.trash"), count: list.data.total, sidebar: { activeNav: "trash" }, headerActions: _jsxs(_Fragment, { children: [_jsx(EntryListHeaderActions, { list: list }), _jsx("nav", { "aria-label": t("dashboard.trashCollections"), className: "flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]", children: site.COLLECTIONS.map((item) => (_jsx(Link, { href: site.adminHref(`/trash?collection=${item}`), "aria-current": state.collection === item ? "page" : undefined, className: cn(buttonVariants({ variant: "ghost", size: "xs" }), "text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground"), children: site.COLLECTION_DEFINITIONS[item].label }, item))) })] }), children: _jsx(EntryListBody, { list: list }) }));
 }
 function ListPage() {
     const list = useEntryList("list");

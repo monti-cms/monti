@@ -151,3 +151,36 @@ export function createPluginStorage(pool, schema, plugin) {
         },
     };
 }
+/**
+ * Runs `work` in one transaction. The storage it hands out reads and writes through the transaction's client, for any plugin, so a write to one plugin's collection and
+ * one to another's (the core key store and a plugin's settings) are kept or dropped together. `once` is not available inside it.
+ */
+export async function inPluginTransaction(pool, schema, work) {
+    const qSchema = validateSchemaName(schema);
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        const db = dbOn(client, qSchema);
+        const result = await work({
+            pluginStorage: (plugin) => {
+                assertStorageName("plugin", plugin);
+                return {
+                    plugin,
+                    collection: (name) => collectionOf(db, plugin, name),
+                    once: async () => {
+                        throw new Error("plugin storage: `once` cannot run inside a transaction");
+                    },
+                };
+            },
+        });
+        await client.query("COMMIT");
+        return result;
+    }
+    catch (error) {
+        await client.query("ROLLBACK").catch(() => { });
+        throw error;
+    }
+    finally {
+        client.release();
+    }
+}

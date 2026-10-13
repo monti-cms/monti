@@ -83,6 +83,21 @@ export interface AdminConfig {
      */
     readonly translations?: boolean;
 }
+/** One width step of the editor: a label for the menu and the widest the editor body gets at that step. */
+export interface EditorWidthStep {
+    /** Name shown in the editor's width menu. Not empty, and unique among the steps. */
+    readonly label: string;
+    /** A CSS length (`720px`, `48rem`, `min(100%, 60ch)`): the widest the body is while editing. */
+    readonly width: string;
+}
+export interface EditorConfig {
+    /**
+     * The width steps of the editor's width menu, in the order they are listed; the first is the one the editor starts at. Set them to the width of your public
+     * pages, and add a phone width to check how a post wraps. The admin always adds a last "Full" step with no limit. Without `widths` the menu has "Normal"
+     * (`48rem`) and "Full". The editor remembers the step a person picked, per browser.
+     */
+    readonly widths?: readonly EditorWidthStep[];
+}
 /**
  * A body template of the seed: its fixed `id` and `name`, and the body as a stored document (`doc`) or as text in a format (`body` and the `format` that reads it;
  * the format must be one the instance has, so a plugin provides it). Text is read when the migration runs.
@@ -130,6 +145,8 @@ export interface CmsConfig<Collections extends CollectionsConfig = CollectionsCo
     readonly schemaVersion?: number;
     /** Admin UI settings. */
     readonly admin?: AdminConfig;
+    /** The editor: the width steps of its width menu. */
+    readonly editor?: EditorConfig;
     /**
      * Body blocks the site adds (`defineBlock`). Blocks such as callouts and tabs are added by putting the block extension (`@monti-cms/blocks`) in `plugins`.
      * The public site renders them by the `component` name.

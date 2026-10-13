@@ -1,19 +1,33 @@
+import { type EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core/client";
+import type { TranslatorFor } from "../translator.js";
+import { editorMessages } from "./messages.js";
+/** One width step of the editor: `key` is what the browser remembers, `width` the CSS value of the body's `max-width`. */
+export interface EditorWidthStep {
+    readonly key: string;
+    readonly label: string;
+    readonly width: string;
+}
+/** The width of the single built-in step ("Normal") used when the config sets no `editor.widths`. */
+export declare const DEFAULT_EDITOR_WIDTH = "48rem";
+/** The `max-width` of the last step, "Full": no limit. */
+export declare const FULL_EDITOR_WIDTH = "none";
 /**
- * Editor body width. Changes only the width shown while editing; unrelated to the saved content and the public page.
- * The browser remembers only the step name, so the width values can be changed here alone.
+ * The steps of the width menu, in order: the config's `editor.widths` (or "Normal" when it sets none), then "Full". The first is where the editor starts.
+ * Changes only the width shown while editing; unrelated to the saved content and the public page.
  */
-export declare const EDITOR_WIDTHS: {
-    /** Comfortable reading width for body text (42rem, same as Tailwind `max-w-2xl`). */
-    readonly narrow: "42rem";
-    readonly normal: "48rem";
-    readonly wide: "64rem";
-    readonly full: "none";
+export declare function resolveEditorWidths(configured: readonly EditorWidthStepConfig[] | undefined, t: TranslatorFor<typeof editorMessages>): EditorWidthStep[];
+/**
+ * The steps of this site and the chosen one. The choice is remembered in this browser, per site, by step key; a remembered key that no step has any more
+ * (the config changed) and unavailable storage both leave the first step.
+ */
+export declare function useEditorWidth(): {
+    steps: EditorWidthStep[];
+    step: EditorWidthStep;
+    choose: (key: string) => void;
 };
-export type EditorWidth = keyof typeof EDITOR_WIDTHS;
-/** Chosen body width. Remembered in this browser, per site; starts at the normal width if storage is unavailable. */
-export declare function useEditorWidth(): [EditorWidth, (width: EditorWidth) => void];
 /** Body width menu at the right end of the toolbar. */
-export declare function EditorWidthMenu({ value, onChange }: {
-    value: EditorWidth;
-    onChange: (width: EditorWidth) => void;
+export declare function EditorWidthMenu({ steps, value, onChange, }: {
+    steps: readonly EditorWidthStep[];
+    value: EditorWidthStep;
+    onChange: (key: string) => void;
 }): import("react").JSX.Element;

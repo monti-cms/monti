@@ -1,3 +1,4 @@
+import { apiKeyChoiceSchema } from "@monti-cms/core/client";
 import { z } from "zod";
 /**
  * AI service connections. Several are saved in the admin AI screen's Connections tab, and each action picks which connection's which model to use.
@@ -6,7 +7,7 @@ import { z } from "zod";
  * - Decisions (`decisions`): a System One model that assigns a probability to each choice (e.g. Jev). Addresses like TypeSafe `…/v1/systemone`,
  *   OpenRouter `…/api/alpha/decisions`. Both use the `state`, `model`, `questions` -> `answers` shape.
  *
- * Keys are encrypted and stored on the server, and only the last four characters are shown on screen. Both server and browser use this file.
+ * Keys live in the central API key store (Tools → API keys); a connection only refers to one, and only the last four characters are shown on screen. Both server and browser use this file.
  */
 export const AI_PROVIDER_KINDS = ["chat", "decisions"];
 /** Per-kind address and model examples (placeholder text of the input fields). */
@@ -19,8 +20,8 @@ export const aiProviderInputSchema = z.object({
     name: z.string().trim().min(1).max(60),
     kind: z.enum(AI_PROVIDER_KINDS),
     url,
-    /** If omitted, the stored key is kept as is; `null` deletes it. */
-    apiKey: z.string().trim().min(1).max(1000).nullable().optional(),
+    /** The key to use: a saved key, a typed one (saved into the key store, named after the connection), or none. If omitted, the connection keeps its key. */
+    key: apiKeyChoiceSchema.optional(),
     /** The model used when the action does not choose one. */
     defaultModel: z.string().trim().max(200),
 });
@@ -40,5 +41,7 @@ export const aiModelsQuerySchema = z.object({
     providerId: z.string().max(60).optional(),
     /** When fetching the list with an address that is not yet saved. */
     url: url.optional(),
+    /** A key of the store to use, or a typed one that is not saved yet. */
+    keyId: z.string().max(100).optional(),
     apiKey: z.string().trim().min(1).max(1000).optional(),
 });

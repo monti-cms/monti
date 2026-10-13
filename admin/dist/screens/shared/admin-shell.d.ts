@@ -6,7 +6,16 @@ interface AdminNavContextValue {
     refreshTrashCount: () => void;
     /** Number of failed and dead event deliveries. null before loading or when unavailable. */
     eventsCount: number | null;
+    /** How many folders each collection has (a collection whose folders are not loaded yet is missing). The sidebar shows a chevron for a collection that has some. */
+    folderCounts: Readonly<Record<string, number>>;
 }
+/**
+ * Puts a page's action buttons (the one primary action, such as "Add template") on the right of the title bar. The page decides what they are, because they
+ * depend on its state; the shell only provides the place. Renders nothing until the title bar is mounted.
+ */
+export declare function PageActions({ children }: {
+    children: ReactNode;
+}): import("react").ReactPortal | null;
 /** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export declare const useAdminNav: () => AdminNavContextValue;
 /** Trash badge state. The screen's list logic must update this value too, so it lives outside the shell. */
@@ -17,12 +26,14 @@ export declare function AdminNavProvider({ children }: {
  * Frame shared by the list, media, templates and trash screens. Left is the shadcn Sidebar (a sheet on narrow screens),
  * with the screen title at the top right. On narrow screens, a header button opens the sidebar sheet.
  */
-export declare function AdminShell({ title, count, sidebar, headerActions, children, }: {
+export declare function AdminShell({ title, count, sidebar, headerActions, bare, children, }: {
     title: ReactNode;
     /** Item count shown dimmed next to the title. */
     count?: number;
     sidebar: AdminSidebarProps;
     headerActions?: ReactNode;
+    /** The screen draws its own page header (the Settings page): the shell then has no title bar of its own. */
+    bare?: boolean;
     children: ReactNode;
 }): import("react").JSX.Element;
 export {};

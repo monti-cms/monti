@@ -11,13 +11,13 @@ import { CmsEditor } from "../../editor/tiptap-editor.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Alert, AlertDescription } from "../../ui/alert.js";
 import { Button } from "../../ui/button.js";
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty.js";
 import { Input } from "../../ui/input.js";
 import { Skeleton } from "../../ui/skeleton.js";
 import { cmsFetch, errorText } from "../admin-api.js";
 import { ActionContextMenu, MoreActionsButton } from "../shared/action-menu.js";
-import { AdminShell } from "../shared/admin-shell.js";
+import { PageActions } from "../shared/admin-shell.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
+import { EmptyState } from "../shared/empty-state.js";
 import { formatDateOnly } from "../shared/format-date.js";
 import { OPEN_ITEM } from "../shared/side-panel.js";
 import { templatesMessages } from "./messages.js";
@@ -190,10 +190,10 @@ export function TemplateManager() {
             onSelect: () => void requestDelete(template),
         },
     ];
-    return (_jsxs(AdminShell, { title: t("title"), count: templatesQuery.data ? templates.length : undefined, sidebar: { activeNav: "templates" }, headerActions: _jsxs(Button, { type: "button", size: "sm", onClick: () => void openNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("common.add")] }), children: [error && (_jsxs(Alert, { variant: "danger", className: "mx-5 mt-3 flex w-auto items-center justify-between", children: [_jsx(AlertDescription, { className: "col-start-auto", children: error }), _jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void templatesQuery.refetch(), children: t("common.retry") })] })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: templatesQuery.isPending
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [_jsx(PageActions, { children: _jsxs(Button, { type: "button", size: "sm", onClick: () => void openNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("common.add")] }) }), error && (_jsxs(Alert, { variant: "danger", className: "mx-5 mt-3 flex w-auto items-center justify-between", children: [_jsx(AlertDescription, { className: "col-start-auto", children: error }), _jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void templatesQuery.refetch(), children: t("common.retry") })] })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: templatesQuery.isPending
                                 ? Array.from({ length: 3 }, (_, index) => (_jsx("li", { className: "p-4", "aria-hidden": true, children: _jsx(Skeleton, { className: "h-10 w-full" }) }, index)))
                                 : templates.length === 0
-                                    ? !error && _jsx("li", { className: "p-8 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })
+                                    ? !error && (_jsx("li", { children: _jsx(EmptyState, { compact: true, title: t("list.empty") }) }))
                                     : templates.map((row) => {
                                         const isSelected = activeTemplate?.id === row.id;
                                         return (_jsxs(ActionContextMenu, { actions: templateMenu(row), trigger: _jsx("li", { className: cn("group flex items-center justify-between gap-2 px-3 py-2 transition-colors", isSelected ? OPEN_ITEM : "hover:bg-cms-accent/50") }), children: [_jsxs(Button, { variant: "ghost", type: "button", "aria-current": isSelected ? "true" : undefined, onClick: () => void openTemplate(row), onKeyDown: (event) => {
@@ -208,5 +208,5 @@ export function TemplateManager() {
                                                     return;
                                                 event.preventDefault();
                                                 void handleSave();
-                                            }, placeholder: t("edit.nameLabel"), className: "h-8 min-w-0 max-w-2xl flex-1" }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: () => void closeEditor(), children: t("common.cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: isSaving, onClick: () => void handleSave(), children: isSaving ? t("common.saving") : t("common.save") })] })] }), saveError && (_jsx("p", { role: "alert", className: "border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs", children: saveError })), _jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto", children: _jsx(CmsEditor, { doc: editBody, onChange: setEditBody }) })] })) : (_jsxs(Empty, { className: "flex-1", children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(LayoutTemplate, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("edit.empty") })] }), _jsx(EmptyContent, { children: _jsxs(Button, { type: "button", size: "sm", onClick: () => void openNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("common.add")] }) })] })) })] }), dialog] }));
+                                            }, placeholder: t("edit.nameLabel"), className: "h-8 min-w-0 max-w-2xl flex-1" }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: () => void closeEditor(), children: t("common.cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: isSaving, onClick: () => void handleSave(), children: isSaving ? t("common.saving") : t("common.save") })] })] }), saveError && (_jsx("p", { role: "alert", className: "border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs", children: saveError })), _jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto", children: _jsx(CmsEditor, { doc: editBody, onChange: setEditBody }) })] })) : (_jsx(EmptyState, { icon: LayoutTemplate, title: t("edit.empty"), action: { label: t("common.add"), icon: Plus, onClick: () => void openNew() } })) })] }), dialog] }));
 }

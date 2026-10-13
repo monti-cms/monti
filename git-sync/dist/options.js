@@ -1,4 +1,6 @@
 /** The name under which the plugin is found in the site config's `plugins`. */
+/** Id of the plugin's one API key slot: the GitHub token. */
+export const GIT_SYNC_TOKEN_SLOT = "token";
 export const GIT_SYNC_PLUGIN_NAME = "git-sync";
 /** The file path pattern when a target gives none. */
 export const DEFAULT_PATH_PATTERN = "{collection}/{slug}.{locale}.{ext}";

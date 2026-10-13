@@ -17,6 +17,18 @@ const MISSING_TABLE = "42P01";
 const isMissingTable = (error) => error?.code === MISSING_TABLE;
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 export const hashOf = (text) => createHash("sha256").update(text).digest("hex").slice(0, 16);
+/** Reads the site URL and its origin from the "SITE_URL" decision the instance reports (the same one `monti doctor` prints). */
+function siteUrlOf(cms) {
+    const url = cms.site.config.site?.url ?? null;
+    if (!url)
+        return { url: null, from: "none" };
+    const source = cms.decisions().find((decision) => decision.topic === "SITE_URL")?.source ?? "";
+    if (source.startsWith("from env"))
+        return { url, from: "env" };
+    if (source.includes("schema file"))
+        return { url, from: "schema" };
+    return { url, from: "config" };
+}
 const relativeToCwd = (file) => path.relative(process.cwd(), file).split(path.sep).join("/");
 async function appliedState(cms) {
     try {
@@ -66,6 +78,8 @@ export async function readSchemaScreen(cms) {
             locales: config.locales,
             defaultLocale: config.defaultLocale,
             ...(config.timeZone !== undefined ? { timeZone: config.timeZone } : {}),
+            ...(config.site ? { site: withoutUrl(config.site) } : {}),
+            ...(config.admin ? { admin: withoutMessages(config.admin) } : {}),
         };
     }
     const applied = await appliedState(cms);
@@ -85,7 +99,18 @@ export async function readSchemaScreen(cms) {
         codeCollections: !literal?.ok ? [] : Object.keys(config.collections).filter((name) => !inFile.includes(name)),
         vocabulary: bodyVocabulary(cms.site),
         collections: Object.keys(config.collections),
+        siteUrl: siteUrlOf(cms),
     };
+}
+/** The site settings as the screen shows them without a schema file; the URL has its own row. */
+function withoutUrl(site) {
+    const { url: _url, ...rest } = site;
+    return rest;
+}
+/** The admin settings that are data (text overrides can be functions, so they are left out). */
+function withoutMessages(admin) {
+    const { messages: _messages, ...rest } = admin;
+    return rest;
 }
 /** A message of `defineSite` as an issue: it starts with `cms.config:` and names a collection, which gives the JSON path. */
 function issueFromError(error, collections) {

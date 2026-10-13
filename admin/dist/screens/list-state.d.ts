@@ -66,3 +66,7 @@ export declare const activeFilterCount: (state: ListState) => number;
 export declare function isExplorerMode(state: ListState): boolean;
 /** State with all search and filters cleared (sort, folder and page size kept). */
 export declare function clearFilters(state: ListState): ListState;
+/** The patch that clears search and filters only; the folder, its subfolder setting and the page size stay as they are. */
+export declare function clearFiltersPatch(state: ListState): Partial<ListState>;
+/** Whether a search or any filter narrows the list. */
+export declare const isFiltered: (state: ListState) => boolean;

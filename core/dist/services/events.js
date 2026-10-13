@@ -3,7 +3,8 @@ import { CmsError, DeferDelivery, isDeferred, } from "../core/store/index.js";
 import { createMemoryPluginStorage } from "../plugin/memory-storage.js";
 const memoryMarks = () => createMemoryPluginStorage().storage("core-events").collection("once");
 export const DEFAULT_MAX_ATTEMPTS = 8;
-const DEFAULT_RETENTION_DAYS = 30;
+/** How long the event log keeps an event, in days; not an option. Events with a delivery still waiting (or dead, until someone retries or dismisses it) are kept past it. */
+export const EVENT_RETENTION_DAYS = 90;
 const DEFAULT_RETRY_LIMIT = 100;
 /** Leave a claimed delivery to its caller for this long before it can be claimed again (a crash or a timeout in the middle of a try). */
 const LEASE_MS = 2 * 60 * 1000;
@@ -20,7 +21,7 @@ export function createEventDispatcher(options) {
     const now = options.now ?? (() => new Date());
     const maxAttempts = Math.max(1, options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS);
     const backoffMs = options.backoffMs ?? defaultBackoffMs;
-    const retentionMs = (options.retentionDays ?? DEFAULT_RETENTION_DAYS) * DAY_MS;
+    const retentionMs = EVENT_RETENTION_DAYS * DAY_MS;
     const store = options.store;
     const fallbackMarks = memoryMarks();
     const marksOf = () => options.marks?.() ?? fallbackMarks;

@@ -206,7 +206,7 @@ export interface CmsAdminComponents {
      */
     readonly fieldViews?: Readonly<Record<string, ComponentType<FieldViewProps>>>;
     /**
-     * List cells (name -> component). The name is a list column name (a field or system column name listed in `list.columns`) or the field's `input`
+     * List cells (name -> component). The name is a list column name (a field or system column name) or the field's `input`
      * name (column name takes precedence). Unregistered columns use the default cell: select shows option labels, text a short excerpt, relation the name, date the date.
      */
     readonly listCells?: Readonly<Record<string, ComponentType<ListCellProps>>>;

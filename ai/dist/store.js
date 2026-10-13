@@ -1,6 +1,7 @@
 import { AI_COLLECTIONS } from "./collections.js";
+import { AiError } from "./errors.js";
 import { AI_PLUGIN_NAME } from "./plugin-name.js";
-import { aiSecrets, noSecretsOf } from "./secret.js";
+import { providerMessages } from "./provider.messages.js";
 const toRow = (item) => ({
     key: item.key,
     value: item.value,
@@ -10,15 +11,24 @@ const toRow = (item) => ({
 /** Edited AI action values, connection settings and UI actions, kept in the AI plugin's storage. */
 export function createAiStore(storage, 
 /**
- * `site`: the site the store works for (the language of its errors). `secrets`: the AI plugin's secrets API for the stored service keys (`aiSecrets(cms)`). Without it,
- * keys cannot be stored or read.
+ * `site`: the site the store works for (the language of its errors). `apiKeys`: the instance's API key store (`() => cms.apiKeys`) the connections' keys live in.
+ * Without it, keys cannot be stored or read.
  */
 options) {
     const overrides = storage.collection(AI_COLLECTIONS.actionOverrides);
     const custom = storage.collection(AI_COLLECTIONS.customActions);
     const settings = storage.collection(AI_COLLECTIONS.settings);
-    return {
-        secrets: () => options.secrets?.() ?? noSecretsOf(options.site),
+    const holder = {};
+    const built = {
+        apiKeys: () => {
+            if (!options.apiKeys)
+                throw new AiError("ai_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
+            return options.apiKeys();
+        },
+        /** Runs `work` with a store whose writes (settings and the key store) are one transaction: all kept, or none if it throws. */
+        transaction: async (work) => options.transaction
+            ? options.transaction((txStorage, txKeys) => work(createAiStore(txStorage, { site: options.site, apiKeys: () => txKeys })))
+            : work(holder.current),
         /** All edited values, by action name. Actions never edited have none. */
         listAiActionOverrides: async () => (await overrides.list()).map(toRow),
         /**
@@ -44,13 +54,19 @@ options) {
         /** Deletes a UI action. A different version gives 409; if it does not exist, 404. */
         deleteAiCustomAction: async (params) => custom.delete(params.key, { expectedVersion: params.expectedVersion }),
     };
+    holder.current = built;
+    return built;
 }
 const stores = new WeakMap();
 /** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
 export function aiStoreFor(cms) {
     let store = stores.get(cms);
     if (!store) {
-        store = createAiStore(cms.storage(AI_PLUGIN_NAME), { site: cms.site, secrets: () => aiSecrets(cms) });
+        store = createAiStore(cms.storage(AI_PLUGIN_NAME), {
+            site: cms.site,
+            apiKeys: () => cms.apiKeys,
+            transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
+        });
         stores.set(cms, store);
     }
     return store;

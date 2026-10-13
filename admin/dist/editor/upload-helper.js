@@ -1,5 +1,7 @@
 import { cmsApiUrl } from "@monti-cms/core/client";
 import { cmsApiErrorMessage } from "../screens/api-error-message.js";
+import { screensMessages } from "../screens/messages.js";
+import { isSandboxSite } from "../screens/shared/preview-sandbox.js";
 import { editorMessages } from "./messages.js";
 /** Default optimization policy. Can be changed in code. */
 export const DEFAULT_OPTIMIZE_POLICY = {
@@ -152,6 +154,9 @@ export const formatBytes = (bytes) => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 
  */
 export async function uploadAttachment(site, file, onProgress) {
     const t = site.createTranslator(editorMessages);
+    // A preview of a screen runs on a draft site: nothing is uploaded from it.
+    if (isSandboxSite(site))
+        throw new Error(site.createTranslator(screensMessages)("api.previewNoWrite"));
     const mimeType = site.api.fileTypeFor(file.name);
     if (!mimeType)
         throw new Error(t("upload.unsupportedType"));

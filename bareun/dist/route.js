@@ -2,6 +2,7 @@ import { adminRoute, handleTextCheck, json, readJsonBody } from "@monti-cms/core
 import { checkWithBareun } from "./api.js";
 import { readBareunOptions } from "./config.js";
 import { bareunMessages } from "./messages.js";
+import { BAREUN_KEY_SLOT, BAREUN_PLUGIN_NAME } from "./options.js";
 /**
  * Bareun check route (`POST /api/monti/v1/text-check/bareun`). Admin only. Takes `{ segments }` and returns `{ issues }`.
  * The settings are those of the Bareun plugin in the site config of the instance that serves the request.
@@ -10,8 +11,8 @@ import { bareunMessages } from "./messages.js";
 export function bareunRoute() {
     const POST = adminRoute(async ({ request, cms }) => {
         const options = readBareunOptions(cms.site);
-        // The key is read from the server environment variable on every call. It is never sent to the browser.
-        const apiKey = process.env[options.apiKeyEnv]?.trim() || undefined;
+        // The key is read from the key slot on every call. It is never sent to the browser.
+        const apiKey = (await cms.apiKeys.readSlot(BAREUN_PLUGIN_NAME, BAREUN_KEY_SLOT))?.trim();
         if (!apiKey) {
             const t = cms.site.createTranslator(bareunMessages);
             return json({ code: "text_check_unavailable", message: t("error.keyMissing") }, { status: 503 });

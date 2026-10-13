@@ -10,7 +10,7 @@ import { Label } from "../ui/label.js";
 import { Switch } from "../ui/switch.js";
 import { clearPatchFor } from "./column-header.js";
 import { columnLabel, columnsFor, filterFor, isColumnFiltered } from "./list-columns.js";
-import { clearFilters } from "./list-state.js";
+import { clearFiltersPatch } from "./list-state.js";
 import { screensMessages } from "./messages.js";
 import { statusLabels } from "./shared/entry-status.js";
 const nameOf = (t, options, id) => options.find((option) => option.id === id)?.title ?? t("toolbar.unknown");
@@ -83,7 +83,6 @@ export function FilterChipBar({ state, options, onChange, }) {
     if (chips.length === 0)
         return null;
     return (_jsxs("ul", { "aria-label": t("toolbar.chips"), className: "flex min-h-11 flex-wrap items-center gap-1.5 border-b px-5 py-2", children: [chips.map((chip) => (_jsx("li", { children: _jsxs("span", { className: "inline-flex h-6 items-center gap-1 rounded-md bg-cms-primary/10 pr-0.5 pl-2 font-medium text-cms-primary text-xs", children: [_jsx("span", { className: "max-w-72 truncate", children: chip.label }), _jsx(IconButton, { size: "icon-xs", className: "size-5 text-cms-primary hover:bg-cms-primary/15 hover:text-cms-primary", label: t("filter.clear"), onClick: () => onChange(chip.clear), children: _jsx(X, { "aria-hidden": true }) })] }) }, chip.key))), _jsx("li", { children: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-muted-foreground", onClick: () => {
-                        const { collection: _c, folder: _f, includeDescendants: _d, pageSize: _p, ...cleared } = clearFilters(state);
-                        onChange(cleared);
+                        onChange(clearFiltersPatch(state));
                     }, children: t("filter.clearAll") }) })] }));
 }

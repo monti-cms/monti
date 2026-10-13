@@ -1,11 +1,13 @@
 import type { SchemaIssue } from "@monti-cms/core/schema-edit";
 import { type SavedSchema } from "./schema-api.js";
-import type { Rename } from "./schema-model.js";
+import type { Rename, SettingChange } from "./schema-model.js";
 export interface ReviewDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     draft: unknown;
     renames: readonly Rename[];
+    /** The site and admin settings that differ from the file, which the entries do not care about but the writer should still see. */
+    settings?: readonly SettingChange[];
     baseHash: string;
     /** The problems of the last check, for the screen to mark. */
     onIssues: (issues: readonly SchemaIssue[]) => void;
@@ -19,4 +21,4 @@ export interface ReviewDialogProps {
  * touches with a sample linking to them, and a choice of data transform for every change that has more than one way to treat the stored values. Saving writes the file,
  * the types and the dev database; the screen then reloads.
  */
-export declare function ReviewDialog({ open, onOpenChange, draft, renames, baseHash, onIssues, onSaved, onApplyFailed, }: ReviewDialogProps): import("react").JSX.Element;
+export declare function ReviewDialog({ open, onOpenChange, draft, renames, settings, baseHash, onIssues, onSaved, onApplyFailed, }: ReviewDialogProps): import("react").JSX.Element;

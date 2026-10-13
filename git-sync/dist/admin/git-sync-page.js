@@ -1,7 +1,7 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
-import { AdminShell, Alert, AlertDescription, Badge, Button, Empty, EmptyHeader, EmptyMedia, EmptyTitle, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, useConfirm, } from "@monti-cms/admin/kit";
+import { Alert, AlertDescription, API_KEYS_KEY, ApiKeyField, Badge, Button, choiceReady, Empty, EmptyHeader, EmptyMedia, EmptyTitle, Input, Label, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, useConfirm, } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
@@ -31,7 +31,7 @@ export function GitSyncPage() {
     });
     const refresh = () => queryClient.invalidateQueries({ queryKey: KEY });
     const conflictCount = conflicts.data?.items.length ?? 0;
-    return (_jsx(AdminShell, { title: t("title"), sidebar: { activeNav: "git-sync" }, children: _jsxs(Tabs, { value: tab, onValueChange: (value) => setTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: [_jsxs(TabsTrigger, { value: "sync", className: "flex-none px-0 text-xs", children: [_jsx(GitBranch, { "aria-hidden": true }), t("tab.sync")] }), _jsxs(TabsTrigger, { value: "conflicts", className: "flex-none px-0 text-xs", children: [_jsx(TriangleAlert, { "aria-hidden": true }), t("tab.conflicts"), conflictCount > 0 && _jsx(Badge, { variant: "destructive", children: conflictCount })] }), _jsxs(TabsTrigger, { value: "settings", className: "flex-none px-0 text-xs", children: [_jsx(KeyRound, { "aria-hidden": true }), t("tab.settings")] })] }), _jsx(TabsContent, { value: "sync", className: "min-h-0 flex-1 overflow-auto", children: _jsx(SyncTab, { status: status.data, error: status.error && !status.data ? errorText(site, status.error, t("load.failed")) : null, loading: status.isPending, onRetry: () => void status.refetch(), onChanged: refresh }) }), _jsx(TabsContent, { value: "conflicts", className: "min-h-0 flex-1 overflow-auto", children: _jsx(ConflictsTab, { items: conflicts.data?.items, error: conflicts.error && !conflicts.data ? errorText(site, conflicts.error, t("conflicts.loadFailed")) : null, loading: conflicts.isPending, onChanged: refresh }) }), _jsx(TabsContent, { value: "settings", className: "min-h-0 flex-1 overflow-auto", children: _jsx(SettingsTab, { status: status.data, onChanged: refresh }) })] }) }));
+    return (_jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: _jsxs(Tabs, { value: tab, onValueChange: (value) => setTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: [_jsxs(TabsTrigger, { value: "sync", className: "flex-none px-0 text-xs", children: [_jsx(GitBranch, { "aria-hidden": true }), t("tab.sync")] }), _jsxs(TabsTrigger, { value: "conflicts", className: "flex-none px-0 text-xs", children: [_jsx(TriangleAlert, { "aria-hidden": true }), t("tab.conflicts"), conflictCount > 0 && _jsx(Badge, { variant: "destructive", children: conflictCount })] }), _jsxs(TabsTrigger, { value: "settings", className: "flex-none px-0 text-xs", children: [_jsx(KeyRound, { "aria-hidden": true }), t("tab.settings")] })] }), _jsx(TabsContent, { value: "sync", className: "min-h-0 flex-1 overflow-auto", children: _jsx(SyncTab, { status: status.data, error: status.error && !status.data ? errorText(site, status.error, t("load.failed")) : null, loading: status.isPending, onRetry: () => void status.refetch(), onChanged: refresh }) }), _jsx(TabsContent, { value: "conflicts", className: "min-h-0 flex-1 overflow-auto", children: _jsx(ConflictsTab, { items: conflicts.data?.items, error: conflicts.error && !conflicts.data ? errorText(site, conflicts.error, t("conflicts.loadFailed")) : null, loading: conflicts.isPending, onChanged: refresh }) }), _jsx(TabsContent, { value: "settings", className: "min-h-0 flex-1 overflow-auto", children: _jsx(SettingsTab, { status: status.data, onChanged: refresh }) })] }) }));
 }
 function ErrorBar({ message, onRetry }) {
     const t = useTranslator(gitSyncMessages);
@@ -86,7 +86,7 @@ function SyncTab({ status, error, loading, onRetry, onChanged, }) {
     if (status.targets.length === 0) {
         return (_jsx(Empty, { className: "h-full", children: _jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(GitBranch, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("sync.empty") })] }) }));
     }
-    return (_jsxs("div", { className: "space-y-4 p-5", children: [!status.settings.token.set && (_jsx(Alert, { layout: "stack", children: _jsx(AlertDescription, { className: "col-start-auto", children: t("sync.noToken") }) })), status.targets.map((target) => (_jsxs("section", { "aria-label": target.id, className: "space-y-3 rounded-lg border border-cms-border p-4", children: [_jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs("h2", { className: "min-w-0 flex-1 truncate font-medium text-sm", children: [target.repo, _jsxs("span", { className: "text-cms-muted-foreground", children: ["@", target.branch] })] }), _jsxs(Badge, { variant: "secondary", children: [target.mode === "pr" ? _jsx(GitPullRequest, { "aria-hidden": true }) : _jsx(GitBranch, { "aria-hidden": true }), t(`target.mode.${target.mode}`)] }), _jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: pull.isPending, onClick: () => pull.mutate(target.id), children: [_jsx(RefreshCw, { "aria-hidden": true }), t("pull.now")] }), target.queued > 0 && (_jsx(Button, { type: "button", size: "sm", variant: "outline", disabled: flush.isPending, onClick: () => flush.mutate(target.id), children: t("flush.now") }))] }), _jsxs("dl", { className: "grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs", children: [_jsx("dt", { className: "text-cms-muted-foreground", children: t("target.folder") }), _jsx("dd", { className: "font-mono", children: target.folder || t("target.wholeRepo") }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.path") }), _jsx("dd", { className: "font-mono", children: target.path }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.format") }), _jsx("dd", { className: "font-mono", children: target.format }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.collections") }), _jsx("dd", { children: target.collections.join(", ") }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.lastPull") }), _jsx("dd", { children: target.lastPull
+    return (_jsxs("div", { className: "space-y-4 p-5", children: [!status.settings.token.key && (_jsx(Alert, { layout: "stack", children: _jsx(AlertDescription, { className: "col-start-auto", children: t("sync.noToken") }) })), status.targets.map((target) => (_jsxs("section", { "aria-label": target.id, className: "space-y-3 rounded-lg border border-cms-border p-4", children: [_jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs("h2", { className: "min-w-0 flex-1 truncate font-medium text-sm", children: [target.repo, _jsxs("span", { className: "text-cms-muted-foreground", children: ["@", target.branch] })] }), _jsxs(Badge, { variant: "secondary", children: [target.mode === "pr" ? _jsx(GitPullRequest, { "aria-hidden": true }) : _jsx(GitBranch, { "aria-hidden": true }), t(`target.mode.${target.mode}`)] }), _jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: pull.isPending, onClick: () => pull.mutate(target.id), children: [_jsx(RefreshCw, { "aria-hidden": true }), t("pull.now")] }), target.queued > 0 && (_jsx(Button, { type: "button", size: "sm", variant: "outline", disabled: flush.isPending, onClick: () => flush.mutate(target.id), children: t("flush.now") }))] }), _jsxs("dl", { className: "grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs", children: [_jsx("dt", { className: "text-cms-muted-foreground", children: t("target.folder") }), _jsx("dd", { className: "font-mono", children: target.folder || t("target.wholeRepo") }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.path") }), _jsx("dd", { className: "font-mono", children: target.path }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.format") }), _jsx("dd", { className: "font-mono", children: target.format }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.collections") }), _jsx("dd", { children: target.collections.join(", ") }), _jsx("dt", { className: "text-cms-muted-foreground", children: t("target.lastPull") }), _jsx("dd", { children: target.lastPull
                                     ? t("target.pull", {
                                         created: target.lastPull.created,
                                         applied: target.lastPull.applied,
@@ -163,7 +163,9 @@ const generateSecret = () => {
 function SettingsTab({ status, onChanged }) {
     const site = useSite();
     const t = useTranslator(gitSyncMessages);
-    const [token, setToken] = useState("");
+    const queryClient = useQueryClient();
+    // What the key field shows until it is changed: the key the token uses now, or an empty new key.
+    const [picked, setPicked] = useState(null);
     const [secret, setSecret] = useState("");
     const save = useMutation({
         mutationFn: (values) => cmsFetch(site, cmsApiUrl("/v1/git-sync/settings"), {
@@ -172,25 +174,57 @@ function SettingsTab({ status, onChanged }) {
             fallback: t("settings.save.failed"),
         }),
         onSuccess: () => {
-            setToken("");
             setSecret("");
             toast.success(t("settings.saved"));
         },
         onError: (err) => toast.error(errorText(site, err, t("settings.save.failed"))),
         onSettled: onChanged,
     });
+    // The token is a key of the API key store assigned to the plugin's slot; the plugin is told afterwards so what waited for a token goes out.
+    const saveToken = useMutation({
+        mutationFn: async (key) => {
+            await cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), {
+                method: "PUT",
+                json: { plugin: "git-sync", slot: "token", key },
+                fallback: t("settings.save.failed"),
+            });
+            if (key.use !== "none") {
+                await cmsFetch(site, cmsApiUrl("/v1/git-sync/token-changed"), {
+                    method: "POST",
+                    json: {},
+                    fallback: t("settings.save.failed"),
+                });
+            }
+        },
+        onSuccess: () => {
+            setPicked(null);
+            toast.success(t("settings.saved"));
+        },
+        onError: (err) => toast.error(errorText(site, err, t("settings.save.failed"))),
+        onSettled: () => {
+            // A key may have been added to the store, and the key's uses changed.
+            void queryClient.invalidateQueries({ queryKey: API_KEYS_KEY });
+            onChanged();
+        },
+    });
     if (!status)
         return _jsx(ListSkeleton, {});
     const { settings } = status;
     const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${cmsApiUrl("/v1/git-sync/webhook")}`;
     const stateOf = (item) => !item.set ? "unset" : item.readable ? "set" : "unreadable";
-    const tokenState = stateOf(settings.token);
+    const tokenKey = settings.token.key;
+    const tokenState = tokenKey ? (tokenKey.readable ? "set" : "unreadable") : "unset";
+    const savedChoice = tokenKey ? { use: "saved", keyId: tokenKey.id } : { use: "new", value: "" };
+    const choice = picked ?? savedChoice;
+    const tokenHint = tokenKey ? `${tokenKey.name}${tokenKey.tail ? ` ••••${tokenKey.tail}` : ""}` : "";
+    // Nothing to save while the field shows the key the token already uses.
+    const tokenChanged = choice.use === "new" || (choice.use === "saved" && choice.keyId !== tokenKey?.id);
     const secretState = stateOf(settings.webhookSecret);
     return (_jsxs("div", { className: "max-w-2xl space-y-8 p-5", children: [!settings.secretsAvailable && (_jsx(Alert, { variant: "danger", layout: "stack", children: _jsx(AlertDescription, { className: "col-start-auto", children: t("settings.secretMissing") }) })), _jsxs("form", { className: "space-y-2", onSubmit: (event) => {
                     event.preventDefault();
-                    if (token.trim())
-                        save.mutate({ token });
-                }, children: [_jsx(Label, { htmlFor: "git-sync-token", className: "font-medium text-sm", children: t("settings.token") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("settings.token.help") }), _jsx("p", { className: "text-xs", children: t(`settings.token.state.${tokenState}`, { hint: settings.token.hint ?? "" }) }), _jsxs("div", { className: "flex gap-2", children: [_jsx(Input, { id: "git-sync-token", type: "password", autoComplete: "off", value: token, placeholder: t("settings.token.new"), onChange: (event) => setToken(event.target.value) }), _jsx(Button, { type: "submit", size: "sm", disabled: !settings.secretsAvailable || !token.trim() || save.isPending, children: t("settings.save") }), settings.token.set && (_jsx(Button, { type: "button", size: "sm", variant: "outline", disabled: save.isPending, onClick: () => save.mutate({ token: null }), children: t("settings.remove") }))] })] }), _jsxs("form", { className: "space-y-2", onSubmit: (event) => {
+                    if (tokenChanged && choiceReady(choice))
+                        saveToken.mutate(choice);
+                }, children: [_jsx("p", { className: "font-medium text-sm", children: t("settings.token") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("settings.token.help") }), _jsx("p", { className: "text-xs", children: t(`settings.token.state.${tokenState}`, { hint: tokenHint }) }), _jsx(ApiKeyField, { label: t("settings.token"), baseName: "GitHub", value: choice, onChange: setPicked }), _jsxs("div", { className: "flex gap-2", children: [_jsx(Button, { type: "submit", size: "sm", disabled: !settings.secretsAvailable || !tokenChanged || !choiceReady(choice) || saveToken.isPending, children: t("settings.save") }), tokenKey && (_jsx(Button, { type: "button", size: "sm", variant: "outline", disabled: saveToken.isPending, onClick: () => saveToken.mutate({ use: "none" }), children: t("settings.remove") }))] })] }), _jsxs("form", { className: "space-y-2", onSubmit: (event) => {
                     event.preventDefault();
                     if (secret.trim())
                         save.mutate({ webhookSecret: secret });

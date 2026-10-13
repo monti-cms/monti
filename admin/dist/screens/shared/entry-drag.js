@@ -10,7 +10,7 @@ export function writeDraggedEntries(event, entries, label) {
     const image = document.createElement("div");
     image.textContent = label;
     image.className =
-        "pointer-events-none fixed -top-96 left-0 max-w-64 truncate rounded-md border bg-cms-popover px-2.5 py-1 text-cms-popover-foreground text-xs shadow-md";
+        "pointer-events-none fixed -top-96 left-0 max-w-64 truncate rounded-md border bg-cms-popover px-2.5 py-1 text-cms-popover-foreground text-xs shadow-[0_1px_2px_rgba(0,0,0,0.1)]";
     document.body.append(image);
     event.dataTransfer.setDragImage?.(image, 12, 12);
     // The browser snapshots the image when the drag starts, so it can be removed right away.

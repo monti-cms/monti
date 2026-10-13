@@ -1,7 +1,7 @@
 import { type AdminColumnSettings, type PageSize, type Site } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import { type AdminListColumn, columnsFor } from "./list-columns.js";
-import type { ListState } from "./list-state.js";
+import { type ListState } from "./list-state.js";
 import { type MenuAction } from "./shared/action-menu.js";
 import { type FolderActions } from "./shared/use-folder-actions.js";
 import type { TaxonomyOptions } from "./shared/use-taxonomy.js";
@@ -50,5 +50,10 @@ interface TableProps {
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: PageSize) => void;
     onRetry: () => void;
+    /** Adds an item. Shown in the empty list as the way to start. */
+    addAction?: {
+        label: string;
+        run: () => void;
+    };
 }
-export declare function AdminEntriesTable({ collection, items, folders, explorer, state, options, onStateChange, columnSettings, onColumnSettingsChange, selectedIds, onSelectionChange, total, isLoading, isRefreshing, errorMessage, mode, folderActions, rowMenu, blankMenu, onDeleteKey, onSelectFolder, onOpenRecord, openRecordId, onRestore, onPermanentDelete, onPageChange, onPageSizeChange, onRetry, }: TableProps): import("react").JSX.Element;
+export declare function AdminEntriesTable({ collection, items, folders, explorer, state, options, onStateChange, columnSettings, onColumnSettingsChange, selectedIds, onSelectionChange, total, isLoading, isRefreshing, errorMessage, mode, folderActions, rowMenu, blankMenu, onDeleteKey, onSelectFolder, onOpenRecord, openRecordId, onRestore, onPermanentDelete, onPageChange, onPageSizeChange, onRetry, addAction, }: TableProps): import("react").JSX.Element;

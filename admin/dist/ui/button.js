@@ -6,7 +6,7 @@ const buttonVariants = cva("group/button inline-flex shrink-0 items-center justi
     variants: {
         variant: {
             default: "bg-cms-primary text-cms-primary-foreground hover:bg-cms-primary/80",
-            outline: "border-cms-border bg-cms-background shadow-xs hover:bg-cms-muted hover:text-cms-foreground aria-expanded:bg-cms-muted aria-expanded:text-cms-foreground cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:hover:bg-cms-input/50",
+            outline: "border-cms-border bg-cms-background hover:bg-cms-muted hover:text-cms-foreground aria-expanded:bg-cms-muted aria-expanded:text-cms-foreground cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:hover:bg-cms-input/50",
             secondary: "bg-cms-secondary text-cms-secondary-foreground hover:bg-[color-mix(in_oklch,var(--cms-secondary),var(--cms-foreground)_5%)] aria-expanded:bg-cms-secondary aria-expanded:text-cms-secondary-foreground",
             ghost: "hover:bg-cms-muted hover:text-cms-foreground aria-expanded:bg-cms-muted aria-expanded:text-cms-foreground cms-dark:hover:bg-cms-muted/50",
             destructive: "bg-cms-destructive/10 text-cms-destructive hover:bg-cms-destructive/20 focus-visible:border-cms-destructive/40 focus-visible:ring-cms-destructive/20 cms-dark:bg-cms-destructive/20 cms-dark:hover:bg-cms-destructive/30 cms-dark:focus-visible:ring-cms-destructive/40",

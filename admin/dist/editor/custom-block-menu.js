@@ -33,5 +33,5 @@ export function CustomBlockMenuItems({ editor }) {
 /** Inserts a custom component (block) at the cursor from the toolbar. */
 export function CustomBlockMenu({ editor }) {
     const t = useTranslator(editorMessages);
-    return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("customBlockMenu.label"), side: "bottom", disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Puzzle, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "w-64", children: _jsx(CustomBlockMenuItems, { editor: editor }) })] }));
+    return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("customBlockMenu.label"), side: "bottom", disabled: !editor.isEditable, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Puzzle, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "min-w-64", children: _jsx(CustomBlockMenuItems, { editor: editor }) })] }));
 }

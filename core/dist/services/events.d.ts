@@ -1,4 +1,4 @@
-import { type AfterCommit, type EventDelivery, type EventDeliveryCounts, type EventDeliveryState, type EventStore } from "../core/store/index.js";
+import { type AfterCommit, type EventDelivery, type EventDeliveryCounts, type EventLogState, type EventStore } from "../core/store/index.js";
 import type { Entry } from "../core/store/types.js";
 import type { PluginCollection } from "../plugin/storage.js";
 /**
@@ -29,8 +29,6 @@ export interface EventDeliveryOptions {
     readonly maxAttempts?: number;
     /** Milliseconds to wait after the given failed try (1 for the first). Default: 15 seconds, doubling, at most an hour. */
     readonly backoffMs?: (attempt: number) => number;
-    /** How long finished events are kept, in days. Default 30. */
-    readonly retentionDays?: number;
     /**
      * A secret for `POST /api/monti/v1/events/retry` (`Authorization: Bearer <secret>`), so a cron job can start the retries without an admin login.
      * Without it the route needs an admin session. Keep it in an environment variable.
@@ -55,16 +53,16 @@ export interface EventRetryResult {
     readonly deferred: number;
 }
 export interface EventListOptions {
-    /** Default `failed` and `dead`. */
-    readonly states?: readonly EventDeliveryState[];
+    /** Default `failed` and `dead`. `recorded` lists the events that have no delivery (no subscriber). */
+    readonly states?: readonly EventLogState[];
     readonly limit?: number;
     readonly offset?: number;
 }
-/** `cms.events`: the delivery side of the outbox. */
+/** `cms.events`: the event log and the delivery side of the outbox. */
 export interface CmsEvents {
     /** Delivers what is due (and, with `all`, what is failed): the call for a cron job, a command or a button. Never throws for a failing subscriber. */
     retry(options?: EventRetryOptions): Promise<EventRetryResult>;
-    /** Deliveries, newest event first. */
+    /** The log, newest event first: deliveries in the states, and with `recorded` the events no subscriber was made a delivery for. */
     list(options?: EventListOptions): Promise<{
         items: EventDelivery[];
         total: number;
@@ -100,5 +98,7 @@ export interface EventDispatcher {
     dispatchEntry(entryId: string): Promise<void>;
 }
 export declare const DEFAULT_MAX_ATTEMPTS = 8;
+/** How long the event log keeps an event, in days; not an option. Events with a delivery still waiting (or dead, until someone retries or dismisses it) are kept past it. */
+export declare const EVENT_RETENTION_DAYS = 90;
 export declare const defaultBackoffMs: (attempt: number) => number;
 export declare function createEventDispatcher(options: EventDispatcherOptions): EventDispatcher;

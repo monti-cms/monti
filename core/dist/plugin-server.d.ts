@@ -4,7 +4,8 @@
  * `cms.storage(pluginName)`, `cms.secrets(pluginName)`. Do not import from browser code.
  */
 export { AuthError } from "./adapters/auth/auth-gateway.js";
-export type { BulkService, Cms, ContentService } from "./cms/index.js";
+export type { ApiKeys } from "./api-keys/api-keys.js";
+export type { BulkService, Cms, CmsTransaction, ContentService } from "./cms/index.js";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem.js";
 export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent, ContentStore, Entry, EntryBody, EntryStatus, PublishedEntryRecord, } from "./core/store/index.js";
 export { CmsError, DeferDelivery, type DeferredDelivery } from "./core/store/index.js";

@@ -80,6 +80,13 @@ export interface DatabaseAdapter {
      * An adapter implements it over its own database; plugins never see the database.
      */
     pluginStorage(plugin: string): PluginStorage;
+    /**
+     * Runs `work` in one database transaction over the storage of any plugin (`tx.pluginStorage(name)`; the core's own key store included): everything it writes is kept together,
+     * and if `work` throws none of it is. `once` is not available inside it. This is what makes "create a key and the item that uses it" one step; an adapter without it cannot save a new key together with the item that uses it.
+     */
+    transaction?<T>(work: (tx: {
+        pluginStorage(plugin: string): PluginStorage;
+    }) => Promise<T>): Promise<T>;
     /** Closes the connection (when the command-line tool finishes). */
     close?(): Promise<void>;
     /**

@@ -4,13 +4,36 @@ import { resolveBlocks } from "../blocks/resolve.js";
 import { validateMediaConfig } from "../core/media-types.js";
 import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisions.js";
 import { validateBodyAllowed } from "../schema/allowed.js";
-import { normalizeCollection, validateListColumns } from "../schema/collection.js";
+import { normalizeCollection } from "../schema/collection.js";
 import { DEFAULT_TITLE_FIELD, RESERVED_METADATA_KEYS, SUMMARY_ROLE, TITLE_ROLE } from "../schema/fields.js";
 import { findTitleField, valueFieldsOf } from "../schema/walk.js";
 import { resolveSchemaConfig } from "../schema-file/merge.js";
 import { SCHEMA_SOURCE } from "../schema-file/source.js";
 import { DEFAULT_ADMIN_PATH, isAdminPath, isHomeHref, LOCALE_CODE, LOCALE_PREFIX_MODES, } from "./rules.js";
 export { LOCALE_PREFIX_MODES };
+/** A number with a unit (`720px`, `48rem`, `80%`), or a `calc`, `min`, `max` or `clamp` of such lengths. Nothing that could end the declaration (`;`, braces, quotes). */
+const CSS_LENGTH = /^(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|ch|ex|vw|vh|vmin|vmax|cm|mm|in|pt|pc|%)$|^(?:calc|min|max|clamp)\([\w\s.,%+*/()-]+\)$/;
+/** Checks the editor's width steps: each has a non-empty unique label and a CSS length, and there is at least one when `widths` is set. */
+function validateEditorConfig(editor) {
+    const widths = editor?.widths;
+    if (widths === undefined)
+        return;
+    if (!Array.isArray(widths) || widths.length === 0) {
+        throw new Error("cms.config: editor.widths needs at least one { label, width } step (leave it out for the default steps)");
+    }
+    const labels = new Set();
+    for (const [index, step] of widths.entries()) {
+        const at = `cms.config: editor.widths[${index}]`;
+        if (typeof step?.label !== "string" || !step.label.trim())
+            throw new Error(`${at}.label must not be empty`);
+        if (labels.has(step.label))
+            throw new Error(`${at}.label "${step.label}" is used twice; labels must be unique`);
+        labels.add(step.label);
+        if (typeof step.width !== "string" || !CSS_LENGTH.test(step.width.trim())) {
+            throw new Error(`${at}.width "${String(step.width)}" is not a CSS length; write a number with a unit such as "720px" or "48rem"`);
+        }
+    }
+}
 const ROLE_NAME = /^[A-Za-z][A-Za-z0-9-]*$/;
 /**
  * Can two public URL rules (of the form `/posts/:slug`) produce the same URL? If so, a body link cannot tell which collection it points to.
@@ -169,6 +192,7 @@ function validate(config) {
     if (config.admin && "legacyBackupNames" in config.admin) {
         throw new Error("cms.config: admin.legacyBackupNames was removed; delete it (the admin UI only uses the `cms_backup` recovery database)");
     }
+    validateEditorConfig(config.editor);
     for (const key of ["templates", "translations"]) {
         const value = config.admin?.[key];
         if (value !== undefined && typeof value !== "boolean") {
@@ -210,7 +234,6 @@ function validate(config) {
             throw new Error(`cms.config: ${collection} has more than one slug field (${slugFields.map(([name]) => name).join(", ")}); a collection can have only one`);
         }
         validateFieldMeanings(collection, schema);
-        validateListColumns(collection, schema);
         if (schema.path !== undefined) {
             const { path } = schema;
             if (!path.startsWith("/") || path.split(":slug").length !== 2 || /:(?!slug)/.test(path) || /[?#]/.test(path)) {

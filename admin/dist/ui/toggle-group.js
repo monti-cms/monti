@@ -12,7 +12,7 @@ const ToggleGroupContext = React.createContext({
     orientation: "horizontal",
 });
 function ToggleGroup({ className, variant, size, spacing = 2, orientation = "horizontal", children, ...props }) {
-    return (_jsx(ToggleGroupPrimitive, { "data-slot": "toggle-group", "data-variant": variant, "data-size": size, "data-spacing": spacing, "data-orientation": orientation, style: { "--gap": spacing }, className: cn("group/toggle-group flex w-fit flex-row cms-vertical:flex-col items-center cms-vertical:items-stretch gap-[--spacing(var(--gap))] rounded-md data-[spacing=0]:data-[variant=outline]:shadow-xs", className), ...props, children: _jsx(ToggleGroupContext.Provider, { value: { variant, size, spacing, orientation }, children: children }) }));
+    return (_jsx(ToggleGroupPrimitive, { "data-slot": "toggle-group", "data-variant": variant, "data-size": size, "data-spacing": spacing, "data-orientation": orientation, style: { "--gap": spacing }, className: cn("group/toggle-group flex w-fit flex-row cms-vertical:flex-col items-center cms-vertical:items-stretch gap-[--spacing(var(--gap))] rounded-md", className), ...props, children: _jsx(ToggleGroupContext.Provider, { value: { variant, size, spacing, orientation }, children: children }) }));
 }
 function ToggleGroupItem({ className, children, variant = "default", size = "default", ...props }) {
     const context = React.useContext(ToggleGroupContext);

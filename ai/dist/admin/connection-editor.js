@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
-import { Alert, AlertDescription, Button, cn, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, Input, Skeleton, useConfirm, useDebounced, } from "@monti-cms/admin/kit";
+import { Alert, AlertDescription, ApiKeyField, Button, choiceReady, cn, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, Input, Skeleton, useConfirm, useDebounced, } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, PlugZap, Plus, Save, Trash2 } from "lucide-react";
@@ -47,14 +47,16 @@ export function InlineError({ children }) {
 }
 /** Time to wait for URL/key input to pause before fetching the model list. */
 const LIST_INPUT_DEBOUNCE_MS = 400;
-const NEW_DRAFT = { name: "", kind: "chat", url: "", apiKey: undefined, defaultModel: "" };
+const NEW_DRAFT = { name: "", kind: "chat", url: "", key: { use: "new", value: "" }, defaultModel: "" };
 const draftOf = (provider) => ({
     name: provider.name,
     kind: provider.kind,
     url: provider.url,
-    apiKey: undefined,
+    key: provider.key ? { use: "saved", keyId: provider.key.id } : { use: "new", value: "" },
     defaultModel: provider.defaultModel,
 });
+/** The draft as the server takes it: a new key with nothing typed yet is left out, so the connection keeps the key it had. */
+const payload = ({ key, ...rest }) => (choiceReady(key) && key.use !== "none" ? { ...rest, key } : rest);
 const sameDraft = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 /**
  * AI screen Connections tab. Keeps several connections (name, mode, URL, key, default model) and lets each action pick which connection to use.
@@ -93,7 +95,7 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
     const [checking, setChecking] = useState(false);
     const [check, setCheck] = useState(null);
     const { confirm, dialog } = useConfirm();
-    const ids = { name: useId(), kind: useId(), url: useId(), key: useId(), model: useId() };
+    const ids = { name: useId(), kind: useId(), url: useId(), model: useId() };
     const set = (patch) => {
         setDraft({ ...draft, ...patch });
         setCheck(null);
@@ -106,20 +108,20 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
     const example = PROVIDER_EXAMPLES[draft.kind];
     // While typing the URL or key the list is not fetched; it is fetched once typing pauses. If the saved key is used as is, it is fetched by connection id.
     const listUrl = useDebounced(draft.url, LIST_INPUT_DEBOUNCE_MS);
-    const listKey = useDebounced(typeof draft.apiKey === "string" ? draft.apiKey : undefined, LIST_INPUT_DEBOUNCE_MS);
+    const typedKey = useDebounced(draft.key.use === "new" ? draft.key.value : undefined, LIST_INPUT_DEBOUNCE_MS);
     const modelSource = draft.kind !== "chat" || !listUrl
         ? null
-        : listKey
-            ? { url: listUrl, apiKey: listKey }
-            : provider?.keyHint && provider.url === listUrl && draft.apiKey === undefined
-                ? { providerId: provider.id }
+        : typedKey
+            ? { url: listUrl, apiKey: typedKey }
+            : draft.key.use === "saved"
+                ? { url: listUrl, keyId: draft.key.keyId }
                 : null;
     const modelList = useModelList(modelSource);
     const save = async () => {
         setSaving(true);
         setError(null);
         try {
-            const json = { expectedVersion: version, provider: draft };
+            const json = { expectedVersion: version, provider: payload(draft) };
             const saved = provider
                 ? await cmsFetch(site, cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
                     method: "PATCH",
@@ -178,7 +180,7 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
         try {
             setCheck(await cmsFetch(site, cmsApiUrl("/v1/ai/providers/check"), {
                 method: "POST",
-                json: { providerId: provider?.id, provider: draft },
+                json: { providerId: provider?.id, provider: payload(draft) },
                 fallback: t("error.check"),
             }));
         }
@@ -189,9 +191,5 @@ function ProviderEditor({ version, provider, onSaved, onDeleted, onCancel, onCon
             setChecking(false);
         }
     };
-    return (_jsxs("div", { className: DETAIL_PANE, children: [_jsxs("div", { className: "min-w-0", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (provider ? provider.name : draft.name.trim()) || t("new.title") }), _jsxs("p", { className: "truncate text-cms-muted-foreground text-xs", children: [providerKindLabel(draft.kind), " \u00B7 ", provider?.defaultModel || draft.defaultModel || t("model.none")] })] }), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.name, children: t("field.name") }), _jsx(Input, { id: ids.name, value: draft.name, placeholder: "OpenRouter", onChange: (event) => set({ name: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.kind, children: t("field.kind") }), _jsx(OptionSelect, { id: ids.kind, value: draft.kind, disabled: Boolean(provider), options: AI_PROVIDER_KINDS.map((kind) => ({ value: kind, label: providerKindLabel(kind) })), onChange: (kind) => set({ kind: kind }) })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.url, children: t("field.url") }), _jsx(Input, { id: ids.url, value: draft.url, placeholder: example.url, onChange: (event) => set({ url: event.target.value.trim() }), className: "h-8 font-mono text-xs md:text-xs" })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.key, children: t("field.key") }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx(Input, { id: ids.key, type: "password", autoComplete: "off", value: typeof draft.apiKey === "string" ? draft.apiKey : "", placeholder: draft.apiKey === null
-                                            ? t("key.cleared")
-                                            : provider?.keyHint
-                                                ? t("key.saved", { hint: provider.keyHint })
-                                                : t("field.key"), onChange: (event) => set({ apiKey: event.target.value || undefined }), className: "h-8 font-mono text-xs md:text-xs" }), provider?.keyHint && draft.apiKey !== null && (_jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: () => set({ apiKey: null }), children: t("action.clear") }))] })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.model, children: t("field.model") }), _jsx(ModelCombobox, { id: ids.model, value: draft.defaultModel, models: modelList.models, loading: modelList.loading, error: modelList.error, placeholder: example.model, onChange: (defaultModel) => set({ defaultModel }) })] })] }), error && _jsx(InlineError, { children: error }), _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Button, { type: "button", size: "sm", disabled: saving || !dirty || !draft.name.trim(), onClick: () => void save(), children: [_jsx(Save, { "aria-hidden": true }), saving ? t("action.saving") : t("action.save")] }), !provider && (_jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: onCancel, children: t("action.cancel") })), _jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: checking || !draft.url || !draft.defaultModel, onClick: () => void runCheck(), children: [_jsx(PlugZap, { "aria-hidden": true }), checking ? t("action.checking") : t("action.check")] }), provider && (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "ml-auto text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", disabled: deleting, onClick: () => void remove(), children: [_jsx(Trash2, { "aria-hidden": true }), deleting ? t("action.deleting") : t("action.delete")] }))] }), check && (_jsx("p", { className: cn("text-xs", check.ok ? "text-cms-muted-foreground" : "text-cms-destructive"), role: check.ok ? undefined : "alert", children: check.ok ? t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) }) : check.message })), dialog] }));
+    return (_jsxs("div", { className: DETAIL_PANE, children: [_jsxs("div", { className: "min-w-0", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (provider ? provider.name : draft.name.trim()) || t("new.title") }), _jsxs("p", { className: "truncate text-cms-muted-foreground text-xs", children: [providerKindLabel(draft.kind), " \u00B7 ", provider?.defaultModel || draft.defaultModel || t("model.none")] })] }), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.name, children: t("field.name") }), _jsx(Input, { id: ids.name, value: draft.name, placeholder: "OpenRouter", onChange: (event) => set({ name: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.kind, children: t("field.kind") }), _jsx(OptionSelect, { id: ids.kind, value: draft.kind, disabled: Boolean(provider), options: AI_PROVIDER_KINDS.map((kind) => ({ value: kind, label: providerKindLabel(kind) })), onChange: (kind) => set({ kind: kind }) })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.url, children: t("field.url") }), _jsx(Input, { id: ids.url, value: draft.url, placeholder: example.url, onChange: (event) => set({ url: event.target.value.trim() }), className: "h-8 font-mono text-xs md:text-xs" })] }), _jsx(ApiKeyField, { label: t("field.key"), baseName: draft.name.trim() || "API", value: draft.key, onChange: (key) => set({ key }) }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.model, children: t("field.model") }), _jsx(ModelCombobox, { id: ids.model, value: draft.defaultModel, models: modelList.models, loading: modelList.loading, error: modelList.error, placeholder: example.model, onChange: (defaultModel) => set({ defaultModel }) })] })] }), error && _jsx(InlineError, { children: error }), _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Button, { type: "button", size: "sm", disabled: saving || !dirty || !draft.name.trim(), onClick: () => void save(), children: [_jsx(Save, { "aria-hidden": true }), saving ? t("action.saving") : t("action.save")] }), !provider && (_jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: onCancel, children: t("action.cancel") })), _jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: checking || !draft.url || !draft.defaultModel, onClick: () => void runCheck(), children: [_jsx(PlugZap, { "aria-hidden": true }), checking ? t("action.checking") : t("action.check")] }), provider && (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "ml-auto text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", disabled: deleting, onClick: () => void remove(), children: [_jsx(Trash2, { "aria-hidden": true }), deleting ? t("action.deleting") : t("action.delete")] }))] }), check && (_jsx("p", { className: cn("text-xs", check.ok ? "text-cms-muted-foreground" : "text-cms-destructive"), role: check.ok ? undefined : "alert", children: check.ok ? t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) }) : check.message })), dialog] }));
 }

@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core`의 AI 플러그인. 이름으로 부르는 AI 기능(생성·판단), 필드 옆 AI 버튼, 번역본 편집기의 AI 번역,
-관리자 AI 화면(`<관리자 경로>/ai`, 기본 `/admin/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
+관리자 도구의 AI 페이지(`<관리자 경로>/tools/ai`, 기본 `/admin/tools/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
 이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `aiPlugin()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
@@ -121,18 +121,12 @@ const unusedAddress = defineValidator({
 });
 ```
 
-## 저장된 서비스 키
+## 서비스 키
 
-AI 화면에서 넣은 서비스 키는 플러그인 저장소의 `settings` 컬렉션에 암호화해서 둔다. 플러그인은 앱의 비밀 값 하나(`MONTI_SECRET`)를 보지 못한다. CMS 인스턴스가 이 값과 플러그인 이름에서
-플러그인 전용 키를 만들어(`cms.secrets("ai")`, HKDF-SHA256, `monti:plugin:ai:v1`) 건네므로, 이 키로는 다른 플러그인의 데이터를 풀 수 없고
-다른 플러그인도 이 서비스 키를 읽을 수 없다. core README의 "플러그인 비밀 값"을 본다. 저장된 값은 `mk1:<키 id>:<iv>:<tag>:<body>` 모양이다.
+연결은 키를 직접 들고 있지 않고 중앙 API 키 저장소(도구 > API 키, core의 `cms.apiKeys`)의 키를 가리킨다. 저장소는 서버 `secret`으로 키를 암호화해서 둔다. 연결 폼에서는 저장된 키를 쓰거나 새 키를 넣는다. 새 키는 저장소에 연결 이름으로 저장되고("OpenRouter", 이름이 있으면 "OpenRouter 2") 연결은 그 id만 갖는다. 새 키와 연결은 한 트랜잭션으로 저장되므로 저장이 실패해도 남는 키가 없다. 값은 브라우저로 돌아오지 않고 키 이름과 끝 네 글자만 보인다. 같은 키를 쓰는 연결은 키를 함께 쓰므로 API 키 탭에서 값을 바꾸면 모든 연결이 한꺼번에 바뀌고, 연결이 쓰는 키를 지우려 하면 먼저 묻고 그 연결들을 보여 준다(다른 키를 고를 때까지 멈춘다). 연결 주소를 바꾸면서 폼이 키에 대해 아무것도 보내지 않으면 키는 새 주소로 넘어가지 않는다.
 
-- **플러그인별 키가 생기기 전 값의 이전**: 이전 버전이 저장한 키(`v1:<iv>:<tag>:<body>`, `sha256("cms-ai-key:" + secret)`으로 암호화)는 따로 할 일 없이
-  그대로 동작한다. `MONTI_SECRET`을 옛 `CMS_SECRET` 값으로 두거나 그 값을 `previousSecrets`에 넣는다. 플러그인이 옛 방식으로 풀어 읽고 새 형식으로 다시 암호화하는 시점은 두 번이다. AI 연결을 다음에 저장할 때(저장된 모든 키를
-  함께 다시 암호화)와 `monti migrate`를 돌릴 때(남은 것을 한 번에 이전하고, 다시 돌려도 달라지는 것이 없다). 키를 다시 넣을 필요는 없다.
-- **비밀 값 바꾸기**: 새 값을 `MONTI_SECRET`(또는 `defineConfig`의 `secret`)에 두고 옛 값을 `monti.config.ts`의 `previousSecrets`에 남긴다. 저장된 키(새 형식이든 옛 형식이든)는 옛 비밀 값으로 계속 풀리고,
-  `monti migrate`나 다음 저장 때 새 비밀 값으로 다시 암호화된다. 그 뒤에 `previousSecrets`에서 옛 값을 뺀다.
-  `previousSecrets` 없이 바꾸면 옛 비밀 값으로 만든 키는 읽을 수 없으므로 다시 넣어야 한다.
+- **이전**: `monti db:migrate`가 이전 버전이 연결 안에 저장해 둔 키(플러그인별 형식 `mk1:...`와 가장 오래된 `v1:...`)를 키 저장소로 옮긴다. 값이 같은 키는 하나로 만들고 처음 쓴 연결의 이름을 붙이며, 같은 값을 쓰던 연결은 그 키를 함께 쓴다. 다시 돌려도 되고, 저장소에 이미 있는 값은 다시 만들지 않는다. 더는 풀 수 없는 키(`previousSecrets` 없이 `secret`을 바꾼 경우)는 경고만 남기고 건너뛰며, 그 연결은 키를 다시 골라야 한다.
+- **비밀 값 바꾸기**: core README의 "플러그인 비밀 값"과 "API 키 저장소"를 본다.
 
 ## 플러그인 저장소로 옮겨진 데이터
 

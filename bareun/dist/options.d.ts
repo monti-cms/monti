@@ -1,13 +1,13 @@
 import type { TextCheckerLimits } from "@monti-cms/core";
 /** Name used to find the Bareun checker in the site config `plugins`. */
 export declare const BAREUN_PLUGIN_NAME = "text-check-bareun";
+/** Id of the plugin's one API key slot. */
+export declare const BAREUN_KEY_SLOT = "key";
 /** Checker name (the source shown on results). */
 export declare const BAREUN_CHECKER_ID = "bareun";
 /** Server route. Appended to the core API base (`/api/monti/`). */
 export declare const BAREUN_ROUTE = "v1/text-check/bareun";
 export interface BareunOptions {
-    /** Name of the environment variable holding the API key. Default `BAREUN_API_KEY`. The key is read on the server only. */
-    readonly apiKeyEnv?: string;
     /** Bareun API URL. Default `https://api.bareun.ai`. Change it to use a self-hosted Bareun server. */
     readonly baseUrl?: string;
     /** Toolbar button name and the source shown in the results panel. Defaults to "Bareun spell check" in the display language. */
@@ -20,7 +20,6 @@ export interface BareunOptions {
     readonly limits?: TextCheckerLimits;
 }
 export interface ResolvedBareunOptions {
-    readonly apiKeyEnv: string;
     readonly baseUrl: string;
     readonly label: string;
     readonly auto: boolean;

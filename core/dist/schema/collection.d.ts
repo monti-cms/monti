@@ -7,19 +7,8 @@ import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fie
  * - `item`: saving in a small form applies straight to the current (public) value. There is no publish, archive or translation copy (e.g. tags).
  */
 export type CollectionKind = "document" | "item";
-/** System columns of the list. They are values of the content itself, not fields. */
-export declare const SYSTEM_LIST_COLUMNS: readonly ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"];
-export type SystemListColumn = (typeof SYSTEM_LIST_COLUMNS)[number];
-/**
- * Checks whether a name can be used by the list columns (`list.columns`). Only system columns, stored field names (including fields dependent on a conditional field),
- * address field names, and `slug` when an address field exists are allowed. It is an error if the name is unknown, the field is not stored (view or reverse relation),
- * or the same name is written twice. Called by `defineSite`.
- */
-export declare function validateListColumns(collection: string, schema: Pick<CollectionSchema, "fields"> & {
-    readonly list?: {
-        readonly columns: readonly string[];
-    };
-}): void;
+/** Said when a collection still has the retired `list` option. */
+export declare const LIST_REMOVED = "List columns are no longer part of the schema: each admin chooses them on the list screen (Column settings). Delete the `list` key.";
 export interface LayoutGroup<Name extends string = string> {
     /** Group title in the properties panel. If absent, it is drawn continuously without a title. */
     readonly group?: string;
@@ -62,29 +51,15 @@ export interface CollectionSchema<Fields extends Readonly<Record<string, Field>>
      * and fields that have their own `tab` gather in that tab.
      */
     readonly layout?: readonly LayoutGroup[];
-    /**
-     * List. If absent, the default columns: for documents, title, status, language (when there are two or more languages), category field (a relation pointing to an item collection),
-     * modified date and published date; for items, title, address, language, status and modified date.
-     */
-    readonly list?: {
-        /**
-         * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineSite`.
-         * Text (`text`), select (`select`) and relation fields are drawn as default cells, and an admin extension (`listCells`) can change the cell look.
-         */
-        readonly columns: readonly string[];
-    };
 }
-/** Value `defineCollection` accepts (without the kind). Types check that names in layout and list columns are real fields. */
-type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<CollectionSchema<Fields>, "kind" | "body" | "allowed" | "layout" | "list" | "path"> & {
+/** Value `defineCollection` accepts (without the kind). Types check that names in layout are real fields. */
+type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<CollectionSchema<Fields>, "kind" | "body" | "allowed" | "layout" | "path"> & {
     path?: `/${string}:slug${string}`;
     /** `true`/`false`, or the object form that limits the blocks, marks and heading levels the body allows. */
     body?: boolean | BodyAllowed;
     layout?: readonly LayoutGroup<Extract<keyof Fields, string>>[];
-    list?: {
-        columns: readonly (Extract<keyof Fields, string> | SystemListColumn)[];
-    };
 };
-/** Defines a collection. Types check that names in layout and list columns are real fields. */
+/** Defines a collection. Types check that names in layout are real fields. */
 export declare function defineCollection<const Fields extends Readonly<Record<string, Field>>, const Kind extends CollectionKind>(schema: CollectionInput<Fields> & {
     kind: Kind;
 }): CollectionSchema<Fields, Kind>;

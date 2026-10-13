@@ -12,6 +12,12 @@ export declare const settings: {
         [x: string]: string;
     }>> | undefined) => Promise<Response>;
 };
+/** The admin screen calls this after it assigned a key to the token slot: what waited for a token goes out now. */
+export declare const tokenChanged: {
+    POST: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<{
+        [x: string]: string;
+    }>> | undefined) => Promise<Response>;
+};
 export declare const pull: {
     POST: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<Record<string, string>>> | undefined) => Promise<Response>;
 };

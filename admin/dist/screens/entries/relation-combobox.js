@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "../../lib/utils/cn.js";
 import { Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxValue, useComboboxAnchor, } from "../../ui/combobox.js";
+import { EmptyState } from "../shared/empty-state.js";
 import { entriesMessages } from "./messages.js";
 /**
  * Relation input such as tags and categories. Search and pick; for a name that does not exist, `Add 'name'` at the end of the list opens the add sheet
@@ -69,7 +70,7 @@ export function RelationCombobox({ options, known, onSearch, loading = false, mu
             setIsCreating(false);
         }
     };
-    const list = (_jsxs(ComboboxContent, { anchor: multiple ? anchor : undefined, children: [_jsx(ComboboxEmpty, { children: loading ? t("loading") : t("relation.empty") }), _jsx(ComboboxList, { children: (item) => (_jsx(ComboboxItem, { value: item, className: cn(item.create && "text-cms-primary"), children: item.create ? (_jsxs(_Fragment, { children: [_jsx(Plus, { "aria-hidden": true }), _jsx("span", { className: "truncate", children: t("relation.create", { label: item.label }) })] })) : (_jsx("span", { className: "truncate", children: item.label })) }, item.value)) })] }));
+    const list = (_jsxs(ComboboxContent, { anchor: multiple ? anchor : undefined, children: [_jsx(ComboboxEmpty, { children: _jsx(EmptyState, { compact: true, title: loading ? t("loading") : t("relation.empty") }) }), _jsx(ComboboxList, { children: (item) => (_jsx(ComboboxItem, { value: item, className: cn(item.create && "text-cms-primary"), children: item.create ? (_jsxs(_Fragment, { children: [_jsx(Plus, { "aria-hidden": true }), _jsx("span", { className: "truncate", children: t("relation.create", { label: item.label }) })] })) : (_jsx("span", { className: "truncate", children: item.label })) }, item.value)) })] }));
     const errorText = error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: error }));
     if (multiple) {
         return (_jsxs(_Fragment, { children: [_jsxs(Combobox, { items: items, multiple: true, autoHighlight: true, disabled: disabled || isCreating, value: selected, onValueChange: (next) => {

@@ -2,7 +2,7 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
-import { DEFAULT_TITLE_FIELD, TITLE_ROLE } from "@monti-cms/core/client";
+import { DEFAULT_TITLE_FIELD, defaultCollectionPath, TITLE_ROLE } from "@monti-cms/core/client";
 export const isObj = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 export const FIELD_KINDS = ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
 /** The kinds a conditional field can show (the ones that store one value). */
@@ -39,7 +39,7 @@ export const FIELD_KEY_ORDER = [
     "values",
     "placeholder",
 ];
-export const COLLECTION_KEY_ORDER = ["label", "kind", "icon", "path", "body", "fields", "layout", "list"];
+export const COLLECTION_KEY_ORDER = ["label", "kind", "icon", "path", "body", "fields", "layout"];
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export function setProp(obj, key, value, order = []) {
     if (value === undefined) {
@@ -60,6 +60,60 @@ export function setProp(obj, key, value, order = []) {
     }
     entries.splice(index, 0, [key, value]);
     return Object.fromEntries(entries);
+}
+const FILE_KEY_ORDER = [
+    "schemaVersion",
+    "collections",
+    "migrations",
+    "locales",
+    "defaultLocale",
+    "timeZone",
+    "site",
+    "admin",
+    "seed",
+];
+/** Where each key of the `site` and `admin` settings is written when it is new. */
+const SECTION_KEY_ORDER = {
+    site: ["url", "name", "home", "previewPath", "previewLocaleParam", "localePrefix", "aliases"],
+    admin: ["path", "locale", "templates", "translations", "messages"],
+};
+/** The `site` or `admin` settings of the file (empty when it has none). */
+export const sectionOf = (file, section) => (isObj(file[section]) ? file[section] : {});
+/** `file` with one setting of `site` or `admin` set (or removed when `value` is `undefined`); a section left empty is removed. */
+export function setSetting(file, section, key, value) {
+    const next = setProp(sectionOf(file, section), key, value, SECTION_KEY_ORDER[section]);
+    return setProp(file, section, Object.keys(next).length === 0 ? undefined : next, FILE_KEY_ORDER);
+}
+/** The settings of `site` and `admin` that differ between the saved file and the draft, in the order of the draft. */
+export function settingChanges(base, draft) {
+    const changes = [];
+    for (const section of ["site", "admin"]) {
+        const before = sectionOf(base, section);
+        const after = sectionOf(draft, section);
+        for (const key of new Set([...Object.keys(after), ...Object.keys(before)])) {
+            if (!sameJson(before[key], after[key]))
+                changes.push({ path: `${section}.${key}`, from: before[key], to: after[key] });
+        }
+    }
+    return changes;
+}
+/**
+ * How many things differ between the saved file and the draft: each collection that was added, removed or edited, each of the language settings
+ * (`locales`, `defaultLocale`, `timeZone`) and each changed `site` or `admin` setting. The number shown as unsaved changes.
+ */
+export function changeCount(base, draft) {
+    const before = collectionsOf(base);
+    const after = collectionsOf(draft);
+    let count = 0;
+    for (const name of new Set([...Object.keys(before), ...Object.keys(after)])) {
+        if (!sameJson(before[name], after[name]))
+            count += 1;
+    }
+    for (const key of ["locales", "defaultLocale", "timeZone"]) {
+        if (!sameJson(base[key], draft[key]))
+            count += 1;
+    }
+    return count + settingChanges(base, draft).length;
 }
 /** `record` with the key `from` named `to`, in the same place. */
 export function renameKey(record, from, to) {
@@ -126,7 +180,12 @@ export function setCollection(file, name, update) {
     return { ...file, collections: { ...collections, [name]: update(current) } };
 }
 /** The public address a new document collection starts with, from its name. */
-export const defaultPath = (name) => (name === "" ? "" : `/${name}/:slug`);
+export const defaultPath = (id) => (id === "" ? "" : defaultCollectionPath(id));
+/** The identifier a display name suggests: lowercase ASCII words joined with `-` ("Blog posts" -> "blog-posts"). Empty when the name has no ASCII letters or digits (Korean). */
+export const idFromName = (name) => name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 /** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
 export function pathProblem(path) {
     if (path.trim() === "")
@@ -136,9 +195,9 @@ export function pathProblem(path) {
     return path.split(":slug").length === 2 ? null : "slug";
 }
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
-export function addCollection(file, name, kind, path) {
+export function addCollection(file, name, kind, path, label) {
     let collection = {
-        label: name.charAt(0).toUpperCase() + name.slice(1),
+        label: label?.trim() || name.charAt(0).toUpperCase() + name.slice(1),
         kind,
         fields: {
             title: { kind: "text", label: "Title", required: true, role: TITLE_ROLE },
@@ -236,7 +295,7 @@ export function recordRename(renames, next) {
         return rest;
     return [...rest, { ...next, from: earlier.from }];
 }
-/** Replaces `from` with `to` (or removes it when `to` is `null`) in the names a collection lists besides its fields: layout groups, list columns, a slug's source. */
+/** Replaces `from` with `to` (or removes it when `to` is `null`) in the names a collection lists besides its fields: layout groups, a slug's source. */
 function rewriteReferences(collection, from, to) {
     let result = collection;
     if (Array.isArray(result.layout)) {
@@ -245,16 +304,6 @@ function rewriteReferences(collection, from, to) {
             fields: (Array.isArray(group.fields) ? group.fields : []).flatMap((name) => name === from ? (to ? [to] : []) : [name]),
         }));
         result = { ...result, layout };
-    }
-    const list = result.list;
-    if (isObj(list) && Array.isArray(list.columns)) {
-        result = {
-            ...result,
-            list: {
-                ...list,
-                columns: list.columns.flatMap((name) => (name === from ? (to ? [to] : []) : [name])),
-            },
-        };
     }
     const fields = fieldsOf(result);
     const touched = Object.entries(fields).map(([name, field]) => field.kind === "slug" && field.from === from
@@ -297,6 +346,15 @@ export function removeField(collection, place, name) {
 }
 export function moveField(collection, place, name, delta) {
     return updateFields(collection, place, (fields) => moveKey(fields, name, delta));
+}
+/** Puts `name` where `over` is (a field dropped on another one of the same list); any other name leaves the list as it is. */
+export function reorderField(collection, place, name, over) {
+    return updateFields(collection, place, (fields) => {
+        const keys = Object.keys(fields);
+        const from = keys.indexOf(name);
+        const to = keys.indexOf(over);
+        return from < 0 || to < 0 || from === to ? fields : moveKey(fields, name, to - from);
+    });
 }
 /**
  * The name of the title field of a collection: the field with the `title` role, else the one named `title` (the file only has it at the top level of `fields`).
@@ -411,12 +469,6 @@ export const layoutOf = (collection) => Array.isArray(collection.layout) ? colle
 export function withLayout(collection, layout) {
     return setProp(collection, "layout", layout.length > 0 ? layout : undefined, COLLECTION_KEY_ORDER);
 }
-export const columnsOf = (collection) => isObj(collection.list) && Array.isArray(collection.list.columns) ? collection.list.columns : undefined;
-export function withColumns(collection, columns) {
-    return setProp(collection, "list", columns === undefined ? undefined : { columns }, COLLECTION_KEY_ORDER);
-}
-/** The system columns a list can show next to the fields. */
-export const SYSTEM_COLUMNS = ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"];
 export const localesOf = (file) => (Array.isArray(file.locales) ? file.locales : []);
 // ----- what a field needs -----
 /** The field `name` at `place`, or `undefined`. */

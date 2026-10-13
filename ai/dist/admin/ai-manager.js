@@ -1,7 +1,7 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
-import { AdminShell, Button, Checkbox, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, FieldTitle, IconButton, Input, Label, Switch, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm, } from "@monti-cms/admin/kit";
+import { Button, Checkbox, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, FieldTitle, IconButton, Input, Label, PageActions, Switch, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm, } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -242,12 +242,7 @@ export function AiManager() {
     const onConnectionDirty = useCallback((dirty) => setConnectionDirty(dirty), []);
     const onSharedDirty = useCallback((dirty) => setSharedDirty(dirty), []);
     const headerActions = tab === "features" ? (_jsxs(Button, { type: "button", size: "sm", onClick: () => void startNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("add.feature")] })) : tab === "connections" ? (_jsxs(Button, { type: "button", size: "sm", onClick: () => void openConnection("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("add.connection")] })) : (_jsxs(Button, { type: "button", size: "sm", onClick: () => void openShared("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("add.shared")] }));
-    const count = tab === "features"
-        ? featuresQuery.data?.items.length
-        : tab === "connections"
-            ? settingsQuery.data?.providers.length
-            : sharedQuery.data?.items.length;
-    return (_jsxs(AdminShell, { title: "AI", count: count, headerActions: headerActions, sidebar: { activeNav: "ai" }, children: [_jsxs(Tabs, { value: tab, onValueChange: (value) => void changeTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: [_jsxs(TabsTrigger, { value: "features", className: "flex-none px-0 text-xs", children: [_jsx(Sparkles, { "aria-hidden": true }), t("tab.features")] }), _jsxs(TabsTrigger, { value: "connections", className: "flex-none px-0 text-xs", children: [_jsx(Plug, { "aria-hidden": true }), t("tab.connections")] }), _jsxs(TabsTrigger, { value: "shared", className: "flex-none px-0 text-xs", children: [_jsx(Quote, { "aria-hidden": true }), t("tab.shared")] })] }), _jsxs(TabsContent, { value: "features", className: "flex min-h-0 flex-1 flex-col", children: [featuresQuery.error && !featuresQuery.data && (_jsx(LoadError, { message: errorText(site, featuresQuery.error, t("list.loadFailed")), onRetry: () => void featuresQuery.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: featuresQuery.isPending ? (_jsx(ListSkeleton, { rows: 4 })) : (_jsxs(_Fragment, { children: [featuresQuery.data && features.length === 0 && !editing?.isNew && (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })), features.map((feature) => (_jsx(ListRow, { title: feature.label, status: !feature.enabled
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [_jsx(PageActions, { children: headerActions }), _jsxs(Tabs, { value: tab, onValueChange: (value) => void changeTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: [_jsxs(TabsTrigger, { value: "features", className: "flex-none px-0 text-xs", children: [_jsx(Sparkles, { "aria-hidden": true }), t("tab.features")] }), _jsxs(TabsTrigger, { value: "connections", className: "flex-none px-0 text-xs", children: [_jsx(Plug, { "aria-hidden": true }), t("tab.connections")] }), _jsxs(TabsTrigger, { value: "shared", className: "flex-none px-0 text-xs", children: [_jsx(Quote, { "aria-hidden": true }), t("tab.shared")] })] }), _jsxs(TabsContent, { value: "features", className: "flex min-h-0 flex-1 flex-col", children: [featuresQuery.error && !featuresQuery.data && (_jsx(LoadError, { message: errorText(site, featuresQuery.error, t("list.loadFailed")), onRetry: () => void featuresQuery.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: featuresQuery.isPending ? (_jsx(ListSkeleton, { rows: 4 })) : (_jsxs(_Fragment, { children: [featuresQuery.data && features.length === 0 && !editing?.isNew && (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })), features.map((feature) => (_jsx(ListRow, { title: feature.label, status: !feature.enabled
                                                             ? t("status.off")
                                                             : usable.has(feature.key)
                                                                 ? null
@@ -296,9 +291,9 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
     const chosen = spec.providerId
         ? providers.find((provider) => provider.id === spec.providerId)
         : providers.find((provider) => provider.ready);
-    const canRun = Boolean(settings?.fake) || Boolean(chosen?.url && chosen.keyHint && (spec.modelName || chosen.defaultModel));
+    const canRun = Boolean(settings?.fake) || Boolean(chosen?.url && chosen.key?.readable && (spec.modelName || chosen.defaultModel));
     // Model list of the selected generation connection. A list that was fetched once is remembered and not fetched again.
-    const modelList = useModelList(!deciding && chosen?.keyHint ? { providerId: chosen.id } : null);
+    const modelList = useModelList(!deciding && chosen?.key?.readable ? { providerId: chosen.id } : null);
     const [sample, setSample] = useState(EMPTY_SAMPLE);
     const [test, setTest] = useState(null);
     const set = (patch) => onChange({ ...spec, ...patch });

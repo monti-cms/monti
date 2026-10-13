@@ -2,6 +2,7 @@ import { adminRoute, HttpError, handleApiError, json, readJsonBody, } from "@mon
 import { listConflicts, resolveConflict } from "./conflicts.js";
 import { GitHubApiError } from "./github/client.js";
 import { pullTarget } from "./inbound.js";
+import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT } from "./options.js";
 import { flushTarget, resumeAfterToken } from "./outbound.js";
 import { saveSettings, settingsView } from "./settings.js";
 import { statusView } from "./status.js";
@@ -47,14 +48,16 @@ export const settings = {
         if (typeof expectedVersion !== "number" || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
             throw new HttpError(428, "version_required", "expectedVersion is required");
         }
-        const pick = (key) => body[key] === null ? null : text(body, key);
-        const ctx = syncContextFor(cms);
-        const token = pick("token");
-        const saved = await saveSettings(ctx, { token, webhookSecret: pick("webhookSecret"), expectedVersion });
-        // A token was just saved: what waited for it goes out now.
-        if (typeof token === "string" && token.trim() !== "")
-            await resumeAfterToken(ctx);
-        return json(saved);
+        const webhookSecret = body.webhookSecret === null ? null : text(body, "webhookSecret");
+        return json(await saveSettings(syncContextFor(cms), { webhookSecret, expectedVersion }));
+    }),
+};
+/** The admin screen calls this after it assigned a key to the token slot: what waited for a token goes out now. */
+export const tokenChanged = {
+    POST: adminRoute(async ({ cms }) => {
+        if (await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT))
+            await resumeAfterToken(syncContextFor(cms));
+        return json({ ok: true });
     }),
 };
 export const pull = {

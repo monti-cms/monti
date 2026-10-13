@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isAdminPath, isHomeHref, isHttpUrl, isTimeZone, LOCALE_CODE, LOCALE_PREFIX_MODES } from "../config/rules.js";
 import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/allowed.js";
+import { LIST_REMOVED } from "../schema/collection.js";
 /**
  * The runtime check of the schema file, written with zod. The editor types come from `defineSchema`; this is the check that runs when the schema is loaded, and
  * it applies the rules a type cannot say (a default option that exists, a time zone that exists). Objects are strict: a key the format does not have is an error (this is how the retired `workflow` option and a misspelt option are caught).
@@ -174,10 +175,8 @@ const collection = z.strictObject({
     path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
     icon: text.optional().describe("Admin sidebar icon name (lucide)."),
     layout: z.array(layoutGroup).optional().describe("Layout of the properties panel."),
-    list: z
-        .strictObject({ columns: z.array(text) })
-        .optional()
-        .describe("Columns of the admin list."),
+    // Retired: any value is rejected with the way forward, instead of the generic "not part of the schema format".
+    list: z.never({ error: LIST_REMOVED }).optional(),
 });
 const locale = z.strictObject({
     code: text.regex(LOCALE_CODE, { error: 'must look like "en", "pt-BR" or "zh-Hant"' }),

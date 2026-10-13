@@ -1,11 +1,14 @@
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import type * as React from "react";
+import { type PanelResizeConfig } from "./panel-resize.js";
 declare function Sheet({ ...props }: SheetPrimitive.Root.Props): React.JSX.Element;
 declare function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props): React.JSX.Element;
 declare function SheetClose({ ...props }: SheetPrimitive.Close.Props): React.JSX.Element;
-declare function SheetContent({ className, children, side, showCloseButton, ...props }: SheetPrimitive.Popup.Props & {
+declare function SheetContent({ className, children, side, showCloseButton, resize, style, ...props }: SheetPrimitive.Popup.Props & {
     side?: "top" | "right" | "bottom" | "left";
     showCloseButton?: boolean;
+    /** A right-side sheet the writer can widen by dragging its left edge. Replaces any width class on `className`. */
+    resize?: PanelResizeConfig;
 }): React.JSX.Element;
 declare function SheetHeader({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element;
 declare function SheetFooter({ className, ...props }: React.ComponentProps<"div">): React.JSX.Element;

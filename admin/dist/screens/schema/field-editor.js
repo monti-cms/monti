@@ -38,7 +38,7 @@ function OptionsEditor({ field, fieldName, editing, change, }) {
                         }, children: t("options.add") })] }))] }));
 }
 /** `inputOptions`: a JSON object of text, number and flag values, checked when the writer leaves the box. */
-function InputOptionsEditor({ value, onChange }) {
+export function InputOptionsEditor({ value, onChange, }) {
     const t = useTranslator(schemaMessages);
     const id = useId();
     const { disabled } = useSchemaEdit();
@@ -64,7 +64,7 @@ function InputOptionsEditor({ value, onChange }) {
     return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, hint: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx("p", { className: "text-cms-destructive text-xs", children: t("field.inputOptionsBad") })] }));
 }
 /** What the kind of the field adds: its own options. */
-function KindOptions({ name, field, editing, set, change, }) {
+export function KindOptions({ name, field, editing, set, change, }) {
     const t = useTranslator(schemaMessages);
     const { collectionNames, file } = useSchemaEdit();
     const placeholder = (_jsx(TextInput, { label: t("field.placeholder"), value: field.placeholder, onChange: (value) => set("placeholder", orUndefined(value)) }));
@@ -72,7 +72,7 @@ function KindOptions({ name, field, editing, set, change, }) {
     switch (field.kind) {
         case "text": {
             const fill = field.fillFromBody;
-            return (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(FlagSwitch, { label: t("field.multiline"), checked: field.multiline === true, onChange: (on) => set("multiline", on ? true : undefined) }), field.multiline === true && (_jsx(TextInput, { label: t("field.rows"), type: "number", value: field.rows, onChange: (value) => set("rows", countOrUndefined(value)) })), _jsx(TextInput, { label: t("field.max"), type: "number", value: field.max, onChange: (value) => set("max", countOrUndefined(value)) }), _jsx(FlagSwitch, { label: t("field.fillFromBody"), hint: t("field.fillFromBodyHint"), checked: Boolean(fill), onChange: (on) => set("fillFromBody", on ? true : undefined) }), Boolean(fill) && (_jsx(TextInput, { label: t("field.fillLength"), type: "number", value: isObj(fill) ? fill.maxLength : undefined, placeholder: "160", onChange: (value) => {
+            return (_jsxs("div", { className: "flex flex-col gap-5", children: [_jsx(FlagSwitch, { label: t("field.multiline"), checked: field.multiline === true, onChange: (on) => set("multiline", on ? true : undefined) }), field.multiline === true && (_jsx(TextInput, { label: t("field.rows"), type: "number", value: field.rows, onChange: (value) => set("rows", countOrUndefined(value)) })), _jsx(TextInput, { label: t("field.max"), type: "number", value: field.max, onChange: (value) => set("max", countOrUndefined(value)) }), _jsx(FlagSwitch, { label: t("field.fillFromBody"), hint: t("field.fillFromBodyHint"), checked: Boolean(fill), onChange: (on) => set("fillFromBody", on ? true : undefined) }), Boolean(fill) && (_jsx(TextInput, { label: t("field.fillLength"), type: "number", value: isObj(fill) ? fill.maxLength : undefined, placeholder: "160", onChange: (value) => {
                             const maxLength = countOrUndefined(value);
                             set("fillFromBody", maxLength === undefined ? true : { maxLength });
                         } })), placeholder] }));
@@ -81,14 +81,14 @@ function KindOptions({ name, field, editing, set, change, }) {
             const texts = Object.entries(fieldsOf(editing.collection))
                 .filter(([, item]) => item.kind === "text")
                 .map(([key]) => ({ value: key, label: key }));
-            return (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(Pick, { label: t("field.slugFrom"), hint: t("field.slugFromHint"), value: typeof field.from === "string" ? field.from : "", items: [{ value: "", label: t("none") }, ...texts], onChange: (value) => set("from", orUndefined(value)) }), placeholder] }));
+            return (_jsxs("div", { className: "flex flex-col gap-5", children: [_jsx(Pick, { label: t("field.slugFrom"), hint: t("field.slugFromHint"), value: typeof field.from === "string" ? field.from : "", items: [{ value: "", label: t("none") }, ...texts], onChange: (value) => set("from", orUndefined(value)) }), placeholder] }));
         }
         case "relation":
-            return (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(Pick, { label: t("field.relationTo"), value: typeof field.to === "string" ? field.to : "", items: collections, onChange: (value) => set("to", value) }), placeholder, _jsx(FlagSwitch, { label: t("field.many"), checked: field.many === true, onChange: (on) => set("many", on ? true : undefined) }), field.many === true && (_jsx(FlagSwitch, { label: t("field.ordered"), hint: t("field.orderedHint"), checked: field.ordered === true, onChange: (on) => set("ordered", on ? true : undefined) })), _jsx(FlagSwitch, { label: t("field.createInline"), checked: field.createInline === true, onChange: (on) => set("createInline", on ? true : undefined) }), _jsx(FlagSwitch, { label: t("field.publishedOnly"), checked: field.publishedOnly === true, onChange: (on) => set("publishedOnly", on ? true : undefined) }), _jsx(FlagSwitch, { label: t("field.allowUnpublished"), checked: field.allowUnpublished === true, onChange: (on) => set("allowUnpublished", on ? true : undefined) })] }));
+            return (_jsxs("div", { className: "flex flex-col gap-5", children: [_jsx(Pick, { label: t("field.relationTo"), value: typeof field.to === "string" ? field.to : "", items: collections, onChange: (value) => set("to", value) }), placeholder, _jsx(FlagSwitch, { label: t("field.many"), checked: field.many === true, onChange: (on) => set("many", on ? true : undefined) }), field.many === true && (_jsx(FlagSwitch, { label: t("field.ordered"), hint: t("field.orderedHint"), checked: field.ordered === true, onChange: (on) => set("ordered", on ? true : undefined) })), _jsx(FlagSwitch, { label: t("field.createInline"), checked: field.createInline === true, onChange: (on) => set("createInline", on ? true : undefined) }), _jsx(FlagSwitch, { label: t("field.publishedOnly"), checked: field.publishedOnly === true, onChange: (on) => set("publishedOnly", on ? true : undefined) }), _jsx(FlagSwitch, { label: t("field.allowUnpublished"), checked: field.allowUnpublished === true, onChange: (on) => set("allowUnpublished", on ? true : undefined) })] }));
         case "select":
             return _jsx(OptionsEditor, { field: field, fieldName: name, editing: editing, change: change });
         case "media":
-            return (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(Pick, { label: t("field.accept"), value: field.accept ?? "image", items: [
+            return (_jsxs("div", { className: "flex flex-col gap-5", children: [_jsx(Pick, { label: t("field.accept"), value: field.accept ?? "image", items: [
                             { value: "image", label: t("field.acceptImage") },
                             { value: "file", label: t("field.acceptFile") },
                         ], onChange: (value) => set("accept", value === "image" ? undefined : value) }), placeholder] }));
@@ -98,7 +98,7 @@ function KindOptions({ name, field, editing, set, change, }) {
             const relations = Object.entries(target ? fieldsOf(target) : {})
                 .filter(([, item]) => item.kind === "relation" && item.many === true)
                 .map(([key]) => ({ value: key, label: key }));
-            return (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(Pick, { label: t("field.backlinkFrom"), value: from, items: collections, onChange: (value) => set("from", value) }), _jsx(Pick, { label: t("field.backlinkVia"), hint: t("field.backlinkViaHint"), value: typeof field.via === "string" ? field.via : "", items: relations, onChange: (value) => set("via", value) }), _jsx(FlagSwitch, { label: t("field.createInline"), checked: field.createInline === true, onChange: (on) => set("createInline", on ? true : undefined) }), placeholder] }));
+            return (_jsxs("div", { className: "flex flex-col gap-5", children: [_jsx(Pick, { label: t("field.backlinkFrom"), value: from, items: collections, onChange: (value) => set("from", value) }), _jsx(Pick, { label: t("field.backlinkVia"), hint: t("field.backlinkViaHint"), value: typeof field.via === "string" ? field.via : "", items: relations, onChange: (value) => set("via", value) }), _jsx(FlagSwitch, { label: t("field.createInline"), checked: field.createInline === true, onChange: (on) => set("createInline", on ? true : undefined) }), placeholder] }));
         }
         case "view":
             return (_jsx(TextInput, { label: t("field.view"), hint: t("field.viewHint"), value: field.view, onChange: (value) => set("view", value) }));
@@ -111,7 +111,7 @@ function KindOptions({ name, field, editing, set, change, }) {
             return null;
     }
 }
-const LOCALIZED_KINDS = ["text", "slug", "relation", "select", "media", "conditional"];
+export const LOCALIZED_KINDS = ["text", "slug", "relation", "select", "media", "conditional"];
 export function FieldEditor({ editing, place, name, field, index, count, }) {
     const t = useTranslator(schemaMessages);
     const { disabled, collectionNames } = useSchemaEdit();
@@ -149,7 +149,7 @@ export function FieldEditor({ editing, place, name, field, index, count, }) {
  * The settings a new field needs, asked before it exists: the field is made in a copy of the collection and joins the real one only when its required
  * settings are complete, so there is never a half-made field in the file.
  */
-function NewFieldDialog({ editing, place, name, kind, onClose, }) {
+export function NewFieldDialog({ editing, place, name, kind, onClose, }) {
     const t = useTranslator(schemaMessages);
     const { collectionNames } = useSchemaEdit();
     const [draft, setDraft] = useState(() => addField(editing.collection, place, name, newField(kind, name.charAt(0).toUpperCase() + name.slice(1), collectionNames)));
@@ -172,7 +172,7 @@ function NewFieldDialog({ editing, place, name, kind, onClose, }) {
                             }) }), _jsx(KindOptions, { name: name, field: field, editing: draftEditing, set: set, change: change }), problems.length > 0 && (_jsx("ul", { className: "flex flex-col gap-0.5 text-cms-muted-foreground text-xs", "data-testid": "new-field-problems", children: problems.map((problem) => (_jsx("li", { children: t(`field.needs.${problem}`) }, problem))) }))] }), _jsxs(DialogFooter, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: () => onClose(false), children: t("field.newCancel") }), _jsx(Button, { type: "button", disabled: problems.length > 0, onClick: () => {
                                 editing.update(() => draft);
                                 onClose(true);
-                            }, children: t("field.add") })] })] }) }));
+                            }, children: t("field.addConfirm") })] })] }) }));
 }
 /** The fields of a collection (or of one branch of a conditional field), each editable, with a row to add one. */
 export function FieldList({ editing, place, fields, kinds, }) {

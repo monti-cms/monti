@@ -5,7 +5,7 @@
  */
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter.js";
 export { type BulkService, type Cms, type ContentService, type CreateCmsOptions, createCms, type HandleOptions, type PublicServerConfig, } from "../cms/index.js";
-export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent, DeferredDelivery, EventDelivery, EventDeliveryCounts, EventDeliveryState, } from "../core/store/index.js";
+export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent, DeferredDelivery, EventDelivery, EventDeliveryCounts, EventDeliveryState, EventLogState, } from "../core/store/index.js";
 export { DeferDelivery } from "../core/store/index.js";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options.js";
 export type { AllowedMediaMime, MediaStore, PrepareUploadInput, PrepareUploadOutput, PromoteFileInput, StoredFileHead, } from "../media/store.js";

@@ -8,6 +8,15 @@ export class InitCancelled extends Error {
         this.name = "InitCancelled";
     }
 }
+/** The time zone of this computer (what the OS says, as an IANA name), or `undefined` when it cannot be read. */
+export const detectSystemTimeZone = () => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+    }
+    catch {
+        return undefined;
+    }
+};
 const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 const isTimeZone = (timeZone) => {
     try {
@@ -136,7 +145,7 @@ async function askLocales(prompter, found) {
  * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link InitCancelled} when the
  * person cancels, and an Error naming the flag when a flag value is wrong.
  */
-export async function collectAnswers(app, flags, prompter) {
+export async function collectAnswers(app, flags, prompter, systemTimeZone = detectSystemTimeZone) {
     validateFlags(flags);
     const siteUrl = flags.siteUrl ?? `http://localhost:${app.devPort}`;
     // Locales, the default first
@@ -256,7 +265,7 @@ export async function collectAnswers(app, flags, prompter) {
     return {
         siteUrl,
         locales,
-        timeZone: flags.timeZone ?? DEFAULT_INIT_TIME_ZONE,
+        ...resolveTimeZone(flags.timeZone, systemTimeZone),
         storage,
         ai: extras.includes("ai"),
         gitSync: extras.includes("git-sync"),
@@ -265,6 +274,15 @@ export async function collectAnswers(app, flags, prompter) {
         login,
         directiveSyntax,
     };
+}
+/** `--time-zone` wins; else this computer's time zone; else UTC when that cannot be read or is not an IANA name. */
+function resolveTimeZone(flag, systemTimeZone) {
+    if (flag !== undefined)
+        return { timeZone: flag, timeZoneSource: "flag" };
+    const system = systemTimeZone();
+    return system !== undefined && isTimeZone(system)
+        ? { timeZone: system, timeZoneSource: "computer" }
+        : { timeZone: DEFAULT_INIT_TIME_ZONE, timeZoneSource: "fallback" };
 }
 /** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */
 export async function createClackPrompter() {

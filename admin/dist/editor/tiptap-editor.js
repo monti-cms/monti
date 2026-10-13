@@ -25,7 +25,7 @@ import { CodeLinkBar } from "./code-block/code-link-bar.js";
 import { CustomBlockMenu, CustomBlockMenuItems, offeredBlocks } from "./custom-block-menu.js";
 import { documentKey } from "./document-key.js";
 import { endBlockDrag, findBlockDOM, refineBlock, resolveTargetBlock, startBlockDrag, startMarquee } from "./drag/index.js";
-import { EDITOR_WIDTHS, EditorWidthMenu, useEditorWidth } from "./editor-width.js";
+import { EditorWidthMenu, useEditorWidth } from "./editor-width.js";
 import { buildEditorExtensions } from "./extensions.js";
 import { FILE_NODE_NAME } from "./file-node.js";
 import { canInsertFootnote, insertFootnote } from "./footnote-nodes.js";
@@ -271,7 +271,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
     });
     const isComposingRef = useRef(false);
     const editorRef = useRef(null);
-    const [width, setWidth] = useEditorWidth();
+    const { steps: widthSteps, step: widthStep, choose: chooseWidth } = useEditorWidth();
     const [slash, setSlash] = useState(null);
     const slashRangeRef = useRef(null);
     // Slash menu items added by extensions (plugins). Also kept in a ref so the key handler reads the latest value.
@@ -750,7 +750,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
                     key: "upload",
                     // Hide later than underline (5). With the same priority, right-hand tools hide first.
                     priority: 4,
-                    render: () => (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("toolbar.upload"), side: "bottom", disabled: !canEdit, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Upload, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "w-40", children: _jsx(UploadMenuItems, {}) })] })),
+                    render: () => (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("toolbar.upload"), side: "bottom", disabled: !canEdit, onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(Upload, { className: "size-4", "aria-hidden": true }) }), _jsx(DropdownMenuContent, { align: "start", className: "min-w-40", children: _jsx(UploadMenuItems, {}) })] })),
                     menu: () => _jsx(UploadMenuItems, {}),
                 },
             ]
@@ -771,7 +771,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
     const toolbarEntries = orderToolbar(t, unordered);
     return (_jsxs("div", { className: "relative flex min-h-full w-full flex-1 flex-col bg-cms-background", "data-cms-editor-shell": true, 
         // Title, body, and source use the same width (`--editor-width`).
-        style: { "--editor-width": EDITOR_WIDTHS[width] }, onCompositionStart: (event) => {
+        style: { "--editor-width": widthStep.width }, onCompositionStart: (event) => {
             // Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
             // If that input disappeared during composition, the end signal never came and saving was blocked.
             if (!event.currentTarget.contains(event.target))
@@ -791,7 +791,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
             if (target.closest('input, textarea, button, select, a, [role="toolbar"], [contenteditable="true"]'))
                 return;
             startMarquee(editor.view, event.nativeEvent);
-        }, children: [_jsxs("div", { role: "toolbar", "aria-label": t("toolbar.format"), className: "sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-cms-background/95 backdrop-blur", children: [_jsxs("div", { className: "relative flex min-h-12 items-center py-2", style: { paddingInline: asideWidth + 24 }, children: [_jsx(ToolbarRow, { editor: editor, entries: toolbarEntries, end: toolbarEnd }), _jsxs("div", { ref: asideRef, className: "absolute inset-y-0 right-4 flex items-center gap-1", children: [toolbarAside, _jsx(EditorWidthMenu, { value: width, onChange: setWidth })] })] }), !isSourceMode && _jsx(CodeLinkBar, { editor: editor })] }), titleField && (_jsx("div", { className: "mx-auto w-full max-w-(--editor-width) border-cms-border/60 border-b px-4 pt-12 pb-5", children: titleField })), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
+        }, children: [_jsxs("div", { role: "toolbar", "aria-label": t("toolbar.format"), className: "sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-cms-background/95 backdrop-blur", children: [_jsxs("div", { className: "relative flex min-h-12 items-center py-2", style: { paddingInline: asideWidth + 24 }, children: [_jsx(ToolbarRow, { editor: editor, entries: toolbarEntries, end: toolbarEnd }), _jsxs("div", { ref: asideRef, className: "absolute inset-y-0 right-4 flex items-center gap-1", children: [toolbarAside, _jsx(EditorWidthMenu, { steps: widthSteps, value: widthStep, onChange: chooseWidth })] })] }), !isSourceMode && _jsx(CodeLinkBar, { editor: editor })] }), titleField && (_jsx("div", { className: "mx-auto w-full max-w-(--editor-width) border-cms-border/60 border-b px-4 pt-12 pb-5", children: titleField })), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
                     const files = Array.from(event.target.files ?? []);
                     event.target.value = "";
                     void uploadAttachments(files);

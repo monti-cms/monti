@@ -4,6 +4,7 @@ export const settingsMessages = defineMessages("cms-ai.settings", {
     en: {
         legacyGenerate: "Generate",
         legacyDecide: "Decide",
+        keyUse: "AI connection “{name}”",
         unknownConnection: "This connection doesn't exist.",
         urlAndModel: "Enter an address and a model.",
         keyAgain: "Enter the key again.",
@@ -22,6 +23,7 @@ export const settingsMessages = defineMessages("cms-ai.settings", {
     ko: {
         legacyGenerate: "생성",
         legacyDecide: "판단",
+        keyUse: "AI 연결 “{name}”",
         unknownConnection: "없는 연결입니다.",
         urlAndModel: "주소와 모델을 넣으세요.",
         keyAgain: "키를 다시 넣으세요.",

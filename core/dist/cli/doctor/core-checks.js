@@ -183,7 +183,7 @@ const schemaFile = {
             const literal = parseSchemaLiteral(readFileSync(path.join(state.cwd, file), "utf8"));
             return literal.ok
                 ? ok(summary)
-                : ok(`${summary}; it contains code (${literal.message}), so the admin schema screen is read-only for it`);
+                : ok(`${summary}; it contains code (${literal.message}), so the schema settings in the admin (Settings) are read-only for it`);
         }
         catch (error) {
             return fail(messageOf(error), {

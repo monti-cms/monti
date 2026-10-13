@@ -35,6 +35,13 @@ export interface SchemaScreenState {
     readonly vocabulary: BodyVocabulary;
     /** The admin path, for links to entries. */
     readonly collections: readonly string[];
+    /** The public site URL the instance uses and where it comes from (it is not part of what the screen edits). */
+    readonly siteUrl: SiteUrlState;
+}
+/** The site URL (`site.url`) in effect: `env` is the `SITE_URL` variable, `schema` the schema file, `config` monti.config.ts, `none` when no one set it. */
+export interface SiteUrlState {
+    readonly url: string | null;
+    readonly from: "env" | "schema" | "config" | "none";
 }
 /** What `GET /v1/schema` answers: the file, its hash, and the facts the screen needs (see {@link SchemaScreenState}). */
 export declare function readSchemaScreen(cms: Cms): Promise<SchemaScreenState>;
