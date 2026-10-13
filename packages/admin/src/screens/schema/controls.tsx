@@ -58,26 +58,33 @@ export function IssueList({ issues }: { issues: readonly SchemaIssue[] }) {
 	);
 }
 
+/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
+const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" } as const;
+/** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
+const HELP = "max-w-[70ch] text-xs";
+
 export function Labeled({
 	label,
 	hint,
 	children,
 	htmlFor,
 	className,
+	control = "normal",
 }: {
 	label: ReactNode;
 	hint?: ReactNode;
 	htmlFor?: string;
 	children: ReactNode;
 	className?: string;
+	control?: keyof typeof CONTROL_WIDTH;
 }) {
 	return (
 		<UiField className={cn("gap-2", className)}>
 			<FieldLabel htmlFor={htmlFor} className="font-medium text-sm">
 				{label}
 			</FieldLabel>
-			{children}
-			{hint && <FieldDescription className="text-xs">{hint}</FieldDescription>}
+			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
+			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
 		</UiField>
 	);
 }
@@ -154,12 +161,12 @@ export function FlagSwitch({
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	return (
-		<UiField orientation="horizontal" className="items-start justify-between gap-4">
+		<UiField orientation="horizontal" className="max-w-3xl items-start justify-between gap-4">
 			<div className="flex flex-col gap-0.5">
 				<FieldLabel htmlFor={id} className="font-medium text-sm">
 					{label}
 				</FieldLabel>
-				{hint && <FieldDescription className="text-xs">{hint}</FieldDescription>}
+				{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
 			</div>
 			<Switch
 				id={id}
@@ -217,7 +224,7 @@ export function Segmented({
 					</button>
 				))}
 			</div>
-			{hint && <FieldDescription className="text-xs">{hint}</FieldDescription>}
+			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
 		</UiField>
 	);
 }
@@ -225,6 +232,8 @@ export function Segmented({
 export interface PickItem {
 	readonly value: string;
 	readonly label: string;
+	/** A muted line under the label in the list of choices (the closed select shows the label only). */
+	readonly description?: string;
 }
 
 export function Pick({
@@ -234,6 +243,7 @@ export function Pick({
 	onChange,
 	hint,
 	className,
+	control = "narrow",
 }: {
 	label: string;
 	value: string;
@@ -241,11 +251,12 @@ export function Pick({
 	onChange: (value: string) => void;
 	hint?: ReactNode;
 	className?: string;
+	control?: keyof typeof CONTROL_WIDTH;
 }) {
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	return (
-		<Labeled label={label} hint={hint} htmlFor={id} className={className}>
+		<Labeled label={label} hint={hint} htmlFor={id} className={className} control={control}>
 			<Select
 				value={value}
 				items={items as PickItem[]}
@@ -258,7 +269,14 @@ export function Pick({
 				<SelectContent>
 					{items.map((item) => (
 						<SelectItem key={item.value} value={item.value}>
-							{item.label}
+							{item.description ? (
+								<span className="flex flex-col gap-0.5">
+									<span>{item.label}</span>
+									<span className="whitespace-normal text-cms-muted-foreground text-xs">{item.description}</span>
+								</span>
+							) : (
+								item.label
+							)}
 						</SelectItem>
 					))}
 				</SelectContent>

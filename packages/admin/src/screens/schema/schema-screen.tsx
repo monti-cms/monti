@@ -15,6 +15,7 @@ import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
 import { errorText } from "../admin-api";
+import { SettingsTabBody } from "../settings/tab-body";
 import type { SchemaTab } from "../settings/tabs";
 import { useConfirm } from "../shared/confirm-dialog";
 import { AdminEditor } from "./admin-editor";
@@ -205,7 +206,7 @@ function SchemaEditor({
 							</div>
 						)}
 				<div className="min-h-0 flex-1 overflow-y-auto">
-					<div className="flex w-full max-w-[1160px] flex-col gap-6 px-4 py-6 lg:px-10 lg:py-8">
+					<SettingsTabBody>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
@@ -336,7 +337,7 @@ function SchemaEditor({
 								{tab === "file" && <FileInfo file={draft} state={state} />}
 							</>
 						)}
-					</div>
+					</SettingsTabBody>
 				</div>
 			</div>
 			{dialog}

@@ -1194,7 +1194,7 @@ describe("SchemaScreen", () => {
 		type(screen.getByLabelText(t("site.alias.new")), "www.example.com");
 		fireEvent.click(screen.getByRole("button", { name: t("site.alias.add") }));
 		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
-		pressOption(await screen.findByRole("option", { name: t("site.prefix.always") }));
+		pressOption(await screen.findByRole("option", { name: new RegExp(`^${t("site.prefix.always")}`) }));
 
 		const file = await reviewedFile();
 		expect(file.site).toEqual({
@@ -1228,14 +1228,21 @@ describe("SchemaScreen", () => {
 		expect(file.site).toEqual({ previewLocaleParam: false });
 	});
 
-	it("explains each language prefix option with an example address", async () => {
+	it("puts each prefix option's explanation and example in the list, and under the select only the chosen one", async () => {
 		await openSettingsTab("site");
-		const list = await screen.findByTestId("locale-prefix-explanations");
+		const explanation = await screen.findByTestId("locale-prefix-explanations");
+		const text = (mode: "except-default" | "always" | "never") =>
+			t(`site.prefix.${mode}.text`, { default: "en", other: "fr" });
+		expect(explanation.textContent).toBe(text("except-default"));
+		expect(explanation.textContent).toContain("/fr/posts/a");
+
+		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
 		for (const mode of ["except-default", "always", "never"] as const) {
-			expect(within(list).getByText(t(`site.prefix.${mode}.text`, { default: "en", other: "fr" }))).toBeTruthy();
+			const option = await screen.findByRole("option", { name: new RegExp(`^${t(`site.prefix.${mode}`)}`) });
+			expect(option.textContent).toContain(text(mode));
 		}
-		expect(list.textContent).toContain("/posts/a");
-		expect(list.textContent).toContain("/fr/posts/a");
+		pressOption(await screen.findByRole("option", { name: new RegExp(`^${t("site.prefix.never")}`) }));
+		await waitFor(() => expect(screen.getByTestId("locale-prefix-explanations").textContent).toBe(text("never")));
 	});
 
 	it("shows the site URL read-only with where it comes from", async () => {

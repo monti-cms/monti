@@ -23,6 +23,7 @@ import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch, errorText } from "../admin-api";
 import { Labeled } from "../schema/controls";
 import { Section } from "../schema/section";
+import { SettingsTabBody } from "../settings/tab-body";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
@@ -108,10 +109,7 @@ export function ApiKeysSettings() {
 	];
 
 	return (
-		<div
-			className="mx-auto flex w-full max-w-[1040px] flex-col gap-6 px-4 py-6 lg:px-10 lg:py-9"
-			data-testid="api-keys-settings"
-		>
+		<SettingsTabBody data-testid="api-keys-settings">
 			{list && !list.secretsAvailable && (
 				<Alert variant="danger" layout="stack">
 					<AlertTitle>{t("secret.title")}</AlertTitle>
@@ -163,7 +161,7 @@ export function ApiKeysSettings() {
 				/>
 			)}
 			<ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
-		</div>
+		</SettingsTabBody>
 	);
 }
 

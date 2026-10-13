@@ -370,11 +370,10 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"site.prefix.always": "Always",
 		"site.prefix.never": "Never",
 		"site.prefix.except-default.text":
-			"Skip the default language: it has no prefix and the other languages start with their code. Example: /posts/a and /{other}/posts/a.",
-		"site.prefix.always.text":
-			"Always: every language starts with its code. Example: /{default}/posts/a and /{other}/posts/a.",
+			"The default language has no prefix; the others start with their code. Example: /posts/a and /{other}/posts/a.",
+		"site.prefix.always.text": "Every language starts with its code. Example: /{default}/posts/a and /{other}/posts/a.",
 		"site.prefix.never.text":
-			"Never: addresses carry no language, for a site with one language or one domain per language. Example: /posts/a.",
+			"No language in addresses, for a site with one language or one domain per language. Example: /posts/a.",
 		"site.aliases": "Other host names",
 		"site.aliasesHint": "Other hosts of the same site, such as www.example.com. Links to them count as internal links.",
 		"site.alias.add": "Add host",
@@ -834,10 +833,10 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"site.prefix.always": "항상",
 		"site.prefix.never": "표시 안 함",
 		"site.prefix.except-default.text":
-			"기본 언어는 생략: 기본 언어는 접두사가 없고 다른 언어는 코드로 시작합니다. 예: /posts/a, /{other}/posts/a",
-		"site.prefix.always.text": "항상: 모든 언어가 코드로 시작합니다. 예: /{default}/posts/a, /{other}/posts/a",
+			"기본 언어는 접두사가 없고 다른 언어는 코드로 시작합니다. 예: /posts/a, /{other}/posts/a",
+		"site.prefix.always.text": "모든 언어가 코드로 시작합니다. 예: /{default}/posts/a, /{other}/posts/a",
 		"site.prefix.never.text":
-			"표시 안 함: 주소에 언어가 붙지 않습니다. 언어가 하나이거나 언어마다 도메인이 있는 사이트용입니다. 예: /posts/a",
+			"주소에 언어가 붙지 않습니다. 언어가 하나이거나 언어마다 도메인이 있는 사이트용입니다. 예: /posts/a",
 		"site.aliases": "다른 호스트 이름",
 		"site.aliasesHint": "같은 사이트의 다른 호스트입니다(예: www.example.com). 이 주소로 건 링크도 내부 링크로 봅니다.",
 		"site.alias.add": "호스트 추가",

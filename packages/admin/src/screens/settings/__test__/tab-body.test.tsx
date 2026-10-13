@@ -1,0 +1,20 @@
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { SettingsTabBody } from "../tab-body";
+
+afterEach(cleanup);
+
+describe("settings tab body", () => {
+	it("is left-aligned under the header with one maximum width, and lets a tab add to its classes", () => {
+		render(
+			<SettingsTabBody data-testid="body" className="gap-3">
+				content
+			</SettingsTabBody>,
+		);
+		const body = screen.getByTestId("body");
+		// Not centered: no auto margins.
+		expect(body.className).not.toMatch(/\bmx-auto\b/);
+		expect(body.className).toContain("max-w-[1160px]");
+		expect(body.className).toContain("gap-3");
+	});
+});

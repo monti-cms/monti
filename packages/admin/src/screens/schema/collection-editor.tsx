@@ -212,7 +212,7 @@ export function CollectionEditor({
 						description={t("collection.basicsDescription")}
 						note={isNew ? undefined : t("collection.nameHint")}
 					>
-						<div className="flex max-w-md flex-col gap-6">
+						<div className="flex flex-col gap-6">
 							<TextInput
 								label={t("collection.label")}
 								value={collection.label as string | undefined}

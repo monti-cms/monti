@@ -282,7 +282,7 @@ export function LocalesEditor({
 				description={t("locales.defaultDescription")}
 				testId="locales-default"
 			>
-				<div className="flex max-w-md flex-col gap-6">
+				<div className="flex flex-col gap-6">
 					<Pick
 						label={t("locales.default")}
 						hint={t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) })}

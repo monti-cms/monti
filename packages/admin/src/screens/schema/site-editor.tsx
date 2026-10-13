@@ -49,7 +49,7 @@ export function SiteEditor({
 	return (
 		<div className="flex flex-col gap-12" data-testid="site-settings">
 			<Section wide title={t("site.identityTitle")} description={t("site.identityDescription")}>
-				<div className="flex max-w-md flex-col gap-6">
+				<div className="flex flex-col gap-6">
 					<TextInput
 						label={t("site.name")}
 						hint={t("site.nameHint")}
@@ -66,7 +66,7 @@ export function SiteEditor({
 				</div>
 			</Section>
 			<Section wide title={t("site.previewTitle")} description={t("site.previewDescription")}>
-				<div className="flex max-w-md flex-col gap-6">
+				<div className="flex flex-col gap-6">
 					<TextInput
 						label={t("site.previewPath")}
 						hint={t("site.previewPathHint")}
@@ -90,27 +90,25 @@ export function SiteEditor({
 				</div>
 			</Section>
 			<Section wide title={t("site.addressTitle")} description={t("site.addressDescription")}>
-				<div className="flex max-w-md flex-col gap-3">
+				<div className="flex flex-col gap-2">
 					<Pick
 						label={t("site.localePrefix")}
 						hint={t("site.localePrefixHint")}
+						control="wide"
 						value={mode}
-						items={PREFIX_MODES.map((value) => ({ value, label: t(`site.prefix.${value}`) }))}
+						items={PREFIX_MODES.map((value) => ({
+							value,
+							label: t(`site.prefix.${value}`),
+							description: t(`site.prefix.${value}.text`, { default: defaultCode, other: otherCode }),
+						}))}
 						onChange={(value) => set("localePrefix", value)}
 					/>
-					<ul
-						className="flex flex-col gap-1 text-cms-muted-foreground text-xs"
-						data-testid="locale-prefix-explanations"
-					>
-						{PREFIX_MODES.map((value) => (
-							<li key={value} className={value === mode ? "font-medium text-cms-foreground" : undefined}>
-								{t(`site.prefix.${value}.text`, { default: defaultCode, other: otherCode })}
-							</li>
-						))}
-					</ul>
+					<p className="max-w-[70ch] text-cms-muted-foreground text-xs" data-testid="locale-prefix-explanations">
+						{t(`site.prefix.${mode}.text`, { default: defaultCode, other: otherCode })}
+					</p>
 				</div>
-				<div className="flex max-w-md flex-col gap-2 border-t pt-6">
-					<Labeled label={t("site.aliases")} hint={t("site.aliasesHint")}>
+				<div className="flex flex-col gap-2 border-t pt-6">
+					<Labeled label={t("site.aliases")} hint={t("site.aliasesHint")} control="normal">
 						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
 							{aliases.map((alias, index) => (
 								<li key={alias} className="flex items-center gap-2 px-3 py-1" data-testid={`alias-${alias}`}>
@@ -127,8 +125,9 @@ export function SiteEditor({
 						</ul>
 					</Labeled>
 					{!disabled && (
-						<div className="flex items-end gap-2">
+						<div className="flex max-w-xl items-end gap-2">
 							<Input
+								className="flex-1"
 								value={host}
 								aria-label={t("site.alias.new")}
 								placeholder="www.example.com"
@@ -149,8 +148,8 @@ export function SiteEditor({
 						</div>
 					)}
 				</div>
-				<div className="max-w-md border-t pt-6">
-					<Labeled label={t("site.url")} hint={t("site.urlHint")}>
+				<div className="border-t pt-6">
+					<Labeled label={t("site.url")} hint={t("site.urlHint")} control="normal">
 						<div className="flex flex-col gap-0.5 rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="site-url">
 							{siteUrl.url && <code className="text-xs">{siteUrl.url}</code>}
 							<span className="text-cms-muted-foreground text-xs">{t(URL_NOTE[siteUrl.from])}</span>
