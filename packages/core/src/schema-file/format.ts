@@ -42,13 +42,11 @@ const base = {
 		.record(text, z.union([text, z.number(), flag]))
 		.optional()
 		.describe("Settings for the input."),
-	hidden: flag.optional().describe("Stored and validated, but no input is drawn."),
 	role: text
 		.optional()
 		.describe(
 			"The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection.",
 		),
-	tab: text.optional().describe("Tab of the edit screen the field is drawn in."),
 };
 
 const textField = strict({
@@ -111,9 +109,7 @@ const conditionalField = strict({
 	localized: base.localized,
 	input: base.input,
 	inputOptions: base.inputOptions,
-	hidden: base.hidden,
 	role: base.role,
-	tab: base.tab,
 	discriminant: selectField.describe("The select that decides which fields show."),
 	values: z.record(text, z.record(text, valueField)).describe("Option value -> the fields shown for it."),
 });
@@ -124,9 +120,7 @@ const backlinkField = strict({
 	description: text.optional(),
 	input: base.input,
 	inputOptions: base.inputOptions,
-	hidden: base.hidden,
 	role: base.role,
-	tab: base.tab,
 	from: text.describe("The other collection that has the relation field."),
 	via: text.describe("The many relation field of that collection that points here."),
 	createInline: flag.optional(),
@@ -138,8 +132,6 @@ const viewField = strict({
 	view: text.describe("Name of a view registered by an admin plugin (kebab-case)."),
 	label: text.optional(),
 	description: text.optional(),
-	hidden: flag.optional(),
-	tab: text.optional(),
 });
 
 const FIELD_KINDS = "text, slug, relation, select, media, conditional, backlink or view";

@@ -46,15 +46,8 @@ interface BaseField {
 	 * Settings passed to the default input or the input `input` points to (e.g. recommended character count). The core does not read it. Only JSON values.
 	 */
 	readonly inputOptions?: Readonly<Record<string, string | number | boolean>>;
-	/** Only stored and validated; no input is drawn in the properties panel. The stored value is left as is. */
-	readonly hidden?: boolean;
 	/** The meaning of the field (`FieldRole`). Does not overlap within a collection. */
 	readonly role?: FieldRole;
-	/**
-	 * Tab name in which this field is drawn in the edit screen's properties area. A `tab` on a layout group (`layout`) takes precedence. Lets field groups provided by an extension
-	 * gather in their own tab even if the site does not write a layout. If absent, it is the default tab ("Properties").
-	 */
-	readonly tab?: string;
 }
 
 export interface TextField extends BaseField {
@@ -155,9 +148,6 @@ export interface ViewField {
 	/** Name above the screen. If absent, it is drawn without a name. */
 	readonly label?: string;
 	readonly description?: string;
-	readonly hidden?: boolean;
-	/** Tab to draw in (same as `BaseField.tab`). */
-	readonly tab?: string;
 	readonly localized?: undefined;
 	readonly required?: undefined;
 	readonly input?: undefined;

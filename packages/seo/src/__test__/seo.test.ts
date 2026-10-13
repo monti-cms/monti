@@ -43,17 +43,16 @@ describe("seoFields", () => {
 		expect(missing.every((key) => key.endsWith(".prompt"))).toBe(true);
 	});
 
-	it("changes names, labels, tab, per-language values and recommended lengths, and omits slots (stored names are kept as they are)", () => {
+	it("changes names, labels, per-language values and recommended lengths, and omits slots (stored names are kept as they are)", () => {
 		const bundle = seoFields({
 			keys: { title: "metaTitle", image: "ogImageId" },
 			labels: { title: "Meta title" },
-			tab: "Search",
 			localized: false,
 			limits: { title: 70 },
 			omit: ["canonical", "preview"],
 		});
 		expect(Object.keys(bundle)).toEqual(["metaTitle", "seoDescription", "ogImageId", "seoNoindex"]);
-		expect(bundle.metaTitle).toMatchObject({ label: "Meta title", tab: "Search", inputOptions: { limit: 70 } });
+		expect(bundle.metaTitle).toMatchObject({ label: "Meta title", inputOptions: { limit: 70 } });
 		expect(bundle.metaTitle.localized).toBeUndefined();
 	});
 });
@@ -165,12 +164,20 @@ describe("current config: AI features", () => {
 		expect(actions.seoTitle?.prompt).toContain(`${limit} characters`);
 	});
 
-	it("all SEO fields are in their own tab", () => {
+	it("the plugin places every SEO field in a tab of its own, found by role and by the preview view", () => {
 		for (const collection of testSite.COLLECTIONS) {
+			const placed = testSite.panelGroupsOf(collection).find((group) => group.placedBy === "seo");
 			for (const { name, field } of valueFieldsOf(testSite.schemaOf(collection))) {
-				if (Object.values(SEO_ROLES).includes(field.role as never)) expect(field.tab, name).toBeTruthy();
+				if (Object.values(SEO_ROLES).includes(field.role as never)) expect(placed?.fields, name).toContain(name);
 			}
 		}
 		expect(testSite.plugins?.some((plugin) => plugin.name === "seo")).toBe(true);
+	});
+
+	it("takes the tab name from the plugin options, and places nothing in a collection without SEO fields", () => {
+		const layout = (tab?: string) => seo(tab ? { tab } : {}).contributes?.layout;
+		expect(layout()).toEqual([expect.objectContaining({ tab: "SEO", views: ["search"] })]);
+		expect(layout("Search")).toEqual([expect.objectContaining({ tab: "Search" })]);
+		expect(seo({ ai: false }).contributes).not.toHaveProperty("ai");
 	});
 });

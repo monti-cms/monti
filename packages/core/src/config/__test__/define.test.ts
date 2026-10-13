@@ -564,16 +564,22 @@ describe("defineSite", () => {
 		);
 	});
 
-	it("checks field tabs and media fields", () => {
+	it("checks media fields, and refuses a tab on a field: tabs live on layout groups", () => {
 		const article = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
 			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra } });
-		const ok = article({ hero: fields.media({ label: "Hero", accept: "file", tab: "Media" }) });
+		const ok = article({ hero: fields.media({ label: "Hero", accept: "file" }) });
 		expect(() => defineSite({ collections: { ok }, locales, defaultLocale: "en" })).not.toThrow();
-		const longTab = article({ hero: fields.media({ label: "Hero", tab: "x".repeat(21) }) });
+		const tabbed = article({ hero: { ...fields.media({ label: "Hero" }), tab: "Media" } as never });
 		expectIssue(
-			() => defineSite({ collections: { longTab }, locales, defaultLocale: "en" }),
-			"collections.longTab.fields.hero.tab",
-			"tab-name",
+			() => defineSite({ collections: { tabbed }, locales, defaultLocale: "en" }),
+			"collections.tabbed.fields.hero.tab",
+			"unknown-key",
+		);
+		const hidden = article({ note: { ...fields.text({ label: "Note" }), hidden: true } as never });
+		expectIssue(
+			() => defineSite({ collections: { hidden }, locales, defaultLocale: "en" }),
+			"collections.hidden.fields.note.hidden",
+			"unknown-key",
 		);
 		const badAccept = article({ hero: { ...fields.media({ label: "Hero" }), accept: "video" } as never });
 		expectIssue(

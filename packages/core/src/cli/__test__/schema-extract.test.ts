@@ -125,16 +125,18 @@ describe("extract -> load round trip", () => {
 		const { schema } = extractSchemaData(blog as CmsConfig);
 		const post = schema.collections.post;
 		expect(post?.fields.searchPreview).toMatchObject({ kind: "view", view: "search" });
-		expect(post?.fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle", tab: "SEO" });
+		expect(post?.fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle" });
 	});
 });
 
 describe("what stays in code", () => {
 	it("lists blocks, site.url and what else needs code, and nothing about data", () => {
 		const { stays } = extractSchemaData(blog as CmsConfig);
-		expect(stays.map((item) => item.what)).toEqual(["site.url", "blocks"]);
-		expect(stays[1]?.detail).toContain("callout");
-		expect(stays[1]?.detail).toContain("notice");
+		expect(stays.map((item) => item.what)).toEqual(["site.url", "plugins", "blocks"]);
+		// The SEO fields are data in the schema; the plugin that places them in their tab stays in code.
+		expect(stays[1]?.detail).toContain("seo");
+		expect(stays[2]?.detail).toContain("callout");
+		expect(stays[2]?.detail).toContain("notice");
 	});
 
 	it("lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {

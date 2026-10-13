@@ -24,19 +24,19 @@ function renderFields(value: Partial<EntryFormValue>, props: Parameters<typeof S
 
 describe("SchemaFields on the form provider", () => {
 	it("shows a publish problem under its field and links it to the input", () => {
-		const issue = { code: "missing_field", path: "title", message: "제목" };
-		renderFields({ issues: [issue] }, { include: (group) => group.fields.includes("title") });
-		const input = screen.getByLabelText(/제목/) as HTMLInputElement;
+		const issue = { code: "missing_field", path: "summary", message: "요약" };
+		renderFields({ issues: [issue] }, { include: (group) => group.fields.includes("summary") });
+		const input = screen.getByLabelText(/요약/) as HTMLInputElement;
 		expect(input.getAttribute("aria-invalid")).toBe("true");
-		expect(input.getAttribute("aria-describedby")).toBe("cms-title-error");
-		expect(document.getElementById("cms-title-error")?.textContent).toBe(cmsIssueMessage(testSite, issue));
+		expect(input.getAttribute("aria-describedby")).toBe("cms-summary-error");
+		expect(document.getElementById("cms-summary-error")?.textContent).toBe(cmsIssueMessage(testSite, issue));
 	});
 
 	it("a change reaches the owner as a patch of that field only", () => {
-		const form: EntryForm = { ...EMPTY_FORM, title: "A", oldField: "kept" };
-		const setForm = renderFields({ form }, { include: (group) => group.fields.includes("title") });
+		const form: EntryForm = { ...EMPTY_FORM, summary: "A", oldField: "kept" };
+		const setForm = renderFields({ form }, { include: (group) => group.fields.includes("summary") });
 		fireEvent.change(screen.getByDisplayValue("A"), { target: { value: "AB" } });
-		expect(setForm).toHaveBeenCalledWith({ title: "AB" });
+		expect(setForm).toHaveBeenCalledWith({ summary: "AB" });
 	});
 
 	it("the slug input uses `onSlugChange` when given, and the form otherwise", () => {

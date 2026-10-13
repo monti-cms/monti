@@ -572,12 +572,6 @@ export function FieldEditor({
 					<details className="rounded-md border border-dashed px-2.5 py-1.5 text-sm">
 						<summary className="cursor-pointer text-cms-muted-foreground text-xs">{t("field.advanced")}</summary>
 						<div className="mt-2 grid gap-3 sm:grid-cols-2">
-							<FlagSwitch
-								label={t("field.hidden")}
-								hint={t("field.hiddenHint")}
-								checked={field.hidden === true}
-								onChange={(on) => set("hidden", on ? true : undefined)}
-							/>
 							{valueKind && (
 								<TextInput
 									label={t("field.role")}
@@ -586,12 +580,6 @@ export function FieldEditor({
 									onChange={(value) => set("role", orUndefined(value))}
 								/>
 							)}
-							<TextInput
-								label={t("field.tab")}
-								hint={t("field.tabHint")}
-								value={field.tab as string | undefined}
-								onChange={(value) => set("tab", orUndefined(value))}
-							/>
 							{valueKind && (
 								<TextInput
 									label={t("field.input")}

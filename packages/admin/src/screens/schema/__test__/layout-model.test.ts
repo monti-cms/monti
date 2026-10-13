@@ -1,5 +1,5 @@
+import { DEFAULT_TAB, type NamedPlacement, type PanelSource, panelGroupsOf } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { layoutGroupsOfSchema } from "../../entries/layout-groups";
 import {
 	addGroup,
 	addTab,
@@ -22,9 +22,11 @@ import {
 	treeOf,
 	withTree,
 } from "../layout-model";
-import { fieldsOf, layoutOf, type Obj } from "../schema-model";
+import { fieldsOf, type Obj } from "../schema-model";
 
-const DEFAULT = "Properties";
+const DEFAULT = DEFAULT_TAB;
+/** What a plugin places: the fields with the role `seoTitle`, in the `SEO` tab. */
+const PLACEMENTS: NamedPlacement[] = [{ plugin: "seo", tab: "SEO", roles: ["seoTitle"] }];
 const text = (label: string, extra: Obj = {}): Obj => ({ kind: "text", label, ...extra });
 const post = (layout?: unknown, extra: Record<string, Obj> = {}): Obj => ({
 	label: "Post",
@@ -35,13 +37,12 @@ const post = (layout?: unknown, extra: Record<string, Obj> = {}): Obj => ({
 		summary: text("Summary"),
 		cover: text("Cover"),
 		body: text("Body"),
-		internal: text("Internal", { hidden: true }),
-		seoTitle: text("SEO title", { tab: "SEO" }),
+		seoTitle: text("SEO title", { role: "seoTitle" }),
 		...extra,
 	},
 	...(layout ? { layout } : {}),
 });
-const read = (collection: Obj) => treeOf(collection, DEFAULT);
+const read = (collection: Obj) => treeOf(collection, PLACEMENTS);
 const roundTrip = (collection: Obj, tree: Tree) => read(withTree(collection, tree));
 /** The tree as plain rows: a group is `[title, fields]`, a run of fields in no group is `fields`. */
 const shape = (tree: Tree) =>
@@ -50,26 +51,19 @@ const shape = (tree: Tree) =>
 		blocks: tab.blocks.map((block) => (block.title === null ? block.fields : [block.title, block.fields])),
 		locked: tab.locked,
 	}));
-/** What the real panel draws, in the shape the tests compare: groups per tab, in order. */
+/** What the real panel draws (core's groups), in the shape the tests compare: groups per tab, in order. */
 const panel = (collection: Obj) =>
-	layoutGroupsOfSchema({
-		fields: fieldsOf(collection) as Record<string, { tab?: string }>,
-		...(layoutOf(collection).length > 0 ? { layout: layoutOf(collection) } : {}),
-	})
-		.map((group) => ({
-			tab: group.tab ?? DEFAULT,
-			group: group.group ?? null,
-			fields: group.fields.filter((name) => !["title", "internal"].includes(name)),
-		}))
+	panelGroupsOf(collection as unknown as PanelSource, PLACEMENTS)
+		.map((group) => ({ tab: group.tab, group: group.group ?? null, fields: [...group.fields] }))
 		.filter((group) => group.fields.length > 0);
 
 // Like the example Post: fields in no group first, then titled groups, then the rest.
 const LEADING_RUN = [{ fields: ["slug", "summary"] }, { group: "Media", fields: ["cover"] }];
 
 describe("layout tree", () => {
-	it("pins the title and hidden fields, locks fields a plugin placed, and keeps the rest in one run", () => {
+	it("pins the title, locks fields a plugin placed, and keeps the rest in one run", () => {
 		const tree = read(post());
-		expect(tree.pinned).toEqual(["title", "internal"]);
+		expect(tree.pinned).toEqual(["title"]);
 		expect(shape(tree)).toEqual([
 			{ tab: DEFAULT, blocks: [["slug", "summary", "cover", "body"]], locked: [] },
 			{ tab: "SEO", blocks: [], locked: ["seoTitle"] },
@@ -110,10 +104,10 @@ describe("layout tree", () => {
 		expect(tree.tabs[0]?.blocks[0]?.collapsed).toBe(true);
 	});
 
-	it("never puts the title, a hidden field or a locked field in a group", () => {
-		const tree = read(post([{ group: "A", fields: ["title", "internal", "seoTitle", "summary"] }]));
+	it("never puts the title or a locked field in a group", () => {
+		const tree = read(post([{ group: "A", fields: ["title", "seoTitle", "summary"] }]));
 		expect(tree.tabs[0]?.blocks[0]?.fields).toEqual(["summary"]);
-		expect(tree.pinned).toEqual(["title", "internal"]);
+		expect(tree.pinned).toEqual(["title"]);
 		expect(tree.tabs[1]?.locked).toEqual(["seoTitle"]);
 	});
 
@@ -158,15 +152,16 @@ describe("layout tree", () => {
 		tree = addGroup(tree, 0, "Media");
 		tree = placeField(tree, "cover", 0, 1);
 		tree = addTab(tree, "More");
-		tree = addGroup(tree, 2, "Details");
-		tree = placeField(tree, "summary", 2, 0);
-		tree = moveFieldToTab(tree, "slug", 2);
+		// The tab a plugin fills stays after the tabs of the site's own, the way the panel draws it.
+		expect(tree.tabs.map((tab) => tab.name)).toEqual([DEFAULT, "More", "SEO"]);
+		tree = addGroup(tree, 1, "Details");
+		tree = placeField(tree, "summary", 1, 0);
+		tree = moveFieldToTab(tree, "slug", 1);
 		const saved = withTree(collection, tree);
-		expect(Object.keys(fieldsOf(saved))).toEqual(["title", "internal", "body", "cover", "seoTitle", "summary", "slug"]);
+		expect(Object.keys(fieldsOf(saved))).toEqual(["title", "body", "cover", "summary", "slug", "seoTitle"]);
 		expect(saved.layout).toEqual([
 			{ fields: ["body"] },
 			{ group: "Media", fields: ["cover"] },
-			{ fields: [], tab: "SEO" },
 			{ group: "Details", fields: ["summary"], tab: "More" },
 			{ fields: ["slug"], tab: "More" },
 		]);
@@ -240,7 +235,6 @@ describe("layout tree", () => {
 		expect(withTree(post(), tree).layout).toEqual([
 			{ fields: ["slug", "summary", "body"] },
 			{ group: "Renamed", fields: ["cover"], collapsed: true },
-			{ fields: [], tab: "SEO" },
 		]);
 		tree = editGroup(tree, { tab: 0, block: 1 }, { collapsed: false });
 		expect(tree.tabs[0]?.blocks[1]?.collapsed).toBeUndefined();
@@ -303,3 +297,77 @@ describe("layout tree", () => {
 /** Whether the field sits in a tab after the first one. */
 const placeUp = (tree: Tree, name: string) =>
 	tree.tabs.slice(1).some((tab) => tab.blocks.some((block) => block.fields.includes(name)));
+
+describe("the tree, the schema and the panel agree", () => {
+	/** A small deterministic generator, so a failure repeats. */
+	const random = (seed: number) => () => {
+		seed = (seed * 1664525 + 1013904223) % 4294967296;
+		return seed / 4294967296;
+	};
+	const NAMES = ["slug", "summary", "cover", "body", "seoTitle", "extra"];
+
+	/** Every move the tree offers, picked at random: the result is whatever a person could build with the tree. */
+	const edit = (tree: Tree, next: () => number): Tree => {
+		const pick = <T>(list: readonly T[]): T => list[Math.floor(next() * list.length)] as T;
+		const name = pick(NAMES);
+		const tab = Math.floor(next() * tree.tabs.length);
+		const block = Math.floor(next() * Math.max(1, tree.tabs[tab]?.blocks.length ?? 1));
+		switch (Math.floor(next() * 11)) {
+			case 0:
+				return placeField(tree, name, tab, block, Math.floor(next() * 3));
+			case 1:
+				return placeUngrouped(tree, name, tab, Math.floor(next() * 3));
+			case 2:
+				return moveFieldBy(tree, name, next() < 0.5 ? -1 : 1);
+			case 3:
+				return addGroup(tree, tab, `G${Math.floor(next() * 4)}`);
+			case 4:
+				return removeGroup(tree, { tab, block });
+			case 5:
+				return moveGroup(
+					tree,
+					{ tab, block },
+					{ tab: Math.floor(next() * tree.tabs.length), block: Math.floor(next() * 3) },
+				);
+			case 6:
+				return addTab(tree, `T${Math.floor(next() * 3)}`);
+			case 7:
+				return removeTab(tree, tab);
+			case 8:
+				return moveTab(tree, tab, next() < 0.5 ? -1 : 1);
+			case 9:
+				return moveOutOfGroup(tree, name);
+			default:
+				return dropFieldOnField(tree, name, pick(NAMES));
+		}
+	};
+
+	it("keeps what a person built through any run of edits: tree to schema to tree is the same tree, and the panel draws the groups of the tree", () => {
+		for (let seed = 1; seed <= 60; seed += 1) {
+			const next = random(seed);
+			let collection = post(undefined, { extra: text("Extra") });
+			for (let step = 0; step < 14; step += 1) {
+				const tree = edit(read(collection), next);
+				collection = withTree(collection, tree);
+				const again = read(collection);
+				// The tree survives the file.
+				expect(shape(again), `seed ${seed} step ${step}`).toEqual(shape(tree));
+				// Every field the panel draws is in the tree once, and the panel's groups are the tree's blocks and locked fields.
+				const drawn = shape(again).flatMap((tab) => [
+					...tab.blocks.flatMap((b) => (b.length === 2 && typeof b[0] === "string" && Array.isArray(b[1]) ? b[1] : b)),
+					...tab.locked,
+				]);
+				expect(new Set(drawn).size).toBe(drawn.length);
+				expect([...drawn].sort()).toEqual(
+					Object.keys(fieldsOf(collection))
+						.filter((n) => n !== "title")
+						.sort(),
+				);
+				const fromPanel = panel(collection).flatMap((group) => group.fields);
+				expect([...fromPanel].sort()).toEqual([...drawn].sort());
+				// Saving a tree that was just read changes nothing.
+				expect(withTree(collection, again)).toEqual(collection);
+			}
+		}
+	});
+});

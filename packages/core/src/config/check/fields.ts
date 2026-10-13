@@ -75,7 +75,6 @@ export function checkField(list: IssueList, path: string, name: string, field: F
 			`"${name}" is not a field name: letters, digits, "_" and "-", starting with a letter or "_"`,
 		);
 	}
-	checkTabName(list, pathOf(path, "tab"), (field as { tab?: string }).tab);
 	switch (field.kind) {
 		case "select":
 			checkSelect(list, path, field);

@@ -12,6 +12,7 @@ import { createI18n, type SiteI18n } from "../i18n";
 import { createActiveTranslator, resolveLabels, withActiveLocale } from "../i18n/active";
 import type { CmsPlugin } from "../plugin/define";
 import { createSchemas, type SiteSchemas } from "../schema/derive";
+import { createPanel, type SitePanel } from "../schema/layout";
 
 /**
  * A site config that is any config: what code that works on a site without knowing which one it is accepts. The config a site writes (`defineSite(...)`) is
@@ -40,7 +41,8 @@ export type Site<Config extends AnyCmsConfig = AnyCmsConfig> = SiteI18n &
 	SiteAdminFeatures &
 	SiteTime &
 	SiteBlocks &
-	SiteCodeBlock & {
+	SiteCodeBlock &
+	SitePanel & {
 		/** The config the site was created from. */
 		readonly config: Config;
 		/** The plugins of the config (an empty list if it has none). */
@@ -142,6 +144,7 @@ export function createSite<const Config extends AnyCmsConfig>(config: Config): S
 			...createTime(config),
 			...blocks,
 			...createCodeBlock(config.codeBlock),
+			...createPanel(schemas, plugins),
 			config,
 			plugins,
 			getPluginOptions: <Options = unknown>(name: string) =>

@@ -9,6 +9,7 @@ import { checkPluginNames, checkPluginPages } from "../plugin/collisions";
 import type { CmsPlugin } from "../plugin/define";
 import { checkBodyAllowed } from "../schema/allowed";
 import { type CollectionSchema, normalizeCollection } from "../schema/collection";
+import { checkPlacements } from "../schema/layout";
 import { configShapeIssues } from "../schema-file/format";
 import { type ConfigDefaults, isRecord, layerSite, resolveSchemaConfig } from "../schema-file/merge";
 import { SCHEMA_SOURCE } from "../schema-file/source";
@@ -214,6 +215,7 @@ function checkConfig(
 			plugins.flatMap((plugin) => (plugin.nav ?? []).map((item) => ({ plugin: plugin.name, path: item.path }))),
 		),
 	);
+	list.addAll(checkPlacements(plugins));
 	const blocks = blockDefinitions.map((block) => block.name);
 	for (const plugin of plugins) {
 		list.addAll(

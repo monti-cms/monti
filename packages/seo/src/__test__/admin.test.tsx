@@ -37,7 +37,7 @@ const field = (role: string) => {
 	return stored;
 };
 const summaryField = testSite.roleField(collection, "summary");
-const tab = field(SEO_ROLES.title).field.tab ?? "";
+const tab = testSite.panelTabOf(collection, field(SEO_ROLES.title).name);
 
 function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] = []) {
 	render(
@@ -120,9 +120,7 @@ describe("SEO extension admin UI", () => {
 	});
 
 	it("a collection without an SEO tab has a single default tab", () => {
-		const plain = testSite.COLLECTIONS.find((name) =>
-			Object.values(testSite.schemaOf(name).fields).every((item) => !item.tab),
-		);
+		const plain = testSite.COLLECTIONS.find((name) => testSite.panelTabsOf(name).length === 1);
 		if (!plain) return;
 		render(
 			<SiteProvider site={testSite}>

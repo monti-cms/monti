@@ -1213,7 +1213,7 @@ export default defineSchema({
 **Format.** Each part is the options object of the matching builder, with its `kind`: a collection is what `defineCollection` takes (`label`, `kind`, `body`, `fields`, `path`, `icon`, `layout`, `list`), and a field is what `fields.<kind>` takes with `kind` added. Field objects stay plain literals. The field kinds are `text`, `slug`, `relation` (`many`, `ordered`, `createInline`, `publishedOnly`, `allowUnpublished`),
 `select` (`options` and `defaultValue`), `media` (`accept: "image" | "file"`: the image field), `conditional` (a `discriminant` select and the `values` that show for each option), `backlink` and `view`: every kind `fields.*` has. `fields.*` has no date, boolean or number kind today, so the file has none. A collection that holds a date keeps it in a text field.
 The types of `defineSchema` show a wrong `kind` or a misspelt option value in the editor; an unknown extra key is caught at run time by the strict check, and so are rules between collections, such as a relation to a collection that exists (checked when the config loads).
-**There are no retired aliases:** `workflow` and `required: "publish"` are errors (use `kind` and `required: true`).
+**Unknown options are errors:** a key the format does not have (a misspelt option, or one that was removed) is reported with its path and, when one is close, the key you may have meant.
 
 **Loading.** `monti.config.ts` imports the module and passes its default export to `defineConfig`. An `import` is what the bundler ships with the build, so the file is read-only in production. Scripts and the `monti` command load the file through tsx (`bin/monti.mjs` registers it).
 
@@ -1402,9 +1402,8 @@ Everything in this table except `codeBlock`, `media` and `editor` can be written
 
 - **Kind (`kind`).** A `document` has a body, separates draft from published content, and is published explicitly. An `item` is a small form whose saved values
   are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents. `body` can also be an object that limits the blocks, marks and heading levels the body allows ("Allowed blocks and marks per body").
-  The old name `workflow: "publish" | "record"` was removed; a config that still has it fails with the `kind` to use (`publish` → `document`, `record` → `item`).
-- **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
-- **List columns.** Not part of the schema: each admin chooses the columns on the list screen (Column settings), saved per account. Until they do, the list shows the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date. A config that still has `list` fails with a message to delete it.
+- **Layout (`layout`).** If absent, it is one group in field declaration order. Plugins place their own fields in tabs of their own (see Tabs).
+- **List columns.** Not part of the schema: each admin chooses the columns on the list screen (Column settings), saved per account. Until they do, the list shows the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
 
 A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links written as an address (they are stored as the id of the entry, see the public read API) and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
 
@@ -1435,10 +1434,12 @@ A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It i
   with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(doc, maxLength)`. The text is taken from the stored document, so it does not depend on the notation the body was written in: prose, headings, list items, table cells, block bodies and the text attributes of blocks (a callout title); code, math and images are left out. Body search text is built the same way, and also keeps code, image alt text and captions.
 - **Multi-line input.** A text field with `multiline: true` is a multi-line input, and `rows` (default 2) sets the initial number of rows.
 - **Field names you cannot use.** The key the core uses separately in metadata (`translations`) cannot be a field name.
-- **Tabs.** Putting `tab: "name"` on a field or `tab` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters).
-  The group's `tab` comes first; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` gather into one group per tab even without a layout.
-  So field groups that extensions provide (e.g. `seoFields()`) land in their own tab even when the site writes no `layout`. If there is none, the default tab
-  is `Properties`.
+- **Tabs.** `tab: "name"` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters). Tabs live on groups only; a field has
+  no `tab`. A plugin that provides a field set (e.g. `seoFields()` of the SEO extension) places it with the `layout` key of its `contributes`: a tab name, and the
+  roles and view names of its fields (`{ tab: "SEO", roles: [...], views: [...] }`, the type is `PluginPlacement`). Those fields are drawn in that tab whatever the site's `layout`
+  says, and the settings screen shows them locked there. The first tab holds the groups with no `tab`; it is the default tab and has no name of its own: its title is only the admin's wording, so a
+  tab you call "Properties" is a different tab. `site.panelGroupsOf(collection)`, `site.panelTabsOf(collection)` and `site.panelTabOf(collection, path)` are the one
+  place that works out the groups, for the panel, the item panel and the settings screen alike. The title of a document is the heading of the edit screen and is not drawn in the panel.
 - **View field.** `fields.view({ view: "name" })` is a field that stores no value and draws a view in that spot. The admin extension registers the view
   with `fieldViews` (e.g. `search` of the SEO extension). If no view is registered, nothing is drawn.
 - **Swapping the input.** `input: "name"` points at an input that an admin extension registered with `fieldInputs`. Without a registration, the kind's default input is used.
@@ -1449,14 +1450,17 @@ fields: {
 	title: fields.text({ label: "Title", required: true }),
 	slug: fields.slug({ label: "Slug", from: "title" }),
 	excerpt: fields.text({ label: "Excerpt", role: "summary", multiline: true, rows: 3, fillFromBody: { maxLength: 200 } }),
-	hero: fields.media({ label: "Hero image", tab: "Media" }),
-	credit: fields.text({ label: "Credit", tab: "Media" }),
+	hero: fields.media({ label: "Hero image" }),
+	credit: fields.text({ label: "Credit" }),
 },
-layout: [{ fields: ["title", "slug", "excerpt"] }], // hero and credit gather in the Media tab
+layout: [
+	{ fields: ["title", "slug", "excerpt"] },
+	{ group: "Image", tab: "Media", fields: ["hero", "credit"] }, // a tab is named on a group
+],
 ```
 
-`defineConfig` throws an error as soon as the app starts if: a relation field points at a collection that does not exist, the default language is not in the list, a collection has no title field, there are two or more URL fields,
-roles collide or `summary` or `title` is not a text field, a tab name is not 1 to 20 characters, `from` or `fillFromBody` does not match the fields,
+`defineConfig` throws one `ConfigError` as soon as the app starts, listing every problem with its path (`error.issues`: `{ path, code, message }`), if: a relation field points at a collection that does not exist, the default language is not in the list, a collection has no title field, there are two or more URL fields,
+roles collide or `summary` or `title` is not a text field, a tab name is not 1 to 20 characters, an option is not part of the format (a misspelt key gets a "did you mean"), `from` or `fillFromBody` does not match the fields,
 a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
 is wrong.
 

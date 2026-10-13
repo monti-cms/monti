@@ -38,6 +38,7 @@ export * from "./schema/allowed";
 export * from "./schema/collection";
 export * from "./schema/derive";
 export * from "./schema/fields";
+export * from "./schema/layout";
 export * from "./schema/walk";
 export * from "./site";
 export * from "./text-check/normalize";

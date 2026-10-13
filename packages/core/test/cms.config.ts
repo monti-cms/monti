@@ -1,5 +1,6 @@
 import { ALL_BLOCKS } from "../../blocks/src/definitions";
 import { seoFields } from "../../seo/src/fields";
+import { seo as seoPlugin } from "../../seo/src/plugin";
 import { defineBlock, defineCollection, defineSite, fields } from "../src";
 import type { StoredDocument } from "../src/doc/stored-document";
 
@@ -42,8 +43,8 @@ const tagIds = fields.relation({
 });
 
 /**
- * Values for search engines and sharing (SEO extension `seoFields`). Same field names as the blog; all gather in the SEO tab (field `tab`).
- * Tests use only the fields, without the plugin (`seo()`) (admin screen code is not read).
+ * Values for search engines and sharing (SEO extension `seoFields`). Same field names as the blog; the `seo()` plugin places them in the SEO tab.
+ * Tests use the plugin only for the tab it places the fields in (its admin screen code is not read).
  */
 const seo = seoFields({
 	keys: {
@@ -234,6 +235,7 @@ export default defineSite({
 	timeZone: "Asia/Seoul",
 	// Blocks from the blocks extension (`@monti-cms/blocks`) plus user blocks. Tests use only the definitions, without the plugin (admin screen code is not read).
 	blocks: [...ALL_BLOCKS, notice, embed],
+	plugins: [seoPlugin()],
 	seed: {
 		templates: [
 			{

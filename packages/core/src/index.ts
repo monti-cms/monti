@@ -110,6 +110,7 @@ export {
 	type ValueField,
 	type ViewField,
 } from "./schema/fields";
+export type { PluginPlacement } from "./schema/layout";
 export {
 	fieldWithRole,
 	findTitleField,

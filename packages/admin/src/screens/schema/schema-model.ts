@@ -33,9 +33,7 @@ export const FIELD_KEY_ORDER = [
 	"localized",
 	"input",
 	"inputOptions",
-	"hidden",
 	"role",
-	"tab",
 	"fillFromBody",
 	"multiline",
 	"rows",
@@ -267,7 +265,7 @@ export function allFieldNames(collection: Obj): string[] {
 }
 
 /** The properties every kind of field can have, so a change of kind keeps what still applies. */
-const BASE_KEYS = ["label", "description", "required", "localized", "input", "inputOptions", "hidden", "role", "tab"];
+const BASE_KEYS = ["label", "description", "required", "localized", "input", "inputOptions", "role"];
 const NO_VALUE_KEYS = ["required", "localized", "input", "inputOptions", "role"];
 
 /** A field of `kind` with the properties it needs. */

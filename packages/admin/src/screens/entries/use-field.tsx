@@ -41,7 +41,6 @@ export interface FieldState<V extends FormValue = FormValue> {
 	readonly label: string;
 	readonly description: string | undefined;
 	readonly required: boolean;
-	readonly hidden: boolean;
 
 	readonly value: V;
 	/** Changes this field only. Does nothing while `readOnly`. */
@@ -306,7 +305,6 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 			label: definition?.label ?? name,
 			description: definition?.description,
 			required: Boolean(definition && "required" in definition && definition.required) && !locked,
-			hidden: Boolean(definition && "hidden" in definition && definition.hidden),
 			value,
 			setValue,
 			readOnly,

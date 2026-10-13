@@ -54,7 +54,7 @@ export interface CmsPlugin<
 	 */
 	readonly render?: () => Promise<{ readonly documentComponents?: unknown }>;
 	/**
-	 * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`), and the core does not read it.
+	 * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`). The core reads one key itself, `layout`: the tabs of the edit screen's properties panel this plugin places its fields in (see `PluginPlacement`).
 	 * It is unused if no plugin receives it, so an extension can add features without knowing the receiving plugin.
 	 */
 	readonly contributes?: Readonly<Record<string, unknown>>;

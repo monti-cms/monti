@@ -13,7 +13,7 @@ const articleCollection = defineCollection({
 		slug: fields.slug({ label: "Slug", from: "headline", required: true }),
 		excerpt: fields.text({ label: "Excerpt", role: "summary", fillFromBody: true }),
 		topicId: fields.relation({ label: "Topic", to: "topic", required: true }),
-		hero: fields.media({ label: "Hero", role: "heroImage", tab: "Media" }),
+		hero: fields.media({ label: "Hero", role: "heroImage" }),
 		robots: fields.select({
 			label: "Robots",
 			role: "noindex",

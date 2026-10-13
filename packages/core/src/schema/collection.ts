@@ -16,7 +16,7 @@ export interface LayoutGroup<Name extends string = string> {
 	/** Collapsed at first. */
 	readonly collapsed?: boolean;
 	/**
-	 * Tab name in which this group is drawn in the edit screen's properties area. Groups with the same name gather in one tab; if absent, it is drawn in the default tab ("Properties").
+	 * Tab name in which this group is drawn in the edit screen's properties area (1 to 20 characters). Groups with the same name gather in one tab; if absent, it is drawn in the default tab. Tabs live on groups only; the fields a plugin places in a tab of its own (the SEO fields) are not the layout's to list.
 	 */
 	readonly tab?: string;
 }
@@ -51,8 +51,8 @@ export interface CollectionSchema<
 	 */
 	readonly icon?: string;
 	/**
-	 * Properties panel layout. Fields not listed are drawn after the last group in declaration order. If absent, they are drawn in field declaration order,
-	 * and fields that have their own `tab` gather in that tab.
+	 * Properties panel layout. Fields not listed are drawn after the last group in declaration order. If absent, they are drawn in field declaration order.
+	 * Plugins place their own fields in tabs of their own (`contributes.layout`); `panelGroupsOf` is the one place that works out the groups.
 	 */
 	readonly layout?: readonly LayoutGroup[];
 }
