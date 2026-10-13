@@ -16,7 +16,7 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
+import { fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, ChevronsDownUp, Eye, GripVertical, MoveRight, Plus, Trash2, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
@@ -62,6 +62,7 @@ import {
 import { LayoutPreview } from "./layout-preview";
 import { schemaMessages } from "./messages";
 import {
+	addFieldSet,
 	type FieldPlace,
 	fieldsOf,
 	moveField,
@@ -944,6 +945,9 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				),
 			),
 		);
+	// A plugin's field set (the SEO fields) is offered until the collection has fields with its roles.
+	const offeredSets = fieldSetsOf(site.plugins).filter((set) => !hasFieldSet(set, fields));
+	const addSet = (set: (typeof offeredSets)[number]) => editing.update((current) => addFieldSet(current, set));
 	const addTabRow = () =>
 		addTo((tree) => {
 			const name = unique(
@@ -980,6 +984,19 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						<Plus aria-hidden />
 						{t("layout.addGroup")}
 					</Button>
+					{offeredSets.map((set) => (
+						<Button
+							key={`${set.plugin}:${set.id}`}
+							type="button"
+							variant="secondary"
+							size="sm"
+							disabled={disabled}
+							onClick={() => addSet(set)}
+						>
+							<Plus aria-hidden />
+							{t("fields.addSet", { name: set.label })}
+						</Button>
+					))}
 					<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
 						<Plus aria-hidden />
 						{t("field.add")}

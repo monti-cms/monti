@@ -10,8 +10,10 @@ import {
 	defaultCollectionPath,
 	type Field,
 	fieldTraits,
+	freshSetFields,
 	IssueList,
 	NAME_PATTERN,
+	type PluginFieldSet,
 	RESERVED_METADATA_KEYS,
 	TITLE_ROLE,
 } from "@monti-cms/core/client";
@@ -357,6 +359,12 @@ function updateFields(
 
 export function addField(collection: Obj, place: FieldPlace, name: string, field: Obj): Obj {
 	return updateFields(collection, place, (fields) => ({ ...fields, [name]: field }));
+}
+
+/** The fields of a plugin's field set added after the others, under names the collection does not use yet. */
+export function addFieldSet(collection: Obj, set: Pick<PluginFieldSet, "fields">): Obj {
+	const added = freshSetFields(set, fieldsOf(collection)) as Record<string, Obj>;
+	return updateFields(collection, {}, (fields) => ({ ...fields, ...added }));
 }
 
 export function setField(collection: Obj, place: FieldPlace, name: string, update: (field: Obj) => Obj): Obj {

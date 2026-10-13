@@ -263,6 +263,49 @@ describe("SchemaScreen", () => {
 		expect(fields.rating).toEqual({ kind: "text", label: "Rating" });
 	});
 
+	it("offers the SEO plugin's fields on the Fields tab until the collection has them, and adds them to the draft as plain fields", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		const seoName = t("fields.addSet", { name: "SEO" });
+		fireEvent.click(screen.getByRole("button", { name: seoName }));
+		// The collection now has fields with the SEO roles, so the action goes away.
+		await waitFor(() => expect(screen.queryByRole("button", { name: seoName })).toBeNull());
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown> } } })
+			.collections.post.fields;
+		expect(Object.keys(fields).slice(0, 4)).toEqual(["title", "slug", "summary", "status"]);
+		expect(fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle", input: "seo-title" });
+		expect(fields.seoPreview).toMatchObject({ kind: "view", view: "search" });
+		// Plain data: nothing but JSON values reaches the file.
+		expect(JSON.parse(JSON.stringify(fields))).toEqual(fields);
+	});
+
+	it("does not offer the SEO fields for a collection that already has them", async () => {
+		state = screenState({
+			schema: {
+				...schema(),
+				collections: {
+					...schema().collections,
+					post: {
+						...schema().collections.post,
+						fields: {
+							...schema().collections.post.fields,
+							metaTitle: { kind: "text", label: "Meta title", role: "seoTitle" },
+						},
+					},
+				},
+			},
+		});
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		expect(screen.queryByRole("button", { name: t("fields.addSet", { name: "SEO" }) })).toBeNull();
+	});
+
 	it("refuses a field name that is taken or malformed", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
