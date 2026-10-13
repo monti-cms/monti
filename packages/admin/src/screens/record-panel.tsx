@@ -44,7 +44,7 @@ function hasLocaleValues(site: Site, collection: SchemaCollection, form: EntryFo
 }
 
 /**
- * Taxonomy (category, tag, series) edit panel. Opens beside the list. `저장` validates and then applies straight to the public values, and
+ * Taxonomy (category, tag, series) edit panel. Opens beside the list. "Save" validates and then applies straight to the public values, and
  * there is no autosave. The panel stays open after saving (for a new item, it switches to open the item the parent created).
  * Closing with unsaved changes asks whether to discard. Each locale tab above shows whether a translation exists, and on other locale tabs only that locale's name and description are edited.
  * A series' post list and slug are the same in all locales, so they are edited on the default locale tab. Unpublished posts can be included too.

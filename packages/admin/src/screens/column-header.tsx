@@ -196,7 +196,7 @@ export function setRelation(state: ListState, field: string, ids: readonly strin
 
 const clearRelation = (state: ListState, field: string) => setRelation(state, field, []);
 
-/** Change that clears this filter. Used by the chip's `✕` and the popup's `필터 해제`. */
+/** Change that clears this filter. Used by the chip's `✕` and the popup's "Clear filter". */
 export function clearPatchFor(filter: ColumnFilter, state: ListState): Partial<ListState> {
 	switch (filter.kind) {
 		case "text":

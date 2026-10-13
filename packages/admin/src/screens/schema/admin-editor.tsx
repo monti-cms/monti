@@ -12,7 +12,7 @@ const DEFAULT_ADMIN_PATH = "/admin";
 /** The languages the admin has a dictionary for (its own text is translated into these; any other locale falls back to English). */
 const dictionaryLanguages = Object.keys(schemaMessages.messages);
 
-/** A language written in itself (`한국어 (ko)`), falling back to the code. */
+/** A language written in itself (Korean is its own name followed by `(ko)`), falling back to the code. */
 function languageName(code: string): string {
 	try {
 		const name = new Intl.DisplayNames([code], { type: "language" }).of(code);

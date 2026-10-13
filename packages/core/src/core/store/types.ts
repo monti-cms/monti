@@ -205,7 +205,7 @@ export interface ListEntriesItem {
 	 * Non-per-language fields are read from the source draft.
 	 */
 	values: Readonly<Record<string, string>>;
-	/** A published version exists and the latest draft differs from it (`발행됨 · 수정 중`). */
+	/** A published version exists and the latest draft differs from it ("Published · Editing"). */
 	hasUnpublishedChanges: boolean;
 	publishedAt: Date | null;
 	createdAt: Date;

@@ -69,7 +69,7 @@ export interface AiCall {
 }
 
 /**
- * Instruction at the very start of every action. Also states the content language (language of the text being edited, else the site default language) so that it is used where the instructions say "콘텐츠 언어"
+ * Instruction at the very start of every action. Also states the content language (language of the text being edited, else the site default language) so that it is used where the instructions refer to "the content language"
  * (when the language cannot be determined from the material).
  */
 const systemFrame = (call: AiCall, deps: AiRunDeps) =>

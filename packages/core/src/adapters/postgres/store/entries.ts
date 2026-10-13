@@ -343,7 +343,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 		},
 
 		/**
-		 * Translation group. Returns the source and translations in language order. Used by the editor's language switch and `번역본 만들기`.
+		 * Translation group. Returns the source and translations in language order. Used by the editor's language switch and "Create translation".
 		 */
 		getTranslationGroup: async (params: { entryId: string }): Promise<TranslationGroup> => {
 			const rows = await db
@@ -472,7 +472,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 			}));
 		},
 
-		/** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
+		/** The detail screen's "Usages". Returns field relations and body references split into draft and published. */
 		getIncomingReferences: async (params: { targetId: string }): Promise<IncomingReferenceItem[]> => {
 			const rows = await db
 				.selectFrom("entry_references as r")

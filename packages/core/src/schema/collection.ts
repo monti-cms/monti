@@ -20,7 +20,7 @@ export interface LayoutGroup<Name extends string = string> {
 	/** Collapsed at first. */
 	readonly collapsed?: boolean;
 	/**
-	 * Tab name in which this group is drawn in the edit screen's properties area. Groups with the same name gather in one tab; if absent, it is drawn in the default tab (`속성`).
+	 * Tab name in which this group is drawn in the edit screen's properties area. Groups with the same name gather in one tab; if absent, it is drawn in the default tab ("Properties").
 	 */
 	readonly tab?: string;
 }

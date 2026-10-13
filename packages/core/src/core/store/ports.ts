@@ -205,7 +205,7 @@ export interface MediaMetadataStore {
 	listStaleUploads(params: { before: Date }): Promise<MediaAssetRecord[]>;
 }
 
-/** Body templates picked from `새 글`. */
+/** Body templates picked from "New post". */
 export interface TemplateStore {
 	listTemplates(): Promise<BodyTemplate[]>;
 	getTemplate(id: string): Promise<BodyTemplate>;

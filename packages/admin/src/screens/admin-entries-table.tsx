@@ -117,7 +117,7 @@ const MIN_COLUMN_SIZE = 72;
 const MAX_COLUMN_SIZE = 960;
 const helper = createColumnHelper<typeof features, ListEntriesItem>();
 
-/** List date: this year as `9월 27일 14:05`, otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
+/** List date: this year as "Sep 27 14:05" (in the admin language), otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
 const formatDate = (site: Site, value: Date | string | null) => {
 	if (!value) return "—";
 	const sameYear = zonedYear(site, value) === zonedYear(site, Date.now());
@@ -402,7 +402,7 @@ export function AdminEntriesTable({
 	const visibility: ColumnVisibilityState = Object.fromEntries(
 		available.map((column) => [column, column === "title" || (savedVisibility?.[column] ?? defaults.includes(column))]),
 	);
-	/** Folder path from the top level, like `상위 / 하위`. `—` for items outside folders. */
+	/** Folder path from the top level, like `Parent / Child`. `—` for items outside folders. */
 	const folderName = (id: string | null) => {
 		const names: string[] = [];
 		let folder = id ? folders.find((candidate) => candidate.id === id) : undefined;
@@ -727,7 +727,7 @@ export function AdminEntriesTable({
 		onDeleteKey(item);
 	};
 
-	// Add `열기` to the same folder menu as the sidebar tree.
+	// Add "Open" to the same folder menu as the sidebar tree.
 	const folderRowMenu = (folder: Folder): MenuAction[] =>
 		folderActions
 			? [
