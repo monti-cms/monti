@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
 import {
@@ -32,14 +33,18 @@ import {
 	FIELD_KINDS,
 	type FieldKindName,
 	type FieldPlace,
+	fieldAt,
+	fieldProblems,
 	fieldsOf,
 	isObj,
+	KINDS_WITH_SETTINGS,
 	moveField,
 	moveOption,
 	newField,
 	type Obj,
 	optionsOf,
 	type Rename,
+	removeBlock,
 	removeField,
 	removeOption,
 	renameField,
@@ -450,6 +455,7 @@ export function FieldEditor({
 	const label = typeof field.label === "string" ? field.label : "";
 	// The title field is a top-level text field: the one with the title role, or the one named `title`.
 	const isTitle = !place.branch && titleFieldName(editing.collection) === name;
+	const blocked = removeBlock(editing.collection, place, name);
 
 	return (
 		<Collapsible
@@ -491,6 +497,7 @@ export function FieldEditor({
 					name={name}
 					onMove={(delta) => editing.update((collection) => moveField(collection, place, name, delta))}
 					onRemove={() => editing.update((collection) => removeField(collection, place, name))}
+					removeBlocked={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
 				/>
 			</div>
 			<CollapsibleContent>
@@ -600,6 +607,93 @@ export function FieldEditor({
 	);
 }
 
+/**
+ * The settings a new field needs, asked before it exists: the field is made in a copy of the collection and joins the real one only when its required
+ * settings are complete, so there is never a half-made field in the file.
+ */
+function NewFieldDialog({
+	editing,
+	place,
+	name,
+	kind,
+	onClose,
+}: {
+	editing: CollectionEditing;
+	place: FieldPlace;
+	name: string;
+	kind: FieldKindName;
+	onClose: (added: boolean) => void;
+}) {
+	const t = useTranslator(schemaMessages);
+	const { collectionNames } = useSchemaEdit();
+	const [draft, setDraft] = useState<Obj>(() =>
+		addField(
+			editing.collection,
+			place,
+			name,
+			newField(kind, name.charAt(0).toUpperCase() + name.slice(1), collectionNames),
+		),
+	);
+	const field = fieldAt(draft, place, name) ?? {};
+	const change = (update: (field: Obj) => Obj) => setDraft((current) => setField(current, place, name, update));
+	const set = (key: string, value: unknown) => change((current) => setProp(current, key, value, FIELD_KEY_ORDER));
+	// Edits inside the dialog (the fields of a branch of a conditional field) go to the copy; renames of a field that is not stored yet need no record.
+	const draftEditing: CollectionEditing = {
+		collectionName: editing.collectionName,
+		collection: draft,
+		update: (apply) => setDraft((current) => apply(current)),
+		onRename: () => undefined,
+	};
+	const problems = fieldProblems(field, draft, collectionNames);
+	return (
+		<Dialog open onOpenChange={(open) => !open && onClose(false)}>
+			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl" data-testid="new-field-dialog">
+				<DialogHeader>
+					<DialogTitle>{t("field.newTitle", { kind: t(`kind.${kind}`) })}</DialogTitle>
+					<DialogDescription>{t("field.newDescription", { name })}</DialogDescription>
+				</DialogHeader>
+				<div className="flex flex-col gap-3">
+					<TextInput
+						label={t("field.label")}
+						value={typeof field.label === "string" ? field.label : ""}
+						onChange={(value) =>
+							change((current) => {
+								const next = setProp(current, "label", value, FIELD_KEY_ORDER);
+								return current.kind === "conditional" && isObj(next.discriminant)
+									? { ...next, discriminant: setProp(next.discriminant, "label", value, FIELD_KEY_ORDER) }
+									: next;
+							})
+						}
+					/>
+					<KindOptions name={name} field={field} editing={draftEditing} set={set} change={change} />
+					{problems.length > 0 && (
+						<ul className="flex flex-col gap-0.5 text-cms-muted-foreground text-xs" data-testid="new-field-problems">
+							{problems.map((problem) => (
+								<li key={problem}>{t(`field.needs.${problem}`)}</li>
+							))}
+						</ul>
+					)}
+				</div>
+				<DialogFooter>
+					<Button type="button" variant="outline" onClick={() => onClose(false)}>
+						{t("field.newCancel")}
+					</Button>
+					<Button
+						type="button"
+						disabled={problems.length > 0}
+						onClick={() => {
+							editing.update(() => draft);
+							onClose(true);
+						}}
+					>
+						{t("field.add")}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}
+
 /** The fields of a collection (or of one branch of a conditional field), each editable, with a row to add one. */
 export function FieldList({
 	editing,
@@ -617,6 +711,7 @@ export function FieldList({
 	const names = Object.keys(fields);
 	const [name, setName] = useState("");
 	const [kind, setKind] = useState<FieldKindName>("text");
+	const [pending, setPending] = useState<{ name: string; kind: FieldKindName } | null>(null);
 	const taken = allFieldNames(editing.collection);
 	const problem =
 		name === "" ? "empty" : taken.includes(name) ? "taken" : /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) ? null : "pattern";
@@ -656,6 +751,10 @@ export function FieldList({
 						disabled={Boolean(problem)}
 						onClick={() => {
 							if (problem) return;
+							if (KINDS_WITH_SETTINGS.includes(kind)) {
+								setPending({ name, kind });
+								return;
+							}
 							editing.update((collection) =>
 								addField(
 									collection,
@@ -670,6 +769,19 @@ export function FieldList({
 						{t("field.add")}
 					</AddButton>
 				</div>
+			)}
+			{pending && (
+				<NewFieldDialog
+					key={pending.name}
+					editing={editing}
+					place={place}
+					name={pending.name}
+					kind={pending.kind}
+					onClose={(added) => {
+						setPending(null);
+						if (added) setName("");
+					}}
+				/>
 			)}
 		</div>
 	);

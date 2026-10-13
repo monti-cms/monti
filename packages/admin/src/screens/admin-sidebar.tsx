@@ -261,9 +261,6 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 						)}
 					</SidebarMenuItem>
 				</SidebarMenu>
-				{folders.length === 0 && (
-					<p className="px-2 py-2 text-cms-muted-foreground text-xs">{t("sidebar.noFolders")}</p>
-				)}
 				{folders.length > 0 && (
 					<Label className="mt-3 px-2 font-normal text-cms-muted-foreground text-xs">
 						<Switch

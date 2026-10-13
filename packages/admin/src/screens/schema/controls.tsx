@@ -11,6 +11,7 @@ import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Switch } from "../../ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import { schemaMessages } from "./messages";
 import { moveItem, nameProblem, type Obj } from "./schema-model";
 
@@ -267,12 +268,15 @@ export function RowActions({
 	onMove,
 	onRemove,
 	name,
+	removeBlocked,
 }: {
 	index: number;
 	count: number;
 	onMove: (delta: number) => void;
 	onRemove: () => void;
 	name: string;
+	/** Why the row cannot be removed: the remove button is disabled and the reason is its tooltip. */
+	removeBlocked?: string;
 }) {
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
@@ -294,9 +298,30 @@ export function RowActions({
 			>
 				<ArrowDown aria-hidden />
 			</IconButton>
-			<IconButton label={t("row.remove", { name })} size="icon-xs" destructive disabled={disabled} onClick={onRemove}>
-				<X aria-hidden />
-			</IconButton>
+			{removeBlocked ? (
+				<Tooltip>
+					{/* A disabled button gets no pointer events, so the tooltip hangs on a wrapper that can also take focus. */}
+					{/* biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users reach the reason through this wrapper; the button inside is disabled */}
+					<TooltipTrigger render={<span tabIndex={0} data-testid="remove-blocked" />}>
+						<Button
+							type="button"
+							variant="ghost"
+							size="icon-xs"
+							disabled
+							aria-label={t("row.remove", { name })}
+							aria-description={removeBlocked}
+							className="pointer-events-none text-cms-destructive"
+						>
+							<X aria-hidden />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent side="top">{removeBlocked}</TooltipContent>
+				</Tooltip>
+			) : (
+				<IconButton label={t("row.remove", { name })} size="icon-xs" destructive disabled={disabled} onClick={onRemove}>
+					<X aria-hidden />
+				</IconButton>
+			)}
 		</div>
 	);
 }

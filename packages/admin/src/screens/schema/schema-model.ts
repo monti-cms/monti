@@ -134,12 +134,27 @@ export function setCollection(file: Obj, name: string, update: (collection: Obj)
 	return { ...file, collections: { ...collections, [name]: update(current) } };
 }
 
-export function addCollection(file: Obj, name: string, kind: "document" | "item"): Obj {
-	const collection: Obj = {
+/** The public address a new document collection starts with, from its name. */
+export const defaultPath = (name: string): string => (name === "" ? "" : `/${name}/:slug`);
+
+/** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
+export function pathProblem(path: string): "slash" | "slug" | null {
+	if (path.trim() === "") return null;
+	if (!path.startsWith("/")) return "slash";
+	return path.split(":slug").length === 2 ? null : "slug";
+}
+
+/** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
+export function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string): Obj {
+	let collection: Obj = {
 		label: name.charAt(0).toUpperCase() + name.slice(1),
 		kind,
-		fields: { title: { kind: "text", label: "Title", required: true } },
+		fields: {
+			title: { kind: "text", label: "Title", required: true, role: TITLE_ROLE },
+			slug: { kind: "slug", label: "Slug", required: true, from: "title" },
+		},
 	};
+	if (path && path.trim() !== "") collection = setProp(collection, "path", path, COLLECTION_KEY_ORDER);
 	return { ...file, collections: { ...collectionsOf(file), [name]: collection } };
 }
 
@@ -484,3 +499,74 @@ export interface Locale {
 	label?: string;
 }
 export const localesOf = (file: Obj): Locale[] => (Array.isArray(file.locales) ? (file.locales as Locale[]) : []);
+
+// ----- what a field needs -----
+
+/** The field `name` at `place`, or `undefined`. */
+export function fieldAt(collection: Obj, place: FieldPlace, name: string): Obj | undefined {
+	if (!place.branch) return fieldsOf(collection)[name];
+	const holder = fieldsOf(collection)[place.branch.field];
+	const values = holder && isObj(holder.values) ? (holder.values as Record<string, Record<string, Obj>>) : {};
+	return values[place.branch.option]?.[name];
+}
+
+/** The kinds that cannot be added with a name alone: they open their settings first. */
+export const KINDS_WITH_SETTINGS: readonly FieldKindName[] = [
+	"conditional",
+	"relation",
+	"select",
+	"slug",
+	"backlink",
+	"view",
+];
+
+export type FieldProblem = "options" | "optionLabel" | "branches" | "target" | "slugFrom" | "backlink" | "view";
+
+/** What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. */
+export function fieldProblems(field: Obj, collection: Obj, collectionNames: readonly string[]): FieldProblem[] {
+	const problems: FieldProblem[] = [];
+	const optionList = (): void => {
+		const options = Object.values(optionsOf(field));
+		if (options.length === 0) problems.push("options");
+		else if (options.some((label) => label.trim() === "")) problems.push("optionLabel");
+	};
+	switch (field.kind) {
+		case "select":
+			optionList();
+			break;
+		case "conditional": {
+			optionList();
+			const branches = isObj(field.values) ? Object.values(field.values as Record<string, unknown>) : [];
+			if (!branches.some((branch) => isObj(branch) && Object.keys(branch).length > 0)) problems.push("branches");
+			break;
+		}
+		case "relation":
+			if (typeof field.to !== "string" || !collectionNames.includes(field.to)) problems.push("target");
+			break;
+		case "slug": {
+			const source = typeof field.from === "string" ? fieldsOf(collection)[field.from] : undefined;
+			if (source?.kind !== "text") problems.push("slugFrom");
+			break;
+		}
+		case "backlink":
+			if (!field.from || !field.via) problems.push("backlink");
+			break;
+		case "view":
+			if (typeof field.view !== "string" || field.view.trim() === "") problems.push("view");
+			break;
+	}
+	return problems;
+}
+
+/**
+ * Why a field cannot be deleted, or `null`. The title field is what names every entry; the slug field cannot go while the public address is made from `:slug`.
+ * Only top-level fields: the file does not take either of them inside a conditional field.
+ */
+export function removeBlock(collection: Obj, place: FieldPlace, name: string): "title" | "slug" | null {
+	if (place.branch) return null;
+	if (titleFieldName(collection) === name) return "title";
+	const fields = fieldsOf(collection);
+	const slugName = Object.keys(fields).find((key) => fields[key]?.kind === "slug");
+	if (slugName === name && typeof collection.path === "string" && collection.path.includes(":slug")) return "slug";
+	return null;
+}

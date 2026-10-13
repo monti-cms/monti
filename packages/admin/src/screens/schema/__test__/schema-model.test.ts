@@ -4,13 +4,17 @@ import {
 	addField,
 	addOption,
 	allowedOf,
+	collectionsOf,
 	FIELD_KEY_ORDER,
+	fieldProblems,
 	fieldsOf,
 	hasBody,
 	moveField,
 	nameProblem,
+	newField,
 	type Obj,
 	recordRename,
+	removeBlock,
 	removeField,
 	removeOption,
 	renameField,
@@ -22,6 +26,7 @@ import {
 	withKind,
 } from "../schema-model";
 
+const withPath = (): Obj => ({ ...post(), path: "/posts/:slug" });
 const post = (): Obj => ({
 	label: "Post",
 	kind: "document",
@@ -163,13 +168,46 @@ describe("schema model", () => {
 		expect(hasBody({ label: "Tag", kind: "item", fields: {} })).toBe(false);
 	});
 
-	it("adds a collection with the title field every collection needs", () => {
+	it("adds a collection with the title and slug fields every collection starts with, and the address when there is one", () => {
 		const file = addCollection({ collections: {} }, "tag", "item");
 		expect(file).toEqual({
 			collections: {
-				tag: { label: "Tag", kind: "item", fields: { title: { kind: "text", label: "Title", required: true } } },
+				tag: {
+					label: "Tag",
+					kind: "item",
+					fields: {
+						title: { kind: "text", label: "Title", required: true, role: "title" },
+						slug: { kind: "slug", label: "Slug", required: true, from: "title" },
+					},
+				},
 			},
 		});
+		const withPath = collectionsOf(addCollection({}, "note", "document", "/note/:slug")).note as Obj;
+		expect(Object.keys(withPath)).toEqual(["label", "kind", "path", "fields"]);
+	});
+
+	it("says what a field still needs before it can be added", () => {
+		const names = ["post", "tag"];
+		expect(fieldProblems(newField("text", "A"), post(), names)).toEqual([]);
+		expect(fieldProblems(newField("relation", "A", names), post(), names)).toEqual([]);
+		expect(fieldProblems(newField("relation", "A", []), post(), [])).toEqual(["target"]);
+		expect(fieldProblems(newField("select", "A"), post(), names)).toEqual([]);
+		expect(fieldProblems({ kind: "select", label: "A", options: {} }, post(), names)).toEqual(["options"]);
+		expect(fieldProblems(newField("slug", "A"), post(), names)).toEqual([]);
+		expect(fieldProblems({ kind: "slug", label: "A", from: "status" }, post(), names)).toEqual(["slugFrom"]);
+		// A conditional field needs a field in one of its options.
+		expect(fieldProblems(newField("conditional", "A"), post(), names)).toEqual(["branches"]);
+		const filled = { ...newField("conditional", "A"), values: { a: { note: { kind: "text", label: "Note" } } } };
+		expect(fieldProblems(filled, post(), names)).toEqual([]);
+	});
+
+	it("blocks deleting the title field, and the slug field while the address uses :slug", () => {
+		expect(removeBlock(withPath(), {}, "title")).toBe("title");
+		expect(removeBlock(withPath(), {}, "slug")).toBe("slug");
+		expect(removeBlock(withPath(), {}, "summary")).toBeNull();
+		expect(removeBlock(post(), {}, "slug")).toBeNull();
+		// The title role moves the block with it.
+		expect(removeBlock(renameField(withPath(), {}, "title", "headline"), {}, "headline")).toBe("title");
 	});
 
 	it("checks names", () => {
