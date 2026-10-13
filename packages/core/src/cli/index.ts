@@ -6,7 +6,6 @@
 export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate";
 export { adminResetPassword, type ResetPasswordOptions } from "./admin-command";
 export type { CliContext, CliIo } from "./command";
-export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
 export { dbMigrate, dbSetup, type MigrateOptions } from "./db";
 export { unifiedDiff } from "./diff";
 export {
@@ -36,6 +35,14 @@ export {
 } from "./init";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect";
 export { collectAnswers, type InitAnswerFlags } from "./init-prompts";
+export { parseJsonc } from "./jsonc";
+export {
+	CONFIG_CANDIDATES,
+	EXTRACT_CONFIG_CANDIDATES,
+	locateConfig,
+	locateExtractConfig,
+	locateSchema,
+} from "./locate";
 export { isPluginCommandName, runPluginCommand } from "./plugin-command";
 export { Cancelled, createClackPrompter, type Prompter } from "./prompt";
 export { runCli } from "./run";
@@ -50,7 +57,6 @@ export {
 	withSchemaVersion,
 } from "./schema-apply";
 export {
-	CONFIG_FILE_CANDIDATES,
 	type ExtractedSchema,
 	type ExtractOptions,
 	type ExtractReport,

@@ -3,8 +3,8 @@ import { pathToFileURL } from "node:url";
 import type { Cms } from "../cms";
 import { problemError } from "../core/problem";
 import type { AppFlags, CliContext } from "./command";
-import { resolveConfigPath } from "./config-paths";
 import { loadEnvFiles } from "./env";
+import { locateConfig } from "./locate";
 
 /** What the commands that run against the app's own configuration (`db:migrate`, `events:retry`, ...) take: the context, and the app options. */
 export interface AppOptions extends CliContext, AppFlags {
@@ -45,7 +45,7 @@ export async function loadApp(options: AppOptions): Promise<Cms> {
 	const { log } = options;
 	const loaded = loadEnvFiles(options.cwd, options.envFiles);
 	if (loaded.length > 0 && !options.quiet) log(`env: ${loaded.join(", ")}`);
-	const configPath = resolveConfigPath(options.cwd, options.config);
+	const configPath = locateConfig(options.cwd, options.config);
 	if (!options.quiet) log(`config: ${configPath}`);
 	return importCms(options.cwd, configPath);
 }

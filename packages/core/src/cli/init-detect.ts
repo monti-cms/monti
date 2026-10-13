@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { parseJsonc } from "./config-paths";
+import { parseJsonc } from "./jsonc";
 import {
 	type DetectedLocale,
 	defaultFirst,

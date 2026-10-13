@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { parseJsonc, resolveConfigPath } from "../config-paths";
 import { loadEnvFiles } from "../env";
 import { dbMigrate, runCli } from "../index";
+import { parseJsonc } from "../jsonc";
+import { locateConfig } from "../locate";
 
 let dirs: string[] = [];
 afterEach(() => {
@@ -40,23 +41,21 @@ describe("monti command helpers", () => {
 	it("finds monti.config.ts from `--config`, `MONTI_CONFIG_PATH`, else common locations", () => {
 		const root = tempDir({ "monti.config.ts": "", "src/monti.config.ts": "", "custom/config.ts": "" });
 		// The root file wins over the one in `src`.
-		expect(resolveConfigPath(root, undefined, {})).toBe("monti.config.ts");
+		expect(locateConfig(root, undefined, {})).toBe("monti.config.ts");
 		const inSrc = tempDir({ "src/monti.config.ts": "" });
-		expect(resolveConfigPath(inSrc, undefined, {})).toBe("src/monti.config.ts");
+		expect(locateConfig(inSrc, undefined, {})).toBe("src/monti.config.ts");
 		// The chosen value beats the environment variable, which beats the common locations.
-		expect(resolveConfigPath(root, "custom/config.ts", { MONTI_CONFIG_PATH: "src/monti.config.ts" })).toBe(
+		expect(locateConfig(root, "custom/config.ts", { MONTI_CONFIG_PATH: "src/monti.config.ts" })).toBe(
 			"custom/config.ts",
 		);
-		expect(resolveConfigPath(root, undefined, { MONTI_CONFIG_PATH: "src/monti.config.ts" })).toBe(
-			"src/monti.config.ts",
-		);
-		expect(() => resolveConfigPath(tempDir({}), undefined, {})).toThrow(/monti init/);
-		expect(() => resolveConfigPath(root, "nope.ts", {})).toThrow(/nope\.ts.*does not exist.*--config.*Fix:/);
-		expect(() => resolveConfigPath(root, undefined, { MONTI_CONFIG_PATH: "nope.ts" })).toThrow(
+		expect(locateConfig(root, undefined, { MONTI_CONFIG_PATH: "src/monti.config.ts" })).toBe("src/monti.config.ts");
+		expect(() => locateConfig(tempDir({}), undefined, {})).toThrow(/monti init/);
+		expect(() => locateConfig(root, "nope.ts", {})).toThrow(/nope\.ts.*does not exist.*--config.*Fix:/);
+		expect(() => locateConfig(root, undefined, { MONTI_CONFIG_PATH: "nope.ts" })).toThrow(
 			/nope\.ts.*does not exist.*MONTI_CONFIG_PATH.*Fix:/,
 		);
 		// The old server file is not looked for any more.
-		expect(() => resolveConfigPath(tempDir({ "cms.server.ts": "" }), undefined, {})).toThrow(/monti init/);
+		expect(() => locateConfig(tempDir({ "cms.server.ts": "" }), undefined, {})).toThrow(/monti init/);
 	});
 
 	it("help and unknown commands", async () => {
