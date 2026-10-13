@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
-import { assertPluginNamesFree, assertPluginPagesFree, assertPluginRoutesFree } from "../collisions";
+import { assertPluginNamesFree, assertPluginPagesFree, assertPluginRoutesFree, RESERVED_SCOPES } from "../collisions";
 
 describe("assertPluginPagesFree", () => {
 	it("accepts distinct pages", () => {
@@ -83,8 +83,17 @@ describe("assertPluginRoutesFree", () => {
 describe("assertPluginNamesFree", () => {
 	it("rejects a plugin name equal to a core feature", () => {
 		expect(() => assertPluginNamesFree(["media"])).toThrow(/plugin name "media" collides with the core feature/);
-		expect(() => assertPluginNamesFree(["core-events"])).toThrow(/collides with the core feature/);
 		expect(() => assertPluginNamesFree(["ai", "seo"])).not.toThrow();
+	});
+});
+
+describe("assertPluginNamesFree: core storage scopes", () => {
+	it.each(RESERVED_SCOPES)("rejects a plugin named %s, which would read the core's secrets and data", (name) => {
+		expect(() => assertPluginNamesFree([name])).toThrow(/collides with the core storage scope/);
+	});
+
+	it("reserves the scopes the core itself uses", () => {
+		expect([...RESERVED_SCOPES].sort()).toEqual(["auth", "core-events", "core-keys"]);
 	});
 });
 

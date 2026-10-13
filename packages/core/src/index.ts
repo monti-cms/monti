@@ -55,6 +55,7 @@ export {
 	assertPluginPagesFree,
 	assertPluginRoutesFree,
 	CORE_FEATURE_KEYS,
+	RESERVED_SCOPES,
 } from "./plugin/collisions";
 export {
 	type CmsPlugin,

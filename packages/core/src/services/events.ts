@@ -11,6 +11,7 @@ import {
 	isDeferred,
 } from "../core/store";
 import type { Entry } from "../core/store/types";
+import { EVENTS_SCOPE } from "../plugin/collisions";
 import { createMemoryPluginStorage } from "../plugin/memory-storage";
 import type { PluginCollection } from "../plugin/storage";
 
@@ -31,7 +32,7 @@ import type { PluginCollection } from "../plugin/storage";
 export type EventMarks = Pick<PluginCollection<{ at: string }>, "get" | "set" | "list" | "delete">;
 
 const memoryMarks = (): EventMarks =>
-	createMemoryPluginStorage().storage("core-events").collection<{ at: string }>("once");
+	createMemoryPluginStorage().storage(EVENTS_SCOPE).collection<{ at: string }>("once");
 
 /** One subscriber. The name is stable: it keys the delivery state, so renaming a subscriber starts it afresh. */
 export interface EventSubscriber {

@@ -2,12 +2,13 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host";
-import { API_KEYS_SCOPE, type ApiKeys, type ApiKeysOptions, createApiKeys, migrateKeyUses } from "../api-keys/api-keys";
+import { type ApiKeys, type ApiKeysOptions, createApiKeys, migrateKeyUses } from "../api-keys/api-keys";
 import { problemText } from "../core/problem";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
 import type { FormatRegistry } from "../format/registry";
 import type { MediaStore } from "../media/store";
+import { API_KEYS_SCOPE, AUTH_SCOPE, EVENTS_SCOPE } from "../plugin/collisions";
 import type { OwnedPluginRoute } from "../plugin/define";
 import { createServerPlugins, type LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
@@ -377,7 +378,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				site,
 				loginPath: site.adminUrl("/login"),
 				trustHost: isHostTrusted(),
-				secrets: vault.forPlugin("auth"),
+				secrets: vault.forPlugin(AUTH_SCOPE),
 				host,
 				storage: (plugin) => connections.database.pluginStorage(plugin),
 			});
@@ -393,7 +394,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			store: getRawStore,
 			subscribers: plugins.eventSubscribers,
 			// The marks of `event.once` live in the plugin storage, under a name no plugin can take (`CORE_FEATURE_KEYS`).
-			marks: () => connections.database.pluginStorage("core-events").collection<{ at: string }>("once"),
+			marks: () => connections.database.pluginStorage(EVENTS_SCOPE).collection<{ at: string }>("once"),
 		});
 		// Every write goes through the dispatcher: the store writes the events in the transaction of the change, the wrapper delivers them after the commit.
 		const getStore = (): ContentStore => {
