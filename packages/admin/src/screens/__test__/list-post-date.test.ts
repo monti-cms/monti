@@ -1,7 +1,7 @@
 import { defineCollection, defineSite, fields } from "@monti-cms/core";
 import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
-import { hideOrderWhenNarrow } from "../admin-entries-table";
+import { hideOrderWhenNarrow } from "../entries-table-widths";
 import { columnsFor } from "../list-columns";
 
 const post = defineCollection({

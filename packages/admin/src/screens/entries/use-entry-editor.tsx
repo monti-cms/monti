@@ -6,14 +6,8 @@ import { BlockIssuesProvider, type BlockIssueTexts } from "../../editor/blocks/b
 import { useStoreSelector } from "../../hooks/store";
 import { useBeforeUnload } from "../../lib/hooks/use-before-unload";
 import { localRecoveryStoreOf, type RecoveryStore } from "./entry-editor-client";
-import {
-	createEntryEditor,
-	ENTRY_EDITOR_CORE,
-	type EntryEditor,
-	type EntryEditorCallbacks,
-	type EntryEditorCore,
-	type EntryEditorTarget,
-} from "./entry-editor-store";
+import { createEntryEditor, ENTRY_EDITOR_CORE } from "./entry-editor-store";
+import type { EntryEditor, EntryEditorCallbacks, EntryEditorCore, EntryEditorTarget } from "./entry-editor-types";
 import { type EntryData, formFromSourceMetadata } from "./entry-form";
 import { EntryFormProvider } from "./use-field";
 

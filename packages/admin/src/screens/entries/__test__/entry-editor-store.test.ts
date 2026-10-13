@@ -2,13 +2,9 @@ import { STORED_DOCUMENT_VERSION, type StoredDocument, withoutBlockIds } from "@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";
-import {
-	COMPOSITION_WAIT_MS,
-	createEntryEditor,
-	type EntryEditorCallbacks,
-	type EntryEditorTarget,
-	RECOVERY_IDLE_MS,
-} from "../entry-editor-store";
+import { RECOVERY_IDLE_MS } from "../entry-editor-recovery-state";
+import { COMPOSITION_WAIT_MS, createEntryEditor } from "../entry-editor-store";
+import type { EntryEditorCallbacks, EntryEditorTarget } from "../entry-editor-types";
 import { type EntryData, formFingerprint, formFromEntry } from "../entry-form";
 import {
 	conflictError,

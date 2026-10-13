@@ -44,7 +44,7 @@ export type {
 	SaveStatus,
 	StatusOutcome,
 	TranslationView,
-} from "../screens/entries/entry-editor-store";
+} from "../screens/entries/entry-editor-types";
 export type { EntryData, EntryForm, EntryFormPatch, FormValue } from "../screens/entries/entry-form";
 export {
 	EntryEditorProvider,

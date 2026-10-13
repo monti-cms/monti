@@ -1,282 +1,31 @@
 "use client";
 
-import {
-	type AdminColumnSettings,
-	PAGE_SIZES,
-	type PageSize,
-	type Site,
-	useSite,
-	useTranslator,
-} from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/runtime";
-import {
-	type ColumnOrderState,
-	type ColumnSizingState,
-	type ColumnVisibilityState,
-	columnOrderingFeature,
-	columnResizingFeature,
-	columnSizingFeature,
-	columnVisibilityFeature,
-	createColumnHelper,
-	type RowSelectionState,
-	rowSelectionFeature,
-	tableFeatures,
-	type Updater,
-	useTable,
-} from "@tanstack/react-table";
-import {
-	ArrowDown,
-	ArrowUp,
-	Columns3,
-	Folder as FolderIcon,
-	FolderOpen,
-	FolderUp,
-	Inbox,
-	Plus,
-	SearchX,
-	Trash2,
-} from "lucide-react";
-import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useCmsAdminComponents } from "../admin-components";
+import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import { Inbox, Plus, SearchX, Trash2 } from "lucide-react";
+import { Fragment, type KeyboardEvent } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
-import { AdminLink as Link } from "../router";
-import { Badge, badgeVariants } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
-import { IconButton } from "../ui/icon-button";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
-import { StatusIndicator } from "../ui/status-indicator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { folderKeyHandler } from "./admin-sidebar";
-import { ColumnHeader } from "./column-header";
-import { customListCell, DefaultFieldCell } from "./list-cells";
-import {
-	type AdminListColumn,
-	columnConfig,
-	columnLabel,
-	columnsFor,
-	fieldColumnOf,
-	filterFor,
-	knownColumnRecord,
-} from "./list-columns";
+import { ColumnResizeHandle } from "./column-resize-handle";
+import { ColumnSettingsPopover } from "./entries-table-column-settings";
+import { EntriesTableFolderRows } from "./entries-table-folder-rows";
+import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";
+import { columnConfig, columnLabel, columnsFor } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
-import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
+import { ActionContextMenu, type MenuAction } from "./shared/action-menu";
 import { EmptyState } from "./shared/empty-state";
 import { writeDraggedEntries } from "./shared/entry-drag";
-import { describeEntryStatus, statusLabels } from "./shared/entry-status";
-import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
 import { ListPagination } from "./shared/list-pager";
 import { LoadErrorAlert } from "./shared/load-error-alert";
 import { OPEN_ITEM } from "./shared/side-panel";
-import { useDebouncedCallback } from "./shared/use-debounced";
-import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
+import type { FolderActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
+import { useEntriesTable } from "./use-entries-table";
 
 export { columnsFor };
-
-// Data Table: TanStack Table handles column visibility/order and row selection; the server handles search, sort, filter and paging.
-const features = tableFeatures({
-	columnVisibilityFeature,
-	columnOrderingFeature,
-	columnSizingFeature,
-	columnResizingFeature,
-	rowSelectionFeature,
-});
-
-/**
- * Default column widths (px). Title fills the remaining width if unset. Dragging to change it saves that value.
- * A taxonomy field column is wide enough for chips if it is a many-relation (tags etc.), or for a single name if single (category etc.).
- */
-const DEFAULT_COLUMN_SIZE: Partial<Record<string, number>> = {
-	status: 132,
-	locale: 124,
-	updatedAt: 132,
-	publishedAt: 132,
-	createdAt: 132,
-	slug: 200,
-	folder: 140,
-};
-const DEFAULT_TITLE_SIZE = 320;
-const MANY_RELATION_SIZE = 200;
-const SINGLE_RELATION_SIZE = 112;
-const SELECT_SIZE = 132;
-const TEXT_SIZE = 200;
-
-function defaultColumnSize(site: Site, collection: string, column: AdminListColumn): number {
-	const size = DEFAULT_COLUMN_SIZE[column];
-	if (size !== undefined) return size;
-	const config = columnConfig(site, collection, column);
-	const kind = fieldColumnOf(site, collection, column)?.field.kind;
-	if (kind === "relation") return config.many ? MANY_RELATION_SIZE : SINGLE_RELATION_SIZE;
-	if (kind === "select") return SELECT_SIZE;
-	if (kind === "text" || kind === "media") return TEXT_SIZE;
-	return DEFAULT_TITLE_SIZE;
-}
-const MIN_COLUMN_SIZE = 72;
-const MAX_COLUMN_SIZE = 960;
-const helper = createColumnHelper<typeof features, ListEntriesItem>();
-
-/** List date: this year as "Sep 27 14:05" (in the admin language), otherwise short like `2025. 8. 7.`. The exact time is in the edit screen, not a tooltip. */
-const formatDate = (site: Site, value: Date | string | null) => {
-	if (!value) return "—";
-	const sameYear = zonedYear(site, value) === zonedYear(site, Date.now());
-	return sameYear
-		? formatDateTime(site, value, { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
-		: formatDateOnly(site, value);
-};
-
-/**
- * Columns hidden first when width runs short, and their order. Even user-enabled columns are hidden in this order if the title cannot get its minimum width.
- * Many-relation taxonomy field columns (tags etc.) are hidden next, and the post date last. Title, status, single taxonomy fields (category etc.) and updated date are never hidden.
- */
-const HIDE_ORDER_WHEN_NARROW = ["folder", "slug", "createdAt", "locale"] as const;
-/**
- * The post date (`publishedAt`) is the date a reader sees, so it goes last: after the locale and the many-relation columns. Hidden first, as it used to be, the list showed only
- * "Updated", which for imported posts is the day of the import.
- */
-export const hideOrderWhenNarrow = (site: Site, collection: string, available: readonly AdminListColumn[]) => [
-	...HIDE_ORDER_WHEN_NARROW,
-	...available.filter((column) => columnConfig(site, collection, column).many),
-	"publishedAt",
-];
-const TITLE_MIN_WIDTH = 240;
-
-/**
- * Column width resize handle. Drag the header's right edge, or focus it and press ←/→ to change by 16px. Pressing twice resets to the default width.
- */
-function ColumnResizeHandle({
-	label,
-	width,
-	resizing,
-	onStart,
-	onNudge,
-	onReset,
-}: {
-	label: string;
-	width: number;
-	resizing: boolean;
-	onStart: (event: unknown) => void;
-	onNudge: (delta: number) => void;
-	onReset: () => void;
-}) {
-	const t = useTranslator(screensMessages);
-	return (
-		// biome-ignore lint/a11y/useSemanticElements: column width resizing is an operable separator, not an hr
-		<div
-			role="separator"
-			aria-orientation="vertical"
-			aria-label={t("list.resizeColumn", { label })}
-			aria-valuenow={width}
-			aria-valuemin={MIN_COLUMN_SIZE}
-			aria-valuemax={MAX_COLUMN_SIZE}
-			aria-valuetext={`${width}px`}
-			tabIndex={0}
-			onMouseDown={onStart}
-			onTouchStart={onStart}
-			onDoubleClick={onReset}
-			onKeyDown={(event) => {
-				if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-					event.preventDefault();
-					onNudge(event.key === "ArrowLeft" ? -16 : 16);
-				}
-			}}
-			className="absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none"
-		>
-			<span
-				className={cn(
-					"h-full w-px bg-transparent transition-colors group-hover/th:bg-cms-border",
-					resizing && "bg-cms-primary group-hover/th:bg-cms-primary",
-					"[div:focus-visible>&]:bg-cms-ring",
-				)}
-			/>
-		</div>
-	);
-}
-
-/** Per-locale status of a translation group. Existing locales link to their edit screen; missing ones show only as dashed. Status is also readable as text, not just color. */
-function LocaleBadges({ translations }: { translations: readonly ListTranslationMember[] }) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	return (
-		<span className="flex items-center gap-1">
-			{site.LOCALES.map((locale) => {
-				const name = site.localeLabel(locale);
-				const member = translations.find((candidate) => candidate.locale === locale);
-				if (!member) {
-					return (
-						<Badge key={locale} variant="outline" className="border-dashed text-cms-muted-foreground/70">
-							<span aria-hidden="true">{locale.toUpperCase()}</span>
-							<span className="sr-only">{t("locale.hasNot", { name })}</span>
-						</Badge>
-					);
-				}
-				const variant =
-					member.status === "published" && !member.hasUnpublishedChanges
-						? "success"
-						: member.status === "published" || member.status === "draft"
-							? "warning"
-							: "secondary";
-				return (
-					<Link key={locale} href={site.adminEntryEditHref(member.id)} className={badgeVariants({ variant })}>
-						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<span className="sr-only">
-							{name} · {statusLabels(site)[member.status]}
-						</span>
-					</Link>
-				);
-			})}
-		</span>
-	);
-}
-
-/** Locales of a taxonomy item (category, tag, series). Locales with a name are filled badges, others are dashed badges. */
-function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	return (
-		<span className="flex items-center gap-1">
-			{site.LOCALES.map((locale) => {
-				const named = locales.includes(locale);
-				return (
-					<Badge
-						key={locale}
-						variant={named ? "success" : "outline"}
-						className={cn(!named && "border-dashed text-cms-muted-foreground/70")}
-					>
-						<span aria-hidden="true">{locale.toUpperCase()}</span>
-						<span className="sr-only">
-							{t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) })}
-						</span>
-					</Badge>
-				);
-			})}
-		</span>
-	);
-}
-
-/** Shows status with both icon shape and text (not conveyed by color alone). */
-function StatusLabel({ item, isRecord }: { item: ListEntriesItem; isRecord: boolean }) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	const label = isRecord && item.status === "published" ? t("list.statusActive") : describeEntryStatus(site, item);
-	const published = item.status === "published";
-	const gone = item.status === "archived" || item.status === "trashed";
-	return (
-		<StatusIndicator
-			tone={published ? (item.hasUnpublishedChanges ? "warning" : "success") : "neutral"}
-			shape={published ? (item.hasUnpublishedChanges ? "half" : "dot") : gone ? "minus" : "dashed"}
-			label={label}
-		/>
-	);
-}
-
-const resolve = <T,>(updater: Updater<T>, current: T): T =>
-	typeof updater === "function" ? (updater as (old: T) => T)(current) : updater;
 
 interface TableProps {
 	collection: string;
@@ -353,329 +102,37 @@ export function AdminEntriesTable({
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
 	const isTrash = mode === "trash";
-	const isRecord = site.isItemCollection(collection);
-	const { listCells } = useCmsAdminComponents();
-	const { available, defaults } = columnsFor(site, collection);
-	// Drop saved-setting columns that no longer exist (deleted fields etc.).
-	const savedOrder = (columnSettings?.order ?? []).filter((column) => available.includes(column));
-	const savedVisibility = knownColumnRecord(columnSettings?.visibility, available);
-	const order = [...new Set([...savedOrder, ...defaults, ...available])];
-	const visibility: ColumnVisibilityState = Object.fromEntries(
-		available.map((column) => [column, column === "title" || (savedVisibility?.[column] ?? defaults.includes(column))]),
-	);
-	/** Folder path from the top level, like `Parent / Child`. `—` for items outside folders. */
-	const folderName = (id: string | null) => {
-		const names: string[] = [];
-		let folder = id ? folders.find((candidate) => candidate.id === id) : undefined;
-		while (folder && names.length < 8) {
-			names.unshift(folder.name);
-			const parentId = folder.parentId;
-			folder = parentId ? folders.find((candidate) => candidate.id === parentId) : undefined;
-		}
-		return names.length > 0 ? names.join(" / ") : "—";
-	};
-	// When viewed flat without folder separation (search, filters, include subfolders) and the folder column is off, append the folder path small next to the title.
-	const showFolderBesideTitle = !explorer && !isTrash && !isRecord && folders.length > 0 && visibility.folder === false;
-
-	// TanStack Table expects column definitions not to be recreated every render. Rebuild only when the values the cells read change.
-	const availableKey = available.join();
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `availableKey` stands in for the contents of `available`
-	const columns = useMemo(() => {
-		const cell = (item: ListEntriesItem, column: AdminListColumn) => {
-			switch (column) {
-				case "title": {
-					const title = item.title || <span className="text-cms-muted-foreground italic">{tc("untitled")}</span>;
-					if (isTrash) return <span className="font-medium">{title}</span>;
-					return isRecord ? (
-						<Button
-							type="button"
-							variant="link"
-							size="sm"
-							onClick={() => onOpenRecord(item)}
-							className="h-auto p-0 font-medium text-cms-foreground hover:text-cms-primary"
-						>
-							{title}
-						</Button>
-					) : (
-						<span className="flex min-w-0 items-center gap-2">
-							<Link
-								href={site.adminEntryEditHref(item.id)}
-								className="truncate font-medium text-cms-foreground hover:text-cms-primary"
-							>
-								{title}
-							</Link>
-							{showFolderBesideTitle && item.folderId && (
-								<span className="flex min-w-0 shrink items-center gap-1 text-cms-muted-foreground text-xs">
-									<FolderIcon aria-hidden className="size-3 shrink-0" />
-									<span className="truncate">
-										<span className="sr-only">{t("list.folderSr")}</span>
-										{folderName(item.folderId)}
-									</span>
-								</span>
-							)}
-						</span>
-					);
-				}
-				case "status":
-					// Do not convey status by color alone.
-					return <StatusLabel item={item} isRecord={isRecord} />;
-				case "locale":
-					if (item.recordLocales) return <RecordLocaleBadges locales={item.recordLocales} />;
-					if (item.translations) return <LocaleBadges translations={item.translations} />;
-					// Also mark that a translation is not the original.
-					return (
-						<span className="text-cms-muted-foreground text-xs">
-							<abbr title={site.localeLabel(item.locale)} className="font-medium no-underline">
-								{item.locale.toUpperCase()}
-							</abbr>
-							{item.translationGroupId !== item.id && <span className="ml-1">{t("list.translation")}</span>}
-						</span>
-					);
-				case "updatedAt":
-				case "createdAt":
-				case "publishedAt":
-					return (
-						<span className="tabular whitespace-nowrap text-cms-muted-foreground text-xs">
-							{formatDate(site, item[column])}
-						</span>
-					);
-				case "slug":
-					return <span className="font-mono text-cms-muted-foreground text-xs">{item.slug || "—"}</span>;
-				case "folder":
-					return <span className="text-cms-muted-foreground text-xs">{folderName(item.folderId)}</span>;
-				default:
-					// Field columns: default cells for relations (including taxonomy fields), select and text.
-					return <DefaultFieldCell collection={collection} column={column} entry={item} />;
-			}
-		};
-		// Cells registered by admin extensions (`listCells`) take precedence over default cells.
-		const cellOf = (item: ListEntriesItem, column: AdminListColumn) => {
-			const Custom = customListCell(site, listCells, collection, column);
-			if (!Custom) return cell(item, column);
-			const stored = fieldColumnOf(site, collection, column);
-			return (
-				<Custom
-					collection={collection}
-					column={column}
-					field={stored?.field}
-					entry={item}
-					value={stored ? item.values[column] : undefined}
-				/>
-			);
-		};
-
-		return helper.columns([
-			helper.display({
-				id: "select",
-				size: 44,
-				enableResizing: false,
-				header: ({ table }) => (
-					<Checkbox
-						checked={table.getIsAllPageRowsSelected()}
-						indeterminate={table.getIsSomePageRowsSelected()}
-						onCheckedChange={(value) => table.toggleAllPageRowsSelected(value === true)}
-						aria-label={t("list.selectAll")}
-					/>
-				),
-				cell: ({ row }) => (
-					<Checkbox
-						checked={row.getIsSelected()}
-						onCheckedChange={(value) => row.toggleSelected(value === true)}
-						aria-label={t("list.rowSelect", { title: row.original.title ?? tc("untitled") })}
-					/>
-				),
-			}),
-			...available.map((column) =>
-				helper.display({
-					id: column,
-					enableHiding: column !== "title",
-					size: defaultColumnSize(site, collection, column),
-					minSize: MIN_COLUMN_SIZE,
-					maxSize: MAX_COLUMN_SIZE,
-					header: () => (
-						<ColumnHeader
-							column={column}
-							filter={filterFor(site, collection, column, mode)}
-							state={state}
-							options={options}
-							onChange={onStateChange}
-						/>
-					),
-					cell: ({ row }) => cellOf(row.original, column),
-				}),
-			),
-			helper.display({
-				id: "actions",
-				size: 52,
-				enableResizing: false,
-				header: () => <span className="sr-only">{t("list.actions")}</span>,
-				cell: ({ row }) => (
-					<div className="flex items-center justify-end gap-1 whitespace-nowrap">
-						{isTrash && (
-							<>
-								<Button type="button" variant="ghost" size="xs" onClick={() => onRestore?.(row.original)}>
-									{tc("lifecycle.restore")}
-								</Button>
-								<Button
-									type="button"
-									variant="ghost"
-									size="xs"
-									className="text-cms-destructive"
-									onClick={() => onPermanentDelete?.(row.original)}
-								>
-									{tc("lifecycle.deletePermanently")}
-								</Button>
-							</>
-						)}
-						<MoreActionsButton
-							actions={rowMenu(row.original)}
-							label={t("list.rowActions", { title: row.original.title ?? tc("untitled") })}
-						/>
-					</div>
-				),
-			}),
-		]);
-	}, [
-		mode,
-		availableKey,
+	const {
+		table,
+		order,
+		visibility,
+		scrollRef,
+		isShown,
+		tableWidth,
+		visibleCount,
+		tableSizing,
+		freezeTitle,
+		updateSizing,
+		moveColumn,
+	} = useEntriesTable({
 		collection,
+		items,
+		folders,
+		explorer,
 		state,
 		options,
 		onStateChange,
-		isTrash,
-		isRecord,
-		folders,
+		columnSettings,
+		onColumnSettingsChange,
+		selectedIds,
+		onSelectionChange,
+		mode,
 		rowMenu,
 		onOpenRecord,
 		onRestore,
 		onPermanentDelete,
-		showFolderBesideTitle,
-		listCells,
-	]);
-
-	const rowSelection: RowSelectionState = Object.fromEntries([...selectedIds].map((id) => [id, true]));
-	const columnOrder: ColumnOrderState = ["select", ...order, "actions"];
-
-	// While dragging, reflect straight into local state; when it stops, save to list settings.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `availableKey` stands in for the contents of `available`
-	const savedSizes = useMemo(
-		() => knownColumnRecord(columnSettings?.sizes, available),
-		[columnSettings?.sizes, availableKey],
-	);
-	const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(savedSizes ?? {});
-	useEffect(() => setColumnSizing(savedSizes ?? {}), [savedSizes]);
-	const persistSizes = useDebouncedCallback((next: ColumnSizingState) => {
-		const sizes = Object.fromEntries(
-			Object.entries(next)
-				.filter(([id]) => available.includes(id as AdminListColumn))
-				.map(([id, size]) => [id, Math.round(Math.min(MAX_COLUMN_SIZE, Math.max(MIN_COLUMN_SIZE, size)))]),
-		);
-		onColumnSettingsChange({ order, visibility, sizes });
-	}, 400);
-	const updateSizing = (updater: Updater<ColumnSizingState>) =>
-		setColumnSizing((current) => {
-			const next = resolve(updater, current);
-			persistSizes(next);
-			return next;
-		});
-
-	// Actual width of the scroll area. Table width and which columns to hide when narrow are decided from this.
-	const scrollRef = useRef<HTMLDivElement | null>(null);
-	const [containerWidth, setContainerWidth] = useState(0);
-	useEffect(() => {
-		const element = scrollRef.current;
-		if (!element) return;
-		setContainerWidth(element.clientWidth);
-		if (typeof ResizeObserver === "undefined") return;
-		const observer = new ResizeObserver(([entry]) => setContainerWidth(Math.floor(entry?.contentRect.width ?? 0)));
-		observer.observe(element);
-		return () => observer.disconnect();
-	}, []);
-
-	// Columns to hide when narrow are decided only by default widths and the title's minimum width. User-widened widths do not trigger hiding and become horizontal scroll
-	// (so handles don't jump when another column disappears mid-drag).
-	const defaultSizeOf = (id: string) =>
-		id === "select" ? 44 : id === "actions" ? 52 : defaultColumnSize(site, collection, id);
-	const visibleIds = columnOrder.filter((id) => visibility[id] !== false);
-	const autoHidden = new Set<string>();
-	const naturalWidth = () =>
-		visibleIds
-			.filter((id) => !autoHidden.has(id))
-			.reduce((sum, id) => sum + (id === "title" ? TITLE_MIN_WIDTH : defaultSizeOf(id)), 0);
-	if (containerWidth > 0) {
-		for (const id of hideOrderWhenNarrow(site, collection, available)) {
-			if (naturalWidth() <= containerWidth) break;
-			if (visibleIds.includes(id)) autoHidden.add(id);
-		}
-	}
-	const isShown = (id: string) => !autoHidden.has(id);
-	// Title fills the remaining width if no width is set. When any column starts dragging, pin the title's width at that moment,
-	// so only the dragged column grows and the handle follows the cursor. Leftover width then goes to the spacer before the actions column.
-	const flexTitleWidth =
-		containerWidth > 0
-			? Math.min(
-					MAX_COLUMN_SIZE,
-					Math.max(
-						TITLE_MIN_WIDTH,
-						containerWidth -
-							visibleIds
-								.filter((id) => id !== "title" && isShown(id))
-								.reduce((sum, id) => sum + (columnSizing[id] ?? defaultSizeOf(id)), 0),
-					),
-				)
-			: DEFAULT_TITLE_SIZE;
-	const tableSizing: ColumnSizingState =
-		columnSizing.title === undefined ? { ...columnSizing, title: flexTitleWidth } : columnSizing;
-	const freezeTitle = () => {
-		if (columnSizing.title === undefined) setColumnSizing((current) => ({ ...current, title: flexTitleWidth }));
-	};
-
-	const table = useTable({
-		features,
-		data: items,
-		columns,
-		getRowId: (row) => row.id,
-		columnResizeMode: "onChange",
-		state: { columnVisibility: visibility, columnOrder, rowSelection, columnSizing: tableSizing },
-		onColumnSizingChange: updateSizing,
-		onColumnVisibilityChange: (updater) =>
-			onColumnSettingsChange({
-				order,
-				visibility: resolve(updater, visibility) as Record<string, boolean>,
-				sizes: savedSizes,
-			}),
-		onColumnOrderChange: (updater) => {
-			const next = resolve(updater, columnOrder).filter((id): id is AdminListColumn =>
-				available.includes(id as AdminListColumn),
-			);
-			onColumnSettingsChange({ order: next, visibility, sizes: savedSizes });
-		},
-		// Deselection can arrive as a key with value false, so keep only IDs that are true.
-		onRowSelectionChange: (updater) => {
-			const next = resolve(updater, rowSelection);
-			onSelectionChange(new Set(Object.entries(next).flatMap(([id, on]) => (on ? [id] : []))));
-		},
 	});
 
-	const moveColumn = (column: AdminListColumn, direction: -1 | 1) => {
-		const index = order.indexOf(column);
-		const target = index + direction;
-		if (target < 0 || target >= order.length) return;
-		const next = [...order];
-		[next[index], next[target]] = [next[target] as AdminListColumn, next[index] as AdminListColumn];
-		onColumnSettingsChange({ order: next, visibility, sizes: savedSizes });
-	};
-
-	const leafColumns = table.getVisibleLeafColumns();
-	const tableWidth =
-		containerWidth > 0
-			? Math.max(
-					containerWidth,
-					leafColumns.filter((column) => isShown(column.id)).reduce((sum, column) => sum + column.getSize(), 0),
-				)
-			: undefined;
-	// Number of cells counted including empty ones.
-	const visibleCount = leafColumns.length - autoHidden.size + 1;
 	const rowKeyDown = (item: ListEntriesItem) => (event: KeyboardEvent) => {
 		if (event.key !== "Delete" || !onDeleteKey) return;
 		const target = event.target as HTMLElement;
@@ -683,16 +140,6 @@ export function AdminEntriesTable({
 		event.preventDefault();
 		onDeleteKey(item);
 	};
-
-	// Add "Open" to the same folder menu as the sidebar tree.
-	const folderRowMenu = (folder: Folder): MenuAction[] =>
-		folderActions
-			? [
-					{ kind: "item", label: tc("open"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
-					{ kind: "separator" },
-					...folderMenuActions(site, folder, folders, folderActions),
-				]
-			: [];
 
 	const pageHref = (page: number) => `?page=${page}`;
 
@@ -764,49 +211,15 @@ export function AdminEntriesTable({
 						aria-busy={isRefreshing || undefined}
 						className={cn("transition-opacity", isRefreshing && "opacity-60")}
 					>
-						{explorer && explorer.parent !== null && (
-							<TableRow>
-								<TableCell className="text-center text-cms-muted-foreground">
-									<FolderUp aria-hidden className="mx-auto size-4" />
-								</TableCell>
-								<TableCell colSpan={visibleCount - 1}>
-									<Button
-										type="button"
-										variant="link"
-										size="sm"
-										onClick={() => onSelectFolder(explorer.parent ?? "all")}
-										className="h-auto p-0 text-cms-muted-foreground hover:text-cms-foreground"
-									>
-										{t("list.folderUp")}
-									</Button>
-								</TableCell>
-							</TableRow>
+						{explorer && (
+							<EntriesTableFolderRows
+								explorer={explorer}
+								folders={folders}
+								folderActions={folderActions}
+								visibleCount={visibleCount}
+								onSelectFolder={onSelectFolder}
+							/>
 						)}
-						{explorer?.folders.map((folder) => (
-							<ActionContextMenu key={`folder-${folder.id}`} actions={folderRowMenu(folder)} trigger={<TableRow />}>
-								<TableCell className="text-center text-cms-muted-foreground">
-									<FolderIcon aria-hidden className="mx-auto size-4" />
-								</TableCell>
-								<TableCell colSpan={visibleCount - 2} className="font-medium">
-									<Button
-										type="button"
-										variant="link"
-										size="sm"
-										onClick={() => onSelectFolder(folder.id)}
-										onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-										className="h-auto p-0 font-medium text-cms-foreground"
-									>
-										{folder.name}
-									</Button>
-								</TableCell>
-								<TableCell className="text-right">
-									<MoreActionsButton
-										actions={folderRowMenu(folder)}
-										label={t("list.folderActions", { name: folder.name })}
-									/>
-								</TableCell>
-							</ActionContextMenu>
-						))}
 						{isLoading
 							? Array.from({ length: 5 }, (_, index) => (
 									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
@@ -898,53 +311,13 @@ export function AdminEntriesTable({
 				onPageSizeChange={onPageSizeChange}
 				hrefFor={pageHref}
 				leading={
-					<Popover>
-						<PopoverTrigger
-							render={<Button type="button" variant="ghost" size="xs" className="text-cms-muted-foreground" />}
-						>
-							<Columns3 aria-hidden />
-							{t("list.columnSettings")}
-						</PopoverTrigger>
-						<PopoverContent align="end" className="w-64 p-3">
-							<ul className="space-y-1">
-								{order.map((column, index) => (
-									<li
-										key={column}
-										className="flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-cms-accent"
-									>
-										<Label className="font-normal">
-											<Checkbox
-												checked={visibility[column] ?? false}
-												disabled={column === "title"}
-												onCheckedChange={(checked) => table.getColumn(column)?.toggleVisibility(checked === true)}
-											/>
-											{columnLabel(site, collection, column)}
-										</Label>
-										<span className="flex gap-1">
-											<IconButton
-												size="icon-xs"
-												variant="outline"
-												label={t("list.columnUp", { label: columnLabel(site, collection, column) })}
-												disabled={index === 0}
-												onClick={() => moveColumn(column, -1)}
-											>
-												<ArrowUp aria-hidden />
-											</IconButton>
-											<IconButton
-												size="icon-xs"
-												variant="outline"
-												label={t("list.columnDown", { label: columnLabel(site, collection, column) })}
-												disabled={index === order.length - 1}
-												onClick={() => moveColumn(column, 1)}
-											>
-												<ArrowDown aria-hidden />
-											</IconButton>
-										</span>
-									</li>
-								))}
-							</ul>
-						</PopoverContent>
-					</Popover>
+					<ColumnSettingsPopover
+						collection={collection}
+						order={order}
+						visibility={visibility}
+						onToggle={(column, visible) => table.getColumn(column)?.toggleVisibility(visible)}
+						onMove={moveColumn}
+					/>
 				}
 			/>
 		</section>

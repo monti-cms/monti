@@ -10,7 +10,7 @@ import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { useConfirm } from "../shared/confirm-dialog";
 import { formatDateTime } from "../shared/format-date";
-import type { ConflictInfo, RecoveryOffer } from "./entry-editor-store";
+import type { ConflictInfo, RecoveryOffer } from "./entry-editor-types";
 import { type EntryForm, formFromEntry, formTitle } from "./entry-form";
 import { entriesMessages } from "./messages";
 
