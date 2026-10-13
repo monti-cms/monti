@@ -6,46 +6,40 @@ import { testSite } from "../../test/site";
 import { resolveAction } from "../action";
 import type { AiProviderInput } from "../connection";
 import { moveKeysToStore } from "../migrate";
+import { AI_PLUGIN_NAME } from "../plugin-name";
 import { createDecider, createGenerator } from "../provider";
 import { aiRegistryOf } from "../registry";
 import {
 	type AiSettingsStore,
 	addAiProvider,
 	connectionForCheck,
+	connectionRef,
 	getAiSettingsView,
+	keyUseLabels,
 	loadAiRuntime,
 	removeAiProvider,
 	updateAiProvider,
 	usableActionKeys,
 } from "../settings";
 import { settingsMessages } from "../settings.messages";
+import { createAiStore } from "../store";
 
 /** An instance with a server secret, so its API key store works. */
 const cmsWith = (secret = "test-secret", previousSecrets: string[] = []) =>
 	fakeCms({ server: { secret, previousSecrets } });
 
-/** What the key store lists as a connection's use, in the instance's language. */
-const label = (cms: ReturnType<typeof cmsWith>, name: string) =>
-	cms.site.createTranslator(settingsMessages)("keyUse", { name });
-
-/** In-memory settings store over the instance's API key store. The version check matches the DB store. */
-function memoryStore(cms = cmsWith()): AiSettingsStore & { value: unknown; cms: typeof cms } {
-	const state = { value: undefined as unknown, version: 0 };
-	return {
-		cms,
+/** The settings store over the instance's own plugin storage and key store, writing through its transactions like the app does. */
+function memoryStore(cms = cmsWith()) {
+	const store = createAiStore(cms.storage(AI_PLUGIN_NAME), {
+		site: testSite,
 		apiKeys: () => cms.apiKeys,
-		get value() {
-			return state.value;
-		},
-		getAiSettings: async () => (state.version === 0 ? null : { value: state.value, version: state.version }),
-		saveAiSettings: async ({ expectedVersion, value }) => {
-			if (expectedVersion !== state.version) throw Object.assign(new Error("Conflict"), { code: "conflict" });
-			state.value = value;
-			state.version += 1;
-			return state.version;
-		},
-	};
+		transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
+	});
+	return Object.assign(store, { cms });
 }
+
+/** The settings row as stored. */
+const storedValue = async (store: ReturnType<typeof memoryStore>) => (await store.getAiSettings())?.value;
 
 const chat = (patch: Partial<AiProviderInput> = {}): AiProviderInput => ({
 	name: "OpenRouter",
@@ -81,8 +75,10 @@ describe("AI connection settings", () => {
 	it("saves a typed key into the key store, keeps only its id in the connection, and gives the screen the last four characters", async () => {
 		const store = memoryStore();
 		const view = await addAiProvider(testSite, store, 0, chat());
-		expect(JSON.stringify(store.value)).not.toContain("sk-chat");
-		expect((store.value as { providers: Array<{ url: string }> }).providers[0]?.url).toBe("https://example.test/v1");
+		expect(JSON.stringify(await storedValue(store))).not.toContain("sk-chat");
+		expect(((await storedValue(store)) as { providers: Array<{ url: string }> }).providers[0]?.url).toBe(
+			"https://example.test/v1",
+		);
 		expect(view.providers[0]).toMatchObject({
 			name: "OpenRouter",
 			key: { name: "OpenRouter", tail: "1234" },
@@ -92,9 +88,25 @@ describe("AI connection settings", () => {
 
 		const [key] = await store.cms.apiKeys.list();
 		expect(await store.cms.apiKeys.read(key?.id ?? "")).toBe("sk-chat-0000000000001234");
-		expect(key?.uses.map((use) => use.label)).toEqual([
-			testSite.createTranslator(settingsMessages)("keyUse", { name: "OpenRouter" }),
-		]);
+		expect(key?.uses.map((use) => use.ref)).toEqual([connectionRef(view.providers[0]?.id ?? "")]);
+		// Only the reference is stored, never text in some language.
+		expect(JSON.stringify(await store.cms.storage("core-keys").collection("uses").list())).not.toContain("OpenRouter");
+	});
+
+	it("works out each connection's label when asked: its current name in the admin language, and none once the connection is deleted", async () => {
+		const store = memoryStore();
+		const view = await addAiProvider(testSite, store, 0, chat());
+		const id = view.providers[0]?.id ?? "";
+		const ref = connectionRef(id);
+		const t = testSite.createTranslator(settingsMessages);
+		expect(await keyUseLabels(testSite, store, [ref])).toEqual({ [ref]: t("keyUse", { name: "OpenRouter" }) });
+
+		await updateAiProvider(testSite, store, 1, id, chat({ name: "Renamed", key: undefined }));
+		expect(await keyUseLabels(testSite, store, [ref])).toEqual({ [ref]: t("keyUse", { name: "Renamed" }) });
+
+		await removeAiProvider(testSite, store, 2, id);
+		expect(await keyUseLabels(testSite, store, [ref])).toEqual({ [ref]: null });
+		expect((await store.cms.apiKeys.list())[0]?.uses).toEqual([]);
 	});
 
 	it("names a second typed key after its connection with a number when the name is taken, and lets connections share a saved key", async () => {
@@ -302,15 +314,11 @@ describe("moving the keys stored in connections into the key store (db:migrate)"
 		expect(keys.map((key) => key.name).sort()).toEqual(["Claude", "Old"]);
 		expect(JSON.stringify((await settings.get("default"))?.value)).not.toContain("apiKey");
 		const claude = keys.find((key) => key.name === "Claude");
-		expect(claude?.uses.map((use) => use.label).sort()).toEqual([label(cms, "Claude"), label(cms, "Translate")]);
+		expect(claude?.uses.map((use) => use.ref).sort()).toEqual(["connection:a", "connection:b"]);
 		expect(await cms.apiKeys.read(claude?.id ?? "")).toBe("sk-chat-0000000000001234");
 
 		// The connections work through the store afterwards, and running it again changes nothing.
-		const view = await getAiSettingsView(testSite, {
-			...memoryStore(cms),
-			getAiSettings: async () => (await settings.get("default")) ?? null,
-			saveAiSettings: async () => 0,
-		});
+		const view = await getAiSettingsView(testSite, memoryStore(cms));
 		expect(view.providers.map((provider) => provider.ready)).toEqual([true, true, true, false]);
 		expect(await moveKeysToStore(storage, cms)).toBe(0);
 		expect(await cms.apiKeys.list()).toHaveLength(2);

@@ -10,7 +10,7 @@ import * as providers from "./routes/providers/route";
 import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
 import * as shared from "./routes/shared/route";
-import { getAiSettingsView } from "./settings";
+import { getAiSettingsView, keyUseLabels } from "./settings";
 import { aiStoreFor } from "./store";
 
 /** Server side of the AI plugin. Loaded by the core API handler and `monti db:migrate`. Not included in the browser bundle. */
@@ -28,6 +28,8 @@ const aiServer: CmsServerPlugin = {
 		{ pattern: "v1/ai/shared", module: shared },
 	],
 	migrate: migrateAi,
+	// What the API keys screen shows for a connection that uses a key: its current name, in the admin language.
+	keyUses: (cms, refs) => keyUseLabels(cms.site, aiStoreFor(cms), refs),
 	// `features.ai.ready` of the admin meta API: is at least one connection ready?
 	features: async (cms) => ({
 		ready: await getAiSettingsView(cms.site, aiStoreFor(cms)).then(

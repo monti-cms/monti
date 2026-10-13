@@ -21,6 +21,8 @@ import { settingsMessages } from "./settings.messages";
 export interface AiSettingsStore {
 	/** The central API key store (`cms.apiKeys`): a connection keeps the id of its key, and the value is read from here when the service is called. */
 	apiKeys(): ApiKeys;
+	/** Runs `work` with a store whose writes (the settings and the key store) are one transaction: all kept, or none if it throws. */
+	transaction<T>(work: (scoped: AiSettingsStore) => Promise<T>): Promise<T>;
 	getAiSettings(): Promise<{ value: unknown; version: number } | null>;
 	saveAiSettings(params: { expectedVersion: number; value: unknown }): Promise<number>;
 }
@@ -77,16 +79,34 @@ export async function getAiSettingsView(site: Site, store: AiSettingsStore): Pro
 	return { version, providers: providers.map(viewOf), fake: isFakeAi() };
 }
 
-/** Tells the key store where each connection's key is used, so the API keys screen can list it and warn before a key is deleted. */
-async function reportKeyUses(site: Site, store: AiSettingsStore, providers: readonly StoredProvider[]): Promise<void> {
-	const t = site.createTranslator(settingsMessages);
+/**
+ * Tells the key store which connections use which key, so the API keys screen can list them and warn before a key is deleted. Only the reference
+ * (`connection:<id>`) is stored; the text shown comes from {@link keyUseLabels} when the keys are read.
+ */
+export async function reportKeyUses(store: AiSettingsStore, providers: readonly StoredProvider[]): Promise<void> {
 	await store.apiKeys().setUses(
 		AI_PLUGIN_NAME,
 		providers.flatMap((provider) =>
-			provider.keyId
-				? [{ slot: `connection:${provider.id}`, keyId: provider.keyId, label: t("keyUse", { name: provider.name }) }]
-				: [],
+			provider.keyId ? [{ ref: connectionRef(provider.id), keyId: provider.keyId }] : [],
 		),
+	);
+}
+
+export const connectionRef = (id: string) => `connection:${id}`;
+
+/**
+ * The text for each connection that uses a key, in the admin language and with the connection's name as it is now (`null` for one that was deleted: its use is
+ * dropped). The plugin's `keyUses`.
+ */
+export async function keyUseLabels(
+	site: Site,
+	store: AiSettingsStore,
+	refs: readonly string[],
+): Promise<Record<string, string | null>> {
+	const t = site.createTranslator(settingsMessages);
+	const names = new Map((await load(store)).providers.map((provider) => [connectionRef(provider.id), provider.name]));
+	return Object.fromEntries(
+		refs.map((ref) => [ref, names.has(ref) ? t("keyUse", { name: names.get(ref) ?? "" }) : null]),
 	);
 }
 
@@ -97,35 +117,26 @@ async function writeProviders(
 	providers: StoredProvider[],
 ): Promise<AiSettingsView> {
 	await store.saveAiSettings({ expectedVersion, value: { providers } });
-	await reportKeyUses(site, store, providers);
+	await reportKeyUses(store, providers);
 	return getAiSettingsView(site, store);
 }
 
 /**
- * Turns the key a form chose into the id to keep, saving a typed key into the store first (named after the connection, `Name 2` if taken).
- * `undefined` (the form said nothing about the key): `keep`. If the connection cannot be saved after a key was just created from the typed value, that key is removed again.
+ * Saves a connection together with the key the form chose, in one transaction: a saved key is checked, a typed one is created, and the connection that refers
+ * to it is written, all or nothing (a version conflict leaves no new key behind). The key is named after the connection (`Name 2` if taken).
+ * `undefined` (the form said nothing about the key): `keep`.
  */
 async function saveWithKey(
 	store: AiSettingsStore,
 	input: AiProviderInput,
 	keep: string | null,
-	save: (keyId: string | null) => Promise<AiSettingsView>,
+	save: (scoped: AiSettingsStore, keyId: string | null) => Promise<AiSettingsView>,
 ): Promise<AiSettingsView> {
-	if (input.key === undefined) return save(keep);
-	const keyId = await store.apiKeys().choose(input.key, { baseName: input.name });
-	try {
-		return await save(keyId);
-	} catch (error) {
-		if (input.key.use === "new" && keyId) {
-			const created = await store.apiKeys().get(keyId);
-			if (created)
-				await store
-					.apiKeys()
-					.remove(keyId, { expectedVersion: created.version })
-					.catch(() => {});
-		}
-		throw error;
-	}
+	if (input.key === undefined) return save(store, keep);
+	const choice = input.key;
+	return store.transaction(async (scoped) =>
+		save(scoped, await scoped.apiKeys().choose(choice, { baseName: input.name })),
+	);
 }
 
 const toStored = (id: string, input: AiProviderInput, keyId: string | null): StoredProvider => ({
@@ -144,8 +155,8 @@ export async function addAiProvider(
 	input: AiProviderInput,
 ): Promise<AiSettingsView> {
 	const { providers } = await load(store);
-	return saveWithKey(store, input, null, (keyId) =>
-		writeProviders(site, store, expectedVersion, [...providers.map(plain), toStored(randomUUID(), input, keyId)]),
+	return saveWithKey(store, input, null, (scoped, keyId) =>
+		writeProviders(site, scoped, expectedVersion, [...providers.map(plain), toStored(randomUUID(), input, keyId)]),
 	);
 }
 
@@ -167,10 +178,10 @@ export async function updateAiProvider(
 	const current = providers.find((provider) => provider.id === id);
 	if (!current) throw new AiError("ai_failed", site.createTranslator(settingsMessages)("unknownConnection"));
 	const keep = input.url.replace(/\/+$/, "") !== current.url ? null : current.keyId;
-	return saveWithKey(store, input, keep, (keyId) =>
+	return saveWithKey(store, input, keep, (scoped, keyId) =>
 		writeProviders(
 			site,
-			store,
+			scoped,
 			expectedVersion,
 			providers.map((provider) => (provider.id === id ? toStored(id, input, keyId) : plain(provider))),
 		),

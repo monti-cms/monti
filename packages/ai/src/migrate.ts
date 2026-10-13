@@ -5,6 +5,7 @@ import { legacyFeatureOverride } from "./actions";
 import { AI_COLLECTIONS } from "./collections";
 import { AI_PLUGIN_NAME } from "./plugin-name";
 import { aiSecrets } from "./secret";
+import { connectionRef } from "./settings";
 import { settingsMessages } from "./settings.messages";
 
 /**
@@ -164,14 +165,9 @@ export async function moveKeysToStore(storage: PluginStorage, cms: Cms): Promise
 		if ((error as { code?: unknown }).code === "conflict") return 0;
 		throw error;
 	}
-	const t = cms.site.createTranslator(settingsMessages);
 	await cms.apiKeys.setUses(
 		AI_PLUGIN_NAME,
-		next.flatMap((provider) =>
-			provider.keyId
-				? [{ slot: `connection:${provider.id}`, keyId: provider.keyId, label: t("keyUse", { name: provider.name }) }]
-				: [],
-		),
+		next.flatMap((provider) => (provider.keyId ? [{ ref: connectionRef(provider.id), keyId: provider.keyId }] : [])),
 	);
 	return moved;
 }
