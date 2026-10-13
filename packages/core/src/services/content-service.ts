@@ -1,5 +1,10 @@
 import type { MediaUrlResolver } from "../core/import-normalize";
-import { serviceInputKeys, validateExactRecord } from "../core/snapshot";
+import {
+	type ImageWarningResolvers,
+	imageWarningsForSnapshot,
+	serviceInputKeys,
+	validateExactRecord,
+} from "../core/snapshot";
 import { withTranslationHints } from "../core/translation/hints";
 import { confirmedSourceState } from "../core/translation/state";
 import type { FormatRegistry } from "../format/registry";
@@ -44,6 +49,8 @@ export interface ContentServiceOptions {
 	readonly formats?: () => Promise<FormatRegistry>;
 	/** Looks up the registered media files the image URLs of an imported body point to. Without it, image URLs are kept as written. */
 	readonly media?: MediaUrlResolver;
+	/** Looks up the media rows and stored files behind the images of a body, for the image warnings of a publish. Without it, a publish reports no image warnings. */
+	readonly imageChecks?: ImageWarningResolvers;
 	/** A pipeline shared with other services (bulk). Takes the place of `hooks`, `formats` and `media`. */
 	readonly pipeline?: WritePipeline;
 }
@@ -210,12 +217,15 @@ export const createContentService = <T = unknown>(
 		/**
 		 * Publishes the latest saved draft. The draft goes through the write pipeline first (a hook that changed it has the change saved with the
 		 * publish, in one transaction), then the store checks the prepared draft against the rows it has to lock and commits.
-		 * `extraWarnings` adds notices computed from the prepared draft (image state), which never block.
+		 * The result's warnings include the image notices of the prepared draft (when the service has `imageChecks`), which never block.
+		 * Single and bulk publishes both come through here, so they report the same.
 		 */
-		publish: async (
-			params: { id: string; expectedVersion: number; resetPublishedAt?: boolean; publishedAt?: Date },
-			options?: { extraWarnings?: (snapshot: PreparedSnapshot) => Promise<readonly Issue[]> },
-		): Promise<WriteResult<T>> => {
+		publish: async (params: {
+			id: string;
+			expectedVersion: number;
+			resetPublishedAt?: boolean;
+			publishedAt?: Date;
+		}): Promise<WriteResult<T>> => {
 			const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
 			const working = await storePort.getWorking({ entryId: params.id });
 			const { snapshot, warnings, transformed } = await pipeline.run({
@@ -230,7 +240,10 @@ export const createContentService = <T = unknown>(
 				} as ServiceInput,
 				prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
 			});
-			const noticed = options?.extraWarnings ? await options.extraWarnings(snapshot) : (snapshot.warnings ?? []);
+			const noticed = [
+				...(snapshot.warnings ?? []),
+				...(options.imageChecks ? await imageWarningsForSnapshot(snapshot, options.imageChecks) : []),
+			];
 			// Notices found while the targets are locked (a link to an entry that is not published) join the ones found before the transaction.
 			const locked: Issue[] = [];
 			const onWarnings = (found: readonly Issue[]) => locked.push(...found);

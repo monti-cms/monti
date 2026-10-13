@@ -22,7 +22,7 @@ import { createBulkService } from "../../../../services/bulk-service";
 import { createContentService } from "../../../../services/content-service";
 import { ServiceError } from "../../../../services/types";
 import type { Collection } from "../../../collections";
-import { imageWarningsForSnapshot, prepareSnapshot } from "../../../snapshot";
+import { prepareSnapshot } from "../../../snapshot";
 import type { MetadataFor, ServiceInput } from "../../../types";
 import type { ContentStore, Entry, EntryMetadata } from "../..";
 import { CmsError } from "../..";
@@ -1043,18 +1043,15 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 			if (selectField) expect(published.published?.metadata[selectField.name]).toBe(UNKNOWN_OPTION);
 
 			const working = await store.getWorking({ entryId: draft.id });
-			const warnings = await imageWarningsForSnapshot(
-				await prepareSnapshot(
-					testSite,
-					{
-						collection: working.collection,
-						slug: working.slug,
-						metadata: working.metadata,
-						doc: working.doc,
-					} as never,
-					{ previousMetadata: working.metadata },
-				),
-				{ getMediaAsset: async () => null },
+			const { warnings } = await prepareSnapshot(
+				testSite,
+				{
+					collection: working.collection,
+					slug: working.slug,
+					metadata: working.metadata,
+					doc: working.doc,
+				} as never,
+				{ previousMetadata: working.metadata },
 			);
 			expect(warnings).toContainEqual(expect.objectContaining({ code: "orphaned_metadata_key", path: ORPHAN }));
 			expect(warnings).toContainEqual(expect.objectContaining({ code: "orphaned_metadata_key", path: ORPHAN_LIST }));

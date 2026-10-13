@@ -6,22 +6,16 @@ import { CmsError } from "../../../../../../core/store";
 import { ServiceError } from "../../../../../../services/types";
 import { POST } from "../route";
 
-const { verifyAdmin, publish, imageWarningsForSnapshot, getMediaAsset } = vi.hoisted(() => ({
+const { verifyAdmin, publish } = vi.hoisted(() => ({
 	verifyAdmin: vi.fn(),
 	publish: vi.fn(),
-	imageWarningsForSnapshot: vi.fn(),
-	getMediaAsset: vi.fn(),
 }));
 
 const cms = fakeCms({
 	config: testConfig,
 	contentService: { publish },
-	store: { getMediaAsset },
-	mediaStore: { headFile: vi.fn() },
 	verifyAdmin: () => verifyAdmin(),
 });
-
-vi.mock("../../../../../../core/snapshot", () => ({ imageWarningsForSnapshot }));
 
 function request(body: unknown = { expectedVersion: 4 }, origin = "http://localhost") {
 	return new Request("http://localhost/api/monti/v1/entries/entry-1/publish", {
@@ -46,25 +40,13 @@ describe("publish HTTP contract", () => {
 		const response = await POST(request(), context);
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({ entry: { id: "entry-1", status: "published" }, warnings });
-		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
-	});
-
-	it("computes the image warnings from the snapshot the pipeline prepared", async () => {
-		const snapshot = { collection: "post" };
-		imageWarningsForSnapshot.mockResolvedValue([]);
-		await POST(request(), context);
-		const { extraWarnings } = publish.mock.calls[0][1];
-		await extraWarnings(snapshot);
-		expect(imageWarningsForSnapshot).toHaveBeenCalledWith(
-			snapshot,
-			expect.objectContaining({ getMediaAsset: expect.any(Function), headStorageKey: expect.any(Function) }),
-		);
+		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 });
 	});
 
 	it("ignores a request publishedAt; the display date comes from the saved draft metadata", async () => {
 		const response = await POST(request({ expectedVersion: 4, publishedAt: "2020-03-04T12:00:00.000Z" }), context);
 		expect(response.status).toBe(200);
-		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
+		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 });
 	});
 
 	it("rejects a non-integer expectedVersion before publishing", async () => {

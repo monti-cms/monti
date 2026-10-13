@@ -81,7 +81,7 @@ export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, opti
 			site,
 			links: linkResolverOf(site, storePort),
 		});
-	const content = createContentService(storePort, { site, pipeline });
+	const content = createContentService(storePort, { site, pipeline, imageChecks: options.imageChecks });
 	return {
 		run: async (request: BulkRequest): Promise<{ results: BulkItemResult[] }> => {
 			if (!request || typeof request !== "object" || !BULK_OPS.includes(request.op)) {

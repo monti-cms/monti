@@ -4,6 +4,7 @@ import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway"
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host";
 import { type ApiKeys, type ApiKeysOptions, createApiKeys, migrateKeyUses } from "../api-keys/api-keys";
 import { problemText } from "../core/problem";
+import type { ImageWarningResolvers } from "../core/snapshot";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
 import type { FormatRegistry } from "../format/registry";
@@ -454,6 +455,23 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			return { summary, saved };
 		};
 
+		/** What a publish looks up for its image warnings. The stored file is checked once more when a media store is configured. */
+		const imageChecks = (): ImageWarningResolvers => ({
+			getMediaAsset: (mediaId) => getStore().getMediaAsset(mediaId),
+			...(server.media
+				? {
+						headStorageKey: async (storageKey: string) => {
+							try {
+								return (await getMediaStore().headFile({ key: storageKey })) !== null;
+							} catch {
+								// Store config and outages fall back to the DB result (non-blocking).
+								return true;
+							}
+						},
+					}
+				: {}),
+		});
+
 		return {
 			site,
 			server: publicServer,
@@ -464,6 +482,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					hooks: plugins.writeHooks,
 					formats: plugins.formats,
 					...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
+					imageChecks: imageChecks(),
 				});
 				return service as unknown as ContentService<Config>;
 			},
@@ -473,6 +492,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					hooks: plugins.writeHooks,
 					formats: plugins.formats,
 					...(server.media ? { media: mediaUrlResolver(getStore, getMediaStore) } : {}),
+					imageChecks: imageChecks(),
 				});
 				return bulk;
 			},

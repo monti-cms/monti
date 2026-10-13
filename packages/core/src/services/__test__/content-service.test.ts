@@ -1547,7 +1547,7 @@ describe("ContentService Contract", () => {
 			).toEqual([expect.objectContaining({ code: "image_media_missing_in_storage", message: "k/a.png" })]);
 		});
 
-		it("warning computation does not block publishing (empty array on failure)", async () => {
+		it("warning computation does not block publishing (no image warnings on failure)", async () => {
 			const warnings = await imageWarningsForSnapshot(await prepareSnapshot(await draft({ mediaId })), {
 				getMediaAsset: async () => {
 					throw new Error("db down");
