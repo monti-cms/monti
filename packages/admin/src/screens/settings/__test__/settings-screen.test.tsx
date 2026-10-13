@@ -7,7 +7,7 @@ import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { settingsMessages } from "../messages";
 import { SettingsScreen } from "../settings-screen";
-import type { SchemaTab } from "../tabs";
+import { SETTINGS_TABS, type SettingsTabId } from "../tabs";
 
 vi.mock("../../schema/schema-screen", () => ({
 	SchemaSettings: ({ tab, actionsSlot }: { tab: string; actionsSlot?: HTMLElement | null }) => (
@@ -23,20 +23,20 @@ const sidebarText = testSite.createTranslator(screensMessages);
 
 afterEach(cleanup);
 
-const element = (tab: SchemaTab) =>
+const element = (tab: SettingsTabId) =>
 	withSite(
 		<AdminQueryProvider>
 			<SettingsScreen tab={tab} />
 		</AdminQueryProvider>,
 	);
-const renderSettings = (tab: SchemaTab) => renderInRouter(element(tab));
+const renderSettings = (tab: SettingsTabId) => renderInRouter(element(tab));
 const tabBar = () => screen.getByRole("navigation", { name: t("tabs.label") });
 
 describe("settings tabs", () => {
-	it("lists the schema file's tabs in order, each with its own address", () => {
+	it("lists the tabs in order, each with its own address", () => {
 		renderSettings("collections");
 		const links = within(tabBar()).getAllByRole("link");
-		const ids = ["collections", "locales", "site", "admin", "file"] as const;
+		const ids = SETTINGS_TABS;
 		expect(links.map((link) => link.textContent)).toEqual(ids.map((id) => t(`tab.${id}`)));
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(
 			ids.map((id) => testSite.adminHref(`/settings/${id}`)),
