@@ -81,7 +81,7 @@ export async function createHarness(options: HarnessOptions = {}) {
 	await cms.migrate({ log: () => undefined });
 	const ctx: SyncContext = syncContextFor(cms);
 	if (!options.noSettings && !options.noSecret) {
-		await saveSettings(ctx, { token: TOKEN, webhookSecret: WEBHOOK_SECRET, expectedVersion: 0 });
+		await saveSettings(ctx, { token: { use: "new", value: TOKEN }, webhookSecret: WEBHOOK_SECRET, expectedVersion: 0 });
 	}
 	const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
 

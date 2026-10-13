@@ -10,6 +10,8 @@ import { gitSyncMessages } from "../page.messages";
 
 const site = createSite(config);
 const t = site.createTranslator(gitSyncMessages);
+/** The API key field belongs to the admin package; its texts are looked up by their English wording (the test site is English). */
+const keyT = (key: "field.useNew" | "field.newInput") => (key === "field.useNew" ? "Enter a new key" : "New API key");
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
@@ -80,7 +82,7 @@ beforeEach(() => {
 	status = {
 		settings: {
 			secretsAvailable: true,
-			token: { set: true, hint: "…1234", readable: true },
+			token: { key: { id: "key-1", name: "GitHub", tail: "1234", readable: true } },
 			webhookSecret: { set: false, readable: true },
 			version: 3,
 		},
@@ -167,7 +169,7 @@ describe("Git sync screen: sync tab", () => {
 		status = {
 			settings: {
 				secretsAvailable: true,
-				token: { set: false, hint: null, readable: true },
+				token: { key: null },
 				webhookSecret: { set: false, readable: true },
 				version: 0,
 			},
@@ -240,10 +242,13 @@ describe("Git sync screen: settings tab", () => {
 		fireEvent.click(screen.getByRole("tab", { name: new RegExp(t("tab.settings")) }));
 	};
 
-	it("tells whether a token is saved without showing it, and sends a new one with the version it saw", async () => {
+	it("shows which key the token uses without showing the token, and sends a new one with the version it saw", async () => {
 		await openSettings();
-		expect(await screen.findByText(t("settings.token.state.set", { hint: "…1234" }))).toBeTruthy();
-		const input = screen.getByLabelText(t("settings.token")) as HTMLInputElement;
+		expect(await screen.findByText(t("settings.token.state.set", { hint: "GitHub ••••1234" }))).toBeTruthy();
+		// Nothing to save while the field shows the key the token uses now.
+		expect((screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLButtonElement).disabled).toBe(true);
+		fireEvent.click(screen.getByRole("radio", { name: new RegExp(keyT("field.useNew")) }));
+		const input = screen.getByLabelText(keyT("field.newInput")) as HTMLInputElement;
 		expect(input.type).toBe("password");
 		expect(input.value).toBe("");
 		fireEvent.change(input, { target: { value: "ghp_brand_new" } });
@@ -251,11 +256,10 @@ describe("Git sync screen: settings tab", () => {
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
 				"/api/monti/v1/git-sync/settings",
-				{ token: "ghp_brand_new", expectedVersion: 3 },
+				{ token: { use: "new", value: "ghp_brand_new" }, expectedVersion: 3 },
 			]),
 		);
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("settings.saved")));
-		expect(input.value).toBe("");
 	});
 
 	it("shows the webhook URL, makes a webhook secret and saves it", async () => {
@@ -279,7 +283,10 @@ describe("Git sync screen: settings tab", () => {
 		await openSettings();
 		fireEvent.click(await screen.findByRole("button", { name: t("settings.remove") }));
 		await waitFor(() =>
-			expect(requests("PUT")).toContainEqual(["/api/monti/v1/git-sync/settings", { token: null, expectedVersion: 3 }]),
+			expect(requests("PUT")).toContainEqual([
+				"/api/monti/v1/git-sync/settings",
+				{ token: { use: "none" }, expectedVersion: 3 },
+			]),
 		);
 	});
 
@@ -287,7 +294,8 @@ describe("Git sync screen: settings tab", () => {
 		status = { ...status, settings: { ...(status.settings as object), secretsAvailable: false } };
 		await openSettings();
 		expect(await screen.findByText(t("settings.secretMissing"))).toBeTruthy();
-		fireEvent.change(screen.getByLabelText(t("settings.token")), { target: { value: "x" } });
+		fireEvent.click(screen.getByRole("radio", { name: new RegExp(keyT("field.useNew")) }));
+		fireEvent.change(screen.getByLabelText(keyT("field.newInput")), { target: { value: "x" } });
 		expect((screen.getAllByRole("button", { name: t("settings.save") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 });

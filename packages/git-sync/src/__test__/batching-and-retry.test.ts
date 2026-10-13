@@ -156,7 +156,7 @@ describe("a failed push is retried through the outbox, not lost", () => {
 			new Request("http://localhost/api/monti/v1/git-sync/settings", {
 				method: "PUT",
 				headers: { origin: "http://localhost", "content-type": "application/json" },
-				body: JSON.stringify({ token: "ghp_late_token", expectedVersion: 0 }),
+				body: JSON.stringify({ token: { use: "new", value: "ghp_late_token" }, expectedVersion: 0 }),
 			}),
 		);
 		expect(saved.status).toBe(200);

@@ -1,3 +1,4 @@
+import { apiKeyChoiceSchema } from "@monti-cms/core/client";
 import {
 	type AdminRequest,
 	adminRoute,
@@ -59,14 +60,24 @@ export const settings = {
 		if (typeof expectedVersion !== "number" || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
 			throw new HttpError(428, "version_required", "expectedVersion is required");
 		}
-		const pick = (key: "token" | "webhookSecret"): string | null | undefined =>
-			body[key] === null ? null : text(body, key);
+		const parsedToken = body.token === undefined ? undefined : apiKeyChoiceSchema.safeParse(body.token);
+		if (parsedToken && !parsedToken.success) {
+			throw new HttpError(
+				400,
+				"invalid_input",
+				'`token` must be `{ use: "saved", keyId }`, `{ use: "new", value }` or `{ use: "none" }`',
+			);
+		}
+		const webhookSecret = body.webhookSecret === null ? null : text(body, "webhookSecret");
 		const ctx = syncContextFor(cms);
-		const token = pick("token");
-		const saved = await saveSettings(ctx, { token, webhookSecret: pick("webhookSecret"), expectedVersion });
-		// A token was just saved: what waited for it goes out now.
-		if (typeof token === "string" && token.trim() !== "") await resumeAfterToken(ctx);
-		return json(saved);
+		const saved = await saveSettings(ctx, {
+			...(parsedToken?.success ? { token: parsedToken.data } : {}),
+			webhookSecret,
+			expectedVersion,
+		});
+		// A key was just chosen for the token: what waited for it goes out now.
+		if (saved.tokenChanged) await resumeAfterToken(ctx);
+		return json(saved.view);
 	}),
 };
 
