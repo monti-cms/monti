@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
@@ -142,13 +142,7 @@ export function ApiKeysSettings() {
 							{t("add")}
 						</Button>
 					</div>
-					<KeyRows
-						query={query}
-						onAdd={() => setEditing({ mode: "add" })}
-						menu={rowMenu}
-						onAssign={setSlotEditing}
-						onRetry={() => void query.refetch()}
-					/>
+					<KeyRows query={query} menu={rowMenu} onAssign={setSlotEditing} onRetry={() => void query.refetch()} />
 				</div>
 			</Section>
 			{editing && (
@@ -175,13 +169,11 @@ export function ApiKeysSettings() {
 
 function KeyRows({
 	query,
-	onAdd,
 	menu,
 	onAssign,
 	onRetry,
 }: {
 	query: ReturnType<typeof useApiKeys>;
-	onAdd: () => void;
 	menu: (key: ApiKeyView) => MenuAction[];
 	onAssign: (slot: ApiKeySlotView) => void;
 	onRetry: () => void;
@@ -215,12 +207,6 @@ function KeyRows({
 					<EmptyTitle>{t("empty.title")}</EmptyTitle>
 				</EmptyHeader>
 				<p className="text-cms-muted-foreground text-sm">{t("empty.description")}</p>
-				<EmptyContent>
-					<Button type="button" size="sm" disabled={!list.secretsAvailable} onClick={onAdd}>
-						<Plus aria-hidden />
-						{t("add")}
-					</Button>
-				</EmptyContent>
 			</Empty>
 		);
 	}
