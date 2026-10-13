@@ -53,6 +53,7 @@ const screenState = (over: Record<string, unknown> = {}) => ({
 	codeCollections: [],
 	vocabulary: { blocks: ["table", "image", "callout"], marks: ["bold", "italic"] },
 	collections: ["post", "tag"],
+	siteUrl: { url: null, from: "none" },
 	...over,
 });
 
@@ -140,6 +141,9 @@ describe("SchemaScreen", () => {
 
 		expect(await screen.findByTestId("schema-read-only")).toBeTruthy();
 		expect(screen.getByText(t("readonly.production"))).toBeTruthy();
+		expect(schemaMessages.messages.en["readonly.production"]).toBe(
+			"Settings are saved to monti.schema.ts. Change them on your computer (pnpm dev), then commit and deploy.",
+		);
 		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).disabled).toBe(true);
 		expect(review().disabled).toBe(true);
 		expect(screen.queryByRole("button", { name: t("collection.create") })).toBeNull();
@@ -638,5 +642,119 @@ describe("SchemaScreen", () => {
 			fireEvent.click(await screen.findByRole("button", { name: t("discard.confirm") }));
 		});
 		await waitFor(() => expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).value).toBe("Post"));
+	});
+	/** Edits through the site or admin tab, then returns the file the review would send. */
+	const openSettingsTab = async (name: "site" | "admin") => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		fireEvent.click(screen.getByRole("tab", { name: t(`tabs.${name}`) }));
+	};
+	const reviewedFile = async () => {
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		return lastPreview()?.body?.schema as Obj;
+	};
+
+	it("edits the site settings: each control writes its own key under site", async () => {
+		await openSettingsTab("site");
+		type(await screen.findByLabelText(t("site.name")), "My blog");
+		type(screen.getByLabelText(t("site.home")), "https://example.com");
+		type(screen.getByLabelText(t("site.previewPath")), "/preview");
+		type(screen.getByLabelText(t("site.previewParam")), "lang");
+		type(screen.getByLabelText(t("site.alias.new")), "www.example.com");
+		fireEvent.click(screen.getByRole("button", { name: t("site.alias.add") }));
+		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
+		pressOption(await screen.findByRole("option", { name: t("site.prefix.always") }));
+
+		const file = await reviewedFile();
+		expect(file.site).toEqual({
+			name: "My blog",
+			home: "https://example.com",
+			previewPath: "/preview",
+			previewLocaleParam: "lang",
+			localePrefix: "always",
+			aliases: ["www.example.com"],
+		});
+	});
+
+	it("lists the changed site and admin settings in the review, with the value before and after", async () => {
+		state = screenState({ schema: { ...schema(), site: { name: "Blog" } } });
+		await openSettingsTab("site");
+		type(await screen.findByLabelText(t("site.name")), "Journal");
+		fireEvent.click(screen.getByRole("tab", { name: t("tabs.admin") }));
+		fireEvent.click(await screen.findByRole("switch", { name: t("admin.templates") }));
+		fireEvent.click(review());
+		const list = await screen.findByTestId("review-settings");
+		expect(list.textContent).toContain('site.name: "Blog" -> "Journal"');
+		expect(list.textContent).toContain(`admin.templates: ${t("review.unset")} -> false`);
+	});
+
+	it("puts the preview language in the path with a switch, and empties the site section when everything is cleared", async () => {
+		state = screenState({ schema: { ...schema(), site: { name: "Blog" } } });
+		await openSettingsTab("site");
+		fireEvent.click(await screen.findByRole("switch", { name: t("site.previewInPath") }));
+		type(screen.getByLabelText(t("site.name")), "");
+		const file = await reviewedFile();
+		expect(file.site).toEqual({ previewLocaleParam: false });
+	});
+
+	it("explains each language prefix option with an example address", async () => {
+		await openSettingsTab("site");
+		const list = await screen.findByTestId("locale-prefix-explanations");
+		for (const mode of ["except-default", "always", "never"] as const) {
+			expect(within(list).getByText(t(`site.prefix.${mode}.text`, { default: "en", other: "fr" }))).toBeTruthy();
+		}
+		expect(list.textContent).toContain("/posts/a");
+		expect(list.textContent).toContain("/fr/posts/a");
+	});
+
+	it("shows the site URL read-only with where it comes from", async () => {
+		state = screenState({ siteUrl: { url: "https://blog.example", from: "env" } });
+		await openSettingsTab("site");
+		const row = await screen.findByTestId("site-url");
+		expect(row.textContent).toContain("https://blog.example");
+		expect(row.textContent).toContain(t("site.url.env"));
+		cleanup();
+		state = screenState();
+		await openSettingsTab("site");
+		expect((await screen.findByTestId("site-url")).textContent).toContain(t("site.url.none"));
+		expect(schemaMessages.messages.en["site.url.none"]).toContain("set SITE_URL where you deploy");
+	});
+
+	it("edits the admin settings: the language is picked from the dictionaries and the switches write false", async () => {
+		await openSettingsTab("admin");
+		fireEvent.click(await screen.findByRole("combobox", { name: t("admin.locale") }));
+		pressOption(await screen.findByRole("option", { name: /ko/ }));
+		fireEvent.click(screen.getByRole("switch", { name: t("admin.templates") }));
+		fireEvent.click(screen.getByRole("switch", { name: t("admin.translations") }));
+
+		const file = await reviewedFile();
+		expect(file.admin).toEqual({ locale: "ko", templates: false, translations: false });
+	});
+
+	it("turns an admin switch back on by removing its key", async () => {
+		state = screenState({ schema: { ...schema(), admin: { templates: false } } });
+		await openSettingsTab("admin");
+		fireEvent.click(await screen.findByRole("switch", { name: t("admin.templates") }));
+		const file = await reviewedFile();
+		expect(file.admin).toBeUndefined();
+	});
+
+	it("shows admin.path read-only with how to change it", async () => {
+		state = screenState({ schema: { ...schema(), admin: { path: "/studio" } } });
+		await openSettingsTab("admin");
+		expect((await screen.findByTestId("admin-path")).textContent).toBe("/studio");
+		expect(screen.getByText(t("admin.pathNote"))).toBeTruthy();
+		expect(schemaMessages.messages.en["admin.pathNote"]).toBe(
+			"Change it in monti.schema.ts and move the admin route folder.",
+		);
+		expect(screen.queryByLabelText(t("admin.path"), { selector: "input" })).toBeNull();
+	});
+
+	it("keeps the site and admin controls disabled when the screen is read-only", async () => {
+		state = screenState({ access: { writable: false, reason: "production" } });
+		await openSettingsTab("site");
+		expect(((await screen.findByLabelText(t("site.name"))) as HTMLInputElement).disabled).toBe(true);
+		expect(screen.queryByRole("button", { name: t("site.alias.add") })).toBeNull();
 	});
 });

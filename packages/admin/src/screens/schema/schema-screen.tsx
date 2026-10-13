@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { errorText } from "../admin-api";
 import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
+import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
 import { LocalesEditor } from "./locales-editor";
@@ -34,7 +35,9 @@ import {
 	removeCollection,
 	sameJson,
 	setCollection,
+	settingChanges,
 } from "./schema-model";
+import { SiteEditor } from "./site-editor";
 
 /** Why a schema file may not be edited here, as the key of the sentence that says it. */
 const READ_ONLY_KEY = {
@@ -44,19 +47,23 @@ const READ_ONLY_KEY = {
 	has_code: "readonly.hasCode",
 } as const;
 
-/** The parts of the file the screen does not edit: site and admin settings and seed data (shown as they are), and the transforms already recorded. */
+/** The parts of the file the screen does not edit: seed data and the admin text overrides (shown as they are), and the transforms already recorded. */
 function FileInfo({ file }: { file: Obj }) {
 	const t = useTranslator(schemaMessages);
 	const migrations = Array.isArray(file.migrations) ? (file.migrations as Obj[]) : [];
-	const rest = (["site", "admin", "seed"] as const).filter((key) => file[key] !== undefined);
+	const messages = isObj(file.admin) ? file.admin.messages : undefined;
+	const rest = [
+		...(messages !== undefined ? ([[t("file.messages"), messages]] as const) : []),
+		...(file.seed !== undefined ? ([["seed", file.seed]] as const) : []),
+	];
 	return (
 		<div className="flex flex-col gap-4">
 			<p className="text-cms-muted-foreground text-xs">{t("file.hint")}</p>
-			{rest.map((key) => (
-				<section key={key} className="flex flex-col gap-1">
-					<h4 className="font-medium text-sm">{key}</h4>
+			{rest.map(([title, value]) => (
+				<section key={title} className="flex flex-col gap-1">
+					<h4 className="font-medium text-sm">{title}</h4>
 					<pre className="max-h-64 overflow-auto rounded-md border bg-cms-muted/40 p-2 text-xs">
-						{JSON.stringify(file[key], null, 2)}
+						{JSON.stringify(value, null, 2)}
 					</pre>
 				</section>
 			))}
@@ -218,6 +225,8 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 								<TabsList className="w-full justify-start sm:w-fit">
 									<TabsTrigger value="collections">{t("tabs.collections")}</TabsTrigger>
 									<TabsTrigger value="locales">{t("tabs.locales")}</TabsTrigger>
+									<TabsTrigger value="site">{t("tabs.site")}</TabsTrigger>
+									<TabsTrigger value="admin">{t("tabs.admin")}</TabsTrigger>
 									<TabsTrigger value="file">{t("tabs.file")}</TabsTrigger>
 								</TabsList>
 								<TabsContent value="collections" className="pt-3">
@@ -294,6 +303,12 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 										update={updateFile}
 									/>
 								</TabsContent>
+								<TabsContent value="site" className="pt-3">
+									<SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />
+								</TabsContent>
+								<TabsContent value="admin" className="pt-3">
+									<AdminEditor file={draft} update={updateFile} />
+								</TabsContent>
 								<TabsContent value="file" className="pt-3">
 									<FileInfo file={draft} />
 								</TabsContent>
@@ -320,6 +335,7 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 					onOpenChange={setReviewing}
 					draft={draft}
 					renames={renames}
+					settings={settingChanges(base, draft)}
 					baseHash={state.hash}
 					onIssues={setIssues}
 					onApplyFailed={() => setApplyFailed(true)}
