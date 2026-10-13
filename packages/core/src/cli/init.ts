@@ -10,14 +10,8 @@ import {
 	type TextEdit,
 	wrapNextConfig,
 } from "./init-edit";
-import {
-	collectAnswers,
-	detectedLocales,
-	detectSystemTimeZone,
-	type InitAnswerFlags,
-	InitCancelled,
-	type Prompter,
-} from "./init-prompts";
+import { collectAnswers, detectedLocales, detectSystemTimeZone, type InitAnswerFlags } from "./init-prompts";
+import { Cancelled, type Prompter } from "./prompt";
 import {
 	adminLayoutTemplate,
 	adminPageTemplate,
@@ -250,7 +244,7 @@ const layoutManualStep = (file: string, reason: string): string =>
 /** `next.config` files init cannot edit, or must not create a second one next to. */
 const OTHER_NEXT_CONFIGS = ["next.config.cjs", "next.config.mts", "next.config.cts"] as const;
 
-/** Runs the whole of `monti init` in `options.cwd`. Throws {@link InitCancelled} when the person cancels, {@link InitError} when a write fails. */
+/** Runs the whole of `monti init` in `options.cwd`. Throws {@link Cancelled} when the person cancels, {@link InitError} when a write fails. */
 export async function initProject(options: InitOptions): Promise<InitReport> {
 	const { cwd } = options;
 	const host: InitHost = { ...defaultInitHost, ...options.host };
@@ -634,5 +628,3 @@ export function formatInitReport(report: InitReport): string {
 	}
 	return out.join("\n").trimEnd();
 }
-
-export { InitCancelled };

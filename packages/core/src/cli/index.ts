@@ -1,13 +1,12 @@
 import { parseArgs } from "node:util";
-import { type AdminPrompts, adminResetPassword } from "./admin-command";
+import { adminResetPassword } from "./admin-command";
 import { dbMigrate, dbSetup } from "./db";
 import { runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
 import { HELP, helpFor } from "./help";
 import { runInitCommand } from "./init-command";
-import type { Prompter } from "./init-prompts";
-import { InitCancelled } from "./init-prompts";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
+import { Cancelled, type Prompter } from "./prompt";
 import { schemaApply, schemaDiff } from "./schema-apply";
 import { extractSchema, formatExtractReport } from "./schema-extract";
 
@@ -27,7 +26,7 @@ import { extractSchema, formatExtractReport } from "./schema-extract";
  */
 
 export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate";
-export { type AdminPrompts, adminResetPassword, type ResetPasswordOptions } from "./admin-command";
+export { adminResetPassword, type ResetPasswordOptions } from "./admin-command";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
 export { dbMigrate, dbSetup, type MigrateOptions } from "./db";
 export { unifiedDiff } from "./diff";
@@ -60,8 +59,9 @@ export {
 	initProject,
 } from "./init";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect";
-export { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
+export { collectAnswers, type InitAnswerFlags } from "./init-prompts";
 export { isPluginCommandName, type PluginCommandRun, runPluginCommand } from "./plugin-command";
+export { Cancelled, createClackPrompter, type Prompter } from "./prompt";
 export {
 	formatApplyResult,
 	formatSchemaPlan,
@@ -88,10 +88,8 @@ export interface CliIo {
 	readonly cwd: string;
 	readonly log: (message: string) => void;
 	readonly error: (message: string) => void;
-	/** Answers the questions of `monti init` (tests). Default: the terminal, when there is one. */
+	/** Answers the questions of `monti init` and `monti admin:reset-password` (tests). Default: the terminal, when there is one. */
 	readonly prompter?: Prompter;
-	/** Answers the questions of `monti admin:reset-password` (tests). Default: the terminal, when there is one. */
-	readonly adminPrompts?: AdminPrompts;
 }
 
 /** Runs the command and returns the exit code. */
@@ -127,7 +125,7 @@ export async function runCli(
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
 				config: values.config,
 				email: values.email,
-				prompts: io.adminPrompts,
+				prompter: io.prompter,
 				log: io.log,
 				error: io.error,
 			});
@@ -255,6 +253,6 @@ export async function runCli(
 	} catch (error) {
 		io.error(error instanceof Error ? error.message : String(error));
 		// Ctrl+C at a question ends any command the same way (the shell convention for an interrupt), not as a failure.
-		return error instanceof InitCancelled ? 130 : 1;
+		return error instanceof Cancelled ? 130 : 1;
 	}
 }

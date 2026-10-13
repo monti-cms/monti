@@ -6,7 +6,7 @@ import { parseSchemaFile } from "../../schema-file/format";
 import { printSchemaFile } from "../../schema-file/print";
 import { unifiedDiff } from "../diff";
 import { formatInitReport, InitError, initProject, ProjectWriter } from "../init";
-import { InitCancelled } from "../init-prompts";
+import { Cancelled } from "../prompt";
 import {
 	CREATE_NEXT_APP,
 	CREATE_NEXT_APP_LAYOUT,
@@ -868,7 +868,7 @@ describe("monti init when something goes wrong", () => {
 		const dir = fixtureApp();
 		const before = listFiles(dir);
 		const prompter = scriptedPrompter({ "Default language of the site": "cancel" });
-		await expect(initProject({ cwd: dir, ...quiet(), prompter })).rejects.toBeInstanceOf(InitCancelled);
+		await expect(initProject({ cwd: dir, ...quiet(), prompter })).rejects.toBeInstanceOf(Cancelled);
 		expect(listFiles(dir)).toEqual(before);
 	});
 

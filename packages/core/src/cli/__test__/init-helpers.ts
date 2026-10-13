@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, vi } from "vitest";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import type { InitHost } from "../init";
-import { InitCancelled, type Prompter } from "../init-prompts";
+import { Cancelled, type Prompter } from "../prompt";
 
 /** Shared by the tests of `monti init`: fixture Next apps in temp folders, a host that touches nothing, and a prompter that answers from a script. */
 
@@ -140,7 +140,7 @@ export function scriptedPrompter(script: Record<string, string | boolean | strin
 		const key = Object.keys(script).find((candidate) => message.includes(candidate));
 		if (key === undefined) throw new Error(`no scripted answer for "${message}"`);
 		const value = script[key];
-		if (value === "cancel") throw new InitCancelled();
+		if (value === "cancel") throw new Cancelled();
 		return value;
 	};
 	return {
@@ -157,6 +157,7 @@ export function scriptedPrompter(script: Record<string, string | boolean | strin
 			if (problem) throw new Error(`scripted answer "${value}" to "${question.message}" is invalid: ${problem}`);
 			return value;
 		},
+		password: async (question) => answer(question.message) as string,
 		confirm: async (question) => answer(question.message) as never,
 	};
 }

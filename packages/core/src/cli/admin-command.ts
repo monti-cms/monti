@@ -1,19 +1,12 @@
 import type { LoginAccountRefusal } from "../server/define";
 import { type AppOptions, loadApp } from "./app";
-import { InitCancelled } from "./init-prompts";
-
-/** What `monti admin:reset-password` asks the person at the terminal. The prompt library sits behind it, so the command is tested with scripted answers. */
-export interface AdminPrompts {
-	text(message: string): Promise<string>;
-	/** A secret: not echoed. */
-	password(message: string): Promise<string>;
-}
+import { createClackPrompter, isInteractive, type Prompter } from "./prompt";
 
 export interface ResetPasswordOptions extends AppOptions {
 	/** The admin's email (`--email`). Asked when not given. */
 	readonly email?: string;
 	/** Default: the terminal, when there is one. */
-	readonly prompts?: AdminPrompts;
+	readonly prompter?: Pick<Prompter, "text" | "password">;
 	readonly error?: (message: string) => void;
 }
 
@@ -25,22 +18,14 @@ const REFUSALS: Record<LoginAccountRefusal, (min: number) => string> = {
 	closed: () => "the accounts are closed.",
 };
 
-/** The prompts for a person at the terminal, on `@clack/prompts` (loaded here, so nothing else loads it). */
-export async function createTerminalAdminPrompts(): Promise<AdminPrompts> {
-	if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+/** The prompter for a person at the terminal. The command asks for a password, so without a terminal it cannot run. */
+async function terminalPrompter(): Promise<Prompter> {
+	if (!isInteractive()) {
 		throw new Error(
 			"`monti admin:reset-password` asks for the new password, so it needs a terminal. Run it in one (use --email to skip the first question).",
 		);
 	}
-	const clack = await import("@clack/prompts");
-	const answer = <T>(value: T | symbol): T => {
-		if (clack.isCancel(value)) throw new InitCancelled();
-		return value as T;
-	};
-	return {
-		text: async (message) => answer<string>(await clack.text({ message })),
-		password: async (message) => answer<string>(await clack.password({ message })),
-	};
+	return createClackPrompter();
 }
 
 /**
@@ -59,10 +44,12 @@ export async function adminResetPassword(options: ResetPasswordOptions): Promise
 			);
 			return 1;
 		}
-		const prompts = options.prompts ?? (await createTerminalAdminPrompts());
-		const email = (options.email ?? (await prompts.text("Email of the admin"))).trim();
-		const password = await prompts.password(`New password (at least ${accounts.minPasswordLength} characters)`);
-		if (password !== (await prompts.password("Repeat the new password"))) {
+		const prompts = options.prompter ?? (await terminalPrompter());
+		const email = (options.email ?? (await prompts.text({ message: "Email of the admin" }))).trim();
+		const password = await prompts.password({
+			message: `New password (at least ${accounts.minPasswordLength} characters)`,
+		});
+		if (password !== (await prompts.password({ message: "Repeat the new password" }))) {
 			error("The two passwords are not the same. Nothing was changed.");
 			return 1;
 		}

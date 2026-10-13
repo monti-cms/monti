@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { formatInitReport, type InitHost, initProject } from "./init";
 import type { PackageManager } from "./init-detect";
-import { createClackPrompter, InitCancelled, type Prompter } from "./init-prompts";
+import { Cancelled, createClackPrompter, isInteractive, type Prompter } from "./prompt";
 
 /** The `monti init` command line: flags in, the report out. Kept apart from `index.ts` so the flag list and the prompt wiring sit with the command. */
 
@@ -55,8 +55,7 @@ export async function runInitCommand(
 			throw new Error(`--package-manager "${manager}" must be one of ${PACKAGE_MANAGERS.join(", ")}`);
 		}
 		// Prompts only when a person is at the terminal and did not ask for none.
-		const interactive =
-			(extras.interactive ?? Boolean(process.stdin.isTTY && process.stdout.isTTY)) && !values.yes && !json;
+		const interactive = (extras.interactive ?? isInteractive()) && !values.yes && !json;
 		const prompter = interactive ? (extras.prompter ?? (await createClackPrompter())) : undefined;
 		const report = await initProject({
 			cwd: io.cwd,
@@ -88,6 +87,6 @@ export async function runInitCommand(
 		const message = error instanceof Error ? error.message : String(error);
 		if (json) io.log(JSON.stringify({ ok: false, error: message }, null, 2));
 		else io.error(message);
-		return error instanceof InitCancelled ? 130 : 1;
+		return error instanceof Cancelled ? 130 : 1;
 	}
 }
