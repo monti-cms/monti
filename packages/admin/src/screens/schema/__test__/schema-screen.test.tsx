@@ -141,7 +141,11 @@ const renderScreen = () =>
 		</AdminQueryProvider>,
 	);
 
-const review = () => screen.getByRole("button", { name: t("actions.review") }) as HTMLButtonElement;
+/** The review button: it reads "No changes" (and is off) until something is edited. */
+const review = () =>
+	screen.getByRole("button", {
+		name: new RegExp(`^(${t("actions.review")}|${t("actions.noChanges")})$`),
+	}) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
 /** Picks the kind in the dialog that adds a field (the last "Kind" box on the screen). */
 async function pickNewFieldKind(optionName: string) {
@@ -810,6 +814,109 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("review-summary");
 		return lastPreview()?.body?.schema as Obj;
 	};
+
+	it("counts the unsaved changes next to the review button, which reads No changes until there is one", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(review().textContent).toBe(t("actions.noChanges"));
+		expect(screen.queryByText(t("header.pending", { count: 1 }))).toBeNull();
+		type(screen.getByLabelText(t("collection.label")), "Article");
+		expect(review().textContent).toBe(t("actions.review"));
+		expect(screen.getByText(t("header.pending", { count: 1 }))).toBeTruthy();
+	});
+
+	describe("languages tab", () => {
+		const openLocales = async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			fireEvent.click(screen.getByRole("tab", { name: t("tabs.locales") }));
+			return screen.findByTestId("locales-content");
+		};
+
+		it("lists the content languages in one card with code, name, default mark and admin name, and has a section for the default language and time zone", async () => {
+			const content = await openLocales();
+			const row = within(content).getByTestId("locale-en");
+			expect(within(row).getByText("en")).toBeTruthy();
+			expect(within(row).getByText("English")).toBeTruthy();
+			expect(within(row).getByText(t("locales.defaultBadge"))).toBeTruthy();
+			expect(within(row).getByText(t("locales.adminName", { label: "English" }))).toBeTruthy();
+			expect(within(content).getByText(t("locales.count", { count: 1 }))).toBeTruthy();
+			// Two sections, each with its title and description.
+			expect(within(content).getByRole("heading", { name: t("locales.contentTitle") })).toBeTruthy();
+			const defaults = screen.getByTestId("locales-default");
+			expect(within(defaults).getByRole("heading", { name: t("locales.defaultTitle") })).toBeTruthy();
+			expect(within(defaults).getByLabelText(t("locales.timeZone"))).toBeTruthy();
+			// The default language says what its addresses look like, with an example from the first collection address.
+			expect(within(defaults).getByText(/\/posts\/hello/)).toBeTruthy();
+		});
+
+		it("adds a language from a small dialog, and the code of a saved language cannot be edited", async () => {
+			const content = await openLocales();
+			fireEvent.click(within(content).getByRole("button", { name: t("locales.add") }));
+			const dialog = await screen.findByTestId("locale-dialog");
+			const add = within(dialog).getByRole("button", { name: t("locales.add") }) as HTMLButtonElement;
+			expect(add.disabled).toBe(true);
+			type(within(dialog).getByLabelText(t("locales.code")), "en");
+			type(within(dialog).getByLabelText(t("locales.name")), "Again");
+			// The code is taken.
+			expect(add.disabled).toBe(true);
+			type(within(dialog).getByLabelText(t("locales.code")), "fr");
+			type(within(dialog).getByLabelText(t("locales.name")), "Français");
+			type(within(dialog).getByLabelText(t("locales.label")), "French");
+			expect(add.disabled).toBe(false);
+			fireEvent.click(add);
+			const row = await screen.findByTestId("locale-fr");
+			expect(within(row).getByText(t("locales.adminName", { label: "French" }))).toBeTruthy();
+
+			fireEvent.click(within(row).getByRole("button", { name: t("locales.menu", { name: "Français" }) }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("locales.edit") }));
+			const edit = await screen.findByTestId("locale-dialog");
+			expect((within(edit).getByLabelText(t("locales.code")) as HTMLInputElement).disabled).toBe(true);
+			fireEvent.click(within(edit).getByRole("button", { name: t("locales.cancel") }));
+
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			expect((lastPreview()?.body?.schema as { locales: unknown[] }).locales).toEqual([
+				{ code: "en", name: "English" },
+				{ code: "fr", name: "Français", label: "French" },
+			]);
+		});
+
+		it("changes the default language and removes a language from the row menu", async () => {
+			const content = await openLocales();
+			fireEvent.click(within(content).getByRole("button", { name: t("locales.add") }));
+			const dialog = await screen.findByTestId("locale-dialog");
+			type(within(dialog).getByLabelText(t("locales.code")), "ko");
+			type(within(dialog).getByLabelText(t("locales.name")), "한국어");
+			fireEvent.click(within(dialog).getByRole("button", { name: t("locales.add") }));
+			await screen.findByTestId("locale-ko");
+			fireEvent.click(screen.getByRole("combobox", { name: t("locales.default") }));
+			pressOption(await screen.findByRole("option", { name: "한국어 (ko)" }));
+			const ko = screen.getByTestId("locale-ko");
+			expect(within(ko).getByText(t("locales.defaultBadge"))).toBeTruthy();
+			expect(within(screen.getByTestId("locale-en")).queryByText(t("locales.defaultBadge"))).toBeNull();
+			fireEvent.click(
+				within(screen.getByTestId("locale-en")).getByRole("button", { name: t("locales.menu", { name: "English" }) }),
+			);
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("row.remove", { name: "en" }) }));
+			await waitFor(() => expect(screen.queryByTestId("locale-en")).toBeNull());
+		});
+	});
+
+	it("groups the site and admin settings into titled sections instead of one long form", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		fireEvent.click(screen.getByRole("tab", { name: t("tabs.site") }));
+		const site = await screen.findByTestId("site-settings");
+		for (const key of ["site.identityTitle", "site.previewTitle", "site.addressTitle"] as const) {
+			expect(within(site).getByRole("heading", { name: t(key) })).toBeTruthy();
+		}
+		fireEvent.click(screen.getByRole("tab", { name: t("tabs.admin") }));
+		const admin = await screen.findByTestId("admin-settings");
+		for (const key of ["admin.languageTitle", "admin.featuresTitle", "admin.addressTitle"] as const) {
+			expect(within(admin).getByRole("heading", { name: t(key) })).toBeTruthy();
+		}
+	});
 
 	it("edits the site settings: each control writes its own key under site", async () => {
 		await openSettingsTab("site");

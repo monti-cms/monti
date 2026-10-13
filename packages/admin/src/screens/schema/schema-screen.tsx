@@ -5,6 +5,7 @@ import type { SchemaIssue, SchemaScreenState } from "@monti-cms/core/schema-edit
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
@@ -27,6 +28,7 @@ import { ReviewDialog } from "./review-dialog";
 import { fetchSchema, type SavedSchema, SCHEMA_KEY } from "./schema-api";
 import {
 	addCollection,
+	changeCount,
 	collectionsOf,
 	isObj,
 	localesOf,
@@ -38,6 +40,7 @@ import {
 	setCollection,
 	settingChanges,
 } from "./schema-model";
+import { Section } from "./section";
 import { SiteEditor } from "./site-editor";
 
 /** Why a schema file may not be edited here, as the key of the sentence that says it. */
@@ -48,8 +51,8 @@ const READ_ONLY_KEY = {
 	has_code: "readonly.hasCode",
 } as const;
 
-/** The parts of the file the screen does not edit: seed data and the admin text overrides (shown as they are), and the transforms already recorded. */
-function FileInfo({ file }: { file: Obj }) {
+/** The file on disk and the version the database has, then the parts of the file the screen does not edit: seed data, the admin text overrides (shown as they are), and the transforms already recorded. */
+function FileInfo({ file, state }: { file: Obj; state: SchemaScreenState }) {
 	const t = useTranslator(schemaMessages);
 	const migrations = Array.isArray(file.migrations) ? (file.migrations as Obj[]) : [];
 	const messages = isObj(file.admin) ? file.admin.messages : undefined;
@@ -58,36 +61,50 @@ function FileInfo({ file }: { file: Obj }) {
 		...(file.seed !== undefined ? ([["seed", file.seed]] as const) : []),
 	];
 	return (
-		<div className="flex flex-col gap-4">
-			<p className="text-cms-muted-foreground text-xs">{t("file.hint")}</p>
+		<div className="flex flex-col gap-12">
+			<Section wide title={t("file.statusTitle")} description={t("file.statusDescription")} note={t("file.hint")}>
+				<div className="flex flex-wrap items-center gap-2">
+					<code className="rounded-sm bg-cms-muted px-1.5 py-0.5 text-xs">{state.file ?? t("status.noFile")}</code>
+					<Badge variant="secondary">{t("status.version", { version: state.schemaVersion })}</Badge>
+					<Badge variant="outline">
+						{state.applied ? t("status.applied", { version: state.applied.schemaVersion }) : t("status.notApplied")}
+					</Badge>
+				</div>
+			</Section>
 			{rest.map(([title, value]) => (
-				<section key={title} className="flex flex-col gap-1">
-					<h4 className="font-medium text-sm">{title}</h4>
-					<pre className="max-h-64 overflow-auto rounded-md border bg-cms-muted/40 p-2 text-xs">
+				<Section wide key={title} title={title}>
+					<pre className="max-h-64 overflow-auto rounded-md bg-cms-muted/60 p-3 text-xs">
 						{JSON.stringify(value, null, 2)}
 					</pre>
-				</section>
+				</Section>
 			))}
-			<section className="flex flex-col gap-1">
-				<h4 className="font-medium text-sm">{t("file.migrations")}</h4>
+			<Section wide title={t("file.migrations")}>
 				{migrations.length === 0 ? (
-					<p className="text-cms-muted-foreground text-xs">{t("file.noMigrations")}</p>
+					<p className="text-cms-muted-foreground text-sm">{t("file.noMigrations")}</p>
 				) : (
-					<ul className="flex flex-col gap-1 text-xs">
+					<ul className="-my-2 flex flex-col divide-y text-sm">
 						{migrations.map((migration) => (
-							<li key={String(migration.id)} className="rounded-md border px-2 py-1">
-								<code>{String(migration.id)}</code>{" "}
-								<span className="text-cms-muted-foreground">{String(migration.op)}</span>
+							<li key={String(migration.id)} className="flex items-center gap-2 py-2">
+								<code className="text-xs">{String(migration.id)}</code>{" "}
+								<span className="text-cms-muted-foreground text-xs">{String(migration.op)}</span>
 							</li>
 						))}
 					</ul>
 				)}
-			</section>
+			</Section>
 		</div>
 	);
 }
 
-function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab }) {
+function SchemaEditor({
+	state,
+	tab,
+	actionsSlot,
+}: {
+	state: SchemaScreenState;
+	tab: SchemaTab;
+	actionsSlot?: HTMLElement | null;
+}) {
 	const t = useTranslator(schemaMessages);
 	const site = useSite();
 	const router = useAdminRouter();
@@ -105,6 +122,7 @@ function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
 	const { confirm, dialog } = useConfirm();
 	const dirty = !sameJson(draft, base);
+	const pending = changeCount(base, draft);
 	const savedNames = Object.keys(collectionsOf(base));
 
 	useEffect(() => {
@@ -143,38 +161,51 @@ function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab
 		setIssues([]);
 	};
 
+	const actions = (
+		<>
+			{!writable && (
+				<Badge variant="outline" className="gap-1">
+					<Lock aria-hidden />
+					{t("status.readOnly")}
+				</Badge>
+			)}
+			{dirty && writable && (
+				<>
+					<Button type="button" variant="ghost" size="sm" onClick={() => void discard()}>
+						{t("actions.discard")}
+					</Button>
+					<span className="hidden text-cms-muted-foreground text-xs sm:inline">
+						{t("header.pending", { count: pending })}
+					</span>
+				</>
+			)}
+			<Button
+				type="button"
+				variant={dirty && writable ? "default" : "outline"}
+				size="sm"
+				disabled={!writable || !dirty}
+				onClick={() => setReviewing(true)}
+			>
+				{dirty && writable ? t("actions.review") : t("actions.noChanges")}
+			</Button>
+		</>
+	);
+
 	const reason = state.access.writable ? null : (state.access.reason as keyof typeof READ_ONLY_KEY | undefined);
 	return (
 		<SchemaEditProvider value={context}>
 			<div className="flex min-h-0 flex-1 flex-col" data-testid="schema-screen">
-				<div className="flex flex-wrap items-center gap-2 border-b px-4 py-2.5 lg:px-5">
-					<code className="rounded bg-cms-muted px-1.5 py-0.5 text-xs">{state.file ?? t("status.noFile")}</code>
-					<Badge variant="secondary">{t("status.version", { version: state.schemaVersion })}</Badge>
-					<Badge variant="outline">
-						{state.applied ? t("status.applied", { version: state.applied.schemaVersion }) : t("status.notApplied")}
-					</Badge>
-					{!writable && (
-						<Badge variant="outline" className="gap-1">
-							<Lock aria-hidden />
-							{t("status.readOnly")}
-						</Badge>
-					)}
-					<div className="ml-auto flex items-center gap-2">
-						{dirty && writable && (
-							<>
-								<Button type="button" variant="ghost" size="sm" onClick={() => void discard()}>
-									{t("actions.discard")}
-								</Button>
-								<span className="hidden text-cms-muted-foreground text-xs sm:inline">{t("actions.unsaved")}</span>
-							</>
+				{actions && actionsSlot !== undefined
+					? actionsSlot
+						? createPortal(actions, actionsSlot)
+						: null
+					: actions && (
+							<div className="flex items-center justify-end gap-2.5 border-b bg-cms-background px-4 py-2 lg:px-10">
+								{actions}
+							</div>
 						)}
-						<Button type="button" size="sm" disabled={!writable || !dirty} onClick={() => setReviewing(true)}>
-							{t("actions.review")}
-						</Button>
-					</div>
-				</div>
 				<div className="min-h-0 flex-1 overflow-y-auto">
-					<div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-4 lg:px-5">
+					<div className="flex w-full max-w-[1160px] flex-col gap-6 px-4 py-6 lg:px-10 lg:py-8">
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
@@ -302,7 +333,7 @@ function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab
 								)}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
 								{tab === "admin" && <AdminEditor file={draft} update={updateFile} />}
-								{tab === "file" && <FileInfo file={draft} />}
+								{tab === "file" && <FileInfo file={draft} state={state} />}
 							</>
 						)}
 					</div>
@@ -347,7 +378,7 @@ function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab
 }
 
 /** The schema file editor: edits `monti.schema.ts` on the development server, shows it read-only everywhere else. `tab` is the Settings tab being shown. */
-export function SchemaSettings({ tab }: { tab: SchemaTab }) {
+export function SchemaSettings({ tab, actionsSlot }: { tab: SchemaTab; actionsSlot?: HTMLElement | null }) {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
 	const query = useQuery({
@@ -358,9 +389,10 @@ export function SchemaSettings({ tab }: { tab: SchemaTab }) {
 		refetchOnWindowFocus: false,
 	});
 	const error = query.error ? errorText(site, query.error, t("load.failed")) : null;
-	if (query.data) return <SchemaEditor key={query.data.hash ?? "site"} state={query.data} tab={tab} />;
+	if (query.data)
+		return <SchemaEditor key={query.data.hash ?? "site"} state={query.data} tab={tab} actionsSlot={actionsSlot} />;
 	return (
-		<div className="flex flex-col gap-3 p-5">
+		<div className="flex flex-col gap-3 p-4 lg:p-10">
 			{error ? (
 				<Alert variant="danger" layout="stack">
 					<AlertDescription className="flex items-center gap-3">

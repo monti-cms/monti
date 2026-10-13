@@ -85,6 +85,7 @@ export function AdminShell({
 	count,
 	sidebar,
 	headerActions,
+	bare,
 	children,
 }: {
 	title: ReactNode;
@@ -92,6 +93,8 @@ export function AdminShell({
 	count?: number;
 	sidebar: AdminSidebarProps;
 	headerActions?: ReactNode;
+	/** The screen draws its own page header (the Settings page): the shell then has no title bar of its own. */
+	bare?: boolean;
 	children: ReactNode;
 }) {
 	const t = useTranslator(sharedMessages);
@@ -99,7 +102,7 @@ export function AdminShell({
 	if (!nav) {
 		return (
 			<AdminNavProvider>
-				<AdminShell title={title} count={count} sidebar={sidebar} headerActions={headerActions}>
+				<AdminShell title={title} count={count} sidebar={sidebar} headerActions={headerActions} bare={bare}>
 					{children}
 				</AdminShell>
 			</AdminNavProvider>
@@ -115,16 +118,18 @@ export function AdminShell({
 				folderCounts={nav.folderCounts}
 			/>
 			<SidebarInset className="min-w-0 overflow-hidden">
-				<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
-					<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-1 text-cms-muted-foreground md:hidden" />
-					<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-[15px]">
-						<span className="truncate">{title}</span>
-						{count !== undefined && (
-							<span className="tabular font-normal text-cms-muted-foreground text-sm">{count}</span>
-						)}
-					</h1>
-					<div className="flex items-center gap-2">{headerActions}</div>
-				</header>
+				{!bare && (
+					<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
+						<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-1 text-cms-muted-foreground md:hidden" />
+						<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-[15px]">
+							<span className="truncate">{title}</span>
+							{count !== undefined && (
+								<span className="tabular font-normal text-cms-muted-foreground text-sm">{count}</span>
+							)}
+						</h1>
+						<div className="flex items-center gap-2">{headerActions}</div>
+					</header>
+				)}
 				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>

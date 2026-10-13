@@ -10,7 +10,12 @@ import { SettingsScreen } from "../settings-screen";
 import type { SchemaTab } from "../tabs";
 
 vi.mock("../../schema/schema-screen", () => ({
-	SchemaSettings: ({ tab }: { tab: string }) => <p>schema editor: {tab}</p>,
+	SchemaSettings: ({ tab, actionsSlot }: { tab: string; actionsSlot?: HTMLElement | null }) => (
+		<p>
+			schema editor: {tab}
+			{actionsSlot ? " (actions slot)" : ""}
+		</p>
+	),
 }));
 
 const t = testSite.createTranslator(settingsMessages);
@@ -57,14 +62,23 @@ describe("settings tabs", () => {
 
 	it("shows the schema editor for the open tab", () => {
 		renderSettings("locales");
-		expect(screen.getByText("schema editor: locales")).toBeTruthy();
+		expect(screen.getByText(/schema editor: locales/)).toBeTruthy();
 	});
 
 	it("keeps the schema editor (and its unsaved draft) mounted while moving between tabs", () => {
 		const { rerender } = renderSettings("collections");
-		const editor = screen.getByText("schema editor: collections");
+		const editor = screen.getByText(/schema editor: collections/);
 		rerender(element("site"));
-		expect(screen.getByText("schema editor: site")).toBe(editor);
+		expect(screen.getByText(/schema editor: site/)).toBe(editor);
+	});
+
+	it("has its own page header: title, a line about where it is saved, and a slot for the editor's review button", () => {
+		renderSettings("collections");
+		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeTruthy();
+		expect(screen.getByText(t("description"))).toBeTruthy();
+		expect(screen.getByText(/actions slot/)).toBeTruthy();
+		// One title only: the shell draws no title bar of its own here.
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
 	});
 
 	it("marks Settings in the sidebar", () => {
