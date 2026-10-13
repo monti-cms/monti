@@ -376,7 +376,13 @@ describe("schema settings API", () => {
 		writeFileSync(file, withSpread);
 		const state = await (await call(cms, "GET", "schema")).json();
 		expect(state).toMatchObject({
-			access: { writable: false, reason: "has_code", detail: expect.stringContaining("line 3") },
+			access: {
+				writable: false,
+				reason: "has_code",
+				detail: expect.stringContaining("line 3"),
+				// The screen translates the code and shows the values it names.
+				issue: { code: "code_before", params: { name: "const" }, line: 3 },
+			},
 			source: "site",
 		});
 		// The screen still shows what the instance runs.

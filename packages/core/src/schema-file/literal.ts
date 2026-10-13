@@ -10,6 +10,75 @@
 /** The module the one import of the file names. */
 export const SCHEMA_MODULE = "@monti-cms/core";
 
+/** What in a schema file is code (or not valid). The admin translates these; `message` carries the English sentence for the command line and logs. */
+export type SchemaLiteralIssueCode =
+	| "comment_unclosed"
+	| "string_unclosed"
+	| "escape_malformed"
+	| "template_expression"
+	| "expected_token"
+	| "expected_value"
+	| "expected_name"
+	| "expected_import"
+	| "expected_module"
+	| "expected_schema_object"
+	| "computed_key"
+	| "spread"
+	| "method"
+	| "shorthand"
+	| "proto_key"
+	| "duplicate_key"
+	| "empty_slot"
+	| "not_data"
+	| "call"
+	| "access"
+	| "identifier"
+	| "foreign_module"
+	| "second_import"
+	| "code_before"
+	| "code_after";
+
+/** The values a code's sentence names (`name`, `expected`, `found`). */
+export type SchemaLiteralIssueParams = Readonly<Record<string, string>>;
+
+export interface SchemaLiteralIssue {
+	readonly code: SchemaLiteralIssueCode;
+	readonly params: SchemaLiteralIssueParams;
+	readonly line: number;
+	readonly column: number;
+}
+
+const found = (p: SchemaLiteralIssueParams) => (p.found ? `, found \`${p.found}\`` : "");
+
+/** The English sentence of each code. */
+const ENGLISH: Record<SchemaLiteralIssueCode, (p: SchemaLiteralIssueParams) => string> = {
+	comment_unclosed: () => "a comment that is never closed",
+	string_unclosed: () => "a string that is never closed",
+	escape_malformed: () => "a malformed escape in a string",
+	template_expression: () => "a template expression `${...}`",
+	expected_token: (p) => `expected ${p.what ?? `\`${p.expected}\``}${found(p)}`,
+	expected_value: () => "expected a value",
+	expected_name: (p) => `expected a property name${found(p)}`,
+	expected_import: () => 'expected `import { defineSchema } from "@monti-cms/core"`',
+	expected_module: () => `expected "${SCHEMA_MODULE}"`,
+	expected_schema_object: (p) => `expected the schema object \`{\`${found(p)}`,
+	computed_key: () => "a computed key `[...]`",
+	spread: () => "a spread `...`",
+	method: (p) => `a method or accessor \`${p.name}\``,
+	shorthand: (p) => `the shorthand property \`${p.name}\` (write \`${p.name}: <value>\`)`,
+	proto_key: () => "the key `__proto__`",
+	duplicate_key: (p) => `the key \`${p.name}\` is written twice`,
+	empty_slot: () => "an empty slot in a list",
+	not_data: (p) => `an expression that is not data, starting with \`${p.found}\``,
+	call: (p) => `a function call \`${p.name}(...)\``,
+	access: (p) => `a property access on \`${p.name}\``,
+	identifier: (p) => `the identifier \`${p.name}\` (a schema holds data only)`,
+	foreign_module: () => `an import from a module other than "${SCHEMA_MODULE}"`,
+	second_import: () => "a second import (only `defineSchema` is imported)",
+	code_before: (p) => `code before the schema (\`${p.name}\`)`,
+	code_after: () => "code after the schema",
+};
+
 export type SchemaLiteral =
 	| {
 			readonly ok: true;
@@ -20,16 +89,22 @@ export type SchemaLiteral =
 	  }
 	| {
 			readonly ok: false;
-			/** What in the file is code (or not valid), with its line. */
+			/** What in the file is code (or not valid), with its line, in English. */
 			readonly message: string;
+			readonly code: SchemaLiteralIssueCode;
+			readonly params: SchemaLiteralIssueParams;
 			readonly line: number;
 			readonly column: number;
 	  };
 
 class Refused extends Error {
 	readonly at: number;
-	constructor(message: string, at: number) {
-		super(message);
+	readonly code: SchemaLiteralIssueCode;
+	readonly params: SchemaLiteralIssueParams;
+	constructor(code: SchemaLiteralIssueCode, params: SchemaLiteralIssueParams, at: number) {
+		super(ENGLISH[code](params));
+		this.code = code;
+		this.params = params;
 		this.at = at;
 	}
 }
@@ -53,9 +128,10 @@ const SIMPLE_ESCAPES: Readonly<Record<string, string>> = {
 function read(text: string): { value: Record<string, unknown>; comments: boolean } {
 	let at = 0;
 	let comments = false;
-	const refuse = (message: string, position = at): never => {
-		throw new Refused(message, position);
+	const refuse = (code: SchemaLiteralIssueCode, params: SchemaLiteralIssueParams = {}, position = at): never => {
+		throw new Refused(code, params, position);
 	};
+	const here = (): Record<string, string> => (text[at] === undefined ? {} : { found: text[at] as string });
 
 	const skip = () => {
 		for (;;) {
@@ -69,7 +145,7 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 			} else if (char === "/" && text[at + 1] === "*") {
 				comments = true;
 				const end = text.indexOf("*/", at + 2);
-				if (end === -1) refuse("a comment that is never closed");
+				if (end === -1) refuse("comment_unclosed");
 				at = end + 2;
 			} else return;
 		}
@@ -83,12 +159,12 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 		NAME.lastIndex = at;
 		return NAME.exec(text)?.[0];
 	};
-	const eat = (expected: string, what = `\`${expected}\``) => {
-		if (peek() !== expected) refuse(`expected ${what}${text[at] === undefined ? "" : `, found \`${text[at]}\``}`);
+	const eat = (expected: string, what?: string) => {
+		if (peek() !== expected) refuse("expected_token", { expected, ...(what === undefined ? {} : { what }), ...here() });
 		at += 1;
 	};
 	const eatWord = (expected: string) => {
-		if (word() !== expected) refuse(`expected \`${expected}\``);
+		if (word() !== expected) refuse("expected_token", { expected });
 		at += expected.length;
 	};
 
@@ -99,20 +175,20 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 		let out = "";
 		for (;;) {
 			const char = text[at];
-			if (char === undefined) refuse("a string that is never closed", start);
+			if (char === undefined) refuse("string_unclosed", {}, start);
 			if (char === quote) {
 				at += 1;
 				return out;
 			}
-			if (quote !== "`" && char === "\n") refuse("a string that is never closed", start);
-			if (quote === "`" && char === "$" && text[at + 1] === "{") refuse("a template expression `${...}`", at);
+			if (quote !== "`" && char === "\n") refuse("string_unclosed", {}, start);
+			if (quote === "`" && char === "$" && text[at + 1] === "{") refuse("template_expression", {}, at);
 			if (char !== "\\") {
 				out += char;
 				at += 1;
 				continue;
 			}
 			const next = text[at + 1];
-			if (next === undefined) refuse("a string that is never closed", start);
+			if (next === undefined) refuse("string_unclosed", {}, start);
 			if (next === "\n") {
 				at += 2;
 			} else if (next === "x" || next === "u") {
@@ -124,10 +200,10 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 					(!braced && digits.length !== (next === "x" ? 2 : 4)) ||
 					(braced && close === -1)
 				) {
-					refuse("a malformed escape in a string", at);
+					refuse("escape_malformed", {}, at);
 				}
 				const code = Number.parseInt(digits, 16);
-				if (code > 0x10ffff) refuse("a malformed escape in a string", at);
+				if (code > 0x10ffff) refuse("escape_malformed", {}, at);
 				out += String.fromCodePoint(code);
 				at += braced ? close + 1 - at : 2 + digits.length;
 			} else {
@@ -140,8 +216,8 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 	const key = (): string => {
 		const char = peek();
 		if (char === '"' || char === "'") return string();
-		if (char === "[") return refuse("a computed key `[...]`");
-		if (char === ".") return refuse("a spread `...`");
+		if (char === "[") return refuse("computed_key");
+		if (char === ".") return refuse("spread");
 		NUMBER.lastIndex = at;
 		const number = NUMBER.exec(text)?.[0];
 		if (number !== undefined) {
@@ -149,19 +225,19 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 			return String(Number(number));
 		}
 		const name = word();
-		if (name === undefined) return refuse(`expected a property name${char === undefined ? "" : `, found \`${char}\``}`);
+		if (name === undefined) return refuse("expected_name", char === undefined ? {} : { found: char });
 		at += name.length;
 		const after = peek();
 		if (after === "(" || (after !== ":" && /^(?:get|set|async|static)$/.test(name))) {
-			refuse(`a method or accessor \`${name}\``, at - name.length);
+			refuse("method", { name }, at - name.length);
 		}
-		if (after !== ":") refuse(`the shorthand property \`${name}\` (write \`${name}: <value>\`)`, at - name.length);
+		if (after !== ":") refuse("shorthand", { name }, at - name.length);
 		return name;
 	};
 
 	const value = (): unknown => {
 		const char = peek();
-		if (char === undefined) return refuse("expected a value");
+		if (char === undefined) return refuse("expected_value");
 		if (char === "{") {
 			at += 1;
 			const result: Record<string, unknown> = {};
@@ -170,16 +246,15 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 					at += 1;
 					return result;
 				}
-				if (text.startsWith("...", at)) refuse("a spread `...`");
+				if (text.startsWith("...", at)) refuse("spread");
 				const start = at;
 				const name = key();
-				if (name === "__proto__") refuse("the key `__proto__`", start);
-				if (Object.hasOwn(result, name)) refuse(`the key \`${name}\` is written twice`, start);
+				if (name === "__proto__") refuse("proto_key", {}, start);
+				if (Object.hasOwn(result, name)) refuse("duplicate_key", { name }, start);
 				eat(":");
 				result[name] = value();
 				if (peek() === ",") at += 1;
-				else if (peek() !== "}")
-					refuse(`expected \`,\` or \`}\`${text[at] === undefined ? "" : `, found \`${text[at]}\``}`);
+				else if (peek() !== "}") refuse("expected_token", { what: "`,` or `}`", ...here() });
 			}
 		}
 		if (char === "[") {
@@ -190,12 +265,11 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 					at += 1;
 					return result;
 				}
-				if (text.startsWith("...", at)) refuse("a spread `...`");
-				if (peek() === ",") refuse("an empty slot in a list");
+				if (text.startsWith("...", at)) refuse("spread");
+				if (peek() === ",") refuse("empty_slot");
 				result.push(value());
 				if (peek() === ",") at += 1;
-				else if (peek() !== "]")
-					refuse(`expected \`,\` or \`]\`${text[at] === undefined ? "" : `, found \`${text[at]}\``}`);
+				else if (peek() !== "]") refuse("expected_token", { what: "`,` or `]`", ...here() });
 			}
 		}
 		if (char === '"' || char === "'" || char === "`") return string();
@@ -206,26 +280,23 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 			return Number(number);
 		}
 		const name = word();
-		if (name === undefined) return refuse(`an expression that is not data, starting with \`${char}\``);
+		if (name === undefined) return refuse("not_data", { found: char });
 		const start = at;
 		at += name.length;
 		if (name === "true") return true;
 		if (name === "false") return false;
 		if (name === "null") return null;
 		const after = peek();
-		if (after === "(") return refuse(`a function call \`${name}(...)\``, start);
-		if (after === ".") return refuse(`a property access on \`${name}\``, start);
-		return refuse(`the identifier \`${name}\` (a schema holds data only)`, start);
+		if (after === "(") return refuse("call", { name }, start);
+		if (after === ".") return refuse("access", { name }, start);
+		return refuse("identifier", { name }, start);
 	};
 
 	// import { defineSchema } from "@monti-cms/core";
 	const first = word();
 	if (first !== "import") {
-		refuse(
-			first === undefined
-				? 'expected `import { defineSchema } from "@monti-cms/core"`'
-				: `code before the schema (\`${first}\`)`,
-		);
+		if (first === undefined) return refuse("expected_import");
+		return refuse("code_before", { name: first });
 	}
 	at += "import".length;
 	eat("{");
@@ -233,25 +304,24 @@ function read(text: string): { value: Record<string, unknown>; comments: boolean
 	eat("}");
 	eatWord("from");
 	const quote = peek();
-	if (quote !== '"' && quote !== "'") refuse(`expected "${SCHEMA_MODULE}"`);
+	if (quote !== '"' && quote !== "'") refuse("expected_module");
 	const moduleAt = at;
-	if (string() !== SCHEMA_MODULE) refuse(`an import from a module other than "${SCHEMA_MODULE}"`, moduleAt);
+	if (string() !== SCHEMA_MODULE) refuse("foreign_module", {}, moduleAt);
 	if (peek() === ";") at += 1;
-	if (word() === "import") refuse("a second import (only `defineSchema` is imported)");
+	if (word() === "import") refuse("second_import");
 
 	// export default defineSchema({ ... });
 	const next = word();
-	if (next !== undefined && next !== "export") refuse(`code before the schema (\`${next}\`)`);
+	if (next !== undefined && next !== "export") refuse("code_before", { name: next });
 	eatWord("export");
 	eatWord("default");
 	eatWord("defineSchema");
 	eat("(");
-	if (peek() !== "{")
-		refuse(`expected the schema object \`{\`${text[at] === undefined ? "" : `, found \`${text[at]}\``}`);
+	if (peek() !== "{") refuse("expected_schema_object", here());
 	const result = value() as Record<string, unknown>;
 	eat(")");
 	if (peek() === ";") at += 1;
-	if (peek() !== undefined) refuse("code after the schema");
+	if (peek() !== undefined) refuse("code_after");
 	return { value: result, comments };
 }
 
@@ -267,7 +337,14 @@ export function parseSchemaLiteral(text: string): SchemaLiteral {
 	} catch (error) {
 		if (!(error instanceof Refused)) throw error;
 		const { line, column } = lineOf(text, error.at);
-		return { ok: false, message: `line ${line}: ${error.message}`, line, column };
+		return {
+			ok: false,
+			message: `line ${line}: ${error.message}`,
+			code: error.code,
+			params: error.params,
+			line,
+			column,
+		};
 	}
 }
 

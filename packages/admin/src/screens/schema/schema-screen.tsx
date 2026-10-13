@@ -27,6 +27,7 @@ import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
+import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
@@ -208,9 +209,9 @@ function SchemaEditor({
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
 								<AlertDescription className="flex flex-col gap-1">
 									<span>{t(READ_ONLY_KEY[reason])}</span>
-									{reason === "has_code" && state.access.detail && (
+									{reason === "has_code" && (state.access.issue || state.access.detail) && (
 										<code className="text-xs" data-testid="schema-code-detail">
-											{state.access.detail}
+											{state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail}
 										</code>
 									)}
 								</AlertDescription>

@@ -1,4 +1,9 @@
-export { parseSchemaLiteral, type SchemaLiteral } from "../schema-file/literal";
+export {
+	parseSchemaLiteral,
+	type SchemaLiteral,
+	type SchemaLiteralIssue,
+	type SchemaLiteralIssueCode,
+} from "../schema-file/literal";
 export { printSchemaFile } from "../schema-file/print";
 export {
 	isDevelopmentServer,

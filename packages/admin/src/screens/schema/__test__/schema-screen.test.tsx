@@ -198,14 +198,22 @@ describe("SchemaScreen", () => {
 
 	it("is read-only when the file holds code: it says the admin cannot rewrite it, names the line, and nothing can be reviewed", async () => {
 		state = screenState({
-			access: { writable: false, reason: "has_code", detail: "line 3: a spread `...`" },
+			access: {
+				writable: false,
+				reason: "has_code",
+				detail: "line 3: a spread `...`",
+				issue: { code: "spread", params: {}, line: 3, column: 5 },
+			},
 			source: "site",
 		});
 		renderScreen();
 
 		expect(await screen.findByTestId("schema-read-only")).toBeTruthy();
 		expect(screen.getByText(t("readonly.hasCode"))).toBeTruthy();
-		expect(screen.getByTestId("schema-code-detail").textContent).toBe("line 3: a spread `...`");
+		// The sentence is in the admin language, built from the issue's code (the server's English sentence is not shown).
+		expect(screen.getByTestId("schema-code-detail").textContent).toBe(
+			t("literal.line", { line: 3, message: t("literal.spread") }),
+		);
 		expect(t("readonly.hasCode")).toContain("monti.schema.ts");
 		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).disabled).toBe(true);
 		expect(review().disabled).toBe(true);
