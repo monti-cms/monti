@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host";
+import { API_KEYS_SCOPE, type ApiKeys, createApiKeys } from "../api-keys/api-keys";
 import { problemText } from "../core/problem";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
@@ -153,6 +154,11 @@ export interface Cms<
 	 * with it. `options.legacy` lets the plugin keep reading values it stored in an older format.
 	 */
 	secrets(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
+	/**
+	 * The central API key store: named keys kept encrypted, with the places that use each. A plugin keeps a key's id (not its value) and reads the value with
+	 * `cms.apiKeys.read(id)` when it calls a service; see {@link ApiKeys}. The admin's Settings → API keys tab manages the same keys.
+	 */
+	readonly apiKeys: ApiKeys;
 	/**
 	 * Gives the login the request headers of the framework serving this instance (Next.js: `nextHost`). `@monti-cms/nextjs` calls it from the route handler and the admin
 	 * layout and page, so a site never does. An explicit `host` of `auth()` wins over it.
@@ -311,6 +317,10 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			() => self() as unknown as Cms,
 		);
 
+		const apiKeys = createApiKeys({
+			storage: () => connections.database.pluginStorage(API_KEYS_SCOPE),
+			secrets: vault.forPlugin(API_KEYS_SCOPE),
+		});
 		let store: ContentStore | undefined;
 		let service: LooseContentService | undefined;
 		let bulk: BulkService | undefined;
@@ -422,6 +432,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			mediaStore: getMediaStore,
 			storage: (plugin) => connections.database.pluginStorage(plugin),
 			secrets: (plugin, secretsOptions) => vault.forPlugin(plugin, secretsOptions),
+			apiKeys,
 			auth: getAuth,
 			authHandlers: {
 				GET: (request) => getAuth().handlers.GET(request),

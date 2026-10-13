@@ -2,6 +2,8 @@ import type { Cms, HandleOptions } from "../cms";
 import { CMS_API_PATH, cmsBasePath } from "../core/base-path";
 import { assertPluginRoutesFree } from "../plugin/collisions";
 import { CMS_AUTH_BASE_PATH } from "../server/define";
+import * as rApiKey from "./v1/api-keys/[id]/route";
+import * as rApiKeys from "./v1/api-keys/route";
 import * as r9 from "./v1/bulk/route";
 import * as r12 from "./v1/entries/[id]/archive/route";
 import * as r13 from "./v1/entries/[id]/duplicate/route";
@@ -57,6 +59,9 @@ type RouteHandler = (
 type RouteModule = Partial<Record<Method, unknown>>;
 
 const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule }> = [
+	// The central API key store: names, masked tails and the places that use each key. A value goes in on save and never comes back.
+	{ pattern: "v1/api-keys", module: rApiKeys },
+	{ pattern: "v1/api-keys/[id]", module: rApiKey },
 	{ pattern: "v1/bulk", module: r9 },
 	{ pattern: "v1/entries", module: r10 },
 	// Named before `[id]`, so `search` is not read as an entry id.
