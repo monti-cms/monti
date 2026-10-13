@@ -24,6 +24,10 @@ import type {
 export interface MemoryPluginStorage {
 	/** The storage of one plugin. The same plugin name gives the same data. */
 	storage(plugin: string): PluginStorage;
+	/**
+	 * Runs `work` and keeps what it wrote only if it does not throw (the data is put back as it was otherwise), like a database transaction. `once` is not available inside it.
+	 */
+	transaction<T>(work: (tx: { pluginStorage(plugin: string): PluginStorage }) => Promise<T>): Promise<T>;
 	/** Puts a table an earlier version of a plugin kept on its own where `readLegacyTable` can read it (for migration tests). */
 	seedLegacyTable(table: string, rows: readonly Record<string, unknown>[]): void;
 	/** Records a one-time step name as done, as an earlier version of a plugin would have (for `legacyNames` tests). */
@@ -153,8 +157,27 @@ export function createMemoryPluginStorage(): MemoryPluginStorage {
 		};
 	};
 
+	const transaction: MemoryPluginStorage["transaction"] = async (work) => {
+		const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
+		try {
+			return await work({
+				pluginStorage: (plugin) => ({
+					...storage(plugin),
+					once: async () => {
+						throw new Error("plugin storage: `once` cannot run inside a transaction");
+					},
+				}),
+			});
+		} catch (error) {
+			collections.clear();
+			for (const [key, docs] of before) collections.set(key, docs);
+			throw error;
+		}
+	};
+
 	return {
 		storage,
+		transaction,
 		seedLegacyTable: (table, rows) => {
 			legacyTables.set(table, rows);
 		},

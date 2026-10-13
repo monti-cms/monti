@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../test/site";
 import { runPluginStorageContract } from "../../../plugin/__test__/storage-contract";
 import { migrateContentStore } from "../content-store";
-import { createPluginStorage } from "../plugin-storage";
+import { createPluginStorage, inPluginTransaction } from "../plugin-storage";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The Postgres plugin storage against the plugin storage contract: every session is a new schema, migrated like `monti db:migrate` does. */
@@ -61,6 +61,28 @@ describe("postgres plugin storage specifics", () => {
 			{ plugin: "rows", collection: "things", key: "a", value: { n: 1 }, version: 1 },
 			{ plugin: "rows-two", collection: "things", key: "a", value: { n: 2 }, version: 1 },
 		]);
+	});
+
+	it("writes to several plugins' collections in one transaction: all kept, or none if the work throws", async () => {
+		const failing = inPluginTransaction(pool, schemaName, async (tx) => {
+			await tx.pluginStorage("tx-a").collection("things").set("a", { n: 1 }, { expectedVersion: 0 });
+			await tx.pluginStorage("tx-b").collection("things").set("b", { n: 2 }, { expectedVersion: 0 });
+			throw new Error("stop");
+		});
+		await expect(failing).rejects.toThrow("stop");
+		expect(await createPluginStorage(pool, schemaName, "tx-a").collection("things").get("a")).toBeNull();
+		expect(await createPluginStorage(pool, schemaName, "tx-b").collection("things").get("b")).toBeNull();
+
+		await inPluginTransaction(pool, schemaName, async (tx) => {
+			await tx.pluginStorage("tx-a").collection("things").set("a", { n: 1 }, { expectedVersion: 0 });
+			await tx.pluginStorage("tx-b").collection("things").set("b", { n: 2 }, { expectedVersion: 0 });
+		});
+		expect((await createPluginStorage(pool, schemaName, "tx-a").collection("things").get("a"))?.value).toEqual({
+			n: 1,
+		});
+		expect((await createPluginStorage(pool, schemaName, "tx-b").collection("things").get("b"))?.value).toEqual({
+			n: 2,
+		});
 	});
 
 	it("reads only tables of its own schema and refuses names that are not plain identifiers", async () => {

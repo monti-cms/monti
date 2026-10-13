@@ -3,7 +3,11 @@ import { adminRoute, json, parseWith, readJsonBody } from "../handler";
 
 /** The keys with the places that use them. Values are never part of it. */
 export const GET = adminRoute(async ({ cms }) =>
-	json({ items: await cms.apiKeys.list(), secretsAvailable: cms.apiKeys.available } satisfies ApiKeyList),
+	json({
+		items: await cms.apiKeys.list(),
+		secretsAvailable: cms.apiKeys.available,
+		slots: await cms.apiKeys.slots(),
+	} satisfies ApiKeyList),
 );
 
 export const POST = adminRoute(async ({ request, cms }) => {

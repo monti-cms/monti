@@ -1,0 +1,188 @@
+import { describe, expect, it } from "vitest";
+import { testConfig } from "../../../test/site";
+import { type Cms, fakeCms } from "../../cms";
+import type { ApiKeyList } from "../../core/api-keys";
+import { PUT as assign } from "../../http/v1/api-keys/slots/route";
+import { definePlugin } from "../../plugin/define";
+import { migrateKeyUses } from "../api-keys";
+
+const VALUE = "sk-ant-api03-abcdefghij3f9a";
+const SECRET = "a-long-enough-test-secret";
+
+/** A plugin that asks for one key. Its label is a getter, so it follows the language when it is read. */
+const speller = (language: { current: string }) =>
+	definePlugin({
+		name: "speller",
+		keySlots: [
+			{
+				id: "key",
+				get label() {
+					return language.current === "ko" ? "맞춤법 검사" : "Spell check";
+				},
+			},
+		],
+	});
+
+const CONFIG = (plugins: ReturnType<typeof speller>[]) => ({ ...testConfig, plugins });
+
+const cmsWith = (plugins: ReturnType<typeof speller>[], extra: Record<string, unknown> = {}) =>
+	fakeCms({ config: CONFIG(plugins) as never, server: { secret: SECRET }, ...extra }) as unknown as Cms;
+
+const request = (body: unknown) =>
+	new Request("http://localhost/api/monti/v1/api-keys/slots", {
+		method: "PUT",
+		headers: { origin: "http://localhost", "content-type": "application/json" },
+		body: JSON.stringify(body),
+	});
+
+describe("key slots", () => {
+	it("lists a plugin's declared slot as empty until a key is assigned", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		expect(await cms.apiKeys.slots()).toEqual([{ plugin: "speller", slot: "key", label: "Spell check", key: null }]);
+		expect(await cms.apiKeys.readSlot("speller", "key")).toBeNull();
+	});
+
+	it("assigns a saved key, shows the slot among the key's uses, and the plugin reads the value through it", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
+		await cms.apiKeys.setSlot("speller", "key", key.id);
+		const [slot] = await cms.apiKeys.slots();
+		expect(slot?.key).toMatchObject({ id: key.id, name: "Bareun", tail: "3f9a" });
+		const view = await cms.apiKeys.get(key.id);
+		expect(view?.uses).toEqual([{ plugin: "speller", ref: "key", label: "Spell check" }]);
+		expect(view?.slots).toHaveLength(1);
+		expect(await cms.apiKeys.readSlot("speller", "key")).toBe(VALUE);
+	});
+
+	it("saves a typed key together with the assignment, named after the slot", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: VALUE }, { baseName: "Spell check" });
+		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: `${VALUE}2` }, { baseName: "Spell check" });
+		expect((await cms.apiKeys.list()).map((key) => key.name)).toEqual(["Spell check", "Spell check 2"]);
+		expect(await cms.apiKeys.readSlot("speller", "key")).toBe(`${VALUE}2`);
+	});
+
+	it("keeps no orphan key when the assignment cannot be written", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		await expect(
+			cms.apiKeys.assignSlot("speller", "nope", { use: "new", value: VALUE }, { baseName: "Spell check" }),
+		).rejects.toMatchObject({ code: "not_found" });
+		expect(await cms.apiKeys.list()).toEqual([]);
+	});
+
+	it("clears a slot, which leaves the key itself", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: VALUE }, { baseName: "Spell check" });
+		await cms.apiKeys.assignSlot("speller", "key", { use: "none" }, { baseName: "Spell check" });
+		expect((await cms.apiKeys.slots())[0]?.key).toBeNull();
+		expect(await cms.apiKeys.readSlot("speller", "key")).toBeNull();
+		const [key] = await cms.apiKeys.list();
+		expect(key?.uses).toEqual([]);
+	});
+
+	it("deleting the assigned key empties the slot", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
+		await cms.apiKeys.setSlot("speller", "key", key.id);
+		await cms.apiKeys.remove(key.id, { expectedVersion: key.version });
+		expect((await cms.apiKeys.slots())[0]?.key).toBeNull();
+	});
+
+	it("shows the slot in the admin language it is read in", async () => {
+		const language = { current: "en" };
+		const cms = cmsWith([speller(language)]);
+		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
+		await cms.apiKeys.setSlot("speller", "key", key.id);
+		expect((await cms.apiKeys.slots())[0]?.label).toBe("Spell check");
+		language.current = "ko";
+		expect((await cms.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
+		expect((await cms.apiKeys.get(key.id))?.uses[0]?.label).toBe("맞춤법 검사");
+	});
+
+	it("has no slot, and no use, when the plugin is not installed", async () => {
+		const storage = fakeCms().storage;
+		const installed = cmsWith([speller({ current: "en" })], { storage });
+		const key = await installed.apiKeys.add({ name: "Bareun", value: VALUE });
+		await installed.apiKeys.setSlot("speller", "key", key.id);
+
+		const without = cmsWith([], { storage });
+		expect(await without.apiKeys.slots()).toEqual([]);
+		expect((await without.apiKeys.get(key.id))?.uses).toEqual([]);
+		await expect(without.apiKeys.setSlot("speller", "key", key.id)).rejects.toMatchObject({ code: "not_found" });
+	});
+
+	it("lists slots and assigns through the routes", async () => {
+		const cms = cmsWith([speller({ current: "en" })]);
+		const response = await assign(request({ plugin: "speller", slot: "key", key: { use: "new", value: VALUE } }), {
+			cms,
+		});
+		expect(response.status).toBe(200);
+		const text = await response.text();
+		expect(text).not.toContain(VALUE);
+		const body = JSON.parse(text) as ApiKeyList;
+		expect(body.slots[0]?.key?.name).toBe("Spell check");
+		expect(body.items[0]?.uses[0]?.label).toBe("Spell check");
+	});
+});
+
+describe("uses are stored as references", () => {
+	it("resolves each label when the keys are read, from the plugin, and drops an item that is gone", async () => {
+		const names = new Map([["connection:a", "Claude"]]);
+		const ai = definePlugin({
+			name: "ai",
+			server: async () => ({
+				default: {
+					keyUses: async (_cms, refs) =>
+						Object.fromEntries(refs.map((ref) => [ref, names.has(ref) ? `AI: ${names.get(ref)}` : null])),
+				},
+			}),
+		});
+		const cms = fakeCms({ config: CONFIG([ai as never]) as never, server: { secret: SECRET } });
+		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
+		await cms.apiKeys.setUses("ai", [
+			{ ref: "connection:a", keyId: key.id },
+			{ ref: "connection:b", keyId: key.id },
+		]);
+		// The stored row has no text, and a rename shows at the next read.
+		expect(JSON.stringify(await cms.storage("core-keys").collection("uses").list())).not.toContain("AI:");
+		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label)).toEqual(["AI: Claude"]);
+		names.set("connection:a", "Claude renamed");
+		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label)).toEqual(["AI: Claude renamed"]);
+		// The use of the item that does not exist was forgotten, not only hidden.
+		expect((await cms.storage("core-keys").collection("uses").list()).map((item) => item.key)).toEqual([
+			"ai:connection:a",
+		]);
+	});
+
+	it("takes the text off uses written before only references were stored", async () => {
+		const cms = fakeCms({ server: { secret: SECRET } });
+		const uses = cms.storage("core-keys").collection<Record<string, unknown>>("uses");
+		await uses.set("ai:connection:a", { keyId: "k1", label: "AI connection Claude" }, { expectedVersion: 0 });
+		await migrateKeyUses(cms.storage("core-keys"));
+		expect((await uses.get("ai:connection:a"))?.value).toEqual({ keyId: "k1" });
+		await migrateKeyUses(cms.storage("core-keys"));
+	});
+});
+
+describe("cms.transaction", () => {
+	it("keeps a new key and the item that uses it together, or neither", async () => {
+		const cms = fakeCms({ server: { secret: SECRET } });
+		const settings = () => cms.storage("my-plugin").collection<{ keyId: string | null }>("settings");
+		await expect(
+			cms.transaction(async (tx) => {
+				const keyId = await tx.apiKeys.choose({ use: "new", value: VALUE }, { baseName: "Mine" });
+				await tx.storage("my-plugin").collection("settings").set("default", { keyId }, { expectedVersion: 0 });
+				throw new Error("the save failed");
+			}),
+		).rejects.toThrow("the save failed");
+		expect(await cms.apiKeys.list()).toEqual([]);
+		expect(await settings().get("default")).toBeNull();
+
+		await cms.transaction(async (tx) => {
+			const keyId = await tx.apiKeys.choose({ use: "new", value: VALUE }, { baseName: "Mine" });
+			await tx.storage("my-plugin").collection("settings").set("default", { keyId }, { expectedVersion: 0 });
+		});
+		const [key] = await cms.apiKeys.list();
+		expect((await settings().get("default"))?.value.keyId).toBe(key?.id);
+	});
+});

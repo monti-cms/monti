@@ -21,6 +21,13 @@ export interface CmsPlugin<
 	readonly options: Options;
 	/** Pages to add to the Tools group of the admin sidebar. `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
+	/**
+	 * The API keys this plugin needs, one slot each (`{ id: "key", label }`). Settings > API keys lists every slot of the installed plugins: assigned (the key's
+	 * "in use" line names it) or empty (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with
+	 * `cms.apiKeys.readSlot(<plugin name>, <slot id>)`. Read by both sides; `label` is read each time it is shown, so write it as a getter that follows the admin language
+	 * (the way `options.label` of the Bareun plugin does).
+	 */
+	readonly keySlots?: readonly PluginKeySlot[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;
 	/** Validation called when the site config is created. Throws if the config is invalid. */
@@ -52,6 +59,14 @@ export interface CmsPlugin<
 	 * It is unused if no plugin receives it, so an extension can add features without knowing the receiving plugin.
 	 */
 	readonly contributes?: Readonly<Record<string, unknown>>;
+}
+
+/** One API key a plugin needs. */
+export interface PluginKeySlot {
+	/** Lowercase letters, digits and `-`. Unique within the plugin. */
+	readonly id: string;
+	/** What the admin calls this key, in the admin language ("Spell check"). */
+	readonly label: string;
 }
 
 export interface PluginNavItem {
@@ -103,6 +118,11 @@ export interface CmsServerPlugin {
 	 * Must give the same result when called repeatedly. `cms` is the instance being migrated.
 	 */
 	readonly migrate?: (storage: PluginStorage, cms: Cms) => Promise<void>;
+	/**
+	 * What the admin shows for each item of this plugin that uses an API key (`cms.apiKeys.setUses(plugin, [{ ref, keyId }])`): the text for each `ref`, in the admin language
+	 * (`cms.site.createTranslator`) and with the item's name as it is now, or `null` when the item does not exist any more (its use is dropped). Called whenever the keys are listed.
+	 */
+	readonly keyUses?: (cms: Cms, refs: readonly string[]) => Promise<Readonly<Record<string, string | null>>>;
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
 	readonly features?: (cms: Cms) => Promise<Readonly<Record<string, boolean>>>;
 	/**

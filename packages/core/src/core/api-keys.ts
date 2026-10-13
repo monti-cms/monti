@@ -9,10 +9,25 @@ import { z } from "zod";
 export interface ApiKeyUse {
 	/** The plugin that uses the key (`ai`, `text-check-bareun`, `git-sync`). */
 	readonly plugin: string;
-	/** Which place of the plugin uses it. Unique within the plugin. */
-	readonly slot: string;
-	/** What the admin shows, in the admin's language: `AI connection "Claude"`. */
+	/** Which item of the plugin uses it (`connection:<id>`). Stable: it is what is stored, never text. */
+	readonly ref: string;
+	/** What the admin shows, worked out when the keys are read, in the admin's language and with the item's current name: `AI connection "Claude"`. */
 	readonly label: string;
+}
+
+/** A key a plugin says it needs (`CmsPlugin.keySlots`), with the key assigned to it. */
+export interface ApiKeySlotView {
+	readonly plugin: string;
+	readonly slot: string;
+	/** In the admin language. */
+	readonly label: string;
+	/** The assigned key (name and last characters only), or `null` when none is assigned yet. */
+	readonly key: {
+		readonly id: string;
+		readonly name: string;
+		readonly tail: string;
+		readonly readable: boolean;
+	} | null;
 }
 
 export interface ApiKeyView {
@@ -25,7 +40,10 @@ export interface ApiKeyView {
 	readonly version: number;
 	readonly createdAt: string;
 	readonly updatedAt: string;
+	/** Everything that uses the key: items of plugins (an AI connection) and the plugin key slots it is assigned to. */
 	readonly uses: readonly ApiKeyUse[];
+	/** The slots among `uses` (`ref` is the slot id). They can be cleared; the other uses are changed where they are made. */
+	readonly slots: readonly ApiKeyUse[];
 }
 
 /** `GET /v1/api-keys`. */
@@ -33,7 +51,20 @@ export interface ApiKeyList {
 	readonly items: readonly ApiKeyView[];
 	/** Whether the server config has a `secret`. Without one nothing can be saved. */
 	readonly secretsAvailable: boolean;
+	/** The keys the installed plugins ask for, assigned or not. */
+	readonly slots: readonly ApiKeySlotView[];
 }
+
+/** `PUT /v1/api-keys/slots`: assigns a key to a plugin's slot (`none` clears it). A typed key is saved together with the assignment. */
+export const assignKeySlotBodySchema = z.object({
+	plugin: z.string().min(1).max(100),
+	slot: z.string().min(1).max(100),
+	key: z.discriminatedUnion("use", [
+		z.object({ use: z.literal("saved"), keyId: z.string().min(1).max(100) }),
+		z.object({ use: z.literal("new"), value: z.string().trim().min(1).max(1000) }),
+		z.object({ use: z.literal("none") }),
+	]),
+});
 
 export const API_KEY_NAME_MAX = 60;
 export const API_KEY_VALUE_MAX = 1000;

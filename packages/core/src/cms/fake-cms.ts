@@ -98,6 +98,7 @@ export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFI
 				(parts.store ?? new Proxy({}, { get: (_t, name) => missing(`store.${String(name)}`) })) as ContentStore,
 			migrate: async () => undefined,
 			pluginStorage: (plugin) => storageOf(plugin),
+			transaction: (work) => (parts.storage ? work({ pluginStorage: storageOf }) : memory.transaction(work)),
 		},
 		auth: fakeAuth(parts.auth),
 		...(parts.mediaStore ? { media: { name: "fake", createStore: () => parts.mediaStore as MediaStore } } : {}),

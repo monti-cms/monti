@@ -64,6 +64,7 @@ export {
 	type PluginCommandContext,
 	type PluginCommandOption,
 	type PluginConfigView,
+	type PluginKeySlot,
 	type PluginNamed,
 	type PluginNavItem,
 	type PluginRoute,

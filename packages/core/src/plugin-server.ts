@@ -6,7 +6,7 @@
 
 export { AuthError } from "./adapters/auth/auth-gateway";
 export type { ApiKeys } from "./api-keys/api-keys";
-export type { BulkService, Cms, ContentService } from "./cms";
+export type { BulkService, Cms, CmsTransaction, ContentService } from "./cms";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem";
 export type {
 	AfterCommit,

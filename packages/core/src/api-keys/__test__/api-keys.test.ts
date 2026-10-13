@@ -52,7 +52,7 @@ describe("api key store", () => {
 	it("renames and replaces the value under the same id, keeping the places that use it", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
-		await cms.apiKeys.setUses("text-check-bareun", [{ slot: "key", keyId: key.id, label: "Spell check" }]);
+		await cms.apiKeys.setUses("text-check-bareun", [{ ref: "key", keyId: key.id }]);
 
 		const renamed = await cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "Bareun main" });
 		const replaced = await cms.apiKeys.update(key.id, {
@@ -62,7 +62,7 @@ describe("api key store", () => {
 		expect(replaced.id).toBe(key.id);
 		expect(replaced.name).toBe("Bareun main");
 		expect(replaced.tail).toBe("7777");
-		expect(replaced.uses).toEqual([{ plugin: "text-check-bareun", slot: "key", label: "Spell check" }]);
+		expect(replaced.uses).toEqual([{ plugin: "text-check-bareun", ref: "key", label: "text-check-bareun" }]);
 		expect(await cms.apiKeys.read(key.id)).toBe("brn-0000000000007777");
 		await expect(cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "stale" })).rejects.toMatchObject({
 			code: "conflict",
@@ -73,25 +73,25 @@ describe("api key store", () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await cms.apiKeys.setUses("ai", [
-			{ slot: "connection:a", keyId: key.id, label: "AI connection Claude" },
-			{ slot: "connection:b", keyId: key.id, label: "AI connection Translate" },
-			{ slot: "connection:c", keyId: "no-such-key", label: "AI connection Gone" },
+			{ ref: "connection:a", keyId: key.id },
+			{ ref: "connection:b", keyId: key.id },
+			{ ref: "connection:c", keyId: "no-such-key" },
 		]);
-		await cms.apiKeys.setUses("git-sync", [{ slot: "token", keyId: key.id, label: "Git sync" }]);
-		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label).sort()).toEqual([
-			"AI connection Claude",
-			"AI connection Translate",
-			"Git sync",
+		await cms.apiKeys.setUses("git-sync", [{ ref: "token", keyId: key.id }]);
+		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => `${use.plugin}:${use.ref}`).sort()).toEqual([
+			"ai:connection:a",
+			"ai:connection:b",
+			"git-sync:token",
 		]);
 
-		await cms.apiKeys.setUses("ai", [{ slot: "connection:a", keyId: key.id, label: "AI connection Claude" }]);
+		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.plugin).sort()).toEqual(["ai", "git-sync"]);
 	});
 
 	it("deleting a key forgets where it was used, and the value is gone", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
-		await cms.apiKeys.setUses("ai", [{ slot: "connection:a", keyId: key.id, label: "AI connection Claude" }]);
+		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
 		await cms.apiKeys.remove(key.id, { expectedVersion: key.version });
 		expect(await cms.apiKeys.read(key.id)).toBeNull();
 		expect(await cms.storage("core-keys").collection("uses").list()).toEqual([]);
@@ -137,7 +137,7 @@ describe("/v1/api-keys", () => {
 	it("answers 409 key_in_use with the places that would stop working, and deletes only when forced", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
-		await cms.apiKeys.setUses("ai", [{ slot: "connection:a", keyId: key.id, label: "AI connection Claude" }]);
+		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
 		const params = Promise.resolve({ id: key.id });
 		const url = `api-keys/${key.id}?expectedVersion=${key.version}`;
 
@@ -145,7 +145,7 @@ describe("/v1/api-keys", () => {
 		expect(refused.status).toBe(409);
 		const body = await refused.json();
 		expect(body.code).toBe("key_in_use");
-		expect(body.details.uses).toEqual([{ plugin: "ai", slot: "connection:a", label: "AI connection Claude" }]);
+		expect(body.details.uses).toEqual([{ plugin: "ai", ref: "connection:a", label: "ai" }]);
 		expect(await cms.apiKeys.get(key.id)).not.toBeNull();
 
 		const forced = await removeKey(request("DELETE", `${url}&force=true`), { cms, params });
