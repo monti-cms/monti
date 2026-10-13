@@ -538,9 +538,6 @@ export interface LayoutGroup {
 	tab?: string;
 }
 
-export const layoutOf = (collection: Obj): LayoutGroup[] =>
-	Array.isArray(collection.layout) ? (collection.layout as LayoutGroup[]) : [];
-
 export function withLayout(collection: Obj, layout: LayoutGroup[]): Obj {
 	return setProp(collection, "layout", layout.length > 0 ? layout : undefined, COLLECTION_KEY_ORDER);
 }

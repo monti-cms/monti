@@ -58,15 +58,6 @@ const dropRowIds = (node: CmsNode): CmsNode => {
 	return kept.content ? { ...kept, content: kept.content.map(dropRowIds) } : kept;
 };
 
-/**
- * The document without the ids of table rows and cells. The editor keeps ids of blocks only; a table row and a cell are paired with their ids again by the server,
- * so a comparison of a document with what the editor saves from it ignores them.
- */
-export const withoutRowIds = (doc: StoredDocument): StoredDocument => ({
-	...doc,
-	content: doc.content.map(dropRowIds),
-});
-
 const dropIds = (node: CmsNode): CmsNode => {
 	const { id: _id, ...rest } = node;
 	return rest.content ? { ...rest, content: rest.content.map(dropIds) } : rest;

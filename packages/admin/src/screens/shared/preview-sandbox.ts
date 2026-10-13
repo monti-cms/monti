@@ -17,13 +17,3 @@ export const isSandboxSite = (site: object): boolean => SANDBOX_SITES.has(site);
 /** Whether a request with this method changes something on the server. */
 export const isWrite = (method: string | undefined): boolean =>
 	!["GET", "HEAD", undefined].includes(method?.toUpperCase());
-
-/** Thrown instead of a write made for a preview site. */
-export class SandboxWriteError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "SandboxWriteError";
-	}
-}
-
-export type { Site };

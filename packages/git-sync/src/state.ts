@@ -139,8 +139,6 @@ async function removeItem<T>(collection: PluginCollection<T>, key: string): Prom
 }
 
 export const entryKey = (target: string, entryId: string) => `${target}:${entryId}`;
-/** The key of a conflict: one per entry per target. */
-export const conflictKey = entryKey;
 const prefixOf = (target: string) => `${target}:`;
 
 /** Typed access to the plugin's storage. */
@@ -184,10 +182,9 @@ export function createState(storage: PluginStorage) {
 		conflicts: {
 			list: async (target?: string) =>
 				(await conflicts.list(target ? { prefix: prefixOf(target) } : undefined)).map((item) => item.value),
-			get: async (target: string, entryId: string) =>
-				(await conflicts.get(conflictKey(target, entryId)))?.value ?? null,
+			get: async (target: string, entryId: string) => (await conflicts.get(entryKey(target, entryId)))?.value ?? null,
 			put: (conflict: ConflictRecord) => upsert(conflicts, conflict.id, conflict),
-			remove: (target: string, entryId: string) => removeItem(conflicts, conflictKey(target, entryId)),
+			remove: (target: string, entryId: string) => removeItem(conflicts, entryKey(target, entryId)),
 		},
 		status: {
 			get: async (target: string): Promise<TargetStatus> => (await status.get(target))?.value ?? {},
