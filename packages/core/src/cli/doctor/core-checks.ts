@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
 import { WHERE_TO_SET_ENV } from "../../core/env";
+import { type Problem, SetupError } from "../../core/problem";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { formatDecision } from "../../server/decision";
@@ -21,7 +22,7 @@ import {
 } from "../next-app";
 import { AUTH_CHECKS } from "./auth-checks";
 import { DATABASE_CHECKS } from "./database-checks";
-import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
+import { type CheckOutcome, fail, fromProblem, ok, skip, warn } from "./outcome";
 
 /** Everything the core checks look at, gathered once before they run. */
 export interface DoctorState {
@@ -109,13 +110,15 @@ const configFile: CoreCheck = {
 	group: "config",
 	id: "file",
 	title: "Config file",
-	run: (state) =>
-		state.configPath
-			? ok(state.configPath)
-			: fail("no monti.config.ts found", {
-					where: `${state.cwd} (also looked under src/)`,
-					fix: "run `monti` from the folder of your Next app; `monti init` creates the config file in an app that has none. If it lives elsewhere, pass --config <path> or set MONTI_CONFIG_PATH",
-				}),
+	run: (state) => {
+		if (state.configPath) return ok(state.configPath);
+		// The lookup says what is missing and how to fix it (a wrong --config or MONTI_CONFIG_PATH, or no file at all).
+		if (state.configError instanceof SetupError) return fromProblem("fail", state.configError.problem);
+		return fail("no monti.config.ts found", {
+			where: `${state.cwd} (also looked under src/)`,
+			fix: "run `monti` from the folder of your Next app; `monti init` creates the config file in an app that has none",
+		});
+	},
 };
 
 /** The first `Cannot find package 'x'` of a load error. */
@@ -196,7 +199,8 @@ const storageConfigured: CoreCheck = {
 		try {
 			state.cms.mediaStore().getPublicUrl("monti-doctor");
 		} catch (error) {
-			const problem = (error as { problem?: { what?: string; where?: string; fix?: string } }).problem;
+			// Setup errors carry their problem; so do the errors of plugins' stores.
+			const problem = (error as { problem?: Partial<Problem> } | null)?.problem;
 			return fail(problem?.what ?? messageOf(error).split("\n")[0] ?? "the media storage cannot be set up", {
 				where: problem?.where ?? "`storage` in monti.config.ts",
 				fix: `${problem?.fix ?? "fix the storage settings"}\nuntil then every image on the public pages is drawn as unavailable`,

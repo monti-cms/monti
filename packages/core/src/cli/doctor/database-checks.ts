@@ -2,7 +2,7 @@ import { Pool } from "pg";
 import { SSLMODE_FIX, sslmodeWarning } from "../../adapters/postgres/connection";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "../../adapters/postgres/explain";
 import type { CoreCheck, DoctorState } from "./core-checks";
-import { fail, ok, skip, warn } from "./outcome";
+import { fail, fromProblem, ok, skip, warn } from "./outcome";
 
 /** How long a check waits for the database before it calls it unreachable. */
 const CONNECT_TIMEOUT_MS = 8000;
@@ -123,7 +123,7 @@ const connect: CoreCheck = {
 			connectionString: value,
 			schema: schemaOf(settings, state),
 		});
-		if (explained) return fail(explained.problem.what, { where: explained.problem.where, fix: explained.problem.fix });
+		if (explained) return fromProblem("fail", explained.problem);
 		return fail(`could not connect to the database: ${(result.error as Error)?.message ?? String(result.error)}`, {
 			where: DATABASE_URL_WHERE,
 			fix: "check that the database is running and that DATABASE_URL is right",
