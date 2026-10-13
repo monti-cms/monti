@@ -612,9 +612,9 @@ function FeatureEditor({
 		? providers.find((provider) => provider.id === spec.providerId)
 		: providers.find((provider) => provider.ready);
 	const canRun =
-		Boolean(settings?.fake) || Boolean(chosen?.url && chosen.keyHint && (spec.modelName || chosen.defaultModel));
+		Boolean(settings?.fake) || Boolean(chosen?.url && chosen.key?.readable && (spec.modelName || chosen.defaultModel));
 	// Model list of the selected generation connection. A list that was fetched once is remembered and not fetched again.
-	const modelList = useModelList(!deciding && chosen?.keyHint ? { providerId: chosen.id } : null);
+	const modelList = useModelList(!deciding && chosen?.key?.readable ? { providerId: chosen.id } : null);
 	const [sample, setSample] = useState<Sample>(EMPTY_SAMPLE);
 	const [test, setTest] = useState<
 		{ status: "running" } | { status: "done"; result: AiRunResult } | { status: "error"; message: string } | null

@@ -4,7 +4,10 @@ import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import {
 	Alert,
 	AlertDescription,
+	type ApiKeyChoice,
+	ApiKeyField,
 	Button,
+	choiceReady,
 	cn,
 	Empty,
 	EmptyContent,
@@ -128,26 +131,26 @@ export function InlineError({ children }: { children: ReactNode }) {
 /** Time to wait for URL/key input to pause before fetching the model list. */
 const LIST_INPUT_DEBOUNCE_MS = 400;
 
-/** Key input state. `undefined` keeps the saved key, `null` clears it. */
-type KeyDraft = string | null | undefined;
-
 interface Draft {
 	name: string;
 	kind: AiProviderKind;
 	url: string;
-	apiKey: KeyDraft;
+	key: ApiKeyChoice;
 	defaultModel: string;
 }
 
-const NEW_DRAFT: Draft = { name: "", kind: "chat", url: "", apiKey: undefined, defaultModel: "" };
+const NEW_DRAFT: Draft = { name: "", kind: "chat", url: "", key: { use: "new", value: "" }, defaultModel: "" };
 
 const draftOf = (provider: AiProviderView): Draft => ({
 	name: provider.name,
 	kind: provider.kind,
 	url: provider.url,
-	apiKey: undefined,
+	key: provider.key ? { use: "saved", keyId: provider.key.id } : { use: "new", value: "" },
 	defaultModel: provider.defaultModel,
 });
+
+/** The draft as the server takes it: a new key with nothing typed yet is left out, so the connection keeps the key it had. */
+const payload = ({ key, ...rest }: Draft) => (choiceReady(key) && key.use !== "none" ? { ...rest, key } : rest);
 
 const sameDraft = (a: Draft, b: Draft) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -284,7 +287,7 @@ function ProviderEditor({
 	const [checking, setChecking] = useState(false);
 	const [check, setCheck] = useState<AiCheckResult | null>(null);
 	const { confirm, dialog } = useConfirm();
-	const ids = { name: useId(), kind: useId(), url: useId(), key: useId(), model: useId() };
+	const ids = { name: useId(), kind: useId(), url: useId(), model: useId() };
 	const set = (patch: Partial<Draft>) => {
 		setDraft({ ...draft, ...patch });
 		setCheck(null);
@@ -298,14 +301,14 @@ function ProviderEditor({
 	const example = PROVIDER_EXAMPLES[draft.kind];
 	// While typing the URL or key the list is not fetched; it is fetched once typing pauses. If the saved key is used as is, it is fetched by connection id.
 	const listUrl = useDebounced(draft.url, LIST_INPUT_DEBOUNCE_MS);
-	const listKey = useDebounced(typeof draft.apiKey === "string" ? draft.apiKey : undefined, LIST_INPUT_DEBOUNCE_MS);
+	const typedKey = useDebounced(draft.key.use === "new" ? draft.key.value : undefined, LIST_INPUT_DEBOUNCE_MS);
 	const modelSource: ModelSource | null =
 		draft.kind !== "chat" || !listUrl
 			? null
-			: listKey
-				? { url: listUrl, apiKey: listKey }
-				: provider?.keyHint && provider.url === listUrl && draft.apiKey === undefined
-					? { providerId: provider.id }
+			: typedKey
+				? { url: listUrl, apiKey: typedKey }
+				: draft.key.use === "saved"
+					? { url: listUrl, keyId: draft.key.keyId }
 					: null;
 	const modelList = useModelList(modelSource);
 
@@ -313,7 +316,7 @@ function ProviderEditor({
 		setSaving(true);
 		setError(null);
 		try {
-			const json = { expectedVersion: version, provider: draft };
+			const json = { expectedVersion: version, provider: payload(draft) };
 			const saved = provider
 				? await cmsFetch<AiSettingsView>(site, cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
 						method: "PATCH",
@@ -371,7 +374,7 @@ function ProviderEditor({
 			setCheck(
 				await cmsFetch<AiCheckResult>(site, cmsApiUrl("/v1/ai/providers/check"), {
 					method: "POST",
-					json: { providerId: provider?.id, provider: draft },
+					json: { providerId: provider?.id, provider: payload(draft) },
 					fallback: t("error.check"),
 				}),
 			);
@@ -424,31 +427,12 @@ function ProviderEditor({
 						className="h-8 font-mono text-xs md:text-xs"
 					/>
 				</Field>
-				<Field>
-					<FieldLabel htmlFor={ids.key}>{t("field.key")}</FieldLabel>
-					<div className="flex items-center gap-2">
-						<Input
-							id={ids.key}
-							type="password"
-							autoComplete="off"
-							value={typeof draft.apiKey === "string" ? draft.apiKey : ""}
-							placeholder={
-								draft.apiKey === null
-									? t("key.cleared")
-									: provider?.keyHint
-										? t("key.saved", { hint: provider.keyHint })
-										: t("field.key")
-							}
-							onChange={(event) => set({ apiKey: event.target.value || undefined })}
-							className="h-8 font-mono text-xs md:text-xs"
-						/>
-						{provider?.keyHint && draft.apiKey !== null && (
-							<Button type="button" variant="ghost" size="xs" onClick={() => set({ apiKey: null })}>
-								{t("action.clear")}
-							</Button>
-						)}
-					</div>
-				</Field>
+				<ApiKeyField
+					label={t("field.key")}
+					baseName={draft.name.trim() || "API"}
+					value={draft.key}
+					onChange={(key) => set({ key })}
+				/>
 				<Field>
 					<FieldLabel htmlFor={ids.model}>{t("field.model")}</FieldLabel>
 					<ModelCombobox
