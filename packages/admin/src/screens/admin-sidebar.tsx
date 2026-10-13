@@ -13,7 +13,7 @@ import {
 	Settings2,
 	Trash2,
 } from "lucide-react";
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { Fragment, type KeyboardEvent, useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { buttonVariants } from "../ui/button";
@@ -314,7 +314,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				)
 			) : null;
 		return (
-			<li key={collection} className="contents">
+			<Fragment key={collection}>
 				{navLink(
 					site.adminHref(`?collection=${collection}`),
 					collection,
@@ -328,7 +328,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 						<FolderTree nav={nav} closeMobile={closeMobile} />
 					</SidebarMenuItem>
 				)}
-			</li>
+			</Fragment>
 		);
 	};
 
