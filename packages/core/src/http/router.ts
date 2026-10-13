@@ -17,7 +17,7 @@ import * as r19 from "./v1/entries/[id]/trash/route";
 import * as r20 from "./v1/entries/[id]/unarchive/route";
 import * as r10 from "./v1/entries/route";
 import * as rEntrySearch from "./v1/entries/search/route";
-import { HttpError, handleApiError } from "./v1/error-handler";
+import { CmsError, handleApiError } from "./v1/error-handler";
 import * as rEventDismiss from "./v1/events/[id]/dismiss/route";
 import * as rEventRetry from "./v1/events/[id]/retry/route";
 import * as rEventsRetry from "./v1/events/retry/route";
@@ -144,7 +144,7 @@ export function matchRoute(
 /** Registered admin API paths (for docs and tests). */
 export const CMS_ROUTE_PATTERNS: readonly string[] = ROUTES.map((route) => route.pattern);
 
-const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
+const notFound = () => handleApiError(new CmsError("Unknown CMS API path", "not_found"));
 
 /**
  * The path segments after the API prefix (`/api/monti/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/monti/v1/entries/<id>`.
@@ -197,13 +197,13 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		if (!path) return notFound();
 		const method = request.method.toUpperCase();
 		if (!isMethod(method)) {
-			return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
+			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
 		}
 		if (path[0] === "auth") {
 			const auth = cms.auth();
 			if (auth.basePath !== CMS_AUTH_BASE_PATH) return notFound();
 			if (method !== "GET" && method !== "POST") {
-				return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
+				return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
 			}
 			return auth.handlers[method](request);
 		}
@@ -212,7 +212,7 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		if (!matched) return notFound();
 		const handler = matched.module[method] as RouteHandler | undefined;
 		if (!handler) {
-			return handleApiError(new HttpError(405, "method_not_allowed", `${method} is not allowed here`));
+			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
 		}
 		if (matched.guarded) {
 			try {

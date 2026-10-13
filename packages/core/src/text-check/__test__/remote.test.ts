@@ -31,7 +31,9 @@ describe("remoteTextChecker", () => {
 	});
 
 	it("a failure response throws an error with the server's message", async () => {
-		vi.stubGlobal("fetch", async () => Response.json({ code: "too_large", message: "Too much text" }, { status: 413 }));
+		vi.stubGlobal("fetch", async () =>
+			Response.json({ error: { code: "payload_too_large", message: "Too much text" } }, { status: 413 }),
+		);
 		const checker = remoteTextChecker({ id: "remote", label: "원격", url: "/x" });
 		await expect(checker.check(segments, { signal: new AbortController().signal })).rejects.toThrow("Too much text");
 	});
@@ -47,17 +49,21 @@ describe("server check route", () => {
 	const signal = new AbortController().signal;
 
 	it("an invalid body is 400, and exceeding the limit is 413", () => {
-		expect(parseTextCheckBody({})).toMatchObject({ status: 400 });
-		expect(parseTextCheckBody({ segments: [{ id: "a", text: 1, locale: "ko" }] })).toMatchObject({ status: 400 });
-		expect(
+		expect(() => parseTextCheckBody({})).toThrow(expect.objectContaining({ code: "invalid_input" }));
+		expect(() => parseTextCheckBody({ segments: [{ id: "a", text: 1, locale: "ko" }] })).toThrow(
+			expect.objectContaining({ code: "invalid_input" }),
+		);
+		expect(() =>
 			parseTextCheckBody({
 				segments: [
 					{ id: "a", text: "x", locale: "ko" },
 					{ id: "a", text: "y", locale: "ko" },
 				],
 			}),
-		).toMatchObject({ status: 400 });
-		expect(parseTextCheckBody({ segments }, { maxChars: 3 })).toMatchObject({ status: 413 });
+		).toThrow(expect.objectContaining({ code: "invalid_input" }));
+		expect(() => parseTextCheckBody({ segments }, { maxChars: 3 })).toThrow(
+			expect.objectContaining({ code: "payload_too_large" }),
+		);
 		expect(parseTextCheckBody({ segments }, { maxSegments: 1 })).toEqual(segments);
 	});
 
@@ -70,24 +76,22 @@ describe("server check route", () => {
 		const result = await handleTextCheck({ segments }, { check }, signal);
 		expect(check).toHaveBeenCalledWith(segments, { signal });
 		expect(result).toEqual({
-			status: 200,
-			body: {
-				issues: [{ segmentId: "a-0", start: 0, end: 3, message: "틀림", suggestions: ["맞는말"], severity: "error" }],
-			},
+			issues: [{ segmentId: "a-0", start: 0, end: 3, message: "틀림", suggestions: ["맞는말"], severity: "error" }],
 		});
 	});
 
-	it("a checker error is returned as 502 without details", async () => {
+	it("a checker error is a 502 upstream_failed without details", async () => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
-		const result = await handleTextCheck(
-			{ segments },
-			{
-				check: async () => {
-					throw new Error("key=secret");
+		await expect(
+			handleTextCheck(
+				{ segments },
+				{
+					check: async () => {
+						throw new Error("key=secret");
+					},
 				},
-			},
-			signal,
-		);
-		expect(result).toEqual({ status: 502, body: { code: "text_check_failed", message: "Text check failed" } });
+				signal,
+			),
+		).rejects.toMatchObject({ code: "upstream_failed", message: "Text check failed" });
 	});
 });

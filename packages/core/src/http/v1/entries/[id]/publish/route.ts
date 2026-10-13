@@ -1,5 +1,5 @@
 import { publishBodySchema } from "../../../../../core/api";
-import { adminRoute, json, readVersionedBody } from "../../../handler";
+import { adminRoute, ok, readVersionedBody } from "../../../handler";
 
 /**
  * Explicit publish. The draft goes through the write pipeline (hooks, core preparation), and the store re-checks it for publishing inside the transaction;
@@ -10,5 +10,5 @@ import { adminRoute, json, readVersionedBody } from "../../../handler";
 export const POST = adminRoute<{ id: string }>(async ({ request, params, cms }) => {
 	const { expectedVersion, resetPublishedAt } = await readVersionedBody(request, publishBodySchema);
 	const result = await cms.contentService().publish({ id: params.id, expectedVersion, resetPublishedAt });
-	return json(result);
+	return ok(result);
 });

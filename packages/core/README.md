@@ -1201,6 +1201,10 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 - The Postgres adapter keeps the documents in the core table `plugin_documents` (created by the core migrations). A storage of another adapter behaves the same: `src/plugin/__test__/storage-contract.ts` is the contract, run against Postgres and against `createMemoryPluginStorage()` from `@monti-cms/core/testing`, which `fakeCms` uses by default (`fakeCms({ storage })` replaces it).
 - The plugin API has no database driver types: `PluginDatabase`, `cms.database()` and `withTransaction` are gone, and neither `@monti-cms/core` nor `@monti-cms/core/plugin/server` exports anything from `pg`.
 
+### Errors and responses
+
+Every error the server answers with has one shape, `{ "error": { "code", "message", "issues"?, "details"? } }`, and its status comes from one table (`ERROR_STATUS`, exported with the `ErrorCode` type from `@monti-cms/core/plugin/server`). A route or a plugin throws `new CmsError(message, code)` with a code of that table; nothing else decides a status. `issues` are the problems found in the content (a refused write), and `details` is machine-readable extra data (the version the server holds for a `conflict`, the places that use a key for `key_in_use`). A success is `ok(body)`; a delete answers `204` with no body (`deleted()`).
+
 ## Server options
 
 The server options are part of the one `defineConfig({ … })` call, next to the site options ("The CMS instance"). They are read on the server only. Each adapter reads its conventional environment variables when an option is not given, and an explicit option always wins.

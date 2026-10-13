@@ -1,4 +1,4 @@
-import { adminRoute, json } from "../../../handler";
+import { adminRoute, ok } from "../../../handler";
 import { completeMediaUpload } from "../../upload-flow";
 
 /**
@@ -6,5 +6,5 @@ import { completeMediaUpload } from "../../upload-flow";
  * If the check fails, the media does not become usable and stays `failed`, to be cleaned up.
  */
 export const POST = adminRoute<{ id: string }>(async ({ params, cms }) =>
-	json(await completeMediaUpload(cms, params.id)),
+	ok(await completeMediaUpload(cms, params.id)),
 );

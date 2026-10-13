@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { HttpError } from "../../../error-handler";
-import { adminRoute, json, parseWith, readJsonBody } from "../../../handler";
+import { CmsError } from "../../../error-handler";
+import { adminRoute, ok, parseWith, readJsonBody } from "../../../handler";
 
 const bodySchema = z.object({ subscriber: z.string().min(1) });
 
@@ -8,7 +8,7 @@ const bodySchema = z.object({ subscriber: z.string().min(1) });
 export const POST = adminRoute<{ id: string }>(async ({ request, params, cms }) => {
 	const { subscriber } = parseWith(bodySchema, await readJsonBody(request));
 	if (!(await cms.events.dismiss({ eventId: params.id, subscriber }))) {
-		throw new HttpError(404, "not_found", "No failed or dead delivery to dismiss");
+		throw new CmsError("No failed or dead delivery to dismiss", "not_found");
 	}
-	return json({ counts: await cms.events.counts() });
+	return ok({ counts: await cms.events.counts() });
 });

@@ -503,7 +503,7 @@ describe("SchemaScreen", () => {
 	});
 
 	it("says when the file changed since it was opened", async () => {
-		saveAnswer = () => ({ status: 409, body: { code: "schema_conflict", message: "changed" } });
+		saveAnswer = () => ({ status: 409, body: { error: { code: "schema_conflict", message: "changed" } } });
 		renderScreen();
 		type(await screen.findByLabelText(t("collection.label")), "Article");
 		fireEvent.click(review());

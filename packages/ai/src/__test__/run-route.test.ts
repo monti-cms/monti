@@ -81,7 +81,7 @@ describe("AI run API", () => {
 		expect((await run({ action: "summary", input: { title: "t" }, draft: { enabled: false } })).status).toBe(200);
 		const bad = await run({ action: "summary", input: { title: "t" }, draft: { prompt: "{{title}}" } });
 		expect(bad.status).toBe(400);
-		expect(await bad.json()).toMatchObject({ code: "ai_invalid_input" });
+		expect(await bad.json()).toMatchObject({ error: { code: "invalid_input" } });
 	});
 
 	it("the fake connection answers by input kind, and an action's own fake answer passes that action's checks", async () => {

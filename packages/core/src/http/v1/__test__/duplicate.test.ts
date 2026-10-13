@@ -92,7 +92,7 @@ describe("Duplicate API Route", () => {
 		);
 		expect(res.status).toBe(404);
 		const data = await res.json();
-		expect(data.code).toBe("not_found");
+		expect(data.error.code).toBe("not_found");
 	});
 
 	it("rejects cross-origin requests with 403", async () => {

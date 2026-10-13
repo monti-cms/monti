@@ -1,9 +1,9 @@
 import {
 	type AdminRequest,
 	adminRoute,
-	HttpError,
+	CmsError,
 	handleApiError,
-	json,
+	ok,
 	readJsonBody,
 } from "@monti-cms/core/plugin/server";
 import { listConflicts, type Resolution, resolveConflict } from "./conflicts";
@@ -23,8 +23,8 @@ import { handleWebhook } from "./webhook";
 
 /** Turns what the sync code throws into the response the admin screen shows. */
 const asHttpError = (error: unknown): unknown => {
-	if (error instanceof GitHubApiError) return new HttpError(502, "github_error", error.message);
-	if (error instanceof GitSyncError) return new HttpError(409, "git_sync", error.message);
+	if (error instanceof GitHubApiError) return new CmsError(error.message, "upstream_failed");
+	if (error instanceof GitSyncError) return new CmsError(error.message, "precondition_failed");
 	return error;
 };
 
@@ -44,24 +44,24 @@ const guarded =
 const text = (body: unknown, key: string): string | undefined => {
 	const value = (body as Record<string, unknown> | null)?.[key];
 	if (value === undefined) return undefined;
-	if (typeof value !== "string") throw new HttpError(400, "invalid_input", `\`${key}\` must be text`);
+	if (typeof value !== "string") throw new CmsError(`\`${key}\` must be text`, "invalid_input");
 	return value;
 };
 
 export const status = {
-	GET: adminRoute(async ({ cms }) => json(await statusView(syncContextFor(cms)))),
+	GET: adminRoute(async ({ cms }) => ok(await statusView(syncContextFor(cms)))),
 };
 
 export const settings = {
-	GET: adminRoute(async ({ cms }) => json(await settingsView(syncContextFor(cms)))),
+	GET: adminRoute(async ({ cms }) => ok(await settingsView(syncContextFor(cms)))),
 	PUT: adminRoute(async ({ request, cms }) => {
 		const body = (await readJsonBody(request)) as Record<string, unknown>;
 		const expectedVersion = body.expectedVersion;
 		if (typeof expectedVersion !== "number" || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
-			throw new HttpError(428, "version_required", "expectedVersion is required");
+			throw new CmsError("expectedVersion is required", "version_required");
 		}
 		const webhookSecret = body.webhookSecret === null ? null : text(body, "webhookSecret");
-		return json(await saveSettings(syncContextFor(cms), { webhookSecret, expectedVersion }));
+		return ok(await saveSettings(syncContextFor(cms), { webhookSecret, expectedVersion }));
 	}),
 };
 
@@ -70,7 +70,7 @@ export const tokenChanged = {
 	POST: adminRoute(async ({ cms }) => {
 		if (await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT))
 			await resumeAfterToken(syncContextFor(cms));
-		return json({ ok: true });
+		return ok({ ok: true });
 	}),
 };
 
@@ -82,7 +82,7 @@ export const pull = {
 			const targets = wanted === undefined ? ctx.targets : [ctx.target(wanted)];
 			const results = [];
 			for (const target of targets) results.push({ target: target.id, summary: await pullTarget(ctx, target) });
-			return json({ results });
+			return ok({ results });
 		}),
 	),
 };
@@ -95,13 +95,13 @@ export const flush = {
 			const targets = wanted === undefined ? ctx.targets : [ctx.target(wanted)];
 			const results = [];
 			for (const target of targets) results.push(await flushTarget(ctx, target));
-			return json({ results });
+			return ok({ results });
 		}),
 	),
 };
 
 export const conflicts = {
-	GET: adminRoute(guarded(async ({ cms }) => json({ items: await listConflicts(syncContextFor(cms)) }))),
+	GET: adminRoute(guarded(async ({ cms }) => ok({ items: await listConflicts(syncContextFor(cms)) }))),
 };
 
 export const resolve = {
@@ -112,9 +112,9 @@ export const resolve = {
 			const entryId = text(body, "entryId");
 			const resolution = text(body, "resolution");
 			if (!target || !entryId || (resolution !== "git" && resolution !== "server")) {
-				throw new HttpError(400, "invalid_input", "`target`, `entryId` and `resolution` (git or server) are required");
+				throw new CmsError("`target`, `entryId` and `resolution` (git or server) are required", "invalid_input");
 			}
-			return json(
+			return ok(
 				await resolveConflict(syncContextFor(cms), {
 					target,
 					entryId,
@@ -136,7 +136,7 @@ export const webhook = {
 				signature: request.headers.get("x-hub-signature-256"),
 				event: request.headers.get("x-github-event"),
 			});
-			return json(outcome.body, { status: outcome.status });
+			return ok(outcome.body, { status: outcome.status });
 		} catch (error) {
 			return handleApiError(asHttpError(error));
 		}

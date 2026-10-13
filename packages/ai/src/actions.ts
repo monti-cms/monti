@@ -55,13 +55,13 @@ const readCustom = (site: Site, value: unknown): CustomValue | null => {
 async function customRow(site: Site, store: AiActionsStore, key: string): Promise<{ row: Row; value: CustomValue }> {
 	const row = (await store.listAiCustomActions()).find((item) => item.key === key);
 	const value = row ? readCustom(site, row.value) : null;
-	if (!row || !value) throw new AiError("ai_unknown_action", site.createTranslator(actionsMessages)("unknownAction"));
+	if (!row || !value) throw new AiError("not_found", site.createTranslator(actionsMessages)("unknownAction"));
 	return { row, value };
 }
 
 const definitionOf = (site: Site, key: string): AiActionDefinition => {
 	const definition = aiRegistryOf(site).actionDefinition(key);
-	if (!definition) throw new AiError("ai_unknown_action", site.createTranslator(actionsMessages)("unknownAction"));
+	if (!definition) throw new AiError("not_found", site.createTranslator(actionsMessages)("unknownAction"));
 	return definition;
 };
 
@@ -116,11 +116,11 @@ export function actionWithEdits(
 	if (!parsed.success) {
 		const issue = parsed.error.issues[0];
 		const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
-		throw new AiError("ai_invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
+		throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
 	}
 	const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, sharedKeys) : [];
 	if (unknown.length > 0) {
-		throw new AiError("ai_invalid_input", t("unknownPlaceholder", { name: unknown[0] ?? "" }));
+		throw new AiError("invalid_input", t("unknownPlaceholder", { name: unknown[0] ?? "" }));
 	}
 	return resolveAction(key, definition, overrideFrom(definition, parsed.data));
 }
@@ -150,12 +150,12 @@ function readBase(site: Site, input: unknown): CustomBase {
 	const parsed = customBaseSchemaOf(site).safeParse(input);
 	if (!parsed.success) {
 		throw new AiError(
-			"ai_invalid_input",
+			"invalid_input",
 			parsed.error.issues[0]?.message ?? site.createTranslator(actionsMessages)("invalidBase"),
 		);
 	}
 	const problem = surfaceProblem(site, parsed.data.surface);
-	if (problem) throw new AiError("ai_invalid_input", problem);
+	if (problem) throw new AiError("invalid_input", problem);
 	return parsed.data;
 }
 
@@ -183,7 +183,7 @@ export async function deleteCustomAction(
 	expectedVersion: number,
 ): Promise<void> {
 	if (!isCustomKey(key)) {
-		throw new AiError("ai_invalid_input", site.createTranslator(actionsMessages)("cannotDeleteCoded"));
+		throw new AiError("invalid_input", site.createTranslator(actionsMessages)("cannotDeleteCoded"));
 	}
 	await store.deleteAiCustomAction({ key, expectedVersion });
 }
@@ -224,7 +224,7 @@ export async function resetAction(
 	expectedVersion: number,
 ): Promise<AiActionView> {
 	if (isCustomKey(key)) {
-		throw new AiError("ai_invalid_input", site.createTranslator(actionsMessages)("noDefaultForCustom"));
+		throw new AiError("invalid_input", site.createTranslator(actionsMessages)("noDefaultForCustom"));
 	}
 	const current = await getAction(site, store, key);
 	const definition = definitionOf(site, key);

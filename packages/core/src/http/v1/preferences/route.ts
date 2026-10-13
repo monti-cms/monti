@@ -1,7 +1,7 @@
 import type { PreferencesBody } from "../../../core/api";
 import type { JsonObject } from "../../../core/store";
 import type { Site } from "../../../site";
-import { adminRoute, json, parseWith, readJsonBody } from "../handler";
+import { adminRoute, ok, parseWith, readJsonBody } from "../handler";
 
 /** Normalizes stored preferences to the per-collection shape. Unknown or corrupt values (including the removed global page size and sort) are dropped. */
 function normalize(site: Site, stored: PreferencesBody | null): PreferencesBody {
@@ -15,7 +15,7 @@ function normalize(site: Site, stored: PreferencesBody | null): PreferencesBody 
 
 export const GET = adminRoute(async ({ auth, cms }) => {
 	const stored = await cms.store().getPreferences({ userId: auth.userId });
-	return json(normalize(cms.site, stored as PreferencesBody | null));
+	return ok(normalize(cms.site, stored as PreferencesBody | null));
 });
 
 /** Merges and saves per collection. Collections and keys not sent are kept. */
@@ -30,5 +30,5 @@ export const PUT = adminRoute(async ({ request, auth, cms }) => {
 	}
 	const preferences: PreferencesBody = { collections, editor: { ...current.editor, ...body.editor } };
 	await store.savePreferences({ userId: auth.userId, preferences: preferences as JsonObject });
-	return json({ success: true, preferences });
+	return ok({ preferences });
 });

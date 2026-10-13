@@ -1,6 +1,6 @@
 import { AuthError } from "../../adapters/auth";
 import type { Cms } from "../../cms";
-import { HttpError } from "./error-handler";
+import { CmsError } from "./error-handler";
 
 /**
  * Same-origin check for state-changing requests (POST, PATCH, PUT, DELETE).
@@ -54,7 +54,7 @@ export function validateSameOrigin(
 		const contentType = request.headers.get("content-type");
 		const accepted = options.form ? ["application/json", "application/x-www-form-urlencoded"] : ["application/json"];
 		if (!accepted.some((type) => contentType?.toLowerCase().includes(type))) {
-			throw new HttpError(415, "unsupported_media_type", `Content-Type must be ${accepted.join(" or ")}`);
+			throw new CmsError(`Content-Type must be ${accepted.join(" or ")}`, "unsupported_media_type");
 		}
 	}
 }

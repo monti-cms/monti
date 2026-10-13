@@ -1,4 +1,4 @@
-import { HttpError, handleApiError } from "../../error-handler";
+import { CmsError, handleApiError } from "../../error-handler";
 import type { RouteContext } from "../../handler";
 import { validateSameOrigin } from "../../security";
 
@@ -18,7 +18,7 @@ export const POST = async (request: Request, context: RouteContext) => {
 		validateSameOrigin(cms, request, { form: true });
 		const auth = cms.auth();
 		const method = auth.providers.find((provider) => provider.credentials);
-		if (!auth.accounts || !method) throw new HttpError(404, "not_found", "This site has no email and password login");
+		if (!auth.accounts || !method) throw new CmsError("This site has no email and password login", "not_found");
 		const back = (error: string) =>
 			new Response(null, {
 				status: 303,

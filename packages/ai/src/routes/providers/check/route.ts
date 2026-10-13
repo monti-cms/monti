@@ -1,4 +1,4 @@
-import { adminRoute, json, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
 import { type AiCheckResult, aiProviderCheckSchema } from "../../../connection";
 import { AiError } from "../../../errors";
@@ -38,9 +38,9 @@ export const POST = adminRoute(async ({ request, cms }) => {
 				signal: request.signal,
 			});
 		}
-		return json({ ok: true, ms: Date.now() - started, model: target.model } satisfies AiCheckResult);
+		return ok({ ok: true, ms: Date.now() - started, model: target.model } satisfies AiCheckResult);
 	} catch (error) {
-		if (error instanceof AiError) return json({ ok: false, message: error.message } satisfies AiCheckResult);
+		if (error instanceof AiError) return ok({ ok: false, message: error.message } satisfies AiCheckResult);
 		throw error;
 	}
 });

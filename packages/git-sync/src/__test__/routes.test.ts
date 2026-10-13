@@ -212,8 +212,10 @@ describe("status, pull now and the queue", () => {
 		const missing = await call("pull", "POST", { target: "nope" });
 		expect(missing.status).toBe(409);
 		expect(await missing.json()).toMatchObject({
-			code: "git_sync",
-			message: expect.stringContaining('no git-sync target "nope"'),
+			error: {
+				code: "precondition_failed",
+				message: expect.stringContaining('no git-sync target "nope"'),
+			},
 		});
 
 		h.github.failNext("getBranchHead", { status: 503, message: "GitHub answered 503: down" });

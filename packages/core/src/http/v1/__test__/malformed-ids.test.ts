@@ -41,7 +41,7 @@ describe("a path id that is not a UUID", () => {
 				});
 				const response = await handler(request, { params: Promise.resolve({ id: "not-a-uuid" }), cms });
 				expect(response.status).toBe(404);
-				expect(await response.json()).toMatchObject({ code: "not_found" });
+				expect(await response.json()).toMatchObject({ error: { code: "not_found" } });
 			});
 		}
 	}

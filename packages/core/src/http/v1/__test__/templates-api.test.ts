@@ -155,8 +155,7 @@ describe("Templates API Route Contract", () => {
 				cms,
 			},
 		);
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ ok: true });
+		expect(res.status).toBe(204);
 
 		// Conflict on stale expectedVersion
 		const conflictRes = await deleteTemplate(

@@ -92,8 +92,10 @@ describe("Bareun check route", () => {
 		const res = await post({ segments });
 		expect(res.status).toBe(503);
 		expect(await res.json()).toEqual({
-			code: "text_check_unavailable",
-			message: testSite.createTranslator(bareunMessages)("error.keyMissing"),
+			error: {
+				code: "service_unavailable",
+				message: testSite.createTranslator(bareunMessages)("error.keyMissing"),
+			},
 		});
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
@@ -142,7 +144,7 @@ describe("Bareun check route", () => {
 		const res = await post({ segments }, cms);
 		expect(res.status).toBe(502);
 		const text = await res.text();
-		expect(JSON.parse(text)).toEqual({ code: "text_check_failed", message: "Text check failed" });
+		expect(JSON.parse(text)).toEqual({ error: { code: "upstream_failed", message: "Text check failed" } });
 		expect(text).not.toContain(FAKE_KEY);
 	});
 

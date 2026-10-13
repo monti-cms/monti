@@ -1,19 +1,19 @@
 import { mediaPatchBodySchema } from "../../../../core/api";
-import { HttpError } from "../../error-handler";
-import { adminRoute, json, parseWith, readJsonBody } from "../../handler";
+import { CmsError } from "../../error-handler";
+import { adminRoute, deleted, ok, parseWith, readJsonBody } from "../../handler";
 
 type IdParams = { id: string };
 
 /** Media detail. Also used when the editor shows an image from `mediaId` alone (including a check of the stored file). */
 export const GET = adminRoute<IdParams>(async ({ params, cms }) => {
 	const media = await cms.store().getMediaAsset(params.id);
-	if (!media) throw new HttpError(404, "not_found", "Media asset not found");
+	if (!media) throw new CmsError("Media asset not found", "not_found");
 	if (media.status !== "ready" || !media.storageKey) {
-		return json({ ...media, mediaId: media.id, publicUrl: null });
+		return ok({ ...media, mediaId: media.id, publicUrl: null });
 	}
 	const mediaStore = cms.mediaStore();
 	const head = await mediaStore.headFile({ key: media.storageKey });
-	return json({
+	return ok({
 		...media,
 		mediaId: media.id,
 		status: head ? "ready" : "missing",
@@ -25,7 +25,7 @@ export const GET = adminRoute<IdParams>(async ({ params, cms }) => {
 /** Edits the default alt and caption. Bodies already written do not change. */
 export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const body = parseWith(mediaPatchBodySchema, await readJsonBody(request));
-	return json(await cms.store().updateMediaMetadata({ id: params.id, ...body }));
+	return ok(await cms.store().updateMediaMetadata({ id: params.id, ...body }));
 });
 
 /**
@@ -41,5 +41,5 @@ export const DELETE = adminRoute<IdParams>(async ({ params, cms }) => {
 		if (key) await mediaStore.deleteFile({ key });
 	}
 	await store.finalizeMediaDelete(params.id);
-	return json({ success: true, id: params.id });
+	return deleted();
 });

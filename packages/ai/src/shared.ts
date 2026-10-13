@@ -137,7 +137,7 @@ async function write(site: Site, store: AiSharedStore, expectedVersion: number, 
 	return viewOf(site, version, stored);
 }
 
-const invalid = (message: string) => new AiError("ai_invalid_input", message);
+const invalid = (message: string) => new AiError("invalid_input", message);
 const unknownKey = (site: Site, key: string) => invalid(contextOf(site).t("shared.unknown", { key }));
 
 function parse<S extends z.ZodType>(site: Site, schema: S, input: unknown): z.output<S> {

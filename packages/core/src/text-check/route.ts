@@ -1,12 +1,11 @@
 import type { Cms } from "../cms";
-import { adminRoute, json, readJsonBody } from "../http/v1/handler";
+import { adminRoute, ok, readJsonBody } from "../http/v1/handler";
 import { handleTextCheck, type TextCheckRouteOptions } from "./server-handler";
 
 export {
 	handleTextCheck,
 	parseTextCheckBody,
 	type ServerTextCheck,
-	type TextCheckResponse,
 	type TextCheckRouteOptions,
 } from "./server-handler";
 
@@ -27,8 +26,7 @@ export {
 export function textCheckRoute(options: TextCheckRouteOptions & { readonly cms?: Cms }) {
 	return adminRoute(
 		async ({ request }) => {
-			const result = await handleTextCheck(await readJsonBody(request), options, request.signal);
-			return json(result.body, { status: result.status });
+			return ok(await handleTextCheck(await readJsonBody(request), options, request.signal));
 		},
 		{ cms: options.cms },
 	);

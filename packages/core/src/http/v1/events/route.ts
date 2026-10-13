@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { EventLogState } from "../../../core/store";
-import { adminRoute, json, parseWith, readQuery } from "../handler";
+import { adminRoute, ok, parseWith, readQuery } from "../handler";
 
 const STATES = [
 	"pending",
@@ -29,5 +29,5 @@ export const GET = adminRoute(async ({ request, cms }) => {
 		}),
 		cms.events.counts(),
 	]);
-	return json({ ...list, counts });
+	return ok({ ...list, counts });
 });

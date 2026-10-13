@@ -146,7 +146,7 @@ describe("entry API with a stored document", () => {
 	it("rejects a create that sends both a body and doc", async () => {
 		const res = await post({ format: "paragraphs", body: "Text", doc: sampleDoc() });
 		expect(res.status).toBe(400);
-		expect((await res.json()).code).toBe("invalid_input");
+		expect((await res.json()).error.code).toBe("invalid_input");
 	});
 
 	it("rejects a create with a document that is not a stored document", async () => {
@@ -163,7 +163,7 @@ describe("entry API with a stored document", () => {
 		for (const value of invalid) {
 			const res = await post({ doc: value });
 			expect(res.status, JSON.stringify(value)).toBe(400);
-			expect((await res.json()).code).toBe("invalid_input");
+			expect((await res.json()).error.code).toBe("invalid_input");
 		}
 	});
 
@@ -240,7 +240,7 @@ describe("entry API with a stored document", () => {
 		});
 
 		expect(res.status).toBe(400);
-		expect((await res.json()).code).toBe("invalid_input");
+		expect((await res.json()).error.code).toBe("invalid_input");
 		expect((await read(entry.id)).working.doc).toEqual(entry.working.doc);
 	});
 
@@ -251,7 +251,7 @@ describe("entry API with a stored document", () => {
 		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 1 }, "text", null]) {
 			const res = await patch(entry.id, { expectedVersion: entry.version, doc: value });
 			expect(res.status, JSON.stringify(value)).toBe(400);
-			expect((await res.json()).code).toBe("invalid_input");
+			expect((await res.json()).error.code).toBe("invalid_input");
 		}
 		const after = await read(entry.id);
 		expect(after.version).toBe(entry.version);
@@ -266,7 +266,7 @@ describe("entry API with a stored document", () => {
 		};
 		const res = await post({ doc });
 		expect(res.status).toBe(413);
-		expect((await res.json()).code).toBe("body_too_large");
+		expect((await res.json()).error.code).toBe("body_too_large");
 	});
 
 	it("accepts a document larger than the text limit", async () => {

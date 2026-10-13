@@ -3,7 +3,7 @@ import type { AuthContext } from "../../adapters/auth";
 import type { Cms } from "../../cms";
 import { actorOf, withActor } from "../../core/actor";
 import { isUuid } from "../../core/ids";
-import { HttpError, handleApiError } from "./error-handler";
+import { CmsError, deleted, handleApiError, ok } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
 /**
@@ -47,7 +47,7 @@ export function adminRoute<P extends Params = Params>(
 			// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
 			// would reject it as a malformed value (an internal error), so it is a missing item here.
 			if (typeof params.id === "string" && !isUuid(params.id)) {
-				throw new HttpError(404, "not_found", "Not found");
+				throw new CmsError("Not found", "not_found");
 			}
 			// The store records this admin as the one who made the changes the handler writes (`changedBy`).
 			return await withActor(actorOf(auth), () => handler({ request, params, auth, cms }));
@@ -64,7 +64,7 @@ export async function readJsonBody(request: Request): Promise<unknown> {
 	try {
 		return JSON.parse(text);
 	} catch {
-		throw new HttpError(400, "invalid_input", "Request body is not valid JSON");
+		throw new CmsError("Request body is not valid JSON", "invalid_input");
 	}
 }
 
@@ -74,7 +74,7 @@ export async function readJsonBody(request: Request): Promise<unknown> {
  */
 export function assertVersionPresent(value: unknown): void {
 	if (value === undefined || value === null || value === "") {
-		throw new HttpError(428, "version_required", "expectedVersion is required");
+		throw new CmsError("expectedVersion is required", "version_required");
 	}
 }
 
@@ -84,7 +84,7 @@ export function parseWith<S extends z.ZodType>(
 	message = "Invalid request body",
 ): z.output<S> {
 	const parsed = schema.safeParse(value);
-	if (!parsed.success) throw new HttpError(400, "invalid_input", message, parsed.error.issues);
+	if (!parsed.success) throw new CmsError(message, "invalid_input", undefined, undefined, parsed.error.issues);
 	return parsed.data;
 }
 
@@ -101,7 +101,7 @@ export function readVersionQuery(request: Request): number {
 	assertVersionPresent(raw ?? undefined);
 	const version = Number(raw);
 	if (!Number.isInteger(version) || version <= 0) {
-		throw new HttpError(400, "invalid_input", "Invalid expectedVersion");
+		throw new CmsError("Invalid expectedVersion", "invalid_input");
 	}
 	return version;
 }
@@ -120,8 +120,8 @@ export function readQuery(request: Request, arrayKeys: readonly string[] = []): 
 export function readFormatQuery(request: Request): string | undefined {
 	const raw = new URL(request.url).searchParams.get("format");
 	if (raw === null || raw === "") return undefined;
-	if (!/^[a-z][a-z0-9-]*$/.test(raw)) throw new HttpError(400, "invalid_input", "Invalid format");
+	if (!/^[a-z][a-z0-9-]*$/.test(raw)) throw new CmsError("Invalid format", "invalid_input");
 	return raw;
 }
 
-export const json = (body: unknown, init?: ResponseInit) => Response.json(body, init);
+export { deleted, ok };

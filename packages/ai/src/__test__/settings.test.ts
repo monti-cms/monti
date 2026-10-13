@@ -249,7 +249,7 @@ describe("AI connection settings", () => {
 		// A typed key is only used for the check: it is not saved.
 		expect(await store.cms.apiKeys.list()).toHaveLength(1);
 		await expect(connectionForCheck(testSite, store, { ...base, key: { use: "none" } })).rejects.toMatchObject({
-			code: "ai_unavailable",
+			code: "service_unavailable",
 		});
 	});
 
@@ -396,7 +396,7 @@ describe("decide model call", () => {
 			"fetch",
 			vi.fn(async () => new Response("nope", { status: 401 })),
 		);
-		await expect(decider.decide(request)).rejects.toMatchObject({ code: "ai_unavailable" });
+		await expect(decider.decide(request)).rejects.toMatchObject({ code: "service_unavailable" });
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => new Response("nope", { status: 402 })),
@@ -406,7 +406,7 @@ describe("decide model call", () => {
 			"fetch",
 			vi.fn(async () => Response.json({ result: "?" })),
 		);
-		await expect(decider.decide(request)).rejects.toMatchObject({ code: "ai_failed" });
+		await expect(decider.decide(request)).rejects.toMatchObject({ code: "upstream_failed" });
 	});
 });
 
@@ -534,7 +534,7 @@ describe("generation model call", () => {
 			apiKey: "key",
 			model: "m-small",
 		});
-		await expect(generator.generate(request)).rejects.toMatchObject({ code: "ai_unavailable" });
+		await expect(generator.generate(request)).rejects.toMatchObject({ code: "service_unavailable" });
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });

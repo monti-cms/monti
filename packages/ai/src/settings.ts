@@ -176,7 +176,7 @@ export async function updateAiProvider(
 ): Promise<AiSettingsView> {
 	const { providers } = await load(store);
 	const current = providers.find((provider) => provider.id === id);
-	if (!current) throw new AiError("ai_failed", site.createTranslator(settingsMessages)("unknownConnection"));
+	if (!current) throw new AiError("upstream_failed", site.createTranslator(settingsMessages)("unknownConnection"));
 	const keep = input.url.replace(/\/+$/, "") !== current.url ? null : current.keyId;
 	return saveWithKey(store, input, keep, (scoped, keyId) =>
 		writeProviders(
@@ -291,8 +291,8 @@ export async function connectionForCheck(
 		apiKey = key.value;
 	}
 	const t = site.createTranslator(settingsMessages);
-	if (!url || !params.model) throw new AiError("ai_unavailable", t("urlAndModel"));
-	if (!apiKey) throw new AiError("ai_unavailable", unreadable ? t("keyAgain") : t("key"));
+	if (!url || !params.model) throw new AiError("service_unavailable", t("urlAndModel"));
+	if (!apiKey) throw new AiError("service_unavailable", unreadable ? t("keyAgain") : t("key"));
 	const config = { apiKey, model: params.model };
 	return params.kind === "chat"
 		? { model: params.model, generator: createGenerator(site, { baseUrl: url, ...config }) }

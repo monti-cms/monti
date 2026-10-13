@@ -48,7 +48,7 @@ describe("Folders HTTP API Contract", () => {
 		});
 		expect(res.status).toBe(428);
 		const data = await res.json();
-		expect(data.code).toBe("version_required");
+		expect(data.error.code).toBe("version_required");
 	});
 
 	it("PATCH /folders/:id maps conflict to 409", async () => {
@@ -63,7 +63,7 @@ describe("Folders HTTP API Contract", () => {
 		});
 		expect(res.status).toBe(409);
 		const data = await res.json();
-		expect(data.code).toBe("conflict");
-		expect(data.serverVersion).toBe(2);
+		expect(data.error.code).toBe("conflict");
+		expect(data.error.details.serverVersion).toBe(2);
 	});
 });

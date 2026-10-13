@@ -1198,6 +1198,10 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 - Postgres 어댑터는 문서를 본체 표 `plugin_documents`에 둔다(본체 마이그레이션이 만든다). 다른 어댑터의 저장소도 똑같이 동작해야 한다. `src/plugin/__test__/storage-contract.ts`가 그 계약이고, Postgres와 `@monti-cms/core/testing`의 `createMemoryPluginStorage()`로 돌린다. `fakeCms`는 이를 기본으로 쓴다(`fakeCms({ storage })`로 바꾼다).
 - 플러그인 API에는 데이터베이스 드라이버 타입이 없다. `PluginDatabase`·`cms.database()`·`withTransaction`은 없어졌고, `@monti-cms/core`와 `@monti-cms/core/plugin/server`는 `pg`의 어떤 것도 내보내지 않는다.
 
+### 오류와 응답
+
+서버가 돌려주는 모든 오류는 `{ "error": { "code", "message", "issues"?, "details"? } }` 한 모양이고, 상태 코드는 한 표(`ERROR_STATUS`, `ErrorCode` 타입과 함께 `@monti-cms/core/plugin/server`에서 내보냄)에서만 정해집니다. 라우트나 플러그인은 그 표의 코드로 `new CmsError(message, code)`를 던지며, 다른 곳에서 상태를 정하지 않습니다. `issues`는 콘텐츠에서 찾은 문제(거부된 쓰기)이고, `details`는 기계가 읽는 추가 정보(`conflict`일 때 서버가 가진 버전, `key_in_use`일 때 키를 쓰는 곳)입니다. 성공은 `ok(body)`이고, 삭제는 본문 없는 `204`(`deleted()`)로 답합니다.
+
 ## 서버 옵션
 
 서버 옵션은 사이트 옵션과 함께 하나의 `defineConfig({ … })` 호출에 들어간다("CMS 인스턴스" 절). 서버에서만 읽힌다. 옵션을 주지 않으면 어댑터가 관례적인 환경 변수를 읽고, 명시한 옵션이 항상 이긴다.

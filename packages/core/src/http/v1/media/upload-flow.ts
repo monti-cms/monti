@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { Cms } from "../../../cms";
-import { HttpError } from "../error-handler";
+import { CmsError } from "../error-handler";
 import { parseWith } from "../handler";
 import { attachmentDisposition, extensionFor, inspectUploadedFile, UPLOAD_URL_TTL_SECONDS } from "./media-files";
 
 /**
  * The two steps of a media upload, shared by the upload routes: `prepareMediaUpload` registers the
- * asset and issues the direct upload URL, `completeMediaUpload` inspects the stored file and makes the asset usable. Both throw `HttpError`.
+ * asset and issues the direct upload URL, `completeMediaUpload` inspects the stored file and makes the asset usable. Both throw `CmsError`.
  */
 
 export interface PreparedMediaUpload {
@@ -32,33 +32,31 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 		...cms.site.api.ALLOWED_FILE_MIME_TYPES,
 	] as readonly unknown[];
 	if (input?.mimeType !== undefined && !allowed.includes(input.mimeType)) {
-		throw new HttpError(415, "unsupported_media_type", `Allowed types: ${allowed.join(", ")}`);
+		throw new CmsError(`Allowed types: ${allowed.join(", ")}`, "unsupported_media_type");
 	}
 	const originalMime = input?.original?.mimeType;
 	if (
 		originalMime !== undefined &&
 		!(cms.site.api.ALLOWED_IMAGE_MIME_TYPES as readonly unknown[]).includes(originalMime)
 	) {
-		throw new HttpError(
-			415,
-			"unsupported_media_type",
+		throw new CmsError(
 			`Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`,
+			"unsupported_media_type",
 		);
 	}
 	const body = parseWith(cms.site.api.mediaUploadBodySchema, raw);
 	const isFile = !cms.site.api.isImageMime(body.mimeType);
 	// An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
 	if (isFile && cms.site.api.fileTypeFor(body.filename) !== body.mimeType) {
-		throw new HttpError(415, "unsupported_media_type", `File extension does not match ${body.mimeType}`);
+		throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type");
 	}
 	const originalFile = "original" in body ? body.original : undefined;
 	const limit = isFile ? cms.site.api.MAX_FILE_BYTES : cms.site.api.MAX_MEDIA_BYTES;
 	for (const file of [body, originalFile]) {
 		if (file && file.byteSize > limit) {
-			throw new HttpError(
-				413,
-				"payload_too_large",
+			throw new CmsError(
 				`File size exceeds the ${limit / 1024 / 1024}MiB limit (${file.byteSize} bytes)`,
+				"payload_too_large",
 			);
 		}
 	}
@@ -114,7 +112,7 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 export async function completeMediaUpload(cms: Cms, mediaId: string) {
 	const store = cms.store();
 	const media = await store.getMediaAsset(mediaId);
-	if (!media) throw new HttpError(404, "not_found", "Media asset not found");
+	if (!media) throw new CmsError("Media asset not found", "not_found");
 
 	const mediaStore = cms.mediaStore();
 	const describe = (record: NonNullable<typeof media>) => ({
@@ -131,7 +129,7 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 
 	if (media.status === "ready") return describe(media);
 	if (media.status !== "pending" || !media.stagingKey) {
-		throw new HttpError(409, "upload_incomplete", `Media asset cannot be completed in status: ${media.status}`);
+		throw new CmsError(`Media asset cannot be completed in status: ${media.status}`, "upload_incomplete");
 	}
 
 	let file: Awaited<ReturnType<typeof inspectUploadedFile>>;
@@ -142,7 +140,7 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 			original = await inspectUploadedFile(cms.site, mediaStore, media.original.stagingKey);
 	} catch (error) {
 		// If the file is not there yet, leave it as is so it can be retried. A file that fails inspection cannot be used.
-		if (!(error instanceof HttpError) || error.code !== "upload_incomplete") await store.failMediaAsset(mediaId);
+		if (!(error instanceof CmsError) || error.code !== "upload_incomplete") await store.failMediaAsset(mediaId);
 		throw error;
 	}
 

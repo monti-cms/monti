@@ -1,4 +1,4 @@
-import { adminRoute, json } from "../../handler";
+import { adminRoute, ok } from "../../handler";
 
 const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -23,5 +23,5 @@ export const POST = adminRoute(async ({ cms }) => {
 			failed.push(media.id);
 		}
 	}
-	return json({ removed, failed });
+	return ok({ removed, failed });
 });

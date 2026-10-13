@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Cms } from "../../../../cms";
-import { HttpError, handleApiError } from "../../error-handler";
-import { adminRoute, json, parseWith, type RouteContext, readQuery } from "../../handler";
+import { CmsError, handleApiError } from "../../error-handler";
+import { adminRoute, ok, parseWith, type RouteContext, readQuery } from "../../handler";
 
 const querySchema = z.object({
 	all: z
@@ -14,7 +14,7 @@ const querySchema = z.object({
 const run = async (cms: Cms, request: Request) => {
 	const query = parseWith(querySchema, readQuery(request), "Invalid query");
 	const result = await cms.events.retry({ all: query.all, limit: query.limit });
-	return json({ ...result, counts: await cms.events.counts() });
+	return ok({ ...result, counts: await cms.events.counts() });
 };
 
 const bearerOf = (request: Request): string | null =>
@@ -33,7 +33,7 @@ export const POST = async (request: Request, context?: Partial<RouteContext>) =>
 	try {
 		const cms = context?.cms;
 		if (!cms) throw new Error("the events retry route was called without a CMS instance");
-		if (!cms.events.acceptsRetryToken(token)) throw new HttpError(401, "unauthorized", "Invalid retry token");
+		if (!cms.events.acceptsRetryToken(token)) throw new CmsError("Invalid retry token", "unauthorized");
 		return await run(cms, request);
 	} catch (error) {
 		return handleApiError(error);

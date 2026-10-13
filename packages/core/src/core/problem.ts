@@ -1,3 +1,4 @@
+import type { ErrorCode } from "./error-codes";
 /**
  * The wording of a setup problem, shared by the errors core and the plugins throw and by `monti doctor`: what is wrong, where it is, and how to fix it.
  * Each part is plain words. `where` names a file, an environment variable or an option; `fix` is the next step, with the exact command or value when there is one.
@@ -38,7 +39,7 @@ export function problemText(problem: Problem): string {
 export class SetupError extends Error {
 	constructor(
 		readonly problem: Problem,
-		options?: { readonly cause?: unknown; readonly kind?: string },
+		options?: { readonly cause?: unknown; readonly kind?: ErrorCode },
 	) {
 		super(problemText(problem), options?.cause === undefined ? undefined : { cause: options.cause });
 		this.name = "SetupError";
@@ -48,12 +49,12 @@ export class SetupError extends Error {
 		this.code = typeof driverCode === "string" ? driverCode : this.kind;
 	}
 	/** Stable name of the kind of problem (`database_unreachable`, `migrations_pending`, ...). */
-	readonly kind: string;
+	readonly kind: ErrorCode;
 	/** The driver's error code when this explains a driver error, else the same as `kind`. */
 	readonly code: string;
 }
 
 /** A {@link SetupError} for the problem. `cause` keeps the error underneath (a driver error, say); `kind` names the kind of problem. */
-export function problemError(problem: Problem, cause?: unknown, kind?: string): SetupError {
+export function problemError(problem: Problem, cause?: unknown, kind?: ErrorCode): SetupError {
 	return new SetupError(problem, { cause, kind });
 }

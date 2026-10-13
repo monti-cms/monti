@@ -196,14 +196,16 @@ describe("the format option of the admin API", () => {
 			const res = await post({ format: "hugo", body: "Text" });
 
 			expect(res.status).toBe(400);
-			expect(await res.json()).toMatchObject({ code: "unknown_format", issues: [{ params: { format: "hugo" } }] });
+			expect(await res.json()).toMatchObject({
+				error: { code: "unknown_format", issues: [{ params: { format: "hugo" } }] },
+			});
 		});
 
 		it("a format that can only write is a 400 format_not_importable", async () => {
 			const res = await post({ format: "one-way", body: "Text" });
 
 			expect(res.status).toBe(400);
-			expect((await res.json()).code).toBe("format_not_importable");
+			expect((await res.json()).error.code).toBe("format_not_importable");
 		});
 
 		it("a format that throws is a 422 format_import_failed, without its own message", async () => {
@@ -213,7 +215,7 @@ describe("the format option of the admin API", () => {
 
 			expect(res.status).toBe(422);
 			const body = await res.json();
-			expect(body.code).toBe("format_import_failed");
+			expect(body.error.code).toBe("format_import_failed");
 			expect(JSON.stringify(body)).not.toContain("secret detail");
 			quiet.mockRestore();
 		});
@@ -239,7 +241,7 @@ describe("the format option of the admin API", () => {
 			]) {
 				const res = await post(body);
 				expect(res.status, JSON.stringify(body)).toBe(400);
-				expect((await res.json()).code).toBe("invalid_input");
+				expect((await res.json()).error.code).toBe("invalid_input");
 			}
 			const entry = await created({ doc });
 			const res = await patch(entry.id, { expectedVersion: entry.version, body: "Text" });
@@ -269,7 +271,7 @@ describe("the format option of the admin API", () => {
 
 			const text = await write({ format: "paragraphs", body: "Some text" });
 			expect(text.status).toBe(400);
-			expect((await text.json()).code).toBe("unknown_format");
+			expect((await text.json()).error.code).toBe("unknown_format");
 
 			const doc = await write({ doc: docOf("Some text") });
 			expect(doc.status).toBe(201);
@@ -285,7 +287,7 @@ describe("the format option of the admin API", () => {
 			const res = await post({ format: "paragraphs", body: "a".repeat(2 * 1024 * 1024 + 1) });
 
 			expect(res.status).toBe(413);
-			expect((await res.json()).code).toBe("body_too_large");
+			expect((await res.json()).error.code).toBe("body_too_large");
 		});
 	});
 
@@ -315,7 +317,7 @@ describe("the format option of the admin API", () => {
 			const { status, body } = await read(entry.id, "?format=hugo");
 
 			expect(status).toBe(400);
-			expect(body.code).toBe("unknown_format");
+			expect(body.error.code).toBe("unknown_format");
 		});
 
 		it("the published body is written too, and a one-way format can be read as text", async () => {
@@ -469,7 +471,7 @@ describe("the format option of the admin API", () => {
 				},
 			);
 			expect(notADoc.status).toBe(400);
-			expect((await notADoc.json()).code).toBe("invalid_input");
+			expect((await notADoc.json()).error.code).toBe("invalid_input");
 		});
 
 		it("an unknown format is a 400, and a text the format rejects is a 422 with its findings (a template cannot hold unparsed text)", async () => {
@@ -478,7 +480,7 @@ describe("the format option of the admin API", () => {
 				{ cms },
 			);
 			expect(unknown.status).toBe(400);
-			expect((await unknown.json()).code).toBe("unknown_format");
+			expect((await unknown.json()).error.code).toBe("unknown_format");
 
 			const rejected = await postTemplate(
 				send("http://localhost/api/monti/v1/templates", "POST", {
@@ -490,8 +492,10 @@ describe("the format option of the admin API", () => {
 			);
 			expect(rejected.status).toBe(422);
 			expect(await rejected.json()).toMatchObject({
-				code: "format_import_failed",
-				issues: [{ code: "bad_marker", position: { line: 1, column: 1 } }],
+				error: {
+					code: "format_import_failed",
+					issues: [{ code: "bad_marker", position: { line: 1, column: 1 } }],
+				},
 			});
 		});
 
@@ -562,7 +566,7 @@ describe("the format option of the admin API", () => {
 
 			const unknown = await getTemplates(new Request("http://localhost/api/monti/v1/templates?format=hugo"), { cms });
 			expect(unknown.status).toBe(400);
-			expect((await unknown.json()).code).toBe("unknown_format");
+			expect((await unknown.json()).error.code).toBe("unknown_format");
 		});
 
 		it("deleting a template still needs its version", async () => {
@@ -581,7 +585,7 @@ describe("the format option of the admin API", () => {
 				}),
 				{ params: Promise.resolve({ id: template.id }), cms },
 			);
-			expect(res.status).toBe(200);
+			expect(res.status).toBe(204);
 		});
 	});
 });

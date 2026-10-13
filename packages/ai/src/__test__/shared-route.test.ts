@@ -83,6 +83,8 @@ describe("shared texts API", () => {
 		state.overrides = [{ key: "summary", value: { prompt: "요약한다.\n{{shared.tone}}" }, version: 1 }];
 		const res = await call(DELETE, "DELETE", undefined, "?key=tone&expectedVersion=1");
 		expect(res.status).toBe(400);
-		expect(await res.json()).toMatchObject({ message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" });
+		expect(await res.json()).toMatchObject({
+			error: { message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" },
+		});
 	});
 });

@@ -277,7 +277,7 @@ describe("Media Upload API Endpoints", () => {
 			cms,
 		});
 		expect(res.status).toBe(413);
-		expect((await res.json()).code).toBe("too_many_pixels");
+		expect((await res.json()).error.code).toBe("too_many_pixels");
 		expect(mockFailMediaAsset).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000010");
 		expect(mockPromoteFile).not.toHaveBeenCalled();
 	});
@@ -392,7 +392,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 		expect(res.status).toBe(409);
 		const json = await res.json();
-		expect(json.code).toBe("in_use");
+		expect(json.error.code).toBe("in_use");
 		expect(mockDeleteFile).not.toHaveBeenCalled();
 		expect(mockFinalizeMediaDelete).not.toHaveBeenCalled();
 	});
@@ -420,9 +420,7 @@ describe("Media Upload API Endpoints", () => {
 			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
 			cms,
 		});
-		expect(res.status).toBe(200);
-		const json = await res.json();
-		expect(json.success).toBe(true);
+		expect(res.status).toBe(204);
 		expect(mockDeleteFile).toHaveBeenCalledWith({ key: "media/00000000-0000-4000-8000-000000000009/pic.png" });
 		expect(mockFinalizeMediaDelete).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000009");
 	});

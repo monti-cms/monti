@@ -82,9 +82,9 @@ describe("AI action edited-value store", () => {
 			code: "conflict",
 		});
 		await expect(updateAction(testSite, store, "summary", 1, { prompt: "{{title}}" })).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 		});
-		await expect(updateAction(testSite, store, "nope", 0, {})).rejects.toMatchObject({ code: "ai_unknown_action" });
+		await expect(updateAction(testSite, store, "nope", 0, {})).rejects.toMatchObject({ code: "not_found" });
 	});
 
 	it("resetting to defaults restores the prompt to the definition and leaves the enabled flag as is", async () => {
@@ -178,7 +178,7 @@ describe("AI action edited-value store", () => {
 			"oneOf",
 		]);
 		await expect(createCustomAction(testSite, store, base, { prompt: "{{title}}" })).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 		});
 		await deleteCustomAction(testSite, store, created.key, created.version);
 	});
@@ -213,17 +213,17 @@ describe("AI action edited-value store", () => {
 		// Only materials of the chosen slots are sent (required inputs of the selection slot are always sent).
 		expect(action.send).toEqual(["selection", "title"]);
 
-		await expect(resetAction(testSite, store, created.key, 2)).rejects.toMatchObject({ code: "ai_invalid_input" });
+		await expect(resetAction(testSite, store, created.key, 2)).rejects.toMatchObject({ code: "invalid_input" });
 		await expect(
 			createCustomAction(testSite, store, { label: "x", surface: { slot: "field", field: "nope" }, result: "text" }),
-		).rejects.toMatchObject({ code: "ai_invalid_input" });
+		).rejects.toMatchObject({ code: "invalid_input" });
 		await expect(
 			createCustomAction(testSite, store, { label: "x", surface: { slot: "selection" }, result: "candidates" }),
-		).rejects.toMatchObject({ code: "ai_invalid_input" });
+		).rejects.toMatchObject({ code: "invalid_input" });
 
 		await deleteCustomAction(testSite, store, created.key, 2);
 		expect((await listActions(testSite, store)).some((item) => item.key === created.key)).toBe(false);
-		await expect(getAction(testSite, store, created.key)).rejects.toMatchObject({ code: "ai_unknown_action" });
-		await expect(deleteCustomAction(testSite, store, "summary", 0)).rejects.toMatchObject({ code: "ai_invalid_input" });
+		await expect(getAction(testSite, store, created.key)).rejects.toMatchObject({ code: "not_found" });
+		await expect(deleteCustomAction(testSite, store, "summary", 0)).rejects.toMatchObject({ code: "invalid_input" });
 	});
 });

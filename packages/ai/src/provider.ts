@@ -96,11 +96,11 @@ function providerError(site: ProviderSite, status: number | undefined, detail: s
 	const message = serviceMessage(detail);
 	console.error("AI provider error:", status, message);
 	const withDetail = (text: string) => (message ? `${text} — ${message}` : text);
-	if (status === 401 || status === 403) return new AiError("ai_unavailable", withDetail(t("service.key")));
-	if (status === 402) return new AiError("ai_unavailable", withDetail(t("service.credit")));
-	if (status === 404) return new AiError("ai_failed", withDetail(t("service.address")));
-	if (status === 429) return new AiError("ai_rate_limited", withDetail(t("service.rateLimited")));
-	return new AiError("ai_failed", withDetail(t("service.problem")));
+	if (status === 401 || status === 403) return new AiError("service_unavailable", withDetail(t("service.key")));
+	if (status === 402) return new AiError("service_unavailable", withDetail(t("service.credit")));
+	if (status === 404) return new AiError("upstream_failed", withDetail(t("service.address")));
+	if (status === 429) return new AiError("rate_limited", withDetail(t("service.rateLimited")));
+	return new AiError("upstream_failed", withDetail(t("service.problem")));
 }
 
 const isAbort = (error: unknown) => error instanceof Error && error.name === "AbortError";
@@ -222,9 +222,9 @@ export function createGenerator(
 					if (APICallError.isInstance(error)) {
 						throw providerError(site, error.statusCode, error.responseBody ?? error.message);
 					}
-					throw new AiError("ai_failed", t("streamCut"));
+					throw new AiError("upstream_failed", t("streamCut"));
 				} else if (part.type === "finish" && part.finishReason === "length") {
-					throw new AiError("ai_failed", t("tooLong"));
+					throw new AiError("upstream_failed", t("tooLong"));
 				}
 			}
 		},
@@ -245,9 +245,9 @@ export function createGenerator(
 				throw providerError(site, lastError.statusCode, lastError.responseBody ?? lastError.message);
 			}
 			if (isTruncated(lastError)) {
-				throw new AiError("ai_failed", t("tooLongModel"));
+				throw new AiError("upstream_failed", t("tooLongModel"));
 			}
-			throw new AiError("ai_failed", t("unreadable"));
+			throw new AiError("upstream_failed", t("unreadable"));
 		},
 	};
 }
@@ -273,7 +273,7 @@ export function createDecider(site: ProviderSite, config: { url: string; apiKey:
 				});
 			} catch (error) {
 				if (isAbort(error)) throw error;
-				throw new AiError("ai_failed", t("deciderUnreachable"));
+				throw new AiError("upstream_failed", t("deciderUnreachable"));
 			}
 			const text = await response.text();
 			if (!response.ok) throw providerError(site, response.status, text);
@@ -288,7 +288,7 @@ export function createDecider(site: ProviderSite, config: { url: string; apiKey:
 			);
 			if (!parsed.success) {
 				console.error("Decision response has an unexpected shape:", text.slice(0, 500));
-				throw new AiError("ai_failed", t("deciderShape"));
+				throw new AiError("upstream_failed", t("deciderShape"));
 			}
 			return parsed.data.answers;
 		},
@@ -311,7 +311,7 @@ export async function listModels(
 		});
 	} catch (error) {
 		if (isAbort(error)) throw error;
-		throw new AiError("ai_failed", t("unreachable"));
+		throw new AiError("upstream_failed", t("unreachable"));
 	}
 	if (response.status === 404) return [];
 	if (!response.ok) throw providerError(site, response.status, await response.text());

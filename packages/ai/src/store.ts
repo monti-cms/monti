@@ -46,7 +46,7 @@ export function createAiStore(
 	const built = {
 		apiKeys: (): ApiKeys => {
 			if (!options.apiKeys)
-				throw new AiError("ai_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
+				throw new AiError("service_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
 			return options.apiKeys();
 		},
 		/** Runs `work` with a store whose writes (settings and the key store) are one transaction: all kept, or none if it throws. */

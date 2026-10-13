@@ -131,7 +131,12 @@ const entry = {
 	working: { metadata: { title: "테스트", categoryId: "cat-1", summary: "요약" }, doc: docOf("첫째 줄\n둘째 줄") },
 };
 
-const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data });
+// An error answer is `{ error: {...} }`; a mock may pass the bare error object.
+const json = (data: unknown, status = 200) => ({
+	ok: status < 400,
+	status,
+	json: async () => (status >= 400 && data && typeof data === "object" && !("error" in data) ? { error: data } : data),
+});
 type Handler = (input: string, init?: RequestInit) => unknown;
 let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -262,7 +267,8 @@ describe("entry editor shell", () => {
 
 	it("shows why an explicit save failed instead of doing nothing", async () => {
 		serve((_input, init) => {
-			if (init?.method === "PATCH") return json({ code: "invalid_input", message: "제목이 너무 깁니다." }, 400);
+			if (init?.method === "PATCH")
+				return json({ error: { code: "invalid_input", message: "제목이 너무 깁니다." } }, 400);
 		});
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "실패할 수정" } });
@@ -669,7 +675,7 @@ describe("entry editor shell", () => {
 		vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
 		serve((input) =>
 			input.endsWith("/publish")
-				? json({ issues: [{ code: "missing_field", path: "categoryId", message: "카테고리" }] }, 422)
+				? json({ error: { issues: [{ code: "missing_field", path: "categoryId", message: "카테고리" }] } }, 422)
 				: undefined,
 		);
 		renderEdit();
@@ -743,7 +749,7 @@ describe("entry editor shell", () => {
 
 	it("stops publishing after an autosave conflict and offers copy, reload and overwrite", async () => {
 		serve((input, init) => {
-			if (init?.method === "PATCH") return json({ code: "conflict", serverVersion: 9 }, 409);
+			if (init?.method === "PATCH") return json({ error: { code: "conflict", serverVersion: 9 } }, 409);
 			if (input.endsWith("/publish")) throw new Error("Publish must not run after conflict");
 		});
 		renderEdit();
@@ -770,7 +776,7 @@ describe("entry editor shell", () => {
 				if (init?.method === "PATCH") {
 					const body = JSON.parse(String(init.body));
 					if (body.expectedVersion !== server.version)
-						return json({ code: "conflict", serverVersion: server.version }, 409);
+						return json({ error: { code: "conflict", serverVersion: server.version } }, 409);
 					server = {
 						...server,
 						version: server.version + 1,
@@ -844,8 +850,8 @@ describe("entry editor shell", () => {
 	it("reports offline, server and expired-session failures and keeps a browser backup", async () => {
 		const failures: unknown[] = [
 			new TypeError("offline"),
-			json({ message: "server error" }, 500),
-			json({ code: "unauthorized" }, 401),
+			json({ error: { message: "server error" } }, 500),
+			json({ error: { code: "unauthorized" } }, 401),
 		];
 		serve((_input, init) => {
 			if (init?.method !== "PATCH") return undefined;
@@ -1006,7 +1012,7 @@ describe("entry editor shell", () => {
 
 	it("reports header action failures as a toast", async () => {
 		serve((input, init) => {
-			if (input.endsWith("/publish") && init?.method === "POST") return json({ message: "서버 오류" }, 500);
+			if (input.endsWith("/publish") && init?.method === "POST") return json({ error: { message: "서버 오류" } }, 500);
 		});
 		renderEdit();
 		await editorTitle();

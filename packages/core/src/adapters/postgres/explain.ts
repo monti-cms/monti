@@ -1,3 +1,4 @@
+import type { ErrorCode } from "../../core/error-codes";
 import { type Problem, problemError, SetupError } from "../../core/problem";
 
 /** The environment variable `postgres()` reads the connection string from. Kept here so the messages and the adapter name the same one. */
@@ -51,7 +52,7 @@ export function explainDatabaseError(
 	const at = target ? ` at ${target}` : "";
 	const schema = context.schema || "public";
 
-	const problem = ((): { problem: Problem; code: string } | undefined => {
+	const problem = ((): { problem: Problem; code: ErrorCode } | undefined => {
 		if (code === "ECONNREFUSED") {
 			return {
 				code: "database_unreachable",

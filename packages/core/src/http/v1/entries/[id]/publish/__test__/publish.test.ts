@@ -69,7 +69,7 @@ describe("publish HTTP contract", () => {
 		publish.mockRejectedValue(new ServiceError("publish_validation_failed", issues));
 		const response = await POST(request(), context);
 		expect(response.status).toBe(422);
-		expect(await response.json()).toMatchObject({ code: "publish_validation_failed", issues });
+		expect(await response.json()).toMatchObject({ error: { code: "publish_validation_failed", issues } });
 	});
 
 	it("reports a failing hook with its own code and owner", async () => {
@@ -79,8 +79,10 @@ describe("publish HTTP contract", () => {
 		const response = await POST(request(), context);
 		expect(response.status).toBe(500);
 		expect(await response.json()).toMatchObject({
-			code: "hook_failed",
-			issues: [{ params: { hook: "transform", owner: "plugin:seo" } }],
+			error: {
+				code: "hook_failed",
+				issues: [{ params: { hook: "transform", owner: "plugin:seo" } }],
+			},
 		});
 	});
 
@@ -88,7 +90,7 @@ describe("publish HTTP contract", () => {
 		publish.mockRejectedValue(new CmsError("Conflict", "conflict", 7));
 		const response = await POST(request(), context);
 		expect(response.status).toBe(409);
-		expect(await response.json()).toMatchObject({ code: "conflict", serverVersion: 7 });
+		expect(await response.json()).toMatchObject({ error: { code: "conflict", details: { serverVersion: 7 } } });
 	});
 
 	it("requires expectedVersion before any publish", async () => {

@@ -1,18 +1,18 @@
 import { z } from "zod";
-import { adminRoute, json, parseWith, readJsonBody } from "../../../handler";
+import { adminRoute, ok, parseWith, readJsonBody } from "../../../handler";
 
 type IdParams = { id: string };
 
 /** The source and translations in the same translation group. */
 export const GET = adminRoute<IdParams>(async ({ params, cms }) =>
-	json(await cms.store().getTranslationGroup({ entryId: params.id })),
+	ok(await cms.store().getTranslationGroup({ entryId: params.id })),
 );
 
 /** Creates a translation: a draft copying the source's per-locale values and body. */
 export const POST = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const createTranslationSchema = z.object({ locale: z.enum(cms.site.LOCALES as [string, ...string[]]) }).strict();
 	const body = parseWith(createTranslationSchema, await readJsonBody(request));
-	return json(await cms.contentService().createTranslation({ sourceId: params.id, locale: body.locale }), {
+	return ok(await cms.contentService().createTranslation({ sourceId: params.id, locale: body.locale }), {
 		status: 201,
 	});
 });

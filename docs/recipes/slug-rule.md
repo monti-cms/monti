@@ -67,7 +67,7 @@ Use inline `hooks` when they are light: inline hooks load with every server star
 ## What it looks like
 
 - The admin shows the `message` (with the field `path`) in the error of the refused save.
-- The API answers `422` with `{ "code": "validation_failed", "issues": [{ "code": "slug_not_lowercase_ascii", "path": "slug", "message": "…" }] }`.
+- The API answers `422` with `{ "error": { "code": "validation_failed", "issues": [{ "code": "slug_not_lowercase_ascii", "path": "slug", "message": "…" }] } }`.
 - A thrown error carries the same text (`validation_failed: The slug "Hello-World" must use only lowercase a-z, … (slug)`), so a log line or a failed test says what is wrong, not only a code.
 
 ## Testing it

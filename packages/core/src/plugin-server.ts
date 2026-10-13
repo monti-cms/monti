@@ -19,10 +19,10 @@ export type {
 	EntryStatus,
 	PublishedEntryRecord,
 } from "./core/store";
-export { CmsError, DeferDelivery, type DeferredDelivery } from "./core/store";
+export { DeferDelivery, type DeferredDelivery } from "./core/store";
 export { type Issue, ServiceError } from "./core/types";
 export { type ExportBodyParams, exportBodyText } from "./format/export-body";
-export { HttpError, handleApiError } from "./http/v1/error-handler";
+export { CmsError, ERROR_STATUS, type ErrorCode, errorResponse, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
 export type { LoadedServerPlugin } from "./plugin/server";

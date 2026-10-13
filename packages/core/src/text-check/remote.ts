@@ -22,10 +22,13 @@ export function remoteTextChecker({ url, headers, ...options }: RemoteTextChecke
 				body: JSON.stringify({ segments }),
 				signal,
 			});
-			const body = (await response.json().catch(() => null)) as { issues?: unknown; message?: unknown } | null;
+			const body = (await response.json().catch(() => null)) as {
+				issues?: unknown;
+				error?: { message?: unknown };
+			} | null;
 			if (!response.ok) {
-				// If it is the core API error shape (`{ code, message }`), use that message.
-				const message = typeof body?.message === "string" ? body.message : `HTTP ${response.status}`;
+				// If it is the core API error shape (`{ error: { code, message } }`), use that message.
+				const message = typeof body?.error?.message === "string" ? body.error.message : `HTTP ${response.status}`;
 				throw new Error(message);
 			}
 			if (!Array.isArray(body?.issues)) throw new Error("Invalid text check response");

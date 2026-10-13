@@ -102,9 +102,15 @@ export async function streamAiAction(
 		signal: options.signal,
 	});
 	if (!response.ok || !response.body) {
-		const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-		const message = typeof body.message === "string" ? body.message : fallback;
-		throw new CmsApiError(response.status, typeof body.code === "string" ? body.code : undefined, message, [], body);
+		const { error } = (await response.json().catch(() => ({}))) as { error?: Record<string, unknown> };
+		const message = typeof error?.message === "string" ? error.message : fallback;
+		throw new CmsApiError(
+			response.status,
+			typeof error?.code === "string" ? error.code : undefined,
+			message,
+			[],
+			error ?? {},
+		);
 	}
 	const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
 	let buffer = "";
@@ -128,7 +134,7 @@ export async function streamAiAction(
 		}
 		if (done) break;
 	}
-	throw new CmsApiError(502, "ai_failed", t("streamCut"), [], {});
+	throw new CmsApiError(502, "upstream_failed", t("streamCut"), [], {});
 }
 
 /** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */

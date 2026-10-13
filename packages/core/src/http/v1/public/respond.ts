@@ -1,5 +1,5 @@
-import { CmsError } from "../../../core/store";
 import { ServiceError } from "../../../core/types";
+import { CmsError, errorResponse } from "../error-handler";
 
 /** Public responses are not cached (errors too: if a CDN stores a 404, it stays 404 even right after publishing). */
 const NO_STORE = { "Cache-Control": "no-store" } as const;
@@ -7,7 +7,7 @@ const NO_STORE = { "Cache-Control": "no-store" } as const;
 export const publicJson = (body: unknown) => Response.json(body, { headers: NO_STORE });
 
 export const publicError = (code: "invalid_input" | "not_found", message: string) =>
-	Response.json({ code, message }, { status: code === "not_found" ? 404 : 400, headers: NO_STORE });
+	errorResponse(code, message, { headers: NO_STORE });
 
 /** Uses only 400, 404, and 503. Internal messages stay out of the response, and DB/config errors are not hidden as 404 (503, cause only in the log). */
 export function publicApiError(error: unknown): Response {
@@ -20,8 +20,5 @@ export function publicApiError(error: unknown): Response {
 		return publicError("invalid_input", "Unknown format");
 	}
 	console.error("[cms] public API error:", error);
-	return Response.json(
-		{ code: "unavailable", message: "Public content is temporarily unavailable" },
-		{ status: 503, headers: NO_STORE },
-	);
+	return errorResponse("unavailable", "Public content is temporarily unavailable", { headers: NO_STORE });
 }

@@ -105,7 +105,7 @@ describe("shared texts", () => {
 		await addShared(testSite, store, 0, { key: "tone", label: "말투", text: "" });
 		const rejects = (promise: Promise<unknown>, message?: RegExp) =>
 			expect(promise).rejects.toMatchObject({
-				code: "ai_invalid_input",
+				code: "invalid_input",
 				...(message ? { message: expect.stringMatching(message) } : {}),
 			});
 		await rejects(addShared(testSite, store, 1, { key: "1tone", label: "말투", text: "" }), /영문자로 시작/);
@@ -130,7 +130,7 @@ describe("shared texts", () => {
 			{ label: "다른 키", prompt: "{{shared.toneLong}}" },
 		];
 		await expect(deleteShared(testSite, store, 1, "tone", features)).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 			message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기, 초안 쓰기",
 		});
 		expect((await getSharedView(testSite, store)).items).toHaveLength(2);
@@ -161,7 +161,7 @@ describe("admin screen prompts and added shared texts", () => {
 		const store = actionsStore(shared);
 		const prompt = "요약한다.\n\n{{shared.tone}}";
 		await expect(updateAction(testSite, store, "summary", 0, { prompt })).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 			message: expect.stringContaining("{{shared.tone}}"),
 		});
 

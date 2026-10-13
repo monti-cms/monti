@@ -1,13 +1,13 @@
 import { patchApiKeyBodySchema } from "../../../../core/api-keys";
 import { CmsError } from "../../../../core/store";
-import { adminRoute, json, readVersionedBody, readVersionQuery } from "../../handler";
+import { adminRoute, deleted, ok, readVersionedBody, readVersionQuery } from "../../handler";
 
 type IdParams = { id: string };
 
 /** Renames a key, replaces its value, or both. Everything that uses the key keeps using it (it is the same key). */
 export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const { expectedVersion, name, value } = await readVersionedBody(request, patchApiKeyBodySchema);
-	return json(
+	return ok(
 		await cms.apiKeys.update(params.id, {
 			expectedVersion,
 			...(name === undefined ? {} : { name }),
@@ -33,5 +33,5 @@ export const DELETE = adminRoute<IdParams>(async ({ request, params, cms }) => {
 		);
 	}
 	await cms.apiKeys.remove(params.id, { expectedVersion });
-	return json({ ok: true });
+	return deleted();
 });

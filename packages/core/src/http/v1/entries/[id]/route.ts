@@ -3,7 +3,7 @@ import type { StoredDocument } from "../../../../doc/stored-document";
 import { exportText } from "../../../../format/convert";
 import { createExportRefs } from "../../../../read";
 import type { SaveDraftInput } from "../../../../services/types";
-import { adminRoute, json, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler";
+import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler";
 
 type IdParams = { id: string };
 
@@ -35,7 +35,7 @@ export const GET = adminRoute<IdParams>(async ({ request, params, cms }) => {
 		: await store.getTranslationGroup({ entryId: entry.id });
 	const source =
 		entry.translationGroupId !== entry.id ? await store.getEntry(entry.translationGroupId).catch(() => null) : null;
-	return json({
+	return ok({
 		...entry,
 		working: await bodyOf(entry.working, entry.locale),
 		...(entry.published ? { published: await bodyOf(entry.published, entry.locale) } : {}),
@@ -75,12 +75,12 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 		...(body.translation !== undefined ? { translation: body.translation } : {}),
 	} as SaveDraftInput;
-	return json(await cms.contentService().saveDraft(params.id, input));
+	return ok(await cms.contentService().saveDraft(params.id, input));
 });
 
 /** Permanently deletes a trashed entry. Moving to trash is `POST /entries/:id/trash`. */
 export const DELETE = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const expectedVersion = readVersionQuery(request);
 	await cms.store().permanentDeleteEntry({ id: params.id, expectedVersion });
-	return new Response(null, { status: 204 });
+	return deleted();
 });

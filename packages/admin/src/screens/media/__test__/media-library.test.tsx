@@ -172,7 +172,7 @@ describe("media library", () => {
 		const ok = fetchMock.getMockImplementation() as (input: string, init?: RequestInit) => Promise<unknown>;
 		fetchMock.mockImplementation(async (input: string, init?: RequestInit) =>
 			fail && new URL(input, "http://localhost").pathname === "/api/monti/v1/media"
-				? json({ code: "internal", message: "서버 오류" }, 500)
+				? json({ error: { code: "internal", message: "서버 오류" } }, 500)
 				: ok(input, init),
 		);
 		render(

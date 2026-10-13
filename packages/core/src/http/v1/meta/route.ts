@@ -1,7 +1,7 @@
 import { LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
-import { adminRoute, json } from "../handler";
+import { adminRoute, ok } from "../handler";
 
 /**
  * Collection definitions (`schemas` and the summarized v1-shaped `definitions`), body block definitions (`blocks`), and server limits (§5.6 "the server config and
@@ -10,7 +10,7 @@ import { adminRoute, json } from "../handler";
 export const GET = adminRoute(async ({ cms }) => {
 	// Plugin feature flags live under the plugin name (`features.ai` etc.). The config rejects plugin names that collide with core names.
 	const plugins = await cms.pluginFeatures();
-	return json({
+	return ok({
 		version: "v1",
 		collections: cms.site.COLLECTIONS,
 		definitions: cms.site.COLLECTION_DEFINITIONS,

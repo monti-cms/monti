@@ -72,7 +72,9 @@ function stubApi(patchStatus: number) {
 			}
 			if (url === "/api/monti/v1/entries/c2" && init?.method === "PATCH") {
 				await held;
-				return patchStatus < 400 ? json({ version: 2 }) : json({ code: "internal", message: "실패" }, patchStatus);
+				return patchStatus < 400
+					? json({ version: 2 })
+					: json({ error: { code: "internal", message: "실패" } }, patchStatus);
 			}
 			throw new Error(`Unexpected fetch: ${url}`);
 		}),

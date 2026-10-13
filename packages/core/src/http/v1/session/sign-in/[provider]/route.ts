@@ -1,4 +1,4 @@
-import { HttpError, handleApiError } from "../../../error-handler";
+import { CmsError, handleApiError } from "../../../error-handler";
 import type { RouteContext } from "../../../handler";
 import { validateSameOrigin } from "../../../security";
 
@@ -15,7 +15,7 @@ export const POST = async (request: Request, context: RouteContext<{ provider: s
 		const { provider = "" } = (await context.params) ?? {};
 		const auth = cms.auth();
 		if (!auth.providers.some((method) => method.id === provider)) {
-			throw new HttpError(404, "not_found", "Unknown sign-in method");
+			throw new CmsError("Unknown sign-in method", "not_found");
 		}
 		const method = auth.providers.find((candidate) => candidate.id === provider);
 		// An email and password method sends what the form holds along; an OAuth method has no fields.

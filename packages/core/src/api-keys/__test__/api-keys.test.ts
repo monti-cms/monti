@@ -144,12 +144,12 @@ describe("/v1/api-keys", () => {
 		const refused = await removeKey(request("DELETE", url), { cms, params });
 		expect(refused.status).toBe(409);
 		const body = await refused.json();
-		expect(body.code).toBe("key_in_use");
-		expect(body.details.uses).toEqual([{ plugin: "ai", ref: "connection:a", label: "ai" }]);
+		expect(body.error.code).toBe("key_in_use");
+		expect(body.error.details.uses).toEqual([{ plugin: "ai", ref: "connection:a", label: "ai" }]);
 		expect(await cms.apiKeys.get(key.id)).not.toBeNull();
 
 		const forced = await removeKey(request("DELETE", `${url}&force=true`), { cms, params });
-		expect(forced.status).toBe(200);
+		expect(forced.status).toBe(204);
 		expect(await cms.apiKeys.get(key.id)).toBeNull();
 	});
 
@@ -160,6 +160,6 @@ describe("/v1/api-keys", () => {
 			cms,
 			params: Promise.resolve({ id: key.id }),
 		});
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(204);
 	});
 });
