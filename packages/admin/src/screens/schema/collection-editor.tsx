@@ -187,7 +187,7 @@ export function CollectionEditor({
 		<div className="flex min-w-0 flex-col gap-6" data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
 			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)} className="gap-6">
-				<div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+				<div className="flex flex-col items-start gap-3">
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">
 							<h3 className="font-semibold text-lg">{label}</h3>
@@ -200,7 +200,7 @@ export function CollectionEditor({
 						</p>
 						{isNew && <p className="mt-0.5 text-cms-muted-foreground text-xs">{t("collection.newHint")}</p>}
 					</div>
-					<TabsList className="w-full justify-start sm:w-fit">
+					<TabsList className="w-fit justify-start">
 						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
 						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
 						{hasBody(collection) && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
