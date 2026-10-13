@@ -1,4 +1,5 @@
 import pluralize from "pluralize";
+import { patternUnder } from "./path-pattern";
 
 /** The plural of an identifier: only its last `-` or `_` separated word changes (`blog-post` -> `blog-posts`, `person` -> `people`). */
 export function pluralizeId(id: string): string {
@@ -9,5 +10,5 @@ export function pluralizeId(id: string): string {
 
 /** The public address a collection starts with, from its id: `post` -> `/posts/:slug`, `category` -> `/categories/:slug`. Init and the admin's new-collection dialog share it. */
 export function defaultCollectionPath(id: string): string {
-	return `/${pluralizeId(id)}/:slug`;
+	return patternUnder(pluralizeId(id));
 }

@@ -2,7 +2,18 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
-import { DEFAULT_TITLE_FIELD, defaultCollectionPath, TITLE_ROLE } from "@monti-cms/core/client";
+import {
+	checkField,
+	checkPathPattern,
+	DEFAULT_TITLE_FIELD,
+	defaultCollectionPath,
+	type Field,
+	fieldTraits,
+	IssueList,
+	NAME_PATTERN,
+	RESERVED_METADATA_KEYS,
+	TITLE_ROLE,
+} from "@monti-cms/core/client";
 
 export type Obj = Record<string, unknown>;
 
@@ -23,9 +34,7 @@ export const FIELD_KEY_ORDER = [
 	"localized",
 	"input",
 	"inputOptions",
-	"hidden",
 	"role",
-	"tab",
 	"fillFromBody",
 	"multiline",
 	"rows",
@@ -171,15 +180,11 @@ export function sameJson(a: unknown, b: unknown): boolean {
 	return a === b;
 }
 
-/** A name for a field, option or collection: what the stored values and the JSON keys are called. */
-export const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const RESERVED_NAMES = ["translations"];
-
 /** Why `name` cannot be used among `taken` names, or `null`. */
 export function nameProblem(name: string, taken: readonly string[]): "empty" | "pattern" | "reserved" | "taken" | null {
 	if (name.trim() === "") return "empty";
 	if (!NAME_PATTERN.test(name)) return "pattern";
-	if (RESERVED_NAMES.includes(name)) return "reserved";
+	if (RESERVED_METADATA_KEYS.includes(name)) return "reserved";
 	if (taken.includes(name)) return "taken";
 	return null;
 }
@@ -211,8 +216,7 @@ export const idFromName = (name: string): string =>
 /** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
 export function pathProblem(path: string): "slash" | "slug" | null {
 	if (path.trim() === "") return null;
-	if (!path.startsWith("/")) return "slash";
-	return path.split(":slug").length === 2 ? null : "slug";
+	return checkPathPattern(path)?.code ?? null;
 }
 
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
@@ -262,7 +266,7 @@ export function allFieldNames(collection: Obj): string[] {
 }
 
 /** The properties every kind of field can have, so a change of kind keeps what still applies. */
-const BASE_KEYS = ["label", "description", "required", "localized", "input", "inputOptions", "hidden", "role", "tab"];
+const BASE_KEYS = ["label", "description", "required", "localized", "input", "inputOptions", "role"];
 const NO_VALUE_KEYS = ["required", "localized", "input", "inputOptions", "role"];
 
 /** A field of `kind` with the properties it needs. */
@@ -297,7 +301,7 @@ export function withKind(field: Obj, kind: FieldKindName, collections: readonly 
 	const fresh = newField(kind, typeof field.label === "string" ? field.label : "", collections);
 	const kept = Object.fromEntries(
 		Object.entries(field).filter(
-			([key]) => BASE_KEYS.includes(key) && !((kind === "view" || kind === "backlink") && NO_VALUE_KEYS.includes(key)),
+			([key]) => BASE_KEYS.includes(key) && !(!fieldTraits[kind].entersValue && NO_VALUE_KEYS.includes(key)),
 		),
 	);
 	let result: Obj = fresh;
@@ -583,40 +587,36 @@ export const KINDS_WITH_SETTINGS: readonly FieldKindName[] = [
 
 export type FieldProblem = "options" | "optionLabel" | "branches" | "target" | "slugFrom" | "backlink" | "view";
 
-/** What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. */
+/** The rule codes of core that mean the form still lacks a setting, and the problem the form names for each. */
+const PROBLEM_OF_CODE: Readonly<Record<string, FieldProblem>> = {
+	"options-empty": "options",
+	"option-label": "optionLabel",
+	"branches-empty": "branches",
+	"unknown-collection": "target",
+	"slug-source": "slugFrom",
+	"backlink-incomplete": "backlink",
+	"view-name": "view",
+};
+
+/**
+ * What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. The rules are
+ * core's (`checkField`, the ones `defineSite` applies to the saved file); the form only turns the codes into the names its messages use.
+ */
 export function fieldProblems(field: Obj, collection: Obj, collectionNames: readonly string[]): FieldProblem[] {
-	const problems: FieldProblem[] = [];
-	const optionList = (): void => {
-		const options = Object.values(optionsOf(field));
-		if (options.length === 0) problems.push("options");
-		else if (options.some((label) => label.trim() === "")) problems.push("optionLabel");
-	};
-	switch (field.kind) {
-		case "select":
-			optionList();
-			break;
-		case "conditional": {
-			optionList();
-			const branches = isObj(field.values) ? Object.values(field.values as Record<string, unknown>) : [];
-			if (!branches.some((branch) => isObj(branch) && Object.keys(branch).length > 0)) problems.push("branches");
-			break;
-		}
-		case "relation":
-			if (typeof field.to !== "string" || !collectionNames.includes(field.to)) problems.push("target");
-			break;
-		case "slug": {
-			const source = typeof field.from === "string" ? fieldsOf(collection)[field.from] : undefined;
-			if (source?.kind !== "text") problems.push("slugFrom");
-			break;
-		}
-		case "backlink":
-			if (!field.from || !field.via) problems.push("backlink");
-			break;
-		case "view":
-			if (typeof field.view !== "string" || field.view.trim() === "") problems.push("view");
-			break;
-	}
-	return problems;
+	const list = new IssueList();
+	checkField(list, "", "field", field as unknown as Field, {
+		collectionNames,
+		fields: fieldsOf(collection) as unknown as Record<string, Field>,
+		body: hasBody(collection),
+	});
+	const problems = list.issues.flatMap((issue) => {
+		const problem = PROBLEM_OF_CODE[issue.code];
+		return problem === undefined ? [] : [problem === "target" && field.kind === "backlink" ? "backlink" : problem];
+	});
+	// A slug is made from a text field; core lets the address stand alone, the form asks for the source.
+	if (field.kind === "slug" && typeof field.from !== "string" && !problems.includes("slugFrom"))
+		problems.push("slugFrom");
+	return [...new Set(problems)];
 }
 
 /**

@@ -44,16 +44,22 @@ describe("monti db:setup and monti db:migrate", () => {
 	const run = async (command: typeof dbSetup | typeof dbMigrate, schema: string) => {
 		setEnv({ DATABASE_URL: DATABASE, DATABASE_SCHEMA: schema });
 		const lines: string[] = [];
-		const errors = vi.spyOn(console, "error").mockImplementation((...args) => void lines.push(args.join(" ")));
-		const ok = await command({ cwd: project(), envFiles: [], log: (line) => lines.push(line) });
-		errors.mockRestore();
-		return { ok, lines, text: lines.join("\n") };
+		const code = await command({
+			cwd: project(),
+			envFiles: [],
+			log: (line) => lines.push(line),
+			error: (line) => lines.push(line),
+		}).catch((error: unknown) => {
+			lines.push(String(error instanceof Error ? error.message : error));
+			return 1;
+		});
+		return { code, lines, text: lines.join("\n") };
 	};
 
 	it("setup on an empty database creates the schema and the tables, and says where and how many", async () => {
 		const schema = freshSchema("setup");
 		const result = await run(dbSetup, schema);
-		expect(result.ok).toBe(true);
+		expect(result.code).toBe(0);
 		const tables = await tablesIn(schema);
 		expect(tables).toContain("cms_migrations");
 		expect(result.lines[0]).toMatch(/^Creating Monti's tables in /);
@@ -80,7 +86,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		const applied = (await pool.query(`SELECT name FROM "${schema}".cms_migrations ORDER BY name`)).rows;
 
 		const again = await run(dbSetup, schema);
-		expect(again.ok).toBe(true);
+		expect(again.code).toBe(0);
 		expect(again.text).toBe(
 			`Monti is already set up in this database (schema "${schema}"). After updating Monti, run \`monti db:migrate\`.`,
 		);
@@ -95,7 +101,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		await pool.query(`INSERT INTO "${schema}".orders VALUES (1)`);
 
 		const result = await run(dbSetup, schema);
-		expect(result.ok).toBe(true);
+		expect(result.code).toBe(0);
 		expect(result.text).toContain("already has 1 other table");
 		expect(await tablesIn(schema)).toContain("orders");
 		const monti = (await tablesIn(schema)).length - 1;
@@ -106,7 +112,7 @@ describe("monti db:setup and monti db:migrate", () => {
 	it("migrate on a database that was never set up points to db:setup, fails, and creates nothing", async () => {
 		const schema = freshSchema("never");
 		const result = await run(dbMigrate, schema);
-		expect(result.ok).toBe(false);
+		expect(result.code).toBe(1);
 		expect(result.text).toContain("monti db:setup");
 		expect(await tablesIn(schema)).toEqual([]);
 	});
@@ -116,7 +122,7 @@ describe("monti db:setup and monti db:migrate", () => {
 		await run(dbSetup, schema);
 
 		const none = await run(dbMigrate, schema);
-		expect(none.ok).toBe(true);
+		expect(none.code).toBe(0);
 		expect(none.lines[0]).toBe("Bringing Monti's tables up to date with this version…");
 		expect(none.lines.at(-1)).toBe("Already up to date.");
 		expect(none.text).not.toContain("monti db:setup");
@@ -129,7 +135,7 @@ describe("monti db:setup and monti db:migrate", () => {
 
 		const refused = await run(dbMigrate, schema);
 
-		expect(refused.ok).toBe(false);
+		expect(refused.code).toBe(1);
 		expect(refused.text).toContain("cannot be upgraded");
 	});
 
@@ -138,7 +144,6 @@ describe("monti db:setup and monti db:migrate", () => {
 		setEnv({ DATABASE_URL: DATABASE, DATABASE_SCHEMA: schema });
 		const io = (cwd: string) => ({ cwd, log: () => undefined, error: () => undefined });
 		const cwd = project();
-		vi.spyOn(console, "error").mockImplementation(() => undefined);
 		expect(await runCli(["db:migrate", "--no-env-file"], io(cwd))).toBe(1);
 		expect(await runCli(["db:setup", "--no-env-file"], io(cwd))).toBe(0);
 		expect(await runCli(["db:setup", "--no-env-file"], io(cwd))).toBe(0);

@@ -135,7 +135,7 @@ export default defineSchema({
 					many: true,
 					publishedOnly: true,
 				},
-				searchPreview: { kind: "view", view: "search", tab: "SEO" },
+				searchPreview: { kind: "view", view: "search" },
 				seoTitle: {
 					kind: "text",
 					label: "Search title",
@@ -143,7 +143,6 @@ export default defineSchema({
 					input: "seo-title",
 					inputOptions: { limit: 60 },
 					role: "seoTitle",
-					tab: "SEO",
 				},
 				seoDescription: {
 					kind: "text",
@@ -152,7 +151,6 @@ export default defineSchema({
 					input: "seo-description",
 					inputOptions: { limit: 155 },
 					role: "seoDescription",
-					tab: "SEO",
 					multiline: true,
 				},
 				ogImageId: {
@@ -160,7 +158,6 @@ export default defineSchema({
 					label: "Share image",
 					localized: true,
 					role: "ogImage",
-					tab: "SEO",
 					accept: "image",
 				},
 				seoRobots: {
@@ -168,7 +165,6 @@ export default defineSchema({
 					label: "Hide from search engines",
 					input: "seo-noindex",
 					role: "noindex",
-					tab: "SEO",
 					options: { index: "Show", noindex: "Hide" },
 					defaultValue: "index",
 				},
@@ -177,7 +173,6 @@ export default defineSchema({
 					label: "Original URL",
 					localized: true,
 					role: "canonical",
-					tab: "SEO",
 					placeholder: "https://",
 				},
 			},
@@ -312,7 +307,7 @@ export default defineSchema({
 					many: true,
 					publishedOnly: true,
 				},
-				searchPreview: { kind: "view", view: "search", tab: "SEO" },
+				searchPreview: { kind: "view", view: "search" },
 				seoTitle: {
 					kind: "text",
 					label: "Search title",
@@ -320,7 +315,6 @@ export default defineSchema({
 					input: "seo-title",
 					inputOptions: { limit: 60 },
 					role: "seoTitle",
-					tab: "SEO",
 				},
 				seoDescription: {
 					kind: "text",
@@ -329,7 +323,6 @@ export default defineSchema({
 					input: "seo-description",
 					inputOptions: { limit: 155 },
 					role: "seoDescription",
-					tab: "SEO",
 					multiline: true,
 				},
 				ogImageId: {
@@ -337,7 +330,6 @@ export default defineSchema({
 					label: "Share image",
 					localized: true,
 					role: "ogImage",
-					tab: "SEO",
 					accept: "image",
 				},
 				seoRobots: {
@@ -345,7 +337,6 @@ export default defineSchema({
 					label: "Hide from search engines",
 					input: "seo-noindex",
 					role: "noindex",
-					tab: "SEO",
 					options: { index: "Show", noindex: "Hide" },
 					defaultValue: "index",
 				},
@@ -354,7 +345,6 @@ export default defineSchema({
 					label: "Original URL",
 					localized: true,
 					role: "canonical",
-					tab: "SEO",
 					placeholder: "https://",
 				},
 			},

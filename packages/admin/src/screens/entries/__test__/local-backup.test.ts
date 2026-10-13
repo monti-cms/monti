@@ -1,4 +1,4 @@
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import { localRecoveryStoreOf } from "../entry-editor-client";
@@ -62,7 +62,7 @@ class FakeIndexedDB {
 	}
 }
 
-const siteOf = (name: string) => createSite({ ...testConfig, site: { ...testConfig.site, name } } as AnyCmsConfig);
+const siteOf = (name: string) => createSite({ ...testConfig, site: { ...testConfig.site, name } } as CmsConfig);
 const blog = siteOf("Blog");
 const shop = siteOf("Shop");
 

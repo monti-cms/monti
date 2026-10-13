@@ -8,12 +8,12 @@ import {
 	type AiActionResult,
 	aiAction,
 	aiInput,
+	checkAiConfig,
 	defineValidator,
 	overrideFrom,
 	renderPrompt,
 	resolveAction,
 	unknownPlaceholders,
-	validateAiConfig,
 } from "../action";
 import type { AiCandidate } from "../definition";
 import { aiPresets, KEBAB_PATTERN } from "../presets";
@@ -84,13 +84,12 @@ describe("AI action definition", () => {
 		const check = defineValidator({ name: "no-dup", label: "겹침 없음", run: () => true });
 		const action = (checks: AiActionDefinition["checks"]) =>
 			aiAction({ label: "x", input: { title: aiInput.text({ label: "제목" }) }, result: "text", prompt: "x", checks });
-		expect(() => validateAiConfig({ actions: { a: action([check, check]) } }, collections)).toThrow("listed twice");
-		expect(() =>
-			validateAiConfig(
-				{ actions: { a: action([defineValidator({ name: "Bad", label: "x", run: () => true })]) } },
-				collections,
-			),
-		).toThrow("kebab-case");
+		const messages = (checks: AiActionDefinition["checks"]) =>
+			checkAiConfig({ actions: { a: action(checks) } }, collections).map((issue) => issue.message);
+		expect(messages([check, check])).toEqual([expect.stringContaining("listed twice")]);
+		expect(messages([defineValidator({ name: "Bad", label: "x", run: () => true })])).toEqual([
+			expect.stringContaining("kebab-case"),
+		]);
 	});
 
 	it("checks added in the admin UI (format, length, one-of) are appended after the definition's checks, and the definition's checks cannot be removed", () => {
@@ -145,45 +144,50 @@ describe("AI action definition", () => {
 	});
 
 	it("config validation: reports options, attach points, and checks that do not match the definition", () => {
-		const ok = (actions: Record<string, unknown>) => () =>
-			validateAiConfig({ actions } as Parameters<typeof validateAiConfig>[0], testSite.config.collections);
+		const issuesOf = (actions: Record<string, unknown>) =>
+			checkAiConfig({ actions } as Parameters<typeof checkAiConfig>[0], testSite.config.collections);
+		const codesOf = (actions: Record<string, unknown>) => issuesOf(actions).map((issue) => issue.code);
 		const tags = build(aiPresets.tags());
 		const slug = build(aiPresets.slug());
 		const summary = build(aiPresets.summary());
-		expect(ok({ tags })).not.toThrow();
-		expect(ok({ tags: { ...tags, choices: { from: "collection", collection: "nope" } } })).toThrow(
-			/unknown collection/,
-		);
-		expect(ok({ slug: { ...slug, attach: [{ slot: "field", field: "missing" }] } })).toThrow(/unknown field/);
-		expect(ok({ slug: { ...slug, attach: [{ slot: "field", field: "summary", collections: ["tag"] }] } })).toThrow(
-			/no field "summary"/,
-		);
-		expect(ok({ "bad-key": slug })).toThrow(/name/);
-		expect(ok({ x: { ...summary, prompt: "{{title}}" } })).toThrow(/locale inputs/);
-		expect(ok({ x: { ...summary, engine: "decide" } })).toThrow(/choices/);
-		expect(ok({ x: { ...summary, checks: [{ kind: "exists" }] } })).toThrow(/choices/);
-		expect(ok({ x: { ...build(aiPresets.codeFold()), attach: [{ slot: "field", field: "title" }] } })).not.toThrow();
-		expect(ok({ x: { ...build(aiPresets.translate()), attach: [{ slot: "field", field: "title" }] } })).toThrow(
-			/cannot fill/,
+		expect(issuesOf({ tags })).toEqual([]);
+		expect(issuesOf({ tags: { ...tags, choices: { from: "collection", collection: "nope" } } })).toEqual([
+			expect.objectContaining({ path: "plugins.ai.actions.tags", code: "choices" }),
+		]);
+		expect(issuesOf({ slug: { ...slug, attach: [{ slot: "field", field: "missing" }] } })[0]?.message).toMatch(
+			/unknown field/,
 		);
 		expect(
-			ok({
+			issuesOf({ slug: { ...slug, attach: [{ slot: "field", field: "summary", collections: ["tag"] }] } })[0]?.message,
+		).toMatch(/no field "summary"/);
+		expect(codesOf({ "bad-key": slug })).toContain("name");
+		expect(issuesOf({ x: { ...summary, prompt: "{{title}}" } })[0]?.message).toMatch(/locale inputs/);
+		expect(codesOf({ x: { ...summary, engine: "decide" } })).toContain("choices");
+		expect(codesOf({ x: { ...summary, checks: [{ kind: "exists" }] } })).toContain("choices");
+		expect(issuesOf({ x: { ...build(aiPresets.codeFold()), attach: [{ slot: "field", field: "title" }] } })).toEqual(
+			[],
+		);
+		expect(
+			issuesOf({ x: { ...build(aiPresets.translate()), attach: [{ slot: "field", field: "title" }] } })[0]?.message,
+		).toMatch(/cannot fill/);
+		expect(
+			issuesOf({
 				x: {
 					...build(aiPresets.category()),
 					choices: { from: "select", collection: "post", field: "policy" },
 					attach: [],
 				},
 			}),
-		).not.toThrow();
+		).toEqual([]);
 	});
 
 	it("every action in the example config follows the definition rules", () => {
-		expect(() =>
-			validateAiConfig(
-				{ actions: AI_ACTIONS, shared: AI_SHARED } as Parameters<typeof validateAiConfig>[0],
+		expect(
+			checkAiConfig(
+				{ actions: AI_ACTIONS, shared: AI_SHARED } as Parameters<typeof checkAiConfig>[0],
 				testSite.config.collections,
 			),
-		).not.toThrow();
+		).toEqual([]);
 	});
 
 	it("block slot: attaches only to blocks the site uses, and the result is MDX", () => {
@@ -195,17 +199,17 @@ describe("AI action definition", () => {
 			attach: [{ slot: "block" as const, block: "mermaid" }],
 			...patch,
 		});
-		const check =
-			(action: object, blocks: readonly string[] = ["image", "mermaid"]) =>
-			() =>
-				validateAiConfig({ actions: { a: action } } as Parameters<typeof validateAiConfig>[0], {}, blocks);
-		expect(check(edit())).not.toThrow();
-		expect(check(edit(), ["image"])).toThrow(/unknown block "mermaid"/);
-		expect(check(edit({ result: "text" }))).toThrow(/block slot needs an mdx result/);
+		const check = (action: object, blocks: readonly string[] = ["image", "mermaid"]) =>
+			checkAiConfig({ actions: { a: action } } as Parameters<typeof checkAiConfig>[0], {}, blocks).map(
+				(issue) => issue.message,
+			);
+		expect(check(edit())).toEqual([]);
+		expect(check(edit(), ["image"])).toEqual([expect.stringMatching(/unknown block "mermaid"/)]);
+		expect(check(edit({ result: "text" }))).toEqual([expect.stringMatching(/block slot needs an mdx result/)]);
 		// The block slot only gives the block source and the title.
-		expect(check(edit({ input: { code: { kind: "code" as const, label: "코드", required: true } } }))).toThrow(
-			/cannot fill/,
-		);
+		expect(check(edit({ input: { code: { kind: "code" as const, label: "코드", required: true } } }))).toEqual([
+			expect.stringMatching(/cannot fill/),
+		]);
 		expect(attachedTo({ slot: "block", block: "mermaid" }, { slot: "block", target: "mermaid" })).toBe(true);
 		expect(attachedTo({ slot: "block", block: "mermaid" }, { slot: "block", target: "chart" })).toBe(false);
 	});
@@ -219,8 +223,8 @@ describe("AI action definition", () => {
 			result: "mdx" as const,
 			...patch,
 		});
-		expect(() =>
-			validateAiConfig(
+		expect(
+			checkAiConfig(
 				{
 					...base,
 					shared: { guide: { label: "가이드", text: "" } },
@@ -228,13 +232,13 @@ describe("AI action definition", () => {
 				},
 				{},
 			),
-		).not.toThrow();
-		expect(() => validateAiConfig({ ...base, actions: { a: action({ prompt: "{{shared.nope}}" }) } }, {})).toThrow(
+		).toEqual([]);
+		expect(checkAiConfig({ ...base, actions: { a: action({ prompt: "{{shared.nope}}" }) } }, {})[0]?.message).toMatch(
 			/shared texts/,
 		);
-		expect(() =>
-			validateAiConfig({ ...base, actions: { a: action({ stream: true, result: "candidates" }) } }, {}),
-		).toThrow(/stream needs/);
+		expect(
+			checkAiConfig({ ...base, actions: { a: action({ stream: true, result: "candidates" }) } }, {})[0]?.code,
+		).toBe("stream");
 	});
 
 	it("types: instruction placeholders, attach points, inputs, and results are checked from the definition", () => {

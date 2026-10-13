@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../test/site";
 import { AuthError } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
+import type { ConfigError } from "../../config/check/issue";
 import { createSecretsVault } from "../../secrets";
 import { defineConfig } from "../config";
 import type { AuthAdapter, DatabaseAdapter, MediaAdapter } from "../define";
@@ -216,6 +217,27 @@ describe("site URL by convention, SITE_URL", () => {
 			name: "Blog",
 			url: "https://env.example.com",
 		});
+	});
+});
+
+describe("keys the config does not have", () => {
+	const issuesOf = (extra: object) => {
+		try {
+			defineConfig({ ...site, database, auth, ...extra });
+		} catch (error) {
+			return (error as ConfigError).issues;
+		}
+		return [];
+	};
+
+	it("names the closest key, among the site options and the server options alike", () => {
+		expect(issuesOf({ plugin: [] })).toEqual([
+			expect.objectContaining({ path: "plugin", code: "unknown-key", message: expect.stringContaining('"plugins"') }),
+		]);
+		expect(issuesOf({ trusthost: true })).toEqual([
+			expect.objectContaining({ path: "trusthost", message: expect.stringContaining('"trustHost"') }),
+		]);
+		expect(issuesOf({})).toEqual([]);
 	});
 });
 

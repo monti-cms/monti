@@ -21,7 +21,7 @@ const article = defineCollection({
 		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
 		...seoFields(),
 	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO 필드는 적지 않아도 SEO 탭에 모인다
+	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO 필드는 적지 않아도 플러그인이 SEO 탭에 둔다
 });
 
 export const cms = defineConfig({
@@ -43,14 +43,13 @@ SEO 패널은 자기 스타일시트가 필요 없다. `@monti-cms/admin/styles.
 | `noindex` | `seoNoindex` | 선택(`index`·`noindex`) | `noindex` | 이름표 줄의 스위치. 켜면 `noindex` |
 | `canonical` | `seoCanonical` | 텍스트 | `canonical` | 원본 주소 |
 
-모든 필드는 `tab`(기본 `SEO`)을 가져 배치(`layout`)를 적지 않아도 편집 화면의 그 탭에 모인다. 값은 필드 이름이 아니라 역할로
+`seo()` 플러그인이 역할과 미리보기 보기 이름으로 이 필드들을 찾아 편집 화면의 제 탭(기본 `SEO`, `seo({ tab })`로 바꿈)에 둔다. 배치(`layout`)를 적지 않아도 된다. 값은 필드 이름이 아니라 역할로
 찾으므로 이름은 사이트가 정한다.
 
 ```ts
 seoFields({
 	keys: { title: "metaTitle", image: "ogImageId" }, // 필드 이름(이미 저장한 값의 이름 그대로 쓰기)
 	labels: { title: "Search title" }, // 이름표
-	tab: "Search", // 탭 이름
 	localized: false, // 제목·설명·이미지·원본 주소를 언어마다 따로 둘까(기본 true, 숨기기는 언제나 공통)
 	limits: { title: 70, description: 160 }, // 권장 글자 수: 넘으면 글자 수 색이 바뀌고 AI 추천 길이가 된다(저장은 막지 않는다)
 	omit: ["canonical"], // 빼는 자리
@@ -64,7 +63,7 @@ seoFields({
 - **관리자 화면**(`@monti-cms/seo/admin`): 보기 필드 `search`, 입력 조각 `seo-title`·`seo-description`(안내 문구·글자 수),
   `seo-noindex`(스위치)를 `CmsAdminComponentsProvider`로 등록한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
 - **설정 검사**: `seoTitle`·`seoDescription`·`canonical`은 텍스트, `ogImage`는 미디어, `noindex`는 `noindex` 선택지가 있는 선택
-  필드여야 한다(`validateSeoFields`).
+  필드여야 한다(`checkSeoFields`).
 - **AI 기능**: `@monti-cms/ai`가 있으면 `seoTitle`(검색 제목 추천, 후보 3개)·`seoDescription`(검색 설명 추천)을 더한다
   (`contributes.ai`). 역할 필드가 있는 모든 컬렉션에 붙고, 길이는 필드 `max` → 권장 글자 수 → 60·155다. 바꾸려면
   `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`, 끄려면 `seoTitle: false` 또는 `seo({ ai: false })`.
@@ -86,7 +85,7 @@ const { title, description, imageId, canonical, noindex } = seoOf(post, entry.me
 
 | 진입점 | 내용 |
 | --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (사이트 설정·공개 화면, 서버·브라우저 공용) |
+| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `checkSeoFields` (사이트 설정·공개 화면, 서버·브라우저 공용) |
 | `@monti-cms/seo/admin` | 관리자 쪽 공급자(본체가 플러그인 정의의 `admin`으로 불러 쓴다) |
 
 ## 개발

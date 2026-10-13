@@ -1,3 +1,4 @@
+import { describeNodeEnv } from "../core/env";
 import type { Decision } from "../server/decision";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -15,7 +16,13 @@ export function coreDecisions(input: {
 }): readonly Decision[] {
 	const { env } = input;
 	return [
-		{ topic: "Trust host", value: input.trust.trusted ? "on" : "off", source: input.trust.source },
+		{
+			topic: "Trust host",
+			value: input.trust.trusted
+				? "on (login links are built from the address the visitor used)"
+				: "off (login links use AUTH_URL)",
+			source: input.trust.source,
+		},
 		{
 			topic: "SITE_URL",
 			value: input.siteUrl ?? "not set",
@@ -38,7 +45,7 @@ export function coreDecisions(input: {
 			source: input.hotReload
 				? 'auto-detected (NODE_ENV is "development": the dev server evaluates monti.config.ts again when the schema file changes)'
 				: input.schemaFile
-					? `auto-detected (NODE_ENV is "${env.NODE_ENV ?? ""}": a server runs the schema it started with)`
+					? `auto-detected (${describeNodeEnv(env)}: a server runs the schema it started with)`
 					: "no schema file to reload",
 		},
 	];

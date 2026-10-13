@@ -1,5 +1,6 @@
 import { chartBlock } from "../../blocks/src/definitions";
 import { seoFields } from "../../seo/src/fields";
+import { seo } from "../../seo/src/plugin";
 import { defineBlock, defineCollection, defineSite, fields } from "../src";
 
 /**
@@ -31,7 +32,7 @@ const article = defineCollection({
 			options: { news: "News", guide: "Guide", review: "Review" },
 			defaultValue: "news",
 		}),
-		// Field group from the SEO extension. Different names, labels and tab (`Search`) from the blog, and the canonical URL is left out. Each field in the group gathers into that tab via its own `tab`.
+		// Field group from the SEO extension. Different names, labels and tab (`Search`) from the blog, and the canonical URL is left out. The `seo()` plugin below places the group in the `Search` tab.
 		...seoFields({
 			keys: {
 				preview: "searchPreview",
@@ -47,7 +48,6 @@ const article = defineCollection({
 				noindex: "Hide from search",
 			},
 			omit: ["canonical"],
-			tab: "Search",
 			localized: false,
 			limits: { title: 70 },
 		}),
@@ -116,4 +116,5 @@ export default defineSite({
 	admin: { path: "/studio" },
 	timeZone: "UTC",
 	blocks: [chartBlock, quoteCard, mapBlock],
+	plugins: [seo({ tab: "Search" })],
 });

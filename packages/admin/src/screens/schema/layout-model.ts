@@ -1,14 +1,21 @@
-import { fieldsOf, layoutOf, type Obj, setProp, titleFieldName, withLayout } from "./schema-model";
+import {
+	DEFAULT_TAB,
+	isPanelField,
+	type NamedPlacement,
+	type PanelSource,
+	panelGroupsOf,
+} from "@monti-cms/core/client";
+import { fieldsOf, layoutOf, type Obj, setProp, withLayout } from "./schema-model";
 
 /**
  * The properties panel of the edit screen as the fields tree shows it: tab, then an ordered list of blocks, each a titled group or a run of fields in no group.
  * A run sits exactly where the panel draws it (a `layout` group without a title), before, between or after groups, so the tree, the schema and the panel
  * say the same thing and an edit never moves fields it was not about. Saving writes the order of `fields` and `layout` together from the tree.
  *
- * It follows `layoutGroupsOf` (the rules of the real panel):
+ * The groups are not worked out here: they are core's (`panelGroupsOf`, the algorithm the real panel runs), and the tree is the same groups drawn as rows. So:
  * - a `layout` group sits in its `tab`, or in the default tab; fields in no `layout` group come last, in the default tab;
- * - a field with a `tab` of its own (placed by a plugin) is drawn in that tab, whatever the layout says: it is locked there;
- * - the title field and `hidden` fields are not drawn in the panel: they are pinned and never join a block.
+ * - the fields a plugin places (`contributes.layout`) are drawn in the plugin's tab, whatever the layout says: they are locked there;
+ * - the fields the panel does not draw (the title of a document) are pinned and never join a block.
  */
 export interface Block {
 	/** The title of a group; `null` for a run of fields in no group. */
@@ -18,34 +25,19 @@ export interface Block {
 }
 
 export interface Tab {
+	/** The tab's id: {@link DEFAULT_TAB} for the first one, the name a person wrote for the others. The screens translate the first one to show it. */
 	name: string;
 	blocks: Block[];
-	/** Fields a plugin placed in this tab (their `tab`): shown here, never movable. */
+	/** Fields a plugin placed in this tab: shown here, never movable. */
 	locked: string[];
 }
 
 export interface Tree {
-	/** Fields the panel does not draw (the title, `hidden` fields): they only define the order of `fields`. */
+	/** Fields the panel does not draw (the title of a document): they only define the order of `fields`. */
 	pinned: string[];
 	/** The default tab first, then the others in the order the panel shows them. */
 	tabs: Tab[];
 }
-
-export type NoPanelReason = "title" | "hidden";
-
-/** Why the panel does not draw a top-level field, or `null` when it does. */
-export function noPanelReason(collection: Obj, name: string): NoPanelReason | null {
-	const field = fieldsOf(collection)[name];
-	if (!field) return null;
-	if (titleFieldName(collection) === name) return "title";
-	return field.kind !== "conditional" && field.hidden === true ? "hidden" : null;
-}
-
-/** The own tab of a field a plugin placed, or `undefined`. */
-export const ownTabOf = (collection: Obj, name: string): string | undefined => {
-	const tab = fieldsOf(collection)[name]?.tab;
-	return typeof tab === "string" && tab !== "" ? tab : undefined;
-};
 
 /** Where a field is in the tree. */
 export interface Place {
@@ -81,17 +73,27 @@ function tidy(tab: Tab): void {
 	tab.blocks = out;
 }
 
+/** A tab only a plugin fills: it has no group of the site's, so it exists without an entry in the layout. */
+const pluginOnly = (tab: Tab): boolean => tab.blocks.length === 0 && tab.locked.length > 0;
+
+/**
+ * Cleans the blocks of every tab and puts the tabs in the order the panel draws them: the default tab, the tabs that have a group of the site's, then the tabs only a
+ * plugin fills (the panel draws what plugins place after everything the layout says).
+ */
 const tidied = (tree: Tree): Tree => {
 	for (const tab of tree.tabs) tidy(tab);
+	const [first, ...others] = tree.tabs;
+	if (first) tree.tabs = [first, ...others.filter((tab) => !pluginOnly(tab)), ...others.filter(pluginOnly)];
 	return tree;
 };
 
-/** The tree of a collection. `defaultTab` is the name of the panel's first tab. */
-export function treeOf(collection: Obj, defaultTab: string): Tree {
-	const names = Object.keys(fieldsOf(collection));
-	const pinned = names.filter((name) => noPanelReason(collection, name) !== null);
-	const locked = (name: string) => !pinned.includes(name) && ownTabOf(collection, name) !== undefined;
-	const tree: Tree = { pinned, tabs: [{ name: defaultTab, blocks: [], locked: [] }] };
+/** The tree of a collection, from the groups of the real panel. `placements` are what the site's plugins place (`placementsOf(site.plugins)`). */
+export function treeOf(collection: Obj, placements: readonly NamedPlacement[]): Tree {
+	const source = collection as unknown as PanelSource;
+	const tree: Tree = {
+		pinned: Object.keys(fieldsOf(collection)).filter((name) => !isPanelField(source, name)),
+		tabs: [{ name: DEFAULT_TAB, blocks: [], locked: [] }],
+	};
 	const tab = (name: string): Tab => {
 		const found = tree.tabs.find((item) => item.name === name);
 		if (found) return found;
@@ -99,28 +101,18 @@ export function treeOf(collection: Obj, defaultTab: string): Tree {
 		tree.tabs.push(created);
 		return created;
 	};
-	const placed = new Set<string>();
-	for (const group of layoutOf(collection)) {
-		const target = tab(group.tab && group.tab !== "" ? group.tab : defaultTab);
-		const fields = group.fields.filter((name) => {
-			if (!names.includes(name) || placed.has(name) || pinned.includes(name) || locked(name)) return false;
-			placed.add(name);
-			return true;
-		});
+	for (const group of panelGroupsOf(source, placements)) {
+		const target = tab(group.tab);
+		if (group.placedBy !== undefined) {
+			target.locked.push(...group.fields);
+			continue;
+		}
 		target.blocks.push({
-			title: group.group ? group.group : null,
-			...(group.group && group.collapsed === true ? { collapsed: true } : {}),
-			fields,
+			title: group.group ?? null,
+			...(group.collapsed === true ? { collapsed: true } : {}),
+			fields: [...group.fields],
 		});
 	}
-	const rest: string[] = [];
-	for (const name of names) {
-		if (pinned.includes(name)) continue;
-		const own = ownTabOf(collection, name);
-		if (own !== undefined) tab(own).locked.push(name);
-		else if (!placed.has(name)) rest.push(name);
-	}
-	(tree.tabs[0] as Tab).blocks.push({ title: null, fields: rest });
 	return tidied(tree);
 }
 
@@ -145,7 +137,8 @@ export function withTree(collection: Obj, tree: Tree): Obj {
 			...tabKey,
 			...(block.collapsed === true ? { collapsed: true } : {}),
 		}));
-		return at > 0 && entries.length === 0 ? [{ fields: [], ...tabKey }] : entries;
+		// A tab a plugin fills exists without an entry; any other tab needs one to exist in the file.
+		return at > 0 && entries.length === 0 && tab.locked.length === 0 ? [{ fields: [], ...tabKey }] : entries;
 	});
 	return withLayout(setProp(collection, "fields", ordered), layout);
 }
@@ -290,7 +283,7 @@ export function tabProblem(tree: Tree, name: string, except?: number): "empty" |
 export function addTab(tree: Tree, name: string): Tree {
 	const next = copy(tree);
 	if (tabProblem(next, name) === null) next.tabs.push({ name: name.trim(), blocks: [], locked: [] });
-	return next;
+	return tidied(next);
 }
 
 /** Whether a tab can be renamed or removed: not the default one, and not one a plugin puts fields in. */
@@ -319,9 +312,11 @@ export function removeTab(tree: Tree, index: number): Tree {
 export function moveTab(tree: Tree, index: number, delta: -1 | 1): Tree {
 	const next = copy(tree);
 	const to = index + delta;
-	if (index < 1 || to < 1 || to >= next.tabs.length) return next;
-	const [moved] = next.tabs.splice(index, 1);
-	if (moved) next.tabs.splice(to, 0, moved);
+	const movable = next.tabs.filter((tab, at) => at > 0 && !pluginOnly(tab)).length;
+	const tab = next.tabs[index];
+	if (index < 1 || to < 1 || to > movable || !tab || pluginOnly(tab)) return next;
+	next.tabs.splice(index, 1);
+	next.tabs.splice(to, 0, tab);
 	return next;
 }
 

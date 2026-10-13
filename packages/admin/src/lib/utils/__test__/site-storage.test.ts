@@ -1,4 +1,4 @@
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import { legacyPreferenceKey, preferenceKey, readPreference, storageNamespace, writePreference } from "../site-storage";
@@ -8,7 +8,7 @@ const siteOf = (name: string, adminPath = "/admin") =>
 		...testConfig,
 		site: { ...testConfig.site, name },
 		admin: { ...testConfig.admin, path: adminPath },
-	} as AnyCmsConfig);
+	} as CmsConfig);
 
 beforeEach(() => window.localStorage.clear());
 afterEach(() => {

@@ -10,7 +10,7 @@ import { seoMessages } from "./messages";
 
 /**
  * SEO field set (`seoFields`). Spread it into a collection's `fields`. Values are found by role (`SEO_ROLES`), not by field name, so field names and
- * labels are up to the site. Every field has a `tab` (default `SEO`), so they gather in that tab of the edit screen even without a `layout`.
+ * labels are up to the site. The `seo()` plugin places them in a tab of the edit screen of their own (`SEO`), found by role and view name, even without a `layout`.
  *
  * ```ts
  * fields: { title, slug, ...seoFields() }
@@ -79,8 +79,6 @@ export interface SeoFieldsOptions<
 	readonly omit?: readonly O[];
 	/** Change labels. */
 	readonly labels?: Partial<Record<Exclude<SeoPart, "preview">, string>> & { readonly preview?: string };
-	/** Edit screen tab name. Default `SEO`. */
-	readonly tab?: string;
 	/** Keep title, description, image and canonical URL separate per language. Default `true` (hiding is always a shared value). */
 	readonly localized?: boolean;
 	/** Recommended lengths (the count changes color when exceeded; saving is not blocked). Also used for AI suggestion length. */
@@ -122,15 +120,13 @@ export function seoFields<
 					configurable: true,
 				})
 			: field;
-	const tab = options.tab ?? "SEO";
 	const localized = options.localized ?? true;
 	const limits = { ...SEO_DEFAULT_LIMITS, ...options.limits };
-	const shared = { tab, ...(localized ? { localized: true as const } : {}) };
+	const shared = localized ? { localized: true as const } : {};
 	const result: Record<string, unknown> = {
 		/** Search result and share preview. Values are read from the role fields, falling back to the title and summary when empty. */
 		[key("preview")]: fields.view({
 			view: SEO_PREVIEW_VIEW,
-			tab,
 			...(options.labels?.preview ? { label: options.labels.preview } : {}),
 		}),
 		/** Search result title. Falls back to the title when empty. */
@@ -176,7 +172,6 @@ export function seoFields<
 				},
 				defaultValue: "index",
 				input: SEO_INPUTS.noindex,
-				tab,
 			}),
 			"noindex",
 		),

@@ -16,7 +16,7 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, ChevronsDownUp, Eye, GripVertical, MoveRight, Plus, Trash2, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -26,7 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialo
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
-import { defaultTab } from "../entries/layout-groups";
+import { tabLabel } from "../entries/layout-groups";
 import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
@@ -46,9 +46,6 @@ import {
 	moveGroupToTab,
 	moveOutOfGroup,
 	moveTab,
-	type NoPanelReason,
-	noPanelReason,
-	ownTabOf,
 	placeField,
 	placeOf,
 	placeUngrouped,
@@ -100,9 +97,7 @@ interface TreeContext {
 }
 
 /** Why a top-level row cannot be moved or grouped. */
-type Locked =
-	| { readonly kind: "plugin"; readonly tab: string }
-	| { readonly kind: "panel"; readonly reason: NoPanelReason };
+type Locked = { readonly kind: "plugin"; readonly tab: string } | { readonly kind: "panel" };
 
 /** A place a row can be moved to from the move dialog (the keyboard and touch alternative to dragging). */
 interface Destination {
@@ -302,10 +297,7 @@ function Row({
 							</span>
 						)}
 						{locked?.kind === "panel" && (
-							<span
-								className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs"
-								title={t(locked.reason === "title" ? "layout.notInPanel.title" : "layout.notInPanel.hidden")}
-							>
+							<span className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs" title={t("layout.notInPanel.title")}>
 								{t("layout.notInPanel")}
 							</span>
 						)}
@@ -526,6 +518,7 @@ interface LayoutOps {
 /** A tab of the panel as a row of the tree: only drawn once the collection has more than the default tab. */
 function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	const t = useTranslator(schemaMessages);
+	const site = useSite();
 	const tab = ops.tree.tabs[index];
 	const { setNodeRef, transform, transition } = useSortable({ id: tabId(index), disabled: { draggable: true } });
 	const inputRef = useRef<HTMLInputElement | null>(null);
@@ -534,19 +527,19 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	const count = ops.tree.tabs.length;
 	const buttons: RowButton[] = [
 		{
-			label: t("layout.upTab", { name: tab.name }),
+			label: t("layout.upTab", { name: tabLabel(site, tab.name) }),
 			icon: ArrowUp,
 			disabled: ops.disabled || index < 2,
 			onClick: () => ops.change((tree) => moveTab(tree, index, -1)),
 		},
 		{
-			label: t("layout.downTab", { name: tab.name }),
+			label: t("layout.downTab", { name: tabLabel(site, tab.name) }),
 			icon: ArrowDown,
 			disabled: ops.disabled || index === 0 || index === count - 1,
 			onClick: () => ops.change((tree) => moveTab(tree, index, 1)),
 		},
 		{
-			label: t("layout.removeTab", { name: tab.name }),
+			label: t("layout.removeTab", { name: tabLabel(site, tab.name) }),
 			icon: Trash2,
 			destructive: true,
 			disabled: ops.disabled || !editable,
@@ -561,7 +554,7 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			className="group/row relative mt-3 flex items-center gap-1 border-y bg-cms-muted py-1.5 pr-5 pl-9 first:mt-0"
 		>
 			<InlineName
-				value={tab.name}
+				value={tabLabel(site, tab.name)}
 				label={t("layout.tabName")}
 				disabled={ops.disabled || !editable}
 				inputRef={inputRef}
@@ -699,12 +692,12 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	const t = useTranslator(schemaMessages);
 	const site = useSite();
 	const { disabled } = useSchemaEdit();
-	const first = defaultTab(site);
+	const placements = placementsOf(site.plugins);
 	const collection = editing.collection;
-	const tree = treeOf(collection, first);
+	const tree = treeOf(collection, placements);
 	const showTabs = hasTabLevel(tree);
 	const change = (next: (tree: Tree) => Tree) =>
-		editing.update((current) => withTree(current, next(treeOf(current, first))));
+		editing.update((current) => withTree(current, next(treeOf(current, placements))));
 	const ops: LayoutOps = { change, tree, showTabs, disabled };
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -728,14 +721,14 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 								? []
 								: [
 										{
-											label: showTabs ? `${tab.name} / ${block.title}` : block.title,
+											label: showTabs ? `${tabLabel(site, tab.name)} / ${block.title}` : block.title,
 											disabled: here?.tab === at && here.block === g,
 											run: () => change((current) => placeField(current, name, at, g)),
 										},
 									],
 						),
 						{
-							label: showTabs ? `${tab.name} / ${t("layout.noGroup")}` : t("layout.noGroup"),
+							label: showTabs ? `${tabLabel(site, tab.name)} / ${t("layout.noGroup")}` : t("layout.noGroup"),
 							run: () => change((current) => placeUngrouped(current, name, at)),
 						},
 					]),
@@ -772,7 +765,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	};
 
 	for (const name of tree.pinned) {
-		fieldRow(name, false, { kind: "panel", reason: noPanelReason(collection, name) ?? "hidden" });
+		fieldRow(name, false, { kind: "panel" });
 	}
 	for (const [at, tab] of tree.tabs.entries()) {
 		if (showTabs) rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
@@ -804,8 +797,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 			id: endId(at),
 			node: <DropRow key={endId(at)} id={endId(at)} testId={`end-${at}`} />,
 		});
-		for (const name of tab.locked)
-			fieldRow(name, false, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
+		for (const name of tab.locked) fieldRow(name, false, { kind: "plugin", tab: tab.name });
 	}
 
 	const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -933,14 +925,14 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
 	const sideResize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview-side", minWidth: 320 });
 	const { file, codeCollections } = useSchemaEdit();
-	const first = defaultTab(site);
+	const placements = placementsOf(site.plugins);
 	const ctx: TreeContext = {
 		editing,
 		onOpen: (place, name) => setSheet({ place, name }),
 		compact: !showSettings,
 	};
 	const addTo = (make: (tree: Tree) => Tree) =>
-		editing.update((current) => withTree(current, make(treeOf(current, first))));
+		editing.update((current) => withTree(current, make(treeOf(current, placements))));
 	const unique = (base: string, taken: string[]) => {
 		let name = base;
 		for (let n = 2; taken.includes(name); n += 1) name = `${base} ${n}`;

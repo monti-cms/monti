@@ -1,9 +1,10 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useMemo } from "react";
+import type { CmsConfig } from "../config/define";
 import type { Translator } from "../i18n";
 import type { MessageBundle } from "../i18n/define";
-import { type AnyCmsConfig, createSite, type Site } from "./create-site";
+import { createSite, type Site } from "./create-site";
 
 const SiteContext = createContext<Site | null>(null);
 
@@ -13,7 +14,7 @@ export type SiteProviderProps = { readonly children: ReactNode } & (
 			 * The site as data: what the server's `cms.site.snapshot()` returns (a server component hands it to this client component), or a plain site config in a test.
 			 * The site is created from it once per distinct object.
 			 */
-			readonly config: AnyCmsConfig;
+			readonly config: CmsConfig;
 			readonly site?: undefined;
 	  }
 	| {
@@ -28,12 +29,12 @@ export type SiteProviderProps = { readonly children: ReactNode } & (
  * the server page passes (`@monti-cms/nextjs/admin`), so the browser never reads a config file.
  */
 export function SiteProvider({ config, site, children }: SiteProviderProps) {
-	const created = useMemo(() => site ?? createSite(config as AnyCmsConfig), [site, config]);
+	const created = useMemo(() => site ?? createSite(config as CmsConfig), [site, config]);
 	return <SiteContext.Provider value={created}>{children}</SiteContext.Provider>;
 }
 
 /** The site of the nearest {@link SiteProvider}. Throws outside one. */
-export function useSite<Config extends AnyCmsConfig = AnyCmsConfig>(): Site<Config> {
+export function useSite<Config extends CmsConfig = CmsConfig>(): Site<Config> {
 	const site = useContext(SiteContext);
 	if (!site)
 		throw new Error(

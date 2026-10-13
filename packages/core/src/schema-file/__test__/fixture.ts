@@ -39,7 +39,7 @@ export const blogSchema = {
 						deprecated: { replacementId: { kind: "relation", label: "Replacement", to: "post" } },
 					},
 				},
-				preview: { kind: "view", view: "search", tab: "SEO" },
+				preview: { kind: "view", view: "search" },
 			},
 			layout: [
 				{ fields: ["title", "slug", "summary"] },

@@ -125,38 +125,40 @@ describe("extract -> load round trip", () => {
 		const { schema } = extractSchemaData(blog as CmsConfig);
 		const post = schema.collections.post;
 		expect(post?.fields.searchPreview).toMatchObject({ kind: "view", view: "search" });
-		expect(post?.fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle", tab: "SEO" });
+		expect(post?.fields.seoTitle).toMatchObject({ kind: "text", role: "seoTitle" });
 	});
 });
 
 describe("what stays in code", () => {
 	it("lists blocks, site.url and what else needs code, and nothing about data", () => {
 		const { stays } = extractSchemaData(blog as CmsConfig);
-		expect(stays.map((item) => item.what)).toEqual(["site.url", "blocks"]);
-		expect(stays[1]?.detail).toContain("callout");
-		expect(stays[1]?.detail).toContain("notice");
+		expect(stays.map((item) => item.what)).toEqual(["site.url", "plugins", "blocks"]);
+		// The SEO fields are data in the schema; the plugin that places them in their tab stays in code.
+		expect(stays[1]?.detail).toContain("seo");
+		expect(stays[2]?.detail).toContain("callout");
+		expect(stays[2]?.detail).toContain("notice");
 	});
 
 	it("lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {
 		const plugin = definePlugin({ name: "my-plugin", options: {} });
-		const config = defineSite({
-			collections: {
-				note: defineCollection({
-					label: "Note",
-					kind: "item",
-					fields: {
-						title: fields.text({ label: "T", inputOptions: { size: (() => 1) as never } }),
-						slug: fields.slug({ label: "S" }),
-					},
-				}),
+		// `defineSite` refuses an option that is not JSON, so the config is written by hand: the extraction still has to say what cannot move.
+		const note = defineCollection({
+			label: "Note",
+			kind: "item",
+			fields: {
+				title: fields.text({ label: "T", inputOptions: { size: (() => 1) as never } }),
+				slug: fields.slug({ label: "S" }),
 			},
+		});
+		const config = {
+			collections: { note },
 			locales: [{ code: "en", name: "English" }],
 			defaultLocale: "en",
 			plugins: [plugin],
 			media: { maxImageBytes: 1000 },
 			codeBlock: { themes: { light: "github-light", dark: "github-dark" } },
 			admin: { messages: { "cms-admin.entries": { publish: "Ship it", unpublish: () => "Pull it" } } },
-		});
+		} as unknown as CmsConfig;
 		const { schema, stays } = extractSchemaData(config);
 		expect(stays.map((item) => item.what)).toEqual([
 			"collection options that are functions",
@@ -271,9 +273,9 @@ describe("monti schema:extract", () => {
 	it("says what is wrong with a missing or wrong config file", async () => {
 		const { dir } = site();
 		const empty = tempDir();
-		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/cannot find monti\.config\.ts; pass --config/);
+		await expect(extractSchema({ cwd: empty, load })).rejects.toThrow(/Cannot find monti\.config\.ts.*--config/);
 		await expect(extractSchema({ cwd: dir, load, config: "nope.ts", overwrite: true })).rejects.toThrow(
-			/config file not found: nope\.ts/,
+			/config file nope\.ts does not exist.*--config/,
 		);
 		await expect(
 			extractSchema({ cwd: dir, load: async () => ({ default: { not: "a config" } }), overwrite: true }),
@@ -284,6 +286,6 @@ describe("monti schema:extract", () => {
 		const { run } = site();
 		const missing = await run("schema:extract", "--config", "missing.config.ts");
 		expect(missing.code).toBe(1);
-		expect(missing.err).toContain("config file not found: missing.config.ts");
+		expect(missing.err).toContain("The config file missing.config.ts does not exist");
 	});
 });

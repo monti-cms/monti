@@ -550,7 +550,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
 | `@monti-cms/core/ai-contract` | AI 기능을 더하는 플러그인 | 타입만 있다. `@monti-cms/ai`가 구현하는 AI 기능·검사·기여(`AiContribution`)의 모양이라, 플러그인이 AI 플러그인에 의존하지 않고 기능을 쓴다 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti doctor`(설정을 점검하고 잘못된 것을 어떻게 고치는지 알려 줌, "문제 해결")·`monti db:migrate`(표 만들기)·`monti admin:reset-password`(이메일·비밀번호 로그인 관리자의 비밀번호 새로 정하기)·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`runDoctor`·`runDoctorCommand(argv, { cwd, log, error })`(`monti doctor` 명령, 종료 코드를 돌려준다)·`initProject`·`addComponents`·`migrate`·`runImport`·`loadSchemaFile`·`findSchemaFile`·`extractSchema`(명령 `monti`의 코드) |
+| `@monti-cms/core/cli` | 명령줄 도구 | `runCli(argv, { cwd, log, error })`(모든 `monti` 명령, 종료 코드를 돌려준다)·`runDoctor`·`initProject`·`addComponents`·`migrate`·`runImport`·`loadSchemaFile`·`findSchemaFile`·`extractSchema`(명령 `monti`의 코드) |
 | `@monti-cms/core/testing` | 테스트 | `testServer()`(`{ server, drop }`: 자기 스키마 위에 둔 진짜 인스턴스를 위한 `database`와 `auth` 옵션, ["훅과 플러그인 테스트하기"](#훅과-플러그인-테스트하기)), `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
@@ -890,7 +890,7 @@ export const myPlugin = () =>
 
 - 서버 쪽(`server`)은 브라우저 묶음에 들어가지 않게 패키지 `exports`의 `browser` 조건으로 빈 진입점을 준다.
 - `server.formats`는 형식(문서를 써 내고 읽어 올 수 있는 표기, "형식" 절)을 더한다. `CmsFormat` 하나 또는 그 목록을 돌려주는 함수(`formats: () => myFormat`)이고, 인스턴스가 형식이 처음 필요할 때 부른다.
-- `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받는다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
+- `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받아 찾은 문제(`{ path, code, message }`, `@monti-cms/core`의 `IssueList`·`pathOf`)를 돌려준다. `defineSite`가 설정의 다른 문제와 함께 하나의 `ConfigError`로 알린다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
 - `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
   `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
   확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
@@ -1165,7 +1165,7 @@ it("refuses a bad slug", async () => {
 });
 ```
 
-`cms.handle(new Request(url))`은 관리자와 같은 검사를 거쳐 플러그인의 경로를 실행하고, `cms.events.retry({ all: true })`는 기다리는 `afterCommit` 이벤트를 전달하며, `@monti-cms/core/cli`의 `runDoctorCommand`는 폴더에서 `monti doctor`를 실행한다. 인스턴스가 몇 가지 부품 위에서만 필요한 코드라면 `fakeCms({ store, … })`가 더 가볍다. 플러그인의 화면은 브라우저와 비슷한 환경에서 테스트한다. `createSite(defineSite({ schema, plugins }))`로 사이트를 만들고(`defineConfig`는 서버 전용이라 `window`가 있는 곳에서는 실행을 거부한다) 화면을 `<SiteProvider site={site}>`로 감싼다. 레시피가 이 모두를 끝에서 끝까지 보여 준다.
+`cms.handle(new Request(url))`은 관리자와 같은 검사를 거쳐 플러그인의 경로를 실행하고, `cms.events.retry({ all: true })`는 기다리는 `afterCommit` 이벤트를 전달하며, `@monti-cms/core/cli`의 `runCli(["doctor"], { cwd, log, error })`는 폴더에서 `monti doctor`를 실행하고 종료 코드를 돌려준다. 인스턴스가 몇 가지 부품 위에서만 필요한 코드라면 `fakeCms({ store, … })`가 더 가볍다. 플러그인의 화면은 브라우저와 비슷한 환경에서 테스트한다. `createSite(defineSite({ schema, plugins }))`로 사이트를 만들고(`defineConfig`는 서버 전용이라 `window`가 있는 곳에서는 실행을 거부한다) 화면을 `<SiteProvider site={site}>`로 감싼다. 레시피가 이 모두를 끝에서 끝까지 보여 준다.
 
 ## 스키마 파일
 
@@ -1211,7 +1211,7 @@ export default defineSchema({
 **형식.** 각 부분은 같은 이름 빌더의 옵션 객체에 `kind`를 붙인 모양이다. 컬렉션은 `defineCollection`이 받는 값(`label`, `kind`, `body`, `fields`, `path`, `icon`, `layout`, `list`)이고, 필드는 `fields.<kind>`가 받는 값에 `kind`를 더한 것이다. 필드 객체는 평범한 리터럴로 둔다. 필드 종류는 `text`, `slug`, `relation`(`many`, `ordered`, `createInline`, `publishedOnly`, `allowUnpublished`),
 `select`(`options`와 `defaultValue`), `media`(`accept: "image" | "file"`, 이미지 필드), `conditional`(`discriminant` 선택 필드와 선택값마다 보이는 `values`), `backlink`, `view`로, `fields.*`가 가진 종류를 모두 쓸 수 있다. 지금 `fields.*`에는 날짜·불리언·숫자 종류가 없어 파일에도 없다. 날짜는 텍스트 필드에 둔다.
 `defineSchema`의 타입이 에디터에서 틀린 `kind`나 잘못 쓴 옵션 값을 알려 준다. 모르는 추가 키는 런타임의 엄격한 검사가 잡고, 존재하는 컬렉션을 가리키는 관계처럼 컬렉션 사이의 규칙도 설정을 읽을 때 검사한다.
-**없앤 옛 이름은 받지 않는다.** `workflow`와 `required: "publish"`는 오류다(`kind`와 `required: true`를 쓴다).
+**모르는 옵션은 오류다.** 형식에 없는 키(철자가 틀린 옵션, 없앤 옵션)는 경로와 함께 알리고, 가까운 키가 있으면 그것을 알려 준다.
 
 **읽기.** `monti.config.ts`가 모듈을 가져와 그 기본 export를 `defineConfig`에 넘긴다. `import`는 번들러가 빌드에 담아 주므로 운영에서는 읽기 전용이다. 스크립트와 `monti` 명령은 파일을 tsx로 읽는다(`bin/monti.mjs`가 등록한다).
 
@@ -1233,11 +1233,11 @@ export const cms = defineConfig({
 낮은 수준 `createCms({ config: defineSite({ … }), server })`는 `@monti-cms/core`의 `defineSite`로 만든 사이트 부분만 받는다(데이터베이스도 로그인도 없고, 테스트와 도구용이다. `@monti-cms/core`는 더 이상 `defineConfig`를 내보내지 않는다). `createCms`·`createSite`와 나머지는 사이트 설정을 다른 설정과 똑같이 받으므로, 제 파일을 가진 여러 사이트가 한 프로세스에 함께 있을 수 있다. 올바르지 않은 파일은 시작할 때 모든 문제를 경로와 함께 알리고 멈춘다:
 
 ```text
-monti.schema.ts is not a valid schema file:
+monti.schema.ts is not valid:
   collections.post.fields.title.kind: a field needs a "kind" of text, slug, relation, select, media, conditional, backlink or view
-  collections.post.workflow: is not part of the schema format
-  locales[1].code: must look like "en", "pt-BR" or "zh-Hant"
-Fix: correct the lines above in monti.schema.ts; the types of defineSchema show most of them in the editor. monti doctor checks the file again.
+  collections.post.workflow: is not an option (known: label, kind, fields, path, icon, layout, body)
+  locales[1].name: must be a string (got number)
+Fix: correct the lines above; `monti doctor` checks the files again.
 ```
 
 **파일과 코드 설정을 합치는 법.** 코드는 파일에 더하고 환경마다 다른 값을 덮어쓸 수 있지만, 파일의 데이터를 조용히 바꾸지는 않는다.
@@ -1400,9 +1400,8 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 - **종류(`kind`).** `document`(문서)는 본문을 쓰고 초안과 공개본을 나눠 명시적으로 발행한다. `item`(항목)은 작은 폼에서 저장하면
   곧바로 공개 값에 반영한다(발행·보관·번역본이 없고, 언어별 값은 `translations`에 둔다). 본문(`body`)은 없으면 문서만 쓴다. `body`를 객체로 쓰면 본문이 허용하는 블록·마크·제목 단계를 제한한다("본문별 허용 블록·마크").
-  예전 이름 `workflow: "publish" | "record"`는 없앴다. 아직 쓰는 설정은 써야 할 `kind`를 알려 주며 실패한다(`publish` → `document`, `record` → `item`).
-- **배치(`layout`).** 없으면 필드 선언 순서대로 한 묶음이고, 제 `tab`을 가진 필드는 그 탭에 모인다.
-- **목록 열.** 스키마에 속하지 않는다. 열은 각 관리자가 목록 화면의 컬럼 설정에서 고르고, 계정마다 저장된다. 고르기 전에는 기본 열이 보인다. 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는 관계)·수정일·발행일, 항목은 제목·주소(주소 필드가 있을 때)·언어·상태·수정일. 아직 `list`가 있는 설정은 지우라는 메시지와 함께 실패한다.
+- **배치(`layout`).** 없으면 필드 선언 순서대로 한 묶음이다. 플러그인은 제 필드를 제 탭에 둔다(탭 참고).
+- **목록 열.** 스키마에 속하지 않는다. 열은 각 관리자가 목록 화면의 컬럼 설정에서 고르고, 계정마다 저장된다. 고르기 전에는 기본 열이 보인다. 문서는 제목·상태·언어(언어가 둘 이상일 때)·분류 필드(항목 컬렉션을 가리키는 관계)·수정일·발행일, 항목은 제목·주소(주소 필드가 있을 때)·언어·상태·수정일.
 
 컬렉션의 `path`(예: `/posts/:slug`)는 공개 주소 모양이다. 주소로 쓴 내부 링크를 알아보고(항목의 id로 저장된다. 공개 읽기 API 참고) 편집기가 링크를 만들 때 쓴다. `path`가 없는 컬렉션은 본문 링크로 가리킬 수 없다.
 
@@ -1433,10 +1432,12 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
   본문 앞부분의 일반 글자로 채운다(본문이 있는 컬렉션만, 필드 `max`를 넘지 않는다). 본체 함수는 `bodyExcerpt(doc, maxLength)`다. 글자는 저장된 문서에서 뽑으므로 본문이 어떤 표기로 쓰였든 상관없다. 문단·제목·목록 항목·표 칸·블록 본문과 블록의 글자 속성(콜아웃 제목)이 대상이고, 코드·수식·이미지는 뺀다. 본문 검색용 글자도 같은 방식으로 만들며, 코드와 이미지 대체글·캡션은 남긴다.
 - **여러 줄 입력.** `multiline: true`인 텍스트 필드는 여러 줄 입력이고 `rows`(기본 2)로 처음 줄 수를 정한다.
 - **쓸 수 없는 필드 이름.** 메타데이터에서 본체가 따로 쓰는 키(`translations`)는 필드 이름으로 쓸 수 없다.
-- **탭.** 필드에 `tab: "이름"`을 두거나 `layout` 묶음에 `tab`을 두면 편집 화면 속성 칸에 그 이름의 탭이 생긴다(1~20자).
-  묶음의 `tab`이 먼저고, 묶음에 `tab`이 없으면 필드의 `tab`이다. 제 `tab`을 가진 필드는 배치를 적지 않아도 탭마다 한 묶음으로
-  모인다. 그래서 확장이 주는 필드 묶음(예: `seoFields()`)이 사이트가 `layout`을 적지 않아도 제 탭에 들어간다. 없으면 기본 탭
-  `속성`이다.
+- **탭.** `layout` 묶음에 `tab: "이름"`을 두면 편집 화면 속성 칸에 그 이름의 탭이 생긴다(1~20자). 탭은 묶음에만 있고 필드에는 `tab`이 없다.
+  필드 묶음을 주는 플러그인(예: SEO 확장의 `seoFields()`)은 `contributes`의 `layout` 키로 자리를 정한다: 탭 이름과 그 필드의 역할·보기 이름
+  (`{ tab: "SEO", roles: [...], views: [...] }`, 타입은 `PluginPlacement`). 그 필드는 사이트의 `layout`이 뭐라 하든 그 탭에 그려지고,
+  설정 화면에는 거기에 잠긴 것으로 보인다. 첫 탭은 `tab`이 없는 묶음을 담는 기본 탭이고 제 이름이 없다. 보이는 제목은 관리자의 문구일 뿐이라
+  `속성`이라 이름 붙인 탭은 다른 탭이다. `site.panelGroupsOf(collection)`·`site.panelTabsOf(collection)`·`site.panelTabOf(collection, path)`가
+  속성 칸, 항목 칸, 설정 화면이 함께 쓰는 하나뿐인 묶음 계산이다. 문서의 제목은 편집 화면의 제목줄이라 속성 칸에는 그리지 않는다.
 - **보기 필드.** `fields.view({ view: "이름" })`은 값을 저장하지 않고 그 자리에 화면을 그리는 필드다. 화면은 관리자 확장이
   `fieldViews`로 등록한다(예: SEO 확장의 `search`). 등록한 화면이 없으면 아무것도 그리지 않는다.
 - **입력 바꾸기.** `input: "이름"`은 관리자 확장이 `fieldInputs`로 등록한 입력을 가리킨다. 등록이 없으면 종류의 기본 입력이다.
@@ -1447,10 +1448,13 @@ fields: {
 	title: fields.text({ label: "Title", required: true }),
 	slug: fields.slug({ label: "Slug", from: "title" }),
 	excerpt: fields.text({ label: "Excerpt", role: "summary", multiline: true, rows: 3, fillFromBody: { maxLength: 200 } }),
-	hero: fields.media({ label: "Hero image", tab: "Media" }),
-	credit: fields.text({ label: "Credit", tab: "Media" }),
+	hero: fields.media({ label: "Hero image" }),
+	credit: fields.text({ label: "Credit" }),
 },
-layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭에 모인다
+layout: [
+	{ fields: ["title", "slug", "excerpt"] },
+	{ group: "Image", tab: "Media", fields: ["hero", "credit"] }, // 탭은 묶음에 이름을 붙인다
+],
 ```
 
 `defineConfig`는 관계 필드가 없는 컬렉션을 가리키거나, 기본 언어가 목록에 없거나, 제목 필드가 없거나, 주소 필드가 둘 이상이거나,

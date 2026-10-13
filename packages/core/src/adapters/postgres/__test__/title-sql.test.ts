@@ -10,14 +10,12 @@ const collection = (titleKey: string) =>
 		kind: "item",
 		fields: { [titleKey]: fields.text({ label: "Title", role: "title" }) },
 	});
-const siteOf = (keys: Record<string, string>) =>
-	createSite(
-		defineSite({
-			collections: Object.fromEntries(Object.entries(keys).map(([name, key]) => [name, collection(key)])),
-			locales: [{ code: "en", name: "English" }],
-			defaultLocale: "en",
-		}),
-	);
+const configOf = (keys: Record<string, string>) => ({
+	collections: Object.fromEntries(Object.entries(keys).map(([name, key]) => [name, collection(key)])),
+	locales: [{ code: "en", name: "English" }],
+	defaultLocale: "en" as const,
+});
+const siteOf = (keys: Record<string, string>) => createSite(defineSite(configOf(keys)));
 
 /** An expression as SQL: a query is compiled, never run (no connection is made), and its select is cut out. */
 const compiled = (expression: ReturnType<typeof titleExpr>) => {
@@ -46,7 +44,8 @@ describe("the SQL that reads a title", () => {
 	});
 
 	it("writes a key as an escaped string literal, never as a parameter or as SQL", () => {
-		const site = siteOf({ a: "it's'; DROP TABLE entries; --" });
+		// A key like this is refused by `defineSite` (field names are plain words), so the site is made without that check: the SQL still has to be safe.
+		const site = createSite(configOf({ a: "it's'; DROP TABLE entries; --" }));
 		const expression = compiled(titleExpr(site, "w.metadata", { collection: "a" }));
 		expect(expression.sql).toBe(`"w"."metadata"->>'it''s''; DROP TABLE entries; --'`);
 		expect(expression.parameters).toEqual([]);

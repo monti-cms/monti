@@ -1,3 +1,4 @@
+import { placementsOf } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -753,6 +754,9 @@ describe("SchemaScreen", () => {
 
 	describe("layout in the fields tree", () => {
 		const defaultTabName = testSite.createTranslator(entriesMessages)("tab.default");
+		/** The tab the SEO plugin of the site under test places its fields in. */
+		const seoTab =
+			placementsOf(testSite.plugins).find((placement) => placement.roles?.includes("seoTitle"))?.tab ?? "SEO";
 		const savedPost = () =>
 			(lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown>; layout?: unknown } } })
 				.collections.post;
@@ -892,11 +896,10 @@ describe("SchemaScreen", () => {
 			expect(within(row).queryByRole("button", { name: t("layout.move", { name: "title" }) })).toBeNull();
 		});
 
-		it("shows a field a plugin placed inside its own tab, locked there, and hidden fields as not in the panel", async () => {
+		it("shows a field a plugin placed inside its own tab, locked there", async () => {
 			const withPlugin = schema();
 			Object.assign(withPlugin.collections.post.fields, {
-				seoTitle: { kind: "text", label: "SEO title", tab: "SEO" },
-				internal: { kind: "text", label: "Internal", hidden: true },
+				seoTitle: { kind: "text", label: "SEO title", role: "seoTitle" },
 			});
 			state = screenState({ schema: withPlugin });
 			await openFields();
@@ -905,8 +908,7 @@ describe("SchemaScreen", () => {
 			expect(within(seo).getByText(t("layout.pluginPlaced"))).toBeTruthy();
 			expect(within(seo).getByRole("button", { name: t("row.remove", { name: "seoTitle" }) })).toBeTruthy();
 			// The tab is the plugin's: it cannot be renamed.
-			expect((screen.getByDisplayValue("SEO") as HTMLInputElement).disabled).toBe(true);
-			expect(within(screen.getByTestId("field-internal")).getByText(t("layout.notInPanel"))).toBeTruthy();
+			expect((screen.getByDisplayValue(seoTab) as HTMLInputElement).disabled).toBe(true);
 			// The plugin places it: it cannot be moved, only removed.
 			expect(within(seo).queryByRole("button", { name: t("layout.move", { name: "seoTitle" }) })).toBeNull();
 			expect(
@@ -979,7 +981,7 @@ describe("SchemaScreen", () => {
 					},
 					values: { normal: {}, deprecated: { replacement: { kind: "text", label: "Replacement note" } } },
 				},
-				seoTitle: { kind: "text", label: "SEO title", tab: "SEO" },
+				seoTitle: { kind: "text", label: "SEO title", role: "seoTitle" },
 			});
 			state = screenState({ schema: rich });
 			wideWindow();
@@ -995,7 +997,7 @@ describe("SchemaScreen", () => {
 
 			// A plugin's own tab is a real tab of the panel.
 			expect(within(preview).queryByLabelText("SEO title")).toBeNull();
-			fireEvent.click(within(preview).getByRole("tab", { name: "SEO" }));
+			fireEvent.click(within(preview).getByRole("tab", { name: seoTab }));
 			expect(await within(preview).findByLabelText("SEO title")).toBeTruthy();
 
 			// Nothing typed or picked reached the server: only reads were made.

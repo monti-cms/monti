@@ -2,6 +2,7 @@ import type { CmsConfig } from "../config/define";
 import type { SiteSchemas } from "../schema/derive";
 import type { Collection, SiteCollections } from "./collections";
 import { localizePathWith, type SiteLocales } from "./locales";
+import { fillPattern, matchPattern } from "./path-pattern";
 
 /**
  * Internal body links. The public URL shape is the collection definition's `path` (e.g. `/posts/:slug`), and the body stores plain Markdown links
@@ -10,11 +11,9 @@ import { localizePathWith, type SiteLocales } from "./locales";
 
 interface PathRule {
 	readonly collection: Collection;
-	readonly prefix: string;
-	readonly suffix: string;
+	/** The collection's path pattern (`/posts/:slug`). */
+	readonly pattern: string;
 }
-
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * Preview URL rules that do not read the config. The query style (`param` is the name) adds the locale only for non-default locales,
@@ -52,14 +51,8 @@ export function createLinks(
 	const PATH_RULES: readonly PathRule[] = collections.COLLECTIONS.flatMap((collection) => {
 		const path = schemas.schemaOf(collection).path;
 		if (!path) return [];
-		const [prefix = "", suffix = ""] = path.split(":slug");
-		return [{ collection, prefix, suffix }];
+		return [{ collection, pattern: path }];
 	});
-
-	const PATH_PATTERNS = PATH_RULES.map((rule) => ({
-		collection: rule.collection,
-		pattern: new RegExp(`^${escapeRegExp(rule.prefix)}([^/]+)${escapeRegExp(rule.suffix.replace(/\/$/, ""))}\\/?$`),
-	}));
 
 	/** Collections a body link can point to (collections with `path`). */
 	const LINKABLE_COLLECTIONS: readonly Collection[] = PATH_RULES.map((rule) => rule.collection);
@@ -71,16 +64,19 @@ export function createLinks(
 	function contentPath(collection: string, slug: string | null | undefined): string | null {
 		const rule = PATH_RULES.find((candidate) => candidate.collection === collection);
 		if (!rule || !slug) return null;
-		return `${rule.prefix}${slug.replace(/[\s()<>]/g, (char) => encodeURIComponent(char))}${rule.suffix}`;
+		return fillPattern(
+			rule.pattern,
+			slug.replace(/[\s()<>]/g, (char) => encodeURIComponent(char)),
+		);
 	}
 
 	const matchPath = (pathname: string): { collection: Collection; slug: string } | null => {
-		for (const { collection, pattern } of PATH_PATTERNS) {
-			const match = pattern.exec(pathname);
-			if (!match) continue;
+		for (const { collection, pattern } of PATH_RULES) {
+			const encoded = matchPattern(pattern, pathname);
+			if (encoded === null) continue;
 			let slug: string;
 			try {
-				slug = decodeURIComponent(match[1] ?? "").normalize("NFC");
+				slug = decodeURIComponent(encoded).normalize("NFC");
 			} catch {
 				return null;
 			}

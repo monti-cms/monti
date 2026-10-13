@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Spinner } from "@monti-cms/admin/kit";
-import { type AnyCmsConfig, useTranslator } from "@monti-cms/core/client";
+import { type CmsConfig, useTranslator } from "@monti-cms/core/client";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +9,7 @@ import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry
 import { aiCommonMessages } from "./ai-common.messages";
 import { useAiAction } from "./use-ai-action";
 
-export interface AiButtonProps<K extends AiActionKey<Config>, Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface AiButtonProps<K extends AiActionKey<Config>, Config extends CmsConfig = CmsConfig> {
 	/** Action name to call (`ai({ actions })` in the site config). */
 	action: K;
 	/** Input read on click. Names and types come from the action definition. */
@@ -29,7 +29,7 @@ export interface AiButtonProps<K extends AiActionKey<Config>, Config extends Any
  * <AiButton action="summary" input={() => ({ title, body })} onResult={(result) => setSummary(result.text)} />
  * ```
  */
-export function AiButton<K extends AiActionKey<Config>, Config extends AnyCmsConfig = AnyCmsConfig>({
+export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig = CmsConfig>({
 	action,
 	input,
 	onResult,

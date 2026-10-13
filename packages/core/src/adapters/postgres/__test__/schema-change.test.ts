@@ -1,13 +1,14 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
+import type { CmsConfig } from "../../../config/define";
 import { defineSite } from "../../../config/define";
 import { computeContentHash } from "../../../core/content-hash";
 import { defineCollection } from "../../../schema/collection";
 import { applySchemaChange, checkSchemaChange, planSchemaChange, SchemaChangeError } from "../../../schema-change";
 import type { SchemaMigration } from "../../../schema-file/types";
 import { createContentService } from "../../../services/content-service";
-import { type AnyCmsConfig, createSite, type Site } from "../../../site";
+import { createSite, type Site } from "../../../site";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { readBodyDoc } from "../store/rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
@@ -97,9 +98,9 @@ interface BodyRow {
 describe("schema changes", () => {
 	let pool: Pool;
 	let schemaName: string;
-	const siteBefore = createSite(beforeConfig as AnyCmsConfig);
-	const siteAfter = createSite(afterConfig() as AnyCmsConfig);
-	const siteAfterV2 = createSite(afterConfig(2) as AnyCmsConfig);
+	const siteBefore = createSite(beforeConfig as CmsConfig);
+	const siteAfter = createSite(afterConfig() as CmsConfig);
+	const siteAfterV2 = createSite(afterConfig(2) as CmsConfig);
 
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
 	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });

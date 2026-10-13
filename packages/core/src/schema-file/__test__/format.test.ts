@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { parseSchemaFile, SchemaFileError } from "../format";
+import { ConfigError, type Issue } from "../../config/check/issue";
+import { parseSchemaFile } from "../format";
 import { blogSchema, cloneSchema, type EditableSchema } from "./fixture";
 
-/** The paths and messages of the problems of a schema, for assertions. */
-function problems(edit: (schema: EditableSchema) => void): { path: string; message: string }[] {
+/** The issues of a schema, for assertions. */
+function problems(edit: (schema: EditableSchema) => void): Issue[] {
 	const schema = cloneSchema();
 	edit(schema);
 	try {
 		parseSchemaFile(schema, "monti.schema.ts");
 	} catch (error) {
-		expect(error).toBeInstanceOf(SchemaFileError);
-		return [...(error as SchemaFileError).issues];
+		expect(error).toBeInstanceOf(ConfigError);
+		return [...(error as ConfigError).issues];
 	}
 	throw new Error("the schema was accepted");
 }
@@ -35,7 +36,8 @@ describe("parseSchemaFile", () => {
 		const keys = problems((schema) => {
 			schema.collections.post.body = { block: ["callout"] };
 		});
-		expect(keys).toEqual([{ path: "collections.post.body.block", message: "is not part of the schema format" }]);
+		expect(keys).toEqual([expect.objectContaining({ path: "collections.post.body.block", code: "unknown-key" })]);
+		expect(keys[0]?.message).toContain('did you mean "blocks"');
 		const level = problems((schema) => {
 			schema.collections.post.body = { headings: [2, 7] };
 		});
@@ -54,65 +56,37 @@ describe("parseSchemaFile", () => {
 		const [issue] = problems((schema) => {
 			schema.collections.post.fields.title.maxLength = 10;
 		});
-		expect(issue).toEqual({
-			path: "collections.post.fields.title.maxLength",
-			message: "is not part of the schema format",
+		expect(issue).toMatchObject({ path: "collections.post.fields.title.maxLength", code: "unknown-key" });
+		// The closest known key is named, when there is one.
+		const [typo] = problems((schema) => {
+			schema.collections.post.fields.title.requird = true;
 		});
+		expect(typo?.message).toContain('did you mean "required"');
 	});
 
-	it("has no retired aliases: `workflow` on a collection and a string `required` are errors", () => {
+	it("has no retired aliases: `workflow`, `list` and a string `required` are errors like any unknown or wrong value", () => {
 		const old = problems((schema) => {
 			schema.collections.post.workflow = "publish";
+			schema.collections.post.list = { columns: ["title"] };
 			schema.collections.post.fields.title.required = "publish";
 		});
-		expect(old).toContainEqual({ path: "collections.post.workflow", message: "is not part of the schema format" });
-		const required = old.find((issue) => issue.path === "collections.post.fields.title.required");
-		expect(required?.message).toContain("only `true` exists");
+		expect(old).toContainEqual(expect.objectContaining({ path: "collections.post.workflow", code: "unknown-key" }));
+		expect(old).toContainEqual(expect.objectContaining({ path: "collections.post.list", code: "unknown-key" }));
+		expect(old).toContainEqual(
+			expect.objectContaining({ path: "collections.post.fields.title.required", code: "enum" }),
+		);
 		const [kind] = problems((schema) => {
 			delete schema.collections.post.kind;
 		});
 		expect(kind?.path).toBe("collections.post.kind");
 	});
 
-	it("rejects the retired `list` key with where list columns are chosen now", () => {
-		const issues = problems((schema) => {
-			schema.collections.post.list = { columns: ["title"] };
-		});
-		const issue = issues.find((item) => item.path === "collections.post.list");
-		expect(issue?.message).toMatch(/list screen.*Delete the `list` key/);
-	});
-
-	it("checks the rules that name one value, with paths into arrays", () => {
-		expect(
-			problems((schema) => {
-				schema.locales[1].code = "EN_us";
-			}),
-		).toEqual([{ path: "locales[1].code", message: 'must look like "en", "pt-BR" or "zh-Hant"' }]);
-		expect(
-			problems((schema) => {
-				schema.defaultLocale = "ja";
-			}),
-		).toEqual([{ path: "defaultLocale", message: '"ja" is not one of the locales (ko, en)' }]);
-		expect(
-			problems((schema) => {
-				schema.locales.push({ code: "ko", name: "Again" });
-			}),
-		).toEqual([{ path: "locales[2].code", message: '"ko" is listed twice' }]);
-		expect(
-			problems((schema) => {
-				schema.timeZone = "Mars/Base";
-			}),
-		).toEqual([{ path: "timeZone", message: "is not an IANA time zone" }]);
-		expect(
-			problems((schema) => {
-				schema.admin.path = "/api/x";
-			})[0]?.path,
-		).toBe("admin.path");
+	it("checks the shape of values, with paths into arrays", () => {
 		expect(
 			problems((schema) => {
 				schema.admin.templates = "no";
-			})[0]?.path,
-		).toBe("admin.templates");
+			})[0],
+		).toMatchObject({ path: "admin.templates", code: "type" });
 		expect(
 			problems((schema) => {
 				schema.admin.translations = 0;
@@ -120,27 +94,37 @@ describe("parseSchemaFile", () => {
 		).toBe("admin.translations");
 		expect(
 			problems((schema) => {
-				schema.site.url = "ftp://example.com";
-			})[0]?.path,
-		).toBe("site.url");
+				schema.locales[1].name = 3;
+			})[0],
+		).toMatchObject({ path: "locales[1].name", code: "type" });
 		expect(
 			problems((schema) => {
-				schema.seed.templates[0].id = "not-a-uuid";
+				delete schema.defaultLocale;
+			})[0],
+		).toMatchObject({ path: "defaultLocale", code: "required" });
+		expect(
+			problems((schema) => {
+				schema.site.localePrefix = "sometimes";
+			})[0],
+		).toMatchObject({ path: "site.localePrefix", code: "enum" });
+		expect(
+			problems((schema) => {
+				schema.seed.templates[0].id = 7;
 			})[0]?.path,
 		).toMatch(/^seed\.templates\[0\]/);
 	});
 
-	it("checks select defaults and the options a conditional field shows fields for", () => {
-		expect(
-			problems((schema) => {
-				schema.collections.post.fields.policy.discriminant.defaultValue = "missing";
-			})[0],
-		).toMatchObject({ path: "collections.post.fields.policy.discriminant.defaultValue" });
-		expect(
-			problems((schema) => {
-				schema.collections.post.fields.policy.values.unknown = {};
-			})[0],
-		).toMatchObject({ path: "collections.post.fields.policy.values.unknown" });
+	it("leaves what a value means to defineSite: a select default, a locale code, a time zone", () => {
+		expect(() =>
+			parseSchemaFile({
+				...cloneSchema(),
+				timeZone: "Mars/Base",
+				locales: [{ code: "EN_us", name: "x" }],
+			}),
+		).not.toThrow();
+	});
+
+	it("checks a dependent field of a conditional field is a field that stores a value", () => {
 		const dependent = problems((schema) => {
 			schema.collections.post.fields.policy.values.deprecated.nested = { kind: "view", view: "x" };
 		});
@@ -149,22 +133,22 @@ describe("parseSchemaFile", () => {
 
 	it("reports every problem in one error that lists the paths", () => {
 		const schema = cloneSchema();
-		schema.locales[0].code = "KO";
+		schema.locales[0].name = 1;
 		schema.collections.post.fields.cover.accept = "video";
 		try {
 			parseSchemaFile(schema, "site/monti.schema.ts");
 			expect.unreachable();
 		} catch (error) {
 			const message = (error as Error).message;
-			expect(message).toContain("site/monti.schema.ts is not a valid schema file:");
-			expect(message).toContain("locales[0].code:");
+			expect(message).toContain("site/monti.schema.ts is not valid:");
+			expect(message).toContain("locales[0].name:");
 			expect(message).toContain("collections.post.fields.cover.accept:");
 		}
 	});
 
 	it("rejects something that is not an object", () => {
 		expect(() => parseSchemaFile([])).toThrow(/\(root\): must be an object/);
-		expect(() => parseSchemaFile(null, "x.ts")).toThrow(/x\.ts is not a valid schema file/);
+		expect(() => parseSchemaFile(null, "x.ts")).toThrow(/x\.ts is not valid/);
 	});
 
 	it("quotes a key that is not a plain name in the path", () => {

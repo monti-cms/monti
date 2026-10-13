@@ -130,7 +130,7 @@ const components = {
 };
 ```
 
-필드나 `layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(없으면 `속성` 탭, 묶음의 `tab`이 먼저). 보기 필드
+`layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(첫 탭은 `tab`이 없는 묶음을 담고, SEO 필드처럼 플러그인이 두는 필드는 제 탭을 가진다). 묶음은 core가 계산하고(`site.panelGroupsOf`), 설정 화면의 필드 트리도 같은 묶음으로 그린다. 보기 필드
 (`fields.view({ view })`)는 그 자리에 `CmsAdminComponentsProvider`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
 등록한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `@monti-cms/core/client`의 `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)는 스케치다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
 `@monti-cms/admin/media`의 `MediaThumbnail`·`useMediaUrl`을 쓴다(SEO 확장 `@monti-cms/seo`의 검색 미리보기가 예시다).

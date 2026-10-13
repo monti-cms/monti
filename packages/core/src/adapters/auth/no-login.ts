@@ -1,3 +1,4 @@
+import { describeNodeEnv } from "../../core/env";
 import { errorResponse } from "../../http/v1/error-handler";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "../../server/define";
 import { isDevAuthBypassEnabled } from "./auth-gateway";
@@ -22,7 +23,7 @@ export function noLogin(): AuthAdapter {
 					source: bypassOn
 						? 'auto-detected (NODE_ENV is "development" and no hosting platform variable is set)'
 						: env.NODE_ENV !== "development"
-							? `auto-detected (NODE_ENV is "${env.NODE_ENV ?? ""}", not "development")`
+							? `auto-detected (${describeNodeEnv(env)}, not "development")`
 							: `auto-detected (looks deployed: ${deployed})`,
 				},
 			];

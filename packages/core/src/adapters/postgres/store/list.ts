@@ -15,7 +15,7 @@ import {
 	MAX_ENTRY_SEARCH_LIMIT,
 	type SearchEntriesParams,
 } from "../../../core/store/types";
-import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/fields";
 import type { StoredField } from "../../../schema/walk";
 import type { Site } from "../../../site";
 import type { StoreContext } from "./context";

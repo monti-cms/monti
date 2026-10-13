@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -40,6 +40,7 @@ import {
 	KINDS_WITH_SETTINGS,
 	moveField,
 	moveOption,
+	nameProblem,
 	newField,
 	type Obj,
 	optionsOf,
@@ -87,7 +88,7 @@ function OptionsEditor({
 	const select = field.kind === "conditional" && isObj(field.discriminant) ? field.discriminant : field;
 	const [draftValue, setDraftValue] = useState("");
 	const taken = (value: string) => values.filter((item) => item !== value);
-	const addable = draftValue !== "" && /^[A-Za-z0-9_-]+$/.test(draftValue) && !values.includes(draftValue);
+	const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
 	return (
 		<fieldset className="flex flex-col gap-1.5">
 			<legend className="font-medium text-xs">{t("options.title")}</legend>
@@ -457,7 +458,7 @@ export function FieldEditor({
 				? { ...next, discriminant: setProp(next.discriminant, key, value, FIELD_KEY_ORDER) }
 				: next;
 		});
-	const valueKind = kind !== "view" && kind !== "backlink";
+	const valueKind = fieldTraits[kind].entersValue;
 	const label = typeof field.label === "string" ? field.label : "";
 	// The title field is a top-level text field: the one with the title role, or the one named `title`.
 	const isTitle = !place.branch && titleFieldName(editing.collection) === name;
@@ -571,12 +572,6 @@ export function FieldEditor({
 					<details className="rounded-md border border-dashed px-2.5 py-1.5 text-sm">
 						<summary className="cursor-pointer text-cms-muted-foreground text-xs">{t("field.advanced")}</summary>
 						<div className="mt-2 grid gap-3 sm:grid-cols-2">
-							<FlagSwitch
-								label={t("field.hidden")}
-								hint={t("field.hiddenHint")}
-								checked={field.hidden === true}
-								onChange={(on) => set("hidden", on ? true : undefined)}
-							/>
 							{valueKind && (
 								<TextInput
 									label={t("field.role")}
@@ -585,12 +580,6 @@ export function FieldEditor({
 									onChange={(value) => set("role", orUndefined(value))}
 								/>
 							)}
-							<TextInput
-								label={t("field.tab")}
-								hint={t("field.tabHint")}
-								value={field.tab as string | undefined}
-								onChange={(value) => set("tab", orUndefined(value))}
-							/>
 							{valueKind && (
 								<TextInput
 									label={t("field.input")}
@@ -719,8 +708,7 @@ export function FieldList({
 	const [kind, setKind] = useState<FieldKindName>("text");
 	const [pending, setPending] = useState<{ name: string; kind: FieldKindName } | null>(null);
 	const taken = allFieldNames(editing.collection);
-	const problem =
-		name === "" ? "empty" : taken.includes(name) ? "taken" : /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) ? null : "pattern";
+	const problem = nameProblem(name, taken);
 	return (
 		<div className="flex flex-col gap-2">
 			{names.length === 0 && <p className="text-cms-muted-foreground text-xs">{t("field.none")}</p>}

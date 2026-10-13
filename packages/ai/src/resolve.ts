@@ -1,3 +1,4 @@
+import { configError, pathOf } from "@monti-cms/core";
 import type {
 	AiActionDefinition,
 	AiActionSource,
@@ -31,7 +32,7 @@ const contributionOf = (plugin: PluginLike): AiContribution | undefined => {
 	return ai && typeof ai === "object" ? (ai as AiContribution) : undefined;
 };
 
-/** Builds the actions together with the config name (`cms.config: …`). */
+/** Builds one action from its source (a definition, or a function of the site). */
 const build = (source: AiActionSource, site: AiSiteView): AiActionDefinition | undefined =>
 	typeof source === "function" ? source(site) : source;
 
@@ -46,14 +47,23 @@ export function resolveAiActions(
 		if (plugin.name === AI_PLUGIN_NAME) continue;
 		for (const [key, source] of Object.entries(contributionOf(plugin)?.actions ?? {})) {
 			if (sources.has(key)) {
-				throw new Error(`cms.config: plugins.${plugin.name} adds AI action "${key}", which is already defined`);
+				throw configError(
+					pathOf("plugins", plugin.name, "contributes", "ai", "actions", key),
+					"duplicate",
+					`adds AI action "${key}", which is already defined`,
+				);
 			}
 			sources.set(key, source);
 		}
 	}
 	for (const [key, source] of Object.entries(config.actions ?? {})) {
 		if (source === false) {
-			if (!sources.has(key)) throw new Error(`cms.config: ai.actions.${key} turns off an action that does not exist`);
+			if (!sources.has(key))
+				throw configError(
+					pathOf("plugins", "ai", "actions", key),
+					"unknown-action",
+					"turns off an action that does not exist",
+				);
 			sources.delete(key);
 		} else sources.set(key, source);
 	}

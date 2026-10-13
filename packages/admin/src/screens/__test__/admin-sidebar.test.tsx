@@ -1,5 +1,5 @@
 import { definePlugin } from "@monti-cms/core";
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +25,7 @@ const site = createSite({
 			],
 		}),
 	],
-} as AnyCmsConfig);
+} as CmsConfig);
 
 const renderSidebar = (props: Partial<AdminSidebarProps> = {}, target = site) =>
 	renderInRouter(
@@ -118,7 +118,7 @@ describe("sidebar structure", () => {
 	});
 
 	it("leaves Templates out when the site turns them off", () => {
-		const off = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false } } as AnyCmsConfig);
+		const off = createSite({ ...testConfig, admin: { ...testConfig.admin, templates: false } } as CmsConfig);
 		renderSidebar({}, off);
 		expect(screen.queryByRole("link", { name: t("sidebar.templates") })).toBeNull();
 	});

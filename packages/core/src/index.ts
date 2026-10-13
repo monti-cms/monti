@@ -26,6 +26,7 @@ export type {
 	BlockValidateContext,
 } from "./blocks/define";
 export { defineBlock } from "./blocks/define";
+export { ConfigError, configError, type Issue, IssueList, pathOf } from "./config/check/issue";
 export {
 	type AdminConfig,
 	type CmsConfig,
@@ -40,7 +41,7 @@ export {
 	type SeedTemplate,
 	type SiteConfig,
 } from "./config/define";
-export { type EnvSource, envValue, WHERE_TO_SET_ENV } from "./core/env";
+export { describeNodeEnv, type EnvSource, envValue, WHERE_TO_SET_ENV } from "./core/env";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem";
 export { createActiveTranslator } from "./i18n/active";
 export {
@@ -56,6 +57,9 @@ export {
 	assertPluginPagesFree,
 	assertPluginRoutesFree,
 	CORE_FEATURE_KEYS,
+	checkPluginNames,
+	checkPluginPages,
+	checkPluginRoutes,
 	RESERVED_SCOPES,
 } from "./plugin/collisions";
 export {
@@ -106,6 +110,7 @@ export {
 	type ValueField,
 	type ViewField,
 } from "./schema/fields";
+export type { PluginPlacement } from "./schema/layout";
 export {
 	fieldWithRole,
 	findTitleField,
@@ -117,7 +122,7 @@ export {
 	valueWithRole,
 } from "./schema/walk";
 export { defineSchema } from "./schema-file/define";
-export { parseSchemaFile, SchemaFileError, type SchemaIssue } from "./schema-file/format";
+export { parseSchemaFile } from "./schema-file/format";
 export type {
 	SchemaAdmin,
 	SchemaCollection,

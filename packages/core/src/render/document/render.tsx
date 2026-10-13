@@ -13,6 +13,7 @@ import {
 	tableWidths,
 } from "../../doc/table-layout";
 import type { CmsMark, CmsNode } from "../../doc/types";
+import { CORE_BODY_MARKS } from "../../schema/allowed";
 import type { Site } from "../../site";
 import { perSite } from "../../site/per-site";
 import { validImageWidth } from "../components/image";
@@ -522,67 +523,56 @@ export const renderDocumentTree = (
 		return { node: child, element, children: element };
 	};
 
+	/** A node that only makes sense inside its parent, or that the document model carries without meaning: shown as unknown, its content included. */
+	const renderLoose = (node: CmsNode, inline: boolean): ReactNode =>
+		fallback(node, inline ? "inline" : "block", "unknown-node", renderUnknownChildren(node));
+
+	/** One renderer per node type the renderer knows; the node type is the key, so adding a type is adding a line. */
+	const NODE_RENDERERS: Readonly<Record<string, (node: CmsNode, inline: boolean) => ReactNode>> = {
+		paragraph: (node) => renderParagraph(node),
+		heading: (node) => renderHeading(node),
+		blockquote: (node) =>
+			createElement(components.blockquote, { ...common(node), children: renderBlocks(node.content ?? []) } as never),
+		bulletList: (node) => renderList(node),
+		orderedList: (node) => renderList(node),
+		horizontalRule: (node) => createElement(components.horizontalRule, common(node) as never),
+		codeBlock: (node) => renderCodeBlock(node),
+		image: (node, inline) => renderImage(node, inline),
+		table: (node) => renderTable(node),
+		math: (node) => renderMath(node),
+		// Shown once, in the footnote section at the end (if something refers to it).
+		footnoteDefinition: () => null,
+		text: (node) => renderInlineNode(node),
+		hardBreak: (node) => renderInlineNode(node),
+		footnoteReference: (node) => renderInlineNode(node),
+		file: (node) => renderFile(node),
+		"text-align": (node) => {
+			const align = TEXT_ALIGN_VALUES.find((value) => value === node.attrs?.align);
+			return createElement(components.textAlign, {
+				...common(node),
+				align,
+				children: renderBlocks(node.content ?? []),
+			} as never);
+		},
+		html: (node, inline) => fallback(node, inline ? "inline" : "block", "unknown-node"),
+		mdxEsm: (node, inline) => fallback(node, inline ? "inline" : "block", "unknown-node"),
+		mdxExpression: (node, inline) => fallback(node, inline ? "inline" : "block", "unknown-node"),
+		mdxJsx: (node, inline) => renderLoose(node, inline),
+		listItem: (node) => renderLoose(node, false),
+		tableRow: (node) => renderLoose(node, false),
+		tableCell: (node) => renderLoose(node, false),
+		doc: (node) => renderLoose(node, false),
+	};
+
 	const renderBlock = (node: CmsNode, inline: boolean): ReactNode => {
-		switch (node.type) {
-			case "paragraph":
-				return renderParagraph(node);
-			case "heading":
-				return renderHeading(node);
-			case "blockquote":
-				return createElement(components.blockquote, {
-					...common(node),
-					children: renderBlocks(node.content ?? []),
-				} as never);
-			case "bulletList":
-			case "orderedList":
-				return renderList(node);
-			case "horizontalRule":
-				return createElement(components.horizontalRule, common(node) as never);
-			case "codeBlock":
-				return renderCodeBlock(node);
-			case "image":
-				return renderImage(node, inline);
-			case "table":
-				return renderTable(node);
-			case "math":
-				return renderMath(node);
-			case "footnoteDefinition":
-				// Shown once, in the footnote section at the end (if something refers to it).
-				return null;
-			case "text":
-			case "hardBreak":
-			case "footnoteReference":
-				return renderInlineNode(node);
-			case "file":
-				return renderFile(node);
-			case "text-align": {
-				const align = TEXT_ALIGN_VALUES.find((value) => value === node.attrs?.align);
-				return createElement(components.textAlign, {
-					...common(node),
-					align,
-					children: renderBlocks(node.content ?? []),
-				} as never);
-			}
-			case "html":
-			case "mdxEsm":
-			case "mdxExpression":
-				return fallback(node, inline ? "inline" : "block", "unknown-node");
-			case "mdxJsx":
-				return fallback(node, inline ? "inline" : "block", "unknown-node", renderUnknownChildren(node));
-			case "listItem":
-			case "tableRow":
-			case "tableCell":
-			case "doc":
-				// A node that only makes sense inside its parent: its content is still shown.
-				return fallback(node, "block", "unknown-node", renderUnknownChildren(node));
-			default: {
-				const definition = ADDED_BY_NAME.get(node.type);
-				if (definition && (definition.syntax.kind === "container" || definition.syntax.kind === "leaf")) {
-					return renderDefinedBlock(node, definition).element;
-				}
-				return fallback(node, inline ? "inline" : "block", "unknown-node", renderUnknownChildren(node));
-			}
+		const known = Object.hasOwn(NODE_RENDERERS, node.type) ? NODE_RENDERERS[node.type] : undefined;
+		if (known) return known(node, inline);
+		// A block a plugin or the site defines (a container or a leaf), else unknown.
+		const definition = ADDED_BY_NAME.get(node.type);
+		if (definition && (definition.syntax.kind === "container" || definition.syntax.kind === "leaf")) {
+			return renderDefinedBlock(node, definition).element;
 		}
+		return renderLoose(node, inline);
 	};
 
 	/** The content of an unknown node: blocks if it holds blocks, inline content if it holds text. */
@@ -654,16 +644,11 @@ export const renderDocumentTree = (
 	return { content: createElement(Fragment, null, ...content), unknown: report.nodes };
 };
 
-const CORE_MARKS = new Set([
-	"bold",
-	"italic",
-	"strike",
-	"underline",
-	"superscript",
-	"subscript",
-	"code",
-	"untranslated",
-]);
+/**
+ * The marks the renderer draws with a component of the default table: the core marks a body list can name (`CORE_BODY_MARKS`) except `link`, which has its own branch
+ * (it reads an entry or an address), plus the translation note `untranslated`, which belongs to the translation flow and so is never in a body list.
+ */
+const CORE_MARKS: ReadonlySet<string> = new Set([...CORE_BODY_MARKS.filter((name) => name !== "link"), "untranslated"]);
 
 /**
  * Whether the table's cells say which are headers. A table GFM can write (no merged cells, no widths, the first row the header) has a header

@@ -1,4 +1,4 @@
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +15,7 @@ vi.mock("../templates/templates-screen", () => ({ TemplatesScreen: () => <p>temp
 afterEach(cleanup);
 
 const withAdmin = (admin: Record<string, unknown>) =>
-	createSite({ ...testConfig, admin: { ...testConfig.admin, ...admin } } as AnyCmsConfig);
+	createSite({ ...testConfig, admin: { ...testConfig.admin, ...admin } } as CmsConfig);
 const cms = (site: typeof testSite) => ({ site }) as unknown as Cms;
 const server = (): AdminServer => ({
 	redirect: vi.fn((href: string) => {

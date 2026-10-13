@@ -4,7 +4,8 @@
  * the result says why, so the step can be listed for the person to do by hand. Nothing here reads or writes a file.
  */
 
-import { ignoresEnvLocal } from "./init-detect";
+import { findHtmlTag, gitignoreCoverage, importsWithCms, suppressHydrationState, usesWithCms } from "./next-app";
+import { matchingClose, skipLiteral } from "./source-text";
 
 /** What an edit decided. */
 export type TextEdit =
@@ -16,96 +17,6 @@ export type TextEdit =
 	| { readonly status: "manual"; readonly reason: string };
 
 export const NEXT_CONFIG_IMPORT = 'import { withCms } from "@monti-cms/nextjs/config";';
-
-/** The index after the string, template literal or comment that starts at `index`; `index` itself when nothing of the kind starts there. */
-function skipLiteral(text: string, index: number): number {
-	const ch = text[index];
-	if (ch === "/" && text[index + 1] === "/") {
-		const end = text.indexOf("\n", index);
-		return end === -1 ? text.length : end;
-	}
-	if (ch === "/" && text[index + 1] === "*") {
-		const end = text.indexOf("*/", index + 2);
-		return end === -1 ? text.length : end + 2;
-	}
-	if (ch === '"' || ch === "'") {
-		let i = index + 1;
-		while (i < text.length && text[i] !== ch && text[i] !== "\n") i += text[i] === "\\" ? 2 : 1;
-		return i + 1;
-	}
-	if (ch === "`") {
-		let i = index + 1;
-		while (i < text.length && text[i] !== "`") {
-			if (text[i] === "\\") i += 2;
-			else if (text[i] === "$" && text[i + 1] === "{") {
-				const close = matchingClose(text, i + 1);
-				i = close === -1 ? text.length : close + 1;
-			} else i += 1;
-		}
-		return i + 1;
-	}
-	return index;
-}
-
-/**
- * The code of a file with its comments and the contents of its strings blanked out, except the module names of imports (after `from` or `require(`).
- * What is left is what the program does, so a search of it is not satisfied by a comment or a string that mentions the name.
- */
-function codeOf(text: string): string {
-	let out = "";
-	for (let i = 0; i < text.length; ) {
-		const end = skipLiteral(text, i);
-		if (end === i) {
-			out += text[i];
-			i += 1;
-			continue;
-		}
-		const literal = text.slice(i, end);
-		const isComment = literal.startsWith("//") || literal.startsWith("/*");
-		const isModuleName = !isComment && /(?:\bfrom|\brequire\()\s*$/.test(out);
-		out += isComment ? " " : isModuleName ? literal : " ";
-		i = end;
-	}
-	return out;
-}
-
-/**
- * Whether a `next.config` file imports `withCms` from `@monti-cms/nextjs` and calls it. The doctor asks the same question of the same file, so
- * `monti init` and `monti doctor` agree on whether the config is wrapped.
- */
-export function usesWithCms(text: string): boolean {
-	return importsWithCms(text) && /\bwithCms\s*\(/.test(codeOf(text));
-}
-
-/** Whether the file imports `withCms` (a comment that says so does not count). */
-function importsWithCms(text: string): boolean {
-	const code = codeOf(text);
-	return (
-		/\bimport\s*(?:type\s*)?\{[^}]*\bwithCms\b[^}]*\}\s*from\s*["']@monti-cms\/nextjs(?:\/config)?["']/.test(code) ||
-		/\{[^}]*\bwithCms\b[^}]*\}\s*=\s*require\(\s*["']@monti-cms\/nextjs(?:\/config)?["']\s*\)/.test(code)
-	);
-}
-
-/** The index of the bracket that closes the one at `open` (`(`, `[` or `{`), or `-1` when there is none. */
-function matchingClose(text: string, open: number): number {
-	const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
-	const stack: string[] = [];
-	for (let i = open; i < text.length; ) {
-		const skipped = skipLiteral(text, i);
-		if (skipped !== i) {
-			i = skipped;
-			continue;
-		}
-		const ch = text[i] as string;
-		if (pairs[ch]) stack.push(pairs[ch] as string);
-		else if (ch === ")" || ch === "]" || ch === "}") {
-			if (stack.pop() !== ch) return -1;
-			if (stack.length === 0) return i;
-		}
-		i += 1;
-	}
-	return -1;
-}
 
 /** `text` without the blank space, semicolon and comments at its end. */
 function withoutTrailingNoise(text: string): string {
@@ -195,60 +106,90 @@ export function wrapNextConfig(file: string, text: string): TextEdit {
 	return unsupported("a function or another kind of expression");
 }
 
-const HTML_TAG = /<html\b([^>]*?)(\s*)(\/?)>/;
-
 /**
  * Adds `suppressHydrationWarning` to the `<html>` tag of a root layout, after its other attributes. A layout that has it already is left as it is; a layout without an
  * `<html>` tag, with a tag init cannot read to its end (a `>` inside an attribute expression), or with `suppressHydrationWarning={false}`, is not touched.
  */
 export function addSuppressHydrationWarning(file: string, text: string): TextEdit {
-	const match = HTML_TAG.exec(text);
-	if (!match) {
+	const tag = findHtmlTag(text);
+	if (!tag) {
 		return { status: "manual", reason: `${file} has no <html> tag (the root layout may be somewhere else)` };
 	}
-	const attributes = match[1] ?? "";
+	const { attributes } = tag;
 	const opens = (attributes.match(/\{/g) ?? []).length;
 	const closes = (attributes.match(/\}/g) ?? []).length;
 	if (opens !== closes) return { status: "manual", reason: `init could not read the <html> tag of ${file} to its end` };
-	if (/\bsuppressHydrationWarning\b/.test(attributes)) {
-		return /\bsuppressHydrationWarning\s*=\s*\{\s*false\s*\}/.test(attributes)
-			? {
-					status: "manual",
-					reason: `<html> in ${file} sets suppressHydrationWarning={false}; set it to true`,
-				}
-			: { status: "present" };
+	const state = suppressHydrationState(attributes);
+	if (state === "off") {
+		return { status: "manual", reason: `<html> in ${file} sets suppressHydrationWarning={false}; set it to true` };
 	}
-	const at = (match.index ?? 0) + "<html".length + attributes.length;
+	if (state === "on") return { status: "present" };
 	return {
 		status: "edit",
-		text: `${text.slice(0, at)} suppressHydrationWarning${text.slice(at)}`,
+		text: `${text.slice(0, tag.start)}${htmlTagWith(text, tag, "suppressHydrationWarning")}${text.slice(tag.end)}`,
 		change: "added suppressHydrationWarning to <html>",
 	};
 }
 
-/** Lines of a `.gitignore` that cover the `.monti/` folder (where `monti db:migrate` writes its logs). */
-const MONTI_FOLDER_LINES = [
-	".monti",
-	".monti/",
-	"/.monti",
-	"/.monti/",
-	".monti/*",
-	".monti/**",
-	"/.monti/*",
-	"/.monti/**",
-];
+/** Lines are kept within this width, the default of Prettier and Biome. */
+const LINE_WIDTH = 80;
+
+/** The attributes of a tag as separate pieces (`lang="en"`, `className={...}`), or `undefined` when they cannot be told apart safely. */
+function splitAttributes(attributes: string): string[] | undefined {
+	const parts: string[] = [];
+	let current = "";
+	for (let i = 0; i < attributes.length; ) {
+		const ch = attributes[i] as string;
+		if (/\s/.test(ch)) {
+			if (current) parts.push(current);
+			current = "";
+			i += 1;
+			continue;
+		}
+		const end = ch === "{" ? matchingClose(attributes, i) + 1 : skipLiteral(attributes, i);
+		if (ch === "{" && end === 0) return undefined;
+		const next = end > i ? end : i + 1;
+		current += attributes.slice(i, next);
+		i = next;
+	}
+	if (current) parts.push(current);
+	return parts;
+}
+
+/**
+ * The `<html>` tag with `attribute` added after the others, written the way the file writes it: a tag that is already on several lines gets the attribute on a line of
+ * its own, a tag that stays within the line width stays on one line, and a tag that would become too long is broken up one attribute per line.
+ */
+function htmlTagWith(text: string, tag: NonNullable<ReturnType<typeof findHtmlTag>>, attribute: string): string {
+	const open = text.slice(tag.start, tag.start + "<html".length);
+	const lineStart = text.lastIndexOf("\n", tag.start - 1) + 1;
+	const indent = /^[ \t]*/.exec(text.slice(lineStart))?.[0] ?? "";
+	const lineEnd = text.indexOf("\n", tag.end);
+	const after = text.slice(tag.end, lineEnd === -1 ? text.length : lineEnd);
+	const single = `${open}${tag.attributes} ${attribute}${tag.gap}${tag.closer}`;
+
+	if (tag.attributes.includes("\n")) {
+		// Already one attribute per line: the new one goes on the line after the last, indented like the others.
+		const lastIndent = /\n([ \t]*)\S[^\n]*$/.exec(tag.attributes)?.[1] ?? `${indent}  `;
+		return `${open}${tag.attributes}\n${lastIndent}${attribute}${tag.gap}${tag.closer}`;
+	}
+	if (indent.length + single.length + after.length <= LINE_WIDTH) return single;
+	const parts = splitAttributes(tag.attributes);
+	if (!parts) return single;
+	const unit = /^\t/m.test(text) ? "\t" : "  ";
+	const inner = `${indent}${unit}`;
+	return `${open}\n${[...parts, attribute].map((part) => `${inner}${part}`).join("\n")}\n${indent}${tag.closer}`;
+}
 
 /**
  * Adds what Monti needs kept out of git to the text of a `.gitignore` (`undefined`: there is none, so it is created): `.env.local` (it holds the secrets) and
  * `.monti/` (where `monti db:migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
  */
 export function ignoreForMonti(text: string | undefined): TextEdit {
-	const lines = (text ?? "").split(/\r?\n/).map((line) => line.trim());
+	const covered = gitignoreCoverage(text ?? "");
 	const missing = [
-		...(ignoresEnvLocal(text ?? "") ? [] : [{ line: ".env.local", why: "it holds your secrets" }]),
-		...(lines.some((line) => MONTI_FOLDER_LINES.includes(line))
-			? []
-			: [{ line: ".monti/", why: "monti db:migrate writes its logs there" }]),
+		...(covered.envLocal ? [] : [{ line: ".env.local", why: "it holds your secrets" }]),
+		...(covered.montiFolder ? [] : [{ line: ".monti/", why: "monti db:migrate writes its logs there" }]),
 	];
 	if (missing.length === 0) return { status: "present" };
 	const eol = text?.includes("\r\n") ? "\r\n" : "\n";

@@ -1,21 +1,20 @@
 "use client";
 
-import type { LayoutGroup } from "@monti-cms/core/client";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
 import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { SidePanelHeader } from "../shared/side-panel";
-import { defaultTab, tabOf, tabOfGroup, tabsOf } from "./layout-groups";
+import { tabLabel } from "./layout-groups";
 import { entriesMessages } from "./messages";
 import { RemovedFieldsNotice } from "./removed-fields-notice";
 import { SchemaFields } from "./schema-fields";
 import { useEntryFormSelector } from "./use-field";
 
 const tabsFor = (site: Site, collection: string) =>
-	site.isCollection(collection) ? tabsOf(site, collection) : [defaultTab(site)];
+	site.isCollection(collection) ? site.panelTabsOf(collection) : [DEFAULT_TAB];
 const tabFor = (site: Site, collection: string, path: string) =>
-	site.isCollection(collection) ? tabOf(site, collection, path) : defaultTab(site);
+	site.isCollection(collection) ? site.panelTabOf(collection, path) : DEFAULT_TAB;
 
 interface InspectorPanelProps {
 	incomingReferences: IncomingReferenceItem[];
@@ -51,7 +50,7 @@ export function InspectorPanel({
 	const disabled = useEntryFormSelector((state) => state.disabled);
 	const publishIssues = useEntryFormSelector((state) => state.issues);
 	const entry = useEntryFormSelector((state) => state.entry);
-	const [tab, setTab] = useState(defaultTab(site));
+	const [tab, setTab] = useState(DEFAULT_TAB);
 	const tabs = useMemo(() => tabsFor(site, collection), [collection, site]);
 	const issuesIn = (name: string) =>
 		publishIssues.filter((issue) => issue.path && tabFor(site, collection, issue.path) === name).length;
@@ -74,11 +73,10 @@ export function InspectorPanel({
 		() => ({ items: incomingReferences, loading: isLoadingIncomingReferences, refresh: onRefreshIncomingReferences }),
 		[incomingReferences, isLoadingIncomingReferences, onRefreshIncomingReferences],
 	);
-	const fields = (include: (group: LayoutGroup) => boolean) =>
+	const fields = (include: (group: PanelGroup) => boolean) =>
 		site.isCollection(collection) && (
 			<fieldset disabled={disabled} className="min-w-0 space-y-4 disabled:opacity-70">
 				<SchemaFields
-					omit={[site.titleField(collection).name]}
 					showDescriptions={false}
 					include={include}
 					sections="plain"
@@ -100,7 +98,7 @@ export function InspectorPanel({
 				<TabsList variant="line" className="h-full flex-1 justify-start gap-3">
 					{tabs.map((name) => (
 						<TabsTrigger key={name} value={name} className="flex-none px-0 text-xs">
-							{name}
+							{tabLabel(site, name)}
 							{issuesIn(name) > 0 && <span aria-hidden className="size-1.5 rounded-full bg-cms-destructive" />}
 						</TabsTrigger>
 					))}
@@ -111,7 +109,7 @@ export function InspectorPanel({
 				<RemovedFieldsNotice collection={collection} metadata={entry?.working.metadata} />
 				{tabs.map((name) => (
 					<TabsContent key={name} value={name}>
-						{fields((group) => tabOfGroup(site, group) === name)}
+						{fields((group) => group.tab === name)}
 					</TabsContent>
 				))}
 			</div>

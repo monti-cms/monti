@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
 import "../format";
-import { MDX_PLUGIN_NAME, mdx, validateMdxOptions } from "../plugin";
+import { checkMdxOptions, MDX_PLUGIN_NAME, mdx } from "../plugin";
 import type { SyntaxExtension } from "../syntax";
 import { docOfMdx } from "../testing";
 
@@ -37,20 +37,23 @@ describe("mdx()", () => {
 
 	describe("validation", () => {
 		it("accepts distinct named extensions, and no extension at all", () => {
-			expect(() => validateMdxOptions({ syntax: [braces, other] })).not.toThrow();
-			expect(() => validateMdxOptions({})).not.toThrow();
-			expect(() => validateMdxOptions(undefined)).not.toThrow();
+			expect(checkMdxOptions({ syntax: [braces, other] })).toEqual([]);
+			expect(checkMdxOptions({})).toEqual([]);
+			expect(checkMdxOptions(undefined)).toEqual([]);
 		});
 
 		it("rejects an extension without a name", () => {
 			const nameless = { ...braces, name: "" };
-			expect(() => validateMdxOptions({ syntax: [nameless] })).toThrow(/name/);
-			expect(() => mdx({ syntax: [nameless] })).toThrow(/name/);
+			expect(checkMdxOptions({ syntax: [nameless] })).toEqual([expect.objectContaining({ code: "name" })]);
 		});
 
 		it("rejects the same name listed twice", () => {
-			expect(() => validateMdxOptions({ syntax: [braces, { ...other, name: braces.name }] })).toThrow(/duplicate/);
-			expect(() => mdx({ syntax: [braces, braces] })).toThrow(/duplicate/);
+			expect(checkMdxOptions({ syntax: [braces, { ...other, name: braces.name }] })).toEqual([
+				expect.objectContaining({ code: "duplicate" }),
+			]);
+			expect(mdx({ syntax: [braces, braces] }).validate?.({} as never)).toEqual([
+				expect.objectContaining({ code: "duplicate" }),
+			]);
 		});
 
 		it("is run again by the validate hook of the plugin", () => {

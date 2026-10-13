@@ -92,7 +92,6 @@ describe("useField", () => {
 		expect(result.current.value).toBe("Hello");
 		expect(result.current.label).toBe("제목");
 		expect(result.current.required).toBe(true);
-		expect(result.current.hidden).toBe(false);
 		expect(result.current.definition?.kind).toBe("text");
 		expect(result.current.ids).toEqual({ input: "cms-title", error: "cms-title-error" });
 		expect(result.current.inputProps).toEqual({ id: "cms-title" });

@@ -553,7 +553,7 @@ What you read is typed for a published entry: a `required` field is not optional
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
 | `@monti-cms/core/ai-contract` | plugins that add AI actions | types only: the shape of an AI action, check and contribution (`AiContribution`) that `@monti-cms/ai` implements, so a plugin writes its actions without depending on it |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti db:migrate` (create tables), `monti admin:reset-password` (set a new password for an admin of the email and password login), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
-| `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `loadSchemaFile`, `findSchemaFile`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
+| `@monti-cms/core/cli` | command-line tooling | `runCli(argv, { cwd, log, error })` (any `monti` command; returns the exit code), `runDoctor`, `initProject`, `addComponents`, `migrate`, `runImport`, `loadSchemaFile`, `findSchemaFile`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `testServer()` (`{ server, drop }`: the `database` and `auth` options for a real instance on a schema of its own, ["Testing your hooks and plugins"](#testing-your-hooks-and-plugins)), `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
 
 ## Building the packages
@@ -893,7 +893,7 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 
 - The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
 - `server.formats` adds formats (notations the document can be written as and read from, "Formats"): a function that returns a `CmsFormat` or a list of them (`formats: () => myFormat`). It is called when the instance first needs its formats.
-- `validate` receives the collection, locale and block definitions and all plugins (`plugins`). Extensions that use roles check field kinds here.
+- `validate` receives the collection, locale and block definitions and all plugins (`plugins`) and returns the issues it finds (`{ path, code, message }`, with `IssueList` and `pathOf` from `@monti-cms/core`); `defineSite` reports them with every other problem of the config in one `ConfigError`. Extensions that use roles check field kinds here.
 - `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
   `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
   An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
@@ -1167,7 +1167,7 @@ it("refuses a bad slug", async () => {
 });
 ```
 
-`cms.handle(new Request(url))` runs a route of a plugin with the same checks as the admin, `cms.events.retry({ all: true })` delivers the `afterCommit` events that are waiting, and `runDoctorCommand` of `@monti-cms/core/cli` runs `monti doctor` on a folder. `fakeCms({ store, … })` is the lighter choice for code that only needs an instance over a few parts. A screen of a plugin is tested in a browser-like environment: build the site with `createSite(defineSite({ schema, plugins }))` (`defineConfig` is server-only and refuses to run where `window` exists) and wrap the screen in `<SiteProvider site={site}>`. The [recipes](../../docs/recipes/README.md) sketch some of these.
+`cms.handle(new Request(url))` runs a route of a plugin with the same checks as the admin, `cms.events.retry({ all: true })` delivers the `afterCommit` events that are waiting, and `runCli(["doctor"], { cwd, log, error })` of `@monti-cms/core/cli` runs `monti doctor` on a folder and returns its exit code. `fakeCms({ store, … })` is the lighter choice for code that only needs an instance over a few parts. A screen of a plugin is tested in a browser-like environment: build the site with `createSite(defineSite({ schema, plugins }))` (`defineConfig` is server-only and refuses to run where `window` exists) and wrap the screen in `<SiteProvider site={site}>`. The [recipes](../../docs/recipes/README.md) sketch some of these.
 
 ## The schema file
 
@@ -1213,7 +1213,7 @@ export default defineSchema({
 **Format.** Each part is the options object of the matching builder, with its `kind`: a collection is what `defineCollection` takes (`label`, `kind`, `body`, `fields`, `path`, `icon`, `layout`, `list`), and a field is what `fields.<kind>` takes with `kind` added. Field objects stay plain literals. The field kinds are `text`, `slug`, `relation` (`many`, `ordered`, `createInline`, `publishedOnly`, `allowUnpublished`),
 `select` (`options` and `defaultValue`), `media` (`accept: "image" | "file"`: the image field), `conditional` (a `discriminant` select and the `values` that show for each option), `backlink` and `view`: every kind `fields.*` has. `fields.*` has no date, boolean or number kind today, so the file has none. A collection that holds a date keeps it in a text field.
 The types of `defineSchema` show a wrong `kind` or a misspelt option value in the editor; an unknown extra key is caught at run time by the strict check, and so are rules between collections, such as a relation to a collection that exists (checked when the config loads).
-**There are no retired aliases:** `workflow` and `required: "publish"` are errors (use `kind` and `required: true`).
+**Unknown options are errors:** a key the format does not have (a misspelt option, or one that was removed) is reported with its path and, when one is close, the key you may have meant.
 
 **Loading.** `monti.config.ts` imports the module and passes its default export to `defineConfig`. An `import` is what the bundler ships with the build, so the file is read-only in production. Scripts and the `monti` command load the file through tsx (`bin/monti.mjs` registers it).
 
@@ -1235,11 +1235,11 @@ export const cms = defineConfig({
 The low-level `createCms({ config: defineSite({ … }), server })` takes the site part alone, built with `defineSite` of `@monti-cms/core` (no database or login; for tests and tools; `@monti-cms/core` no longer exports `defineConfig`). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its path:
 
 ```text
-monti.schema.ts is not a valid schema file:
+monti.schema.ts is not valid:
   collections.post.fields.title.kind: a field needs a "kind" of text, slug, relation, select, media, conditional, backlink or view
-  collections.post.workflow: is not part of the schema format
-  locales[1].code: must look like "en", "pt-BR" or "zh-Hant"
-Fix: correct the lines above in monti.schema.ts; the types of defineSchema show most of them in the editor. monti doctor checks the file again.
+  collections.post.workflow: is not an option (known: label, kind, fields, path, icon, layout, body)
+  locales[1].name: must be a string (got number)
+Fix: correct the lines above; `monti doctor` checks the files again.
 ```
 
 **How the file and the code config merge.** Code adds to the file and may override what differs per environment, but it never silently replaces the file's data:
@@ -1402,9 +1402,8 @@ Everything in this table except `codeBlock`, `media` and `editor` can be written
 
 - **Kind (`kind`).** A `document` has a body, separates draft from published content, and is published explicitly. An `item` is a small form whose saved values
   are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents. `body` can also be an object that limits the blocks, marks and heading levels the body allows ("Allowed blocks and marks per body").
-  The old name `workflow: "publish" | "record"` was removed; a config that still has it fails with the `kind` to use (`publish` → `document`, `record` → `item`).
-- **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
-- **List columns.** Not part of the schema: each admin chooses the columns on the list screen (Column settings), saved per account. Until they do, the list shows the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date. A config that still has `list` fails with a message to delete it.
+- **Layout (`layout`).** If absent, it is one group in field declaration order. Plugins place their own fields in tabs of their own (see Tabs).
+- **List columns.** Not part of the schema: each admin chooses the columns on the list screen (Column settings), saved per account. Until they do, the list shows the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
 
 A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links written as an address (they are stored as the id of the entry, see the public read API) and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
 
@@ -1435,10 +1434,12 @@ A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It i
   with the plain text at the start of the body (only for collections with a body, and never over the field's `max`). The core function is `bodyExcerpt(doc, maxLength)`. The text is taken from the stored document, so it does not depend on the notation the body was written in: prose, headings, list items, table cells, block bodies and the text attributes of blocks (a callout title); code, math and images are left out. Body search text is built the same way, and also keeps code, image alt text and captions.
 - **Multi-line input.** A text field with `multiline: true` is a multi-line input, and `rows` (default 2) sets the initial number of rows.
 - **Field names you cannot use.** The key the core uses separately in metadata (`translations`) cannot be a field name.
-- **Tabs.** Putting `tab: "name"` on a field or `tab` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters).
-  The group's `tab` comes first; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` gather into one group per tab even without a layout.
-  So field groups that extensions provide (e.g. `seoFields()`) land in their own tab even when the site writes no `layout`. If there is none, the default tab
-  is `Properties`.
+- **Tabs.** `tab: "name"` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters). Tabs live on groups only; a field has
+  no `tab`. A plugin that provides a field set (e.g. `seoFields()` of the SEO extension) places it with the `layout` key of its `contributes`: a tab name, and the
+  roles and view names of its fields (`{ tab: "SEO", roles: [...], views: [...] }`, the type is `PluginPlacement`). Those fields are drawn in that tab whatever the site's `layout`
+  says, and the settings screen shows them locked there. The first tab holds the groups with no `tab`; it is the default tab and has no name of its own: its title is only the admin's wording, so a
+  tab you call "Properties" is a different tab. `site.panelGroupsOf(collection)`, `site.panelTabsOf(collection)` and `site.panelTabOf(collection, path)` are the one
+  place that works out the groups, for the panel, the item panel and the settings screen alike. The title of a document is the heading of the edit screen and is not drawn in the panel.
 - **View field.** `fields.view({ view: "name" })` is a field that stores no value and draws a view in that spot. The admin extension registers the view
   with `fieldViews` (e.g. `search` of the SEO extension). If no view is registered, nothing is drawn.
 - **Swapping the input.** `input: "name"` points at an input that an admin extension registered with `fieldInputs`. Without a registration, the kind's default input is used.
@@ -1449,14 +1450,17 @@ fields: {
 	title: fields.text({ label: "Title", required: true }),
 	slug: fields.slug({ label: "Slug", from: "title" }),
 	excerpt: fields.text({ label: "Excerpt", role: "summary", multiline: true, rows: 3, fillFromBody: { maxLength: 200 } }),
-	hero: fields.media({ label: "Hero image", tab: "Media" }),
-	credit: fields.text({ label: "Credit", tab: "Media" }),
+	hero: fields.media({ label: "Hero image" }),
+	credit: fields.text({ label: "Credit" }),
 },
-layout: [{ fields: ["title", "slug", "excerpt"] }], // hero and credit gather in the Media tab
+layout: [
+	{ fields: ["title", "slug", "excerpt"] },
+	{ group: "Image", tab: "Media", fields: ["hero", "credit"] }, // a tab is named on a group
+],
 ```
 
-`defineConfig` throws an error as soon as the app starts if: a relation field points at a collection that does not exist, the default language is not in the list, a collection has no title field, there are two or more URL fields,
-roles collide or `summary` or `title` is not a text field, a tab name is not 1 to 20 characters, `from` or `fillFromBody` does not match the fields,
+`defineConfig` throws one `ConfigError` as soon as the app starts, listing every problem with its path (`error.issues`: `{ path, code, message }`), if: a relation field points at a collection that does not exist, the default language is not in the list, a collection has no title field, there are two or more URL fields,
+roles collide or `summary` or `title` is not a text field, a tab name is not 1 to 20 characters, an option is not part of the format (a misspelt key gets a "did you mean"), `from` or `fillFromBody` does not match the fields,
 a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
 is wrong.
 

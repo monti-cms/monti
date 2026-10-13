@@ -1,11 +1,11 @@
-import type { AnyCmsConfig } from "@monti-cms/core/client";
+import type { CmsConfig } from "@monti-cms/core/client";
 import type { ReactNode } from "react";
 import type { AiActionKey } from "../registry";
 import { AiButton, type AiButtonProps } from "./ai-button";
 import { type UseAiAction, useAiAction } from "./use-ai-action";
 
 /** The hook and the button with the action names, inputs and results of one site config. */
-export interface AiClient<Config extends AnyCmsConfig> {
+export interface AiClient<Config extends CmsConfig> {
 	useAiAction<K extends AiActionKey<Config>>(key: K, enabled?: boolean): UseAiAction<K, Config>;
 	AiButton<K extends AiActionKey<Config>>(props: AiButtonProps<K, Config>): ReactNode;
 }
@@ -19,4 +19,4 @@ export interface AiClient<Config extends AnyCmsConfig> {
  * export const { useAiAction, AiButton } = aiClient<typeof config>();
  * ```
  */
-export const aiClient = <Config extends AnyCmsConfig>(): AiClient<Config> => ({ useAiAction, AiButton });
+export const aiClient = <Config extends CmsConfig>(): AiClient<Config> => ({ useAiAction, AiButton });

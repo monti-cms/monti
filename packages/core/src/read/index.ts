@@ -11,6 +11,7 @@
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway";
+import type { CmsConfig } from "../config/define";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
 import type { CollectionName, PublishedMetadataFor } from "../core/types";
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
@@ -21,8 +22,8 @@ import type { FormatRegistry } from "../format/registry";
 import type { FormatLink, FormatMedia } from "../format/types";
 import { unknownFormatError } from "../format/unknown";
 import type { MediaStore } from "../media/store";
-import { RECORD_TRANSLATIONS_KEY } from "../schema/derive";
-import type { AnyCmsConfig, Site } from "../site";
+import { RECORD_TRANSLATIONS_KEY } from "../schema/fields";
+import type { Site } from "../site";
 
 export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types";
 
@@ -41,7 +42,7 @@ export interface ReadRelation {
 export interface ReadEntry<
 	C extends string = string,
 	// biome-ignore lint/suspicious/noExplicitAny: `ReadEntry` alone is an entry of any site config
-	Config extends AnyCmsConfig = any,
+	Config extends CmsConfig = any,
 > {
 	readonly id: string;
 	readonly collection: C;
@@ -88,7 +89,7 @@ export interface ReadBody {
 export type ReadEntryResult<
 	C extends string = string,
 	// biome-ignore lint/suspicious/noExplicitAny: `ReadEntryResult` alone is a result of any site config
-	Config extends AnyCmsConfig = any,
+	Config extends CmsConfig = any,
 > =
 	| { readonly status: "found"; readonly entry: ReadEntry<C, Config> }
 	/** Arrived through an old URL. Permanently redirect (308) to `path` (or `slug` if absent). */
@@ -258,7 +259,7 @@ const exportRefsOf = (refs: ReadRefs): ExportRefs => ({
 	),
 });
 
-async function toReadEntries<C extends string, Config extends AnyCmsConfig>(
+async function toReadEntries<C extends string, Config extends CmsConfig>(
 	deps: ReadDeps<Config>,
 	records: readonly PublishedEntryRecord[],
 	locale: string,
@@ -324,7 +325,7 @@ const storageLocale = (site: Site, collection: string, locale: string | undefine
 			: site.DEFAULT_LOCALE;
 
 /** What the read API needs from a CMS instance. */
-export interface ReadDeps<Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface ReadDeps<Config extends CmsConfig = CmsConfig> {
 	/** The site of the instance: the collections, locales and URLs the reads follow. */
 	readonly site: Site<Config>;
 	readonly store: () => ContentStore;
@@ -341,7 +342,7 @@ export interface ReadDeps<Config extends AnyCmsConfig = AnyCmsConfig> {
  */
 export interface CmsRead<
 	// biome-ignore lint/suspicious/noExplicitAny: `CmsRead` alone reads any site config
-	Config extends AnyCmsConfig = any,
+	Config extends CmsConfig = any,
 > {
 	/**
 	 * One entry. The URL (`slug`) is that locale's URL. For an old URL it returns `redirect`.
@@ -388,7 +389,7 @@ export interface CmsRead<
 	mediaUrl(mediaId: string): ReturnType<typeof resolvePublicMediaUrl>;
 }
 
-export function createRead<Config extends AnyCmsConfig = AnyCmsConfig>(deps: ReadDeps<Config>): CmsRead<Config> {
+export function createRead<Config extends CmsConfig = CmsConfig>(deps: ReadDeps<Config>): CmsRead<Config> {
 	const { site } = deps;
 	return {
 		async getEntry<C extends CollectionName<Config>>(params: {

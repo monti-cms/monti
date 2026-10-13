@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { explainTrustHost } from "../adapters/auth/trust-host";
+import type { CmsConfig } from "../config/define";
 import { findSchemaFile } from "../schema-file/locate";
 import { schemaSourceOf } from "../schema-file/source";
 import type { Decision } from "../server/decision";
 import type { CmsServerConfig } from "../server/define";
-import type { AnyCmsConfig } from "../site";
 import { coreDecisions } from "./decisions";
 import type { Cms, CreateCmsOptions, SchemaReload } from "./types";
 
@@ -17,7 +17,7 @@ export type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema" | "decis
  * `forSchema`, `reloadSchema`, `decisions`) into the instance. `reloadSchema` rebuilds the parts in place, in development: `site` is a getter, and every other part is
  * assigned over, so the cache of `cms.plugin(name).once` starts afresh with them.
  */
-export function withSchemaControls<Config extends AnyCmsConfig>(parts: {
+export function withSchemaControls<Config extends CmsConfig>(parts: {
 	readonly options: CreateCmsOptions<Config>;
 	readonly server: CmsServerConfig;
 	readonly build: (config: Config, self: () => Cms<Config>) => Omit<Cms<Config>, SchemaMembers>;

@@ -1,6 +1,7 @@
 import { CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { resolveTrustHost } from "../adapters/auth/trust-host";
 import { type ApiKeys, type ApiKeysOptions, createApiKeys } from "../api-keys/api-keys";
+import type { CmsConfig } from "../config/define";
 import { problemText } from "../core/problem";
 import type { ImageWarningResolvers } from "../core/snapshot";
 import { CmsError, type ContentStore, withEventDispatch } from "../core/store";
@@ -17,7 +18,7 @@ import { createEventDispatcher } from "../services/events";
 import { createMediaService, type MediaService } from "../services/media-service";
 import { mediaUrlResolver } from "../services/media-urls";
 import { createPreferencesService, type PreferencesService } from "../services/preferences-service";
-import { type AnyCmsConfig, createSite } from "../site";
+import { createSite } from "../site";
 
 export type * from "./types";
 
@@ -48,7 +49,7 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
  * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
  * connections of the server config.
  */
-export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsOptions<Config>): Cms<Config> {
+export function createCms<const Config extends CmsConfig>(options: CreateCmsOptions<Config>): Cms<Config> {
 	const { server, id = "default" } = options;
 	const { secret, previousSecrets, events: eventOptions, ...publicServer } = server;
 	const vault = createSecretsVault({ secret, previousSecrets });

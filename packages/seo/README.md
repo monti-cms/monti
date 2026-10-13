@@ -21,7 +21,7 @@ const article = defineCollection({
 		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
 		...seoFields(),
 	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO fields gather in the SEO tab even if not listed
+	layout: [{ fields: ["title", "slug", "excerpt"] }], // the SEO fields are placed in the SEO tab by the plugin, even if not listed
 });
 
 export const cms = defineConfig({
@@ -43,14 +43,13 @@ The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` alre
 | `noindex` | `seoNoindex` | select (`index`, `noindex`) | `noindex` | A switch in the label row. On means `noindex` |
 | `canonical` | `seoCanonical` | text | `canonical` | Canonical URL |
 
-Every field has a `tab` (default `SEO`), so they gather in that tab of the edit screen even without a `layout`. Values are found by role, not by field name,
+The `seo()` plugin places them in a tab of the edit screen of their own (default `SEO`, set with `seo({ tab })`), found by role and by the preview's view name, even without a `layout`. Values are found by role, not by field name,
 so names are up to the site.
 
 ```ts
 seoFields({
 	keys: { title: "metaTitle", image: "ogImageId" }, // field names (reuse the names of values already stored)
 	labels: { title: "Search title" }, // labels
-	tab: "Search", // tab name
 	localized: false, // keep title, description, image and canonical URL separate per language? (default true; hiding is always shared)
 	limits: { title: 70, description: 160 }, // recommended lengths: the count changes color when exceeded and it becomes the AI suggestion length (saving is not blocked)
 	omit: ["canonical"], // slots to omit
@@ -64,7 +63,7 @@ The recommended length is stored in the field's `inputOptions.limit`. If you nee
 - **Admin UI** (`@monti-cms/seo/admin`): registers the view field `search`, the input pieces `seo-title` and `seo-description` (hint and character count),
   and `seo-noindex` (switch) through `CmsAdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
 - **Config validation**: `seoTitle`, `seoDescription` and `canonical` must be text, `ogImage` must be media, and `noindex` must be a select
-  field with a `noindex` option (`validateSeoFields`).
+  field with a `noindex` option (`checkSeoFields`).
 - **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)
   (`contributes.ai`). They attach to every collection that has the role fields, and the length is field `max` → recommended length → 60 / 155. To change one:
   `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
@@ -86,7 +85,7 @@ It reads values by role from the collection definition (the result of `defineCol
 
 | Entry point | Contents |
 | --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (site config and public pages, shared by server and browser) |
+| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `checkSeoFields` (site config and public pages, shared by server and browser) |
 | `@monti-cms/seo/admin` | Admin-side provider (the core loads it through the plugin definition's `admin`) |
 
 ## Development

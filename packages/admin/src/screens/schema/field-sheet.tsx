@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
 import { Button } from "../../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
@@ -82,7 +82,7 @@ export function FieldSheet({
 				? { ...next, discriminant: setProp(next.discriminant, key, value, FIELD_KEY_ORDER) }
 				: next;
 		});
-	const valueKind = kind !== "view" && kind !== "backlink";
+	const valueKind = fieldTraits[kind].entersValue;
 	const label = typeof field.label === "string" ? field.label : "";
 	const isTitle = !place.branch && titleFieldName(draft) === name;
 	const blocked = removeBlock(editing.collection, place, name);
@@ -194,12 +194,6 @@ export function FieldSheet({
 								items={branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 								onChange={(next) => change((current) => withKind(current, next as FieldKindName, collectionNames))}
 							/>
-							<FlagSwitch
-								label={t("field.hidden")}
-								hint={t("field.hiddenHint")}
-								checked={field.hidden === true}
-								onChange={(on) => set("hidden", on ? true : undefined)}
-							/>
 							{valueKind && (
 								<TextInput
 									label={t("field.role")}
@@ -209,13 +203,6 @@ export function FieldSheet({
 									onChange={(value) => set("role", orUndefined(value))}
 								/>
 							)}
-							<TextInput
-								label={t("field.tab")}
-								hint={t("field.tabHint")}
-								optional
-								value={field.tab as string | undefined}
-								onChange={(value) => set("tab", orUndefined(value))}
-							/>
 							{valueKind && (
 								<TextInput
 									label={t("field.input")}

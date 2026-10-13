@@ -29,7 +29,7 @@ describe("seed templates", () => {
 		const template = { id: ID, name: "Broken", doc: { type: "doc", content: "nope" } } as unknown as SeedTemplate;
 
 		await expect(seedTemplateDocument(testSite, template, NO_FORMATS)).rejects.toThrow(
-			/seed template "Broken" is not a stored document/,
+			/seed\.templates\["[^"]+"\]: template "Broken" is not a stored document/,
 		);
 	});
 
@@ -47,7 +47,7 @@ describe("seed templates", () => {
 	it("stops the migration with a message that names the missing plugin when no installed plugin provides the format", async () => {
 		await expect(
 			seedTemplateDocument(testSite, { id: ID, name: "Text", format: "hugo", body: "x" }, NO_FORMATS),
-		).rejects.toThrow(/seed template "Text" is written in the format "hugo", which no installed plugin provides/);
+		).rejects.toThrow(/template "Text" is written in the format "hugo", which no installed plugin provides/);
 
 		// A site that never installed the MDX package is told which package it is missing.
 		const withoutMdx = createFormatRegistry([paragraphsFormat]);
@@ -60,6 +60,6 @@ describe("seed templates", () => {
 		const registry = createFormatRegistry([paragraphsFormat]);
 		await expect(
 			seedTemplateDocument(testSite, { id: ID, name: "Open", format: "paragraphs", body: "Words <<< open" }, registry),
-		).rejects.toThrow(/seed template "Open" could not be read as "paragraphs"/);
+		).rejects.toThrow(/template "Open" could not be read as "paragraphs"/);
 	});
 });

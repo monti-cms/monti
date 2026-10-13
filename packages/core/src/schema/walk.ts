@@ -1,5 +1,12 @@
 import type { CollectionSchema } from "./collection";
-import { DEFAULT_TITLE_FIELD, type FieldRole, type TextField, TITLE_ROLE, type ValueField } from "./fields";
+import {
+	DEFAULT_TITLE_FIELD,
+	type FieldRole,
+	isStoredField,
+	type TextField,
+	TITLE_ROLE,
+	type ValueField,
+} from "./fields";
 
 /**
  * Pure function that reads one collection definition. It reads no site, so it is used by extensions the config file imports
@@ -19,7 +26,7 @@ export function valueFieldsOf(schema: Pick<CollectionSchema, "fields">): StoredF
 	const result: StoredField[] = [];
 	for (const [name, field] of Object.entries(schema.fields)) {
 		// The address goes in the content column, and a reverse relation is stored on the other record. View fields are not stored.
-		if (field.kind === "slug" || field.kind === "backlink" || field.kind === "view") continue;
+		if (!isStoredField(field)) continue;
 		if (field.kind === "conditional") {
 			result.push({ name, field: field.discriminant });
 			for (const [value, group] of Object.entries(field.values)) {

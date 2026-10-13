@@ -5,7 +5,8 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
 import { importCms } from "../app";
 import { dbSetup } from "../db";
 import type { DoctorReport } from "../doctor";
-import { InitCancelled, runCli } from "../index";
+import { runCli } from "../index";
+import { Cancelled } from "../prompt";
 import { byId, CORE_SRC, configText, project, setEnv } from "./doctor-helpers";
 
 const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
@@ -27,14 +28,14 @@ const passwordConfig = () =>
 async function run(
 	dir: string,
 	argv: string[],
-	adminPrompts?: { text: () => Promise<string>; password: () => Promise<string> },
+	prompter?: { text: () => Promise<string>; password: () => Promise<string> },
 ) {
 	const out: string[] = [];
 	const code = await runCli([...argv, "--no-env-file"], {
 		cwd: dir,
 		log: (message) => out.push(message),
 		error: (message) => out.push(message),
-		...(adminPrompts ? { adminPrompts } : {}),
+		...(prompter ? { prompter: prompter as never } : {}),
 	});
 	return { code, text: out.join("\n") };
 }
@@ -69,7 +70,7 @@ describe("the email and password login on the command line", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined })).toBe(true);
+		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
 	});
 
 	afterAll(async () => {
@@ -84,6 +85,7 @@ describe("the email and password login on the command line", () => {
 		expect(accounts.status).toBe("warn");
 		expect(accounts.fix).toContain("create the first admin");
 		expect(accounts.fix).toContain("https://blog.example.com/studio");
+		expect(accounts.fix?.length).toBeLessThan(200);
 		for (const id of ["auth/github-id", "auth/github-secret", "auth/admins", "auth/callback-url"]) {
 			expect(byId(report, id).status, id).toBe("skip");
 		}
@@ -152,7 +154,7 @@ describe("the email and password login on the command line", () => {
 		const dir = app();
 		const prompts = {
 			text: async () => {
-				throw new InitCancelled();
+				throw new Cancelled();
 			},
 			password: async () => "",
 		};

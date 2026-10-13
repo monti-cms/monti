@@ -1,8 +1,8 @@
+import type { CmsConfig } from "../config/define";
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsImageSource } from "../doc/types";
 import type { MetadataOf, PublishedMetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
-import type { AnyCmsConfig } from "../site/create-site";
 import type { Collection } from "./collections";
 import type { ErrorCode } from "./error-codes";
 import { CmsError } from "./store/errors";
@@ -86,7 +86,7 @@ export type JsonValue = string | number | boolean | null | readonly JsonValue[] 
  * The collection names of a site config: the keys of its `collections`, as the literal names when the config is typed (`defineSite(...)`) and `string` for the
  * loose config.
  */
-export type CollectionName<Config extends AnyCmsConfig = AnyCmsConfig> = keyof Config["collections"] & string;
+export type CollectionName<Config extends CmsConfig = CmsConfig> = keyof Config["collections"] & string;
 
 /** An item collection keeps per-locale names in `translations`. */
 type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { translations?: RecordTranslations } : M;
@@ -96,7 +96,7 @@ type WithRecordTranslations<S, M> = S extends { readonly kind: "item" } ? M & { 
  */
 export type MetadataFor<
 	C extends string = string,
-	Config extends AnyCmsConfig = AnyCmsConfig,
+	Config extends CmsConfig = CmsConfig,
 > = string extends keyof Config["collections"]
 	? { [field: string]: unknown }
 	: C extends keyof Config["collections"]
@@ -109,7 +109,7 @@ export type MetadataFor<
  */
 export type PublishedMetadataFor<
 	C extends string = string,
-	Config extends AnyCmsConfig = AnyCmsConfig,
+	Config extends CmsConfig = CmsConfig,
 > = string extends keyof Config["collections"]
 	? { [field: string]: unknown }
 	: C extends keyof Config["collections"]
@@ -136,7 +136,7 @@ type InputFor<C extends string, M, Body = BodyInput> = Body & {
 	translation?: TranslationState | null;
 };
 
-export type ServiceInput<Config extends AnyCmsConfig = AnyCmsConfig> = {
+export type ServiceInput<Config extends CmsConfig = CmsConfig> = {
 	[C in CollectionName<Config>]: InputFor<
 		C,
 		MetadataFor<C, Config>,
@@ -144,7 +144,7 @@ export type ServiceInput<Config extends AnyCmsConfig = AnyCmsConfig> = {
 	>;
 }[CollectionName<Config>];
 
-export type SaveDraftInput<Config extends AnyCmsConfig = AnyCmsConfig> = ServiceInput<Config> & {
+export type SaveDraftInput<Config extends CmsConfig = CmsConfig> = ServiceInput<Config> & {
 	expectedVersion: number;
 };
 

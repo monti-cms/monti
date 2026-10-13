@@ -108,7 +108,7 @@ describe("schema:diff and schema:apply", () => {
 				secret: "test-secret",
 			},
 		});
-	const options = () => ({ cwd: dir, envFiles: [] as string[], log: () => {}, loadCms });
+	const options = () => ({ cwd: dir, envFiles: [] as string[], log: () => {}, error: () => {}, loadCms });
 	const fileText = () => readFileSync(file, "utf8");
 	const metadataOf = async (slug: string) => {
 		const res = await pool.query<{ metadata: Record<string, unknown>; schema_version: number }>(

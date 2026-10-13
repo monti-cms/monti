@@ -1,8 +1,9 @@
 "use client";
 
+import type { Issue } from "@monti-cms/core/client";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { ChangeImpact } from "@monti-cms/core/schema-change";
-import type { SchemaDecision, SchemaIssue } from "@monti-cms/core/schema-edit";
+import type { SchemaDecision } from "@monti-cms/core/schema-edit";
 import { TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AdminLink } from "../../router";
@@ -171,7 +172,7 @@ export interface ReviewDialogProps {
 	settings?: readonly SettingChange[];
 	baseHash: string;
 	/** The problems of the last check, for the screen to mark. */
-	onIssues: (issues: readonly SchemaIssue[]) => void;
+	onIssues: (issues: readonly Issue[]) => void;
 	/** The file was saved (and applied). The screen reloads so everything shows the new schema. */
 	onSaved: (saved: SavedSchema) => void;
 	/** The file was saved but applying it to the database failed. */
@@ -269,7 +270,7 @@ export function ReviewDialog({
 					setSaveError({ message: t("save.applyFailed", { message: reason.message }), applyFailed: true });
 					onApplyFailed();
 				} else {
-					const issues = Array.isArray(reason.body.issues) ? (reason.body.issues as SchemaIssue[]) : [];
+					const issues = Array.isArray(reason.body.issues) ? (reason.body.issues as Issue[]) : [];
 					if (reason.code === "invalid_schema") onIssues(issues);
 					setSaveError({ message: reason.message });
 				}

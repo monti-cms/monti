@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { detectApp, detectAppDir, parseFrontMatterKeys } from "../init-detect";
+import { detectApp, parseFrontMatterKeys } from "../init-detect";
+import { detectAppDir } from "../next-app";
 import { fixtureApp, POST_MDX, SRC_APP } from "./init-helpers";
 
 describe("detectAppDir", () => {
@@ -13,13 +14,13 @@ describe("detectAppDir", () => {
 	};
 
 	it("prefers the folders that exist: src/app, then app", () => {
-		expect(detectAppDir(dirWith("src/app", "app"))).toEqual({ dir: "src/app", exists: true });
-		expect(detectAppDir(dirWith("app"))).toEqual({ dir: "app", exists: true });
+		expect(detectAppDir(dirWith("src/app", "app"))).toMatchObject({ dir: "src/app", exists: true });
+		expect(detectAppDir(dirWith("app"))).toMatchObject({ dir: "app", exists: true });
 	});
 
 	it("says where the folder would be made when there is none: src/app if only src/ exists", () => {
-		expect(detectAppDir(dirWith("src"))).toEqual({ dir: "src/app", exists: false });
-		expect(detectAppDir(dirWith())).toEqual({ dir: "app", exists: false });
+		expect(detectAppDir(dirWith("src"))).toMatchObject({ dir: "src/app", exists: false });
+		expect(detectAppDir(dirWith())).toMatchObject({ dir: "app", exists: false });
 	});
 
 	it("is what detectApp reports, so init and doctor look in the same place", () => {

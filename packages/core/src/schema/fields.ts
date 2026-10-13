@@ -46,15 +46,8 @@ interface BaseField {
 	 * Settings passed to the default input or the input `input` points to (e.g. recommended character count). The core does not read it. Only JSON values.
 	 */
 	readonly inputOptions?: Readonly<Record<string, string | number | boolean>>;
-	/** Only stored and validated; no input is drawn in the properties panel. The stored value is left as is. */
-	readonly hidden?: boolean;
 	/** The meaning of the field (`FieldRole`). Does not overlap within a collection. */
 	readonly role?: FieldRole;
-	/**
-	 * Tab name in which this field is drawn in the edit screen's properties area. A `tab` on a layout group (`layout`) takes precedence. Lets field groups provided by an extension
-	 * gather in their own tab even if the site does not write a layout. If absent, it is the default tab ("Properties").
-	 */
-	readonly tab?: string;
 }
 
 export interface TextField extends BaseField {
@@ -155,19 +148,19 @@ export interface ViewField {
 	/** Name above the screen. If absent, it is drawn without a name. */
 	readonly label?: string;
 	readonly description?: string;
-	readonly hidden?: boolean;
-	/** Tab to draw in (same as `BaseField.tab`). */
-	readonly tab?: string;
 	readonly localized?: undefined;
 	readonly required?: undefined;
 	readonly input?: undefined;
 }
 
+/** The key under which an item collection keeps its per-language values (`metadata.translations`). */
+export const RECORD_TRANSLATIONS_KEY = "translations";
+
 /**
  * Keys the core uses separately in metadata. They cannot be used as field names (`defineSite` blocks them).
  * `translations` holds the per-language values of an item collection.
  */
-export const RESERVED_METADATA_KEYS: readonly string[] = ["translations"];
+export const RESERVED_METADATA_KEYS: readonly string[] = [RECORD_TRANSLATIONS_KEY];
 
 /** Whether the field must not be empty (`required: true`). */
 export const isRequiredField = (field: { readonly required?: true }): boolean => field.required === true;
@@ -190,6 +183,28 @@ export type ValueField = TextField | RelationField | SelectField | MediaField;
 export type Field = ValueField | SlugField | ConditionalField | BacklinkField | ViewField;
 export type FieldKind = Field["kind"];
 
+/** What a kind of field is, asked in one place instead of by listing the kinds that are not (`slug`, `backlink` and `view` are the odd ones). */
+export interface FieldTraits {
+	/** The field has a value in the entry's metadata. A conditional field stores its choice; the address has its own column, a backlink is stored on the other record, a view stores nothing. */
+	readonly stored: boolean;
+	/** The value can be per language (`localized`). */
+	readonly localizable: boolean;
+	/** A person types or picks a value for it: it takes `required`, `input` and `inputOptions` (a backlink edits the other record, a view draws a screen). */
+	readonly entersValue: boolean;
+}
+
+/** The traits of each kind of field. */
+export const fieldTraits: Readonly<Record<FieldKind, FieldTraits>> = {
+	text: { stored: true, localizable: true, entersValue: true },
+	slug: { stored: false, localizable: false, entersValue: true },
+	relation: { stored: true, localizable: true, entersValue: true },
+	select: { stored: true, localizable: true, entersValue: true },
+	media: { stored: true, localizable: true, entersValue: true },
+	conditional: { stored: true, localizable: true, entersValue: true },
+	backlink: { stored: false, localizable: false, entersValue: false },
+	view: { stored: false, localizable: false, entersValue: false },
+};
+
 type Options<F extends { kind: string }> = Omit<F, "kind">;
 
 export const fields = {
@@ -209,6 +224,9 @@ export const fields = {
 			values,
 		}) as const,
 };
+
+/** Whether the field has a value in the entry's metadata (a value field, or a conditional field with its choice). */
+export const isStoredField = (field: Field): field is ValueField | ConditionalField => fieldTraits[field.kind].stored;
 
 /** Storage format of a field value. */
 export type StorageType = "string" | "string[]";

@@ -147,8 +147,8 @@ const fieldsOf = (site: Site, collection: string, translation = false): readonly
 	if (!site.isCollection(collection)) return [];
 	const fields = site.storedFields(collection as SchemaCollection);
 	if (!translation) return fields;
-	const { own, inherit } = site.localizedFieldNames(collection as SchemaCollection);
-	return fields.filter(({ name }) => own.includes(name) || inherit.includes(name));
+	const localized = site.localizedSet(collection as SchemaCollection);
+	return fields.filter(({ name }) => localized.has(name));
 };
 
 /** Form key holding the translation state. Starts with `$` so it never collides with a stored field name. The value is a JSON string. */
@@ -206,7 +206,6 @@ export function formFromEntry(site: Site, entry: EntryData): EntryForm {
 	const metadata = entry.working.metadata ?? {};
 	const form: EntryForm = { slug: entry.workingSlug ?? "", doc: entry.working.doc };
 	for (const stored of fieldsOf(site, entry.collection, isTranslationEntry(entry))) {
-		if (stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
 	Object.assign(form, recordTranslationsToForm(site, entry.collection, metadata));
@@ -242,7 +241,6 @@ function recordTranslationsToForm(
 export function formFromSourceMetadata(site: Site, collection: string, metadata: Record<string, unknown>): EntryForm {
 	const form: EntryForm = { slug: "", doc: emptyStoredDocument() };
 	for (const stored of fieldsOf(site, collection)) {
-		if (stored.field.hidden) continue;
 		form[stored.name] = toFormValue(stored, metadata[stored.name]);
 	}
 	return form;
@@ -292,7 +290,6 @@ export function metadataFromForm(
 	const values: Record<string, FormValue> = { ...form };
 
 	for (const { name, field, when } of fields) {
-		if (field.hidden) continue;
 		const active = !when || values[when.field] === when.value;
 		const value = values[name];
 		if (!active) {

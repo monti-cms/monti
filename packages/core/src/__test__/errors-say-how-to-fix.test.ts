@@ -107,9 +107,9 @@ describe("errors of core", () => {
 
 	it("a schema file with a wrong value lists the paths and ends with how to fix them", () => {
 		const message = messageOf(() => parseSchemaFile({ collections: { post: { kind: "nope" } } }, "monti.schema.ts"));
-		expect(message).toContain("monti.schema.ts is not a valid schema file");
+		expect(message).toContain("monti.schema.ts is not valid");
 		expect(message).toContain("collections.post");
-		expect(message).toContain("Fix: correct the lines above in monti.schema.ts");
-		expect(message).toContain("defineSchema");
+		expect(message).toContain("Fix: correct the lines above");
+		expect(message).toContain("monti doctor");
 	});
 });

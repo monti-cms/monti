@@ -1,3 +1,4 @@
+import { UUID_SOURCE } from "../config/rules";
 import type { CmsJsonValue, CmsMark, CmsNode } from "./types";
 
 /**
@@ -9,7 +10,7 @@ import type { CmsJsonValue, CmsMark, CmsNode } from "./types";
 /** How a text notation (MDX) writes an entry link: `[text](entry:<id>)`. The id is the only thing it carries. */
 export const ENTRY_LINK_PREFIX = "entry:";
 
-const ENTRY_LINK = /^entry:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const ENTRY_LINK = new RegExp(`^entry:(${UUID_SOURCE})$`, "i");
 
 /** The text-notation address of an entry link. */
 export const entryLinkHref = (entryId: string): string => `${ENTRY_LINK_PREFIX}${entryId}`;

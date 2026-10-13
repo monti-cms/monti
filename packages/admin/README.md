@@ -132,7 +132,7 @@ const components = {
 };
 ```
 
-Each field or `layout` group `tab` creates a tab in the properties panel (a `Properties` tab if none; the group's `tab` takes precedence). A view field
+Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
 (`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `CmsAdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/client` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
 uses `MediaThumbnail` and `useMediaUrl` from `@monti-cms/admin/media` (the search preview in the SEO extension `@monti-cms/seo` is an example).

@@ -4,7 +4,7 @@ import type {
 	BacklinkField,
 	Collection,
 	ConditionalField,
-	LayoutGroup,
+	PanelGroup,
 	RelationField,
 	SlugField,
 	ValueField,
@@ -40,7 +40,6 @@ import {
 	OrderedEntryList,
 } from "./field-inputs";
 import { FieldView } from "./field-views";
-import { isDrawnField, layoutGroupsOf } from "./layout-groups";
 import { MediaInput } from "./media-image-input";
 import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
@@ -60,12 +59,10 @@ interface SchemaFieldsProps {
 	onRegenerateSlug?: () => void;
 	/** Hint text of the slug input. Used when switching to show the value to be generated when empty. */
 	slugPlaceholder?: string;
-	/** Do not render this field (when the input lives elsewhere, like the title above the body on the edit screen). */
-	omit?: readonly string[];
 	/** Whether to show the always-visible description under the field. */
 	showDescriptions?: boolean;
 	/** Render only this group (splitting per tab in the edit screen's properties panel). All if absent. */
-	include?: (group: LayoutGroup) => boolean;
+	include?: (group: PanelGroup) => boolean;
 	/** Group title style. `plain` is a small title that does not collapse (the edit screen's properties panel). */
 	sections?: "collapsible" | "plain";
 	references?: SchemaFieldsReferences;
@@ -300,7 +297,7 @@ function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
 const ValueRow = memo(function ValueRow({ name, showDescriptions }: RowProps) {
 	const field = useField(name);
 	const registered = useRegisteredInput(field);
-	if (!field.definition || field.hidden) return null;
+	if (!field.definition) return null;
 	return registered ? (
 		<FormBoundRow field={field} showDescriptions={showDescriptions} />
 	) : (
@@ -461,7 +458,6 @@ const ViewRow = memo(function ViewRow({ name, showDescriptions }: RowProps) {
 	const form = useEntryFormSelector((state) => state.form);
 	const entry = useEntryFormSelector((state) => state.entry);
 	const field = site.schemaOf(collection).fields[name] as ViewField;
-	if (field.hidden) return null;
 	const view = <FieldView view={field.view} collection={collection} form={form} entry={entry} />;
 	return field.label ? (
 		<FieldRow id={`cms-${name}`} label={field.label} help={showDescriptions ? field.description : undefined}>
@@ -516,7 +512,6 @@ export function SchemaFields({
 	onSlugChange,
 	onRegenerateSlug,
 	slugPlaceholder,
-	omit = [],
 	showDescriptions = true,
 	include,
 	sections = "collapsible",
@@ -528,7 +523,6 @@ export function SchemaFields({
 	const schema = site.schemaOf(collection);
 
 	const renderField = (name: string) => {
-		if (omit.includes(name)) return null;
 		const field = schema.fields[name];
 		if (!field) return null;
 		switch (field.kind) {
@@ -554,15 +548,12 @@ export function SchemaFields({
 		}
 	};
 
-	const groups = layoutGroupsOf(site, collection).filter((group) => !include || include(group));
+	const groups = site.panelGroupsOf(collection).filter((group) => !include || include(group));
 
 	return (
 		<>
 			{groups.map((group, index) => {
-				const visible = group.fields.filter((name) => {
-					const field = schema.fields[name];
-					return field && !omit.includes(name) && isDrawnField(field);
-				});
+				const visible = group.fields;
 				if (visible.length === 0) return null;
 				const key = `${group.group ?? "group"}-${index}`;
 				if (!group.group) {

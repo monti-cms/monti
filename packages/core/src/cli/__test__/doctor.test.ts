@@ -56,7 +56,7 @@ describe("monti doctor on a healthy project", () => {
 	it("passes every check, prints no warning, and exits 0", async () => {
 		healthyEnv();
 		const dir = project();
-		expect(await dbSetup({ cwd: dir, envFiles: [], log: () => undefined })).toBe(true);
+		expect(await dbSetup({ cwd: dir, envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
 
 		const { code, report } = await doctor(dir);
 		expect(report.checks.filter((check) => check.status === "fail" || check.status === "warn")).toEqual([]);
@@ -89,10 +89,21 @@ describe("monti doctor on a healthy project", () => {
 		expect(byId(report, "auth/admins").message).toContain("github:12345678");
 	});
 
+	it("does not assume a dev port or an empty NODE_ENV when SITE_URL is not set", async () => {
+		healthyEnv({ SITE_URL: "", NODE_ENV: "" });
+		const { report } = await doctor(project());
+		const text = JSON.stringify(report);
+		expect(text).not.toContain(":3000");
+		expect(text).not.toContain('NODE_ENV is \\"\\"');
+		expect(byId(report, "auth/callback-url").message).toContain("<your dev URL>/api/monti/auth/callback/github");
+		expect(byId(report, "config/automatic").message).toContain("NODE_ENV is not set");
+		expect(byId(report, "config/automatic").message).toMatch(/Trust host: on \(login links/);
+	});
+
 	it("says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
 		healthyEnv();
 		const dir = project();
-		await dbSetup({ cwd: dir, envFiles: [], log: () => undefined });
+		await dbSetup({ cwd: dir, envFiles: [], log: () => undefined, error: () => undefined });
 		await pool.query(`INSERT INTO "${schemaName}".cms_migrations (name) VALUES ('0023_entry_changed_by')`);
 
 		const { code, report } = await doctor(dir);

@@ -15,6 +15,7 @@ import {
 	type FieldKindName,
 	type FieldPlace,
 	KINDS_WITH_SETTINGS,
+	nameProblem,
 	newField,
 	VALUE_KINDS,
 } from "./schema-model";
@@ -41,8 +42,7 @@ export function AddFieldDialog({
 	const [pending, setPending] = useState(false);
 	const kinds = place.branch ? VALUE_KINDS : FIELD_KINDS;
 	const taken = allFieldNames(editing.collection);
-	const problem =
-		name === "" ? "empty" : taken.includes(name) ? "taken" : /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) ? null : "pattern";
+	const problem = nameProblem(name, taken);
 
 	const submit = () => {
 		if (problem) return;

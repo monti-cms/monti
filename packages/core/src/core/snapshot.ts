@@ -9,7 +9,8 @@ import {
 import type { CmsImageSource } from "../doc/types";
 import { importText } from "../format/convert";
 import { type FormatRegistry, NO_FORMATS } from "../format/registry";
-import { fieldValueError, RECORD_TRANSLATIONS_KEY } from "../schema/derive";
+import { fieldValueError } from "../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../schema/fields";
 import type { Site } from "../site";
 import { checkDocument, isEmptyDocument } from "./body-check";
 import { computeContentHash } from "./content-hash";
