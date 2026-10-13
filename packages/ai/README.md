@@ -136,19 +136,12 @@ const unusedAddress = defineValidator({
 });
 ```
 
-## Stored service keys
+## Service keys
 
-The service keys entered on the AI screen are kept encrypted in the `settings` collection of the plugin storage. The plugin never sees the app's one secret (`MONTI_SECRET`): the CMS instance derives
-a key for the plugin from it and the plugin name (`cms.secrets("ai")`, HKDF-SHA256, `monti:plugin:ai:v1`), so the key cannot be used for another plugin's data
-and other plugins cannot read these keys. See "Plugin secrets" in the core README. Stored values look like `mk1:<key id>:<iv>:<tag>:<body>`.
+A connection does not hold a key. It refers to a key in the central API key store (Settings > API keys, `cms.apiKeys` in the core), which keeps the keys encrypted with the server `secret`. In the connection form you either use a saved key or enter a new one; a new key is saved into the store, named after the connection ("OpenRouter", then "OpenRouter 2" if that name is taken), and the connection keeps its id. The value never goes back to the browser, only the key's name and its last four characters. Connections that use the same key share it, so replacing the value in the API keys tab changes every connection at once, and deleting a key that connections use asks first and lists them (they stop working until another key is chosen). If the address of a connection changes and the form says nothing about the key, the key is not carried over to the new address.
 
-- **Upgrade from before per-plugin keys**: keys stored by earlier versions (`v1:<iv>:<tag>:<body>`, encrypted under `sha256("cms-ai-key:" + secret)`) keep
-  working with no step from you; set `MONTI_SECRET` to the value of the old `CMS_SECRET` (or list that value in `previousSecrets`). The plugin reads them with the old derivation and re-encrypts them in the new format in two
-  places: on the next save of any AI connection (all stored keys are re-encrypted together), and on `monti migrate` (a one-time upgrade of whatever is left;
-  running it again changes nothing). Nothing needs to be entered again.
-- **Changing the secret**: put the new value in `MONTI_SECRET` (or `secret` of `defineConfig`) and keep the old one in `previousSecrets` in `monti.config.ts`. Stored keys (new or old format) still
-  decrypt with the old secret, and `monti migrate` or the next save re-encrypts them with the new one. Drop the old value from `previousSecrets` after that.
-  Without `previousSecrets`, keys made under the old secret can no longer be read and have to be entered again.
+- **Upgrade**: `monti db:migrate` moves the keys that earlier versions stored inside the connections (the per-plugin format `mk1:...` and the oldest `v1:...` one) into the key store: one key per distinct value, named after the first connection that used it, with connections that shared a value sharing the key. It can be run again; a value already in the store is reused. A key that can no longer be decrypted (the `secret` changed without `previousSecrets`) is skipped with a warning, and its connection needs a key chosen again.
+- **Changing the secret**: see "Plugin secrets" and "API key store" in the core README.
 
 ## Data moved to the plugin storage
 

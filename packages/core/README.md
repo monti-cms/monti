@@ -483,7 +483,7 @@ When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.con
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`, and `export const generateMetadata = () => cmsAdminMetadata(cms);` in the layout file (from `@monti-cms/nextjs/admin`) |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass a `format`, for example `"mdx"` with `@monti-cms/mdx`, to also get the body as text in `entry.body`, "Formats") |
 | Public media and links | `entry.refs` (the URLs of the media and the addresses of the internal links of `entry.doc`, drawn by `<CmsContent cms={cms} entry={entry} />`), `cms.read.mediaUrl(mediaId)` |
-| Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
+| Stores and settings | `cms.store()`, `cms.contentService()`, `cms.bulkService()`, `cms.mediaStore()`, `cms.storage(pluginName)`, `cms.secrets(pluginName)`, `cms.apiKeys`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`, `cms.isMediaConfigured` |
 | Scripts and the command line | `cms.migrate()`, `cms.close()` |
 | Plugin routes | `adminRoute(async ({ request, params, auth, cms }) => …)`: the route gets the instance that serves it |
 | The site | `cms.site`: collections and their rules, locales, URLs, blocks, code block settings, admin addresses and language ("The site config belongs to the instance") |
@@ -1158,6 +1158,24 @@ secrets.deriveKey("signing");               // a 32-byte key for another purpose
 - A plugin that stored values in its own format before this API can declare it: `cms.secrets("my-plugin", { legacy: { prefix: "v1", domain: "my-key:" } })` makes `decrypt` also read `v1:<iv>:<tag>:<body>` values encrypted under `sha256("my-key:" + secret)`. The legacy format is read-only; `encrypt` never uses it.
 - `cms.server` is the server config without `secret` and `previousSecrets`.
 - Changing `MONTI_SECRET` also changes the login session key, so everyone signs in again once. `previousSecrets` only keeps stored values readable; it does not keep old login sessions.
+
+#### API key store
+
+Keys for outside services (an AI provider, a spell checker, a GitHub token) are kept once, in `cms.apiKeys`, not by each plugin. Each key has a name, is encrypted with the core's own key (`cms.secrets("core-keys")`) in the plugin storage scope `core-keys`, and is shown in the admin (Settings > API keys) by its name and last four characters only.
+
+```ts
+const key = await cms.apiKeys.add({ name: "Anthropic", value });          // or addNamed({ baseName: "Anthropic", value }) -> "Anthropic 2" when taken
+const id = await cms.apiKeys.choose(choice, { baseName: "Anthropic" });    // what a form sent: { use: "saved", keyId } | { use: "new", value } | { use: "none" }
+const value = await cms.apiKeys.read(id);                                  // server only; null if the key was deleted or cannot be decrypted
+await cms.apiKeys.setUses("my-plugin", [{ slot: "main", keyId: id, label: "My feature" }]); // where the plugin uses keys, replaced as a whole
+```
+
+- A plugin keeps the key's **id**, never the value, and calls `read` when it calls the service. Renaming or replacing the value keeps the id, so everything that uses the key follows.
+- `setUses` is how the admin knows what a key is used by. Call it whenever the places change (a connection is saved or deleted); the label is shown as written, so write it in the admin's language.
+- Deleting a key through the admin API (`DELETE /v1/api-keys/<id>?expectedVersion=`) answers `409 key_in_use` with `details.uses` while something uses it; `&force=true` deletes it anyway, and what used it finds no key and stops working. `cms.apiKeys.remove` always deletes.
+- Without a server `secret` nothing can be saved (`secret_not_configured`); keys made under a secret that is no longer listed read as `readable: false`.
+- Routes: `GET/POST /v1/api-keys`, `PATCH/DELETE /v1/api-keys/<id>`. No response contains a value.
+- A plugin that stored keys itself moves them in its `migrate(storage, cms)` hook (see the AI plugin's `moveKeysToStore`): reuse a key with the same value instead of adding a duplicate, and keep the step safe to repeat.
 
 ### Plugin storage
 
