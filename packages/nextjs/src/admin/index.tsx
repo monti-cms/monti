@@ -82,8 +82,9 @@ export type CmsAdminPageProps = Pick<AdminPageProps, "params" | "searchParams">;
  * A single admin screen. Rendered by the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media
- * - `/admin/settings/<tab>` Settings: schema (`collections`, `locales`, `site`, `admin`, `file`), `templates`, `events`, and one tab per plugin page (e.g. the AI plugin's `/admin/settings/ai`)
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` event log
+ * - `/admin/settings/<tab>` Settings: the schema file (`collections`, `locales`, `site`, `admin`, `file`)
+ * - `/admin/tools/<path>` one page per plugin `nav` item (e.g. the AI plugin's `/admin/tools/ai`)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */
 export function CmsAdminPage({ cms, ...props }: CmsAdminPageProps & { cms: Cms }) {

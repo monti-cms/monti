@@ -3,7 +3,7 @@ import { defineMessages } from "@monti-cms/core";
 /** Messages for the events screen. */
 export const eventsMessages = defineMessages("cms-admin.events", {
 	en: {
-		title: "Events",
+		title: "Event log",
 		"list.label": "Events",
 		"list.loadFailed": "Couldn't load the event deliveries.",
 		"list.emptyYet": "No events yet",
@@ -56,7 +56,7 @@ export const eventsMessages = defineMessages("cms-admin.events", {
 		"dismiss.failed": "Couldn't dismiss.",
 	},
 	ko: {
-		title: "이벤트",
+		title: "이벤트 기록",
 		"list.label": "이벤트",
 		"list.loadFailed": "이벤트 전달 목록을 불러오지 못했습니다.",
 		"list.emptyYet": "아직 이벤트가 없습니다",

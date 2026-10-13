@@ -29,6 +29,7 @@ import {
 	ENTRIES_KEY,
 	type EntriesPage,
 	entriesKey,
+	fetchFolders,
 	foldersKey,
 	type OptimisticOp,
 } from "./shared/list-cache";
@@ -111,7 +112,7 @@ function useEntriesData(state: ListState, mode: ListMode) {
 
 	const foldersQuery = useQuery({
 		queryKey: foldersKey(collection),
-		queryFn: ({ signal }) => cmsFetch<Folder[]>(site, cmsApiUrl(`/v1/folders?collection=${collection}`), { signal }),
+		queryFn: ({ signal }) => fetchFolders(site, collection, signal),
 		enabled: !isTrash,
 	});
 	const folders = useMemo(() => (isTrash ? [] : (foldersQuery.data ?? [])), [isTrash, foldersQuery.data]);

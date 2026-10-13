@@ -233,7 +233,7 @@ function Sidebar({
 				<div
 					data-sidebar="sidebar"
 					data-slot="sidebar-inner"
-					className="flex size-full flex-col bg-cms-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-cms-sidebar-border"
+					className="group-data-[ flex size-full flex-col bg-cms-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-cms-sidebar-border"
 				>
 					{children}
 				</div>
@@ -296,7 +296,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
 		<main
 			data-slot="sidebar-inset"
 			className={cn(
-				"relative flex w-full flex-1 flex-col bg-cms-background md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm",
+				"md:peer-data-[ relative flex w-full flex-1 flex-col bg-cms-background md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl",
 				className,
 			)}
 			{...props}
@@ -342,7 +342,7 @@ function SidebarSeparator({ className, ...props }: React.ComponentProps<typeof S
 		<Separator
 			data-slot="sidebar-separator"
 			data-sidebar="separator"
-			className={cn("mx-2 w-auto bg-cms-sidebar-border", className)}
+			className={cn("mx-2 cms-horizontal:w-auto bg-cms-sidebar-border", className)}
 			{...props}
 		/>
 	);

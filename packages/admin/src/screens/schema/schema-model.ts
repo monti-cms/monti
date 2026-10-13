@@ -117,6 +117,23 @@ export function settingChanges(base: Obj, draft: Obj): SettingChange[] {
 	return changes;
 }
 
+/**
+ * How many things differ between the saved file and the draft: each collection that was added, removed or edited, each of the language settings
+ * (`locales`, `defaultLocale`, `timeZone`) and each changed `site` or `admin` setting. The number shown as unsaved changes.
+ */
+export function changeCount(base: Obj, draft: Obj): number {
+	const before = collectionsOf(base);
+	const after = collectionsOf(draft);
+	let count = 0;
+	for (const name of new Set([...Object.keys(before), ...Object.keys(after)])) {
+		if (!sameJson(before[name], after[name])) count += 1;
+	}
+	for (const key of ["locales", "defaultLocale", "timeZone"]) {
+		if (!sameJson(base[key], draft[key])) count += 1;
+	}
+	return count + settingChanges(base, draft).length;
+}
+
 /** `record` with the key `from` named `to`, in the same place. */
 export function renameKey<T>(record: Record<string, T>, from: string, to: string): Record<string, T> {
 	return Object.fromEntries(Object.entries(record).map(([key, value]) => [key === from ? to : key, value]));
@@ -384,6 +401,16 @@ export function removeField(collection: Obj, place: FieldPlace, name: string): O
 
 export function moveField(collection: Obj, place: FieldPlace, name: string, delta: number): Obj {
 	return updateFields(collection, place, (fields) => moveKey(fields, name, delta));
+}
+
+/** Puts `name` where `over` is (a field dropped on another one of the same list); any other name leaves the list as it is. */
+export function reorderField(collection: Obj, place: FieldPlace, name: string, over: string): Obj {
+	return updateFields(collection, place, (fields) => {
+		const keys = Object.keys(fields);
+		const from = keys.indexOf(name);
+		const to = keys.indexOf(over);
+		return from < 0 || to < 0 || from === to ? fields : moveKey(fields, name, to - from);
+	});
 }
 
 /**

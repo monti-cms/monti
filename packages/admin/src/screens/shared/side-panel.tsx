@@ -15,7 +15,7 @@ export const SIDE_PANEL_WIDTH = "w-[22rem]";
  * on wide screens it sits beside the list at the same width as `SIDE_PANEL_WIDTH` (written literally so Tailwind can read it).
  */
 export const SIDE_PANEL_DOCK =
-	"absolute inset-y-0 right-0 z-20 w-full shadow-lg sm:w-[22rem] lg:static lg:shrink-0 lg:shadow-none";
+	"absolute inset-y-0 right-0 z-20 w-full shadow-[0_1px_2px_rgba(0,0,0,0.1)] sm:w-[22rem] lg:static lg:shrink-0 lg:shadow-none";
 
 /** Background of the item currently open in the list (open in the right slot or edit slot). */
 export const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";

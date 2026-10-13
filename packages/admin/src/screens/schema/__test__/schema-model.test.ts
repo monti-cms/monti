@@ -4,6 +4,7 @@ import {
 	addField,
 	addOption,
 	allowedOf,
+	changeCount,
 	collectionsOf,
 	FIELD_KEY_ORDER,
 	fieldProblems,
@@ -19,6 +20,7 @@ import {
 	removeOption,
 	renameField,
 	renameOption,
+	reorderField,
 	setProp,
 	setTitleField,
 	titleFieldName,
@@ -223,5 +225,40 @@ describe("schema model", () => {
 		const chain = recordRename(first, { kind: "field", collection: "post", from: "b", to: "c" });
 		expect(chain).toEqual([{ kind: "field", collection: "post", from: "a", to: "c" }]);
 		expect(recordRename(chain, { kind: "field", collection: "post", from: "c", to: "a" })).toEqual([]);
+	});
+});
+
+describe("reorderField", () => {
+	it("puts a field where the one it is dropped on is, and keeps the others in order", () => {
+		const collection = post();
+		const order = Object.keys(fieldsOf(collection));
+		const moved = reorderField(collection, {}, order[0] as string, order[2] as string);
+		expect(Object.keys(fieldsOf(moved))).toEqual([order[1], order[2], order[0], ...order.slice(3)]);
+		const back = reorderField(moved, {}, order[0] as string, order[1] as string);
+		expect(Object.keys(fieldsOf(back))).toEqual([order[0], order[1], order[2], ...order.slice(3)]);
+	});
+
+	it("leaves the list alone for the same field or a name that is not in it", () => {
+		const collection = post();
+		const first = Object.keys(fieldsOf(collection))[0] as string;
+		expect(reorderField(collection, {}, first, first)).toEqual(collection);
+		expect(reorderField(collection, {}, first, "nope")).toEqual(collection);
+	});
+});
+
+describe("changeCount", () => {
+	const file = (): Obj => ({
+		collections: { post: post() },
+		locales: [{ code: "en", name: "English" }],
+		defaultLocale: "en",
+	});
+	it("is zero for an untouched draft and counts each edited part once", () => {
+		expect(changeCount(file(), file())).toBe(0);
+		const edited = file();
+		edited.collections = { post: { ...post(), label: "Article" }, memo: post() };
+		edited.timeZone = "Asia/Seoul";
+		edited.site = { name: "Mine", home: "/" };
+		// post edited, memo added, time zone, two site settings
+		expect(changeCount(file(), edited)).toBe(5);
 	});
 });

@@ -83,7 +83,7 @@ function SiteCalloutView() {
 
 1. In `monti.config.ts`, set `enabled: true` and put your own `repo` (and `folder`, `branch`, `mode`) in `targets`. The default file path is `{collection}/{slug}.{locale}.{ext}` under the folder, for example `content/post/hello.ko.mdx`.
 2. Run `pnpm db:migrate`, make sure `MONTI_SECRET` is set (the token is saved encrypted with a key derived from it), and start the app.
-3. Open `/studio/settings/git-sync`, Settings tab: save a GitHub token (a fine-grained token with read and write access to Contents and Pull requests on that repo). To receive pushes, add a webhook in the repo (Settings, Webhooks) with the payload URL shown there, content type `application/json`, the secret you saved, and the push event. The site must be reachable from GitHub for that (a tunnel works for local development).
+3. Open `/studio/tools/git-sync`, Settings tab: save a GitHub token (a fine-grained token with read and write access to Contents and Pull requests on that repo). To receive pushes, add a webhook in the repo (Settings, Webhooks) with the payload URL shown there, content type `application/json`, the secret you saved, and the push event. The site must be reachable from GitHub for that (a tunnel works for local development).
 4. Run `pnpm exec monti git-sync:push --all` once to write every published entry to the repo. From then on a publish commits its file, and a change pushed to the repo (or "Pull now", or `pnpm exec monti git-sync:pull`) comes back to the site.
 
 The package README has the file format, the conflict screen and the pull request mode.

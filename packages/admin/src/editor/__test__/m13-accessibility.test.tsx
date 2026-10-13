@@ -145,8 +145,8 @@ describe("editor accessibility", () => {
 		expect(screen.getByRole("button", { name: "문서 하위 폴더 접기" }).getAttribute("aria-expanded")).toBe("true");
 		fireEvent.click(await screen.findByRole("button", { name: "하위" }));
 		expect(onSelectFolder).toHaveBeenCalledWith("folder-2");
-		// The top level named after the collection, not an uncategorized bucket, is the tree root.
-		fireEvent.click(screen.getByRole("button", { name: "메모" }));
+		// The tree starts with "All": the collection's top level, not an uncategorized bucket.
+		fireEvent.click(screen.getByRole("button", { name: "전체" }));
 		expect(onSelectFolder).toHaveBeenCalledWith("all");
 
 		const folderButton = screen.getByRole("button", { name: "문서" });
@@ -162,13 +162,14 @@ describe("editor accessibility", () => {
 		expect(screen.getByRole("menuitem", { name: /삭제/ })).toBeTruthy();
 	});
 
-	it("shows only the collection's root item when there are no folders, with the add button and no empty message", () => {
+	it("shows only the add button under the collection when there are no folders, and no empty message", () => {
 		render(
 			<SidebarProvider>
 				<AdminSidebar activeNav="memo" folderNav={folderNav([], fakeActions())} />
 			</SidebarProvider>,
 		);
-		expect(screen.getByRole("button", { name: "메모" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "메모" })).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
 		expect(screen.getByRole("button", { name: "폴더 추가" })).toBeTruthy();
 		expect(screen.queryByText(/폴더가 없습니다/)).toBeNull();
 	});

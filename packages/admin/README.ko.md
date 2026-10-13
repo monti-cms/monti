@@ -2,9 +2,9 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·휴지통·로그인·설정 화면을 준다(설정에 스키마 편집기·본문 템플릿·이벤트 기록이 `/admin/settings/<탭>`으로 들어 있다).
+`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·휴지통·로그인·설정 화면을 준다(설정에 스키마 편집기가 `/admin/settings/<탭>`으로 들어 있고, 템플릿·이벤트 기록·플러그인 페이지는 각자 주소가 있다).
 프레임워크에 묶이지 않는다. Next.js에서 아무것도 가져오지 않고, 라우터는 받은 어댑터로만 닿는다("라우터 어댑터"). 지금 지원하는 호스트는 `@monti-cms/nextjs`를 통한 Next.js(App Router)다.
-플러그인(예: `@monti-cms/ai`)이 설정 탭·필드 옆 버튼·편집 화면 동작을 더한다.
+플러그인(예: `@monti-cms/ai`)이 도구 페이지·필드 옆 버튼·편집 화면 동작을 더한다.
 화면은 본체의 관리자 API(`/api/monti/v1/*`)만 부른다. 설치하지 않고 같은 API로 화면을 직접 만들어도 된다.
 
 ## 붙이기
@@ -59,7 +59,7 @@ export function SiteAdminComponents({ children }) {
 
 ### 아이콘
 
-블록 정의의 `editor.icon`, 플러그인 설정 탭의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 lucide 이름이다.
+블록 정의의 `editor.icon`, 플러그인 페이지의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 lucide 이름이다.
 관리자 패키지에는 자주 쓰는 아이콘만 있으므로, 다른 이름은 같은 공급자의 `icons`로 등록한다. 없는 이름은 기본 아이콘(퍼즐·플러그 등)으로
 보인다.
 
@@ -141,14 +141,14 @@ const components = {
 
 ## 탐색과 설정
 
-사이드바는 세 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어), **설정** 항목 하나, 맨 아래에 개수 배지와 함께 고정된 **휴지통**. 설정은 영역마다 탭이 있는 한 페이지이고, 탭마다 주소가 따로 있다.
+사이드바는 네 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어와 템플릿. 폴더가 있는 컬렉션은 열려 있는 동안 그 아래에 폴더 트리가 펼쳐진다), **도구**(플러그인 페이지마다 하나, 그다음 실패한 전달이 있을 때만 개수 배지가 붙는 이벤트 기록), 개수가 붙는 **휴지통**, 그리고 **설정**과 테마 전환이 있는 맨 아래 줄. 화면마다 주소가 따로 있다.
 
-| 탭 | 주소 | 내용 |
+| 화면 | 주소 | 내용 |
 |---|---|---|
-| 컬렉션·언어·사이트·관리자·파일 | `<관리자 경로>/settings/collections`(`locales`·`site`·`admin`·`file`) | 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
-| 템플릿 | `<관리자 경로>/settings/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
-| 이벤트 기록 | `<관리자 경로>/settings/events` | 이벤트 전달. 실패 개수를 탭과 사이드바 설정 항목에 배지로 보인다(실패가 있을 때만). |
-| 플러그인 페이지마다 하나 | `<관리자 경로>/settings/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`, `git-sync`). |
+| 컬렉션·언어·사이트·관리자·파일 | `<관리자 경로>/settings/collections`(`locales`·`site`·`admin`·`file`) | 설정, 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
+| 템플릿 | `<관리자 경로>/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
+| 이벤트 기록 | `<관리자 경로>/events` | 이벤트 전달. |
+| 플러그인 페이지마다 하나 | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`, `git-sync`). |
 
 `<관리자 경로>/settings`는 첫 탭으로 간다.
 
@@ -307,12 +307,12 @@ export const POST = textCheckRoute({
 
 ```ts
 export default defineAdminPlugin({
-	pages: { my: MyPage }, // 설정의 "my" 탭: <관리자 경로>/settings/my(기본 /admin/settings/my, 클라이언트 컴포넌트). 로그인 확인은 관리자 화면이 한다
+	pages: { my: MyPage }, // 도구의 "my" 페이지: <관리자 경로>/tools/my(기본 /admin/tools/my, 클라이언트 컴포넌트). 로그인 확인은 관리자 화면이 한다
 	Provider: MyProvider, // 관리자 화면 전체를 감싼다. 안에서 CmsAdminComponentsProvider로 입력·편집 화면 확장을 더한다
 });
 ```
 
-페이지는 클라이언트 컴포넌트이고 설정 페이지의 탭으로 나온다. 탭 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바·제목·탭 줄은 설정 페이지가 이미 둔다). `SettingsPanel`(`@monti-cms/admin/kit`)은 얇은 도구 줄에 개수와 동작을 두는 선택 본문이다. 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
+페이지는 클라이언트 컴포넌트이고 사이드바 도구 묶음의 항목으로 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바와 제목은 관리자가 이미 둔다). `SettingsPanel`(`@monti-cms/admin/kit`)은 얇은 도구 줄에 개수와 동작을 두는 선택 본문이다. 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
 
 ```tsx
 "use client";
@@ -334,7 +334,7 @@ export function StatsPage() {
 자리에는 `SlotRegistryProvider`(`@monti-cms/admin/slots`)로 동작을 붙인다.
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
-`cn`, 확인 대화상자(`useConfirm`), 설정 탭 본문(`SettingsPanel`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
+`cn`, 확인 대화상자(`useConfirm`), 페이지 본문(`SettingsPanel`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
 | 진입점 | 내용 |

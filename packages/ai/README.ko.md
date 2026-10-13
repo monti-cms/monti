@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core`의 AI 플러그인. 이름으로 부르는 AI 기능(생성·판단), 필드 옆 AI 버튼, 번역본 편집기의 AI 번역,
-관리자 설정 페이지의 AI 탭(`<관리자 경로>/settings/ai`, 기본 `/admin/settings/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
+관리자 도구의 AI 페이지(`<관리자 경로>/tools/ai`, 기본 `/admin/tools/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
 이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `aiPlugin()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").

@@ -1,13 +1,13 @@
 "use client";
 
 import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
 import { cmsFetch } from "../admin-api";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { countFailedEvents, EVENTS_COUNT_KEY } from "../events/events-api";
-import { TRASH_COUNT_KEY } from "./list-cache";
+import { fetchFolders, foldersKey, TRASH_COUNT_KEY } from "./list-cache";
 import { sharedMessages } from "./messages";
 
 interface AdminNavContextValue {
@@ -16,13 +16,15 @@ interface AdminNavContextValue {
 	refreshTrashCount: () => void;
 	/** Number of failed and dead event deliveries. null before loading or when unavailable. */
 	eventsCount: number | null;
+	/** How many folders each collection has (a collection whose folders are not loaded yet is missing). The sidebar shows a chevron for a collection that has some. */
+	folderCounts: Readonly<Record<string, number>>;
 }
 
 const AdminNavContext = createContext<AdminNavContextValue | null>(null);
 
 /** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export const useAdminNav = (): AdminNavContextValue =>
-	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {}, eventsCount: null };
+	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {}, eventsCount: null, folderCounts: {} };
 
 async function countTrash(site: Site): Promise<number> {
 	const totals = await Promise.all(
@@ -46,13 +48,30 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 		queryFn: () => countFailedEvents(site),
 		retry: false,
 	});
+	// The sidebar needs to know which collections have folders, not only the open one. The list screen reads the same cache entries.
+	const folderCounts = useQueries({
+		queries: site.COLLECTIONS.map((collection) => ({
+			queryKey: foldersKey(collection),
+			queryFn: ({ signal }: { signal: AbortSignal }) => fetchFolders(site, collection, signal),
+			retry: false,
+		})),
+		combine: (results) =>
+			Object.fromEntries(
+				site.COLLECTIONS.flatMap((collection, index) => {
+					const folders = results[index]?.data;
+					return folders ? [[collection, folders.length] as const] : [];
+				}),
+			),
+	});
+	const folderKey = JSON.stringify(folderCounts);
 	const refreshTrashCount = useCallback(
 		() => void queryClient.invalidateQueries({ queryKey: TRASH_COUNT_KEY }),
 		[queryClient],
 	);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `folderKey` is the stable identity of `folderCounts`
 	const nav = useMemo(
-		() => ({ trashCount: data ?? null, refreshTrashCount, eventsCount: eventsCount ?? null }),
-		[data, refreshTrashCount, eventsCount],
+		() => ({ trashCount: data ?? null, refreshTrashCount, eventsCount: eventsCount ?? null, folderCounts }),
+		[data, refreshTrashCount, eventsCount, folderKey],
 	);
 	return <AdminNavContext.Provider value={nav}>{children}</AdminNavContext.Provider>;
 }
@@ -66,6 +85,7 @@ export function AdminShell({
 	count,
 	sidebar,
 	headerActions,
+	bare,
 	children,
 }: {
 	title: ReactNode;
@@ -73,6 +93,8 @@ export function AdminShell({
 	count?: number;
 	sidebar: AdminSidebarProps;
 	headerActions?: ReactNode;
+	/** The screen draws its own page header (the Settings page): the shell then has no title bar of its own. */
+	bare?: boolean;
 	children: ReactNode;
 }) {
 	const t = useTranslator(sharedMessages);
@@ -80,7 +102,7 @@ export function AdminShell({
 	if (!nav) {
 		return (
 			<AdminNavProvider>
-				<AdminShell title={title} count={count} sidebar={sidebar} headerActions={headerActions}>
+				<AdminShell title={title} count={count} sidebar={sidebar} headerActions={headerActions} bare={bare}>
 					{children}
 				</AdminShell>
 			</AdminNavProvider>
@@ -89,18 +111,25 @@ export function AdminShell({
 
 	return (
 		<SidebarProvider className="h-svh overflow-hidden">
-			<AdminSidebar {...sidebar} trashCount={nav.trashCount} eventsCount={nav.eventsCount} />
+			<AdminSidebar
+				{...sidebar}
+				trashCount={nav.trashCount}
+				eventsCount={nav.eventsCount}
+				folderCounts={nav.folderCounts}
+			/>
 			<SidebarInset className="min-w-0 overflow-hidden">
-				<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
-					<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-1 text-cms-muted-foreground md:hidden" />
-					<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-[15px]">
-						<span className="truncate">{title}</span>
-						{count !== undefined && (
-							<span className="tabular font-normal text-cms-muted-foreground text-sm">{count}</span>
-						)}
-					</h1>
-					<div className="flex items-center gap-2">{headerActions}</div>
-				</header>
+				{!bare && (
+					<header className="flex h-13 shrink-0 items-center gap-3 border-b px-4 lg:px-5">
+						<SidebarTrigger aria-label={t("shell.openSidebar")} className="-ml-1 text-cms-muted-foreground md:hidden" />
+						<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-[15px]">
+							<span className="truncate">{title}</span>
+							{count !== undefined && (
+								<span className="tabular font-normal text-cms-muted-foreground text-sm">{count}</span>
+							)}
+						</h1>
+						<div className="flex items-center gap-2">{headerActions}</div>
+					</header>
+				)}
 				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>

@@ -507,7 +507,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	);
 	if (answers.gitSync) {
 		todo.push(
-			`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/settings/git-sync to save the GitHub token.`,
+			`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/tools/git-sync to save the GitHub token.`,
 		);
 	}
 	const siteBase = answers.siteUrl.replace(/\/+$/, "");

@@ -59,7 +59,7 @@ import {
 	withKind,
 } from "./schema-model";
 
-interface CollectionEditing {
+export interface CollectionEditing {
 	readonly collectionName: string;
 	readonly collection: Obj;
 	/** Changes the collection (the screen puts the result into the file). */
@@ -162,7 +162,13 @@ function OptionsEditor({
 }
 
 /** `inputOptions`: a JSON object of text, number and flag values, checked when the writer leaves the box. */
-function InputOptionsEditor({ value, onChange }: { value: unknown; onChange: (value: Obj | undefined) => void }) {
+export function InputOptionsEditor({
+	value,
+	onChange,
+}: {
+	value: unknown;
+	onChange: (value: Obj | undefined) => void;
+}) {
 	const t = useTranslator(schemaMessages);
 	const id = useId();
 	const { disabled } = useSchemaEdit();
@@ -202,7 +208,7 @@ function InputOptionsEditor({ value, onChange }: { value: unknown; onChange: (va
 }
 
 /** What the kind of the field adds: its own options. */
-function KindOptions({
+export function KindOptions({
 	name,
 	field,
 	editing,
@@ -229,7 +235,7 @@ function KindOptions({
 		case "text": {
 			const fill = field.fillFromBody;
 			return (
-				<div className="grid gap-3 sm:grid-cols-2">
+				<div className="flex flex-col gap-5">
 					<FlagSwitch
 						label={t("field.multiline")}
 						checked={field.multiline === true}
@@ -276,7 +282,7 @@ function KindOptions({
 				.filter(([, item]) => item.kind === "text")
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<div className="grid gap-3 sm:grid-cols-2">
+				<div className="flex flex-col gap-5">
 					<Pick
 						label={t("field.slugFrom")}
 						hint={t("field.slugFromHint")}
@@ -290,7 +296,7 @@ function KindOptions({
 		}
 		case "relation":
 			return (
-				<div className="grid gap-3 sm:grid-cols-2">
+				<div className="flex flex-col gap-5">
 					<Pick
 						label={t("field.relationTo")}
 						value={typeof field.to === "string" ? field.to : ""}
@@ -332,7 +338,7 @@ function KindOptions({
 			return <OptionsEditor field={field} fieldName={name} editing={editing} change={change} />;
 		case "media":
 			return (
-				<div className="grid gap-3 sm:grid-cols-2">
+				<div className="flex flex-col gap-5">
 					<Pick
 						label={t("field.accept")}
 						value={(field.accept as string | undefined) ?? "image"}
@@ -352,7 +358,7 @@ function KindOptions({
 				.filter(([, item]) => item.kind === "relation" && item.many === true)
 				.map(([key]) => ({ value: key, label: key }));
 			return (
-				<div className="grid gap-3 sm:grid-cols-2">
+				<div className="flex flex-col gap-5">
 					<Pick
 						label={t("field.backlinkFrom")}
 						value={from}
@@ -413,7 +419,7 @@ function KindOptions({
 	}
 }
 
-const LOCALIZED_KINDS: readonly string[] = ["text", "slug", "relation", "select", "media", "conditional"];
+export const LOCALIZED_KINDS: readonly string[] = ["text", "slug", "relation", "select", "media", "conditional"];
 
 export function FieldEditor({
 	editing,
@@ -611,7 +617,7 @@ export function FieldEditor({
  * The settings a new field needs, asked before it exists: the field is made in a copy of the collection and joins the real one only when its required
  * settings are complete, so there is never a half-made field in the file.
  */
-function NewFieldDialog({
+export function NewFieldDialog({
 	editing,
 	place,
 	name,
@@ -686,7 +692,7 @@ function NewFieldDialog({
 							onClose(true);
 						}}
 					>
-						{t("field.add")}
+						{t("field.addConfirm")}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

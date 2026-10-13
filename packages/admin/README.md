@@ -2,9 +2,9 @@
 
 English | [한국어](README.ko.md)
 
-Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, trash, login and Settings screens (Settings holds the schema editor, body templates and the event log at `/admin/settings/<tab>`).
+Admin UI for `@monti-cms/core`. Provides the list, editor (tiptap), media, trash, login and Settings screens (Settings holds the schema editor at `/admin/settings/<tab>`; templates, the event log and plugin pages have their own addresses).
 It is framework-neutral: it imports nothing from Next.js and reaches the router through an adapter it is given (see "Router adapter"). Next.js (App Router) is the supported host for now, through `@monti-cms/nextjs`.
-Plugins (e.g. `@monti-cms/ai`) add Settings tabs, field-side buttons and edit screen actions.
+Plugins (e.g. `@monti-cms/ai`) add Tools pages, field-side buttons and edit screen actions.
 The screens only call the core's admin API (`/api/monti/v1/*`). You can also skip installing it and build your own screens against the same API.
 
 ## Setup
@@ -59,7 +59,7 @@ A fence nobody registers shows its source as is.
 
 ### Icons
 
-A block definition's `editor.icon`, a plugin Settings tab's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
+A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
 The admin package includes only the commonly used icons, so register other names with the same provider's `icons`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
@@ -143,14 +143,14 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has three parts: **Content** (each collection, then Media), one **Settings** entry, and **Trash** pinned at the bottom with its count. Settings is one page with a tab per area, each tab with its own address:
+The sidebar has four parts: **Content** (each collection, then Media and Templates; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (one item per plugin page, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
 
-| Tab | Address | Contents |
+| Screen | Address | Contents |
 |---|---|---|
-| Collections, Locales, Site, Admin, File | `<admin path>/settings/collections` (`locales`, `site`, `admin`, `file`) | The schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
-| Templates | `<admin path>/settings/templates` | Body templates (a 404 when `admin.templates` is `false`). |
-| Event log | `<admin path>/settings/events` | Event deliveries, with the failed count as a badge on the tab and on the sidebar Settings entry (only while some failed). |
-| One per plugin page | `<admin path>/settings/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
+| Collections, Languages, Site, Admin, File | `<admin path>/settings/collections` (`locales`, `site`, `admin`, `file`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
+| Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
+| Event log | `<admin path>/events` | Event deliveries. |
+| One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
 
 `<admin path>/settings` goes to the first tab.
 
@@ -309,12 +309,12 @@ The module that a plugin definition's `admin` loads provides `defineAdminPlugin(
 
 ```ts
 export default defineAdminPlugin({
-	pages: { my: MyPage }, // the "my" tab of Settings: <admin path>/settings/my (default /admin/settings/my, a client component). The admin UI handles the login check
+	pages: { my: MyPage }, // the "my" page of Tools: <admin path>/tools/my (default /admin/tools/my, a client component). The admin UI handles the login check
 	Provider: MyProvider, // wraps the whole admin UI. Inside it, add input and edit screen extensions with CmsAdminComponentsProvider
 });
 ```
 
-A page is a client component and shows as a tab of the Settings page: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names the tab, and the page draws only its body (the Settings page already provides the sidebar, title and tab bar). `SettingsPanel` (`@monti-cms/admin/kit`) is an optional body with a count and actions in a slim toolbar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
+A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `SettingsPanel` (`@monti-cms/admin/kit`) is an optional body with a count and actions in a slim toolbar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
 
 ```tsx
 "use client";
@@ -336,7 +336,7 @@ Edit screen extensions (`editorExtensions`) are hooks that add an element at the
 attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`), the Settings tab body (`SettingsPanel`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
+`cn`, the confirm dialog (`useConfirm`), the page body (`SettingsPanel`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
 (`EntryForm`, `EntryData`). Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |

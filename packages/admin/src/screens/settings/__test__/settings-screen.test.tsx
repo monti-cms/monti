@@ -1,82 +1,45 @@
-import { definePlugin } from "@monti-cms/core";
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { testConfig, testSite } from "../../../../../core/test/site";
+import { cleanup, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import { renderInRouter } from "../../../test/router";
 import { withSite } from "../../__test__/site-wrapper";
+import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { settingsMessages } from "../messages";
 import { SettingsScreen } from "../settings-screen";
+import type { SchemaTab } from "../tabs";
 
-const failed = vi.hoisted(() => ({ count: 0 }));
 vi.mock("../../schema/schema-screen", () => ({
-	SchemaSettings: ({ tab }: { tab: string }) => <p>schema editor: {tab}</p>,
-}));
-vi.mock("../../templates/template-manager", () => ({ TemplateManager: () => <p>templates screen</p> }));
-vi.mock("../../events/events-screen", () => ({ EventsScreen: () => <p>events screen</p> }));
-vi.mock("../../events/events-api", async (importOriginal) => ({
-	...(await importOriginal<typeof import("../../events/events-api")>()),
-	countFailedEvents: async () => failed.count,
+	SchemaSettings: ({ tab, actionsSlot }: { tab: string; actionsSlot?: HTMLElement | null }) => (
+		<p>
+			schema editor: {tab}
+			{actionsSlot ? " (actions slot)" : ""}
+		</p>
+	),
 }));
 
 const t = testSite.createTranslator(settingsMessages);
-const withPlugin = (admin: Record<string, unknown> = {}) =>
-	createSite({
-		...testConfig,
-		admin: { ...testConfig.admin, ...admin },
-		plugins: [
-			definePlugin({
-				name: "tools",
-				options: {},
-				nav: [
-					{ path: "tools", label: "Tools", icon: "plug" },
-					{ path: "more", label: "More" },
-				],
-			}),
-		],
-	} as AnyCmsConfig);
+const sidebarText = testSite.createTranslator(screensMessages);
 
-beforeEach(() => {
-	failed.count = 0;
-	vi.stubGlobal("fetch", async () => ({ ok: true, status: 200, json: async () => ({ total: 0 }) }));
-});
-afterEach(() => {
-	cleanup();
-	vi.unstubAllGlobals();
-});
+afterEach(cleanup);
 
-const renderSettings = (tab: string, site = testSite, children?: React.ReactNode) =>
-	renderInRouter(
-		withSite(
-			<AdminQueryProvider>
-				<SettingsScreen tab={tab}>{children}</SettingsScreen>
-			</AdminQueryProvider>,
-			site,
-		),
+const element = (tab: SchemaTab) =>
+	withSite(
+		<AdminQueryProvider>
+			<SettingsScreen tab={tab} />
+		</AdminQueryProvider>,
 	);
+const renderSettings = (tab: SchemaTab) => renderInRouter(element(tab));
 const tabBar = () => screen.getByRole("navigation", { name: t("tabs.label") });
 
 describe("settings tabs", () => {
-	it("lists the core tabs in order, then the plugin tabs, each with its own address", () => {
-		const site = withPlugin();
-		renderSettings("collections", site);
+	it("lists the schema file's tabs in order, each with its own address", () => {
+		renderSettings("collections");
 		const links = within(tabBar()).getAllByRole("link");
-		expect(links.map((link) => link.textContent)).toEqual([
-			t("tab.collections"),
-			t("tab.locales"),
-			t("tab.site"),
-			t("tab.admin"),
-			t("tab.file"),
-			t("tab.templates"),
-			t("tab.events"),
-			"Tools",
-			"More",
-		]);
+		const ids = ["collections", "locales", "site", "admin", "file"] as const;
+		expect(links.map((link) => link.textContent)).toEqual(ids.map((id) => t(`tab.${id}`)));
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(
-			["collections", "locales", "site", "admin", "file", "templates", "events", "tools", "more"].map((id) =>
-				site.adminHref(`/settings/${id}`),
-			),
+			ids.map((id) => testSite.adminHref(`/settings/${id}`)),
 		);
 	});
 
@@ -88,57 +51,39 @@ describe("settings tabs", () => {
 		expect(current.map((link) => link.textContent)).toEqual([t("tab.site")]);
 	});
 
-	it("drops the Templates tab when the site turns templates off", () => {
-		renderSettings("collections", withPlugin({ templates: false }));
-		expect(within(tabBar()).queryByRole("link", { name: t("tab.templates") })).toBeNull();
-		expect(within(tabBar()).getByRole("link", { name: t("tab.events") })).toBeTruthy();
+	it("has no tab for templates, the event log or a plugin page: they are in the sidebar", () => {
+		renderSettings("collections");
+		const names = within(tabBar())
+			.getAllByRole("link")
+			.map((link) => link.textContent);
+		expect(names).not.toContain(sidebarText("sidebar.templates"));
+		expect(names).not.toContain(sidebarText("sidebar.events"));
 	});
 
-	it("shows a plugin page as a tab: its content is the tab body, and there is no sidebar item for it", () => {
-		renderSettings("tools", withPlugin(), <p>tools page</p>);
-		expect(screen.getByText("tools page")).toBeTruthy();
-		expect(screen.queryByText(/schema editor/)).toBeNull();
-		const sidebarLinks = screen.getAllByRole("link").filter((link) => !tabBar().contains(link));
-		expect(sidebarLinks.map((link) => link.textContent)).not.toContain("Tools");
+	it("shows the schema editor for the open tab", () => {
+		renderSettings("locales");
+		expect(screen.getByText(/schema editor: locales/)).toBeTruthy();
 	});
 
-	it("shows the schema editor on the schema tabs, the templates and the event log on theirs", () => {
-		const { unmount } = renderSettings("locales");
-		expect(screen.getByText("schema editor: locales")).toBeTruthy();
-		unmount();
-		renderSettings("templates");
-		expect(screen.getByText("templates screen")).toBeTruthy();
-		cleanup();
-		renderSettings("events");
-		expect(screen.getByText("events screen")).toBeTruthy();
-	});
-
-	it("keeps the schema editor (and its unsaved draft) mounted while another tab shows", () => {
+	it("keeps the schema editor (and its unsaved draft) mounted while moving between tabs", () => {
 		const { rerender } = renderSettings("collections");
-		const editor = screen.getByText("schema editor: collections");
-		const element = (tab: string) =>
-			withSite(
-				<AdminQueryProvider>
-					<SettingsScreen tab={tab} />
-				</AdminQueryProvider>,
-			);
-		rerender(element("events"));
-		expect(screen.getByText("schema editor: collections")).toBe(editor);
-		expect(editor.closest(".hidden")).toBeTruthy();
-		expect(screen.getByText("events screen")).toBeTruthy();
+		const editor = screen.getByText(/schema editor: collections/);
+		rerender(element("site"));
+		expect(screen.getByText(/schema editor: site/)).toBe(editor);
 	});
 
-	it("puts the failed-delivery count on the Event log tab and on the sidebar Settings item, only when there are failures", async () => {
-		failed.count = 3;
+	it("has its own page header: title, a line about where it is saved, and a slot for the editor's review button", () => {
 		renderSettings("collections");
-		const badge = t("tab.eventsBadge", { count: 3 });
-		await waitFor(() => expect(within(tabBar()).getByLabelText(badge)).toBeTruthy());
-		expect(screen.getAllByLabelText(badge)).toHaveLength(2);
+		expect(screen.getByRole("heading", { level: 1, name: t("title") })).toBeTruthy();
+		expect(screen.getByText(t("description"))).toBeTruthy();
+		expect(screen.getByText(/actions slot/)).toBeTruthy();
+		// One title only: the shell draws no title bar of its own here.
+		expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
 	});
 
-	it("shows no badge without failures", async () => {
+	it("marks Settings in the sidebar", () => {
 		renderSettings("collections");
-		await waitFor(() => expect(screen.getByRole("link", { name: t("tab.events") })).toBeTruthy());
-		expect(screen.queryByLabelText(/failed event deliveries/)).toBeNull();
+		const link = screen.getByRole("link", { name: sidebarText("sidebar.settings") });
+		expect(link.getAttribute("aria-current")).toBe("page");
 	});
 });

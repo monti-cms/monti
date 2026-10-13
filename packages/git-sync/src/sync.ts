@@ -117,12 +117,12 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 					stored
 						? problemText({
 								what: "The saved GitHub token cannot be read, because MONTI_SECRET changed since it was saved",
-								where: `the Git sync screen (${cms.site.adminHref("/settings/git-sync")})`,
+								where: `the Git sync screen (${cms.site.adminHref("/tools/git-sync")})`,
 								fix: "save the token again there, or put the old secret back (as MONTI_SECRET, or listed in `previousSecrets` in monti.config.ts)",
 							})
 						: problemText({
 								what: "No GitHub token is saved, so nothing is pushed or pulled yet",
-								where: `the Git sync screen (${cms.site.adminHref("/settings/git-sync")})`,
+								where: `the Git sync screen (${cms.site.adminHref("/tools/git-sync")})`,
 								fix: "paste a GitHub token that can read and write the repo's contents there; `monti doctor` lists what else is missing",
 							}),
 				);

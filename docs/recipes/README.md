@@ -14,5 +14,5 @@ The principle behind them: open what users touch, seal what core must guard behi
 | [Enforce a slug rule before save](slug-rule.md) | lowercase ASCII slugs, refused or fixed, with a clear error | write hooks `validate` and `transform`, inline plugin `hooks` |
 | [Write a custom format](custom-format.md) | Markdown in and out, and a one-way text export | `defineFormat`, `formats` of a plugin |
 | [Read posts on the public site, typed](read-posts.md) | list, single post, tags, redirects; types from the config | `cms.read`, `Cms<typeof config>` |
-| [Add an admin page to a plugin](admin-page.md) | a "Post stats" Settings tab with its own API route | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
+| [Add an admin page to a plugin](admin-page.md) | a "Post stats" Tools page with its own API route | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
 | [Strict 404 and 308 under Cache Components](strict-status.md) | a real 404 and 308 from a small `proxy.ts`, when you need them | `cms.read.getEntry`, Next `proxy.ts` |

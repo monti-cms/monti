@@ -14,5 +14,5 @@ Monti를 확장하는 방법을 다루는 짧은 페이지 모음이다. 각 페
 | [저장 전에 슬러그 규칙 지키기](slug-rule.md) | 소문자 ASCII 슬러그, 거부하거나 고치고 분명한 오류를 낸다 | 쓰기 훅 `validate`와 `transform`, 플러그인의 인라인 `hooks` |
 | [나만의 형식 만들기](custom-format.md) | Markdown 읽기와 쓰기, 한쪽으로만 내보내는 텍스트 | `defineFormat`, 플러그인의 `formats` |
 | [공개 사이트에서 글을 타입 있게 읽기](read-posts.md) | 목록, 글 하나, 태그, 리디렉션. 타입은 설정에서 온다 | `cms.read`, `Cms<typeof config>` |
-| [플러그인에 관리자 페이지 더하기](admin-page.md) | 자체 API 경로가 있는 "Post stats" 설정 탭 | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
+| [플러그인에 관리자 페이지 더하기](admin-page.md) | 자체 API 경로가 있는 "Post stats" 도구 페이지 | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
 | [Cache Components에서 엄격한 404와 308](strict-status.md) | 필요할 때 작은 `proxy.ts`로 진짜 404와 308 | `cms.read.getEntry`, Next `proxy.ts` |

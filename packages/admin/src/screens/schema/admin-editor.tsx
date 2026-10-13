@@ -4,6 +4,7 @@ import { useTranslator } from "@monti-cms/core/client";
 import { FlagSwitch, Labeled, Pick } from "./controls";
 import { schemaMessages } from "./messages";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
+import { Section } from "./section";
 
 const DEFAULT_CHOICE = "__default";
 const DEFAULT_ADMIN_PATH = "/admin";
@@ -32,36 +33,46 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 		locale && !dictionaryLanguages.includes(locale) ? [...dictionaryLanguages, locale] : dictionaryLanguages;
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
-		<div className="flex flex-col gap-4" data-testid="admin-settings">
-			<p className="text-cms-muted-foreground text-xs">{t("admin.hint")}</p>
-			<Pick
-				label={t("admin.locale")}
-				hint={t("admin.localeHint")}
-				value={locale ?? DEFAULT_CHOICE}
-				items={[
-					{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
-					...languages.map((code) => ({ value: code, label: languageName(code) })),
-				]}
-				onChange={(value) => set("locale", value === DEFAULT_CHOICE ? undefined : value)}
-				className="sm:max-w-xs"
-			/>
-			<FlagSwitch
-				label={t("admin.templates")}
-				hint={t("admin.templatesHint")}
-				checked={admin.templates !== false}
-				onChange={(on) => set("templates", on ? undefined : false)}
-			/>
-			<FlagSwitch
-				label={t("admin.translations")}
-				hint={t("admin.translationsHint")}
-				checked={admin.translations !== false}
-				onChange={(on) => set("translations", on ? undefined : false)}
-			/>
-			<Labeled label={t("admin.path")} hint={t("admin.pathNote")}>
-				<code className="w-fit rounded-md border bg-cms-muted/40 px-2.5 py-1.5 text-xs" data-testid="admin-path">
-					{path}
-				</code>
-			</Labeled>
+		<div className="flex flex-col gap-12" data-testid="admin-settings">
+			<Section wide title={t("admin.languageTitle")} description={t("admin.languageDescription")}>
+				<div className="max-w-md">
+					<Pick
+						label={t("admin.locale")}
+						hint={t("admin.localeHint")}
+						value={locale ?? DEFAULT_CHOICE}
+						items={[
+							{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
+							...languages.map((code) => ({ value: code, label: languageName(code) })),
+						]}
+						onChange={(value) => set("locale", value === DEFAULT_CHOICE ? undefined : value)}
+					/>
+				</div>
+			</Section>
+			<Section wide title={t("admin.featuresTitle")} description={t("admin.featuresDescription")}>
+				<FlagSwitch
+					label={t("admin.templates")}
+					hint={t("admin.templatesHint")}
+					checked={admin.templates !== false}
+					onChange={(on) => set("templates", on ? undefined : false)}
+				/>
+				<div className="border-t pt-6">
+					<FlagSwitch
+						label={t("admin.translations")}
+						hint={t("admin.translationsHint")}
+						checked={admin.translations !== false}
+						onChange={(on) => set("translations", on ? undefined : false)}
+					/>
+				</div>
+			</Section>
+			<Section wide title={t("admin.addressTitle")} description={t("admin.addressDescription")}>
+				<div className="max-w-md">
+					<Labeled label={t("admin.path")} hint={t("admin.pathNote")}>
+						<code className="w-fit rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="admin-path">
+							{path}
+						</code>
+					</Labeled>
+				</div>
+			</Section>
 		</div>
 	);
 }

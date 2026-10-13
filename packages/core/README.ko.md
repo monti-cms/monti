@@ -1093,7 +1093,7 @@ export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
 		options: {}, // JSON 값. 서버·브라우저가 함께 읽는다
-		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 설정 페이지의 탭: <관리자 경로>/settings/my
+		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 도구 묶음의 페이지: <관리자 경로>/tools/my
 		validate: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API 경로·표 만들기·메타 표시, 서버 코드가 필요한 훅
 		hooks: { validate: () => undefined }, // 인라인으로 쓴 쓰기 훅: 훅만 더하는 플러그인은 `server` 모듈이 필요 없다(`options`도 생략할 수 있다)
@@ -1328,7 +1328,7 @@ defineConfig({
 });
 ```
 
-커밋된 모든 변경은 구독자가 있든 없든 이벤트 로그에 기록된다(전달이 없는 이벤트는 "기록됨 (구독자 없음)"으로 보이고, 요청에서 온 변경이면 작업자도 담긴다). 90일(옵션이 아닌 고정 기간)이 지난 이벤트는 같은 쓰기 쪽 정리에서 프로세스당 시간당 한 번 이하로 전달과 함께 지워지며, 아직 기다리는 전달이 있으면 남는다. `pending`·`delivering`·`failed`·`dead` 전달은 전달되거나 무시될 때까지 이벤트를 붙들고 있다. 관리자의 **이벤트 기록** 탭(설정 > 이벤트 기록: 설정 기본 경로에서는 `/admin/settings/events`, `monti init` 뒤에는 `/studio/settings/events`)은 모든 이벤트를 전달 상태와 함께 보여 주는 로그이며, 실패한 전달과 죽은 전달은 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 이벤트 기록 탭과 사이드바 설정 항목이 그 수를 보여 준다.
+커밋된 모든 변경은 구독자가 있든 없든 이벤트 로그에 기록된다(전달이 없는 이벤트는 "기록됨 (구독자 없음)"으로 보이고, 요청에서 온 변경이면 작업자도 담긴다). 90일(옵션이 아닌 고정 기간)이 지난 이벤트는 같은 쓰기 쪽 정리에서 프로세스당 시간당 한 번 이하로 전달과 함께 지워지며, 아직 기다리는 전달이 있으면 남는다. `pending`·`delivering`·`failed`·`dead` 전달은 전달되거나 무시될 때까지 이벤트를 붙들고 있다. 관리자의 **이벤트 기록**(도구 > 이벤트 기록: 설정 기본 경로에서는 `/admin/events`, `monti init` 뒤에는 `/studio/events`)은 모든 이벤트를 전달 상태와 함께 보여 주는 로그이며, 실패한 전달과 죽은 전달은 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바의 이벤트 기록 항목이 그 수를 보여 준다.
 
 ## 훅과 플러그인 테스트하기
 
@@ -1527,7 +1527,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 ### 관리자에서 스키마 편집하기 (개발 서버 전용)
 
-관리자에는 `monti.schema.ts`를 편집하는 스키마 설정(`<관리자 경로>/settings/collections`, 사이드바 설정 아래. 언어·사이트·관리자·파일 탭도 여기에 속한다)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
+관리자에는 `monti.schema.ts`를 편집하는 스키마 설정(`<관리자 경로>/settings/collections`, 사이드바 맨 아래 설정. 언어·사이트·관리자·파일 탭도 여기에 속한다)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
 
 **누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/monti/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
 
