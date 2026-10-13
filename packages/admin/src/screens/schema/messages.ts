@@ -218,7 +218,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"locales.default": "Default locale",
 		"locales.defaultHint": "Public addresses have no language prefix for it.",
 		"locales.timeZone": "Time zone",
-		"locales.timeZoneHint": "IANA name; dates are entered and shown in it.",
+		"locales.timeZoneHint": "Used for dates on your site and for scheduled publishing.",
+		"locales.timeZoneNone": "No matching time zone.",
 		"file.hint":
 			"Site and admin settings, seed data and recorded transforms are part of the file but not edited on this screen. Edit them in monti.schema.ts.",
 		"file.migrations": "Recorded data transforms",
@@ -507,7 +508,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"locales.default": "기본 언어",
 		"locales.defaultHint": "기본 언어의 공개 주소에는 언어 접두사가 붙지 않습니다.",
 		"locales.timeZone": "시간대",
-		"locales.timeZoneHint": "IANA 이름이며 날짜를 이 시간대로 입력하고 보여 줍니다.",
+		"locales.timeZoneHint": "사이트의 날짜와 예약 발행에 쓰입니다.",
+		"locales.timeZoneNone": "맞는 시간대가 없습니다.",
 		"file.hint":
 			"사이트와 관리자 설정, 시드 데이터, 기록된 변환은 파일의 일부지만 이 화면에서 편집하지 않습니다. monti.schema.ts에서 고치세요.",
 		"file.migrations": "기록된 데이터 변환",

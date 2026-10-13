@@ -1,12 +1,70 @@
 "use client";
 
 import { useTranslator } from "@monti-cms/core/client";
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Button } from "../../ui/button";
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
 import { Input } from "../../ui/input";
 import { Labeled, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls";
 import { schemaMessages } from "./messages";
 import { type Locale, localesOf, moveItem, type Obj, setProp } from "./schema-model";
+
+/** The IANA time zones the runtime knows, with UTC (which `Intl.supportedValuesOf` leaves out) and the file's own value when it is none of them. */
+const zonesWith = (current: string | undefined): string[] => {
+	let known: string[] = [];
+	try {
+		known = Intl.supportedValuesOf("timeZone");
+	} catch {
+		// an old runtime: the list is the current value and UTC
+	}
+	return [...new Set(["UTC", ...known, ...(current ? [current] : [])])].sort((a, b) =>
+		a === "UTC" ? -1 : b === "UTC" ? 1 : a.localeCompare(b),
+	);
+};
+
+/** A searchable list of time zones; clearing it removes `timeZone` from the file (UTC applies). */
+function TimeZonePick({
+	value,
+	onChange,
+}: {
+	value: string | undefined;
+	onChange: (value: string | undefined) => void;
+}) {
+	const t = useTranslator(schemaMessages);
+	const { disabled } = useSchemaEdit();
+	const id = useId();
+	const zones = useMemo(() => zonesWith(value), [value]);
+	return (
+		<Labeled label={t("locales.timeZone")} hint={t("locales.timeZoneHint")} htmlFor={id}>
+			<Combobox
+				items={zones}
+				autoHighlight
+				disabled={disabled}
+				value={value ?? null}
+				onValueChange={(next: string | null) => onChange(next ?? undefined)}
+			>
+				<ComboboxInput
+					id={id}
+					aria-label={t("locales.timeZone")}
+					placeholder="Asia/Seoul"
+					showClear={value !== undefined}
+					disabled={disabled}
+					className="h-8 w-full text-xs [&_input]:text-xs"
+				/>
+				<ComboboxContent>
+					<ComboboxEmpty>{t("locales.timeZoneNone")}</ComboboxEmpty>
+					<ComboboxList>
+						{(zone: string) => (
+							<ComboboxItem key={zone} value={zone}>
+								<span className="truncate">{zone}</span>
+							</ComboboxItem>
+						)}
+					</ComboboxList>
+				</ComboboxContent>
+			</Combobox>
+		</Labeled>
+	);
+}
 
 const CODE = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
 
@@ -123,14 +181,11 @@ export function LocalesEditor({
 					}))}
 					onChange={(value) => update((current) => ({ ...current, defaultLocale: value }))}
 				/>
-				<TextInput
-					label={t("locales.timeZone")}
-					hint={t("locales.timeZoneHint")}
-					placeholder="Asia/Seoul"
-					value={file.timeZone as string | undefined}
+				<TimeZonePick
+					value={typeof file.timeZone === "string" ? file.timeZone : undefined}
 					onChange={(value) =>
 						update((current) =>
-							setProp(current, "timeZone", orUndefined(value), [
+							setProp(current, "timeZone", value, [
 								"schemaVersion",
 								"collections",
 								"migrations",
