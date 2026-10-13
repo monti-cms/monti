@@ -261,3 +261,12 @@ export function clearFilters(state: ListState): ListState {
 		page: 1,
 	};
 }
+
+/** The patch that clears search and filters only; the folder, its subfolder setting and the page size stay as they are. */
+export function clearFiltersPatch(state: ListState): Partial<ListState> {
+	const { collection: _c, folder: _f, includeDescendants: _d, pageSize: _p, ...cleared } = clearFilters(state);
+	return cleared;
+}
+
+/** Whether a search or any filter narrows the list. */
+export const isFiltered = (state: ListState): boolean => state.search.trim() !== "" || activeFilterCount(state) > 0;

@@ -7,6 +7,7 @@ import { renderInRouter as render } from "../../test/router";
 import { AdminEntriesTable, columnsFor } from "../admin-entries-table";
 import { parseListState } from "../list-state";
 import { filterChips } from "../list-toolbar";
+import { screensMessages } from "../messages";
 import { withSite } from "./site-wrapper";
 
 afterEach(cleanup);
@@ -275,6 +276,36 @@ describe("admin entry list", () => {
 			const [image] = transfer.setDragImage.mock.calls[0] as [HTMLElement];
 			expect(document.body.contains(image)).toBe(true);
 			await waitFor(() => expect(document.body.contains(image)).toBe(false));
+		});
+	});
+
+	describe("empty states", () => {
+		const t = testSite.createTranslator(screensMessages);
+		const emptyTitle = () => document.querySelector('[data-slot="empty-title"]')?.textContent;
+
+		it("offers to add the first item when nothing exists yet", () => {
+			const run = vi.fn();
+			renderTable({ items: [], total: 0, addAction: { label: "글 추가", run } });
+			expect(emptyTitle()).toBe(t("list.emptyYet"));
+			fireEvent.click(screen.getByRole("button", { name: "글 추가" }));
+			expect(run).toHaveBeenCalled();
+		});
+
+		it("says nothing matches when filtered, and clears only the search and filters", () => {
+			const state = parseListState(testSite, new URLSearchParams("collection=post&search=zzz&status=draft"));
+			const props = renderTable({ items: [], total: 0, state });
+			expect(emptyTitle()).toBe(t("list.emptyNoMatch"));
+			fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
+			expect(props.onStateChange).toHaveBeenCalledWith(expect.objectContaining({ search: "", statuses: [] }));
+			const patch = vi.mocked(props.onStateChange).mock.calls[0]?.[0] ?? {};
+			expect(patch).not.toHaveProperty("collection");
+			expect(patch).not.toHaveProperty("pageSize");
+		});
+
+		it("shows the trash as empty without an action", () => {
+			renderTable({ items: [], total: 0, mode: "trash" });
+			expect(emptyTitle()).toBe(t("list.emptyTrash"));
+			expect(screen.queryByRole("button", { name: t("list.clearFilters") })).toBeNull();
 		});
 	});
 });

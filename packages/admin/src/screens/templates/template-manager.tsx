@@ -19,13 +19,13 @@ import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
-import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch, errorText } from "../admin-api";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
+import { EmptyState } from "../shared/empty-state";
 import { formatDateOnly } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
 import { templatesMessages } from "./messages";
@@ -243,7 +243,11 @@ export function TemplateManager() {
 									</li>
 								))
 							: templates.length === 0
-								? !error && <li className="p-8 text-center text-cms-muted-foreground text-xs">{t("list.empty")}</li>
+								? !error && (
+										<li>
+											<EmptyState compact title={t("list.empty")} />
+										</li>
+									)
 								: templates.map((row) => {
 										const isSelected = activeTemplate?.id === row.id;
 										return (
@@ -328,20 +332,11 @@ export function TemplateManager() {
 							</div>
 						</section>
 					) : (
-						<Empty className="flex-1">
-							<EmptyHeader>
-								<EmptyMedia variant="icon">
-									<LayoutTemplate aria-hidden />
-								</EmptyMedia>
-								<EmptyTitle>{t("edit.empty")}</EmptyTitle>
-							</EmptyHeader>
-							<EmptyContent>
-								<Button type="button" size="sm" onClick={() => void openNew()}>
-									<Plus aria-hidden />
-									{t("common.add")}
-								</Button>
-							</EmptyContent>
-						</Empty>
+						<EmptyState
+							icon={LayoutTemplate}
+							title={t("edit.empty")}
+							action={{ label: t("common.add"), icon: Plus, onClick: () => void openNew() }}
+						/>
 					)}
 				</div>
 			</div>

@@ -1,9 +1,10 @@
 import type { Cms } from "@monti-cms/core/runtime";
+import { ImageOff } from "lucide-react";
 import type { AdminServer } from "../../host/server";
-import { Empty, EmptyHeader, EmptyTitle } from "../../ui/empty";
 import { mediaNotConfiguredMessage } from "../api-error-message";
 import { requireAdminPage } from "../require-admin";
 import { AdminShell } from "../shared/admin-shell";
+import { EmptyState } from "../shared/empty-state";
 import { MediaLibrary } from "./media-library";
 import { mediaMessages } from "./messages";
 
@@ -14,11 +15,7 @@ export default async function AdminMediaPage({ cms, server }: { cms: Cms; server
 	if (!cms.isMediaConfigured) {
 		return (
 			<AdminShell title={t("title")} sidebar={{ activeNav: "media" }}>
-				<Empty className="py-16">
-					<EmptyHeader>
-						<EmptyTitle>{mediaNotConfiguredMessage(site)}</EmptyTitle>
-					</EmptyHeader>
-				</Empty>
+				<EmptyState icon={ImageOff} title={mediaNotConfiguredMessage(site)} />
 			</AdminShell>
 		);
 	}

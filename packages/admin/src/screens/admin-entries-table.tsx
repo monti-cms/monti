@@ -24,7 +24,18 @@ import {
 	type Updater,
 	useTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, Columns3, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
+import {
+	ArrowDown,
+	ArrowUp,
+	Columns3,
+	Folder as FolderIcon,
+	FolderOpen,
+	FolderUp,
+	Inbox,
+	Plus,
+	SearchX,
+	Trash2,
+} from "lucide-react";
 import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useCmsAdminComponents } from "../admin-components";
 import { cn } from "../lib/utils/cn";
@@ -32,10 +43,8 @@ import { AdminLink as Link } from "../router";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../ui/empty";
 import { IconButton } from "../ui/icon-button";
 import { Label } from "../ui/label";
-import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "../ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Skeleton } from "../ui/skeleton";
@@ -52,12 +61,14 @@ import {
 	filterFor,
 	knownColumnRecord,
 } from "./list-columns";
-import type { ListState } from "./list-state";
+import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
+import { EmptyState } from "./shared/empty-state";
 import { writeDraggedEntries } from "./shared/entry-drag";
 import { describeEntryStatus, statusLabels } from "./shared/entry-status";
 import { formatDateOnly, formatDateTime, zonedYear } from "./shared/format-date";
+import { ListPagination } from "./shared/list-pager";
 import { OPEN_ITEM } from "./shared/side-panel";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
@@ -343,6 +354,8 @@ interface TableProps {
 	onPageChange: (page: number) => void;
 	onPageSizeChange: (size: PageSize) => void;
 	onRetry: () => void;
+	/** Adds an item. Shown in the empty list as the way to start. */
+	addAction?: { label: string; run: () => void };
 }
 
 export function AdminEntriesTable({
@@ -374,6 +387,7 @@ export function AdminEntriesTable({
 	onPageChange,
 	onPageSizeChange,
 	onRetry,
+	addAction,
 }: TableProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -388,7 +402,6 @@ export function AdminEntriesTable({
 	const visibility: ColumnVisibilityState = Object.fromEntries(
 		available.map((column) => [column, column === "title" || (savedVisibility?.[column] ?? defaults.includes(column))]),
 	);
-	const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
 	/** Folder path from the top level, like `상위 / 하위`. `—` for items outside folders. */
 	const folderName = (id: string | null) => {
 		const names: string[] = [];
@@ -844,89 +857,97 @@ export function AdminEntriesTable({
 								</TableCell>
 							</ActionContextMenu>
 						))}
-						{isLoading ? (
-							Array.from({ length: 5 }, (_, index) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
-								<TableRow key={index} aria-hidden>
-									<TableCell colSpan={visibleCount}>
-										<Skeleton className="h-5 w-full" />
-									</TableCell>
-								</TableRow>
-							))
-						) : items.length === 0 && !explorer?.folders.length ? (
-							<TableRow>
-								<TableCell colSpan={visibleCount} className="p-0">
-									<Empty className="py-10">
-										<EmptyHeader>
-											<EmptyTitle>{isTrash ? t("list.emptyTrash") : t("list.emptyNone")}</EmptyTitle>
-											{!isTrash && <EmptyDescription>{t("list.emptyHint")}</EmptyDescription>}
-										</EmptyHeader>
-									</Empty>
-								</TableCell>
-							</TableRow>
-						) : (
-							table.getRowModel().rows.map((row) => (
-								<ActionContextMenu
-									key={row.id}
-									actions={rowMenu(row.original)}
-									trigger={
-										<TableRow
-											className={cn(
-												"h-11 data-[state=selected]:bg-cms-primary/5",
-												row.original.id === openRecordId && OPEN_ITEM,
-											)}
-											aria-current={row.original.id === openRecordId ? "true" : undefined}
-											data-state={row.getIsSelected() ? "selected" : undefined}
-											draggable={!isTrash}
-											onDragStart={(event) => {
-												// Dragging a selected row moves the whole selection; otherwise just this row.
-												const group = selectedIds.has(row.original.id)
-													? items.filter((item) => selectedIds.has(item.id))
-													: [row.original];
-												writeDraggedEntries(
-													event,
-													group.map((item) => ({ id: item.id, expectedVersion: item.version })),
-													group.length === 1
-														? group[0]?.title || t("common.untitled")
-														: t("list.itemsCount", { count: group.length }),
-												);
-											}}
-											onKeyDown={rowKeyDown(row.original)}
-										/>
-									}
-								>
-									{row
-										.getVisibleCells()
-										.filter((cell) => isShown(cell.column.id))
-										.map((cell) => (
-											<Fragment key={cell.id}>
-												{cell.column.id === "actions" && <TableCell aria-hidden className="p-0" />}
-												<TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
-													<table.FlexRender cell={cell} />
-												</TableCell>
-											</Fragment>
-										))}
-								</ActionContextMenu>
-							))
-						)}
+						{isLoading
+							? Array.from({ length: 5 }, (_, index) => (
+									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder row
+									<TableRow key={index} aria-hidden>
+										<TableCell colSpan={visibleCount}>
+											<Skeleton className="h-5 w-full" />
+										</TableCell>
+									</TableRow>
+								))
+							: items.length === 0
+								? null
+								: table.getRowModel().rows.map((row) => (
+										<ActionContextMenu
+											key={row.id}
+											actions={rowMenu(row.original)}
+											trigger={
+												<TableRow
+													className={cn(
+														"h-11 data-[state=selected]:bg-cms-primary/5",
+														row.original.id === openRecordId && OPEN_ITEM,
+													)}
+													aria-current={row.original.id === openRecordId ? "true" : undefined}
+													data-state={row.getIsSelected() ? "selected" : undefined}
+													draggable={!isTrash}
+													onDragStart={(event) => {
+														// Dragging a selected row moves the whole selection; otherwise just this row.
+														const group = selectedIds.has(row.original.id)
+															? items.filter((item) => selectedIds.has(item.id))
+															: [row.original];
+														writeDraggedEntries(
+															event,
+															group.map((item) => ({ id: item.id, expectedVersion: item.version })),
+															group.length === 1
+																? group[0]?.title || t("common.untitled")
+																: t("list.itemsCount", { count: group.length }),
+														);
+													}}
+													onKeyDown={rowKeyDown(row.original)}
+												/>
+											}
+										>
+											{row
+												.getVisibleCells()
+												.filter((cell) => isShown(cell.column.id))
+												.map((cell) => (
+													<Fragment key={cell.id}>
+														{cell.column.id === "actions" && <TableCell aria-hidden className="p-0" />}
+														<TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
+															<table.FlexRender cell={cell} />
+														</TableCell>
+													</Fragment>
+												))}
+										</ActionContextMenu>
+									))}
 					</TableBody>
 				</Table>
+				{!isLoading &&
+					!errorMessage &&
+					items.length === 0 &&
+					!explorer?.folders.length &&
+					(isTrash ? (
+						<EmptyState icon={Trash2} title={t("list.emptyTrash")} />
+					) : isFiltered(state) ? (
+						<EmptyState
+							icon={SearchX}
+							title={t("list.emptyNoMatch")}
+							description={t("list.emptyNoMatchHint")}
+							action={{ label: t("list.clearFilters"), onClick: () => onStateChange(clearFiltersPatch(state)) }}
+						/>
+					) : (
+						<EmptyState
+							icon={Inbox}
+							title={t("list.emptyYet")}
+							description={t("list.emptyYetHint")}
+							action={addAction && { label: addAction.label, icon: Plus, onClick: addAction.run }}
+						/>
+					))}
 				{blankMenu && (
 					<ActionContextMenu actions={blankMenu} trigger={<div className="min-h-12 flex-1" aria-hidden />} />
 				)}
 			</div>
 
-			<div className="flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-cms-muted-foreground text-xs">
-				<span className="tabular">
-					{t("list.range", {
-						total,
-						range:
-							items.length > 0
-								? `${(state.page - 1) * state.pageSize + 1}–${Math.min(state.page * state.pageSize, total)}`
-								: "0",
-					})}
-				</span>
-				<div className="flex items-center gap-2">
+			<ListPagination
+				total={total}
+				shown={items.length}
+				page={state.page}
+				pageSize={state.pageSize}
+				onPageChange={onPageChange}
+				onPageSizeChange={onPageSizeChange}
+				hrefFor={pageHref}
+				leading={
 					<Popover>
 						<PopoverTrigger
 							render={<Button type="button" variant="ghost" size="xs" className="text-cms-muted-foreground" />}
@@ -974,55 +995,8 @@ export function AdminEntriesTable({
 							</ul>
 						</PopoverContent>
 					</Popover>
-					<Select
-						value={String(state.pageSize)}
-						items={PAGE_SIZES.map((size) => ({ value: String(size), label: t("list.pageSizeOption", { size }) }))}
-						onValueChange={(value) => value && onPageSizeChange(Number(value) as PageSize)}
-					>
-						<SelectTrigger size="sm" aria-label={t("list.pageSize")} className="h-7 border-0 text-xs shadow-none">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PAGE_SIZES.map((size) => (
-								<SelectItem key={size} value={String(size)}>
-									{t("list.pageSizeOption", { size })}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<Pagination className="mx-0 w-auto">
-						<PaginationContent>
-							<PaginationItem>
-								<PaginationPrevious
-									href={pageHref(state.page - 1)}
-									aria-disabled={state.page <= 1}
-									className={cn(state.page <= 1 && "pointer-events-none opacity-50")}
-									onClick={(event) => {
-										event.preventDefault();
-										if (state.page > 1) onPageChange(state.page - 1);
-									}}
-								/>
-							</PaginationItem>
-							<PaginationItem>
-								<span className="px-2 tabular-nums">
-									{state.page} / {totalPages}
-								</span>
-							</PaginationItem>
-							<PaginationItem>
-								<PaginationNext
-									href={pageHref(state.page + 1)}
-									aria-disabled={state.page >= totalPages}
-									className={cn(state.page >= totalPages && "pointer-events-none opacity-50")}
-									onClick={(event) => {
-										event.preventDefault();
-										if (state.page < totalPages) onPageChange(state.page + 1);
-									}}
-								/>
-							</PaginationItem>
-						</PaginationContent>
-					</Pagination>
-				</div>
-			</div>
+				}
+			/>
 		</section>
 	);
 }

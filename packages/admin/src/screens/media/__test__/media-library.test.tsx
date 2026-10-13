@@ -258,4 +258,48 @@ describe("media library", () => {
 		expect(await screen.findByRole("table", { name: t("views.table") })).toBeTruthy();
 		window.localStorage.removeItem(preferenceKey(testSite, "media-view"));
 	});
+
+	describe("when the list is empty", () => {
+		const emptyTitle = () => document.querySelector('[data-slot="empty-title"]')?.textContent;
+		const mockEmpty = () =>
+			fetchMock.mockImplementation(async (input: string) => {
+				const url = new URL(input, "http://localhost");
+				if (url.pathname === "/api/monti/v1/media") return json({ items: [], total: 0 });
+				throw new Error(`Unexpected fetch ${input}`);
+			});
+
+		it("offers an upload when there is no media yet, and keeps the pager in the footer", async () => {
+			mockEmpty();
+			render(
+				<AdminQueryProvider>
+					<MediaLibrary />
+				</AdminQueryProvider>,
+			);
+			expect(await screen.findByText(t("library.emptyYet"))).toBeTruthy();
+			expect(screen.getAllByRole("button", { name: t("library.upload") }).length).toBeGreaterThan(1);
+			// The pager is not inside the scrolling content next to the empty message.
+			const pager = screen.getByRole("navigation", { name: /페이지 이동/ });
+			expect(pager.closest('[data-slot="empty"]')).toBeNull();
+			// The footer is the last child of the content column; the empty message sits in the area above it.
+			const footer = pager.parentElement?.parentElement;
+			expect(footer?.nextElementSibling).toBeNull();
+			expect(footer?.previousElementSibling?.querySelector('[data-slot="empty"]')).not.toBeNull();
+		});
+
+		it("says nothing matches when filtered and clears the filters from the empty state", async () => {
+			mockEmpty();
+			render(
+				<AdminQueryProvider>
+					<MediaLibrary />
+				</AdminQueryProvider>,
+			);
+			await screen.findByText(t("library.emptyYet"));
+			fireEvent.change(screen.getByRole("searchbox", { name: t("library.search") }), { target: { value: "zzz" } });
+			await waitFor(() => expect(emptyTitle()).toBe(t("library.emptyNoMatch")));
+
+			fireEvent.click(screen.getByRole("button", { name: t("library.clearFilters") }));
+			await waitFor(() => expect(emptyTitle()).toBe(t("library.emptyYet")));
+			expect((screen.getByRole("searchbox", { name: t("library.search") }) as HTMLInputElement).value).toBe("");
+		});
+	});
 });
