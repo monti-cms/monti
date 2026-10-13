@@ -33,17 +33,6 @@ export const lifecycleSuccess = (site: Site): Record<LifecycleAction, string> =>
 	};
 };
 
-/** Text to announce when the transition fails. */
-export const lifecycleFailed = (site: Site): Record<LifecycleAction, string> => {
-	const t = site.createTranslator(entriesMessages);
-	return {
-		archive: t("lifecycle.failed.archive"),
-		unarchive: t("lifecycle.failed.unarchive"),
-		trash: t("lifecycle.failed.trash"),
-		restore: t("lifecycle.failed.restore"),
-	};
-};
-
 /**
  * Confirmation text for transitions that take a published entry down. Also tells if the published version is used elsewhere,
  * and that moving the original also moves translations in the same group.

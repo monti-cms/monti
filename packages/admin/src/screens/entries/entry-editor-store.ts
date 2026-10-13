@@ -1,9 +1,8 @@
 import { bodyExcerpt, confirmedSourceState, fillFromBodyLength, type Site } from "@monti-cms/core/client";
-import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
+import { readStoredDocument, type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
 import { CmsApiError, errorText, isConflict } from "../../api/client";
 import type { EntryEditorClient, EntryStatusAction } from "../../api/entries";
 import type { CmsIssue } from "../../api/error-message";
-import type { BrowserFormat } from "../../browser-format";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
 import type { TranslatorFor } from "../../translator";
@@ -29,7 +28,6 @@ import {
 	translationSourceOf,
 	translationStateFromForm,
 } from "./entry-form";
-import { upgradeRecoveryRecord } from "./legacy-backup";
 import { backupKey } from "./local-backup";
 import { entriesMessages } from "./messages";
 
@@ -285,8 +283,6 @@ export interface EntryEditorConfig {
 	target: EntryEditorTarget;
 	client: EntryEditorClient;
 	recoveryStore: RecoveryStore;
-	/** The formats the browser can read (`CmsAdminComponents.formats`), asked for when an old recovery copy is opened. */
-	formats?: () => Readonly<Record<string, BrowserFormat>> | undefined;
 	/** Read when a callback is needed, so the latest render's functions are used. */
 	callbacks: () => EntryEditorCallbacks;
 }
@@ -316,6 +312,17 @@ function failureOf(site: Site, error: unknown, fallback: string): EditorError {
 }
 
 const failed = (error: EditorError): Failure => ({ ok: false, error });
+
+/**
+ * The recovery copy with its body checked and lifted to the current document version, and its fingerprint worked out again so it compares with the form the way the
+ * editor makes it. A copy without a readable body is not offered.
+ */
+function checkedRecovery(site: Site, record: RecoveryRecord): RecoveryRecord | null {
+	const doc = readStoredDocument((record.snapshot as { doc?: unknown }).doc, site);
+	if (!doc) return null;
+	const snapshot = { ...record.snapshot, doc } as EntryForm;
+	return { ...record, snapshot, localFingerprint: formFingerprint(site, snapshot) };
+}
 
 /** What a document says, without its block ids: two documents with the same key read the same. */
 const contentKey = (doc: StoredDocument) => JSON.stringify(withoutBlockIds(doc.content));
@@ -352,7 +359,6 @@ const statusFailed = (t: TranslatorFor<typeof entriesMessages>): Record<EntrySta
 export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const { site, adminId, target, client, recoveryStore } = config;
 	const t = site.createTranslator(entriesMessages);
-	const formats = () => config.formats?.();
 	const callbacks = () => config.callbacks();
 
 	const initialCollection = target.mode === "new" ? target.collection : "";
@@ -884,7 +890,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		if (target.mode === "new") {
 			if (site.isItemCollection(target.collection)) return;
 			const stored = await safely(() => recoveryStore.get(backupKey(adminId, null, target.collection)), null);
-			const backup = stored && upgradeRecoveryRecord(site, stored, undefined, formats());
+			const backup = stored && checkedRecovery(site, stored);
 			if (alive() && backup && backup.localFingerprint !== backup.baseFingerprint) offerRecovery(backup);
 			return;
 		}
@@ -894,7 +900,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			if (!loaded || !alive()) return;
 			const key = backupKey(adminId, loaded.id, loaded.collection);
 			const stored = await safely(() => recoveryStore.get(key), null);
-			const backup = stored && upgradeRecoveryRecord(site, stored, loaded.working.doc, formats());
+			const backup = stored && checkedRecovery(site, stored);
 			if (backup && alive()) {
 				if (backup.localFingerprint === formFingerprint(site, state().form)) {
 					await discardBackup(key);

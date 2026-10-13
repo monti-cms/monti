@@ -1,0 +1,9 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"workspaces": {
+		".": { "entry": ["scripts/*.mjs", "commitlint.config.mjs"] },
+		"packages/*": { "entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}", "test/**/*.{ts,tsx}"] }
+	},
+	"ignore": ["examples/**"],
+	"ignoreExportsUsedInFile": true
+}

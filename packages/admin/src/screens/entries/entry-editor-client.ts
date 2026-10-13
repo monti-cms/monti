@@ -18,8 +18,7 @@ export interface RecoveryStore {
 }
 
 /**
- * The browser's IndexedDB, in a database of the site's own (two sites on one origin keep their copies apart). Copies the old shared database holds are still found:
- * the first read of one moves it to the site's database.
+ * The browser's IndexedDB, in a database of the site's own (two sites on one origin keep their copies apart).
  *
  * @experimental
  */
