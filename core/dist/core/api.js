@@ -3,7 +3,7 @@ import { DEFAULT_MEDIA_LIMITS, SUPPORTED_FILE_MIME_TYPES, SUPPORTED_IMAGE_MIME_T
 import { MAX_ENTRY_SEARCH_LIMIT } from "./store/types.js";
 export * from "./media-types.js";
 /**
- * Request contract of `/api/cms/v1`. The routes and the admin UI see the same definitions.
+ * Request contract of `/api/monti/v1`. The routes and the admin UI see the same definitions.
  */
 export const ENTRY_STATUSES = ["draft", "published", "archived", "trashed"];
 export const entryStatusSchema = z.enum(ENTRY_STATUSES);

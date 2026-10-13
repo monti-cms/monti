@@ -19,7 +19,7 @@ React 19 위의 Next.js 16(App Router) 앱이 필요하다. `@monti-cms/core`를
 
 ```sh
 # 1. @monti-cms/core를 GitHub 주소로 추가한다(공개 릴리스 전에는 pnpm만 된다)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.5&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.6&path:/core"
 # 2. init을 돌린다. 나머지 Monti 패키지는 같은 릴리스에서 설치된다
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ Next 16(App Router)·React 19 앱 기준이다. 관리자에는 Tailwind가 필�
 ### 1. 패키지
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.5&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.5&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.5&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.6&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.6&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.6&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
@@ -120,7 +120,7 @@ pnpm 12는 허락하지 않은 설치 스크립트가 있으면 설치를 실패
 | 하나뿐인 설정: 고른 기능마다 한 줄과 짧은 주석, 그다음 데이터베이스·로그인·저장소. 프리셋 뒤에 숨기는 것이 없다. 줄을 지우면 기능이 빠진다 | `monti.config.ts` |
 | 스키마 파일: 시작용 `post` 컬렉션(콘텐츠를 찾으면 그 front matter대로), 언어, 시간대, 관리자 경로, 관리자 스키마 화면이 쓰는 것과 같은 모양으로 쓴다 | `monti.schema.ts` |
 | 관리자 화면: 레이아웃(미리 만든 관리자 스타일시트를 불러온다)과 페이지 | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
-| 관리자 API와 로그인(`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
+| 관리자 API와 로그인(`/api/monti/v1/*`, `/api/monti/auth/*`) | `app/api/monti/[...path]/route.ts` |
 | 고른 기능이 읽는 모든 변수와, 변수마다 짧은 주석(무엇이고 어디서 얻는지: 데이터베이스 URL, `MONTI_SECRET`을 만드는 `openssl rand -base64 32`, `S3_*` 값). 컴퓨터에서 지금 필요한 값이 먼저 오고, `SITE_URL`·`AUTH_TRUST_HOST`·`DATABASE_SCHEMA`는 "When you deploy (not needed on your computer)" 아래에 주석 처리되어 한 문장씩 설명이 붙는다. `DATABASE_URL` 옆에는 `sslmode=require` 대신 `sslmode=verify-full`을 쓰라는 안내가 있다. 자리표시자만 있고 비밀은 없으므로 커밋해도 안전하다 | `.env.example` |
 
 `src/`를 쓰는 앱이면 설정 파일을 `src/`에, 라우트를 `src/app/` 아래에 만든다. Monti가 만드는 Next 파일은 셋이다: 관리자 레이아웃, 관리자 페이지, API 라우트. 레이아웃은 일부러 따로 둔다. Next는 동적 세그먼트(`[[...path]]`)의 값이 바뀔 때마다 그 아래 트리 전체를 다시 마운트하므로, 레이아웃을 페이지 안에 두면 화면을 옮길 때마다 관리자(내비게이션·쿼리 캐시·테마 프로바이더)가 다시 마운트된다. 한 세그먼트 위에 두어야 계속 마운트된 채로 남는다.
@@ -174,7 +174,7 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 
 **도움말.** `monti --help`는 머리말과 모든 명령을 보여 주고, `monti <명령> --help`(예: `monti init --help`)는 그 명령의 도움말만 보여 준다.
 
-**관리자 경로는 `admin.path`(스키마 파일 또는 사이트 설정)와 라우트 폴더가 같아야 한다.** `monti init`은 둘을 함께 맞춘다. 나중에 바꿀 때는 둘을 함께 바꾼다. 관리자 API 경로(`/api/cms/v1`)는 바뀌지 않는다.
+**관리자 경로는 `admin.path`(스키마 파일 또는 사이트 설정)와 라우트 폴더가 같아야 한다.** `monti init`은 둘을 함께 맞춘다. 나중에 바꿀 때는 둘을 함께 바꾼다. 관리자 API 경로(`/api/monti/v1`)는 바뀌지 않는다.
 
 **안전.** init이 이미 있는 파일에서 고치는 것은 위의 세 가지뿐이다. 쓰는 파일은 모두 프로젝트 밖의 경로(`..` 경로, 절대 경로, 밖으로 나가는 심볼릭 링크)를 거부하는 한 곳을 지난다. 모든 질문에 답하기 전에는 아무것도 쓰지 않으므로 Ctrl+C로 멈추면 프로젝트는 그대로다. 쓰다가 실패하면 오류가 이미 쓴 파일을 알려 주고(되돌리지 않는다) `monti init`을 다시 돌리라고 안내한다. 다시 돌리면 그 파일들은 그대로 둔다.
 
@@ -251,7 +251,7 @@ storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.
 | `DATABASE_URL` | Postgres 연결 주소(`postgres()`가 읽는다) |
 | `DATABASE_SCHEMA` | 선택. 스키마 이름(없으면 `public`). 다른 앱과 같이 쓰는 데이터베이스면 표가 섞이지 않게 따로 둔다. `monti migrate`가 없으면 만든다. `monti init`은 묻지 않고, `.env.example`에 주석 처리된 줄로 둔다 |
 | `MONTI_SECRET` | 임의의 긴 값(예: `openssl rand -base64 32`). 하나뿐인 비밀 값이다. 로그인 세션은 이 값에서 만든 키로 서명하고, 플러그인이 저장하는 값(AI 서비스 키, git-sync 토큰)도 이 값에서 만든 키로 암호화한다(`defineConfig({ secret })`에도 같은 값을 줄 수 있다). 바꿀 때는 옛 값을 `previousSecrets`에 남긴다("비밀 값") |
-| `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | (`monti init --login github`은 `.env.example`에 적어 둔다.) GitHub 로그인(`auth: auth({ providers: [github()] })`, `@monti-cms/auth` 필요)을 쓸 때만. GitHub OAuth 앱(`github()`가 읽는다). 콜백 주소는 `<사이트 주소>/api/cms/auth/callback/github`. `next dev`에서는 필요 없다 |
+| `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET` | (`monti init --login github`은 `.env.example`에 적어 둔다.) GitHub 로그인(`auth: auth({ providers: [github()] })`, `@monti-cms/auth` 필요)을 쓸 때만. GitHub OAuth 앱(`github()`가 읽는다). 콜백 주소는 `<사이트 주소>/api/monti/auth/callback/github`. `next dev`에서는 필요 없다 |
 | `MONTI_ADMIN_GITHUB_ID` | 관리자 GitHub 숫자 ID. 여럿이면 쉼표로 구분한다(`github()`가 읽는다). `next dev`에서는 필요 없다 |
 | `SITE_URL` | 선택. 사이트의 공개 URL(`site.url`). 환경마다 다르다. 코드나 스키마 파일의 `site.url`이 있으면 그쪽이 이긴다 |
 | `AUTH_TRUST_HOST` | 선택. `X-Forwarded-Host`를 덮어쓰는, 직접 운영하는 프록시(nginx, 로드 밸런서) 뒤에서 돌 때만 `true`. Vercel·Netlify·Cloudflare Pages 같은 플랫폼은 알아서 감지한다("호스트 신뢰" 참고) |
@@ -284,7 +284,7 @@ pnpm exec monti migrate
 
 ### 로그인 경로
 
-로그인 API는 기본으로 관리자 API 라우트가 함께 받는다(`/api/cms/auth/*`). 그래서 로그인 라우트 파일이 따로 없다.
+로그인 API는 기본으로 관리자 API 라우트가 함께 받는다(`/api/monti/auth/*`). 그래서 로그인 라우트 파일이 따로 없다.
 예전처럼 `/api/auth/*`를 쓰는 앱(이미 등록한 OAuth 콜백 주소를 바꾸지 않으려는 앱)은 경로를 고르고 라우트 파일을 둔다.
 
 ```ts
@@ -296,7 +296,7 @@ import { cms } from "../../../../monti.config";
 export const { GET, POST } = cms.authHandlers;
 ```
 
-`basePath`가 기본값이 아니면 관리자 API 라우트는 `/api/cms/auth/*`를 받지 않는다(404).
+`basePath`가 기본값이 아니면 관리자 API 라우트는 `/api/monti/auth/*`를 받지 않는다(404).
 
 ### 선택 의존성
 
@@ -471,7 +471,7 @@ export const cms = defineConfig({
 
 | 어디서 | 코드 |
 | --- | --- |
-| 관리자 API 라우트(`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`@monti-cms/nextjs`의 `createRouteHandler`, `cms.handle(request)`의 Next 어댑터) |
+| 관리자 API 라우트(`app/api/monti/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`@monti-cms/nextjs`의 `createRouteHandler`, `cms.handle(request)`의 Next 어댑터) |
 | 다른 호스트의 관리자 API | `cms.handle(request)`: 표준 `Request`를 받아 `Response`를 돌려준다 |
 | 관리자 레이아웃·페이지 | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`, 레이아웃 파일의 `export const generateMetadata = () => cmsAdminMetadata(cms);`(`@monti-cms/nextjs/admin`) |
 | 사이트 페이지(서버 컴포넌트·sitemap·RSS) | `cms.read.getEntry(…)`·`cms.read.listEntries(…)`·`cms.read.getTranslations(…)`·`cms.read.getPreview(…)`(`format: "mdx"`를 넘기면 본문을 그 형식의 글로도 받는다. `entry.body`, "형식" 절) |
@@ -484,7 +484,7 @@ export const cms = defineConfig({
 
 HTTP 계층은 표준 웹 `Request`와 `Response`로 동작한다.
 관리자 API, 로그인 연결, 공개 API, 플러그인 라우트에는 `NextRequest`, `NextResponse`, `request.nextUrl`을 쓰지 않는다.
-`cms.handle(request)`가 요청 하나를 처리하고(`/api/cms/` 뒤의 경로는 URL에서 읽는다), `@monti-cms/nextjs`의 `createRouteHandler(cms)`는 그 위에 얹은 얇은 Next 어댑터다.
+`cms.handle(request)`가 요청 하나를 처리하고(`/api/monti/` 뒤의 경로는 URL에서 읽는다), `@monti-cms/nextjs`의 `createRouteHandler(cms)`는 그 위에 얹은 얇은 Next 어댑터다.
 플러그인 라우트(`adminRoute`)는 표준 `Request`를 받는다. 쿼리는 `new URL(request.url).searchParams`로 읽고, 응답은 `Response.json(…)`으로 만든다.
 코어는 Next.js에서 아무것도 가져오지 않는다. 호스트가 대 주는 것은 로그인 연결로 들어온다. `CmsAuth.requestHeaders()`(처리 중인 요청의 헤더, 개발용 로그인 우회와 `session()`이 읽는다)와 `CmsAuth.rethrow(error)`(로그인 라이브러리가 던지는 리다이렉트를 호스트까지 보낸다. `@monti-cms/auth`는 `Response`로 답하므로 필요 없다)다. Next 통합(`@monti-cms/nextjs`의 `createRouteHandler(cms)`, `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata`)이 `cms.attachHost(host)`로 Next 요청 헤더를 인스턴스에 직접 붙이므로(`RequestHost`는 `@monti-cms/core/server`에서 온다. `AuthCreateContext`에는 `host: RequestHost`가 있다) 설정에 호스트를 적지 않는다. `auth({ host })`는 Next 통합 밖에서 쓰는 명시적 재정의로 남아 있고, 붙여 둔 호스트보다 우선한다. 다른 프레임워크의 호스트는 제 것을 채운다.
 
@@ -544,7 +544,7 @@ Next에 묶인 코드는 모두 `@monti-cms/core`와 `@monti-cms/admin`에서 �
 - `@monti-cms/nextjs`를 설치한다(`next`는 이 패키지의 peer다. 코어와 관리자는 더 이상 요구하지 않는다).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"`는 `from "@monti-cms/nextjs/config"`가 된다.
 - `githubAuth`는 `@monti-cms/auth`로 대체됐다("`@monti-cms/auth`로 올리기"를 본다).
-- `app/api/cms/[...path]/route.ts`: `cms.routeHandler()`는 `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 된다. `CmsRouteHandler` 타입도 거기서 내보낸다.
+- `app/api/monti/[...path]/route.ts`: `cms.routeHandler()`는 `@monti-cms/nextjs`의 `createRouteHandler(cms)`가 된다. `CmsRouteHandler` 타입도 거기서 내보낸다.
 - 관리자 레이아웃·페이지: `@monti-cms/admin/next`는 `@monti-cms/nextjs/admin`이 된다(`CmsAdminLayout`·`CmsAdminPage`·`CmsAdminPageProps`·`cmsAdminMetadata`, props는 같다). 레이아웃이 관리자용 App Router 어댑터를 그린다.
 - 관리자 메시지: 페이지 제목 키가 `cms-admin.next` 사전에서 `cms-admin.layout`으로 옮겼다(`admin.messages["cms-admin.next"]`를 덮어쓴 경우에만 해당한다).
 - 직접 만든 `AuthAdapter`: `CmsAuth`에 선택 항목 `requestHeaders()`와 `rethrow(error)`가 생겼다. `requestHeaders`가 없으면 개발용 로그인 우회는 적용되지 않는다.
@@ -556,7 +556,7 @@ GitHub 로그인이 NextAuth(`next-auth`, `@monti-cms/nextjs` 안)에서 프레�
 
 - `@monti-cms/auth`를 설치한다. `@monti-cms/nextjs/auth`의 `githubAuth`는 없어졌다. 아래 모양으로 바꾼다.
 - 새 모양은 `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], devBypass, secret })`다(지금은 관례적인 환경 변수가 있으면 `github()`와 `auth()`에 옵션이 필요 없다. "환경 변수와 `monti migrate`" 참고). `auth`는 `@monti-cms/auth`, `github`는 `@monti-cms/auth/github`에서 온다(호스트는 Next 통합이 붙인다. "CMS 인스턴스" 절 참고). `adminIds`는 프로바이더의 `admins`가 되고 여전히 GitHub 숫자 ID를 받는다(로그인 이름은 처음부터 비교하지 않았다).
-- 모두 한 번 다시 로그인한다. NextAuth가 만든 세션은 읽지 않는다. OAuth 콜백 URL(`/api/cms/auth/callback/github`)과 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`AUTH_URL`·`AUTH_TRUST_HOST`는 이 이동에서 바뀌지 않았다(세션 비밀 값은 지금 `MONTI_SECRET`이다. "`cms.config.ts` + `cms.server.ts`에서 올리기" 참고). `package.json`에서 `next-auth`는 빼도 된다.
+- 모두 한 번 다시 로그인한다. NextAuth가 만든 세션은 읽지 않는다. OAuth 콜백 URL(`/api/monti/auth/callback/github`)과 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`AUTH_URL`·`AUTH_TRUST_HOST`는 이 이동에서 바뀌지 않았다(세션 비밀 값은 지금 `MONTI_SECRET`이다. "`cms.config.ts` + `cms.server.ts`에서 올리기" 참고). `package.json`에서 `next-auth`는 빼도 된다.
 - 계정 ID에 프로바이더가 붙는다(`github:12345678`). `AuthContext.accountId`, `CmsAuth.devUserId`, 이름이 없을 때 변경 기록에 남는 작성자가 그렇다. 직접 만든 `CmsAuth`의 `isAdmin(userId)`는 이 값을 받는다.
 - `CmsAuth`가 바뀐 곳(직접 만든 `AuthAdapter`용): `session(request?)`가 요청을 받을 수 있고, `signIn`·`signOut`이 라우트가 그대로 돌려줄 `Response`(쿠키를 실은 리다이렉트)로 끝날 수 있으며, `AuthProvider`에 선택 항목 `icon`이, `AuthCreateContext`에 `storage(plugin)`(`cms.storage`)이 생겼다.
 - NextAuth와 함께 `next-auth` 모듈 확장(`session.user.githubId`)도 없어졌다.
@@ -574,7 +574,7 @@ GitHub 로그인이 NextAuth(`next-auth`, `@monti-cms/nextjs` 안)에서 프레�
   마스터 비밀 값 자체를 내주는 길은 이제 없다(`cms.secret`과 `cms.server.secret`도 없어졌다). "플러그인 비밀 값"을 본다.
   플러그인 라우트는 핸들러 입력으로 `cms`를 받고, `CmsServerPlugin.features(cms)`와 `migrate(storage, cms)`는 인자로 받고, 훅은 직접 만든 `cms`를 클로저로 쓴다.
 - `@monti-cms/core/migrate`는 없어졌다: `monti migrate`를 돌리거나 스크립트에서 `await cms.migrate()`를 쓴다. `monti migrate`는 이제 설정 파일을 불러오므로 그 파일이 `cms`를 내보내야 한다.
-- 로그인·로그아웃은 서버 액션이 아니라 `/api/cms/v1/session/*`로 보내는 일반 폼 전송이다(서버 액션은 인스턴스를 실을 수 없다). 앱에서 바꿀 것은 없다.
+- 로그인·로그아웃은 서버 액션이 아니라 `/api/monti/v1/session/*`로 보내는 일반 폼 전송이다(서버 액션은 인스턴스를 실을 수 없다). 앱에서 바꿀 것은 없다.
 
 ### `cms.database()`를 쓰던 플러그인 올리기
 
@@ -719,14 +719,14 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 
 4. **비밀 값.** `MONTI_SECRET`을 **옛 `CMS_SECRET` 값**으로 정하면 전에 암호화한 값(AI 서비스 키, git-sync 토큰)이 모두 그대로 풀린다. 또는 새 `MONTI_SECRET`을 정하고 `defineConfig`의 `previousSecrets: [process.env.CMS_SECRET]`로 옛 값을 계속 읽게 한다. 값은 다시 저장할 때 새 비밀 값으로 다시 암호화되고, 옛 값은 그 뒤에 뺀다. `AUTH_SECRET`은 더 이상 읽지 않으므로 지워도 된다. 로그인 세션 키가 이제 `MONTI_SECRET`에서 만들어지므로 모두 한 번 로그아웃된다(세션이 초기화될 뿐 잃는 것은 없다).
 5. **호스트.** `host: nextHost`와 그 import를 지운다. Next 통합이 붙여 준다.
-6. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다. 관리자 경로는 스키마 파일의 `admin.path`가 따로 없으면 `/admin`이라, 화면이 `app/(admin)/admin`에 있던 사이트는 `app/admin`으로 옮겨 주소를 그대로 둔다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/cms/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
+6. **Next 파일.** `app/(admin)/studio/*`를 `app/studio/*`로 옮긴다(라우트 그룹은 이제 선택이다. 관리자 경로는 스키마 파일의 `admin.path`가 따로 없으면 `/admin`이라, 화면이 `app/(admin)/admin`에 있던 사이트는 `app/admin`으로 옮겨 주소를 그대로 둔다). Monti 파일은 셋이 된다: `app/<관리자 경로>/layout.tsx`, `app/<관리자 경로>/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`(레이아웃을 페이지에 합칠 수 없는 이유는 "`monti init`"을 본다). `admin-components.tsx`는 지우고 그 컴포넌트를 플러그인으로 등록한다. `definePlugin({ name, options: {}, admin: () => import("./admin") })`를 만들고, 그 관리자 모듈의 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 한다. `Provider`는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓴다(`examples/blog/plugins/word-list/`). 세 파일의 import는 `monti.config.ts`로 고친다.
    세 파일 밖에서 로그인한 사람을 묻는 자기 코드(미리보기 레이아웃, `/api/admin/access` 라우트 같은 것)에는 통합이 요청 헤더를 붙여 주지 않는다. `cms.authGateway.verifyAdmin()` 앞에서 `cms.attachHost(nextHost)`(`@monti-cms/nextjs/auth`의 `nextHost`)를 부르거나, 그것을 대신 해 주는 `previewEntry(cms, …)`로 초안을 읽는다. 그러지 않으면 개발용 우회에서도 "로그인하지 않음"으로 답한다(로그에 `DEV AUTH BYPASS skipped … host: unknown`).
 7. **`bareun()`을 쓰지 않으려면 뺀다.** 패키지는 그대로 남아 있고, 블로그 예시에서는 뺐다.
 8. **확인하고 마이그레이션한다.** `monti doctor`를 돌린다. 이 안내에서 남은 것(옛 파일, 옛 변수 이름, `(admin)` 라우트 폴더, 설정에 남은 옛 옵션)을 정확한 단계와 함께 보여 주고, `"use client"` 파일이 설정에 닿으면 실패한다. 그다음 `monti migrate`를 돌린다.
 
 위 단계에 나오지 않는 것 셋:
 
-- **OAuth 콜백 URL.** 옛 `githubAuth`에 `basePath`가 없던 사이트만 GitHub OAuth 콜백 URL이 그대로다. `basePath: "/api/auth"`로 NextAuth 주소를 유지하던 사이트는 이제 OAuth 앱에 `<사이트 URL>/api/cms/auth/callback/github`를 등록하고(`monti doctor`가 찍어 준다), 옛 `app/api/auth/[...nextauth]` 라우트를 지운다.
+- **OAuth 콜백 URL.** 옛 `githubAuth`에 `basePath`가 없던 사이트만 GitHub OAuth 콜백 URL이 그대로다. `basePath: "/api/auth"`로 NextAuth 주소를 유지하던 사이트는 이제 OAuth 앱에 `<사이트 URL>/api/monti/auth/callback/github`를 등록하고(`monti doctor`가 찍어 준다), 옛 `app/api/auth/[...nextauth]` 라우트를 지운다.
 - **`monti schema:extract`는 `monti.config.ts`를 불러온다.** 설정이 아직 옛 패키지를 쓰는 앱 코드를 import하면(항목을 읽는 `publicApi.toJson` 같은 것) 이번 실행 동안 그 옵션을 주석 처리하고 끝난 뒤 되돌린다.
 - **테스트.** `defineConfig`는 `window`가 있는 곳에서 던지므로, `monti.config.ts`를 import하는 테스트(직접이든 테스트 대상 코드를 거쳐서든)는 `jsdom` 환경에서 돌리면 안 된다. `// @vitest-environment node`를 붙이거나, `@monti-cms/core/testing`의 `fakeCms`로 테스트에 필요한 인스턴스를 만든다.
 
@@ -738,7 +738,7 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 | `@monti-cms/core/schema-change` | 설정 화면, 명령줄 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
 | `@monti-cms/core/schema-edit` | 설정 화면(서버 쪽) | `schemaEditAccess`(누가 스키마 파일을 쓸 수 있나), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `printSchemaFile`, `parseSchemaLiteral`("관리자에서 스키마 편집하기") |
 | `@monti-cms/core/server` | `monti.config.ts` | `defineConfig`(사이트·서버 옵션을 한꺼번에 받아 인스턴스를 돌려준다)·`postgres`·`createCms`(낮은 수준 API), 저장소 계약 타입(`MediaStore` 등). 저장소 모듈은 처음 쓸 때 불러온다 |
-| `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
+| `@monti-cms/nextjs` | `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost`(로그인의 Next 쪽. 사이트에는 필요 없고 Next 통합이 붙인다) |
@@ -795,19 +795,19 @@ MDX가 코어에서 `@monti-cms/mdx` 패키지로 옮겨 갔다. 코어는 이�
 이런 본문 때문에 실패하는 일은 없다. 발행본과 템플릿도 마찬가지인데, 기존 저장소의 데이터는 언제나 옮겨져야 하기 때문이다. 그중 발행본과 템플릿은 id로 로그에 남는다(`[monti] N published bodies have no document …`). 편집기에서 고치기 전까지는 `unparsed`로 읽힌다(페이지는 아무것도 그리지 않는다).
 **참조 위치.** 저장된 참조의 본문 위치는 전에 `{ "type": "mdx", "line", "column", "blockId"? }`였다. 읽을 때는 두 모양을 모두 받고, 그 항목을 다음에 저장하면 새 모양(`{ "type": "body", "blockId" }`)으로 쓴다. SQL 마이그레이션은 없다.
 
-- **선택 칸용 항목 검색.** `GET /api/cms/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20`은 선택 칸이 쓰도록 한 컬렉션의 항목을 제목으로 찾는다(관리자의 관계 필드는 전체 목록을 불러오지 않고 이렇게 검색한다). `{ items: [{ id, title, slug, status }] }`를 돌려주며 제목이 잘 맞는 순서다(제목이 같은 것, 질의로 시작하는 제목, 질의로 시작하는 낱말이 있는 제목, 질의를 포함한 제목, 질의를 포함한 슬러그). 최대 `limit`개(기본 20, 최대 50)이고 휴지통은 찾지 않는다. `id`를 되풀이하면 검색 대신 그 항목들을 id로 찾는다. 저장소 포트는 `searchEntries`(`ListStore`)다.
-- **관리자 항목 API.** `POST /api/cms/v1/entries`와 `PATCH /api/cms/v1/entries/:id`는 본문을 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON) 또는 `body`(글)와 그것을 읽는 `format`으로 받는다("형식" 절). `mdx`는 없다. 문서와 글을 함께 보내거나, 형식 없이 글만 보내거나, 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 아무것도 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
-  읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/cms/v1/entries/:id?format=<이름>`은 `working`과 `published`(번역이면 원문도)에 `body`(문자열)를 더한다. 그 형식으로 쓴 글이며, 다시 가져올 수 있게 쓴다. `GET /api/cms/v1/meta`는 크기 한도를 `limits.textBytes`(어떤 형식이든 글)와 `limits.docBytes`로, 인스턴스의 형식을 `formats`(`{ name, label, mimeType, extension, canImport }`)로 알려 준다. 관리자 편집기는 늘 `doc`을 보낸다.
-- **템플릿 API와 템플릿.** 본문 템플릿은 항목 본문처럼 문서다. `body_templates.doc`이 유일한 원본이고 `body_templates.mdx`는 이제 아무도 쓰지 않는다(열은 남고 선택 사항이다). `POST /api/cms/v1/templates`와 `PATCH /api/cms/v1/templates/:id`는 `{ name, doc }` 또는 `{ name, body, format }`을 받고(둘 다 없으면 빈 템플릿이고, 패치는 본문을 그대로 둔다) `doc`을 돌려주며 `mdx`는 주지 않는다. `GET`의 `?format=<이름>`은 템플릿마다 `body`를 더한다. 형식이 거절한 글은 형식의 발견 사항과 함께 `422 format_import_failed`다. 템플릿에는 항목 초안과 달리 문서가 아닌 글을 담아 둘 자리가 없기 때문이다.
+- **선택 칸용 항목 검색.** `GET /api/monti/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20`은 선택 칸이 쓰도록 한 컬렉션의 항목을 제목으로 찾는다(관리자의 관계 필드는 전체 목록을 불러오지 않고 이렇게 검색한다). `{ items: [{ id, title, slug, status }] }`를 돌려주며 제목이 잘 맞는 순서다(제목이 같은 것, 질의로 시작하는 제목, 질의로 시작하는 낱말이 있는 제목, 질의를 포함한 제목, 질의를 포함한 슬러그). 최대 `limit`개(기본 20, 최대 50)이고 휴지통은 찾지 않는다. `id`를 되풀이하면 검색 대신 그 항목들을 id로 찾는다. 저장소 포트는 `searchEntries`(`ListStore`)다.
+- **관리자 항목 API.** `POST /api/monti/v1/entries`와 `PATCH /api/monti/v1/entries/:id`는 본문을 `doc`(항목의 `working.doc`·`published.doc`로 읽은 문서 JSON) 또는 `body`(글)와 그것을 읽는 `format`으로 받는다("형식" 절). `mdx`는 없다. 문서와 글을 함께 보내거나, 형식 없이 글만 보내거나, 올바른 저장 문서가 아닌 값을 보내면 `400 invalid_input`이다. 아무것도 없으면 새 항목은 빈 본문이고, 패치는 지금 본문을 그대로 둔다.
+  읽은 `doc`을 그대로 되돌려 보내면 아무것도 바뀌지 않는다. `GET /api/monti/v1/entries/:id?format=<이름>`은 `working`과 `published`(번역이면 원문도)에 `body`(문자열)를 더한다. 그 형식으로 쓴 글이며, 다시 가져올 수 있게 쓴다. `GET /api/monti/v1/meta`는 크기 한도를 `limits.textBytes`(어떤 형식이든 글)와 `limits.docBytes`로, 인스턴스의 형식을 `formats`(`{ name, label, mimeType, extension, canImport }`)로 알려 준다. 관리자 편집기는 늘 `doc`을 보낸다.
+- **템플릿 API와 템플릿.** 본문 템플릿은 항목 본문처럼 문서다. `body_templates.doc`이 유일한 원본이고 `body_templates.mdx`는 이제 아무도 쓰지 않는다(열은 남고 선택 사항이다). `POST /api/monti/v1/templates`와 `PATCH /api/monti/v1/templates/:id`는 `{ name, doc }` 또는 `{ name, body, format }`을 받고(둘 다 없으면 빈 템플릿이고, 패치는 본문을 그대로 둔다) `doc`을 돌려주며 `mdx`는 주지 않는다. `GET`의 `?format=<이름>`은 템플릿마다 `body`를 더한다. 형식이 거절한 글은 형식의 발견 사항과 함께 `422 format_import_failed`다. 템플릿에는 항목 초안과 달리 문서가 아닌 글을 담아 둘 자리가 없기 때문이다.
   관리자 템플릿 관리 화면과 편집기의 템플릿 메뉴는 문서로 일한다. 템플릿을 적용하면 그 문서를 새 블록 ID로 항목에 복사한다. 시드 템플릿(사이트 설정의 `seed.templates`)은 `{ id, name, doc }` 또는 `{ id, name, body, format }`이다. 글은 새 저장소를 처음 채우는 마이그레이션이 그 형식으로 읽고, 설치된 어떤 플러그인도 읽지 못하는 시드는 그 형식을 알리는 메시지와 함께 마이그레이션을 멈춘다(`mdx`라면 `@monti-cms/mdx`를 설치한다). 이미 데이터가 있는 저장소는 이 때문에 멈추지 않는다.
   `monti migrate`는 `0019_templates_documents`를 실행한다. 읽을 수 있는 문서가 없는 템플릿은 그 글의 `unparsed` 문서를 받고, `body_templates.mdx`는 더 이상 필수가 아니다. `version`, `updated_at`, 열에 이미 있는 글은 그대로다. 템플릿 때문에 실패하는 일은 없고, 문서가 없던 것은 id로 로그에 남는다. 다시 돌려도 바뀌는 것이 없다.
-- **관리자 내보내기**(`GET` 또는 `POST /api/cms/v1/export`)는 형식 버전 4다. 보관 파일은 문서를 담는다. 본문마다 `working.doc.json`·`published.doc.json`, `doc`이 있는 `templates.json` 항목, `doc`이 있는 공개 내보내기의 `published.json`이며, 다이제스트가 이를 포함한다. MDX는 따로 없다. `format=<이름>`(쿼리, 또는 `POST` 본문의 `format`)을 주면 본문마다 `working.<확장자>`·`published.<확장자>`로, 템플릿은 `body`로 그 형식의 글도 쓰고 `manifest.format`이 그 형식을 알려 준다. 관리자 보관 파일의 글은 다시 가져올 수 있게 쓴다(풀 수 없는 항목 링크는 id를 유지한다). 공개 보관 파일의 글은 읽는 사람을 위한 것이다(공개된 항목만 담고, 공개되지 않은 대상은 링크가 아니다). 모르는 형식은 `400 unknown_format`이다.
+- **관리자 내보내기**(`GET` 또는 `POST /api/monti/v1/export`)는 형식 버전 4다. 보관 파일은 문서를 담는다. 본문마다 `working.doc.json`·`published.doc.json`, `doc`이 있는 `templates.json` 항목, `doc`이 있는 공개 내보내기의 `published.json`이며, 다이제스트가 이를 포함한다. MDX는 따로 없다. `format=<이름>`(쿼리, 또는 `POST` 본문의 `format`)을 주면 본문마다 `working.<확장자>`·`published.<확장자>`로, 템플릿은 `body`로 그 형식의 글도 쓰고 `manifest.format`이 그 형식을 알려 준다. 관리자 보관 파일의 글은 다시 가져올 수 있게 쓴다(풀 수 없는 항목 링크는 id를 유지한다). 공개 보관 파일의 글은 읽는 사람을 위한 것이다(공개된 항목만 담고, 공개되지 않은 대상은 링크가 아니다). 모르는 형식은 `400 unknown_format`이다.
 - **공개 읽기 API와 공개 내보내기**는 문서를 돌려준다. `cms.read.getEntry` / `listEntries` / `getPreview`는 `entry.doc`(저장된 문서. 목록에서는 `body: true`일 때만, 아니면 `null`)과 `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: 그 문서의 이미지, 파일, 내부 링크를 그리는 데 필요한 값. 문서가 쓰는 것만 들어 있고, `collectRefs(doc)`가 id 목록을 준다)를 담는다.
   문서의 링크는 `{ entryId }`(내부) 또는 `{ href, title? }`(외부)다. `entryId`는 번역 그룹 id(원문 항목의 id. 관계 필드가 담는 id와 같다)라서, `refs.links`는 읽는 사람의 언어로 된 주소와 제목을 주고 번역이 없으면 원문 것을 준다.
   가리키는 글이 공개되지 않았으면 `refs.links`에 없고 링크는 일반 글자로 그려진다. 주소(slug)를 바꿔도 저장된 문서는 그대로다. 링크는 관계 필드처럼 참조다. 항목의 참조에 블록 단위로 기록되고, 없는 항목(또는 아무도 쓰지 않는 주소)을 가리키는 링크는 발행을 막는다(`unresolved_internal_link`). 공개되지 않았거나 휴지통에 있는 항목을 가리키는 링크는 경고만 한다(`unpublished_internal_link`). 가리키는 글이 공개될 때까지 페이지는 그 링크를 일반 글자로 그리므로, 서로 링크한 글은 어떤 순서로 발행해도 된다.
   글 주소로 쓴 링크(`[x](/posts/slug)`. 어떤 형식이든 문서든)는 그 주소를 가진 항목이 있으면 쓸 때 id 링크로 바뀐다. 주소를 가진 항목이 없으면 쓴 그대로 남고 발행을 막는다. 기존 데이터베이스의 저장된 문서는 마이그레이션 `0018_link_entry_ids`가 옮긴다(문서 버전 3).
-  `entry.mdx`는 없다. `format: "mdx"`를 넘기고 `entry.body`(`{ format, text }`, "형식" 절)를 읽는다. `GET /api/cms/v1/public/entries/:collection/:slug`는 `doc`과 `refs`를 돌려주고, `?format=<이름>`이면 `body: { format, text }`도 준다(모르는 형식은 `400 invalid_input`). 목록에는 없다.
+  `entry.mdx`는 없다. `format: "mdx"`를 넘기고 `entry.body`(`{ format, text }`, "형식" 절)를 읽는다. `GET /api/monti/v1/public/entries/:collection/:slug`는 `doc`과 `refs`를 돌려주고, `?format=<이름>`이면 `body: { format, text }`도 준다(모르는 형식은 `400 invalid_input`). 목록에는 없다.
   문서가 될 수 없는 초안은 `unparsed` 문서로 미리보기가 된다.
 
 ### 문법 확장 만들기(실험적)
@@ -837,7 +837,7 @@ export default defineFormat({
 });
 ```
 
-플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/cms/v1/meta`가 이를 `formats`로 알려 준다.
+플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/monti/v1/meta`가 이를 `formats`로 알려 준다.
 
 **문서 모델.** 노드는 `paragraph`, `heading`(`attrs.level`), `bulletList`와 `orderedList`(각각 블록을 담은 `listItem` 노드를 가진다), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`다. 텍스트 노드에는 `marks`(`bold`, `italic`, `code`, `attrs.href`가 있는 `link` 등)가 붙는다. 플러그인의 블록은 블록 이름을 딴 노드이고, 블록의 속성은 `attrs`에 들어간다(`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()`(`@monti-cms/core/document`)가 `content`를 채워 넣을 문서이고, 그 텍스트는 `toPlainText(site, doc)`나 `documentText(site, doc, options)`(`@monti-cms/core/client`)가 준다. 양방향을 모두 갖춘 형식은 [커스텀 형식 레시피](../../docs/recipes/custom-format.md)에 있다.
 
@@ -854,11 +854,11 @@ export default defineFormat({
 | 어디 | 어떻게 |
 | --- | --- |
 | `cms.read.getEntry`·`listEntries`(`body: true`일 때)·`getPreview` | `format: "mdx"`가 `entry.body = { format, text }`를 더한다. 링크는 읽는 사람이 보는 경로(공개되지 않은 대상은 링크가 아니다)이고 이미지는 공개 URL이다. 모르는 형식은 `unknown_format` 코드의 `ServiceError`를 던진다 |
-| `GET /api/cms/v1/public/entries/:collection/:slug` | `?format=mdx`가 `body: { format, text }`를 더한다 |
-| `POST /api/cms/v1/entries`·`PATCH /api/cms/v1/entries/:id`·`cms.contentService()`(만들기·저장·일괄) | 본문은 `{ doc }` 또는 `{ body, format }`이고 둘을 함께 보낼 수 없다 |
-| `GET /api/cms/v1/entries/:id` | `?format=mdx`가 `working.body`와 `published.body`(문자열)를 더한다 |
-| `/api/cms/v1/templates` | `{ name, doc }` 또는 `{ name, body, format }`. `GET`의 `?format=`은 `body`를 더한다 |
-| `GET` 또는 `POST /api/cms/v1/export` | `format=mdx`는 본문을 그 형식의 파일로도 쓴다 |
+| `GET /api/monti/v1/public/entries/:collection/:slug` | `?format=mdx`가 `body: { format, text }`를 더한다 |
+| `POST /api/monti/v1/entries`·`PATCH /api/monti/v1/entries/:id`·`cms.contentService()`(만들기·저장·일괄) | 본문은 `{ doc }` 또는 `{ body, format }`이고 둘을 함께 보낼 수 없다 |
+| `GET /api/monti/v1/entries/:id` | `?format=mdx`가 `working.body`와 `published.body`(문자열)를 더한다 |
+| `/api/monti/v1/templates` | `{ name, doc }` 또는 `{ name, body, format }`. `GET`의 `?format=`은 `body`를 더한다 |
+| `GET` 또는 `POST /api/monti/v1/export` | `format=mdx`는 본문을 그 형식의 파일로도 쓴다 |
 
 | 오류 코드 | 상태 | 언제 |
 | --- | --- | --- |
@@ -1107,7 +1107,7 @@ export const myPlugin = () =>
 - `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
   `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
   확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
-- 서버 쪽 `routes`는 본체 경로(`/api/cms/v1/*`)에 없는 주소를 받는다. 본체가 관리자 로그인 확인과 같은 출처 검사로 감싸므로
+- 서버 쪽 `routes`는 본체 경로(`/api/monti/v1/*`)에 없는 주소를 받는다. 본체가 관리자 로그인 확인과 같은 출처 검사로 감싸므로
   인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`로 빼고 스스로 확인한다.
   `migrate`는 `monti migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
@@ -1180,11 +1180,11 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | 항목 | 뜻 |
 |---|---|
 | `database` | 필수. 콘텐츠 저장소. `postgres()`는 `DATABASE_URL`과 `DATABASE_SCHEMA`를 읽고, `postgres({ connectionString, schema })`는 코드에서 정한다 |
-| `auth` | 선택. 없으면 아무도 로그인할 수 없다. `next dev`에서는 개발 로그인으로 내 컴퓨터에서 관리자에 들어가고, 배포된 관리자는 로그인이 설정되지 않았다고 답한다(`monti doctor`는 개발에서 경고하고 프로덕션에서 실패한다). 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/cms/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). `host`는 Next 통합 밖에서 쓰는 명시적 재정의다(`cms.attachHost`가 붙인 호스트보다 우선한다). Next.js 앱에서는 적지 않는다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
+| `auth` | 선택. 없으면 아무도 로그인할 수 없다. `next dev`에서는 개발 로그인으로 내 컴퓨터에서 관리자에 들어가고, 배포된 관리자는 로그인이 설정되지 않았다고 답한다(`monti doctor`는 개발에서 경고하고 프로덕션에서 실패한다). 관리자 로그인. `@monti-cms/auth`의 `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()`는 `AUTH_GITHUB_ID`·`AUTH_GITHUB_SECRET`·`MONTI_ADMIN_GITHUB_ID`(GitHub 숫자 ID 하나, 또는 쉼표로 구분한 여럿)를 읽고, `github({ clientId, clientSecret, admins })`는 코드에서 정한다. `basePath`는 로그인 API 경로(기본 `/api/monti/auth`, "로그인 경로")다. 세션 서명 키는 비밀 값에서 만든다("비밀 값"). `host`는 Next 통합 밖에서 쓰는 명시적 재정의다(`cms.attachHost`가 붙인 호스트보다 우선한다). Next.js 앱에서는 적지 않는다. 개발 우회가 켜진 `next dev`에서는 GitHub 앱이 없어도 로그인을 시도할 때만 오류가 나고, 로그인이 필요한 서버에서는 로그인 연결을 만들 때 오류가 난다 |
 | `secret` | 선택. 하나뿐인 비밀 값. 없으면 `MONTI_SECRET` 환경 변수. 로그인 세션과 플러그인이 암호화해 두는 값(AI 서비스 키, git-sync 토큰)이 이 값에서 만든 키를 받는다. 비밀 값 자체는 누구도 받지 않는다("비밀 값"). |
 | `previousSecrets` | 선택. `secret`이 바뀌기 전의 값들(항목이 정의되지 않은 환경 변수 값이어도 된다). 이 값으로 암호화한 저장 값도 계속 읽히고, 다시 저장할 때 `secret`으로 새로 암호화된다. 그래서 `secret`을 바꿔도 저장된 키를 다시 넣지 않아도 된다. |
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 알려진 프록시 플랫폼이 감지되거나 개발일 때 켬, 그 밖에는 끔 |
-| `publicApi` | 선택. 공개 JSON API(`/api/cms/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
+| `publicApi` | 선택. 공개 JSON API(`/api/monti/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
 | `hooks` | 선택. 모든 콘텐츠 쓰기에 거는 훅: `transform`·`validate`·`validatePublish`·`afterCommit`(변경이 커밋된 뒤 알림이며 두 번째 인자로 인스턴스를 받는다: 캐시 갱신·웹훅·검색 색인. 실패하면 다시 시도하므로, 반복되면 안 되는 일은 `event.once`로 감싼다). "훅 계약"과 "이벤트 전달"을 본다. 플러그인도 `hooks`를 둘 수 있다 |
 | `events` | 선택. `afterCommit` 전달을 다시 시도하고 보관하는 방식: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. "이벤트 전달"을 본다 |
 
@@ -1316,7 +1316,7 @@ export default plugin;
 - **같은 프로세스의 다음 쓰기.** 쓰기는 자기 이벤트를 보낸 뒤 때가 된 재시도를 최대 5건, 프로세스마다 10초에 한 번까지 함께 돌린다.
 - **`cms.events.retry({ all?, limit? })`.** 때가 된 전달을 보낸다(`all`이면 아직 때가 안 된 실패도, 죽은 것은 손으로만). 커밋과 전달 사이에 프로세스가 멈춰 전달 행이 없는 이벤트도 보낸다. `{ delivered, failed, dead }`를 돌려준다. `cms.events.list()`·`counts()`·`retryDelivery({ eventId, subscriber })`·`dismiss({ eventId, subscriber })`는 관리자 화면이 쓴다.
 - **`monti events:retry [--all] [--limit <n>]`.** `monti migrate`처럼 설정 파일을 불러와 `cms.events.retry()`를 부른다. 크론 작업이나 CI 일정에서 돌린다.
-- **`POST /api/cms/v1/events/retry[?all=1&limit=100]`.** URL만 부를 수 있는 스케줄러(예: Vercel 크론)를 위한 길이다. 관리자 세션을 받고, 설정에 `events.retrySecret`이 있으면 `Authorization: Bearer <retrySecret>`도 받는다(환경 변수에 두고, `cms.server`에는 들어가지 않는다).
+- **`POST /api/monti/v1/events/retry[?all=1&limit=100]`.** URL만 부를 수 있는 스케줄러(예: Vercel 크론)를 위한 길이다. 관리자 세션을 받고, 설정에 `events.retrySecret`이 있으면 `Authorization: Bearer <retrySecret>`도 받는다(환경 변수에 두고, `cms.server`에는 들어가지 않는다).
 
 ```ts
 defineConfig({
@@ -1526,9 +1526,9 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 관리자에는 `monti.schema.ts`를 편집하는 **스키마** 화면(`<관리자 경로>/schema`, 사이드바 "관리" 아래)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
 
-**누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/cms/v1/schema`와 `POST /api/cms/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/cms/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
+**누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/monti/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
 
-**경로** (`/api/cms/v1/schema`, `cms.handle()`이 처리한다):
+**경로** (`/api/monti/v1/schema`, `cms.handle()`이 처리한다):
 
 | 경로 | 하는 일 |
 | --- | --- |
@@ -1643,7 +1643,7 @@ layout: [{ fields: ["title", "slug", "excerpt"] }], // hero·credit은 Media 탭
 필드 이름이 `translations`이거나, 컬렉션 종류가 없거나, `admin.path`·`site.localePrefix`·`site.previewLocaleParam`·`site.home`
 모양이 틀리면 앱이 뜰 때 바로 오류를 낸다.
 
-복제(`POST /api/cms/v1/entries/:id/duplicate`)는 본문에 `{ title }`을 받으면 복제본 제목을 그 값으로 둔다(관리자 화면은 원본
+복제(`POST /api/monti/v1/entries/:id/duplicate`)는 본문에 `{ title }`을 받으면 복제본 제목을 그 값으로 둔다(관리자 화면은 원본
 제목에 "(복사)"를 붙여 보낸다). 없으면 원본 제목 그대로다. 본체는 붙일 말을 정하지 않고, 복제본도 다른 쓰기와 같은 쓰기 파이프라인을 지난다.
 
 ## 레시피

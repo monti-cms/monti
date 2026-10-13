@@ -59,7 +59,7 @@ export { LOCALE_PREFIX_MODES, type LocalePrefixMode };
 export interface AdminConfig {
     /**
      * Admin UI path. Default `/admin`. The app's admin route folder must use the same path
-     * (for `/studio`, `app/(admin)/studio/[[...path]]/page.tsx`). The admin API (`/api/cms/v1`) does not change.
+     * (for `/studio`, `app/(admin)/studio/[[...path]]/page.tsx`). The admin API (`/api/monti/v1`) does not change.
      */
     readonly path?: string;
     /**

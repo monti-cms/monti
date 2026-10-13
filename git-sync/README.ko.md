@@ -70,7 +70,7 @@ export const cms = defineConfig({
 ## 설정하기
 
 1. **토큰.** GitHub에서 저장소의 *Contents*와 *Pull requests*에 **읽기·쓰기** 권한이 있는 세분화된 개인 액세스 토큰을 만든다(`repo` 범위의 클래식 토큰도 된다). Git 동기화 화면의 설정 탭에서 저장한다. 암호화해 저장하며 끝 네 글자만 보여 준다. 앱에 `MONTI_SECRET`이 있어야 하고, 없으면 아무것도 저장할 수 없다.
-2. **웹훅**(변경을 돌려받으려면). 저장소의 Settings, Webhooks, Add webhook에서 Payload URL은 설정 탭이 보여 주는 주소(`https://<사이트>/api/cms/v1/git-sync/webhook`), 콘텐츠 형식은 `application/json`, 이벤트는 **push**, 비밀 값은 설정 탭의 "만들기"로 만들어 저장한 뒤 같은 값을 GitHub에 붙여 넣는다. 라우트는 `X-Hub-Signature-256`을 그 비밀 값으로 검증하고, 맞지 않으면 거절한다. GitHub에서 사이트에 닿을 수 있어야 한다.
+2. **웹훅**(변경을 돌려받으려면). 저장소의 Settings, Webhooks, Add webhook에서 Payload URL은 설정 탭이 보여 주는 주소(`https://<사이트>/api/monti/v1/git-sync/webhook`), 콘텐츠 형식은 `application/json`, 이벤트는 **push**, 비밀 값은 설정 탭의 "만들기"로 만들어 저장한 뒤 같은 값을 GitHub에 붙여 넣는다. 라우트는 `X-Hub-Signature-256`을 그 비밀 값으로 검증하고, 맞지 않으면 거절한다. GitHub에서 사이트에 닿을 수 있어야 한다.
 3. **첫 동기화.** `monti git-sync:push --all`이 발행한 글을 모두 저장소에 쓴다(아래).
 
 웹훅이 없으면 화면의 "지금 가져오기"와 `monti git-sync:pull`(크론 작업용)로 변경을 가져온다.
@@ -189,7 +189,7 @@ monti git-sync:push --all [--target <id>]
 
 ## API
 
-`/api/cms/v1/git-sync/` 아래에 있고, 웹훅만 공개(서명 검증)이며 나머지는 관리자 전용이다.
+`/api/monti/v1/git-sync/` 아래에 있고, 웹훅만 공개(서명 검증)이며 나머지는 관리자 전용이다.
 
 | 라우트 | |
 | --- | --- |

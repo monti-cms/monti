@@ -79,7 +79,7 @@ export interface PluginConfigView {
 }
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 /**
- * One plugin API route. `pattern` is the path after `/api/cms/` (e.g. `v1/ai/run`) and `[name]` is a single segment.
+ * One plugin API route. `pattern` is the path after `/api/monti/` (e.g. `v1/ai/run`) and `[name]` is a single segment.
  * The core wraps it with the admin login check and a same-origin check. Only routes that must be reachable without login (external runners, webhooks, etc.) set `public: true`
  * to opt out, and then the route verifies the request itself.
  */

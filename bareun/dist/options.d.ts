@@ -3,7 +3,7 @@ import type { TextCheckerLimits } from "@monti-cms/core";
 export declare const BAREUN_PLUGIN_NAME = "text-check-bareun";
 /** Checker name (the source shown on results). */
 export declare const BAREUN_CHECKER_ID = "bareun";
-/** Server route. Appended to the core API base (`/api/cms/`). */
+/** Server route. Appended to the core API base (`/api/monti/`). */
 export declare const BAREUN_ROUTE = "v1/text-check/bareun";
 export interface BareunOptions {
     /** Name of the environment variable holding the API key. Default `BAREUN_API_KEY`. The key is read on the server only. */

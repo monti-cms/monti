@@ -70,7 +70,7 @@ The config is checked when the site config is created: a missing collection, a p
 ## Setting it up
 
 1. **Token.** Create a fine-grained personal access token on GitHub with **read and write** access to *Contents* and *Pull requests* of the repo (a classic token with `repo` scope also works). On the Git sync screen, Settings tab, save it. It is stored encrypted and shown only as its last four characters. The app needs `MONTI_SECRET`; without it nothing can be saved.
-2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/cms/v1/git-sync/webhook`), content type `application/json`, the **push** event, and a secret: use "Generate" on the Settings tab, save it there, and paste the same value into GitHub. The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
+2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/monti/v1/git-sync/webhook`), content type `application/json`, the **push** event, and a secret: use "Generate" on the Settings tab, save it there, and paste the same value into GitHub. The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
 3. **First sync.** `monti git-sync:push --all` writes every published entry to the repo (below).
 
 Without the webhook, "Pull now" on the screen and `monti git-sync:pull` (for a cron job) bring changes in.
@@ -189,7 +189,7 @@ All of them load the app like `monti migrate` (`--env-file`, `--no-env-file`, `-
 
 ## API
 
-Under `/api/cms/v1/git-sync/`; all admin only except the webhook, which is public and checks its signature.
+Under `/api/monti/v1/git-sync/`; all admin only except the webhook, which is public and checks its signature.
 
 | Route | |
 | --- | --- |

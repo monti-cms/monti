@@ -361,7 +361,7 @@ export default function StudioLayout({ children }: { children: ReactNode }) {
 export const apiRouteTemplate = (configImport) => `import { createRouteHandler } from "@monti-cms/nextjs";
 import { cms } from ${JSON.stringify(configImport)};
 
-// The admin API (/api/cms/v1/*) and the sign-in routes (/api/cms/auth/*).
+// The admin API (/api/monti/v1/*) and the sign-in routes (/api/monti/auth/*).
 export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 `;
 export function nextConfigTemplate() {
@@ -374,7 +374,7 @@ export default withCms(nextConfig);
 `;
 }
 /** The OAuth callback URL of the GitHub login for a site URL. */
-export const githubCallbackUrl = (siteUrl) => `${siteUrl.replace(/\/+$/, "")}/api/cms/auth/callback/github`;
+export const githubCallbackUrl = (siteUrl) => `${siteUrl.replace(/\/+$/, "")}/api/monti/auth/callback/github`;
 /** How to add GitHub login to a config that has none: the one how-to `monti init` and `monti doctor` both print. */
 export function githubLoginHowTo(siteUrl) {
     return [

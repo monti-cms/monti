@@ -368,9 +368,9 @@ const nextFiles = {
             {
                 what: "API route",
                 base: "route",
-                segments: ["api", "cms", "[...path]"],
+                segments: ["api", "monti", "[...path]"],
                 marker: "createRouteHandler",
-                route: "/api/cms/[...path]",
+                route: "/api/monti/[...path]",
             },
         ];
         const problems = [];
@@ -644,6 +644,24 @@ const oldAdminComponents = {
         });
     },
 };
+const oldApiRoute = {
+    group: "upgrade",
+    id: "api-route",
+    title: "app/api/cms route folder",
+    run: (state) => {
+        const appDir = appDirOf(state);
+        if (!appDir)
+            return skip("not checked: there is no app/ folder");
+        const file = findRouteFile(state, appDir, ["api", "cms", "[...path]"], "route");
+        if (!file || !/@monti-cms\//.test(readFileSync(path.join(state.cwd, file), "utf8"))) {
+            return ok("no Monti route file at the old api/cms folder");
+        }
+        return warn(`${file} is at the old address; Monti's API now lives at /api/monti`, {
+            where: file,
+            fix: `git mv "${appDir}/api/cms" "${appDir}/api/monti" (and in the GitHub OAuth app, change the callback URL to <your site>/api/monti/auth/callback/github)`,
+        });
+    },
+};
 /** The checks of core itself, in the order they are listed. */
 export const CORE_CHECKS = [
     envFiles,
@@ -666,6 +684,7 @@ export const CORE_CHECKS = [
     oldConfigText,
     oldEnv,
     routeGroups,
+    oldApiRoute,
     oldAdminComponents,
 ];
 /** The order the groups are printed in. */

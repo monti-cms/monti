@@ -1,6 +1,6 @@
 import type { ReadEntry } from "../../../read/index.js";
 /**
- * Public JSON API (`/api/cms/v1/public/*`). Enabled by `publicApi` in the server config. Without it, public API paths return 404.
+ * Public JSON API (`/api/monti/v1/public/*`). Enabled by `publicApi` in the server config. Without it, public API paths return 404.
  * Returns only published content without login, and responses are not cached (archiving and address changes show up on the next request).
  */
 export interface PublicApiOptions {

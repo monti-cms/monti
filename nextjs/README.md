@@ -24,7 +24,7 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 
 | Entry point | Used in | Contents |
 | --- | --- | --- |
-| `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
+| `@monti-cms/nextjs` | `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)`, the `CmsRouteHandler` type |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms(nextConfig)` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | (attached for you by the route handler and the admin) | `nextHost` |
@@ -32,14 +32,14 @@ pnpm add @monti-cms/core @monti-cms/admin @monti-cms/auth @monti-cms/nextjs
 ### Route handler
 
 ```ts
-// app/api/cms/[...path]/route.ts
+// app/api/monti/[...path]/route.ts
 import { createRouteHandler } from "@monti-cms/nextjs";
 import { cms } from "@/monti.config";
 
 export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
 ```
 
-It passes the request and the path segments Next already split on to `cms.handle(request)`. This one route serves the admin API (`/api/cms/v1/*`), the login (`/api/cms/auth/*`) and the plugin routes.
+It passes the request and the path segments Next already split on to `cms.handle(request)`. This one route serves the admin API (`/api/monti/v1/*`), the login (`/api/monti/auth/*`) and the plugin routes.
 
 ### `next.config.ts`
 
@@ -113,7 +113,7 @@ The admin needs three files in the app (`monti init` writes them), whatever the 
 | --- | --- |
 | `app/<admin path>/layout.tsx` | `CmsAdminLayout` and `generateMetadata` (`cmsAdminMetadata`); the admin's stylesheet imports |
 | `app/<admin path>/[[...path]]/page.tsx` | `CmsAdminPage` |
-| `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)`: the admin API, the login and the plugin routes |
+| `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)`: the admin API, the login and the plugin routes |
 
 There is no route group and no other admin file: custom admin components are a plugin with an admin side (see "Adding site components" in the `@monti-cms/admin` README). All three import `cms` from `monti.config.ts`.
 

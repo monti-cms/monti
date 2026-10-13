@@ -6,7 +6,7 @@ const t = createActiveTranslator(bareunMessages);
 export const BAREUN_PLUGIN_NAME = "text-check-bareun";
 /** Checker name (the source shown on results). */
 export const BAREUN_CHECKER_ID = "bareun";
-/** Server route. Appended to the core API base (`/api/cms/`). */
+/** Server route. Appended to the core API base (`/api/monti/`). */
 export const BAREUN_ROUTE = "v1/text-check/bareun";
 const DEFAULT_LIMITS = { maxSegments: 100, maxChars: 10_000 };
 /** Fills in defaults and rejects invalid values. */

@@ -1,6 +1,6 @@
 import { handleApiError } from "../../error-handler.js";
 import { validateSameOrigin } from "../../security.js";
-/** `POST /api/cms/v1/session/sign-out`: signs out and sends the browser to the login screen. A plain form post from the login screen, with the same-origin check. */
+/** `POST /api/monti/v1/session/sign-out`: signs out and sends the browser to the login screen. A plain form post from the login screen, with the same-origin check. */
 export const POST = async (request, context) => {
     try {
         const { cms } = context;

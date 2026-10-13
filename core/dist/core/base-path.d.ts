@@ -2,8 +2,8 @@
  * Address rules that do not read the site config (`basePath` and the admin API address). The adapter used by the server config (`cms.server.ts`) also reads this, so
  * it must not import modules that load the config.
  */
-/** Admin API path prefix (location of `app/api/cms/[...path]/route.ts`). */
-export declare const CMS_API_PATH = "/api/cms";
+/** Admin API path prefix (location of `app/api/monti/[...path]/route.ts`). */
+export declare const CMS_API_PATH = "/api/monti";
 /** Normalizes a `basePath` value to `""` (none) or `/folder` (leading `/`, no trailing `/`). */
 export declare function normalizeBasePath(value: string | undefined | null): string;
 /**
@@ -19,7 +19,7 @@ export declare function cmsBasePath(): string;
  */
 export declare const withBasePath: (path: string) => string;
 /**
- * Admin API address. `cmsApiUrl("/v1/entries?page=2")` is `/api/cms/v1/entries?page=2` (prefixed with `basePath` if set).
+ * Admin API address. `cmsApiUrl("/v1/entries?page=2")` is `/api/monti/v1/entries?page=2` (prefixed with `basePath` if set).
  * Every API call from the admin screen and extensions builds its address with this function.
  */
 export declare function cmsApiUrl(path: string): string;

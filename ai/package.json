@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/ai",
-  "version": "0.2.0-next.5",
+  "version": "0.2.0-next.6",
   "private": true,
   "description": "AI plugin for @monti-cms/core: named AI actions, a decision model (System One), and the admin AI screen",
   "license": "MIT",
@@ -33,9 +33,9 @@
     "lucide-react": ">=0.562.0",
     "react": ">=19",
     "sonner": "^2.0.8",
-    "@monti-cms/admin": "^0.2.0-next.5",
-    "@monti-cms/mdx": "^0.2.0-next.5",
-    "@monti-cms/core": "^0.2.0-next.5"
+    "@monti-cms/core": "^0.2.0-next.6",
+    "@monti-cms/mdx": "^0.2.0-next.6",
+    "@monti-cms/admin": "^0.2.0-next.6"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -59,9 +59,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/admin": "0.2.0-next.5",
-    "@monti-cms/core": "0.2.0-next.5",
-    "@monti-cms/mdx": "0.2.0-next.5"
+    "@monti-cms/core": "0.2.0-next.6",
+    "@monti-cms/admin": "0.2.0-next.6",
+    "@monti-cms/mdx": "0.2.0-next.6"
   },
   "files": [
     "dist",

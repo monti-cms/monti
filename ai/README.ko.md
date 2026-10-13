@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core`의 AI 플러그인. 이름으로 부르는 AI 기능(생성·판단), 필드 옆 AI 버튼, 번역본 편집기의 AI 번역,
-관리자 AI 화면(`<관리자 경로>/ai`, 기본 `/admin/ai`)과 AI API(`/api/cms/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
+관리자 AI 화면(`<관리자 경로>/ai`, 기본 `/admin/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
 이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `aiPlugin()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
@@ -66,7 +66,7 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
   자리가 필수 입력을 채울 수 있어야 한다.
 - 관리자 AI 화면에서는 켜기·요청 받기·연결·모델·보낼 입력·지시문·기준값·검사 값만 고친다. 고친 값만 DB(플러그인 저장소의 `action-overrides` 컬렉션)에 둔다.
   "기본값으로"는 입력 칸만 기본값으로 되돌리고, 저장은 따로 누른다.
-- 실행: `POST /api/cms/v1/ai/run { action, input | inputs, env }`. 관리자 화면에서는 `useAiAction("summary").run({ title, body })`나
+- 실행: `POST /api/monti/v1/ai/run { action, input | inputs, env }`. 관리자 화면에서는 `useAiAction("summary").run({ title, body })`나
   `<AiButton action="summary" input={() => ({ title, body })} onResult={…} />`(`@monti-cms/ai/admin`)처럼 이름으로 부른다. 그대로 쓰면 어떤 이름이든 받고,
   `const { useAiAction, AiButton } = aiClient<typeof config>()`로 얻은 둘은 사이트 설정의 이름·입력·결과 타입을 따른다(모르는 이름은 타입 오류).
 - 판단 방식(`engine: "decide"`, System One)은 선택지(`choices`)마다 확률을 받아 기준 이상만 후보로 낸다.

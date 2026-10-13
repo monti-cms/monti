@@ -2,7 +2,7 @@ import { z } from "zod";
 import { type AllowedFileMime, type MediaConfig } from "./media-types.js";
 export * from "./media-types.js";
 /**
- * Request contract of `/api/cms/v1`. The routes and the admin UI see the same definitions.
+ * Request contract of `/api/monti/v1`. The routes and the admin UI see the same definitions.
  */
 export declare const ENTRY_STATUSES: readonly ["draft", "published", "archived", "trashed"];
 export declare const entryStatusSchema: z.ZodEnum<{

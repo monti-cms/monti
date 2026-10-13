@@ -23,7 +23,7 @@ async function targetId(cms, collection, field, slug) {
     });
     return found.status === "not_found" ? null : found.entry.translationGroupId;
 }
-/** `GET /api/cms/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
+/** `GET /api/monti/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
 export async function GET(request, { cms }) {
     const config = cms.server.publicApi;
     if (!config)
@@ -66,7 +66,7 @@ export async function GET(request, { cms }) {
         return publicApiError(error);
     }
 }
-/** `GET /api/cms/v1/public/entries/:collection/:slug?locale` — a single published entry. For an old address, reports the canonical address as `address`. */
+/** `GET /api/monti/v1/public/entries/:collection/:slug?locale` — a single published entry. For an old address, reports the canonical address as `address`. */
 export async function getOne(request, params, cms) {
     const config = cms.server.publicApi;
     if (!config)

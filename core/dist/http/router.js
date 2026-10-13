@@ -112,7 +112,7 @@ export function matchRoute(path, routes = COMPILED) {
 export const CMS_ROUTE_PATTERNS = ROUTES.map((route) => route.pattern);
 const notFound = () => handleApiError(new HttpError(404, "not_found", "Unknown CMS API path"));
 /**
- * The path segments after the API prefix (`/api/cms/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/cms/v1/entries/<id>`.
+ * The path segments after the API prefix (`/api/monti/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/monti/v1/entries/<id>`.
  * The site's `basePath` is skipped when the URL has it. `null` if the URL is not under the API prefix.
  */
 export function pathFromRequest(request) {
@@ -136,7 +136,7 @@ export function pathFromRequest(request) {
 }
 /**
  * The request handler of one CMS instance (`cms.handle()` calls it): standard `Request` in, `Response` out, no framework types.
- * `auth/*` is forwarded to the auth handler when the auth base path is the default (`/api/cms/auth`), so no separate auth route file is needed.
+ * `auth/*` is forwarded to the auth handler when the auth base path is the default (`/api/monti/auth`), so no separate auth route file is needed.
  */
 export function createRequestHandler(cms) {
     let pluginCompiled;

@@ -19,7 +19,7 @@ Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.5&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.6&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.5&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.5&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.5&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.6&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.6&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.6&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
@@ -120,7 +120,7 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | The one config: one line per feature you chose, each with a short comment, then the database, the login and storage. Nothing is hidden behind a preset: deleting a line removes the feature | `monti.config.ts` |
 | The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, written the way the admin's schema screen would write it | `monti.schema.ts` |
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
-| Admin API and login (`/api/cms/v1/*`, `/api/cms/auth/*`) | `app/api/cms/[...path]/route.ts` |
+| Admin API and login (`/api/monti/v1/*`, `/api/monti/auth/*`) | `app/api/monti/[...path]/route.ts` |
 | Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, the `S3_*` values). What is needed on your computer comes first; `SITE_URL`, `AUTH_TRUST_HOST` and `DATABASE_SCHEMA` sit commented out under "When you deploy (not needed on your computer)", one plain sentence each. A note next to `DATABASE_URL` says to use `sslmode=verify-full` instead of `sslmode=require`. It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
 
 For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
@@ -174,7 +174,7 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 
 **Help.** `monti --help` prints the header and every command; `monti <command> --help` (for example `monti init --help`) prints only that command's help.
 
-**The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** `monti init` keeps them together; when you change it later, change both. The admin API path (`/api/cms/v1`) does not change.
+**The admin path must be the same in `admin.path` (the schema file, or the site config) and in the route folder.** `monti init` keeps them together; when you change it later, change both. The admin API path (`/api/monti/v1`) does not change.
 
 **Safety.** The only changes init makes to an existing file are the three edits above. Every write it does make goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
 
@@ -251,7 +251,7 @@ Put them in `.env.local`.
 | `DATABASE_URL` | Postgres connection URL (read by `postgres()`) |
 | `DATABASE_SCHEMA` | Optional. Schema name (`public` if unset). Set it when the database is shared with other apps, so the tables stay separate. `monti migrate` creates it if missing. `monti init` does not ask: `.env.example` has it as a commented line |
 | `MONTI_SECRET` | A random long value, for example from `openssl rand -base64 32`. The one secret: login sessions are signed with a key derived from it, and plugins' stored values (AI service keys, git-sync tokens) are encrypted under keys derived from it (`defineConfig({ secret })` takes the same value). To change it, keep the old value in `previousSecrets` ("Secrets") |
-| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | Only with a GitHub login (`monti init --login github` writes them into `.env.example`) (`auth: auth({ providers: [github()] })`, which needs `@monti-cms/auth`). The GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/cms/auth/callback/github`. Not needed in `next dev` |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | Only with a GitHub login (`monti init --login github` writes them into `.env.example`) (`auth: auth({ providers: [github()] })`, which needs `@monti-cms/auth`). The GitHub OAuth app (read by `github()`). The callback URL is `<site URL>/api/monti/auth/callback/github`. Not needed in `next dev` |
 | `MONTI_ADMIN_GITHUB_ID` | The admin's numeric GitHub ID, or several separated by commas (read by `github()`). Not needed in `next dev` |
 | `SITE_URL` | Optional. The public URL of the site (`site.url`), different per environment; `site.url` in code or in the schema file wins |
 | `AUTH_TRUST_HOST` | Optional. `true` only when the server runs behind a proxy you run yourself (nginx, a load balancer) that overwrites `X-Forwarded-Host`; Vercel, Netlify, Cloudflare Pages and the like are detected. See "Host trust" |
@@ -284,7 +284,7 @@ Start it with `pnpm dev` and open the admin path (`/studio` for a setup made by 
 
 ### Login path
 
-By default the login API is served by the admin API route as well (`/api/cms/auth/*`), so there is no separate login route file.
+By default the login API is served by the admin API route as well (`/api/monti/auth/*`), so there is no separate login route file.
 Apps that still use `/api/auth/*` as before (apps that do not want to change an already registered OAuth callback URL) pick the path and add a route file.
 
 ```ts
@@ -296,7 +296,7 @@ import { cms } from "../../../../monti.config";
 export const { GET, POST } = cms.authHandlers;
 ```
 
-If `basePath` is not the default, the admin API route does not serve `/api/cms/auth/*` (404).
+If `basePath` is not the default, the admin API route does not serve `/api/monti/auth/*` (404).
 
 ### Optional dependencies
 
@@ -475,7 +475,7 @@ When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.con
 
 | Where | Code |
 | --- | --- |
-| Admin API route (`app/api/cms/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`createRouteHandler` of `@monti-cms/nextjs`, the Next adapter of `cms.handle(request)`) |
+| Admin API route (`app/api/monti/[...path]/route.ts`) | `export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);` (`createRouteHandler` of `@monti-cms/nextjs`, the Next adapter of `cms.handle(request)`) |
 | Admin API in another host | `cms.handle(request)`: a standard `Request` in, a `Response` out |
 | Admin layout and page | `<CmsAdminLayout cms={cms}>…</CmsAdminLayout>`, `<CmsAdminPage cms={cms} {...props} />`, and `export const generateMetadata = () => cmsAdminMetadata(cms);` in the layout file (from `@monti-cms/nextjs/admin`) |
 | Site pages (server components, sitemap, RSS) | `cms.read.getEntry(…)`, `cms.read.listEntries(…)`, `cms.read.getTranslations(…)`, `cms.read.getPreview(…)` (pass a `format`, for example `"mdx"` with `@monti-cms/mdx`, to also get the body as text in `entry.body`, "Formats") |
@@ -487,7 +487,7 @@ When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.con
 | Tests | `fakeCms({ config, store, verifyAdmin, … })` from `@monti-cms/core/testing`: a real instance over the parts the test provides (a minimal English site if it passes no `config`) |
 
 **HTTP layer.** The admin API, the login connection, the public API and the plugin routes work on the standard web `Request` and `Response`; no `NextRequest`, `NextResponse` or `request.nextUrl` is used.
-`cms.handle(request)` serves one request (the path after `/api/cms/` is read from the URL), and `createRouteHandler(cms)` of `@monti-cms/nextjs` is the thin Next adapter built on it.
+`cms.handle(request)` serves one request (the path after `/api/monti/` is read from the URL), and `createRouteHandler(cms)` of `@monti-cms/nextjs` is the thin Next adapter built on it.
 Plugin routes (`adminRoute`) receive a standard `Request`: read the query with `new URL(request.url).searchParams` and answer with `Response.json(…)`.
 The core imports nothing from Next.js. What a host supplies reaches it through the login connection: `CmsAuth.requestHeaders()` (the headers of the request being handled, which the development login bypass and `session()` read) and `CmsAuth.rethrow(error)` (lets a redirect that a login library throws pass through to the host; `@monti-cms/auth` answers with a `Response` and does not need it). The Next integration (`createRouteHandler(cms)`, `CmsAdminLayout`, `CmsAdminPage` and `cmsAdminMetadata` of `@monti-cms/nextjs`) attaches the Next request headers to the instance itself with `cms.attachHost(host)` (`RequestHost` from `@monti-cms/core/server`; `AuthCreateContext` has `host: RequestHost`), so the config does not name a host. `auth({ host })` is still there as an explicit override for use outside a Next integration, and it wins over the attached one; a host for another framework provides its own.
 
@@ -547,7 +547,7 @@ All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` int
 - Install `@monti-cms/nextjs` (`next` is its peer; core and admin no longer ask for it).
 - `next.config.ts`: `import { withCms } from "@monti-cms/core/next"` becomes `from "@monti-cms/nextjs/config"`.
 - `githubAuth` is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`".
-- `app/api/cms/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
+- `app/api/monti/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
 - Admin layout and page: `@monti-cms/admin/next` becomes `@monti-cms/nextjs/admin` (`CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`; same props). The layout renders the App Router adapter for the admin.
 - Admin messages: the page title keys moved from the `cms-admin.next` dictionary to `cms-admin.layout` (only matters if you override `admin.messages["cms-admin.next"]`).
 - Your own `AuthAdapter`: `CmsAuth` has two optional members, `requestHeaders()` and `rethrow(error)`. Without `requestHeaders`, the development login bypass never applies.
@@ -559,7 +559,7 @@ GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to th
 
 - Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` is removed; replace it with the shape below.
 - The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], devBypass, secret })` (with the conventional environment variables `github()` and `auth()` need no options now, see "Environment variables and `monti migrate`"), with `auth` from `@monti-cms/auth` and `github` from `@monti-cms/auth/github` (the host is attached by the Next integration, see "The CMS instance"). `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
-- Everyone signs in once more: sessions made by NextAuth are not read. The OAuth callback URL (`/api/cms/auth/callback/github`), `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` were unchanged by that move (the session secret is `MONTI_SECRET` now, see "Upgrading from `cms.config.ts` + `cms.server.ts`"). `next-auth` can be removed from `package.json`.
+- Everyone signs in once more: sessions made by NextAuth are not read. The OAuth callback URL (`/api/monti/auth/callback/github`), `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` were unchanged by that move (the session secret is `MONTI_SECRET` now, see "Upgrading from `cms.config.ts` + `cms.server.ts`"). `next-auth` can be removed from `package.json`.
 - Account ids are qualified with the provider (`github:12345678`): `AuthContext.accountId`, `CmsAuth.devUserId`, and the author recorded for a change when the login gives no name. `isAdmin(userId)` of your own `CmsAuth` receives that value.
 - `CmsAuth` changes (for your own `AuthAdapter`): `session(request?)` may be given the request, `signIn` and `signOut` may resolve with a `Response` that the route returns as it is (a redirect that carries cookies), `AuthProvider` has an optional `icon`, and `AuthCreateContext` has `storage(plugin)` (`cms.storage`).
 - The `next-auth` module augmentation (`session.user.githubId`) is gone with NextAuth.
@@ -577,7 +577,7 @@ GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to th
   Nothing hands out the raw master secret any more (`cms.secret` and `cms.server.secret` are gone too); see "Plugin secrets".
   A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(storage, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
 - `@monti-cms/core/migrate` is gone: run `monti migrate`, or `await cms.migrate()` in a script. `monti migrate` now imports the config file and needs it to export `cms`.
-- Signing in and out are plain form posts to `/api/cms/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
+- Signing in and out are plain form posts to `/api/monti/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
 
 ### Upgrading plugins that used `cms.database()`
 
@@ -722,14 +722,14 @@ Do these steps in order:
 
 4. **The secret.** Set `MONTI_SECRET` to the **old `CMS_SECRET` value**: every value encrypted before (AI service keys, git-sync tokens) keeps decrypting. Or set a new `MONTI_SECRET` and keep the old one readable with `previousSecrets: [process.env.CMS_SECRET]` in `defineConfig`; values are re-encrypted with the new secret when they are saved again, and you drop the old one only after that. `AUTH_SECRET` is not read any more and can be deleted: the login session key now comes from `MONTI_SECRET`, so everyone is signed out once (sessions reset, nothing else is lost).
 5. **The host.** Delete `host: nextHost` and its import: the Next integration attaches it.
-6. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now; the admin path is `/admin` unless `admin.path` of the schema file says otherwise, so a site whose pages were at `app/(admin)/admin` moves them to `app/admin` and keeps its URL), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/cms/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
+6. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now; the admin path is `/admin` unless `admin.path` of the schema file says otherwise, so a site whose pages were at `app/(admin)/admin` moves them to `app/admin` and keeps its URL), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/monti/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
    Your own code that asks who is signed in (a preview layout, an `/api/admin/access` route) is outside the three files, so no integration attaches the request headers for it: call `cms.attachHost(nextHost)` (`nextHost` of `@monti-cms/nextjs/auth`) before `cms.authGateway.verifyAdmin()`, or read drafts with `previewEntry(cms, …)`, which does it. Without it the check answers "not signed in" even under the development bypass (`DEV AUTH BYPASS skipped … host: unknown` in the log).
 7. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
 8. **Check and migrate.** Run `monti doctor`: it lists what of this guide is left (the old files, the old variable names, an `(admin)` route folder, old options in the config) with the exact steps, and fails when a `"use client"` file reaches the config. Then run `monti migrate`.
 
 Three things the steps above do not show:
 
-- **The OAuth callback URL.** Only a site whose old `githubAuth` had no `basePath` keeps its GitHub OAuth callback URL. One that set `basePath: "/api/auth"` (to keep the NextAuth address) registers `<site URL>/api/cms/auth/callback/github` in the OAuth app now (`monti doctor` prints it), and deletes the old `app/api/auth/[...nextauth]` route.
+- **The OAuth callback URL.** Only a site whose old `githubAuth` had no `basePath` keeps its GitHub OAuth callback URL. One that set `basePath: "/api/auth"` (to keep the NextAuth address) registers `<site URL>/api/monti/auth/callback/github` in the OAuth app now (`monti doctor` prints it), and deletes the old `app/api/auth/[...nextauth]` route.
 - **`monti schema:extract` loads `monti.config.ts`.** If the config imports code of your app that still uses the old packages (a `publicApi.toJson` that reads entries, say), comment that option out for the run and put it back after.
 - **Tests.** `defineConfig` throws where `window` exists, so a test that imports `monti.config.ts` (directly or through the code it tests) must not run in the `jsdom` environment: give it `// @vitest-environment node`, or build the instance the test needs with `fakeCms` from `@monti-cms/core/testing`.
 
@@ -741,7 +741,7 @@ Three things the steps above do not show:
 | `@monti-cms/core/schema-change` | settings screen, command line | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange` ("Changing the schema") |
 | `@monti-cms/core/schema-edit` | settings screen (server side) | `schemaEditAccess` (who may write the schema file), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `printSchemaFile`, `parseSchemaLiteral` ("Editing the schema in the admin") |
 | `@monti-cms/core/server` | `monti.config.ts` | `defineConfig` (site and server options in one, returns the instance), `postgres`, `createCms` (the low-level API), store contract types (`MediaStore`, etc.). Store modules are loaded on first use |
-| `@monti-cms/nextjs` | `app/api/cms/[...path]/route.ts` | `createRouteHandler(cms)` |
+| `@monti-cms/nextjs` | `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | admin route files | `CmsAdminLayout`, `CmsAdminPage`, `cmsAdminMetadata(cms)`, `NextAdminRouter` |
 | `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` (the Next side of the login; a site does not need it, the Next integration attaches it) |
@@ -798,19 +798,19 @@ Bodies that do not parse, have front matter or would not read back the same are 
 Nothing fails because of such a body, published ones and templates included, since the data of an existing store always migrates. The published bodies and templates among them are logged by id (`[monti] N published bodies have no document …`): they read as unparsed (a page renders it as nothing) until you fix them in the editor.
 **Reference occurrences.** A body occurrence of a stored reference used to be `{ "type": "mdx", "line", "column", "blockId"? }`. Reads accept both shapes, and the next save of the entry writes the new one (`{ "type": "body", "blockId" }`); there is no SQL migration for them.
 
-- **Entry search for pickers.** `GET /api/cms/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20` finds entries of one collection by title for a picker (the relation field of the admin searches this way instead of loading the whole list). It answers `{ items: [{ id, title, slug, status }] }`, best title matches first (an equal title, then a title that starts with the query, a word that starts with it, a title that contains it, a slug that contains it), at most `limit` (default 20, at most 50), never the trash. Repeating `id` looks those entries up by id instead. The store port is `searchEntries` (`ListStore`).
-- **Admin entry API.** `POST /api/cms/v1/entries` and `PATCH /api/cms/v1/entries/:id` take the body as `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) or as `body` (a text) with the `format` that reads it ("Formats"); `mdx` is gone. Sending a document and a text together, a text without its format, or a document that is not a valid stored document is `400 invalid_input`. With none of them, a new entry has an empty body and a patch keeps the current one.
-  Sending back the `doc` that was read changes nothing. `GET /api/cms/v1/entries/:id?format=<name>` adds `body` (a string) to `working` and `published` (and to the source of a translation): the document as text in that format, written to be imported again. `GET /api/cms/v1/meta` reports the size limits as `limits.textBytes` (a text, in any format) and `limits.docBytes`, and the formats of the instance as `formats` (`{ name, label, mimeType, extension, canImport }`). The admin editor always sends `doc`.
-- **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and nothing writes `body_templates.mdx` any more (the column stays, optional). `POST /api/cms/v1/templates` and `PATCH /api/cms/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
+- **Entry search for pickers.** `GET /api/monti/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20` finds entries of one collection by title for a picker (the relation field of the admin searches this way instead of loading the whole list). It answers `{ items: [{ id, title, slug, status }] }`, best title matches first (an equal title, then a title that starts with the query, a word that starts with it, a title that contains it, a slug that contains it), at most `limit` (default 20, at most 50), never the trash. Repeating `id` looks those entries up by id instead. The store port is `searchEntries` (`ListStore`).
+- **Admin entry API.** `POST /api/monti/v1/entries` and `PATCH /api/monti/v1/entries/:id` take the body as `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) or as `body` (a text) with the `format` that reads it ("Formats"); `mdx` is gone. Sending a document and a text together, a text without its format, or a document that is not a valid stored document is `400 invalid_input`. With none of them, a new entry has an empty body and a patch keeps the current one.
+  Sending back the `doc` that was read changes nothing. `GET /api/monti/v1/entries/:id?format=<name>` adds `body` (a string) to `working` and `published` (and to the source of a translation): the document as text in that format, written to be imported again. `GET /api/monti/v1/meta` reports the size limits as `limits.textBytes` (a text, in any format) and `limits.docBytes`, and the formats of the instance as `formats` (`{ name, label, mimeType, extension, canImport }`). The admin editor always sends `doc`.
+- **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and nothing writes `body_templates.mdx` any more (the column stays, optional). `POST /api/monti/v1/templates` and `PATCH /api/monti/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
   The admin template manager and the template menu of the editor work on documents. Applying a template copies its document into the entry with new block ids. Seed templates (`seed.templates` in the site config) are `{ id, name, doc }` or `{ id, name, body, format }`; a text is read by its format when the migration seeds a new store, and a seed that no installed plugin can read stops the migration with a message that names the format (for `mdx`: install `@monti-cms/mdx`). Nothing like that stops a store that already has its data.
   `monti migrate` runs `0019_templates_documents`: a template that has no readable document gets the `unparsed` document of its text, and `body_templates.mdx` stops being required. `version`, `updated_at` and the text already in the column do not change; nothing fails because of a template, and the ones that had no document are logged by id. Running it again changes nothing.
-- **Admin export** (`GET` or `POST /api/cms/v1/export`) is format version 4. The archive holds the documents: `working.doc.json` / `published.doc.json` for each body, `templates.json` items with `doc`, the public archive's `published.json` with `doc`, and the digests cover them. It has no MDX of its own; `format=<name>` (in the query, or `format` in the body of a `POST`) also writes each body as `working.<extension>` / `published.<extension>` and each template as `body` in that format, and `manifest.format` names it. The admin archive's texts are written to be imported again (a link to an entry that cannot be resolved keeps its id); the public archive's are for readers (it has published entries only, and an unpublished target is not a link). An unknown format is `400 unknown_format`.
+- **Admin export** (`GET` or `POST /api/monti/v1/export`) is format version 4. The archive holds the documents: `working.doc.json` / `published.doc.json` for each body, `templates.json` items with `doc`, the public archive's `published.json` with `doc`, and the digests cover them. It has no MDX of its own; `format=<name>` (in the query, or `format` in the body of a `POST`) also writes each body as `working.<extension>` / `published.<extension>` and each template as `body` in that format, and `manifest.format` names it. The admin archive's texts are written to be imported again (a link to an entry that cannot be resolved keeps its id); the public archive's are for readers (it has published entries only, and an unpublished target is not a link). An unknown format is `400 unknown_format`.
 - **Public read API and public export** return the document. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: what a renderer needs for the images, files and internal links of that document, only for what the document uses; `collectRefs(doc)` lists the ids).
   A link in a document is `{ entryId }` (internal) or `{ href, title? }` (external). `entryId` is the translation group id (the source entry's id, the same id a relation holds), so `refs.links` gives the address and title in the reader's language and falls back to the source's;
   a link whose target is not published is not in `refs.links` and is drawn as plain text. Renaming a slug changes nothing in the stored document. Links are references like relations: they are in the references of the entry, block by block, and a link to an entry that does not exist (or an address nobody holds) blocks publishing (`unresolved_internal_link`). A link to an entry that is not published, or is in the trash, only warns (`unpublished_internal_link`): the page draws it as plain text until the target is published, so posts that link to each other can be published in any order.
   Text written with the address of a post (`[x](/posts/slug)`, in any format or in a document) is turned into a link by id when it is written, if an entry holds that address; an address no entry holds stays as written and blocks publishing. Migration `0018_link_entry_ids` does this for the stored documents of an existing database (document version 3).
-  `entry.mdx` is gone: pass `format: "mdx"` and read `entry.body` (`{ format, text }`, "Formats"). `GET /api/cms/v1/public/entries/:collection/:slug` returns `doc` and `refs`, and with `?format=<name>` also `body: { format, text }` (an unknown format is `400 invalid_input`); lists have none of them.
+  `entry.mdx` is gone: pass `format: "mdx"` and read `entry.body` (`{ format, text }`, "Formats"). `GET /api/monti/v1/public/entries/:collection/:slug` returns `doc` and `refs`, and with `?format=<name>` also `body: { format, text }` (an unknown format is `400 invalid_input`); lists have none of them.
   A draft that could not become a document previews with its `unparsed` document.
 
 ### Writing a syntax extension (experimental)
@@ -840,7 +840,7 @@ export default defineFormat({
 });
 ```
 
-A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/cms/v1/meta` lists it as `formats`.
+A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/monti/v1/meta` lists it as `formats`.
 
 **Legacy bodies.** A format may also give `legacyBodies` (the `LegacyBodies` type of `@monti-cms/core/format`): how to read and write the text that old stores kept bodies in (`read`, `write`, `insertSoftBreaks`, `documentOf`). Only the `mdx` format has it (`@monti-cms/mdx/server` supplies it). The migration steps `0010`, `0011`, `0012`, `0013` and `0015` keep their names in core but parse through it, and ask for it only when a store has a body to read ("Upgrading from MDX in core").
 
@@ -859,11 +859,11 @@ A plugin provides formats with a lazy loader, like `server` and `render`: `defin
 | Where | How |
 | --- | --- |
 | `cms.read.getEntry`, `listEntries` (with `body: true`), `getPreview` | `format: "mdx"` adds `entry.body = { format, text }`. Links are the paths readers see (an unpublished target is not a link) and images are public URLs. An unknown format throws a `ServiceError` coded `unknown_format` |
-| `GET /api/cms/v1/public/entries/:collection/:slug` | `?format=mdx` adds `body: { format, text }` |
-| `POST /api/cms/v1/entries`, `PATCH /api/cms/v1/entries/:id`, `cms.contentService()` (create, save, bulk) | the body is `{ doc }` or `{ body, format }`, never both |
-| `GET /api/cms/v1/entries/:id` | `?format=mdx` adds `working.body` and `published.body` (strings) |
-| `/api/cms/v1/templates` | `{ name, doc }` or `{ name, body, format }`; `?format=` on a `GET` adds `body` |
-| `GET` or `POST /api/cms/v1/export` | `format=mdx` also writes the bodies as files of that format |
+| `GET /api/monti/v1/public/entries/:collection/:slug` | `?format=mdx` adds `body: { format, text }` |
+| `POST /api/monti/v1/entries`, `PATCH /api/monti/v1/entries/:id`, `cms.contentService()` (create, save, bulk) | the body is `{ doc }` or `{ body, format }`, never both |
+| `GET /api/monti/v1/entries/:id` | `?format=mdx` adds `working.body` and `published.body` (strings) |
+| `/api/monti/v1/templates` | `{ name, doc }` or `{ name, body, format }`; `?format=` on a `GET` adds `body` |
+| `GET` or `POST /api/monti/v1/export` | `format=mdx` also writes the bodies as files of that format |
 
 | Error code | Status | When |
 | --- | --- | --- |
@@ -1110,7 +1110,7 @@ export const myPlugin = () =>
 - `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
   `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
   An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
-- The server-side `routes` receive addresses that are not in the core routes (`/api/cms/v1/*`). The core wraps them with the admin login check and the same-origin check, so
+- The server-side `routes` receive addresses that are not in the core routes (`/api/monti/v1/*`). The core wraps them with the admin login check and the same-origin check, so
   forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
   `migrate` is called by `monti migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
@@ -1183,11 +1183,11 @@ The server options are part of the one `defineConfig({ … })` call, next to the
 | Item | Meaning |
 |---|---|
 | `database` | Required. Content store. `postgres()` reads `DATABASE_URL` and `DATABASE_SCHEMA`; `postgres({ connectionString, schema })` sets them in code |
-| `auth` | Optional. Without it nobody can sign in: under `next dev` the development login lets you into the admin from your machine, and a deployed admin answers that no login is configured (`monti doctor` warns in development and fails for production). Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/cms/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). `host` is an explicit override for use outside a Next integration (it wins over the host that `cms.attachHost` attached); in a Next.js app leave it out. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
+| `auth` | Optional. Without it nobody can sign in: under `next dev` the development login lets you into the admin from your machine, and a deployed admin answers that no login is configured (`monti doctor` warns in development and fails for production). Admin login, from `@monti-cms/auth`: `auth({ providers: [github()], host?, devBypass?, basePath? })`. `github()` reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas); `github({ clientId, clientSecret, admins })` sets them in code. `basePath` is the login API path (default `/api/monti/auth`, see "Login path"). The session signing key is derived from the secret ("Secrets"). `host` is an explicit override for use outside a Next integration (it wins over the host that `cms.attachHost` attached); in a Next.js app leave it out. In `next dev` with the bypass on, a missing GitHub app is only an error when a sign-in is attempted; in a server that requires login it is an error when the login connection is created |
 | `secret` | Optional. The one secret. If unset, the `MONTI_SECRET` environment variable. Login sessions and plugins' encrypted values (AI service keys, git-sync tokens) get keys derived from it; nothing receives the secret itself ("Secrets"). |
 | `previousSecrets` | Optional. Secrets `secret` replaced (entries may be undefined environment values). Values encrypted with them stay readable and are encrypted again with `secret` when saved again, so changing `secret` does not make stored keys unreadable. |
 | `trustHost` | Optional. Whether `Host` and `X-Forwarded-Host` can be trusted ("Host trust"). Default: the `AUTH_TRUST_HOST` environment variable, else on when a known proxy platform is detected or in development, else off |
-| `publicApi` | Optional. Public JSON API (`/api/cms/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
+| `publicApi` | Optional. Public JSON API (`/api/monti/v1/public/entries`, `/entries/:collection/:slug`; published content only, no login, not cached). `{ collections, filters?: { queryName: relationField }, toJson?(entry, { body }) }` |
 | `hooks` | Optional. Hooks on every content write: `transform`, `validate`, `validatePublish` and `afterCommit` (a notification after the change is committed, with the instance as its second argument: cache revalidation, webhooks, search indexing; retried when it fails, so wrap work that must not be repeated in `event.once`). See "Hook contract" and "Event delivery". Plugins can set `hooks` too |
 | `events` | Optional. How `afterCommit` deliveries are retried and kept: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. See "Event delivery" |
 
@@ -1319,7 +1319,7 @@ Nothing runs in the background, because the site may run on serverless functions
 - **The next write in the same process.** After its own events, a write runs up to 5 due retries, at most once every 10 seconds per process.
 - **`cms.events.retry({ all?, limit? })`.** Delivers what is due (with `all`, also failed deliveries that are not due yet; dead ones only by hand). It also delivers events that have no delivery rows because the process stopped between the commit and the delivery. It returns `{ delivered, failed, dead }`. `cms.events.list()`, `counts()`, `retryDelivery({ eventId, subscriber })` and `dismiss({ eventId, subscriber })` are what the admin uses.
 - **`monti events:retry [--all] [--limit <n>]`.** Loads the config file like `monti migrate` and calls `cms.events.retry()`; run it from a cron job or a CI schedule.
-- **`POST /api/cms/v1/events/retry[?all=1&limit=100]`.** For a scheduler that can only call a URL (a Vercel cron, say). It takes an admin session, or `Authorization: Bearer <retrySecret>` when the config sets `events.retrySecret` (keep it in an environment variable; it is not part of `cms.server`).
+- **`POST /api/monti/v1/events/retry[?all=1&limit=100]`.** For a scheduler that can only call a URL (a Vercel cron, say). It takes an admin session, or `Authorization: Bearer <retrySecret>` when the config sets `events.retrySecret` (keep it in an environment variable; it is not part of `cms.server`).
 
 ```ts
 defineConfig({
@@ -1529,9 +1529,9 @@ The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchem
 
 The admin has a **Schema** screen (`<admin path>/schema`, in the sidebar under "Manage") that edits `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
 
-**Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists, can be written and is a pure literal (below). The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/cms/v1/schema` and `POST /api/cms/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file`, `not_writable` or `has_code`), and the screen shows the schema read-only with a short explanation. `GET /api/cms/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
+**Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists, can be written and is a pure literal (below). The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file`, `not_writable` or `has_code`), and the screen shows the schema read-only with a short explanation. `GET /api/monti/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
 
-**The routes** (`/api/cms/v1/schema`, served by `cms.handle()`):
+**The routes** (`/api/monti/v1/schema`, served by `cms.handle()`):
 
 | Route | What it does |
 | --- | --- |
@@ -1646,7 +1646,7 @@ roles collide or `summary` or `title` is not a text field, a tab name is not 1 t
 a field is named `translations`, a collection has no kind, or the shape of `admin.path`, `site.localePrefix`, `site.previewLocaleParam` or `site.home`
 is wrong.
 
-Duplicating (`POST /api/cms/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original
+Duplicating (`POST /api/monti/v1/entries/:id/duplicate`) sets the copy's title to the `{ title }` in the body if given (the admin UI sends the original
 title with " (copy)" appended). Without it, the title is the original's as is. The core does not decide what to append; the copy goes through the same write pipeline as any other write.
 
 ## Recipes

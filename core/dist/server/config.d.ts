@@ -52,7 +52,7 @@ export interface MontiServerOptions {
     readonly hooks?: WriteHooks;
     /** How `afterCommit` deliveries are retried and kept, and the secret of the retry route. */
     readonly events?: EventDeliveryOptions;
-    /** Public JSON API (`/api/cms/v1/public/*`). Off if unset (404). */
+    /** Public JSON API (`/api/monti/v1/public/*`). Off if unset (404). */
     readonly publicApi?: PublicApiOptions;
 }
 /**

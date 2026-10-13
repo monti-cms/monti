@@ -8,7 +8,7 @@ const GITHUB_ID = "AUTH_GITHUB_ID";
 const GITHUB_SECRET = "AUTH_GITHUB_SECRET";
 const GITHUB_ADMIN = "MONTI_ADMIN_GITHUB_ID";
 /** How to get the two values. */
-const OAUTH_APP_FIX = "create a GitHub OAuth app (https://github.com/settings/developers, OAuth Apps, New OAuth App) whose callback URL is <your site>/api/cms/auth/callback/github (`monti doctor` prints it), then copy its Client ID into AUTH_GITHUB_ID and a new client secret into AUTH_GITHUB_SECRET";
+const OAUTH_APP_FIX = "create a GitHub OAuth app (https://github.com/settings/developers, OAuth Apps, New OAuth App) whose callback URL is <your site>/api/monti/auth/callback/github (`monti doctor` prints it), then copy its Client ID into AUTH_GITHUB_ID and a new client secret into AUTH_GITHUB_SECRET";
 const isProduction = (env) => env.NODE_ENV === "production";
 /** Whether the process looks like a deployed one: production mode or a known hosting platform. */
 const looksDeployed = (env) => isProduction(env) || detectProxyPlatform(env) !== undefined;

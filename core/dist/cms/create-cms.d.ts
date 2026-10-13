@@ -34,7 +34,7 @@ export type BulkService = ReturnType<typeof createBulkService<Entry>>;
 /** Options of {@link Cms.handle}. */
 export interface HandleOptions {
     /**
-     * The path segments after the API prefix (`/api/cms/`), e.g. `["v1", "entries", "<id>"]`. By default they are read from the request URL.
+     * The path segments after the API prefix (`/api/monti/`), e.g. `["v1", "entries", "<id>"]`. By default they are read from the request URL.
      * A host that mounts the API somewhere else, or whose router already split the path, passes them here.
      */
     readonly path?: readonly string[];
@@ -114,7 +114,7 @@ export interface Cms<Config extends AnyCmsConfig = any> {
     /** The login connection (`auth` in the server config): session, sign in and out, login methods, route handlers. */
     auth(): CmsAuth;
     /**
-     * The login connection's route handlers, for an app whose login path is not the default (`/api/cms/auth`) and so needs its own route file:
+     * The login connection's route handlers, for an app whose login path is not the default (`/api/monti/auth`) and so needs its own route file:
      * `export const { GET, POST } = cms.authHandlers;`. The login connection is created on the first request.
      */
     readonly authHandlers: CmsAuth["handlers"];
@@ -142,7 +142,7 @@ export interface Cms<Config extends AnyCmsConfig = any> {
      */
     readonly events: CmsEvents;
     /**
-     * Serves one request of the admin API (`/api/cms/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
+     * Serves one request of the admin API (`/api/monti/v1/*`), the login connection, the public API and the plugin routes. It takes a standard web
      * `Request` and returns a `Response`, so any host that speaks them can mount it. `@monti-cms/nextjs` mounts it in a Next.js route file (`createRouteHandler(cms)`). Unknown paths return 404 and a known
      * path with an unsupported method returns 405. The route code loads on the first request.
      */

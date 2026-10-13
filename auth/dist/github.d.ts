@@ -19,6 +19,6 @@ export interface GithubOptions {
 /**
  * Log in with GitHub. It works with no arguments: the OAuth app comes from `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET`, the admin from `MONTI_ADMIN_GITHUB_ID`,
  * and a value passed here wins. A missing id or secret is an error that names the variable. The account id is the numeric GitHub id, so `github:12345678`
- * is the same person after a rename. The callback URL of the OAuth app is `<site>/api/cms/auth/callback/github`.
+ * is the same person after a rename. The callback URL of the OAuth app is `<site>/api/monti/auth/callback/github`.
  */
 export declare function github(options?: GithubOptions): LoginProvider;
