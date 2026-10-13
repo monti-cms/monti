@@ -173,6 +173,8 @@ export const up: MigrationUp = (client, qSchema, { site }) =>
 			next_attempt_at TIMESTAMPTZ,
 			locked_until TIMESTAMPTZ,
 			delivered_at TIMESTAMPTZ,
+			-- \`event.once\`: when the work of the subscriber for this event was done. It goes with the delivery when the event is pruned.
+			once_at TIMESTAMPTZ,
 			PRIMARY KEY (event_id, subscriber)
 		);
 		CREATE INDEX cms_event_deliveries_state_idx ON "${qSchema}".cms_event_deliveries (state, subscriber);

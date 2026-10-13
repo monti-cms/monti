@@ -178,14 +178,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 	return context;
 }
 
-const contexts = new WeakMap<Cms, SyncContext>();
-
-/** The sync context of an instance, made on first use. Each instance has its own. */
+/** The sync context of an instance, made on first use and again after a schema reload (`cms.plugin(...).once`). */
 export function syncContextFor(cms: Cms): SyncContext {
-	let context = contexts.get(cms);
-	if (!context) {
-		context = createSyncContext(cms);
-		contexts.set(cms, context);
-	}
-	return context;
+	return cms.plugin(GIT_SYNC_PLUGIN_NAME).once("sync-context", () => createSyncContext(cms));
 }

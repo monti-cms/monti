@@ -25,6 +25,7 @@ export { type ExportBodyParams, exportBodyText } from "./format/export-body";
 export { CmsError, ERROR_STATUS, type ErrorCode, errorResponse, handleApiError } from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
+export type { PluginContext } from "./plugin/context";
 export type { LoadedServerPlugin } from "./plugin/server";
 export type {
 	PluginCollection,

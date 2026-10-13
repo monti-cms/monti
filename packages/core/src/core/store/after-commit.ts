@@ -1,16 +1,16 @@
-import type { ContentChangeKind } from "./events";
+import type { EntryStore, LifecycleStore } from "./ports";
 import type { Entry } from "./types";
 
-/** Changes that return an entry, and their notification kinds. */
-const ENTRY_CHANGES = {
-	createEntryWithReferences: "created",
-	saveWorkingWithReferences: "saved",
-	publishEntry: "published",
-	archiveEntry: "archived",
-	unarchiveEntry: "unarchived",
-	trashEntry: "trashed",
-	restoreEntry: "restored",
-} as const satisfies Record<string, ContentChangeKind>;
+/** The store functions that change an entry and return it; the store writes the event of each in its own transaction. */
+const ENTRY_CHANGES = [
+	"createEntryWithReferences",
+	"saveWorkingWithReferences",
+	"publishEntry",
+	"archiveEntry",
+	"unarchiveEntry",
+	"trashEntry",
+	"restoreEntry",
+] as const satisfies readonly (keyof EntryStore | keyof LifecycleStore)[];
 
 interface ChangingStore {
 	permanentDeleteEntry(params: { id: string; expectedVersion: number }): Promise<void>;
@@ -31,7 +31,7 @@ export function withEventDispatch<S extends ChangingStore>(store: S, dispatch: (
 	};
 	// A proxy, not a copy: the store may itself be a proxy that answers any name (the lazy adapter store), which a spread would not see.
 	const overrides = new Map<PropertyKey, unknown>();
-	for (const method of Object.keys(ENTRY_CHANGES)) {
+	for (const method of ENTRY_CHANGES) {
 		const original = (store as unknown as Record<string, unknown>)[method];
 		if (typeof original !== "function") continue;
 		overrides.set(method, async (...args: unknown[]) => {

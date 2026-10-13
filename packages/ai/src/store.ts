@@ -106,18 +106,14 @@ export function createAiStore(
 
 export type AiStore = ReturnType<typeof createAiStore>;
 
-const stores = new WeakMap<Cms, AiStore>();
-
-/** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
+/** The AI store of one CMS instance, built from its plugin storage on first use. It is rebuilt when the site is reloaded (`cms.plugin(...).once`). */
 export function aiStoreFor(cms: Cms): AiStore {
-	let store = stores.get(cms);
-	if (!store) {
-		store = createAiStore(cms.storage(AI_PLUGIN_NAME), {
+	const plugin = cms.plugin(AI_PLUGIN_NAME);
+	return plugin.once("store", () =>
+		createAiStore(plugin.storage, {
 			site: cms.site,
 			apiKeys: () => cms.apiKeys,
 			transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
-		});
-		stores.set(cms, store);
-	}
-	return store;
+		}),
+	);
 }

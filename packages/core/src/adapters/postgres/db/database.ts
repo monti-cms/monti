@@ -179,6 +179,8 @@ export interface CmsEventDeliveriesTable {
 	next_attempt_at: Date | null;
 	locked_until: Date | null;
 	delivered_at: Date | null;
+	/** When `event.once` finished the subscriber's work for this event. */
+	once_at: Date | null;
 }
 
 export interface CmsMigrationsTable {
