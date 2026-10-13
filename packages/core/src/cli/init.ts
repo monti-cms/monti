@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { findRootLayout } from "./first-run";
 import { detectApp, type PackageManager } from "./init-detect";
 import {
 	addSuppressHydrationWarning,
@@ -11,6 +10,7 @@ import {
 	wrapNextConfig,
 } from "./init-edit";
 import { collectAnswers, detectedLocales, detectSystemTimeZone, type InitAnswerFlags } from "./init-prompts";
+import { findOtherNextConfig, findRootLayout, montiNextFilePath, montiNextFiles } from "./next-app";
 import { Cancelled, type Prompter } from "./prompt";
 import {
 	adminLayoutTemplate,
@@ -241,9 +241,6 @@ export const timeZoneNote = (answers: Pick<InitAnswers, "timeZone" | "timeZoneSo
 const layoutManualStep = (file: string, reason: string): string =>
 	`Add suppressHydrationWarning to the <html> tag in ${file} (init did not edit it: ${reason}):\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`;
 
-/** `next.config` files init cannot edit, or must not create a second one next to. */
-const OTHER_NEXT_CONFIGS = ["next.config.cjs", "next.config.mts", "next.config.cts"] as const;
-
 /** Runs the whole of `monti init` in `options.cwd`. Throws {@link Cancelled} when the person cancels, {@link InitError} when a write fails. */
 export async function initProject(options: InitOptions): Promise<InitReport> {
 	const { cwd } = options;
@@ -290,10 +287,12 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	const root = app.src ? "src/" : "";
 	const configFile = `${root}monti.config.ts`;
 	const schemaFile = `${root}monti.schema.ts`;
-	const adminDir = posix(path.join(app.appDir, ...answers.adminPath.split("/").filter(Boolean)));
-	const pageFile = `${adminDir}/[[...path]]/page.tsx`;
-	const layoutFile = `${adminDir}/layout.tsx`;
-	const routeFile = `${app.appDir}/api/monti/[...path]/route.ts`;
+	const nextFiles = montiNextFiles(answers.adminPath);
+	const fileOf = (id: "layout" | "page" | "route") =>
+		montiNextFilePath(app.appDir, nextFiles.find((file) => file.id === id) as (typeof nextFiles)[number]);
+	const pageFile = fileOf("page");
+	const layoutFile = fileOf("layout");
+	const routeFile = fileOf("route");
 	const configImport = (from: string) =>
 		dotted(posix(path.relative(path.dirname(from), configFile.replace(/\.ts$/, ""))));
 
@@ -373,7 +372,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		const file = app.nextConfig;
 		planEdit(file, wrapNextConfig(file, nextConfigText), (reason) => nextConfigManualStep(file, reason));
 	} else {
-		const other = OTHER_NEXT_CONFIGS.find((candidate) => writer.exists(candidate));
+		const other = findOtherNextConfig(cwd);
 		if (other) {
 			manual.push(
 				nextConfigManualStep(

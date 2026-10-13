@@ -1,14 +1,24 @@
-import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
 import { WHERE_TO_SET_ENV } from "../../core/env";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { formatDecision } from "../../server/decision";
-import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
 import { findBoundaryViolations } from "../import-boundary";
-import { detectAppDir, ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
-import { usesWithCms } from "../init-edit";
+import {
+	detectAppDir,
+	findNextConfig,
+	findRootLayout,
+	findRouteFile,
+	gitignoreCoverage,
+	hasSuppressHydrationWarning,
+	isNextApp,
+	montiNextFilePath,
+	montiNextFiles,
+	routesUsing,
+	usesWithCms,
+} from "../next-app";
 import { AUTH_CHECKS } from "./auth-checks";
 import { DATABASE_CHECKS } from "./database-checks";
 import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
@@ -54,8 +64,6 @@ export function whereSet(state: DoctorState, name: string): string {
 	return files.length > 0 ? files.join(", ") : "the environment";
 }
 
-/** Where a variable should be set, when it is not. */
-
 // ---- config ----
 
 const envFiles: CoreCheck = {
@@ -82,13 +90,18 @@ const envIgnored: CoreCheck = {
 	run: (state) => {
 		if (!exists(state, ".env.local")) return skip("not checked: there is no .env.local");
 		if (!exists(state, ".gitignore")) return skip("not checked: there is no .gitignore in this folder");
-		const ignored = ignoresEnvLocal(readFileSync(path.join(state.cwd, ".gitignore"), "utf8"));
-		return ignored
-			? ok(".env.local is in .gitignore")
-			: warn(".env.local holds secrets (MONTI_SECRET, the database URL) but .gitignore does not list it", {
-					where: ".gitignore",
-					fix: "add a line `.env.local` to .gitignore; if it was already committed, rotate the secrets in it",
-				});
+		const covered = gitignoreCoverage(readFileSync(path.join(state.cwd, ".gitignore"), "utf8"));
+		if (covered.envLocal && covered.montiFolder) return ok(".env.local and .monti/ are in .gitignore");
+		if (!covered.envLocal) {
+			return warn(".env.local holds secrets (MONTI_SECRET, the database URL) but .gitignore does not list it", {
+				where: ".gitignore",
+				fix: "add a line `.env.local` to .gitignore; if it was already committed, rotate the secrets in it",
+			});
+		}
+		return warn("the .monti/ folder, where `monti db:migrate` writes its logs, is not in .gitignore", {
+			where: ".gitignore",
+			fix: "add a line `.monti/` to .gitignore",
+		});
 	},
 };
 
@@ -271,143 +284,24 @@ const montiSecret: CoreCheck = {
 	},
 };
 
-const FILE_EXTENSIONS = ["tsx", "ts", "jsx", "js"] as const;
-
-const packageDeps = (state: DoctorState): Record<string, string> | undefined => {
-	try {
-		const pkg = JSON.parse(readFileSync(path.join(state.cwd, "package.json"), "utf8")) as {
-			dependencies?: Record<string, string>;
-			devDependencies?: Record<string, string>;
-		};
-		return { ...pkg.dependencies, ...pkg.devDependencies };
-	} catch {
-		return undefined;
-	}
-};
-
-const isNextApp = (state: DoctorState): boolean => Boolean(packageDeps(state)?.next);
-
-const appDirOf = (state: DoctorState): string | undefined => {
-	const found = detectAppDir(state.cwd);
-	return found.exists ? found.dir : undefined;
-};
-
-const isGroup = (name: string) => /^\(.+\)$/.test(name);
-
-/** The file for a route (`segments` after the app folder, route groups are transparent), or `undefined`. `base` is the file name without extension. */
-function findRouteFile(
-	state: DoctorState,
-	appDir: string,
-	segments: readonly string[],
-	base: string,
-): string | undefined {
-	const walk = (dir: string, rest: readonly string[]): string | undefined => {
-		if (rest.length === 0) {
-			for (const extension of FILE_EXTENSIONS) {
-				if (exists(state, `${dir}/${base}.${extension}`)) return `${dir}/${base}.${extension}`;
-			}
-		}
-		let entries: Dirent[];
-		try {
-			entries = readdirSync(path.join(state.cwd, dir), { withFileTypes: true });
-		} catch {
-			return undefined;
-		}
-		for (const entry of entries) {
-			if (!entry.isDirectory()) continue;
-			if (isGroup(entry.name)) {
-				const found = walk(`${dir}/${entry.name}`, rest);
-				if (found) return found;
-			} else if (rest[0] === entry.name) {
-				const found = walk(`${dir}/${entry.name}`, rest.slice(1));
-				if (found) return found;
-			}
-		}
-		return undefined;
-	};
-	return walk(appDir, segments);
-}
-
-/** The page files under the app folder that use `marker`, as the route they serve (route groups removed). */
-function routesUsing(
-	state: DoctorState,
-	appDir: string,
-	marker: string,
-	base: string,
-): { file: string; route: string }[] {
-	const found: { file: string; route: string }[] = [];
-	const walk = (dir: string, depth: number) => {
-		if (depth > 6) return;
-		let entries: Dirent[];
-		try {
-			entries = readdirSync(path.join(state.cwd, dir), { withFileTypes: true });
-		} catch {
-			return;
-		}
-		for (const entry of entries) {
-			const full = `${dir}/${entry.name}`;
-			if (entry.isDirectory()) {
-				if (entry.name !== "node_modules") walk(full, depth + 1);
-			} else if (FILE_EXTENSIONS.some((extension) => entry.name === `${base}.${extension}`)) {
-				try {
-					if (readFileSync(path.join(state.cwd, full), "utf8").includes(marker)) {
-						const route = path.posix
-							.dirname(full)
-							.slice(appDir.length)
-							.split("/")
-							.filter((part) => part && !isGroup(part));
-						found.push({ file: full, route: `/${route.join("/")}` });
-					}
-				} catch {
-					// unreadable: not a candidate
-				}
-			}
-		}
-	};
-	walk(appDir, 0);
-	return found;
-}
-
 const nextFiles: CoreCheck = {
 	group: "next",
 	id: "files",
 	title: "The three Next files",
 	needsCms: true,
 	run: (state) => {
-		if (!isNextApp(state)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
-		const appDir = appDirOf(state);
+		if (!isNextApp(state.cwd)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
+		const detected = detectAppDir(state.cwd);
+		const appDir = detected.dir;
 		const adminPath = state.cms?.site.ADMIN_PATH ?? "/admin";
 		const adminSegments = adminPath.split("/").filter(Boolean);
-		if (!appDir) {
-			const folder = detectAppDir(state.cwd).dir;
-			return fail(`there is no ${folder}/ folder, so there are no Next files`, {
+		if (!detected.exists) {
+			return fail(`there is no ${appDir}/ folder, so there are no Next files`, {
 				where: state.cwd,
-				fix: `Monti needs the App Router: add a ${folder}/ folder (it can sit next to pages/) and run \`monti init\``,
+				fix: `Monti needs the App Router: add a ${appDir}/ folder (it can sit next to pages/) and run \`monti init\``,
 			});
 		}
-		const wanted = [
-			{
-				what: "admin layout",
-				base: "layout",
-				segments: adminSegments,
-				marker: "CmsAdminLayout",
-				route: `${adminPath}`,
-			},
-			{
-				what: "admin page",
-				base: "page",
-				segments: [...adminSegments, "[[...path]]"],
-				marker: "CmsAdminPage",
-				route: `${adminPath}/[[...path]]`,
-			},
-			{
-				what: "API route",
-				base: "route",
-				segments: ["api", "monti", "[...path]"],
-				marker: "createRouteHandler",
-				route: "/api/monti/[...path]",
-			},
-		];
+		const wanted = montiNextFiles(adminPath);
 		const problems: string[] = [];
 		const fixes: string[] = [];
 		const found: string[] = [];
@@ -415,7 +309,7 @@ const nextFiles: CoreCheck = {
 			const file =
 				adminSegments.length === 0 && item.base === "layout"
 					? undefined
-					: findRouteFile(state, appDir, item.segments, item.base);
+					: findRouteFile(state.cwd, appDir, item.segments, item.base);
 			if (file) {
 				if (!readFileSync(path.join(state.cwd, file), "utf8").includes(item.marker)) {
 					problems.push(`${file} exists but does not use ${item.marker}`);
@@ -427,7 +321,7 @@ const nextFiles: CoreCheck = {
 			}
 			problems.push(`${item.what} is missing (${appDir}${item.route})`);
 			if (item.marker !== "createRouteHandler") {
-				const elsewhere = routesUsing(state, appDir, item.marker, item.base)[0];
+				const elsewhere = routesUsing(state.cwd, appDir, item.marker, item.base)[0];
 				if (elsewhere) {
 					fixes.push(
 						`the ${item.what} is at ${elsewhere.file}, which serves ${elsewhere.route}, but the admin path in your config is ${adminPath}. Either set admin: { path: "${elsewhere.route}" } in monti.schema.ts, or move the folder to ${appDir}${adminPath}`,
@@ -436,7 +330,7 @@ const nextFiles: CoreCheck = {
 				}
 			}
 			fixes.push(
-				`create ${appDir}${item.route}/${item.base}.${item.base === "route" ? "ts" : "tsx"} (\`monti init\` writes all three; it keeps files you already have)`,
+				`create ${montiNextFilePath(appDir, item)} (\`monti init\` writes all three; it keeps files you already have)`,
 			);
 		}
 		return problems.length === 0
@@ -450,8 +344,8 @@ const nextWithCms: CoreCheck = {
 	id: "with-cms",
 	title: "withCms in next.config",
 	run: (state) => {
-		if (!isNextApp(state)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
-		const file = NEXT_CONFIG_FILES.find((candidate) => exists(state, candidate));
+		if (!isNextApp(state.cwd)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
+		const file = findNextConfig(state.cwd);
 		if (!file) {
 			return fail("there is no next.config.ts", {
 				where: state.cwd,
@@ -472,7 +366,7 @@ const nextHydration: CoreCheck = {
 	id: "hydration",
 	title: "suppressHydrationWarning on <html>",
 	run: (state) => {
-		if (!isNextApp(state)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
+		if (!isNextApp(state.cwd)) return skip("not checked: this folder is not a Next app (no `next` in package.json)");
 		const layout = findRootLayout(state.cwd);
 		if (!layout) return skip("not checked: there is no root layout");
 		const has = hasSuppressHydrationWarning(readFileSync(path.join(state.cwd, layout), "utf8"));

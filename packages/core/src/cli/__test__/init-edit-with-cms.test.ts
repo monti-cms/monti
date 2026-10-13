@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { usesWithCms, wrapNextConfig } from "../init-edit";
+import { wrapNextConfig } from "../init-edit";
+import { usesWithCms } from "../next-app";
 
 const WRAPPED =
 	'import { withCms } from "@monti-cms/nextjs/config";\nconst nextConfig = {};\nexport default withCms(nextConfig);\n';

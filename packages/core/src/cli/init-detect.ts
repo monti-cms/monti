@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { parseJsonc } from "./jsonc";
 import {
 	type DetectedLocale,
 	defaultFirst,
@@ -8,6 +7,14 @@ import {
 	localesFromFileNames,
 	normalizeLanguageCode,
 } from "./locale-names";
+import {
+	dependencyNames,
+	dependencySpec,
+	detectAppDir,
+	findNextConfig,
+	ignoresEnvLocal,
+	readPackageJson,
+} from "./next-app";
 
 /** What `monti init` finds out about the app before it asks anything. Read-only: nothing is written here. */
 
@@ -23,12 +30,7 @@ export function detectPackageManager(cwd: string): PackageManager {
 		["package-lock.json", "npm"],
 	] as const;
 	for (const [file, manager] of lockfiles) if (existsSync(path.join(cwd, file))) return manager;
-	const manifest = path.join(cwd, "package.json");
-	const field = (
-		existsSync(manifest)
-			? (parseJsonc(readFileSync(manifest, "utf8")) as { packageManager?: unknown } | undefined)
-			: undefined
-	)?.packageManager;
+	const field = readPackageJson(cwd)?.packageManager;
 	const named = typeof field === "string" ? field.split("@")[0] : undefined;
 	return named === "pnpm" || named === "yarn" || named === "bun" ? named : "npm";
 }
@@ -91,7 +93,6 @@ export interface DetectedApp {
 	readonly envLocalIgnored: boolean;
 }
 
-export const NEXT_CONFIG_FILES = ["next.config.ts", "next.config.mjs", "next.config.js"] as const;
 /** Folders searched for Markdown and MDX (each, and the folders up to {@link MAX_DEPTH} levels under it). */
 const CONTENT_ROOTS = ["content", "src/content", "posts", "src/posts", "_posts", "blog", "src/blog", "data"];
 const MAX_DEPTH = 3;
@@ -243,41 +244,13 @@ function mergeLocaleFolders(folders: ContentFolder[], names: ReadonlyMap<string,
 	return result;
 }
 
-/** Whether a `.gitignore` line list covers `.env.local`. */
-export function ignoresEnvLocal(gitignore: string): boolean {
-	return gitignore
-		.split(/\r?\n/)
-		.map((line) => line.trim())
-		.some((line) => [".env.local", ".env*.local", ".env*", ".env", "*.local", ".env.*"].includes(line));
-}
-
-/**
- * The App Router folder of the app in `cwd`, for `monti init` and `monti doctor` alike: `src/app` when it exists, else `app` when it exists, else the folder
- * `init` would create (`src/app` when the project keeps its code in `src/`, which is the case when `src/` exists and `app/` does not).
- */
-export function detectAppDir(cwd: string): { readonly dir: "app" | "src/app"; readonly exists: boolean } {
-	const exists = (folder: string) => existsSync(path.join(cwd, folder));
-	if (exists("src/app")) return { dir: "src/app", exists: true };
-	if (exists("app")) return { dir: "app", exists: true };
-	return { dir: exists("src") ? "src/app" : "app", exists: false };
-}
-
 /** Reads the app in `cwd`. Throws when there is no package.json. */
 export function detectApp(cwd: string): DetectedApp {
-	const packageFile = path.join(cwd, "package.json");
-	if (!existsSync(packageFile)) {
-		throw new Error("package.json not found; run `monti init` in the folder of your Next app");
-	}
-	const pkg = (parseJsonc(readFileSync(packageFile, "utf8")) ?? {}) as {
-		name?: unknown;
-		scripts?: Record<string, unknown>;
-		dependencies?: Record<string, string>;
-		devDependencies?: Record<string, string>;
-	};
-	const dependencies = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]);
+	const pkg = readPackageJson(cwd);
+	if (!pkg) throw new Error("package.json not found; run `monti init` in the folder of your Next app");
+	const dependencies = dependencyNames(pkg);
 	const exists = (file: string) => existsSync(path.join(cwd, file));
-	const src = exists("src/app") || (exists("src") && !exists("app"));
-	const { dir: appDir } = detectAppDir(cwd);
+	const { dir: appDir, src } = detectAppDir(cwd);
 	const configRoots = src ? ["src/", ""] : [""];
 	const dev = typeof pkg.scripts?.dev === "string" ? pkg.scripts.dev : "";
 	const port = /(?:-p|--port)[ =]+(\d{2,5})/.exec(dev)?.[1];
@@ -285,7 +258,7 @@ export function detectApp(cwd: string): DetectedApp {
 	return {
 		cwd,
 		packageName: typeof pkg.name === "string" ? pkg.name : undefined,
-		next: pkg.dependencies?.next ?? pkg.devDependencies?.next,
+		next: dependencySpec(pkg, "next"),
 		appDir,
 		src,
 		hasAppRouter: exists("app") || exists("src/app"),
@@ -293,9 +266,9 @@ export function detectApp(cwd: string): DetectedApp {
 		packageManager: detectPackageManager(cwd),
 		typescript: exists("tsconfig.json") || dependencies.has("typescript"),
 		contentFolders: findContentFolders(cwd),
-		nextConfig: NEXT_CONFIG_FILES.find(exists),
+		nextConfig: findNextConfig(cwd),
 		devPort: port ? Number(port) : 3000,
-		coreSpec: pkg.dependencies?.["@monti-cms/core"] ?? pkg.devDependencies?.["@monti-cms/core"],
+		coreSpec: dependencySpec(pkg, "@monti-cms/core"),
 		dependencies,
 		existingConfig: configRoots.map((root) => `${root}monti.config.ts`).find(exists),
 		envLocalIgnored: ignoresEnvLocal(gitignore),
