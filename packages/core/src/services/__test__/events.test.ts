@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
+import { withActor } from "../../core/actor";
 import {
 	type AfterCommit,
 	type ContentEvent,
@@ -433,15 +434,14 @@ describe("afterCommit delivery", () => {
 					store: () => raw,
 					subscribers: async () => subscribers,
 					marks: () => marks,
-					retentionDays: 1,
 					now,
 				});
 			const first = dispatcherAt(() => new Date());
 			await create(withEventDispatch(raw, first.dispatchEntry), `once-${name}`);
 			expect((await marks.list()).map((item) => item.key)).toEqual([expect.stringMatching(/^m\d+\//)]);
 
-			// Three days later, the sweep that a write carries along drops the marks of events past the retention.
-			const later = dispatcherAt(() => new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+			// 91 days later, the sweep that a write carries along drops the marks of events past the retention.
+			const later = dispatcherAt(() => new Date(Date.now() + 91 * 24 * 60 * 60 * 1000));
 			await create(withEventDispatch(raw, later.dispatchEntry), `once-${name}-later`);
 			expect(await marks.list()).toEqual([]);
 		});
@@ -547,12 +547,75 @@ describe("afterCommit delivery", () => {
 		});
 	});
 
-	describe("without subscribers", () => {
-		it("writes events and delivers nothing, and a retry has nothing to do", async () => {
+	describe("the event log without subscribers", () => {
+		const DAY = 24 * 60 * 60 * 1000;
+		const formats = async () => createFormatRegistry([paragraphsFormat]);
+		const ALL = ["pending", "delivering", "delivered", "failed", "dead", "dismissed", "recorded"] as const;
+		const logOf = async (events: ReturnType<typeof setup>["events"], entryId: string) =>
+			(await events.list({ states: ALL, limit: 200 })).items.filter((item) => item.change.entryId === entryId);
+
+		it("records every kind of change once, with entry, collection, locale, time and actor, and lists it as recorded", async () => {
 			const { store, events } = setup({});
-			const entry = await create(store, "no-subscribers");
+			const service = createContentService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const entry = await withActor("Mina", () => create(store, "log-no-subscribers"));
+			const saved = await withActor("Mina", () => save(store, entry, "second"));
+			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: saved.version });
+			await service.restore({ id: entry.id, expectedVersion: trashed.version });
+
 			expect(await events.retry()).toEqual({ delivered: 0, failed: 0, dead: 0, deferred: 0 });
-			expect((await store.getEntry(entry.id)).id).toBe(entry.id);
+			const log = await logOf(events, entry.id);
+			// Newest first, one row per event, none of them a delivery.
+			expect(log.map((item) => item.change.kind)).toEqual(["restored", "trashed", "saved", "created"]);
+			for (const item of log) {
+				expect(item).toMatchObject({ subscriber: null, state: "recorded", attempts: 0 });
+				expect(item.change).toMatchObject({ entryId: entry.id, collection: entry.collection });
+				expect(item.change.locale).toBe(entry.locale);
+				expect(item.change.occurredAt).toBeInstanceOf(Date);
+			}
+			expect(log.find((item) => item.change.kind === "saved")?.change.actor).toBe("Mina");
+			expect(log.find((item) => item.change.kind === "created")?.change.actor).toBe("Mina");
+			// A write outside a request has no actor.
+			expect(log.find((item) => item.change.kind === "trashed")?.change.actor).toBeNull();
+			// Not part of the default list (the failed and dead deliveries).
+			expect((await events.list()).items.filter((item) => item.change.entryId === entry.id)).toEqual([]);
+		});
+
+		it("makes deliveries only for subscribers, and an event is recorded once either way", async () => {
+			const seen = recorder();
+			const { store, events, name } = setup({ a: seen.handler });
+			const entry = await create(store, "log-with-subscriber");
+			const log = await logOf(events, entry.id);
+			expect(log).toHaveLength(1);
+			expect(log[0]).toMatchObject({ subscriber: name("a"), state: "delivered" });
+		});
+
+		it("removes old finished and recorded events but keeps the ones a retry can still deliver", async () => {
+			const subscribe = (handler: Handler) => [{ name: `keep${++counter}`, handler }];
+			let subscribers: EventSubscriber[] = [];
+			const make = (now: () => Date) =>
+				createEventDispatcher({ store: () => raw, subscribers: async () => subscribers, now, backoffMs: () => 60_000 });
+
+			const recordedEntry = await create(setup({}).store, "log-old-recorded");
+			subscribers = subscribe(() => undefined);
+			const doneDispatcher = make(() => new Date());
+			const doneEntry = await create(withEventDispatch(raw, doneDispatcher.dispatchEntry), "log-old-delivered");
+			subscribers = subscribe(() => {
+				throw new Error("down");
+			});
+			const failingDispatcher = make(() => new Date());
+			const failedEntry = await create(withEventDispatch(raw, failingDispatcher.dispatchEntry), "log-old-failed");
+			const readLog = (id: string) => logOf(failingDispatcher.events, id);
+
+			// Not old enough yet: a sweep 89 days on removes nothing.
+			await make(() => new Date(Date.now() + 89 * DAY)).dispatchEntry(failedEntry.id);
+			expect((await readLog(recordedEntry.id)).length).toBe(1);
+			expect((await readLog(doneEntry.id)).length).toBe(1);
+
+			subscribers = [];
+			await make(() => new Date(Date.now() + 91 * DAY)).dispatchEntry(failedEntry.id);
+			expect(await readLog(recordedEntry.id)).toEqual([]);
+			expect(await readLog(doneEntry.id)).toEqual([]);
+			expect((await readLog(failedEntry.id)).map((item) => item.state)).toEqual(["failed"]);
 		});
 	});
 

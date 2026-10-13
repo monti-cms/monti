@@ -34,6 +34,8 @@ export interface EventPayload {
 	status: EntryStatus;
 	publishedSlug: string | null;
 	workingSlug: string | null;
+	/** Who made the change; absent on events recorded before the field existed. */
+	actor?: string | null;
 }
 
 export interface EntriesTable {

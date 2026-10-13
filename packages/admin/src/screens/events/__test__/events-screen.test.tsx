@@ -18,8 +18,8 @@ vi.mock("../../../router", () => ({
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
 const item = (
 	eventId: string,
-	subscriber: string,
-	state: "failed" | "dead" | "delivered" | "pending",
+	subscriber: string | null,
+	state: "failed" | "dead" | "delivered" | "pending" | "recorded",
 	kind = "published",
 ) => ({
 	change: {
@@ -84,6 +84,19 @@ describe("EventsScreen", () => {
 		// A deleted entry shows only its id.
 		expect(within(deadRow).getByText("entry-e2").closest("a")).toBeNull();
 		expect(within(failedRow).getByText("slug-e1").closest("a")).not.toBeNull();
+	});
+
+	it("labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
+		fetchMock.mockImplementation(async () =>
+			json({ items: [item("e3", null, "recorded", "saved")], total: 1, counts }),
+		);
+		renderScreen();
+
+		const row = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
+		expect(within(row).getByText(t("state.recorded"))).toBeTruthy();
+		expect(within(row).queryByText(t("state.pending"))).toBeNull();
+		expect(within(row).queryByText(t("state.failed"))).toBeNull();
+		expect(within(row).queryByRole("button")).toBeNull();
 	});
 
 	it("retries one delivery with its subscriber", async () => {
@@ -166,7 +179,7 @@ describe("EventsScreen", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
 		expect(await screen.findByText("search-index")).toBeTruthy();
-		expect(requested().at(-1)?.length).toBe(6);
+		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
 	});
 
 	it("pages through the events", async () => {

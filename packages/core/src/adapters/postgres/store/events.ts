@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import type { PoolClient } from "pg";
+import { currentActor } from "../../../core/actor";
 import {
 	type ContentChange,
 	type ContentChangeKind,
@@ -40,7 +41,7 @@ export async function recordEvents(
 				locale: row.locale,
 				content_hash: row.contentHash,
 				version: row.version,
-				payload: JSON.stringify(row.payload),
+				payload: JSON.stringify({ ...row.payload, actor: currentActor() }),
 			})
 			.execute();
 	}
@@ -82,6 +83,7 @@ const changeOf = (row: EventColumns): ContentChange => ({
 	status: row.payload.status,
 	publishedSlug: row.payload.publishedSlug,
 	workingSlug: row.payload.workingSlug,
+	actor: row.payload.actor ?? null,
 	version: row.version,
 	contentHash: row.content_hash,
 	occurredAt: row.occurred_at,
@@ -216,12 +218,12 @@ export function createEventOps(ctx: StoreContext): EventStore {
 			const states = [...(params?.states ?? ["failed", "dead"])];
 			const limit = Math.min(Math.max(params?.limit ?? 50, 1), 200);
 			const offset = Math.max(params?.offset ?? 0, 0);
-			// `= any(array)` and not `in (...)`: an empty list of states matches nothing instead of being a syntax error.
-			const inStates = sql<boolean>`d.state = any(${states}::text[])`;
+			// An event with no delivery row (no subscriber) is `recorded`. `= any(array)` and not `in (...)`: an empty list of states matches nothing instead of being a syntax error.
+			const inStates = sql<boolean>`coalesce(d.state, 'recorded') = any(${states}::text[])`;
 			const [rows, total] = await Promise.all([
 				db
-					.selectFrom("cms_event_deliveries as d")
-					.innerJoin("cms_events as e", "e.id", "d.event_id")
+					.selectFrom("cms_events as e")
+					.leftJoin("cms_event_deliveries as d", "d.event_id", "e.id")
 					.select([
 						...EVENT_COLUMNS,
 						"d.subscriber",
@@ -239,7 +241,8 @@ export function createEventOps(ctx: StoreContext): EventStore {
 					.offset(offset)
 					.execute(),
 				db
-					.selectFrom("cms_event_deliveries as d")
+					.selectFrom("cms_events as e")
+					.leftJoin("cms_event_deliveries as d", "d.event_id", "e.id")
 					.select((eb) => eb.fn.countAll<string>().as("total"))
 					.where(inStates)
 					.executeTakeFirst(),
@@ -247,8 +250,8 @@ export function createEventOps(ctx: StoreContext): EventStore {
 			const items: EventDelivery[] = rows.map((row) => ({
 				change: changeOf(row),
 				subscriber: row.subscriber,
-				state: row.state,
-				attempts: row.attempts,
+				state: row.state ?? "recorded",
+				attempts: row.attempts ?? 0,
 				lastError: row.last_error,
 				lastAttemptAt: row.last_attempt_at,
 				nextAttemptAt: row.next_attempt_at,
