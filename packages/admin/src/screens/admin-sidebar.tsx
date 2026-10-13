@@ -3,21 +3,20 @@
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import {
-	BellRing,
 	ChevronRight,
+	ExternalLink,
 	FileImage,
 	Folder as FolderIcon,
 	FolderOpen,
 	FolderPlus,
-	Globe,
-	LayoutTemplate,
 	Plus,
 	Settings2,
 	Trash2,
 } from "lucide-react";
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
+import { buttonVariants } from "../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { IconButton } from "../ui/icon-button";
 import { Label } from "../ui/label";
@@ -35,6 +34,7 @@ import {
 	SidebarMenuItem,
 	SidebarMenuSub,
 	SidebarMenuSubItem,
+	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
 } from "../ui/sidebar";
@@ -44,12 +44,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { useAdminFeatures } from "./shared/admin-features";
-import { CollectionIcon, NamedIcon } from "./shared/collection-icon";
+import { CollectionIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 
-/** Value that points to the current screen in the sidebar. For a plugin screen, that screen's address (`nav.path`, e.g. `ai`). */
-export type AdminNavId = Collection | "media" | "templates" | "events" | "schema" | "trash" | (string & {});
+/** Value that points to the current screen in the sidebar. Every Settings tab, plugin tabs included, is the one `settings` entry. */
+export type AdminNavId = Collection | "media" | "settings" | "trash";
 
 /** Folder navigation used only on the list screen. */
 export interface FolderNavigation {
@@ -70,7 +70,7 @@ export interface AdminSidebarProps {
 	activeNav: AdminNavId;
 	folderNav?: FolderNavigation;
 	trashCount?: number | null;
-	/** Failed and dead event deliveries. */
+	/** Failed and dead event deliveries: shown on the Settings entry. */
 	eventsCount?: number | null;
 }
 
@@ -278,11 +278,9 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	);
 }
 
-/** Left navigation area: collections, media/templates/trash, virtual folder tree. */
+/** Left navigation area: content (collections, media), Settings, trash pinned at the bottom, virtual folder tree. */
 export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: AdminSidebarProps) {
 	const site = useSite();
-	// Sidebar items added by a plugin (`plugins[].nav` in site settings).
-	const pluginNav = useMemo(() => site.plugins.flatMap((plugin) => plugin.nav ?? []), [site]);
 	const t = useTranslator(screensMessages);
 	const { isMobile, setOpenMobile, state } = useSidebar();
 	const features = useAdminFeatures();
@@ -311,7 +309,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarHeader className="flex-row items-center gap-1 px-3 pt-3.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+			<SidebarHeader className="flex-row items-center gap-1 px-3 pt-3.5 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
 				<Link
 					href={site.adminHref()}
 					onClick={closeMobile}
@@ -319,14 +317,34 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 				>
 					<span
 						aria-hidden
-						className="flex size-6 items-center justify-center rounded-md bg-cms-sidebar-primary font-semibold text-cms-sidebar-primary-foreground text-xs"
+						className="flex size-6 shrink-0 items-center justify-center rounded-md bg-cms-sidebar-primary font-semibold text-cms-sidebar-primary-foreground text-xs"
 					>
 						{(site.SITE_NAME || "CMS").slice(0, 1)}
 					</span>
-					<span className="font-semibold text-[13px] text-cms-sidebar-accent-foreground">
+					<span className="truncate font-semibold text-[13px] text-cms-sidebar-accent-foreground">
 						{site.SITE_NAME || "CMS"}
 					</span>
 				</Link>
+				{/* Site home (`site.home`, default `/`). The admin screen lives inside the site app, so `/` is the site. Opens in a new tab so the admin stays. */}
+				<Tooltip>
+					<TooltipTrigger
+						render={
+							<Link
+								href={site.SITE_HOME}
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label={t("sidebar.viewSite")}
+								className={cn(
+									buttonVariants({ variant: "ghost", size: "icon-sm" }),
+									"size-8 shrink-0 text-cms-sidebar-foreground/70",
+								)}
+							/>
+						}
+					>
+						<ExternalLink aria-hidden className="size-4" />
+					</TooltipTrigger>
+					<TooltipContent side="right">{t("sidebar.viewSite")}</TooltipContent>
+				</Tooltip>
 				<Tooltip>
 					<TooltipTrigger
 						render={
@@ -338,9 +356,9 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>{t("sidebar.collections")}</SidebarGroupLabel>
+					<SidebarGroupLabel>{t("sidebar.content")}</SidebarGroupLabel>
 					<SidebarGroupContent>
-						<SidebarMenu aria-label={t("sidebar.collections")}>
+						<SidebarMenu aria-label={t("sidebar.content")}>
 							{site.COLLECTIONS.map((collection) =>
 								navLink(
 									site.adminHref(`?collection=${collection}`),
@@ -349,39 +367,22 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 									<CollectionIcon collection={collection} />,
 								),
 							)}
+							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
+				<SidebarSeparator />
 				<SidebarGroup>
-					<SidebarGroupLabel>{t("sidebar.manage")}</SidebarGroupLabel>
 					<SidebarGroupContent>
-						<SidebarMenu aria-label={t("sidebar.manage")}>
-							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
-							{site.ADMIN_TEMPLATES &&
-								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
-							{navLink(site.adminHref("/schema"), "schema", t("sidebar.schema"), <Settings2 />)}
-							{pluginNav.map((item) =>
-								navLink(site.adminHref(`/${item.path}`), item.path, item.label, <NamedIcon name={item.icon} />),
-							)}
+						<SidebarMenu aria-label={t("sidebar.settings")}>
 							{navLink(
-								site.adminHref("/events"),
-								"events",
-								t("sidebar.events"),
-								<BellRing />,
+								site.adminHref("/settings/collections"),
+								"settings",
+								t("sidebar.settings"),
+								<Settings2 />,
 								eventsCount ? (
-									<SidebarMenuBadge aria-label={t("sidebar.eventsBadge", { count: eventsCount })}>
+									<SidebarMenuBadge aria-label={t("sidebar.settingsBadge", { count: eventsCount })}>
 										{eventsCount}
-									</SidebarMenuBadge>
-								) : null,
-							)}
-							{navLink(
-								site.adminHref("/trash"),
-								"trash",
-								t("sidebar.trash"),
-								<Trash2 />,
-								trashCount ? (
-									<SidebarMenuBadge aria-label={t("sidebar.trashBadge", { count: trashCount })}>
-										{trashCount}
 									</SidebarMenuBadge>
 								) : null,
 							)}
@@ -390,26 +391,21 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 				</SidebarGroup>
 				{folderNav && <FolderTree nav={folderNav} closeMobile={closeMobile} />}
 			</SidebarContent>
-			<SidebarFooter className="flex-row items-center gap-1 border-cms-sidebar-border border-t px-3 py-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-2">
-				{/* Site home (`site.home`, default `/`). The admin screen lives inside the site app, so `/` is the site. */}
-				<Tooltip>
-					<TooltipTrigger
-						render={
-							<Link
-								href={site.SITE_HOME}
-								aria-label={t("sidebar.viewSite")}
-								className="flex h-8 flex-1 items-center gap-2 rounded-md px-2 text-[13px] text-cms-muted-foreground hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
-							/>
-						}
-					>
-						<Globe aria-hidden className="size-4" />
-						<span className="group-data-[collapsible=icon]:hidden">{t("sidebar.viewSite")}</span>
-					</TooltipTrigger>
-					<TooltipContent side="right" hidden={state !== "collapsed" || isMobile}>
-						{t("sidebar.viewSite")}
-					</TooltipContent>
-				</Tooltip>
-				<ThemeToggle className="size-8 text-cms-muted-foreground" />
+			<SidebarFooter className="flex-row items-center gap-1 border-cms-sidebar-border border-t px-2 py-2 group-data-[collapsible=icon]:flex-col">
+				<SidebarMenu aria-label={t("sidebar.trash")} className="min-w-0 flex-1">
+					{navLink(
+						site.adminHref("/trash"),
+						"trash",
+						t("sidebar.trash"),
+						<Trash2 />,
+						trashCount ? (
+							<SidebarMenuBadge aria-label={t("sidebar.trashBadge", { count: trashCount })}>
+								{trashCount}
+							</SidebarMenuBadge>
+						) : null,
+					)}
+				</SidebarMenu>
+				<ThemeToggle className="size-8 shrink-0 text-cms-muted-foreground" />
 			</SidebarFooter>
 		</Sidebar>
 	);

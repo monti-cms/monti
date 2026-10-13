@@ -2,7 +2,6 @@
 
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import {
-	AdminShell,
 	Alert,
 	AlertDescription,
 	Badge,
@@ -13,6 +12,7 @@ import {
 	EmptyTitle,
 	Input,
 	Label,
+	SettingsPanel,
 	Skeleton,
 	Tabs,
 	TabsContent,
@@ -114,7 +114,7 @@ export function GitSyncPage() {
 	const conflictCount = conflicts.data?.items.length ?? 0;
 
 	return (
-		<AdminShell title={t("title")} sidebar={{ activeNav: "git-sync" }}>
+		<SettingsPanel>
 			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
 				<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
 					<TabsTrigger value="sync" className="flex-none px-0 text-xs">
@@ -154,7 +154,7 @@ export function GitSyncPage() {
 					<SettingsTab status={status.data} onChanged={refresh} />
 				</TabsContent>
 			</Tabs>
-		</AdminShell>
+		</SettingsPanel>
 	);
 }
 

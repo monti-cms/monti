@@ -52,8 +52,8 @@ export {
 	assertPluginNamesFree,
 	assertPluginPagesFree,
 	assertPluginRoutesFree,
-	CORE_ADMIN_PAGES,
 	CORE_FEATURE_KEYS,
+	CORE_SETTINGS_TABS,
 } from "./plugin/collisions";
 export {
 	type CmsPlugin,

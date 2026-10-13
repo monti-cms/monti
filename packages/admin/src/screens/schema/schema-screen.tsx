@@ -7,13 +7,13 @@ import { Lock, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "../../lib/utils/cn";
+import { useAdminRouter } from "../../router";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { errorText } from "../admin-api";
-import { AdminShell } from "../shared/admin-shell";
+import type { SchemaTab } from "../settings/tabs";
 import { useConfirm } from "../shared/confirm-dialog";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
@@ -86,8 +86,10 @@ function FileInfo({ file }: { file: Obj }) {
 	);
 }
 
-function SchemaEditor({ state }: { state: SchemaScreenState }) {
+function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab }) {
 	const t = useTranslator(schemaMessages);
+	const site = useSite();
+	const router = useAdminRouter();
 	const base = useMemo(() => (isObj(state.schema) ? (state.schema as Obj) : {}), [state.schema]);
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
@@ -95,7 +97,6 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 	const [issues, setIssues] = useState<readonly SchemaIssue[]>([]);
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
-	const [tab, setTab] = useState("collections");
 	const [creating, setCreating] = useState(false);
 	const collections = collectionsOf(draft);
 	const names = Object.keys(collections);
@@ -221,15 +222,8 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 							</Alert>
 						)}
 						{state.issues.length === 0 && (
-							<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)}>
-								<TabsList className="w-full justify-start sm:w-fit">
-									<TabsTrigger value="collections">{t("tabs.collections")}</TabsTrigger>
-									<TabsTrigger value="locales">{t("tabs.locales")}</TabsTrigger>
-									<TabsTrigger value="site">{t("tabs.site")}</TabsTrigger>
-									<TabsTrigger value="admin">{t("tabs.admin")}</TabsTrigger>
-									<TabsTrigger value="file">{t("tabs.file")}</TabsTrigger>
-								</TabsList>
-								<TabsContent value="collections" className="pt-3">
+							<>
+								{tab === "collections" && (
 									<div className="flex flex-col gap-4 lg:flex-row">
 										<div className="flex shrink-0 flex-col gap-2 lg:w-52">
 											{writable && (
@@ -295,24 +289,18 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 											)}
 										</div>
 									</div>
-								</TabsContent>
-								<TabsContent value="locales" className="pt-3">
+								)}
+								{tab === "locales" && (
 									<LocalesEditor
 										file={draft}
 										savedCodes={localesOf(base).map((locale) => locale.code)}
 										update={updateFile}
 									/>
-								</TabsContent>
-								<TabsContent value="site" className="pt-3">
-									<SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />
-								</TabsContent>
-								<TabsContent value="admin" className="pt-3">
-									<AdminEditor file={draft} update={updateFile} />
-								</TabsContent>
-								<TabsContent value="file" className="pt-3">
-									<FileInfo file={draft} />
-								</TabsContent>
-							</Tabs>
+								)}
+								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
+								{tab === "admin" && <AdminEditor file={draft} update={updateFile} />}
+								{tab === "file" && <FileInfo file={draft} />}
+							</>
 						)}
 					</div>
 				</div>
@@ -325,7 +313,7 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 				onCreate={(id, kind, path, label) => {
 					updateFile((file) => addCollection(file, id, kind, path, label));
 					setSelected(id);
-					setTab("collections");
+					if (tab !== "collections") router.navigate(site.adminHref("/settings/collections"));
 					setCreating(false);
 				}}
 			/>
@@ -355,8 +343,8 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 	);
 }
 
-/** The schema settings screen: edits `monti.schema.ts` on the development server, shows it read-only everywhere else. */
-export function SchemaScreen() {
+/** The schema file editor: edits `monti.schema.ts` on the development server, shows it read-only everywhere else. `tab` is the Settings tab being shown. */
+export function SchemaSettings({ tab }: { tab: SchemaTab }) {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
 	const query = useQuery({
@@ -367,26 +355,21 @@ export function SchemaScreen() {
 		refetchOnWindowFocus: false,
 	});
 	const error = query.error ? errorText(site, query.error, t("load.failed")) : null;
+	if (query.data) return <SchemaEditor key={query.data.hash ?? "site"} state={query.data} tab={tab} />;
 	return (
-		<AdminShell title={t("title")} sidebar={{ activeNav: "schema" }}>
-			{query.data ? (
-				<SchemaEditor key={query.data.hash ?? "site"} state={query.data} />
+		<div className="flex flex-col gap-3 p-5">
+			{error ? (
+				<Alert variant="danger" layout="stack">
+					<AlertDescription className="flex items-center gap-3">
+						{error}
+						<Button type="button" variant="outline" size="sm" onClick={() => void query.refetch()}>
+							{t("load.retry")}
+						</Button>
+					</AlertDescription>
+				</Alert>
 			) : (
-				<div className="flex flex-col gap-3 p-5">
-					{error ? (
-						<Alert variant="danger" layout="stack">
-							<AlertDescription className="flex items-center gap-3">
-								{error}
-								<Button type="button" variant="outline" size="sm" onClick={() => void query.refetch()}>
-									{t("load.retry")}
-								</Button>
-							</AlertDescription>
-						</Alert>
-					) : (
-						<Skeleton className="h-40 w-full" />
-					)}
-				</div>
+				<Skeleton className="h-40 w-full" />
 			)}
-		</AdminShell>
+		</div>
 	);
 }

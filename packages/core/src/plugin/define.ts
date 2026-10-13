@@ -8,7 +8,7 @@ import type { PluginStorage } from "./storage";
 /**
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`).
  *
- * - Config values (`options`), sidebar items (`nav`) and config validation (`validate`) are read by both server and browser. Apart from functions, only JSON values go here.
+ * - Config values (`options`), Settings tabs (`nav`) and config validation (`validate`) are read by both server and browser. Apart from functions, only JSON values go here.
  * - Server code (`server`) and admin UI code (`admin`) are loader functions. They are read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`)
  *   so server code stays out of the browser bundle.
  */
@@ -19,7 +19,7 @@ export interface CmsPlugin<
 > {
 	readonly name: Name;
 	readonly options: Options;
-	/** Items to add to the "Manage" group of the admin sidebar. `path` is a single-segment path after the admin path (`admin.path`, default `/admin`), rendered by the admin plugin's `pages`. */
+	/** Tabs to add to the admin Settings page. `path` is a single-segment tab address (`<admin path>/settings/<path>`, default `/admin/settings/<path>`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
 	readonly blocks?: Blocks;

@@ -2,9 +2,9 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·본문 템플릿·실패한 이벤트 전달(`/admin/events`)·휴지통·로그인 화면을 준다.
+`@monti-cms/core`의 관리자 화면. 목록·편집기(tiptap)·미디어·휴지통·로그인·설정 화면을 준다(설정에 스키마 편집기·본문 템플릿·이벤트 기록이 `/admin/settings/<탭>`으로 들어 있다).
 프레임워크에 묶이지 않는다. Next.js에서 아무것도 가져오지 않고, 라우터는 받은 어댑터로만 닿는다("라우터 어댑터"). 지금 지원하는 호스트는 `@monti-cms/nextjs`를 통한 Next.js(App Router)다.
-플러그인(예: `@monti-cms/ai`)이 화면·사이드바 항목·필드 옆 버튼·편집 화면 동작을 더한다.
+플러그인(예: `@monti-cms/ai`)이 설정 탭·필드 옆 버튼·편집 화면 동작을 더한다.
 화면은 본체의 관리자 API(`/api/monti/v1/*`)만 부른다. 설치하지 않고 같은 API로 화면을 직접 만들어도 된다.
 
 ## 붙이기
@@ -15,7 +15,7 @@
   (`app/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
   플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/core/client`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
   주소를 만든다. 관리자 API(`/api/monti/v1`)는 바뀌지 않는다.
-- **사이트 보기.** 사이드바 아래 `사이트 보기`는 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
+- **사이트 보기.** 사이드바 맨 위 사이트 이름 옆의 외부 링크 아이콘 단추(툴팁 `사이트 보기`)가 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
 - **미리보기.** 편집 화면 `미리보기`는 `site.previewPath` 뒤에 공개 경로를 붙이고 언어는 `site.previewLocaleParam`(기본
   `?locale=`)으로 넘긴다. 검색 미리보기의 주소는 `site.localePrefix`를 따른다.
 
@@ -59,7 +59,7 @@ export function SiteAdminComponents({ children }) {
 
 ### 아이콘
 
-블록 정의의 `editor.icon`, 플러그인 사이드바 항목의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 lucide 이름이다.
+블록 정의의 `editor.icon`, 플러그인 설정 탭의 `icon`, 컬렉션의 `icon`, 코드 줄 효과의 `icon`은 lucide 이름이다.
 관리자 패키지에는 자주 쓰는 아이콘만 있으므로, 다른 이름은 같은 공급자의 `icons`로 등록한다. 없는 이름은 기본 아이콘(퍼즐·플러그 등)으로
 보인다.
 
@@ -139,9 +139,22 @@ const components = {
 컬렉션을 가리키는 곳은 `<관리자 경로>?collection=<컬렉션>&open=<ID>`로 그 항목 칸을 열고, `<관리자 경로>/entries/<ID>/edit`로 열어도
 그 주소로 보낸다. 목록 컬럼 설정에 저장된 이름 중 지금 컬럼이 아닌 것은 버린다(예전 이름을 짐작해 바꾸지 않는다).
 
+## 탐색과 설정
+
+사이드바는 세 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어), **설정** 항목 하나, 맨 아래에 개수 배지와 함께 고정된 **휴지통**. 설정은 영역마다 탭이 있는 한 페이지이고, 탭마다 주소가 따로 있다.
+
+| 탭 | 주소 | 내용 |
+|---|---|---|
+| 컬렉션·언어·사이트·관리자·파일 | `<관리자 경로>/settings/collections`(`locales`·`site`·`admin`·`file`) | 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
+| 템플릿 | `<관리자 경로>/settings/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
+| 이벤트 기록 | `<관리자 경로>/settings/events` | 이벤트 전달. 실패 개수를 탭과 사이드바 설정 항목에 배지로 보인다(실패가 있을 때만). |
+| 플러그인 페이지마다 하나 | `<관리자 경로>/settings/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`, `git-sync`). |
+
+`<관리자 경로>/settings`는 첫 탭으로 간다.
+
 ## 스키마 화면
 
-`<관리자 경로>/schema`(사이드바: 관리 > 스키마)는 개발 서버에서, 파일이 평범한 데이터인 동안(`defineSchema` import와 `export default defineSchema({ ... })`뿐, 그 밖의 코드는 없음) `monti.schema.ts`를 다시 쓴다. 그 밖에서, 그리고 코드가 들어 있는 파일(import, 전개, 함수 호출)에서는 이유와 함께 읽기 전용으로 보여 준다. 저장하면 파일 전체를 다시 쓰므로 파일의 주석은 사라진다(화면이 알려 준다). 코어의 `GET/PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview` 경로의 화면이다(누가 쓸 수 있는지, 저장 순서, 돌고 있는 인스턴스가 다시 읽는 방법은 `@monti-cms/core` README의 "관리자에서 스키마 편집하기"를 본다).
+`<관리자 경로>/settings/collections`(사이드바: 설정 > 컬렉션. 편집기는 언어·사이트·관리자·파일 탭에도 걸쳐 있다)는 개발 서버에서, 파일이 평범한 데이터인 동안(`defineSchema` import와 `export default defineSchema({ ... })`뿐, 그 밖의 코드는 없음) `monti.schema.ts`를 다시 쓴다. 그 밖에서, 그리고 코드가 들어 있는 파일(import, 전개, 함수 호출)에서는 이유와 함께 읽기 전용으로 보여 준다. 저장하면 파일 전체를 다시 쓰므로 파일의 주석은 사라진다(화면이 알려 준다). 코어의 `GET/PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview` 경로의 화면이다(누가 쓸 수 있는지, 저장 순서, 돌고 있는 인스턴스가 다시 읽는 방법은 `@monti-cms/core` README의 "관리자에서 스키마 편집하기"를 본다).
 
 - **컬렉션**: 이름표, 아이콘, 종류, 공개 주소, 본문, 허용하는 블록·서식·제목 단계(목록마다 스위치가 있다. 끄면 모두 허용하고, 켜면 사이트가 아는 이름마다 체크박스가 나온다). 모든 종류의 필드는 그 자리에서 펼쳐진다. 이름, 종류, 이름표, 도움말, 필수, 언어, 종류별 옵션(텍스트 길이와 줄 수, 주소의 기준, 관계의 대상, 미디어 종류, 역참조의 관계, 뷰 이름), 선택의 선택지(이름표, 기본값, 순서), 조건부 필드의 선택마다 딸린 필드를 고친다. 필드는 위아래로 옮기고 지울 수 있고, 여기서 이름을 바꾼 필드는 그 이름을 쓰던 배치, 목록 열, 주소 기준을 따라간다. 배치 묶음(제목, 탭, 접힘, 순서 있는 필드)과 목록 열은 순서 있는 목록으로 편집한다.
 - **언어**: 콘텐츠 언어(저장된 언어의 코드는 저장되는 값이라 새 언어만 코드를 정한다), 기본 언어, 시간대.
@@ -294,24 +307,24 @@ export const POST = textCheckRoute({
 
 ```ts
 export default defineAdminPlugin({
-	pages: { my: MyPage }, // <관리자 경로>/my(기본 /admin/my, 클라이언트 컴포넌트). 로그인 확인은 관리자 화면이 한다
+	pages: { my: MyPage }, // 설정의 "my" 탭: <관리자 경로>/settings/my(기본 /admin/settings/my, 클라이언트 컴포넌트). 로그인 확인은 관리자 화면이 한다
 	Provider: MyProvider, // 관리자 화면 전체를 감싼다. 안에서 CmsAdminComponentsProvider로 입력·편집 화면 확장을 더한다
 });
 ```
 
-페이지는 클라이언트 컴포넌트다. 틀은 `AdminShell`(사이드바와 제목, `sidebar.activeNav`는 플러그인 `nav` 항목의 `path`)로 그리고, 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
+페이지는 클라이언트 컴포넌트이고 설정 페이지의 탭으로 나온다. 탭 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바·제목·탭 줄은 설정 페이지가 이미 둔다). `SettingsPanel`(`@monti-cms/admin/kit`)은 얇은 도구 줄에 개수와 동작을 두는 선택 본문이다. 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
 
 ```tsx
 "use client";
 import { cmsFetch } from "@monti-cms/admin/api";
-import { AdminShell } from "@monti-cms/admin/kit";
+import { SettingsPanel } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
 	const site = useSite();
 	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
-	return <AdminShell title="Post stats" sidebar={{ activeNav: "post-stats" }}>{stats.data?.published}</AdminShell>;
+	return <SettingsPanel>{stats.data?.published}</SettingsPanel>;
 }
 ```
 
@@ -321,7 +334,7 @@ export function StatsPage() {
 자리에는 `SlotRegistryProvider`(`@monti-cms/admin/slots`)로 동작을 붙인다.
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
-`cn`, 확인 대화상자(`useConfirm`), 플러그인 화면 틀(`AdminShell`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
+`cn`, 확인 대화상자(`useConfirm`), 설정 탭 본문(`SettingsPanel`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
 | 진입점 | 내용 |

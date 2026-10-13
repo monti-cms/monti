@@ -103,7 +103,7 @@ export function TemplateMenu({
 						))
 					)}
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={() => window.open(site.adminUrl("/templates"), "_blank", "noopener")}>
+					<DropdownMenuItem onClick={() => window.open(site.adminUrl("/settings/templates"), "_blank", "noopener")}>
 						<Settings aria-hidden />
 						{t("template.manage")}
 					</DropdownMenuItem>
