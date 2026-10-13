@@ -91,7 +91,7 @@ async function writeProviders(site, store, expectedVersion, providers) {
     return getAiSettingsView(site, store);
 }
 /**
- * Encrypts every stored key that is in the legacy format or was made with a previous secret again with the current secret (`monti migrate` runs it).
+ * Encrypts every stored key that is in the legacy format or was made with a previous secret again with the current secret (`monti db:migrate` runs it).
  * Keys that cannot be decrypted are left as they are. Does nothing when there is no current secret or nothing to upgrade, so it is safe to repeat.
  * A save of the connections that races with it wins (it also upgrades), so a version conflict is not an error.
  * @returns how many keys were upgraded

@@ -7,6 +7,8 @@ export interface AppOptions {
     /** Config file (`monti.config.ts`): the module that exports the CMS instance. */
     readonly config?: string;
     readonly log?: (message: string) => void;
+    /** Do not print the `env:` and `config:` lines (the commands that open with a line of their own). */
+    readonly quiet?: boolean;
 }
 /**
  * Loads the config file (a path relative to `cwd`) and returns the CMS instance it exports (`export const cms = defineConfig({ ... })`, or as the default

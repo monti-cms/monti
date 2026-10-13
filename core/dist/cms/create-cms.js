@@ -112,6 +112,41 @@ export function createCms(options) {
             return connections.mediaStore;
         };
         const authGateway = new CmsAuthGateway(getAuth);
+        /** Runs the steps of the core tables and the plugins, and reports what the steps found. The callers print the first and last line. */
+        const runMigration = async ({ log = console.log, verbose = false, reconvertBodies = false, saveDetail }, 
+        /** Where the line per plugin goes. First-time setup leaves it out: the plugin tables are in the count of created tables. */
+        pluginLog = log) => {
+            // The steps report each body they keep as unreadable; one body can be reported by several steps.
+            const unreadable = new Map();
+            const detailLines = [];
+            const summary = await connections.database.migrate({
+                site,
+                formats: await plugins.formats(),
+                reconvertBodies,
+                onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
+                detail: (line) => {
+                    detailLines.push(line);
+                    if (verbose)
+                        log(line);
+                },
+            });
+            await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), pluginLog);
+            if (summary?.reconverted) {
+                const { converted, remaining } = summary.reconverted;
+                log(converted === 0 && remaining === 0
+                    ? "No body was kept as unreadable, so there was nothing to read again."
+                    : `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`);
+            }
+            const found = [...unreadable.values()];
+            if (verbose)
+                for (const body of found)
+                    log(unreadableLine(body));
+            for (const line of describeUnreadable(found, { again: reconvertBodies }))
+                log(line);
+            const everything = [...detailLines, ...found.map(unreadableLine)];
+            const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
+            return { summary, saved };
+        };
         return {
             site,
             server: publicServer,
@@ -162,43 +197,38 @@ export function createCms(options) {
                 formats: plugins.formats,
                 verifyAdmin: () => authGateway.verifyAdmin(),
             }),
-            migrate: async ({ log = console.log, verbose = false, reconvertBodies = false, saveDetail } = {}) => {
+            migrate: async (options = {}) => {
+                const log = options.log ?? console.log;
                 const target = connections.database.describeTarget?.();
-                log(`Migrating the ${connections.database.name} database${target ? `: ${target}` : ""}`);
-                // The steps report each body they keep as unreadable; one body can be reported by several steps.
-                const unreadable = new Map();
-                const detailLines = [];
-                const summary = await connections.database.migrate({
-                    site,
-                    formats: await plugins.formats(),
-                    reconvertBodies,
-                    onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
-                    detail: (line) => {
-                        detailLines.push(line);
-                        if (verbose)
-                            log(line);
-                    },
-                });
-                await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
-                if (summary?.reconverted) {
-                    const { converted, remaining } = summary.reconverted;
-                    log(converted === 0 && remaining === 0
-                        ? "No body was kept as unreadable, so there was nothing to read again."
-                        : `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`);
-                }
-                const found = [...unreadable.values()];
-                if (verbose)
-                    for (const body of found)
-                        log(unreadableLine(body));
-                for (const line of describeUnreadable(found, { again: reconvertBodies }))
-                    log(line);
-                const everything = [...detailLines, ...found.map(unreadableLine)];
-                const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
+                log("Bringing Monti's tables up to date with this version\u2026");
+                log(`Database: ${target ?? connections.database.name}`);
+                const { summary, saved } = await runMigration(options);
+                const applied = summary?.applied ?? 0;
                 log(summary
-                    ? `Applied ${summary.applied} step${summary.applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
-                    : "Migration completed.");
+                    ? applied === 0
+                        ? "Already up to date."
+                        : `Applied ${applied} step${applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
+                    : "Done.");
                 if (saved)
                     log(`Full details: ${saved}`);
+            },
+            databaseState: async () => connections.database.state?.(),
+            setup: async ({ log = console.log } = {}) => {
+                const target = connections.database.describeTarget?.();
+                const before = await connections.database.state?.();
+                if (before?.set) {
+                    log(`Monti is already set up in this database (schema "${before.schema}"). After updating Monti, run \`monti db:migrate\`.`);
+                    return { created: false, tables: 0 };
+                }
+                log(`Creating Monti's tables in ${target ?? `the ${connections.database.name} database`}\u2026`);
+                if (before && before.tables > 0) {
+                    log(`The schema "${before.schema}" already has ${before.tables} other table${before.tables === 1 ? "" : "s"}; Monti only adds its own and does not touch them.`);
+                }
+                await runMigration({ log }, () => undefined);
+                const after = await connections.database.state?.();
+                const tables = after ? after.tables - (before?.tables ?? 0) : 0;
+                log(after ? `Done: created ${tables} table${tables === 1 ? "" : "s"}.` : "Done.");
+                return { created: true, tables };
             },
             close: async () => {
                 await connections.database.close?.();

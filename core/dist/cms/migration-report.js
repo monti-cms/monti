@@ -1,6 +1,6 @@
 /**
- * What `monti migrate` says about bodies that could not be read as documents and were kept exactly as they were. The steps report each body as it is found
- * (`UnreadableBody`); this turns the list into a few plain lines. The per-body lines stay available (`monti migrate --verbose`).
+ * What `monti db:migrate` says about bodies that could not be read as documents and were kept exactly as they were. The steps report each body as it is found
+ * (`UnreadableBody`); this turns the list into a few plain lines. The per-body lines stay available (`monti db:migrate --verbose`).
  */
 /** The same body reported by several steps, as one: the facts any of them knew. */
 export function mergeUnreadable(found, next) {
@@ -58,14 +58,14 @@ export function describeUnreadable(found, options = {}) {
         lines.push(`Most common reason: ${top}${found.length > 1 ? ` (${topCount} of ${found.length})` : ""}.`);
     }
     if (!options.again && found.some((body) => body.hasDirective)) {
-        lines.push("Some of them use ::: blocks (callout, tabs, ...). Turn on the directive syntax, then read them again:", '  1. install @monti-cms/syntax-directive and use `mdx({ syntax: [directiveSyntax()] })` in monti.config.ts (import { directiveSyntax } from "@monti-cms/syntax-directive")', "  2. run `monti migrate --reconvert-bodies`");
+        lines.push("Some of them use ::: blocks (callout, tabs, ...). Turn on the directive syntax, then read them again:", '  1. install @monti-cms/syntax-directive and use `mdx({ syntax: [directiveSyntax()] })` in monti.config.ts (import { directiveSyntax } from "@monti-cms/syntax-directive")', "  2. run `monti db:migrate --reconvert-bodies`");
     }
     else if (!options.again) {
-        lines.push("After you change the setup so they can be read, `monti migrate --reconvert-bodies` reads them again. Or open each one in the admin editor and fix it there.");
+        lines.push("After you change the setup so they can be read, `monti db:migrate --reconvert-bodies` reads them again. Or open each one in the admin editor and fix it there.");
     }
     else {
         lines.push("Open each one in the admin editor and fix it there.");
     }
-    lines.push("`monti migrate --verbose` lists every one of them.");
+    lines.push("`monti db:migrate --verbose` lists every one of them.");
     return lines;
 }

@@ -83,7 +83,7 @@ const configLoads = {
             where: state.configPath,
             fix: missing
                 ? `install the package it imports (\`${missing.startsWith(".") ? "check the path of the import" : `add ${missing} with your package manager`}\`), then run \`monti doctor\` again`
-                : "fix the error above in the config file (the full message is printed by `monti migrate`), then run `monti doctor` again",
+                : "fix the error above in the config file (the full message is printed by `monti db:migrate`), then run `monti doctor` again",
         });
     },
 };

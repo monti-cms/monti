@@ -2,7 +2,7 @@ import { pullTarget } from "./inbound.js";
 import { flushTarget, pushAll } from "./outbound.js";
 import { syncContextFor } from "./sync.js";
 /**
- * `monti git-sync:<command>`: the plugin's command line. They load the app like `monti migrate` (`.env.local`, `cms.server.ts`), so the token and the
+ * `monti git-sync:<command>`: the plugin's command line. They load the app like `monti db:migrate` (`.env.local`, `cms.server.ts`), so the token and the
  * instance's secrets are the app's own.
  */
 const targetOption = { type: "string", description: "Only this target (its id); default: every target" };

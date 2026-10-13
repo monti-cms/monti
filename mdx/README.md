@@ -8,7 +8,7 @@ MDX for `@monti-cms/core`. Core stores a body as a document and has no text form
 - **`renderMdx`** for the public page: MDX text is read into a document and drawn by core's renderer (no MDX is compiled or executed);
 - the **source panel** of the admin: edit a body as MDX text, checked as it is typed;
 - the **syntax extension API** (`SyntaxExtension` and friends) that `@monti-cms/syntax-directive` and `@monti-cms/syntax-shiki` build on;
-- the code that reads old stores which kept bodies as MDX text, when `monti migrate` needs it.
+- the code that reads old stores which kept bodies as MDX text, when `monti db:migrate` needs it.
 
 ## Installation
 
@@ -137,8 +137,8 @@ The root entry also exports the table helpers (`tableHasMergedCells`, `tableWidt
 Stores from before stored documents kept every body as MDX text. Core still lists the steps that moved them (`0010`, `0011`, `0012`, `0013`, `0015`) under their old names, but it does not parse MDX: those steps read and write the text through the `mdx` format that `@monti-cms/mdx/server` supplies (`CmsFormat.legacyBodies`, the `LegacyBodies` type of `@monti-cms/core/format`).
 
 - A step asks for the format **only when a store actually has a body to read** through it. A fresh store and a store already past those steps never need this package at migrate time.
-- When one does and the package is missing, `monti migrate` fails with a message that says to install `@monti-cms/mdx` and add `mdx()` to the plugins of the site config to upgrade the database.
-- `monti migrate` and `cms.migrate()` pass the instance's formats (the ones its plugins provide) to the migration, so a site that lists `mdx({ syntax: [...] })` migrates old data with the right syntax extensions.
+- When one does and the package is missing, `monti db:migrate` fails with a message that says to install `@monti-cms/mdx` and add `mdx()` to the plugins of the site config to upgrade the database.
+- `monti db:migrate` and `cms.migrate()` pass the instance's formats (the ones its plugins provide) to the migration, so a site that lists `mdx({ syntax: [...] })` migrates old data with the right syntax extensions.
 - `entry_bodies.mdx` and `body_templates.mdx` are nullable (the step `0020_mdx_columns_optional`) and nothing writes them any more. They are not dropped, so old rows keep their text.
 
 ## Upgrading from MDX in core
@@ -151,7 +151,7 @@ MDX used to be built into core, configured with `defineConfig({ mdx: { syntax } 
 4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs`.
 5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`: the syntax extension interface comes from `@monti-cms/mdx`, the parser and writer from `@monti-cms/mdx/format`.
 6. Block extensions you wrote: drop the default export of your render modules and keep `documentComponents`.
-7. Run `monti migrate`. With `mdx()` installed, an old database upgrades. Without it, a store that still has old steps to run fails with the install message.
+7. Run `monti db:migrate`. With `mdx()` installed, an old database upgrades. Without it, a store that still has old steps to run fails with the install message.
 8. Drop `monti content:rewrite` from scripts: it is removed.
 
 The full list of changes is in "Upgrading from MDX in core" in the core README.

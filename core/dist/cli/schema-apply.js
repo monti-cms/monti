@@ -102,7 +102,7 @@ async function load(options) {
     return { cms, file, migrations: schema.migrations ?? [] };
 }
 /** The store is not migrated to the step that records the applied schema. */
-const MIGRATE_HINT = "the store has no schema record yet; run `monti migrate` first";
+const MIGRATE_HINT = "the store has no schema record yet; run `monti db:migrate` first";
 const isMissingTable = (error) => error?.code === "42P01";
 /**
  * `monti schema:diff`: compares the schema of the site with the one last applied to the store (the snapshot `schema:apply` recorded), and says which stored entries

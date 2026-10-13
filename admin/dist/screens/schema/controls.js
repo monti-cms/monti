@@ -10,6 +10,7 @@ import { IconButton } from "../../ui/icon-button.js";
 import { Input } from "../../ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { Switch } from "../../ui/switch.js";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip.js";
 import { schemaMessages } from "./messages.js";
 import { moveItem, nameProblem } from "./schema-model.js";
 const Context = createContext({
@@ -88,10 +89,10 @@ export function NameInput({ label, value, taken, onCommit, disabled: forcedDisab
                 } }), problem && _jsx(FieldError, { className: "text-xs", children: t(`name.${problem}`) })] }));
 }
 /** Up, down and remove buttons of one row of a list. */
-export function RowActions({ index, count, onMove, onRemove, name, }) {
+export function RowActions({ index, count, onMove, onRemove, name, removeBlocked, }) {
     const t = useTranslator(schemaMessages);
     const { disabled } = useSchemaEdit();
-    return (_jsxs("div", { className: "flex shrink-0 items-center", children: [_jsx(IconButton, { label: t("row.up", { name }), size: "icon-xs", disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { label: t("row.down", { name }), size: "icon-xs", disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, { "aria-hidden": true }) }), _jsx(IconButton, { label: t("row.remove", { name }), size: "icon-xs", destructive: true, disabled: disabled, onClick: onRemove, children: _jsx(X, { "aria-hidden": true }) })] }));
+    return (_jsxs("div", { className: "flex shrink-0 items-center", children: [_jsx(IconButton, { label: t("row.up", { name }), size: "icon-xs", disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { label: t("row.down", { name }), size: "icon-xs", disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, { "aria-hidden": true }) }), removeBlocked ? (_jsxs(Tooltip, { children: [_jsx(TooltipTrigger, { render: _jsx("span", { tabIndex: 0, "data-testid": "remove-blocked" }), children: _jsx(Button, { type: "button", variant: "ghost", size: "icon-xs", disabled: true, "aria-label": t("row.remove", { name }), "aria-description": removeBlocked, className: "pointer-events-none text-cms-destructive", children: _jsx(X, { "aria-hidden": true }) }) }), _jsx(TooltipContent, { side: "top", children: removeBlocked })] })) : (_jsx(IconButton, { label: t("row.remove", { name }), size: "icon-xs", destructive: true, disabled: disabled, onClick: onRemove, children: _jsx(X, { "aria-hidden": true }) }))] }));
 }
 /** An ordered list of names picked from `options`: add from the options not in the list yet, move, remove. Used for layout groups and list columns. */
 export function OrderedNames({ label, names, options, onChange, nameOf, }) {

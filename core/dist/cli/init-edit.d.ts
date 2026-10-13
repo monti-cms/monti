@@ -34,6 +34,6 @@ export declare function wrapNextConfig(file: string, text: string): TextEdit;
 export declare function addSuppressHydrationWarning(file: string, text: string): TextEdit;
 /**
  * Adds what Monti needs kept out of git to the text of a `.gitignore` (`undefined`: there is none, so it is created): `.env.local` (it holds the secrets) and
- * `.monti/` (where `monti migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
+ * `.monti/` (where `monti db:migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
  */
 export declare function ignoreForMonti(text: string | undefined): TextEdit;

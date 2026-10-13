@@ -72,12 +72,14 @@ export declare function NameInput({ label, value, taken, onCommit, disabled: for
     hint?: ReactNode;
 }): import("react").JSX.Element;
 /** Up, down and remove buttons of one row of a list. */
-export declare function RowActions({ index, count, onMove, onRemove, name, }: {
+export declare function RowActions({ index, count, onMove, onRemove, name, removeBlocked, }: {
     index: number;
     count: number;
     onMove: (delta: number) => void;
     onRemove: () => void;
     name: string;
+    /** Why the row cannot be removed: the remove button is disabled and the reason is its tooltip. */
+    removeBlocked?: string;
 }): import("react").JSX.Element;
 /** An ordered list of names picked from `options`: add from the options not in the list yet, move, remove. Used for layout groups and list columns. */
 export declare function OrderedNames({ label, names, options, onChange, nameOf, }: {

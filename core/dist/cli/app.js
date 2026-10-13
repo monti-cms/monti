@@ -29,9 +29,10 @@ export async function importCms(cwd, configPath) {
 export async function loadApp(options) {
     const log = options.log ?? console.log;
     const loaded = loadEnvFiles(options.cwd, options.envFiles);
-    if (loaded.length > 0)
+    if (loaded.length > 0 && !options.quiet)
         log(`env: ${loaded.join(", ")}`);
     const configPath = resolveConfigPath(options.cwd, options.config);
-    log(`config: ${configPath}`);
+    if (!options.quiet)
+        log(`config: ${configPath}`);
     return importCms(options.cwd, configPath);
 }

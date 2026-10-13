@@ -179,7 +179,7 @@ export function addSuppressHydrationWarning(file, text) {
         change: "added suppressHydrationWarning to <html>",
     };
 }
-/** Lines of a `.gitignore` that cover the `.monti/` folder (where `monti migrate` writes its logs). */
+/** Lines of a `.gitignore` that cover the `.monti/` folder (where `monti db:migrate` writes its logs). */
 const MONTI_FOLDER_LINES = [
     ".monti",
     ".monti/",
@@ -192,7 +192,7 @@ const MONTI_FOLDER_LINES = [
 ];
 /**
  * Adds what Monti needs kept out of git to the text of a `.gitignore` (`undefined`: there is none, so it is created): `.env.local` (it holds the secrets) and
- * `.monti/` (where `monti migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
+ * `.monti/` (where `monti db:migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
  */
 export function ignoreForMonti(text) {
     const lines = (text ?? "").split(/\r?\n/).map((line) => line.trim());
@@ -200,7 +200,7 @@ export function ignoreForMonti(text) {
         ...(ignoresEnvLocal(text ?? "") ? [] : [{ line: ".env.local", why: "it holds your secrets" }]),
         ...(lines.some((line) => MONTI_FOLDER_LINES.includes(line))
             ? []
-            : [{ line: ".monti/", why: "monti migrate writes its logs there" }]),
+            : [{ line: ".monti/", why: "monti db:migrate writes its logs there" }]),
     ];
     if (missing.length === 0)
         return { status: "present" };

@@ -115,7 +115,7 @@ export function explainDatabaseError(error, context = {}) {
                 problem: {
                     what: `The Monti tables are missing in the database schema "${schema}"`,
                     where: `${SCHEMA_ENV} (default public) of ${target ?? "the database"}`,
-                    fix: `run \`monti migrate\` against this database (on a deployed site, run it as a step of the deploy), then \`monti doctor\` to check the rest. Driver message: ${message}`,
+                    fix: `run \`monti db:setup\` for a new database, or \`monti db:migrate\` after updating Monti (on a deployed site, run it as a step of the deploy), then \`monti doctor\` to check the rest. Driver message: ${message}`,
                 },
             };
         }
@@ -125,7 +125,7 @@ export function explainDatabaseError(error, context = {}) {
                 problem: {
                     what: "The database tables are older than this version of Monti (a column is missing)",
                     where: `schema "${schema}" of ${target ?? "the database"}`,
-                    fix: `run \`monti migrate\` to bring the tables up to date, then restart the server. Driver message: ${message}`,
+                    fix: `run \`monti db:migrate\` to bring the tables up to date, then restart the server. Driver message: ${message}`,
                 },
             };
         }

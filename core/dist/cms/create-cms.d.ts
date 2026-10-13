@@ -9,7 +9,7 @@ import type { PluginStorage } from "../plugin/storage.js";
 import { type CmsRead } from "../read/index.js";
 import { type PluginSecrets, type PluginSecretsOptions } from "../secrets/index.js";
 import type { Decision } from "../server/decision.js";
-import type { CmsAuth, CmsServerConfig, RequestHost } from "../server/define.js";
+import type { CmsAuth, CmsServerConfig, DatabaseState, RequestHost } from "../server/define.js";
 import { createBulkService } from "../services/bulk-service.js";
 import { createContentService } from "../services/content-service.js";
 import { type CmsEvents } from "../services/events.js";
@@ -69,6 +69,19 @@ export interface SchemaReload {
     readonly reloaded: boolean;
     /** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the schema. */
     readonly reason?: string;
+}
+/** What `cms.migrate()` takes. */
+export interface MigrateRunOptions {
+    readonly log?: (message: string) => void;
+    /** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
+    readonly verbose?: boolean;
+    /** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti db:migrate --reconvert-bodies`). */
+    readonly reconvertBodies?: boolean;
+    /**
+     * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
+     * with that place.
+     */
+    readonly saveDetail?: (lines: readonly string[]) => string | undefined;
 }
 /**
  * A CMS instance. It owns everything the server side needs, built from the server config: the store, services, media store, login connection,
@@ -153,18 +166,19 @@ export interface Cms<Config extends AnyCmsConfig = any> {
      * Creates the tables in the store, or brings them up to date (core tables, then plugin tables). Running it repeatedly gives the same result.
      * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
      */
-    migrate(options?: {
+    migrate(options?: MigrateRunOptions): Promise<void>;
+    /** What the database holds of Monti (`undefined` when the adapter cannot say). `monti db:migrate` reads it to tell a database that was never set up. */
+    databaseState(): Promise<DatabaseState | undefined>;
+    /**
+     * First-time setup (`monti db:setup`): creates the tables in an empty database, or says Monti is already set up there and changes nothing.
+     * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
+     */
+    setup(options?: {
         readonly log?: (message: string) => void;
-        /** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
-        readonly verbose?: boolean;
-        /** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti migrate --reconvert-bodies`). */
-        readonly reconvertBodies?: boolean;
-        /**
-         * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
-         * with that place.
-         */
-        readonly saveDetail?: (lines: readonly string[]) => string | undefined;
-    }): Promise<void>;
+    }): Promise<{
+        readonly created: boolean;
+        readonly tables: number;
+    }>;
     /** Closes the database connection (when a command-line tool or a test is done). */
     close(): Promise<void>;
     /**

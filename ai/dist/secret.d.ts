@@ -8,7 +8,7 @@ type SecretSite = Pick<Site, "createTranslator">;
  *
  * Keys stored before per-plugin keys (`v1:<iv>:<tag>:<body>`, AES-256-GCM under `sha256("cms-ai-key:" + secret)`) still decrypt through the legacy
  * format below, with the current secret or a previous one. They are encrypted again in the current format the next time the AI connections are
- * saved, and on `monti migrate`, so no manual step is needed.
+ * saved, and on `monti db:migrate`, so no manual step is needed.
  */
 export declare const LEGACY_KEY_FORMAT: LegacySecretFormat;
 /** The secrets API of the AI plugin for one CMS instance. */

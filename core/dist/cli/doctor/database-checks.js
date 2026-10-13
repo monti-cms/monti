@@ -136,7 +136,7 @@ const schema = {
         if (found.rows.length === 0) {
             return warn(`the schema "${name}" does not exist yet`, {
                 where,
-                fix: "run `monti migrate`, which creates it with the tables",
+                fix: "run `monti db:setup`, which creates it with the tables",
             });
         }
         return ok(`schema "${name}" exists`, { where });
@@ -181,7 +181,9 @@ const migrations = {
                 ? `no migration has run: all ${total} are pending, so the tables do not exist yet`
                 : `${pending.length} of ${total} migrations are pending${names}`, {
                 where: `schema "${name}" (table cms_migrations)`,
-                fix: "run `monti migrate`; on a deployed site run it as a step of the deploy, before the new version starts",
+                fix: none
+                    ? "run `monti db:setup` once; on a deployed site run it as a step of the first deploy, before the new version starts"
+                    : "run `monti db:migrate`; on a deployed site run it as a step of the deploy, before the new version starts",
             });
         }
         const known = new Set(CONTENT_STORE_MIGRATIONS);

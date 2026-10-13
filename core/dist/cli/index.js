@@ -1,19 +1,20 @@
 import { parseArgs } from "node:util";
 import { adminResetPassword } from "./admin-command.js";
+import { dbMigrate, dbSetup } from "./db.js";
 import { runDoctorCommand } from "./doctor/index.js";
 import { eventsRetry } from "./events.js";
 import { HELP, helpFor } from "./help.js";
 import { runInitCommand } from "./init-command.js";
-import { migrate } from "./migrate.js";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
 import { schemaApply, schemaDiff } from "./schema-apply.js";
 import { extractSchema, formatExtractReport } from "./schema-extract.js";
 /**
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
- * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
+ * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and prints what is left. See `monti init --help`.
  * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
- * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: creates the DB tables. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
+ * - `monti db:setup [--env-file .env.local] [--no-env-file] [--config <file>]`: first-time setup: creates Monti's tables in an empty database (changes nothing when they are already there).
+ * - `monti db:migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: after updating Monti, brings the tables up to date. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
  * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
@@ -24,6 +25,7 @@ import { extractSchema, formatExtractReport } from "./schema-extract.js";
 export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate.js";
 export { adminResetPassword } from "./admin-command.js";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths.js";
+export { dbMigrate, dbSetup } from "./db.js";
 export { unifiedDiff } from "./diff.js";
 export { DOCTOR_HELP, formatDoctorReport, runDoctor, runDoctorCommand, } from "./doctor/index.js";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env.js";
@@ -32,7 +34,6 @@ export { findBoundaryViolations, formatBoundaryViolations, SERVER_ONLY_MODULES, 
 export { formatInitReport, InitError, initProject, } from "./init.js";
 export { detectApp, detectPackageManager } from "./init-detect.js";
 export { collectAnswers, InitCancelled } from "./init-prompts.js";
-export { migrate } from "./migrate.js";
 export { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
 export { formatApplyResult, formatSchemaPlan, schemaApply, schemaDiff, withSchemaVersion, } from "./schema-apply.js";
 export { CONFIG_FILE_CANDIDATES, extractSchema, extractSchemaData, formatExtractReport, schemaFileText, } from "./schema-extract.js";
@@ -71,7 +72,24 @@ export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, 
                 error: io.error,
             });
         }
-        if (command === "migrate") {
+        if (command === "db:setup") {
+            const { values } = parseArgs({
+                args: [...rest],
+                options: {
+                    "env-file": { type: "string", multiple: true },
+                    "no-env-file": { type: "boolean" },
+                    config: { type: "string" },
+                },
+            });
+            const ok = await dbSetup({
+                cwd: io.cwd,
+                envFiles: values["no-env-file"] ? [] : values["env-file"],
+                config: values.config,
+                log: io.log,
+            });
+            return ok ? 0 : 1;
+        }
+        if (command === "db:migrate") {
             const { values } = parseArgs({
                 args: [...rest],
                 options: {
@@ -82,7 +100,7 @@ export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, 
                     "reconvert-bodies": { type: "boolean" },
                 },
             });
-            const ok = await migrate({
+            const ok = await dbMigrate({
                 cwd: io.cwd,
                 envFiles: values["no-env-file"] ? [] : values["env-file"],
                 config: values.config,

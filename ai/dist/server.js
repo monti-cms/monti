@@ -11,7 +11,7 @@ import * as settings from "./routes/settings/route.js";
 import * as shared from "./routes/shared/route.js";
 import { getAiSettingsView } from "./settings.js";
 import { aiStoreFor } from "./store.js";
-/** Server side of the AI plugin. Loaded by the core API handler and `monti migrate`. Not included in the browser bundle. */
+/** Server side of the AI plugin. Loaded by the core API handler and `monti db:migrate`. Not included in the browser bundle. */
 const aiServer = {
     routes: [
         { pattern: "v1/ai/actions", module: actions },

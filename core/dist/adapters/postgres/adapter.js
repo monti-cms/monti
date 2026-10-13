@@ -116,6 +116,22 @@ export function postgres(options = {}) {
                 },
             ];
         },
+        state: async () => {
+            const schema = schemaOptions()?.schema ?? "public";
+            try {
+                const found = await getPool().query("SELECT table_name FROM information_schema.tables WHERE table_schema = $1 AND table_type = 'BASE TABLE'", [schema]);
+                const names = found.rows.map((row) => row.table_name);
+                let set = false;
+                if (names.includes("cms_migrations")) {
+                    const rows = await getPool().query(`SELECT count(*) AS count FROM "${schema.replaceAll('"', '""')}".cms_migrations`);
+                    set = Number(rows.rows[0]?.count ?? 0) > 0;
+                }
+                return { schema, set, tables: names.length };
+            }
+            catch (error) {
+                throw explain(error) ?? error;
+            }
+        },
         describeTarget: () => {
             const where = describeConnection(options.connectionString || process.env[DATABASE_URL_ENV]);
             return where ? `${where}, schema "${schemaOptions()?.schema ?? "public"}"` : undefined;

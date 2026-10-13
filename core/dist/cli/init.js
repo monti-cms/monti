@@ -223,7 +223,7 @@ export async function initProject(options) {
     if (rootLayout) {
         planEdit(rootLayout, addSuppressHydrationWarning(rootLayout, writer.read(rootLayout)), (reason) => layoutManualStep(rootLayout, reason));
     }
-    // .env.local holds the secrets and migrate writes its logs under .monti/: neither belongs in git.
+    // .env.local holds the secrets and db:migrate writes its logs under .monti/: neither belongs in git.
     const gitignore = writer.exists(".gitignore") ? writer.read(".gitignore") : undefined;
     planEdit(".gitignore", ignoreForMonti(gitignore), () => "");
     planned.push({ file: pageFile, content: adminPageTemplate(configImport(pageFile), { instant: usesCacheComponents }) }, { file: layoutFile, content: adminLayoutTemplate(configImport(layoutFile), { blocks: answers.blocks.length > 0 }) }, { file: routeFile, content: apiRouteTemplate(configImport(routeFile)) }, { file: ".env.example", content: envExampleTemplate(answers) });
@@ -314,7 +314,7 @@ export async function initProject(options) {
         "or, without openssl:",
         `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`,
     ].join("\n"));
-    todo.push(`Create the tables: ${exec(manager, "migrate")}`, `Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`, `Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`);
+    todo.push(`Create Monti's tables in your database (once): ${exec(manager, "db:setup")}`, `Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`, `Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`);
     if (answers.gitSync) {
         todo.push(`Name the repo to sync: add a target to gitSync() in ${configFile}, then open ${answers.adminPath}/git-sync to save the GitHub token.`);
     }

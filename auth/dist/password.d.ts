@@ -10,7 +10,7 @@ export declare function passwordAccounts(storage: (plugin: string) => PluginStor
     authorize(email: string, password: string): Promise<string | null>;
 };
 /**
- * Log in with an email and a password. The accounts are kept in Monti's database (the plugin storage of the instance, so `monti migrate` is all the setup there is),
+ * Log in with an email and a password. The accounts are kept in Monti's database (the plugin storage of the instance, so `monti db:migrate` is all the setup there is),
  * with the password hashed by scrypt and a salt per account. Every account is an admin. The first admin is created on the admin's own login screen while no account exists
  * (that screen is closed for good afterwards); `monti admin:reset-password` sets a new password. A few failed sign-ins for one email are followed by a minute of refusals.
  *

@@ -11,7 +11,7 @@ import { problemText } from "../../../core/problem.js";
 export const MDX_REQUIRED_MESSAGE = problemText({
     what: "This database still holds bodies stored as MDX text, and upgrading it needs the MDX format",
     where: "`plugins` in monti.config.ts",
-    fix: "install @monti-cms/mdx and add mdx() to the list, then run `monti migrate` again",
+    fix: "install @monti-cms/mdx and add mdx() to the list, then run `monti db:migrate` again",
 });
 /** The old-body reader of the site's `mdx` format. It throws `MDX_REQUIRED_MESSAGE` when it is first used and there is no such format. */
 export const legacyBodiesOf = (formats, site) => {

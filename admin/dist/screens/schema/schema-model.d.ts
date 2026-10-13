@@ -23,7 +23,12 @@ export declare function nameProblem(name: string, taken: readonly string[]): "em
 export declare const collectionsOf: (file: Obj) => Record<string, Obj>;
 export declare const fieldsOf: (collection: Obj) => Record<string, Obj>;
 export declare function setCollection(file: Obj, name: string, update: (collection: Obj) => Obj): Obj;
-export declare function addCollection(file: Obj, name: string, kind: "document" | "item"): Obj;
+/** The public address a new document collection starts with, from its name. */
+export declare const defaultPath: (name: string) => string;
+/** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
+export declare function pathProblem(path: string): "slash" | "slug" | null;
+/** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
+export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string): Obj;
 export declare function removeCollection(file: Obj, name: string): Obj;
 /** The names of the fields that store a value, including the fields a conditional field shows (the order the entry form has them). */
 export declare function storedFieldNames(collection: Obj): string[];
@@ -107,3 +112,15 @@ export interface Locale {
     label?: string;
 }
 export declare const localesOf: (file: Obj) => Locale[];
+/** The field `name` at `place`, or `undefined`. */
+export declare function fieldAt(collection: Obj, place: FieldPlace, name: string): Obj | undefined;
+/** The kinds that cannot be added with a name alone: they open their settings first. */
+export declare const KINDS_WITH_SETTINGS: readonly FieldKindName[];
+export type FieldProblem = "options" | "optionLabel" | "branches" | "target" | "slugFrom" | "backlink" | "view";
+/** What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. */
+export declare function fieldProblems(field: Obj, collection: Obj, collectionNames: readonly string[]): FieldProblem[];
+/**
+ * Why a field cannot be deleted, or `null`. The title field is what names every entry; the slug field cannot go while the public address is made from `:slug`.
+ * Only top-level fields: the file does not take either of them inside a conditional field.
+ */
+export declare function removeBlock(collection: Obj, place: FieldPlace, name: string): "title" | "slug" | null;

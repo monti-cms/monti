@@ -1,7 +1,7 @@
 import type { UnreadableBody } from "../server/define.js";
 /**
- * What `monti migrate` says about bodies that could not be read as documents and were kept exactly as they were. The steps report each body as it is found
- * (`UnreadableBody`); this turns the list into a few plain lines. The per-body lines stay available (`monti migrate --verbose`).
+ * What `monti db:migrate` says about bodies that could not be read as documents and were kept exactly as they were. The steps report each body as it is found
+ * (`UnreadableBody`); this turns the list into a few plain lines. The per-body lines stay available (`monti db:migrate --verbose`).
  */
 /** The same body reported by several steps, as one: the facts any of them knew. */
 export declare function mergeUnreadable(found: ReadonlyMap<string, UnreadableBody>, next: UnreadableBody): UnreadableBody;

@@ -2,12 +2,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../../ui/button.js";
 import { Checkbox } from "../../ui/checkbox.js";
 import { Label } from "../../ui/label.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs.js";
 import { COLLECTION_ICON_NAMES } from "../shared/collection-icon.js";
 import { AddButton, FlagSwitch, IssueList, OrderedNames, orUndefined, Pick, RowActions, TextInput, useIssuesUnder, useSchemaEdit, } from "./controls.js";
 import { FieldList } from "./field-editor.js";
+import { ListPreview } from "./list-preview.js";
 import { schemaMessages } from "./messages.js";
 import { allowedOf, COLLECTION_KEY_ORDER, columnsOf, FIELD_KINDS, fieldsOf, hasBody, layoutOf, moveItem, SYSTEM_COLUMNS, setProp, storedFieldNames, titleFieldName, withBody, withColumns, withLayout, } from "./schema-model.js";
 const HEADINGS = [1, 2, 3, 4, 5, 6];
@@ -25,9 +28,14 @@ function LimitList({ label, all, value, onChange, nameOf, }) {
 }
 function BodyEditor({ collection, update }) {
     const t = useTranslator(schemaMessages);
+    return (_jsx("section", { className: "flex flex-col gap-3", children: _jsx(FlagSwitch, { label: t("collection.body"), hint: t("collection.bodyHint"), checked: hasBody(collection), onChange: (on) => update((current) => withBody(current, on, on ? allowedOf(current) : {})) }) }));
+}
+/** Which blocks and text styles the body allows: everything unless the writer limits a list. */
+function AllowedEditor({ collection, update, }) {
+    const t = useTranslator(schemaMessages);
     const { vocabulary } = useSchemaEdit();
-    const enabled = hasBody(collection);
     const allowed = allowedOf(collection);
+    const limited = Object.values(allowed).some((list) => Array.isArray(list));
     const setAllowed = (key, value) => update((current) => {
         const next = { ...allowedOf(current) };
         if (value === undefined)
@@ -36,7 +44,7 @@ function BodyEditor({ collection, update }) {
             next[key] = value;
         return withBody(current, true, next);
     });
-    return (_jsxs("section", { className: "flex flex-col gap-3", children: [_jsx(FlagSwitch, { label: t("collection.body"), hint: t("collection.bodyHint"), checked: enabled, onChange: (on) => update((current) => withBody(current, on, on ? allowedOf(current) : {})) }), enabled && (_jsxs("div", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("allowed.title") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("allowed.hint") }), _jsx(LimitList, { label: t("allowed.blocks"), all: vocabulary.blocks, value: allowed.blocks, onChange: (value) => setAllowed("blocks", value) }), _jsx(LimitList, { label: t("allowed.marks"), all: vocabulary.marks, value: allowed.marks, onChange: (value) => setAllowed("marks", value) }), _jsx(LimitList, { label: t("allowed.headings"), all: HEADINGS, value: allowed.headings, nameOf: (level) => `H${level}`, onChange: (value) => setAllowed("headings", value) })] }))] }));
+    return (_jsxs("div", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("allowed.title") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("allowed.hint") }), _jsx(LimitList, { label: t("allowed.blocks"), all: vocabulary.blocks, value: allowed.blocks, onChange: (value) => setAllowed("blocks", value) }), _jsx(LimitList, { label: t("allowed.marks"), all: vocabulary.marks, value: allowed.marks, onChange: (value) => setAllowed("marks", value) }), _jsx(LimitList, { label: t("allowed.headings"), all: HEADINGS, value: allowed.headings, nameOf: (level) => `H${level}`, onChange: (value) => setAllowed("headings", value) }), limited && _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("allowed.note") })] }));
 }
 function LayoutEditor({ collection, update }) {
     const t = useTranslator(schemaMessages);
@@ -68,6 +76,7 @@ function ListEditor({ collection, update }) {
 export function CollectionEditor({ name, collection, isNew, onChange, onRemove, onRename, }) {
     const t = useTranslator(schemaMessages);
     const { disabled } = useSchemaEdit();
+    const [tab, setTab] = useState("basics");
     const issues = useIssuesUnder(`collections.${name}`, ".fields");
     const fields = fieldsOf(collection);
     const set = (key, value) => onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
@@ -77,8 +86,8 @@ export function CollectionEditor({ name, collection, isNew, onChange, onRemove, 
         label: value || t("collection.iconDefault"),
     }));
     const editing = { collectionName: name, collection, update: onChange, onRename };
-    return (_jsxs("div", { className: "flex min-w-0 flex-col gap-5", "data-testid": `collection-${name}`, children: [_jsx(IssueList, { issues: issues }), _jsxs("section", { className: "flex flex-col gap-3", children: [_jsxs("div", { className: "flex items-start justify-between gap-3", children: [_jsxs("div", { children: [_jsxs("h3", { className: "font-semibold text-base", children: [typeof collection.label === "string" ? collection.label : name, " ", _jsx("code", { className: "font-normal text-cms-muted-foreground text-xs", children: name })] }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: isNew ? t("collection.newHint") : t("collection.nameHint") })] }), _jsxs(Button, { type: "button", variant: "destructive", size: "sm", disabled: disabled, onClick: onRemove, children: [_jsx(Trash2, { "aria-hidden": true }), t("collection.remove")] })] }), _jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(TextInput, { label: t("collection.label"), value: collection.label, onChange: (value) => set("label", value) }), _jsx(Pick, { label: t("collection.kind"), hint: collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint"), value: String(collection.kind), items: [
-                                    { value: "document", label: t("collection.kindDocument") },
-                                    { value: "item", label: t("collection.kindItem") },
-                                ], onChange: (value) => set("kind", value) }), _jsx(Pick, { label: t("collection.icon"), value: icon, items: icons, onChange: (value) => set("icon", orUndefined(value)) }), _jsx(TextInput, { label: t("collection.path"), hint: t("collection.pathHint"), placeholder: "/posts/:slug", value: collection.path, onChange: (value) => set("path", orUndefined(value)) })] })] }), _jsx(BodyEditor, { collection: collection, update: onChange }), _jsxs("section", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("field.title") }), _jsx(FieldList, { editing: editing, place: {}, fields: fields, kinds: FIELD_KINDS })] }), _jsxs("section", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("layout.title") }), _jsx(LayoutEditor, { collection: collection, update: onChange })] }), _jsxs("section", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("list.title") }), _jsx(ListEditor, { collection: collection, update: onChange })] })] }));
+    return (_jsxs("div", { className: "flex min-w-0 flex-col gap-5", "data-testid": `collection-${name}`, children: [_jsx(IssueList, { issues: issues }), _jsx("section", { className: "flex flex-col gap-3", children: _jsxs("div", { className: "flex items-start justify-between gap-3", children: [_jsxs("div", { children: [_jsxs("h3", { className: "font-semibold text-base", children: [typeof collection.label === "string" ? collection.label : name, " ", _jsx("code", { className: "font-normal text-cms-muted-foreground text-xs", children: name })] }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: isNew ? t("collection.newHint") : t("collection.nameHint") })] }), _jsxs(Button, { type: "button", variant: "destructive", size: "sm", disabled: disabled, onClick: onRemove, children: [_jsx(Trash2, { "aria-hidden": true }), t("collection.remove")] })] }) }), _jsxs(Tabs, { value: tab, onValueChange: (value) => typeof value === "string" && setTab(value), children: [_jsxs(TabsList, { className: "w-full justify-start sm:w-fit", children: [_jsx(TabsTrigger, { value: "basics", children: t("collection.tabs.basics") }), _jsx(TabsTrigger, { value: "fields", children: t("collection.tabs.fields") }), _jsx(TabsTrigger, { value: "list", children: t("collection.tabs.list") }), _jsx(TabsTrigger, { value: "advanced", children: t("collection.tabs.advanced") })] }), _jsxs(TabsContent, { value: "basics", className: "flex flex-col gap-5 pt-3", children: [_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(TextInput, { label: t("collection.label"), value: collection.label, onChange: (value) => set("label", value) }), _jsx(Pick, { label: t("collection.kind"), hint: collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint"), value: String(collection.kind), items: [
+                                            { value: "document", label: t("collection.kindDocument") },
+                                            { value: "item", label: t("collection.kindItem") },
+                                        ], onChange: (value) => set("kind", value) }), _jsx(Pick, { label: t("collection.icon"), value: icon, items: icons, onChange: (value) => set("icon", orUndefined(value)) }), _jsx(TextInput, { label: t("collection.path"), hint: t("collection.pathHint"), placeholder: "/posts/:slug", value: collection.path, onChange: (value) => set("path", orUndefined(value)) })] }), _jsx(BodyEditor, { collection: collection, update: onChange })] }), _jsxs(TabsContent, { value: "fields", className: "flex flex-col gap-5 pt-3", children: [_jsxs("section", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("field.title") }), _jsx(FieldList, { editing: editing, place: {}, fields: fields, kinds: FIELD_KINDS })] }), _jsxs("section", { className: "flex flex-col gap-2", children: [_jsx("h4", { className: "font-medium text-sm", children: t("layout.title") }), _jsx(LayoutEditor, { collection: collection, update: onChange })] })] }), _jsxs(TabsContent, { value: "list", className: "flex flex-col gap-4 pt-3", children: [_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("list.hint") }), _jsx(ListEditor, { collection: collection, update: onChange }), _jsx(ListPreview, { name: name, collection: collection, columns: columnsOf(collection), saved: !isNew })] }), _jsx(TabsContent, { value: "advanced", className: "flex flex-col gap-5 pt-3", children: hasBody(collection) ? (_jsx(AllowedEditor, { collection: collection, update: onChange })) : (_jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("advanced.noBody") })) })] })] }));
 }
