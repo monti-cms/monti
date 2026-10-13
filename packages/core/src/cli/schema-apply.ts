@@ -133,7 +133,7 @@ async function load(options: SchemaCommandOptions): Promise<Loaded> {
 }
 
 /** The store is not migrated to the step that records the applied schema. */
-const MIGRATE_HINT = "the store has no schema record yet; run `monti migrate` first";
+const MIGRATE_HINT = "the store has no schema record yet; run `monti db:migrate` first";
 const isMissingTable = (error: unknown) => (error as { code?: string } | null)?.code === "42P01";
 
 export interface SchemaDiffResult {

@@ -34,7 +34,7 @@ describe("AI action edited-value store", () => {
 	let schemaName: string;
 	let content: ContentStore;
 	let store: AiStore;
-	/** Creates the core tables, then the AI plugin tables (same order as `monti migrate`). */
+	/** Creates the core tables, then the AI plugin tables (same order as `monti db:migrate`). */
 	const migrate = async () => {
 		await migrateContentStore(pool, { schema: schemaName, site: testSite });
 		await migrateAi(pluginStorageFor(pool, schemaName, "ai"), cms);

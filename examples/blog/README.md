@@ -14,7 +14,7 @@ pnpm example:pack
 # In this folder
 pnpm install --ignore-workspace
 cp .env.example .env.local   # fill in DATABASE_URL and MONTI_SECRET (the rest is for GitHub login in production)
-pnpm db:migrate               # = monti migrate
+pnpm db:setup                 # = monti db:setup (once; after you update Monti: pnpm db:migrate)
 pnpm dev                     # http://localhost:3000/studio
 ```
 
@@ -103,7 +103,7 @@ This does not use the production DB. It creates a `cms_preview_*` schema in the 
 ```sh
 export DATABASE_URL="$CMS_TEST_DATABASE_URL" DATABASE_SCHEMA=cms_preview_example MONTI_SECRET=local-only
 # (after creating the schema cms_preview_example)
-pnpm exec monti migrate --no-env-file
+pnpm exec monti db:setup --no-env-file
 pnpm exec next dev -p 3997   # http://localhost:3997/studio
 ```
 
@@ -114,7 +114,7 @@ Do not commit the `AGENTS.md` and `CLAUDE.md` that `next dev` creates in this fo
 After a change, open the "CMS elements" sample post in a local preview and look at it. From the repo root:
 
 ```sh
-pnpm preview:example               # pack the packages, install the example, reset the schema, migrate, seed
+pnpm preview:example               # pack the packages, install the example, reset the schema, set up the tables, seed
 pnpm preview:example --seed-only   # same, without packing and installing again
 cd examples/blog && pnpm exec next dev -p 3997
 ```

@@ -53,7 +53,7 @@ describe("explainDatabaseError", () => {
 		expect(error?.message).toContain("db.example.com:5432/blog");
 	});
 
-	it("says `monti migrate` for tables that are missing or older than the code, and keeps the driver's code", () => {
+	it("says `monti db:migrate` for tables that are missing or older than the code, and keeps the driver's code", () => {
 		const missing = explain(
 			Object.assign(new Error('relation "monti.entries" does not exist'), { code: "42P01" }),
 			"monti",
@@ -61,7 +61,7 @@ describe("explainDatabaseError", () => {
 		expect(missing?.kind).toBe("migrations_pending");
 		expect(missing?.message).toContain('schema "monti"');
 		expect(missing?.message).toContain("Where: DATABASE_SCHEMA");
-		expect(missing?.message).toContain("`monti migrate`");
+		expect(missing?.message).toContain("`monti db:migrate`");
 		expect(missing?.message).toContain("deploy");
 		// Code that tells a missing table apart (`schema:diff`, the importer) still sees the driver's code.
 		expect(missing?.code).toBe("42P01");
@@ -69,7 +69,7 @@ describe("explainDatabaseError", () => {
 		const old = explain(Object.assign(new Error('column "x" does not exist'), { code: "42703" }));
 		expect(old?.kind).toBe("migrations_pending");
 		expect(old?.message).toContain("older than this version of Monti");
-		expect(old?.message).toContain("`monti migrate`");
+		expect(old?.message).toContain("`monti db:migrate`");
 	});
 
 	it("leaves an error that is not a setup problem alone", () => {
@@ -94,7 +94,7 @@ describe("postgres() at run time", () => {
 		await closeGlobalPool();
 	});
 
-	it("tells to run `monti migrate` when the tables are not there, as the first request of a new site meets it", async () => {
+	it("tells to run `monti db:migrate` when the tables are not there, as the first request of a new site meets it", async () => {
 		const adapter = postgres({ connectionString: process.env.CMS_TEST_DATABASE_URL, schema: pool.schemaName });
 		const store = adapter.createStore({ site: testSite });
 		const error = await store.getPreferences({ userId: "u" }).then(
@@ -104,7 +104,7 @@ describe("postgres() at run time", () => {
 		expect(error).toBeInstanceOf(SetupError);
 		expect((error as SetupError).kind).toBe("migrations_pending");
 		expect((error as SetupError).message).toContain(pool.schemaName);
-		expect((error as SetupError).message).toContain("monti migrate");
+		expect((error as SetupError).message).toContain("monti db:migrate");
 		await adapter.close?.();
 	});
 

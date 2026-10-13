@@ -3,9 +3,9 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 import { importCms } from "../app";
+import { dbSetup } from "../db";
 import type { DoctorReport } from "../doctor";
 import { runCli } from "../index";
-import { migrate } from "../migrate";
 import { byId, CORE_SRC, configText, project, setEnv } from "./doctor-helpers";
 
 const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
@@ -69,7 +69,7 @@ describe("the email and password login on the command line", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		expect(await migrate({ cwd: app(), envFiles: [], log: () => undefined })).toBe(true);
+		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined })).toBe(true);
 	});
 
 	afterAll(async () => {

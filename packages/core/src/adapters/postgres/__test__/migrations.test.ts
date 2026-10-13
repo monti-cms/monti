@@ -85,7 +85,7 @@ describe("migrations", () => {
 		expect(templates.rows[0]?.mdx).toBeNull();
 	});
 
-	it("creates the schema if missing (only set `schema` and run monti migrate)", async () => {
+	it("creates the schema if missing (only set `schema` and run monti db:migrate)", async () => {
 		const schema = `cms_test_new_${randomBytes(3).toString("hex")}`;
 		extraSchemas.push(schema);
 		await migrateContentStore(pool, { site: testSite, schema });

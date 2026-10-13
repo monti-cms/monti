@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseJsonc, resolveConfigPath } from "../config-paths";
 import { loadEnvFiles } from "../env";
-import { migrate, runCli } from "../index";
+import { dbMigrate, dbSetup, runCli } from "../index";
 
 let dirs: string[] = [];
 afterEach(() => {
@@ -67,7 +67,7 @@ describe("monti command helpers", () => {
 		expect(out.at(-1)).toContain("--locale <code>");
 		expect(out.at(-1)).toContain("--time-zone <tz>");
 		// One config file: the commands that load the app take `--config`, and there is no separate server file any more.
-		const migrateHelp = out.at(-1)?.split("  migrate")[1]?.split("  schema:extract")[0];
+		const migrateHelp = out.at(-1)?.split("  db:migrate")[1]?.split("  admin:reset-password")[0];
 		expect(migrateHelp).toContain("--config <file>");
 		expect(migrateHelp).not.toContain("--server");
 		expect(out.at(-1)).toContain("schema:extract");
@@ -92,15 +92,16 @@ const appWith = (body: string) => {
 };
 
 describe("monti commands run against the instance the config file exports", () => {
-	it("`migrate` migrates through the instance, then closes it", async () => {
+	it("`db:migrate` migrates through the instance, then closes it", async () => {
 		const { dir, options } = appWith(
 			`export const cms = {
+				databaseState: async () => ({ schema: "public", set: true, tables: 3 }),
 				migrate: async ({ log }) => { calls.push("migrate"); log("migrating"); },
 				close: async () => { calls.push("close"); },
 			};`,
 		);
 		const logs: string[] = [];
-		expect(await migrate({ ...options, log: (message) => logs.push(message) })).toBe(true);
+		expect(await dbMigrate({ ...options, log: (message) => logs.push(message) })).toBe(true);
 		const { calls } = await import(pathToFileURL(path.join(dir, "monti.config.mjs")).href);
 		expect(calls).toEqual(["migrate", "close"]);
 		expect(logs).toContain("migrating");
@@ -110,11 +111,12 @@ describe("monti commands run against the instance the config file exports", () =
 		const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const { dir, options } = appWith(
 			`export const cms = {
+				databaseState: async () => ({ schema: "public", set: true, tables: 3 }),
 				migrate: async () => { throw new Error("no database"); },
 				close: async () => { calls.push("close"); },
 			};`,
 		);
-		expect(await migrate(options)).toBe(false);
+		expect(await dbMigrate(options)).toBe(false);
 		const { calls } = await import(pathToFileURL(path.join(dir, "monti.config.mjs")).href);
 		expect(calls).toEqual(["close"]);
 		expect(error).toHaveBeenCalledWith("Migration failed:", expect.any(Error));
@@ -123,6 +125,6 @@ describe("monti commands run against the instance the config file exports", () =
 
 	it("a config file that does not export an instance is refused with the shape to use", async () => {
 		const { options } = appWith("export default { database: {}, auth: {} };");
-		await expect(migrate(options)).rejects.toThrow(/must export the CMS instance.*defineConfig/);
+		await expect(dbMigrate(options)).rejects.toThrow(/must export the CMS instance.*defineConfig/);
 	});
 });

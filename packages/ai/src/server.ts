@@ -13,7 +13,7 @@ import * as shared from "./routes/shared/route";
 import { getAiSettingsView } from "./settings";
 import { aiStoreFor } from "./store";
 
-/** Server side of the AI plugin. Loaded by the core API handler and `monti migrate`. Not included in the browser bundle. */
+/** Server side of the AI plugin. Loaded by the core API handler and `monti db:migrate`. Not included in the browser bundle. */
 const aiServer: CmsServerPlugin = {
 	routes: [
 		{ pattern: "v1/ai/actions", module: actions },

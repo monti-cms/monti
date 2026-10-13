@@ -5,7 +5,7 @@ import { flushTarget, pushAll } from "./outbound";
 import { syncContextFor } from "./sync";
 
 /**
- * `monti git-sync:<command>`: the plugin's command line. They load the app like `monti migrate` (`.env.local`, `cms.server.ts`), so the token and the
+ * `monti git-sync:<command>`: the plugin's command line. They load the app like `monti db:migrate` (`.env.local`, `cms.server.ts`), so the token and the
  * instance's secrets are the app's own.
  */
 

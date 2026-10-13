@@ -66,6 +66,7 @@ export {
 	type CmsAuth,
 	type CmsServerConfig,
 	type DatabaseAdapter,
+	type DatabaseState,
 	type LoginAccountRefusal,
 	type LoginAccounts,
 	type MediaAdapter,

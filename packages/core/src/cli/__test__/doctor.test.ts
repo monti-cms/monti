@@ -3,9 +3,9 @@ import path from "node:path";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
+import { dbSetup } from "../db";
 import { type DoctorReport, runDoctor } from "../doctor";
 import { runCli } from "../index";
-import { migrate } from "../migrate";
 import { byId, configText, project, SCHEMA_TEXT, setEnv, statusesOf } from "./doctor-helpers";
 
 // The pg driver warns about sslmode=require; verify-full is what it means today, so the healthy project has no warning.
@@ -56,7 +56,7 @@ describe("monti doctor on a healthy project", () => {
 	it("passes every check, prints no warning, and exits 0", async () => {
 		healthyEnv();
 		const dir = project();
-		expect(await migrate({ cwd: dir, envFiles: [], log: () => undefined })).toBe(true);
+		expect(await dbSetup({ cwd: dir, envFiles: [], log: () => undefined })).toBe(true);
 
 		const { code, report } = await doctor(dir);
 		expect(report.checks.filter((check) => check.status === "fail" || check.status === "warn")).toEqual([]);
@@ -93,7 +93,7 @@ describe("monti doctor on a healthy project", () => {
 	it("reads the pending migrations: how many, and what to run", async () => {
 		healthyEnv();
 		const dir = project();
-		await migrate({ cwd: dir, envFiles: [], log: () => undefined });
+		await dbSetup({ cwd: dir, envFiles: [], log: () => undefined });
 		const applied = await pool.query<{ name: string }>(
 			`SELECT name FROM "${schemaName}".cms_migrations WHERE name ~ '^[0-9]{4}_' ORDER BY name DESC LIMIT 2`,
 		);
@@ -107,7 +107,7 @@ describe("monti doctor on a healthy project", () => {
 		expect(migrations.status).toBe("fail");
 		expect(migrations.message).toMatch(/^2 of \d+ migrations are pending/);
 		expect(migrations.message).toContain(applied.rows[0]?.name);
-		expect(migrations.fix).toContain("monti migrate");
+		expect(migrations.fix).toContain("monti db:migrate");
 		expect(migrations.where).toContain(schemaName);
 		// The rest of the setup is still reported: one broken part does not hide the others.
 		expect(byId(report, "database/connect").status).toBe("ok");
@@ -118,10 +118,13 @@ describe("monti doctor on a healthy project", () => {
 		healthyEnv({ DATABASE_SCHEMA: `${schemaName}_none` });
 		const { report } = await doctor(project());
 		expect(byId(report, "database/schema")).toMatchObject({ status: "warn" });
-		expect(byId(report, "database/schema").fix).toContain("monti migrate");
+		expect(byId(report, "database/schema").fix).toContain("monti db:setup");
 		const migrations = byId(report, "database/migrations");
 		expect(migrations.status).toBe("fail");
 		expect(migrations.message).toMatch(/no migration has run: all \d+ are pending/);
+		// Nothing is set up, so the fix is the first-time command, not the update one.
+		expect(migrations.fix).toContain("monti db:setup");
+		expect(migrations.fix).not.toContain("db:migrate");
 	});
 });
 

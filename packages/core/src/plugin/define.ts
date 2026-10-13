@@ -99,7 +99,7 @@ export interface CmsServerPlugin {
 	 */
 	readonly routes?: readonly PluginRoute[];
 	/**
-	 * Called by `monti migrate` after the core tables, with the plugin's own storage (`storage.once(name, step)` runs one-time work, e.g. moving data from an earlier layout).
+	 * Called by `monti db:migrate` after the core tables, with the plugin's own storage (`storage.once(name, step)` runs one-time work, e.g. moving data from an earlier layout).
 	 * Must give the same result when called repeatedly. `cms` is the instance being migrated.
 	 */
 	readonly migrate?: (storage: PluginStorage, cms: Cms) => Promise<void>;
@@ -112,7 +112,7 @@ export interface CmsServerPlugin {
 	 */
 	readonly hooks?: WriteHooks;
 	/**
-	 * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti migrate`), runs the command with the instance and
+	 * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti db:migrate`), runs the command with the instance and
 	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
 	 */
 	readonly commands?: Readonly<Record<string, PluginCommand>>;

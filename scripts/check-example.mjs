@@ -130,7 +130,7 @@ if (appEnv) {
 	} finally {
 		await client.end();
 	}
-	run("pnpm", ["exec", "monti", "migrate", "--no-env-file"], app, appEnv);
+	run("pnpm", ["exec", "monti", "db:setup", "--no-env-file"], app, appEnv);
 	run("pnpm", ["exec", "tsx", "showcase/seed.ts", "3000"], app, appEnv);
 } else {
 	console.log("\ncheck-example: CMS_TEST_DATABASE_URL is not set, so the HTTP status checks are skipped");

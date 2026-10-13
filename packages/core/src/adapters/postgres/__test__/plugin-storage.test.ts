@@ -5,7 +5,7 @@ import { migrateContentStore } from "../content-store";
 import { createPluginStorage } from "../plugin-storage";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-/** The Postgres plugin storage against the plugin storage contract: every session is a new schema, migrated like `monti migrate` does. */
+/** The Postgres plugin storage against the plugin storage contract: every session is a new schema, migrated like `monti db:migrate` does. */
 runPluginStorageContract({
 	name: "postgres",
 	create: async () => {

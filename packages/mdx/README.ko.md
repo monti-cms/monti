@@ -8,7 +8,7 @@
 - 공개 화면용 **`renderMdx`**: MDX 글을 문서로 읽어 코어의 렌더러로 그린다(MDX를 컴파일하거나 실행하지 않는다).
 - 관리자의 **원문 패널**: 본문을 MDX 글로 고치고, 쓰는 동안 바로 검사한다.
 - `@monti-cms/syntax-directive`와 `@monti-cms/syntax-shiki`가 기대는 **문법 확장 API**(`SyntaxExtension` 등).
-- 본문을 MDX 글로 저장하던 옛 저장소를 `monti migrate`가 올릴 때 필요한 코드.
+- 본문을 MDX 글로 저장하던 옛 저장소를 `monti db:migrate`가 올릴 때 필요한 코드.
 
 ## 설치
 
@@ -137,8 +137,8 @@ interface SyntaxExtension {
 본문을 저장 문서로 두기 전의 저장소는 모든 본문을 MDX 글로 들고 있었다. 코어는 그것을 옮기던 단계(`0010`·`0011`·`0012`·`0013`·`0015`)를 옛 이름으로 여전히 두지만 MDX를 해석하지는 않는다. 그 단계들은 `@monti-cms/mdx/server`가 주는 `mdx` 형식(`CmsFormat.legacyBodies`, `@monti-cms/core/format`의 `LegacyBodies` 타입)으로 글을 읽고 쓴다.
 
 - 단계는 그것으로 읽을 본문이 **실제로 있을 때만** 형식을 요청한다. 새 저장소와 이미 그 단계를 지난 저장소는 마이그레이션 때 이 패키지가 필요 없다.
-- 필요한데 패키지가 없으면 `monti migrate`는 `@monti-cms/mdx`를 설치하고 사이트 설정의 `plugins`에 `mdx()`를 넣어야 데이터베이스를 올릴 수 있다는 메시지와 함께 실패한다.
-- `monti migrate`와 `cms.migrate()`는 인스턴스의 형식(플러그인이 주는 것)을 마이그레이션에 넘기므로, `mdx({ syntax: [...] })`를 설정에 둔 사이트는 알맞은 문법 확장으로 옛 데이터를 옮긴다.
+- 필요한데 패키지가 없으면 `monti db:migrate`는 `@monti-cms/mdx`를 설치하고 사이트 설정의 `plugins`에 `mdx()`를 넣어야 데이터베이스를 올릴 수 있다는 메시지와 함께 실패한다.
+- `monti db:migrate`와 `cms.migrate()`는 인스턴스의 형식(플러그인이 주는 것)을 마이그레이션에 넘기므로, `mdx({ syntax: [...] })`를 설정에 둔 사이트는 알맞은 문법 확장으로 옛 데이터를 옮긴다.
 - `entry_bodies.mdx`와 `body_templates.mdx`는 null을 허용하고(`0020_mdx_columns_optional` 단계) 더는 아무도 쓰지 않는다. 열을 지우지는 않으므로 옛 행에는 글이 남는다.
 
 ## 코어에 있던 MDX에서 올리기
@@ -151,7 +151,7 @@ MDX는 코어에 들어 있었고 `defineConfig({ mdx: { syntax } })`로 설정�
 4. `@monti-cms/core/render`의 `renderMdx` import를 `@monti-cms/mdx/render`로 바꾸거나(또는 `CmsContent`로 문서를 그린다), `cms.read.imageResolver(...)`를 `entry.refs`로 바꾼다.
 5. `@monti-cms/core/mdx`·`@monti-cms/core/syntax`·`@monti-cms/core/format/mdx` import를 바꾼다. 문법 확장 인터페이스는 `@monti-cms/mdx`에서, 해석기와 직렬화기는 `@monti-cms/mdx/format`에서 가져온다.
 6. 직접 만든 블록 확장은 render 모듈의 기본 내보내기를 지우고 `documentComponents`만 둔다.
-7. `monti migrate`를 돌린다. `mdx()`가 있으면 옛 데이터베이스가 올라간다. 없으면 돌릴 옛 단계가 남은 저장소는 설치 메시지와 함께 실패한다.
+7. `monti db:migrate`를 돌린다. `mdx()`가 있으면 옛 데이터베이스가 올라간다. 없으면 돌릴 옛 단계가 남은 저장소는 설치 메시지와 함께 실패한다.
 8. 스크립트에서 `monti content:rewrite`를 뺀다. 없어졌다.
 
 바뀐 것 전체는 코어 README의 "코어에 있던 MDX에서 올리기"에 있다.

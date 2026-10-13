@@ -32,7 +32,7 @@ export interface ServerPlugins {
 	 * Plugins with no feature flags, or that fail, are left out.
 	 */
 	features(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
-	/** Runs each plugin's migration hook with that plugin's storage. Called after the core tables are created (`monti migrate`). */
+	/** Runs each plugin's migration hook with that plugin's storage. Called after the core tables are created (`monti db:migrate`). */
 	migrate(storageOf: (plugin: string) => PluginStorage, log?: (message: string) => void): Promise<void>;
 	/**
 	 * Write hooks in the order they run: the server config first, then the plugins in the site config's order. Each is tagged with its owner
@@ -123,7 +123,7 @@ export function createServerPlugins(
 		migrate: async (storageOf, log = console.log) => {
 			for (const plugin of await load()) {
 				if (!plugin.migrate) continue;
-				log(`Migrating plugin "${plugin.name}"...`);
+				log(`Updating the tables of plugin "${plugin.name}"\u2026`);
 				await plugin.migrate(storageOf(plugin.name), cms());
 			}
 		},

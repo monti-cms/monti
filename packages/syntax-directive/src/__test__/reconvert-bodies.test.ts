@@ -13,7 +13,7 @@ import { testSite } from "../../test/site";
 import { directiveSyntax } from "../index";
 
 /**
- * `monti migrate --reconvert-bodies`: a body a migration kept as `unparsed` source because the site could not read its `:::` blocks then is read again once the
+ * `monti db:migrate --reconvert-bodies`: a body a migration kept as `unparsed` source because the site could not read its `:::` blocks then is read again once the
  * directive syntax is in the config. Nothing else about the row changes.
  */
 

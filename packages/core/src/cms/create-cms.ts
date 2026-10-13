@@ -15,7 +15,14 @@ import { findSchemaFile } from "../schema-file/locate";
 import { schemaSourceOf } from "../schema-file/source";
 import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
 import type { Decision } from "../server/decision";
-import type { CmsAuth, CmsServerConfig, DatabaseAdapter, RequestHost, UnreadableBody } from "../server/define";
+import type {
+	CmsAuth,
+	CmsServerConfig,
+	DatabaseAdapter,
+	DatabaseState,
+	RequestHost,
+	UnreadableBody,
+} from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import { type CmsEvents, createEventDispatcher } from "../services/events";
@@ -91,6 +98,20 @@ export interface SchemaReload {
 	readonly reloaded: boolean;
 	/** Why not: `production` (instances do not reload there), `no_schema_file` (the config has none), or the message of the error in the schema. */
 	readonly reason?: string;
+}
+
+/** What `cms.migrate()` takes. */
+export interface MigrateRunOptions {
+	readonly log?: (message: string) => void;
+	/** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
+	readonly verbose?: boolean;
+	/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti db:migrate --reconvert-bodies`). */
+	readonly reconvertBodies?: boolean;
+	/**
+	 * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
+	 * with that place.
+	 */
+	readonly saveDetail?: (lines: readonly string[]) => string | undefined;
 }
 
 /**
@@ -179,18 +200,16 @@ export interface Cms<
 	 * Creates the tables in the store, or brings them up to date (core tables, then plugin tables). Running it repeatedly gives the same result.
 	 * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
 	 */
-	migrate(options?: {
+	migrate(options?: MigrateRunOptions): Promise<void>;
+	/** What the database holds of Monti (`undefined` when the adapter cannot say). `monti db:migrate` reads it to tell a database that was never set up. */
+	databaseState(): Promise<DatabaseState | undefined>;
+	/**
+	 * First-time setup (`monti db:setup`): creates the tables in an empty database, or says Monti is already set up there and changes nothing.
+	 * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
+	 */
+	setup(options?: {
 		readonly log?: (message: string) => void;
-		/** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
-		readonly verbose?: boolean;
-		/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti migrate --reconvert-bodies`). */
-		readonly reconvertBodies?: boolean;
-		/**
-		 * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
-		 * with that place.
-		 */
-		readonly saveDetail?: (lines: readonly string[]) => string | undefined;
-	}): Promise<void>;
+	}): Promise<{ readonly created: boolean; readonly tables: number }>;
 	/** Closes the database connection (when a command-line tool or a test is done). */
 	close(): Promise<void>;
 	/**
@@ -341,6 +360,42 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		};
 		const authGateway = new CmsAuthGateway(getAuth);
 
+		/** Runs the steps of the core tables and the plugins, and reports what the steps found. The callers print the first and last line. */
+		const runMigration = async (
+			{ log = console.log, verbose = false, reconvertBodies = false, saveDetail }: MigrateRunOptions,
+			/** Where the line per plugin goes. First-time setup leaves it out: the plugin tables are in the count of created tables. */
+			pluginLog: (message: string) => void = log,
+		) => {
+			// The steps report each body they keep as unreadable; one body can be reported by several steps.
+			const unreadable = new Map<string, UnreadableBody>();
+			const detailLines: string[] = [];
+			const summary = await connections.database.migrate({
+				site,
+				formats: await plugins.formats(),
+				reconvertBodies,
+				onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
+				detail: (line) => {
+					detailLines.push(line);
+					if (verbose) log(line);
+				},
+			});
+			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), pluginLog);
+			if (summary?.reconverted) {
+				const { converted, remaining } = summary.reconverted;
+				log(
+					converted === 0 && remaining === 0
+						? "No body was kept as unreadable, so there was nothing to read again."
+						: `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`,
+				);
+			}
+			const found = [...unreadable.values()];
+			if (verbose) for (const body of found) log(unreadableLine(body));
+			for (const line of describeUnreadable(found, { again: reconvertBodies })) log(line);
+			const everything = [...detailLines, ...found.map(unreadableLine)];
+			const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
+			return { summary, saved };
+		};
+
 		return {
 			site,
 			server: publicServer,
@@ -391,42 +446,43 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				formats: plugins.formats,
 				verifyAdmin: () => authGateway.verifyAdmin(),
 			}),
-			migrate: async ({ log = console.log, verbose = false, reconvertBodies = false, saveDetail } = {}) => {
+			migrate: async (options = {}) => {
+				const log = options.log ?? console.log;
 				const target = connections.database.describeTarget?.();
-				log(`Migrating the ${connections.database.name} database${target ? `: ${target}` : ""}`);
-				// The steps report each body they keep as unreadable; one body can be reported by several steps.
-				const unreadable = new Map<string, UnreadableBody>();
-				const detailLines: string[] = [];
-				const summary = await connections.database.migrate({
-					site,
-					formats: await plugins.formats(),
-					reconvertBodies,
-					onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
-					detail: (line) => {
-						detailLines.push(line);
-						if (verbose) log(line);
-					},
-				});
-				await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
-				if (summary?.reconverted) {
-					const { converted, remaining } = summary.reconverted;
-					log(
-						converted === 0 && remaining === 0
-							? "No body was kept as unreadable, so there was nothing to read again."
-							: `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`,
-					);
-				}
-				const found = [...unreadable.values()];
-				if (verbose) for (const body of found) log(unreadableLine(body));
-				for (const line of describeUnreadable(found, { again: reconvertBodies })) log(line);
-				const everything = [...detailLines, ...found.map(unreadableLine)];
-				const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
+				log("Bringing Monti's tables up to date with this version\u2026");
+				log(`Database: ${target ?? connections.database.name}`);
+				const { summary, saved } = await runMigration(options);
+				const applied = summary?.applied ?? 0;
 				log(
 					summary
-						? `Applied ${summary.applied} step${summary.applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
-						: "Migration completed.",
+						? applied === 0
+							? "Already up to date."
+							: `Applied ${applied} step${applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
+						: "Done.",
 				);
 				if (saved) log(`Full details: ${saved}`);
+			},
+			databaseState: async () => connections.database.state?.(),
+			setup: async ({ log = console.log } = {}) => {
+				const target = connections.database.describeTarget?.();
+				const before = await connections.database.state?.();
+				if (before?.set) {
+					log(
+						`Monti is already set up in this database (schema "${before.schema}"). After updating Monti, run \`monti db:migrate\`.`,
+					);
+					return { created: false, tables: 0 };
+				}
+				log(`Creating Monti's tables in ${target ?? `the ${connections.database.name} database`}\u2026`);
+				if (before && before.tables > 0) {
+					log(
+						`The schema "${before.schema}" already has ${before.tables} other table${before.tables === 1 ? "" : "s"}; Monti only adds its own and does not touch them.`,
+					);
+				}
+				await runMigration({ log }, () => undefined);
+				const after = await connections.database.state?.();
+				const tables = after ? after.tables - (before?.tables ?? 0) : 0;
+				log(after ? `Done: created ${tables} table${tables === 1 ? "" : "s"}.` : "Done.");
+				return { created: true, tables };
 			},
 			close: async () => {
 				await connections.database.close?.();

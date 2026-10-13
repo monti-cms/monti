@@ -49,7 +49,7 @@ describe("a setup mistake over HTTP", () => {
 		const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
 		const response = handleApiError(
 			problemError(
-				{ what: "The Monti tables are missing", where: "DATABASE_SCHEMA", fix: "run `monti migrate`" },
+				{ what: "The Monti tables are missing", where: "DATABASE_SCHEMA", fix: "run `monti db:migrate`" },
 				undefined,
 				"migrations_pending",
 			),
@@ -59,7 +59,7 @@ describe("a setup mistake over HTTP", () => {
 			code: "migrations_pending",
 			message: expect.stringContaining("server log"),
 		});
-		expect(log.mock.calls.flat().join(" ")).toContain("run `monti migrate`");
+		expect(log.mock.calls.flat().join(" ")).toContain("run `monti db:migrate`");
 		log.mockRestore();
 	});
 });
