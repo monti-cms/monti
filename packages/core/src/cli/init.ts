@@ -341,12 +341,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 
 	// Files to write when they do not exist yet.
 	const planned: { file: string; content: string }[] = [];
-	const keepConfig = app.existingConfig !== undefined || app.legacyConfig.length > 0;
-	if (app.legacyConfig.length > 0 && app.existingConfig === undefined) {
-		report.notes.push(
-			`${app.legacyConfig.join(" and ")} from the earlier setup ${app.legacyConfig.length > 1 ? "are" : "is"} left alone, and no ${configFile} was created. They are one ${configFile} now: move them into it (see "Upgrading" in the core README).`,
-		);
-	}
+	const keepConfig = app.existingConfig !== undefined;
 	const existingText = app.existingConfig === undefined ? "" : writer.read(app.existingConfig);
 	if (answers.directiveSyntax && keepConfig && !existingText.includes("directiveSyntax")) {
 		report.notes.push(

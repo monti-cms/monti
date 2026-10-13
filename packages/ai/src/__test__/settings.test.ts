@@ -1,16 +1,13 @@
-import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { testSite } from "../../test/site";
 import { resolveAction } from "../action";
 import type { AiProviderInput } from "../connection";
-import { moveKeysToStore } from "../migrate";
-import { AI_PLUGIN_NAME } from "../plugin-name";
+import { AI_PLUGIN_NAME } from "../name";
 import { createDecider, createGenerator } from "../provider";
 import { aiRegistryOf } from "../registry";
 import {
-	type AiSettingsStore,
 	addAiProvider,
 	connectionForCheck,
 	connectionRef,
@@ -210,7 +207,7 @@ describe("AI connection settings", () => {
 		expect(await usableActionKeys(testSite, store, features)).toEqual(["slug"]);
 
 		const key = await store.cms.apiKeys.get(view.providers[0]?.key?.id ?? "");
-		await store.cms.apiKeys.remove(key?.id ?? "", { expectedVersion: key?.version ?? 0 });
+		await store.cms.apiKeys.remove(key?.id ?? "", { expectedVersion: key?.version ?? 0, force: true });
 		expect(await usableActionKeys(testSite, store, features)).toEqual([]);
 		expect((await getAiSettingsView(testSite, store)).providers[0]?.key).toBeNull();
 	});
@@ -249,7 +246,7 @@ describe("AI connection settings", () => {
 		// A typed key is only used for the check: it is not saved.
 		expect(await store.cms.apiKeys.list()).toHaveLength(1);
 		await expect(connectionForCheck(testSite, store, { ...base, key: { use: "none" } })).rejects.toMatchObject({
-			code: "ai_unavailable",
+			code: "service_unavailable",
 		});
 	});
 
@@ -264,104 +261,6 @@ describe("AI connection settings", () => {
 	it("refuses to save a typed key when the instance has no secret, and says how to fix it", async () => {
 		const store = memoryStore(fakeCms());
 		await expect(addAiProvider(testSite, store, 0, chat())).rejects.toMatchObject({ code: "secret_not_configured" });
-	});
-});
-
-/** A key as the plugin stored it before per-plugin keys: `v1:<iv>:<tag>:<body>` under `sha256("cms-ai-key:" + secret)`. */
-function legacyKey(plain: string, masterSecret: string): string {
-	const iv = randomBytes(12);
-	const cipher = createCipheriv("aes-256-gcm", createHash("sha256").update(`cms-ai-key:${masterSecret}`).digest(), iv);
-	const body = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-	return ["v1", iv.toString("base64"), cipher.getAuthTag().toString("base64"), body.toString("base64")].join(":");
-}
-
-/** Plugin storage holding settings as the previous version wrote them: the key ciphertext inside each connection. */
-function oldSettings(cms: ReturnType<typeof cmsWith>, providers: unknown[]) {
-	const settings = cms.storage("ai").collection("settings");
-	return {
-		storage: cms.storage("ai"),
-		save: () => settings.set("default", { providers }, { expectedVersion: 0 }),
-		settings,
-	};
-}
-
-describe("moving the keys stored in connections into the key store (db:migrate)", () => {
-	beforeEach(() => vi.stubEnv("CMS_AI_FAKE", ""));
-	afterEach(() => vi.unstubAllEnvs());
-
-	const connection = (id: string, name: string, apiKey: string | null) => ({
-		id,
-		name,
-		kind: "chat",
-		url: "https://example.test/v1",
-		apiKey,
-		defaultModel: "m",
-	});
-
-	it("moves keys in the per-plugin and the oldest format, shares one key between connections that had the same value, and leaves ids behind", async () => {
-		const cms = cmsWith();
-		const modern = cms.secrets("ai").encrypt("sk-chat-0000000000001234");
-		const { storage, save, settings } = oldSettings(cms, [
-			connection("a", "Claude", modern),
-			connection("b", "Translate", modern),
-			connection("c", "Old", legacyKey("sk-old-0000000000007777", "test-secret")),
-			connection("d", "No key", null),
-		]);
-		await save();
-
-		expect(await moveKeysToStore(storage, cms)).toBe(2);
-		const keys = await cms.apiKeys.list();
-		expect(keys.map((key) => key.name).sort()).toEqual(["Claude", "Old"]);
-		expect(JSON.stringify((await settings.get("default"))?.value)).not.toContain("apiKey");
-		const claude = keys.find((key) => key.name === "Claude");
-		expect(claude?.uses.map((use) => use.ref).sort()).toEqual(["connection:a", "connection:b"]);
-		expect(await cms.apiKeys.read(claude?.id ?? "")).toBe("sk-chat-0000000000001234");
-
-		// The connections work through the store afterwards, and running it again changes nothing.
-		const view = await getAiSettingsView(testSite, memoryStore(cms));
-		expect(view.providers.map((provider) => provider.ready)).toEqual([true, true, true, false]);
-		expect(await moveKeysToStore(storage, cms)).toBe(0);
-		expect(await cms.apiKeys.list()).toHaveLength(2);
-	});
-
-	it("leaves a connection without a key when its stored key cannot be decrypted any more", async () => {
-		const cms = cmsWith("new-secret");
-		const { storage, save, settings } = oldSettings(cms, [
-			connection("a", "Claude", cms.secrets("ai", { legacy: { prefix: "v1", domain: "cms-ai-key:" } }).encrypt("x")),
-			connection("b", "Lost", legacyKey("sk-lost", "forgotten-secret")),
-		]);
-		await save();
-		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-		expect(await moveKeysToStore(storage, cms)).toBe(1);
-		warn.mockRestore();
-		const stored = (await settings.get("default"))?.value as {
-			providers: Array<{ name: string; keyId: string | null }>;
-		};
-		expect(stored.providers.map((provider) => [provider.name, provider.keyId !== null])).toEqual([
-			["Claude", true],
-			["Lost", false],
-		]);
-	});
-
-	it("reads settings saved in the pair shape (one generate and one decide connection) and shares their key", async () => {
-		const cms = cmsWith();
-		const key = cms.secrets("ai").encrypt("sk-pair-0000000000001111");
-		const settings = cms.storage("ai").collection("settings");
-		await settings.set(
-			"default",
-			{
-				generate: { baseUrl: "https://example.test/v1", apiKey: key, smallModel: "m" },
-				decide: { url: "https://example.test/decisions", apiKey: null, shareKey: true, model: "jev" },
-			},
-			{ expectedVersion: 0 },
-		);
-		await moveKeysToStore(cms.storage("ai"), cms);
-		const stored = (await settings.get("default"))?.value as {
-			providers: Array<{ kind: string; keyId: string | null }>;
-		};
-		expect(stored.providers.map((provider) => provider.kind)).toEqual(["chat", "decisions"]);
-		expect(new Set(stored.providers.map((provider) => provider.keyId)).size).toBe(1);
-		expect(await cms.apiKeys.list()).toHaveLength(1);
 	});
 });
 
@@ -396,7 +295,7 @@ describe("decide model call", () => {
 			"fetch",
 			vi.fn(async () => new Response("nope", { status: 401 })),
 		);
-		await expect(decider.decide(request)).rejects.toMatchObject({ code: "ai_unavailable" });
+		await expect(decider.decide(request)).rejects.toMatchObject({ code: "service_unavailable" });
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => new Response("nope", { status: 402 })),
@@ -406,7 +305,7 @@ describe("decide model call", () => {
 			"fetch",
 			vi.fn(async () => Response.json({ result: "?" })),
 		);
-		await expect(decider.decide(request)).rejects.toMatchObject({ code: "ai_failed" });
+		await expect(decider.decide(request)).rejects.toMatchObject({ code: "upstream_failed" });
 	});
 });
 
@@ -534,7 +433,7 @@ describe("generation model call", () => {
 			apiKey: "key",
 			model: "m-small",
 		});
-		await expect(generator.generate(request)).rejects.toMatchObject({ code: "ai_unavailable" });
+		await expect(generator.generate(request)).rejects.toMatchObject({ code: "service_unavailable" });
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });

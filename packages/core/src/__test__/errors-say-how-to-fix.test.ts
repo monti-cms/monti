@@ -56,8 +56,10 @@ describe("a setup mistake over HTTP", () => {
 		);
 		expect(response.status).toBe(503);
 		expect(await response.json()).toMatchObject({
-			code: "migrations_pending",
-			message: expect.stringContaining("server log"),
+			error: {
+				code: "migrations_pending",
+				message: expect.stringContaining("server log"),
+			},
 		});
 		expect(log.mock.calls.flat().join(" ")).toContain("run `monti db:migrate`");
 		log.mockRestore();

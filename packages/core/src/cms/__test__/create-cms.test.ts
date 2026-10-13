@@ -28,6 +28,8 @@ function fakeDatabase(tag: string) {
 		}),
 		migrate: vi.fn(async () => undefined),
 		pluginStorage: vi.fn((plugin: string) => ({ plugin: `${tag}:${plugin}`, once: async () => false }) as never),
+		transaction: (async (work: (tx: never) => Promise<unknown>) =>
+			work({ pluginStorage: () => ({}) } as never)) as DatabaseAdapter["transaction"],
 		close: vi.fn(async () => undefined),
 	};
 	return adapter satisfies DatabaseAdapter;

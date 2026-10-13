@@ -1,12 +1,11 @@
 import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust-host";
+import { WHERE_TO_SET_ENV } from "../../core/env";
 import { CMS_AUTH_BASE_PATH } from "../../server/define";
 import { githubLoginHowTo } from "../templates";
 import type { CoreCheck, DoctorState } from "./core-checks";
 import { fail, ok, skip, warn } from "./outcome";
 
 /** The `auth` group of `monti doctor`: only the environment values and config values core itself knows about the GitHub login. */
-
-const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 
 const GITHUB_ID = "AUTH_GITHUB_ID";
 const GITHUB_SECRET = "AUTH_GITHUB_SECRET";
@@ -50,7 +49,7 @@ function missingGithubValue(name: string, env: Env) {
 	const message = `${name} is not set, so nobody can sign in with GitHub${
 		isProduction(env) ? "" : " (under `next dev` the development login is used instead)"
 	}`;
-	const details = { where: WHERE_TO_SET, fix: OAUTH_APP_FIX };
+	const details = { where: WHERE_TO_SET_ENV, fix: OAUTH_APP_FIX };
 	return isProduction(env) ? fail(message, details) : warn(message, details);
 }
 
@@ -204,7 +203,7 @@ const siteUrl: CoreCheck = {
 			const fix =
 				"set SITE_URL to the public address, for example SITE_URL=https://your-domain.com, in the environment of the deployed site";
 			return looksDeployed(state.env)
-				? warn(message, { where: WHERE_TO_SET, fix })
+				? warn(message, { where: WHERE_TO_SET_ENV, fix })
 				: ok(
 						"not set; fine on a development machine (the dev server is http://localhost:3000). Set it where you deploy",
 						{ where: "SITE_URL" },
@@ -213,13 +212,13 @@ const siteUrl: CoreCheck = {
 		const origin = originOf(value);
 		if (!origin) {
 			return fail(`SITE_URL is not a valid address (${value})`, {
-				where: WHERE_TO_SET,
+				where: WHERE_TO_SET_ENV,
 				fix: "write it with the scheme, for example SITE_URL=https://your-domain.com",
 			});
 		}
 		if (looksDeployed(state.env) && /^http:\/\/(localhost|127\.)/.test(origin)) {
 			return warn(`SITE_URL points at ${origin}, but this environment looks like a deployed one`, {
-				where: WHERE_TO_SET,
+				where: WHERE_TO_SET_ENV,
 				fix: "set SITE_URL to the public address of the site, for example https://your-domain.com",
 			});
 		}

@@ -1,11 +1,14 @@
-import type { PluginConfigView } from "@monti-cms/core";
+import { type PluginConfigView, pluginError } from "@monti-cms/core";
 import type { GitHubClientFactory } from "./github/client";
 
-/** The name under which the plugin is found in the site config's `plugins`. */
+import { GIT_SYNC_PLUGIN_NAME } from "./name";
+
+export { GIT_SYNC_PLUGIN_NAME };
+
 /** Id of the plugin's one API key slot: the GitHub token. */
 export const GIT_SYNC_TOKEN_SLOT = "token";
-
-export const GIT_SYNC_PLUGIN_NAME = "git-sync";
+/** The key slot of the secret the push webhook is signed with. */
+export const GIT_SYNC_WEBHOOK_SLOT = "webhook-secret";
 
 /** How a publish lands in the repo. */
 export type GitSyncMode = "commit" | "pr";
@@ -165,7 +168,7 @@ export function resolveTarget(target: GitSyncTarget, index: number): ResolvedTar
 /** Every target with its defaults, after checking the list as a whole (ids are unique). */
 export function resolveTargets(options: GitSyncOptions): ResolvedTarget[] {
 	const given = options.targets ?? [];
-	if (!Array.isArray(given)) throw new Error("git-sync: `targets` must be a list");
+	if (!Array.isArray(given)) throw pluginError(GIT_SYNC_PLUGIN_NAME, "`targets` must be a list");
 	const targets = given.map(resolveTarget);
 	const seen = new Set<string>();
 	for (const target of targets) {
@@ -174,7 +177,7 @@ export function resolveTargets(options: GitSyncOptions): ResolvedTarget[] {
 		seen.add(target.id);
 	}
 	if (options.debounceMs !== undefined && (!Number.isFinite(options.debounceMs) || options.debounceMs < 0)) {
-		throw new Error("git-sync: `debounceMs` must be 0 or more");
+		throw pluginError(GIT_SYNC_PLUGIN_NAME, "`debounceMs` must be 0 or more");
 	}
 	return targets;
 }

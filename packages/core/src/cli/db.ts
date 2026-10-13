@@ -1,25 +1,6 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import path from "node:path";
 import { type AppOptions, loadApp } from "./app";
 
-export interface MigrateOptions extends AppOptions {
-	/** List every body that could not be read, and the other per-body detail, instead of a short summary. */
-	readonly verbose?: boolean;
-	/** Read the bodies kept as unreadable again, with the config as it is now. */
-	readonly reconvertBodies?: boolean;
-}
-
-/**
- * Writes the full per-body detail of a migration to `.monti/logs/migrate-<time>.log` under `cwd` and returns that path relative to `cwd` (with `/`).
- * Called only when there is something to report, so a clean run leaves no file.
- */
-export function writeMigrateLog(cwd: string, lines: readonly string[], now: Date = new Date()): string {
-	const stamp = now.toISOString().slice(0, 19).replaceAll(":", "-");
-	const relative = `.monti/logs/migrate-${stamp}.log`;
-	mkdirSync(path.join(cwd, ".monti/logs"), { recursive: true });
-	writeFileSync(path.join(cwd, relative), `${lines.join("\n")}\n`);
-	return relative;
-}
+export type MigrateOptions = AppOptions;
 
 /**
  * `monti db:migrate`: reads env files, loads the app's CMS instance (`monti.config.ts`) and brings the tables up to date with this version of Monti.
@@ -37,12 +18,7 @@ export async function dbMigrate(options: MigrateOptions): Promise<boolean> {
 			);
 			return false;
 		}
-		await cms.migrate({
-			log,
-			verbose: options.verbose,
-			reconvertBodies: options.reconvertBodies,
-			saveDetail: (lines) => writeMigrateLog(options.cwd ?? process.cwd(), lines),
-		});
+		await cms.migrate({ log });
 		return true;
 	} catch (error) {
 		console.error("Migration failed:", error);

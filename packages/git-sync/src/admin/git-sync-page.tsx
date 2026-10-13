@@ -60,13 +60,15 @@ interface TargetView {
 	lastFlush?: { at: string; files: number; commitSha: string; branch: string; pullRequestUrl?: string; note?: string };
 }
 
+interface SlotKeyView {
+	id: string;
+	name: string;
+	tail: string;
+	readable: boolean;
+}
+
 interface StatusView {
-	settings: {
-		secretsAvailable: boolean;
-		token: { key: { id: string; name: string; tail: string; readable: boolean } | null };
-		webhookSecret: { set: boolean; readable: boolean };
-		version: number;
-	};
+	keys: { secretsAvailable: boolean; token: SlotKeyView | null; webhookSecret: SlotKeyView | null };
 	targets: TargetView[];
 }
 
@@ -259,7 +261,7 @@ function SyncTab({
 
 	return (
 		<div className="space-y-4 p-5">
-			{!status.settings.token.key && (
+			{!status.keys.token && (
 				<Alert layout="stack">
 					<AlertDescription className="col-start-auto">{t("sync.noToken")}</AlertDescription>
 				</Alert>
@@ -537,47 +539,30 @@ const generateSecret = (): string => {
 	return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 
+const keyHint = (key: SlotKeyView) => `${key.name}${key.tail ? ` ••••${key.tail}` : ""}`;
+const keyState = (key: SlotKeyView | null) => (!key ? "unset" : key.readable ? "set" : "unreadable");
+
 function SettingsTab({ status, onChanged }: { status: StatusView | undefined; onChanged: () => void }) {
 	const site = useSite();
 	const t = useTranslator(gitSyncMessages);
 	const queryClient = useQueryClient();
-	// What the key field shows until it is changed: the key the token uses now, or an empty new key.
+	// What the token field shows until it is changed: the key the token uses now, or an empty new key.
 	const [picked, setPicked] = useState<ApiKeyChoice | null>(null);
+	// The webhook secret as typed or generated. It is shown only here, before it is saved: afterwards the store keeps it encrypted.
 	const [secret, setSecret] = useState("");
+	const [revealed, setRevealed] = useState(false);
 
-	const save = useMutation({
-		mutationFn: (values: { webhookSecret: string | null }) =>
-			cmsFetch(site, cmsApiUrl("/v1/git-sync/settings"), {
+	// Both secrets are keys of the API key store assigned to the plugin's slots. A token is followed by the server (the slot's `onChange`), so what waited for one goes out.
+	const assign = useMutation({
+		mutationFn: (values: { slot: "token" | "webhook-secret"; key: ApiKeyChoice }) =>
+			cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), {
 				method: "PUT",
-				json: { ...values, expectedVersion: status?.settings.version ?? 0 },
+				json: { plugin: "git-sync", ...values },
 				fallback: t("settings.save.failed"),
 			}),
-		onSuccess: () => {
-			setSecret("");
-			toast.success(t("settings.saved"));
-		},
-		onError: (err) => toast.error(errorText(site, err, t("settings.save.failed"))),
-		onSettled: onChanged,
-	});
-
-	// The token is a key of the API key store assigned to the plugin's slot; the plugin is told afterwards so what waited for a token goes out.
-	const saveToken = useMutation({
-		mutationFn: async (key: ApiKeyChoice) => {
-			await cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), {
-				method: "PUT",
-				json: { plugin: "git-sync", slot: "token", key },
-				fallback: t("settings.save.failed"),
-			});
-			if (key.use !== "none") {
-				await cmsFetch(site, cmsApiUrl("/v1/git-sync/token-changed"), {
-					method: "POST",
-					json: {},
-					fallback: t("settings.save.failed"),
-				});
-			}
-		},
-		onSuccess: () => {
-			setPicked(null);
+		onSuccess: (_result, values) => {
+			if (values.slot === "token") setPicked(null);
+			else setSecret("");
 			toast.success(t("settings.saved"));
 		},
 		onError: (err) => toast.error(errorText(site, err, t("settings.save.failed"))),
@@ -589,22 +574,18 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 	});
 
 	if (!status) return <ListSkeleton />;
-	const { settings } = status;
+	const { keys } = status;
 	const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${cmsApiUrl("/v1/git-sync/webhook")}`;
-	const stateOf = (item: { set: boolean; readable: boolean }) =>
-		!item.set ? "unset" : item.readable ? "set" : "unreadable";
-	const tokenKey = settings.token.key;
-	const tokenState = tokenKey ? (tokenKey.readable ? "set" : "unreadable") : "unset";
+	const tokenKey = keys.token;
 	const savedChoice: ApiKeyChoice = tokenKey ? { use: "saved", keyId: tokenKey.id } : { use: "new", value: "" };
 	const choice = picked ?? savedChoice;
-	const tokenHint = tokenKey ? `${tokenKey.name}${tokenKey.tail ? ` ••••${tokenKey.tail}` : ""}` : "";
 	// Nothing to save while the field shows the key the token already uses.
 	const tokenChanged = choice.use === "new" || (choice.use === "saved" && choice.keyId !== tokenKey?.id);
-	const secretState = stateOf(settings.webhookSecret);
+	const secretKey = keys.webhookSecret;
 
 	return (
 		<div className="max-w-2xl space-y-8 p-5">
-			{!settings.secretsAvailable && (
+			{!keys.secretsAvailable && (
 				<Alert variant="danger" layout="stack">
 					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
 				</Alert>
@@ -614,18 +595,20 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 				className="space-y-2"
 				onSubmit={(event) => {
 					event.preventDefault();
-					if (tokenChanged && choiceReady(choice)) saveToken.mutate(choice);
+					if (tokenChanged && choiceReady(choice)) assign.mutate({ slot: "token", key: choice });
 				}}
 			>
 				<p className="font-medium text-sm">{t("settings.token")}</p>
 				<p className="text-cms-muted-foreground text-xs">{t("settings.token.help")}</p>
-				<p className="text-xs">{t(`settings.token.state.${tokenState}`, { hint: tokenHint })}</p>
+				<p className="text-xs">
+					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
+				</p>
 				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
 				<div className="flex gap-2">
 					<Button
 						type="submit"
 						size="sm"
-						disabled={!settings.secretsAvailable || !tokenChanged || !choiceReady(choice) || saveToken.isPending}
+						disabled={!keys.secretsAvailable || !tokenChanged || !choiceReady(choice) || assign.isPending}
 					>
 						{t("settings.save")}
 					</Button>
@@ -634,8 +617,8 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 							type="button"
 							size="sm"
 							variant="outline"
-							disabled={saveToken.isPending}
-							onClick={() => saveToken.mutate({ use: "none" })}
+							disabled={assign.isPending}
+							onClick={() => assign.mutate({ slot: "token", key: { use: "none" } })}
 						>
 							{t("settings.remove")}
 						</Button>
@@ -647,13 +630,15 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 				className="space-y-2"
 				onSubmit={(event) => {
 					event.preventDefault();
-					if (secret.trim()) save.mutate({ webhookSecret: secret });
+					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
 				}}
 			>
 				<Label htmlFor="git-sync-secret" className="font-medium text-sm">
 					{t("settings.webhook")}
 				</Label>
-				<p className="text-xs">{t(`settings.webhook.state.${secretState}`)}</p>
+				<p className="text-xs">
+					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
+				</p>
 				<div className="space-y-1">
 					<Label htmlFor="git-sync-url" className="text-cms-muted-foreground text-xs">
 						{t("settings.webhook.url")}
@@ -661,28 +646,58 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-xs" />
 				</div>
 				<p className="text-cms-muted-foreground text-xs">{t("settings.webhook.help")}</p>
-				<div className="flex gap-2">
+				<div className="flex flex-wrap gap-2">
 					<Input
 						id="git-sync-secret"
-						type="password"
-						autoComplete="new-password"
+						type={revealed ? "text" : "password"}
+						autoComplete="off"
+						spellCheck={false}
 						value={secret}
 						placeholder={t("settings.webhook.new")}
 						onChange={(event) => setSecret(event.target.value)}
+						className="min-w-0 flex-1 font-mono"
 					/>
-					<Button type="button" size="sm" variant="outline" onClick={() => setSecret(generateSecret())}>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onClick={() => {
+							setSecret(generateSecret());
+							// A generated value has to be seen once: it goes into GitHub, and the store does not show it again.
+							setRevealed(true);
+						}}
+					>
 						{t("settings.generate")}
 					</Button>
-					<Button type="submit" size="sm" disabled={!settings.secretsAvailable || !secret.trim() || save.isPending}>
+					<Button type="button" size="sm" variant="outline" onClick={() => setRevealed((shown) => !shown)}>
+						{revealed ? t("settings.hide") : t("settings.show")}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						disabled={!secret}
+						onClick={() =>
+							void navigator.clipboard.writeText(secret).then(
+								() => toast.success(t("settings.copied")),
+								() => toast.error(t("settings.copy.failed")),
+							)
+						}
+					>
+						{t("settings.copy")}
+					</Button>
+				</div>
+				<div className="flex gap-2">
+					<Button type="submit" size="sm" disabled={!keys.secretsAvailable || !secret.trim() || assign.isPending}>
 						{t("settings.save")}
 					</Button>
-					{settings.webhookSecret.set && (
+					{secretKey && (
 						<Button
 							type="button"
 							size="sm"
 							variant="outline"
-							disabled={save.isPending}
-							onClick={() => save.mutate({ webhookSecret: null })}
+							disabled={assign.isPending}
+							onClick={() => assign.mutate({ slot: "webhook-secret", key: { use: "none" } })}
 						>
 							{t("settings.remove")}
 						</Button>

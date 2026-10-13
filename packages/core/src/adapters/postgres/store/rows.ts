@@ -11,7 +11,7 @@ import type {
 	PublishedEntryRecord,
 } from "../../../core/store/types";
 import { parseTranslationState, type TranslationState } from "../../../core/translation/state";
-import { normalizeReferenceKind, type Reference, readReferenceOccurrences } from "../../../core/types";
+import { type Reference, type ReferenceKind, readReferenceOccurrences } from "../../../core/types";
 import {
 	emptyStoredDocument,
 	readStoredDocument,
@@ -36,11 +36,10 @@ export function extractVisibleText(site: Site, doc: StoredDocument): string {
 export const readDoc = (value: unknown): StoredDocument | null => readStoredDocument(value) ?? null;
 
 /**
- * The document of a stored body. A body whose `doc` column is empty or unreadable (a row older than stored documents) reads as the document
- * of one `unparsed` node holding its `mdx` column when there is one, so every body a store hands out is a document.
+ * The document of a stored body. A body whose `doc` column is empty or not a stored document of a known version reads as the document of one empty
+ * `unparsed` node, which blocks publishing, so every body a store hands out is a document.
  */
-export const readBodyDoc = (value: unknown, mdx: string | null): StoredDocument =>
-	readDoc(value) ?? unparsedDocument(mdx ?? "");
+export const readBodyDoc = (value: unknown): StoredDocument => readDoc(value) ?? unparsedDocument("");
 
 /** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
 export const readTranslation = (value: unknown): TranslationState | null =>
@@ -48,7 +47,6 @@ export const readTranslation = (value: unknown): TranslationState | null =>
 
 export interface BodyRow {
 	content_hash: string;
-	mdx: string | null;
 	doc: StoredDocument;
 	schema_version: number;
 	metadata: EntryMetadata;
@@ -57,11 +55,10 @@ export interface BodyRow {
 }
 
 export interface ReferenceRow {
-	/** Legacy rows may be `category` or `tag`. */
 	kind: string;
 	target_id: string;
 	is_stale: boolean;
-	/** As stored: a body occurrence may still be in the old shape (`{type:"mdx", line, column}`). */
+	/** As stored; `readReferenceOccurrences` validates it. */
 	occurrences: unknown;
 }
 
@@ -83,7 +80,7 @@ export const mapFolderRow = (row: FolderRow): Folder => ({
 });
 
 export const mapReferenceRow = (row: ReferenceRow): Reference => ({
-	kind: normalizeReferenceKind(row.kind),
+	kind: row.kind as ReferenceKind,
 	targetId: row.target_id,
 	isStale: row.is_stale,
 	occurrences: readReferenceOccurrences(row.occurrences),
@@ -107,7 +104,7 @@ export function mapPublishedEntryRow(row: {
 		translationGroupId: row.translation_group_id,
 		slug: row.slug,
 		metadata: row.metadata,
-		doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc, null),
+		doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc),
 		publishedAt: row.published_at,
 		updatedAt: row.body_updated_at,
 	};
@@ -170,7 +167,7 @@ export const mapMediaRow = (row: MediaRow): MediaAssetRecord => ({
 	readyAt: row.ready_at,
 });
 
-/** The columns of `body_templates` that make a `BodyTemplate` (the `mdx` column is no longer read). */
+/** The columns of `body_templates` that make a `BodyTemplate`. */
 export type TemplateRow = Pick<
 	Selectable<BodyTemplatesTable>,
 	"id" | "name" | "doc" | "version" | "created_at" | "updated_at"
@@ -225,17 +222,17 @@ export async function readReferences(db: Db, entryId: string, state: "working" |
 export async function readBody(db: Db, entryId: string, state: "working" | "published"): Promise<BodyRow | undefined> {
 	const row = await db
 		.selectFrom("entry_bodies")
-		.select(["metadata", "mdx", "doc", "schema_version", "content_hash", "updated_at", "translation"])
+		.select(["metadata", "doc", "schema_version", "content_hash", "updated_at", "translation"])
 		.where("entry_id", "=", entryId)
 		.where("state", "=", state)
 		.executeTakeFirst();
-	return row && { ...row, doc: readBodyDoc(row.doc, row.mdx), translation: readTranslation(row.translation) };
+	return row && { ...row, doc: readBodyDoc(row.doc), translation: readTranslation(row.translation) };
 }
 
 /** The value a conflicting insert of `entry_bodies` proposed (`EXCLUDED.<column>`), for the `DO UPDATE` of `writeBody`. */
 const proposed = <T>(column: string) => sql.ref<T>(`excluded.${column}`);
 
-/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
+/** Writes the working/published body. Also updates the plain text used for search. `doc` is the only source of a body. */
 export async function writeBody(
 	site: Site,
 	db: Db,
@@ -305,7 +302,6 @@ export async function loadEntry(db: Db, id: string): Promise<Entry> {
 				.as("current_slug"),
 			"b.state",
 			"b.metadata",
-			"b.mdx",
 			"b.doc",
 			"b.schema_version",
 			"b.content_hash",
@@ -324,7 +320,7 @@ export async function loadEntry(db: Db, id: string): Promise<Entry> {
 		if (row.schema_version === null || row.content_hash === null || row.body_updated_at === null) continue;
 		const body: EntryBody = {
 			metadata: row.metadata,
-			doc: readBodyDoc(row.doc, row.mdx),
+			doc: readBodyDoc(row.doc),
 			schemaVersion: row.schema_version,
 			contentHash: row.content_hash,
 			updatedAt: row.body_updated_at,

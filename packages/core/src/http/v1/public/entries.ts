@@ -26,7 +26,7 @@ async function targetId(cms: Cms, collection: string, field: string, slug: strin
 }
 
 /** `GET /api/monti/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
-export async function GET(request: Request, { cms }: { cms: Cms }): Promise<Response> {
+export async function list(request: Request, cms: Cms): Promise<Response> {
 	const config: PublicApiOptions | undefined = cms.server.publicApi;
 	if (!config) return publicError("not_found", "Not found");
 	try {

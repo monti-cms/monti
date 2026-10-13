@@ -1,7 +1,19 @@
-import { fakeCms } from "@monti-cms/core/testing";
+import { fakeCms, routeCaller } from "@monti-cms/core/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../test/site";
-import { DELETE, GET, PATCH, POST, PUT } from "../routes/shared/route";
+import {
+	DELETE as DELETEHandler,
+	GET as GETHandler,
+	PATCH as PATCHHandler,
+	POST as POSTHandler,
+	PUT as PUTHandler,
+} from "../routes/shared/route";
+
+const DELETE = routeCaller(DELETEHandler);
+const GET = routeCaller(GETHandler);
+const PATCH = routeCaller(PATCHHandler);
+const POST = routeCaller(POSTHandler);
+const PUT = routeCaller(PUTHandler);
 
 /** A store holding the shared text rows and action overrides. A version mismatch gives 409. */
 const state = vi.hoisted(() => ({
@@ -83,6 +95,8 @@ describe("shared texts API", () => {
 		state.overrides = [{ key: "summary", value: { prompt: "요약한다.\n{{shared.tone}}" }, version: 1 }];
 		const res = await call(DELETE, "DELETE", undefined, "?key=tone&expectedVersion=1");
 		expect(res.status).toBe(400);
-		expect(await res.json()).toMatchObject({ message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" });
+		expect(await res.json()).toMatchObject({
+			error: { message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" },
+		});
 	});
 });

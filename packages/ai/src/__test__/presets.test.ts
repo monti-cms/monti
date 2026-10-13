@@ -14,7 +14,7 @@ import { mermaid } from "../../../blocks/src/mermaid";
 import { seo } from "../../../seo/src";
 import { testSite } from "../../test/site";
 import type { AiActionDefinition, AiAttach } from "../action";
-import { aiPlugin } from "../plugin";
+import { ai } from "../plugin";
 import { aiPresets } from "../presets";
 import { presetMessages } from "../presets.messages";
 import { aiRegistryOf, aiSiteViewOf } from "../registry";
@@ -277,7 +277,7 @@ describe("AI actions contributed by other plugins (`contributes.ai.actions`)", (
 			contributes: { ai: { actions: { summary: aiPresets.codeFold() } } },
 		});
 		expect(() => resolveAiActions({}, blogSite([]), [clash])).toThrow(/plugins.clash adds AI action "summary"/);
-		const plugin = aiPlugin();
+		const plugin = ai();
 		expect(() =>
 			plugin.validate?.({
 				collections,

@@ -175,7 +175,7 @@ describe("schema settings API", () => {
 
 		const save = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
 		expect(save.status).toBe(403);
-		expect(await save.json()).toMatchObject({ code: "schema_read_only", reason: "production" });
+		expect(await save.json()).toMatchObject({ error: { code: "schema_read_only", details: { reason: "production" } } });
 		const preview = await call(cms, "POST", "schema/preview", { schema: edited });
 		expect(preview.status).toBe(403);
 		expect(text()).toBe(before);
@@ -190,7 +190,7 @@ describe("schema settings API", () => {
 		const { hash, schema } = await read(cms);
 		const res = await call(cms, "PUT", "schema", { schema, baseHash: hash });
 		expect(res.status).toBe(403);
-		expect(await res.json()).toMatchObject({ code: "schema_read_only", reason: "production" });
+		expect(await res.json()).toMatchObject({ error: { code: "schema_read_only", details: { reason: "production" } } });
 		expect(text()).toBe(before);
 	});
 
@@ -338,7 +338,7 @@ describe("schema settings API", () => {
 		const before = text();
 		const res = await call(cms, "PUT", "schema", { schema, baseHash: hash });
 		expect(res.status).toBe(409);
-		expect(await res.json()).toMatchObject({ code: "schema_conflict" });
+		expect(await res.json()).toMatchObject({ error: { code: "schema_conflict" } });
 		expect(text()).toBe(before);
 	});
 
@@ -352,8 +352,8 @@ describe("schema settings API", () => {
 		const res = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
 		expect(res.status).toBe(400);
 		const body = await res.json();
-		expect(body.code).toBe("invalid_schema");
-		expect(body.issues).toEqual(
+		expect(body.error.code).toBe("invalid_schema");
+		expect(body.error.issues).toEqual(
 			expect.arrayContaining([expect.objectContaining({ path: "collections.post.fields.broken.max" })]),
 		);
 		// A rule between collections is reported too, with the collection's path.
@@ -384,9 +384,11 @@ describe("schema settings API", () => {
 		const save = await call(cms, "PUT", "schema", { schema: state.schema, baseHash: state.hash });
 		expect(save.status).toBe(403);
 		expect(await save.json()).toMatchObject({
-			code: "schema_read_only",
-			reason: "has_code",
-			message: "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead",
+			error: {
+				code: "schema_read_only",
+				details: { reason: "has_code" },
+				message: "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead",
+			},
 		});
 		expect((await call(cms, "POST", "schema/preview", { schema: state.schema })).status).toBe(403);
 		expect(text()).toBe(withSpread);

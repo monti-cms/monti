@@ -184,7 +184,7 @@ export interface CmsConfig<
 	 * The public site renders them by the `component` name.
 	 */
 	readonly blocks?: Blocks;
-	/** Plugins (e.g. `aiPlugin()`). Names must not collide. */
+	/** Plugins (e.g. `ai()`). Names must not collide. */
 	readonly plugins?: Plugins;
 	/** Code block settings. Adds line effects (`lineEffects`) or changes the core defaults (highlight, add, delete, warning, error). */
 	readonly codeBlock?: CodeBlockConfig;
@@ -406,12 +406,6 @@ function validate(
 	}
 	if (config.site?.home !== undefined && !isHomeHref(config.site.home)) {
 		throw new Error(`cms.config: site.home "${config.site.home}" must be a path ("/") or an http(s) URL`);
-	}
-
-	if (config.admin && "legacyBackupNames" in config.admin) {
-		throw new Error(
-			"cms.config: admin.legacyBackupNames was removed; delete it (the admin UI only uses the `cms_backup` recovery database)",
-		);
 	}
 
 	validateEditorConfig(config.editor);

@@ -1,11 +1,9 @@
-import { createActiveTranslator, definePlugin } from "@monti-cms/core";
+import { definePlugin } from "@monti-cms/core";
 import { bareunMessages } from "./messages";
 import { BAREUN_KEY_SLOT, BAREUN_PLUGIN_NAME, type BareunOptions, resolveBareunOptions } from "./options";
 
 export { type BareunIssueSegment, type BareunResponse, type BareunRevisedBlock, bareunIssues } from "./mapping";
 export { BAREUN_PLUGIN_NAME, type BareunOptions, type ResolvedBareunOptions } from "./options";
-
-const t = createActiveTranslator(bareunMessages);
 
 /**
  * Bareun spell and sentence checker. Add it to the site config `plugins` and the editor gets a "Spell check" button,

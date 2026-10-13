@@ -50,7 +50,10 @@ beforeEach(() => {
 		}
 		if (input === "/api/monti/v1/ai/shared" && init?.method === "PATCH") return json({ ...view, version: 3 });
 		if (input.startsWith("/api/monti/v1/ai/shared?") && init?.method === "DELETE") {
-			return json({ code: "ai_invalid_input", message: "Actions use this text, so it can't be deleted: Summary" }, 400);
+			return json(
+				{ error: { code: "invalid_input", message: "Actions use this text, so it can't be deleted: Summary" } },
+				400,
+			);
 		}
 		throw new Error(`Unexpected fetch ${init?.method ?? "GET"} ${input}`);
 	});

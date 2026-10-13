@@ -32,7 +32,7 @@ describe("mdx()", () => {
 	it("provides its admin side and its formats lazily", () => {
 		const plugin = mdx();
 		expect(typeof plugin.admin).toBe("function");
-		expect(typeof plugin.formats).toBe("function");
+		expect(typeof (plugin.server as { formats?: unknown }).formats).toBe("function");
 	});
 
 	describe("validation", () => {
@@ -61,22 +61,19 @@ describe("mdx()", () => {
 
 	describe("formats", () => {
 		const formatOf = async (options?: Parameters<typeof mdx>[0]) => {
-			const loaded = await mdx(options).formats?.();
-			const provided = loaded?.default;
+			const provided = await (mdx(options).server as { formats(): Promise<unknown> }).formats();
 			if (!provided || Array.isArray(provided)) throw new Error("expected one format");
 			return provided as import("@monti-cms/core/format").CmsFormat;
 		};
 
-		it("resolves to a format named mdx that carries the old-body reader", async () => {
+		it("resolves to a format named mdx", async () => {
 			const format = await formatOf();
 			expect(format.name).toBe("mdx");
 			expect(format.extension).toBe("mdx");
-			expect(format.legacyBodies).toBeDefined();
-			expect(typeof format.legacyBodies?.(testSite).read).toBe("function");
 			expect(typeof format.import).toBe("function");
 		});
 
-		it("writes and reads with the syntax it was given, for the format and for the old bodies", async () => {
+		it("writes and reads with the syntax it was given", async () => {
 			const doc = {
 				...docOfMdx(testSite, "x"),
 				content: [{ type: "paragraph", content: [{ type: "text", text: "word", marks: [{ type: "underline" }] }] }],
@@ -96,8 +93,6 @@ describe("mdx()", () => {
 			const extended = await formatOf({ syntax: [braces] });
 			expect(await extended.export(doc, exportContext)).toContain("{u word}");
 			expect(await plain.export(doc, exportContext)).not.toContain("{u word}");
-			expect(extended.legacyBodies?.(testSite).write(doc).text).toContain("{u word}");
-			expect(plain.legacyBodies?.(testSite).write(doc).text).not.toContain("{u word}");
 		});
 	});
 });

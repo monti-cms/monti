@@ -11,6 +11,7 @@ const database = {
 	createStore: vi.fn(),
 	migrate: vi.fn(),
 	pluginStorage: vi.fn(),
+	transaction: vi.fn(),
 } satisfies DatabaseAdapter;
 const auth: AuthAdapter = { name: "fake", create: () => fakeCms().auth() };
 const site = {

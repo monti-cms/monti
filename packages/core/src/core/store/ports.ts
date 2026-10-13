@@ -311,7 +311,13 @@ export interface EventStore {
 	retryDelivery(params: { eventId: string; subscriber: string; now: Date }): Promise<boolean>;
 	/** A failed or dead delivery becomes `dismissed`: it is no longer retried or listed. `false` when it is in another state. */
 	dismissDelivery(params: { eventId: string; subscriber: string }): Promise<boolean>;
-	/** Removes events committed before `before` whose deliveries are all finished (delivered or dismissed), or that have none. Returns the number removed. */
+	/**
+	 * `event.once`: whether the work for this delivery was done by an earlier try. The mark lives on the delivery row, so the pruning of the events removes it with them.
+	 */
+	isOnceDone(params: { eventId: string; subscriber: string }): Promise<boolean>;
+	/** Marks the work of `event.once` as done for this delivery (idempotent). */
+	markOnceDone(params: { eventId: string; subscriber: string; now: Date }): Promise<void>;
+	/** Removes events committed before `before` whose deliveries are all finished (delivered or dismissed), or that have none, with their deliveries and marks. Returns the number removed. */
 	pruneEvents(params: { before: Date }): Promise<number>;
 }
 

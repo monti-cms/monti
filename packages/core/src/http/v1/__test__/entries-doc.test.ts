@@ -18,10 +18,16 @@ import {
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
 	migrateContentStore,
+	routeCaller,
 } from "../../../testing";
-import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
-import { POST as postEntries } from "../entries/route";
-import { GET as getTemplates } from "../templates/route";
+import { GET as getEntryHandler, PATCH as patchEntryHandler } from "../entries/[id]/route";
+import { POST as postEntriesHandler } from "../entries/route";
+import { GET as getTemplatesHandler } from "../templates/route";
+
+const getEntry = routeCaller(getEntryHandler);
+const patchEntry = routeCaller(patchEntryHandler);
+const postEntries = routeCaller(postEntriesHandler);
+const getTemplates = routeCaller(getTemplatesHandler);
 
 /** A document of a heading, a paragraph and a list, as a client would send it. */
 const sampleDoc = () => docOf("# Title\n\nSome *emphasis* here\n\n- one\n- two");
@@ -38,7 +44,7 @@ describe("entry API with a stored document", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let cms: Cms;
 	let sequence = 0;
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
@@ -50,7 +56,7 @@ describe("entry API with a stored document", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
-		service = createContentService<Entry>(store, {
+		service = createContentService(store, {
 			site: testSite,
 			formats: async () => createFormatRegistry([paragraphsFormat]),
 		});
@@ -117,7 +123,7 @@ describe("entry API with a stored document", () => {
 	const storedRow = async (id: string) =>
 		(
 			await pool.query(
-				`SELECT mdx, doc, content_hash, updated_at FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
+				`SELECT doc, content_hash, updated_at FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
 				[id],
 			)
 		).rows[0];
@@ -129,15 +135,12 @@ describe("entry API with a stored document", () => {
 
 		expect(entry.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
-		// The old text column is no longer written.
-		expect(row.mdx).toBeNull();
 		expect(row.doc).toEqual(doc);
 	});
 
 	it("creates an entry from text with its format, and with no body it is empty", async () => {
 		const fromText = await created({ format: "paragraphs", body: "One\n\nTwo" });
 		expect(contentOf(fromText.working.doc)).toEqual(contentOf(docOf("One\n\nTwo")));
-		expect((await storedRow(fromText.id)).mdx).toBeNull();
 
 		const empty = await created({});
 		expect(empty.working.doc.content).toEqual([]);
@@ -146,7 +149,7 @@ describe("entry API with a stored document", () => {
 	it("rejects a create that sends both a body and doc", async () => {
 		const res = await post({ format: "paragraphs", body: "Text", doc: sampleDoc() });
 		expect(res.status).toBe(400);
-		expect((await res.json()).code).toBe("invalid_input");
+		expect((await res.json()).error.code).toBe("invalid_input");
 	});
 
 	it("rejects a create with a document that is not a stored document", async () => {
@@ -163,7 +166,7 @@ describe("entry API with a stored document", () => {
 		for (const value of invalid) {
 			const res = await post({ doc: value });
 			expect(res.status, JSON.stringify(value)).toBe(400);
-			expect((await res.json()).code).toBe("invalid_input");
+			expect((await res.json()).error.code).toBe("invalid_input");
 		}
 	});
 
@@ -178,7 +181,6 @@ describe("entry API with a stored document", () => {
 		expect(saved.version).toBe(entry.version + 1);
 		expect(saved.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
-		expect(row.mdx).toBeNull();
 		expect(row.doc).toEqual(doc);
 	});
 
@@ -240,7 +242,7 @@ describe("entry API with a stored document", () => {
 		});
 
 		expect(res.status).toBe(400);
-		expect((await res.json()).code).toBe("invalid_input");
+		expect((await res.json()).error.code).toBe("invalid_input");
 		expect((await read(entry.id)).working.doc).toEqual(entry.working.doc);
 	});
 
@@ -251,7 +253,7 @@ describe("entry API with a stored document", () => {
 		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 1 }, "text", null]) {
 			const res = await patch(entry.id, { expectedVersion: entry.version, doc: value });
 			expect(res.status, JSON.stringify(value)).toBe(400);
-			expect((await res.json()).code).toBe("invalid_input");
+			expect((await res.json()).error.code).toBe("invalid_input");
 		}
 		const after = await read(entry.id);
 		expect(after.version).toBe(entry.version);
@@ -266,7 +268,7 @@ describe("entry API with a stored document", () => {
 		};
 		const res = await post({ doc });
 		expect(res.status).toBe(413);
-		expect((await res.json()).code).toBe("body_too_large");
+		expect((await res.json()).error.code).toBe("body_too_large");
 	});
 
 	it("accepts a document larger than the text limit", async () => {

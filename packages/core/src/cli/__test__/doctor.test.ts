@@ -4,7 +4,7 @@ import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "../../testing";
 import { dbSetup } from "../db";
-import { type DoctorReport, runDoctor } from "../doctor";
+import type { DoctorReport } from "../doctor";
 import { runCli } from "../index";
 import { byId, configText, project, SCHEMA_TEXT, setEnv, statusesOf } from "./doctor-helpers";
 
@@ -72,7 +72,6 @@ describe("monti doctor on a healthy project", () => {
 			"database/schema": "ok",
 			"database/migrations": "ok",
 			"secrets/monti-secret": "ok",
-			"secrets/old-secrets": "ok",
 			"auth/github-id": "ok",
 			"auth/github-secret": "ok",
 			"auth/admins": "ok",
@@ -90,24 +89,20 @@ describe("monti doctor on a healthy project", () => {
 		expect(byId(report, "auth/admins").message).toContain("github:12345678");
 	});
 
-	it("reads the pending migrations: how many, and what to run", async () => {
+	it("says a database created by an older pre-release cannot be upgraded, and to recreate it", async () => {
 		healthyEnv();
 		const dir = project();
 		await dbSetup({ cwd: dir, envFiles: [], log: () => undefined });
-		const applied = await pool.query<{ name: string }>(
-			`SELECT name FROM "${schemaName}".cms_migrations WHERE name ~ '^[0-9]{4}_' ORDER BY name DESC LIMIT 2`,
-		);
-		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name = ANY($1)`, [
-			applied.rows.map((row) => row.name),
-		]);
+		await pool.query(`INSERT INTO "${schemaName}".cms_migrations (name) VALUES ('0023_entry_changed_by')`);
 
 		const { code, report } = await doctor(dir);
 		const migrations = byId(report, "database/migrations");
 		expect(code).toBe(1);
 		expect(migrations.status).toBe("fail");
-		expect(migrations.message).toMatch(/^2 of \d+ migrations are pending/);
-		expect(migrations.message).toContain(applied.rows[0]?.name);
-		expect(migrations.fix).toContain("monti db:migrate");
+		expect(migrations.message).toBe(
+			"This database was created by an older pre-release of Monti and cannot be upgraded",
+		);
+		expect(migrations.fix).toContain("recreate it");
 		expect(migrations.where).toContain(schemaName);
 		// The rest of the setup is still reported: one broken part does not hide the others.
 		expect(byId(report, "database/connect").status).toBe("ok");
@@ -361,25 +356,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "next/with-cms").status).toBe("fail");
 	});
 
-	it("notices a Monti route file left at the old app/api/cms folder", async () => {
-		setEnv();
-		const dir = project({
-			"app/api/monti/[...path]/route.ts": null,
-			"app/api/cms/[...path]/route.ts": 'import { createRouteHandler } from "@monti-cms/nextjs";\n',
-		});
-		const { report } = await doctor(dir);
-		const old = byId(report, "upgrade/api-route");
-		expect(old.status).toBe("warn");
-		expect(old.fix).toContain('git mv "app/api/cms" "app/api/monti"');
-		expect(byId(report, "upgrade/api-route").where).toContain("app/api/cms/[...path]/route.ts");
-	});
-
-	it("is quiet when there is no route file at the old api/cms folder", async () => {
-		setEnv();
-		const { report } = await doctor(project());
-		expect(byId(report, "upgrade/api-route").status).toBe("ok");
-	});
-
 	it("warns about a root layout without suppressHydrationWarning, and is quiet once it has it", async () => {
 		setEnv();
 		const dir = project({ "app/layout.tsx": '<html lang="en"><body /></html>\n' });
@@ -407,69 +383,6 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(files.status).toBe("fail");
 		expect(files.fix).toContain("serves /admin");
 		expect(files.fix).toContain('admin: { path: "/admin" }');
-	});
-});
-
-describe("monti doctor on a project that still has the old setup", () => {
-	it("gives the exact steps for the old config files, env names, route group, and options", async () => {
-		setEnv({
-			CMS_DATABASE_URL: "postgres://old",
-			HOST_URL: "https://old.example.com",
-			CMS_SECRET: STRONG_SECRET,
-			AUTH_SECRET: "x",
-		});
-		const dir = project({
-			"cms.config.ts": "export default {};\n",
-			"cms.server.ts": "export const cms = {};\n",
-			"lib/posts.ts": 'import { cms } from "@/cms.server";\nexport const read = () => cms;\n',
-			"monti.config.ts": `${configText()}\nconst legacy = process.env.CMS_DATABASE_URL;\nconst nextHost = undefined;\nconst host = nextHost;\n`,
-			"app/studio/layout.tsx": null,
-			"app/studio/[[...path]]/page.tsx": null,
-			"app/(admin)/studio/layout.tsx": "export default function L() { return <CmsAdminLayout cms={cms} />; }\n",
-			"app/(admin)/studio/[[...path]]/page.tsx": "export default function P() { return <CmsAdminPage cms={cms} />; }\n",
-		});
-		writeFileSync(path.join(dir, ".env.local"), "CMS_DATABASE_URL=postgres://old\nHOST_URL=https://old.example.com\n");
-
-		const report = await runDoctor({ cwd: dir, env: process.env });
-
-		const files = byId(report, "upgrade/config-files");
-		expect(files.status).toBe("warn");
-		expect(files.message).toContain("cms.config.ts and cms.server.ts");
-		expect(files.fix).toContain("one `export const cms = defineConfig");
-		expect(files.fix).toContain("Delete cms.config.ts and cms.server.ts");
-		expect(files.fix).toContain("lib/posts.ts");
-
-		const env = byId(report, "upgrade/env");
-		expect(env.status).toBe("warn");
-		expect(env.where).toContain(".env.local");
-		expect(env.fix).toContain("rename CMS_DATABASE_URL to DATABASE_URL");
-		expect(env.fix).toContain("rename HOST_URL to SITE_URL");
-		expect(env.fix).toContain("environment settings of your host");
-
-		const secrets = byId(report, "secrets/old-secrets");
-		expect(secrets.status).toBe("warn");
-		expect(secrets.fix).toContain("CMS_SECRET: rename it to MONTI_SECRET, keeping the same value");
-		expect(secrets.fix).toContain("AUTH_SECRET: delete it");
-
-		const groups = byId(report, "upgrade/route-groups");
-		expect(groups.status).toBe("warn");
-		expect(groups.fix).toContain('git mv "app/(admin)/studio" "app/studio"');
-		// The files are still found through the group, so the Next files check passes.
-		expect(byId(report, "next/files").status).toBe("ok");
-
-		const text = byId(report, "upgrade/config-text");
-		expect(text.status).toBe("warn");
-		expect(text.fix).toContain("host");
-		expect(text.fix).toContain("DATABASE_URL");
-	});
-
-	it("is quiet about the secret that previousSecrets still reads", async () => {
-		setEnv({ CMS_SECRET: STRONG_SECRET, MONTI_SECRET: STRONG_SECRET });
-		const dir = project({
-			"monti.config.ts": `${configText()}\n// previousSecrets: [process.env.CMS_SECRET]\nexport const previous = [process.env.CMS_SECRET];\n`,
-		});
-		const { report } = await doctor(dir);
-		expect(byId(report, "secrets/old-secrets").status).toBe("ok");
 	});
 });
 
@@ -527,7 +440,7 @@ describe("monti doctor --only", () => {
 		setEnv();
 		const { report } = await doctor(project());
 		const groups = [...new Set(report.checks.map((check) => check.group))];
-		expect(groups).toEqual(["config", "schema", "database", "secrets", "auth", "next", "upgrade"]);
+		expect(groups).toEqual(["config", "schema", "database", "secrets", "auth", "next"]);
 	});
 });
 

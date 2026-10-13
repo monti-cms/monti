@@ -1,7 +1,8 @@
 import { definePlugin } from "@monti-cms/core";
+import { MDX_PLUGIN_NAME } from "./name";
 import type { SyntaxExtension } from "./syntax/types";
 
-export const MDX_PLUGIN_NAME = "mdx";
+export { MDX_PLUGIN_NAME };
 
 export interface MdxPluginOptions {
 	/**
@@ -24,8 +25,7 @@ export const validateMdxOptions = (options: MdxPluginOptions | undefined): void 
  * MDX as a format of the CMS (`@monti-cms/mdx`). Add it to the site config `plugins`.
  *
  * - the `mdx` format: `format: "mdx"` on the read and write APIs, `?format=mdx` on the export and the HTTP API, and the text the AI plugin's model reads and writes;
- * - the source panel of the admin: edit a body as MDX text, checked as it is typed;
- * - the implementation of the store migrations that predate stored documents (`0012` to `0015`), which core only calls when an old store needs them.
+ * - the source panel of the admin: edit a body as MDX text, checked as it is typed.
  *
  * ```ts
  * plugins: [mdx({ syntax: [directiveSyntax()] })]
@@ -37,9 +37,9 @@ export const mdx = (options: MdxPluginOptions = {}) => {
 		name: MDX_PLUGIN_NAME,
 		options,
 		validate: () => validateMdxOptions(options),
-		formats: async () => {
-			const { createServerMdxFormat } = await import("@monti-cms/mdx/server");
-			return { default: createServerMdxFormat(options) };
+		// The format is read on the server only: the parser stays out of the browser bundle (`@monti-cms/mdx/server` is empty there).
+		server: {
+			formats: async () => (await import("@monti-cms/mdx/server")).createServerMdxFormat(options),
 		},
 		admin: () => import("@monti-cms/mdx/admin"),
 	});

@@ -1,5 +1,5 @@
-import { HttpError, handleApiError } from "../../../error-handler";
-import type { RouteContext } from "../../../handler";
+import { CmsError } from "../../../error-handler";
+import { publicRoute } from "../../../handler";
 import { validateSameOrigin } from "../../../security";
 
 /**
@@ -8,32 +8,25 @@ import { validateSameOrigin } from "../../../security";
  *
  * It is a route and not a server action because a server action cannot carry the CMS instance: its closed-over values must be serializable.
  */
-export const POST = async (request: Request, context: RouteContext<{ provider: string }>) => {
-	try {
-		const { cms } = context;
-		validateSameOrigin(cms, request, { form: true });
-		const { provider = "" } = (await context.params) ?? {};
-		const auth = cms.auth();
-		if (!auth.providers.some((method) => method.id === provider)) {
-			throw new HttpError(404, "not_found", "Unknown sign-in method");
-		}
-		const method = auth.providers.find((candidate) => candidate.id === provider);
-		// An email and password method sends what the form holds along; an OAuth method has no fields.
-		let credentials: Record<string, string> | undefined;
-		if (method?.credentials) {
-			const form = await request.formData();
-			const field = (name: string) => (typeof form.get(name) === "string" ? String(form.get(name)) : "");
-			credentials = { email: field("email"), password: field("password") };
-		}
-		const result = await auth.signIn(provider, {
-			redirectTo: cms.site.adminUrl(),
-			request,
-			...(credentials ? { credentials } : {}),
-		});
-		return result instanceof Response ? result : new Response(null, { status: 204 });
-	} catch (error) {
-		// The login connection may redirect by throwing (Next.js does); that signal must reach the host framework.
-		context.cms.auth().rethrow?.(error);
-		return handleApiError(error);
+export const POST = publicRoute<{ provider: string }>(async ({ request, params, cms }) => {
+	validateSameOrigin(cms, request, { form: true });
+	const { provider = "" } = params;
+	const auth = cms.auth();
+	if (!auth.providers.some((method) => method.id === provider)) {
+		throw new CmsError("Unknown sign-in method", "not_found");
 	}
-};
+	const method = auth.providers.find((candidate) => candidate.id === provider);
+	// An email and password method sends what the form holds along; an OAuth method has no fields.
+	let credentials: Record<string, string> | undefined;
+	if (method?.credentials) {
+		const form = await request.formData();
+		const field = (name: string) => (typeof form.get(name) === "string" ? String(form.get(name)) : "");
+		credentials = { email: field("email"), password: field("password") };
+	}
+	const result = await auth.signIn(provider, {
+		redirectTo: cms.site.adminUrl(),
+		request,
+		...(credentials ? { credentials } : {}),
+	});
+	return result instanceof Response ? result : new Response(null, { status: 204 });
+});

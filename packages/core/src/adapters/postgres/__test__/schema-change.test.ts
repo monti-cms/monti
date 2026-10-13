@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import { defineSite } from "../../../config/define";
 import { computeContentHash } from "../../../core/content-hash";
-import type { Entry } from "../../../core/store";
 import { defineCollection } from "../../../schema/collection";
 import { applySchemaChange, checkSchemaChange, planSchemaChange, SchemaChangeError } from "../../../schema-change";
 import type { SchemaMigration } from "../../../schema-file/types";
@@ -103,7 +102,7 @@ describe("schema changes", () => {
 	const siteAfterV2 = createSite(afterConfig(2) as AnyCmsConfig);
 
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
-	const serviceFor = (site: Site) => createContentService<Entry>(storeFor(site), { site });
+	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
 
 	/** The entries every test works on, written under the schema before. */
 	const ids = {} as Record<"category" | "a" | "b" | "c" | "d", string>;
@@ -402,7 +401,7 @@ describe("schema changes", () => {
 
 			for (const [key, row] of rowsAfter) {
 				// The hash is the one the write rules give for what is stored now (and stays defined over schema version 1).
-				expect(row.content_hash, key).toBe(computeContentHash(row.metadata as never, readBodyDoc(row.doc, null)));
+				expect(row.content_hash, key).toBe(computeContentHash(row.metadata as never, readBodyDoc(row.doc)));
 			}
 			// "Unpublished changes" is true or false as it was.
 			expect(differs(rowsAfter, ids.a)).toBe(false);

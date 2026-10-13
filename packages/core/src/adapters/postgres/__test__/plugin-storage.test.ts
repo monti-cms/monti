@@ -13,21 +13,6 @@ runPluginStorageContract({
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		return {
 			storage: (plugin) => createPluginStorage(pool, schemaName, plugin),
-			seedLegacyTable: async (table, rows) => {
-				await pool.query(
-					`CREATE TABLE "${schemaName}"."${table}" (key TEXT PRIMARY KEY, value JSONB NOT NULL, version INTEGER NOT NULL)`,
-				);
-				for (const row of rows) {
-					await pool.query(`INSERT INTO "${schemaName}"."${table}" (key, value, version) VALUES ($1, $2, $3)`, [
-						row.key,
-						JSON.stringify(row.value),
-						row.version,
-					]);
-				}
-			},
-			recordMigration: async (name) => {
-				await pool.query(`INSERT INTO "${schemaName}".cms_migrations (name) VALUES ($1)`, [name]);
-			},
 			close: () => dropIsolatedTestPool(pool, schemaName),
 		};
 	},
@@ -82,14 +67,6 @@ describe("postgres plugin storage specifics", () => {
 		});
 		expect((await createPluginStorage(pool, schemaName, "tx-b").collection("things").get("b"))?.value).toEqual({
 			n: 2,
-		});
-	});
-
-	it("reads only tables of its own schema and refuses names that are not plain identifiers", async () => {
-		await createPluginStorage(pool, schemaName, "reader").once("read-names", async (migration) => {
-			expect(await migration.readLegacyTable("cms_migrations")).not.toBeNull();
-			expect(await migration.readLegacyTable('x"; DROP TABLE y; --')).toBeNull();
-			expect(await migration.readLegacyTable("pg_catalog.pg_class")).toBeNull();
 		});
 	});
 });

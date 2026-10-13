@@ -2,6 +2,7 @@ import { CmsError, type Entry } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, recordOf } from "./apply";
 import { exportEntry, isSyncable, parseEntryFile } from "./entry-file";
 import { pushEntries } from "./outbound";
+import { serverMessages } from "./server.messages";
 import type { ConflictRecord } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
 
@@ -104,11 +105,12 @@ export async function resolveConflict(
 		readonly gitSha?: string;
 	},
 ): Promise<{ readonly resolution: Resolution; readonly pullRequestUrl?: string }> {
+	const t = ctx.cms.site.createTranslator(serverMessages);
 	const target = ctx.target(params.target);
 	const conflict = await ctx.state.conflicts.get(params.target, params.entryId);
-	if (!conflict) throw new CmsError("There is no such conflict", "not_found");
+	if (!conflict) throw new CmsError(t("noConflict"), "not_found");
 	if (params.gitSha !== undefined && params.gitSha !== conflict.gitSha) {
-		throw new CmsError("The file changed in git since you looked at it; reload the conflict", "conflict");
+		throw new CmsError(t("conflictChanged"), "conflict");
 	}
 	if (params.resolution === "server") {
 		const pushed = await pushEntries(ctx, target, [params.entryId]);
@@ -117,10 +119,10 @@ export async function resolveConflict(
 	}
 
 	const parsed = parseEntryFile(conflict.gitText);
-	if (!parsed.ok) throw new GitSyncError(`The git version cannot be read: ${parsed.message}`);
+	if (!parsed.ok) throw new GitSyncError(t("gitVersionUnreadable", { message: parsed.message }));
 	const { file } = parsed;
 	const slug = file.slug ?? (await ctx.format(target)).pattern.parse(conflict.path)?.slug;
-	if (!slug) throw new GitSyncError("The git version has no slug: add `slug` to its front matter");
+	if (!slug) throw new GitSyncError(t("gitVersionNoSlug"));
 	await ctx.withLock(target, async () => {
 		const entry = await readEntry(ctx, params.entryId);
 		let applied: Awaited<ReturnType<typeof applyFile>>;
@@ -135,7 +137,7 @@ export async function resolveConflict(
 				entry,
 			});
 		} catch (error) {
-			throw new GitSyncError(`The git version could not be written to the entry: ${describeError(error)}`);
+			throw new GitSyncError(t("gitVersionNotWritten", { message: describeError(error) }));
 		}
 		await ctx.state.records.put(recordOf(target, { path: conflict.path, sha: conflict.gitSha }, applied, ctx.now()));
 		await ctx.state.conflicts.remove(params.target, params.entryId);

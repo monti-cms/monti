@@ -1,9 +1,12 @@
-import { createActiveTranslator, definePlugin } from "@monti-cms/core";
-import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT, type GitSyncOptions, validateGitSyncConfig } from "./options";
+import { definePlugin } from "@monti-cms/core";
+import {
+	GIT_SYNC_PLUGIN_NAME,
+	GIT_SYNC_TOKEN_SLOT,
+	GIT_SYNC_WEBHOOK_SLOT,
+	type GitSyncOptions,
+	validateGitSyncConfig,
+} from "./options";
 import { settingsMessages } from "./settings.messages";
-
-// `gitSync()` is called from the site config file, so the slot's label is chosen by admin language at read time.
-const t = createActiveTranslator(settingsMessages);
 
 /**
  * Git sync. Add it to the site config `plugins` to sync the published entries of some collections two ways with files in a GitHub repo (a separate content repo,
@@ -36,13 +39,20 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 		...(options.enabled === false
 			? {}
 			: {
-					// The GitHub token is a key of the central API key store, assigned to this slot.
+					// Both secrets are keys of the central API key store, assigned to these slots.
 					keySlots: [
 						{
 							id: GIT_SYNC_TOKEN_SLOT,
 							service: "GitHub",
 							// Worked out with the site of the instance each time, so it follows the admin language.
 							label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
+							// A token was chosen: what waited for one goes out now. In the browser bundle `./server` is an empty entry point.
+							onChange: async (cms) => (await import("@monti-cms/git-sync/server")).onTokenChanged(cms),
+						},
+						{
+							id: GIT_SYNC_WEBHOOK_SLOT,
+							service: "GitHub webhook",
+							label: (site) => site.createTranslator(settingsMessages)("webhookLabel"),
 						},
 					],
 					nav: [{ path: "git-sync", label: "Git sync", icon: "git-branch" }],

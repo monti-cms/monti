@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { mermaidAiContribution } from "./ai";
 import { mermaidBlock } from "./definition";
 
@@ -16,9 +16,8 @@ export { mermaidBlock } from "./definition";
  * `remarkFenceBlocksToMdx`).
  */
 export const mermaid = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "mermaid",
-		options: {},
 		blocks: [mermaidBlock],
 		admin: () => import("@monti-cms/blocks/mermaid/admin"),
 		render: () => import("@monti-cms/blocks/mermaid/render"),

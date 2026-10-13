@@ -5,13 +5,12 @@ import { contentCollection, recordCollection, recordRelationField } from "../../
 import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
-import type { Entry } from "../../../core/store";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import type { PreparedSnapshot, Reference, StorePort } from "../../../services";
 import { createContentStore, migrateContentStore } from "../content-store";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
-type ExtendedStore = ReturnType<typeof createContentStore> & StorePort<Entry>;
+type ExtendedStore = ReturnType<typeof createContentStore> & StorePort;
 
 /**
  * A relation field where a body collection points at an item collection. A multi-select field is preferred (it also tests the order `ordinal`).

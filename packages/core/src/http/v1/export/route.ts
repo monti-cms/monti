@@ -1,9 +1,8 @@
 import type { Cms } from "../../../cms";
 import { exportScopeSchema } from "../../../core/api";
 import type { ExportSnapshot } from "../../../core/store";
-import { exportText } from "../../../format/convert";
-import { unknownFormatError } from "../../../format/unknown";
-import { createExportRefs } from "../../../read";
+import type { StoredDocument } from "../../../doc/stored-document";
+import { createBodyExporter } from "../../../services/body-export";
 import {
 	buildExportArchive,
 	type ExportScope,
@@ -23,22 +22,14 @@ async function exportTexts(
 	scope: ExportScope,
 	format: string,
 ): Promise<ExportTexts> {
-	const registry = await cms.formats();
-	const found = registry.get(format);
-	if (!found) throw unknownFormatError(format, registry);
-	const purpose = scope === "public" ? "read" : "sync";
-	const refsOf = createExportRefs(
-		{ site: cms.site, store: cms.store, mediaStore: cms.mediaStore },
-		scope === "public" ? "published" : "working",
-	);
+	const exporter = await createBodyExporter(cms, {
+		format,
+		purpose: scope === "public" ? "read" : "sync",
+		source: scope === "public" ? "published" : "working",
+	});
 	const bodies = new Map<string, string>();
-	const write = async (key: string, doc: Parameters<typeof refsOf>[0], locale: string) => {
-		const { text } = await exportText(cms.site, registry, format, doc, {
-			locale,
-			purpose,
-			refs: await refsOf(doc, locale),
-		});
-		bodies.set(key, text);
+	const write = async (key: string, doc: StoredDocument, locale: string) => {
+		bodies.set(key, await exporter.text(doc, locale));
 	};
 	for (const entry of snapshot.entries) {
 		if (scope === "public") {
@@ -55,7 +46,7 @@ async function exportTexts(
 			await write(exportTextKey(template.id, "template"), template.doc, cms.site.DEFAULT_LOCALE);
 		}
 	}
-	return { format: { name: found.name, extension: found.extension }, bodies };
+	return { format: exporter.format, bodies };
 }
 
 const buildResponse = async (cms: Cms, scope: ExportScope, format: string | undefined): Promise<Response> => {

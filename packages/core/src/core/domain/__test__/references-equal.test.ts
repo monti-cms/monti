@@ -19,21 +19,15 @@ describe("isReferencesEqual", () => {
 		expect(isReferencesEqual([base], [{ ...base, occurrences: [{ type: "body" }] }])).toBe(false);
 	});
 
-	it("reads an occurrence stored before positions were block ids as the same occurrence in the current shape", () => {
+	it("reads the stored occurrences", () => {
 		const stored = [
-			{ type: "mdx", line: 3, column: 1, blockId: "aaaaaaaa" },
-			{ type: "mdx", line: 9, column: 4 },
 			{ type: "metadata", path: "tagIds", ordinal: 1 },
 			{ type: "body", blockId: "bbbbbbbb" },
-		];
-		expect(readReferenceOccurrences(stored)).toEqual([
-			{ type: "body", blockId: "aaaaaaaa" },
 			{ type: "body" },
-			{ type: "metadata", path: "tagIds", ordinal: 1 },
-			{ type: "body", blockId: "bbbbbbbb" },
-		]);
+		];
+		expect(readReferenceOccurrences(stored)).toEqual(stored);
 		// What is not an occurrence is dropped, and a row without occurrences reads as none.
-		expect(readReferenceOccurrences([{ type: "other" }, null, 4])).toEqual([]);
+		expect(readReferenceOccurrences([{ type: "other" }, { type: "mdx", line: 1, column: 1 }, null, 4])).toEqual([]);
 		expect(readReferenceOccurrences(null)).toEqual([]);
 	});
 });

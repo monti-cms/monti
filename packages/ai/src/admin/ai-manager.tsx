@@ -136,8 +136,8 @@ export function AiManager() {
 	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
 	const featuresQuery = useAiActions();
-	const settingsQuery = useAiSettings();
-	const sharedQuery = useAiShared();
+	const _settingsQuery = useAiSettings();
+	const _sharedQuery = useAiShared();
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
 	const [tab, setTab] = useState<AiTab>("features");

@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { ResolvedAiAction } from "./action";
 import type { AiProviderInput, AiProviderKind, AiProviderView, AiSettingsView } from "./connection";
 import { AiError } from "./errors";
-import { AI_PLUGIN_NAME } from "./plugin-name";
+import { AI_PLUGIN_NAME } from "./name";
 import {
 	type AiDecider,
 	type AiProvider,
@@ -74,7 +74,7 @@ const viewOf = (provider: ResolvedProvider): AiProviderView => ({
 	ready: isReady(provider),
 });
 
-export async function getAiSettingsView(site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
+export async function getAiSettingsView(_site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
 	const { version, providers } = await load(store);
 	return { version, providers: providers.map(viewOf), fake: isFakeAi() };
 }
@@ -176,7 +176,7 @@ export async function updateAiProvider(
 ): Promise<AiSettingsView> {
 	const { providers } = await load(store);
 	const current = providers.find((provider) => provider.id === id);
-	if (!current) throw new AiError("ai_failed", site.createTranslator(settingsMessages)("unknownConnection"));
+	if (!current) throw new AiError("upstream_failed", site.createTranslator(settingsMessages)("unknownConnection"));
 	const keep = input.url.replace(/\/+$/, "") !== current.url ? null : current.keyId;
 	return saveWithKey(store, input, keep, (scoped, keyId) =>
 		writeProviders(
@@ -253,7 +253,7 @@ export async function loadAiRuntime(site: Site, store: AiSettingsStore, spec: Ac
 
 /** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
 export async function usableActionKeys(
-	site: Site,
+	_site: Site,
 	store: AiSettingsStore,
 	actions: ReadonlyArray<ActionConnection & { key: string }>,
 ): Promise<string[]> {
@@ -291,8 +291,8 @@ export async function connectionForCheck(
 		apiKey = key.value;
 	}
 	const t = site.createTranslator(settingsMessages);
-	if (!url || !params.model) throw new AiError("ai_unavailable", t("urlAndModel"));
-	if (!apiKey) throw new AiError("ai_unavailable", unreadable ? t("keyAgain") : t("key"));
+	if (!url || !params.model) throw new AiError("service_unavailable", t("urlAndModel"));
+	if (!apiKey) throw new AiError("service_unavailable", unreadable ? t("keyAgain") : t("key"));
 	const config = { apiKey, model: params.model };
 	return params.kind === "chat"
 		? { model: params.model, generator: createGenerator(site, { baseUrl: url, ...config }) }

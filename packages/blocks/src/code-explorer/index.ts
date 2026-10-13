@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { codeExplorerBlock } from "./definition";
 
 export { codeExplorerBlock } from "./definition";
@@ -13,9 +13,8 @@ export { codeExplorerBlock } from "./definition";
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
 export const codeExplorer = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "code-explorer",
-		options: {},
 		blocks: [codeExplorerBlock],
 		admin: () => import("@monti-cms/blocks/code-explorer/admin"),
 		render: () => import("@monti-cms/blocks/code-explorer/render"),

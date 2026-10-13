@@ -1,15 +1,18 @@
 import type { Site } from "@monti-cms/core/client";
-import { adminRoute, HttpError, json, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/plugin/server";
 import { type AiRunBody, aiRunBodySchemaOf, inputSchemaFor, type ResolvedAiAction } from "../../action";
 import { actionWithDraft, getAction } from "../../actions";
 import { coreMessages } from "../../core.messages";
 import { AiError } from "../../errors";
+import { AI_PLUGIN_NAME } from "../../name";
 import { type AiCall, type AiRunDeps, runAiAction, streamAiAction } from "../../run";
 import { runMessages } from "../../run.messages";
 import { loadAiRuntime } from "../../settings";
 import { loadSharedTexts } from "../../shared";
 import { aiStoreFor } from "../../store";
 import { aiRunDeps } from "../ai-route";
+
+const log = pluginLog(AI_PLUGIN_NAME);
 
 /** Number of concurrent calls in a batch run. */
 const CONCURRENCY = 3;
@@ -50,11 +53,11 @@ function streamResponse(site: Site, run: (send: (event: StreamEvent) => void) =>
 			} catch (error) {
 				// If the screen withdrew the request (e.g. closed the dialog), nobody is receiving, so end quietly.
 				if (error instanceof Error && error.name === "AbortError") return close();
-				const known = error instanceof HttpError;
-				if (!known) console.error("AI stream failed:", error);
+				const known = error instanceof CmsError;
+				if (!known) log.error("stream failed:", error);
 				send({
 					type: "error",
-					code: known ? error.code : "ai_failed",
+					code: known ? error.code : "upstream_failed",
 					message: known ? error.message : t("noAnswer"),
 				});
 			}
@@ -81,7 +84,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 		body.draft === undefined
 			? await getAction(site, store, body.action)
 			: await actionWithDraft(site, store, body.action, body.draft, body.draftBase);
-	if (body.draft === undefined && !action.enabled) throw new AiError("ai_unavailable", t("disabled"));
+	if (body.draft === undefined && !action.enabled) throw new AiError("service_unavailable", t("disabled"));
 
 	const runtime = await loadAiRuntime(site, store, action);
 	const deps = {
@@ -92,8 +95,8 @@ export const POST = adminRoute(async ({ request, cms }) => {
 	const started = Date.now();
 
 	if (body.stream) {
-		if (body.inputs !== undefined) throw new AiError("ai_invalid_input", t("streamOneInput"));
-		if (!deps.generator) throw new AiError("ai_unavailable", t("noGenerator"));
+		if (body.inputs !== undefined) throw new AiError("invalid_input", t("streamOneInput"));
+		if (!deps.generator) throw new AiError("service_unavailable", t("noGenerator"));
 		const parsed = parseWith(
 			inputSchemaFor(action.input, site.createTranslator(coreMessages)),
 			body.input,
@@ -102,7 +105,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 		const call: AiCall = { input: parsed as Record<string, unknown>, env: body.env, request: body.request };
 		return streamResponse(site, async (send) => {
 			const result = await streamAiAction(action, call, deps, (text) => send({ type: "delta", text }));
-			console.info(`[@monti-cms/ai] ${action.key} model=${model} stream ${Date.now() - started}ms`);
+			log.info(`${action.key} model=${model} stream ${Date.now() - started}ms`);
 			send({ type: "done", result });
 		});
 	}
@@ -110,8 +113,8 @@ export const POST = adminRoute(async ({ request, cms }) => {
 	if (body.inputs === undefined) {
 		const result = await runOne(action, body, body.input, deps);
 		// The body and result are not kept.
-		console.info(`[@monti-cms/ai] ${action.key} model=${model} ${Date.now() - started}ms`);
-		return json({ result });
+		log.info(`${action.key} model=${model} ${Date.now() - started}ms`);
+		return ok({ result });
 	}
 
 	const inputs = body.inputs;
@@ -124,15 +127,13 @@ export const POST = adminRoute(async ({ request, cms }) => {
 				results[index] = { result: await runOne(action, body, inputs[index], deps) };
 			} catch (error) {
 				// A format error in one input fails only that input.
-				if (error instanceof AiError && error.code === "ai_failed") results[index] = { error: error.message };
+				if (error instanceof AiError && error.code === "upstream_failed") results[index] = { error: error.message };
 				else throw error;
 			}
 		}
 	};
 	await Promise.all(Array.from({ length: Math.min(CONCURRENCY, inputs.length) }, worker));
 	const failed = results.filter((item) => "error" in item).length;
-	console.info(
-		`[@monti-cms/ai] ${action.key} inputs=${inputs.length} failed=${failed} model=${model} ${Date.now() - started}ms`,
-	);
-	return json({ results });
+	log.info(`${action.key} inputs=${inputs.length} failed=${failed} model=${model} ${Date.now() - started}ms`);
+	return ok({ results });
 });

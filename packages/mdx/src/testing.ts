@@ -15,7 +15,6 @@ import { toDocument } from "./to-document";
 
 export { readSample, readSamples, SAMPLES_DIR } from "./__test__/fixtures/samples";
 export { analyze, bodyDocument, bodyFromMdx, parseMdxAst, serialize, toDocument };
-export { insertSoftBreaks, type SoftBreakResult } from "./soft-breaks";
 export { syntaxRemarkPlugins } from "./syntax-config";
 
 /**

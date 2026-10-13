@@ -10,12 +10,12 @@ import type {
 	AiSiteView,
 } from "./action";
 import type { AiSlot } from "./definition";
-import { AI_PLUGIN_NAME } from "./plugin-name";
+import { AI_PLUGIN_NAME } from "./name";
 import type { DEFAULT_AI_ACTIONS } from "./presets";
 import { resolveAiActions } from "./resolve";
 
 /**
- * AI actions of one site (`aiPlugin({ actions })`). The names (keys) and the input/result types are read from the config type; the actions to run are resolved from a
+ * AI actions of one site (`ai({ actions })`). The names (keys) and the input/result types are read from the config type; the actions to run are resolved from a
  * site (`aiRegistryOf`). Both the server (running) and the browser (calling by slot and name) use them.
  */
 

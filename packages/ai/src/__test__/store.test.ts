@@ -1,6 +1,6 @@
 import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { createContentLookup } from "@monti-cms/core/plugin/server";
-import { type ContentStore, createContentService, type Entry } from "@monti-cms/core/runtime";
+import { type ContentStore, createContentService } from "@monti-cms/core/runtime";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -22,14 +22,13 @@ import {
 	resetAction,
 	updateAction,
 } from "../actions";
-import { migrateAi } from "../migrate";
 import { aiRegistryOf } from "../registry";
 import { type AiStore, createAiStore } from "../store";
 
 const AI_ACTIONS = aiRegistryOf(testSite).actions;
 
 describe("AI action edited-value store", () => {
-	const cms = fakeCms({ config: testConfig });
+	const _cms = fakeCms({ config: testConfig });
 	let pool: Pool;
 	let schemaName: string;
 	let content: ContentStore;
@@ -37,7 +36,6 @@ describe("AI action edited-value store", () => {
 	/** Creates the core tables, then the AI plugin tables (same order as `monti db:migrate`). */
 	const migrate = async () => {
 		await migrateContentStore(pool, { schema: schemaName, site: testSite });
-		await migrateAi(pluginStorageFor(pool, schemaName, "ai"), cms);
 	};
 
 	beforeAll(async () => {
@@ -82,9 +80,9 @@ describe("AI action edited-value store", () => {
 			code: "conflict",
 		});
 		await expect(updateAction(testSite, store, "summary", 1, { prompt: "{{title}}" })).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 		});
-		await expect(updateAction(testSite, store, "nope", 0, {})).rejects.toMatchObject({ code: "ai_unknown_action" });
+		await expect(updateAction(testSite, store, "nope", 0, {})).rejects.toMatchObject({ code: "not_found" });
 	});
 
 	it("resetting to defaults restores the prompt to the definition and leaves the enabled flag as is", async () => {
@@ -95,43 +93,9 @@ describe("AI action edited-value store", () => {
 		expect((await getAction(testSite, store, "slug")).prompt).toBe(AI_ACTIONS.slug?.prompt);
 	});
 
-	it("moves edited values of the legacy action table once, and does not delete the legacy table", async () => {
-		await pool.query(`
-			CREATE TABLE "${schemaName}".ai_features (
-				id UUID PRIMARY KEY, builtin TEXT UNIQUE, spec JSONB NOT NULL,
-				version INTEGER NOT NULL DEFAULT 1,
-				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-			)`);
-		await pool.query(
-			`INSERT INTO "${schemaName}".ai_features (id, builtin, spec) VALUES
-			 (gen_random_uuid(), 'codeFold', $1), (gen_random_uuid(), 'mediaAlt', $2), (gen_random_uuid(), NULL, '{}')`,
-			[
-				JSON.stringify({ prompt: "운영자 지시문", enabled: false, modelName: "m-1", inputs: ["code", "title"] }),
-				JSON.stringify({ prompt: "지운 기능" }),
-			],
-		);
-		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name LIKE 'plugin:ai:%'`);
-		await migrate();
-		expect(await getAction(testSite, store, "codeFold")).toMatchObject({
-			prompt: "운영자 지시문",
-			enabled: false,
-			modelName: "m-1",
-			send: ["code"],
-		});
-		const keys = await pluginStorageFor(pool, schemaName, "ai").collection("action-overrides").list();
-		expect(keys.map((item) => item.key)).not.toContain("mediaAlt");
-
-		// After moving once, later changes to the legacy table are not moved again.
-		await pool.query(`UPDATE "${schemaName}".ai_features SET spec = '{"prompt": "다시"}' WHERE builtin = 'codeFold'`);
-		await migrate();
-		expect((await getAction(testSite, store, "codeFold")).prompt).toBe("운영자 지시문");
-		const legacy = await pool.query(`SELECT count(*)::int AS n FROM "${schemaName}".ai_features`);
-		expect(legacy.rows[0]?.n).toBe(3);
-	});
-
 	it("the core content lookup used by code checks finds slugs used by other posts in the same collection and language", async () => {
 		const entry = (
-			await createContentService<Entry>(content, { site: testSite }).createDraft({
+			await createContentService(content, { site: testSite }).createDraft({
 				collection: "category",
 				slug: "used-address",
 				metadata: { title: "주소 확인" },
@@ -178,7 +142,7 @@ describe("AI action edited-value store", () => {
 			"oneOf",
 		]);
 		await expect(createCustomAction(testSite, store, base, { prompt: "{{title}}" })).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 		});
 		await deleteCustomAction(testSite, store, created.key, created.version);
 	});
@@ -213,17 +177,17 @@ describe("AI action edited-value store", () => {
 		// Only materials of the chosen slots are sent (required inputs of the selection slot are always sent).
 		expect(action.send).toEqual(["selection", "title"]);
 
-		await expect(resetAction(testSite, store, created.key, 2)).rejects.toMatchObject({ code: "ai_invalid_input" });
+		await expect(resetAction(testSite, store, created.key, 2)).rejects.toMatchObject({ code: "invalid_input" });
 		await expect(
 			createCustomAction(testSite, store, { label: "x", surface: { slot: "field", field: "nope" }, result: "text" }),
-		).rejects.toMatchObject({ code: "ai_invalid_input" });
+		).rejects.toMatchObject({ code: "invalid_input" });
 		await expect(
 			createCustomAction(testSite, store, { label: "x", surface: { slot: "selection" }, result: "candidates" }),
-		).rejects.toMatchObject({ code: "ai_invalid_input" });
+		).rejects.toMatchObject({ code: "invalid_input" });
 
 		await deleteCustomAction(testSite, store, created.key, 2);
 		expect((await listActions(testSite, store)).some((item) => item.key === created.key)).toBe(false);
-		await expect(getAction(testSite, store, created.key)).rejects.toMatchObject({ code: "ai_unknown_action" });
-		await expect(deleteCustomAction(testSite, store, "summary", 0)).rejects.toMatchObject({ code: "ai_invalid_input" });
+		await expect(getAction(testSite, store, created.key)).rejects.toMatchObject({ code: "not_found" });
+		await expect(deleteCustomAction(testSite, store, "summary", 0)).rejects.toMatchObject({ code: "invalid_input" });
 	});
 });

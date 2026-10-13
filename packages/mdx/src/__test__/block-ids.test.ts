@@ -1,14 +1,8 @@
-import {
-	BLOCK_ID_PATTERN,
-	type CmsNode,
-	forEachBlock,
-	type StoredDocument,
-	withoutBlockIds,
-} from "@monti-cms/core/document";
+import { BLOCK_ID_PATTERN, type CmsNode, forEachBlock, type StoredDocument } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { computeContentHash } from "../../../core/src/core/content-hash";
 import { testSite } from "../../../core/test/site";
-import { bodyFromDocument, bodyFromMdx } from "../body";
+import { bodyFromMdx } from "../body";
 
 const docOf = (mdx: string, previous?: StoredDocument | null): StoredDocument => {
 	const { doc } = bodyFromMdx(testSite, mdx, undefined, { previous });
@@ -92,21 +86,5 @@ describe("block ids and MDX", () => {
 		expect(idOf(edited, "Title", "heading")).toBe(idOf(first, "Title", "heading"));
 		const known = new Set(blocks(first).map((block) => block.id));
 		expect(known.has(idOf(edited, "New paragraph.") as string)).toBe(false);
-	});
-
-	it("are kept from a stored document, and inherited when it has none", () => {
-		const first = docOf(SAMPLE);
-		expect(bodyFromDocument(testSite, first).doc).toEqual(first);
-		const bare = { ...first, content: withoutBlockIds(first.content) };
-		expect(bodyFromDocument(testSite, bare, undefined, { previous: first }).doc).toEqual(first);
-		const fresh = bodyFromDocument(testSite, bare).doc as StoredDocument;
-		expect(blocks(fresh).every((block) => BLOCK_ID_PATTERN.test(block.id))).toBe(true);
-	});
-
-	it("replace an id that is not a valid block id", () => {
-		const first = docOf("One.\n");
-		const odd = { ...first, content: [{ ...(first.content[0] as CmsNode), id: "NOT-AN-ID" }] };
-		const id = (bodyFromDocument(testSite, odd).doc as StoredDocument).content[0]?.id;
-		expect(id).toMatch(BLOCK_ID_PATTERN);
 	});
 });

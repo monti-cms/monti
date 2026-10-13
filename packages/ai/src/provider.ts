@@ -1,4 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { pluginLog } from "@monti-cms/core";
 import { type Site, slugify } from "@monti-cms/core/client";
 import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
 import { z } from "zod";
@@ -6,7 +7,10 @@ import type { AiInputKind } from "./action";
 import type { AiModelInfo } from "./connection";
 import type { AiResult } from "./definition";
 import { AiError } from "./errors";
+import { AI_PLUGIN_NAME } from "./name";
 import { providerMessages } from "./provider.messages";
+
+const log = pluginLog(AI_PLUGIN_NAME);
 
 /** The sites a message is written for: anything that has a translator for the admin language. */
 type ProviderSite = Pick<Site, "createTranslator">;
@@ -94,13 +98,13 @@ function serviceMessage(detail: string): string {
 function providerError(site: ProviderSite, status: number | undefined, detail: string): AiError {
 	const t = site.createTranslator(providerMessages);
 	const message = serviceMessage(detail);
-	console.error("AI provider error:", status, message);
+	log.error("provider error:", status, message);
 	const withDetail = (text: string) => (message ? `${text} — ${message}` : text);
-	if (status === 401 || status === 403) return new AiError("ai_unavailable", withDetail(t("service.key")));
-	if (status === 402) return new AiError("ai_unavailable", withDetail(t("service.credit")));
-	if (status === 404) return new AiError("ai_failed", withDetail(t("service.address")));
-	if (status === 429) return new AiError("ai_rate_limited", withDetail(t("service.rateLimited")));
-	return new AiError("ai_failed", withDetail(t("service.problem")));
+	if (status === 401 || status === 403) return new AiError("service_unavailable", withDetail(t("service.key")));
+	if (status === 402) return new AiError("service_unavailable", withDetail(t("service.credit")));
+	if (status === 404) return new AiError("upstream_failed", withDetail(t("service.address")));
+	if (status === 429) return new AiError("rate_limited", withDetail(t("service.rateLimited")));
+	return new AiError("upstream_failed", withDetail(t("service.problem")));
 }
 
 const isAbort = (error: unknown) => error instanceof Error && error.name === "AbortError";
@@ -218,13 +222,13 @@ export function createGenerator(
 				else if (part.type === "error") {
 					const error = unwrap(part.error);
 					if (isAbort(error)) throw error;
-					console.warn(`[@monti-cms/ai] ${config.model} stream failed: ${failureNote(error)}`);
+					log.warn(`${config.model} stream failed: ${failureNote(error)}`);
 					if (APICallError.isInstance(error)) {
 						throw providerError(site, error.statusCode, error.responseBody ?? error.message);
 					}
-					throw new AiError("ai_failed", t("streamCut"));
+					throw new AiError("upstream_failed", t("streamCut"));
 				} else if (part.type === "finish" && part.finishReason === "length") {
-					throw new AiError("ai_failed", t("tooLong"));
+					throw new AiError("upstream_failed", t("tooLong"));
 				}
 			}
 		},
@@ -237,7 +241,7 @@ export function createGenerator(
 					const error = unwrap(caught);
 					lastError = error;
 					if (isAbort(error)) throw error;
-					console.warn(`[@monti-cms/ai] ${config.model} ${mode} failed: ${failureNote(error)}`);
+					log.warn(`${config.model} ${mode} failed: ${failureNote(error)}`);
 					if (!shouldTryNext(error)) break;
 				}
 			}
@@ -245,9 +249,9 @@ export function createGenerator(
 				throw providerError(site, lastError.statusCode, lastError.responseBody ?? lastError.message);
 			}
 			if (isTruncated(lastError)) {
-				throw new AiError("ai_failed", t("tooLongModel"));
+				throw new AiError("upstream_failed", t("tooLongModel"));
 			}
-			throw new AiError("ai_failed", t("unreadable"));
+			throw new AiError("upstream_failed", t("unreadable"));
 		},
 	};
 }
@@ -273,7 +277,7 @@ export function createDecider(site: ProviderSite, config: { url: string; apiKey:
 				});
 			} catch (error) {
 				if (isAbort(error)) throw error;
-				throw new AiError("ai_failed", t("deciderUnreachable"));
+				throw new AiError("upstream_failed", t("deciderUnreachable"));
 			}
 			const text = await response.text();
 			if (!response.ok) throw providerError(site, response.status, text);
@@ -287,8 +291,8 @@ export function createDecider(site: ProviderSite, config: { url: string; apiKey:
 				})(),
 			);
 			if (!parsed.success) {
-				console.error("Decision response has an unexpected shape:", text.slice(0, 500));
-				throw new AiError("ai_failed", t("deciderShape"));
+				log.error("the decision response has an unexpected shape:", text.slice(0, 500));
+				throw new AiError("upstream_failed", t("deciderShape"));
 			}
 			return parsed.data.answers;
 		},
@@ -311,7 +315,7 @@ export async function listModels(
 		});
 	} catch (error) {
 		if (isAbort(error)) throw error;
-		throw new AiError("ai_failed", t("unreachable"));
+		throw new AiError("upstream_failed", t("unreachable"));
 	}
 	if (response.status === 404) return [];
 	if (!response.ok) throw providerError(site, response.status, await response.text());

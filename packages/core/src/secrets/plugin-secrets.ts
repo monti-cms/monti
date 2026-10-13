@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 import { problemText } from "../core/problem";
 import { CmsError } from "../core/store";
 
@@ -16,18 +16,6 @@ const PREFIX = "mk1";
 const PLUGIN_NAME = /^[a-z][a-z0-9-]*$/;
 const KEY_BYTES = 32;
 
-/** An older value format a plugin wrote before this API existed, so its stored values stay readable. Decrypt only: new values never use it. */
-export interface LegacySecretFormat {
-	/** First part of the old value (`v1` for `v1:<iv>:<tag>:<body>`). */
-	readonly prefix: string;
-	/** The old key was `sha256(domain + secret)`; this is the `domain` string. */
-	readonly domain: string;
-}
-
-export interface PluginSecretsOptions {
-	readonly legacy?: LegacySecretFormat;
-}
-
 export interface PluginSecrets {
 	/** Whether the server config has a `secret`. Without one, `encrypt` and `deriveKey` throw (`secret_not_configured`) and `decrypt` only reads previous secrets' values. */
 	readonly available: boolean;
@@ -37,8 +25,7 @@ export interface PluginSecrets {
 	 */
 	encrypt(plain: string): string;
 	/**
-	 * Decrypts a value of this plugin. It uses the key the value names (the current secret's or a previous secret's), or the plugin's legacy
-	 * format if it declared one. `null` if the value is not this plugin's, was made with an unknown secret, or is corrupted.
+	 * Decrypts a value of this plugin. It uses the key the value names (the current secret's or a previous secret's). `null` if the value is not this plugin's, was made with an unknown secret, or is corrupted.
 	 */
 	decrypt(stored: string): string | null;
 	/** Whether the value is in the current format and encrypted with the current secret. If not, `decrypt` it and `encrypt` it again. */
@@ -95,23 +82,10 @@ export function createSecretsVault(master: { readonly secret?: string; readonly 
 	const previous = [...new Set(master.previousSecrets ?? [])].filter((secret) => secret && secret !== current);
 
 	return {
-		forPlugin(plugin: string, options: PluginSecretsOptions = {}): PluginSecrets {
+		forPlugin(plugin: string): PluginSecrets {
 			if (!PLUGIN_NAME.test(plugin)) throw new Error(`cms secrets: invalid plugin name "${plugin}"`);
 			const now = current ? pluginKey(current, plugin) : undefined;
 			const before = previous.map((secret) => pluginKey(secret, plugin));
-			const { legacy } = options;
-
-			const decryptLegacy = (stored: string): string | null => {
-				if (!legacy) return null;
-				const [prefix, iv, tag, body] = stored.split(":");
-				if (prefix !== legacy.prefix || !iv || !tag || !body) return null;
-				for (const secret of [current, ...previous]) {
-					if (!secret) continue;
-					const plain = open(createHash("sha256").update(`${legacy.domain}${secret}`).digest(), iv, tag, body);
-					if (plain !== null) return plain;
-				}
-				return null;
-			};
 
 			return {
 				available: Boolean(now),
@@ -130,7 +104,7 @@ export function createSecretsVault(master: { readonly secret?: string; readonly 
 				},
 				decrypt(stored) {
 					const [prefix, id, iv, tag, body] = stored.split(":");
-					if (prefix !== PREFIX) return decryptLegacy(stored);
+					if (prefix !== PREFIX) return null;
 					if (!id || !iv || !tag || !body) return null;
 					const found = [now, ...before].find((candidate) => candidate?.id === id);
 					return found ? open(found.key, iv, tag, body) : null;

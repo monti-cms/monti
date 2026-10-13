@@ -1,5 +1,4 @@
 import { parseSchemaFile } from "./format";
-import type { SchemaFile } from "./types";
 
 /** What error messages call the schema. */
 const SCHEMA_SOURCE_NAME = "monti.schema.ts";

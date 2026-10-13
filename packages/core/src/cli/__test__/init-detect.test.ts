@@ -45,7 +45,6 @@ describe("detecting the app", () => {
 			devPort: 3000,
 			envLocalIgnored: true,
 			existingConfig: undefined,
-			legacyConfig: [],
 		});
 	});
 
@@ -111,13 +110,9 @@ describe("detecting the app", () => {
 		expect(posts?.keys.find((key) => key.name === "date")?.type).toBe("date");
 	});
 
-	it("reads an existing monti.config.ts and the earlier cms.config.ts", () => {
+	it("reads an existing monti.config.ts", () => {
 		expect(detectApp(fixtureApp({ "monti.config.ts": "" })).existingConfig).toBe("monti.config.ts");
 		expect(detectApp(fixtureApp({ ...SRC_APP, "src/monti.config.ts": "" })).existingConfig).toBe("src/monti.config.ts");
-		expect(detectApp(fixtureApp({ "cms.config.ts": "", "cms.server.ts": "" })).legacyConfig).toEqual([
-			"cms.config.ts",
-			"cms.server.ts",
-		]);
 	});
 
 	it("reads the port from the dev script", () => {

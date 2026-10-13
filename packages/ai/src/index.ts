@@ -22,7 +22,7 @@ export {
 	aiInput,
 	defineValidator,
 } from "./action";
-export { aiPlugin } from "./plugin";
+export { ai } from "./plugin";
 export {
 	type AiFieldTarget,
 	aiPresets,

@@ -10,7 +10,7 @@ import { aiCommonMessages } from "./ai-common.messages";
 import { useAiAction } from "./use-ai-action";
 
 export interface AiButtonProps<K extends AiActionKey<Config>, Config extends AnyCmsConfig = AnyCmsConfig> {
-	/** Action name to call (`aiPlugin({ actions })` in the site config). */
+	/** Action name to call (`ai({ actions })` in the site config). */
 	action: K;
 	/** Input read on click. Names and types come from the action definition. */
 	input: () => AiActionInputOf<K, Config>;

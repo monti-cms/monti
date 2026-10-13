@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { fakeCms } from "../../cms";
 import type { ApiKeyList, ApiKeyView } from "../../core/api-keys";
-import { PATCH as patchKey, DELETE as removeKey } from "../../http/v1/api-keys/[id]/route";
-import { GET as listKeys, POST as postKey } from "../../http/v1/api-keys/route";
+import { PATCH as patchKeyHandler, DELETE as removeKeyHandler } from "../../http/v1/api-keys/[id]/route";
+import { GET as listKeysHandler, POST as postKeyHandler } from "../../http/v1/api-keys/route";
+import { routeCaller } from "../../testing";
+
+const patchKey = routeCaller(patchKeyHandler);
+const removeKey = routeCaller(removeKeyHandler);
+const listKeys = routeCaller(listKeysHandler);
+const postKey = routeCaller(postKeyHandler);
 
 const cmsWithSecret = () => fakeCms({ server: { secret: "a-long-enough-test-secret" } });
 const VALUE = "sk-ant-api03-abcdefghij3f9a";
@@ -49,6 +55,52 @@ describe("api key store", () => {
 		expect([second.name, third.name]).toEqual(["Anthropic 2", "Anthropic 3"]);
 	});
 
+	it("keeps names unique without regard to case, also when two keys are saved at the same moment", async () => {
+		const cms = cmsWithSecret();
+		const saved = await Promise.allSettled([
+			cms.apiKeys.add({ name: "Anthropic", value: VALUE }),
+			cms.apiKeys.add({ name: "ANTHROPIC", value: `${VALUE}2` }),
+		]);
+		expect(saved.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+		expect(saved.find((result) => result.status === "rejected")).toMatchObject({
+			reason: { code: "key_name_taken" },
+		});
+		expect(await cms.apiKeys.list()).toHaveLength(1);
+	});
+
+	it("frees a name when its key is renamed or deleted", async () => {
+		const cms = cmsWithSecret();
+		const key = await cms.apiKeys.add({ name: "Old", value: VALUE });
+		const renamed = await cms.apiKeys.update(key.id, { expectedVersion: key.version, name: "New" });
+		await cms.apiKeys.add({ name: "old", value: `${VALUE}2` });
+		await expect(cms.apiKeys.update(key.id, { expectedVersion: renamed.version, name: "OLD" })).rejects.toMatchObject({
+			code: "key_name_taken",
+		});
+		await cms.apiKeys.remove(key.id, { expectedVersion: renamed.version });
+		await cms.apiKeys.add({ name: "new", value: `${VALUE}3` });
+	});
+
+	it("reuses a key that has the same value, and names a new one when there is none", async () => {
+		const cms = cmsWithSecret();
+		const first = await cms.apiKeys.findOrAdd({ baseName: "GitHub", value: VALUE });
+		expect((await cms.apiKeys.findOrAdd({ baseName: "Other", value: VALUE })).id).toBe(first.id);
+		expect((await cms.apiKeys.findOrAdd({ baseName: "GitHub", value: `${VALUE}2` })).name).toBe("GitHub 2");
+	});
+
+	it("refuses to delete a key that is used unless forced, and deletes the key with its uses together", async () => {
+		const cms = cmsWithSecret();
+		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
+		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
+		await expect(cms.apiKeys.remove(key.id, { expectedVersion: key.version })).rejects.toMatchObject({
+			code: "key_in_use",
+			serverVersion: key.version,
+			details: { uses: [{ plugin: "ai", ref: "connection:a", label: "ai" }] },
+		});
+		expect(await cms.apiKeys.get(key.id)).not.toBeNull();
+		await cms.apiKeys.remove(key.id, { expectedVersion: key.version, force: true });
+		expect(await cms.apiKeys.get(key.id)).toBeNull();
+	});
+
 	it("renames and replaces the value under the same id, keeping the places that use it", async () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
@@ -92,9 +144,9 @@ describe("api key store", () => {
 		const cms = cmsWithSecret();
 		const key = await cms.apiKeys.add({ name: "Anthropic", value: VALUE });
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
-		await cms.apiKeys.remove(key.id, { expectedVersion: key.version });
+		await cms.apiKeys.remove(key.id, { expectedVersion: key.version, force: true });
 		expect(await cms.apiKeys.read(key.id)).toBeNull();
-		expect(await cms.storage("core-keys").collection("uses").list()).toEqual([]);
+		expect(await cms.storage("core-keys").collection("assignments").list()).toEqual([]);
 	});
 
 	it("reports a value that cannot be decrypted any more as unreadable", async () => {
@@ -144,12 +196,12 @@ describe("/v1/api-keys", () => {
 		const refused = await removeKey(request("DELETE", url), { cms, params });
 		expect(refused.status).toBe(409);
 		const body = await refused.json();
-		expect(body.code).toBe("key_in_use");
-		expect(body.details.uses).toEqual([{ plugin: "ai", ref: "connection:a", label: "ai" }]);
+		expect(body.error.code).toBe("key_in_use");
+		expect(body.error.details.uses).toEqual([{ plugin: "ai", ref: "connection:a", label: "ai" }]);
 		expect(await cms.apiKeys.get(key.id)).not.toBeNull();
 
 		const forced = await removeKey(request("DELETE", `${url}&force=true`), { cms, params });
-		expect(forced.status).toBe(200);
+		expect(forced.status).toBe(204);
 		expect(await cms.apiKeys.get(key.id)).toBeNull();
 	});
 
@@ -160,6 +212,6 @@ describe("/v1/api-keys", () => {
 			cms,
 			params: Promise.resolve({ id: key.id }),
 		});
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(204);
 	});
 });

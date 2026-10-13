@@ -1,12 +1,13 @@
 import type { TextCheckerLimits } from "@monti-cms/core";
-import { createActiveTranslator } from "@monti-cms/core";
+import { createActiveTranslator, pluginError, resolveTextCheckerLimits } from "@monti-cms/core";
 import { bareunMessages } from "./messages";
 
 // `bareun()` is called from the site config file, so the default name is chosen by display language at read time.
 const t = createActiveTranslator(bareunMessages);
 
-/** Name used to find the Bareun checker in the site config `plugins`. */
-export const BAREUN_PLUGIN_NAME = "text-check-bareun";
+import { BAREUN_PLUGIN_NAME } from "./name";
+
+export { BAREUN_PLUGIN_NAME };
 
 /** Id of the plugin's one API key slot. */
 export const BAREUN_KEY_SLOT = "key";
@@ -38,17 +39,14 @@ export interface ResolvedBareunOptions {
 	readonly limits: TextCheckerLimits;
 }
 
-const DEFAULT_LIMITS: TextCheckerLimits = { maxSegments: 100, maxChars: 10_000 };
+/** Bareun takes fewer characters per request than the route default. */
+const DEFAULT_LIMITS = { maxSegments: 100, maxChars: 10_000 };
 
 /** Fills in defaults and rejects invalid values. */
 export function resolveBareunOptions(options: BareunOptions = {}): ResolvedBareunOptions {
 	const baseUrl = (options.baseUrl ?? "https://api.bareun.ai").replace(/\/+$/, "");
-	if (!/^https?:\/\//.test(baseUrl)) throw new Error(`bareun: baseUrl must be an http(s) URL`);
-	const limits = { ...DEFAULT_LIMITS, ...options.limits };
-	for (const [key, value] of Object.entries(limits)) {
-		if (value !== undefined && (!Number.isInteger(value) || value <= 0))
-			throw new Error(`bareun: limits.${key} must be a positive integer`);
-	}
+	if (!/^https?:\/\//.test(baseUrl)) throw pluginError(BAREUN_PLUGIN_NAME, `baseUrl must be an http(s) URL`);
+	const limits = resolveTextCheckerLimits(options.limits, DEFAULT_LIMITS, "bareun");
 	const label = options.label?.trim();
 	return {
 		baseUrl,

@@ -1,13 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { pullTarget } from "./inbound";
+import { readWebhookSecret } from "./keys";
 import type { ResolvedTarget } from "./options";
-import { readWebhookSecret } from "./settings";
 import type { PullSummary } from "./state";
 import type { SyncContext } from "./sync";
 
 /**
  * The GitHub webhook (`POST /api/monti/v1/git-sync/webhook`, content type `application/json`). GitHub signs the raw body with the webhook secret
- * (`X-Hub-Signature-256: sha256=<hmac>`); the secret is the one saved on the plugin's admin screen. The events it handles:
+ * (`X-Hub-Signature-256: sha256=<hmac>`); the secret is the key assigned to the plugin's `webhook-secret` key slot. The events it handles:
  *
  * - `push` to the branch of a target: the target is pulled.
  */
@@ -40,7 +40,7 @@ export async function handleWebhook(
 	ctx: SyncContext,
 	delivery: { readonly rawBody: string; readonly signature: string | null; readonly event: string | null },
 ): Promise<WebhookOutcome> {
-	const secret = await readWebhookSecret(ctx);
+	const secret = await readWebhookSecret(ctx.cms);
 	if (!secret) {
 		return {
 			status: 503,

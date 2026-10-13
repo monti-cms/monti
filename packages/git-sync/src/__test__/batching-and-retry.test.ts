@@ -151,7 +151,7 @@ describe("a failed push is retried through the outbox, not lost", () => {
 		for (let round = 0; round < 3; round += 1) await h.cms.events.retry({ all: true });
 		expect(await h.cms.events.counts()).toMatchObject({ failed: 0, dead: 0 });
 
-		// Saving the token (the Settings tab) sends what waited, and delivers the deferred events.
+		// Assigning the token (the Settings tab) sends what waited, and delivers the deferred events.
 		const request = (path: string, method: string, body: unknown) =>
 			h.cms.handle(
 				new Request(`http://localhost/api/monti/${path}`, {
@@ -166,8 +166,7 @@ describe("a failed push is retried through the outbox, not lost", () => {
 			key: { use: "new", value: "ghp_late_token" },
 		});
 		expect(assigned.status).toBe(200);
-		// The screen then tells the plugin, which sends what waited.
-		expect((await request("v1/git-sync/token-changed", "POST", {})).status).toBe(200);
+		// The slot tells the plugin (`onChange`) once the key is saved, and the plugin sends what waited.
 		expect(h.repo.files("main").has("content/memo/no-token.en.mdx")).toBe(true);
 		expect(h.repo.files("main").has("content/memo/no-token-2.en.mdx")).toBe(true);
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(0);

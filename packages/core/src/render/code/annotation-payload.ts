@@ -19,7 +19,7 @@ const hasRender = (annotation: { render?: string }): annotation is AnnotationWit
 
 type ResolvedAnnotationStyle = { class?: string; render?: string };
 
-const resolveStyleFromRule = (
+const resolveStyle = (
 	registry: AnnotationRegistry | undefined,
 	annotation: Pick<CodeBlockAnnotation, "name" | "scope">,
 ): ResolvedAnnotationStyle | undefined => {
@@ -34,20 +34,6 @@ const resolveStyleFromRule = (
 
 	if (typeof rule.render !== "string") return;
 	return { render: rule.render };
-};
-
-// Temporary adapter: supports legacy payloads that still carry class/render on annotations.
-const resolveStyle = (
-	registry: AnnotationRegistry | undefined,
-	annotation: Pick<CodeBlockAnnotation, "name" | "scope"> & { class?: string; render?: string },
-): ResolvedAnnotationStyle | undefined => {
-	const fromRule = resolveStyleFromRule(registry, annotation);
-	if (fromRule) return fromRule;
-
-	const fallback: ResolvedAnnotationStyle = {};
-	if (typeof annotation.class === "string") fallback.class = annotation.class;
-	if (typeof annotation.render === "string") fallback.render = annotation.render;
-	return fallback.class || fallback.render ? fallback : undefined;
 };
 
 const buildInlineDecoration = (
@@ -182,5 +168,5 @@ export const fromCodeBlockDocumentToShikiAnnotationPayload = (
 
 export const __testable__ = {
 	fromCodeBlockDocumentToShikiAnnotationPayload,
-	resolveStyleFromRule,
+	resolveStyle,
 };

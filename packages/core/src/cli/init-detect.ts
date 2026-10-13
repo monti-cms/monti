@@ -85,8 +85,6 @@ export interface DetectedApp {
 	readonly coreSpec?: string;
 	/** Whether the package.json already lists these packages. */
 	readonly dependencies: ReadonlySet<string>;
-	/** Config files of an earlier Monti setup, which `init` leaves alone. */
-	readonly legacyConfig: readonly string[];
 	/** The existing `monti.config.ts` (relative to cwd), if any. */
 	readonly existingConfig?: string;
 	/** Whether `.gitignore` covers `.env.local`. */
@@ -299,9 +297,6 @@ export function detectApp(cwd: string): DetectedApp {
 		devPort: port ? Number(port) : 3000,
 		coreSpec: pkg.dependencies?.["@monti-cms/core"] ?? pkg.devDependencies?.["@monti-cms/core"],
 		dependencies,
-		legacyConfig: configRoots
-			.flatMap((root) => ["cms.config.ts", "cms.server.ts"].map((file) => `${root}${file}`))
-			.filter(exists),
 		existingConfig: configRoots.map((root) => `${root}monti.config.ts`).find(exists),
 		envLocalIgnored: ignoresEnvLocal(gitignore),
 	};

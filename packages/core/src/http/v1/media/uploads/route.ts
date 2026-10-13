@@ -1,4 +1,4 @@
-import { adminRoute, json, readJsonBody } from "../../handler";
+import { adminRoute, ok, readJsonBody } from "../../handler";
 import { prepareMediaUpload } from "../upload-flow";
 
 /**
@@ -6,5 +6,5 @@ import { prepareMediaUpload } from "../upload-flow";
  * Credentials never reach the browser, and the file body does not pass through the app server.
  */
 export const POST = adminRoute(async ({ request, cms }) =>
-	json(await prepareMediaUpload(cms, await readJsonBody(request)), { status: 201 }),
+	ok(await prepareMediaUpload(cms, await readJsonBody(request)), { status: 201 }),
 );

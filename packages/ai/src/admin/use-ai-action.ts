@@ -25,7 +25,7 @@ export interface UseAiAction<K extends AiActionKey<Config>, Config extends AnyCm
 }
 
 /**
- * Calls an action of the site config (`aiPlugin({ actions })`) by name. Called as it is, any name is accepted and an input is any input; `aiClient<typeof config>()`
+ * Calls an action of the site config (`ai({ actions })`) by name. Called as it is, any name is accepted and an input is any input; `aiClient<typeof config>()`
  * gives the same hook with names, inputs and results typed by the config.
  *
  * ```ts

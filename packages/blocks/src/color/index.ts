@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { type PaletteColor, validateTextPalette } from "./colors";
 import { colorBlock } from "./definition";
 
@@ -21,7 +21,7 @@ export interface ColorOptions {
  * and the color is picked for the theme by this package's `render.css` and `styles.css` (`.cms-color`).
  */
 export const color = (options: ColorOptions = {}) =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "color",
 		options,
 		blocks: [colorBlock],

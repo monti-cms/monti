@@ -40,6 +40,7 @@ export {
 	type SeedTemplate,
 	type SiteConfig,
 } from "./config/define";
+export { type EnvSource, envValue, WHERE_TO_SET_ENV } from "./core/env";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem";
 export { createActiveTranslator } from "./i18n/active";
 export {
@@ -61,17 +62,20 @@ export {
 	type CmsPlugin,
 	type CmsServerPlugin,
 	definePlugin,
+	emptyServerPlugin,
 	type PluginCommand,
 	type PluginCommandContext,
 	type PluginCommandOption,
 	type PluginConfigView,
 	type PluginKeySlot,
+	type PluginLabel,
 	type PluginNamed,
 	type PluginNavItem,
 	type PluginRoute,
+	type PluginServer,
 } from "./plugin/define";
+export { type PluginLog, pluginError, pluginLog } from "./plugin/log";
 export type {
-	ImportedItem,
 	PluginCollection,
 	PluginMigration,
 	PluginStorage,

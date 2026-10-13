@@ -93,7 +93,7 @@ describe("assertPluginNamesFree: core storage scopes", () => {
 	});
 
 	it("reserves the scopes the core itself uses", () => {
-		expect([...RESERVED_SCOPES].sort()).toEqual(["auth", "core-events", "core-keys"]);
+		expect([...RESERVED_SCOPES].sort()).toEqual(["auth", "core-keys"]);
 	});
 });
 

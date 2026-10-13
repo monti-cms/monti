@@ -16,10 +16,6 @@ export interface PluginStorageFactory {
 
 export interface PluginStorageSession {
 	storage(plugin: string): PluginStorage;
-	/** Makes a table that an earlier version of a plugin kept on its own, with these rows (column name to value). */
-	seedLegacyTable(table: string, rows: readonly Record<string, unknown>[]): Promise<void>;
-	/** Records a one-time step name as done, as an earlier version of a plugin would have. */
-	recordMigration(name: string): Promise<void>;
 	close(): Promise<void>;
 }
 
@@ -252,85 +248,6 @@ export function runPluginStorageContract(factory: PluginStorageFactory): void {
 				expect(await session.storage("first-plugin").once("shared-name", async () => {})).toBe(true);
 				expect(await session.storage("second-plugin").once("shared-name", async () => {})).toBe(true);
 				expect(await session.storage("first-plugin").once("shared-name", async () => {})).toBe(false);
-			});
-
-			it("skips a step whose work an earlier version of the plugin already recorded under another name", async () => {
-				await session.recordMigration("old_step_name");
-				const owner = session.storage("legacy-names");
-				let ran = false;
-				expect(
-					await owner.once(
-						"new-step-name",
-						async () => {
-							ran = true;
-						},
-						{ legacyNames: ["unrelated", "old_step_name"] },
-					),
-				).toBe(false);
-				expect(ran).toBe(false);
-				expect(
-					await owner.once(
-						"other-step",
-						async () => {
-							ran = true;
-						},
-						{ legacyNames: ["unrelated"] },
-					),
-				).toBe(true);
-				expect(ran).toBe(true);
-			});
-
-			it("imports items with the version and dates they had, and never overwrites an existing one", async () => {
-				const owner = session.storage("importer");
-				const createdAt = new Date("2025-03-04T05:06:07.000Z");
-				const updatedAt = new Date("2025-04-05T06:07:08.000Z");
-				const results: boolean[] = [];
-				await owner.once("import", async (migration) => {
-					results.push(
-						await migration.importItem("imported", {
-							key: "old",
-							value: { from: "legacy" },
-							version: 7,
-							createdAt,
-							updatedAt,
-						}),
-					);
-					results.push(await migration.importItem("imported", { key: "old", value: { from: "again" }, version: 9 }));
-					results.push(await migration.importItem("imported", { key: "plain", value: 1 }));
-				});
-				expect(results).toEqual([true, false, true]);
-				expect(await owner.collection("imported").get("old")).toEqual({
-					key: "old",
-					value: { from: "legacy" },
-					version: 7,
-					createdAt,
-					updatedAt,
-				});
-				const plain = await owner.collection("imported").get("plain");
-				expect(plain).toMatchObject({ version: 1 });
-				expect(plain?.updatedAt).toEqual(plain?.createdAt);
-				// The imported version is the one the next write has to expect.
-				expect((await owner.collection("imported").set("old", { from: "now" }, { expectedVersion: 7 })).version).toBe(
-					8,
-				);
-			});
-
-			it("reads the rows of a table an earlier plugin version kept on its own, and null when there is none", async () => {
-				const owner = session.storage("legacy-reader");
-				await session.seedLegacyTable("legacy_things", [
-					{ key: "a", value: { x: 1 }, version: 2 },
-					{ key: "b", value: { x: 2 }, version: 1 },
-				]);
-				let rows: Record<string, unknown>[] | null = [];
-				let missing: Record<string, unknown>[] | null = [];
-				await owner.once("read-legacy", async (migration) => {
-					rows = await migration.readLegacyTable("legacy_things");
-					missing = await migration.readLegacyTable("no_such_table");
-				});
-				expect(missing).toBeNull();
-				expect(rows).toHaveLength(2);
-				expect(new Set((rows as unknown as { key: string }[]).map((row) => row.key))).toEqual(new Set(["a", "b"]));
-				expect(rows).toContainEqual(expect.objectContaining({ key: "a", value: { x: 1 }, version: 2 }));
 			});
 		});
 	});

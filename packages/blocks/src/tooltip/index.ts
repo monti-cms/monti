@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { tooltipBlock } from "./definition";
 
 export { tooltipBlock } from "./definition";
@@ -14,9 +14,8 @@ export { tooltipBlock } from "./definition";
  * Tooltips on text inside a code block (code fence comments) are a core code block feature, separate from this extension.
  */
 export const tooltip = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "tooltip",
-		options: {},
 		blocks: [tooltipBlock],
 		admin: () => import("@monti-cms/blocks/tooltip/admin"),
 		render: () => import("@monti-cms/blocks/tooltip/render"),

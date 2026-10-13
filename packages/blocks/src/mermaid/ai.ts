@@ -1,36 +1,22 @@
-// The AI plugin is an optional dependency, so only types are imported (the block extension never loads AI plugin code).
-
-import type { AiActionDefinition, AiContribution } from "@monti-cms/ai";
-import type { Site } from "@monti-cms/core/client";
+import type { AiContribution } from "@monti-cms/core/ai-contract";
+import { type AiTextSite, type DiagramAiText, diagramAi } from "../shared/diagram-ai";
 import { mermaidMessages } from "./messages";
+
+export type { AiTextSite } from "../shared/diagram-ai";
 
 /**
  * AI features of the Mermaid block (only for sites using `@monti-cms/ai`). The `mermaid()` plugin adds them via `contributes.ai`, so they attach automatically
  * on sites that use the AI plugin (`diagramDraft`, `diagramEdit`). To change the instructions, write an entry with the same name; to turn one off, give `false`.
+ * The contract types come from `@monti-cms/core/ai-contract`, so this block never depends on the AI plugin.
  *
  * ```ts
- * aiPlugin({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), diagramEdit: false } })
+ * ai({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), diagramEdit: false } })
  * ```
  *
  * The actions are factories (`AiActionFactory`): the AI plugin calls them with the site, so the text is in that site's admin language.
  */
 
-/** What the actions read from the site: its admin-language translator (the actions are created per site). */
-export type AiTextSite = Pick<Site, "createTranslator">;
-
 const textOf = (site: AiTextSite) => site.createTranslator(mermaidMessages);
-
-/**
- * Code validation (same shape as `AiValidator` and `defineValidator` of `@monti-cms/ai`). The shape is written out here so the published type declarations do not
- * reference the AI plugin (sites without the AI plugin still pass type checking). The `satisfies` below checks that the shape matches.
- */
-export interface CodeCheck {
-	readonly kind: "code";
-	readonly name: string;
-	readonly label: string;
-	readonly run: (value: string) => string | undefined;
-}
-const codeCheck = (check: Omit<CodeCheck, "kind">): CodeCheck => ({ kind: "code", ...check });
 
 /** Diagram types Mermaid knows (the first word of the first line). */
 const DIAGRAM_TYPES = new Set([
@@ -79,14 +65,6 @@ export function validateMermaid(site: AiTextSite, value: string): string | undef
 	return DIAGRAM_TYPES.has(type) ? undefined : t("ai.error.unknownType", { type });
 }
 
-/** Result syntax validation (code validation). It can also be added to other features through `checks`. */
-export const mermaidSyntax = (site: AiTextSite): CodeCheck =>
-	codeCheck({
-		name: "mermaid-syntax",
-		label: textOf(site)("ai.check.label"),
-		run: (value) => validateMermaid(site, value),
-	});
-
 /** Answer of the fake connection (development only): a diagram that passes syntax validation. If there is a diagram to fix, one node line is added. */
 const fakeMermaid =
 	(site: AiTextSite) =>
@@ -97,49 +75,18 @@ const fakeMermaid =
 		return `\`\`\`mermaid\ngraph TD\n  fake["(fake) ${title}"]\n\`\`\``;
 	};
 
-export const mermaidAi = {
-	/** Create a diagram. Takes a request from the slash menu and inserts a Mermaid block at the cursor. */
-	draft:
-		(options: { readonly prompt?: string } = {}) =>
-		(site: AiTextSite) => {
-			const t = textOf(site);
-			return {
-				label: t("ai.draft.label"),
-				input: {
-					title: { kind: "text", label: t("ai.input.title") },
-					body: { kind: "mdx", label: t("ai.input.body") },
-				},
-				result: "mdx",
-				stream: true,
-				askInstruction: true,
-				prompt: options.prompt ?? t("ai.draft.prompt"),
-				checks: [mermaidSyntax(site)],
-				fake: fakeMermaid(site),
-				attach: [{ slot: "insert" }],
-			} as const satisfies AiActionDefinition;
-		},
+const diagram = diagramAi({
+	block: "mermaid",
+	syntaxName: "mermaid-syntax",
+	text: (site) => textOf(site) as DiagramAiText,
+	validate: validateMermaid,
+	fake: fakeMermaid,
+});
 
-	/** Edit a diagram. Edits as requested from next to the block handle, shows what changed, and then replaces the block. */
-	edit:
-		(options: { readonly prompt?: string } = {}) =>
-		(site: AiTextSite) => {
-			const t = textOf(site);
-			return {
-				label: t("ai.edit.label"),
-				input: {
-					block: { kind: "mdx", label: t("ai.input.block"), required: true },
-					title: { kind: "text", label: t("ai.input.title") },
-				},
-				result: "mdx",
-				stream: true,
-				askInstruction: true,
-				prompt: options.prompt ?? t("ai.edit.prompt"),
-				checks: [mermaidSyntax(site)],
-				fake: fakeMermaid(site),
-				attach: [{ slot: "block", block: "mermaid" }],
-			} as const satisfies AiActionDefinition;
-		},
-};
+/** Result syntax validation (code validation). It can also be added to other features through `checks`. */
+export const mermaidSyntax = diagram.syntax;
+
+export const mermaidAi = { draft: diagram.draft, edit: diagram.edit };
 
 /** What `mermaid()` adds to the AI plugin. The feature names are the keys of the values edited in the admin AI screen. */
 export const mermaidAiContribution = {

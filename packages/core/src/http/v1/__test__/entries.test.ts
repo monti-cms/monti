@@ -4,10 +4,16 @@ import { testConfig } from "../../../../test/site";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
-import { PATCH as patchEntry } from "../entries/[id]/route";
-import { POST as postEntries } from "../entries/route";
-import { GET as searchEntries } from "../entries/search/route";
-import { GET as getMeta } from "../meta/route";
+import { routeCaller } from "../../../testing";
+import { PATCH as patchEntryHandler } from "../entries/[id]/route";
+import { POST as postEntriesHandler } from "../entries/route";
+import { GET as searchEntriesHandler } from "../entries/search/route";
+import { GET as getMetaHandler } from "../meta/route";
+
+const patchEntry = routeCaller(patchEntryHandler);
+const postEntries = routeCaller(postEntriesHandler);
+const searchEntries = routeCaller(searchEntriesHandler);
+const getMeta = routeCaller(getMetaHandler);
 
 const mockVerifyAdmin = vi.fn();
 
@@ -80,7 +86,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 		expect(res.status).toBe(401);
 		const data = await res.json();
-		expect(data.code).toBe("unauthorized");
+		expect(data.error.code).toBe("unauthorized");
 	});
 
 	it("returns 403 when user is forbidden", async () => {
@@ -88,7 +94,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });
 		expect(res.status).toBe(403);
 		const data = await res.json();
-		expect(data.code).toBe("forbidden");
+		expect(data.error.code).toBe("forbidden");
 	});
 
 	it("rejects cross-origin mutations with 403", async () => {
@@ -103,7 +109,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const res = await postEntries(req, { cms });
 		expect(res.status).toBe(403);
 		const data = await res.json();
-		expect(data.code).toBe("forbidden");
+		expect(data.error.code).toBe("forbidden");
 	});
 
 	it("POST /entries creates a new draft atomically with folderId", async () => {
@@ -144,7 +150,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const res = await patchEntry(req, { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000008" }), cms });
 		expect(res.status).toBe(428);
 		const data = await res.json();
-		expect(data.code).toBe("version_required");
+		expect(data.error.code).toBe("version_required");
 	});
 
 	it("PATCH /entries/:id maps optimistic lock conflict to 409 and returns serverVersion", async () => {
@@ -163,8 +169,8 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const res = await patchEntry(req, { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000008" }), cms });
 		expect(res.status).toBe(409);
 		const data = await res.json();
-		expect(data.code).toBe("conflict");
-		expect(data.serverVersion).toBe(2);
+		expect(data.error.code).toBe("conflict");
+		expect(data.error.details.serverVersion).toBe(2);
 	});
 
 	describe("GET /entries/search", () => {

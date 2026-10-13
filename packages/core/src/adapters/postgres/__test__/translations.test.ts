@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, secondLocale } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
-import type { ContentStore, Entry } from "../../../core/store";
+import type { ContentStore } from "../../../core/store";
 import { second, translationHelpers } from "../../../core/store/__test__/contract/translation-fixtures";
 import type { createContentService } from "../../../services/content-service";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -14,7 +14,7 @@ describe("translation groups (postgres storage)", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let createPost: ReturnType<typeof translationHelpers>["createPost"];
 
 	beforeAll(async () => {

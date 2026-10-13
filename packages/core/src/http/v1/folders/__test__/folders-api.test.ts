@@ -3,8 +3,12 @@ import { contentCollection } from "../../../../../test/any-site";
 import { testConfig } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
-import { PATCH as patchFolder } from "../[id]/route";
-import { GET as getFolders } from "../route";
+import { routeCaller } from "../../../../testing";
+import { PATCH as patchFolderHandler } from "../[id]/route";
+import { GET as getFoldersHandler } from "../route";
+
+const patchFolder = routeCaller(patchFolderHandler);
+const getFolders = routeCaller(getFoldersHandler);
 
 const mockStore = {
 	listFolders: vi
@@ -48,7 +52,7 @@ describe("Folders HTTP API Contract", () => {
 		});
 		expect(res.status).toBe(428);
 		const data = await res.json();
-		expect(data.code).toBe("version_required");
+		expect(data.error.code).toBe("version_required");
 	});
 
 	it("PATCH /folders/:id maps conflict to 409", async () => {
@@ -63,7 +67,7 @@ describe("Folders HTTP API Contract", () => {
 		});
 		expect(res.status).toBe(409);
 		const data = await res.json();
-		expect(data.code).toBe("conflict");
-		expect(data.serverVersion).toBe(2);
+		expect(data.error.code).toBe("conflict");
+		expect(data.error.details.serverVersion).toBe(2);
 	});
 });

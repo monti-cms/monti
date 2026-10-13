@@ -11,7 +11,11 @@ import {
 	makeExportFixtureSnapshot,
 } from "../../../services/__test__/export-fixture";
 import { readZipArchive } from "../../../services/zip";
-import { GET, POST } from "../export/route";
+import { routeCaller } from "../../../testing";
+import { GET as GETHandler, POST as POSTHandler } from "../export/route";
+
+const GET = routeCaller(GETHandler);
+const POST = routeCaller(POSTHandler);
 
 const mockVerifyAdmin = vi.fn();
 const mockReadExportSnapshot = vi.fn();
@@ -54,13 +58,13 @@ describe("GET/POST /api/monti/v1/export", () => {
 		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
 		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(401);
-		expect((await res.json()).code).toBe("unauthorized");
+		expect((await res.json()).error.code).toBe("unauthorized");
 	});
 
 	it("returns 400 for an invalid scope", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?scope=everything"), { cms });
 		expect(res.status).toBe(400);
-		expect((await res.json()).code).toBe("invalid_input");
+		expect((await res.json()).error.code).toBe("invalid_input");
 	});
 
 	it("default (admin) export returns a ZIP with a digest header and includes draft bodies", async () => {
@@ -122,11 +126,11 @@ describe("GET/POST /api/monti/v1/export", () => {
 	it("an export in a format nobody provides is a 400 unknown_format, and no archive", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?format=hugo"), { cms });
 		expect(res.status).toBe(400);
-		expect((await res.json()).code).toBe("unknown_format");
+		expect((await res.json()).error.code).toBe("unknown_format");
 
 		const bad = await GET(request("http://localhost/api/monti/v1/export?format=Not%20A%20Name"), { cms });
 		expect(bad.status).toBe(400);
-		expect((await bad.json()).code).toBe("invalid_input");
+		expect((await bad.json()).error.code).toBe("invalid_input");
 	});
 
 	it("public export excludes drafts and does not include working values", async () => {

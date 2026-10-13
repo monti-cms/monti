@@ -67,7 +67,7 @@ seoFields({
   필드여야 한다(`validateSeoFields`).
 - **AI 기능**: `@monti-cms/ai`가 있으면 `seoTitle`(검색 제목 추천, 후보 3개)·`seoDescription`(검색 설명 추천)을 더한다
   (`contributes.ai`). 역할 필드가 있는 모든 컬렉션에 붙고, 길이는 필드 `max` → 권장 글자 수 → 60·155다. 바꾸려면
-  `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`, 끄려면 `seoTitle: false` 또는 `seo({ ai: false })`.
+  `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`, 끄려면 `seoTitle: false` 또는 `seo({ ai: false })`.
 
 ## 공개 화면 `seoOf(collection, metadata)`
 

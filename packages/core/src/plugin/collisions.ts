@@ -10,14 +10,12 @@ export const CORE_FEATURE_KEYS: readonly string[] = ["folders", "references", "s
 export const AUTH_SCOPE = "auth";
 /** The storage and secrets scope of the API key store. */
 export const API_KEYS_SCOPE = "core-keys";
-/** The plugin storage the core keeps the marks of `event.once` in. */
-export const EVENTS_SCOPE = "core-events";
 
 /**
  * Storage and secrets scopes the core keeps for itself. A plugin reads its own scope by its name, so a plugin named like one of these would read the core's
  * secrets and data. Cannot be used as plugin names; the core's own scopes are taken from here.
  */
-export const RESERVED_SCOPES: readonly string[] = [AUTH_SCOPE, API_KEYS_SCOPE, EVENTS_SCOPE];
+export const RESERVED_SCOPES: readonly string[] = [AUTH_SCOPE, API_KEYS_SCOPE];
 
 const trimSlashes = (path: string) => path.replace(/^\/+|\/+$/g, "");
 const showPage = (path: string) => `/${path}`;

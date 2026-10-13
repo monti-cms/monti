@@ -11,7 +11,7 @@ import {
 } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
-import type { ContentStore, Entry } from "../../core/store";
+import type { ContentStore } from "../../core/store";
 import { duplicateDraft, publishDraft } from "../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
@@ -32,7 +32,7 @@ describe("any site: core content flow", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let sequence = 0;
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
 	const targets = new Map<Collection, string>();
@@ -76,7 +76,7 @@ describe("any site: core content flow", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
-		service = createContentService<Entry>(store, {
+		service = createContentService(store, {
 			site: testSite,
 			formats: async () => createFormatRegistry([paragraphsFormat]),
 		});

@@ -18,6 +18,5 @@ export type {
 	FormatLink,
 	FormatMedia,
 	FormatPurpose,
-	LegacyBodies,
 } from "./types";
 export { assertFormatName, defineFormat } from "./types";

@@ -10,7 +10,7 @@ import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format"
 import { createFormatRegistry } from "../../../../format/registry";
 import { createContentService } from "../../../../services/content-service";
 import type { Collection } from "../../../collections";
-import type { ContentStore, Entry } from "../..";
+import type { ContentStore } from "../..";
 import { publishDraft } from "../seed";
 
 /**
@@ -54,7 +54,7 @@ export const translatedMetadata = (title: string, text: string) => ({
 
 /** Helpers that create the posts and relation targets of the translation tests in a store. */
 export function translationHelpers(store: ContentStore) {
-	const service = createContentService<Entry>(store, {
+	const service = createContentService(store, {
 		site: testSite,
 		formats: async () => createFormatRegistry([paragraphsFormat]),
 	});

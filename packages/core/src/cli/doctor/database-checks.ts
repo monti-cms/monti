@@ -14,8 +14,8 @@ interface Settings {
 	readonly schema?: string | undefined;
 }
 
-/** What the database adapter was given in `monti.config.ts` (`DatabaseAdapter.settings`); empty when it exposes none. */
-const settingsOf = (state: DoctorState): Settings => state.cms?.server.database.settings?.() ?? {};
+/** What the database adapter was given in `monti.config.ts` (`DatabaseInspector.settings`); empty when it exposes none. */
+const settingsOf = (state: DoctorState): Settings => state.cms?.server.database.inspector?.settings() ?? {};
 
 const IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
@@ -64,7 +64,7 @@ const shortVersion = (version: string): string => /^PostgreSQL [\d.]+/.exec(vers
 
 /**
  * The `database` group of `monti doctor`: the connection string, reaching the database, the schema, and the migrations. The connection string and schema
- * come from what the adapter was given (`DatabaseAdapter.settings`), else from `DATABASE_URL` and `DATABASE_SCHEMA`. The checks open a short-lived
+ * come from what the adapter was given (`DatabaseInspector.settings`), else from `DATABASE_URL` and `DATABASE_SCHEMA`. The checks open a short-lived
  * connection of their own and change nothing.
  */
 const url: CoreCheck = {
@@ -176,7 +176,9 @@ const migrations: CoreCheck = {
 		if (!IDENTIFIER.test(name)) return skip("not checked: the schema name is not valid (see above)");
 		const result = await reach(state, value);
 		if (!result.ok) return skip("not checked: the database cannot be reached (see above)");
-		const { CONTENT_STORE_MIGRATIONS } = await import("../../adapters/postgres/store/schema");
+		const { CONTENT_STORE_MIGRATIONS, databaseOutdatedError, isOutdatedMigrationName } = await import(
+			"../../adapters/postgres/migrations"
+		);
 		const applied = await withPool(value, async (pool) => {
 			try {
 				const rows = await pool.query<{ name: string }>(`SELECT name FROM "${name}".cms_migrations`);
@@ -188,6 +190,10 @@ const migrations: CoreCheck = {
 				throw error;
 			}
 		});
+		if ([...applied].some(isOutdatedMigrationName)) {
+			const { what, fix } = databaseOutdatedError().problem;
+			return fail(what, { where: `schema "${name}" (table cms_migrations)`, fix });
+		}
 		const pending = CONTENT_STORE_MIGRATIONS.filter((step) => !applied.has(step));
 		const total = CONTENT_STORE_MIGRATIONS.length;
 		if (pending.length > 0) {
@@ -202,17 +208,6 @@ const migrations: CoreCheck = {
 					fix: none
 						? "run `monti db:setup` once; on a deployed site run it as a step of the first deploy, before the new version starts"
 						: "run `monti db:migrate`; on a deployed site run it as a step of the deploy, before the new version starts",
-				},
-			);
-		}
-		const known = new Set(CONTENT_STORE_MIGRATIONS);
-		const ahead = [...applied].filter((step) => /^\d{4}_/.test(step) && !known.has(step));
-		if (ahead.length > 0) {
-			return warn(
-				`the database has ${ahead.length} migration${ahead.length === 1 ? "" : "s"} this version of Monti does not know (${ahead.slice(0, 3).join(", ")})`,
-				{
-					where: `schema "${name}" (table cms_migrations)`,
-					fix: "something newer has migrated this database: update @monti-cms/core to the same version, or point DATABASE_URL (or DATABASE_SCHEMA) at a database of this version",
 				},
 			);
 		}

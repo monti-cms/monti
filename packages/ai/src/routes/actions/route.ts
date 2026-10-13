@@ -1,4 +1,4 @@
-import { adminRoute, json, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, readJsonBody } from "@monti-cms/core/plugin/server";
 import { createCustomAction, listActions } from "../../actions";
 import { usableActionKeys } from "../../settings";
 import { aiStoreFor } from "../../store";
@@ -7,7 +7,7 @@ import { aiStoreFor } from "../../store";
 export const GET = adminRoute(async ({ cms }) => {
 	const store = aiStoreFor(cms);
 	const items = await listActions(cms.site, store);
-	return json({ usable: await usableActionKeys(cms.site, store, items), items });
+	return ok({ usable: await usableActionKeys(cms.site, store, items), items });
 });
 
 /**
@@ -16,5 +16,5 @@ export const GET = adminRoute(async ({ cms }) => {
  */
 export const POST = adminRoute(async ({ request, cms }) => {
 	const body = (await readJsonBody(request)) as { base?: unknown; value?: unknown };
-	return json(await createCustomAction(cms.site, aiStoreFor(cms), body.base, body.value), { status: 201 });
+	return ok(await createCustomAction(cms.site, aiStoreFor(cms), body.base, body.value), { status: 201 });
 });

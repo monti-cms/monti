@@ -1,3 +1,4 @@
+import { errorResponse } from "../../http/v1/error-handler";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth } from "../../server/define";
 import { isDevAuthBypassEnabled } from "./auth-gateway";
 import { productionLikeEnvironment } from "./dev-bypass";
@@ -7,7 +8,7 @@ import { productionLikeEnvironment } from "./dev-bypass";
  * machine's own requests into the admin, everywhere else the admin refuses everyone and the login screen says that no login is configured.
  */
 export function noLogin(): AuthAdapter {
-	const unavailable = async () => Response.json({ error: "no_login_configured" }, { status: 404 });
+	const unavailable = async () => errorResponse("not_found", "No login is configured");
 	return {
 		name: "none",
 		decisions: (env) => {

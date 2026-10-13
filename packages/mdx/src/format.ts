@@ -152,7 +152,6 @@ export {
 	type Body,
 	type BodyOptions,
 	bodyDocument,
-	bodyFromDocument,
 	bodyFromMdx,
 	documentToMdx,
 	fromStoredDocument,
@@ -165,7 +164,6 @@ export { parseMdxAst } from "./parse";
 export { type JsxRegistry, jsxRegistryOf, RETIRED_JSX_NAMES } from "./registry";
 export { remarkFenceBlocksToMdx } from "./remark-fence-blocks";
 export { serialize } from "./serialize";
-export { insertSoftBreaks, type SoftBreakResult } from "./soft-breaks";
 export {
 	configuredSyntax,
 	NO_SYNTAX,

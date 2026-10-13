@@ -160,7 +160,7 @@ describe("Public JSON API", () => {
 		const one = await get(`v1/public/entries/${contentCollection}/public-2?format=hugo`);
 
 		expect(one.status).toBe(400);
-		expect(one.body).toEqual({ code: "invalid_input", message: "Unknown format" });
+		expect(one.body).toEqual({ error: { code: "invalid_input", message: "Unknown format" } });
 		expect(one.cache).toBe("no-store");
 	});
 

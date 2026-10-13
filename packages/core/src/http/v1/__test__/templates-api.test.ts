@@ -2,8 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
-import { DELETE as deleteTemplate, GET as getTemplate, PATCH as patchTemplate } from "../templates/[id]/route";
-import { GET as getTemplates, POST as postTemplate } from "../templates/route";
+import { routeCaller } from "../../../testing";
+import {
+	DELETE as deleteTemplateHandler,
+	GET as getTemplateHandler,
+	PATCH as patchTemplateHandler,
+} from "../templates/[id]/route";
+import { GET as getTemplatesHandler, POST as postTemplateHandler } from "../templates/route";
+
+const deleteTemplate = routeCaller(deleteTemplateHandler);
+const getTemplate = routeCaller(getTemplateHandler);
+const patchTemplate = routeCaller(patchTemplateHandler);
+const getTemplates = routeCaller(getTemplatesHandler);
+const postTemplate = routeCaller(postTemplateHandler);
 
 const mockTemplates = [
 	{
@@ -155,8 +166,7 @@ describe("Templates API Route Contract", () => {
 				cms,
 			},
 		);
-		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ ok: true });
+		expect(res.status).toBe(204);
 
 		// Conflict on stale expectedVersion
 		const conflictRes = await deleteTemplate(

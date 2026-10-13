@@ -1,7 +1,9 @@
-import { fakeCms } from "@monti-cms/core/testing";
+import { fakeCms, routeCaller } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../test/site";
-import { POST as postRun } from "../routes/run/route";
+import { POST as postRunHandler } from "../routes/run/route";
+
+const postRun = routeCaller(postRunHandler);
 
 const mockVerifyAdmin = vi.fn();
 const overrides = vi.hoisted(() => ({ rows: [] as Array<{ key: string; value: unknown; version: number }> }));
@@ -81,7 +83,7 @@ describe("AI run API", () => {
 		expect((await run({ action: "summary", input: { title: "t" }, draft: { enabled: false } })).status).toBe(200);
 		const bad = await run({ action: "summary", input: { title: "t" }, draft: { prompt: "{{title}}" } });
 		expect(bad.status).toBe(400);
-		expect(await bad.json()).toMatchObject({ code: "ai_invalid_input" });
+		expect(await bad.json()).toMatchObject({ error: { code: "invalid_input" } });
 	});
 
 	it("the fake connection answers by input kind, and an action's own fake answer passes that action's checks", async () => {

@@ -1,6 +1,6 @@
 import { readSchemaScreen, saveSchemaEdit } from "../../../schema-edit";
-import { HttpError } from "../error-handler";
-import { adminRoute, json } from "../handler";
+import { CmsError } from "../error-handler";
+import { adminRoute, ok } from "../handler";
 import { assertSchemaWritable, readEditBody } from "./shared";
 
 /**
@@ -9,39 +9,37 @@ import { assertSchemaWritable, readEditBody } from "./shared";
  * route.
  */
 
-export const GET = adminRoute(async ({ cms }) => json(await readSchemaScreen(cms)));
+export const GET = adminRoute(async ({ cms }) => ok(await readSchemaScreen(cms)));
 
 export const PUT = adminRoute(async ({ request, cms }) => {
 	assertSchemaWritable(cms);
 	const body = await readEditBody(request);
 	if (typeof body.baseHash !== "string") {
-		throw new HttpError(400, "invalid_input", "`baseHash` (the hash of the file the edit started from) is required");
+		throw new CmsError("`baseHash` (the hash of the file the edit started from) is required", "invalid_input");
 	}
 	const result = await saveSchemaEdit(cms, { ...body, baseHash: body.baseHash });
-	if (result.saved) return json(result);
+	if (result.saved) return ok(result);
 	switch (result.reason) {
 		case "conflict":
-			throw new HttpError(
-				409,
-				"schema_conflict",
-				"The schema file changed since you opened it; reload it and edit again",
-			);
+			throw new CmsError("The schema file changed since you opened it; reload it and edit again", "schema_conflict");
 		case "invalid":
-			throw new HttpError(400, "invalid_schema", "The schema does not check", result.issues);
+			throw new CmsError("The schema does not check", "invalid_schema", undefined, undefined, result.issues);
 		case "problems":
-			throw new HttpError(422, "invalid_transforms", "A data transform does not fit the new schema", result.problems);
-		case "apply_failed":
-			throw new HttpError(
-				500,
-				"schema_apply_failed",
-				`The file was saved, but applying it to the database failed: ${result.message}`,
+			throw new CmsError(
+				"A data transform does not fit the new schema",
+				"invalid_transforms",
 				undefined,
-				{
-					fileWritten: true,
-					hash: result.hash,
-				},
+				undefined,
+				result.problems,
+			);
+		case "apply_failed":
+			throw new CmsError(
+				`The file was saved, but applying it to the database failed: ${result.message}`,
+				"schema_apply_failed",
+				undefined,
+				{ fileWritten: true, hash: result.hash },
 			);
 		case "unchanged":
-			return json(result);
+			return ok(result);
 	}
 });

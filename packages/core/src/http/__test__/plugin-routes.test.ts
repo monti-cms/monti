@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
 import type { PluginRoute } from "../../plugin/define";
-import type { RouteContext } from "../v1/handler";
+import type { AdminRequest } from "../v1/handler";
 
 const mocks = vi.hoisted(() => ({
 	verifyAdmin: vi.fn(),
-	privateGet: vi.fn(async (_request: Request, _context: RouteContext) => new Response("private")),
+	privateGet: vi.fn(async (_input: AdminRequest) => new Response("private")),
 	publicPost: vi.fn(async () => new Response("public")),
 }));
 
@@ -69,10 +69,10 @@ describe("plugin API route default authentication", () => {
 	it("a plugin route gets the instance that serves it, so a plugin works with several instances at once", async () => {
 		const cms = instance();
 		await call(cms, "GET", "v1/example/private");
-		expect(mocks.privateGet.mock.calls[0]?.[1].cms).toBe(cms);
+		expect(mocks.privateGet.mock.calls[0]?.[0].cms).toBe(cms);
 		const other = instance();
 		await call(other, "GET", "v1/example/private");
-		expect(mocks.privateGet.mock.calls[1]?.[1].cms).toBe(other);
+		expect(mocks.privateGet.mock.calls[1]?.[0].cms).toBe(other);
 	});
 
 	it("a `public: true` route is not wrapped (the route checks for itself)", async () => {

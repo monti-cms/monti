@@ -1,4 +1,4 @@
-import { adminRoute, HttpError, json, readVersionedBody, readVersionQuery } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, ok, readVersionedBody, readVersionQuery } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
 import { listActions } from "../../actions";
 import { addShared, deleteShared, getSharedView, updateShared, updateSharedItem } from "../../shared";
@@ -17,26 +17,26 @@ import { aiStoreFor } from "../../store";
 
 const versioned = z.looseObject({ expectedVersion: z.number().int().min(0) });
 
-export const GET = adminRoute(async ({ cms }) => json(await getSharedView(cms.site, aiStoreFor(cms))));
+export const GET = adminRoute(async ({ cms }) => ok(await getSharedView(cms.site, aiStoreFor(cms))));
 
 export const POST = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, ...item } = await readVersionedBody(request, versioned);
-	return json(await addShared(cms.site, aiStoreFor(cms), expectedVersion, item), { status: 201 });
+	return ok(await addShared(cms.site, aiStoreFor(cms), expectedVersion, item), { status: 201 });
 });
 
 export const PATCH = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, ...item } = await readVersionedBody(request, versioned);
-	return json(await updateSharedItem(cms.site, aiStoreFor(cms), expectedVersion, item));
+	return ok(await updateSharedItem(cms.site, aiStoreFor(cms), expectedVersion, item));
 });
 
 export const PUT = adminRoute(async ({ request, cms }) => {
 	const { expectedVersion, texts } = await readVersionedBody(request, versioned);
-	return json(await updateShared(cms.site, aiStoreFor(cms), expectedVersion, { texts }));
+	return ok(await updateShared(cms.site, aiStoreFor(cms), expectedVersion, { texts }));
 });
 
 const readKey = (request: Request): string => {
 	const key = new URL(request.url).searchParams.get("key");
-	if (!key) throw new HttpError(400, "invalid_input", "key is required");
+	if (!key) throw new CmsError("key is required", "invalid_input");
 	return key;
 };
 
@@ -44,5 +44,5 @@ export const DELETE = adminRoute(async ({ request, cms }) => {
 	const store = aiStoreFor(cms);
 	const key = readKey(request);
 	const expectedVersion = readVersionQuery(request);
-	return json(await deleteShared(cms.site, store, expectedVersion, key, await listActions(cms.site, store)));
+	return ok(await deleteShared(cms.site, store, expectedVersion, key, await listActions(cms.site, store)));
 });

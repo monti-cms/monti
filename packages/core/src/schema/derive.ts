@@ -1,4 +1,5 @@
 import type { CollectionsConfig } from "../config/define";
+import type { ErrorCode } from "../core/error-codes";
 import { isUuid } from "../core/ids";
 import { slugify } from "../core/slug";
 import type { CollectionSchema } from "./collection";
@@ -32,7 +33,7 @@ export type RelationTarget = SchemaCollection;
 /**
  * Validates the meaning of values that passed the storage format check. If there is a problem, returns the legacy API's error code.
  */
-export function fieldValueError(field: ValueField, value: string | readonly string[]): string | null {
+export function fieldValueError(field: ValueField, value: string | readonly string[]): ErrorCode | null {
 	const values = typeof value === "string" ? [value] : value;
 	switch (field.kind) {
 		case "text":
@@ -322,7 +323,7 @@ export function createSchemas(collections: CollectionsConfig) {
 		collection: SchemaCollection,
 		value: unknown,
 		locales: readonly string[],
-	): { value: RecordTranslations } | { error: string; path?: string; label?: string } {
+	): { value: RecordTranslations } | { error: ErrorCode; path?: string; label?: string } {
 		const fieldsAllowed = recordLocalizedFields(collection);
 		const isPlain = (item: unknown): item is Record<string, unknown> =>
 			typeof item === "object" &&

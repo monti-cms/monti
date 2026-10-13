@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { calloutBlock } from "./definition";
 
 export { calloutBlock } from "./definition";
@@ -13,9 +13,8 @@ export { calloutBlock } from "./definition";
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
 export const callout = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "callout",
-		options: {},
 		blocks: [calloutBlock],
 		admin: () => import("@monti-cms/blocks/callout/admin"),
 		render: () => import("@monti-cms/blocks/callout/render"),

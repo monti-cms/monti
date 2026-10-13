@@ -224,7 +224,7 @@ describe("AI action runner", () => {
 			}),
 		);
 		await expect(runAiAction(action, call({ title: "글" }), deps(provider))).rejects.toMatchObject({
-			code: "ai_failed",
+			code: "upstream_failed",
 			message: "결과가 검사를 통과하지 못했습니다: 너무 짧다",
 		});
 		// A disabled code check does not run.
@@ -330,10 +330,10 @@ describe("AI action runner", () => {
 
 	it("if no model for the mode is connected, it notifies instead of calling", async () => {
 		await expect(runAiAction(preset("tags"), call({ title: "t" }), deps(null))).rejects.toMatchObject({
-			code: "ai_unavailable",
+			code: "service_unavailable",
 		});
 		await expect(runAiAction(preset("slug"), call({ title: "t" }), deps(null))).rejects.toMatchObject({
-			code: "ai_unavailable",
+			code: "service_unavailable",
 		});
 	});
 
@@ -380,7 +380,7 @@ describe("AI action runner", () => {
 
 		await expect(
 			runAiAction(preset("imageAlt"), call({ image }), deps(provider, { loadImage: async () => null })),
-		).rejects.toMatchObject({ code: "ai_failed" });
+		).rejects.toMatchObject({ code: "upstream_failed" });
 	});
 
 	it("images outside the media library are read by site URL", async () => {
@@ -412,7 +412,7 @@ describe("AI action runner", () => {
 		const { provider } = stubProvider({ text: "가".repeat(200) });
 		await expect(runAiAction(preset("summary"), call({ title: "t", body: "b" }), deps(provider))).rejects.toMatchObject(
 			{
-				code: "ai_failed",
+				code: "upstream_failed",
 			},
 		);
 	});
@@ -443,7 +443,7 @@ describe("AI action runner", () => {
 		const broken = stubProvider({ mdx: "Hello world" });
 		await expect(
 			runAiAction(preset("translate"), call({ block: "안녕 **세계**", from: "ko", to: "en" }), deps(broken.provider)),
-		).rejects.toMatchObject({ code: "ai_failed" });
+		).rejects.toMatchObject({ code: "upstream_failed" });
 	});
 
 	it("does not call if a required input is missing", async () => {
@@ -451,7 +451,7 @@ describe("AI action runner", () => {
 		await expect(
 			runAiAction(preset("translate"), call({ block: "a", from: "ko" }), deps(provider)),
 		).rejects.toMatchObject({
-			code: "ai_failed",
+			code: "upstream_failed",
 		});
 		expect(requests).toHaveLength(0);
 	});
@@ -493,10 +493,10 @@ describe("streaming and shared text", () => {
 	it("blocks actions that cannot stream, and empty results", async () => {
 		const { provider } = stubProvider({ streamText: "  " });
 		await expect(streamAiAction(polish, call({ selection: "글" }), deps(provider), () => {})).rejects.toMatchObject({
-			code: "ai_failed",
+			code: "upstream_failed",
 		});
 		await expect(streamAiAction(preset("slug"), call({ title: "t" }), deps(provider), () => {})).rejects.toMatchObject({
-			code: "ai_invalid_input",
+			code: "invalid_input",
 		});
 	});
 

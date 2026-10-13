@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import type { CmsFormat } from "@monti-cms/core/format";
-import { type Cms, problemText } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/plugin/server";
 import type { GitHubClient, GitHubClientFactory } from "./github/client";
 import { githubClientFactory } from "./github/rest";
+import { tokenKeyOf } from "./keys";
 import {
 	DEFAULT_DEBOUNCE_MS,
 	GIT_SYNC_PLUGIN_NAME,
@@ -12,7 +13,7 @@ import {
 	resolveTargets,
 } from "./options";
 import { createPathPattern, type PathPattern } from "./path-pattern";
-import { tokenKeyOf } from "./settings";
+import { serverMessages } from "./server.messages";
 import { createState, type SyncState } from "./state";
 
 /** An error a person can fix (a token that is not saved, a format that is not installed). It is thrown like any other, so the event outbox retries and then keeps it. */
@@ -76,13 +77,7 @@ export interface SyncContext {
 export function readOptions(cms: Cms): GitSyncOptions {
 	const options = cms.site.getPluginOptions<GitSyncOptions>(GIT_SYNC_PLUGIN_NAME);
 	if (!options) {
-		throw new GitSyncError(
-			problemText({
-				what: "The git-sync plugin is not in the site config",
-				where: "`plugins` in monti.config.ts",
-				fix: "add `gitSync({ targets: [...] })` (from @monti-cms/git-sync) to the list",
-			}),
-		);
+		throw new GitSyncError(cms.site.createTranslator(serverMessages)("pluginMissing"));
 	}
 	return options;
 }
@@ -107,27 +102,17 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 		sleep,
 		target: (id) => {
 			const found = targets.find((target) => target.id === id);
-			if (!found) throw new GitSyncError(`There is no git-sync target "${id}"`);
+			if (!found) throw new GitSyncError(cms.site.createTranslator(serverMessages)("noTarget", { id }));
 			return found;
 		},
 		client: async (target) => {
-			const token = await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT);
+			const token = await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read();
 			if (!token) {
 				// A key that is there but cannot be read is another problem than a key that was never chosen (or was deleted).
 				const unreadable = (await tokenKeyOf(cms)) !== null;
-				throw new GitSyncNotConfigured(
-					unreadable
-						? problemText({
-								what: "The saved GitHub token cannot be read, because MONTI_SECRET changed since it was saved",
-								where: `the Git sync screen (${cms.site.adminHref("/tools/git-sync")})`,
-								fix: "enter the token again there, or put the old secret back (as MONTI_SECRET, or listed in `previousSecrets` in monti.config.ts)",
-							})
-						: problemText({
-								what: "No GitHub token is saved, so nothing is pushed or pulled yet",
-								where: `the Git sync screen (${cms.site.adminHref("/tools/git-sync")})`,
-								fix: "choose or enter a GitHub token that can read and write the repo's contents there; `monti doctor` lists what else is missing",
-							}),
-				);
+				const t = cms.site.createTranslator(serverMessages);
+				const where = cms.site.adminHref("/tools/git-sync");
+				throw new GitSyncNotConfigured(t(unreadable ? "tokenUnreadable" : "tokenMissing", { where }));
 			}
 			return factory({ token, repo: target.repo, ...(target.apiUrl ? { apiUrl: target.apiUrl } : {}) });
 		},
@@ -135,23 +120,12 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			const cached = patterns.get(target.id);
 			if (cached) return cached;
 			const format = (await cms.formats()).get(target.format);
+			const t = cms.site.createTranslator(serverMessages);
 			if (!format) {
-				throw new GitSyncError(
-					problemText({
-						what: `Target "${target.id}" writes files in the format "${target.format}", which this site does not have`,
-						where: "`plugins` in monti.config.ts, and `format` of the target",
-						fix: 'add the plugin that provides the format (mdx() from @monti-cms/mdx provides "mdx"; install the package first), or give the target another format',
-					}),
-				);
+				throw new GitSyncError(t("formatMissing", { target: target.id, format: target.format }));
 			}
 			if (!format.import) {
-				throw new GitSyncError(
-					problemText({
-						what: `Format "${target.format}" cannot import, so target "${target.id}" cannot sync both ways`,
-						where: "`format` of the target in gitSync() of monti.config.ts",
-						fix: "use a format that can read files back (mdx does)",
-					}),
-				);
+				throw new GitSyncError(t("formatCannotImport", { target: target.id, format: target.format }));
 			}
 			const found = {
 				format,
@@ -165,7 +139,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			const deadline = now() + (lockOptions?.waitMs ?? LOCK_WAIT_MS);
 			while (!(await state.locks.tryAcquire(target.id, holder, LOCK_TTL_MS, now()))) {
 				if (now() >= deadline)
-					throw new GitSyncError(`Target "${target.id}" is busy (another sync is running); it will be retried`);
+					throw new GitSyncError(cms.site.createTranslator(serverMessages)("targetBusy", { target: target.id }));
 				await sleep(LOCK_POLL_MS);
 			}
 			try {
@@ -178,14 +152,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 	return context;
 }
 
-const contexts = new WeakMap<Cms, SyncContext>();
-
-/** The sync context of an instance, made on first use. Each instance has its own. */
+/** The sync context of an instance, made on first use and again after a schema reload (`cms.plugin(...).once`). */
 export function syncContextFor(cms: Cms): SyncContext {
-	let context = contexts.get(cms);
-	if (!context) {
-		context = createSyncContext(cms);
-		contexts.set(cms, context);
-	}
-	return context;
+	return cms.plugin(GIT_SYNC_PLUGIN_NAME).once("sync-context", () => createSyncContext(cms));
 }

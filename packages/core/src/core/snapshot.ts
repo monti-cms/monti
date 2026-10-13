@@ -13,6 +13,7 @@ import { fieldValueError, RECORD_TRANSLATIONS_KEY } from "../schema/derive";
 import type { Site } from "../site";
 import { checkDocument, isEmptyDocument } from "./body-check";
 import { computeContentHash } from "./content-hash";
+import type { ErrorCode } from "./error-codes";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "./limits";
 import { normalizeSlugInput } from "./slug";
 import { sortKeys } from "./sort-keys";
@@ -179,13 +180,13 @@ export const readInputBody = async (
  * Field value error. The error code is the same regardless of field name. Exceeding the length limit (`field_too_long`) is reported through the issue (`issues`)'s
  * `path` (field name) and `message` (field label) (the admin screen shows it as "<label> is too long.").
  */
-function fieldValueServiceError(code: string, path: string, label: string | undefined): ServiceError {
+function fieldValueServiceError(code: ErrorCode, path: string, label: string | undefined): ServiceError {
 	if (code !== "field_too_long") return new ServiceError(code);
 	return new ServiceError(code, [{ code, path, ...(label ? { message: label } : {}) }]);
 }
 
 /** A metadata error that names the field: a code alone ("invalid_metadata_type") does not say which of the fields is wrong. */
-const metadataError = (code: string, field: string, message: string): ServiceError =>
+const metadataError = (code: ErrorCode, field: string, message: string): ServiceError =>
 	new ServiceError(code, [{ code, path: field, message }]);
 
 const describeValue = (v: unknown): string => (v === null ? "null" : Array.isArray(v) ? "a list" : typeof v);

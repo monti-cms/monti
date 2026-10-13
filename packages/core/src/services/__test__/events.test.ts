@@ -14,7 +14,6 @@ import {
 import { seedEntry, seedSave } from "../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
-import { createMemoryPluginStorage } from "../../plugin/memory-storage";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -418,8 +417,7 @@ describe("afterCommit delivery", () => {
 			expect(counts).toEqual({ a: 1, b: 1 });
 		});
 
-		it("keeps the marks in the storage it is given, and drops the ones older than the events it keeps", async () => {
-			const marks = createMemoryPluginStorage().storage("test").collection<{ at: string }>("once");
+		it("keeps the mark with the delivery, so pruning the events past the retention removes it too", async () => {
 			const name = `m${++counter}`;
 			const subscribers: EventSubscriber[] = [
 				{
@@ -430,20 +428,24 @@ describe("afterCommit delivery", () => {
 				},
 			];
 			const dispatcherAt = (now: () => Date) =>
-				createEventDispatcher({
-					store: () => raw,
-					subscribers: async () => subscribers,
-					marks: () => marks,
-					now,
-				});
+				createEventDispatcher({ store: () => raw, subscribers: async () => subscribers, now });
+			const markedEvents = async () =>
+				(
+					await pool.query<{ event_id: string }>(
+						`SELECT event_id FROM "${schemaName}".cms_event_deliveries WHERE subscriber = $1 AND once_at IS NOT NULL`,
+						[name],
+					)
+				).rows.map((row) => row.event_id);
 			const first = dispatcherAt(() => new Date());
 			await create(withEventDispatch(raw, first.dispatchEntry), `once-${name}`);
-			expect((await marks.list()).map((item) => item.key)).toEqual([expect.stringMatching(/^m\d+\//)]);
+			const before = await markedEvents();
+			expect(before).toHaveLength(1);
 
-			// 91 days later, the sweep that a write carries along drops the marks of events past the retention.
+			// 91 days later, the sweep that a write carries along prunes the events past the retention, and the marks go with their deliveries.
 			const later = dispatcherAt(() => new Date(Date.now() + 91 * 24 * 60 * 60 * 1000));
 			await create(withEventDispatch(raw, later.dispatchEntry), `once-${name}-later`);
-			expect(await marks.list()).toEqual([]);
+			// Every event of the test is past the retention on that clock, and their marks are gone with them.
+			expect(await markedEvents()).toEqual([]);
 		});
 	});
 
@@ -515,7 +517,7 @@ describe("afterCommit delivery", () => {
 		it("a bulk change delivers one event per item, in each entry's order", async () => {
 			const seen = recorder();
 			const { store } = setup({ a: seen.handler });
-			const bulk = createBulkService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const bulk = createBulkService(store, { site: testSite, hooks: () => [], formats });
 			const drafts = [await create(store, "bulk-a"), await create(store, "bulk-b"), await create(store, "bulk-c")];
 			const items = drafts.map((draft) => ({ id: draft.id, expectedVersion: draft.version }));
 
@@ -537,7 +539,7 @@ describe("afterCommit delivery", () => {
 		it("restoring an entry from the trash delivers `restored`, after `trashed`", async () => {
 			const seen = recorder();
 			const { store } = setup({ a: seen.handler });
-			const service = createContentService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const service = createContentService(store, { site: testSite, hooks: () => [], formats });
 			const entry = await create(store, "restore-a");
 			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
 			const restored = (await service.restore({ id: entry.id, expectedVersion: trashed.version })).entry;
@@ -556,7 +558,7 @@ describe("afterCommit delivery", () => {
 
 		it("records every kind of change once, with entry, collection, locale, time and actor, and lists it as recorded", async () => {
 			const { store, events } = setup({});
-			const service = createContentService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const service = createContentService(store, { site: testSite, hooks: () => [], formats });
 			const entry = await withActor("Mina", () => create(store, "log-no-subscribers"));
 			const saved = await withActor("Mina", () => save(store, entry, "second"));
 			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: saved.version });

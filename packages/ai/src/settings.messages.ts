@@ -3,8 +3,6 @@ import { defineMessages } from "@monti-cms/core";
 /** Error messages for AI connection settings and shared texts. */
 export const settingsMessages = defineMessages("cms-ai.settings", {
 	en: {
-		legacyGenerate: "Generate",
-		legacyDecide: "Decide",
 		keyUse: "AI connection “{name}”",
 		unknownConnection: "This connection doesn't exist.",
 		urlAndModel: "Enter an address and a model.",
@@ -22,8 +20,6 @@ export const settingsMessages = defineMessages("cms-ai.settings", {
 		"shared.inUse": "Actions use this text, so it can't be deleted: {users}",
 	},
 	ko: {
-		legacyGenerate: "생성",
-		legacyDecide: "판단",
 		keyUse: "AI 연결 “{name}”",
 		unknownConnection: "없는 연결입니다.",
 		urlAndModel: "주소와 모델을 넣으세요.",

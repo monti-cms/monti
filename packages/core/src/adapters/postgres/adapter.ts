@@ -90,7 +90,6 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 		});
 	return {
 		name: "postgres",
-		settings: () => ({ connectionString: options.connectionString, schema: options.schema }),
 		createStore: (storeOptions) =>
 			lazyStore(
 				async () => (await loadStoreModule()).createContentStore(getPool(), { ...schemaOptions(), ...storeOptions }),
@@ -103,61 +102,61 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 					...schemaOptions(),
 					site: migrateOptions.site,
 					formats: migrateOptions.formats,
-					reconvertBodies: migrateOptions.reconvertBodies,
-					onUnreadableBody: migrateOptions.onUnreadableBody,
-					detail: migrateOptions.detail,
 				});
 			} catch (error) {
 				throw explain(error) ?? error;
 			}
 		},
-		decisions: (env): readonly Decision[] => {
-			const url = options.connectionString || env[DATABASE_URL_ENV]?.trim() || undefined;
-			const schema = options.schema || env[DATABASE_SCHEMA_ENV]?.trim() || undefined;
-			return [
-				{
-					topic: "Database",
-					value: describeConnection(url) ?? "no URL",
-					source: options.connectionString
-						? "set in monti.config.ts (postgres({ connectionString }))"
-						: url
-							? `from env ${DATABASE_URL_ENV}`
-							: `${DATABASE_URL_ENV} is not set`,
-				},
-				{
-					topic: "Database schema",
-					value: schema ?? "public",
-					source: options.schema
-						? "set in monti.config.ts (postgres({ schema }))"
-						: schema
-							? `from env ${DATABASE_SCHEMA_ENV}`
-							: `default (${DATABASE_SCHEMA_ENV} is not set)`,
-				},
-			];
-		},
-		state: async () => {
-			const schema = schemaOptions()?.schema ?? "public";
-			try {
-				const found = await getPool().query<{ table_name: string }>(
-					"SELECT table_name FROM information_schema.tables WHERE table_schema = $1 AND table_type = 'BASE TABLE'",
-					[schema],
-				);
-				const names = found.rows.map((row) => row.table_name);
-				let set = false;
-				if (names.includes("cms_migrations")) {
-					const rows = await getPool().query<{ count: string }>(
-						`SELECT count(*) AS count FROM "${schema.replaceAll('"', '""')}".cms_migrations`,
+		inspector: {
+			settings: () => ({ connectionString: options.connectionString, schema: options.schema }),
+			decisions: (env): readonly Decision[] => {
+				const url = options.connectionString || env[DATABASE_URL_ENV]?.trim() || undefined;
+				const schema = options.schema || env[DATABASE_SCHEMA_ENV]?.trim() || undefined;
+				return [
+					{
+						topic: "Database",
+						value: describeConnection(url) ?? "no URL",
+						source: options.connectionString
+							? "set in monti.config.ts (postgres({ connectionString }))"
+							: url
+								? `from env ${DATABASE_URL_ENV}`
+								: `${DATABASE_URL_ENV} is not set`,
+					},
+					{
+						topic: "Database schema",
+						value: schema ?? "public",
+						source: options.schema
+							? "set in monti.config.ts (postgres({ schema }))"
+							: schema
+								? `from env ${DATABASE_SCHEMA_ENV}`
+								: `default (${DATABASE_SCHEMA_ENV} is not set)`,
+					},
+				];
+			},
+			state: async () => {
+				const schema = schemaOptions()?.schema ?? "public";
+				try {
+					const found = await getPool().query<{ table_name: string }>(
+						"SELECT table_name FROM information_schema.tables WHERE table_schema = $1 AND table_type = 'BASE TABLE'",
+						[schema],
 					);
-					set = Number(rows.rows[0]?.count ?? 0) > 0;
+					const names = found.rows.map((row) => row.table_name);
+					let set = false;
+					if (names.includes("cms_migrations")) {
+						const rows = await getPool().query<{ count: string }>(
+							`SELECT count(*) AS count FROM "${schema.replaceAll('"', '""')}".cms_migrations`,
+						);
+						set = Number(rows.rows[0]?.count ?? 0) > 0;
+					}
+					return { schema, set, tables: names.length };
+				} catch (error) {
+					throw explain(error) ?? error;
 				}
-				return { schema, set, tables: names.length };
-			} catch (error) {
-				throw explain(error) ?? error;
-			}
-		},
-		describeTarget: () => {
-			const where = describeConnection(options.connectionString || process.env[DATABASE_URL_ENV]);
-			return where ? `${where}, schema "${schemaOptions()?.schema ?? "public"}"` : undefined;
+			},
+			describeTarget: () => {
+				const where = describeConnection(options.connectionString || process.env[DATABASE_URL_ENV]);
+				return where ? `${where}, schema "${schemaOptions()?.schema ?? "public"}"` : undefined;
+			},
 		},
 		pluginStorage: (plugin) => createPluginStorage(getPool(), schemaOptions()?.schema, plugin),
 		transaction: (work) => inPluginTransaction(getPool(), schemaOptions()?.schema, work),

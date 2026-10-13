@@ -1,60 +1,46 @@
 import { AuthError } from "../../adapters/auth";
+import { ERROR_STATUS, type ErrorCode, HIDDEN_MESSAGE_CODES } from "../../core/error-codes";
 import { SetupError } from "../../core/problem";
-import { CmsError } from "../../core/store";
-import { ServiceError } from "../../services/types";
+import { CmsError } from "../../core/store/errors";
+
+export { CmsError, ERROR_STATUS, type ErrorCode };
+export { ServiceError } from "../../core/types";
 
 /**
- * HTTP errors that routes throw directly (malformed request, missing version, etc.). Plugin errors extend this to set the status code.
- * The response shape matches other errors: `code`, `message`, and `issues` when present.
+ * The error body of every answer: `{ error: { code, message, issues?, details? } }`. `details` is machine-readable extra data
+ * (the places a key is used, the server version of a `conflict`); `issues` are the problems found in the content.
  */
-export class HttpError extends Error {
-	constructor(
-		readonly status: number,
-		readonly code: string,
-		message: string,
-		readonly issues?: unknown,
-		/** More members of the response body (a machine-readable `reason`, say). */
-		readonly extra?: Readonly<Record<string, unknown>>,
-	) {
-		super(message);
-		this.name = "HttpError";
-	}
+export interface ErrorBody {
+	readonly error: {
+		readonly code: ErrorCode;
+		readonly message: string;
+		readonly issues?: readonly unknown[];
+		readonly details?: unknown;
+	};
 }
 
-const CMS_ERROR_STATUS: Record<string, number> = {
-	not_found: 404,
-	conflict: 409,
-	slug_conflict: 409,
-	in_use: 409,
-	key_name_taken: 409,
-	key_in_use: 409,
-	invalid_status: 409,
-	locked: 409,
-	folder_name_conflict: 409,
-	translation_exists: 409,
-	has_translations: 409,
-	source_trashed: 409,
-	invalid_input: 400,
-	invalid_reference: 400,
-	invalid_state: 500,
-	media_not_configured: 501,
-};
+/** The response for a code. Nothing outside this file picks a status: it comes from {@link ERROR_STATUS}. */
+export function errorResponse(
+	code: ErrorCode,
+	message: string,
+	extra: { readonly issues?: readonly unknown[]; readonly details?: unknown; readonly headers?: HeadersInit } = {},
+): Response {
+	const body: ErrorBody = {
+		error: {
+			code,
+			message,
+			...(extra.issues && extra.issues.length > 0 ? { issues: extra.issues } : {}),
+			...(extra.details !== undefined ? { details: extra.details } : {}),
+		},
+	};
+	return Response.json(body, { status: ERROR_STATUS[code], ...(extra.headers ? { headers: extra.headers } : {}) });
+}
 
-const SERVICE_ERROR_STATUS: Record<string, number> = {
-	invalid_input: 400,
-	unknown_collection: 400,
-	slug_reserved: 409,
-	body_too_large: 413,
-	metadata_too_large: 413,
-	// The `format` option names a format no plugin provides, or one that can only write text.
-	unknown_format: 400,
-	format_not_importable: 400,
-	// The format could not read the text, or a plugin's format threw.
-	format_import_failed: 422,
-	format_export_failed: 500,
-	// A hook of the server config or a plugin threw: a server-side failure, not a problem with the request.
-	hook_failed: 500,
-};
+/** A successful answer with a body. */
+export const ok = (body: unknown, init?: ResponseInit): Response => Response.json(body, init);
+
+/** The one answer to a delete: 204, no body. */
+export const deleted = (): Response => new Response(null, { status: 204 });
 
 /** A DB connection failure is a transient error (503). It is not disguised as missing content or an empty list. */
 const isUnavailable = (error: unknown) => {
@@ -69,54 +55,29 @@ const isUnavailable = (error: unknown) => {
 	);
 };
 
-export function handleApiError(error: unknown): Response {
-	if (error instanceof HttpError) {
-		return Response.json(
-			{
-				code: error.code,
-				message: error.message,
-				...(error.issues ? { issues: error.issues } : {}),
-				...error.extra,
-			},
-			{ status: error.status },
-		);
-	}
+/** The details of a store error: the version the server holds (for a `conflict`) next to what the store attached. */
+function detailsOf(error: CmsError): unknown {
+	if (error.serverVersion === undefined) return error.details;
+	const attached = error.details && typeof error.details === "object" ? error.details : {};
+	return { ...attached, serverVersion: error.serverVersion };
+}
 
+export function handleApiError(error: unknown): Response {
 	// A setup mistake (a database that is down or not migrated, a missing setting): the server log has the fix; the response does not repeat host names.
 	if (error instanceof SetupError) {
 		console.error(`Monti is not set up correctly: ${error.message}`);
-		return Response.json(
-			{ code: error.kind, message: "The server is not set up correctly. The server log says how to fix it." },
-			{ status: 503 },
-		);
+		return errorResponse(error.kind, "The server is not set up correctly. The server log says how to fix it.");
 	}
 
-	if (error instanceof AuthError) {
-		return Response.json(
-			{ code: error.code, message: error.message },
-			{ status: error.code === "unauthorized" ? 401 : 403 },
-		);
-	}
+	if (error instanceof AuthError) return errorResponse(error.code, error.message);
 
 	if (error instanceof CmsError) {
-		const status = CMS_ERROR_STATUS[error.code] ?? 400;
-		if (status === 500) console.error("CMS store invariant broken:", error);
-		return Response.json(
-			{
-				code: error.code,
-				message: status === 500 ? "Internal server error" : error.message,
-				...(error.serverVersion !== undefined ? { serverVersion: error.serverVersion } : {}),
-				...(error.details !== undefined ? { details: error.details } : {}),
-			},
-			{ status },
-		);
-	}
-
-	if (error instanceof ServiceError) {
-		return Response.json(
-			{ code: error.code, message: error.message, ...(error.issues ? { issues: error.issues } : {}) },
-			{ status: SERVICE_ERROR_STATUS[error.code] ?? 422 },
-		);
+		const hidden = HIDDEN_MESSAGE_CODES.has(error.code);
+		if (hidden) console.error("CMS store invariant broken:", error);
+		return errorResponse(error.code, hidden ? "Internal server error" : error.message, {
+			issues: error.issues,
+			details: detailsOf(error),
+		});
 	}
 
 	// The UI withdrew the request (e.g. reloading the model list). Nobody is waiting, so end quietly.
@@ -124,11 +85,11 @@ export function handleApiError(error: unknown): Response {
 
 	if (isUnavailable(error)) {
 		console.error("CMS storage unavailable:", error);
-		return Response.json({ code: "unavailable", message: "Storage is temporarily unavailable" }, { status: 503 });
+		return errorResponse("unavailable", "Storage is temporarily unavailable");
 	}
 
 	console.error("Unhandled API error:", error);
-	return Response.json({ code: "internal_error", message: "Internal server error" }, { status: 500 });
+	return errorResponse("internal_error", "Internal server error");
 }
 
 /** Work stopped because the browser dropped the request (body not fully read) or the request signal aborted. */

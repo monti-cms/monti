@@ -1,8 +1,9 @@
 import { definePlugin } from "@monti-cms/core";
 import { seoAiContribution } from "./ai";
+import { SEO_PLUGIN_NAME } from "./name";
 import { validateSeoFields } from "./validate";
 
-export const SEO_PLUGIN_NAME = "seo";
+export { SEO_PLUGIN_NAME } from "./name";
 
 export interface SeoPluginOptions {
 	/** Adds search title and description suggestions when the AI plugin is present. Default `true`. */
@@ -17,7 +18,7 @@ export interface SeoPluginOptions {
  * - With the AI plugin, search title and description suggestions (`seoTitle`, `seoDescription`)
  *
  * ```ts
- * plugins: [seo(), aiPlugin()]
+ * plugins: [seo(), ai()]
  * ```
  */
 export const seo = (options: SeoPluginOptions = {}) =>

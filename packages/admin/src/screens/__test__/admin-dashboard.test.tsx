@@ -275,7 +275,7 @@ describe("list screen — row menu and bulk actions", () => {
 		server.handle = (url, init) => {
 			if (url.pathname === "/api/monti/v1/bulk" && init?.method === "POST") {
 				bulkFailed = true;
-				return json({ code: "internal", message: "서버 오류" }, 500);
+				return json({ error: { code: "internal", message: "서버 오류" } }, 500);
 			}
 			// The refetch after the failure never finishes. If the rows come back, it is thanks to the rollback.
 			if (bulkFailed && url.pathname === "/api/monti/v1/entries") return new Promise(() => {});

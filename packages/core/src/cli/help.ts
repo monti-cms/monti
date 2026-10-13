@@ -52,9 +52,6 @@ const DB_MIGRATE_HELP = `  db:migrate  After you update Monti: bring the tables 
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
               --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
-              --verbose             List every body that could not be read, with its reason, instead of a short summary
-              --reconvert-bodies    Read the bodies that were kept as unreadable (source only) again, with the config as it is now: use it after you turn on a
-                                    syntax such as mdx({ syntax: [directiveSyntax()] }). Bodies that read now become normal bodies; the rest stay as they are
 `;
 
 const EVENTS_RETRY_HELP = `  events:retry    Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)

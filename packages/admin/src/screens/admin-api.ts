@@ -10,6 +10,7 @@ export class CmsApiError extends Error {
 		readonly code: string | undefined,
 		message: string,
 		readonly issues: CmsIssue[],
+		/** The `error` object of the answer: `code`, `message`, and `issues` / `details` when there are any. */
 		readonly body: Record<string, unknown>,
 	) {
 		super(message);
@@ -39,12 +40,14 @@ export async function cmsFetch<T = unknown>(
 	if (response.status === 204) return undefined as T;
 	const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 	if (!response.ok) {
+		// Every error answer is `{ error: { code, message, issues?, details? } }`.
+		const error = (typeof body.error === "object" && body.error !== null ? body.error : {}) as Record<string, unknown>;
 		throw new CmsApiError(
 			response.status,
-			typeof body.code === "string" ? body.code : undefined,
-			cmsApiErrorMessage(site, body, fallback),
-			cmsApiIssues(body),
-			body,
+			typeof error.code === "string" ? error.code : undefined,
+			cmsApiErrorMessage(site, error, fallback),
+			cmsApiIssues(error),
+			error,
 		);
 	}
 	return body as T;

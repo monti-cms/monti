@@ -1,4 +1,4 @@
-import { adminRoute, handleTextCheck, json, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, handleTextCheck, ok, readJsonBody } from "@monti-cms/core/plugin/server";
 import { checkWithBareun } from "./api";
 import { readBareunOptions } from "./config";
 import { bareunMessages } from "./messages";
@@ -13,26 +13,27 @@ export function bareunRoute() {
 	const POST = adminRoute(async ({ request, cms }) => {
 		const options = readBareunOptions(cms.site);
 		// The key is read from the key slot on every call. It is never sent to the browser.
-		const apiKey = (await cms.apiKeys.readSlot(BAREUN_PLUGIN_NAME, BAREUN_KEY_SLOT))?.trim();
+		const apiKey = (await cms.apiKeys.slot(BAREUN_PLUGIN_NAME, BAREUN_KEY_SLOT).read())?.trim();
 		if (!apiKey) {
 			const t = cms.site.createTranslator(bareunMessages);
-			return json({ code: "text_check_unavailable", message: t("error.keyMissing") }, { status: 503 });
+			throw new CmsError(t("error.keyMissing"), "service_unavailable");
 		}
-		const result = await handleTextCheck(
-			await readJsonBody(request),
-			{
-				limits: options.limits,
-				check: (segments, { signal }) =>
-					checkWithBareun(cms.site, segments, {
-						apiKey,
-						baseUrl: options.baseUrl,
-						customDictNames: options.customDictNames,
-						signal,
-					}),
-			},
-			request.signal,
+		return ok(
+			await handleTextCheck(
+				await readJsonBody(request),
+				{
+					limits: options.limits,
+					check: (segments, { signal }) =>
+						checkWithBareun(cms.site, segments, {
+							apiKey,
+							baseUrl: options.baseUrl,
+							customDictNames: options.customDictNames,
+							signal,
+						}),
+				},
+				request.signal,
+			),
 		);
-		return json(result.body, { status: result.status });
 	});
 	return { POST };
 }

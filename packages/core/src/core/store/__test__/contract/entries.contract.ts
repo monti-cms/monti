@@ -920,7 +920,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 	describe("EntryStore: values of removed fields and options", () => {
 		let session: StoreSession;
 		let store: ContentStore;
-		let service: ReturnType<typeof createContentService<Entry>>;
+		let service: ReturnType<typeof createContentService>;
 		let sequence = 0;
 		const unique = (prefix: string) => `${prefix}-${++sequence}`;
 		const targets = new Map<Collection, string>();
@@ -928,7 +928,7 @@ const createRemovedFieldsContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			service = createContentService<Entry>(store, serviceOptions);
+			service = createContentService(store, serviceOptions);
 		});
 
 		afterAll(async () => {
@@ -1183,7 +1183,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 	describe("EntryStore: review regressions", () => {
 		let session: StoreSession;
 		let store: ContentStore;
-		let service: ReturnType<typeof createContentService<Entry>>;
+		let service: ReturnType<typeof createContentService>;
 		let sequence = 0;
 		const unique = (prefix: string) => `${prefix}-${++sequence}`;
 		const targets = new Map<Collection, string>();
@@ -1191,7 +1191,7 @@ const createReviewRegressionsContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			service = createContentService<Entry>(store, serviceOptions);
+			service = createContentService(store, serviceOptions);
 		});
 
 		afterAll(async () => {
@@ -1568,7 +1568,7 @@ const createDuplicateContract: ContractSuite = (factory) => {
 
 			// A published entry with a folder and an image (a media reference) in its body, made the way production makes it.
 			const original = (
-				await createContentService<Entry>(store, serviceOptions).createDraft({
+				await createContentService(store, serviceOptions).createDraft({
 					collection: contentCollection,
 					slug: "orig-slug",
 					metadata: { title: "Original Post", ...relations },
@@ -1679,7 +1679,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 	describe("EntryStore: block ids in the store", () => {
 		let session: StoreSession;
 		let store: ContentStore;
-		let service: ReturnType<typeof createContentService<Entry>>;
+		let service: ReturnType<typeof createContentService>;
 		let sequence = 0;
 		const unique = (prefix: string) => `${prefix}-${++sequence}`;
 		const targets = new Map<Collection, string>();
@@ -1687,7 +1687,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		beforeAll(async () => {
 			session = await factory.create();
 			store = session.store;
-			service = createContentService<Entry>(store, serviceOptions);
+			service = createContentService(store, serviceOptions);
 		});
 
 		afterAll(async () => {

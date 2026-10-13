@@ -7,8 +7,7 @@ MDX for `@monti-cms/core`. Core stores a body as a document and has no text form
 - the **`mdx` format**: `format: "mdx"` on the read and write APIs, `?format=mdx` on the export and the HTTP API, and the text the AI plugin's model reads and writes;
 - **`renderMdx`** for the public page: MDX text is read into a document and drawn by core's renderer (no MDX is compiled or executed);
 - the **source panel** of the admin: edit a body as MDX text, checked as it is typed;
-- the **syntax extension API** (`SyntaxExtension` and friends) that `@monti-cms/syntax-directive` and `@monti-cms/syntax-shiki` build on;
-- the code that reads old stores which kept bodies as MDX text, when `monti db:migrate` needs it.
+- the **syntax extension API** (`SyntaxExtension` and friends) that `@monti-cms/syntax-directive` and `@monti-cms/syntax-shiki` build on.
 
 ## Installation
 
@@ -56,10 +55,10 @@ A site without `mdx()` accepts documents (`doc`) only: a text write fails with `
 | Entry point | Used in | Contents |
 | --- | --- | --- |
 | `@monti-cms/mdx` | `monti.config.ts`, syntax extension packages | The plugin `mdx({ syntax })` and the syntax extension API: the types (`SyntaxExtension`, `SyntaxContext`, `SerializeContext`, ...), `RAW_SOURCE_PARAGRAPH`, the table helpers and the code comment syntax helpers. It stays light (no remark imports) because the config imports it |
-| `@monti-cms/mdx/format` | server code, tests | `mdxFormat`, `createMdxFormat({ syntax })`, and the parse and write API: `analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `bodyFromDocument`, `bodyDocument`, `documentToMdx`, `toStoredDocument`, `fromStoredDocument`, `parseMdxAst`, `insertSoftBreaks`, `readableMdx`, `compareMdxStructure`, `configuredSyntax`, `remarkFenceBlocksToMdx`, ... |
+| `@monti-cms/mdx/format` | server code, tests | `mdxFormat`, `createMdxFormat({ syntax })`, and the parse and write API: `analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `bodyDocument`, `documentToMdx`, `toStoredDocument`, `fromStoredDocument`, `parseMdxAst`, `readableMdx`, `compareMdxStructure`, `configuredSyntax`, `remarkFenceBlocksToMdx`, ... |
 | `@monti-cms/mdx/render` | public pages (server components) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, and the admin provider that registers them |
-| `@monti-cms/mdx/server` | the plugin, migrations | `createServerMdxFormat`, `legacyBodies`: what the old store migrations use ("Old databases") |
+| `@monti-cms/mdx/server` | the plugin | `createServerMdxFormat`: the `mdx` format as the server registers it |
 | `@monti-cms/mdx/testing` | tests | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)` and re-exports of the pipeline functions |
 
 ## The `mdx` format
@@ -131,30 +130,6 @@ interface SyntaxExtension {
 `serializeBlocks` and `serializeInlines` for children, `componentName`, `hasSpread`, `nodeAttributes` and `markAttributes` (the attribute list the standard notation uses), and `escapeAttribute`.
 Line breaks are always `<br />` and are not offered to extensions; an `image` node is offered only when Markdown cannot say it. A remark plugin that turns source text back into a paragraph to be written as is marks it with `RAW_SOURCE_PARAGRAPH`.
 The root entry also exports the table helpers (`tableHasMergedCells`, `tableWidths`, `formatTableWidths`, ...) and the code comment syntax helpers (`resolveCommentSyntax`, `formatAnnotationComment`) for extensions that write tables or code comments. The directive extension (`packages/syntax-directive`) is the reference implementation.
-
-## Old databases
-
-Stores from before stored documents kept every body as MDX text. Core still lists the steps that moved them (`0010`, `0011`, `0012`, `0013`, `0015`) under their old names, but it does not parse MDX: those steps read and write the text through the `mdx` format that `@monti-cms/mdx/server` supplies (`CmsFormat.legacyBodies`, the `LegacyBodies` type of `@monti-cms/core/format`).
-
-- A step asks for the format **only when a store actually has a body to read** through it. A fresh store and a store already past those steps never need this package at migrate time.
-- When one does and the package is missing, `monti db:migrate` fails with a message that says to install `@monti-cms/mdx` and add `mdx()` to the plugins of the site config to upgrade the database.
-- `monti db:migrate` and `cms.migrate()` pass the instance's formats (the ones its plugins provide) to the migration, so a site that lists `mdx({ syntax: [...] })` migrates old data with the right syntax extensions.
-- `entry_bodies.mdx` and `body_templates.mdx` are nullable (the step `0020_mdx_columns_optional`) and nothing writes them any more. They are not dropped, so old rows keep their text.
-
-## Upgrading from MDX in core
-
-MDX used to be built into core, configured with `defineConfig({ mdx: { syntax } })`. Do this **before** deploying:
-
-1. Install `@monti-cms/mdx`.
-2. Add `mdx()` to `plugins` and **move** `mdx.syntax` into it: `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]` (for the owner-style blog, `directiveSyntax()` with write mode on; keep the same options).
-3. Nothing to import for its admin styles: `@monti-cms/admin/styles.css` already covers the source panel.
-4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs`.
-5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`: the syntax extension interface comes from `@monti-cms/mdx`, the parser and writer from `@monti-cms/mdx/format`.
-6. Block extensions you wrote: drop the default export of your render modules and keep `documentComponents`.
-7. Run `monti db:migrate`. With `mdx()` installed, an old database upgrades. Without it, a store that still has old steps to run fails with the install message.
-8. Drop `monti content:rewrite` from scripts: it is removed.
-
-The full list of changes is in "Upgrading from MDX in core" in the core README.
 
 ## Development
 

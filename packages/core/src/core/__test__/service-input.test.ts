@@ -44,7 +44,7 @@ describe("an error that reaches a log or a test failure", () => {
 			'validation_failed: The slug "A" must be lowercase. (slug); empty_body (body); third (and 1 more)',
 		);
 		expect(new ServiceError("invalid_input").message).toBe("invalid_input");
-		expect(new ServiceError("x", issues, "written by the caller").message).toBe("written by the caller");
+		expect(new ServiceError("hook_failed", issues, "written by the caller").message).toBe("written by the caller");
 	});
 });
 

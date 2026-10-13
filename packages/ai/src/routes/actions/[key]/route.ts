@@ -1,7 +1,7 @@
 import {
 	adminRoute,
 	assertVersionPresent,
-	json,
+	ok,
 	parseWith,
 	readJsonBody,
 	readVersionQuery,
@@ -22,7 +22,7 @@ export const PATCH = adminRoute<KeyParams>(async ({ request, params, cms }) => {
 	const body = await readJsonBody(request);
 	assertVersionPresent((body as { expectedVersion?: unknown })?.expectedVersion);
 	const { expectedVersion, value, base } = parseWith(patchSchema, body);
-	return json(await updateAction(cms.site, aiStoreFor(cms), params.key, expectedVersion, value, base));
+	return ok(await updateAction(cms.site, aiStoreFor(cms), params.key, expectedVersion, value, base));
 });
 
 /** Deletes a screen action (`?expectedVersion=`). Code actions cannot be deleted. */

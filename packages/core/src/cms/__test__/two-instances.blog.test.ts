@@ -91,6 +91,7 @@ function stubServer(tag: string) {
 			sites.push(options.site);
 		}),
 		pluginStorage: vi.fn(() => ({ once: async () => false }) as never),
+		transaction: vi.fn(),
 	} satisfies DatabaseAdapter;
 	const server = {
 		database,

@@ -49,7 +49,7 @@ describe("a collection whose title field is not named title", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let cms: ReturnType<typeof makeCms>;
 
 	beforeAll(async () => {
@@ -58,7 +58,7 @@ describe("a collection whose title field is not named title", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site, schema: schemaName });
 		store = createContentStore(pool, { site, schema: schemaName });
-		service = createContentService<Entry>(store, { site });
+		service = createContentService(store, { site });
 		cms = makeCms(store);
 	});
 

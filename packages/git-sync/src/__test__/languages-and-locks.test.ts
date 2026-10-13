@@ -119,19 +119,21 @@ describe("the secret", () => {
 		const bare = await createHarness({ noSecret: true });
 		try {
 			const response = await bare.cms.handle(
-				new Request("http://localhost/api/monti/v1/git-sync/settings", {
+				new Request("http://localhost/api/monti/v1/api-keys/slots", {
 					method: "PUT",
 					headers: { origin: "http://localhost", "content-type": "application/json" },
-					body: JSON.stringify({ token: { use: "new", value: "ghp_x" }, expectedVersion: 0 }),
+					body: JSON.stringify({ plugin: "git-sync", slot: "token", key: { use: "new", value: "ghp_x" } }),
 				}),
 			);
-			expect(response.status).toBe(400);
+			expect(response.status).toBe(501);
 			expect(await response.json()).toMatchObject({
-				code: "secret_not_configured",
-				message: expect.stringContaining("MONTI_SECRET"),
+				error: {
+					code: "secret_not_configured",
+					message: expect.stringContaining("MONTI_SECRET"),
+				},
 			});
-			const view = await (await bare.cms.handle(new Request("http://localhost/api/monti/v1/git-sync/settings"))).json();
-			expect(view).toMatchObject({ secretsAvailable: false, token: { key: null } });
+			const view = await (await bare.cms.handle(new Request("http://localhost/api/monti/v1/git-sync/status"))).json();
+			expect(view.keys).toMatchObject({ secretsAvailable: false, token: null, webhookSecret: null });
 		} finally {
 			await bare.close();
 		}

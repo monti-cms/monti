@@ -1,11 +1,12 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
+import { WHERE_TO_SET_ENV } from "../../core/env";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { formatDecision } from "../../server/decision";
 import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
-import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
+import { findBoundaryViolations } from "../import-boundary";
 import { detectAppDir, ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
 import { usesWithCms } from "../init-edit";
 import { AUTH_CHECKS } from "./auth-checks";
@@ -54,7 +55,6 @@ export function whereSet(state: DoctorState, name: string): string {
 }
 
 /** Where a variable should be set, when it is not. */
-const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 
 // ---- config ----
 
@@ -255,7 +255,7 @@ const montiSecret: CoreCheck = {
 		const available = state.cms ? state.cms.secrets("doctor").available : Boolean(value);
 		if (!available) {
 			return fail("MONTI_SECRET is not set, so login sessions cannot be signed and no key or token can be stored", {
-				where: WHERE_TO_SET,
+				where: WHERE_TO_SET_ENV,
 				fix: "generate one with `openssl rand -base64 32` and put it in MONTI_SECRET. Use the same value wherever the site runs, and keep it: values encrypted with it (AI keys, git-sync tokens) cannot be read without it",
 			});
 		}
@@ -268,40 +268,6 @@ const montiSecret: CoreCheck = {
 			});
 		}
 		return ok(`set (${value.length} characters)`, { where: whereSet(state, "MONTI_SECRET") });
-	},
-};
-
-const legacySecrets: CoreCheck = {
-	group: "secrets",
-	id: "old-secrets",
-	title: "Old secret names",
-	run: (state) => {
-		const found = (["CMS_SECRET", "AUTH_SECRET"] as const).filter((name) => state.env[name]?.trim());
-		if (found.length === 0) return ok("CMS_SECRET and AUTH_SECRET are not set");
-		const usedByConfig = state.configText?.includes("CMS_SECRET") === true;
-		const unused = found.filter((name) => !(name === "CMS_SECRET" && usedByConfig));
-		if (unused.length === 0)
-			return ok("CMS_SECRET is read by `previousSecrets` in the config, to keep old stored values readable");
-		const steps: string[] = [];
-		if (unused.includes("CMS_SECRET")) {
-			steps.push(
-				state.env.MONTI_SECRET?.trim()
-					? "CMS_SECRET: if values were stored under it (AI keys, git-sync tokens), add `previousSecrets: [process.env.CMS_SECRET]` to defineConfig, and delete the variable once they are saved again; if not, delete it"
-					: "CMS_SECRET: rename it to MONTI_SECRET, keeping the same value, so the AI keys and git-sync tokens stored with it still decrypt",
-			);
-		}
-		if (unused.includes("AUTH_SECRET")) {
-			steps.push(
-				"AUTH_SECRET: delete it; the login session key now comes from MONTI_SECRET (everyone signs in once more)",
-			);
-		}
-		return warn(
-			`${unused.join(" and ")} ${unused.length === 1 ? "is" : "are"} still set but nothing reads ${unused.length === 1 ? "it" : "them"} any more`,
-			{
-				where: [...new Set(unused.map((name) => whereSet(state, name)))].join(", "),
-				fix: steps.join("\n"),
-			},
-		);
 	},
 };
 
@@ -537,220 +503,6 @@ const adminPathCheck: CoreCheck = {
 	},
 };
 
-// ---- upgrade/*: migration-only checks ----
-//
-// For sites upgrading from the pre-overhaul setup (two config files, old env names, an `(admin)` route group, `admin-components.tsx`). They are grouped under
-// `upgrade/` so they are easy to find and easy to delete: they will be removed after the owner's blog migration (#93), together with the old-data compatibility (#45).
-
-const OLD_CONFIG_FILES = ["cms.config", "cms.server"] as const;
-const OLD_EXTENSIONS = ["ts", "tsx", "js", "mjs"] as const;
-
-const oldConfigFiles: CoreCheck = {
-	group: "upgrade",
-	id: "config-files",
-	title: "cms.config.ts and cms.server.ts",
-	run: (state) => {
-		const roots = ["", "src/"];
-		const present = roots
-			.flatMap((root) =>
-				OLD_CONFIG_FILES.flatMap((name) => OLD_EXTENSIONS.map((extension) => `${root}${name}.${extension}`)),
-			)
-			.filter((file) => exists(state, file));
-		if (present.length === 0) return ok("no cms.config.ts or cms.server.ts left");
-		const importers: string[] = [];
-		try {
-			for (const file of sourceFiles(state.cwd)) {
-				const relative = posix(path.relative(state.cwd, file));
-				if (present.includes(relative)) continue;
-				const uses = importsOf(readFileSync(file, "utf8")).some((name) => /(^|[/@])cms[.-](server|config)$/.test(name));
-				if (uses) importers.push(relative);
-			}
-		} catch {
-			// the list is a help, not the check
-		}
-		const configFile = state.configPath ?? "monti.config.ts";
-		return warn(
-			`${present.join(" and ")} ${present.length === 1 ? "is" : "are"} from the earlier two-file setup and nothing reads ${present.length === 1 ? "it" : "them"} now`,
-			{
-				where: present.join(", "),
-				fix: [
-					`1. Put the site options of cms.config.ts and the server options of cms.server.ts into one \`export const cms = defineConfig({ ... })\` in ${configFile} (defineConfig and postgres come from @monti-cms/core/server).`,
-					`2. Delete ${present.join(" and ")}.`,
-					`3. Change every import of cms.server or cms.config to ${configFile.replace(/\.ts$/, "")}${importers.length > 0 ? `: ${importers.slice(0, 8).join(", ")}${importers.length > 8 ? ", ..." : ""}` : " (the route file, the admin layout and page, your pages, scripts)"}.`,
-					'4. Run `monti doctor` again. The steps in full: "Upgrading from cms.config.ts + cms.server.ts" in the core README.',
-				].join("\n"),
-			},
-		);
-	},
-};
-
-/** Patterns of the old config that no longer work or are no longer needed, with what to do. */
-const OLD_CONFIG_TEXT: readonly { readonly pattern: RegExp; readonly what: string; readonly fix: string }[] = [
-	{
-		pattern: /\.\.\.\s*blocks\s*\(/,
-		what: "`...blocks()` is gone",
-		fix: "list one line per block instead: callout(), collapsible(), tabs(), columns(), codeExplorer(), mermaid(), chart(), tooltip(), codeRef(), color() (from @monti-cms/blocks)",
-	},
-	{
-		pattern: /defineServerConfig/,
-		what: "`defineServerConfig` is removed",
-		fix: "put its options straight into defineConfig({ database, auth, storage, secret })",
-	},
-	{
-		pattern: /\bnextHost\b/,
-		what: "`host: nextHost` is not needed",
-		fix: "delete the `host` option and its import; the Next integration attaches it",
-	},
-	{
-		pattern: /process\.env\.(CMS_(?!SECRET)[A-Z_]+|AUTH_SECRET|HOST_URL)/,
-		what: "the old environment names are read in the config",
-		fix: "delete those arguments: postgres() reads DATABASE_URL and DATABASE_SCHEMA, github() reads AUTH_GITHUB_ID, AUTH_GITHUB_SECRET and MONTI_ADMIN_GITHUB_ID, defineConfig reads SITE_URL and MONTI_SECRET",
-	},
-];
-
-const oldConfigText: CoreCheck = {
-	group: "upgrade",
-	id: "config-text",
-	title: "Old options in monti.config.ts",
-	run: (state) => {
-		if (!state.configText || !state.configPath) return skip("not checked: no config file");
-		const code = state.configText
-			.split("\n")
-			.filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
-			.join("\n");
-		const hits = OLD_CONFIG_TEXT.filter((entry) => entry.pattern.test(code));
-		if (hits.length === 0) return ok("no option of the earlier setup is left in the config");
-		return warn(hits.map((hit) => hit.what).join("; "), {
-			where: state.configPath,
-			fix: hits.map((hit, index) => `${index + 1}. ${hit.fix}`).join("\n"),
-		});
-	},
-};
-
-const RENAMED_ENV: readonly (readonly [string, string | undefined])[] = [
-	["CMS_DATABASE_URL", "DATABASE_URL"],
-	["CMS_SCHEMA", "DATABASE_SCHEMA"],
-	["CMS_ADMIN_GITHUB_ID", "MONTI_ADMIN_GITHUB_ID"],
-	["HOST_URL", "SITE_URL"],
-	["CMS_CONFIG_PATH", "MONTI_CONFIG_PATH"],
-	["CMS_DEV_AUTH_BYPASS", undefined],
-];
-
-const oldEnv: CoreCheck = {
-	group: "upgrade",
-	id: "env",
-	title: "Old environment names",
-	run: (state) => {
-		const found = RENAMED_ENV.filter(([name]) => state.env[name]?.trim());
-		if (found.length === 0) return ok("no variable with an old name is set");
-		const steps = found.map(([oldName, newName], index) => {
-			const where = whereSet(state, oldName);
-			if (!newName) {
-				return `${index + 1}. In ${where} delete ${oldName}: the development login is on by itself under \`next dev\` and never in production.`;
-			}
-			return state.env[newName]?.trim()
-				? `${index + 1}. In ${where} delete ${oldName}: ${newName} is already set and is the one that is read.`
-				: `${index + 1}. In ${where} rename ${oldName} to ${newName} (keep the value).`;
-		});
-		steps.push(
-			`${steps.length + 1}. Do the same in the environment settings of your host (Vercel: Project, Settings, Environment Variables), then redeploy.`,
-		);
-		return warn(
-			`${found.map(([name]) => name).join(", ")} ${found.length === 1 ? "is" : "are"} from the earlier setup and nothing reads ${found.length === 1 ? "it" : "them"} now`,
-			{
-				where: [...new Set(found.map(([name]) => whereSet(state, name)))].join(", "),
-				fix: steps.join("\n"),
-			},
-		);
-	},
-};
-
-const routeGroups: CoreCheck = {
-	group: "upgrade",
-	id: "route-groups",
-	title: "(admin) route folders",
-	run: (state) => {
-		const appDir = appDirOf(state);
-		if (!appDir) return skip(`not checked: there is no ${detectAppDir(state.cwd).dir}/ folder`);
-		const groups: string[] = [];
-		const walk = (dir: string, depth: number) => {
-			if (depth > 2) return;
-			let entries: Dirent[];
-			try {
-				entries = readdirSync(path.join(state.cwd, dir), { withFileTypes: true });
-			} catch {
-				return;
-			}
-			for (const entry of entries) {
-				if (!entry.isDirectory()) continue;
-				if (entry.name === "(admin)") groups.push(`${dir}/${entry.name}`);
-				else if (entry.name !== "node_modules" && !entry.name.startsWith("_")) walk(`${dir}/${entry.name}`, depth + 1);
-			}
-		};
-		walk(appDir, 0);
-		const holding = groups.filter(
-			(group) =>
-				routesUsing(state, group, "CmsAdmin", "page").length + routesUsing(state, group, "CmsAdmin", "layout").length >
-				0,
-		);
-		if (holding.length === 0) return ok("no (admin) route folder holds the Monti files");
-		const steps = holding.flatMap((group) => {
-			const inside = readdirSync(path.join(state.cwd, group), { withFileTypes: true }).filter((entry) =>
-				entry.isDirectory(),
-			);
-			return inside.map((entry) => `git mv "${group}/${entry.name}" "${appDir}/${entry.name}"`);
-		});
-		return warn(
-			`the admin lives in a route group folder (${holding.join(", ")}); route groups are optional now and the setup guide no longer uses one`,
-			{
-				where: holding.join(", "),
-				fix: [
-					"It still works. To follow the new layout:",
-					...steps.map((step, index) => `${index + 1}. ${step}`),
-					`${steps.length + 1}. In the moved files, change the relative import of monti.config.ts (it is one folder shallower now), then delete the empty (admin) folder.`,
-				].join("\n"),
-			},
-		);
-	},
-};
-
-const oldAdminComponents: CoreCheck = {
-	group: "upgrade",
-	id: "admin-components",
-	title: "admin-components.tsx",
-	run: (state) => {
-		const found = [
-			"admin-components.tsx",
-			"src/admin-components.tsx",
-			"app/admin-components.tsx",
-			"src/app/admin-components.tsx",
-		].filter((file) => exists(state, file));
-		if (found.length === 0) return ok("no admin-components.tsx");
-		return warn(`${found.join(", ")} is from the earlier setup; nothing loads it now`, {
-			where: found.join(", "),
-			fix: 'register its components as a plugin instead: `definePlugin({ name, options: {}, admin: () => import("./admin") })` whose admin module\'s default export is `defineAdminPlugin({ Provider })` (@monti-cms/admin/plugins); see plugins/word-list in examples/blog. Then delete the file',
-		});
-	},
-};
-
-const oldApiRoute: CoreCheck = {
-	group: "upgrade",
-	id: "api-route",
-	title: "app/api/cms route folder",
-	run: (state) => {
-		const appDir = appDirOf(state);
-		if (!appDir) return skip(`not checked: there is no ${detectAppDir(state.cwd).dir}/ folder`);
-		const file = findRouteFile(state, appDir, ["api", "cms", "[...path]"], "route");
-		if (!file || !/@monti-cms\//.test(readFileSync(path.join(state.cwd, file), "utf8"))) {
-			return ok("no Monti route file at the old api/cms folder");
-		}
-		return warn(`${file} is at the old address; Monti's API now lives at /api/monti`, {
-			where: file,
-			fix: `git mv "${appDir}/api/cms" "${appDir}/api/monti" (and in the GitHub OAuth app, change the callback URL to <your site>/api/monti/auth/callback/github)`,
-		});
-	},
-};
-
 /** The checks of core itself, in the order they are listed. */
 export const CORE_CHECKS: readonly CoreCheck[] = [
 	envFiles,
@@ -763,19 +515,12 @@ export const CORE_CHECKS: readonly CoreCheck[] = [
 	schemaFile,
 	...DATABASE_CHECKS,
 	montiSecret,
-	legacySecrets,
 	...AUTH_CHECKS,
 	nextFiles,
 	nextWithCms,
 	nextHydration,
 	adminPathCheck,
-	oldConfigFiles,
-	oldConfigText,
-	oldEnv,
-	routeGroups,
-	oldApiRoute,
-	oldAdminComponents,
 ];
 
 /** The order the groups are printed in. */
-export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "next", "upgrade"] as const;
+export const GROUP_ORDER = ["config", "schema", "database", "secrets", "auth", "next"] as const;

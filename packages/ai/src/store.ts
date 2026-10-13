@@ -2,7 +2,7 @@ import type { Site } from "@monti-cms/core/client";
 import type { ApiKeys, Cms, PluginCollection, PluginStorage } from "@monti-cms/core/plugin/server";
 import { AI_COLLECTIONS } from "./collections";
 import { AiError } from "./errors";
-import { AI_PLUGIN_NAME } from "./plugin-name";
+import { AI_PLUGIN_NAME } from "./name";
 import { providerMessages } from "./provider.messages";
 import type { AiSettingsStore } from "./settings";
 
@@ -46,7 +46,7 @@ export function createAiStore(
 	const built = {
 		apiKeys: (): ApiKeys => {
 			if (!options.apiKeys)
-				throw new AiError("ai_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
+				throw new AiError("service_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
 			return options.apiKeys();
 		},
 		/** Runs `work` with a store whose writes (settings and the key store) are one transaction: all kept, or none if it throws. */
@@ -106,18 +106,14 @@ export function createAiStore(
 
 export type AiStore = ReturnType<typeof createAiStore>;
 
-const stores = new WeakMap<Cms, AiStore>();
-
-/** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
+/** The AI store of one CMS instance, built from its plugin storage on first use. It is rebuilt when the site is reloaded (`cms.plugin(...).once`). */
 export function aiStoreFor(cms: Cms): AiStore {
-	let store = stores.get(cms);
-	if (!store) {
-		store = createAiStore(cms.storage(AI_PLUGIN_NAME), {
+	const plugin = cms.plugin(AI_PLUGIN_NAME);
+	return plugin.once("store", () =>
+		createAiStore(plugin.storage, {
 			site: cms.site,
 			apiKeys: () => cms.apiKeys,
 			transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
-		});
-		stores.set(cms, store);
-	}
-	return store;
+		}),
+	);
 }

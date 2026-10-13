@@ -1,4 +1,13 @@
-import type { BlockDefinition, CollectionsConfig } from "@monti-cms/core";
+import type {
+	AiActionDefinition,
+	AiActionSource,
+	AiAttach,
+	AiChoices,
+	AiInputKind,
+	AiInputSpec,
+	AiInputs,
+	AiValidator,
+} from "@monti-cms/core/ai-contract";
 import type { Site } from "@monti-cms/core/client";
 import { z } from "zod";
 import {
@@ -19,7 +28,6 @@ import {
 	isAddableCheck,
 	MAX_PROMPT_LENGTH,
 	MAX_REQUEST_LENGTH,
-	migrateCheck,
 } from "./definition";
 
 /**
@@ -38,22 +46,6 @@ import {
 // ---------------------------------------------------------------------------
 // Inputs
 // ---------------------------------------------------------------------------
-
-/**
- * Input kinds. `text`, `mdx` and `code` are text, `value` is a field's current value (text or list), `image` is an image the server reads
- * (a media ID or a path on this site), and `locale` is a language code (it goes into the prompt as a language name).
- */
-export type AiInputKind = "text" | "mdx" | "code" | "value" | "image" | "locale";
-
-export interface AiInputSpec<K extends AiInputKind = AiInputKind> {
-	readonly kind: K;
-	/** Name used in the admin UI's `Send` list and in the language line attached to the prompt. */
-	readonly label: string;
-	/** If missing, the action does not run. Without this flag the input may be empty (when empty, it is not sent). */
-	readonly required?: boolean;
-}
-
-export type AiInputs = Readonly<Record<string, AiInputSpec>>;
 
 type InputOptions = { readonly label: string; readonly required?: boolean };
 
@@ -106,21 +98,6 @@ export const SLOT_INPUTS = {
 
 type SlotInputNames = { [S in AiSlot]: keyof (typeof SLOT_INPUTS)[S] };
 
-export type AiAttach =
-	/** Beside a field. Without `collections`, every collection that has the field. */
-	| { readonly slot: "field"; readonly field: string; readonly collections?: readonly string[] }
-	| { readonly slot: "image"; readonly target: "alt" | "caption" }
-	| { readonly slot: "media"; readonly target: "filename" | "defaultAlt" | "defaultCaption" }
-	| { readonly slot: "codeRules"; readonly target: "fold" }
-	/** Block translation in the translation editor (block menu, `Translate all`). */
-	| { readonly slot: "translation" }
-	/** Menu on the body selection. The result (MDX) shows what changed, then replaces the selected text. */
-	| { readonly slot: "selection" }
-	/** Slash menu / empty document. The result (MDX) is inserted at the cursor. */
-	| { readonly slot: "insert" }
-	/** Beside the handle of one body block (`block` is the block name, e.g. `mermaid`). The result (MDX) shows what changed, then replaces that block. */
-	| { readonly slot: "block"; readonly block: string };
-
 type RequiredInputNames<I> = { [K in keyof I]: I[K] extends { readonly required: true } ? K : never }[keyof I];
 /** Slots where all required inputs can be filled. */
 type AttachableSlot<I> = {
@@ -131,74 +108,9 @@ type AttachableSlot<I> = {
 // Choices
 // ---------------------------------------------------------------------------
 
-/**
- * The choices for the decide mode, also used for the `exists` check and candidate names. Read directly by the server.
- * - `collection`: the published entries of that collection (value is the entry ID, name is the title)
- * - `select`: the options of a select field
- * - `list`: a hand-written list
- */
-export type AiChoices =
-	| { readonly from: "collection"; readonly collection: string }
-	| { readonly from: "select"; readonly collection: string; readonly field: string }
-	| { readonly from: "list"; readonly items: readonly string[] };
-
 // ---------------------------------------------------------------------------
 // Action definition
 // ---------------------------------------------------------------------------
-
-/**
- * Lookup of core content that code checks read on the server. The run API fills it from the core's public lookup (`createContentLookup` in
- * `@monti-cms/core/plugin/server`). Plugins do not read core tables directly.
- */
-export interface AiContentLookup {
-	/** Slugs already used in the same collection and locale. Slugs used by the `excludeEntryId` entry are excluded. */
-	slugsInUse(params: {
-		readonly collection: string;
-		readonly locale: string;
-		readonly slugs: readonly string[];
-		readonly excludeEntryId?: string;
-	}): Promise<ReadonlySet<string>>;
-}
-
-/** The situation a code check receives. */
-export interface AiValidatorContext {
-	/** The inputs used for the run. */
-	readonly input: Readonly<Record<string, unknown>>;
-	readonly collection?: string;
-	/** Content locale. If not in the request, the site config's default locale. */
-	readonly locale: string;
-	readonly entryId?: string;
-	/** For actions with choices: value -> display name. */
-	readonly choices?: ReadonlyMap<string, string>;
-	/** Core content lookup (server). */
-	readonly content: AiContentLookup;
-	/** The site the action runs for (its admin language for a note a check attaches to a candidate). */
-	readonly site: Site;
-}
-
-/**
- * Result of a code check. `true`, `null` or `undefined` passes, `false` discards, and a string discards with that reason.
- * To pass while attaching a note beside the candidate, return `{ detail }`.
- */
-export type AiValidatorResult = boolean | string | null | undefined | { readonly detail: string };
-
-/**
- * Code check (`defineValidator`). Checks what the fixed checks (format, length, choices) cannot, using a function. Put in an action's `checks`, it
- * shows by name in the admin UI and can be toggled (its value cannot be edited). Called on the server once per value (one candidate, or the whole text/MDX result).
- */
-export interface AiValidator {
-	readonly kind: "code";
-	/** Name unique within the action (lowercase, digits, hyphen). The edited value (enabled state) is stored under this name. */
-	readonly name: string;
-	/**
-	 * Name shown in the admin UI. A function receives the site and returns the text in its admin language (the site is where the translator is), so a label written in
-	 * a module the config file reads does not depend on a language set elsewhere. Read it with `validatorLabel`.
-	 */
-	readonly label: string | ((site: Pick<Site, "createTranslator">) => string);
-	/** Enabled initially? Defaults to enabled. */
-	readonly enabled?: boolean;
-	readonly run: (value: string, context: AiValidatorContext) => AiValidatorResult | Promise<AiValidatorResult>;
-}
 
 /** Creates a code check. Put it in an action definition's `checks` together with the fixed checks. */
 export const defineValidator = (check: Omit<AiValidator, "kind">): AiValidator => ({ kind: "code", ...check });
@@ -209,48 +121,6 @@ export const validatorLabel = (check: Pick<AiValidator, "label">, site: Pick<Sit
 
 const isValidator = (check: AiCheckInput | AiValidator): check is AiValidator => "run" in check;
 
-export interface AiActionDefinition<I extends AiInputs = AiInputs> {
-	/** Name shown in the admin UI and on buttons. */
-	readonly label: string;
-	readonly input: I;
-	/** Inputs sent initially. Defaults to all. Toggled in the admin UI. */
-	readonly send?: readonly (keyof I & string)[];
-	/** Prompt. In decide mode it is the decision criterion. `{{language input name}}` is replaced with the language name. */
-	readonly prompt: string;
-	readonly result: AiResult;
-	/** How the result is applied. Defaults to `none` for notes and `replace` otherwise. */
-	readonly apply?: AiApply;
-	/** Defaults to `generate`. `decide` requires `choices`. */
-	readonly engine?: AiEngine;
-	readonly choices?: AiChoices;
-	/** In decide mode, pick only one? Defaults to `many`. */
-	readonly pick?: AiPick;
-	/** Threshold probability for decide mode (0-1). Defaults to 0.6. */
-	readonly threshold?: number;
-	/** Maximum number of candidates in decide mode. Defaults to 5. */
-	readonly maxCount?: number;
-	/**
-	 * Result checks. Fixed checks are applied first, then code checks (`defineValidator`), in the listed order.
-	 * The admin UI edits enabled state and values, and can add format, length and in-choices checks.
-	 */
-	readonly checks?: readonly (Exclude<AiCheckInput, { kind: "code" }> | AiValidator)[];
-	/** Accepts an extra request at run time. If missing, none is accepted. */
-	readonly askInstruction?: boolean;
-	/** On click, inserts the result directly without showing it (the candidate is the first one). If missing, the result is shown and applied by clicking. */
-	readonly instant?: boolean;
-	/** Streams the result (shown incrementally). Only for text/MDX results in generate mode. */
-	readonly stream?: boolean;
-	/** Enabled initially? Defaults to enabled. */
-	readonly enabled?: boolean;
-	readonly attach?: readonly AiAttach[];
-	/**
-	 * Text the dev-only fake connection (`CMS_AI_FAKE=1`) uses as this action's answer, built from the received inputs (name -> text). If missing, the fake connection
-	 * builds an answer from the result shape and input kinds. Set only for actions whose code check expects a specific shape (e.g. diagram syntax).
-	 * For candidate results, one candidate per line.
-	 */
-	readonly fake?: (input: Readonly<Record<string, string>>) => string;
-}
-
 /** One shared snippet (e.g. a style guide). Inserted into prompts as `{{shared.name}}` and edited in the admin AI screen. */
 export interface AiSharedText {
 	readonly label: string;
@@ -258,34 +128,22 @@ export interface AiSharedText {
 	readonly text: string;
 }
 
-/** Site config seen by the function that creates actions. */
-export interface AiSiteView {
-	readonly collections: CollectionsConfig;
-	/** Body block definitions used by the site (core + extensions + site). */
-	readonly blocks: readonly BlockDefinition[];
-	readonly locales: readonly { readonly code: string }[];
-	/** Translator of one dictionary in the site's admin language (`site.createTranslator`), for the labels of the actions a function creates. */
-	readonly createTranslator: Site["createTranslator"];
-	/** Names of the AI config's shared snippets (`aiPlugin({ shared })`). */
-	readonly sharedKeys: readonly string[];
-}
-
-/**
- * A function that looks at the site config and creates one action. Default actions (`aiPresets`) and actions added by extensions have this shape (they find the field to attach to by
- * field kind, role and relation target). If there is nothing to attach to it returns `undefined` and the action is not enabled.
- */
-export type AiActionFactory<D extends AiActionDefinition = AiActionDefinition> = (site: AiSiteView) => D | undefined;
-
-/** An action definition or a function that creates one. */
-export type AiActionSource = AiActionDefinition | AiActionFactory;
-
-/**
- * The shape in which other plugins add AI actions. Placed in a plugin definition's `contributes: { ai: { actions } }` (unused if there is no AI plugin).
- * Examples: the block extension's diagram generation, the SEO extension's search title suggestion.
- */
-export interface AiContribution {
-	readonly actions?: Readonly<Record<string, AiActionSource>>;
-}
+export type {
+	AiActionDefinition,
+	AiActionFactory,
+	AiActionSource,
+	AiAttach,
+	AiChoices,
+	AiContentLookup,
+	AiContribution,
+	AiInputKind,
+	AiInputSpec,
+	AiInputs,
+	AiSiteView,
+	AiValidator,
+	AiValidatorContext,
+	AiValidatorResult,
+} from "@monti-cms/core/ai-contract";
 
 export interface AiConfig {
 	/** Site description. Goes into the leading instruction of every action ("You are the editing assistant of the CMS for this site: {this}"). Defaults to "website". */
@@ -379,7 +237,7 @@ export const aiActionOverrideSchemaOf = (t: CoreText) =>
 			send: z.array(z.string().max(40)).max(20),
 			threshold: z.number().min(0.01).max(0.99),
 			maxCount: z.number().int().min(1).max(20),
-			checks: z.array(z.preprocess(migrateCheck, aiCheckSchemaOf(t))).max(10),
+			checks: z.array(aiCheckSchemaOf(t)).max(10),
 		})
 		.partial();
 

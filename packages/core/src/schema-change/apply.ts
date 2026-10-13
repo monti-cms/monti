@@ -1,4 +1,5 @@
 import { prepareSnapshot } from "../core/snapshot";
+import { CmsError } from "../core/store/errors";
 import type { SchemaChangeStore } from "../core/store/ports";
 import type { AppliedSchemaChange, SchemaState } from "../core/store/schema-change";
 import type { JsonObject } from "../core/store/types";
@@ -101,10 +102,10 @@ export async function planSchemaChange(options: PlanOptions): Promise<SchemaPlan
 }
 
 /** The transforms cannot run: a transform does not fit the schema, or an entry cannot be rewritten. Nothing was changed. */
-export class SchemaChangeError extends Error {
+export class SchemaChangeError extends CmsError {
 	readonly problems: readonly TransformProblem[];
 	constructor(message: string, problems: readonly TransformProblem[] = []) {
-		super(message);
+		super(message, "invalid_transforms", undefined, undefined, problems);
 		this.name = "SchemaChangeError";
 		this.problems = problems;
 	}

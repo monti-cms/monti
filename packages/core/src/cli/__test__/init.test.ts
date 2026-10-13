@@ -77,7 +77,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config).toContain("\tauth: auth({ providers: [password()] }),");
 		expect(config).not.toMatch(/github/i);
 		expect(config).toContain("// storage: s3Storage(),");
-		expect(config).not.toMatch(/aiPlugin|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
+		expect(config).not.toMatch(/\bai\(|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
 
 		const schema = schemaOf(dir);
 		expect(() => parseSchemaFile(schema)).not.toThrow();
@@ -731,11 +731,11 @@ describe("monti init choices", () => {
 			siteUrl: "https://blog.example.com",
 		});
 		const config = read(dir, "monti.config.ts");
-		expect(config).toContain('import { aiPlugin } from "@monti-cms/ai";');
+		expect(config).toContain('import { ai } from "@monti-cms/ai";');
 		expect(config).toContain('import { gitSync } from "@monti-cms/git-sync";');
 		expect(config).toContain('import { s3Storage } from "@monti-cms/storage-s3";');
 		expect(config).toContain('import { callout, color, tabs } from "@monti-cms/blocks";');
-		expect(config).toMatch(/\n\t\taiPlugin\(\),\n/);
+		expect(config).toMatch(/\n\t\tai\(\),\n/);
 		expect(config).toMatch(/\n\t\tgitSync\(\),\n/);
 		expect(config).toContain("\tstorage: s3Storage(),");
 		expect(config.indexOf("callout(),")).toBeLessThan(config.indexOf("tabs(),"));
@@ -793,14 +793,6 @@ describe("monti init and files that already exist", () => {
 		expect(report.created).toContain("app/studio/layout.tsx");
 		expect(report.notes.join("\n")).toContain("monti.config.ts already exists, so it was kept");
 		expect(formatInitReport(report)).toContain("Already there, left as they are:\n  - monti.config.ts");
-	});
-
-	it("leaves the files of the earlier cms.config.ts setup alone", async () => {
-		const dir = fixtureApp({ "cms.config.ts": "export default {};\n", "cms.server.ts": "export const cms = {};\n" });
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, "cms.config.ts")).toBe("export default {};\n");
-		expect(() => read(dir, "monti.config.ts")).toThrow();
-		expect(report.notes.join("\n")).toContain("cms.config.ts and cms.server.ts from the earlier setup are left alone");
 	});
 
 	it("an existing .env.example is kept and reported, never merged", async () => {
