@@ -476,6 +476,46 @@ describe("defineSite", () => {
 		expect(() => defineSite({ collections: { note }, locales, defaultLocale: "en" })).toThrow(/fillFromBody/);
 	});
 
+	describe("checks that hold for a config written in code as for the schema file", () => {
+		const site = (noteFields: Record<string, never>, extra: Record<string, unknown> = {}) =>
+			defineSite({
+				collections: {
+					note: defineCollection({ label: "Note", kind: "item", fields: { title, ...noteFields } as never, ...extra }),
+				},
+				locales,
+				defaultLocale: "en",
+			});
+
+		it("rejects a layout group that lists a field the collection does not have", () => {
+			expect(() => site({}, { layout: [{ fields: ["title", "missing"] }] })).toThrow(
+				/note\.layout\[0\] lists "missing", which is not a field of note/,
+			);
+			expect(() => site({}, { layout: [{ fields: ["title"] }] })).not.toThrow();
+		});
+
+		it("rejects a select whose default is not one of its options", () => {
+			const kind = { ...fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a" }), defaultValue: "b" };
+			expect(() => site({ kind } as never)).toThrow(/note\.kind defaultValue "b" is not one of the options \(a\)/);
+		});
+
+		it("rejects a conditional field that shows fields for an option its select does not have", () => {
+			const kind = fields.conditional(fields.select({ label: "Kind", options: { a: "A" }, defaultValue: "a" }), {
+				a: { inner: fields.text({ label: "Inner" }) },
+				b: { other: fields.text({ label: "Other" }) },
+			} as never);
+			expect(() => site({ kind } as never)).toThrow(/note\.kind shows fields for "b", which is not an option/);
+		});
+
+		it("checks the role and required of the address field like those of any other", () => {
+			const badRole = fields.slug({ label: "Slug", from: "title", role: "not a name" });
+			expect(() => site({ slug: badRole } as never)).toThrow(/note\.slug has an invalid role/);
+			const required = { ...fields.slug({ label: "Slug", from: "title" }), required: "publish" };
+			expect(() => site({ slug: required } as never)).toThrow(/note\.slug has required: "publish"/);
+			const summaryRole = fields.slug({ label: "Slug", from: "title", role: "summary" });
+			expect(() => site({ slug: summaryRole } as never)).toThrow(/note\.slug role "summary" needs a text field/);
+		});
+	});
+
 	it("checks that a slug is made from a text field", () => {
 		const withFrom = (from: string) =>
 			defineCollection({
