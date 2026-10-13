@@ -148,7 +148,7 @@ The sidebar has four parts: **Content** (each collection, then Media; a collecti
 | Screen | Address | Contents |
 |---|---|---|
 | Collections, Languages, Site, Admin, File | `<admin path>/settings/collections` (`locales`, `site`, `admin`, `file`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
-| API keys | `<admin path>/settings/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. AI connections, the spell checker and git sync pick a saved key or enter a new one (saved here) in their own forms. |
+| API keys | `<admin path>/settings/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and git sync pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
 | Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
 | Event log | `<admin path>/events` | Event deliveries. |
 | One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |
