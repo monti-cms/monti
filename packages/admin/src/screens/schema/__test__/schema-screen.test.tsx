@@ -524,6 +524,18 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByTestId("collection-post")).toBeNull();
 	});
 
+	it("describes what removing does under the remove section, and keeps the name note on the basics tab", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.getByText(t("collection.nameHint"))).toBeTruthy();
+
+		openTab("advanced");
+		expect(await screen.findByText(t("collection.dangerDescription"))).toBeTruthy();
+		expect(screen.queryByText(t("collection.nameHint"))).toBeNull();
+		const button = screen.getByRole("button", { name: t("collection.remove") });
+		expect(button.closest("section")?.querySelector(".bg-cms-card")).toBeNull();
+	});
+
 	it("limits the body of a collection to the blocks that are ticked", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");

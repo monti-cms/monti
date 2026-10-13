@@ -91,6 +91,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.summary": "{kind} · public address {path}",
 		"collection.summaryNoPath": "{kind} · no public address",
 		"collection.dangerTitle": "Remove collection",
+		"collection.dangerDescription":
+			"Takes the collection out of the schema. Its stored entries stay in the database, and a review step shows what happens to them before anything is saved.",
 		"collection.railTitle": "Collections",
 		"collection.railNew": "New collection",
 		"layout.description": "How the properties panel of the edit screen groups the fields.",
@@ -531,6 +533,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"collection.summary": "{kind} · 공개 주소 {path}",
 		"collection.summaryNoPath": "{kind} · 공개 주소 없음",
 		"collection.dangerTitle": "컬렉션 삭제",
+		"collection.dangerDescription":
+			"컬렉션을 스키마에서 뺍니다. 저장된 항목은 데이터베이스에 남고, 저장하기 전에 검토 화면에서 그 항목들이 어떻게 되는지 보여 줍니다.",
 		"collection.railTitle": "컬렉션",
 		"collection.railNew": "새 컬렉션",
 		"layout.description": "편집 화면의 속성 패널이 필드를 어떻게 묶는지 정해요.",

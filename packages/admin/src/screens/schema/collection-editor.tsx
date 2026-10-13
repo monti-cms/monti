@@ -315,7 +315,11 @@ export function CollectionEditor({
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex flex-col gap-12">
-					<Section title={t("collection.basicsTitle")} description={t("collection.basicsDescription")}>
+					<Section
+						title={t("collection.basicsTitle")}
+						description={t("collection.basicsDescription")}
+						note={isNew ? undefined : t("collection.nameHint")}
+					>
 						<div className="flex max-w-md flex-col gap-6">
 							<TextInput
 								label={t("collection.label")}
@@ -367,15 +371,16 @@ export function CollectionEditor({
 					)}
 					<Section
 						title={t("collection.dangerTitle")}
-						description={isNew ? t("collection.newHint") : t("collection.nameHint")}
+						description={isNew ? t("collection.newHint") : t("collection.dangerDescription")}
+						card={false}
 					>
-						<div>
+						<div className="flex justify-end">
 							<Button
 								type="button"
-								variant="ghost"
+								variant="outline"
 								size="sm"
 								disabled={disabled}
-								className="-ml-2.5 text-cms-destructive hover:text-cms-destructive"
+								className="border-cms-destructive/50 text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
 								onClick={onRemove}
 							>
 								<Trash2 aria-hidden />
