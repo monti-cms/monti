@@ -152,14 +152,22 @@ describe("a failed push is retried through the outbox, not lost", () => {
 		expect(await h.cms.events.counts()).toMatchObject({ failed: 0, dead: 0 });
 
 		// Saving the token (the Settings tab) sends what waited, and delivers the deferred events.
-		const saved = await h.cms.handle(
-			new Request("http://localhost/api/monti/v1/git-sync/settings", {
-				method: "PUT",
-				headers: { origin: "http://localhost", "content-type": "application/json" },
-				body: JSON.stringify({ token: "ghp_late_token", expectedVersion: 0 }),
-			}),
-		);
-		expect(saved.status).toBe(200);
+		const request = (path: string, method: string, body: unknown) =>
+			h.cms.handle(
+				new Request(`http://localhost/api/monti/${path}`, {
+					method,
+					headers: { origin: "http://localhost", "content-type": "application/json" },
+					body: JSON.stringify(body),
+				}),
+			);
+		const assigned = await request("v1/api-keys/slots", "PUT", {
+			plugin: "git-sync",
+			slot: "token",
+			key: { use: "new", value: "ghp_late_token" },
+		});
+		expect(assigned.status).toBe(200);
+		// The screen then tells the plugin, which sends what waited.
+		expect((await request("v1/git-sync/token-changed", "POST", {})).status).toBe(200);
 		expect(h.repo.files("main").has("content/memo/no-token.en.mdx")).toBe(true);
 		expect(h.repo.files("main").has("content/memo/no-token-2.en.mdx")).toBe(true);
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(0);

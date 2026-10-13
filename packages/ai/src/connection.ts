@@ -1,3 +1,4 @@
+import { apiKeyChoiceSchema } from "@monti-cms/core/client";
 import { z } from "zod";
 
 /**
@@ -7,7 +8,7 @@ import { z } from "zod";
  * - Decisions (`decisions`): a System One model that assigns a probability to each choice (e.g. Jev). Addresses like TypeSafe `…/v1/systemone`,
  *   OpenRouter `…/api/alpha/decisions`. Both use the `state`, `model`, `questions` -> `answers` shape.
  *
- * Keys are encrypted and stored on the server, and only the last four characters are shown on screen. Both server and browser use this file.
+ * Keys live in the central API key store (Settings → API keys); a connection only refers to one, and only the last four characters are shown on screen. Both server and browser use this file.
  */
 
 export const AI_PROVIDER_KINDS = ["chat", "decisions"] as const;
@@ -25,8 +26,8 @@ export const aiProviderInputSchema = z.object({
 	name: z.string().trim().min(1).max(60),
 	kind: z.enum(AI_PROVIDER_KINDS),
 	url,
-	/** If omitted, the stored key is kept as is; `null` deletes it. */
-	apiKey: z.string().trim().min(1).max(1000).nullable().optional(),
+	/** The key to use: a saved key, a typed one (saved into the key store, named after the connection), or none. If omitted, the connection keeps its key. */
+	key: apiKeyChoiceSchema.optional(),
 	/** The model used when the action does not choose one. */
 	defaultModel: z.string().trim().max(200),
 });
@@ -45,7 +46,8 @@ export interface AiProviderView {
 	name: string;
 	kind: AiProviderKind;
 	url: string;
-	keyHint: string | null;
+	/** The key in the API key store this connection uses (name and last four characters only), or `null`. */
+	key: { id: string; name: string; tail: string; readable: boolean } | null;
 	defaultModel: string;
 	/** Is it usable, i.e. address, key and default model are all present? */
 	ready: boolean;
@@ -70,6 +72,8 @@ export const aiModelsQuerySchema = z.object({
 	providerId: z.string().max(60).optional(),
 	/** When fetching the list with an address that is not yet saved. */
 	url: url.optional(),
+	/** A key of the store to use, or a typed one that is not saved yet. */
+	keyId: z.string().max(100).optional(),
 	apiKey: z.string().trim().min(1).max(1000).optional(),
 });
 

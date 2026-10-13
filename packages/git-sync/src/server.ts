@@ -1,6 +1,7 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
+import { migrateGitSync } from "./migrate";
 import * as routes from "./routes";
 import { settingsView } from "./settings";
 import { syncContextFor } from "./sync";
@@ -10,6 +11,7 @@ const gitSyncServer: CmsServerPlugin = {
 	routes: [
 		{ pattern: "v1/git-sync/status", module: routes.status },
 		{ pattern: "v1/git-sync/settings", module: routes.settings },
+		{ pattern: "v1/git-sync/token-changed", module: routes.tokenChanged },
 		{ pattern: "v1/git-sync/pull", module: routes.pull },
 		{ pattern: "v1/git-sync/flush", module: routes.flush },
 		{ pattern: "v1/git-sync/conflicts", module: routes.conflicts },
@@ -20,10 +22,11 @@ const gitSyncServer: CmsServerPlugin = {
 	// Delivered through the event outbox: a failed push is retried, not lost.
 	hooks: { afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event) },
 	commands,
+	migrate: migrateGitSync,
 	// `features["git-sync"].ready` of the admin meta API: is a token saved?
 	features: async (cms) => ({
 		ready: await settingsView(syncContextFor(cms)).then(
-			(view) => view.token.set && view.token.readable,
+			(view) => Boolean(view.token.key?.readable),
 			() => false,
 		),
 	}),

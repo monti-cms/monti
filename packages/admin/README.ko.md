@@ -141,11 +141,12 @@ const components = {
 
 ## 탐색과 설정
 
-사이드바는 네 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어와 템플릿. 폴더가 있는 컬렉션은 열려 있는 동안 그 아래에 폴더 트리가 펼쳐진다), **도구**(플러그인 페이지마다 하나, 그다음 실패한 전달이 있을 때만 개수 배지가 붙는 이벤트 기록), 개수가 붙는 **휴지통**, 그리고 **설정**과 테마 전환이 있는 맨 아래 줄. 화면마다 주소가 따로 있다.
+사이드바는 네 부분이다. **콘텐츠**(컬렉션마다 하나, 그다음 미디어. 폴더가 있는 컬렉션은 열려 있는 동안 그 아래에 폴더 트리가 펼쳐진다), **도구**(템플릿, 플러그인 페이지마다 하나, 그다음 실패한 전달이 있을 때만 개수 배지가 붙는 이벤트 기록), 개수가 붙는 **휴지통**, 그리고 **설정**과 테마 전환이 있는 맨 아래 줄. 화면마다 주소가 따로 있다.
 
 | 화면 | 주소 | 내용 |
 |---|---|---|
 | 컬렉션·언어·사이트·관리자·파일 | `<관리자 경로>/settings/collections`(`locales`·`site`·`admin`·`file`) | 설정, 스키마 편집기(아래). 초안을 이 탭들이 함께 쓰고, 다른 탭에 다녀와도 남는다. |
+| API 키 | `<관리자 경로>/settings/api-keys` | 중앙 키 저장소. 이름 붙은 키마다 한 줄로 가린 끝자리와 쓰는 곳을 보여 주고, 추가·이름 바꾸기·값 바꾸기·지우기를 한다(쓰는 중인 키는 먼저 묻고 멈추는 곳을 보여 준다). 키는 서버 `secret`으로 암호화하고 값은 브라우저로 돌아오지 않는다. 플러그인이 필요하다고 선언한 키(`keySlots`, 맞춤법 검사기 등)는 한 줄씩 나온다. 비어 있으면 "키 넣기"(저장된 키를 고르거나 새 키를 넣음)가 있고, 정해진 슬롯은 그 키의 "사용 중" 줄에 나오며 줄 메뉴에서 뺀다. AI 연결·git-sync는 각자 화면에서 저장된 키를 고르거나 새 키를 넣는다(같은 요청으로 여기에 저장된다). |
 | 템플릿 | `<관리자 경로>/templates` | 본문 템플릿(`admin.templates`가 `false`면 404). |
 | 이벤트 기록 | `<관리자 경로>/events` | 이벤트 전달. |
 | 플러그인 페이지마다 하나 | `<관리자 경로>/tools/<경로>` | 플러그인의 `nav` 항목과 `pages` 항목(예: `ai`, `git-sync`). |
@@ -312,19 +313,18 @@ export default defineAdminPlugin({
 });
 ```
 
-페이지는 클라이언트 컴포넌트이고 사이드바 도구 묶음의 항목으로 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바와 제목은 관리자가 이미 둔다). `SettingsPanel`(`@monti-cms/admin/kit`)은 얇은 도구 줄에 개수와 동작을 두는 선택 본문이다. 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
+페이지는 클라이언트 컴포넌트이고 사이드바 도구 묶음의 항목으로 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바와 제목은 관리자가 이미 둔다). `PageActions`(`@monti-cms/admin/kit`)는 페이지의 주된 동작 하나를 제목 줄 오른쪽에 둔다. 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/client`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
 
 ```tsx
 "use client";
 import { cmsFetch } from "@monti-cms/admin/api";
-import { SettingsPanel } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
 	const site = useSite();
 	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
-	return <SettingsPanel>{stats.data?.published}</SettingsPanel>;
+	return <div>{stats.data?.published}</div>;
 }
 ```
 
@@ -334,7 +334,7 @@ export function StatsPage() {
 자리에는 `SlotRegistryProvider`(`@monti-cms/admin/slots`)로 동작을 붙인다.
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
-`cn`, 확인 대화상자(`useConfirm`), 페이지 본문(`SettingsPanel`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
+`cn`, 확인 대화상자(`useConfirm`), 제목 줄 동작(`PageActions`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
 | 진입점 | 내용 |

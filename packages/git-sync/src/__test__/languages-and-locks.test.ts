@@ -122,7 +122,7 @@ describe("the secret", () => {
 				new Request("http://localhost/api/monti/v1/git-sync/settings", {
 					method: "PUT",
 					headers: { origin: "http://localhost", "content-type": "application/json" },
-					body: JSON.stringify({ token: "ghp_x", expectedVersion: 0 }),
+					body: JSON.stringify({ token: { use: "new", value: "ghp_x" }, expectedVersion: 0 }),
 				}),
 			);
 			expect(response.status).toBe(400);
@@ -131,7 +131,7 @@ describe("the secret", () => {
 				message: expect.stringContaining("MONTI_SECRET"),
 			});
 			const view = await (await bare.cms.handle(new Request("http://localhost/api/monti/v1/git-sync/settings"))).json();
-			expect(view).toMatchObject({ secretsAvailable: false, token: { set: false } });
+			expect(view).toMatchObject({ secretsAvailable: false, token: { key: null } });
 		} finally {
 			await bare.close();
 		}

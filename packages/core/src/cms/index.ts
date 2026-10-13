@@ -1,6 +1,7 @@
 export {
 	type BulkService,
 	type Cms,
+	type CmsTransaction,
 	type ContentService,
 	type CreateCmsOptions,
 	createCms,

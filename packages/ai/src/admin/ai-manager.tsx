@@ -21,7 +21,7 @@ import {
 	IconButton,
 	Input,
 	Label,
-	SettingsPanel,
+	PageActions,
 	Switch,
 	Tabs,
 	TabsContent,
@@ -328,15 +328,9 @@ export function AiManager() {
 				{t("add.shared")}
 			</Button>
 		);
-	const count =
-		tab === "features"
-			? featuresQuery.data?.items.length
-			: tab === "connections"
-				? settingsQuery.data?.providers.length
-				: sharedQuery.data?.items.length;
-
 	return (
-		<SettingsPanel count={count} actions={headerActions}>
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+			<PageActions>{headerActions}</PageActions>
 			<Tabs
 				value={tab}
 				onValueChange={(value) => void changeTab(value as AiTab)}
@@ -467,7 +461,7 @@ export function AiManager() {
 				</TabsContent>
 			</Tabs>
 			{dialog}
-		</SettingsPanel>
+		</div>
 	);
 }
 
@@ -612,9 +606,9 @@ function FeatureEditor({
 		? providers.find((provider) => provider.id === spec.providerId)
 		: providers.find((provider) => provider.ready);
 	const canRun =
-		Boolean(settings?.fake) || Boolean(chosen?.url && chosen.keyHint && (spec.modelName || chosen.defaultModel));
+		Boolean(settings?.fake) || Boolean(chosen?.url && chosen.key?.readable && (spec.modelName || chosen.defaultModel));
 	// Model list of the selected generation connection. A list that was fetched once is remembered and not fetched again.
-	const modelList = useModelList(!deciding && chosen?.keyHint ? { providerId: chosen.id } : null);
+	const modelList = useModelList(!deciding && chosen?.key?.readable ? { providerId: chosen.id } : null);
 	const [sample, setSample] = useState<Sample>(EMPTY_SAMPLE);
 	const [test, setTest] = useState<
 		{ status: "running" } | { status: "done"; result: AiRunResult } | { status: "error"; message: string } | null

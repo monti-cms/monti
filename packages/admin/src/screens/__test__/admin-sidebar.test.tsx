@@ -69,15 +69,21 @@ const folderNav = (folders: Folder[], overrides: Partial<FolderNavigation> = {})
 });
 
 describe("sidebar structure", () => {
-	it("has Content (each collection, Media, Templates), Tools (plugin pages, Event log), then Trash", () => {
+	it("has Content (each collection, Media), Tools (Templates, plugin pages, Event log), then Trash", () => {
 		renderSidebar();
 		const collections = site.COLLECTIONS.map((collection) => site.COLLECTION_DEFINITIONS[collection].label);
-		expect(labels(menu(t("sidebar.content")))).toEqual([...collections, t("sidebar.media"), t("sidebar.templates")]);
-		expect(labels(menu(t("sidebar.tools")))).toEqual(["Tools page", "More page", t("sidebar.events")]);
+		expect(labels(menu(t("sidebar.content")))).toEqual([...collections, t("sidebar.media")]);
+		expect(labels(menu(t("sidebar.tools")))).toEqual([
+			t("sidebar.templates"),
+			"Tools page",
+			"More page",
+			t("sidebar.events"),
+		]);
 		expect(labels(menu(t("sidebar.trash")))).toEqual([t("sidebar.trash")]);
 		// Order on the page: content, tools, trash, then Settings in the footer.
 		const all = screen.getAllByRole("link").map((link) => link.textContent?.trim());
 		const at = (label: string) => all.indexOf(label);
+		expect(at(t("sidebar.media"))).toBeLessThan(at(t("sidebar.templates")));
 		expect(at(t("sidebar.templates"))).toBeLessThan(at("Tools page"));
 		expect(at(t("sidebar.events"))).toBeLessThan(at(t("sidebar.trash")));
 		expect(at(t("sidebar.trash"))).toBeLessThan(at(t("sidebar.settings")));

@@ -81,7 +81,8 @@ export async function createHarness(options: HarnessOptions = {}) {
 	await cms.migrate({ log: () => undefined });
 	const ctx: SyncContext = syncContextFor(cms);
 	if (!options.noSettings && !options.noSecret) {
-		await saveSettings(ctx, { token: TOKEN, webhookSecret: WEBHOOK_SECRET, expectedVersion: 0 });
+		await cms.apiKeys.assignSlot("git-sync", "token", { use: "new", value: TOKEN }, { baseName: "GitHub" });
+		await saveSettings(ctx, { webhookSecret: WEBHOOK_SECRET, expectedVersion: 0 });
 	}
 	const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
 

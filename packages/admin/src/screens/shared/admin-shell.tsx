@@ -2,7 +2,8 @@
 
 import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
 import { cmsFetch } from "../admin-api";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
@@ -21,6 +22,18 @@ interface AdminNavContextValue {
 }
 
 const AdminNavContext = createContext<AdminNavContextValue | null>(null);
+
+/** The element on the right of the shell's title bar, where a page's own actions go (see {@link PageActions}). */
+const ActionsSlotContext = createContext<HTMLElement | null>(null);
+
+/**
+ * Puts a page's action buttons (the one primary action, such as "Add template") on the right of the title bar. The page decides what they are, because they
+ * depend on its state; the shell only provides the place. Renders nothing until the title bar is mounted.
+ */
+export function PageActions({ children }: { children: ReactNode }) {
+	const slot = useContext(ActionsSlotContext);
+	return slot ? createPortal(children, slot) : null;
+}
 
 /** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
 export const useAdminNav = (): AdminNavContextValue =>
@@ -99,6 +112,7 @@ export function AdminShell({
 }) {
 	const t = useTranslator(sharedMessages);
 	const nav = useContext(AdminNavContext);
+	const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
 	if (!nav) {
 		return (
 			<AdminNavProvider>
@@ -127,10 +141,14 @@ export function AdminShell({
 								<span className="tabular font-normal text-cms-muted-foreground text-sm">{count}</span>
 							)}
 						</h1>
-						<div className="flex items-center gap-2">{headerActions}</div>
+						<div ref={setActionsSlot} className="flex items-center gap-2">
+							{headerActions}
+						</div>
 					</header>
 				)}
-				<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+				<ActionsSlotContext.Provider value={actionsSlot}>
+					<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+				</ActionsSlotContext.Provider>
 			</SidebarInset>
 		</SidebarProvider>
 	);

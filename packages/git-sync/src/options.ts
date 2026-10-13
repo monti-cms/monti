@@ -2,6 +2,9 @@ import type { PluginConfigView } from "@monti-cms/core";
 import type { GitHubClientFactory } from "./github/client";
 
 /** The name under which the plugin is found in the site config's `plugins`. */
+/** Id of the plugin's one API key slot: the GitHub token. */
+export const GIT_SYNC_TOKEN_SLOT = "token";
+
 export const GIT_SYNC_PLUGIN_NAME = "git-sync";
 
 /** How a publish lands in the repo. */

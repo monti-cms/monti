@@ -258,7 +258,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	);
 }
 
-/** Left navigation area: Content (collections with their folders, media, templates), Tools (plugin pages, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
+/** Left navigation area: Content (collections with their folders, media), Tools (templates, plugin pages, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
 export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, folderCounts }: AdminSidebarProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -386,8 +386,6 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 						<SidebarMenu aria-label={t("sidebar.content")}>
 							{site.COLLECTIONS.map(collectionEntry)}
 							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
-							{site.ADMIN_TEMPLATES &&
-								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
@@ -395,6 +393,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					<SidebarGroupLabel>{t("sidebar.tools")}</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.tools")}>
+							{site.ADMIN_TEMPLATES &&
+								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
 							{toolsPages(site).map((page) =>
 								navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />),
 							)}

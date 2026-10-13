@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import type { AdminServer } from "../../host/server";
 import SettingsPage from "../settings/page";
-import { settingsTabs } from "../settings/tabs";
+import { SCHEMA_TABS, settingsTabs } from "../settings/tabs";
 import TemplatesPage from "../templates/page";
 
 vi.mock("../require-admin", () => ({ requireAdminPage: async () => undefined }));
@@ -27,9 +27,11 @@ const server = (): AdminServer => ({
 });
 
 describe("settings tabs", () => {
-	it("are the schema file's tabs; templates, the event log and plugin pages are not among them", () => {
-		const ids = settingsTabs(testSite).map((tab) => tab.id);
-		expect(ids).toEqual(["collections", "locales", "site", "admin", "file"]);
+	it("are the schema file's tabs with the API keys between Admin and File; templates, the event log and plugin pages are not among them", () => {
+		const ids: string[] = settingsTabs(testSite).map((tab) => tab.id);
+		expect(ids.filter((id) => id !== "api-keys")).toEqual([...SCHEMA_TABS]);
+		expect(ids.indexOf("api-keys")).toBe(ids.indexOf("admin") + 1);
+		expect(ids.indexOf("api-keys")).toBeLessThan(ids.indexOf("file"));
 	});
 });
 

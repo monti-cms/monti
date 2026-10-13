@@ -4,7 +4,7 @@ import type { ContentStore } from "../../core/store";
 import type { Decision } from "../../server/decision";
 import type { DatabaseAdapter } from "../../server/define";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "./explain";
-import { createPluginStorage } from "./plugin-storage";
+import { createPluginStorage, inPluginTransaction } from "./plugin-storage";
 
 /** The environment variable `postgres()` reads the connection string from when `connectionString` is not given. */
 export const DATABASE_URL_ENV = "DATABASE_URL";
@@ -160,6 +160,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 			return where ? `${where}, schema "${schemaOptions()?.schema ?? "public"}"` : undefined;
 		},
 		pluginStorage: (plugin) => createPluginStorage(getPool(), schemaOptions()?.schema, plugin),
+		transaction: (work) => inPluginTransaction(getPool(), schemaOptions()?.schema, work),
 		close: async () => {
 			await pool?.end();
 			pool = undefined;

@@ -6,11 +6,13 @@ import { githubClientFactory } from "./github/rest";
 import {
 	DEFAULT_DEBOUNCE_MS,
 	GIT_SYNC_PLUGIN_NAME,
+	GIT_SYNC_TOKEN_SLOT,
 	type GitSyncOptions,
 	type ResolvedTarget,
 	resolveTargets,
 } from "./options";
 import { createPathPattern, type PathPattern } from "./path-pattern";
+import { tokenKeyOf } from "./settings";
 import { createState, type SyncState } from "./state";
 
 /** An error a person can fix (a token that is not saved, a format that is not installed). It is thrown like any other, so the event outbox retries and then keeps it. */
@@ -92,7 +94,6 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 	const now = deps.now ?? Date.now;
 	const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 	const factory: GitHubClientFactory = options.client ?? githubClientFactory;
-	const secrets = cms.secrets(GIT_SYNC_PLUGIN_NAME);
 	const patterns = new Map<string, { format: CmsFormat; pattern: PathPattern }>();
 
 	const context: SyncContext = {
@@ -110,20 +111,21 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			return found;
 		},
 		client: async (target) => {
-			const stored = (await state.settings.get())?.value.token;
-			const token = stored ? secrets.decrypt(stored) : null;
+			const token = await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT);
 			if (!token) {
+				// A key that is there but cannot be read is another problem than a key that was never chosen (or was deleted).
+				const unreadable = (await tokenKeyOf(cms)) !== null;
 				throw new GitSyncNotConfigured(
-					stored
+					unreadable
 						? problemText({
 								what: "The saved GitHub token cannot be read, because MONTI_SECRET changed since it was saved",
 								where: `the Git sync screen (${cms.site.adminHref("/tools/git-sync")})`,
-								fix: "save the token again there, or put the old secret back (as MONTI_SECRET, or listed in `previousSecrets` in monti.config.ts)",
+								fix: "enter the token again there, or put the old secret back (as MONTI_SECRET, or listed in `previousSecrets` in monti.config.ts)",
 							})
 						: problemText({
 								what: "No GitHub token is saved, so nothing is pushed or pulled yet",
 								where: `the Git sync screen (${cms.site.adminHref("/tools/git-sync")})`,
-								fix: "paste a GitHub token that can read and write the repo's contents there; `monti doctor` lists what else is missing",
+								fix: "choose or enter a GitHub token that can read and write the repo's contents there; `monti doctor` lists what else is missing",
 							}),
 				);
 			}

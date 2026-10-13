@@ -30,7 +30,7 @@ function databaseFinding(found: readonly UnreadableBody[], summary: MigrationSum
 			}
 			return summary;
 		}),
-		pluginStorage: vi.fn(),
+		pluginStorage: vi.fn(() => ({ once: async () => false }) as never),
 		close: vi.fn(async () => undefined),
 	} as unknown as DatabaseAdapter & { migrate: ReturnType<typeof vi.fn> };
 }

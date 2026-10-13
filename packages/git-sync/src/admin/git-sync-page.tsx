@@ -4,15 +4,18 @@ import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import {
 	Alert,
 	AlertDescription,
+	API_KEYS_KEY,
+	type ApiKeyChoice,
+	ApiKeyField,
 	Badge,
 	Button,
+	choiceReady,
 	Empty,
 	EmptyHeader,
 	EmptyMedia,
 	EmptyTitle,
 	Input,
 	Label,
-	SettingsPanel,
 	Skeleton,
 	Tabs,
 	TabsContent,
@@ -60,7 +63,7 @@ interface TargetView {
 interface StatusView {
 	settings: {
 		secretsAvailable: boolean;
-		token: { set: boolean; hint: string | null; readable: boolean };
+		token: { key: { id: string; name: string; tail: string; readable: boolean } | null };
 		webhookSecret: { set: boolean; readable: boolean };
 		version: number;
 	};
@@ -114,7 +117,7 @@ export function GitSyncPage() {
 	const conflictCount = conflicts.data?.items.length ?? 0;
 
 	return (
-		<SettingsPanel>
+		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			<Tabs value={tab} onValueChange={(value) => setTab(value as Tab)} className="flex min-h-0 flex-1 flex-col gap-0">
 				<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-4 border-b px-4">
 					<TabsTrigger value="sync" className="flex-none px-0 text-xs">
@@ -154,7 +157,7 @@ export function GitSyncPage() {
 					<SettingsTab status={status.data} onChanged={refresh} />
 				</TabsContent>
 			</Tabs>
-		</SettingsPanel>
+		</div>
 	);
 }
 
@@ -256,7 +259,7 @@ function SyncTab({
 
 	return (
 		<div className="space-y-4 p-5">
-			{!status.settings.token.set && (
+			{!status.settings.token.key && (
 				<Alert layout="stack">
 					<AlertDescription className="col-start-auto">{t("sync.noToken")}</AlertDescription>
 				</Alert>
@@ -537,18 +540,19 @@ const generateSecret = (): string => {
 function SettingsTab({ status, onChanged }: { status: StatusView | undefined; onChanged: () => void }) {
 	const site = useSite();
 	const t = useTranslator(gitSyncMessages);
-	const [token, setToken] = useState("");
+	const queryClient = useQueryClient();
+	// What the key field shows until it is changed: the key the token uses now, or an empty new key.
+	const [picked, setPicked] = useState<ApiKeyChoice | null>(null);
 	const [secret, setSecret] = useState("");
 
 	const save = useMutation({
-		mutationFn: (values: { token?: string | null; webhookSecret?: string | null }) =>
+		mutationFn: (values: { webhookSecret: string | null }) =>
 			cmsFetch(site, cmsApiUrl("/v1/git-sync/settings"), {
 				method: "PUT",
 				json: { ...values, expectedVersion: status?.settings.version ?? 0 },
 				fallback: t("settings.save.failed"),
 			}),
 		onSuccess: () => {
-			setToken("");
 			setSecret("");
 			toast.success(t("settings.saved"));
 		},
@@ -556,12 +560,46 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 		onSettled: onChanged,
 	});
 
+	// The token is a key of the API key store assigned to the plugin's slot; the plugin is told afterwards so what waited for a token goes out.
+	const saveToken = useMutation({
+		mutationFn: async (key: ApiKeyChoice) => {
+			await cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), {
+				method: "PUT",
+				json: { plugin: "git-sync", slot: "token", key },
+				fallback: t("settings.save.failed"),
+			});
+			if (key.use !== "none") {
+				await cmsFetch(site, cmsApiUrl("/v1/git-sync/token-changed"), {
+					method: "POST",
+					json: {},
+					fallback: t("settings.save.failed"),
+				});
+			}
+		},
+		onSuccess: () => {
+			setPicked(null);
+			toast.success(t("settings.saved"));
+		},
+		onError: (err) => toast.error(errorText(site, err, t("settings.save.failed"))),
+		onSettled: () => {
+			// A key may have been added to the store, and the key's uses changed.
+			void queryClient.invalidateQueries({ queryKey: API_KEYS_KEY });
+			onChanged();
+		},
+	});
+
 	if (!status) return <ListSkeleton />;
 	const { settings } = status;
 	const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${cmsApiUrl("/v1/git-sync/webhook")}`;
 	const stateOf = (item: { set: boolean; readable: boolean }) =>
 		!item.set ? "unset" : item.readable ? "set" : "unreadable";
-	const tokenState = stateOf(settings.token);
+	const tokenKey = settings.token.key;
+	const tokenState = tokenKey ? (tokenKey.readable ? "set" : "unreadable") : "unset";
+	const savedChoice: ApiKeyChoice = tokenKey ? { use: "saved", keyId: tokenKey.id } : { use: "new", value: "" };
+	const choice = picked ?? savedChoice;
+	const tokenHint = tokenKey ? `${tokenKey.name}${tokenKey.tail ? ` ••••${tokenKey.tail}` : ""}` : "";
+	// Nothing to save while the field shows the key the token already uses.
+	const tokenChanged = choice.use === "new" || (choice.use === "saved" && choice.keyId !== tokenKey?.id);
 	const secretState = stateOf(settings.webhookSecret);
 
 	return (
@@ -576,33 +614,28 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 				className="space-y-2"
 				onSubmit={(event) => {
 					event.preventDefault();
-					if (token.trim()) save.mutate({ token });
+					if (tokenChanged && choiceReady(choice)) saveToken.mutate(choice);
 				}}
 			>
-				<Label htmlFor="git-sync-token" className="font-medium text-sm">
-					{t("settings.token")}
-				</Label>
+				<p className="font-medium text-sm">{t("settings.token")}</p>
 				<p className="text-cms-muted-foreground text-xs">{t("settings.token.help")}</p>
-				<p className="text-xs">{t(`settings.token.state.${tokenState}`, { hint: settings.token.hint ?? "" })}</p>
+				<p className="text-xs">{t(`settings.token.state.${tokenState}`, { hint: tokenHint })}</p>
+				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
 				<div className="flex gap-2">
-					<Input
-						id="git-sync-token"
-						type="password"
-						autoComplete="off"
-						value={token}
-						placeholder={t("settings.token.new")}
-						onChange={(event) => setToken(event.target.value)}
-					/>
-					<Button type="submit" size="sm" disabled={!settings.secretsAvailable || !token.trim() || save.isPending}>
+					<Button
+						type="submit"
+						size="sm"
+						disabled={!settings.secretsAvailable || !tokenChanged || !choiceReady(choice) || saveToken.isPending}
+					>
 						{t("settings.save")}
 					</Button>
-					{settings.token.set && (
+					{tokenKey && (
 						<Button
 							type="button"
 							size="sm"
 							variant="outline"
-							disabled={save.isPending}
-							onClick={() => save.mutate({ token: null })}
+							disabled={saveToken.isPending}
+							onClick={() => saveToken.mutate({ use: "none" })}
 						>
 							{t("settings.remove")}
 						</Button>

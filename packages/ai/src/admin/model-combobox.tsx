@@ -17,7 +17,7 @@ import type { AiModelInfo } from "../connection";
 import { aiCommonMessages } from "./ai-common.messages";
 
 /** Where to fetch the model list from. A saved connection by id; before saving, by URL and key. */
-export type ModelSource = { providerId: string } | { url: string; apiKey?: string };
+export type ModelSource = { providerId: string } | { url: string; apiKey?: string; keyId?: string };
 
 /**
  * Model list of a generation connection. A list fetched once is not fetched again for 10 minutes, and is reused after saving or reopening.

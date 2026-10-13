@@ -1,5 +1,9 @@
-import { definePlugin } from "@monti-cms/core";
-import { GIT_SYNC_PLUGIN_NAME, type GitSyncOptions, validateGitSyncConfig } from "./options";
+import { createActiveTranslator, definePlugin } from "@monti-cms/core";
+import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT, type GitSyncOptions, validateGitSyncConfig } from "./options";
+import { settingsMessages } from "./settings.messages";
+
+// `gitSync()` is called from the site config file, so the slot's label is chosen by admin language at read time.
+const t = createActiveTranslator(settingsMessages);
 
 /**
  * Git sync. Add it to the site config `plugins` to sync the published entries of some collections two ways with files in a GitHub repo (a separate content repo,
@@ -10,7 +14,8 @@ import { GIT_SYNC_PLUGIN_NAME, type GitSyncOptions, validateGitSyncConfig } from
  * - In: GitHub's `push` webhook, "Pull now" on the admin screen and `monti git-sync:pull` write what changed in the repo to the CMS and publish it.
  * - If an entry changed on both sides since the last sync, nothing is merged: the admin screen lists the conflict with a diff and a person picks a side.
  *
- * The GitHub token and the webhook secret are saved on the plugin's admin screen (encrypted with a key derived from `MONTI_SECRET`), never in config.
+ * The GitHub token is a key of the API key store assigned to the plugin's `token` slot (Settings > API keys, or the plugin's screen); the webhook secret is saved on the
+ * plugin's admin screen (encrypted with a key derived from `MONTI_SECRET`). Neither is in config.
  * It works with no arguments (`gitSync()`): no target is listed, so nothing syncs until `targets` names a repo.
  *
  * ```ts
@@ -31,6 +36,15 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 		...(options.enabled === false
 			? {}
 			: {
+					// The GitHub token is a key of the central API key store, assigned to this slot.
+					keySlots: [
+						{
+							id: GIT_SYNC_TOKEN_SLOT,
+							service: "GitHub",
+							// Worked out with the site of the instance each time, so it follows the admin language.
+							label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
+						},
+					],
 					nav: [{ path: "git-sync", label: "Git sync", icon: "git-branch" }],
 					// In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).
 					server: () => import("@monti-cms/git-sync/server"),

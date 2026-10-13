@@ -8,6 +8,9 @@ const t = createActiveTranslator(bareunMessages);
 /** Name used to find the Bareun checker in the site config `plugins`. */
 export const BAREUN_PLUGIN_NAME = "text-check-bareun";
 
+/** Id of the plugin's one API key slot. */
+export const BAREUN_KEY_SLOT = "key";
+
 /** Checker name (the source shown on results). */
 export const BAREUN_CHECKER_ID = "bareun";
 
@@ -15,8 +18,6 @@ export const BAREUN_CHECKER_ID = "bareun";
 export const BAREUN_ROUTE = "v1/text-check/bareun";
 
 export interface BareunOptions {
-	/** Name of the environment variable holding the API key. Default `BAREUN_API_KEY`. The key is read on the server only. */
-	readonly apiKeyEnv?: string;
 	/** Bareun API URL. Default `https://api.bareun.ai`. Change it to use a self-hosted Bareun server. */
 	readonly baseUrl?: string;
 	/** Toolbar button name and the source shown in the results panel. Defaults to "Bareun spell check" in the display language. */
@@ -30,7 +31,6 @@ export interface BareunOptions {
 }
 
 export interface ResolvedBareunOptions {
-	readonly apiKeyEnv: string;
 	readonly baseUrl: string;
 	readonly label: string;
 	readonly auto: boolean;
@@ -42,8 +42,6 @@ const DEFAULT_LIMITS: TextCheckerLimits = { maxSegments: 100, maxChars: 10_000 }
 
 /** Fills in defaults and rejects invalid values. */
 export function resolveBareunOptions(options: BareunOptions = {}): ResolvedBareunOptions {
-	const apiKeyEnv = options.apiKeyEnv ?? "BAREUN_API_KEY";
-	if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(apiKeyEnv)) throw new Error(`bareun: invalid apiKeyEnv "${apiKeyEnv}"`);
 	const baseUrl = (options.baseUrl ?? "https://api.bareun.ai").replace(/\/+$/, "");
 	if (!/^https?:\/\//.test(baseUrl)) throw new Error(`bareun: baseUrl must be an http(s) URL`);
 	const limits = { ...DEFAULT_LIMITS, ...options.limits };
@@ -53,7 +51,6 @@ export function resolveBareunOptions(options: BareunOptions = {}): ResolvedBareu
 	}
 	const label = options.label?.trim();
 	return {
-		apiKeyEnv,
 		baseUrl,
 		get label() {
 			return label || t("label");
