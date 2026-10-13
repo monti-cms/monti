@@ -33,7 +33,10 @@ describe("Bareun checker admin side", () => {
 		expect(plugin.name).toBe("text-check-bareun");
 		expect(typeof plugin.server).toBe("function");
 		expect(typeof plugin.admin).toBe("function");
-		expect(() => bareun({ apiKeyEnv: "bad key" })).toThrow();
+		// Every Tools page the plugin lists in `nav` has a screen in the admin plugin.
+		for (const item of plugin.nav ?? []) expect(Object.keys(bareunAdmin.pages ?? {})).toContain(item.path);
+		expect(plugin.nav?.length).toBeGreaterThan(0);
+		expect(() => bareun({ baseUrl: "ftp://x" })).toThrow();
 		expect(() => bareun({ limits: { maxChars: 0 } })).toThrow();
 	});
 });
