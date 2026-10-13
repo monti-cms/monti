@@ -1,6 +1,8 @@
+import { SiteProvider } from "@monti-cms/core/client";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
 import {
 	EntryFormProvider,
 	type EntryFormValue,
@@ -12,6 +14,7 @@ import {
 import { SlotRegistryProvider } from "../../../slots/registry";
 import { docOf } from "../../../test/mdx";
 import { renderWithSite as render, renderHookWithSite as renderHook } from "../../__test__/site-wrapper";
+import { draftSiteOf } from "../../schema/draft-site";
 import { EMPTY_FORM, type EntryForm, type EntryFormPatch } from "../entry-form";
 
 afterEach(cleanup);
@@ -56,6 +59,29 @@ function Owner({
 		</EntryFormProvider>
 	);
 }
+
+describe("useField in a preview", () => {
+	it("has no slot actions on a draft site, where nothing may reach a service", () => {
+		const draft = draftSiteOf(
+			testSite,
+			{
+				schemaVersion: 1,
+				collections: { page: { label: "Page", kind: "document", fields: { title: { kind: "text", label: "Title" } } } },
+				locales: [{ code: "en", name: "English" }],
+				defaultLocale: "en",
+			},
+			[],
+		);
+		if (!draft) throw new Error("the draft should parse");
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<SiteProvider site={draft}>
+				<EntryFormProvider value={baseValue({ collection: "page" })}>{children}</EntryFormProvider>
+			</SiteProvider>
+		);
+		const { result } = renderHook(() => useField("title"), { wrapper });
+		expect(result.current.slotRequest).toBeNull();
+	});
+});
 
 describe("useField", () => {
 	it("returns the value, definition, label, ids and the change function of one field", () => {

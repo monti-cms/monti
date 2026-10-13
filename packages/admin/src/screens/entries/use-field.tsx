@@ -12,6 +12,7 @@ import {
 } from "../../hooks/store";
 import type { SlotRequest } from "../../slots/registry";
 import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
+import { isSandboxSite } from "../shared/preview-sandbox";
 import { type EntryData, type EntryForm, type EntryFormPatch, type FormValue, formTitle } from "./entry-form";
 
 /**
@@ -255,7 +256,8 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 	);
 
 	const slotRequest = useMemo((): SlotRequest | null => {
-		if (locked) return null;
+		// A preview of a screen (a draft site) has no actions: nothing it does may reach a service.
+		if (locked || isSandboxSite(site)) return null;
 		return {
 			slot: "field",
 			target: name,

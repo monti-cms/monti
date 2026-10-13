@@ -27,6 +27,7 @@ import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { defaultTab } from "../entries/layout-groups";
+import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
@@ -297,11 +298,11 @@ function Row({
 						<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 							{prefix}
 						</span>
-						<span className="truncate font-mono text-[13px]" title={name}>
+						<span className="max-w-[70%] shrink-0 truncate font-mono text-[13px]" title={name}>
 							{name}
 						</span>
 						{label && (
-							<span className="ml-2 truncate text-cms-muted-foreground text-xs" title={label}>
+							<span className="ml-2 min-w-0 truncate text-cms-muted-foreground text-xs" title={label}>
 								{label}
 							</span>
 						)}
@@ -867,7 +868,7 @@ function useWide(): boolean {
 /** The preview on a narrower window: a panel on the right that the writer can widen, with the tree still reachable beside it. */
 function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () => void }) {
 	const t = useTranslator(schemaMessages);
-	const resize = usePanelResize({ name: "layout-preview", defaultWidth: 420, minWidth: 320 });
+	const resize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview", minWidth: 320 });
 	return (
 		<aside
 			aria-label={t("layout.previewTitle")}
@@ -919,7 +920,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const [adding, setAdding] = useState(false);
 	const wide = useWide();
 	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
-	const sideResize = usePanelResize({ name: "layout-preview-side", defaultWidth: 420, minWidth: 320 });
+	const sideResize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview-side", minWidth: 320 });
 	const { file, codeCollections } = useSchemaEdit();
 	const first = defaultTab(site);
 	const ctx: TreeContext = {
@@ -955,24 +956,24 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		});
 	const card = (
 		<section className="min-w-0 overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
-			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3.5">
+			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
 						{t("field.title")} <span className="font-medium text-cms-muted-foreground">{names.length}</span>
 					</h4>
-					<p className="mt-0.5 text-cms-muted-foreground text-xs">{t("fields.hint")}</p>
+					<p className="mt-0.5 truncate text-cms-muted-foreground text-xs" title={t("fields.hint")}>
+						{t("fields.hint")}
+					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-2">
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						aria-pressed={previewOpen}
+				<div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+					<IconButton
+						label={t("layout.preview")}
+						size="icon-sm"
+						pressed={previewOpen}
 						onClick={() => setPreviewOpen(!previewOpen)}
 					>
 						<Eye aria-hidden />
-						{t("layout.preview")}
-					</Button>
+					</IconButton>
 					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
 						<Plus aria-hidden />
 						{t("layout.addTab")}

@@ -7,6 +7,7 @@ import { createTestRouter } from "../../../test/router";
 import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
+import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
 import { schemaMessages } from "../messages";
 import type { Obj } from "../schema-model";
 import { SchemaSettings } from "../schema-screen";
@@ -1003,6 +1004,17 @@ describe("SchemaScreen", () => {
 			});
 			expect(within(group).getByLabelText("Summary")).toBeTruthy();
 			expect(requests.filter((request) => request.method !== "GET")).toEqual([]);
+			vi.unstubAllGlobals();
+		});
+
+		it("opens as wide as the entry editor's properties panel, and can be resized", async () => {
+			wideWindow();
+			await openFields();
+			const side = await screen.findByTestId("layout-preview-side");
+			const handle = within(side).getByRole("separator");
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth);
+			fireEvent.keyDown(handle, { key: "ArrowLeft", shiftKey: true });
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth + 64);
 			vi.unstubAllGlobals();
 		});
 
