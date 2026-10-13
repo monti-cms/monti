@@ -85,6 +85,7 @@ describe("the email and password login on the command line", () => {
 		expect(accounts.status).toBe("warn");
 		expect(accounts.fix).toContain("create the first admin");
 		expect(accounts.fix).toContain("https://blog.example.com/studio");
+		expect(accounts.fix?.length).toBeLessThan(200);
 		for (const id of ["auth/github-id", "auth/github-secret", "auth/admins", "auth/callback-url"]) {
 			expect(byId(report, id).status, id).toBe("skip");
 		}

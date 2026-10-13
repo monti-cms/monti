@@ -40,7 +40,7 @@ export {
 	type SeedTemplate,
 	type SiteConfig,
 } from "./config/define";
-export { type EnvSource, envValue, WHERE_TO_SET_ENV } from "./core/env";
+export { describeNodeEnv, type EnvSource, envValue, WHERE_TO_SET_ENV } from "./core/env";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem";
 export { createActiveTranslator } from "./i18n/active";
 export {

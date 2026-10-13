@@ -394,8 +394,8 @@ const adminPathCheck: CoreCheck = {
 	needsCms: true,
 	run: (state) => {
 		const adminPath = state.cms?.site.ADMIN_PATH ?? "/admin";
-		const site = (state.env.SITE_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
-		return ok(`the admin is at ${adminPath} (${site}${adminPath})`, {
+		const site = state.env.SITE_URL?.trim().replace(/\/+$/, "");
+		return ok(`the admin is at ${adminPath} ${site ? `(${site}${adminPath})` : "on your site (SITE_URL is not set)"}`, {
 			where: 'admin.path in monti.schema.ts (default "/admin")',
 		});
 	},
