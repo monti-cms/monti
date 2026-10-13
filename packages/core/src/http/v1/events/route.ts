@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EventDeliveryState } from "../../../core/store";
+import type { EventLogState } from "../../../core/store";
 import { adminRoute, json, parseWith, readQuery } from "../handler";
 
 const STATES = [
@@ -9,7 +9,8 @@ const STATES = [
 	"failed",
 	"dead",
 	"dismissed",
-] as const satisfies readonly EventDeliveryState[];
+	"recorded",
+] as const satisfies readonly EventLogState[];
 
 const querySchema = z.object({
 	state: z.array(z.enum(STATES)).optional(),

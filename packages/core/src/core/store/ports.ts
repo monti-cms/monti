@@ -1,5 +1,5 @@
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types";
-import type { ClaimedDelivery, EventDelivery, EventDeliveryCounts, EventDeliveryState } from "./events";
+import type { ClaimedDelivery, EventDelivery, EventDeliveryCounts, EventLogState } from "./events";
 import type {
 	AppliedSchemaChange,
 	ApplySchemaChangeParams,
@@ -297,9 +297,12 @@ export interface EventStore {
 	 * order of its entry. Returns `false` when the delivery is not in flight.
 	 */
 	deferDelivery(params: { eventId: string; subscriber: string; retryAt: Date }): Promise<boolean>;
-	/** Deliveries in the states (default `failed` and `dead`), newest event first. */
+	/**
+	 * The event log, newest event first: one item per delivery whose state is in `states` (default `failed` and `dead`), and, when `states` has `recorded`, one
+	 * item per event that has no delivery at all (no subscriber was registered), with `subscriber` null.
+	 */
 	listEventDeliveries(params?: {
-		states?: readonly EventDeliveryState[];
+		states?: readonly EventLogState[];
 		limit?: number;
 		offset?: number;
 	}): Promise<{ items: EventDelivery[]; total: number }>;

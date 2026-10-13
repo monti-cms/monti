@@ -23,6 +23,7 @@ export type {
 	EventDelivery,
 	EventDeliveryCounts,
 	EventDeliveryState,
+	EventLogState,
 } from "../core/store";
 export { DeferDelivery } from "../core/store";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";

@@ -10,6 +10,7 @@ export type {
 	EventDelivery,
 	EventDeliveryCounts,
 	EventDeliveryState,
+	EventLogState,
 } from "./events";
 export { CONTENT_CHANGE_KINDS, DeferDelivery, eventRowOf, isDeferred } from "./events";
 export type {

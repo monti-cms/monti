@@ -1,8 +1,8 @@
 import type { Entry, EntryStatus } from "./types";
 
 /**
- * The event outbox. Every committed change of an entry leaves an event row in the same transaction as the write, so an event exists exactly when its
- * change does. Delivering the event to the subscribers (the server config's and the plugins' `hooks.afterCommit`) happens after the commit and is retried;
+ * The event outbox and the event log. Every committed change of an entry leaves an event row in the same transaction as the write, so an event exists exactly when its
+ * change does, whether or not anything subscribes to it (the row is the log; the deliveries are per subscriber). Delivering the event to the subscribers (the server config's and the plugins' `hooks.afterCommit`) happens after the commit and is retried;
  * the delivery state of each subscriber is kept per event.
  */
 
@@ -51,6 +51,8 @@ export interface ContentChange {
 	readonly version: number;
 	/** Content hash of the body the change leaves: the published body for `published`, the draft for every other kind. */
 	readonly contentHash: string | null;
+	/** Who made the change (see `currentActor`), or `null` when it was made outside a request or the actor is not known. */
+	readonly actor: string | null;
 	/** When the change was committed. */
 	readonly occurredAt: Date;
 }
@@ -68,7 +70,7 @@ export interface ContentEvent extends ContentChange {
 	 * Runs `run` once for this event and this subscriber, however many times the delivery is tried. Delivery is at least once, so a subscriber whose work
 	 * must not be repeated (a message, a charge, an export) wraps it in `once`: when an earlier try already finished `run`, it is skipped and this returns
 	 * `false`; otherwise `run` runs, the event is marked done once it returned, and this returns `true`. A `run` that throws is not marked, so the retry
-	 * runs it again. The mark is kept as long as the event is (`events.retentionDays`). Only a crash between the end of `run` and the mark can repeat it.
+	 * runs it again. The mark is kept as long as the event is (`EVENT_RETENTION_DAYS`). Only a crash between the end of `run` and the mark can repeat it.
 	 */
 	once(run: () => void | Promise<void>): Promise<boolean>;
 }
@@ -110,11 +112,17 @@ export const isDeferred = (value: unknown): value is DeferredDelivery =>
  */
 export type EventDeliveryState = "pending" | "delivering" | "delivered" | "failed" | "dead" | "dismissed";
 
-/** An event and one subscriber's delivery state. */
+/**
+ * What the event log shows for an event: the state of one delivery, or `recorded` for an event that has no delivery rows (no subscriber was registered when it
+ * was committed, or its deliveries are not made yet). A `recorded` event is never retried.
+ */
+export type EventLogState = EventDeliveryState | "recorded";
+
+/** An event as the log lists it: with one subscriber's delivery state, or alone (`recorded`, no subscriber) when it has no delivery rows. */
 export interface EventDelivery {
 	readonly change: ContentChange;
-	readonly subscriber: string;
-	readonly state: EventDeliveryState;
+	readonly subscriber: string | null;
+	readonly state: EventLogState;
 	readonly attempts: number;
 	readonly lastError: string | null;
 	readonly lastAttemptAt: Date | null;

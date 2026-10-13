@@ -21,6 +21,7 @@ const failed: EventDelivery = {
 		workingSlug: "hello",
 		version: 3,
 		contentHash: "abc",
+		actor: null,
 		occurredAt: new Date("2030-01-01T00:00:00Z"),
 	} satisfies ContentChange,
 	subscriber: "plugin:git-sync",
