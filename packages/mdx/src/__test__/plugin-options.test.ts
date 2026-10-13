@@ -1,27 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { mdx, validateMdxOptions } from "../plugin";
+import { checkMdxOptions, mdx } from "../plugin";
 
-/** The names of the syntax extensions are checked when the site config is created (`plugins: [mdx({ syntax })]`). */
+/** The names of the syntax extensions are checked with the site config (`plugins: [mdx({ syntax })]`). */
 describe("the options of the mdx plugin", () => {
 	it("accepts syntax extensions", () => {
 		const extension = { name: "notation" };
-		expect(() => validateMdxOptions({ syntax: [extension] })).not.toThrow();
+		expect(checkMdxOptions({ syntax: [extension] })).toEqual([]);
 		expect(mdx({ syntax: [extension] }).options).toEqual({ syntax: [extension] });
 	});
 
 	it("accepts no options", () => {
-		expect(() => validateMdxOptions(undefined)).not.toThrow();
+		expect(checkMdxOptions(undefined)).toEqual([]);
 		expect(() => mdx()).not.toThrow();
 	});
 
-	it("rejects duplicate extension names", () => {
+	it("reports duplicate extension names", () => {
 		const extension = { name: "notation" };
-		expect(() => validateMdxOptions({ syntax: [extension, extension] })).toThrow(/duplicate/);
-		expect(() => mdx({ syntax: [extension, extension] })).toThrow(/duplicate/);
+		expect(checkMdxOptions({ syntax: [extension, extension] })).toEqual([
+			expect.objectContaining({ path: "plugins.mdx.options.syntax[1]", code: "duplicate" }),
+		]);
 	});
 
-	it("rejects an extension without a name", () => {
-		expect(() => validateMdxOptions({ syntax: [{ name: "" }] })).toThrow(/needs a name/);
-		expect(() => mdx({ syntax: [{ name: "" }] })).toThrow(/needs a name/);
+	it("reports an extension without a name", () => {
+		expect(checkMdxOptions({ syntax: [{ name: "" }] })).toEqual([
+			expect.objectContaining({ path: "plugins.mdx.options.syntax[0]", code: "name" }),
+		]);
 	});
 });

@@ -1,8 +1,8 @@
 import { noLogin } from "../adapters/auth/no-login";
 import type { BlockDefinition } from "../blocks/define";
 import { type Cms, createCms } from "../cms";
-import { type CmsConfig, type CollectionsConfig, defineSite, type SchemaCmsConfig } from "../config/define";
-import { problemText } from "../core/problem";
+import { buildSite, type CmsConfig, type CollectionsConfig, type SchemaCmsConfig } from "../config/define";
+import { problemError } from "../core/problem";
 import type { PublicApiOptions } from "../http/v1/public/options";
 import type { CmsPlugin } from "../plugin/define";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
@@ -111,31 +111,26 @@ export function defineConfig<
 ): Cms<CmsConfig<Collections, Locale, Plugins, Blocks>>;
 export function defineConfig(input: MontiServerOptions): Cms {
 	if (typeof window !== "undefined") {
-		throw new Error(
-			problemText({
-				what: "monti.config.ts was loaded in the browser, but it holds the database and login settings and is server-only",
-				where: "the import chain from a file with 'use client' to monti.config.ts (`monti doctor` prints it)",
-				fix: "import the config only from server code (route files, server components, scripts); a client component gets data as props or through the API route. The admin gets the site as data from its layout",
-			}),
-		);
+		throw problemError({
+			what: "monti.config.ts was loaded in the browser, but it holds the database and login settings and is server-only",
+			where: "the import chain from a file with 'use client' to monti.config.ts (`monti doctor` prints it)",
+			fix: "import the config only from server code (route files, server components, scripts); a client component gets data as props or through the API route. The admin gets the site as data from its layout",
+		});
 	}
 	if (!input.database) {
-		throw new Error(
-			problemText({
-				what: "defineConfig has no `database`, so there is nowhere to keep the content",
-				where: "defineConfig({ ... }) in monti.config.ts",
-				fix: "add `database: postgres()` (postgres is exported by @monti-cms/core/server); it reads DATABASE_URL",
-			}),
-		);
+		throw problemError({
+			what: "defineConfig has no `database`, so there is nowhere to keep the content",
+			where: "defineConfig({ ... }) in monti.config.ts",
+			fix: "add `database: postgres()` (postgres is exported by @monti-cms/core/server); it reads DATABASE_URL",
+		});
 	}
 	const site: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(input as object)) if (!isServerKey(key)) site[key] = value;
-	// The public site URL by convention: `SITE_URL`, unless the code (`site.url`) or the schema file says it.
+	// The public site URL by convention: `SITE_URL`, the weakest source: the schema file's `site.url` and the code's `site.url` are laid over it.
 	const schema = site.schema as { site?: { url?: unknown } } | undefined;
 	const fileUrl = schema?.site?.url;
 	const siteOptions = site.site as { url?: string } | undefined;
 	const envUrl = process.env[SITE_URL_ENV]?.trim();
-	if (!siteOptions?.url && !fileUrl && envUrl) site.site = { ...siteOptions, url: envUrl };
 	const siteUrlSource = siteOptions?.url
 		? "set in monti.config.ts (site.url)"
 		: fileUrl
@@ -143,7 +138,7 @@ export function defineConfig(input: MontiServerOptions): Cms {
 			: envUrl
 				? `from env ${SITE_URL_ENV}`
 				: undefined;
-	const config = defineSite(site as never);
+	const config = buildSite(site, { ...(envUrl ? { site: { url: envUrl } } : {}), alsoKnown: SERVER_KEYS });
 	const server: CmsServerConfig = {
 		database: input.database,
 		auth: input.auth ?? noLogin(),

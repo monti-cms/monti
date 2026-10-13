@@ -1,3 +1,4 @@
+import { type Issue, IssueList, pathOf } from "@monti-cms/core";
 import type {
 	AiActionDefinition,
 	AiActionSource,
@@ -520,61 +521,61 @@ function findField(
 	return undefined;
 }
 
-/** Checks that the AI config matches the collection definitions, slots and result shapes. If wrong, reports right away when the app starts. */
-export function validateAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): void {
+/** Checks that the AI config matches the collection definitions, slots and result shapes. */
+export function checkAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): Issue[] {
+	const list = new IssueList();
+	const bad = (path: string, code: string, message: string) => list.add(path, code, message);
 	const sharedKeys = Object.keys(ai.shared ?? {});
 	for (const key of sharedKeys) {
-		if (!NAME.test(key)) throw new Error(`cms.config: ai.shared.${key}: name must be letters, digits or _`);
+		if (!NAME.test(key)) bad(pathOf("plugins", "ai", "shared", key), "name", "name must be letters, digits or _");
 	}
 	for (const [key, action] of Object.entries(ai.actions)) {
-		const where = `cms.config: ai.actions.${key}`;
-		if (!NAME.test(key)) throw new Error(`${where}: name must be letters, digits or _`);
+		const where = pathOf("plugins", "ai", "actions", key);
+		if (!NAME.test(key)) bad(where, "name", `name must be letters, digits or _`);
 		const inputs = Object.entries(action.input);
-		for (const [name] of inputs) if (!NAME.test(name)) throw new Error(`${where}: bad input name "${name}"`);
+		for (const [name] of inputs) if (!NAME.test(name)) bad(where, "input", `bad input name "${name}"`);
 		for (const name of action.send ?? []) {
-			if (!action.input[name]) throw new Error(`${where}: send lists unknown input "${name}"`);
+			if (!action.input[name]) bad(where, "send", `send lists unknown input "${name}"`);
 		}
 		const unknown = unknownPlaceholders(action.prompt, action.input, sharedKeys);
 		if (unknown.length > 0) {
-			throw new Error(`${where}: prompt can only use locale inputs and shared texts, not {{${unknown[0]}}}`);
+			bad(where, "prompt", `prompt can only use locale inputs and shared texts, not {{${unknown[0]}}}`);
 		}
 
 		const choices = action.choices;
 		if (choices?.from === "collection" && !collections[choices.collection]) {
-			throw new Error(`${where}: choices use unknown collection "${choices.collection}"`);
+			bad(where, "choices", `choices use unknown collection "${choices.collection}"`);
 		}
 		if (choices?.from === "select") {
 			const field = findField(collections, choices.collection, choices.field);
 			const select =
 				field?.kind === "conditional" ? (field as { discriminant?: { kind: string } }).discriminant : field;
 			if (select?.kind !== "select") {
-				throw new Error(`${where}: choices need a select field ${choices.collection}.${choices.field}`);
+				bad(where, "choices", `choices need a select field ${choices.collection}.${choices.field}`);
 			}
 		}
 		const engine = action.engine ?? "generate";
 		if (engine === "decide") {
-			if (!choices) throw new Error(`${where}: decide engine needs choices`);
-			if (action.result !== "candidates") throw new Error(`${where}: decide engine answers candidates only`);
-			if (inputs.some(([, spec]) => spec.kind === "image"))
-				throw new Error(`${where}: decide engine cannot read images`);
+			if (!choices) bad(where, "choices", `decide engine needs choices`);
+			if (action.result !== "candidates") bad(where, "engine", `decide engine answers candidates only`);
+			if (inputs.some(([, spec]) => spec.kind === "image")) bad(where, "engine", `decide engine cannot read images`);
 		}
 		if (action.stream && (engine !== "generate" || (action.result !== "text" && action.result !== "mdx"))) {
-			throw new Error(`${where}: stream needs the generate engine and a text or mdx result`);
+			bad(where, "stream", `stream needs the generate engine and a text or mdx result`);
 		}
 		if (action.fake !== undefined && typeof action.fake !== "function") {
-			throw new Error(`${where}: fake must be a function`);
+			bad(where, "fake", `fake must be a function`);
 		}
 		if (action.result === "note" && action.apply && action.apply !== "none") {
-			throw new Error(`${where}: note results are not applied`);
+			bad(where, "apply", `note results are not applied`);
 		}
 		const codeNames = new Set<string>();
 		for (const check of action.checks ?? []) {
-			if (check.kind === "exists" && !choices) throw new Error(`${where}: exists check needs choices`);
+			if (check.kind === "exists" && !choices) bad(where, "choices", `exists check needs choices`);
 			if (isValidator(check)) {
-				if (!CODE_CHECK_NAME.test(check.name))
-					throw new Error(`${where}: check name "${check.name}" must be kebab-case`);
-				if (codeNames.has(check.name)) throw new Error(`${where}: check "${check.name}" is listed twice`);
-				if (typeof check.run !== "function") throw new Error(`${where}: check "${check.name}" needs a run function`);
+				if (!CODE_CHECK_NAME.test(check.name)) bad(where, "check", `check name "${check.name}" must be kebab-case`);
+				if (codeNames.has(check.name)) bad(where, "check", `check "${check.name}" is listed twice`);
+				if (typeof check.run !== "function") bad(where, "check", `check "${check.name}" needs a run function`);
 				codeNames.add(check.name);
 			}
 		}
@@ -584,26 +585,27 @@ export function validateAiConfig(ai: ResolvedAiConfig, collections: CollectionsV
 			for (const [name, spec] of inputs) {
 				const given = provides[name];
 				if (given === undefined ? spec.required : given !== spec.kind) {
-					throw new Error(`${where}: ${attach.slot} slot cannot fill input "${name}" (${spec.kind})`);
+					bad(where, "attach", `${attach.slot} slot cannot fill input "${name}" (${spec.kind})`);
 				}
 			}
 			if (attach.slot === "block") {
-				if (action.result !== "mdx") throw new Error(`${where}: block slot needs an mdx result`);
+				if (action.result !== "mdx") bad(where, "attach", `block slot needs an mdx result`);
 				if (blocks && !blocks.includes(attach.block)) {
-					throw new Error(`${where}: attach uses unknown block "${attach.block}"`);
+					bad(where, "attach", `attach uses unknown block "${attach.block}"`);
 				}
 				continue;
 			}
 			if (attach.slot !== "field") continue;
 			for (const collection of attach.collections ?? []) {
-				if (!collections[collection]) throw new Error(`${where}: attach uses unknown collection "${collection}"`);
+				if (!collections[collection]) bad(where, "attach", `attach uses unknown collection "${collection}"`);
 				if (!findField(collections, collection, attach.field)) {
-					throw new Error(`${where}: ${collection} has no field "${attach.field}"`);
+					bad(where, "attach", `${collection} has no field "${attach.field}"`);
 				}
 			}
 			if (!Object.keys(collections).some((collection) => findField(collections, collection, attach.field))) {
-				throw new Error(`${where}: attach uses unknown field "${attach.field}"`);
+				bad(where, "attach", `attach uses unknown field "${attach.field}"`);
 			}
 		}
 	}
+	return list.issues;
 }

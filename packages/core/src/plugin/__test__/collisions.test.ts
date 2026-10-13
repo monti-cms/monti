@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
-import { assertPluginNamesFree, assertPluginPagesFree, assertPluginRoutesFree, RESERVED_SCOPES } from "../collisions";
+import { ConfigError } from "../../config/check/issue";
+import {
+	assertPluginNamesFree,
+	assertPluginPagesFree,
+	assertPluginRoutesFree,
+	checkPluginNames,
+	checkPluginPages,
+	checkPluginRoutes,
+	RESERVED_SCOPES,
+} from "../collisions";
 
 describe("assertPluginPagesFree", () => {
 	it("accepts distinct pages", () => {
@@ -14,9 +23,8 @@ describe("assertPluginPagesFree", () => {
 
 	it("rejects a page without a path", () => {
 		for (const path of ["", "/", "//"]) {
-			expect(() => assertPluginPagesFree([{ plugin: "evil", path }])).toThrow(
-				/tools page "\/" of plugin "evil" has no path/,
-			);
+			expect(checkPluginPages([{ plugin: "evil", path }])).toEqual([expect.objectContaining({ code: "empty" })]);
+			expect(() => assertPluginPagesFree([{ plugin: "evil", path }])).toThrow(ConfigError);
 		}
 	});
 
@@ -27,12 +35,12 @@ describe("assertPluginPagesFree", () => {
 	});
 
 	it("rejects a page another plugin already uses", () => {
-		expect(() =>
-			assertPluginPagesFree([
+		expect(
+			checkPluginPages([
 				{ plugin: "a", path: "tools" },
 				{ plugin: "b", path: "/tools" },
 			]),
-		).toThrow(/tools page "\/tools" of plugin "b" collides with plugin "a"/);
+		).toEqual([expect.objectContaining({ path: 'plugins.b.nav["/tools"]', code: "collision" })]);
 	});
 
 	it("lets one plugin name the same page twice (nav and pages)", () => {
@@ -58,38 +66,43 @@ describe("assertPluginRoutesFree", () => {
 	});
 
 	it("rejects a route that equals a core route, even with another param name", () => {
-		expect(() => assertPluginRoutesFree(core, [{ plugin: "x", pattern: "v1/meta" }])).toThrow(
-			/route "v1\/meta" of plugin "x" collides with the core route "v1\/meta"/,
-		);
-		expect(() => assertPluginRoutesFree(core, [{ plugin: "x", pattern: "v1/entries/[entry]" }])).toThrow(
-			/collides with the core route "v1\/entries\/\[id\]"/,
+		expect(checkPluginRoutes(core, [{ plugin: "x", pattern: "v1/meta" }])).toEqual([
+			expect.objectContaining({ path: 'plugins.x.routes["v1/meta"]', code: "collision" }),
+		]);
+		expect(checkPluginRoutes(core, [{ plugin: "x", pattern: "v1/entries/[entry]" }])[0]?.message).toContain(
+			'core route "v1/entries/[id]"',
 		);
 	});
 
 	it("rejects the core auth prefix", () => {
-		expect(() => assertPluginRoutesFree(core, [{ plugin: "x", pattern: "auth/callback" }])).toThrow(/"auth\/\*"/);
+		expect(checkPluginRoutes(core, [{ plugin: "x", pattern: "auth/callback" }])[0]?.message).toContain('"auth/*"');
 	});
 
 	it("rejects a route another plugin already has", () => {
-		expect(() =>
-			assertPluginRoutesFree(core, [
-				{ plugin: "a", pattern: "v1/tools/[id]" },
-				{ plugin: "b", pattern: "v1/tools/[name]" },
-			]),
-		).toThrow(/"v1\/tools\/\[name\]" of plugin "b" collides with the route "v1\/tools\/\[id\]" of plugin "a"/);
+		const issues = checkPluginRoutes(core, [
+			{ plugin: "a", pattern: "v1/tools/[id]" },
+			{ plugin: "b", pattern: "v1/tools/[name]" },
+		]);
+		expect(issues).toEqual([
+			expect.objectContaining({ path: 'plugins.b.routes["v1/tools/[name]"]', code: "collision" }),
+		]);
+		expect(issues[0]?.message).toContain('plugin "a"');
 	});
 });
 
 describe("assertPluginNamesFree", () => {
 	it("rejects a plugin name equal to a core feature", () => {
-		expect(() => assertPluginNamesFree(["media"])).toThrow(/plugin name "media" collides with the core feature/);
+		expect(checkPluginNames(["media"])).toEqual([
+			expect.objectContaining({ path: "plugins[0].name", code: "collision" }),
+		]);
+		expect(() => assertPluginNamesFree(["media"])).toThrow(ConfigError);
 		expect(() => assertPluginNamesFree(["ai", "seo"])).not.toThrow();
 	});
 });
 
 describe("assertPluginNamesFree: core storage scopes", () => {
 	it.each(RESERVED_SCOPES)("rejects a plugin named %s, which would read the core's secrets and data", (name) => {
-		expect(() => assertPluginNamesFree([name])).toThrow(/collides with the core storage scope/);
+		expect(checkPluginNames([name])[0]?.message).toContain("core storage scope");
 	});
 
 	it("reserves the scopes the core itself uses", () => {

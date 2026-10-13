@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { HOST_PATTERN, useTranslator } from "@monti-cms/core/client";
 import type { SiteUrlState } from "@monti-cms/core/schema-edit";
 import { useState } from "react";
 import { Button } from "../../ui/button";
@@ -12,7 +12,6 @@ import { Section } from "./section";
 
 const PREFIX_MODES = ["except-default", "always", "never"] as const;
 type PrefixMode = (typeof PREFIX_MODES)[number];
-const HOST = /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:\d+)?$/;
 
 const URL_NOTE = {
 	env: "site.url.env",
@@ -44,7 +43,7 @@ export function SiteEditor({
 		? (site.localePrefix as PrefixMode)
 		: "except-default";
 	const inPath = site.previewLocaleParam === false;
-	const addable = HOST.test(host.trim()) && !aliases.includes(host.trim());
+	const addable = HOST_PATTERN.test(host.trim()) && !aliases.includes(host.trim());
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
 		<div className="flex flex-col gap-12" data-testid="site-settings">

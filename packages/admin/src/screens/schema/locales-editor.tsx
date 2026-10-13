@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { Button } from "../../ui/button";
@@ -83,8 +83,6 @@ function TimeZonePick({
 	);
 }
 
-const CODE = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/;
-
 /** The dialog that adds a language or edits one. The code of a saved language is a stored value, so editing shows it but does not change it. */
 function LocaleDialog({
 	locale,
@@ -102,7 +100,7 @@ function LocaleDialog({
 	const [code, setCode] = useState(locale?.code ?? "");
 	const [name, setName] = useState(locale?.name ?? "");
 	const [label, setLabel] = useState(locale?.label ?? "");
-	const codeOk = locale !== undefined || (CODE.test(code) && !taken.includes(code));
+	const codeOk = locale !== undefined || (LOCALE_CODE.test(code) && !taken.includes(code));
 	const ok = codeOk && name.trim() !== "";
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -160,7 +158,7 @@ function LocaleDialog({
 function examplePath(file: Obj): string {
 	for (const collection of Object.values(collectionsOf(file))) {
 		if (typeof collection.path === "string" && collection.path.startsWith("/"))
-			return collection.path.replace(":slug", "hello");
+			return fillPattern(collection.path, "hello");
 	}
 	return "/posts/hello";
 }

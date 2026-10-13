@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { definePlugin, type Issue, IssueList, pathOf } from "@monti-cms/core";
 import { MDX_PLUGIN_NAME } from "./name";
 import type { SyntaxExtension } from "./syntax/types";
 
@@ -14,11 +14,16 @@ export interface MdxPluginOptions {
 	readonly syntax?: readonly SyntaxExtension[];
 }
 
-/** Checks the options when the site config is created: every extension has a name, and no name is listed twice. */
-export const validateMdxOptions = (options: MdxPluginOptions | undefined): void => {
+/** The problems of the options: every extension has a name, and no name is listed twice. */
+export const checkMdxOptions = (options: MdxPluginOptions | undefined): Issue[] => {
+	const list = new IssueList();
 	const names = (options?.syntax ?? []).map((extension) => extension.name);
-	if (names.some((name) => !name)) throw new Error("cms.config: every `mdx({ syntax })` extension needs a name");
-	if (new Set(names).size !== names.length) throw new Error("cms.config: `mdx({ syntax })` has duplicate names");
+	for (const [index, name] of names.entries()) {
+		const at = pathOf("plugins", MDX_PLUGIN_NAME, "options", "syntax", index);
+		if (!name) list.add(at, "name", "every syntax extension needs a name");
+		else if (names.indexOf(name) !== index) list.add(at, "duplicate", `"${name}" is listed twice`);
+	}
+	return list.issues;
 };
 
 /**
@@ -32,11 +37,10 @@ export const validateMdxOptions = (options: MdxPluginOptions | undefined): void 
  * ```
  */
 export const mdx = (options: MdxPluginOptions = {}) => {
-	validateMdxOptions(options);
 	return definePlugin({
 		name: MDX_PLUGIN_NAME,
 		options,
-		validate: () => validateMdxOptions(options),
+		validate: () => checkMdxOptions(options),
 		// The format is read on the server only: the parser stays out of the browser bundle (`@monti-cms/mdx/server` is empty there).
 		server: {
 			formats: async () => (await import("@monti-cms/mdx/server")).createServerMdxFormat(options),

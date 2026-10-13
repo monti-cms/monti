@@ -26,6 +26,7 @@ export type {
 	BlockValidateContext,
 } from "./blocks/define";
 export { defineBlock } from "./blocks/define";
+export { ConfigError, configError, type Issue, IssueList, pathOf } from "./config/check/issue";
 export {
 	type AdminConfig,
 	type CmsConfig,
@@ -56,6 +57,9 @@ export {
 	assertPluginPagesFree,
 	assertPluginRoutesFree,
 	CORE_FEATURE_KEYS,
+	checkPluginNames,
+	checkPluginPages,
+	checkPluginRoutes,
 	RESERVED_SCOPES,
 } from "./plugin/collisions";
 export {
@@ -117,7 +121,7 @@ export {
 	valueWithRole,
 } from "./schema/walk";
 export { defineSchema } from "./schema-file/define";
-export { parseSchemaFile, SchemaFileError, type SchemaIssue } from "./schema-file/format";
+export { parseSchemaFile } from "./schema-file/format";
 export type {
 	SchemaAdmin,
 	SchemaCollection,

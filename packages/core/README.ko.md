@@ -890,7 +890,7 @@ export const myPlugin = () =>
 
 - 서버 쪽(`server`)은 브라우저 묶음에 들어가지 않게 패키지 `exports`의 `browser` 조건으로 빈 진입점을 준다.
 - `server.formats`는 형식(문서를 써 내고 읽어 올 수 있는 표기, "형식" 절)을 더한다. `CmsFormat` 하나 또는 그 목록을 돌려주는 함수(`formats: () => myFormat`)이고, 인스턴스가 형식이 처음 필요할 때 부른다.
-- `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받는다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
+- `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받아 찾은 문제(`{ path, code, message }`, `@monti-cms/core`의 `IssueList`·`pathOf`)를 돌려준다. `defineSite`가 설정의 다른 문제와 함께 하나의 `ConfigError`로 알린다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
 - `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
   `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
   확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
@@ -1233,11 +1233,11 @@ export const cms = defineConfig({
 낮은 수준 `createCms({ config: defineSite({ … }), server })`는 `@monti-cms/core`의 `defineSite`로 만든 사이트 부분만 받는다(데이터베이스도 로그인도 없고, 테스트와 도구용이다. `@monti-cms/core`는 더 이상 `defineConfig`를 내보내지 않는다). `createCms`·`createSite`와 나머지는 사이트 설정을 다른 설정과 똑같이 받으므로, 제 파일을 가진 여러 사이트가 한 프로세스에 함께 있을 수 있다. 올바르지 않은 파일은 시작할 때 모든 문제를 경로와 함께 알리고 멈춘다:
 
 ```text
-monti.schema.ts is not a valid schema file:
+monti.schema.ts is not valid:
   collections.post.fields.title.kind: a field needs a "kind" of text, slug, relation, select, media, conditional, backlink or view
-  collections.post.workflow: is not part of the schema format
-  locales[1].code: must look like "en", "pt-BR" or "zh-Hant"
-Fix: correct the lines above in monti.schema.ts; the types of defineSchema show most of them in the editor. monti doctor checks the file again.
+  collections.post.workflow: is not an option (known: label, kind, fields, path, icon, layout, body)
+  locales[1].name: must be a string (got number)
+Fix: correct the lines above; `monti doctor` checks the files again.
 ```
 
 **파일과 코드 설정을 합치는 법.** 코드는 파일에 더하고 환경마다 다른 값을 덮어쓸 수 있지만, 파일의 데이터를 조용히 바꾸지는 않는다.

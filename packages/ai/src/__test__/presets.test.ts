@@ -276,7 +276,7 @@ describe("AI actions contributed by other plugins (`contributes.ai.actions`)", (
 			options: {},
 			contributes: { ai: { actions: { summary: aiPresets.codeFold() } } },
 		});
-		expect(() => resolveAiActions({}, blogSite([]), [clash])).toThrow(/plugins.clash adds AI action "summary"/);
+		expect(() => resolveAiActions({}, blogSite([]), [clash])).toThrow(/plugins\.clash.*adds AI action "summary"/);
 		const plugin = ai();
 		expect(() =>
 			plugin.validate?.({

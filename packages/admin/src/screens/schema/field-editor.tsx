@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -40,6 +40,7 @@ import {
 	KINDS_WITH_SETTINGS,
 	moveField,
 	moveOption,
+	nameProblem,
 	newField,
 	type Obj,
 	optionsOf,
@@ -87,7 +88,7 @@ function OptionsEditor({
 	const select = field.kind === "conditional" && isObj(field.discriminant) ? field.discriminant : field;
 	const [draftValue, setDraftValue] = useState("");
 	const taken = (value: string) => values.filter((item) => item !== value);
-	const addable = draftValue !== "" && /^[A-Za-z0-9_-]+$/.test(draftValue) && !values.includes(draftValue);
+	const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
 	return (
 		<fieldset className="flex flex-col gap-1.5">
 			<legend className="font-medium text-xs">{t("options.title")}</legend>
@@ -719,8 +720,7 @@ export function FieldList({
 	const [kind, setKind] = useState<FieldKindName>("text");
 	const [pending, setPending] = useState<{ name: string; kind: FieldKindName } | null>(null);
 	const taken = allFieldNames(editing.collection);
-	const problem =
-		name === "" ? "empty" : taken.includes(name) ? "taken" : /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) ? null : "pattern";
+	const problem = nameProblem(name, taken);
 	return (
 		<div className="flex flex-col gap-2">
 			{names.length === 0 && <p className="text-cms-muted-foreground text-xs">{t("field.none")}</p>}

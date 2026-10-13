@@ -1,36 +1,25 @@
-import { type CodeBlockConfig, validateCodeBlockConfig } from "../annotation/code-block/line-effects";
+import { type CodeBlockConfig, checkCodeBlockConfig } from "../annotation/code-block/line-effects";
 import { createBlocks } from "../blocks/active";
 import type { BlockDefinition } from "../blocks/define";
-import { resolveBlocks } from "../blocks/resolve";
-import { type MediaConfig, validateMediaConfig } from "../core/media-types";
+import { resolveBlocksChecked } from "../blocks/resolve";
+import { checkMediaConfig, type MediaConfig } from "../core/media-types";
 import type { StoredDocument } from "../doc/stored-document";
 import type { MessageValue } from "../i18n/define";
-import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisions";
+import { checkPluginNames, checkPluginPages } from "../plugin/collisions";
 import type { CmsPlugin } from "../plugin/define";
-import { validateBodyAllowed } from "../schema/allowed";
+import { checkBodyAllowed } from "../schema/allowed";
 import { type CollectionSchema, normalizeCollection } from "../schema/collection";
-import {
-	DEFAULT_TITLE_FIELD,
-	RESERVED_METADATA_KEYS,
-	type SlugField,
-	SUMMARY_ROLE,
-	TITLE_ROLE,
-} from "../schema/fields";
-import { findTitleField, valueFieldsOf } from "../schema/walk";
-import { resolveSchemaConfig } from "../schema-file/merge";
+import { configShapeIssues } from "../schema-file/format";
+import { type ConfigDefaults, isRecord, layerSite, resolveSchemaConfig } from "../schema-file/merge";
 import { SCHEMA_SOURCE } from "../schema-file/source";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
-import {
-	DEFAULT_ADMIN_PATH,
-	isAdminPath,
-	isHomeHref,
-	LOCALE_CODE,
-	LOCALE_PREFIX_MODES,
-	type LocalePrefixMode,
-} from "./rules";
+import { checkCollections } from "./check/collections";
+import { CONFIG_SOURCE, type Issue, IssueList, throwIssues } from "./check/issue";
+import { checkSite } from "./check/site";
+import { DEFAULT_ADMIN_PATH, isAdminPath, LOCALE_PREFIX_MODES, type LocalePrefixMode } from "./rules";
 
 /**
- * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
+ * Site config (`monti.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
  *
  * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values** (plugins also hold functions).
  * Secrets (DB URL, API keys) do not go here; keep them in environment variables.
@@ -192,336 +181,55 @@ export interface CmsConfig<
 	readonly media?: MediaConfig;
 }
 
-/** A number with a unit (`720px`, `48rem`, `80%`), or a `calc`, `min`, `max` or `clamp` of such lengths. Nothing that could end the declaration (`;`, braces, quotes). */
-const CSS_LENGTH =
-	/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|ch|ex|vw|vh|vmin|vmax|cm|mm|in|pt|pc|%)$|^(?:calc|min|max|clamp)\([\w\s.,%+*/()-]+\)$/;
-
-/** Checks the editor's width steps: each has a non-empty unique label and a CSS length, and there is at least one when `widths` is set. */
-function validateEditorConfig(editor: EditorConfig | undefined): void {
-	const widths = editor?.widths;
-	if (widths === undefined) return;
-	if (!Array.isArray(widths) || widths.length === 0) {
-		throw new Error(
-			"cms.config: editor.widths needs at least one { label, width } step (leave it out for the default steps)",
-		);
-	}
-	const labels = new Set<string>();
-	for (const [index, step] of widths.entries()) {
-		const at = `cms.config: editor.widths[${index}]`;
-		if (typeof step?.label !== "string" || !step.label.trim()) throw new Error(`${at}.label must not be empty`);
-		if (labels.has(step.label)) throw new Error(`${at}.label "${step.label}" is used twice; labels must be unique`);
-		labels.add(step.label);
-		if (typeof step.width !== "string" || !CSS_LENGTH.test(step.width.trim())) {
-			throw new Error(
-				`${at}.width "${String(step.width)}" is not a CSS length; write a number with a unit such as "720px" or "48rem"`,
-			);
-		}
-	}
-}
-
-const ROLE_NAME = /^[A-Za-z][A-Za-z0-9-]*$/;
-
-/**
- * Can two public URL rules (of the form `/posts/:slug`) produce the same URL? If so, a body link cannot tell which collection it points to.
- * A slug lives within a single `/`-free segment, so the rules collide when the segment counts match and every segment can match:
- * literal segments must be equal; a slug segment (`prefix:slugsuffix`) matches a literal segment if the literal starts and ends with that prefix and suffix (the slug needs at least one character);
- * two slug segments can match if one prefix starts with the other and one suffix ends with the other.
- */
-export function pathsOverlap(a: string, b: string): boolean {
-	const segments = (path: string) => path.replace(/\/+$/, "").split("/");
-	const left = segments(a);
-	const right = segments(b);
-	if (left.length !== right.length) return false;
-	return left.every((x, index) => {
-		const y = right[index] ?? "";
-		const xs = x.split(":slug");
-		const ys = y.split(":slug");
-		if (xs.length === 1 && ys.length === 1) return x === y;
-		if (xs.length === 1 || ys.length === 1) {
-			const literal = xs.length === 1 ? x : y;
-			const [prefix = "", suffix = ""] = xs.length === 1 ? ys : xs;
-			return literal.length > prefix.length + suffix.length && literal.startsWith(prefix) && literal.endsWith(suffix);
-		}
-		const [xp = "", xsuf = ""] = xs;
-		const [yp = "", ysuf = ""] = ys;
-		return (xp.startsWith(yp) || yp.startsWith(xp)) && (xsuf.endsWith(ysuf) || ysuf.endsWith(xsuf));
-	});
-}
-const checkTab = (at: string, tab: string | undefined) => {
-	if (tab !== undefined && (!tab.trim() || tab.length > 20)) throw new Error(`${at}.tab must be 1-20 characters`);
-};
-
-/**
- * Checks that field roles (`role`), tabs (`tab`), fill-from-body (`fillFromBody`) and URL source (`from`) are consistent. A role is unique per collection,
- * and only the roles the core knows (`summary`, `title`) get their type checked. The type of other roles is checked in `validate` by the plugin that uses the role.
- */
-function validateFieldMeanings(collection: string, schema: CollectionSchema): void {
-	const roles = new Map<string, string>();
-	// Every field that can carry a meaning: the stored ones, and the address (which has no stored value but takes `role` and `required` like the rest).
-	const slugs: { name: string; field: SlugField }[] = [];
-	for (const [name, field] of Object.entries(schema.fields)) {
-		if (field.kind === "slug") slugs.push({ name, field });
-	}
-	for (const { name, field } of [...valueFieldsOf(schema), ...slugs]) {
-		const role = field.role;
-		if (role !== undefined) {
-			if (!ROLE_NAME.test(role)) throw new Error(`cms.config: ${collection}.${name} has an invalid role "${role}"`);
-			if ((role === SUMMARY_ROLE || role === TITLE_ROLE) && field.kind !== "text") {
-				throw new Error(`cms.config: ${collection}.${name} role "${role}" needs a text field`);
-			}
-			if (role === TITLE_ROLE && !Object.hasOwn(schema.fields, name)) {
-				throw new Error(`cms.config: ${collection}.${name} role "${role}" cannot be on a field of a conditional field`);
-			}
-			const other = roles.get(role);
-			if (other) throw new Error(`cms.config: ${collection} has role "${role}" on both ${other} and ${name}`);
-			roles.set(role, name);
-		}
-		if (RESERVED_METADATA_KEYS.includes(name)) {
-			throw new Error(`cms.config: ${collection}.${name} uses a reserved name; rename the field`);
-		}
-		if (field.required !== undefined && field.required !== true) {
-			throw new Error(
-				`cms.config: ${collection}.${name} has required: ${JSON.stringify(field.required)}; only \`required: true\` exists (the old "publish" value was removed)`,
-			);
-		}
-		if (field.kind === "text" && field.fillFromBody && !schema.body) {
-			throw new Error(`cms.config: ${collection}.${name} fillFromBody needs a collection with a body`);
-		}
-		if (field.kind === "text" && typeof field.fillFromBody === "object") {
-			const { maxLength } = field.fillFromBody;
-			if (maxLength !== undefined && (!Number.isInteger(maxLength) || maxLength < 1)) {
-				throw new Error(`cms.config: ${collection}.${name} fillFromBody.maxLength must be a positive integer`);
-			}
-		}
-		if (field.kind === "select" && !Object.hasOwn(field.options, field.defaultValue)) {
-			throw new Error(
-				`cms.config: ${collection}.${name} defaultValue "${field.defaultValue}" is not one of the options (${Object.keys(field.options).join(", ")})`,
-			);
-		}
-		if (field.kind === "media" && field.accept !== undefined && field.accept !== "image" && field.accept !== "file") {
-			throw new Error(`cms.config: ${collection}.${name} accept must be "image" or "file"`);
-		}
-	}
-	// Every collection has one title text field: the field with role "title" or, without one, the field named `title` (its label is free).
-	// The list, search, relation picker, body links and the editor's title input use it.
-	const titleField = findTitleField(schema);
-	if (!titleField) {
-		throw new Error(
-			`cms.config: ${collection} needs a title field: a text field with role "${TITLE_ROLE}" (or one named "${DEFAULT_TITLE_FIELD}")`,
-		);
-	}
-	// The name `title` is the list's title column and the sort of the API, so it cannot name another field once the title role is somewhere else.
-	if (titleField.name !== DEFAULT_TITLE_FIELD && Object.hasOwn(schema.fields, DEFAULT_TITLE_FIELD)) {
-		throw new Error(
-			`cms.config: ${collection}.${DEFAULT_TITLE_FIELD} is not the title field (${titleField.name} has the role "${TITLE_ROLE}"); rename it`,
-		);
-	}
-	for (const [index, group] of (schema.layout ?? []).entries()) {
-		checkTab(`cms.config: ${collection}.layout[${index}]`, group.tab);
-		for (const fieldName of group.fields) {
-			if (!Object.hasOwn(schema.fields, fieldName)) {
-				throw new Error(
-					`cms.config: ${collection}.layout[${index}] lists "${fieldName}", which is not a field of ${collection}`,
-				);
-			}
-		}
-	}
-	for (const [name, field] of Object.entries(schema.fields)) {
-		if (RESERVED_METADATA_KEYS.includes(name)) {
-			throw new Error(`cms.config: ${collection}.${name} uses a reserved name; rename the field`);
-		}
-		checkTab(`cms.config: ${collection}.${name}`, field.tab);
-		if (field.kind === "conditional") {
-			for (const option of Object.keys(field.values)) {
-				if (!Object.hasOwn(field.discriminant.options, option)) {
-					throw new Error(
-						`cms.config: ${collection}.${name} shows fields for "${option}", which is not an option of its discriminant (${Object.keys(field.discriminant.options).join(", ")})`,
-					);
-				}
-			}
-		}
-		if (field.kind === "view" && !/^[a-z][a-z0-9-]*$/.test(field.view)) {
-			throw new Error(`cms.config: ${collection}.${name} view must be a kebab-case name`);
-		}
-	}
-	for (const [name, field] of Object.entries(schema.fields)) {
-		if (field.kind !== "slug" || field.from === undefined) continue;
-		if (schema.fields[field.from]?.kind !== "text") {
-			throw new Error(`cms.config: ${collection}.${name} is made from "${field.from}", which is not a text field`);
-		}
-	}
-}
-
 export { DEFAULT_ADMIN_PATH, isAdminPath };
 
-/** Checks that the config is consistent. Reports an error right away when the app starts if it is not. */
-function validate(
+/**
+ * Every problem of a config, as issues. Runs the shape of the plain data first (types, enums, unknown keys), then the rules about what the values mean
+ * (`check/`), then the parts other modules own: the body lists, blocks, code blocks, media and what the plugins say about the config.
+ */
+function checkConfig(
 	config: CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>,
-): void {
-	const names = Object.keys(config.collections);
-	if (names.length === 0) throw new Error("cms.config: `collections` is empty");
+	alsoKnown: readonly string[] = [],
+): Issue[] {
+	const shape = configShapeIssues(config);
+	if (shape.length > 0) return shape;
+	const list = new IssueList();
+	checkSite(list, config, alsoKnown);
+	checkCollections(list, config.collections);
+	list.addAll(checkCodeBlockConfig(config.codeBlock));
+	list.addAll(checkMediaConfig(config.media));
 
-	const codes = config.locales.map((locale) => locale.code);
-	if (codes.length === 0) throw new Error("cms.config: `locales` is empty");
-	if (new Set(codes).size !== codes.length) throw new Error("cms.config: `locales` has duplicate codes");
-	// Locale codes go straight into URLs and DB defaults (migrations). Only BCP 47 shapes (`ko`, `en`, `pt-BR`, `zh-Hant`) are accepted.
-	for (const code of codes) {
-		if (!LOCALE_CODE.test(code)) {
-			throw new Error(`cms.config: locale code "${code}" must look like "en", "pt-BR" or "zh-Hant"`);
+	const { blocks: blockDefinitions, issues: blockIssues } = resolveBlocksChecked(config);
+	list.addAll(blockIssues);
+	if (blockIssues.length === 0) {
+		// The names in a body's allowed list must be blocks and marks of this site.
+		const bodySite = createBlocks(config);
+		for (const [collection, schema] of Object.entries(config.collections)) {
+			list.addAll(checkBodyAllowed(collection, schema.allowed, bodySite));
 		}
 	}
-	if (!codes.includes(config.defaultLocale)) {
-		throw new Error(`cms.config: defaultLocale "${config.defaultLocale}" is not in \`locales\``);
-	}
-
-	if (config.site?.url !== undefined) {
-		let url: URL | undefined;
-		try {
-			url = new URL(config.site.url);
-		} catch {}
-		if (url?.protocol !== "http:" && url?.protocol !== "https:") {
-			throw new Error(`cms.config: site.url "${config.site.url}" is not an http(s) URL`);
-		}
-	}
-
-	if (config.timeZone !== undefined) {
-		try {
-			new Intl.DateTimeFormat("en-US", { timeZone: config.timeZone });
-		} catch {
-			throw new Error(`cms.config: timeZone "${config.timeZone}" is not an IANA time zone`);
-		}
-	}
-
-	if (config.admin?.path !== undefined && !isAdminPath(config.admin.path)) {
-		throw new Error(
-			`cms.config: admin.path "${config.admin.path}" must be a path like "/admin" (not "/" and not under "/api")`,
-		);
-	}
-	if (config.site?.localePrefix !== undefined && !LOCALE_PREFIX_MODES.includes(config.site.localePrefix)) {
-		throw new Error(`cms.config: site.localePrefix must be one of ${LOCALE_PREFIX_MODES.join(", ")}`);
-	}
-	const previewParam = config.site?.previewLocaleParam;
-	if (previewParam !== undefined && previewParam !== false && !/^[A-Za-z][\w-]*$/.test(previewParam)) {
-		throw new Error(`cms.config: site.previewLocaleParam "${previewParam}" is not a query name`);
-	}
-	if (config.site?.home !== undefined && !isHomeHref(config.site.home)) {
-		throw new Error(`cms.config: site.home "${config.site.home}" must be a path ("/") or an http(s) URL`);
-	}
-
-	validateEditorConfig(config.editor);
-
-	for (const key of ["templates", "translations"] as const) {
-		const value = config.admin?.[key];
-		if (value !== undefined && typeof value !== "boolean") {
-			throw new Error(`cms.config: admin.${key} must be true or false`);
-		}
-	}
-
-	if (config.admin?.locale !== undefined) {
-		try {
-			new Intl.DateTimeFormat(config.admin.locale);
-		} catch {
-			throw new Error(`cms.config: admin.locale "${config.admin.locale}" is not a valid locale`);
-		}
-	}
-
-	if (config.schemaVersion !== undefined && (!Number.isInteger(config.schemaVersion) || config.schemaVersion < 1)) {
-		throw new Error(`cms.config: schemaVersion must be a whole number from 1 (got ${String(config.schemaVersion)})`);
-	}
-
-	const templateIds = new Set<string>();
-	for (const template of config.seed?.templates ?? []) {
-		if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(template.id)) {
-			throw new Error(`cms.config: seed template "${template.name}" needs a UUID id`);
-		}
-		if (templateIds.has(template.id.toLowerCase())) {
-			throw new Error(`cms.config: seed template id "${template.id}" is duplicated`);
-		}
-		templateIds.add(template.id.toLowerCase());
-		const asDocument = template.doc !== undefined;
-		const asText = template.body !== undefined || template.format !== undefined;
-		if (
-			asDocument === asText ||
-			(asText && (typeof template.body !== "string" || typeof template.format !== "string"))
-		) {
-			throw new Error(
-				`cms.config: seed template "${template.name}" needs either \`doc\` or both \`body\` and \`format\``,
-			);
-		}
-	}
-
-	const paths = new Map<string, string>();
-	for (const [collection, schema] of Object.entries(config.collections)) {
-		// A content item has a single URL (the store has one URL column). A second URL field would go unused, so it is rejected as a config error.
-		const slugFields = Object.entries(schema.fields).filter(([, field]) => field.kind === "slug");
-		if (slugFields.length > 1) {
-			throw new Error(
-				`cms.config: ${collection} has more than one slug field (${slugFields.map(([name]) => name).join(", ")}); a collection can have only one`,
-			);
-		}
-		validateFieldMeanings(collection, schema);
-		if (schema.path !== undefined) {
-			const { path } = schema;
-			if (!path.startsWith("/") || path.split(":slug").length !== 2 || /:(?!slug)/.test(path) || /[?#]/.test(path)) {
-				throw new Error(`cms.config: ${collection}.path "${path}" must start with "/" and contain ":slug" once`);
-			}
-			if (!Object.values(schema.fields).some((field) => field.kind === "slug")) {
-				throw new Error(`cms.config: ${collection}.path needs a slug field`);
-			}
-			for (const [otherPath, other] of paths) {
-				if (pathsOverlap(path, otherPath)) {
-					throw new Error(
-						`cms.config: ${collection}.path "${path}" can make the same URL as ${other}.path "${otherPath}"`,
-					);
-				}
-			}
-			paths.set(path, collection);
-		}
-		for (const { name, field } of valueFieldsOf(schema)) {
-			if (field.kind === "relation" && !Object.hasOwn(config.collections, field.to)) {
-				throw new Error(`cms.config: ${collection}.${name} relates to unknown collection "${field.to}"`);
-			}
-		}
-		for (const [name, field] of Object.entries(schema.fields)) {
-			if (field.kind !== "backlink") continue;
-			const source = config.collections[field.from];
-			if (!source) throw new Error(`cms.config: ${collection}.${name} links from unknown collection "${field.from}"`);
-			const via = valueFieldsOf(source).find((stored) => stored.name === field.via)?.field;
-			if (via?.kind !== "relation" || !via.many || via.to !== collection) {
-				throw new Error(
-					`cms.config: ${collection}.${name} needs ${field.from}.${field.via} to be a many relation to "${collection}"`,
-				);
-			}
-		}
-	}
-
-	const blockDefinitions = resolveBlocks(config);
-	const blocks = blockDefinitions.map((block) => block.name);
-	// The names in a body's allowed list must be blocks and marks of this site.
-	const bodySite = createBlocks(config);
-	for (const [collection, schema] of Object.entries(config.collections)) {
-		validateBodyAllowed(collection, schema.allowed, bodySite);
-	}
-	validateCodeBlockConfig(config.codeBlock);
-	validateMediaConfig(config.media);
 
 	const plugins = config.plugins ?? [];
-	const pluginNames = plugins.map((plugin) => plugin.name);
-	if (new Set(pluginNames).size !== pluginNames.length) throw new Error("cms.config: `plugins` has duplicate names");
-	assertPluginNamesFree(pluginNames);
-	assertPluginPagesFree(
-		plugins.flatMap((plugin) => (plugin.nav ?? []).map((item) => ({ plugin: plugin.name, path: item.path }))),
+	list.addAll(checkPluginNames(plugins.map((plugin) => plugin.name)));
+	list.addAll(
+		checkPluginPages(
+			plugins.flatMap((plugin) => (plugin.nav ?? []).map((item) => ({ plugin: plugin.name, path: item.path }))),
+		),
 	);
+	const blocks = blockDefinitions.map((block) => block.name);
 	for (const plugin of plugins) {
-		plugin.validate?.({
-			collections: config.collections,
-			locales: config.locales,
-			defaultLocale: config.defaultLocale,
-			blocks,
-			blockDefinitions,
-			plugins,
-		});
+		list.addAll(
+			plugin.validate?.({
+				collections: config.collections,
+				locales: config.locales,
+				defaultLocale: config.defaultLocale,
+				blocks,
+				blockDefinitions,
+				plugins,
+			}),
+		);
 	}
+	return list.issues;
 }
 
 /**
@@ -575,21 +283,32 @@ export function defineSite(
 		| CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>
 		| (SchemaCmsConfig & { readonly schema: unknown }),
 ): CmsConfig {
-	const config = (
-		"schema" in input && input.schema !== undefined ? resolveSchemaConfig(input as { readonly schema: unknown }) : input
-	) as CmsConfig;
+	return buildSite(input);
+}
+
+/**
+ * `defineSite` with a lowest layer under the config: `defaults.site` is what the file's and the code's `site` settings are laid over (the server's `defineConfig` passes
+ * the `SITE_URL` variable this way, so the environment is the weakest source of the site URL).
+ */
+export function buildSite(input: object, defaults: ConfigDefaults = {}): CmsConfig {
+	const withSchema = "schema" in input && (input as { schema?: unknown }).schema !== undefined;
+	const config = (withSchema
+		? resolveSchemaConfig(input as { readonly schema: unknown }, defaults)
+		: layerSite(input as Record<string, unknown>, defaults)) as unknown as CmsConfig;
 	// Also accepts definitions written without `defineCollection`. The core only reads the normalized `kind`.
-	const collections = Object.fromEntries(
-		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema, name)]),
-	);
-	const normalized = { ...config, collections };
-	validate(normalized);
-	if ("schema" in input && input.schema !== undefined) {
+	const collections = isRecord(config.collections)
+		? Object.fromEntries(
+				Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),
+			)
+		: config.collections;
+	const normalized = { ...config, collections } as CmsConfig;
+	throwIssues(CONFIG_SOURCE, checkConfig(normalized, defaults.alsoKnown));
+	if (withSchema) {
 		const schemaInput = input as SchemaCmsConfig & { readonly schema: unknown };
 		// Hidden: lets an instance rebuild the config with another schema (see `schema-file/source.ts`).
 		Object.defineProperty(normalized, SCHEMA_SOURCE, {
 			value: {
-				rebuild: (schema: unknown) => defineSite({ ...schemaInput, schema } as never),
+				rebuild: (schema: unknown) => buildSite({ ...schemaInput, schema }, defaults),
 			},
 		});
 	}

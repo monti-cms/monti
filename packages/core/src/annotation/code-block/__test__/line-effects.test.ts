@@ -4,7 +4,7 @@ import { createTranslator } from "../../../i18n";
 import { fromCodeFenceToCodeBlockDocument } from "../code-fence-to-document";
 import { createAnnotationConfig } from "../constants";
 import { fromCodeBlockDocumentToCodeFence } from "../document-to-code-fence";
-import { DEFAULT_CODE_LINE_EFFECTS, resolveCodeLineEffects, validateCodeBlockConfig } from "../line-effects";
+import { checkCodeBlockConfig, DEFAULT_CODE_LINE_EFFECTS, resolveCodeLineEffects } from "../line-effects";
 import { codeBlockMessages } from "../messages";
 import type { AnnotationConfigItem } from "../types";
 
@@ -93,25 +93,27 @@ describe("code line effect definitions", () => {
 		expect(testSite.isLineEffectName("info")).toBe(false);
 	});
 
-	it("an invalid config is reported immediately", () => {
-		expect(() => validateCodeBlockConfig({ lineEffects: [{ name: "Focus", label: "초점", class: "" }] })).toThrow(
-			/lower-case kebab/,
-		);
-		expect(() => validateCodeBlockConfig({ lineEffects: [{ name: "collapse", label: "접기", class: "" }] })).toThrow(
-			/reserved/,
-		);
-		expect(() =>
-			validateCodeBlockConfig({
+	it("an invalid config is reported with the path of each value", () => {
+		const codes = (config: Parameters<typeof checkCodeBlockConfig>[0]) =>
+			checkCodeBlockConfig(config).map((issue) => `${issue.path}:${issue.code}`);
+		expect(codes({ lineEffects: [{ name: "Focus", label: "Focus", class: "" }] })).toEqual([
+			"codeBlock.lineEffects[0].name:name",
+		]);
+		expect(codes({ lineEffects: [{ name: "collapse", label: "Fold", class: "" }] })).toEqual([
+			"codeBlock.lineEffects[0].name:reserved",
+		]);
+		expect(
+			codes({
 				lineEffects: [
-					{ name: "focus", label: "초점", class: "a" },
-					{ name: "focus", label: "초점", class: "b" },
+					{ name: "focus", label: "Focus", class: "a" },
+					{ name: "focus", label: "Focus", class: "b" },
 				],
 			}),
-		).toThrow(/duplicated/);
-		expect(() => validateCodeBlockConfig({ lineEffects: [{ name: "focus", label: " ", class: "a" }] })).toThrow(
-			/label/,
-		);
-		expect(() => validateCodeBlockConfig(undefined)).not.toThrow();
+		).toEqual(["codeBlock.lineEffects[1].name:duplicate"]);
+		expect(codes({ lineEffects: [{ name: "focus", label: " ", class: "a" }] })).toEqual([
+			"codeBlock.lineEffects[0].label:empty",
+		]);
+		expect(checkCodeBlockConfig(undefined)).toEqual([]);
 	});
 });
 
@@ -124,26 +126,25 @@ describe("code block options of the site config", () => {
 	});
 
 	it("accept switches, omitted line effects, themes and languages", () => {
-		expect(() =>
-			validateCodeBlockConfig({
+		expect(
+			checkCodeBlockConfig({
 				lineEffects: [{ name: "focus", label: "Focus", class: "a" }],
 				omitLineEffects: ["warning", "focus"],
 				features: { rules: false, fold: false, tooltip: true, textStyles: false },
 				themes: { light: "github-light", dark: "github-dark" },
 				languages: ["elixir", "c++", "f#"],
 			}),
-		).not.toThrow();
+		).toEqual([]);
 	});
 
 	it("report a wrong value at startup", () => {
-		expect(() => validateCodeBlockConfig({ features: { comments: false } as never })).toThrow(
-			/features\.comments: unknown feature/,
-		);
-		expect(() => validateCodeBlockConfig({ features: { rules: "no" } as never })).toThrow(/true or false/);
-		expect(() => validateCodeBlockConfig({ omitLineEffects: ["info"] })).toThrow(/no such line effect/);
-		expect(() => validateCodeBlockConfig({ themes: { light: "github-light", dark: " " } })).toThrow(
-			/themes\.dark: theme name is empty/,
-		);
-		expect(() => validateCodeBlockConfig({ languages: ["not a language"] })).toThrow(/not a language name/);
+		const codes = (config: Parameters<typeof checkCodeBlockConfig>[0]) =>
+			checkCodeBlockConfig(config).map((issue) => `${issue.path}:${issue.code}`);
+		expect(codes({ features: { comments: false } as never })).toEqual(["codeBlock.features.comments:unknown-key"]);
+		expect(codes({ features: { rules: "no" } as never })).toEqual(["codeBlock.features.rules:type"]);
+		expect(codes({ omitLineEffects: ["info"] })).toEqual(["codeBlock.omitLineEffects[0]:unknown-effect"]);
+		expect(codes({ themes: { light: "github-light", dark: " " } })).toEqual(["codeBlock.themes.dark:empty"]);
+		expect(codes({ languages: ["not a language"] })).toEqual(["codeBlock.languages[0]:name"]);
+		expect(codes({ theme: {} } as never)).toEqual(["codeBlock.theme:unknown-key"]);
 	});
 });

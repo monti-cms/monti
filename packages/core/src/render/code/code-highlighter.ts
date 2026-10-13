@@ -4,6 +4,7 @@ import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import { bundledLanguages } from "shiki/langs";
 import { bundledThemes } from "shiki/themes";
 import type { CodeBlockThemes } from "../../annotation/code-block/line-effects";
+import { configError, pathOf } from "../../config/check/issue";
 import type { Site } from "../../site";
 import { perSite } from "../../site/per-site";
 import { DEFAULT_CODE_LANG_ALIAS, DEFAULT_CODE_LANGS, DEFAULT_CODE_THEMES } from "./default-code-options";
@@ -102,13 +103,14 @@ const loadTheme = async (key: keyof CodeBlockThemes, name: string): Promise<Them
 	const fallback = DEFAULT_CODE_THEMES[key];
 	if (name === themeName(fallback)) return fallback;
 	const load = bundledThemes[name as keyof typeof bundledThemes];
-	if (!load) throw new Error(`cms.config: codeBlock.themes.${key}: "${name}" is not a Shiki theme`);
+	if (!load) throw configError(pathOf("codeBlock", "themes", key), "shiki-theme", `"${name}" is not a Shiki theme`);
 	return (await load()).default;
 };
 
 const loadLanguage = async (name: string): Promise<LanguageInput> => {
 	const load = bundledLanguages[name as keyof typeof bundledLanguages];
-	if (!load) throw new Error(`cms.config: codeBlock.languages.${name}: "${name}" is not a Shiki language`);
+	if (!load)
+		throw configError(pathOf("codeBlock", "languages", name), "shiki-language", `"${name}" is not a Shiki language`);
 	return (await load()).default;
 };
 

@@ -86,7 +86,7 @@ describe("plugin route collisions", () => {
 	it("a plugin route identical to a core route is an error naming both sides", async () => {
 		const cms = instance({ plugin: "evil", routes: [{ pattern: "v1/meta", module: { GET: mocks.privateGet } }] });
 		await expect(call(cms, "GET", "v1/example/private")).rejects.toThrow(
-			/route "v1\/meta" of plugin "evil" collides with the core route "v1\/meta"/,
+			/plugins\.evil\.routes\["v1\/meta"\]: collides with the core route "v1\/meta"/,
 		);
 		expect(mocks.privateGet).not.toHaveBeenCalled();
 	});
@@ -97,7 +97,7 @@ describe("plugin route collisions", () => {
 			routes: [{ pattern: "v1/example/private", module: { GET: mocks.privateGet } }],
 		});
 		await expect(call(cms, "GET", "v1/example/private")).rejects.toThrow(
-			/of plugin "other" collides with the route "v1\/example\/private" of plugin "example"/,
+			/plugins\.other\.routes.*collides with the route "v1\/example\/private" of plugin "example"/,
 		);
 	});
 

@@ -64,7 +64,7 @@ The recommended length is stored in the field's `inputOptions.limit`. If you nee
 - **Admin UI** (`@monti-cms/seo/admin`): registers the view field `search`, the input pieces `seo-title` and `seo-description` (hint and character count),
   and `seo-noindex` (switch) through `CmsAdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
 - **Config validation**: `seoTitle`, `seoDescription` and `canonical` must be text, `ogImage` must be media, and `noindex` must be a select
-  field with a `noindex` option (`validateSeoFields`).
+  field with a `noindex` option (`checkSeoFields`).
 - **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)
   (`contributes.ai`). They attach to every collection that has the role fields, and the length is field `max` → recommended length → 60 / 155. To change one:
   `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
@@ -86,7 +86,7 @@ It reads values by role from the collection definition (the result of `defineCol
 
 | Entry point | Contents |
 | --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (site config and public pages, shared by server and browser) |
+| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `checkSeoFields` (site config and public pages, shared by server and browser) |
 | `@monti-cms/seo/admin` | Admin-side provider (the core loads it through the plugin definition's `admin`) |
 
 ## Development

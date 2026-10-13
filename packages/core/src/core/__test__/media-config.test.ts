@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, defineSite, fields } from "../..";
 import { createSite } from "../../site";
-import { validateMediaConfig } from "../media-types";
+import { checkMediaConfig } from "../media-types";
 
 const site = createSite(
 	defineSite({
@@ -53,13 +53,16 @@ describe("media settings", () => {
 		);
 	});
 
-	it("an invalid config is an error", () => {
-		expect(() => validateMediaConfig(undefined)).not.toThrow();
-		expect(() => validateMediaConfig({ maxImageBytes: 0 })).toThrow(/maxImageBytes/);
-		expect(() => validateMediaConfig({ maxPixels: 1.5 })).toThrow(/maxPixels/);
-		expect(() => validateMediaConfig({ imageTypes: ["image/svg+xml" as "image/png"] })).toThrow(/unsupported/);
-		expect(() => validateMediaConfig({ fileTypes: ["text/html" as "text/plain"] })).toThrow(/unsupported/);
-		expect(() => validateMediaConfig({ imageTypes: [] })).toThrow(/empty/);
-		expect(() => validateMediaConfig({ fileTypes: [] })).not.toThrow();
+	it("an invalid config is reported with the path of each value", () => {
+		const codes = (media: Parameters<typeof checkMediaConfig>[0]) =>
+			checkMediaConfig(media).map((issue) => `${issue.path}:${issue.code}`);
+		expect(checkMediaConfig(undefined)).toEqual([]);
+		expect(codes({ maxImageBytes: 0 })).toEqual(["media.maxImageBytes:positive-integer"]);
+		expect(codes({ maxPixels: 1.5 })).toEqual(["media.maxPixels:positive-integer"]);
+		expect(codes({ imageTypes: ["image/svg+xml" as "image/png"] })).toEqual(["media.imageTypes[0]:unsupported"]);
+		expect(codes({ fileTypes: ["text/html" as "text/plain"] })).toEqual(["media.fileTypes[0]:unsupported"]);
+		expect(codes({ imageTypes: [] })).toEqual(["media.imageTypes:empty"]);
+		expect(codes({ fileTypes: [] })).toEqual([]);
+		expect(codes({ maxImage: 5 } as never)).toEqual(["media.maxImage:unknown-key"]);
 	});
 });

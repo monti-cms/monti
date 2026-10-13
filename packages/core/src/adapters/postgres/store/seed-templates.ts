@@ -1,3 +1,4 @@
+import { configError } from "../../../config/check/issue";
 import type { SeedTemplate } from "../../../config/define";
 import { assignBlockIds } from "../../../doc/block-ids";
 import { canonicalDocument, readStoredDocument, type StoredDocument } from "../../../doc/stored-document";
@@ -15,29 +16,33 @@ export async function seedTemplateDocument(
 	template: SeedTemplate,
 	formats: FormatRegistry,
 ): Promise<StoredDocument> {
-	const label = `cms.config: seed template "${template.name}"`;
+	const fail = (code: string, message: string) =>
+		configError(`seed.templates["${template.id}"]`, code, `template "${template.name}" ${message}`);
 	if ("doc" in template && template.doc !== undefined) {
 		const doc = readStoredDocument(template.doc, site);
-		if (!doc) throw new Error(`${label} is not a stored document`);
+		if (!doc) throw fail("template-doc", "is not a stored document");
 		const canonical = canonicalDocument(site, doc);
 		return { ...canonical, content: assignBlockIds(canonical.content, []) };
 	}
 	const { body, format } = template as { body: string; format: string };
 	if (!formats.get(format)) {
-		throw new Error(
-			`${label} is written in the format "${format}", which no installed plugin provides${format === "mdx" ? " (install @monti-cms/mdx)" : ""}`,
+		throw fail(
+			"template-format",
+			`is written in the format "${format}", which no installed plugin provides${format === "mdx" ? " (install @monti-cms/mdx)" : ""}`,
 		);
 	}
 	const imported = await importText(site, formats, format, body, { locale: site.DEFAULT_LOCALE }).catch(
 		(error: unknown) => {
-			throw new Error(
-				`${label} could not be read as "${format}": ${error instanceof Error ? error.message : String(error)}`,
+			throw fail(
+				"template-read",
+				`could not be read as "${format}": ${error instanceof Error ? error.message : String(error)}`,
 			);
 		},
 	);
 	if (imported.issues.length > 0) {
-		throw new Error(
-			`${label} could not be read as "${format}": ${imported.issues.map((issue) => issue.message ?? issue.code).join("; ")}`,
+		throw fail(
+			"template-read",
+			`could not be read as "${format}": ${imported.issues.map((issue) => issue.message ?? issue.code).join("; ")}`,
 		);
 	}
 	return imported.doc;

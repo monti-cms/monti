@@ -1,5 +1,6 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
+import type { Issue } from "../config/check/issue";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
@@ -39,8 +40,9 @@ export interface CmsPlugin<
 	 * Uses of a key that are not slots (an item of the plugin that has its own key, like an AI connection) are reported with `cms.apiKeys.setUses` and labelled by `server.keyUses`.
 	 */
 	readonly keySlots?: readonly PluginKeySlot[];
-	/** Validation called when the site config is created. Throws if the config is invalid. */
-	readonly validate?: (config: PluginConfigView) => void;
+	/** Validation called when the site config is created. Returns the issues it finds (a path into the config and a message each); `defineSite` reports them with every other problem. */
+	// biome-ignore lint/suspicious/noConfusingVoidType: a plugin with nothing to report returns nothing
+	readonly validate?: (config: PluginConfigView) => readonly Issue[] | void;
 	/** Server side. Inline for a plugin that only needs hooks (it loads with every server start, so keep it light), or a loader for routes, commands and heavy code. */
 	readonly server?: PluginServer;
 	/** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */

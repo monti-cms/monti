@@ -1,5 +1,5 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin";
-import { type PaletteColor, validateTextPalette } from "./colors";
+import { checkTextPalette, type PaletteColor } from "./colors";
 import { colorBlock } from "./definition";
 
 export * from "./colors";
@@ -25,7 +25,7 @@ export const color = (options: ColorOptions = {}) =>
 		name: "color",
 		options,
 		blocks: [colorBlock],
-		validate: () => validateTextPalette(options.palette),
+		validate: () => checkTextPalette(options.palette),
 		admin: () => import("@monti-cms/blocks/color/admin"),
 		render: () => import("@monti-cms/blocks/color/render"),
 	});

@@ -139,24 +139,24 @@ describe("what stays in code", () => {
 
 	it("lists plugins by name, codeBlock and media, and options that cannot be written as JSON", () => {
 		const plugin = definePlugin({ name: "my-plugin", options: {} });
-		const config = defineSite({
-			collections: {
-				note: defineCollection({
-					label: "Note",
-					kind: "item",
-					fields: {
-						title: fields.text({ label: "T", inputOptions: { size: (() => 1) as never } }),
-						slug: fields.slug({ label: "S" }),
-					},
-				}),
+		// `defineSite` refuses an option that is not JSON, so the config is written by hand: the extraction still has to say what cannot move.
+		const note = defineCollection({
+			label: "Note",
+			kind: "item",
+			fields: {
+				title: fields.text({ label: "T", inputOptions: { size: (() => 1) as never } }),
+				slug: fields.slug({ label: "S" }),
 			},
+		});
+		const config = {
+			collections: { note },
 			locales: [{ code: "en", name: "English" }],
 			defaultLocale: "en",
 			plugins: [plugin],
 			media: { maxImageBytes: 1000 },
 			codeBlock: { themes: { light: "github-light", dark: "github-dark" } },
 			admin: { messages: { "cms-admin.entries": { publish: "Ship it", unpublish: () => "Pull it" } } },
-		});
+		} as unknown as CmsConfig;
 		const { schema, stays } = extractSchemaData(config);
 		expect(stays.map((item) => item.what)).toEqual([
 			"collection options that are functions",

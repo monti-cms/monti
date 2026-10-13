@@ -1,7 +1,7 @@
 import { definePlugin } from "@monti-cms/core";
 import { seoAiContribution } from "./ai";
 import { SEO_PLUGIN_NAME } from "./name";
-import { validateSeoFields } from "./validate";
+import { checkSeoFields } from "./validate";
 
 export { SEO_PLUGIN_NAME } from "./name";
 
@@ -25,7 +25,7 @@ export const seo = (options: SeoPluginOptions = {}) =>
 	definePlugin({
 		name: SEO_PLUGIN_NAME,
 		options,
-		validate: validateSeoFields,
+		validate: checkSeoFields,
 		admin: () => import("@monti-cms/seo/admin"),
 		...(options.ai === false ? {} : { contributes: { ai: seoAiContribution } }),
 	});

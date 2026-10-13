@@ -64,7 +64,7 @@ seoFields({
 - **관리자 화면**(`@monti-cms/seo/admin`): 보기 필드 `search`, 입력 조각 `seo-title`·`seo-description`(안내 문구·글자 수),
   `seo-noindex`(스위치)를 `CmsAdminComponentsProvider`로 등록한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
 - **설정 검사**: `seoTitle`·`seoDescription`·`canonical`은 텍스트, `ogImage`는 미디어, `noindex`는 `noindex` 선택지가 있는 선택
-  필드여야 한다(`validateSeoFields`).
+  필드여야 한다(`checkSeoFields`).
 - **AI 기능**: `@monti-cms/ai`가 있으면 `seoTitle`(검색 제목 추천, 후보 3개)·`seoDescription`(검색 설명 추천)을 더한다
   (`contributes.ai`). 역할 필드가 있는 모든 컬렉션에 붙고, 길이는 필드 `max` → 권장 글자 수 → 60·155다. 바꾸려면
   `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`, 끄려면 `seoTitle: false` 또는 `seo({ ai: false })`.
@@ -86,7 +86,7 @@ const { title, description, imageId, canonical, noindex } = seoOf(post, entry.me
 
 | 진입점 | 내용 |
 | --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (사이트 설정·공개 화면, 서버·브라우저 공용) |
+| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `checkSeoFields` (사이트 설정·공개 화면, 서버·브라우저 공용) |
 | `@monti-cms/seo/admin` | 관리자 쪽 공급자(본체가 플러그인 정의의 `admin`으로 불러 쓴다) |
 
 ## 개발

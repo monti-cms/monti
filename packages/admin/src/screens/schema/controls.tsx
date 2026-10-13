@@ -1,7 +1,7 @@
 "use client";
 
+import type { Issue } from "@monti-cms/core/client";
 import { useTranslator } from "@monti-cms/core/client";
-import type { SchemaIssue } from "@monti-cms/core/schema-edit";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -19,7 +19,7 @@ import { moveItem, nameProblem, type Obj } from "./schema-model";
 export interface SchemaEditContext {
 	readonly disabled: boolean;
 	readonly vocabulary: { readonly blocks: readonly string[]; readonly marks: readonly string[] };
-	readonly issues: readonly SchemaIssue[];
+	readonly issues: readonly Issue[];
 	readonly collectionNames: readonly string[];
 	/** Collections defined in code: the preview keeps them next to the file's. */
 	readonly codeCollections: readonly string[];
@@ -39,7 +39,7 @@ export const SchemaEditProvider = Context.Provider;
 export const useSchemaEdit = () => useContext(Context);
 
 /** The problems of the last check at `path` or below it. */
-export function useIssuesUnder(path: string, exclude?: string): readonly SchemaIssue[] {
+export function useIssuesUnder(path: string, exclude?: string): readonly Issue[] {
 	const { issues } = useSchemaEdit();
 	return issues.filter(
 		(issue) =>
@@ -48,7 +48,7 @@ export function useIssuesUnder(path: string, exclude?: string): readonly SchemaI
 	);
 }
 
-export function IssueList({ issues }: { issues: readonly SchemaIssue[] }) {
+export function IssueList({ issues }: { issues: readonly Issue[] }) {
 	if (issues.length === 0) return null;
 	return (
 		<ul className="flex flex-col gap-0.5 text-cms-destructive text-xs" data-testid="schema-issues">

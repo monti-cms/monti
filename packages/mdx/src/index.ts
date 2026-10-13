@@ -3,5 +3,5 @@
  * and the syntax extension API (types and constants) only, and nothing that parses MDX. The format is `@monti-cms/mdx/format`, the public renderer
  * `@monti-cms/mdx/render`, the admin side `@monti-cms/mdx/admin` and the server side `@monti-cms/mdx/server`.
  */
-export { MDX_PLUGIN_NAME, type MdxPluginOptions, mdx, validateMdxOptions } from "./plugin";
+export { checkMdxOptions, MDX_PLUGIN_NAME, type MdxPluginOptions, mdx } from "./plugin";
 export * from "./syntax";

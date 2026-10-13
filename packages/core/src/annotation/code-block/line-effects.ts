@@ -1,3 +1,4 @@
+import { checkKnownKeys, type Issue, IssueList, pathOf } from "../../config/check/issue";
 import { createActiveTranslator } from "../../i18n/active";
 import { codeBlockMessages } from "./messages";
 
@@ -153,43 +154,51 @@ export const DEFAULT_CODE_BLOCK_THEMES: CodeBlockThemes = { light: "one-light", 
 const FEATURES = new Set(["rules", "fold", "tooltip", "textStyles"]);
 const LANGUAGE = /^[a-z0-9][a-z0-9+#.-]*$/i;
 
-/** Checks that the site config is valid. Reports at app startup if wrong. */
-export function validateCodeBlockConfig(config: CodeBlockConfig | undefined): void {
-	for (const [key, value] of Object.entries(config?.features ?? {})) {
-		if (!FEATURES.has(key)) throw new Error(`cms.config: codeBlock.features.${key}: unknown feature`);
-		if (typeof value !== "boolean") throw new Error(`cms.config: codeBlock.features.${key}: must be true or false`);
+/** Checks the `codeBlock` settings of the site config. */
+export function checkCodeBlockConfig(config: CodeBlockConfig | undefined): Issue[] {
+	if (!config) return [];
+	const list = new IssueList();
+	checkKnownKeys(list, "codeBlock", config, ["lineEffects", "omitLineEffects", "features", "themes", "languages"]);
+	for (const [key, value] of Object.entries(config.features ?? {})) {
+		const at = pathOf("codeBlock", "features", key);
+		if (!FEATURES.has(key)) list.add(at, "unknown-key", `is not a feature (${[...FEATURES].join(", ")})`);
+		else if (typeof value !== "boolean") list.add(at, "type", "must be true or false");
 	}
-	for (const name of config?.omitLineEffects ?? []) {
+	for (const [index, name] of (config.omitLineEffects ?? []).entries()) {
 		if (typeof name !== "string" || !NAME.test(name)) {
-			throw new Error(`cms.config: codeBlock.omitLineEffects.${String(name)}: name must be lower-case kebab`);
+			list.add(pathOf("codeBlock", "omitLineEffects", index), "name", "must be a lower-case kebab name");
 		}
 	}
-	if (config?.themes) {
+	if (config.themes) {
 		for (const key of ["light", "dark"] as const) {
 			const name = config.themes[key];
 			if (typeof name !== "string" || !name.trim())
-				throw new Error(`cms.config: codeBlock.themes.${key}: theme name is empty`);
+				list.add(pathOf("codeBlock", "themes", key), "empty", "theme name must not be empty");
 		}
 	}
-	for (const name of config?.languages ?? []) {
+	for (const [index, name] of (config.languages ?? []).entries()) {
 		if (typeof name !== "string" || !LANGUAGE.test(name)) {
-			throw new Error(`cms.config: codeBlock.languages.${String(name)}: not a language name`);
+			list.add(pathOf("codeBlock", "languages", index), "name", "must be a language name");
 		}
 	}
-	const known = new Set(resolveCodeLineEffects(config?.lineEffects).map((effect) => effect.name));
-	for (const name of config?.omitLineEffects ?? []) {
-		if (!known.has(name)) throw new Error(`cms.config: codeBlock.omitLineEffects.${name}: no such line effect`);
+	const known = new Set(resolveCodeLineEffects(config.lineEffects).map((effect) => effect.name));
+	for (const [index, name] of (config.omitLineEffects ?? []).entries()) {
+		if (typeof name === "string" && NAME.test(name) && !known.has(name)) {
+			list.add(pathOf("codeBlock", "omitLineEffects", index), "unknown-effect", `"${name}" is not a line effect`);
+		}
 	}
 	const seen = new Set<string>();
-	for (const effect of config?.lineEffects ?? []) {
-		const at = `cms.config: codeBlock.lineEffects.${effect.name}`;
-		if (!NAME.test(effect.name)) throw new Error(`${at}: name must be lower-case kebab`);
-		if (RESERVED.has(effect.name.toLowerCase())) throw new Error(`${at}: name is reserved`);
-		if (seen.has(effect.name)) throw new Error(`${at}: name is duplicated`);
+	for (const [index, effect] of (config.lineEffects ?? []).entries()) {
+		const at = pathOf("codeBlock", "lineEffects", index);
+		if (!NAME.test(effect.name)) list.add(pathOf(at, "name"), "name", "must be a lower-case kebab name");
+		else if (RESERVED.has(effect.name.toLowerCase()))
+			list.add(pathOf(at, "name"), "reserved", `"${effect.name}" is reserved`);
+		else if (seen.has(effect.name)) list.add(pathOf(at, "name"), "duplicate", `"${effect.name}" is defined twice`);
 		seen.add(effect.name);
-		if (!effect.label.trim()) throw new Error(`${at}: label is empty`);
-		if (typeof effect.class !== "string") throw new Error(`${at}: class must be a string`);
+		if (!effect.label.trim()) list.add(pathOf(at, "label"), "empty", "must not be empty");
+		if (typeof effect.class !== "string") list.add(pathOf(at, "class"), "type", "must be a string");
 	}
+	return list.issues;
 }
 
 /** Merges site definitions into the default line effects. A same name is replaced in place; a new name is appended. */

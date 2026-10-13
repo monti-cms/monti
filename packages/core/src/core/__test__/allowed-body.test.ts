@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ALL_BLOCKS } from "../../../../blocks/src/definitions";
+import type { ConfigError } from "../../config/check/issue";
 import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { defineCollection, defineSite, fields } from "../../index";
@@ -85,11 +86,27 @@ describe("the allowed list of a body", () => {
 	});
 
 	it("rejects a name the site does not have, and a heading level that does not exist", () => {
-		expect(() => config({ blocks: ["callot"] })).toThrow(/memo\.body\.blocks has unknown block "callot"/);
-		expect(() => config({ blocks: ["tab"] })).toThrow(/unknown block "tab"/);
-		expect(() => config({ marks: ["callout"] })).toThrow(/unknown mark "callout"/);
-		expect(() => config({ headings: [2, 7] })).toThrow(/memo\.body\.headings/);
-		expect(() => config({ blocks: ["table", "table"] })).toThrow(/lists "table" twice/);
+		const issues = (body: unknown) => {
+			try {
+				config(body);
+			} catch (error) {
+				return (error as ConfigError).issues;
+			}
+			return [];
+		};
+		expect(issues({ blocks: ["callot"] })).toEqual([
+			expect.objectContaining({ path: "collections.memo.body.blocks[0]", code: "unknown-name" }),
+		]);
+		expect(issues({ blocks: ["tab"] })).toEqual([expect.objectContaining({ code: "unknown-name" })]);
+		expect(issues({ marks: ["callout"] })).toEqual([
+			expect.objectContaining({ path: "collections.memo.body.marks[0]", code: "unknown-name" }),
+		]);
+		expect(issues({ headings: [2, 7] })).toEqual([
+			expect.objectContaining({ path: expect.stringMatching(/^collections\.memo\.body\.headings/) }),
+		]);
+		expect(issues({ blocks: ["table", "table"] })).toEqual([
+			expect.objectContaining({ path: "collections.memo.body.blocks[1]", code: "duplicate" }),
+		]);
 	});
 
 	it("allows everything when a key is left out", () => {

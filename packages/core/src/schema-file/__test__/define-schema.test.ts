@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, definePlugin, defineSite, fields } from "../..";
+import { ConfigError, defineCollection, definePlugin, defineSite, fields, type Issue } from "../..";
 import type { Cms } from "../../cms";
 import { fakeCms } from "../../cms/fake-cms";
-import { SchemaFileError } from "../format";
 import type { SchemaTypes } from "../types";
 import { blogSchema, cloneSchema, type EditableSchema } from "./fixture";
+
+/** The issues a config is rejected with. */
+const issuesOf = (run: () => unknown): Issue[] => {
+	try {
+		run();
+	} catch (error) {
+		if (error instanceof ConfigError) return [...error.issues];
+		throw error;
+	}
+	return [];
+};
 
 /** The content of the schema as a test edits it: loosely typed, so a test can break any part of it. */
 const fileSchema = (edit: EditableSchema = cloneSchema()): SchemaTypes => edit as SchemaTypes;
@@ -81,9 +91,9 @@ describe("defineSite with a schema file", () => {
 		});
 		const config = defineSite({ schema: fileSchema(), collections: { note } });
 		expect(Object.keys(config.collections)).toEqual(["post", "category", "tag", "series", "note"]);
-		expect(() => defineSite({ schema: fileSchema(), collections: { tag: note } })).toThrow(
-			/collection "tag" is defined in monti\.schema\.ts and in the config/,
-		);
+		expect(issuesOf(() => defineSite({ schema: fileSchema(), collections: { tag: note } }))).toEqual([
+			expect.objectContaining({ path: "collections.tag", code: "set-twice" }),
+		]);
 	});
 
 	it("appends the code's seed templates to the file's", () => {
@@ -97,27 +107,83 @@ describe("defineSite with a schema file", () => {
 	});
 
 	it("keeps locales and the default locale in the file only", () => {
-		expect(() => defineSite({ schema: fileSchema(), locales: [{ code: "en", name: "English" }] as never })).toThrow(
-			/`locales` is set in the config and in monti\.schema\.ts/,
-		);
-		expect(() => defineSite({ schema: fileSchema(), defaultLocale: "en" as never })).toThrow(
-			/`defaultLocale` is set in the config and in monti\.schema\.ts/,
-		);
+		expect(
+			issuesOf(() => defineSite({ schema: fileSchema(), locales: [{ code: "en", name: "English" }] as never })),
+		).toEqual([expect.objectContaining({ path: "locales", code: "set-twice" })]);
+		expect(issuesOf(() => defineSite({ schema: fileSchema(), defaultLocale: "en" as never }))).toEqual([
+			expect.objectContaining({ path: "defaultLocale", code: "set-twice" }),
+		]);
 	});
 
 	it("rejects an invalid schema with the path of the value, and a relation to a collection that does not exist", () => {
 		const broken = cloneSchema();
 		broken.collections.post.fields.title.kind = "date";
-		expect(() => defineSite({ schema: fileSchema(broken) })).toThrow(SchemaFileError);
-		expect(() => defineSite({ schema: fileSchema(broken) })).toThrow(/collections\.post\.fields\.title\.kind/);
+		expect(issuesOf(() => defineSite({ schema: fileSchema(broken) }))).toContainEqual(
+			expect.objectContaining({ path: "collections.post.fields.title.kind" }),
+		);
 		const dangling = cloneSchema();
 		dangling.collections.post.fields.categoryId.to = "nowhere";
-		expect(() => defineSite({ schema: fileSchema(dangling) })).toThrow(
-			/post\.categoryId relates to unknown collection "nowhere"/,
-		);
+		expect(issuesOf(() => defineSite({ schema: fileSchema(dangling) }))).toEqual([
+			expect.objectContaining({ path: "collections.post.fields.categoryId.to", code: "unknown-collection" }),
+		]);
 		const noTitle = cloneSchema();
 		delete noTitle.collections.tag.fields.title;
-		expect(() => defineSite({ schema: fileSchema(noTitle) })).toThrow(/tag needs a title field/);
+		expect(issuesOf(() => defineSite({ schema: fileSchema(noTitle) }))).toContainEqual(
+			expect.objectContaining({ path: "collections.tag.fields", code: "title-missing" }),
+		);
+	});
+
+	it("checks what the values of the file mean: locale codes, the default locale, the time zone, select defaults", () => {
+		const check = (edit: (schema: EditableSchema) => void) => {
+			const schema = cloneSchema();
+			edit(schema);
+			return issuesOf(() => defineSite({ schema: fileSchema(schema) }));
+		};
+		expect(
+			check((schema) => {
+				schema.locales[1].code = "EN_us";
+			}),
+		).toContainEqual(expect.objectContaining({ path: "locales[1].code", code: "locale-code" }));
+		expect(
+			check((schema) => {
+				schema.defaultLocale = "ja";
+			}),
+		).toContainEqual(expect.objectContaining({ path: "defaultLocale", code: "unknown-locale" }));
+		expect(check((schema) => schema.locales.push({ code: "ko", name: "Again" }))).toContainEqual(
+			expect.objectContaining({ path: "locales[2].code", code: "duplicate" }),
+		);
+		expect(
+			check((schema) => {
+				schema.timeZone = "Mars/Base";
+			}),
+		).toEqual([expect.objectContaining({ path: "timeZone", code: "time-zone" })]);
+		expect(
+			check((schema) => {
+				schema.admin.path = "/api/x";
+			})[0]?.path,
+		).toBe("admin.path");
+		expect(
+			check((schema) => {
+				schema.site.url = "ftp://example.com";
+			})[0]?.path,
+		).toBe("site.url");
+		expect(
+			check((schema) => {
+				schema.seed.templates[0].id = "not-a-uuid";
+			})[0]?.path,
+		).toBe("seed.templates[0].id");
+		expect(
+			check((schema) => {
+				schema.collections.post.fields.policy.discriminant.defaultValue = "missing";
+			})[0],
+		).toMatchObject({ path: "collections.post.fields.policy.discriminant.defaultValue", code: "default-not-option" });
+		expect(
+			check((schema) => {
+				schema.collections.post.fields.policy.values.unknown = {};
+			})[0],
+		).toMatchObject({
+			path: "collections.post.fields.policy.values.unknown",
+		});
 	});
 
 	it("still checks plugin validation against the file's collections", () => {

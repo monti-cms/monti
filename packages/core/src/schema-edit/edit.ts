@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../cms";
+import { ConfigError, type Issue } from "../config/check/issue";
 import type { SchemaChangeStore } from "../core/store/ports";
 import type { SchemaState } from "../core/store/schema-change";
 import { type BodyVocabulary, bodyVocabulary } from "../schema/allowed";
@@ -21,7 +22,7 @@ import {
 	suggestTransforms,
 	type TransformProblem,
 } from "../schema-change";
-import { parseSchemaFile, SchemaFileError, type SchemaIssue } from "../schema-file/format";
+import { parseSchemaFile } from "../schema-file/format";
 import { parseSchemaLiteral } from "../schema-file/literal";
 import { printSchemaFile } from "../schema-file/print";
 import type { SchemaFile, SchemaMigration } from "../schema-file/types";
@@ -54,7 +55,7 @@ export interface SchemaScreenState {
 	/** The file has comments; saving writes it again without them. */
 	readonly comments: boolean;
 	/** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
-	readonly issues: readonly SchemaIssue[];
+	readonly issues: readonly Issue[];
 	/** The version the instance runs. */
 	readonly schemaVersion: number;
 	/** The schema last applied to the dev database, or `null` when none was (or the store has no schema record yet). */
@@ -108,21 +109,14 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 		}
 	}
 	let schema: unknown;
-	let issues: SchemaIssue[] = [];
+	let issues: Issue[] = [];
 	let comments = false;
 	// A file with code is not read as data (the instance runs it; the screen shows what the instance runs and is read-only).
 	const literal = text === undefined ? undefined : parseSchemaLiteral(text);
 	if (literal?.ok) {
 		comments = literal.comments;
 		schema = literal.value;
-		try {
-			parseSchemaFile(schema, relativeToCwd(file as string));
-		} catch (error) {
-			issues =
-				error instanceof SchemaFileError
-					? [...error.issues]
-					: [{ path: "", message: error instanceof Error ? error.message : String(error) }];
-		}
+		issues = [...checkEdit(cms, schema).issues];
 	}
 	const { config } = cms.site;
 	if (schema === undefined && issues.length === 0) {
@@ -210,7 +204,7 @@ export interface SchemaDecision {
 export interface SchemaEditPreview {
 	/** The edit checks. When it does not, `issues` says what is wrong, with JSON paths, and the rest is empty. */
 	readonly valid: boolean;
-	readonly issues: readonly SchemaIssue[];
+	readonly issues: readonly Issue[];
 	/** Something would be written or applied: the content differs from the file, or a change or transform is pending. */
 	readonly changed: boolean;
 	/** The schema changes the stored data cares about (collections, fields, options, locales, allowed blocks), each with the entries it touches. */
@@ -226,19 +220,6 @@ export interface SchemaEditPreview {
 	/** The schema applied to the dev database is older than the file (the file was changed by hand and not applied): the diff includes that. */
 	readonly baseline: "applied" | "file";
 	readonly bodiesRead: number;
-}
-
-/** A message of `defineSite` as an issue: it starts with `cms.config:` and names a collection, which gives the JSON path. */
-function issueFromError(error: unknown, collections: readonly string[]): SchemaIssue {
-	const message = error instanceof Error ? error.message : String(error);
-	const text = message.replace(/^cms\.config:\s*/, "");
-	const named = /^collection "([^"]+)"/.exec(text);
-	if (named?.[1]) return { path: `collections.${named[1]}`, message: text };
-	const dotted = /^([\w-]+)\.([\w.[\]-]+)/.exec(text);
-	if (dotted?.[1] && collections.includes(dotted[1])) {
-		return { path: `collections.${dotted[1]}.${dotted[2]}`.replace(/\.body$/, ".body"), message: text };
-	}
-	return { path: "", message: text };
 }
 
 const OPS: Record<SchemaMigration["op"], string> = {
@@ -273,19 +254,14 @@ interface Checked {
 	readonly next: Cms;
 }
 
-/** Checks the edited content: the file format, then the rules between collections that `defineSite` checks. */
-function checkEdit(cms: Cms, schema: unknown): { issues: SchemaIssue[]; checked?: Checked } {
-	let parsed: SchemaFile;
+/** Checks the edited content as the instance would: the file format, then every rule `defineSite` applies (between collections, plugins and blocks included). */
+function checkEdit(cms: Cms, schema: unknown): { issues: Issue[]; checked?: Checked } {
 	try {
-		parsed = parseSchemaFile(schema);
-	} catch (error) {
-		if (error instanceof SchemaFileError) return { issues: [...error.issues] };
-		throw error;
-	}
-	try {
+		const parsed = parseSchemaFile(schema);
 		return { issues: [], checked: { parsed, next: cms.forSchema(parsed) } };
 	} catch (error) {
-		return { issues: [issueFromError(error, Object.keys(parsed.collections))] };
+		if (error instanceof ConfigError) return { issues: [...error.issues] };
+		return { issues: [{ path: "", code: "error", message: error instanceof Error ? error.message : String(error) }] };
 	}
 }
 
@@ -324,10 +300,7 @@ interface Evaluation {
 }
 
 /** Everything the preview and the save agree on: the diff against what is applied (or the running schema), the decisions, and the transforms in effect. */
-async function evaluate(
-	cms: Cms,
-	input: SchemaEditInput,
-): Promise<Evaluation | { readonly issues: readonly SchemaIssue[] }> {
+async function evaluate(cms: Cms, input: SchemaEditInput): Promise<Evaluation | { readonly issues: readonly Issue[] }> {
 	const { issues, checked } = checkEdit(cms, input.schema);
 	if (!checked) return { issues };
 	const { parsed, next } = checked;
@@ -461,7 +434,7 @@ async function evaluate(
 	return { checked, store, applied, pending, preview };
 }
 
-const invalid = (issues: readonly SchemaIssue[]): SchemaEditPreview => ({
+const invalid = (issues: readonly Issue[]): SchemaEditPreview => ({
 	valid: false,
 	issues,
 	changed: false,
@@ -490,7 +463,7 @@ export interface SchemaSaveInput extends SchemaEditInput {
 }
 
 export type SchemaSaveResult =
-	| { readonly saved: false; readonly reason: "invalid"; readonly issues: readonly SchemaIssue[] }
+	| { readonly saved: false; readonly reason: "invalid"; readonly issues: readonly Issue[] }
 	| { readonly saved: false; readonly reason: "problems"; readonly problems: readonly TransformProblem[] }
 	| { readonly saved: false; readonly reason: "conflict" }
 	| { readonly saved: false; readonly reason: "unchanged" }
@@ -626,4 +599,4 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 }
 
 export { SchemaChangeError };
-export type { SchemaIssue };
+export type { Issue };

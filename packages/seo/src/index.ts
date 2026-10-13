@@ -17,4 +17,4 @@ export {
 } from "./fields";
 export { SEO_PLUGIN_NAME, type SeoPluginOptions, seo } from "./plugin";
 export { type SeoValues, seoOf } from "./read";
-export { validateSeoFields } from "./validate";
+export { checkSeoFields } from "./validate";

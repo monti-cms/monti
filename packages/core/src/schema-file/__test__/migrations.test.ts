@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { ConfigError } from "../../config/check/issue";
 import { defineSite } from "../../config/define";
-import { parseSchemaFile, SchemaFileError } from "../format";
+import { parseSchemaFile } from "../format";
 import type { SchemaTypes } from "../types";
 import { cloneSchema, type EditableSchema } from "./fixture";
 
@@ -10,8 +11,8 @@ const issues = (edit: (schema: EditableSchema) => void) => {
 	try {
 		parseSchemaFile(schema);
 	} catch (error) {
-		expect(error).toBeInstanceOf(SchemaFileError);
-		return (error as SchemaFileError).issues.map((issue) => `${issue.path}: ${issue.message}`);
+		expect(error).toBeInstanceOf(ConfigError);
+		return (error as ConfigError).issues.map((issue) => `${issue.path}: ${issue.message}`);
 	}
 	throw new Error("the schema was accepted");
 };
@@ -38,16 +39,18 @@ describe("schemaVersion and migrations in the schema file", () => {
 	});
 
 	it("names the path of a bad version or transform", () => {
-		expect(
-			issues((schema) => {
-				schema.schemaVersion = 0;
-			}),
-		).toEqual(["schemaVersion: Too small: expected number to be >=1"]);
-		expect(
-			issues((schema) => {
-				schema.schemaVersion = 1.5;
-			})[0],
-		).toMatch(/^schemaVersion:/);
+		for (const schemaVersion of [0, 1.5]) {
+			const schema = cloneSchema();
+			schema.schemaVersion = schemaVersion;
+			try {
+				defineSite({ schema: schema as SchemaTypes });
+				expect.unreachable();
+			} catch (error) {
+				expect((error as ConfigError).issues).toEqual([
+					expect.objectContaining({ path: "schemaVersion", code: "schema-version" }),
+				]);
+			}
+		}
 		expect(
 			issues((schema) => {
 				schema.migrations = [{ id: "a", op: "moveField", collection: "post" }];
@@ -57,7 +60,7 @@ describe("schemaVersion and migrations in the schema file", () => {
 			issues((schema) => {
 				schema.migrations = [{ id: "a", op: "dropField", collection: "post", field: "x", extra: 1 }];
 			}),
-		).toEqual(["migrations[0].extra: is not part of the schema format"]);
+		).toEqual(["migrations[0].extra: is not an option (known: id, note, collection, op, field)"]);
 		expect(
 			issues((schema) => {
 				schema.migrations = [{ id: "", op: "dropField", collection: "post", field: "x" }];

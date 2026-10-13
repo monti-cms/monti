@@ -893,7 +893,7 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 
 - The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
 - `server.formats` adds formats (notations the document can be written as and read from, "Formats"): a function that returns a `CmsFormat` or a list of them (`formats: () => myFormat`). It is called when the instance first needs its formats.
-- `validate` receives the collection, locale and block definitions and all plugins (`plugins`). Extensions that use roles check field kinds here.
+- `validate` receives the collection, locale and block definitions and all plugins (`plugins`) and returns the issues it finds (`{ path, code, message }`, with `IssueList` and `pathOf` from `@monti-cms/core`); `defineSite` reports them with every other problem of the config in one `ConfigError`. Extensions that use roles check field kinds here.
 - `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
   `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
   An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
@@ -1235,11 +1235,11 @@ export const cms = defineConfig({
 The low-level `createCms({ config: defineSite({ … }), server })` takes the site part alone, built with `defineSite` of `@monti-cms/core` (no database or login; for tests and tools; `@monti-cms/core` no longer exports `defineConfig`). `createCms`, `createSite` and everything else take a site config like any other, so any number of sites with their own files live in one process. A file that is not valid stops the app at start with every problem and its path:
 
 ```text
-monti.schema.ts is not a valid schema file:
+monti.schema.ts is not valid:
   collections.post.fields.title.kind: a field needs a "kind" of text, slug, relation, select, media, conditional, backlink or view
-  collections.post.workflow: is not part of the schema format
-  locales[1].code: must look like "en", "pt-BR" or "zh-Hant"
-Fix: correct the lines above in monti.schema.ts; the types of defineSchema show most of them in the editor. monti doctor checks the file again.
+  collections.post.workflow: is not an option (known: label, kind, fields, path, icon, layout, body)
+  locales[1].name: must be a string (got number)
+Fix: correct the lines above; `monti doctor` checks the files again.
 ```
 
 **How the file and the code config merge.** Code adds to the file and may override what differs per environment, but it never silently replaces the file's data:

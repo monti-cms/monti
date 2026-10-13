@@ -3,7 +3,7 @@ import { createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { aiRegistryOf } from "../../../ai/src/registry";
 import { testConfig, testSite } from "../../test/site";
-import { SEO_ROLES, seo, seoFields, seoOf, validateSeoFields } from "..";
+import { checkSeoFields, SEO_ROLES, seo, seoFields, seoOf } from "..";
 import { seoMessages } from "../messages";
 
 /**
@@ -60,8 +60,8 @@ describe("seoFields", () => {
 
 describe("config validation (`seo().validate`)", () => {
 	const title = fields.text({ label: "Title" });
-	const check = (extra: Parameters<typeof defineCollection>[0]["fields"]) => () =>
-		validateSeoFields({
+	const check = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
+		checkSeoFields({
 			collections: {
 				page: defineCollection({
 					label: "Page",
@@ -72,13 +72,17 @@ describe("config validation (`seo().validate`)", () => {
 		});
 
 	it("checks that SEO roles are attached to fields of the right kind", () => {
-		expect(check(seoFields())).not.toThrow();
-		expect(check({ image: fields.text({ label: "Image", role: "ogImage" }) })).toThrow(/needs a media field/);
-		expect(check({ t: fields.media({ label: "T", role: "seoTitle" }) })).toThrow(/needs a text field/);
+		expect(check(seoFields())).toEqual([]);
+		expect(check({ image: fields.text({ label: "Image", role: "ogImage" }) })).toEqual([
+			expect.objectContaining({ path: "collections.page.fields.image.role", code: "role-kind" }),
+		]);
+		expect(check({ t: fields.media({ label: "T", role: "seoTitle" }) })).toEqual([
+			expect.objectContaining({ path: "collections.page.fields.t.role", code: "role-kind" }),
+		]);
 		expect(
 			check({ robots: fields.select({ label: "R", role: "noindex", options: { a: "A" }, defaultValue: "a" }) }),
-		).toThrow(/"noindex" option/);
-		expect(seo().validate).toBe(validateSeoFields);
+		).toEqual([expect.objectContaining({ path: "collections.page.fields.robots.role", code: "role-kind" })]);
+		expect(seo().validate).toBe(checkSeoFields);
 	});
 });
 

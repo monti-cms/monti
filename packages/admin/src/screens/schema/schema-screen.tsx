@@ -1,7 +1,8 @@
 "use client";
 
+import type { Issue } from "@monti-cms/core/client";
 import { useSite, useTranslator } from "@monti-cms/core/client";
-import type { SchemaIssue, SchemaScreenState } from "@monti-cms/core/schema-edit";
+import type { SchemaScreenState } from "@monti-cms/core/schema-edit";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -113,7 +114,7 @@ function SchemaEditor({
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
 	const [renames, setRenames] = useState<Rename[]>([]);
-	const [issues, setIssues] = useState<readonly SchemaIssue[]>([]);
+	const [issues, setIssues] = useState<readonly Issue[]>([]);
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
 	const [creating, setCreating] = useState(false);

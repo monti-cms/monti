@@ -1,3 +1,4 @@
+import { checkKnownKeys, type Issue, IssueList, pathOf } from "../config/check/issue";
 /**
  * Media formats the core can identify. The site config `media.imageTypes` and `fileTypes` choose from these.
  * The config validation (`config/define`) also reads this, so it does not import other modules.
@@ -38,23 +39,32 @@ export interface MediaConfig {
 	readonly fileTypes?: readonly AllowedFileMime[];
 }
 
-/** Config validation. Throws an error for invalid values (English message for developers). */
-export function validateMediaConfig(media: MediaConfig | undefined): void {
-	if (!media) return;
+const MEDIA_KEYS = ["maxImageBytes", "maxPixels", "maxFileBytes", "imageTypes", "fileTypes"];
+
+/** Checks the media settings of the site config. */
+export function checkMediaConfig(media: MediaConfig | undefined): Issue[] {
+	if (!media) return [];
+	const list = new IssueList();
+	checkKnownKeys(list, "media", media, MEDIA_KEYS);
 	for (const key of ["maxImageBytes", "maxPixels", "maxFileBytes"] as const) {
 		const value = media[key];
 		if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
-			throw new Error(`cms.config: media.${key} must be a positive integer`);
+			list.add(pathOf("media", key), "positive-integer", "must be a positive integer");
 		}
 	}
 	const check = (key: "imageTypes" | "fileTypes", supported: readonly string[]) => {
-		for (const type of media[key] ?? []) {
+		for (const [index, type] of (media[key] ?? []).entries()) {
 			if (!supported.includes(type)) {
-				throw new Error(`cms.config: media.${key} has unsupported type "${type}" (supported: ${supported.join(", ")})`);
+				list.add(
+					pathOf("media", key, index),
+					"unsupported",
+					`"${type}" is not supported (supported: ${supported.join(", ")})`,
+				);
 			}
 		}
 	};
 	check("imageTypes", SUPPORTED_IMAGE_MIME_TYPES);
 	check("fileTypes", SUPPORTED_FILE_MIME_TYPES);
-	if (media.imageTypes?.length === 0) throw new Error("cms.config: media.imageTypes must not be empty");
+	if (media.imageTypes?.length === 0) list.add("media.imageTypes", "empty", "must not be empty");
+	return list.issues;
 }
