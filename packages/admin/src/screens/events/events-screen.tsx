@@ -13,12 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Skeleton } from "../../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { cmsFetch, errorText } from "../admin-api";
-import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
+import { SettingsPanel } from "../shared/settings-panel";
 import {
 	EVENTS_FILTERS,
 	EVENTS_KEY,
@@ -110,11 +110,9 @@ export function EventsScreen() {
 	};
 
 	return (
-		<AdminShell
-			title={t("title")}
+		<SettingsPanel
 			count={listQuery.data?.total}
-			sidebar={{ activeNav: "events" }}
-			headerActions={
+			actions={
 				<Button
 					type="button"
 					size="sm"
@@ -274,6 +272,6 @@ export function EventsScreen() {
 				}}
 			/>
 			{dialog}
-		</AdminShell>
+		</SettingsPanel>
 	);
 }

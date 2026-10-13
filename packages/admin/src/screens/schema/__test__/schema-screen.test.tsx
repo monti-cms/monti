@@ -1,12 +1,14 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { pressOption } from "../../../test/base-ui";
 import { createTestRouter } from "../../../test/router";
+import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { schemaMessages } from "../messages";
 import type { Obj } from "../schema-model";
-import { SchemaScreen } from "../schema-screen";
+import { SchemaSettings } from "../schema-screen";
 
 const nav = createTestRouter();
 const { render } = nav;
@@ -14,7 +16,6 @@ const t = testSite.createTranslator(schemaMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
-vi.mock("../../admin-sidebar", () => ({ AdminSidebar: () => null }));
 const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), takeSavedMessage: vi.fn(() => null) }));
 vi.mock("../reload", () => reload);
 
@@ -116,10 +117,27 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
+/** Stands in for the Settings page: the schema editor and the buttons that move between its tabs (the page does this with links). */
+function SchemaTabs() {
+	const [tab, setTab] = useState<SchemaTab>("collections");
+	return (
+		<>
+			<div role="tablist">
+				{SCHEMA_TABS.map((name) => (
+					<button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>
+						{t(`tabs.${name}`)}
+					</button>
+				))}
+			</div>
+			<SchemaSettings tab={tab} />
+		</>
+	);
+}
+
 const renderScreen = () =>
 	render(
 		<AdminQueryProvider>
-			<SchemaScreen />
+			<SchemaTabs />
 		</AdminQueryProvider>,
 	);
 

@@ -13,7 +13,6 @@ const tShared = testSite.createTranslator(sharedMessages);
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 vi.mock("../../../editor/tiptap-editor", () => ({ CmsEditor: () => null }));
-vi.mock("../../admin-sidebar", () => ({ AdminSidebar: () => null }));
 
 const DOC = {
 	type: "doc",
@@ -69,11 +68,11 @@ const renderManager = () =>
 	);
 
 describe("TemplateManager", () => {
-	it("loads templates from the API items envelope and shows the count beside the title", async () => {
+	it("loads templates from the API items envelope and shows the count in the panel toolbar", async () => {
 		renderManager();
 
 		expect(await screen.findByText("일반 게시글")).toBeTruthy();
-		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(`${t("title")}2`);
+		expect(screen.getByTestId("settings-panel").firstElementChild?.textContent).toContain("2");
 		expect(screen.queryByText("포스트용")).toBeNull();
 	});
 

@@ -11,7 +11,6 @@ const t = testSite.createTranslator(eventsMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
-vi.mock("../../admin-sidebar", () => ({ AdminSidebar: () => null }));
 vi.mock("../../../router", () => ({
 	AdminLink: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
 }));

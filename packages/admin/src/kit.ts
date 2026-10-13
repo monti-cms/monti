@@ -6,10 +6,11 @@
 export { cn } from "./lib/utils/cn";
 export type { EntryData, EntryForm, FormValue } from "./screens/entries/entry-form";
 export { EMPTY_FORM, formList, formText, metadataFromForm } from "./screens/entries/entry-form";
-export { AdminShell, useAdminNav } from "./screens/shared/admin-shell";
+export { useAdminNav } from "./screens/shared/admin-shell";
 export { NamedIcon, useIconByName } from "./screens/shared/collection-icon";
 export type { ConfirmRequest } from "./screens/shared/confirm-dialog";
 export { ConfirmDialog, discardConfirm, useConfirm } from "./screens/shared/confirm-dialog";
+export { SettingsPanel } from "./screens/shared/settings-panel";
 export { useDebounced } from "./screens/shared/use-debounced";
 export * from "./ui/alert";
 export * from "./ui/alert-dialog";

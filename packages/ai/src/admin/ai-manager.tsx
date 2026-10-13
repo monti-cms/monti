@@ -2,7 +2,6 @@
 
 import { cmsFetch, errorText } from "@monti-cms/admin/api";
 import {
-	AdminShell,
 	Button,
 	Checkbox,
 	cn,
@@ -22,6 +21,7 @@ import {
 	IconButton,
 	Input,
 	Label,
+	SettingsPanel,
 	Switch,
 	Tabs,
 	TabsContent,
@@ -336,7 +336,7 @@ export function AiManager() {
 				: sharedQuery.data?.items.length;
 
 	return (
-		<AdminShell title="AI" count={count} headerActions={headerActions} sidebar={{ activeNav: "ai" }}>
+		<SettingsPanel count={count} actions={headerActions}>
 			<Tabs
 				value={tab}
 				onValueChange={(value) => void changeTab(value as AiTab)}
@@ -467,7 +467,7 @@ export function AiManager() {
 				</TabsContent>
 			</Tabs>
 			{dialog}
-		</AdminShell>
+		</SettingsPanel>
 	);
 }
 

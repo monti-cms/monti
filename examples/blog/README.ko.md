@@ -83,7 +83,7 @@ function SiteCalloutView() {
 
 1. `monti.config.ts`에서 `enabled: true`로 바꾸고, `targets`에 본인 저장소(`repo`)와 필요하면 `folder`·`branch`·`mode`를 적는다. 파일 경로 기본값은 폴더 아래 `{collection}/{slug}.{locale}.{ext}`이다(예: `content/post/hello.ko.mdx`).
 2. `pnpm db:migrate`를 돌리고, `MONTI_SECRET`이 설정되어 있는지 확인한 뒤(토큰은 이 값에서 파생한 키로 암호화해 저장한다) 앱을 띄운다.
-3. `/studio/git-sync`의 설정 탭에서 GitHub 토큰을 저장한다(그 저장소의 Contents와 Pull requests에 읽기·쓰기 권한이 있는 세분화된 토큰). push를 받으려면 저장소의 Settings, Webhooks에서 그 화면에 나온 Payload URL, 콘텐츠 형식 `application/json`, 저장한 비밀 값, push 이벤트로 웹훅을 추가한다. 이를 위해 사이트가 GitHub에서 접근 가능해야 한다(로컬 개발에는 터널을 쓴다).
+3. `/studio/settings/git-sync`의 설정 탭에서 GitHub 토큰을 저장한다(그 저장소의 Contents와 Pull requests에 읽기·쓰기 권한이 있는 세분화된 토큰). push를 받으려면 저장소의 Settings, Webhooks에서 그 화면에 나온 Payload URL, 콘텐츠 형식 `application/json`, 저장한 비밀 값, push 이벤트로 웹훅을 추가한다. 이를 위해 사이트가 GitHub에서 접근 가능해야 한다(로컬 개발에는 터널을 쓴다).
 4. `pnpm exec monti git-sync:push --all`을 한 번 돌려 발행한 글을 모두 저장소에 쓴다. 그 뒤로는 발행하면 그 글의 파일이 커밋되고, 저장소에 push한 변경(또는 "지금 가져오기", `pnpm exec monti git-sync:pull`)이 사이트로 돌아온다.
 
 파일 형식, 충돌 화면, 풀 리퀘스트 방식은 패키지 README에 있다.

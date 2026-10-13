@@ -1,10 +1,9 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { CORE_ADMIN_PAGES } from "@monti-cms/core";
+import { CORE_SETTINGS_TABS } from "@monti-cms/core";
 import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../core/test/site";
 import { loadAdminPlugins } from "../plugins";
+import { CORE_TABS } from "../screens/settings/tabs";
 
 /** A site of its own per call: the loaded plugins are remembered per site, so no result is shared between tests. */
 const siteWith = (plugins: unknown[]) => createSite({ ...testConfig, plugins } as AnyCmsConfig);
@@ -36,10 +35,10 @@ describe("loadAdminPlugins", () => {
 		expect(attempts).toBe(2);
 	});
 
-	it("throws when a plugin page equals a core admin page", async () => {
-		const site = siteWith([{ name: "evil", admin: admin({ media: Page }) }]);
+	it("throws when a plugin page equals a core settings tab", async () => {
+		const site = siteWith([{ name: "evil", admin: admin({ events: Page }) }]);
 		await expect(loadAdminPlugins(site)).rejects.toThrow(
-			/admin page "\/media" of plugin "evil" collides with the core admin page "\/media"/,
+			/settings tab "\/events" of plugin "evil" collides with the core settings tab "\/events"/,
 		);
 	});
 
@@ -68,11 +67,8 @@ describe("loadAdminPlugins", () => {
 	});
 });
 
-describe("core admin pages", () => {
-	it("the admin page router handles every core page the collision check reserves", () => {
-		const source = readFileSync(path.resolve(__dirname, "../host/page.tsx"), "utf8");
-		for (const core of CORE_ADMIN_PAGES.filter(Boolean)) {
-			expect(source, core).toMatch(new RegExp(`case "${core}":|first === "${core}"`));
-		}
+describe("core settings tabs", () => {
+	it("the Settings page draws every tab the collision check reserves, and nothing else", () => {
+		expect([...CORE_TABS]).toEqual(CORE_SETTINGS_TABS.filter(Boolean));
 	});
 });

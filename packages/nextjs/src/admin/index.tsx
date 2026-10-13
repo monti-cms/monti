@@ -82,9 +82,9 @@ export type CmsAdminPageProps = Pick<AdminPageProps, "params" | "searchParams">;
  * A single admin screen. Rendered by the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/schema` schema settings
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media
+ * - `/admin/settings/<tab>` Settings: schema (`collections`, `locales`, `site`, `admin`, `file`), `templates`, `events`, and one tab per plugin page (e.g. the AI plugin's `/admin/settings/ai`)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
- * - `/admin/<path>` plugin screens (e.g. the AI plugin's `/admin/ai`)
  */
 export function CmsAdminPage({ cms, ...props }: CmsAdminPageProps & { cms: Cms }) {
 	assertCms(cms, "<CmsAdminPage cms={cms}>");

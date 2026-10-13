@@ -23,10 +23,10 @@ import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch, errorText } from "../admin-api";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
-import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";
 import { formatDateOnly } from "../shared/format-date";
+import { SettingsPanel } from "../shared/settings-panel";
 import { OPEN_ITEM } from "../shared/side-panel";
 import { templatesMessages } from "./messages";
 
@@ -213,11 +213,9 @@ export function TemplateManager() {
 	];
 
 	return (
-		<AdminShell
-			title={t("title")}
+		<SettingsPanel
 			count={templatesQuery.data ? templates.length : undefined}
-			sidebar={{ activeNav: "templates" }}
-			headerActions={
+			actions={
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />
 					{t("common.add")}
@@ -341,6 +339,6 @@ export function TemplateManager() {
 				</div>
 			</div>
 			{dialog}
-		</AdminShell>
+		</SettingsPanel>
 	);
 }

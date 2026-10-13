@@ -64,7 +64,7 @@ export const cms = defineConfig({
 		// Draws the site's own callout (components/callout.tsx) in the editor; the public page uses the same component (components/article-body.tsx).
 		siteCallout(),
 		// Two-way sync of published entries with files in a GitHub repo (`@monti-cms/git-sync`). It is switched off here, so the example runs with no token and no repo.
-		// To try it: set `enabled` to `true`, put your own repo in `targets`, run `pnpm db:migrate`, open /studio/git-sync, save a GitHub token (and a webhook secret) there,
+		// To try it: set `enabled` to `true`, put your own repo in `targets`, run `pnpm db:migrate`, open /studio/settings/git-sync, save a GitHub token (and a webhook secret) there,
 		// and run `pnpm exec monti git-sync:push --all` once. The token is saved on that screen (encrypted with a key derived from MONTI_SECRET), never in this file. See the package README.
 		gitSync({
 			enabled: false,

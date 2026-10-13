@@ -118,7 +118,7 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | What | File |
 | --- | --- |
 | The one config: one line per feature you chose, each with a short comment, then the database, the login and storage. Nothing is hidden behind a preset: deleting a line removes the feature | `monti.config.ts` |
-| The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, written the way the admin's schema screen would write it | `monti.schema.ts` |
+| The schema file: a starter `post` collection (from your front matter if content was found), the locales, time zone, admin path, written the way the admin's schema settings would write it | `monti.schema.ts` |
 | Admin UI: the layout (it imports the prebuilt admin stylesheet) and the page | `app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx` |
 | Admin API and login (`/api/monti/v1/*`, `/api/monti/auth/*`) | `app/api/monti/[...path]/route.ts` |
 | Every variable the chosen features read, each with a short comment: what it is and where to get it (the database URL, `openssl rand -base64 32` for `MONTI_SECRET`, the `S3_*` values). What is needed on your computer comes first; `SITE_URL`, `AUTH_TRUST_HOST` and `DATABASE_SCHEMA` sit commented out under "When you deploy (not needed on your computer)", one plain sentence each. A note next to `DATABASE_URL` says to use `sslmode=verify-full` instead of `sslmode=require`. It holds placeholders only, never a secret, so it is safe to commit | `.env.example` |
@@ -434,7 +434,7 @@ What it checks, in the order it prints:
 | Group | Checks |
 | --- | --- |
 | `config` | the env files, that `.env.local` is in `.gitignore`, the config file is found, it loads and exports the instance, **what Monti decided on its own, with where each value came from** (`config/automatic`), **the media storage can be set up** (`config/storage`: a missing `S3_*` value fails here, because the public pages draw an image they cannot address as "unavailable" and say nothing), and **no `"use client"` file imports it or another server-only module** (this replaces `monti check:boundary`) |
-| `schema` | `schema/file`: the schema file is found, loads and is valid (each problem with its path); it also says when the file contains code, so the admin schema screen is read-only for it |
+| `schema` | `schema/file`: the schema file is found, loads and is valid (each problem with its path); it also says when the file contains code, so the admin schema settings are read-only for it |
 | `database` | `DATABASE_URL` is set and a Postgres URL (and the `sslmode` warning of the driver explained), the database is reachable (wrong host, port, password and database name are told apart), `DATABASE_SCHEMA` exists, **how many migrations are pending** (`monti db:migrate`) |
 | `secrets` | `MONTI_SECRET` is set and strong enough; the old `CMS_SECRET` and `AUTH_SECRET` are still set but unused |
 | `auth` | whether the config has a login (a warning in development and a failure for production or a known host platform, with how to add GitHub login); with the email and password login, a warning while no admin account exists yet (open the admin and create the first admin); with GitHub, only the values core knows: the GitHub client id and secret (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), an admin is listed in `MONTI_ADMIN_GITHUB_ID` (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
@@ -1096,7 +1096,7 @@ export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
 		options: {}, // JSON value. Read by both the server and the browser
-		nav: [{ path: "my", label: "My screen", icon: "plug" }], // admin sidebar "Manage" group
+		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a tab of the admin Settings page: <admin path>/settings/my
 		validate: ({ collections }) => {}, // called when the site config is built
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display, hooks that need server code
 		hooks: { validate: () => undefined }, // write hooks written inline: a plugin that only adds hooks needs no `server` module (and no `options`)
@@ -1331,7 +1331,7 @@ defineConfig({
 });
 ```
 
-Every committed change is recorded in the event log, whether or not anything subscribes to it (an event with no delivery shows as "recorded (no subscribers)" and carries the actor when the change came from a request). Events older than 90 days (a fixed period, not an option) are removed by the same write-driven pass, at most once an hour per process, together with their deliveries, unless a delivery is still waiting: `pending`, `delivering`, `failed` and `dead` deliveries keep their event until they are delivered or dismissed. The admin's **Events** screen (`/admin/events` at the config default path, `/studio/events` after `monti init`) is the log of all events with their delivery status, and for failed and dead deliveries it shows the last error and retries or dismisses each; the sidebar shows how many there are.
+Every committed change is recorded in the event log, whether or not anything subscribes to it (an event with no delivery shows as "recorded (no subscribers)" and carries the actor when the change came from a request). Events older than 90 days (a fixed period, not an option) are removed by the same write-driven pass, at most once an hour per process, together with their deliveries, unless a delivery is still waiting: `pending`, `delivering`, `failed` and `dead` deliveries keep their event until they are delivered or dismissed. The admin's **Event log** tab (Settings > Event log: `/admin/settings/events` at the config default path, `/studio/settings/events` after `monti init`) is the log of all events with their delivery status, and for failed and dead deliveries it shows the last error and retries or dismisses each; the Event log tab and the sidebar Settings entry show how many there are.
 
 ## Testing your hooks and plugins
 
@@ -1530,7 +1530,7 @@ The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchem
 
 ### Editing the schema in the admin (development only)
 
-The admin has a **Schema** screen (`<admin path>/schema`, in the sidebar under "Manage") that edits `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
+The admin has schema settings (`<admin path>/settings/collections`, in the sidebar under Settings; the Locales, Site, Admin and File tabs belong to it too) that edit `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
 
 **Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists, can be written and is a pure literal (below). The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file`, `not_writable` or `has_code`), and the screen shows the schema read-only with a short explanation. `GET /api/monti/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
 
@@ -1572,7 +1572,7 @@ Everything in this table except `codeBlock` and `media` can be written in the sc
 | `site.url` | Public site URL. Links written as full URLs in the body are also recognized as internal links. May be read from an environment variable. |
 | `site.aliases` | Other host names to treat as the same site (e.g. `www.example.com`). |
 | `site.name` | Site name shown in the admin UI. If unset, the host name of `site.url`. |
-| `site.home` | URL of the admin sidebar `View site` link. A path or full URL. Default `/`. |
+| `site.home` | URL the admin sidebar's `View site` icon button (next to the site name) opens. A path or full URL. Default `/`. |
 | `site.localePrefix` | How the language is added to public URLs. `except-default` (default: the default language as is, other languages as `/{code}`), `always` (`/{code}` for every language), `never` (no prefix). Search previews, draft previews and `localizePath` follow it. |
 | `site.previewPath` | Leading part of the draft preview URL (e.g. `/preview`). If unset, there is no preview button. |
 | `site.previewLocaleParam` | Query name that carries the language in the preview URL (default `locale`, e.g. `?locale=en`, only when it is not the default language). If `false`, the language goes in the path according to the `localePrefix` rule (`/preview/en/posts/a`). |
@@ -1583,7 +1583,7 @@ Everything in this table except `codeBlock` and `media` can be written in the sc
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
 | `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.core"` and `"cms.translation"` (the texts of reading MDX are in `"cms.mdx"`, from `@monti-cms/mdx`). |
-| `admin.templates` | `false` hides body templates in the admin: the template menu of the editor, the sidebar link and the Templates screen (a 404). Default `true`. Stored templates are kept. |
+| `admin.templates` | `false` hides body templates in the admin: the template menu of the editor, the Settings > Templates tab (a 404 at its address). Default `true`. Stored templates are kept. |
 | `admin.translations` | `false` hides the translation UI in the admin: the language tabs of the editor, the locale column and filter of the list, and the language tabs of the item panel. Default `true`. A site with one locale never shows it, whatever this says. |
 
 ### Collections

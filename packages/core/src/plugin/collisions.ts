@@ -3,8 +3,17 @@
  * This module does not read the site config (the authoring API imports it).
  */
 
-/** A single-segment path of the core admin UI (`/admin/<path>`). An empty string is the list view. Keep it identical to the admin UI's path picking. */
-export const CORE_ADMIN_PAGES: readonly string[] = ["", "entries", "login", "media", "templates", "trash"];
+/** A tab of the core admin Settings page (`/admin/settings/<tab>`; an empty string is the Settings page itself). A plugin page is a Settings tab too, so it cannot take one of these. Keep it identical to the admin UI's tab list. */
+export const CORE_SETTINGS_TABS: readonly string[] = [
+	"",
+	"collections",
+	"locales",
+	"site",
+	"admin",
+	"file",
+	"templates",
+	"events",
+];
 
 /**
  * Names the core uses in the admin meta API `features`, and the plugin storage it keeps for itself (`core-events`: the marks of `event.once`).
@@ -32,22 +41,22 @@ export function assertPluginNamesFree(names: readonly string[]): void {
 }
 
 /**
- * Error if a plugin admin UI path (`path` in `nav`, or a key of an admin plugin's `pages`) equals a core page or another plugin's.
+ * Error if a plugin Settings tab (`path` in `nav`, or a key of an admin plugin's `pages`) equals a core tab or another plugin's.
  * The same path within one plugin counts as one page.
  */
 export function assertPluginPagesFree(pages: readonly { readonly plugin: string; readonly path: string }[]): void {
 	const owners = new Map<string, string>();
 	for (const { plugin, path } of pages) {
 		const key = trimSlashes(path);
-		if (CORE_ADMIN_PAGES.includes(key)) {
+		if (CORE_SETTINGS_TABS.includes(key)) {
 			throw new Error(
-				`cms plugin: admin page "${showPage(key)}" of plugin "${plugin}" collides with the core admin page "${showPage(key)}"`,
+				`cms plugin: settings tab "${showPage(key)}" of plugin "${plugin}" collides with the core settings tab "${showPage(key)}"`,
 			);
 		}
 		const owner = owners.get(key);
 		if (owner !== undefined && owner !== plugin) {
 			throw new Error(
-				`cms plugin: admin page "${showPage(key)}" of plugin "${plugin}" collides with plugin "${owner}" (same admin page)`,
+				`cms plugin: settings tab "${showPage(key)}" of plugin "${plugin}" collides with plugin "${owner}" (same settings tab)`,
 			);
 		}
 		owners.set(key, plugin);
