@@ -59,7 +59,7 @@ export function CustomBlockMenu({ editor }: { editor: Editor }) {
 			>
 				<Puzzle className="size-4" aria-hidden />
 			</IconButton>
-			<DropdownMenuContent align="start" className="w-64">
+			<DropdownMenuContent align="start" className="min-w-64">
 				<CustomBlockMenuItems editor={editor} />
 			</DropdownMenuContent>
 		</DropdownMenu>

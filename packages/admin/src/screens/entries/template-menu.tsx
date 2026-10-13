@@ -81,7 +81,7 @@ export function TemplateMenu({
 				>
 					<LayoutTemplate aria-hidden className="size-4" />
 				</IconButton>
-				<DropdownMenuContent align="end" className="max-h-80 w-56 overflow-y-auto">
+				<DropdownMenuContent align="end" className="max-h-80 min-w-56 overflow-y-auto">
 					{loadFailed ? (
 						<>
 							<DropdownMenuItem disabled>{t("template.loadFailed")}</DropdownMenuItem>

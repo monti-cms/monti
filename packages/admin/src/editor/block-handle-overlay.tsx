@@ -86,7 +86,7 @@ export function BlockHandleOverlay({
 				>
 					<GripVertical aria-hidden />
 				</IconButton>
-				<DropdownMenuContent align="start" side="right" className="w-56">
+				<DropdownMenuContent align="start" side="right" className="min-w-56">
 					<DropdownMenuItem onClick={onMoveUp}>
 						<ArrowUp aria-hidden />
 						{t("blockHandle.moveUp")}

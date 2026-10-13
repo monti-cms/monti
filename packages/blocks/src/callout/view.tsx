@@ -59,7 +59,7 @@ export function CalloutNodeView() {
 						>
 							<Icon aria-hidden />
 						</ToolbarButton>
-						<DropdownMenuContent align="end" className="w-40">
+						<DropdownMenuContent align="end" className="min-w-40">
 							<DropdownMenuRadioGroup value={variant} onValueChange={(next) => setValue("variant", String(next))}>
 								{Object.entries(VARIANT_OPTIONS).map(([key, label]) => {
 									const OptionIcon = CALLOUT_ICON_BY_VARIANT[key as CalloutVariant];

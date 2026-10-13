@@ -840,7 +840,7 @@ export function EntryEditorShell({
 									>
 										<ChevronDown aria-hidden className="size-3.5" />
 									</IconButton>
-									<DropdownMenuContent align="end" className="w-48">
+									<DropdownMenuContent align="end" className="min-w-48">
 										{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
 										{canResetPublishedAt && (
 											<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
@@ -871,7 +871,7 @@ export function EntryEditorShell({
 							>
 								<MoreHorizontal aria-hidden className="size-4" />
 							</IconButton>
-							<DropdownMenuContent align="end" className="w-56">
+							<DropdownMenuContent align="end" className="min-w-56">
 								{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 								{entry && !isTrashed && (
 									<>
