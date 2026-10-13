@@ -15,7 +15,7 @@ const mockStore = {
 	listEntries: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 }),
 	searchEntries: vi.fn().mockResolvedValue([{ id: "e1", title: "Hello", slug: "hello", status: "published" }]),
 	getEntry: vi.fn().mockImplementation((id: string) => {
-		if (id === "non-existent") {
+		if (id === "00000000-0000-4000-8000-000000000002") {
 			throw new CmsError("Not found", "not_found");
 		}
 		return Promise.resolve({
@@ -130,7 +130,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 	});
 
 	it("PATCH /entries/:id rejects without version with 428 version_required", async () => {
-		const req = new Request("http://localhost/api/monti/v1/entries/test-id", {
+		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000008", {
 			method: "PATCH",
 			headers: {
 				origin: "http://localhost",
@@ -141,14 +141,14 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			}),
 		});
 
-		const res = await patchEntry(req, { params: Promise.resolve({ id: "test-id" }), cms });
+		const res = await patchEntry(req, { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000008" }), cms });
 		expect(res.status).toBe(428);
 		const data = await res.json();
 		expect(data.code).toBe("version_required");
 	});
 
 	it("PATCH /entries/:id maps optimistic lock conflict to 409 and returns serverVersion", async () => {
-		const req = new Request("http://localhost/api/monti/v1/entries/test-id", {
+		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000008", {
 			method: "PATCH",
 			headers: {
 				origin: "http://localhost",
@@ -160,7 +160,7 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 			}),
 		});
 
-		const res = await patchEntry(req, { params: Promise.resolve({ id: "test-id" }), cms });
+		const res = await patchEntry(req, { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000008" }), cms });
 		expect(res.status).toBe(409);
 		const data = await res.json();
 		expect(data.code).toBe("conflict");

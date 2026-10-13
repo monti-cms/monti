@@ -9,7 +9,7 @@ const verifyAdmin = vi.fn();
 
 const mockStore = {
 	getEntry: vi.fn().mockImplementation((id: string) => {
-		if (id === "non-existent") {
+		if (id === "00000000-0000-4000-8000-000000000002") {
 			throw new CmsError("Not found", "not_found");
 		}
 		return Promise.resolve({ id, collection: "tag" });
@@ -37,12 +37,15 @@ describe("Relations API Contract", () => {
 	});
 
 	it("GET /entries/:id/relations returns incoming references for existing entry", async () => {
-		const req = new Request("http://localhost/api/monti/v1/entries/tag-1/relations");
-		const res = await getRelations(req, { params: Promise.resolve({ id: "tag-1" }), cms });
+		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000004/relations");
+		const res = await getRelations(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000004" }),
+			cms,
+		});
 
 		expect(res.status).toBe(200);
 		const data = await res.json();
-		expect(data.targetId).toBe("tag-1");
+		expect(data.targetId).toBe("00000000-0000-4000-8000-000000000004");
 		expect(data.total).toBe(1);
 		expect(data.incomingReferences[0].sourceId).toBe("post-1");
 		expect(data.incomingReferences[0].state).toBe("working");
@@ -50,14 +53,20 @@ describe("Relations API Contract", () => {
 
 	it("GET /entries/:id/relations requires admin access", async () => {
 		verifyAdmin.mockRejectedValueOnce(new AuthError("unauthorized", "Not logged in"));
-		const req = new Request("http://localhost/api/monti/v1/entries/tag-1/relations");
-		const res = await getRelations(req, { params: Promise.resolve({ id: "tag-1" }), cms });
+		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000004/relations");
+		const res = await getRelations(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000004" }),
+			cms,
+		});
 		expect(res.status).toBe(401);
 	});
 
 	it("GET /entries/:id/relations returns 404 for nonexistent entry", async () => {
-		const req = new Request("http://localhost/api/monti/v1/entries/non-existent/relations");
-		const res = await getRelations(req, { params: Promise.resolve({ id: "non-existent" }), cms });
+		const req = new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000002/relations");
+		const res = await getRelations(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000002" }),
+			cms,
+		});
 
 		expect(res.status).toBe(404);
 	});

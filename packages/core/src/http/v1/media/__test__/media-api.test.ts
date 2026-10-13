@@ -169,14 +169,14 @@ describe("Media Upload API Endpoints", () => {
 
 	it("POST /media/:id/complete returns 409 if file not yet uploaded to staging", async () => {
 		mockGetMediaAsset.mockResolvedValue({
-			id: "media-1",
+			id: "00000000-0000-4000-8000-000000000009",
 			status: "pending",
-			stagingKey: "staging/media-1/pic.png",
+			stagingKey: "staging/00000000-0000-4000-8000-000000000009/pic.png",
 			filename: "pic.png",
 		});
 		mockHeadFile.mockResolvedValue(null);
 
-		const req = new Request("http://localhost/api/monti/v1/media/media-1/complete", {
+		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009/complete", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -186,7 +186,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 
 		const res = await handleComplete(req, {
-			params: Promise.resolve({ id: "media-1" }),
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
 			cms,
 		});
 		expect(res.status).toBe(409);
@@ -194,13 +194,13 @@ describe("Media Upload API Endpoints", () => {
 
 	it("POST /media/:id/complete verifies magic bytes, promotes to finalKey, and marks ready", async () => {
 		mockGetMediaAsset.mockResolvedValue({
-			id: "media-1",
+			id: "00000000-0000-4000-8000-000000000009",
 			status: "pending",
-			stagingKey: "staging/media-1/pic.png",
+			stagingKey: "staging/00000000-0000-4000-8000-000000000009/pic.png",
 			filename: "pic.png",
 		});
 		mockHeadFile.mockResolvedValue({
-			key: "staging/media-1/pic.png",
+			key: "staging/00000000-0000-4000-8000-000000000009/pic.png",
 			contentType: "image/png",
 			contentLength: 24,
 			etag: "etag-123",
@@ -216,22 +216,22 @@ describe("Media Upload API Endpoints", () => {
 
 		mockReadFile.mockResolvedValue(pngBytes);
 		mockPromoteFile.mockResolvedValue({
-			key: "media/media-1/uuid.png",
+			key: "media/00000000-0000-4000-8000-000000000009/uuid.png",
 			contentType: "image/png",
 			contentLength: 24,
 		});
 		mockCompleteMediaAsset.mockResolvedValue({
-			id: "media-1",
+			id: "00000000-0000-4000-8000-000000000009",
 			status: "ready",
-			storageKey: "media/media-1/uuid.png",
+			storageKey: "media/00000000-0000-4000-8000-000000000009/uuid.png",
 			mimeType: "image/png",
 			byteSize: 24,
 			width: 256,
 			height: 256,
 		});
-		mockGetPublicUrl.mockReturnValue("https://media.example.com/media/media-1/uuid.png");
+		mockGetPublicUrl.mockReturnValue("https://media.example.com/media/00000000-0000-4000-8000-000000000009/uuid.png");
 
-		const req = new Request("http://localhost/api/monti/v1/media/media-1/complete", {
+		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009/complete", {
 			method: "POST",
 			headers: {
 				origin: "http://localhost",
@@ -241,13 +241,13 @@ describe("Media Upload API Endpoints", () => {
 		});
 
 		const res = await handleComplete(req, {
-			params: Promise.resolve({ id: "media-1" }),
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
 			cms,
 		});
 		expect(res.status).toBe(200);
 		const json = await res.json();
 		expect(json.status).toBe("ready");
-		expect(json.publicUrl).toBe("https://media.example.com/media/media-1/uuid.png");
+		expect(json.publicUrl).toBe("https://media.example.com/media/00000000-0000-4000-8000-000000000009/uuid.png");
 		expect(json.width).toBe(256);
 		expect(json.height).toBe(256);
 		expect(mockPromoteFile).toHaveBeenCalled();
@@ -256,7 +256,7 @@ describe("Media Upload API Endpoints", () => {
 
 	it("POST /media/:id/complete rejects images over 40 megapixels and marks the upload failed", async () => {
 		mockGetMediaAsset.mockResolvedValue({
-			id: "media-2",
+			id: "00000000-0000-4000-8000-000000000010",
 			status: "pending",
 			stagingKey: "staging/huge.png",
 			filename: "huge.png",
@@ -268,14 +268,17 @@ describe("Media Upload API Endpoints", () => {
 		pngBytes.set([0x00, 0x00, 0x13, 0x88], 20); // height 5000 → 50MP
 		mockReadFile.mockResolvedValue(pngBytes);
 
-		const req = new Request("http://localhost/api/monti/v1/media/media-2/complete", {
+		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000010/complete", {
 			method: "POST",
 			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
 		});
-		const res = await handleComplete(req, { params: Promise.resolve({ id: "media-2" }), cms });
+		const res = await handleComplete(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000010" }),
+			cms,
+		});
 		expect(res.status).toBe(413);
 		expect((await res.json()).code).toBe("too_many_pixels");
-		expect(mockFailMediaAsset).toHaveBeenCalledWith("media-2");
+		expect(mockFailMediaAsset).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000010");
 		expect(mockPromoteFile).not.toHaveBeenCalled();
 	});
 
@@ -320,20 +323,30 @@ describe("Media Upload API Endpoints", () => {
 		mockListMediaAssets.mockResolvedValue({
 			items: [
 				{
-					id: "media-1",
+					id: "00000000-0000-4000-8000-000000000009",
 					status: "ready",
 					filename: "pic.png",
 					mimeType: "image/png",
 					byteSize: 1024,
 					width: 800,
 					height: 600,
-					storageKey: "media/media-1/pic.png",
-					publicUrl: "https://media.example.com/media/media-1/pic.png",
+					storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
+					publicUrl: "https://media.example.com/media/00000000-0000-4000-8000-000000000009/pic.png",
 					createdAt: new Date(),
 					referencesCount: 2,
 					references: [
-						{ entryId: "entry-1", title: "First Post", collection: "post", state: "published" },
-						{ entryId: "entry-2", title: "Draft Memo", collection: "memo", state: "working" },
+						{
+							entryId: "00000000-0000-4000-8000-000000000011",
+							title: "First Post",
+							collection: "post",
+							state: "published",
+						},
+						{
+							entryId: "00000000-0000-4000-8000-000000000012",
+							title: "Draft Memo",
+							collection: "memo",
+							state: "working",
+						},
 					],
 				},
 			],
@@ -341,7 +354,7 @@ describe("Media Upload API Endpoints", () => {
 			page: 1,
 			pageSize: 25,
 		});
-		mockGetPublicUrl.mockReturnValue("https://media.example.com/media/media-1/pic.png");
+		mockGetPublicUrl.mockReturnValue("https://media.example.com/media/00000000-0000-4000-8000-000000000009/pic.png");
 
 		const req = new Request("http://localhost/api/monti/v1/media?search=pic&used=all", {
 			method: "GET",
@@ -358,14 +371,14 @@ describe("Media Upload API Endpoints", () => {
 
 	it("DELETE /media/:id rejects deletion with 409 if media is in use", async () => {
 		mockGetMediaAsset.mockResolvedValue({
-			id: "media-1",
+			id: "00000000-0000-4000-8000-000000000009",
 			status: "ready",
-			storageKey: "media/media-1/pic.png",
+			storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
 			filename: "pic.png",
 		});
 		mockBeginMediaDelete.mockRejectedValue(new CmsError("Media asset is in use", "in_use"));
 
-		const req = new Request("http://localhost/api/monti/v1/media/media-1", {
+		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009", {
 			method: "DELETE",
 			headers: {
 				origin: "http://localhost",
@@ -374,7 +387,7 @@ describe("Media Upload API Endpoints", () => {
 		});
 
 		const res = await handleDeleteMedia(req, {
-			params: Promise.resolve({ id: "media-1" }),
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
 			cms,
 		});
 		expect(res.status).toBe(409);
@@ -386,16 +399,16 @@ describe("Media Upload API Endpoints", () => {
 
 	it("DELETE /media/:id safely deletes unused media from R2 storage and DB", async () => {
 		mockBeginMediaDelete.mockResolvedValue({
-			id: "media-1",
+			id: "00000000-0000-4000-8000-000000000009",
 			status: "deleting",
-			storageKey: "media/media-1/pic.png",
-			stagingKey: "staging/media-1/pic.png",
+			storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
+			stagingKey: "staging/00000000-0000-4000-8000-000000000009/pic.png",
 			original: null,
 			filename: "pic.png",
 		});
 		mockFinalizeMediaDelete.mockResolvedValue(undefined);
 
-		const req = new Request("http://localhost/api/monti/v1/media/media-1", {
+		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009", {
 			method: "DELETE",
 			headers: {
 				origin: "http://localhost",
@@ -404,32 +417,35 @@ describe("Media Upload API Endpoints", () => {
 		});
 
 		const res = await handleDeleteMedia(req, {
-			params: Promise.resolve({ id: "media-1" }),
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
 			cms,
 		});
 		expect(res.status).toBe(200);
 		const json = await res.json();
 		expect(json.success).toBe(true);
-		expect(mockDeleteFile).toHaveBeenCalledWith({ key: "media/media-1/pic.png" });
-		expect(mockFinalizeMediaDelete).toHaveBeenCalledWith("media-1");
+		expect(mockDeleteFile).toHaveBeenCalledWith({ key: "media/00000000-0000-4000-8000-000000000009/pic.png" });
+		expect(mockFinalizeMediaDelete).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000009");
 	});
 
 	it("DELETE /media/:id keeps the deleting record when storage deletion fails so it can be retried", async () => {
 		mockBeginMediaDelete.mockResolvedValue({
-			id: "media-1",
+			id: "00000000-0000-4000-8000-000000000009",
 			status: "deleting",
-			storageKey: "media/media-1/pic.png",
+			storageKey: "media/00000000-0000-4000-8000-000000000009/pic.png",
 			stagingKey: null,
 			original: null,
 			filename: "pic.png",
 		});
 		mockDeleteFile.mockRejectedValue(new Error("R2 unavailable"));
 
-		const req = new Request("http://localhost/api/monti/v1/media/media-1", {
+		const req = new Request("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000009", {
 			method: "DELETE",
 			headers: { origin: "http://localhost", host: "localhost" },
 		});
-		const res = await handleDeleteMedia(req, { params: Promise.resolve({ id: "media-1" }), cms });
+		const res = await handleDeleteMedia(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000009" }),
+			cms,
+		});
 		expect(res.status).toBe(500);
 		expect(mockFinalizeMediaDelete).not.toHaveBeenCalled();
 	});
@@ -474,14 +490,14 @@ describe("attachment upload", () => {
 
 	it("on completion, verifies the actual content and stores it to download under the original name", async () => {
 		mockGetMediaAsset.mockResolvedValue({
-			id: "file-1",
+			id: "00000000-0000-4000-8000-000000000101",
 			status: "pending",
-			stagingKey: "staging/file-1/a.pdf",
+			stagingKey: "staging/00000000-0000-4000-8000-000000000101/a.pdf",
 			filename: "보고서.pdf",
 			mimeType: "application/pdf",
 		});
 		mockHeadFile.mockResolvedValue({
-			key: "staging/file-1/a.pdf",
+			key: "staging/00000000-0000-4000-8000-000000000101/a.pdf",
 			contentType: "application/pdf",
 			contentLength: 2048,
 			etag: "e1",
@@ -495,10 +511,13 @@ describe("attachment upload", () => {
 		}));
 		mockGetPublicUrl.mockReturnValue("https://cdn.example/file.pdf");
 
-		const res = await handleComplete(post("http://localhost/api/monti/v1/media/file-1/complete"), {
-			params: Promise.resolve({ id: "file-1" }),
-			cms,
-		});
+		const res = await handleComplete(
+			post("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000101/complete"),
+			{
+				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000101" }),
+				cms,
+			},
+		);
 		expect(res.status).toBe(200);
 		expect(mockPromoteFile).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -511,25 +530,28 @@ describe("attachment upload", () => {
 
 	it("makes a binary uploaded as a text file unusable", async () => {
 		mockGetMediaAsset.mockResolvedValue({
-			id: "file-2",
+			id: "00000000-0000-4000-8000-000000000102",
 			status: "pending",
-			stagingKey: "staging/file-2/a.txt",
+			stagingKey: "staging/00000000-0000-4000-8000-000000000102/a.txt",
 			filename: "notes.txt",
 			mimeType: "text/plain",
 		});
 		mockHeadFile.mockResolvedValue({
-			key: "staging/file-2/a.txt",
+			key: "staging/00000000-0000-4000-8000-000000000102/a.txt",
 			contentType: "text/plain",
 			contentLength: 4,
 			etag: "e2",
 		});
 		mockReadFile.mockResolvedValue(new Uint8Array([0x4d, 0x5a, 0x00, 0x90]));
 
-		const res = await handleComplete(post("http://localhost/api/monti/v1/media/file-2/complete"), {
-			params: Promise.resolve({ id: "file-2" }),
-			cms,
-		});
+		const res = await handleComplete(
+			post("http://localhost/api/monti/v1/media/00000000-0000-4000-8000-000000000102/complete"),
+			{
+				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000102" }),
+				cms,
+			},
+		);
 		expect(res.status).toBe(415);
-		expect(mockFailMediaAsset).toHaveBeenCalledWith("file-2");
+		expect(mockFailMediaAsset).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000102");
 	});
 });
