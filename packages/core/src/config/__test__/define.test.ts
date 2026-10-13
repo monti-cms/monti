@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
+import { createSite } from "../../site";
 import { pathsOverlap } from "../define";
 
 const title = fields.text({ label: "Title" });
@@ -122,6 +123,57 @@ describe("defineSite", () => {
 			fields: { title, summary: fields.text({ label: "Summary", fillFromBody: { maxLength: 0 } }) },
 		});
 		expect(() => defineSite({ collections: { article }, locales, defaultLocale: "en" })).toThrow(/maxLength/);
+	});
+
+	describe("editor.widths", () => {
+		const base = { collections: { topic }, locales, defaultLocale: "en" } as const;
+		const withWidths = (widths: { label: string; width: string }[]) => defineSite({ ...base, editor: { widths } });
+
+		it("keeps the steps in the order written, and the config works without them", () => {
+			const widths = [
+				{ label: "Desktop", width: "720px" },
+				{ label: "Phone", width: "375px" },
+			];
+			expect(withWidths(widths).editor?.widths).toEqual(widths);
+			expect(defineSite(base).editor).toBeUndefined();
+		});
+
+		it("accepts CSS lengths of every common shape", () => {
+			for (const width of [
+				"720px",
+				"48rem",
+				"60ch",
+				"80%",
+				"37.5em",
+				".5rem",
+				"min(100%, 60ch)",
+				"calc(100vw - 2rem)",
+			]) {
+				expect(() => withWidths([{ label: "A", width }]), width).not.toThrow();
+			}
+		});
+
+		it("rejects empty or invalid widths, naming the step", () => {
+			for (const width of ["", "  ", "720", "wide", "px", "-5px", "10px; color: red", "url(x)", "720 px"]) {
+				expect(() => withWidths([{ label: "A", width }]), width).toThrow(/editor\.widths\[0\]\.width/);
+			}
+		});
+
+		it("rejects empty and repeated labels and an empty list", () => {
+			expect(() => withWidths([{ label: " ", width: "720px" }])).toThrow(/editor\.widths\[0\]\.label/);
+			expect(() =>
+				withWidths([
+					{ label: "A", width: "720px" },
+					{ label: "A", width: "375px" },
+				]),
+			).toThrow(/editor\.widths\[1\]\.label.*unique/);
+			expect(() => withWidths([])).toThrow(/editor\.widths/);
+		});
+
+		it("reaches the browser snapshot", () => {
+			const widths = [{ label: "Desktop", width: "720px" }];
+			expect(createSite(withWidths(widths)).snapshot().editor?.widths).toEqual(widths);
+		});
 	});
 
 	it("checks the admin path, locale prefix, preview locale param and site home", () => {

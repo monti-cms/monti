@@ -80,6 +80,14 @@ export const cms = defineConfig({
 		}),
 	],
 
+	// The editor's width menu: the blog's real content width first (the editor starts there), then a phone width to check how a post wraps. "Full" is always added last.
+	editor: {
+		widths: [
+			{ label: "Desktop", width: "720px" },
+			{ label: "Mobile", width: "375px" },
+		],
+	},
+
 	// The content database: DATABASE_URL, and DATABASE_SCHEMA when the database is shared.
 	database: postgres(),
 

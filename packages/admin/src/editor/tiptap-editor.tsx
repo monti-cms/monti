@@ -65,7 +65,7 @@ import { CodeLinkBar } from "./code-block/code-link-bar";
 import { CustomBlockMenu, CustomBlockMenuItems, offeredBlocks } from "./custom-block-menu";
 import { documentKey } from "./document-key";
 import { endBlockDrag, findBlockDOM, refineBlock, resolveTargetBlock, startBlockDrag, startMarquee } from "./drag";
-import { EDITOR_WIDTHS, EditorWidthMenu, useEditorWidth } from "./editor-width";
+import { EditorWidthMenu, useEditorWidth } from "./editor-width";
 import { buildEditorExtensions } from "./extensions";
 import { FILE_NODE_NAME } from "./file-node";
 import { canInsertFootnote, insertFootnote } from "./footnote-nodes";
@@ -463,7 +463,7 @@ export function CmsEditor({
 	});
 	const isComposingRef = useRef(false);
 	const editorRef = useRef<Editor | null>(null);
-	const [width, setWidth] = useEditorWidth();
+	const { steps: widthSteps, step: widthStep, choose: chooseWidth } = useEditorWidth();
 
 	const [slash, setSlash] = useState<{ query: string; index: number; coords: Coords } | null>(null);
 	const slashRangeRef = useRef<Range | null>(null);
@@ -1077,7 +1077,7 @@ export function CmsEditor({
 			className="relative flex min-h-full w-full flex-1 flex-col bg-cms-background"
 			data-cms-editor-shell
 			// Title, body, and source use the same width (`--editor-width`).
-			style={{ "--editor-width": EDITOR_WIDTHS[width] } as CSSProperties}
+			style={{ "--editor-width": widthStep.width } as CSSProperties}
 			onCompositionStart={(event) => {
 				// Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
 				// If that input disappeared during composition, the end signal never came and saving was blocked.
@@ -1111,7 +1111,7 @@ export function CmsEditor({
 					<ToolbarRow editor={editor} entries={toolbarEntries} end={toolbarEnd} />
 					<div ref={asideRef} className="absolute inset-y-0 right-4 flex items-center gap-1">
 						{toolbarAside}
-						<EditorWidthMenu value={width} onChange={setWidth} />
+						<EditorWidthMenu steps={widthSteps} value={widthStep} onChange={chooseWidth} />
 					</div>
 				</div>
 				{!isSourceMode && <CodeLinkBar editor={editor} />}

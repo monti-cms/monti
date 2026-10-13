@@ -7,6 +7,7 @@ export * from "./blocks/active";
 export * from "./blocks/define";
 export * from "./blocks/definitions";
 export * from "./blocks/derive";
+export type { EditorConfig, EditorWidthStep } from "./config/define";
 export * from "./core/admin-features";
 export * from "./core/admin-paths";
 export * from "./core/api";
