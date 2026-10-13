@@ -10,7 +10,8 @@
 		"build": "next build",
 		"start": "next start",
 		"typecheck": "tsc --noEmit",
-		"db:migrate": "monti migrate"
+		"db:setup": "monti db:setup",
+		"db:migrate": "monti db:migrate"
 	},
 	"dependencies": {
 		"@monti-cms/ai": "file:vendor/monti-cms-ai.tgz",

@@ -37,6 +37,16 @@ export interface MigrationSummary {
 	readonly reconverted?: { readonly converted: number; readonly remaining: number };
 }
 
+/** What a database holds of Monti, for `monti db:setup` and `monti db:migrate`. */
+export interface DatabaseState {
+	/** The schema looked at. */
+	readonly schema: string;
+	/** Monti's tables are there (its migration record exists and has rows). */
+	readonly set: boolean;
+	/** How many tables the schema has, Monti's or not (0 when the schema does not exist). */
+	readonly tables: number;
+}
+
 /** Content store connection. */
 export interface DatabaseAdapter {
 	readonly name: string;
@@ -46,20 +56,22 @@ export interface DatabaseAdapter {
 	 */
 	createStore(options: { readonly site: Site }): ContentStore;
 	/**
-	 * Creates the tables or brings them to the latest shape (`monti migrate`). Running it repeatedly gives the same result. It may return how many steps it ran,
-	 * so `monti migrate` can say what it did.
+	 * Creates the tables or brings them to the latest shape (`monti db:migrate`). Running it repeatedly gives the same result. It may return how many steps it ran,
+	 * so `monti db:migrate` can say what it did.
 	 */
 	migrate(options: {
 		readonly site: Site;
 		readonly formats?: FormatRegistry;
-		/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti migrate --reconvert-bodies`). */
+		/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti db:migrate --reconvert-bodies`). */
 		readonly reconvertBodies?: boolean;
 		/** Called once for each body a step keeps as unreadable (or that is still unreadable after `reconvertBodies`). Without it the steps log one line per body. */
 		readonly onUnreadableBody?: (body: UnreadableBody) => void;
 		/** Called with the per-body detail lines of the steps (links left as they are, ...). Without it they are logged as warnings. */
 		readonly detail?: (line: string) => void;
 	}): Promise<MigrationSummary | undefined | void>;
-	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti migrate`. */
+	/** What the database holds of Monti right now, without changing anything. Used by `monti db:setup` and `monti db:migrate`; an adapter that cannot say leaves it out. */
+	state?(): Promise<DatabaseState>;
+	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti db:migrate`. */
 	describeTarget?(): string | undefined;
 	/** What the adapter decided on its own (which environment variable the URL came from, ...), for `monti doctor`. */
 	decisions?(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
@@ -235,7 +247,7 @@ export interface CmsServerConfig {
 	readonly secret?: string;
 	/**
 	 * Secrets `secret` replaced. Values encrypted with them stay readable and are encrypted again with `secret` the next time they are saved
-	 * (the AI plugin also does it on `monti migrate`). Drop a secret from the list only after its values are re-encrypted.
+	 * (the AI plugin also does it on `monti db:migrate`). Drop a secret from the list only after its values are re-encrypted.
 	 */
 	readonly previousSecrets?: readonly string[];
 	/**

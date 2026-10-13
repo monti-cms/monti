@@ -14,7 +14,8 @@ const help = async (...argv: string[]) => {
 const COMMANDS = [
 	"init",
 	"admin:reset-password",
-	"migrate",
+	"db:setup",
+	"db:migrate",
 	"events:retry",
 	"doctor",
 	"schema:extract",

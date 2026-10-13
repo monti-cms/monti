@@ -169,8 +169,8 @@ describe("createCms: an instance owns its server resources", () => {
 		expect(a.database.close).toHaveBeenCalledTimes(1);
 		expect(b.database.migrate).not.toHaveBeenCalled();
 		expect(b.database.close).not.toHaveBeenCalled();
-		expect(logs[0]).toContain("fake-a");
-		expect(logs.at(-1)).toContain("completed");
+		expect(logs.join("\n")).toContain("fake-a");
+		expect(logs.at(-1)).toBe("Done.");
 	});
 
 	it("keeps no global state: nothing is left on the global object", async () => {

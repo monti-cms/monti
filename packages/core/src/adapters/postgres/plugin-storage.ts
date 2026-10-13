@@ -157,7 +157,7 @@ function migrationOf(client: PoolClient, qSchema: string, plugin: string): Plugi
 /** Records of one-time steps share the core migration log. A plugin's step is recorded as `plugin:<plugin>:<name>`. */
 const stepRecord = (plugin: string, name: string) => `plugin:${plugin}:${name}`;
 
-/** The storage of one plugin in a Postgres schema. The `plugin_documents` table is created by the core migrations (`monti migrate`). */
+/** The storage of one plugin in a Postgres schema. The `plugin_documents` table is created by the core migrations (`monti db:migrate`). */
 export function createPluginStorage(pool: Pool, schema: string | undefined, plugin: string): PluginStorage {
 	assertStorageName("plugin", plugin);
 	const qSchema = validateSchemaName(schema);

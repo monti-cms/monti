@@ -13,6 +13,8 @@ export interface AppOptions {
 	/** Config file (`monti.config.ts`): the module that exports the CMS instance. */
 	readonly config?: string;
 	readonly log?: (message: string) => void;
+	/** Do not print the `env:` and `config:` lines (the commands that open with a line of their own). */
+	readonly quiet?: boolean;
 }
 
 const isCms = (value: unknown): value is Cms =>
@@ -47,8 +49,8 @@ export async function importCms(cwd: string, configPath: string): Promise<Cms> {
 export async function loadApp(options: AppOptions): Promise<Cms> {
 	const log = options.log ?? console.log;
 	const loaded = loadEnvFiles(options.cwd, options.envFiles);
-	if (loaded.length > 0) log(`env: ${loaded.join(", ")}`);
+	if (loaded.length > 0 && !options.quiet) log(`env: ${loaded.join(", ")}`);
 	const configPath = resolveConfigPath(options.cwd, options.config);
-	log(`config: ${configPath}`);
+	if (!options.quiet) log(`config: ${configPath}`);
 	return importCms(options.cwd, configPath);
 }

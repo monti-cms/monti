@@ -6,7 +6,7 @@ import { DOCTOR_HELP } from "./doctor/command";
  */
 
 const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): asks a few questions, writes Monti's own new files (monti.config.ts, monti.schema.ts, the
-            admin pages, the API route and a commented .env.example), installs the packages, and prints what is left (.env.local, migrate).
+            admin pages, the API route and a commented .env.example), installs the packages, and prints what is left (.env.local, db:setup).
             It makes two edits to your own files and lists them under "Changed:": it wraps the export of next.config in withCms() and adds
             suppressHydrationWarning to the <html> of the root layout (a file in a shape it cannot edit safely is left alone and the step is in the list).
             It writes no .env.local. A file that already exists is never overwritten without a yes.
@@ -37,10 +37,18 @@ const ADMIN_RESET_PASSWORD_HELP = `  admin:reset-password    Set a new password 
             and writes it straight to the database of monti.config.ts; there is no mail, so this is the way to replace a forgotten password. The first admin is
             created on the admin's own screen, not here.
               --email <email>       The admin's email (asked when left out)
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for db:migrate
 `;
 
-const MIGRATE_HELP = `  migrate   Create or update the tables in the database of monti.config.ts, and say where (host, database, schema) and how many steps ran
+const DB_SETUP_HELP = `  db:setup  First-time setup: create Monti's tables in the database of monti.config.ts (and the schema, when DATABASE_SCHEMA names one that is missing).
+            Run it once. When the tables are already there it changes nothing and says so
+              --env-file <file>     Env file to read (repeatable, default .env.local and .env)
+              --no-env-file         Don't read any env file
+              --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
+`;
+
+const DB_MIGRATE_HELP = `  db:migrate  After you update Monti: bring the tables up to date with this version, and say where (host, database, schema) and how many steps ran.
+            When nothing is set up yet it tells you to run db:setup first
               --env-file <file>     Env file to read (repeatable, default .env.local and .env)
               --no-env-file         Don't read any env file
               --config <file>       The config file that exports the CMS instance (default: ./monti.config.ts, ./src/monti.config.ts)
@@ -52,10 +60,10 @@ const MIGRATE_HELP = `  migrate   Create or update the tables in the database of
 const EVENTS_RETRY_HELP = `  events:retry    Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)
               --all                 Also try the failed deliveries that are not due yet
               --limit <n>           Most deliveries to try (default 100)
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for db:migrate
 `;
 
-const PLUGIN_HELP = `  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for migrate (for example git-sync:pull). Add --help for its options
+const PLUGIN_HELP = `  <plugin>:<command>    Run a command a plugin adds, with the app loaded as for db:migrate (for example git-sync:pull). Add --help for its options
 `;
 
 const SCHEMA_EXTRACT_HELP = `  schema:extract  Write the data part of the config file to monti.schema.ts and list what stays in code
@@ -68,19 +76,20 @@ const SCHEMA_EXTRACT_HELP = `  schema:extract  Write the data part of the config
 const SCHEMA_DIFF_HELP = `  schema:diff     Compare the schema with the one last applied to the database and list the stored entries each change touches (read-only)
               --schema <file>       Schema file (default: ./monti.schema.ts, ./src/monti.schema.ts)
               --check               Exit 1 when there is anything to apply
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for db:migrate
 `;
 
 const SCHEMA_APPLY_HELP = `  schema:apply    Run the data transforms of the schema file (migrations) once each, record the schema, and raise schemaVersion in the file when the schema changed
               --schema <file>       Schema file (default: ./monti.schema.ts, ./src/monti.schema.ts)
               --dry-run             Run everything in a transaction that is rolled back, and write nothing
-              --env-file <file>, --no-env-file, --config <file>   As for migrate
+              --env-file <file>, --no-env-file, --config <file>   As for db:migrate
 `;
 
 /** Commands that have a section of their own, in the order `monti --help` lists them. */
 const SECTIONS: readonly (readonly [string, string])[] = [
 	["init", INIT_HELP],
-	["migrate", MIGRATE_HELP],
+	["db:setup", DB_SETUP_HELP],
+	["db:migrate", DB_MIGRATE_HELP],
 	["admin:reset-password", ADMIN_RESET_PASSWORD_HELP],
 	["events:retry", EVENTS_RETRY_HELP],
 	["<plugin>", PLUGIN_HELP],

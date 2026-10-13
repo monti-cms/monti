@@ -4,7 +4,7 @@ import type { DatabaseAdapter, MigrationSummary, UnreadableBody } from "../../se
 import { createCms } from "../create-cms";
 import { describeUnreadable, mergeUnreadable } from "../migration-report";
 
-/** What `monti migrate` says about bodies that could not be read: a short plain summary by default, every body with `verbose`. */
+/** What `monti db:migrate` says about bodies that could not be read: a short plain summary by default, every body with `verbose`. */
 
 const ACORN = "Could not parse expression with acorn";
 const body = (id: number, over: Partial<UnreadableBody> = {}): UnreadableBody => ({
@@ -59,7 +59,7 @@ async function migrateWith(
 const published = (id: number) => body(id, { kind: "published", hasDirective: true });
 const drafts = (from: number, count: number) => Array.from({ length: count }, (_, index) => body(from + index));
 
-describe("monti migrate: bodies that could not be read", () => {
+describe("monti db:migrate: bodies that could not be read", () => {
 	it("says in a few plain lines how many, which kind, and that nothing is lost; no line per body", async () => {
 		const found = [...Array.from({ length: 12 }, (_, i) => published(i)), ...drafts(100, 27)];
 		const lines = await migrateWith(databaseFinding(found));
@@ -79,11 +79,11 @@ describe("monti migrate: bodies that could not be read", () => {
 		expect(withBlocks).toContain("::: blocks (callout, tabs, ...)");
 		expect(withBlocks).toContain("mdx({ syntax: [directiveSyntax()] })");
 		expect(withBlocks).toContain("@monti-cms/syntax-directive");
-		expect(withBlocks).toContain("monti migrate --reconvert-bodies");
+		expect(withBlocks).toContain("monti db:migrate --reconvert-bodies");
 
 		const without = (await migrateWith(databaseFinding(drafts(1, 3)))).join("\n");
 		expect(without).not.toMatch(/:::|directiveSyntax|syntax-directive/);
-		expect(without).toContain("monti migrate --reconvert-bodies");
+		expect(without).toContain("monti db:migrate --reconvert-bodies");
 	});
 
 	it("--verbose keeps the per-body detail the steps report, and lists every body", async () => {

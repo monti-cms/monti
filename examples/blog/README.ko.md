@@ -14,7 +14,7 @@ pnpm example:pack
 # 이 폴더에서
 pnpm install --ignore-workspace
 cp .env.example .env.local   # DATABASE_URL과 MONTI_SECRET을 채운다(나머지는 운영 환경의 GitHub 로그인용)
-pnpm db:migrate               # = monti migrate
+pnpm db:setup                 # = monti db:setup (처음 한 번. Monti를 올린 뒤에는 pnpm db:migrate)
 pnpm dev                     # http://localhost:3000/studio
 ```
 
@@ -103,7 +103,7 @@ function SiteCalloutView() {
 ```sh
 export DATABASE_URL="$CMS_TEST_DATABASE_URL" DATABASE_SCHEMA=cms_preview_example MONTI_SECRET=local-only
 # (스키마 cms_preview_example을 만든 뒤)
-pnpm exec monti migrate --no-env-file
+pnpm exec monti db:setup --no-env-file
 pnpm exec next dev -p 3997   # http://localhost:3997/studio
 ```
 
@@ -114,7 +114,7 @@ pnpm exec next dev -p 3997   # http://localhost:3997/studio
 변경한 뒤에는 로컬 미리보기에서 "CMS elements" 샘플 글을 열어 눈으로 확인한다. 저장소 루트에서:
 
 ```sh
-pnpm preview:example               # 패키지 묶기, 예제 설치, 스키마 초기화, 마이그레이션, 시드
+pnpm preview:example               # 패키지 묶기, 예제 설치, 스키마 초기화, 표 만들기, 시드
 pnpm preview:example --seed-only   # 같지만 묶기와 설치는 건너뜀
 cd examples/blog && pnpm exec next dev -p 3997
 ```

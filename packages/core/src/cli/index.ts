@@ -1,11 +1,11 @@
 import { parseArgs } from "node:util";
 import { type AdminPrompts, adminResetPassword } from "./admin-command";
+import { dbMigrate, dbSetup } from "./db";
 import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
 import { HELP, helpFor } from "./help";
 import { runInitCommand } from "./init-command";
 import type { Prompter } from "./init-prompts";
-import { migrate } from "./migrate";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
 import { schemaApply, schemaDiff } from "./schema-apply";
 import { extractSchema, formatExtractReport } from "./schema-extract";
@@ -13,9 +13,10 @@ import { extractSchema, formatExtractReport } from "./schema-extract";
 /**
  * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
  *
- * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and runs the migrations. See `monti init --help`.
+ * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and prints what is left. See `monti init --help`.
  * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
- * - `monti migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: creates the DB tables. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
+ * - `monti db:setup [--env-file .env.local] [--no-env-file] [--config <file>]`: first-time setup: creates Monti's tables in an empty database (changes nothing when they are already there).
+ * - `monti db:migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: after updating Monti, brings the tables up to date. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
  * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
@@ -27,6 +28,7 @@ import { extractSchema, formatExtractReport } from "./schema-extract";
 export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate";
 export { type AdminPrompts, adminResetPassword, type ResetPasswordOptions } from "./admin-command";
 export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths";
+export { dbMigrate, dbSetup, type MigrateOptions } from "./db";
 export { unifiedDiff } from "./diff";
 export {
 	DOCTOR_HELP,
@@ -58,7 +60,6 @@ export {
 } from "./init";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect";
 export { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
-export { type MigrateOptions, migrate } from "./migrate";
 export { isPluginCommandName, type PluginCommandRun, runPluginCommand } from "./plugin-command";
 export {
 	formatApplyResult,
@@ -130,7 +131,24 @@ export async function runCli(
 				error: io.error,
 			});
 		}
-		if (command === "migrate") {
+		if (command === "db:setup") {
+			const { values } = parseArgs({
+				args: [...rest],
+				options: {
+					"env-file": { type: "string", multiple: true },
+					"no-env-file": { type: "boolean" },
+					config: { type: "string" },
+				},
+			});
+			const ok = await dbSetup({
+				cwd: io.cwd,
+				envFiles: values["no-env-file"] ? [] : values["env-file"],
+				config: values.config,
+				log: io.log,
+			});
+			return ok ? 0 : 1;
+		}
+		if (command === "db:migrate") {
 			const { values } = parseArgs({
 				args: [...rest],
 				options: {
@@ -141,7 +159,7 @@ export async function runCli(
 					"reconvert-bodies": { type: "boolean" },
 				},
 			});
-			const ok = await migrate({
+			const ok = await dbMigrate({
 				cwd: io.cwd,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
 				config: values.config,

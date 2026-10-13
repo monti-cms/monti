@@ -14,7 +14,7 @@ import { createAiStore } from "../store";
 
 /**
  * The AI plugin used to create its own tables (`ai_action_overrides`, `ai_custom_actions`, `ai_settings`) in the site's database. It now keeps the same data in the plugin
- * storage (`cms.storage("ai")`). A site that already has data must find all of it after `monti migrate`, as it was.
+ * storage (`cms.storage("ai")`). A site that already has data must find all of it after `monti db:migrate`, as it was.
  */
 describe("AI data migration from the plugin's own tables to the plugin storage", () => {
 	let pool: Pool;

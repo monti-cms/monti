@@ -2,8 +2,8 @@
 /**
  * Prepares a local preview of the example app (`examples/blog`) with the showcase posts, memo and series in it, to look at on screen after a change.
  *
- *   pnpm preview:example               # pack the packages, install the example, reset the schema, migrate, seed
- *   pnpm preview:example --seed-only   # skip packing and installing; reset the schema, migrate and seed again
+ *   pnpm preview:example               # pack the packages, install the example, reset the schema, set up the tables, seed
+ *   pnpm preview:example --seed-only   # skip packing and installing; reset the schema, set up the tables and seed again
  *   pnpm preview:example --port 4000   # print URLs for another port than 3997 (when 3997 is busy)
  *
  * It only ever touches the schema `cms_preview_example` of the test database (`CMS_TEST_DATABASE_URL`, read from the repo's `.env.local` or the
@@ -82,7 +82,7 @@ if (replacedLink)
 console.log("wrote examples/blog/.env.local");
 
 // 5. Tables and content.
-run("pnpm", ["exec", "monti", "migrate", "--no-env-file"], app, env);
+run("pnpm", ["exec", "monti", "db:setup", "--no-env-file"], app, env);
 run("pnpm", ["exec", "tsx", "--env-file=.env.local", "showcase/seed.ts", PORT], app, env);
 
 console.log(

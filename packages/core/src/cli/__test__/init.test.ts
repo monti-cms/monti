@@ -124,7 +124,7 @@ describe("monti init in a fresh create-next-app", () => {
 		// The summary names each edited file with the exact change, next to "Created:".
 		const text = formatInitReport(report);
 		expect(text).toContain(
-			"Changed:\n  - next.config.ts \u2014 wrapped the export in withCms(), added the import from @monti-cms/nextjs/config\n  - app/layout.tsx \u2014 added suppressHydrationWarning to <html>\n  - .gitignore \u2014 added .env.local (it holds your secrets) and .monti/ (monti migrate writes its logs there)",
+			"Changed:\n  - next.config.ts \u2014 wrapped the export in withCms(), added the import from @monti-cms/nextjs/config\n  - app/layout.tsx \u2014 added suppressHydrationWarning to <html>\n  - .gitignore \u2014 added .env.local (it holds your secrets) and .monti/ (monti db:migrate writes its logs there)",
 		);
 		expect(text.indexOf("Created:")).toBeLessThan(text.indexOf("Changed:"));
 	});
@@ -265,10 +265,10 @@ describe("monti init in a fresh create-next-app", () => {
 		const report = await initProject({ cwd: fixtureApp(), host: fakeHost() });
 		const next = report.next;
 
-		// The install ran and init edited next.config and the layout, so neither is in the list. The order is: .env.local, migrate, doctor, dev, then the notes.
+		// The install ran and init edited next.config and the layout, so neither is in the list. The order is: .env.local, db:setup, doctor, dev, then the notes.
 		expect(next.map((step) => step.split("\n")[0])).toEqual([
 			"Create .env.local from the example and fill it in (.env.example says what each value is and where to get it):",
-			"Create the tables: pnpm exec monti migrate",
+			"Create Monti's tables in your database (once): pnpm exec monti db:setup",
 			"Check the setup: pnpm exec monti doctor",
 			"Start the app: pnpm dev, then open http://localhost:3000/studio",
 			expect.stringContaining("Right after you deploy, open <your site>/studio and create the first admin"),
@@ -512,7 +512,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(read(dir, ".gitignore")).toBe("node_modules\n.env.local\n.monti/\n");
 		expect(first.changed).toContainEqual({
 			file: ".gitignore",
-			change: "added .monti/ (monti migrate writes its logs there)",
+			change: "added .monti/ (monti db:migrate writes its logs there)",
 		});
 		const second = await initProject({ cwd: dir, ...quiet() });
 		expect(read(dir, ".gitignore")).toBe("node_modules\n.env.local\n.monti/\n");
@@ -590,7 +590,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(read(none, ".gitignore")).toBe(".env.local\n.monti/\n");
 		expect(report.changed).toContainEqual({
 			file: ".gitignore",
-			change: "created it with .env.local (it holds your secrets) and .monti/ (monti migrate writes its logs there)",
+			change: "created it with .env.local (it holds your secrets) and .monti/ (monti db:migrate writes its logs there)",
 		});
 		expect(report.next.join("\n")).not.toContain("out of git");
 
@@ -604,7 +604,7 @@ describe("monti init tailors what is left to the app", () => {
 		expect(read(covered, ".gitignore")).toBe(".env*.local\n.monti/\n");
 		expect(third.changed).toContainEqual({
 			file: ".gitignore",
-			change: "added .monti/ (monti migrate writes its logs there)",
+			change: "added .monti/ (monti db:migrate writes its logs there)",
 		});
 	});
 
@@ -630,7 +630,7 @@ describe("monti init tailors what is left to the app", () => {
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
 		expect(host.install.mock.calls[0]?.[0].command).toBe("yarn");
-		expect(report.next.join("\n")).toContain("Create the tables: yarn monti migrate");
+		expect(report.next.join("\n")).toContain("Create Monti's tables in your database (once): yarn monti db:setup");
 		expect(report.next.join("\n")).toContain("Start the app: yarn dev");
 		const bun = await initProject({
 			cwd: fixtureApp({ "pnpm-lock.yaml": null }),

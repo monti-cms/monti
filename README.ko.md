@@ -17,12 +17,12 @@ pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.6&path:/cor
 pnpm exec monti init
 ```
 
-앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.ts`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **앱의 파일 셋을 고치고, 고친 파일과 정확한 변경을 "Changed:" 아래에 하나씩 적어 준다**(`next.config`를 `withCms`로 감싸기, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`, `.gitignore`의 `.env.local`·`.monti/`). 안전하게 고칠 수 없는 모양의 파일은 건드리지 않고 이유와 함께 할 일 목록에 넣는다. `.env.local`은 쓰지 않는다. 남은 일은 복사할 내용 그대로 번호를 붙여 쉬운 말로 적어 준다(`cp .env.example .env.local`, 그다음 `monti migrate`, `monti doctor`, `pnpm dev`). 데이터베이스는 건드리지 않는다.
+앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.ts`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **앱의 파일 셋을 고치고, 고친 파일과 정확한 변경을 "Changed:" 아래에 하나씩 적어 준다**(`next.config`를 `withCms`로 감싸기, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`, `.gitignore`의 `.env.local`·`.monti/`). 안전하게 고칠 수 없는 모양의 파일은 건드리지 않고 이유와 함께 할 일 목록에 넣는다. `.env.local`은 쓰지 않는다. 남은 일은 복사할 내용 그대로 번호를 붙여 쉬운 말로 적어 준다(`cp .env.example .env.local`, 그다음 `monti db:setup`, `monti doctor`, `pnpm dev`). 데이터베이스는 건드리지 않는다.
 
 전체 흐름:
 
 ```text
-설치 → monti init → monti migrate → monti doctor → pnpm dev
+설치 → monti init → monti db:setup → monti doctor → pnpm dev
 ```
 
 pnpm 12라면 1단계 전에 `pnpm-workspace.yaml`에 이렇게 적는다(core가 쓰는 `tsx`가 esbuild를 가져오고, pnpm 12는 그 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
@@ -52,7 +52,7 @@ allowBuilds:
 pnpm exec monti doctor
 ```
 
-설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·마이그레이션됐는지(미적용 마이그레이션이 몇 개인지, `monti migrate`), `MONTI_SECRET`, 로그인 설정(이메일·비밀번호면 관리자 계정이 이미 있는지, GitHub이면 등록할 콜백 URL과 관리자 id, 그리고 `SITE_URL`), Next 파일 셋, Monti가 스스로 정한 값과 그 출처, `upgrade/` 검사(개편 전 설정에서 올리는 사이트만 해당하며 소유자의 블로그 마이그레이션(#93) 뒤에 지운다). `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
+설정 전체를 점검하고 검사마다 `ok`, `warn`, `FAIL`로 보여 준다. 경고와 실패마다 무엇이 잘못됐는지, 어디(파일이나 환경 변수)인지, 어떻게 고치는지를 적는다: 설정 파일과 스키마 파일, `DATABASE_URL`과 데이터베이스에 닿는지·표가 만들어져 있는지(표가 아직 없으면 `monti db:setup`, 업데이트 뒤 미적용 마이그레이션이 있으면 `monti db:migrate`), `MONTI_SECRET`, 로그인 설정(이메일·비밀번호면 관리자 계정이 이미 있는지, GitHub이면 등록할 콜백 URL과 관리자 id, 그리고 `SITE_URL`), Next 파일 셋, Monti가 스스로 정한 값과 그 출처, `upgrade/` 검사(개편 전 설정에서 올리는 사이트만 해당하며 소유자의 블로그 마이그레이션(#93) 뒤에 지운다). `--json`은 도구를 위해 결과를 찍으며, 검사가 실패하면 종료 코드가 1이다. 패키지가 던지는 오류도 같은 내용을 같은 말투로 알려 준다. [core README](packages/core/README.ko.md)의 "문제 해결: `monti doctor`"를 본다.
 
 ## 패키지
 

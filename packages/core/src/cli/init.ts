@@ -378,7 +378,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 			layoutManualStep(rootLayout, reason),
 		);
 	}
-	// .env.local holds the secrets and migrate writes its logs under .monti/: neither belongs in git.
+	// .env.local holds the secrets and db:migrate writes its logs under .monti/: neither belongs in git.
 	const gitignore = writer.exists(".gitignore") ? writer.read(".gitignore") : undefined;
 	planEdit(".gitignore", ignoreForMonti(gitignore), () => "");
 	planned.push(
@@ -479,7 +479,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		].join("\n"),
 	);
 	todo.push(
-		`Create the tables: ${exec(manager, "migrate")}`,
+		`Create Monti's tables in your database (once): ${exec(manager, "db:setup")}`,
 		`Check the setup: ${exec(manager, "doctor")}\nIt lists every check as ok, warn or fail, and \`monti doctor\` will tell you if any of the steps above is missing.`,
 		`Start the app: ${script(manager, "dev")}, then open ${answers.siteUrl}${answers.adminPath}`,
 	);
