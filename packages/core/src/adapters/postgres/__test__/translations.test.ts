@@ -14,7 +14,7 @@ describe("translation groups (postgres storage)", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let createPost: ReturnType<typeof translationHelpers>["createPost"];
 
 	beforeAll(async () => {

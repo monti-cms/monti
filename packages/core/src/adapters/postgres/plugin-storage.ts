@@ -17,8 +17,9 @@ import type {
 	StorageItem,
 	StorageWriteOptions,
 } from "../../plugin/storage";
+import type { TransactionStorage } from "../../server/define";
 import { createDb, type Db, dbOn } from "./db/kysely";
-import { validateSchemaName } from "./store/context";
+import { validateSchemaName, withTransaction } from "./store/context";
 
 interface DocumentRow {
 	key: string;
@@ -128,58 +129,43 @@ function migrationOf(client: PoolClient, qSchema: string, plugin: string): Plugi
 /** Records of one-time steps share the core migration log. A plugin's step is recorded as `plugin:<plugin>:<name>`. */
 const stepRecord = (plugin: string, name: string) => `plugin:${plugin}:${name}`;
 
+/** The storage of one plugin over a `Db`: the one factory behind both the pool's storage and a transaction's. */
+function storageOn(db: Db, plugin: string, once: PluginStorage["once"]): PluginStorage {
+	assertStorageName("plugin", plugin);
+	return { plugin, collection: (name) => collectionOf(db, plugin, name), once };
+}
+
 /** The storage of one plugin in a Postgres schema. The `plugin_documents` table is created by the core migrations (`monti db:migrate`). */
 export function createPluginStorage(pool: Pool, schema: string | undefined, plugin: string): PluginStorage {
-	assertStorageName("plugin", plugin);
 	const qSchema = validateSchemaName(schema);
-	const db = createDb(pool, qSchema);
-	return {
-		plugin,
-		collection: (name) => collectionOf(db, plugin, name),
-		once: async (name, step) => {
-			assertMigrationName(name);
-			let ran = false;
-			await (await loadSchemaModule()).runOnce(pool, { schema: qSchema }, stepRecord(plugin, name), async (client) => {
-				await step(migrationOf(client, qSchema, plugin));
-				ran = true;
-			});
-			return ran;
-		},
-	};
+	return storageOn(createDb(pool, qSchema), plugin, async (name, step) => {
+		assertMigrationName(name);
+		let ran = false;
+		await (await loadSchemaModule()).runOnce(pool, { schema: qSchema }, stepRecord(plugin, name), async (client) => {
+			await step(migrationOf(client, qSchema, plugin));
+			ran = true;
+		});
+		return ran;
+	});
 }
 
 /**
- * Runs `work` in one transaction. The storage it hands out reads and writes through the transaction's client, for any plugin, so a write to one plugin's collection and
- * one to another's (the core key store and a plugin's settings) are kept or dropped together. `once` is not available inside it.
+ * Runs `work` in one transaction (`withTransaction`). The storage it hands out reads and writes through the transaction's client, for any plugin, so a write to
+ * one plugin's collection and one to another's (the core key store and a plugin's settings) are kept or dropped together. `once` is not available inside it.
  */
-export async function inPluginTransaction<T>(
+export function inPluginTransaction<T>(
 	pool: Pool,
 	schema: string | undefined,
-	work: (tx: { pluginStorage(plugin: string): PluginStorage }) => Promise<T>,
+	work: (tx: TransactionStorage) => Promise<T>,
 ): Promise<T> {
 	const qSchema = validateSchemaName(schema);
-	const client = await pool.connect();
-	try {
-		await client.query("BEGIN");
+	return withTransaction(pool, (client) => {
 		const db = dbOn(client, qSchema);
-		const result = await work({
-			pluginStorage: (plugin) => {
-				assertStorageName("plugin", plugin);
-				return {
-					plugin,
-					collection: (name) => collectionOf(db, plugin, name),
-					once: async () => {
-						throw new Error("plugin storage: `once` cannot run inside a transaction");
-					},
-				};
-			},
+		return work({
+			pluginStorage: (plugin) =>
+				storageOn(db, plugin, async () => {
+					throw new Error("plugin storage: `once` cannot run inside a transaction");
+				}),
 		});
-		await client.query("COMMIT");
-		return result;
-	} catch (error) {
-		await client.query("ROLLBACK").catch(() => {});
-		throw error;
-	} finally {
-		client.release();
-	}
+	});
 }

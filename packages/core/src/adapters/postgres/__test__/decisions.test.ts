@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { postgres } from "../adapter";
 
 const decide = (options: Parameters<typeof postgres>[0], env: Record<string, string | undefined>) =>
-	Object.fromEntries((postgres(options).decisions?.(env) ?? []).map((item) => [item.topic, item]));
+	Object.fromEntries((postgres(options).inspector?.decisions(env) ?? []).map((item) => [item.topic, item]));
 
 describe("postgres decisions", () => {
 	it("reports a URL given in the config", () => {
@@ -45,8 +45,8 @@ describe("postgres decisions", () => {
 
 	it("never prints the password", () => {
 		const text = JSON.stringify([
-			...(postgres({ connectionString: "postgres://user:s3cr3t-pw@db.test/shop" }).decisions?.({}) ?? []),
-			...(postgres().decisions?.({ DATABASE_URL: "postgres://user:s3cr3t-pw@db.test/shop" }) ?? []),
+			...(postgres({ connectionString: "postgres://user:s3cr3t-pw@db.test/shop" }).inspector?.decisions({}) ?? []),
+			...(postgres().inspector?.decisions({ DATABASE_URL: "postgres://user:s3cr3t-pw@db.test/shop" }) ?? []),
 		]);
 		expect(text).not.toContain("s3cr3t-pw");
 		expect(text).not.toContain("user:");

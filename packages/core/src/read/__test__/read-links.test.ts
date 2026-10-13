@@ -29,7 +29,7 @@ describe("links by entry id", () => {
 	let schemaName: string;
 	let store: ContentStore;
 	let cms: Cms;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let relationTarget: (to: Collection) => Promise<string>;
 	let rawCreate: ContentStore["createEntryWithReferences"];
 
@@ -42,7 +42,7 @@ describe("links by entry id", () => {
 		const filled = fillRequiredMetadata(store);
 		relationTarget = filled.relationTarget as typeof relationTarget;
 		rawCreate = filled.raw.createEntryWithReferences;
-		service = createContentService<Entry>(store, {
+		service = createContentService(store, {
 			site: testSite,
 			formats: async () => createFormatRegistry([paragraphsFormat]),
 		});

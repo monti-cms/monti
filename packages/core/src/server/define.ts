@@ -33,6 +33,26 @@ export interface DatabaseState {
 	readonly tables: number;
 }
 
+/** What an adapter can say about itself without changing anything: `monti doctor`, `db:setup` and `db:migrate` read it. An adapter that cannot say leaves it out. */
+export interface DatabaseInspector {
+	/** What the database holds of Monti right now. */
+	state(): Promise<DatabaseState>;
+	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti db:migrate`. */
+	describeTarget(): string | undefined;
+	/** What the adapter decided on its own (which environment variable the URL came from, ...), for `monti doctor`. */
+	decisions(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
+	/**
+	 * What `monti doctor` reads to check the connection: the connection string and the schema name the adapter was given in `monti.config.ts`. A value left
+	 * out here is read from the environment (`DATABASE_URL`, `DATABASE_SCHEMA`). Read only: it must not open a connection.
+	 */
+	settings(): { readonly connectionString?: string | undefined; readonly schema?: string | undefined };
+}
+
+/** The storage of any plugin inside one transaction (see {@link DatabaseAdapter.transaction}). */
+export interface TransactionStorage {
+	pluginStorage(plugin: string): PluginStorage;
+}
+
 /** Content store connection. */
 export interface DatabaseAdapter {
 	readonly name: string;
@@ -49,12 +69,6 @@ export interface DatabaseAdapter {
 		readonly site: Site;
 		readonly formats?: FormatRegistry;
 	}): Promise<MigrationSummary | undefined | void>;
-	/** What the database holds of Monti right now, without changing anything. Used by `monti db:setup` and `monti db:migrate`; an adapter that cannot say leaves it out. */
-	state?(): Promise<DatabaseState>;
-	/** Where the adapter connects, without secrets (for `postgres()`: `host:port/database, schema "name"`), shown by `monti db:migrate`. */
-	describeTarget?(): string | undefined;
-	/** What the adapter decided on its own (which environment variable the URL came from, ...), for `monti doctor`. */
-	decisions?(env: Readonly<Record<string, string | undefined>>): readonly Decision[];
 	/**
 	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
 	 * An adapter implements it over its own database; plugins never see the database.
@@ -62,16 +76,13 @@ export interface DatabaseAdapter {
 	pluginStorage(plugin: string): PluginStorage;
 	/**
 	 * Runs `work` in one database transaction over the storage of any plugin (`tx.pluginStorage(name)`; the core's own key store included): everything it writes is kept together,
-	 * and if `work` throws none of it is. `once` is not available inside it. This is what makes "create a key and the item that uses it" one step; an adapter without it cannot save a new key together with the item that uses it.
+	 * and if `work` throws none of it is. `once` is not available inside it. This is what makes "create a key and the item that uses it" one step.
 	 */
-	transaction?<T>(work: (tx: { pluginStorage(plugin: string): PluginStorage }) => Promise<T>): Promise<T>;
+	transaction<T>(work: (tx: TransactionStorage) => Promise<T>): Promise<T>;
+	/** What the adapter can say about itself for the command-line tool. Optional. */
+	readonly inspector?: DatabaseInspector;
 	/** Closes the connection (when the command-line tool finishes). */
 	close?(): Promise<void>;
-	/**
-	 * What `monti doctor` reads to check the connection: the connection string and the schema name the adapter was given in `monti.config.ts`. A value left
-	 * out here is read from the environment (`DATABASE_URL`, `DATABASE_SCHEMA`). Read only: it must not open a connection.
-	 */
-	settings?(): { readonly connectionString?: string | undefined; readonly schema?: string | undefined };
 }
 
 /** Media (image and attachment) store connection. */

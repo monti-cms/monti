@@ -50,7 +50,7 @@ describe("cms.read returns the document", () => {
 	let schemaName: string;
 	let store: ContentStore;
 	let cms: Cms;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let relationTarget: (to: Collection) => Promise<string>;
 
 	/** A ready image, a ready attachment and an upload that never finished. */
@@ -64,7 +64,7 @@ describe("cms.read returns the document", () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		relationTarget = fillRequiredMetadata(store).relationTarget as typeof relationTarget;
-		service = createContentService<Entry>(store, {
+		service = createContentService(store, {
 			site: testSite,
 			formats: async () => createFormatRegistry([paragraphsFormat, labelsFormat]),
 		});

@@ -65,7 +65,7 @@ describe("the format option of the admin API", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let cms: Cms;
 	let sequence = 0;
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
@@ -78,7 +78,7 @@ describe("the format option of the admin API", () => {
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
 		const registry = createFormatRegistry(FORMATS);
-		service = createContentService<Entry>(store, { site: testSite, formats: async () => registry });
+		service = createContentService(store, { site: testSite, formats: async () => registry });
 		cms = fakeCms({ config: testConfig, store, contentService: service, formats: FORMATS });
 	});
 
@@ -252,7 +252,7 @@ describe("the format option of the admin API", () => {
 			const bare = fakeCms({
 				config: testConfig,
 				store,
-				contentService: createContentService<Entry>(store, {
+				contentService: createContentService(store, {
 					site: testSite,
 					formats: async () => createFormatRegistry([]),
 				}),

@@ -38,7 +38,7 @@ describe("entry API with a stored document", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let cms: Cms;
 	let sequence = 0;
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
@@ -50,7 +50,7 @@ describe("entry API with a stored document", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
-		service = createContentService<Entry>(store, {
+		service = createContentService(store, {
 			site: testSite,
 			formats: async () => createFormatRegistry([paragraphsFormat]),
 		});

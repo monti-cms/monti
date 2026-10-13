@@ -56,7 +56,13 @@ describe("Cms.decisions", () => {
 			createStore: vi.fn(),
 			migrate: vi.fn(),
 			pluginStorage: vi.fn(),
-			decisions: () => [{ topic: "Database", value: "x", source: "from env DATABASE_URL" }],
+			transaction: vi.fn(),
+			inspector: {
+				state: vi.fn(),
+				describeTarget: () => undefined,
+				settings: () => ({}),
+				decisions: () => [{ topic: "Database", value: "x", source: "from env DATABASE_URL" }],
+			},
 		};
 		const auth: AuthAdapter = {
 			...fakeAuth(),
@@ -130,7 +136,13 @@ describe("Cms.decisions", () => {
 });
 
 describe("SITE_URL source through defineConfig", () => {
-	const database: DatabaseAdapter = { name: "fake", createStore: vi.fn(), migrate: vi.fn(), pluginStorage: vi.fn() };
+	const database: DatabaseAdapter = {
+		name: "fake",
+		createStore: vi.fn(),
+		migrate: vi.fn(),
+		pluginStorage: vi.fn(),
+		transaction: vi.fn(),
+	};
 	const auth: AuthAdapter = fakeAuth();
 	const site = {
 		collections: fakeCms().site.config.collections,

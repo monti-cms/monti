@@ -515,7 +515,7 @@ describe("afterCommit delivery", () => {
 		it("a bulk change delivers one event per item, in each entry's order", async () => {
 			const seen = recorder();
 			const { store } = setup({ a: seen.handler });
-			const bulk = createBulkService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const bulk = createBulkService(store, { site: testSite, hooks: () => [], formats });
 			const drafts = [await create(store, "bulk-a"), await create(store, "bulk-b"), await create(store, "bulk-c")];
 			const items = drafts.map((draft) => ({ id: draft.id, expectedVersion: draft.version }));
 
@@ -537,7 +537,7 @@ describe("afterCommit delivery", () => {
 		it("restoring an entry from the trash delivers `restored`, after `trashed`", async () => {
 			const seen = recorder();
 			const { store } = setup({ a: seen.handler });
-			const service = createContentService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const service = createContentService(store, { site: testSite, hooks: () => [], formats });
 			const entry = await create(store, "restore-a");
 			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
 			const restored = (await service.restore({ id: entry.id, expectedVersion: trashed.version })).entry;
@@ -556,7 +556,7 @@ describe("afterCommit delivery", () => {
 
 		it("records every kind of change once, with entry, collection, locale, time and actor, and lists it as recorded", async () => {
 			const { store, events } = setup({});
-			const service = createContentService<Entry>(store, { site: testSite, hooks: () => [], formats });
+			const service = createContentService(store, { site: testSite, hooks: () => [], formats });
 			const entry = await withActor("Mina", () => create(store, "log-no-subscribers"));
 			const saved = await withActor("Mina", () => save(store, entry, "second"));
 			const trashed = await store.trashEntry({ id: entry.id, expectedVersion: saved.version });

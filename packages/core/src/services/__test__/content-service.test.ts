@@ -33,10 +33,10 @@ const prepareSnapshot = (
 	options: Parameters<typeof prepareCoreSnapshot>[2] = {},
 ) =>
 	prepareCoreSnapshot(testSite, value, { ...options, import: { formats: createFormatRegistry([paragraphsFormat]) } });
-const createContentService = <T = unknown>(
-	port: Parameters<typeof createCoreContentService<T>>[0],
+const createContentService = (
+	port: Parameters<typeof createCoreContentService>[0],
 	options: Partial<ContentServiceOptions> = {},
-) => createCoreContentService<T>(port, { site: testSite, formats, ...options });
+) => createCoreContentService(port, { site: testSite, formats, ...options });
 
 /*
  * Collection and field names are looked up from the current config. In the reference blog setup, the body collection is posts (`post`),

@@ -1,3 +1,4 @@
+import type { LifecycleStore } from "../core/store/ports";
 import { type ContentServiceOptions, createContentService } from "./content-service";
 import type { Issue, ServiceInput, StorePort, WorkingCopy } from "./types";
 import { ServiceError } from "./types";
@@ -58,10 +59,7 @@ export type BulkItemResult =
 const MAX_ITEMS = 100;
 
 /** Contract a bulk operation requires from the store. Permanent deletion is used only in bulk operations, so it is not put in the shared `StorePort`. */
-export interface BulkStorePort<T = unknown> extends StorePort<T> {
-	/** Permanently deletes only trash items. Rejects with `in_use` (details.usages) if other content references it. */
-	permanentDeleteEntry(params: { id: string; expectedVersion: number }): Promise<void>;
-}
+export type BulkStorePort = StorePort & Pick<LifecycleStore, "permanentDeleteEntry">;
 
 const toServiceInput = (working: WorkingCopy, metadata: { [key: string]: unknown }): ServiceInput =>
 	({ collection: working.collection, slug: working.slug, metadata, doc: working.doc }) as ServiceInput;
@@ -70,7 +68,7 @@ const toServiceInput = (working: WorkingCopy, metadata: { [key: string]: unknown
  * Bulk operations. Every item runs the same write pipeline as a single write (hooks included): a publish is the single publish, a relation or folder
  * change is a save. Results and errors are per item.
  */
-export const createBulkService = <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions) => {
+export const createBulkService = (storePort: BulkStorePort, options: ContentServiceOptions) => {
 	const { site } = options;
 	const pipeline =
 		options.pipeline ??

@@ -95,7 +95,7 @@ describe("AI action edited-value store", () => {
 
 	it("the core content lookup used by code checks finds slugs used by other posts in the same collection and language", async () => {
 		const entry = (
-			await createContentService<Entry>(content, { site: testSite }).createDraft({
+			await createContentService(content, { site: testSite }).createDraft({
 				collection: "category",
 				slug: "used-address",
 				metadata: { title: "주소 확인" },

@@ -31,8 +31,8 @@ describe("write hook contract", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ContentStore;
-	let service: ReturnType<typeof createContentService<Entry>>;
-	let bulk: ReturnType<typeof createBulkService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
+	let bulk: ReturnType<typeof createBulkService>;
 	let sources: HookSource[] = [];
 	let changes: ContentChange[] = [];
 	let afterCommitFails = false;
@@ -64,8 +64,8 @@ describe("write hook contract", () => {
 		store = withEventDispatch(raw, dispatcher.dispatchEntry);
 		const hooks = () => sources;
 		const formats = async () => createFormatRegistry([paragraphsFormat]);
-		service = createContentService<Entry>(store, { site: testSite, hooks, formats });
-		bulk = createBulkService<Entry>(store, { site: testSite, hooks, formats });
+		service = createContentService(store, { site: testSite, hooks, formats });
+		bulk = createBulkService(store, { site: testSite, hooks, formats });
 		vi.spyOn(console, "error").mockImplementation(() => undefined);
 	});
 

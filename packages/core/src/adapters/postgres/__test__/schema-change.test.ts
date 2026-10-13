@@ -103,7 +103,7 @@ describe("schema changes", () => {
 	const siteAfterV2 = createSite(afterConfig(2) as AnyCmsConfig);
 
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
-	const serviceFor = (site: Site) => createContentService<Entry>(storeFor(site), { site });
+	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
 
 	/** The entries every test works on, written under the schema before. */
 	const ids = {} as Record<"category" | "a" | "b" | "c" | "d", string>;

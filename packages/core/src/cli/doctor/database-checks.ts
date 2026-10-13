@@ -14,8 +14,8 @@ interface Settings {
 	readonly schema?: string | undefined;
 }
 
-/** What the database adapter was given in `monti.config.ts` (`DatabaseAdapter.settings`); empty when it exposes none. */
-const settingsOf = (state: DoctorState): Settings => state.cms?.server.database.settings?.() ?? {};
+/** What the database adapter was given in `monti.config.ts` (`DatabaseInspector.settings`); empty when it exposes none. */
+const settingsOf = (state: DoctorState): Settings => state.cms?.server.database.inspector?.settings() ?? {};
 
 const IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
@@ -64,7 +64,7 @@ const shortVersion = (version: string): string => /^PostgreSQL [\d.]+/.exec(vers
 
 /**
  * The `database` group of `monti doctor`: the connection string, reaching the database, the schema, and the migrations. The connection string and schema
- * come from what the adapter was given (`DatabaseAdapter.settings`), else from `DATABASE_URL` and `DATABASE_SCHEMA`. The checks open a short-lived
+ * come from what the adapter was given (`DatabaseInspector.settings`), else from `DATABASE_URL` and `DATABASE_SCHEMA`. The checks open a short-lived
  * connection of their own and change nothing.
  */
 const url: CoreCheck = {

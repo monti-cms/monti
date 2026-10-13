@@ -23,7 +23,7 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 	let pool: Pool;
 	let schemaName: string;
 	let store: ReturnType<typeof createContentStore>;
-	let service: ReturnType<typeof createContentService<Entry>>;
+	let service: ReturnType<typeof createContentService>;
 	let sequence = 0;
 	const unique = (prefix: string) => `${prefix}-${++sequence}`;
 	const targets = new Map<Collection, string>();
@@ -34,7 +34,7 @@ describe("block ids in the Postgres store: saves that write nothing", () => {
 		schemaName = isolated.schemaName;
 		await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		store = createContentStore(pool, { site: testSite, schema: schemaName });
-		service = createContentService<Entry>(store, { site: testSite });
+		service = createContentService(store, { site: testSite });
 	});
 
 	afterAll(async () => {

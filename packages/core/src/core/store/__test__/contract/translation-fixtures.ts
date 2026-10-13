@@ -54,7 +54,7 @@ export const translatedMetadata = (title: string, text: string) => ({
 
 /** Helpers that create the posts and relation targets of the translation tests in a store. */
 export function translationHelpers(store: ContentStore) {
-	const service = createContentService<Entry>(store, {
+	const service = createContentService(store, {
 		site: testSite,
 		formats: async () => createFormatRegistry([paragraphsFormat]),
 	});

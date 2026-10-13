@@ -18,7 +18,14 @@ import { findSchemaFile } from "../schema-file/locate";
 import { schemaSourceOf } from "../schema-file/source";
 import { createSecretsVault, type PluginSecrets } from "../secrets";
 import type { Decision } from "../server/decision";
-import type { CmsAuth, CmsServerConfig, DatabaseAdapter, DatabaseState, RequestHost } from "../server/define";
+import type {
+	CmsAuth,
+	CmsServerConfig,
+	DatabaseAdapter,
+	DatabaseState,
+	RequestHost,
+	TransactionStorage,
+} from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import { type CmsEvents, createEventDispatcher } from "../services/events";
@@ -30,7 +37,7 @@ import { type AnyCmsConfig, createSite, type Site } from "../site";
 import { coreDecisions } from "./decisions";
 
 /** The content service of any site: input is checked at run time only. */
-type LooseContentService = ReturnType<typeof createContentService<Entry>>;
+type LooseContentService = ReturnType<typeof createContentService>;
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
@@ -52,7 +59,7 @@ export type ContentService<Config extends AnyCmsConfig = AnyCmsConfig> = Omit<
 		options?: { publishImmediately?: boolean },
 	): ReturnType<LooseContentService["saveDraft"]>;
 };
-export type BulkService = ReturnType<typeof createBulkService<Entry>>;
+export type BulkService = ReturnType<typeof createBulkService>;
 
 /** Options of {@link Cms.handle}. */
 export interface HandleOptions {
@@ -334,18 +341,8 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					label: typeof slot.label === "function" ? slot.label(site) : slot.label,
 				})),
 			);
-		const inTransaction = <T>(
-			work: (tx: { pluginStorage(plugin: string): PluginStorage }) => Promise<T>,
-		): Promise<T> => {
-			const { transaction } = connections.database;
-			if (!transaction) {
-				throw new CmsError(
-					`The ${connections.database.name} database adapter has no transactions, so a new key cannot be saved together with the item that uses it`,
-					"invalid_state",
-				);
-			}
-			return transaction.call(connections.database, work) as Promise<T>;
-		};
+		const inTransaction = <T>(work: (tx: TransactionStorage) => Promise<T>): Promise<T> =>
+			connections.database.transaction(work);
 		const keysOn = (storage: () => PluginStorage, transact?: ApiKeysOptions["transact"]): ApiKeys =>
 			createApiKeys({
 				storage,
@@ -442,7 +439,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			server: publicServer,
 			store: getStore,
 			contentService: () => {
-				service ??= createContentService<Entry>(getStore(), {
+				service ??= createContentService(getStore(), {
 					site,
 					hooks: plugins.writeHooks,
 					formats: plugins.formats,
@@ -452,7 +449,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				return service as unknown as ContentService<Config>;
 			},
 			bulkService: () => {
-				bulk ??= createBulkService<Entry>(getStore(), {
+				bulk ??= createBulkService(getStore(), {
 					site,
 					hooks: plugins.writeHooks,
 					formats: plugins.formats,
@@ -507,7 +504,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			}),
 			migrate: async (options = {}) => {
 				const log = options.log ?? console.log;
-				const target = connections.database.describeTarget?.();
+				const target = connections.database.inspector?.describeTarget();
 				log("Bringing Monti's tables up to date with this version\u2026");
 				log(`Database: ${target ?? connections.database.name}`);
 				const { summary } = await runMigration(options);
@@ -520,10 +517,10 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 						: "Done.",
 				);
 			},
-			databaseState: async () => connections.database.state?.(),
+			databaseState: async () => connections.database.inspector?.state(),
 			setup: async ({ log = console.log } = {}) => {
-				const target = connections.database.describeTarget?.();
-				const before = await connections.database.state?.();
+				const target = connections.database.inspector?.describeTarget();
+				const before = await connections.database.inspector?.state();
 				if (before?.set) {
 					log(
 						`Monti is already set up in this database (schema "${before.schema}"). After updating Monti, run \`monti db:migrate\`.`,
@@ -537,7 +534,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					);
 				}
 				await runMigration({ log }, () => undefined);
-				const after = await connections.database.state?.();
+				const after = await connections.database.inspector?.state();
 				const tables = after ? after.tables - (before?.tables ?? 0) : 0;
 				log(after ? `Done: created ${tables} table${tables === 1 ? "" : "s"}.` : "Done.");
 				return { created: true, tables };
@@ -605,7 +602,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 	const decisions = (env: Readonly<Record<string, string | undefined>> = process.env): readonly Decision[] => {
 		const file = schemaFile();
 		return [
-			...(server.database.decisions?.(env) ?? []),
+			...(server.database.inspector?.decisions(env) ?? []),
 			...(server.auth.decisions?.(env) ?? []),
 			...coreDecisions({
 				env,
