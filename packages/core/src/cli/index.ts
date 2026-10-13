@@ -6,6 +6,7 @@ import { eventsRetry } from "./events";
 import { HELP, helpFor } from "./help";
 import { runInitCommand } from "./init-command";
 import type { Prompter } from "./init-prompts";
+import { InitCancelled } from "./init-prompts";
 import { isPluginCommandName, runPluginCommand } from "./plugin-command";
 import { schemaApply, schemaDiff } from "./schema-apply";
 import { extractSchema, formatExtractReport } from "./schema-extract";
@@ -257,6 +258,7 @@ export async function runCli(
 		return 1;
 	} catch (error) {
 		io.error(error instanceof Error ? error.message : String(error));
-		return 1;
+		// Ctrl+C at a question ends any command the same way (the shell convention for an interrupt), not as a failure.
+		return error instanceof InitCancelled ? 130 : 1;
 	}
 }
