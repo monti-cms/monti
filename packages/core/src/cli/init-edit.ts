@@ -5,7 +5,7 @@
  */
 
 import { findHtmlTag, gitignoreCoverage, importsWithCms, suppressHydrationState, usesWithCms } from "./next-app";
-import { matchingClose } from "./source-text";
+import { matchingClose, skipLiteral } from "./source-text";
 
 /** What an edit decided. */
 export type TextEdit =
@@ -124,12 +124,61 @@ export function addSuppressHydrationWarning(file: string, text: string): TextEdi
 		return { status: "manual", reason: `<html> in ${file} sets suppressHydrationWarning={false}; set it to true` };
 	}
 	if (state === "on") return { status: "present" };
-	const at = tag.start + "<html".length + attributes.length;
 	return {
 		status: "edit",
-		text: `${text.slice(0, at)} suppressHydrationWarning${text.slice(at)}`,
+		text: `${text.slice(0, tag.start)}${htmlTagWith(text, tag, "suppressHydrationWarning")}${text.slice(tag.end)}`,
 		change: "added suppressHydrationWarning to <html>",
 	};
+}
+
+/** Lines are kept within this width, the default of Prettier and Biome. */
+const LINE_WIDTH = 80;
+
+/** The attributes of a tag as separate pieces (`lang="en"`, `className={...}`), or `undefined` when they cannot be told apart safely. */
+function splitAttributes(attributes: string): string[] | undefined {
+	const parts: string[] = [];
+	let current = "";
+	for (let i = 0; i < attributes.length; ) {
+		const ch = attributes[i] as string;
+		if (/\s/.test(ch)) {
+			if (current) parts.push(current);
+			current = "";
+			i += 1;
+			continue;
+		}
+		const end = ch === "{" ? matchingClose(attributes, i) + 1 : skipLiteral(attributes, i);
+		if (ch === "{" && end === 0) return undefined;
+		const next = end > i ? end : i + 1;
+		current += attributes.slice(i, next);
+		i = next;
+	}
+	if (current) parts.push(current);
+	return parts;
+}
+
+/**
+ * The `<html>` tag with `attribute` added after the others, written the way the file writes it: a tag that is already on several lines gets the attribute on a line of
+ * its own, a tag that stays within the line width stays on one line, and a tag that would become too long is broken up one attribute per line.
+ */
+function htmlTagWith(text: string, tag: NonNullable<ReturnType<typeof findHtmlTag>>, attribute: string): string {
+	const open = text.slice(tag.start, tag.start + "<html".length);
+	const lineStart = text.lastIndexOf("\n", tag.start - 1) + 1;
+	const indent = /^[ \t]*/.exec(text.slice(lineStart))?.[0] ?? "";
+	const lineEnd = text.indexOf("\n", tag.end);
+	const after = text.slice(tag.end, lineEnd === -1 ? text.length : lineEnd);
+	const single = `${open}${tag.attributes} ${attribute}${tag.gap}${tag.closer}`;
+
+	if (tag.attributes.includes("\n")) {
+		// Already one attribute per line: the new one goes on the line after the last, indented like the others.
+		const lastIndent = /\n([ \t]*)\S[^\n]*$/.exec(tag.attributes)?.[1] ?? `${indent}  `;
+		return `${open}${tag.attributes}\n${lastIndent}${attribute}${tag.gap}${tag.closer}`;
+	}
+	if (indent.length + single.length + after.length <= LINE_WIDTH) return single;
+	const parts = splitAttributes(tag.attributes);
+	if (!parts) return single;
+	const unit = /^\t/m.test(text) ? "\t" : "  ";
+	const inner = `${indent}${unit}`;
+	return `${open}\n${[...parts, attribute].map((part) => `${inner}${part}`).join("\n")}\n${indent}${tag.closer}`;
 }
 
 /**

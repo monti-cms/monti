@@ -555,6 +555,34 @@ describe("monti init tailors what is left to the app", () => {
 		}
 	});
 
+	it("formats the edited <html> sensibly: one line when it fits, one attribute per line when it would be long", async () => {
+		const edited = async (tag: string) => {
+			const dir = fixtureApp({ "app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace('<html lang="en">', tag) });
+			await initProject({ cwd: dir, ...quiet() });
+			return read(dir, "app/layout.tsx");
+		};
+		// Short: stays on one line.
+		expect(await edited('<html lang="en" className="dark">')).toContain(
+			'    <html lang="en" className="dark" suppressHydrationWarning>',
+		);
+		// Long (the shape create-next-app 16 writes): every attribute on its own line, the template literal intact.
+		const className = "className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}";
+		const long = await edited(`<html lang="en" ${className}>`);
+		expect(long).toContain(
+			`    <html\n      lang="en"\n      ${className}\n      suppressHydrationWarning\n    >\n      <body>`,
+		);
+		// Already one attribute per line: the new one is added on a line of its own, like the others.
+		expect(await edited('<html\n      lang="en"\n      dir="ltr"\n    >')).toContain(
+			'<html\n      lang="en"\n      dir="ltr"\n      suppressHydrationWarning\n    >',
+		);
+		// Tabs stay tabs.
+		const tabs = fixtureApp({
+			"app/layout.tsx": `export default function L({ children }: { children: React.ReactNode }) {\n\treturn (\n\t\t<html lang="en" className="a-very-long-class-name another-long-class-name yet-another-class-name">\n\t\t\t{children}\n\t\t</html>\n\t);\n}\n`,
+		});
+		await initProject({ cwd: tabs, ...quiet() });
+		expect(read(tabs, "app/layout.tsx")).toContain('\t\t<html\n\t\t\tlang="en"\n');
+	});
+
 	it("a layout init cannot edit (no <html>, or suppressHydrationWarning={false}) gets a step with the reason", async () => {
 		const noHtml = fixtureApp({
 			"app/layout.tsx": "export default function L({ children }: { children: React.ReactNode }) { return children; }\n",

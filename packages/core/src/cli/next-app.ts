@@ -101,13 +101,28 @@ export function usesWithCms(text: string): boolean {
 const HTML_TAG = /<html\b([^>]*?)(\s*)(\/?)>/;
 
 /** The `<html>` tag of a layout: its text, where it starts and its attributes; `undefined` when the text has no `<html>` tag (a nested layout). */
-export function findHtmlTag(
-	text: string,
-): { readonly start: number; readonly end: number; readonly attributes: string } | undefined {
+export function findHtmlTag(text: string):
+	| {
+			readonly start: number;
+			readonly end: number;
+			/** Everything between `<html` and the blank space before the closing `>`. */
+			readonly attributes: string;
+			/** The blank space before the closing `>` or `/>`. */
+			readonly gap: string;
+			/** `>` or `/>`. */
+			readonly closer: string;
+	  }
+	| undefined {
 	const match = HTML_TAG.exec(text);
 	if (!match) return undefined;
 	const start = match.index ?? 0;
-	return { start, end: start + match[0].length, attributes: match[1] ?? "" };
+	return {
+		start,
+		end: start + match[0].length,
+		attributes: match[1] ?? "",
+		gap: match[2] ?? "",
+		closer: `${match[3] ?? ""}>`,
+	};
 }
 
 /** What the attributes of an `<html>` tag say about `suppressHydrationWarning`: `on`, `off` (`={false}`), or `absent`. */
