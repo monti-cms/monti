@@ -45,7 +45,6 @@ export const blogSchema = {
 				{ fields: ["title", "slug", "summary"] },
 				{ group: "Classification", fields: ["categoryId", "tagIds"], collapsed: true },
 			],
-			list: { columns: ["title", "status", "categoryId"] },
 		},
 		category: {
 			label: "Category",

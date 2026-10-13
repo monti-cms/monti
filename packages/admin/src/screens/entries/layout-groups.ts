@@ -13,8 +13,21 @@ export const tabOfGroup = (site: Site, group: LayoutGroup) => group.tab ?? defau
  * A layout group's `tab` takes priority; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` (e.g. field groups supplied by an extension) are
  * gathered into one group per tab and placed last. The group's name is the tab name (shown as the group title on screens without tabs).
  */
-export function layoutGroupsOf(site: Site, collection: SchemaCollection): LayoutGroup[] {
-	const schema = site.schemaOf(collection);
+export const layoutGroupsOf = (site: Site, collection: SchemaCollection): LayoutGroup[] =>
+	layoutGroupsOfSchema(site.schemaOf(collection));
+
+/** What the grouping reads of a collection: the fields (for their own `tab`) and the layout. A draft of the settings screen has the same shape. */
+export interface GroupingSchema {
+	readonly fields: Readonly<Record<string, { readonly tab?: string }>>;
+	readonly layout?: readonly LayoutGroup[];
+}
+
+/** Whether the panel draws a field: a hidden field is not (a conditional field is, its hidden option applies to what it shows). */
+export const isDrawnField = (field: { readonly kind: string; readonly hidden?: boolean }): boolean =>
+	field.kind === "conditional" || field.hidden !== true;
+
+/** `layoutGroupsOf` for any schema with these parts, so the settings screen's preview groups exactly like the panel. */
+export function layoutGroupsOfSchema(schema: GroupingSchema): LayoutGroup[] {
 	const groups: LayoutGroup[] = [];
 	const byTab = new Map<string, string[]>();
 	const moveToTab = (name: string, tab: string) => byTab.set(tab, [...(byTab.get(tab) ?? []), name]);

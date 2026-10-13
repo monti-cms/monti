@@ -39,7 +39,6 @@ const post = (): Obj => ({
 		status: { kind: "select", label: "Status", options: { draft: "Draft", live: "Live" }, defaultValue: "draft" },
 	},
 	layout: [{ group: "Main", fields: ["title", "summary"] }],
-	list: { columns: ["title", "summary", "status"] },
 });
 
 describe("schema model", () => {
@@ -66,11 +65,10 @@ describe("schema model", () => {
 		});
 	});
 
-	it("renames a field in place and follows it in the layout, the list columns and a slug's source", () => {
+	it("renames a field in place and follows it in the layout and a slug's source", () => {
 		const renamed = renameField(post(), {}, "title", "heading");
 		expect(Object.keys(fieldsOf(renamed))).toEqual(["heading", "slug", "summary", "status"]);
 		expect((renamed.layout as { fields: string[] }[])[0]?.fields).toEqual(["heading", "summary"]);
-		expect((renamed.list as { columns: string[] }).columns).toEqual(["heading", "summary", "status"]);
 		expect((fieldsOf(renamed).slug as Obj).from).toBe("heading");
 	});
 
@@ -95,7 +93,6 @@ describe("schema model", () => {
 		const removed = removeField(post(), {}, "summary");
 		expect(Object.keys(fieldsOf(removed))).toEqual(["title", "slug", "status"]);
 		expect((removed.layout as { fields: string[] }[])[0]?.fields).toEqual(["title"]);
-		expect((removed.list as { columns: string[] }).columns).toEqual(["title", "status"]);
 	});
 
 	it("adds and moves fields, inside a conditional branch too", () => {

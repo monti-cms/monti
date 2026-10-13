@@ -91,7 +91,7 @@ export function EditorWidthMenu({
 			>
 				<MoveHorizontal aria-hidden className="size-4" />
 			</IconButton>
-			<DropdownMenuContent align="end" className="w-36">
+			<DropdownMenuContent align="end" className="min-w-36">
 				<DropdownMenuRadioGroup
 					aria-label={t("editorWidth.label")}
 					value={value.key}

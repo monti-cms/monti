@@ -1615,8 +1615,7 @@ Everything in this table except `codeBlock`, `media` and `editor` can be written
   are reflected in the public value immediately (no publishing, archiving or translations; per-language values go in `translations`). The body (`body`), if absent, is used only by documents. `body` can also be an object that limits the blocks, marks and heading levels the body allows ("Allowed blocks and marks per body").
   The old name `workflow: "publish" | "record"` was removed; a config that still has it fails with the `kind` to use (`publish` → `document`, `record` → `item`).
 - **Layout (`layout`).** If absent, it is one group in field declaration order, and fields with their own `tab` gather in that tab.
-- **List (`list.columns`).** If absent, the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation
-  pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date.
+- **List columns.** Not part of the schema: each admin chooses the columns on the list screen (Column settings), saved per account. Until they do, the list shows the default columns. For documents: title, status, language (when there are two or more languages), category field (a relation pointing to an item collection), modified date and published date; for items: title, URL (when there is a URL field), language, status and modified date. A config that still has `list` fails with a message to delete it.
 
 A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It is used to recognize internal links written as an address (they are stored as the id of the entry, see the public read API) and by the editor when it creates links. A collection without `path` cannot be linked to from the body.
 

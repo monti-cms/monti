@@ -22,7 +22,6 @@ const article = defineCollection({
 		...seoFields(),
 	},
 	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO fields gather in the SEO tab even if not listed
-	list: { columns: ["title", "status"] },
 });
 
 export const cms = defineConfig({

@@ -56,7 +56,6 @@ const article = defineCollection({
 		{ fields: ["title", "slug", "excerpt", "authorId", "topicIds"] },
 		{ group: "Presentation", fields: ["heroImage", "format"] },
 	],
-	list: { columns: ["title", "status", "authorId", "topicIds", "format", "updatedAt"] },
 });
 
 const topic = defineCollection({
@@ -67,7 +66,6 @@ const topic = defineCollection({
 		title: fields.text({ label: "Name", required: true, max: 60 }),
 		slug: fields.slug({ label: "Key", from: "title", required: true }),
 	},
-	list: { columns: ["title", "slug", "updatedAt"] },
 });
 
 const author = defineCollection({
@@ -79,7 +77,6 @@ const author = defineCollection({
 		slug: fields.slug({ label: "Handle", from: "title", required: true }),
 		bio: fields.text({ label: "Bio", multiline: true }),
 	},
-	list: { columns: ["title", "slug"] },
 });
 
 /** Site block: quote card (container). The public page renders it with the site's `QuoteCard` component. */

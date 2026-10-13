@@ -23,7 +23,6 @@ const site = createSite(
 						policy: blogSchema.collections.post.fields.policy,
 					},
 					layout: undefined,
-					list: undefined,
 				},
 			},
 		}),

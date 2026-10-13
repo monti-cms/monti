@@ -40,7 +40,7 @@ import {
 	OrderedEntryList,
 } from "./field-inputs";
 import { FieldView } from "./field-views";
-import { layoutGroupsOf } from "./layout-groups";
+import { isDrawnField, layoutGroupsOf } from "./layout-groups";
 import { MediaInput } from "./media-image-input";
 import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
@@ -561,7 +561,7 @@ export function SchemaFields({
 			{groups.map((group, index) => {
 				const visible = group.fields.filter((name) => {
 					const field = schema.fields[name];
-					return field && !omit.includes(name) && !(field.kind !== "conditional" && "hidden" in field && field.hidden);
+					return field && !omit.includes(name) && isDrawnField(field);
 				});
 				if (visible.length === 0) return null;
 				const key = `${group.group ?? "group"}-${index}`;

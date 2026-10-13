@@ -5,7 +5,7 @@ import { pathsOverlap } from "../define";
 
 const title = fields.text({ label: "Title" });
 const slug = fields.slug({ label: "Slug", from: "title" });
-const topic = defineCollection({ label: "Topic", kind: "item", fields: { title, slug }, list: { columns: [] } });
+const topic = defineCollection({ label: "Topic", kind: "item", fields: { title, slug } });
 const locales = [{ code: "en", name: "English" }];
 
 describe("defineSite", () => {
@@ -72,7 +72,7 @@ describe("defineSite", () => {
 		expect(pathsOverlap("/posts/:slug", "/posts/")).toBe(false);
 
 		const page = (path: `/${string}:slug${string}`) =>
-			defineCollection({ label: "Page", kind: "document", path, fields: { title, slug }, list: { columns: [] } });
+			defineCollection({ label: "Page", kind: "document", path, fields: { title, slug } });
 		expect(() =>
 			defineSite({
 				collections: { post: page("/posts/:slug"), archive: page("/posts/archive-:slug") },
@@ -206,7 +206,6 @@ describe("defineSite", () => {
 			label: "Article",
 			kind: "document",
 			fields: { title, topicId: fields.relation({ label: "Topic", to: "missing" }) },
-			list: { columns: [] },
 		});
 		expect(() => defineSite({ collections: { article }, locales, defaultLocale: "en" })).toThrow(/unknown collection/);
 
@@ -214,13 +213,11 @@ describe("defineSite", () => {
 			label: "Series",
 			kind: "item",
 			fields: { title, articleId: fields.relation({ label: "Article", to: "article" }) },
-			list: { columns: [] },
 		});
 		const linked = defineCollection({
 			label: "Article",
 			kind: "document",
 			fields: { title, series: fields.backlink({ label: "Series", from: "series", via: "articleId" }) },
-			list: { columns: [] },
 		});
 		// Without a to-many `via`, the inverse relation cannot be created.
 		expect(() => defineSite({ collections: { article: linked, series }, locales, defaultLocale: "en" })).toThrow(
@@ -243,7 +240,6 @@ describe("defineSite", () => {
 			kind: "document",
 			path: "/notes/:slug",
 			fields: { title },
-			list: { columns: [] },
 		});
 		expect(() => defineSite({ collections: { noSlug }, locales, defaultLocale: "en" })).toThrow(/slug field/);
 		expect(() =>
@@ -283,7 +279,6 @@ describe("defineSite", () => {
 					title: fields.text({ label: "Title" }),
 					preview: fields.view({ view: extra.view ?? "search" }),
 				},
-				list: { columns: [] },
 				layout: [{ fields: ["title", "preview"], ...(extra.tab !== undefined ? { tab: extra.tab } : {}) }],
 			});
 		expect(() =>
@@ -302,7 +297,6 @@ describe("defineSite", () => {
 			label: "Note",
 			kind: "item",
 			fields: { name: fields.text({ label: "Name" }) },
-			list: { columns: [] },
 		});
 		expect(() => defineSite({ collections: { untitled }, locales, defaultLocale: "en" })).toThrow(
 			/untitled needs a title field: a text field with role "title" \(or one named "title"\)/,
@@ -311,14 +305,13 @@ describe("defineSite", () => {
 			label: "Note",
 			kind: "item",
 			fields: { title: fields.select({ label: "Title", options: { a: "A" }, defaultValue: "a" }) },
-			list: { columns: [] },
 		});
 		expect(() => defineSite({ collections: { wrongKind }, locales, defaultLocale: "en" })).toThrow(/title/);
 	});
 
 	describe("the title role", () => {
 		const note = (noteFields: Record<string, ReturnType<typeof fields.text> | ReturnType<typeof fields.select>>) =>
-			defineCollection({ label: "Note", kind: "item", fields: noteFields, list: { columns: [] } });
+			defineCollection({ label: "Note", kind: "item", fields: noteFields });
 		const config = (collection: ReturnType<typeof note>) =>
 			defineSite({ collections: { note: collection }, locales, defaultLocale: "en" });
 
@@ -364,7 +357,6 @@ describe("defineSite", () => {
 							label: "Note",
 							kind: "item",
 							fields: { title: fields.text({ label: "Title" }), kind: nested },
-							list: { columns: [] },
 						}),
 					},
 					locales,
@@ -383,57 +375,26 @@ describe("defineSite", () => {
 				slug: fields.slug({ label: "Slug", from: "title" }),
 				handle: fields.slug({ label: "Handle", from: "title" }),
 			},
-			list: { columns: [] },
 		});
 		expect(() => defineSite({ collections: { twoSlugs }, locales, defaultLocale: "en" })).toThrow(
 			/twoSlugs has more than one slug field \(slug, handle\)/,
 		);
 	});
 
-	it("checks list columns: system columns and stored fields are fine, anything else is an error", () => {
-		const article = (columns: readonly string[]) =>
+	it("rejects the retired `list` option with the way forward", () => {
+		const old = () =>
 			defineCollection({
 				label: "Article",
 				kind: "document",
-				fields: {
-					title,
-					permalink: fields.slug({ label: "Permalink", from: "title" }),
-					format: fields.select({ label: "Format", options: { news: "News" }, defaultValue: "news" }),
-					related: fields.relation({ label: "Related", to: "topic", many: true }),
-					preview: fields.view({ view: "preview" }),
-					kind: fields.conditional(
-						fields.select({ label: "Kind", options: { video: "Video" }, defaultValue: "video" }),
-						{ video: { videoUrl: fields.text({ label: "Video URL" }) } },
-					),
-				},
-				list: { columns: columns as never },
-			});
-		const define = (columns: readonly string[]) =>
-			defineSite({ collections: { article: article(columns), topic }, locales, defaultLocale: "en" });
-
-		expect(() =>
-			define(["title", "permalink", "slug", "format", "related", "kind", "videoUrl", "status", "updatedAt", "folder"]),
-		).not.toThrow();
-		expect(() => define(["title", "nope"])).toThrow(/article\.list\.columns has unknown column "nope"/);
-		// The same applies when a system column name is misspelled.
-		expect(() => define(["updated"])).toThrow(/unknown column "updated".*updatedAt/);
-		expect(() => define(["title", "preview"])).toThrow(/"preview" is a view field that is not stored/);
-		expect(() => define(["title", "format", "format"])).toThrow(/lists "format" twice/);
-		// Without a URL field, `slug` is an unknown name too.
-		const noSlug = defineCollection({
-			label: "Note",
-			kind: "document",
-			fields: { title },
-			list: { columns: ["slug" as never] },
-		});
-		expect(() => defineSite({ collections: { noSlug }, locales, defaultLocale: "en" })).toThrow(
-			/noSlug\.list\.columns has unknown column "slug"/,
-		);
+				fields: { title },
+				list: { columns: ["title"] },
+			} as never);
+		expect(old).toThrow(/collection "Article" uses `list`.*list screen.*Delete the `list` key/);
 	});
 
 	it("checks field roles: one field per role, and the field kind fits", () => {
 		const article = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
-			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra }, list: { columns: [] } });
+			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra } });
 		const ok = article({
 			excerpt: fields.text({ label: "Excerpt", role: "summary", fillFromBody: true }),
 			metaTitle: fields.text({ label: "Meta title", role: "seoTitle" }),
@@ -472,7 +433,7 @@ describe("defineSite", () => {
 
 	it("checks field tabs and media fields", () => {
 		const article = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
-			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra }, list: { columns: [] } });
+			defineCollection({ label: "Article", kind: "document", fields: { title, ...extra } });
 		const ok = article({ hero: fields.media({ label: "Hero", accept: "file", tab: "Media" }) });
 		expect(() => defineSite({ collections: { ok }, locales, defaultLocale: "en" })).not.toThrow();
 		const longTab = article({ hero: fields.media({ label: "Hero", tab: "x".repeat(21) }) });
@@ -501,7 +462,6 @@ describe("defineSite", () => {
 			label: "Article",
 			kind: "document",
 			fields: { title },
-			list: { columns: [] },
 		});
 		defineSite({ collections: { article }, locales, defaultLocale: "en", plugins: [other, watcher] });
 		expect(seen).toEqual(["en", ["other", "watcher"], true]);
@@ -512,7 +472,6 @@ describe("defineSite", () => {
 			label: "Note",
 			kind: "item",
 			fields: { title, summary: fields.text({ label: "Summary", fillFromBody: true }) },
-			list: { columns: [] },
 		});
 		expect(() => defineSite({ collections: { note }, locales, defaultLocale: "en" })).toThrow(/fillFromBody/);
 	});
@@ -523,7 +482,6 @@ describe("defineSite", () => {
 				label: "Topic",
 				kind: "item",
 				fields: { title, name: fields.text({ label: "Name" }), slug: fields.slug({ label: "Slug", from }) },
-				list: { columns: [] },
 			});
 		expect(() => defineSite({ collections: { topic: withFrom("name") }, locales, defaultLocale: "en" })).not.toThrow();
 		expect(() => defineSite({ collections: { topic: withFrom("missing") }, locales, defaultLocale: "en" })).toThrow(

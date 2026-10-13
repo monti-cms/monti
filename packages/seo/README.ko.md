@@ -22,7 +22,6 @@ const article = defineCollection({
 		...seoFields(),
 	},
 	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO 필드는 적지 않아도 SEO 탭에 모인다
-	list: { columns: ["title", "status"] },
 });
 
 export const cms = defineConfig({

@@ -8,7 +8,7 @@ import type { MessageValue } from "../i18n/define";
 import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisions";
 import type { CmsPlugin } from "../plugin/define";
 import { validateBodyAllowed } from "../schema/allowed";
-import { type CollectionSchema, normalizeCollection, validateListColumns } from "../schema/collection";
+import { type CollectionSchema, normalizeCollection } from "../schema/collection";
 import { DEFAULT_TITLE_FIELD, RESERVED_METADATA_KEYS, SUMMARY_ROLE, TITLE_ROLE } from "../schema/fields";
 import { findTitleField, valueFieldsOf } from "../schema/walk";
 import { resolveSchemaConfig } from "../schema-file/merge";
@@ -434,7 +434,6 @@ function validate(
 			);
 		}
 		validateFieldMeanings(collection, schema);
-		validateListColumns(collection, schema);
 		if (schema.path !== undefined) {
 			const { path } = schema;
 			if (!path.startsWith("/") || path.split(":slug").length !== 2 || /:(?!slug)/.test(path) || /[?#]/.test(path)) {

@@ -74,6 +74,14 @@ describe("parseSchemaFile", () => {
 		expect(kind?.path).toBe("collections.post.kind");
 	});
 
+	it("rejects the retired `list` key with where list columns are chosen now", () => {
+		const issues = problems((schema) => {
+			schema.collections.post.list = { columns: ["title"] };
+		});
+		const issue = issues.find((item) => item.path === "collections.post.list");
+		expect(issue?.message).toMatch(/list screen.*Delete the `list` key/);
+	});
+
 	it("checks the rules that name one value, with paths into arrays", () => {
 		expect(
 			problems((schema) => {

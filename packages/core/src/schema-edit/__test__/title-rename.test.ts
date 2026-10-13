@@ -36,7 +36,6 @@ const schema = {
 				title: { kind: "text", label: "Title", required: true },
 				slug: { kind: "slug", label: "Address", from: "title" },
 			},
-			list: { columns: ["title", "status"] },
 		},
 	},
 	locales: [{ code: "en", name: "English" }],
@@ -117,7 +116,6 @@ describe("renaming the title field", () => {
 		const { title, ...rest } = edited.collections.post.fields;
 		edited.collections.post.fields = { headline: { ...title, role: "title" }, ...rest } as never;
 		(edited.collections.post.fields.slug as { from: string }).from = "headline";
-		edited.collections.post.list = { columns: ["headline", "status"] };
 		const renames = [{ kind: "field", collection: "post", from: "title", to: "headline" }];
 
 		const preview = await (await call(before, "POST", "schema/preview", { schema: edited, renames })).json();

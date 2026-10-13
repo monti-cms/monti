@@ -1017,7 +1017,7 @@ export function CmsEditor({
 								>
 									<Upload className="size-4" aria-hidden />
 								</IconButton>
-								<DropdownMenuContent align="start" className="w-40">
+								<DropdownMenuContent align="start" className="min-w-40">
 									<UploadMenuItems />
 								</DropdownMenuContent>
 							</DropdownMenu>

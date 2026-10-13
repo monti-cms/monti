@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../ui/button";
@@ -8,41 +8,19 @@ import { Checkbox } from "../../ui/checkbox";
 import { Label } from "../../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { COLLECTION_ICON_NAMES } from "../shared/collection-icon";
-import {
-	AddButton,
-	FlagSwitch,
-	IssueList,
-	OrderedNames,
-	orUndefined,
-	Pick,
-	RowActions,
-	TextInput,
-	useIssuesUnder,
-	useSchemaEdit,
-} from "./controls";
+import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
 import { FieldsCard } from "./fields-tree";
-import { ListPreview } from "./list-preview";
 import { schemaMessages } from "./messages";
 import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
-	columnsOf,
-	FIELD_KINDS,
 	fieldsOf,
 	hasBody,
-	type LayoutGroup,
-	layoutOf,
-	moveItem,
 	type Obj,
 	type Rename,
-	SYSTEM_COLUMNS,
 	setProp,
-	storedFieldNames,
-	titleFieldName,
 	withBody,
-	withColumns,
-	withLayout,
 } from "./schema-model";
 import { Section } from "./section";
 
@@ -92,7 +70,7 @@ function LimitList<T extends string | number>({
 										)
 									}
 								/>
-								<Label htmlFor={id} className="font-normal text-sm">
+								<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
 									{nameOf ? nameOf(item) : String(item)}
 								</Label>
 							</li>
@@ -127,8 +105,15 @@ function AllowedEditor({
 	update: (change: (collection: Obj) => Obj) => void;
 }) {
 	const t = useTranslator(schemaMessages);
+	const site = useSite();
 	const { vocabulary } = useSchemaEdit();
 	const allowed = allowedOf(collection);
+	// Core names have a label in the dictionary; blocks and text styles a plugin adds use the label of their definition.
+	const nameLabel = (id: string): string => {
+		const key = `allowed.name.${id}`;
+		if (key in schemaMessages.messages.en) return t(key as "allowed.name.table");
+		return site.BLOCK_BY_NAME.get(id)?.label ?? id;
+	};
 	const limited = Object.values(allowed).some((list) => Array.isArray(list));
 	const setAllowed = (key: keyof Allowed, value: unknown[] | undefined) =>
 		update((current) => {
@@ -142,12 +127,14 @@ function AllowedEditor({
 			<LimitList
 				label={t("allowed.blocks")}
 				all={vocabulary.blocks}
+				nameOf={nameLabel}
 				value={allowed.blocks}
 				onChange={(value) => setAllowed("blocks", value)}
 			/>
 			<LimitList
 				label={t("allowed.marks")}
 				all={vocabulary.marks}
+				nameOf={nameLabel}
 				value={allowed.marks}
 				onChange={(value) => setAllowed("marks", value)}
 			/>
@@ -155,105 +142,9 @@ function AllowedEditor({
 				label={t("allowed.headings")}
 				all={HEADINGS}
 				value={allowed.headings}
-				nameOf={(level) => `H${level}`}
+				nameOf={(level) => t("allowed.name.heading", { level })}
 				onChange={(value) => setAllowed("headings", value)}
 			/>
-		</Section>
-	);
-}
-
-function LayoutEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
-	const t = useTranslator(schemaMessages);
-	const groups = layoutOf(collection);
-	const names = storedFieldNames(collection).concat(
-		Object.entries(fieldsOf(collection))
-			.filter(([, field]) => field.kind === "view" || field.kind === "backlink")
-			.map(([name]) => name),
-	);
-	const change = (next: LayoutGroup[]) => update((current) => withLayout(current, next));
-	const edit = (index: number, patch: Partial<LayoutGroup>) =>
-		change(
-			groups.map((group, at) => {
-				if (at !== index) return group;
-				const merged: Record<string, unknown> = { ...group, ...patch };
-				for (const key of Object.keys(merged)) if (merged[key] === undefined) delete merged[key];
-				return merged as unknown as LayoutGroup;
-			}),
-		);
-	return (
-		<Section title={t("layout.title")} description={t("layout.description")} note={t("layout.hint")}>
-			<div className="flex flex-col divide-y">
-				{groups.map((group, index) => (
-					<div key={`${group.group ?? ""}-${index}`} className="flex flex-col gap-4 py-5 first:pt-0 last:pb-0">
-						<div className="flex items-end gap-2">
-							<TextInput
-								label={t("layout.group")}
-								value={group.group}
-								className="min-w-0 flex-1"
-								onChange={(value) => edit(index, { group: orUndefined(value) })}
-							/>
-							<TextInput
-								label={t("layout.tab")}
-								value={group.tab}
-								className="w-32"
-								onChange={(value) => edit(index, { tab: orUndefined(value) })}
-							/>
-							<RowActions
-								index={index}
-								count={groups.length}
-								name={group.group ?? t("layout.untitled")}
-								onMove={(delta) => change(moveItem(groups, index, delta))}
-								onRemove={() => change(groups.filter((_, at) => at !== index))}
-							/>
-						</div>
-						<FlagSwitch
-							label={t("layout.collapsed")}
-							checked={group.collapsed === true}
-							onChange={(on) => edit(index, { collapsed: on ? true : undefined })}
-						/>
-						<OrderedNames
-							label={t("layout.fields")}
-							names={group.fields}
-							options={names}
-							onChange={(next) => edit(index, { fields: next })}
-						/>
-					</div>
-				))}
-			</div>
-			<div>
-				<AddButton onClick={() => change([...groups, { fields: [] }])}>{t("layout.add")}</AddButton>
-			</div>
-		</Section>
-	);
-}
-
-function ListEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
-	const t = useTranslator(schemaMessages);
-	const columns = columnsOf(collection);
-	const slugs = Object.entries(fieldsOf(collection))
-		.filter(([, field]) => field.kind === "slug")
-		.map(([name]) => name);
-	const options = [...storedFieldNames(collection), ...slugs, ...(slugs.length > 0 ? ["slug"] : []), ...SYSTEM_COLUMNS];
-	return (
-		<Section title={t("list.title")} description={t("list.hint")}>
-			<FlagSwitch
-				label={t("list.custom")}
-				hint={columns ? undefined : t("list.default")}
-				checked={columns !== undefined}
-				onChange={(on) =>
-					update((current) =>
-						withColumns(current, on ? [titleFieldName(current)].filter((name) => name !== undefined) : undefined),
-					)
-				}
-			/>
-			{columns && (
-				<OrderedNames
-					label={t("list.columns")}
-					names={columns}
-					options={[...new Set(options)]}
-					onChange={(next) => update((current) => withColumns(current, next))}
-				/>
-			)}
 		</Section>
 	);
 }
@@ -276,9 +167,11 @@ export function CollectionEditor({
 }) {
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
-	const [tab, setTab] = useState("basics");
+	const [chosenTab, setTab] = useState("basics");
+	// The editor tab only exists for a collection with a body.
+	const tab = chosenTab === "editor" && !hasBody(collection) ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
-	const fields = fieldsOf(collection);
+	const _fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
 		onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
 	const icon = typeof collection.icon === "string" ? collection.icon : "";
@@ -310,13 +203,16 @@ export function CollectionEditor({
 					<TabsList className="w-full justify-start sm:w-fit">
 						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
 						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
-						<TabsTrigger value="list">{t("collection.tabs.list")}</TabsTrigger>
-						<TabsTrigger value="advanced">{t("collection.tabs.advanced")}</TabsTrigger>
+						{hasBody(collection) && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex flex-col gap-12">
-					<Section title={t("collection.basicsTitle")} description={t("collection.basicsDescription")}>
-						<div className="flex max-w-md flex-col gap-6">
+					<Section
+						title={t("collection.basicsTitle")}
+						description={t("collection.basicsDescription")}
+						note={isNew ? undefined : t("collection.nameHint")}
+					>
+						<div className="flex flex-col gap-6">
 							<TextInput
 								label={t("collection.label")}
 								value={collection.label as string | undefined}
@@ -348,34 +244,18 @@ export function CollectionEditor({
 						</div>
 					</Section>
 					<BodyEditor collection={collection} update={onChange} />
-				</TabsContent>
-				<TabsContent value="fields" className="flex flex-col gap-12">
-					<FieldsCard editing={editing} />
-					<LayoutEditor collection={collection} update={onChange} />
-				</TabsContent>
-				<TabsContent value="list" className="flex flex-col gap-12">
-					<ListEditor collection={collection} update={onChange} />
-					<Section title={t("list.previewTitle")} card={false}>
-						<ListPreview name={name} collection={collection} columns={columnsOf(collection)} saved={!isNew} />
-					</Section>
-				</TabsContent>
-				<TabsContent value="advanced" className="flex flex-col gap-12">
-					{hasBody(collection) ? (
-						<AllowedEditor collection={collection} update={onChange} />
-					) : (
-						<p className="text-cms-muted-foreground text-sm">{t("advanced.noBody")}</p>
-					)}
 					<Section
 						title={t("collection.dangerTitle")}
-						description={isNew ? t("collection.newHint") : t("collection.nameHint")}
+						description={isNew ? t("collection.newHint") : t("collection.dangerDescription")}
+						card={false}
 					>
-						<div>
+						<div className="flex justify-end">
 							<Button
 								type="button"
-								variant="ghost"
+								variant="outline"
 								size="sm"
 								disabled={disabled}
-								className="-ml-2.5 text-cms-destructive hover:text-cms-destructive"
+								className="border-cms-destructive/50 text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
 								onClick={onRemove}
 							>
 								<Trash2 aria-hidden />
@@ -384,6 +264,14 @@ export function CollectionEditor({
 						</div>
 					</Section>
 				</TabsContent>
+				<TabsContent value="fields" className="flex flex-col gap-12">
+					<FieldsCard editing={editing} />
+				</TabsContent>
+				{hasBody(collection) && (
+					<TabsContent value="editor" className="flex flex-col gap-12">
+						<AllowedEditor collection={collection} update={onChange} />
+					</TabsContent>
+				)}
 			</Tabs>
 		</div>
 	);

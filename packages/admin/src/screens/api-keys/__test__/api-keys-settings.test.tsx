@@ -115,6 +115,14 @@ describe("API keys tab", () => {
 		expect((screen.getAllByRole("button", { name: t("add") })[0] as HTMLButtonElement).disabled).toBe(true);
 	});
 
+	it("offers a single add action when there are no keys", async () => {
+		keys = [];
+		slots = [];
+		renderTab();
+		await screen.findByText(t("empty.title"));
+		expect(screen.getAllByRole("button", { name: t("add") })).toHaveLength(1);
+	});
+
 	it("adds a key from the dialog", async () => {
 		renderTab();
 		await screen.findByTestId("api-key-Spare");

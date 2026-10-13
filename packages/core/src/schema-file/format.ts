@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isAdminPath, isHomeHref, isHttpUrl, isTimeZone, LOCALE_CODE, LOCALE_PREFIX_MODES } from "../config/rules";
 import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/allowed";
+import { LIST_REMOVED } from "../schema/collection";
 import type { SchemaFile } from "./types";
 
 /**
@@ -209,10 +210,8 @@ const collection = z.strictObject({
 	path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
 	icon: text.optional().describe("Admin sidebar icon name (lucide)."),
 	layout: z.array(layoutGroup).optional().describe("Layout of the properties panel."),
-	list: z
-		.strictObject({ columns: z.array(text) })
-		.optional()
-		.describe("Columns of the admin list."),
+	// Retired: any value is rejected with the way forward, instead of the generic "not part of the schema format".
+	list: z.never({ error: LIST_REMOVED }).optional(),
 });
 
 const locale = z.strictObject({

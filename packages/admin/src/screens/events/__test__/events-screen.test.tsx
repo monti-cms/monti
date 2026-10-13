@@ -1,7 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { chooseSelectOption } from "../../../test/base-ui";
 import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -176,13 +175,28 @@ describe("EventsScreen", () => {
 		renderScreen();
 		await screen.findByText("search-index");
 
-		await chooseSelectOption(t("filter.label"), t("filter.failed"));
+		fireEvent.click(screen.getByRole("button", { name: t("column.state") }));
+		fireEvent.click(await screen.findByRole("button", { name: t("filter.failed") }));
 		expect(await screen.findByText(t("list.emptyNoMatch"))).toBeTruthy();
 		expect(requested().at(-1)?.sort()).toEqual(["dead", "failed"]);
 
 		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
 		expect(await screen.findByText("search-index")).toBeTruthy();
 		expect(requested().at(-1)).toEqual(expect.arrayContaining(["pending", "delivered", "failed", "dead", "recorded"]));
+	});
+
+	it("shows the status as the first column and marks the header once filtered", async () => {
+		renderScreen();
+		const row = (await screen.findByText("search-index")).closest("tr") as HTMLElement;
+
+		const headers = screen.getAllByRole("columnheader");
+		expect(within(headers[0] as HTMLElement).getByRole("button", { name: t("column.state") })).toBeTruthy();
+		expect(within(row).getAllByRole("cell")[0]?.textContent).toBe(t("state.failed"));
+		expect(screen.queryByRole("combobox", { name: t("filter.label") })).toBeNull();
+
+		fireEvent.click(screen.getByRole("button", { name: t("column.state") }));
+		fireEvent.click(await screen.findByRole("button", { name: t("filter.delivered") }));
+		expect(await screen.findByRole("button", { name: `${t("column.state")}${t("filter.activeSuffix")}` })).toBeTruthy();
 	});
 
 	it("pages through the events", async () => {

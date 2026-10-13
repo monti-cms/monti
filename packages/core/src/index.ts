@@ -82,8 +82,6 @@ export {
 	defineCollection,
 	type LayoutGroup,
 	type MetadataOf,
-	SYSTEM_LIST_COLUMNS,
-	type SystemListColumn,
 } from "./schema/collection";
 export {
 	type BacklinkField,

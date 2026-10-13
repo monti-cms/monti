@@ -45,6 +45,7 @@ import {
 import { FieldLabel } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
+import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { Skeleton } from "../../ui/skeleton";
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
@@ -53,7 +54,7 @@ import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { nounVars } from "../shared/noun.messages";
-import { SIDE_PANEL_WIDTH } from "../shared/side-panel";
+import { INSPECTOR_PANEL_RESIZE, SIDE_PANEL_WIDTH } from "../shared/side-panel";
 import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { ConflictInfo, RecoveryOffer, SaveStatus } from "./entry-editor-store";
@@ -255,6 +256,7 @@ export function EntryEditorShell({
 	const loadError = load.status === "error" ? load.error.message : null;
 	const [editorMode, setEditorMode] = useState<"visual" | "source">("visual");
 	const [isInspectorOpen, setIsInspectorOpen] = useState(true);
+	const inspectorResize = usePanelResize(INSPECTOR_PANEL_RESIZE);
 	const [isNarrowScreen, setIsNarrowScreen] = useState(false);
 	const [isSourcePaneOpen, setIsSourcePaneOpen] = useState(true);
 	const [isSourceCompareOpen, setIsSourceCompareOpen] = useState(false);
@@ -838,7 +840,7 @@ export function EntryEditorShell({
 									>
 										<ChevronDown aria-hidden className="size-3.5" />
 									</IconButton>
-									<DropdownMenuContent align="end" className="w-48">
+									<DropdownMenuContent align="end" className="min-w-48">
 										{/* Keeping the original publish date is the default. Choose it only when re-posting an edited post as new. */}
 										{canResetPublishedAt && (
 											<DropdownMenuItem onClick={() => void handlePublish({ resetPublishedAt: true })}>
@@ -869,7 +871,7 @@ export function EntryEditorShell({
 							>
 								<MoreHorizontal aria-hidden className="size-4" />
 							</IconButton>
-							<DropdownMenuContent align="end" className="w-56">
+							<DropdownMenuContent align="end" className="min-w-56">
 								{/* Save with the header save button and ⌘S. Not repeated in the menu. */}
 								{entry && !isTrashed && (
 									<>
@@ -1021,13 +1023,15 @@ export function EntryEditorShell({
 					</div>
 
 					{isInspectorOpen && (
-						// On narrow screens it overlays the body; on wide screens it sits beside it at a fixed width.
+						// On narrow screens it overlays the body; on wide screens it sits beside it at the width the writer dragged it to.
 						<div
 							className={cn(
-								"absolute inset-y-0 right-0 z-20 max-w-full shadow-[0_1px_2px_rgba(0,0,0,0.1)] lg:static lg:z-auto lg:shrink-0 lg:shadow-none",
+								"absolute inset-y-0 right-0 z-20 max-w-full shadow-[0_1px_2px_rgba(0,0,0,0.1)] lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",
 								SIDE_PANEL_WIDTH,
 							)}
+							style={inspectorResize.style}
 						>
+							<PanelResizeHandle resize={inspectorResize} />
 							{site.isCollection(collection) && (
 								<InspectorPanel
 									incomingReferences={incoming.items}

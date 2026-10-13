@@ -1,6 +1,5 @@
 import type { BodyAllowed } from "./allowed";
 import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fields";
-import { valueFieldsOf } from "./walk";
 
 /**
  * Collection kind.
@@ -10,47 +9,9 @@ import { valueFieldsOf } from "./walk";
  */
 export type CollectionKind = "document" | "item";
 
-/** System columns of the list. They are values of the content itself, not fields. */
-export const SYSTEM_LIST_COLUMNS = ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"] as const;
-export type SystemListColumn = (typeof SYSTEM_LIST_COLUMNS)[number];
-
-/**
- * Checks whether a name can be used by the list columns (`list.columns`). Only system columns, stored field names (including fields dependent on a conditional field),
- * address field names, and `slug` when an address field exists are allowed. It is an error if the name is unknown, the field is not stored (view or reverse relation),
- * or the same name is written twice. Called by `defineSite`.
- */
-export function validateListColumns(
-	collection: string,
-	schema: Pick<CollectionSchema, "fields"> & { readonly list?: { readonly columns: readonly string[] } },
-): void {
-	const columns = schema.list?.columns;
-	if (columns === undefined) return;
-	if (!Array.isArray(columns))
-		throw new Error(`cms.config: ${collection}.list.columns must be an array of column names`);
-	const stored = new Set(valueFieldsOf(schema).map((field) => field.name));
-	const slugFields = Object.entries(schema.fields).filter(([, field]) => field.kind === "slug");
-	const system = new Set<string>(SYSTEM_LIST_COLUMNS);
-	const seen = new Set<string>();
-	for (const column of columns) {
-		const at = `cms.config: ${collection}.list.columns`;
-		if (typeof column !== "string") throw new Error(`${at} must be an array of column names`);
-		const field = Object.hasOwn(schema.fields, column) ? schema.fields[column] : undefined;
-		const known =
-			system.has(column) ||
-			stored.has(column) ||
-			slugFields.some(([name]) => name === column) ||
-			(column === "slug" && slugFields.length > 0);
-		if (!known) {
-			if (field)
-				throw new Error(`${at} "${column}" is a ${field.kind} field that is not stored, so it cannot be a column`);
-			throw new Error(
-				`${at} has unknown column "${column}"; use a field name of ${collection} or one of: ${SYSTEM_LIST_COLUMNS.join(", ")}`,
-			);
-		}
-		if (seen.has(column)) throw new Error(`${at} lists "${column}" twice`);
-		seen.add(column);
-	}
-}
+/** Said when a collection still has the retired `list` option. */
+export const LIST_REMOVED =
+	"List columns are no longer part of the schema: each admin chooses them on the list screen (Column settings). Delete the `list` key.";
 
 export interface LayoutGroup<Name extends string = string> {
 	/** Group title in the properties panel. If absent, it is drawn continuously without a title. */
@@ -98,32 +59,20 @@ export interface CollectionSchema<
 	 * and fields that have their own `tab` gather in that tab.
 	 */
 	readonly layout?: readonly LayoutGroup[];
-	/**
-	 * List. If absent, the default columns: for documents, title, status, language (when there are two or more languages), category field (a relation pointing to an item collection),
-	 * modified date and published date; for items, title, address, language, status and modified date.
-	 */
-	readonly list?: {
-		/**
-		 * Columns the list shows and their order. Field names or system columns. Unknown names are reported as errors by `defineSite`.
-		 * Text (`text`), select (`select`) and relation fields are drawn as default cells, and an admin extension (`listCells`) can change the cell look.
-		 */
-		readonly columns: readonly string[];
-	};
 }
 
-/** Value `defineCollection` accepts (without the kind). Types check that names in layout and list columns are real fields. */
+/** Value `defineCollection` accepts (without the kind). Types check that names in layout are real fields. */
 type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<
 	CollectionSchema<Fields>,
-	"kind" | "body" | "allowed" | "layout" | "list" | "path"
+	"kind" | "body" | "allowed" | "layout" | "path"
 > & {
 	path?: `/${string}:slug${string}`;
 	/** `true`/`false`, or the object form that limits the blocks, marks and heading levels the body allows. */
 	body?: boolean | BodyAllowed;
 	layout?: readonly LayoutGroup<Extract<keyof Fields, string>>[];
-	list?: { columns: readonly (Extract<keyof Fields, string> | SystemListColumn)[] };
 };
 
-/** Defines a collection. Types check that names in layout and list columns are real fields. */
+/** Defines a collection. Types check that names in layout are real fields. */
 export function defineCollection<
 	const Fields extends Readonly<Record<string, Field>>,
 	const Kind extends CollectionKind,
@@ -153,6 +102,9 @@ export function normalizeCollection(
 		throw new Error(
 			`cms.config: collection "${schema.label}" uses \`workflow\`, which was removed; use \`kind\`${replacement ? ` (kind: "${replacement}" instead of workflow: "${workflow}")` : ' ("document" or "item")'}`,
 		);
+	}
+	if ("list" in schema) {
+		throw new Error(`cms.config: collection "${schema.label}" uses \`list\`. ${LIST_REMOVED}`);
 	}
 	if (kind !== "document" && kind !== "item") {
 		throw new Error(`cms.config: collection "${schema.label}" needs kind "document" or "item"`);

@@ -133,15 +133,13 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 			shelfId: fields.relation({ label: "책장", to: "shelf" }),
 			relatedId: fields.relation({ label: "관련 노트", to: "note" }),
 		},
-		list: { columns: [] },
 	});
 	const label = defineCollection({
 		label: "라벨",
 		kind: "item",
 		fields: { title, slug: fields.slug({ label: "주소" }) },
-		list: { columns: [] },
 	});
-	const shelf = defineCollection({ label: "책장", kind: "item", fields: { title }, list: { columns: [] } });
+	const shelf = defineCollection({ label: "책장", kind: "item", fields: { title } });
 	const callout = defineBlock({
 		name: "aside-box",
 		label: "곁상자",

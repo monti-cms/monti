@@ -35,7 +35,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 	return (
 		<div className="flex flex-col gap-12" data-testid="admin-settings">
 			<Section wide title={t("admin.languageTitle")} description={t("admin.languageDescription")}>
-				<div className="max-w-md">
+				<div>
 					<Pick
 						label={t("admin.locale")}
 						hint={t("admin.localeHint")}
@@ -65,7 +65,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 				</div>
 			</Section>
 			<Section wide title={t("admin.addressTitle")} description={t("admin.addressDescription")}>
-				<div className="max-w-md">
+				<div>
 					<Labeled label={t("admin.path")} hint={t("admin.pathNote")}>
 						<code className="w-fit rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="admin-path">
 							{path}

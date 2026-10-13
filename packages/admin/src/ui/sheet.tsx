@@ -7,6 +7,7 @@ import type * as React from "react";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { uiMessages } from "./messages";
+import { type PanelResizeConfig, PanelResizeHandle, usePanelResize } from "./panel-resize";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
 	return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -42,12 +43,18 @@ function SheetContent({
 	children,
 	side = "right",
 	showCloseButton = true,
+	resize,
+	style,
 	...props
 }: SheetPrimitive.Popup.Props & {
 	side?: "top" | "right" | "bottom" | "left";
 	showCloseButton?: boolean;
+	/** A right-side sheet the writer can widen by dragging its left edge. Replaces any width class on `className`. */
+	resize?: PanelResizeConfig;
 }) {
 	const t = useTranslator(uiMessages);
+	const resizable = usePanelResize(resize ?? { name: "unused", defaultWidth: 0, minWidth: 0 });
+	const sized = resize !== undefined && side === "right";
 	return (
 		<SheetPortal>
 			<SheetOverlay />
@@ -56,10 +63,14 @@ function SheetContent({
 				data-side={side}
 				className={cn(
 					"fixed z-50 flex flex-col gap-4 border-cms-border bg-cms-popover bg-clip-padding text-cms-popover-foreground text-sm transition duration-200 ease-in-out data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=bottom]:inset-x-0 data-[side=top]:inset-x-0 data-[side=left]:inset-y-0 data-[side=right]:inset-y-0 data-[side=top]:top-0 data-[side=right]:right-0 data-[side=bottom]:bottom-0 data-[side=left]:left-0 data-[side=bottom]:h-auto data-[side=left]:h-full data-[side=right]:h-full data-[side=top]:h-auto data-[side=left]:w-3/4 data-[side=right]:w-3/4 data-[side=bottom]:rounded-t-dialog data-[side=left]:rounded-r-dialog data-[side=top]:rounded-b-dialog data-[side=right]:rounded-l-dialog data-[side=bottom]:border-t data-[side=left]:border-r data-[side=left]:border-r data-[side=top]:border-b data-[side=right]:border-l data-[side=right]:border-l data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
+					sized &&
+						"data-[side=right]:w-full data-[side=right]:sm:w-[var(--panel-width)] data-[side=right]:sm:max-w-none",
 					className,
 				)}
+				style={sized ? { ...resizable.style, ...style } : style}
 				{...props}
 			>
+				{sized && <PanelResizeHandle resize={resizable} />}
 				{children}
 				{showCloseButton && (
 					<SheetPrimitive.Close

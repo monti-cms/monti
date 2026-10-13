@@ -93,7 +93,6 @@ describe("defineSite: plugin collisions", () => {
 		label: "Topic",
 		kind: "item",
 		fields: { title: fields.text({ label: "Title" }), slug: fields.slug({ label: "Slug", from: "title" }) },
-		list: { columns: [] },
 	});
 	const base = { collections: { topic: collection }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" };
 	const plugin = (name: string, path?: string) =>

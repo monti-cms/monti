@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { pressOption } from "../../../test/base-ui";
 import { createTestRouter } from "../../../test/router";
+import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { schemaMessages } from "../messages";
@@ -171,7 +172,7 @@ const applySheet = async (sheet: HTMLElement) => {
 	fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.apply") }));
 	await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 };
-const openTab = (name: "basics" | "fields" | "list" | "advanced") =>
+const openTab = (name: "basics" | "fields" | "editor") =>
 	fireEvent.click(screen.getByRole("tab", { name: t(`collection.tabs.${name}`) }));
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
 
@@ -393,13 +394,12 @@ describe("SchemaScreen", () => {
 		expect(within(screen.getByTestId("field-title")).queryByTestId("title-badge")).toBeNull();
 	});
 
-	it("changes the order from the row menu", async () => {
+	it("changes the order from the row buttons", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
 		await screen.findByTestId("fields-card");
-		fireEvent.click(screen.getByRole("button", { name: t("fields.menu", { name: "summary" }) }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("row.up", { name: "summary" }) }));
+		fireEvent.click(screen.getByRole("button", { name: t("row.up", { name: "summary" }) }));
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown> } } })
@@ -524,15 +524,54 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByTestId("collection-post")).toBeNull();
 	});
 
+	it("ends the basics tab with the remove section, which says what removing does", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.getByText(t("collection.nameHint"))).toBeTruthy();
+		expect(screen.getByText(t("collection.dangerDescription"))).toBeTruthy();
+		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
+		expect(sections.at(-1)).toBe(t("collection.dangerTitle"));
+		const button = screen.getByRole("button", { name: t("collection.remove") });
+		expect(button.closest("section")?.querySelector(".bg-cms-card")).toBeNull();
+	});
+
+	it("labels the allowed blocks and styles by name, and keeps the id as a hint", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("editor");
+		fireEvent.click(
+			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
+		);
+		const table = await screen.findByRole("checkbox", { name: t("allowed.name.table") });
+		expect(table).toBeTruthy();
+		expect(screen.getByText(t("allowed.name.table")).getAttribute("title")).toBe("table");
+		expect(screen.queryByRole("checkbox", { name: "table" })).toBeNull();
+		expect(screen.getByRole("checkbox", { name: t("allowed.name.image") })).toBeTruthy();
+		// A block without a dictionary label falls back to its definition's label, or its id.
+		expect(screen.getByTitle("callout").textContent).toBe(testSite.BLOCK_BY_NAME.get("callout")?.label ?? "callout");
+	});
+
+	it("shows the editor tab only for a collection with a body", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.getByRole("tab", { name: t("collection.tabs.editor") })).toBeTruthy();
+		fireEvent.click(screen.getByRole("switch", { name: t("collection.body") }));
+		expect(screen.queryByRole("tab", { name: t("collection.tabs.editor") })).toBeNull();
+	});
+
 	it("limits the body of a collection to the blocks that are ticked", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		openTab("advanced");
+		openTab("editor");
 		fireEvent.click(
 			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
 		);
 		// Everything is ticked at first; untick one.
-		fireEvent.click(await screen.findByRole("checkbox", { name: "callout" }));
+		fireEvent.click(
+			await screen
+				.findByTitle("callout")
+				.then((label) => within(label.parentElement as HTMLElement).getByRole("checkbox")),
+		);
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const body = (lastPreview()?.body?.schema as { collections: { post: { body: unknown } } }).collections.post.body;
@@ -678,22 +717,22 @@ describe("SchemaScreen", () => {
 		await waitFor(() => expect(screen.queryByTestId("field-slug")).toBeNull());
 	});
 
-	it("splits a collection into tabs: Basics first, and the body limits and the list columns each in their own", async () => {
+	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
 		expect(tabs).toEqual(
-			expect.arrayContaining(
-				["basics", "fields", "list", "advanced"].map((name) => t(`collection.tabs.${name as "basics"}`)),
-			),
+			expect.arrayContaining(["basics", "fields", "editor"].map((name) => t(`collection.tabs.${name as "basics"}`))),
 		);
+		// List columns are chosen on the list screen, so there is no list tab here.
+		expect(tabs).not.toContain("List");
+		expect(tabs).not.toContain("목록");
 		// Basics is open: the address is there, the settings of the other tabs are not.
 		expect(screen.getByLabelText(t("collection.path"))).toBeTruthy();
 		expect(screen.queryByText(t("allowed.title"))).toBeNull();
-		expect(screen.queryByText(t("list.custom"))).toBeNull();
 		expect(screen.queryByTestId("field-title")).toBeNull();
 
-		openTab("advanced");
+		openTab("editor");
 		expect(await screen.findByText(t("allowed.title"))).toBeTruthy();
 		expect(screen.getByText(t("allowed.hint"))).toBeTruthy();
 		// Everything is allowed until a list is limited.
@@ -701,30 +740,258 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByLabelText(t("collection.path"))).toBeNull();
 	});
 
-	it("previews the entry list with the chosen columns, with sample rows when there are no entries", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		openTab("list");
-		const preview = await screen.findByTestId("list-preview");
-		// The usual columns until the writer chooses their own.
-		expect(within(preview).getAllByRole("columnheader")).toHaveLength(3);
-		expect(within(preview).getByText(t("list.previewSample"))).toBeTruthy();
+	describe("layout in the fields tree", () => {
+		const defaultTabName = testSite.createTranslator(entriesMessages)("tab.default");
+		const savedPost = () =>
+			(lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown>; layout?: unknown } } })
+				.collections.post;
+		/** Moves a field with the row's move button: it opens a list of places. */
+		const moveTo = async (field: string, destination: string) => {
+			fireEvent.click(await screen.findByRole("button", { name: t("layout.move", { name: field }) }));
+			const dialog = await screen.findByTestId("move-dialog");
+			fireEvent.click(within(dialog).getByRole("button", { name: destination }));
+		};
+		const openFields = async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			openTab("fields");
+			await screen.findByTestId("fields-card");
+		};
 
-		fireEvent.click(screen.getByRole("switch", { name: t("list.custom") }));
-		// Choosing columns starts from the title; adding one shows its column at once.
-		expect(within(screen.getByTestId("list-preview")).getAllByRole("columnheader")).toHaveLength(1);
-		fireEvent.click(screen.getByRole("combobox", { name: t("names.add", { label: t("list.columns") }) }));
-		pressOption(await screen.findByRole("option", { name: "summary" }));
-		const headers = within(screen.getByTestId("list-preview")).getAllByRole("columnheader");
-		expect(headers.map((cell) => cell.textContent)).toEqual(["Title", "Summary"]);
-		// The sample rows carry values for the field.
-		expect(within(screen.getByTestId("list-preview")).getByText("Summary 1")).toBeTruthy();
+		it("moves, reorders and deletes with buttons on every row, named after the row, and keeps no menu", async () => {
+			await openFields();
+			expect(screen.queryByRole("button", { name: /^(Actions for|.* 작업$)/ })).toBeNull();
+			// The ends of the run are disabled.
+			const first = screen.getByRole("button", { name: t("row.up", { name: "slug" }) }) as HTMLButtonElement;
+			expect(first.disabled).toBe(true);
+			expect(
+				(screen.getByRole("button", { name: t("row.down", { name: "slug" }) }) as HTMLButtonElement).disabled,
+			).toBe(false);
 
-		// The choice is part of the one save.
-		fireEvent.click(review());
-		await screen.findByTestId("review-summary");
-		const post = (lastPreview()?.body?.schema as { collections: { post: { list: unknown } } }).collections.post;
-		expect(post.list).toEqual({ columns: ["title", "summary"] });
+			// Delete is a staged change: the row goes and the review has it.
+			fireEvent.click(screen.getByRole("button", { name: t("row.remove", { name: "summary" }) }));
+			await waitFor(() => expect(screen.queryByTestId("field-summary")).toBeNull());
+
+			// A group and a tab have the same buttons.
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addTab") }));
+			await screen.findByTestId("tab-1");
+			for (const label of [
+				t("layout.upGroup", { name: t("layout.newGroup") }),
+				t("layout.downGroup", { name: t("layout.newGroup") }),
+				t("layout.removeGroup", { name: t("layout.newGroup") }),
+				t("layout.upTab", { name: t("layout.newTab") }),
+				t("layout.downTab", { name: t("layout.newTab") }),
+				t("layout.removeTab", { name: t("layout.newTab") }),
+			]) {
+				expect(screen.getByRole("button", { name: label })).toBeTruthy();
+			}
+			fireEvent.click(screen.getByRole("button", { name: t("layout.removeTab", { name: t("layout.newTab") }) }));
+			await waitFor(() => expect(screen.queryByTestId("tab-1")).toBeNull());
+		});
+
+		it("adds a group, renames it in place, and saves the group with the order of the fields", async () => {
+			await openFields();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			const title = (await screen.findByDisplayValue(t("layout.newGroup"))) as HTMLInputElement;
+			type(title, "Details");
+			fireEvent.blur(title);
+			await screen.findByDisplayValue("Details");
+
+			await moveTo("summary", "Details");
+
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			const post = savedPost();
+			expect(post.layout).toEqual([{ fields: ["slug", "status"] }, { group: "Details", fields: ["summary"] }]);
+			// The grouped field comes first in the file; the title is pinned before everything.
+			expect(Object.keys(post.fields)).toEqual(["title", "slug", "status", "summary"]);
+		});
+
+		it("collapses a group at first", async () => {
+			await openFields();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await screen.findByDisplayValue(t("layout.newGroup"));
+			fireEvent.click(
+				await screen.findByRole("button", { name: t("layout.collapseToggle", { name: t("layout.newGroup") }) }),
+			);
+			expect(await screen.findByText(t("layout.collapsedMark"))).toBeTruthy();
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			expect(savedPost().layout).toEqual([
+				{ fields: ["slug", "summary", "status"] },
+				{ group: t("layout.newGroup"), fields: [], collapsed: true },
+			]);
+		});
+
+		it("deletes a group, sending its fields back to no group", async () => {
+			await openFields();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await screen.findByDisplayValue(t("layout.newGroup"));
+			await moveTo("summary", t("layout.newGroup"));
+			fireEvent.click(
+				await screen.findByRole("button", { name: t("layout.removeGroup", { name: t("layout.newGroup") }) }),
+			);
+			await waitFor(() => expect(screen.queryByDisplayValue(t("layout.newGroup"))).toBeNull());
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			const post = savedPost();
+			expect(post.layout).toBeUndefined();
+			expect(Object.keys(post.fields)).toEqual(["title", "slug", "status", "summary"]);
+		});
+
+		it("shows the tab level only once a second tab exists, and moves a group into it", async () => {
+			await openFields();
+			expect(screen.queryByTestId("tab-0")).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await screen.findByDisplayValue(t("layout.newGroup"));
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addTab") }));
+			await screen.findByTestId("tab-1");
+			expect(screen.getByDisplayValue(defaultTabName)).toBeTruthy();
+
+			fireEvent.click(
+				await screen.findByRole("button", { name: t("layout.moveGroup", { name: t("layout.newGroup") }) }),
+			);
+			fireEvent.click(
+				within(await screen.findByTestId("move-dialog")).getByRole("button", { name: t("layout.newTab") }),
+			);
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			expect(savedPost().layout).toEqual([{ group: t("layout.newGroup"), fields: [], tab: t("layout.newTab") }]);
+		});
+
+		it("marks the title as not in the properties panel and cannot move it into a group", async () => {
+			await openFields();
+			const row = screen.getByTestId("field-title");
+			expect(within(row).getByText(t("layout.notInPanel"))).toBeTruthy();
+			expect(within(row).getByText(t("layout.notInPanel")).getAttribute("title")).toBe(t("layout.notInPanel.title"));
+			expect(within(row).queryByRole("button", { name: t("layout.move", { name: "title" }) })).toBeNull();
+		});
+
+		it("shows a field a plugin placed inside its own tab, locked there, and hidden fields as not in the panel", async () => {
+			const withPlugin = schema();
+			Object.assign(withPlugin.collections.post.fields, {
+				seoTitle: { kind: "text", label: "SEO title", tab: "SEO" },
+				internal: { kind: "text", label: "Internal", hidden: true },
+			});
+			state = screenState({ schema: withPlugin });
+			await openFields();
+			expect(screen.getByTestId("tab-1")).toBeTruthy();
+			const seo = screen.getByTestId("field-seoTitle");
+			expect(within(seo).getByText(t("layout.pluginPlaced"))).toBeTruthy();
+			expect(within(seo).getByRole("button", { name: t("row.remove", { name: "seoTitle" }) })).toBeTruthy();
+			// The tab is the plugin's: it cannot be renamed.
+			expect((screen.getByDisplayValue("SEO") as HTMLInputElement).disabled).toBe(true);
+			expect(within(screen.getByTestId("field-internal")).getByText(t("layout.notInPanel"))).toBeTruthy();
+			// The plugin places it: it cannot be moved, only removed.
+			expect(within(seo).queryByRole("button", { name: t("layout.move", { name: "seoTitle" }) })).toBeNull();
+			expect(
+				(within(seo).getByRole("button", { name: t("row.up", { name: "seoTitle" }) }) as HTMLButtonElement).disabled,
+			).toBe(true);
+		});
+
+		it("shows fields in no group where the panel draws them, and an unrelated move leaves them in place", async () => {
+			const withRun = schema();
+			(withRun.collections.post as Record<string, unknown>).layout = [
+				{ fields: ["slug", "summary"] },
+				{ group: "Classification", fields: ["status"] },
+			];
+			state = screenState({ schema: withRun });
+			vi.stubGlobal("matchMedia", (query: string) => ({
+				matches: query.includes("1280"),
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+			}));
+			await openFields();
+			const order = () =>
+				Array.from(document.querySelectorAll('[data-testid^="field-"], [data-testid^="group-"]')).map((row) =>
+					row.getAttribute("data-testid"),
+				);
+			// The tree lists the fields in no group first, then the group, as the panel does.
+			expect(order().filter((id) => id !== "field-title")).toEqual([
+				"field-slug",
+				"field-summary",
+				"group-0-1",
+				"field-status",
+			]);
+			const previewOrder = () =>
+				Array.from(document.querySelectorAll('[data-testid="layout-preview"] [data-testid^="preview-field-"]')).map(
+					(row) => row.getAttribute("data-testid"),
+				);
+			expect(previewOrder()).toEqual(["preview-field-slug", "preview-field-summary", "preview-field-status"]);
+
+			// Moving another field does not move them.
+			await moveTo("status", t("layout.moveOut"));
+			await waitFor(() => expect(order().filter((id) => id !== "field-title")[0]).toBe("field-slug"));
+			expect(previewOrder().slice(0, 2)).toEqual(["preview-field-slug", "preview-field-summary"]);
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			const post = savedPost();
+			expect(post.layout).toEqual([{ fields: ["slug", "summary"] }, { group: "Classification", fields: [] }]);
+			vi.unstubAllGlobals();
+		});
+
+		it("gives a conditional field's own field no drag handle when it is alone in its choice", async () => {
+			const withConditional = schema();
+			Object.assign(withConditional.collections.post.fields, {
+				policy: {
+					kind: "conditional",
+					label: "Policy",
+					discriminant: { kind: "select", label: "Policy", options: { normal: "Normal", deprecated: "Deprecated" } },
+					values: { normal: {}, deprecated: { replacementId: { kind: "text", label: "Replacement" } } },
+				},
+			});
+			state = screenState({ schema: withConditional });
+			await openFields();
+			// The parent can be dragged; its single sub-field cannot go anywhere on its own.
+			expect(screen.getByRole("button", { name: t("fields.drag", { name: "policy" }) })).toBeTruthy();
+			expect(
+				(screen.getByRole("button", { name: t("fields.drag", { name: "replacementId" }) }) as HTMLButtonElement)
+					.disabled,
+			).toBe(true);
+		});
+
+		it("previews the panel beside the tree on a wide window, following the tree", async () => {
+			vi.stubGlobal("matchMedia", (query: string) => ({
+				matches: query.includes("1280"),
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+			}));
+			await openFields();
+			const preview = await screen.findByTestId("layout-preview");
+			// The title is above the body, so the panel does not draw it.
+			expect(within(preview).queryByTestId("preview-field-title")).toBeNull();
+			expect(within(preview).getByTestId("preview-field-summary")).toBeTruthy();
+			expect(within(preview).getByRole("tab", { name: defaultTabName })).toBeTruthy();
+
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await moveTo("summary", t("layout.newGroup"));
+			const grouped = await within(screen.getByTestId("layout-preview")).findByRole("region", {
+				name: t("layout.newGroup"),
+			});
+			expect(within(grouped).getByTestId("preview-field-summary")).toBeTruthy();
+			vi.unstubAllGlobals();
+		});
+
+		it("opens the preview in a side panel on a narrow window", async () => {
+			await openFields();
+			expect(screen.queryByTestId("layout-preview")).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			const drawer = await screen.findByTestId("layout-preview-drawer");
+			expect(within(drawer).getByTestId("layout-preview")).toBeTruthy();
+			fireEvent.click(within(drawer).getByRole("button", { name: t("layout.previewClose") }));
+			expect(screen.queryByTestId("layout-preview-drawer")).toBeNull();
+		});
+
+		it("cannot change the layout when the schema is read-only", async () => {
+			state = screenState({ access: { writable: false, reason: "production" } });
+			await openFields();
+			expect((screen.getByRole("button", { name: t("layout.addGroup") }) as HTMLButtonElement).disabled).toBe(true);
+			expect((screen.getByRole("button", { name: t("layout.addTab") }) as HTMLButtonElement).disabled).toBe(true);
+		});
 	});
 
 	it("adds a conditional field only once its options and a field are set", async () => {
@@ -927,7 +1194,7 @@ describe("SchemaScreen", () => {
 		type(screen.getByLabelText(t("site.alias.new")), "www.example.com");
 		fireEvent.click(screen.getByRole("button", { name: t("site.alias.add") }));
 		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
-		pressOption(await screen.findByRole("option", { name: t("site.prefix.always") }));
+		pressOption(await screen.findByRole("option", { name: new RegExp(`^${t("site.prefix.always")}`) }));
 
 		const file = await reviewedFile();
 		expect(file.site).toEqual({
@@ -961,14 +1228,21 @@ describe("SchemaScreen", () => {
 		expect(file.site).toEqual({ previewLocaleParam: false });
 	});
 
-	it("explains each language prefix option with an example address", async () => {
+	it("puts each prefix option's explanation and example in the list, and under the select only the chosen one", async () => {
 		await openSettingsTab("site");
-		const list = await screen.findByTestId("locale-prefix-explanations");
+		const explanation = await screen.findByTestId("locale-prefix-explanations");
+		const text = (mode: "except-default" | "always" | "never") =>
+			t(`site.prefix.${mode}.text`, { default: "en", other: "fr" });
+		expect(explanation.textContent).toBe(text("except-default"));
+		expect(explanation.textContent).toContain("/fr/posts/a");
+
+		fireEvent.click(screen.getByRole("combobox", { name: t("site.localePrefix") }));
 		for (const mode of ["except-default", "always", "never"] as const) {
-			expect(within(list).getByText(t(`site.prefix.${mode}.text`, { default: "en", other: "fr" }))).toBeTruthy();
+			const option = await screen.findByRole("option", { name: new RegExp(`^${t(`site.prefix.${mode}`)}`) });
+			expect(option.textContent).toContain(text(mode));
 		}
-		expect(list.textContent).toContain("/posts/a");
-		expect(list.textContent).toContain("/fr/posts/a");
+		pressOption(await screen.findByRole("option", { name: new RegExp(`^${t("site.prefix.never")}`) }));
+		await waitFor(() => expect(screen.getByTestId("locale-prefix-explanations").textContent).toBe(text("never")));
 	});
 
 	it("shows the site URL read-only with where it comes from", async () => {

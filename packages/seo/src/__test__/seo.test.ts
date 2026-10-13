@@ -28,7 +28,6 @@ describe("seoFields", () => {
 			label: "Page",
 			kind: "document",
 			fields: { title: fields.text({ label: "Title" }), ...seoBundle },
-			list: { columns: [] },
 		});
 		// The labels are read when a site is created from the config, in that site's admin language.
 		const site = createSite(defineSite({ ...testConfig, collections: { page } as CollectionsConfig }));
@@ -68,7 +67,6 @@ describe("config validation (`seo().validate`)", () => {
 					label: "Page",
 					kind: "document",
 					fields: { title, ...extra },
-					list: { columns: [] },
 				}),
 			} as CollectionsConfig,
 		});
@@ -93,7 +91,6 @@ describe("public page helper (`seoOf`)", () => {
 			intro: fields.text({ label: "Intro", role: "summary" }),
 			...seoFields({ keys: { title: "metaTitle", noindex: "robots" } }),
 		},
-		list: { columns: [] },
 	});
 
 	it("reads values by role and fills an empty title or description from the title or summary", () => {
@@ -128,7 +125,6 @@ describe("public page helper (`seoOf`)", () => {
 				headline: fields.text({ label: "Headline", role: "title" }),
 				...seoFields(),
 			},
-			list: { columns: [] },
 		});
 		expect(seoOf(article, { headline: "Article headline" })).toMatchObject({ title: "Article headline" });
 		// A stored `title` that is not the title field is not the fallback.

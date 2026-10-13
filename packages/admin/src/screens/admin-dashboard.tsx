@@ -16,7 +16,7 @@ import { FilterChipBar, ListSearch } from "./list-toolbar";
 import { screensMessages } from "./messages";
 import { RecordPanel } from "./record-panel";
 import { AdminNavProvider, AdminShell } from "./shared/admin-shell";
-import { SIDE_PANEL_DOCK } from "./shared/side-panel";
+import { DockedPanel, RECORD_PANEL_RESIZE } from "./shared/side-panel";
 import { type EntryList, useEntryList } from "./use-entry-list";
 
 /** Top right above the list: search and add button (trash has no add). */
@@ -117,20 +117,21 @@ function EntryListBody({ list }: { list: EntryList }) {
 					/>
 				</div>
 				{record && (
-					<RecordPanel
-						key={`${record.collection}:${record.id ?? "new"}`}
-						target={record}
-						className={SIDE_PANEL_DOCK}
-						onDirtyChange={list.setRecordDirty}
-						onClose={list.closeRecord}
-						onSaved={(saved) => {
-							// Keep the saved item open as is. For a new item, switch to editing the created item.
-							if (!record.id) list.showRecord({ collection: record.collection, id: saved.id });
-							toast.success(t("common.saved"));
-							void list.invalidateEntries();
-							list.reloadTaxonomies();
-						}}
-					/>
+					<DockedPanel resize={RECORD_PANEL_RESIZE}>
+						<RecordPanel
+							key={`${record.collection}:${record.id ?? "new"}`}
+							target={record}
+							onDirtyChange={list.setRecordDirty}
+							onClose={list.closeRecord}
+							onSaved={(saved) => {
+								// Keep the saved item open as is. For a new item, switch to editing the created item.
+								if (!record.id) list.showRecord({ collection: record.collection, id: saved.id });
+								toast.success(t("common.saved"));
+								void list.invalidateEntries();
+								list.reloadTaxonomies();
+							}}
+						/>
+					</DockedPanel>
 				)}
 			</div>
 			{list.folderActions.dialogs}
