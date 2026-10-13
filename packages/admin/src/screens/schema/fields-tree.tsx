@@ -187,7 +187,7 @@ function Row({
 	return (
 		<div
 			ref={setNodeRef}
-			style={{ transform: CSS.Transform.toString(transform), transition }}
+			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn("relative", isDragging && "z-10 bg-cms-card opacity-80")}
 			data-testid={`field-${name}`}
 		>
@@ -477,7 +477,7 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	return (
 		<div
 			ref={setNodeRef}
-			style={{ transform: CSS.Transform.toString(transform), transition }}
+			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
 			className="group/row relative mt-2 flex items-center gap-1 border-y bg-cms-muted/50 px-5 py-1 first:mt-0"
 		>
@@ -577,7 +577,7 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 	return (
 		<div
 			ref={setNodeRef}
-			style={{ transform: CSS.Transform.toString(transform), transition }}
+			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn("group/row relative mt-1 border-y bg-cms-muted/30", isDragging && "z-10 bg-cms-card opacity-80")}
 			data-testid={`group-${tab}-${block}`}
 		>
@@ -623,7 +623,7 @@ function DropRow({ id, indent, label, testId }: { id: string; indent: string; la
 	return (
 		<div
 			ref={setNodeRef}
-			style={{ transform: CSS.Transform.toString(transform), transition }}
+			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn("px-5 text-cms-muted-foreground text-xs", label ? "py-1" : "h-2")}
 			data-testid={testId}
 		>
