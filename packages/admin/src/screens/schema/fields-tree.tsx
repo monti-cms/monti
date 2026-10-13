@@ -18,8 +18,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, ChevronsDownUp, Eye, GripVertical, MoveRight, Plus, Trash2, X } from "lucide-react";
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
+import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { IconButton } from "../../ui/icon-button";
@@ -864,9 +865,9 @@ function useWide(): boolean {
 }
 
 /** The preview on a narrower window: a panel on the right that the writer can widen, with the tree still reachable beside it. */
-function PreviewDrawer({ collection, onClose }: { collection: Obj; onClose: () => void }) {
+function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () => void }) {
 	const t = useTranslator(schemaMessages);
-	const resize = usePanelResize({ name: "layout-preview", defaultWidth: 384, minWidth: 320 });
+	const resize = usePanelResize({ name: "layout-preview", defaultWidth: 420, minWidth: 320 });
 	return (
 		<aside
 			aria-label={t("layout.previewTitle")}
@@ -881,11 +882,26 @@ function PreviewDrawer({ collection, onClose }: { collection: Obj; onClose: () =
 					<X aria-hidden />
 				</Button>
 			</div>
-			<div className="min-h-0 flex-1 overflow-y-auto p-4">
-				<LayoutPreview collection={collection} />
-			</div>
+			<div className="flex min-h-0 flex-1 flex-col p-3">{preview}</div>
 		</aside>
 	);
+}
+
+/** Whether the preview is open: remembered in this browser; open on a wide window until the writer closes it. */
+function usePreviewOpen(wide: boolean): [boolean, (open: boolean) => void] {
+	const site = useSite();
+	const [chosen, setChosen] = useState<boolean | null>(null);
+	useEffect(() => {
+		const saved = readPreference(site, "layout-preview-open");
+		setChosen(saved === "1" ? true : saved === "0" ? false : null);
+	}, [site]);
+	return [
+		chosen ?? wide,
+		(open) => {
+			setChosen(open);
+			writePreference(site, "layout-preview-open", open ? "1" : "0");
+		},
+	];
 }
 
 /**
@@ -901,10 +917,16 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const names = Object.keys(fields);
 	const [sheet, setSheet] = useState<{ place: FieldPlace; name: string } | null>(null);
 	const [adding, setAdding] = useState(false);
-	const [drawer, setDrawer] = useState(false);
 	const wide = useWide();
+	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
+	const sideResize = usePanelResize({ name: "layout-preview-side", defaultWidth: 420, minWidth: 320 });
+	const { file, codeCollections } = useSchemaEdit();
 	const first = defaultTab(site);
-	const ctx: TreeContext = { editing, onOpen: (place, name) => setSheet({ place, name }), compact: wide };
+	const ctx: TreeContext = {
+		editing,
+		onOpen: (place, name) => setSheet({ place, name }),
+		compact: wide && previewOpen,
+	};
 	const addTo = (make: (tree: Tree) => Tree) =>
 		editing.update((current) => withTree(current, make(treeOf(current, first))));
 	const unique = (base: string, taken: string[]) => {
@@ -941,18 +963,16 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					<p className="mt-0.5 text-cms-muted-foreground text-xs">{t("fields.hint")}</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					{!wide && (
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							aria-pressed={drawer}
-							onClick={() => setDrawer((open) => !open)}
-						>
-							<Eye aria-hidden />
-							{t("layout.preview")}
-						</Button>
-					)}
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						aria-pressed={previewOpen}
+						onClick={() => setPreviewOpen(!previewOpen)}
+					>
+						<Eye aria-hidden />
+						{t("layout.preview")}
+					</Button>
 					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
 						<Plus aria-hidden />
 						{t("layout.addTab")}
@@ -967,10 +987,13 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					</Button>
 				</div>
 			</div>
-			<div className={cn(columnsOf(wide), "border-b py-2 pr-5 pl-9 text-cms-muted-foreground text-xs")} aria-hidden>
+			<div
+				className={cn(columnsOf(ctx.compact), "border-b py-2 pr-5 pl-9 text-cms-muted-foreground text-xs")}
+				aria-hidden
+			>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
-				<span className={cn("hidden", !wide && "sm:block")}>{t("fields.colSettings")}</span>
+				<span className={cn("hidden", !ctx.compact && "sm:block")}>{t("fields.colSettings")}</span>
 			</div>
 			<div className="py-1.5 pb-2.5">
 				{names.length === 0 ? (
@@ -1017,20 +1040,28 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			)}
 		</section>
 	);
+	const preview = (
+		<LayoutPreview
+			file={file}
+			collection={editing.collectionName}
+			codeCollections={codeCollections}
+			onClose={() => setPreviewOpen(false)}
+		/>
+	);
 	return (
 		<>
-			{wide ? (
-				<div className="grid grid-cols-[minmax(0,1fr)_22rem] items-start gap-6">
+			{wide && previewOpen ? (
+				<div className="grid grid-cols-[minmax(0,1fr)_var(--panel-width)] items-start gap-6" style={sideResize.style}>
 					{card}
-					<div className="sticky top-4 space-y-2" data-testid="layout-preview-side">
-						<p className="text-cms-muted-foreground text-xs">{t("layout.previewHint")}</p>
-						<LayoutPreview collection={editing.collection} />
+					<div className="sticky top-4 flex h-[min(48rem,calc(100vh-6rem))] flex-col" data-testid="layout-preview-side">
+						<PanelResizeHandle resize={sideResize} className="-left-3.5" />
+						{preview}
 					</div>
 				</div>
 			) : (
 				card
 			)}
-			{!wide && drawer && <PreviewDrawer collection={editing.collection} onClose={() => setDrawer(false)} />}
+			{!wide && previewOpen && <PreviewDrawer preview={preview} onClose={() => setPreviewOpen(false)} />}
 		</>
 	);
 }

@@ -21,6 +21,8 @@ export interface SchemaEditContext {
 	readonly vocabulary: { readonly blocks: readonly string[]; readonly marks: readonly string[] };
 	readonly issues: readonly SchemaIssue[];
 	readonly collectionNames: readonly string[];
+	/** Collections defined in code: the preview keeps them next to the file's. */
+	readonly codeCollections: readonly string[];
 	/** The file as edited, for editors that look at another collection (a relation's target, a backlink's relation). */
 	readonly file: Obj;
 }
@@ -30,6 +32,7 @@ const Context = createContext<SchemaEditContext>({
 	vocabulary: { blocks: [], marks: [] },
 	issues: [],
 	collectionNames: [],
+	codeCollections: [],
 	file: {},
 });
 export const SchemaEditProvider = Context.Provider;

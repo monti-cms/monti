@@ -1,5 +1,7 @@
 import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import { cmsApiErrorMessage } from "../screens/api-error-message";
+import { screensMessages } from "../screens/messages";
+import { isSandboxSite } from "../screens/shared/preview-sandbox";
 import { editorMessages } from "./messages";
 
 /**
@@ -219,6 +221,8 @@ export async function uploadAttachment(
 	onProgress?: (percent: number) => void,
 ): Promise<{ mediaId: string }> {
 	const t = site.createTranslator(editorMessages);
+	// A preview of a screen runs on a draft site: nothing is uploaded from it.
+	if (isSandboxSite(site)) throw new Error(site.createTranslator(screensMessages)("api.previewNoWrite"));
 	const mimeType = site.api.fileTypeFor(file.name);
 	if (!mimeType) throw new Error(t("upload.unsupportedType"));
 	if (file.size > site.api.MAX_FILE_BYTES)

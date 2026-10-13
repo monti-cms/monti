@@ -1,116 +1,113 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
-import { ChevronRight } from "lucide-react";
-import { useState } from "react";
-import { Input } from "../../ui/input";
-import { Label } from "../../ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
-import { defaultTab, isDrawnField, layoutGroupsOfSchema } from "../entries/layout-groups";
+import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/client";
+import { Component, type ReactNode, useMemo, useRef, useState } from "react";
+import { type EntryForm, type EntryFormPatch, emptyFormOf } from "../entries/entry-form";
+import { InspectorPanel } from "../entries/inspector-panel";
+import { SchemaFields } from "../entries/schema-fields";
+import { EntryFormProvider } from "../entries/use-field";
+import { draftSiteOf } from "./draft-site";
 import { schemaMessages } from "./messages";
-import { fieldsOf, layoutOf, type Obj, titleFieldName } from "./schema-model";
+import type { Obj } from "./schema-model";
 
-/** One field as the panel draws it, with an input that does nothing. */
-function InertField({ name, field }: { name: string; field: Obj }) {
-	const label = typeof field.label === "string" && field.label !== "" ? field.label : name;
-	const id = `layout-preview-${name}`;
-	const kind = String(field.kind);
+/** Catches what the real components throw for a draft that is only half made, so one bad moment does not take the settings page down. */
+class PreviewBoundary extends Component<
+	{ children: ReactNode; fallback: ReactNode; resetKey: unknown },
+	{ failed: boolean }
+> {
+	state = { failed: false };
+	static getDerivedStateFromError() {
+		return { failed: true };
+	}
+	componentDidUpdate(previous: { resetKey: unknown }) {
+		if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false });
+	}
+	render() {
+		return this.state.failed ? this.props.fallback : this.props.children;
+	}
+}
+
+const noop = () => {};
+
+/**
+ * The form of a collection with nothing in it: the real panel on a local form, so typing, picking and the conditional fields that follow work, and nothing is
+ * kept or sent. Documents use the properties panel of the edit screen, items the fields of the record panel.
+ */
+function PreviewPanel({ collection, onClose }: { collection: string; onClose: () => void }) {
+	const site = useSite();
+	const [form, setForm] = useState<EntryForm>(() => emptyFormOf(site, collection));
+	const value = useMemo(
+		() => ({
+			collection,
+			form,
+			setForm: (patch: EntryFormPatch) => setForm((current) => ({ ...current, ...patch })),
+		}),
+		[collection, form],
+	);
 	return (
-		<div className="space-y-1.5" data-testid={`preview-field-${name}`}>
-			<Label htmlFor={id} className="text-xs">
-				{label}
-			</Label>
-			{kind === "view" || kind === "backlink" ? (
-				<div id={id} className="rounded-md border border-dashed px-2.5 py-1.5 text-cms-muted-foreground text-xs">
-					{kind === "view" ? String(field.view ?? name) : label}
+		<EntryFormProvider value={value}>
+			{site.isItemCollection(collection) ? (
+				<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4" data-testid="layout-preview-record">
+					<SchemaFields />
 				</div>
-			) : kind === "media" ? (
-				<div id={id} className="h-16 rounded-md border border-dashed" />
 			) : (
-				<Input id={id} readOnly tabIndex={-1} aria-readonly className="pointer-events-none h-8 bg-cms-muted/30" />
+				<InspectorPanel
+					incomingReferences={[]}
+					isLoadingIncomingReferences={false}
+					onRefreshIncomingReferences={noop}
+					onSlugChange={(slug) => value.setForm({ slug })}
+					onRegenerateSlug={noop}
+					onClose={onClose}
+				/>
 			)}
-		</div>
+		</EntryFormProvider>
 	);
 }
 
 /**
- * The properties panel of the edit screen for the layout being edited: the same grouping (`layoutGroupsOfSchema`, which the real panel uses) and the same
- * rules for what is drawn (not the title, not hidden fields), with inputs that do nothing. It reads the draft, so it follows the tree as it changes.
- * Documents draw their groups plainly under a title; items (the record panel) let a group be folded, so a group that starts collapsed is closed here.
+ * The properties panel of the edit screen for the schema being edited, running for real: the same components on a site made from the draft, so tabs, groups,
+ * required marks, options, help texts and conditional fields are what the editor will show. It is interactive and keeps nothing: writes are refused and nothing
+ * is saved. It follows the tree and the sheets as the draft changes.
  */
-export function LayoutPreview({ collection }: { collection: Obj }) {
+export function LayoutPreview({
+	file,
+	collection,
+	codeCollections,
+	onClose,
+}: {
+	/** The schema file as edited. */
+	file: Obj;
+	/** The collection shown. */
+	collection: string;
+	codeCollections: readonly string[];
+	onClose: () => void;
+}) {
 	const t = useTranslator(schemaMessages);
 	const site = useSite();
-	const first = defaultTab(site);
-	const fields = fieldsOf(collection);
-	const titleName = titleFieldName(collection);
-	const layout = layoutOf(collection);
-	const groups = layoutGroupsOfSchema({
-		fields: fields as Record<string, { tab?: string }>,
-		...(layout.length > 0 ? { layout } : {}),
-	});
-	const tabs = [...new Set([first, ...groups.map((group) => group.tab ?? first)])];
-	const [chosen, setChosen] = useState(first);
-	const tab = tabs.includes(chosen) ? chosen : first;
-	const isItem = collection.kind === "item";
-	const drawn = (name: string) => {
-		const field = fields[name];
-		return field !== undefined && name !== titleName && isDrawnField(field as { kind: string; hidden?: boolean });
-	};
+	const made = useMemo(() => draftSiteOf(site, file, codeCollections), [site, file, codeCollections]);
+	// While the draft cannot be made (a half-typed name), the last one that could stays.
+	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
+	if (made) lastGood.current = made;
+	const draft = made ?? lastGood.current;
+	const problem = <p className="px-4 py-4 text-cms-muted-foreground text-xs">{t("layout.previewUnavailable")}</p>;
 
 	return (
-		<Tabs
-			value={tab}
-			onValueChange={(value) => setChosen(String(value))}
-			aria-label={t("layout.previewTitle")}
-			className="gap-0 overflow-hidden rounded-lg border bg-cms-background text-sm"
+		<div
+			className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-cms-background"
 			data-testid="layout-preview"
 		>
-			<TabsList variant="line" className="h-10 w-full shrink-0 justify-start gap-3 border-b px-4">
-				{tabs.map((name) => (
-					<TabsTrigger key={name} value={name} className="flex-none px-0 text-xs">
-						{name}
-					</TabsTrigger>
-				))}
-			</TabsList>
-			{tabs.map((name) => {
-				const inTab = groups.filter((group) => (group.tab ?? first) === name);
-				const shown = inTab
-					.map((group) => ({ group, names: group.fields.filter(drawn) }))
-					.filter((item) => item.names.length > 0);
-				return (
-					<TabsContent key={name} value={name} className="space-y-4 px-4 py-4">
-						{shown.length === 0 && <p className="text-cms-muted-foreground text-xs">{t("layout.previewEmpty")}</p>}
-						{shown.map(({ group, names }, index) => {
-							const body = names.map((fieldName) => (
-								<InertField key={fieldName} name={fieldName} field={fields[fieldName] as Obj} />
-							));
-							if (!group.group || (!isItem && shown.length === 1)) {
-								return (
-									<div key={`${group.group ?? "group"}-${index}`} className="space-y-4">
-										{body}
-									</div>
-								);
-							}
-							const folded = isItem && group.collapsed === true;
-							return (
-								<section
-									key={`${group.group}-${index}`}
-									aria-label={group.group}
-									data-collapsed={folded ? "" : undefined}
-									className="space-y-4 border-t pt-4 first:border-t-0 first:pt-0"
-								>
-									<h3 className="flex items-center gap-1 font-medium text-[11px] text-cms-muted-foreground uppercase tracking-wide">
-										{isItem && <ChevronRight aria-hidden className={`size-3.5 ${folded ? "" : "rotate-90"}`} />}
-										{group.group}
-									</h3>
-									{!folded && body}
-								</section>
-							);
-						})}
-					</TabsContent>
-				);
-			})}
-		</Tabs>
+			<p className="shrink-0 border-b bg-cms-muted/50 px-4 py-1.5 text-cms-muted-foreground text-xs">
+				{t("layout.previewLabel")}
+			</p>
+			{draft?.isCollection(collection) ? (
+				<SiteProvider site={draft}>
+					<PreviewBoundary fallback={problem} resetKey={draft}>
+						<PreviewPanel key={collection} collection={collection} onClose={onClose} />
+					</PreviewBoundary>
+				</SiteProvider>
+			) : (
+				problem
+			)}
+		</div>
 	);
 }

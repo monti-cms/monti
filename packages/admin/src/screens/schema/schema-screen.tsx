@@ -144,9 +144,10 @@ function SchemaEditor({
 			vocabulary: state.vocabulary,
 			issues,
 			collectionNames: names,
+			codeCollections: state.codeCollections,
 			file: draft,
 		}),
-		[writable, state.vocabulary, issues, names, draft],
+		[writable, state.vocabulary, issues, names, state.codeCollections, draft],
 	);
 
 	const discard = async () => {
