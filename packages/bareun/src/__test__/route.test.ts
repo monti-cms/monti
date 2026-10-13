@@ -3,7 +3,7 @@
 import { defineSite } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/adapters/auth";
 import type { Cms } from "@monti-cms/core/plugin/server";
-import { fakeCms } from "@monti-cms/core/testing";
+import { fakeCms, routeCaller } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../test/site";
 import { bareun } from "../index";
@@ -33,7 +33,8 @@ const request = (method: string, body?: unknown) =>
 		body: body === undefined ? undefined : JSON.stringify(body),
 	});
 
-const post = (body: unknown, cms: Cms = cmsWith()) => bareunRoute().POST(request("POST", body), { cms });
+const postRoute = routeCaller(bareunRoute().POST);
+const post = (body: unknown, cms: Cms = cmsWith()) => postRoute(request("POST", body), { cms });
 const assignKey = (cms: Cms, value: string) =>
 	cms.apiKeys.slot("text-check-bareun", "key").assign({ use: "new", value });
 

@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { fakeCms } from "../../cms";
 import type { ApiKeyList, ApiKeyView } from "../../core/api-keys";
-import { PATCH as patchKey, DELETE as removeKey } from "../../http/v1/api-keys/[id]/route";
-import { GET as listKeys, POST as postKey } from "../../http/v1/api-keys/route";
+import { PATCH as patchKeyHandler, DELETE as removeKeyHandler } from "../../http/v1/api-keys/[id]/route";
+import { GET as listKeysHandler, POST as postKeyHandler } from "../../http/v1/api-keys/route";
+import { routeCaller } from "../../testing";
+
+const patchKey = routeCaller(patchKeyHandler);
+const removeKey = routeCaller(removeKeyHandler);
+const listKeys = routeCaller(listKeysHandler);
+const postKey = routeCaller(postKeyHandler);
 
 const cmsWithSecret = () => fakeCms({ server: { secret: "a-long-enough-test-secret" } });
 const VALUE = "sk-ant-api03-abcdefghij3f9a";

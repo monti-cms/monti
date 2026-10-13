@@ -1,7 +1,9 @@
-import { fakeCms } from "@monti-cms/core/testing";
+import { fakeCms, routeCaller } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../test/site";
-import { POST as postRun } from "../routes/run/route";
+import { POST as postRunHandler } from "../routes/run/route";
+
+const postRun = routeCaller(postRunHandler);
 
 const mockVerifyAdmin = vi.fn();
 const overrides = vi.hoisted(() => ({ rows: [] as Array<{ key: string; value: unknown; version: number }> }));

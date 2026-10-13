@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { contentCollection, otherContentCollection, recordCollection } from "../../../../../test/any-site";
 import { testConfig } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
-import { GET as getPreferences, PUT as putPreferences } from "../route";
+import { routeCaller } from "../../../../testing";
+import { GET as getPreferencesHandler, PUT as putPreferencesHandler } from "../route";
+
+const getPreferences = routeCaller(getPreferencesHandler);
+const putPreferences = routeCaller(putPreferencesHandler);
 
 /** Two collections used to tell the two settings apart (the reference blog setup uses posts and memos). Names are looked up from the config. */
 const FIRST = contentCollection;

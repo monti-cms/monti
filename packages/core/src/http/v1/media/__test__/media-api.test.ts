@@ -3,10 +3,16 @@ import { testConfig } from "../../../../../test/site";
 import { AuthError } from "../../../../adapters/auth";
 import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
-import { POST as handleComplete } from "../[id]/complete/route";
-import { DELETE as handleDeleteMedia } from "../[id]/route";
-import { GET as handleListMedia } from "../route";
-import { POST as handleUploads } from "../uploads/route";
+import { routeCaller } from "../../../../testing";
+import { POST as handleCompleteHandler } from "../[id]/complete/route";
+import { DELETE as handleDeleteMediaHandler } from "../[id]/route";
+import { GET as handleListMediaHandler } from "../route";
+import { POST as handleUploadsHandler } from "../uploads/route";
+
+const handleComplete = routeCaller(handleCompleteHandler);
+const handleDeleteMedia = routeCaller(handleDeleteMediaHandler);
+const handleListMedia = routeCaller(handleListMediaHandler);
+const handleUploads = routeCaller(handleUploadsHandler);
 
 const mockVerifyAdmin = vi.fn();
 

@@ -2,8 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
 import type { LoginAccounts } from "../../../../server/define";
-import { POST as firstAdmin } from "../first-admin/route";
-import { POST as signIn } from "../sign-in/[provider]/route";
+import { publicRouteCaller } from "../../../../testing";
+import { POST as firstAdminHandler } from "../first-admin/route";
+import { POST as signInHandler } from "../sign-in/[provider]/route";
+
+const firstAdmin = publicRouteCaller(firstAdminHandler);
+const signIn = publicRouteCaller(signInHandler);
 
 const FORM = "application/x-www-form-urlencoded";
 

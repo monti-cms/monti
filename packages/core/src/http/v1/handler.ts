@@ -28,24 +28,6 @@ export type PublicRequest<P extends Params = Params> = Omit<AdminRequest<P>, "au
 export type AdminHandler<P extends Params = Params> = (input: AdminRequest<P>) => Promise<Response>;
 export type PublicHandler<P extends Params = Params> = (input: PublicRequest<P>) => Promise<Response>;
 
-/** What the router (and a host that mounts a route file on its own) passes along with the request. */
-export type RouteContext<P extends Params = Params> = { params?: Promise<P>; cms: Cms };
-
-/**
- * An admin route handler (a method of a route file). The router calls it with the input (the checks are done by then, centrally: see {@link runAdminRoute}).
- * A route file an app mounts on its own, and a test, calls it as `(request, { params, cms })`: then the same checks run first.
- */
-export interface AdminRoute<P extends Params = Params> {
-	(input: AdminRequest<P>): Promise<Response>;
-	(request: Request, context?: Partial<RouteContext<P>>): Promise<Response>;
-}
-
-/** A handler of a route marked `public: true`: it needs no login and checks the request itself. Callable like {@link AdminRoute}. */
-export interface PublicRoute<P extends Params = Params> {
-	(input: PublicRequest<P>): Promise<Response>;
-	(request: Request, context?: Partial<RouteContext<P>>): Promise<Response>;
-}
-
 /**
  * Runs an admin route: the same-origin check of a state-changing request, the admin check, the `[id]` shape, and the actor for the change record. Errors become the
  * one error answer. The router does this for every route that is not `public`, so a handler holds no auth code.
@@ -95,40 +77,18 @@ export async function runPublicRoute<P extends Params>(
 	}
 }
 
-const missingInstance = () =>
-	handleApiError(
-		new Error(
-			"route called without a CMS instance: serve it through `cms.handle()` or pass `{ cms }` when wrapping it",
-		),
-	);
-
 /**
- * Declares an admin route handler. `bound.cms` names the instance for a route file that is mounted on its own and called without one in its context.
+ * Declares an admin route handler (a method of a route file). It only types the input: the router runs the same-origin and admin checks before it
+ * (`runAdminRoute`), so a handler holds no auth code.
  *
  * ```ts
  * export const GET = adminRoute(async ({ request, params, auth, cms }) => ok(await cms.store().listFolders()));
  * ```
  */
-export function adminRoute<P extends Params = Params>(
-	handler: AdminHandler<P>,
-	bound: { readonly cms?: Cms } = {},
-): AdminRoute<P> {
-	return (async (first: AdminRequest<P> | Request, context?: Partial<RouteContext<P>>) => {
-		if (!(first instanceof Request)) return handler(first);
-		const cms = context?.cms ?? bound.cms;
-		if (!cms) return missingInstance();
-		return runAdminRoute(cms, first, ((await context?.params) ?? {}) as P, handler);
-	}) as AdminRoute<P>;
-}
+export const adminRoute = <P extends Params = Params>(handler: AdminHandler<P>): AdminHandler<P> => handler;
 
-/** Declares the handler of a `public: true` route. */
-export function publicRoute<P extends Params = Params>(handler: PublicHandler<P>): PublicRoute<P> {
-	return (async (first: PublicRequest<P> | Request, context?: Partial<RouteContext<P>>) => {
-		if (!(first instanceof Request)) return handler(first);
-		if (!context?.cms) return missingInstance();
-		return runPublicRoute(context.cms, first, ((await context.params) ?? {}) as P, handler);
-	}) as PublicRoute<P>;
-}
+/** Declares the handler of a `public: true` route. It needs no login and checks the request itself. */
+export const publicRoute = <P extends Params = Params>(handler: PublicHandler<P>): PublicHandler<P> => handler;
 
 /** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
 export async function readJsonBody(request: Request): Promise<unknown> {

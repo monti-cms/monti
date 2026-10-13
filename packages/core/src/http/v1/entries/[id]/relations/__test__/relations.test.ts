@@ -3,7 +3,10 @@ import { testConfig } from "../../../../../../../test/site";
 import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { CmsError } from "../../../../../../core/store";
-import { GET as getRelations } from "../route";
+import { routeCaller } from "../../../../../../testing";
+import { GET as getRelationsHandler } from "../route";
+
+const getRelations = routeCaller(getRelationsHandler);
 
 const verifyAdmin = vi.fn();
 

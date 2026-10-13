@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../test/site";
 import { type Cms, fakeCms } from "../../cms";
 import type { ApiKeyList } from "../../core/api-keys";
-import { PUT as assign } from "../../http/v1/api-keys/slots/route";
+import { PUT as assignHandler } from "../../http/v1/api-keys/slots/route";
 import { defineMessages } from "../../i18n/define";
 import { definePlugin } from "../../plugin/define";
+import { routeCaller } from "../../testing";
+
+const assign = routeCaller(assignHandler);
 
 const VALUE = "sk-ant-api03-abcdefghij3f9a";
 const SECRET = "a-long-enough-test-secret";

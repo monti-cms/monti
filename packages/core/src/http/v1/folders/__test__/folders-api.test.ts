@@ -3,8 +3,12 @@ import { contentCollection } from "../../../../../test/any-site";
 import { testConfig } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
-import { PATCH as patchFolder } from "../[id]/route";
-import { GET as getFolders } from "../route";
+import { routeCaller } from "../../../../testing";
+import { PATCH as patchFolderHandler } from "../[id]/route";
+import { GET as getFoldersHandler } from "../route";
+
+const patchFolder = routeCaller(patchFolderHandler);
+const getFolders = routeCaller(getFoldersHandler);
 
 const mockStore = {
 	listFolders: vi

@@ -18,12 +18,27 @@ import {
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
 	migrateContentStore,
+	routeCaller,
 } from "../../../testing";
-import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
-import { POST as postEntries } from "../entries/route";
-import { GET as getMeta } from "../meta/route";
-import { DELETE as deleteTemplate, GET as getTemplate, PATCH as patchTemplate } from "../templates/[id]/route";
-import { GET as getTemplates, POST as postTemplate } from "../templates/route";
+import { GET as getEntryHandler, PATCH as patchEntryHandler } from "../entries/[id]/route";
+import { POST as postEntriesHandler } from "../entries/route";
+import { GET as getMetaHandler } from "../meta/route";
+import {
+	DELETE as deleteTemplateHandler,
+	GET as getTemplateHandler,
+	PATCH as patchTemplateHandler,
+} from "../templates/[id]/route";
+import { GET as getTemplatesHandler, POST as postTemplateHandler } from "../templates/route";
+
+const getEntry = routeCaller(getEntryHandler);
+const patchEntry = routeCaller(patchEntryHandler);
+const postEntries = routeCaller(postEntriesHandler);
+const getMeta = routeCaller(getMetaHandler);
+const deleteTemplate = routeCaller(deleteTemplateHandler);
+const getTemplate = routeCaller(getTemplateHandler);
+const patchTemplate = routeCaller(patchTemplateHandler);
+const getTemplates = routeCaller(getTemplatesHandler);
+const postTemplate = routeCaller(postTemplateHandler);
 
 const send = (url: string, method: string, body?: unknown) =>
 	new Request(url, {

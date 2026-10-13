@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { fakeCms } from "../../../cms";
 import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
-import { GET as getMeta } from "../meta/route";
+import { routeCaller } from "../../../testing";
+import { GET as getMetaHandler } from "../meta/route";
+
+const getMeta = routeCaller(getMetaHandler);
 
 const readFeatures = async (cms = fakeCms()) => {
 	const res = await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms });

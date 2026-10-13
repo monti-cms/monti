@@ -4,7 +4,10 @@ import { testConfig } from "../../../../test/site";
 import type { AuthContext } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import { actorOf, currentActor } from "../../../core/actor";
-import { PATCH as patchEntry } from "../entries/[id]/route";
+import { routeCaller } from "../../../testing";
+import { PATCH as patchEntryHandler } from "../entries/[id]/route";
+
+const patchEntry = routeCaller(patchEntryHandler);
 
 const ID = "11111111-1111-4111-8111-111111111111";
 

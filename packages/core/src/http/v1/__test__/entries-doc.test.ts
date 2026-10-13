@@ -18,10 +18,16 @@ import {
 	createIsolatedTestPool,
 	dropIsolatedTestPool,
 	migrateContentStore,
+	routeCaller,
 } from "../../../testing";
-import { GET as getEntry, PATCH as patchEntry } from "../entries/[id]/route";
-import { POST as postEntries } from "../entries/route";
-import { GET as getTemplates } from "../templates/route";
+import { GET as getEntryHandler, PATCH as patchEntryHandler } from "../entries/[id]/route";
+import { POST as postEntriesHandler } from "../entries/route";
+import { GET as getTemplatesHandler } from "../templates/route";
+
+const getEntry = routeCaller(getEntryHandler);
+const patchEntry = routeCaller(patchEntryHandler);
+const postEntries = routeCaller(postEntriesHandler);
+const getTemplates = routeCaller(getTemplatesHandler);
 
 /** A document of a heading, a paragraph and a list, as a client would send it. */
 const sampleDoc = () => docOf("# Title\n\nSome *emphasis* here\n\n- one\n- two");

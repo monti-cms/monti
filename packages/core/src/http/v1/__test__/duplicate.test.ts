@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
-import { POST as postDuplicate } from "../entries/[id]/duplicate/route";
+import { routeCaller } from "../../../testing";
+import { POST as postDuplicateHandler } from "../entries/[id]/duplicate/route";
+
+const postDuplicate = routeCaller(postDuplicateHandler);
 
 const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => {
 	if (id === "00000000-0000-4000-8000-000000000003")

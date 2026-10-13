@@ -5,7 +5,10 @@ import { docOf } from "../../../../test/stored-content";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
 import { createBulkService } from "../../../services/bulk-service";
-import { POST as postBulk } from "../bulk/route";
+import { routeCaller } from "../../../testing";
+import { POST as postBulkHandler } from "../bulk/route";
+
+const postBulk = routeCaller(postBulkHandler);
 
 const CAT_1 = "11111111-1111-4111-8111-111111111111";
 const TAG_1 = "33333333-3333-4333-8333-333333333333";

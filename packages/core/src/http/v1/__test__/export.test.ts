@@ -11,7 +11,11 @@ import {
 	makeExportFixtureSnapshot,
 } from "../../../services/__test__/export-fixture";
 import { readZipArchive } from "../../../services/zip";
-import { GET, POST } from "../export/route";
+import { routeCaller } from "../../../testing";
+import { GET as GETHandler, POST as POSTHandler } from "../export/route";
+
+const GET = routeCaller(GETHandler);
+const POST = routeCaller(POSTHandler);
 
 const mockVerifyAdmin = vi.fn();
 const mockReadExportSnapshot = vi.fn();

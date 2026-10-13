@@ -4,7 +4,10 @@ import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
 import { CmsError } from "../../../../../../core/store";
 import { ServiceError } from "../../../../../../services/types";
-import { POST } from "../route";
+import { routeCaller } from "../../../../../../testing";
+import { POST as POSTHandler } from "../route";
+
+const POST = routeCaller(POSTHandler);
 
 const { verifyAdmin, publish } = vi.hoisted(() => ({
 	verifyAdmin: vi.fn(),

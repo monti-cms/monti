@@ -4,10 +4,16 @@ import { testConfig } from "../../../../test/site";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import { CmsError } from "../../../core/store";
-import { PATCH as patchEntry } from "../entries/[id]/route";
-import { POST as postEntries } from "../entries/route";
-import { GET as searchEntries } from "../entries/search/route";
-import { GET as getMeta } from "../meta/route";
+import { routeCaller } from "../../../testing";
+import { PATCH as patchEntryHandler } from "../entries/[id]/route";
+import { POST as postEntriesHandler } from "../entries/route";
+import { GET as searchEntriesHandler } from "../entries/search/route";
+import { GET as getMetaHandler } from "../meta/route";
+
+const patchEntry = routeCaller(patchEntryHandler);
+const postEntries = routeCaller(postEntriesHandler);
+const searchEntries = routeCaller(searchEntriesHandler);
+const getMeta = routeCaller(getMetaHandler);
 
 const mockVerifyAdmin = vi.fn();
 
