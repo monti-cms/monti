@@ -7,6 +7,11 @@ import type { HookSource } from "../services/hooks";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define";
 import type { PluginStorage } from "./storage";
 
+/** The server side of one plugin: its inline object, or the default export of its loader. `undefined` for a plugin without one. */
+export async function serverSideOf(plugin: Pick<CmsPlugin, "server">): Promise<CmsServerPlugin | undefined> {
+	return typeof plugin.server === "function" ? (await plugin.server()).default : plugin.server;
+}
+
 /** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
 export type LoadedServerPlugin = CmsServerPlugin & { readonly name: string };
 
@@ -54,16 +59,9 @@ export function createServerPlugins(
 ): ServerPlugins {
 	let loaded: Promise<readonly LoadedServerPlugin[]> | undefined;
 
-	/** The server side of one plugin. Its `hooks` are the inline ones (`definePlugin({ hooks })`) or those of its `server` module, never both. */
+	/** The server side of one plugin: its inline object, or the default export of its loader. */
 	const loadOne = async (plugin: CmsPlugin): Promise<LoadedServerPlugin> => {
-		const server = (await plugin.server?.())?.default;
-		if (plugin.hooks && server?.hooks) {
-			throw new Error(
-				`cms plugin "${plugin.name}": hooks are set both inline (definePlugin({ hooks })) and in its server module. Keep them in one place.`,
-			);
-		}
-		const hooks = plugin.hooks ?? server?.hooks;
-		return { name: plugin.name, ...server, ...(hooks ? { hooks } : {}) };
+		return { name: plugin.name, ...(await serverSideOf(plugin)) };
 	};
 
 	const load = () => {
@@ -77,12 +75,15 @@ export function createServerPlugins(
 
 	let formats: Promise<FormatRegistry> | undefined;
 	const loadFormats = () => {
-		formats ??= Promise.all(
-			plugins.map(async (plugin) => {
-				const provided = (await plugin.formats?.())?.default;
-				return provided === undefined ? [] : Array.isArray(provided) ? provided : [provided as CmsFormat];
-			}),
-		)
+		formats ??= load()
+			.then((servers) =>
+				Promise.all(
+					servers.map(async (server) => {
+						const provided = await server.formats?.();
+						return provided === undefined ? [] : Array.isArray(provided) ? provided : [provided as CmsFormat];
+					}),
+				),
+			)
 			.then((lists) => createFormatRegistry(lists.flat()))
 			.catch((error) => {
 				formats = undefined;

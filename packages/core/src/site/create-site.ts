@@ -9,7 +9,7 @@ import { createLinks, type SiteLinks } from "../core/links";
 import { createLocales, type SiteLocales } from "../core/locales";
 import { createTime, type SiteTime } from "../core/time";
 import { createI18n, type SiteI18n } from "../i18n";
-import { resolveLabels, withActiveLocale } from "../i18n/active";
+import { createActiveTranslator, resolveLabels, withActiveLocale } from "../i18n/active";
 import type { CmsPlugin } from "../plugin/define";
 import { createSchemas, type SiteSchemas } from "../schema/derive";
 
@@ -94,7 +94,20 @@ function snapshotOf(config: AnyCmsConfig, blocks: SiteBlocks): SiteSnapshot {
 		plugins: (config.plugins ?? []).map((plugin) => ({
 			name: plugin.name,
 			options: asData(plugin.options),
-			...(plugin.nav ? { nav: asData(plugin.nav) } : {}),
+			...(plugin.nav
+				? {
+						// A label that is a function of the site is read here, in the admin language, so the browser gets text.
+						nav: asData(
+							plugin.nav.map((item) => ({
+								...item,
+								label:
+									typeof item.label === "function"
+										? item.label({ createTranslator: createActiveTranslator })
+										: item.label,
+							})),
+						),
+					}
+				: {}),
 			...(plugin.contributes ? { contributes: asData(plugin.contributes) } : {}),
 		})),
 	};

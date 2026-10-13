@@ -37,13 +37,13 @@ export interface ToolsPage {
 }
 
 /** The Tools pages of a site's plugins, in plugin order. */
-export function toolsPages(site: Pick<Site, "adminHref" | "plugins">): readonly ToolsPage[] {
+export function toolsPages(site: Pick<Site, "adminHref" | "plugins" | "createTranslator">): readonly ToolsPage[] {
 	return site.plugins.flatMap((entry) =>
 		(entry.nav ?? []).map(
 			(item): ToolsPage => ({
 				path: item.path.replace(/^\/+|\/+$/g, ""),
 				href: site.adminHref(`/tools/${item.path.replace(/^\/+|\/+$/g, "")}`),
-				label: item.label,
+				label: typeof item.label === "function" ? item.label(site) : item.label,
 				icon: item.icon,
 			}),
 		),

@@ -32,7 +32,7 @@ describe("mdx()", () => {
 	it("provides its admin side and its formats lazily", () => {
 		const plugin = mdx();
 		expect(typeof plugin.admin).toBe("function");
-		expect(typeof plugin.formats).toBe("function");
+		expect(typeof (plugin.server as { formats?: unknown }).formats).toBe("function");
 	});
 
 	describe("validation", () => {
@@ -61,8 +61,7 @@ describe("mdx()", () => {
 
 	describe("formats", () => {
 		const formatOf = async (options?: Parameters<typeof mdx>[0]) => {
-			const loaded = await mdx(options).formats?.();
-			const provided = loaded?.default;
+			const provided = await (mdx(options).server as { formats(): Promise<unknown> }).formats();
 			if (!provided || Array.isArray(provided)) throw new Error("expected one format");
 			return provided as import("@monti-cms/core/format").CmsFormat;
 		};

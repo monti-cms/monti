@@ -1,11 +1,4 @@
-import {
-	type AdminRequest,
-	adminRoute,
-	CmsError,
-	handleApiError,
-	ok,
-	readJsonBody,
-} from "@monti-cms/core/plugin/server";
+import { type AdminRequest, adminRoute, CmsError, ok, publicRoute, readJsonBody } from "@monti-cms/core/plugin/server";
 import { listConflicts, type Resolution, resolveConflict } from "./conflicts";
 import { GitHubApiError } from "./github/client";
 import { pullTarget } from "./inbound";
@@ -128,17 +121,13 @@ export const resolve = {
 
 /** GitHub's `push` webhook. Public: the signature is the check, and nothing else about the request is trusted. */
 export const webhook = {
-	POST: async (request: Request, context: { cms: Parameters<typeof syncContextFor>[0] }): Promise<Response> => {
-		try {
-			const rawBody = await request.text();
-			const outcome = await handleWebhook(syncContextFor(context.cms), {
-				rawBody,
-				signature: request.headers.get("x-hub-signature-256"),
-				event: request.headers.get("x-github-event"),
-			});
-			return ok(outcome.body, { status: outcome.status });
-		} catch (error) {
-			return handleApiError(asHttpError(error));
-		}
-	},
+	POST: publicRoute(async ({ request, cms }) => {
+		const rawBody = await request.text();
+		const outcome = await handleWebhook(syncContextFor(cms), {
+			rawBody,
+			signature: request.headers.get("x-hub-signature-256"),
+			event: request.headers.get("x-github-event"),
+		});
+		return ok(outcome.body, { status: outcome.status });
+	}),
 };

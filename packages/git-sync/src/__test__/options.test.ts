@@ -1,4 +1,5 @@
 import { createSite } from "@monti-cms/core/client";
+import { serverSideOf } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import config from "../../test/cms.config";
 import { gitSync } from "../index";
@@ -159,7 +160,7 @@ describe("the plugin", () => {
 	});
 
 	it("loads its server side, which has the webhook as a public route, the outbox subscriber and the commands", async () => {
-		const server = (await gitSync({ targets: [target()] }).server?.())?.default;
+		const server = await serverSideOf(gitSync({ targets: [target()] }));
 		expect(server?.hooks?.afterCommit).toBeTypeOf("function");
 		expect(Object.keys(server?.commands ?? {}).sort()).toEqual(["flush", "pull", "push"]);
 		const routes = server?.routes ?? [];

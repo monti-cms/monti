@@ -7,7 +7,7 @@ The snippets below are a sketch to adapt, not tested code.
 ## What you need to know
 
 1. **Every content write goes through one pipeline** (create, save, publish, bulk, import, the AI plugin). Your rule lives there once, so nothing can write around it ("Hook contract" in the [core README](../../packages/core/README.md)).
-2. **Write hooks** are `transform`, `validate`, `validatePublish` and `afterCommit`, set as `hooks` in `defineConfig`, or in a plugin (inline `hooks`, or the `hooks` of its lazy `server` module).
+2. **Write hooks** are `transform`, `validate`, `validatePublish` and `afterCommit`, set as `hooks` in `defineConfig`, or in a plugin (the `hooks` of its `server`, inline or in its lazy module).
 3. **`validate` can only add failures.** Core has already prepared the data; your issues join the core ones, and any of them blocks the write with `validation_failed`.
 4. **An issue** is `{ code, path, message }`. `path` is the field the editor shows the message under, and `message` is the text the person reads (a code that core does not know is shown as its `message`).
 5. **`transform`** runs before core prepares the data. It returns the data to prepare (`metadata`, `doc`, and now `slug`), and what it returns still goes through core, so it cannot get a bad value past a core check.
@@ -55,14 +55,14 @@ export const cms = defineConfig({
 
 ## As a plugin
 
-The same object works as the `hooks` of a plugin, which is how a package ships a rule. These hooks are small and pure, so the plugin writes them inline, with no `server` module file:
+The same object works as the `hooks` of a plugin's `server`, which is how a package ships a rule. These hooks are small and pure, so the plugin writes its `server` inline, with no module file:
 
 ```ts
-export const slugRulePlugin = () => definePlugin({ name: "slug-rule", hooks: { ...lowercaseSlugs, ...slugRule } });
+export const slugRulePlugin = () => definePlugin({ name: "slug-rule", server: { hooks: { ...lowercaseSlugs, ...slugRule } } });
 // plugins: [slugRulePlugin()]
 ```
 
-Use inline `hooks` when they are light: inline hooks load with every server start, the CLI and cold starts included (`monti.config.ts` is server-only, so secrets through `cms.secrets` or the environment are fine). When they are heavy, or the plugin has routes, migrations or commands, put them in a lazy `server` module (`server: async () => ({ default: { hooks } })`); the [Slack recipe](slack-on-publish.md#inline-or-server) does that for its network client. A plugin sets its hooks in one of the two places, not both.
+Use an inline `server` when the hooks are light: it loads with every server start, the CLI and cold starts included (`monti.config.ts` is server-only, so secrets through `cms.secrets` or the environment are fine). When they are heavy, or the plugin has routes, migrations or commands, make `server` a loader (`server: () => import("./server")`); the [Slack recipe](slack-on-publish.md#inline-or-server) does that for its network client.
 
 ## What it looks like
 

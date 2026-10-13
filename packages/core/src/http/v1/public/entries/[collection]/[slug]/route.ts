@@ -1,7 +1,6 @@
-import type { Cms } from "../../../../../../cms";
+import { publicRoute } from "../../../../handler";
 import { getOne } from "../../../entries";
 
-export const GET = async (
-	request: Request,
-	context: { params?: Promise<{ collection: string; slug: string }>; cms: Cms },
-) => getOne(request, (await context.params) ?? { collection: "", slug: "" }, context.cms);
+export const GET = publicRoute<{ collection: string; slug: string }>(({ request, params, cms }) =>
+	getOne(request, params, cms),
+);

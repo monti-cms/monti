@@ -341,14 +341,26 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					label: typeof slot.label === "function" ? slot.label(site) : slot.label,
 				})),
 			);
+		const slotChanged = async (plugin: string, slot: string) => {
+			const declared = site.plugins
+				.find((entry) => entry.name === plugin)
+				?.keySlots?.find((entry) => entry.id === slot);
+			await declared?.onChange?.(self() as unknown as Cms);
+		};
 		const inTransaction = <T>(work: (tx: TransactionStorage) => Promise<T>): Promise<T> =>
 			connections.database.transaction(work);
-		const keysOn = (storage: () => PluginStorage, transact?: ApiKeysOptions["transact"]): ApiKeys =>
+		const keysOn = (
+			storage: () => PluginStorage,
+			transact?: ApiKeysOptions["transact"],
+			/** A slot's `onChange` is called for changes made outside a transaction only: inside one, the change is not saved yet. */
+			notify = true,
+		): ApiKeys =>
 			createApiKeys({
 				storage,
 				secrets: vault.forPlugin(API_KEYS_SCOPE),
 				labels: keyLabels,
 				declared: declaredSlots,
+				...(notify ? { onSlotChange: slotChanged } : {}),
 				...(transact ? { transact } : {}),
 			});
 		const apiKeys: ApiKeys = keysOn(
@@ -475,7 +487,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				inTransaction((tx) =>
 					work({
 						storage: (plugin) => tx.pluginStorage(plugin),
-						apiKeys: keysOn(() => tx.pluginStorage(API_KEYS_SCOPE)),
+						apiKeys: keysOn(() => tx.pluginStorage(API_KEYS_SCOPE), undefined, false),
 					}),
 				),
 			auth: getAuth,

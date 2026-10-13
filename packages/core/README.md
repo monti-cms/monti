@@ -625,7 +625,7 @@ export default defineFormat({
 });
 ```
 
-A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/monti/v1/meta` lists it as `formats`.
+A plugin provides formats through its `server`: `definePlugin({ name: "hugo", server: { formats: async () => (await import("./formats")).hugo } })`, a function that returns a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/monti/v1/meta` lists it as `formats`.
 
 
 **The document model.** Nodes: `paragraph`, `heading` (`attrs.level`), `bulletList` and `orderedList` (each holds `listItem` nodes that hold blocks), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`; a text node has `marks` (`bold`, `italic`, `code`, `link` with `attrs.href`, ...). A block of a plugin is a node named after the block, with the block's attributes in `attrs` (`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()` (`@monti-cms/core/document`) is the document to put `content` into, and `toPlainText(site, doc)` or `documentText(site, doc, options)` (`@monti-cms/core/client`) give its text. A complete two-way format is in the [custom format recipe](../../docs/recipes/custom-format.md).
@@ -876,30 +876,32 @@ export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
 		options: {}, // JSON value. Read by both the server and the browser
-		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a page in the Tools group of the admin sidebar: <admin path>/tools/my
-		validate: ({ collections }) => {}, // called when the site config is built
-		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display, hooks that need server code
-		hooks: { validate: () => undefined }, // write hooks written inline: a plugin that only adds hooks needs no `server` module (and no `options`)
-		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
-		formats: () => import("my-plugin/formats"), // a CmsFormat or a list of them ("Formats")
-		render: () => import("my-plugin/render"), // the public components of the plugin's blocks: `export const documentComponents = (context) => ({ blocks: { name: Component } })` ("Rendering a stored document")
 		blocks: [], // body blocks the plugin adds (`defineBlock`, "Body blocks")
+		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a page in the Tools group of the admin sidebar: <admin path>/tools/my (`label` may be `(site) => text` to follow the admin language)
+		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // an API key the plugin needs ("API key store")
+		validate: ({ collections }) => {}, // called when the site config is built
+		// The server side, in one place: a loader (read only on the server) or an inline object.
+		server: () => import("my-plugin/server"), // CmsServerPlugin: routes, hooks, formats, commands, migrate, keyUses, features
+		// server: { hooks: { validate: () => undefined } }, // inline: a plugin that only adds hooks needs no module (and no `options`)
+		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
+		render: () => import("my-plugin/render"), // the public components of the plugin's blocks: `export const documentComponents = (context) => ({ blocks: { name: Component } })` ("Rendering a stored document")
 	});
 ```
 
+The parts are grouped by who reads them: both sides read `options`, `blocks`, `nav`, `keySlots`, `validate` and `contributes`; the server reads `server`; the admin reads `admin`; the public page reads `render`. Every concept has one place: hooks only in `server`, and API key slots only in `keySlots`.
+
 - The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
-- `formats` adds formats (notations the document can be written as and read from, "Formats"). It is read on the server when the instance first needs its formats.
+- `server.formats` adds formats (notations the document can be written as and read from, "Formats"): a function that returns a `CmsFormat` or a list of them (`formats: () => myFormat`). It is called when the instance first needs its formats.
 - `validate` receives the collection, locale and block definitions and all plugins (`plugins`). Extensions that use roles check field kinds here.
 - `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
   `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
   An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
-- The server-side `routes` receive addresses that are not in the core routes (`/api/monti/v1/*`). The core wraps them with the admin login check and the same-origin check, so
-  forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` and verify on their own.
+- The server-side `routes` receive addresses that are not in the core routes (`/api/monti/v1/*`). They are a table like the core's own, `{ pattern, module, public? }`, and the router checks each one before its handler runs: the same-origin check, then the admin login. Forgetting authentication does not leave an open route. Only routes that must be reachable without login (external runners, webhooks) are taken out with `public: true` (`publicRoute(...)` handlers) and verify on their own. The handlers are `adminRoute(async ({ request, params, auth, cms }) => …)`; a route file an app mounts on its own calls the same handler as `(request, { params, cms })` and then runs the same checks.
   `migrate` is called by `monti db:migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
-- **Write hooks** (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract". A plugin sets them in one of two places, never both (a plugin with hooks in both fails when it loads):
-  - **Inline**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. For a plugin that only adds hooks: no module file, and `options` can be left out. Inline hooks load with every server start, the CLI, edge and cold starts included, so keep them light (no heavy import). They may use secrets through `cms.secrets` or the environment: `monti.config.ts` is server-only and never reaches the browser.
-  - **In the lazy `server` module**: `server: async () => ({ default: { hooks } })`. Read on the server only, so this is the place for hooks that hold a secret, call out over the network or import something heavy, and for a plugin that has routes, migrations, commands or checks anyway.
+- **Write hooks** (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract". They are the `hooks` of the plugin's `server`, which is given in one of two forms:
+  - **Inline**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. For a plugin that only adds hooks: no module file, and `options` can be left out. An inline server loads with every server start, the CLI, edge and cold starts included, so keep it light (no heavy import). It may use secrets through `cms.secrets` or the environment: `monti.config.ts` is server-only and never reaches the browser.
+  - **As a loader**: `server: () => import("./server")`, whose default export is the `CmsServerPlugin`. Read on the server only, so this is the place for hooks that hold a secret, call out over the network or import something heavy, and for a plugin that has routes, migrations, commands or checks anyway.
 - `afterCommit(event, cms)` gets the instance, in a plugin's hooks and in the server config's alike, so a subscriber that needs its storage, the store or the formats keeps no state of its own. It is delivered from the outbox (retried, at least once, "Event delivery"), and `event.once(run)` runs work once per event.
 - `commands` of the server side adds command line commands: `monti <plugin name>:<command> [options]` loads the app like `monti db:migrate` (`--env-file`, `--no-env-file`, `--config`), runs `command.run({ cms, args, log, error })` and exits with the code it returns. The command declares its `options` (`{ name: { type: "string" | "boolean", description } }`); `--help` lists them. `monti git-sync:pull` is one.
 - Custom admin components are a plugin too. Give it an `admin` module whose default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`); the `Provider` (a `"use client"` component) wraps the admin and registers the components with `CmsAdminComponentsProvider`. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
@@ -910,7 +912,7 @@ export const myPlugin = () =>
   ```
 
 - `exportBodyText(cms, { format, doc, locale, scope? })` of `@monti-cms/core/plugin/server` writes a stored document as text in a format of the instance for importing again (`purpose: "sync"`, links as the real path of their target), as the admin export does. For a plugin that keeps bodies somewhere else.
-- A plugin's route gets the instance that serves it, so plugin code reads its storage (`cms.storage("<plugin name>")`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(storage, cms)` receive the instance too.
+- A plugin's route gets the instance that serves it, so plugin code reads its storage (`cms.storage("<plugin name>")`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute`, `publicRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(storage, cms)` receive the instance too.
 
 ### Secrets
 
@@ -934,8 +936,7 @@ secrets.deriveKey("signing");               // a 32-byte key for another purpose
 
 - Two plugins get unrelated keys, so a plugin cannot decrypt another plugin's values, and a value read from one plugin's table says nothing about the master secret or another plugin's data. Plugin code still runs in your server process, so this separates what plugins store; it is not a sandbox.
 - Each value carries the id of the key it was made with (the `mk1:<key id>` prefix), so `decrypt` picks the right secret without trying them all.
-- Rotation: put the new value in `MONTI_SECRET` (or `secret`) and the old ones in `previousSecrets` (`previousSecrets: [process.env.OLD_MONTI_SECRET]`; an entry may be an unset variable, it is ignored). `decrypt` tries the current secret and then the previous ones, and `encrypt` always uses the current one. A plugin re-encrypts values with `isCurrent` false when it saves them again. Drop a secret from `previousSecrets` only after everything stored under it was re-encrypted (the AI plugin does this on `monti db:migrate`).
-- A plugin that stored values in its own format before this API can declare it: `cms.secrets("my-plugin", { legacy: { prefix: "v1", domain: "my-key:" } })` makes `decrypt` also read `v1:<iv>:<tag>:<body>` values encrypted under `sha256("my-key:" + secret)`. The legacy format is read-only; `encrypt` never uses it.
+- Rotation: put the new value in `MONTI_SECRET` (or `secret`) and the old ones in `previousSecrets` (`previousSecrets: [process.env.OLD_MONTI_SECRET]`; an entry may be an unset variable, it is ignored). `decrypt` tries the current secret and then the previous ones, and `encrypt` always uses the current one. A plugin re-encrypts values with `isCurrent` false when it saves them again. Drop a secret from `previousSecrets` only after everything stored under it was re-encrypted.
 - `cms.server` is the server config without `secret` and `previousSecrets`.
 - Changing `MONTI_SECRET` also changes the login session key, so everyone signs in again once. `previousSecrets` only keeps stored values readable; it does not keep old login sessions.
 
@@ -948,15 +949,17 @@ const key = await cms.apiKeys.add({ name: "Anthropic", value });          // or 
 const id = await cms.apiKeys.choose(choice, { baseName: "Anthropic" });    // what a form sent: { use: "saved", keyId } | { use: "new", value } | { use: "none" }
 const value = await cms.apiKeys.read(id);                                  // server only; null if the key was deleted or cannot be decrypted
 await cms.apiKeys.setUses("my-plugin", [{ ref: "item:42", keyId: id }]);   // which items of the plugin use keys, replaced as a whole
-await cms.apiKeys.readSlot("my-plugin", "key");                            // the key assigned to a slot the plugin declared (`keySlots`)
+await cms.apiKeys.slot("my-plugin", "key").read();                         // the key assigned to a slot the plugin declared (`keySlots`)
+await cms.apiKeys.findOrAdd({ baseName: "GitHub", value });                // the key that has this value, or a new one
 await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...) and tx.storage("my-plugin") writes: all kept or none */ });
 ```
 
 - A plugin keeps the key's **id**, never the value, and calls `read` when it calls the service. Renaming or replacing the value keeps the id, so everything that uses the key follows.
 - `setUses` is how the admin knows what a key is used by. It takes **references** (`ref`, a stable id such as `connection:<id>`), never text. Call it whenever the items change (a connection is saved or deleted). The text the admin shows is worked out when the keys are read, by the plugin's `keyUses(cms, refs)` in `CmsServerPlugin`: it returns the label for each `ref` in the admin language (`cms.site.createTranslator`) with the item's current name, or `null` for an item that does not exist any more, whose use is then dropped. A plugin without `keyUses` is shown by its name.
-- **Key slots**: a plugin that needs one fixed key (a spell checker's) declares it in the plugin definition, `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })` (`service` is the language-neutral name a key entered for the slot is saved under, `Bareun`, then `Bareun 2` when taken, the same as the migrations use; `label` is display only, a function of the site so it follows the admin language), and reads it with `cms.apiKeys.readSlot(<plugin name>, "key")`. Tools > API keys lists each slot of the installed plugins: assigned (the key's "in use" line names it), or an empty row where a saved key is picked or a new one entered (saved in the same transaction as the assignment), and an assigned slot is cleared from the key's row menu. `PUT /v1/api-keys/slots` with `{ plugin, slot, key }` (`key` as `choose` takes it, `{ use: "none" }` clears) is what the admin calls; a plugin page can call it too. A slot of a plugin that is not installed is not listed and not counted as a use.
+- **Key slots**: a plugin that needs one fixed key (a spell checker's) declares it in the plugin definition, `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })` (`service` is the language-neutral name a key entered for the slot is saved under, `Bareun`, then `Bareun 2` when taken, the same as the migrations use; `label` is display only, a function of the site so it follows the admin language), and reads it with `cms.apiKeys.slot(<plugin name>, "key").read()`. `onChange: (cms) => …` on the slot is called once a key was assigned or the slot cleared (a sync that waited for a token resumes there); it is not called for changes made inside `cms.transaction`. Tools > API keys lists each slot of the installed plugins: assigned (the key's "in use" line names it), or an empty row where a saved key is picked or a new one entered (saved in the same transaction as the assignment), and an assigned slot is cleared from the key's row menu. `PUT /v1/api-keys/slots` with `{ plugin, slot, key }` (`key` as `choose` takes it, `{ use: "none" }` clears) is what the admin calls; a plugin page can call it too. A slot of a plugin that is not installed is not listed and not counted as a use.
 - **Atomic saves**: `cms.transaction(work)` runs `work` in one database transaction (Postgres: one `BEGIN`/`COMMIT` over any plugin's storage and the key store; the database adapter's `transaction` port). Create the key with `tx.apiKeys.choose(...)` and write the item that refers to it with `tx.storage("my-plugin")` in it, so a failed save leaves no key behind. `once` is not available inside it.
-- Deleting a key through the admin API (`DELETE /v1/api-keys/<id>?expectedVersion=`) answers `409 key_in_use` with `details.uses` while something uses it; `&force=true` deletes it anyway, and what used it finds no key and stops working. `cms.apiKeys.remove` always deletes.
+- `cms.apiKeys.remove(id, { expectedVersion, force? })` deletes the key and where it was used in one transaction, and fails with `key_in_use` (`details.uses`) while something uses it unless `force` is set; then what used it finds no key and stops working. The admin API (`DELETE /v1/api-keys/<id>?expectedVersion=&force=true`) just calls it and answers `204`.
+- Key names are unique without regard to case; the store enforces it when it writes. `cms.apiKeys.view()` is what both `GET /v1/api-keys` and `PUT /v1/api-keys/slots` answer.
 - Without a server `secret` nothing can be saved (`secret_not_configured`); keys made under a secret that is no longer listed read as `readable: false`.
 - Routes: `GET/POST /v1/api-keys`, `PATCH/DELETE /v1/api-keys/<id>`. No response contains a value.
 

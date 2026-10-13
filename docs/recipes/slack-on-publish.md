@@ -11,7 +11,7 @@ The snippet below is a sketch to adapt, not tested code.
 3. **`event.once(run)` is the idempotency helper.** It runs `run` one time per event and subscriber: a repeat skips it, and a `run` that throws is not marked, so the retry runs it again. No storage code of your own.
 4. **Every `afterCommit` gets the instance**: `afterCommit(event, cms)`, in the config's `hooks` and in a plugin's alike, so it can read its storage, the site and the entry.
 5. **`event.read()`** returns the committed entry now (`null` if it was deleted): the event itself carries ids, the kind and slugs, never the body.
-6. **A plugin's `hooks` can be inline or in a lazy `server` module.** This one calls out over the network and has its own settings, so it uses the lazy `server` module (see "Inline or `server`" below).
+6. **A plugin's `server` can be inline or a lazy loader.** This one calls out over the network and has its own settings, so it uses a loader (see "Inline or `server`" below).
 
 ## A sketch
 
@@ -72,9 +72,9 @@ plugins: [slackOnPublish()], // reads SLACK_WEBHOOK_URL, or slackOnPublish({ web
 
 ## Inline or `server`
 
-A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`) can sit in two places:
+A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`) are the `hooks` of its `server`, which comes in two forms:
 
-- **Inline**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. No module file. Inline hooks load with every server start (the CLI, edge and cold starts included), so use this when they are light. They may use secrets through `cms.secrets` or the environment; `monti.config.ts` is server-only and never reaches the browser. The [slug rule](slug-rule.md#as-a-plugin) is the example.
-- **In the lazy `server` module**: `server: async () => ({ default: { hooks } })`. Loaded when it is needed, and the place for heavy code (an SDK, a database client) and for a plugin that has routes, migrations or commands. This recipe uses it because it is a network client.
+- **Inline**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. No module file. An inline server loads with every server start (the CLI, edge and cold starts included), so use this when they are light. They may use secrets through `cms.secrets` or the environment; `monti.config.ts` is server-only and never reaches the browser. The [slug rule](slug-rule.md#as-a-plugin) is the example.
+- **As a loader**: `server: async () => ({ default: { hooks } })`, or `server: () => import("./server")`. Loaded when it is needed, and the place for heavy code (an SDK, a database client) and for a plugin that has routes, migrations or commands. This recipe uses it because it is a network client.
 
-Set the hooks in one of the two, not both: a plugin with hooks in both places fails when it loads.
+The hooks have one place, `server`; there is no second one.

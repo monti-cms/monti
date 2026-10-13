@@ -10,7 +10,7 @@ The snippets below are a sketch to adapt, not tested code. A real Markdown parse
 2. **Core does the rest**: it resolves links and media before `export`, then validates, normalises and stores whatever `import` returns, so a format cannot get past a core rule. A text the format rejects (`ok: false`) is kept in a draft as an `unparsed` document with your issues.
 3. **The document model**: nodes `paragraph`, `heading` (`attrs.level`), `bulletList` / `orderedList` > `listItem` > blocks, `text` with `marks` (`bold`, `italic`, `code`, `link` with `attrs.href`), `hardBreak`. A block of a plugin is a node named after the block.
 4. **`ctx.link(entryId)`** is the address of the entry a link points to (`null` when it is gone or unpublished); `ctx.purpose` is `"read"` (for readers) or `"sync"` (it will be imported again, keep the ids); `ctx.report(issue)` says what the text could not keep.
-5. **A plugin provides formats** with a lazy loader whose default export is a format or a list: `definePlugin({ formats: () => import("./formats") })`.
+5. **A plugin provides formats** through its `server`, a function that returns a format or a list: `definePlugin({ server: { formats: async () => (await import("./formats")).default } })`.
 
 ## A sketch
 
@@ -77,7 +77,12 @@ export default [markdownFormat, textFormat];
 The plugin, and the line in `monti.config.ts` (`plugins: [markdown()]`):
 
 ```ts
-export const markdown = () => definePlugin({ name: "markdown", options: {}, formats: () => import("./formats") });
+export const markdown = () =>
+	definePlugin({
+		name: "markdown",
+		options: {},
+		server: { formats: async () => (await import("./formats")).default },
+	});
 ```
 
 ## How it behaves

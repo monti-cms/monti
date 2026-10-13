@@ -119,6 +119,8 @@ export interface ApiKeysOptions {
 		readonly label: string;
 		readonly service: string;
 	}[];
+	/** Called after a slot was assigned or cleared and the change is saved (the slot's `onChange`). */
+	readonly onSlotChange?: (plugin: string, slot: string) => Promise<void> | void;
 	/**
 	 * Runs work in one transaction with the key store (`cms.transaction`): it hands the work a storage that reads and writes through the transaction. Every
 	 * write that touches more than one row runs through it. Without it the writes are made one after the other.
@@ -385,10 +387,22 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 
 export function createApiKeys(options: ApiKeysOptions): ApiKeys {
 	const direct = keysOn(options, options.storage);
-	const { transact } = options;
-	if (!transact) return direct;
+	const { transact, onSlotChange } = options;
 	const inTx = <T>(work: (keys: ApiKeys) => Promise<T>): Promise<T> =>
-		transact((storage) => work(keysOn(options, storage)));
+		transact ? transact((storage) => work(keysOn(options, storage))) : work(direct);
+	/** A slot whose change is saved first, then reported to the plugin that owns it. */
+	const slotOf = (plugin: string, slot: string): ApiKeySlot => {
+		const reported = async (change: () => Promise<void>) => {
+			await change();
+			await onSlotChange?.(plugin, slot);
+		};
+		return {
+			read: () => direct.slot(plugin, slot).read(),
+			set: (keyId) => reported(() => inTx((keys) => keys.slot(plugin, slot).set(keyId))),
+			assign: (choice) => reported(() => inTx((keys) => keys.slot(plugin, slot).assign(choice))),
+		};
+	};
+	if (!transact) return { ...direct, slot: slotOf };
 	return {
 		...direct,
 		add: (input) => inTx((keys) => keys.add(input)),
@@ -398,10 +412,6 @@ export function createApiKeys(options: ApiKeysOptions): ApiKeys {
 		update: (id, input) => inTx((keys) => keys.update(id, input)),
 		remove: (id, input) => inTx((keys) => keys.remove(id, input)),
 		setUses: (plugin, uses) => inTx((keys) => keys.setUses(plugin, uses)),
-		slot: (plugin, slot) => ({
-			...direct.slot(plugin, slot),
-			set: (keyId) => inTx((keys) => keys.slot(plugin, slot).set(keyId)),
-			assign: (choice) => inTx((keys) => keys.slot(plugin, slot).assign(choice)),
-		}),
+		slot: slotOf,
 	};
 }

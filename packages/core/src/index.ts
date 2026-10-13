@@ -66,9 +66,11 @@ export {
 	type PluginCommandOption,
 	type PluginConfigView,
 	type PluginKeySlot,
+	type PluginLabel,
 	type PluginNamed,
 	type PluginNavItem,
 	type PluginRoute,
+	type PluginServer,
 } from "./plugin/define";
 export type {
 	PluginCollection,

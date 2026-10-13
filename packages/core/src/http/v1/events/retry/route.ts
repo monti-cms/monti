@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Cms } from "../../../../cms";
-import { CmsError, handleApiError } from "../../error-handler";
-import { adminRoute, ok, parseWith, type RouteContext, readQuery } from "../../handler";
+import { CmsError } from "../../error-handler";
+import { ok, parseWith, publicRoute, readQuery, runAdminRoute } from "../../handler";
 
 const querySchema = z.object({
 	all: z
@@ -20,22 +20,15 @@ const run = async (cms: Cms, request: Request) => {
 const bearerOf = (request: Request): string | null =>
 	/^Bearer\s+(.+)$/i.exec(request.headers.get("authorization") ?? "")?.[1] ?? null;
 
-const asAdmin = adminRoute(async ({ request, cms }) => run(cms, request));
-
 /**
  * `POST /v1/events/retry[?all=1&limit=100]`: delivers the events that are due (with `all`, also the failed ones that are not due yet). It is the endpoint a cron job
  * calls on a serverless host that has no worker. It takes an admin session, or `Authorization: Bearer <events.retrySecret>` when the server config has a
- * `retrySecret` (a bearer request needs no same-origin check: it carries no cookie).
+ * `retrySecret` (a bearer request needs no same-origin check: it carries no cookie). The route is public for the router, because it decides the login itself.
  */
-export const POST = async (request: Request, context?: Partial<RouteContext>) => {
+export const POST = publicRoute(async ({ request, params, cms }) => {
 	const token = bearerOf(request);
-	if (token === null) return asAdmin(request, context);
-	try {
-		const cms = context?.cms;
-		if (!cms) throw new Error("the events retry route was called without a CMS instance");
-		if (!cms.events.acceptsRetryToken(token)) throw new CmsError("Invalid retry token", "unauthorized");
-		return await run(cms, request);
-	} catch (error) {
-		return handleApiError(error);
-	}
-};
+	if (token === null)
+		return runAdminRoute(cms, request, params, ({ request: admin, cms: instance }) => run(instance, admin));
+	if (!cms.events.acceptsRetryToken(token)) throw new CmsError("Invalid retry token", "unauthorized");
+	return run(cms, request);
+});

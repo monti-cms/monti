@@ -622,7 +622,7 @@ export default defineFormat({
 });
 ```
 
-플러그인은 `server`·`render`처럼 느리게 불러오는 함수로 형식을 준다. `definePlugin({ name: "hugo", formats: () => import("./formats") })`이고, 기본 내보내기는 형식 하나 또는 그 목록이다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/monti/v1/meta`가 이를 `formats`로 알려 준다.
+플러그인은 `server`로 형식을 준다. `definePlugin({ name: "hugo", server: { formats: async () => (await import("./formats")).hugo } })`이고, 형식 하나 또는 그 목록을 돌려주는 함수다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/monti/v1/meta`가 이를 `formats`로 알려 준다.
 
 **문서 모델.** 노드는 `paragraph`, `heading`(`attrs.level`), `bulletList`와 `orderedList`(각각 블록을 담은 `listItem` 노드를 가진다), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`다. 텍스트 노드에는 `marks`(`bold`, `italic`, `code`, `attrs.href`가 있는 `link` 등)가 붙는다. 플러그인의 블록은 블록 이름을 딴 노드이고, 블록의 속성은 `attrs`에 들어간다(`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()`(`@monti-cms/core/document`)가 `content`를 채워 넣을 문서이고, 그 텍스트는 `toPlainText(site, doc)`나 `documentText(site, doc, options)`(`@monti-cms/core/client`)가 준다. 양방향을 모두 갖춘 형식은 [커스텀 형식 레시피](../../docs/recipes/custom-format.md)에 있다.
 
@@ -873,30 +873,33 @@ export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
 		options: {}, // JSON 값. 서버·브라우저가 함께 읽는다
-		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 도구 묶음의 페이지: <관리자 경로>/tools/my
-		validate: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
-		server: () => import("my-plugin/server"), // CmsServerPlugin: API 경로·표 만들기·메타 표시, 서버 코드가 필요한 훅
-		hooks: { validate: () => undefined }, // 인라인으로 쓴 쓰기 훅: 훅만 더하는 플러그인은 `server` 모듈이 필요 없다(`options`도 생략할 수 있다)
-		admin: () => import("my-plugin/admin"), // CmsAdminPlugin(@monti-cms/admin): 화면·공급자
-		formats: () => import("my-plugin/formats"), // CmsFormat 하나 또는 그 목록("형식" 절)
-		render: () => import("my-plugin/render"), // 플러그인 블록의 공개 컴포넌트: `export const documentComponents = (context) => ({ blocks: { name: Component } })`("저장된 문서 그리기")
 		blocks: [], // 플러그인이 더하는 본문 블록(`defineBlock`, "본문 블록")
+		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 도구 묶음의 페이지: <관리자 경로>/tools/my (`label`은 `(site) => 글`이어도 되며 관리자 언어를 따른다)
+		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // 플러그인에 필요한 API 키("API 키 저장소")
+		validate: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
+		// 서버 쪽은 한곳에: 로더(서버에서만 읽는다) 또는 인라인 객체.
+		server: () => import("my-plugin/server"), // CmsServerPlugin: 경로·훅·형식·명령·migrate·keyUses·features
+		// server: { hooks: { validate: () => undefined } }, // 인라인: 훅만 더하는 플러그인은 모듈이 필요 없다(`options`도 생략할 수 있다)
+		admin: () => import("my-plugin/admin"), // CmsAdminPlugin(@monti-cms/admin): 화면·공급자
+		render: () => import("my-plugin/render"), // 플러그인 블록의 공개 컴포넌트: `export const documentComponents = (context) => ({ blocks: { name: Component } })`("저장된 문서 그리기")
 	});
 ```
 
+부분은 읽는 쪽별로 묶여 있다. 두 쪽이 `options`·`blocks`·`nav`·`keySlots`·`validate`·`contributes`를 읽고, 서버가 `server`를, 관리자가 `admin`을, 공개 페이지가 `render`를 읽는다. 개념마다 자리가 하나다. 훅은 `server`에만, API 키 칸은 `keySlots`에만 둔다.
+
 - 서버 쪽(`server`)은 브라우저 묶음에 들어가지 않게 패키지 `exports`의 `browser` 조건으로 빈 진입점을 준다.
-- `formats`는 형식(문서를 써 내고 읽어 올 수 있는 표기, "형식" 절)을 더한다. 인스턴스가 형식이 처음 필요할 때 서버에서 읽는다.
+- `server.formats`는 형식(문서를 써 내고 읽어 올 수 있는 표기, "형식" 절)을 더한다. `CmsFormat` 하나 또는 그 목록을 돌려주는 함수(`formats: () => myFormat`)이고, 인스턴스가 형식이 처음 필요할 때 부른다.
 - `validate`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받는다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
 - `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
   `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
   확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
-- 서버 쪽 `routes`는 본체 경로(`/api/monti/v1/*`)에 없는 주소를 받는다. 본체가 관리자 로그인 확인과 같은 출처 검사로 감싸므로
-  인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`로 빼고 스스로 확인한다.
+- 서버 쪽 `routes`는 본체 경로(`/api/monti/v1/*`)에 없는 주소를 받는다. 본체 경로와 같은 표(`{ pattern, module, public? }`)이고, 라우터가 핸들러보다 먼저 같은 출처 검사와 관리자 로그인 확인을 한다.
+  인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`(`publicRoute(...)` 핸들러)로 빼고 스스로 확인한다. 핸들러는 `adminRoute(async ({ request, params, auth, cms }) => …)`이고, 앱이 라우트 파일을 따로 마운트할 때는 같은 핸들러를 `(request, { params, cms })`로 부르며 그때 같은 검사를 한다.
   `migrate`는 `monti db:migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
-- **쓰기 훅**(`transform`·`validate`·`validatePublish`·`afterCommit`)은 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 플러그인은 훅을 두 곳 중 한 곳에만 둔다(양쪽에 두면 불러올 때 실패한다).
-  - **인라인**: `definePlugin({ name: "audit", hooks: { afterCommit } })`. 훅만 더하는 플러그인에 쓴다. 모듈 파일이 없고 `options`도 생략할 수 있다. 인라인 훅은 CLI, 엣지, 콜드 스타트를 포함해 서버가 시작할 때마다 불러오므로 가볍게 둔다(무거운 import 없이). `cms.secrets`나 환경 변수로 비밀 값을 쓸 수 있다. `monti.config.ts`는 서버 전용이라 브라우저에 닿지 않는다.
-  - **지연 `server` 모듈**: `server: async () => ({ default: { hooks } })`. 서버만 읽으므로, 비밀 값을 쥐거나 네트워크로 호출하거나 무거운 것을 import하는 훅이 있는 곳이다. 어차피 경로, 마이그레이션, 명령, 검사가 있는 플러그인도 여기에 둔다.
+- **쓰기 훅**(`transform`·`validate`·`validatePublish`·`afterCommit`)은 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 훅은 플러그인 `server`의 `hooks`이고, `server`는 두 꼴 중 하나로 준다.
+  - **인라인**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. 훅만 더하는 플러그인에 쓴다. 모듈 파일이 없고 `options`도 생략할 수 있다. 인라인 서버는 CLI, 엣지, 콜드 스타트를 포함해 서버가 시작할 때마다 불러오므로 가볍게 둔다(무거운 import 없이). `cms.secrets`나 환경 변수로 비밀 값을 쓸 수 있다. `monti.config.ts`는 서버 전용이라 브라우저에 닿지 않는다.
+  - **로더**: `server: () => import("./server")`이고 기본 내보내기가 `CmsServerPlugin`이다. 서버만 읽으므로, 비밀 값을 쥐거나 네트워크로 호출하거나 무거운 것을 import하는 훅이 있는 곳이다. 어차피 경로, 마이그레이션, 명령, 검사가 있는 플러그인도 여기에 둔다.
 - `afterCommit(event, cms)`는 플러그인의 훅이든 서버 설정의 훅이든 인스턴스를 받는다. 그래서 자기 저장소·스토어·형식이 필요한 구독자가 따로 상태를 두지 않아도 된다. 전달은 아웃박스에서 하며(재시도, 최소 한 번, "이벤트 전달") `event.once(run)`은 이벤트마다 일을 한 번만 돌린다.
 - 서버 쪽 `commands`는 명령줄 명령을 더한다. `monti <플러그인 이름>:<명령> [옵션]`이 `monti db:migrate`처럼 앱을 불러오고(`--env-file`, `--no-env-file`, `--config`) `command.run({ cms, args, log, error })`를 돌려 그것이 돌려주는 코드로 끝난다. 명령은 `options`(`{ 이름: { type: "string" | "boolean", description } }`)를 선언하고, `--help`가 그것을 나열한다. `monti git-sync:pull`이 그중 하나다.
 - 직접 만든 관리자 컴포넌트도 플러그인이다. `admin` 모듈을 주고 그 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin/plugins`)로 만든다. `Provider`(`"use client"` 컴포넌트)가 관리자를 감싸고 `CmsAdminComponentsProvider`로 컴포넌트를 등록한다. `admin-components.tsx` 파일은 더 이상 없다. `examples/blog/plugins/word-list/`가 예시다:
@@ -907,7 +910,7 @@ export const myPlugin = () =>
   ```
 
 - `@monti-cms/core/plugin/server`의 `exportBodyText(cms, { format, doc, locale, scope? })`는 저장된 문서를 인스턴스의 형식으로 다시 가져올 수 있게(`purpose: "sync"`, 링크는 대상의 실제 경로) 텍스트로 쓴다. 관리자 내보내기와 같다. 본문을 다른 곳에 두는 플러그인을 위한 것이다.
-- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
+- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute`·`publicRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
 
 ### 비밀 값
 
@@ -931,8 +934,7 @@ secrets.deriveKey("signing");               // 다른 용도(HMAC, 해시)용 32
 
 - 플러그인끼리는 키가 서로 무관하므로, 한 플러그인이 다른 플러그인의 값을 풀 수 없고, 한 플러그인의 테이블에서 읽은 값으로는 마스터 비밀 값도 다른 플러그인의 데이터도 알 수 없다. 플러그인 코드는 여전히 같은 서버 프로세스에서 돌므로 이것은 플러그인이 저장하는 값을 서로 나누는 장치이지 샌드박스가 아니다.
 - 값마다 만든 키의 id가 붙어 있어(`mk1:<키 id>` 접두어), `decrypt`는 모든 secret을 시도하지 않고 맞는 것을 바로 고른다.
-- 교체: 새 값을 `MONTI_SECRET`(또는 `secret`)에, 옛 값들을 `previousSecrets`에 둔다(`previousSecrets: [process.env.OLD_MONTI_SECRET]`. 항목이 설정하지 않은 환경 변수여도 되고, 그런 항목은 무시한다). `decrypt`는 현재 secret을 먼저, 그다음 이전 secret들을 시도하고, `encrypt`는 항상 현재 secret을 쓴다. 플러그인은 `isCurrent`가 false인 값을 다시 저장할 때 새로 암호화한다. 그 secret으로 저장된 값을 모두 다시 암호화한 뒤에만 `previousSecrets`에서 뺀다(AI 플러그인은 `monti db:migrate`에서 이 일을 한다).
-- 이 API가 생기기 전에 자기 형식으로 값을 저장한 플러그인은 그 형식을 알릴 수 있다. `cms.secrets("my-plugin", { legacy: { prefix: "v1", domain: "my-key:" } })`로 알리면 `decrypt`가 `sha256("my-key:" + secret)`으로 암호화한 `v1:<iv>:<tag>:<body>` 값도 읽는다. 옛 형식은 읽기 전용이며 `encrypt`는 쓰지 않는다.
+- 교체: 새 값을 `MONTI_SECRET`(또는 `secret`)에, 옛 값들을 `previousSecrets`에 둔다(`previousSecrets: [process.env.OLD_MONTI_SECRET]`. 항목이 설정하지 않은 환경 변수여도 되고, 그런 항목은 무시한다). `decrypt`는 현재 secret을 먼저, 그다음 이전 secret들을 시도하고, `encrypt`는 항상 현재 secret을 쓴다. 플러그인은 `isCurrent`가 false인 값을 다시 저장할 때 새로 암호화한다. 그 secret으로 저장된 값을 모두 다시 암호화한 뒤에만 `previousSecrets`에서 뺀다.
 - `cms.server`는 `secret`과 `previousSecrets`를 뺀 서버 설정이다.
 - `MONTI_SECRET`을 바꾸면 로그인 세션 키도 바뀌어 모두 한 번 다시 로그인한다. `previousSecrets`는 저장된 값을 계속 읽게 할 뿐 옛 로그인 세션을 살려 주지는 않는다.
 
@@ -945,15 +947,17 @@ const key = await cms.apiKeys.add({ name: "Anthropic", value });          // 또
 const id = await cms.apiKeys.choose(choice, { baseName: "Anthropic" });    // 폼이 보낸 값: { use: "saved", keyId } | { use: "new", value } | { use: "none" }
 const value = await cms.apiKeys.read(id);                                  // 서버에서만. 키가 지워졌거나 풀 수 없으면 null
 await cms.apiKeys.setUses("my-plugin", [{ ref: "item:42", keyId: id }]);   // 플러그인의 어느 항목이 키를 쓰는지, 전체를 통째로 바꾼다
-await cms.apiKeys.readSlot("my-plugin", "key");                            // 플러그인이 선언한 슬롯(`keySlots`)에 정해진 키
+await cms.apiKeys.slot("my-plugin", "key").read();                         // 플러그인이 선언한 슬롯(`keySlots`)에 정해진 키
+await cms.apiKeys.findOrAdd({ baseName: "GitHub", value });                // 값이 같은 키, 없으면 새 키
 await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...)와 tx.storage("my-plugin") 쓰기: 모두 남거나 모두 사라진다 */ });
 ```
 
 - 플러그인은 키의 **id**만 들고 있고 값은 서비스를 부를 때 `read`로 읽는다. 이름을 바꾸거나 값을 바꿔도 id는 같으므로 그 키를 쓰는 곳이 모두 따라간다.
 - `setUses`는 관리자가 키를 어디서 쓰는지 아는 방법이다. 글자가 아니라 **참조**(`ref`, `connection:<id>` 같은 바뀌지 않는 값)를 받는다. 항목이 바뀔 때마다(연결 저장·삭제 등) 부른다. 관리자에 보이는 글자는 키를 읽을 때 `CmsServerPlugin`의 `keyUses(cms, refs)`가 만든다. `ref`마다 관리자 언어(`cms.site.createTranslator`)로, 항목의 지금 이름을 담은 라벨을 돌려주고, 더는 없는 항목은 `null`을 돌려주어 그 사용을 지운다. `keyUses`가 없는 플러그인은 플러그인 이름으로 보인다.
-- **키 슬롯**: 정해진 키 하나가 필요한 플러그인(맞춤법 검사기 등)은 플러그인 정의에 `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })`로 선언하고(`service`는 슬롯에 넣은 키가 저장되는 언어와 무관한 이름으로, `Bareun`, 있으면 `Bareun 2`이며 이전 작업도 같은 이름을 쓴다. `label`은 표시용이고 관리자 언어를 따르도록 site를 받는 함수로 쓴다), `cms.apiKeys.readSlot(<플러그인 이름>, "key")`로 읽는다. 도구 > API 키는 설치된 플러그인의 슬롯을 모두 보여 준다. 키가 정해졌으면 그 키의 "사용 중" 줄에 이름이 나오고, 비어 있으면 저장된 키를 고르거나 새 키를 넣는 줄(새 키는 지정과 같은 트랜잭션으로 저장)이 나오며, 정해진 슬롯은 키 줄 메뉴에서 뺄 수 있다. 관리자는 `PUT /v1/api-keys/slots`에 `{ plugin, slot, key }`(`key`는 `choose`가 받는 값, `{ use: "none" }`은 비운다)를 보낸다. 플러그인 페이지도 부를 수 있다. 설치되지 않은 플러그인의 슬롯은 보이지 않고 사용으로 세지도 않는다.
+- **키 슬롯**: 정해진 키 하나가 필요한 플러그인(맞춤법 검사기 등)은 플러그인 정의에 `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })`로 선언하고(`service`는 슬롯에 넣은 키가 저장되는 언어와 무관한 이름으로, `Bareun`, 있으면 `Bareun 2`이며 이전 작업도 같은 이름을 쓴다. `label`은 표시용이고 관리자 언어를 따르도록 site를 받는 함수로 쓴다), `cms.apiKeys.slot(<플러그인 이름>, "key").read()`로 읽는다. 슬롯의 `onChange: (cms) => …`는 키가 정해지거나 슬롯이 비워져 저장된 뒤에 한 번 불린다(토큰을 기다리던 동기화가 여기서 다시 시작한다). `cms.transaction` 안에서 한 변경에는 불리지 않는다. 도구 > API 키는 설치된 플러그인의 슬롯을 모두 보여 준다. 키가 정해졌으면 그 키의 "사용 중" 줄에 이름이 나오고, 비어 있으면 저장된 키를 고르거나 새 키를 넣는 줄(새 키는 지정과 같은 트랜잭션으로 저장)이 나오며, 정해진 슬롯은 키 줄 메뉴에서 뺄 수 있다. 관리자는 `PUT /v1/api-keys/slots`에 `{ plugin, slot, key }`(`key`는 `choose`가 받는 값, `{ use: "none" }`은 비운다)를 보낸다. 플러그인 페이지도 부를 수 있다. 설치되지 않은 플러그인의 슬롯은 보이지 않고 사용으로 세지도 않는다.
 - **한 번에 저장**: `cms.transaction(work)`는 `work`를 데이터베이스 트랜잭션 하나로 돌린다(Postgres: 어느 플러그인 저장소와 키 저장소든 한 번의 `BEGIN`/`COMMIT`. 데이터베이스 어댑터의 `transaction` 포트). 안에서 `tx.apiKeys.choose(...)`로 키를 만들고 `tx.storage("my-plugin")`으로 그 키를 가리키는 항목을 쓰면, 저장이 실패해도 남는 키가 없다. 안에서 `once`는 쓸 수 없다.
-- 관리자 API로 지울 때(`DELETE /v1/api-keys/<id>?expectedVersion=`) 쓰는 곳이 있으면 `409 key_in_use`와 `details.uses`로 답한다. `&force=true`를 붙이면 그래도 지우고, 쓰던 곳은 키를 찾지 못해 멈춘다. `cms.apiKeys.remove`는 항상 지운다.
+- `cms.apiKeys.remove(id, { expectedVersion, force? })`는 키와 쓰이던 곳을 한 트랜잭션으로 지우고, 쓰는 곳이 있으면 `force`가 없는 한 `key_in_use`(`details.uses`)로 실패한다. `force`면 쓰던 곳은 키를 찾지 못해 멈춘다. 관리자 API(`DELETE /v1/api-keys/<id>?expectedVersion=&force=true`)는 이를 부르고 `204`로 답한다.
+- 키 이름은 대소문자를 가리지 않고 유일하며, 저장소가 쓸 때 이를 지킨다. `cms.apiKeys.view()`가 `GET /v1/api-keys`와 `PUT /v1/api-keys/slots`의 답이다.
 - 서버 `secret`이 없으면 저장할 수 없다(`secret_not_configured`). 더는 나열되지 않은 비밀 값으로 만든 키는 `readable: false`로 나온다.
 - 경로: `GET/POST /v1/api-keys`, `PATCH/DELETE /v1/api-keys/<id>`. 어느 응답에도 값은 없다.
 

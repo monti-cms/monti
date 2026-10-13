@@ -15,46 +15,119 @@ import { validateSameOrigin } from "./security";
  */
 
 type Params = Record<string, string>;
-/** What the route handler passes to a route: the path params and the CMS instance the request is served by. */
-export type RouteContext<P extends Params = Params> = { params?: Promise<P>; cms: Cms };
-
-export interface AdminRequest<P extends Params> {
+/** What a request handler of a route module gets: the request, its path params, the CMS instance that serves it, and (admin routes) who is signed in. */
+export interface AdminRequest<P extends Params = Params> {
 	request: Request;
 	params: P;
 	auth: AuthContext;
 	cms: Cms;
 }
+/** What a route that needs no login gets: the same without `auth`. Such a route checks the request itself. */
+export type PublicRequest<P extends Params = Params> = Omit<AdminRequest<P>, "auth">;
+
+export type AdminHandler<P extends Params = Params> = (input: AdminRequest<P>) => Promise<Response>;
+export type PublicHandler<P extends Params = Params> = (input: PublicRequest<P>) => Promise<Response>;
+
+/** What the router (and a host that mounts a route file on its own) passes along with the request. */
+export type RouteContext<P extends Params = Params> = { params?: Promise<P>; cms: Cms };
 
 /**
- * Wraps a route with the admin check. The route handler passes the instance in the context. A route file mounted on its own in the app
- * (not served by `cms.handle()`) names the instance it belongs to with `bound.cms`.
+ * An admin route handler (a method of a route file). The router calls it with the input (the checks are done by then, centrally: see {@link runAdminRoute}).
+ * A route file an app mounts on its own, and a test, calls it as `(request, { params, cms })`: then the same checks run first.
+ */
+export interface AdminRoute<P extends Params = Params> {
+	(input: AdminRequest<P>): Promise<Response>;
+	(request: Request, context?: Partial<RouteContext<P>>): Promise<Response>;
+}
+
+/** A handler of a route marked `public: true`: it needs no login and checks the request itself. Callable like {@link AdminRoute}. */
+export interface PublicRoute<P extends Params = Params> {
+	(input: PublicRequest<P>): Promise<Response>;
+	(request: Request, context?: Partial<RouteContext<P>>): Promise<Response>;
+}
+
+/**
+ * Runs an admin route: the same-origin check of a state-changing request, the admin check, the `[id]` shape, and the actor for the change record. Errors become the
+ * one error answer. The router does this for every route that is not `public`, so a handler holds no auth code.
+ */
+export async function runAdminRoute<P extends Params>(
+	cms: Cms,
+	request: Request,
+	params: P,
+	handler: AdminHandler<P>,
+): Promise<Response> {
+	try {
+		validateSameOrigin(cms, request);
+		const auth = await cms.authGateway.verifyAdmin();
+		// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
+		// would reject it as a malformed value (an internal error), so it is a missing item here.
+		if (typeof params.id === "string" && !isUuid(params.id)) {
+			throw new CmsError("Not found", "not_found");
+		}
+		// The store records this admin as the one who made the changes the handler writes (`changedBy`).
+		return await withActor(actorOf(auth), () => handler({ request, params, auth, cms }));
+	} catch (error) {
+		return handleApiError(error);
+	}
+}
+
+/**
+ * Runs a public route: errors become the one error answer. A login connection may redirect by throwing (Next.js does); that signal must reach the host framework,
+ * so it is offered to the connection first.
+ */
+export async function runPublicRoute<P extends Params>(
+	cms: Cms,
+	request: Request,
+	params: P,
+	handler: PublicHandler<P>,
+): Promise<Response> {
+	try {
+		return await handler({ request, params, cms });
+	} catch (error) {
+		let auth: ReturnType<Cms["auth"]> | undefined;
+		try {
+			auth = cms.auth();
+		} catch {
+			// No login connection to ask: the error is answered as it is.
+		}
+		auth?.rethrow?.(error);
+		return handleApiError(error);
+	}
+}
+
+const missingInstance = () =>
+	handleApiError(
+		new Error(
+			"route called without a CMS instance: serve it through `cms.handle()` or pass `{ cms }` when wrapping it",
+		),
+	);
+
+/**
+ * Declares an admin route handler. `bound.cms` names the instance for a route file that is mounted on its own and called without one in its context.
+ *
+ * ```ts
+ * export const GET = adminRoute(async ({ request, params, auth, cms }) => ok(await cms.store().listFolders()));
+ * ```
  */
 export function adminRoute<P extends Params = Params>(
-	handler: (input: AdminRequest<P>) => Promise<Response>,
+	handler: AdminHandler<P>,
 	bound: { readonly cms?: Cms } = {},
-): (request: Request, context?: Partial<RouteContext<P>>) => Promise<Response> {
-	return async (request, context) => {
-		try {
-			const cms = context?.cms ?? bound.cms;
-			if (!cms) {
-				throw new Error(
-					"admin route called without a CMS instance: serve it through `cms.handle()` or pass `{ cms }` when wrapping it",
-				);
-			}
-			validateSameOrigin(cms, request);
-			const auth = await cms.authGateway.verifyAdmin();
-			const params = (await context?.params) ?? ({} as P);
-			// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
-			// would reject it as a malformed value (an internal error), so it is a missing item here.
-			if (typeof params.id === "string" && !isUuid(params.id)) {
-				throw new CmsError("Not found", "not_found");
-			}
-			// The store records this admin as the one who made the changes the handler writes (`changedBy`).
-			return await withActor(actorOf(auth), () => handler({ request, params, auth, cms }));
-		} catch (error) {
-			return handleApiError(error);
-		}
-	};
+): AdminRoute<P> {
+	return (async (first: AdminRequest<P> | Request, context?: Partial<RouteContext<P>>) => {
+		if (!(first instanceof Request)) return handler(first);
+		const cms = context?.cms ?? bound.cms;
+		if (!cms) return missingInstance();
+		return runAdminRoute(cms, first, ((await context?.params) ?? {}) as P, handler);
+	}) as AdminRoute<P>;
+}
+
+/** Declares the handler of a `public: true` route. */
+export function publicRoute<P extends Params = Params>(handler: PublicHandler<P>): PublicRoute<P> {
+	return (async (first: PublicRequest<P> | Request, context?: Partial<RouteContext<P>>) => {
+		if (!(first instanceof Request)) return handler(first);
+		if (!context?.cms) return missingInstance();
+		return runPublicRoute(context.cms, first, ((await context.params) ?? {}) as P, handler);
+	}) as PublicRoute<P>;
 }
 
 /** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
