@@ -3,6 +3,7 @@
 import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch } from "../admin-api";
 import { screensMessages } from "../messages";
 import { formatDateOnly } from "../shared/format-date";
@@ -93,6 +94,8 @@ export function ListPreview({
 	});
 	const real = (query.data?.items ?? []).slice(0, 5);
 	const useReal = real.length > 0;
+	// A saved collection waits for its entries instead of flashing made-up rows.
+	const pending = saved && query.isPending;
 	const rows = useReal ? real : sampleRows(collection);
 	const shown = columns ?? USUAL_COLUMNS;
 	const fields = fieldsOf(collection);
@@ -125,7 +128,9 @@ export function ListPreview({
 
 	return (
 		<div className="flex flex-col gap-3" data-testid="list-preview">
-			<p className="text-cms-muted-foreground text-xs">{useReal ? t("list.previewReal") : t("list.previewSample")}</p>
+			<p className="min-h-4 text-cms-muted-foreground text-xs">
+				{pending ? "" : useReal ? t("list.previewReal") : t("list.previewSample")}
+			</p>
 			{shown.length === 0 ? (
 				<p className="rounded-lg border border-dashed p-3 text-cms-muted-foreground text-xs">{t("list.previewNone")}</p>
 			) : (
@@ -141,15 +146,26 @@ export function ListPreview({
 							</tr>
 						</thead>
 						<tbody>
-							{rows.map((row, index) => (
-								<tr key={`${row.slug ?? ""}-${index}`} className="border-t">
-									{shown.map((column) => (
-										<td key={column} className="max-w-48 truncate px-3 py-1.5">
-											{cell(row, column) || <span className="text-cms-muted-foreground">—</span>}
-										</td>
+							{pending
+								? Array.from({ length: SAMPLE_ROWS }, (_, index) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: fixed placeholder rows
+										<tr key={index} className="border-t" data-testid="list-preview-skeleton">
+											{shown.map((column) => (
+												<td key={column} className="px-3 py-1.5">
+													<Skeleton className="h-5 w-full" />
+												</td>
+											))}
+										</tr>
+									))
+								: rows.map((row, index) => (
+										<tr key={`${row.slug ?? ""}-${index}`} className="border-t">
+											{shown.map((column) => (
+												<td key={column} className="max-w-48 truncate px-3 py-1.5">
+													{cell(row, column) || <span className="text-cms-muted-foreground">—</span>}
+												</td>
+											))}
+										</tr>
 									))}
-								</tr>
-							))}
 						</tbody>
 					</table>
 				</div>

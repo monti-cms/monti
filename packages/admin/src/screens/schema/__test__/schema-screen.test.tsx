@@ -720,7 +720,7 @@ describe("SchemaScreen", () => {
 		const preview = await screen.findByTestId("list-preview");
 		// The usual columns until the writer chooses their own.
 		expect(within(preview).getAllByRole("columnheader")).toHaveLength(3);
-		expect(within(preview).getByText(t("list.previewSample"))).toBeTruthy();
+		expect(await within(preview).findByText(t("list.previewSample"))).toBeTruthy();
 
 		fireEvent.click(screen.getByRole("switch", { name: t("list.custom") }));
 		// Choosing columns starts from the title; adding one shows its column at once.
