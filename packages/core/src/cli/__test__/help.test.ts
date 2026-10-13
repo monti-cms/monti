@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { APP_OPTIONS } from "../command";
+import { COMMANDS as TABLE } from "../commands";
 import { runCli } from "../index";
 
 const help = async (...argv: string[]) => {
@@ -11,17 +13,7 @@ const help = async (...argv: string[]) => {
 	return { code, text: out.join("\n") };
 };
 
-const COMMANDS = [
-	"init",
-	"admin:reset-password",
-	"db:setup",
-	"db:migrate",
-	"events:retry",
-	"doctor",
-	"schema:extract",
-	"schema:diff",
-	"schema:apply",
-];
+const COMMANDS = TABLE.map((command) => command.name);
 
 /** The names of the commands whose section is in a help text (a section starts with two spaces and the name). */
 const sectionsIn = (text: string) => COMMANDS.filter((name) => new RegExp(`^ {2}${name}\\s`, "m").test(text));
@@ -58,5 +50,24 @@ describe("monti help", () => {
 		expect(unknown.code).toBe(1);
 		expect(unknown.text).toContain("Unknown command: nope");
 		expect(sectionsIn(unknown.text)).toEqual(COMMANDS);
+	});
+
+	it.each(TABLE)("`monti $name --help` documents every option the command accepts", async (command) => {
+		const { text } = await help(command.name, "--help");
+		const accepted = [...Object.keys(command.options), ...(command.app ? Object.keys(APP_OPTIONS) : [])];
+		for (const option of accepted) expect(text).toMatch(new RegExp(`^ +--${option}(?:[ ,]|$)`, "m"));
+	});
+
+	it("every option the help lists is accepted by the command (no stale flag)", async () => {
+		for (const command of TABLE) {
+			const { text } = await help(command.name, "--help");
+			const accepted = new Set([...Object.keys(command.options), ...(command.app ? Object.keys(APP_OPTIONS) : [])]);
+			const listed = [...text.matchAll(/^ {14}--([a-z-]+)/gm)].map((match) => match[1]);
+			for (const option of listed) expect(accepted.has(option as string)).toBe(true);
+		}
+	});
+
+	it("does not send the reader to another command for the shared options", async () => {
+		expect((await help("--help")).text).not.toMatch(/As for/);
 	});
 });
