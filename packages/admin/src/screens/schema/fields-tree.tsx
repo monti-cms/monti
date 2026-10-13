@@ -36,12 +36,14 @@ import {
 	moveGroup,
 	moveGroupBy,
 	moveGroupToTab,
+	moveOutOfGroup,
 	moveTab,
 	type NoPanelReason,
 	noPanelReason,
 	ownTabOf,
 	placeField,
 	placeOf,
+	placeUngrouped,
 	removeGroup,
 	removeTab,
 	renameTab,
@@ -140,9 +142,11 @@ function Row({
 	const label = typeof field.label === "string" ? field.label : "";
 	const blocked = removeBlock(editing.collection, place, name);
 	const locked = top?.locked ?? null;
+	// A field in a conditional branch only reorders within its branch, so a branch with one field has nothing to drag.
+	const noDrag = disabled || locked !== null || (place.branch !== undefined && count < 2);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: name,
-		disabled: disabled || locked !== null,
+		disabled: noDrag,
 	});
 	const open = () => ctx.onOpen(place, name);
 	const onKeyDown = (event: KeyboardEvent) => {
@@ -261,7 +265,7 @@ function Row({
 					{...attributes}
 					{...listeners}
 					aria-label={t("fields.drag", { name })}
-					disabled={disabled}
+					disabled={noDrag}
 					className="absolute top-1/2 left-0.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-4" />
@@ -408,15 +412,16 @@ function InlineName({
 	);
 }
 
-const groupId = (tab: number, index: number) => `group:${tab}:${index}`;
+const groupId = (tab: number, block: number) => `group:${tab}:${block}`;
+const emptyId = (tab: number, block: number) => `empty:${tab}:${block}`;
 const tabId = (tab: number) => `tab:${tab}`;
-const restId = (tab: number) => `rest:${tab}`;
-const parseGroupId = (id: string): { tab: number; index: number } | null => {
-	const match = /^group:(\d+):(\d+)$/.exec(id);
-	return match ? { tab: Number(match[1]), index: Number(match[2]) } : null;
+const endId = (tab: number) => `end:${tab}`;
+const parseBlockId = (id: string, kind: "group" | "empty"): { tab: number; block: number } | null => {
+	const match = new RegExp(`^${kind}:(\\d+):(\\d+)$`).exec(id);
+	return match ? { tab: Number(match[1]), block: Number(match[2]) } : null;
 };
 const parseTabId = (id: string): number | null => {
-	const match = /^(?:tab|rest):(\d+)$/.exec(id);
+	const match = /^(?:tab|end):(\d+)$/.exec(id);
 	return match ? Number(match[1]) : null;
 };
 
@@ -500,17 +505,17 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 }
 
 /** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
-function GroupRow({ ops, tab, index, indent }: { ops: LayoutOps; tab: number; index: number; indent: string }) {
+function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; block: number; indent: string }) {
 	const t = useTranslator(schemaMessages);
-	const group = ops.tree.tabs[tab]?.groups[index];
+	const group = ops.tree.tabs[tab]?.blocks[block];
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
-		id: groupId(tab, index),
+		id: groupId(tab, block),
 		disabled: ops.disabled,
 	});
 	const inputRef = useRef<HTMLInputElement | null>(null);
-	if (!group) return null;
-	const ref = { tab, index };
-	const count = ops.tree.tabs[tab]?.groups.length ?? 0;
+	if (!group || group.title === null) return null;
+	const ref = { tab, block };
+	const count = ops.tree.tabs[tab]?.blocks.length ?? 0;
 	const actions: MenuAction[] = [
 		{
 			kind: "item",
@@ -530,14 +535,14 @@ function GroupRow({ ops, tab, index, indent }: { ops: LayoutOps; tab: number; in
 			kind: "item",
 			label: t("layout.upGroup"),
 			icon: ArrowUp,
-			disabled: ops.disabled || index === 0,
+			disabled: ops.disabled || block === 0,
 			onSelect: () => ops.change((tree) => moveGroupBy(tree, ref, -1)),
 		},
 		{
 			kind: "item",
 			label: t("layout.downGroup"),
 			icon: ArrowDown,
-			disabled: ops.disabled || index === count - 1,
+			disabled: ops.disabled || block === count - 1,
 			onSelect: () => ops.change((tree) => moveGroupBy(tree, ref, 1)),
 		},
 		...(ops.showTabs
@@ -574,7 +579,7 @@ function GroupRow({ ops, tab, index, indent }: { ops: LayoutOps; tab: number; in
 			ref={setNodeRef}
 			style={{ transform: CSS.Transform.toString(transform), transition }}
 			className={cn("group/row relative mt-1 border-y bg-cms-muted/30", isDragging && "z-10 bg-cms-card opacity-80")}
-			data-testid={`group-${tab}-${index}`}
+			data-testid={`group-${tab}-${block}`}
 		>
 			<div className="flex items-center gap-1 px-5 py-0.5">
 				<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
@@ -612,21 +617,20 @@ function GroupRow({ ops, tab, index, indent }: { ops: LayoutOps; tab: number; in
 	);
 }
 
-/** The place for the fields in no group of a tab: drawn once the tab has groups, so a field can be dropped out of them. */
-function RestRow({ tab, indent }: { tab: number; indent: string }) {
-	const t = useTranslator(schemaMessages);
-	const { setNodeRef, transform, transition } = useSortable({ id: restId(tab), disabled: { draggable: true } });
+/** The place to drop a field into a group that has none, or after the last block of a tab. */
+function DropRow({ id, indent, label, testId }: { id: string; indent: string; label?: string; testId: string }) {
+	const { setNodeRef, transform, transition } = useSortable({ id, disabled: { draggable: true } });
 	return (
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Transform.toString(transform), transition }}
-			className="mt-1 border-y border-dashed px-5 py-1 text-cms-muted-foreground text-xs"
-			data-testid={`rest-${tab}`}
+			className={cn("px-5 text-cms-muted-foreground text-xs", label ? "py-1" : "h-2")}
+			data-testid={testId}
 		>
 			<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 				{indent}
 			</span>
-			{t("layout.ungrouped")}
+			{label}
 		</div>
 	);
 }
@@ -655,6 +659,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	const rows: { id: string; node: React.ReactNode }[] = [];
 	const fieldRow = (name: string, depth: number, locked: Locked | null) => {
 		const here = placeOf(tree, name);
+		const inGroup = here !== null && tree.tabs[here.tab]?.blocks[here.block]?.title !== null;
 		const moveUp = locked ? tree : moveFieldBy(tree, name, -1);
 		const moveDown = locked ? tree : moveFieldBy(tree, name, 1);
 		const same = (other: Tree) => JSON.stringify(other) === JSON.stringify(tree);
@@ -665,22 +670,34 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 						kind: "sub",
 						label: t("layout.moveFieldToGroup"),
 						items: tree.tabs.flatMap((tab, at): MenuAction[] => [
-							...tab.groups.map(
-								(group, g): MenuAction => ({
-									kind: "item",
-									label: showTabs ? `${tab.name} / ${group.title}` : group.title,
-									disabled: here?.tab === at && here.group === g,
-									onSelect: () => change((current) => placeField(current, name, at, g)),
-								}),
+							...tab.blocks.flatMap((block, g): MenuAction[] =>
+								block.title === null
+									? []
+									: [
+											{
+												kind: "item",
+												label: showTabs ? `${tab.name} / ${block.title}` : block.title,
+												disabled: here?.tab === at && here.block === g,
+												onSelect: () => change((current) => placeField(current, name, at, g)),
+											},
+										],
 							),
 							{
 								kind: "item",
 								label: showTabs ? `${tab.name} / ${t("layout.noGroup")}` : t("layout.noGroup"),
-								disabled: here?.tab === at && here.group === null,
-								onSelect: () => change((current) => placeField(current, name, at, null)),
+								onSelect: () => change((current) => placeUngrouped(current, name, at)),
 							},
 						]),
 					},
+					...(inGroup
+						? [
+								{
+									kind: "item" as const,
+									label: t("layout.moveOut"),
+									onSelect: () => change((current) => moveOutOfGroup(current, name)),
+								},
+							]
+						: []),
 					...(showTabs
 						? [
 								{
@@ -731,20 +748,37 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	for (const [at, tab] of tree.tabs.entries()) {
 		if (showTabs) rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
 		const tabDepth = showTabs ? 1 : 0;
-		for (const [g, group] of tab.groups.entries()) {
+		for (const [b, block] of tab.blocks.entries()) {
+			if (block.title === null) {
+				for (const name of block.fields) fieldRow(name, tabDepth, null);
+				continue;
+			}
 			rows.push({
-				id: groupId(at, g),
-				node: <GroupRow key={groupId(at, g)} ops={ops} tab={at} index={g} indent={INDENT.repeat(tabDepth)} />,
+				id: groupId(at, b),
+				node: <GroupRow key={groupId(at, b)} ops={ops} tab={at} block={b} indent={INDENT.repeat(tabDepth)} />,
 			});
-			for (const name of group.fields) fieldRow(name, tabDepth + 1, null);
+			if (block.fields.length === 0) {
+				rows.push({
+					id: emptyId(at, b),
+					node: (
+						<DropRow
+							key={emptyId(at, b)}
+							id={emptyId(at, b)}
+							indent={INDENT.repeat(tabDepth + 1)}
+							label={t("layout.emptyGroup")}
+							testId={`empty-${at}-${b}`}
+						/>
+					),
+				});
+			}
+			for (const name of block.fields) fieldRow(name, tabDepth + 1, null);
 		}
-		const restDepth = tab.groups.length > 0 ? tabDepth + 1 : tabDepth;
-		if (tab.groups.length > 0) {
-			rows.push({ id: restId(at), node: <RestRow key={restId(at)} tab={at} indent={INDENT.repeat(tabDepth)} /> });
-		}
-		for (const name of tab.ungrouped) fieldRow(name, restDepth, null);
+		rows.push({
+			id: endId(at),
+			node: <DropRow key={endId(at)} id={endId(at)} indent="" testId={`end-${at}`} />,
+		});
 		for (const name of tab.locked)
-			fieldRow(name, restDepth, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
+			fieldRow(name, tabDepth, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
 	}
 
 	const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -752,19 +786,21 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 		const from = String(active.id);
 		const to = String(over.id);
 		change((current) => {
-			const group = parseGroupId(from);
-			const toGroup = parseGroupId(to);
+			const group = parseBlockId(from, "group");
+			const toGroup = parseBlockId(to, "group");
+			const toEmpty = parseBlockId(to, "empty");
 			const toTab = parseTabId(to);
 			if (group) {
 				if (toGroup) return moveGroup(current, group, toGroup);
-				if (toTab !== null) return moveGroup(current, group, { tab: toTab, index: Number.MAX_SAFE_INTEGER });
+				if (toEmpty) return moveGroup(current, group, toEmpty);
+				if (toTab !== null) return moveGroup(current, group, { tab: toTab, block: Number.MAX_SAFE_INTEGER });
 				const place = placeOf(current, to);
-				return place
-					? moveGroup(current, group, { tab: place.tab, index: place.group ?? Number.MAX_SAFE_INTEGER })
-					: current;
+				return place ? moveGroup(current, group, { tab: place.tab, block: place.block }) : current;
 			}
-			if (toGroup) return placeField(current, from, toGroup.tab, toGroup.index, 0);
-			if (toTab !== null) return placeField(current, from, toTab, null, 0);
+			// A field dropped on a group's title leaves its group for the place just before that group.
+			if (toGroup) return placeUngrouped(current, from, toGroup.tab, toGroup.block);
+			if (toEmpty) return placeField(current, from, toEmpty.tab, toEmpty.block);
+			if (toTab !== null) return placeUngrouped(current, from, toTab, to.startsWith("end:") ? undefined : 0);
 			return dropFieldOnField(current, from, to);
 		});
 	};
@@ -850,7 +886,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				0,
 				unique(
 					t("layout.newGroup"),
-					tree.tabs.flatMap((tab) => tab.groups.map((group) => group.title)),
+					tree.tabs.flatMap((tab) => tab.blocks.flatMap((block) => (block.title === null ? [] : [block.title]))),
 				),
 			),
 		);

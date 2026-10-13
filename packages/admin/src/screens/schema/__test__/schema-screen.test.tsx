@@ -771,9 +771,9 @@ describe("SchemaScreen", () => {
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
 			const post = savedPost();
-			expect(post.layout).toEqual([{ group: "Details", fields: ["summary"] }]);
+			expect(post.layout).toEqual([{ fields: ["slug", "status"] }, { group: "Details", fields: ["summary"] }]);
 			// The grouped field comes first in the file; the title is pinned before everything.
-			expect(Object.keys(post.fields)).toEqual(["title", "summary", "slug", "status"]);
+			expect(Object.keys(post.fields)).toEqual(["title", "slug", "status", "summary"]);
 		});
 
 		it("collapses a group at first", async () => {
@@ -785,7 +785,10 @@ describe("SchemaScreen", () => {
 			expect(await screen.findByText(t("layout.collapsedMark"))).toBeTruthy();
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
-			expect(savedPost().layout).toEqual([{ group: t("layout.newGroup"), fields: [], collapsed: true }]);
+			expect(savedPost().layout).toEqual([
+				{ fields: ["slug", "summary", "status"] },
+				{ group: t("layout.newGroup"), fields: [], collapsed: true },
+			]);
 		});
 
 		it("deletes a group, sending its fields back to no group", async () => {
@@ -802,7 +805,7 @@ describe("SchemaScreen", () => {
 			await screen.findByTestId("review-summary");
 			const post = savedPost();
 			expect(post.layout).toBeUndefined();
-			expect(Object.keys(post.fields)).toEqual(["title", "summary", "slug", "status"]);
+			expect(Object.keys(post.fields)).toEqual(["title", "slug", "status", "summary"]);
 		});
 
 		it("shows the tab level only once a second tab exists, and moves a group into it", async () => {
@@ -819,10 +822,7 @@ describe("SchemaScreen", () => {
 			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newTab") }));
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
-			expect(savedPost().layout).toEqual([
-				{ group: t("layout.newGroup"), fields: [], tab: t("layout.newTab") },
-				{ fields: [], tab: t("layout.newTab") },
-			]);
+			expect(savedPost().layout).toEqual([{ group: t("layout.newGroup"), fields: [], tab: t("layout.newTab") }]);
 		});
 
 		it("marks the title as not in the properties panel and cannot move it into a group", async () => {
@@ -856,6 +856,69 @@ describe("SchemaScreen", () => {
 			await screen.findByRole("menuitem", { name: t("fields.edit") });
 			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToGroup") })).toBeNull();
 			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToTab") })).toBeNull();
+		});
+
+		it("shows fields in no group where the panel draws them, and an unrelated move leaves them in place", async () => {
+			const withRun = schema();
+			(withRun.collections.post as Record<string, unknown>).layout = [
+				{ fields: ["slug", "summary"] },
+				{ group: "Classification", fields: ["status"] },
+			];
+			state = screenState({ schema: withRun });
+			vi.stubGlobal("matchMedia", (query: string) => ({
+				matches: query.includes("1280"),
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+			}));
+			await openFields();
+			const order = () =>
+				Array.from(document.querySelectorAll('[data-testid^="field-"], [data-testid^="group-"]')).map((row) =>
+					row.getAttribute("data-testid"),
+				);
+			// The tree lists the fields in no group first, then the group, as the panel does.
+			expect(order().filter((id) => id !== "field-title")).toEqual([
+				"field-slug",
+				"field-summary",
+				"group-0-1",
+				"field-status",
+			]);
+			const previewOrder = () =>
+				Array.from(document.querySelectorAll('[data-testid="layout-preview"] [data-testid^="preview-field-"]')).map(
+					(row) => row.getAttribute("data-testid"),
+				);
+			expect(previewOrder()).toEqual(["preview-field-slug", "preview-field-summary", "preview-field-status"]);
+
+			// Moving another field does not move them.
+			await menuOf(t("fields.menu", { name: "status" }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveOut") }));
+			await waitFor(() => expect(order().filter((id) => id !== "field-title")[0]).toBe("field-slug"));
+			expect(previewOrder().slice(0, 2)).toEqual(["preview-field-slug", "preview-field-summary"]);
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			const post = savedPost();
+			expect(post.layout).toEqual([{ fields: ["slug", "summary"] }, { group: "Classification", fields: [] }]);
+			vi.unstubAllGlobals();
+		});
+
+		it("gives a conditional field's own field no drag handle when it is alone in its choice", async () => {
+			const withConditional = schema();
+			Object.assign(withConditional.collections.post.fields, {
+				policy: {
+					kind: "conditional",
+					label: "Policy",
+					discriminant: { kind: "select", label: "Policy", options: { normal: "Normal", deprecated: "Deprecated" } },
+					values: { normal: {}, deprecated: { replacementId: { kind: "text", label: "Replacement" } } },
+				},
+			});
+			state = screenState({ schema: withConditional });
+			await openFields();
+			// The parent can be dragged; its single sub-field cannot go anywhere on its own.
+			expect(screen.getByRole("button", { name: t("fields.drag", { name: "policy" }) })).toBeTruthy();
+			expect(
+				(screen.getByRole("button", { name: t("fields.drag", { name: "replacementId" }) }) as HTMLButtonElement)
+					.disabled,
+			).toBe(true);
 		});
 
 		it("previews the panel beside the tree on a wide window, following the tree", async () => {
