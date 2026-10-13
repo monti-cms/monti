@@ -90,7 +90,6 @@ const COLUMNS =
 /** Two columns only, for when the preview takes the room beside the tree. */
 const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4";
 const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
-const INDENT = "   ";
 
 interface TreeContext {
 	readonly editing: CollectionEditing;
@@ -184,6 +183,8 @@ function MoveDialog({
 /** What a top-level row does besides what a field in a conditional branch does: it moves through the tree of tabs and groups. */
 interface TopRow {
 	readonly locked: Locked | null;
+	/** The row is in a group: a rule along its left edge shows it, there is no indent. */
+	readonly member: boolean;
 	/** Places the row can be moved to without dragging. */
 	readonly destinations: Destination[];
 	readonly up: () => void;
@@ -270,7 +271,11 @@ function Row({
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("relative", isDragging && "z-10 bg-cms-card opacity-80")}
+			className={cn(
+				"relative",
+				top?.member && "before:absolute before:inset-y-0 before:left-1.5 before:w-0.5 before:bg-cms-foreground/15",
+				isDragging && "z-10 bg-cms-card opacity-80",
+			)}
 			data-testid={`field-${name}`}
 		>
 			<div className="group/row relative">
@@ -283,7 +288,7 @@ function Row({
 					onKeyDown={onKeyDown}
 					className={cn(
 						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer px-5 outline-none hover:bg-cms-muted/60 focus-visible:bg-cms-muted/60 focus-visible:ring-2 focus-visible:ring-cms-ring/50 focus-visible:ring-inset",
+						"min-h-[30px] cursor-pointer pr-5 pl-9 outline-none hover:bg-cms-muted/60 focus-visible:bg-cms-muted/60 focus-visible:ring-2 focus-visible:ring-cms-ring/50 focus-visible:ring-inset",
 						nested && "bg-cms-muted/20",
 					)}
 				>
@@ -291,8 +296,14 @@ function Row({
 						<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 							{prefix}
 						</span>
-						<span className="font-mono text-[13px]">{name}</span>
-						{label && <span className="ml-2 truncate text-cms-muted-foreground text-xs">{label}</span>}
+						<span className="truncate font-mono text-[13px]" title={name}>
+							{name}
+						</span>
+						{label && (
+							<span className="ml-2 truncate text-cms-muted-foreground text-xs" title={label}>
+								{label}
+							</span>
+						)}
 						{locked?.kind === "panel" && (
 							<span
 								className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs"
@@ -348,7 +359,7 @@ function Row({
 					{...listeners}
 					aria-label={t("fields.drag", { name })}
 					disabled={noDrag}
-					className="absolute top-1/2 left-0.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-4" />
 				</button>
@@ -366,7 +377,7 @@ function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] px-5")}>
+						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] pr-5 pl-9")}>
 							<div className="flex min-w-0 items-center">
 								<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 									{childLead}
@@ -553,7 +564,7 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
-			className="group/row relative mt-2 flex items-center gap-1 border-y bg-cms-muted/50 px-5 py-1 first:mt-0"
+			className="group/row relative mt-3 flex items-center gap-1 border-y bg-cms-muted py-1.5 pr-5 pl-9 first:mt-0"
 		>
 			<InlineName
 				value={tab.name}
@@ -561,21 +572,21 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 				disabled={ops.disabled || !editable}
 				inputRef={inputRef}
 				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name))}
-				className="font-semibold"
+				className="-ml-1.5 font-semibold"
 			/>
+			<span className="flex-1" />
 			{!editable && index > 0 && (
-				<span className="shrink-0 text-cms-muted-foreground text-xs" title={t("layout.tabLocked")}>
+				<span className="shrink-0 pr-1 text-cms-muted-foreground text-xs" title={t("layout.tabLocked")}>
 					{t("layout.pluginPlaced")}
 				</span>
 			)}
-			<span className="flex-1" />
 			<RowButtons buttons={buttons} />
 		</div>
 	);
 }
 
 /** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
-function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; block: number; indent: string }) {
+function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; block: number }) {
 	const t = useTranslator(schemaMessages);
 	const group = ops.tree.tabs[tab]?.blocks[block];
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -632,11 +643,9 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 			className={cn("group/row relative mt-1 border-y bg-cms-muted/30", isDragging && "z-10 bg-cms-card opacity-80")}
 			data-testid={`group-${tab}-${block}`}
 		>
-			<div className="flex items-center gap-1 px-5 py-0.5">
-				<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
-					{indent}
-				</span>
+			<div className="flex items-center gap-1 py-0.5 pr-5 pl-9">
 				<InlineName
+					className="-ml-1.5"
 					value={group.title}
 					label={t("layout.groupTitle")}
 					disabled={ops.disabled}
@@ -665,7 +674,7 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 				{...listeners}
 				aria-label={t("layout.dragGroup", { name: group.title })}
 				disabled={ops.disabled}
-				className="absolute top-1/2 left-0.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
@@ -674,18 +683,15 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 }
 
 /** The place to drop a field into a group that has none, or after the last block of a tab. */
-function DropRow({ id, indent, label, testId }: { id: string; indent: string; label?: string; testId: string }) {
+function DropRow({ id, label, testId }: { id: string; label?: string; testId: string }) {
 	const { setNodeRef, transform, transition } = useSortable({ id, disabled: { draggable: true } });
 	return (
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("px-5 text-cms-muted-foreground text-xs", label ? "py-1" : "h-2")}
+			className={cn("pr-5 pl-9 text-cms-muted-foreground text-xs", label ? "py-1" : "h-2")}
 			data-testid={testId}
 		>
-			<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
-				{indent}
-			</span>
 			{label}
 		</div>
 	);
@@ -713,7 +719,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	const fields = fieldsOf(collection);
 
 	const rows: { id: string; node: React.ReactNode }[] = [];
-	const fieldRow = (name: string, depth: number, locked: Locked | null) => {
+	const fieldRow = (name: string, member: boolean, locked: Locked | null) => {
 		const here = placeOf(tree, name);
 		const inGroup = here !== null && tree.tabs[here.tab]?.blocks[here.block]?.title !== null;
 		const moveUp = locked ? tree : moveFieldBy(tree, name, -1);
@@ -752,12 +758,13 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 					place={{}}
 					name={name}
 					field={fields[name] ?? {}}
-					prefix={INDENT.repeat(depth)}
-					childLead={`${INDENT.repeat(depth)}  `}
+					prefix=""
+					childLead="  "
 					nested={false}
 					index={0}
 					count={1}
 					top={{
+						member,
 						locked,
 						destinations,
 						up: () => change((current) => moveFieldBy(current, name, -1)),
@@ -771,19 +778,18 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	};
 
 	for (const name of tree.pinned) {
-		fieldRow(name, 0, { kind: "panel", reason: noPanelReason(collection, name) ?? "hidden" });
+		fieldRow(name, false, { kind: "panel", reason: noPanelReason(collection, name) ?? "hidden" });
 	}
 	for (const [at, tab] of tree.tabs.entries()) {
 		if (showTabs) rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
-		const tabDepth = showTabs ? 1 : 0;
 		for (const [b, block] of tab.blocks.entries()) {
 			if (block.title === null) {
-				for (const name of block.fields) fieldRow(name, tabDepth, null);
+				for (const name of block.fields) fieldRow(name, false, null);
 				continue;
 			}
 			rows.push({
 				id: groupId(at, b),
-				node: <GroupRow key={groupId(at, b)} ops={ops} tab={at} block={b} indent={INDENT.repeat(tabDepth)} />,
+				node: <GroupRow key={groupId(at, b)} ops={ops} tab={at} block={b} />,
 			});
 			if (block.fields.length === 0) {
 				rows.push({
@@ -792,21 +798,20 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 						<DropRow
 							key={emptyId(at, b)}
 							id={emptyId(at, b)}
-							indent={INDENT.repeat(tabDepth + 1)}
 							label={t("layout.emptyGroup")}
 							testId={`empty-${at}-${b}`}
 						/>
 					),
 				});
 			}
-			for (const name of block.fields) fieldRow(name, tabDepth + 1, null);
+			for (const name of block.fields) fieldRow(name, true, null);
 		}
 		rows.push({
 			id: endId(at),
-			node: <DropRow key={endId(at)} id={endId(at)} indent="" testId={`end-${at}`} />,
+			node: <DropRow key={endId(at)} id={endId(at)} testId={`end-${at}`} />,
 		});
 		for (const name of tab.locked)
-			fieldRow(name, tabDepth, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
+			fieldRow(name, false, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
 	}
 
 	const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -962,7 +967,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					</Button>
 				</div>
 			</div>
-			<div className={cn(columnsOf(wide), "border-b px-5 py-2 text-cms-muted-foreground text-xs")} aria-hidden>
+			<div className={cn(columnsOf(wide), "border-b py-2 pr-5 pl-9 text-cms-muted-foreground text-xs")} aria-hidden>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
 				<span className={cn("hidden", !wide && "sm:block")}>{t("fields.colSettings")}</span>
