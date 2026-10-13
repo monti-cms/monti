@@ -10,7 +10,14 @@ import {
 	type TextEdit,
 	wrapNextConfig,
 } from "./init-edit";
-import { collectAnswers, detectedLocales, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts";
+import {
+	collectAnswers,
+	detectedLocales,
+	detectSystemTimeZone,
+	type InitAnswerFlags,
+	InitCancelled,
+	type Prompter,
+} from "./init-prompts";
 import {
 	adminLayoutTemplate,
 	adminPageTemplate,
@@ -49,6 +56,8 @@ export interface InstallCommand {
 export interface InitHost {
 	/** Installs packages with the package manager. Throws when it fails. */
 	install(command: InstallCommand): void | Promise<void>;
+	/** The time zone of this computer (an IANA name), or `undefined` when it cannot be read. */
+	systemTimeZone(): string | undefined;
 }
 
 export interface InitOptions extends InitAnswerFlags {
@@ -167,6 +176,7 @@ export class ProjectWriter {
 
 /** The real host: spawns the package manager. */
 export const defaultInitHost: InitHost = {
+	systemTimeZone: detectSystemTimeZone,
 	install: (command) => {
 		const result = spawnSync(command.command, [...command.args], { cwd: command.cwd, stdio: "inherit" });
 		if (result.error || result.status !== 0) {
@@ -222,6 +232,17 @@ function nextConfigManualStep(file: string, reason: string): string {
 	return `Wrap the config in ${file} (init did not edit it: ${reason}). Add this import at the top:\n${NEXT_CONFIG_IMPORT}\nand export the result of withCms around the config you export now:\nexport default withCms(nextConfig);   // wherever you export your config`;
 }
 
+/** The one line that says which time zone the site got and why: automatic is fine, silent is not. */
+export const timeZoneNote = (answers: Pick<InitAnswers, "timeZone" | "timeZoneSource">, schemaFile: string): string => {
+	const from =
+		answers.timeZoneSource === "flag"
+			? "from --time-zone"
+			: answers.timeZoneSource === "computer"
+				? "from this computer"
+				: "this computer's time zone could not be read";
+	return `Time zone: ${answers.timeZone} (${from}). Dates on your site and scheduled publishing use it; change \`timeZone\` in ${schemaFile} if your readers are elsewhere.`;
+};
+
 /** The root layout item of the list when init did not edit the file. */
 const layoutManualStep = (file: string, reason: string): string =>
 	`Add suppressHydrationWarning to the <html> tag in ${file} (init did not edit it: ${reason}):\n<html lang="en" suppressHydrationWarning>\nThe admin's theme provider sets a class on <html> before React hydrates; without it the first admin screen logs a hydration mismatch.`;
@@ -267,7 +288,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		"Detected",
 	);
 
-	const answers = await collectAnswers(app, options, prompter);
+	const answers = await collectAnswers(app, options, prompter, host.systemTimeZone);
 	const foundLocales = detectedLocales(app);
 
 	// Plan the files.
@@ -336,6 +357,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		planned.push({ file: configFile, content: configTemplate(answers) });
 		const folder = app.contentFolders[0];
 		planned.push({ file: schemaFile, content: schemaTemplate(answers, { siteName: app.packageName, folder }) });
+		report.notes.push(timeZoneNote(answers, schemaFile));
 		if (folder) {
 			const keys = folder.keys.map((key) => key.name);
 			report.notes.push(

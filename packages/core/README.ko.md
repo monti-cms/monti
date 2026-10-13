@@ -155,7 +155,7 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 | `--dry-run` | 쓰지도 돌리지도 않고 계획만 보인다 | |
 | `--site-url <url>` | 공개 사이트 주소. `.env.example`의 `SITE_URL` 예시 값이다 | `http://localhost:<개발 포트>` |
 | `--locales <목록>` | 언어 코드, 기본 언어가 먼저(하나면 `--locale <코드>`도 같다) | 콘텐츠 파일 이름이나 폴더에서 찾은 언어, 없으면 `en` |
-| `--time-zone <시간대>` | IANA 시간대 | `UTC` |
+| `--time-zone <시간대>` | 사이트의 날짜와 예약 발행에 쓰는 IANA 시간대 | 이 컴퓨터의 시간대(읽을 수 없으면 `UTC`). 어느 쪽인지 요약에 나오고, `monti.schema.ts`의 `timeZone`(또는 관리자의 스키마 설정)으로 바꾼다 |
 | `--storage <s3\|none>` | 이미지 저장소 | `none` |
 | `--extras <목록>` | `ai`, `git-sync`, `none` | `none` |
 | `--blocks <목록>` | `default`(가벼운 묶음), `all`, `none`, 블록 이름(`default,mermaid`는 가벼운 묶음에 더한다) | `default` |

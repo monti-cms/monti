@@ -155,7 +155,7 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 | `--dry-run` | write and run nothing; show the plan | |
 | `--site-url <url>` | public site URL, the example value of `SITE_URL` in `.env.example` | `http://localhost:<dev port>` |
 | `--locales <list>` | language codes, the default first (`--locale <code>` is the same for one) | the languages found in the content file names or folders, else `en` |
-| `--time-zone <tz>` | IANA time zone | `UTC` |
+| `--time-zone <tz>` | IANA time zone for dates on the site and scheduled publishing | this computer's time zone (`UTC` if it cannot be read); the summary says which, and `timeZone` in `monti.schema.ts` (or the admin's schema settings) changes it |
 | `--storage <s3\|none>` | image storage | `none` |
 | `--extras <list>` | `ai`, `git-sync`, or `none` | `none` |
 | `--blocks <list>` | `default` (the light set), `all`, `none`, or block names (`default,mermaid` adds to the light set) | `default` |

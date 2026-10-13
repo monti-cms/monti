@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { timeZoneNote } from "../init";
 import { detectApp } from "../init-detect";
 import { collectAnswers, QUESTIONS } from "../init-prompts";
 import { fixtureApp, scriptedPrompter } from "./init-helpers";
@@ -22,7 +23,7 @@ const everything = {
 describe("the questions of monti init", () => {
 	it("asks in the order locales, storage, extras, blocks, admin path, login", async () => {
 		const prompter = scriptedPrompter(everything);
-		const answers = await collectAnswers(app(), {}, prompter);
+		const answers = await collectAnswers(app(), {}, prompter, () => "UTC");
 		expect(prompter.asked).toEqual([
 			QUESTIONS.defaultLocale,
 			QUESTIONS.otherLocales,
@@ -38,6 +39,7 @@ describe("the questions of monti init", () => {
 			siteUrl: "http://localhost:3000",
 			locales: ["ko", "en"],
 			timeZone: "UTC",
+			timeZoneSource: "computer",
 			storage: "s3",
 			ai: true,
 			gitSync: true,
@@ -232,11 +234,39 @@ describe("the questions of monti init", () => {
 		});
 	});
 
+	it("the time zone follows this computer, is never asked, and --time-zone wins", async () => {
+		const prompter = scriptedPrompter(everything);
+		const seoul = await collectAnswers(app(), {}, prompter, () => "Asia/Seoul");
+		expect(prompter.asked.some((question) => /time ?zone/i.test(question))).toBe(false);
+		expect(seoul).toMatchObject({ timeZone: "Asia/Seoul", timeZoneSource: "computer" });
+		const flagged = await collectAnswers(app(), { timeZone: "Asia/Tokyo" }, undefined, () => "Asia/Seoul");
+		expect(flagged).toMatchObject({ timeZone: "Asia/Tokyo", timeZoneSource: "flag" });
+	});
+
+	it("a computer time zone that is missing or invalid becomes UTC, and says so", async () => {
+		for (const system of [undefined, "Not/AZone", ""]) {
+			const answers = await collectAnswers(app(), {}, undefined, () => system);
+			expect(answers).toMatchObject({ timeZone: "UTC", timeZoneSource: "fallback" });
+			expect(timeZoneNote(answers, "monti.schema.ts")).toContain("could not be read");
+		}
+	});
+
+	it("the time zone line names the zone, where it came from and what to change", async () => {
+		const answers = await collectAnswers(app(), {}, undefined, () => "Asia/Seoul");
+		expect(timeZoneNote(answers, "src/monti.schema.ts")).toBe(
+			"Time zone: Asia/Seoul (from this computer). Dates on your site and scheduled publishing use it; change `timeZone` in src/monti.schema.ts if your readers are elsewhere.",
+		);
+		expect(timeZoneNote({ timeZone: "Asia/Tokyo", timeZoneSource: "flag" }, "monti.schema.ts")).toContain(
+			"(from --time-zone)",
+		);
+	});
+
 	it("without a prompter every question takes its default", async () => {
-		expect(await collectAnswers(app(), {})).toEqual({
+		expect(await collectAnswers(app(), {}, undefined, () => "UTC")).toEqual({
 			siteUrl: "http://localhost:3000",
 			locales: ["en"],
 			timeZone: "UTC",
+			timeZoneSource: "computer",
 			storage: "none",
 			ai: false,
 			gitSync: false,

@@ -312,7 +312,7 @@ describe("monti init and the package install", () => {
 		const dir = fixtureApp();
 		const host = fakeHost();
 		const report = await initProject({ cwd: dir, host });
-		expect(Object.keys(host)).toEqual(["install"]);
+		expect(Object.keys(host)).toEqual(["install", "systemTimeZone"]);
 		expect(host.install).toHaveBeenCalledTimes(1);
 		const command = host.install.mock.calls[0]?.[0];
 		expect(command?.command).toBe("pnpm");
@@ -765,6 +765,24 @@ describe("monti init choices", () => {
 });
 
 describe("monti init and files that already exist", () => {
+	it("writes the computer's time zone to the schema and says so in the summary", async () => {
+		const dir = fixtureApp();
+		const host = fakeHost({ systemTimeZone: () => "Asia/Seoul" });
+		const report = await initProject({ cwd: dir, host, install: false });
+		expect(schemaOf(dir).timeZone).toBe("Asia/Seoul");
+		expect(formatInitReport(report)).toContain(
+			"Time zone: Asia/Seoul (from this computer). Dates on your site and scheduled publishing use it; change `timeZone` in monti.schema.ts if your readers are elsewhere.",
+		);
+	});
+
+	it("a broken computer time zone gives UTC and the summary says it could not be read", async () => {
+		const dir = fixtureApp();
+		const host = fakeHost({ systemTimeZone: () => "Mars/Olympus" });
+		const report = await initProject({ cwd: dir, host, install: false });
+		expect(schemaOf(dir).timeZone).toBe("UTC");
+		expect(formatInitReport(report)).toContain("Time zone: UTC (this computer's time zone could not be read).");
+	});
+
 	it("an existing monti.config.ts is kept, its schema file is not written, and the skip is reported", async () => {
 		const dir = fixtureApp({ "monti.config.ts": "// mine\nexport const cms = {};\n" });
 		const report = await initProject({ cwd: dir, ...quiet() });

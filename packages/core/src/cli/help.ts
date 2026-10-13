@@ -17,7 +17,7 @@ const INIT_HELP = `  init      Add Monti to an existing Next app (App Router): a
               --site-url <url>      Public site URL, for the SITE_URL example in .env.example (default http://localhost:3000)
               --locales <list>      Language codes, the default first (default: the languages found in file names like hello.ko.mdx or in folders like ko/, else en);
                                     --locale <code> is the same for one
-              --time-zone <tz>      IANA time zone for dates and times (default UTC)
+              --time-zone <tz>      IANA time zone for dates and times (default: this computer's)
               --storage <s3|none>   Image storage: an S3-compatible store (S3, R2, MinIO), or none for now (default none)
               --extras <list>       ai, git-sync, or none (default none)
               --blocks <list>       default, all, none, or block names: callout, collapsible, tabs, columns, code-explorer, mermaid, chart, tooltip, code-ref, color

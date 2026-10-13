@@ -116,6 +116,8 @@ export interface FakeHost extends InitHost {
 export function fakeHost(overrides: Partial<InitHost> = {}): FakeHost {
 	return {
 		install: vi.fn<InitHost["install"]>(),
+		// a fixed computer time zone, so a test does not depend on the machine it runs on
+		systemTimeZone: () => "UTC",
 		...overrides,
 	} as unknown as FakeHost;
 }
