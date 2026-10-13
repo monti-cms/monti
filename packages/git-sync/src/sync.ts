@@ -111,7 +111,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			return found;
 		},
 		client: async (target) => {
-			const token = await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT);
+			const token = await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read();
 			if (!token) {
 				// A key that is there but cannot be read is another problem than a key that was never chosen (or was deleted).
 				const unreadable = (await tokenKeyOf(cms)) !== null;

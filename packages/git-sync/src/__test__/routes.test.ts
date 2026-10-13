@@ -71,7 +71,7 @@ describe("the GitHub token slot", () => {
 		expect(String(stored?.value.webhookSecret)).toMatch(/^mk1:/);
 		expect(JSON.stringify(stored)).not.toContain(TOKEN);
 		expect(JSON.stringify(stored)).not.toContain(WEBHOOK_SECRET);
-		expect(await h.cms.apiKeys.readSlot("git-sync", "token")).toBe(TOKEN);
+		expect(await h.cms.apiKeys.slot("git-sync", "token").read()).toBe(TOKEN);
 
 		const text = await (await call("settings")).text();
 		expect(JSON.parse(text)).toEqual({
@@ -115,7 +115,7 @@ describe("the GitHub token slot", () => {
 
 	it("is back in the no-token state when the key is deleted", async () => {
 		const key = await keyNamed("GitHub");
-		await h.cms.apiKeys.remove(key?.id ?? "", { expectedVersion: key?.version ?? 0 });
+		await h.cms.apiKeys.remove(key?.id ?? "", { expectedVersion: key?.version ?? 0, force: true });
 		expect(await (await call("settings")).json()).toMatchObject({ token: { key: null } });
 		await expect(h.ctx.client(h.target)).rejects.toMatchObject({ name: "GitSyncNotConfigured" });
 		await publishMemo("after-delete");
@@ -221,7 +221,9 @@ describe("status, pull now and the queue", () => {
 		h.github.failNext("getBranchHead", { status: 503, message: "GitHub answered 503: down" });
 		const down = await call("pull", "POST", { target: "site" });
 		expect(down.status).toBe(502);
-		expect(await down.json()).toMatchObject({ code: "github_error", message: expect.stringContaining("503") });
+		expect(await down.json()).toMatchObject({
+			error: { code: "upstream_failed", message: expect.stringContaining("503") },
+		});
 	});
 
 	it('"Commit the queue now" sends what waits in the batch queue', async () => {

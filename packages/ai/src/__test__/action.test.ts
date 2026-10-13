@@ -16,7 +16,6 @@ import {
 	unknownPlaceholders,
 	validateAiConfig,
 } from "../action";
-import { legacyFeatureOverride } from "../actions";
 import type { AiCandidate } from "../definition";
 import { aiPresets, KEBAB_PATTERN } from "../presets";
 import { presetMessages } from "../presets.messages";
@@ -80,24 +79,6 @@ describe("AI action definition", () => {
 		]);
 		expect(Object.keys(action.validators)).toEqual(["unique-slug"]);
 		expect(action.definedChecks).toEqual(["pattern", "maxLength", "code:unique-slug"]);
-	});
-
-	it("edited values for the formerly fixed checks (no duplicates, regex run, structure preserved) are read as enabling the same code check", () => {
-		const override = aiActionOverrideSchema.parse({
-			checks: [
-				{ kind: "unique", enabled: false },
-				{ kind: "regexRuns", enabled: true },
-			],
-		});
-		expect(override.checks).toEqual([
-			{ kind: "code", name: "unique-slug", enabled: false },
-			{ kind: "code", name: "regex-runs", enabled: true },
-		]);
-		expect(resolveAction("slug", build(aiPresets.slug()), override).checks.at(-1)).toEqual({
-			kind: "code",
-			name: "unique-slug",
-			enabled: false,
-		});
 	});
 
 	it("code check names are lowercase hyphenated and used once per action", () => {
@@ -255,31 +236,6 @@ describe("AI action definition", () => {
 		expect(() =>
 			validateAiConfig({ ...base, actions: { a: action({ stream: true, result: "candidates" }) } }, {}),
 		).toThrow(/stream needs/);
-	});
-
-	it("moves stored values from the legacy action table into edited values (including legacy check shapes, missing inputs, and missing actions)", () => {
-		expect(
-			legacyFeatureOverride(testSite, "summary", {
-				enabled: false,
-				prompt: "운영자가 고친 지시문",
-				inputs: ["title", "tags", "body"],
-				check: "maxLength",
-				maxLength: 120,
-				name: "무시되는 이름",
-			}),
-		).toEqual({
-			enabled: false,
-			prompt: "운영자가 고친 지시문",
-			checks: [{ kind: "maxLength", max: 120, enabled: true }],
-		});
-		expect(
-			legacyFeatureOverride(testSite, "summary", { ...resolveAction("summary", AI_ACTIONS.summary as never) }),
-		).toEqual({});
-		expect(legacyFeatureOverride(testSite, "mediaAlt", { prompt: "x" })).toBeNull();
-		expect(legacyFeatureOverride(testSite, "translate", { inputs: [], prompt: AI_ACTIONS.translate?.prompt })).toEqual(
-			{},
-		);
-		expect(legacyFeatureOverride(testSite, "slug", { checks: [{ kind: "pattern", pattern: "(" }] })).toEqual({});
 	});
 
 	it("types: instruction placeholders, attach points, inputs, and results are checked from the definition", () => {

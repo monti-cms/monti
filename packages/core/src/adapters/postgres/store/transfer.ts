@@ -102,7 +102,7 @@ export function createTransferOps(ctx: StoreContext) {
 					for (const row of bodiesRes) {
 						const body: ExportSnapshotBody = {
 							metadata: row.metadata,
-							doc: readBodyDoc(row.doc, null),
+							doc: readBodyDoc(row.doc),
 							schemaVersion: row.schema_version,
 							contentHash: row.content_hash,
 							updatedAt: row.updated_at,

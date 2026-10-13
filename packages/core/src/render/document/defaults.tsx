@@ -260,7 +260,7 @@ const Footnotes = ({ items, ctx }: FootnotesProps) => (
 const Link = ({ href, title, entryId, children }: LinkProps) =>
 	// An entry link whose target cannot be reached (not published, or gone) is plain text.
 	entryId !== undefined && !href ? (
-		<>{children}</>
+		children
 	) : (
 		<CmsLink href={href ?? ""} title={title}>
 			{children}

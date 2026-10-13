@@ -117,7 +117,7 @@ describe("entry API with a stored document", () => {
 	const storedRow = async (id: string) =>
 		(
 			await pool.query(
-				`SELECT mdx, doc, content_hash, updated_at FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
+				`SELECT doc, content_hash, updated_at FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
 				[id],
 			)
 		).rows[0];
@@ -129,15 +129,12 @@ describe("entry API with a stored document", () => {
 
 		expect(entry.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
-		// The old text column is no longer written.
-		expect(row.mdx).toBeNull();
 		expect(row.doc).toEqual(doc);
 	});
 
 	it("creates an entry from text with its format, and with no body it is empty", async () => {
 		const fromText = await created({ format: "paragraphs", body: "One\n\nTwo" });
 		expect(contentOf(fromText.working.doc)).toEqual(contentOf(docOf("One\n\nTwo")));
-		expect((await storedRow(fromText.id)).mdx).toBeNull();
 
 		const empty = await created({});
 		expect(empty.working.doc.content).toEqual([]);
@@ -178,7 +175,6 @@ describe("entry API with a stored document", () => {
 		expect(saved.version).toBe(entry.version + 1);
 		expect(saved.working.doc).toEqual(doc);
 		const row = await storedRow(entry.id);
-		expect(row.mdx).toBeNull();
 		expect(row.doc).toEqual(doc);
 	});
 

@@ -23,7 +23,6 @@ import {
 	newCustomKey,
 	surfaceProblem,
 } from "./custom";
-import { migrateLegacyCheck } from "./definition";
 import { AiError } from "./errors";
 import { aiRegistryOf } from "./registry";
 import { type AiSharedStore, loadSharedKeys } from "./shared";
@@ -231,42 +230,4 @@ export async function resetAction(
 	const value = overrideFrom(definition, { enabled: current.enabled });
 	const row = await store.saveAiActionOverride({ key, expectedVersion, value });
 	return viewOf(site, resolveAction(key, definition, value), row, undefined, definition);
-}
-
-/**
- * Moves the stored values of the legacy AI action table (`ai_features`) into per-action edited values, keeping only values that differ from the definition.
- * Names missing from the definition (actions removed from the config, a previously deleted `mediaAlt`, etc.) give `null`.
- * The legacy `send` content list (`inputs`) becomes `send`, and inputs missing from the definition (e.g. `tags`) are dropped.
- */
-export function legacyFeatureOverride(site: Site, key: string, spec: unknown): AiActionOverride | null {
-	const definition = aiRegistryOf(site).actionDefinition(key);
-	if (!definition || !spec || typeof spec !== "object") return null;
-	const raw = migrateLegacyCheck(spec) as Record<string, unknown>;
-	const edited: Record<string, unknown> = {};
-	const take = (name: keyof AiActionOverride, value: unknown) => {
-		const parsed = aiActionOverrideSchema.shape[name].safeParse(value);
-		if (parsed.success) edited[name] = parsed.data;
-	};
-	for (const name of [
-		"enabled",
-		"askInstruction",
-		"providerId",
-		"modelName",
-		"prompt",
-		"threshold",
-		"maxCount",
-	] as const) {
-		if (raw[name] !== undefined) take(name, raw[name]);
-	}
-	// Actions that, like the legacy translation, did not choose what to send had an empty list. An empty list is not moved over.
-	if (Array.isArray(raw.inputs) && raw.inputs.length > 0) {
-		take(
-			"send",
-			raw.inputs.filter(
-				(input): input is string => typeof input === "string" && Object.hasOwn(definition.input, input),
-			),
-		);
-	}
-	if (Array.isArray(raw.checks)) take("checks", raw.checks);
-	return overrideFrom(definition, resolveAction(key, definition, edited as AiActionOverride));
 }

@@ -22,10 +22,9 @@ import { CmsError } from "../../../core/store/errors";
 import type { Entry, IncomingReferenceItem, TranslationGroup } from "../../../core/store/types";
 import type { Issue } from "../../../core/types";
 import {
-	hasLegacyOccurrence,
-	normalizeReferenceKind,
 	type PreparedSnapshot,
 	type Reference,
+	type ReferenceKind,
 	readReferenceOccurrences,
 	type WorkingCopy,
 } from "../../../core/types";
@@ -205,13 +204,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 
 					const body = await readBody(trx, params.entryId, "working");
 					const currentRefs = await readReferences(trx, params.entryId, "working");
-					// A reference stored with a body occurrence in the old shape (`{type:"mdx"}`) is rewritten in the new one by this save.
-					const legacy = await trx
-						.selectFrom("entry_references")
-						.select("occurrences")
-						.where("entry_id", "=", params.entryId)
-						.where("state", "=", "working")
-						.execute();
 					const nextSlug = params.snapshot.slug;
 					// If no translation status is sent (bulk operations, etc.), keep the stored value.
 					const translation =
@@ -236,8 +228,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					const folderChanged = params.folderId !== undefined;
 
 					const references = await lockDraftReferenceTargets(client, params.references);
-					const refsEqual =
-						isReferencesEqual(currentRefs, references) && !legacy.some((row) => hasLegacyOccurrence(row.occurrences));
+					const refsEqual = isReferencesEqual(currentRefs, references);
 
 					let version = locked.version;
 					if (!bodyIdentical || !refsEqual || folderChanged) {
@@ -334,7 +325,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				collection: row.collection as WorkingCopy["collection"],
 				slug: row.working_slug,
 				metadata: row.metadata,
-				doc: readBodyDoc(row.doc, null),
+				doc: readBodyDoc(row.doc),
 				version: row.version,
 				folderId: row.folder_id,
 				locale: row.locale,
@@ -514,7 +505,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				sourceCollection: row.source_collection,
 				sourceTitle: row.source_title,
 				sourceSlug: row.source_slug,
-				kind: normalizeReferenceKind(row.kind),
+				kind: row.kind as ReferenceKind,
 				isStale: row.is_stale,
 				occurrences: readReferenceOccurrences(row.occurrences),
 			}));

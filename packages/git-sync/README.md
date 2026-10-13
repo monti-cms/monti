@@ -7,7 +7,7 @@ Two-way sync of **published entries** with files in a GitHub repo: a separate co
 - Talks to GitHub through the API with a token and a webhook, so it works on serverless hosting. No checkout, no `git` binary.
 - Delivered through the core's event outbox (`afterCommit`): a failed push is retried, not lost.
 - The text of a file comes from a format plugin (`mdx` by default) with `purpose: "sync"`, so what is written can be read back.
-- The GitHub token is a key of the core's API key store assigned to the plugin's `token` key slot (listed under Tools > API keys, and set on the plugin's own screen too: pick a saved key or type one, which is saved as a new key). The webhook secret is saved on the same screen, encrypted with a key derived from `MONTI_SECRET` (`cms.secrets("git-sync")`). Neither is ever in config. `monti db:migrate` moves a token saved by an earlier version (in the plugin's settings, as ciphertext or as a key id) into the slot.
+- The GitHub token is a key of the core's API key store assigned to the plugin's `token` key slot (listed under Tools > API keys, and set on the plugin's own screen too: pick a saved key or type one, which is saved as a new key). The webhook secret is saved on the same screen, encrypted with a key derived from `MONTI_SECRET` (`cms.secrets("git-sync")`). Neither is ever in config.
 
 ```ts
 // monti.config.ts

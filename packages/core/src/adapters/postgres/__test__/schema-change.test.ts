@@ -402,7 +402,7 @@ describe("schema changes", () => {
 
 			for (const [key, row] of rowsAfter) {
 				// The hash is the one the write rules give for what is stored now (and stays defined over schema version 1).
-				expect(row.content_hash, key).toBe(computeContentHash(row.metadata as never, readBodyDoc(row.doc, null)));
+				expect(row.content_hash, key).toBe(computeContentHash(row.metadata as never, readBodyDoc(row.doc)));
 			}
 			// "Unpublished changes" is true or false as it was.
 			expect(differs(rowsAfter, ids.a)).toBe(false);

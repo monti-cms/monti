@@ -47,6 +47,16 @@
 	},
 	"overrides": [
 		{
+			"includes": ["packages/core/src/adapters/postgres/migrations/0*_*.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"useFilenamingConvention": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["packages/admin/src/ui/**"],
 			"linter": {
 				"rules": {

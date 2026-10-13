@@ -130,9 +130,3 @@ A site page that shows drafts (`site.previewPath`, for example `/preview/ko/post
 **404 and 308.** Monti ships no `proxy.ts`. A page calls `notFound()` and `permanentRedirect()` like any Next page. With `cacheComponents` off that is a real `404` and `308`. With it on, Next has already sent the page's shell with a `200`, so an unknown post is a page marked `noindex` and an old address is a redirect in the browser; search engines may read that as a soft 404. If you need strict statuses, the [strict status recipe](../../docs/recipes/strict-status.md) is a short `proxy.ts` and a tested function.
 
 **Production without the login settings.** If `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` or `MONTI_SECRET` is missing, the admin layout shows a "Not set up yet" screen that points to `monti doctor` and logs the full problem once, instead of Next's error page (which hides the message in production). It is the admin, not a public page, so the status is whatever Next sends (a `200` under Cache Components). Under `next dev` the development login is used and nothing is shown.
-
-## Upgrading
-
-For the move from NextAuth to `@monti-cms/auth` (`githubAuth` is gone; everyone signs in once more), see "Upgrading to `@monti-cms/auth`" in the `@monti-cms/core` README.
-
-See "Upgrading to `@monti-cms/nextjs`" in the `@monti-cms/core` README for the import changes from `@monti-cms/core/next`, `@monti-cms/core/server` and `@monti-cms/admin/next`.

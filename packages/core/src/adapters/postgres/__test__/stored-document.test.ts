@@ -98,7 +98,6 @@ describe("stored documents", () => {
 
 	interface Stored {
 		metadata: JsonValue;
-		mdx: string | null;
 		doc: unknown;
 		schema_version: number;
 		content_hash: string;
@@ -109,7 +108,7 @@ describe("stored documents", () => {
 	const stored = async (entryId: string, state: "working" | "published") => {
 		const found = (
 			await pool.query<Stored>(
-				`SELECT metadata, mdx, doc, schema_version, content_hash, search_text, updated_at
+				`SELECT metadata, doc, schema_version, content_hash, search_text, updated_at
 				 FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
 				[entryId, state],
 			)
@@ -123,8 +122,6 @@ describe("stored documents", () => {
 		const row = await stored(entryId, state);
 		const doc = readStoredDocument(row.doc, testSite);
 		expect(doc).not.toBeNull();
-		// The text of a body is not stored: the document is the only source.
-		expect(row.mdx).toBeNull();
 		// The hash and the search text are the document's.
 		expect(row.content_hash).toBe(computeContentHash(row.metadata, doc as never));
 		expect(row.search_text).toBe(documentText(testSite, doc as never, SEARCH_TEXT));

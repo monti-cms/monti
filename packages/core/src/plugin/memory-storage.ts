@@ -8,14 +8,7 @@ import {
 	storageConflict,
 	storageNotFound,
 } from "../core/domain/plugin-storage";
-import type {
-	ImportedItem,
-	PluginCollection,
-	PluginMigration,
-	PluginStorage,
-	StorageItem,
-	StorageWriteOptions,
-} from "./storage";
+import type { PluginCollection, PluginMigration, PluginStorage, StorageItem, StorageWriteOptions } from "./storage";
 
 /**
  * Plugin storage in memory: for plugin tests, and for `fakeCms` when a test does not bring a database. It follows the same contract as the
@@ -28,10 +21,6 @@ export interface MemoryPluginStorage {
 	 * Runs `work` and keeps what it wrote only if it does not throw (the data is put back as it was otherwise), like a database transaction. `once` is not available inside it.
 	 */
 	transaction<T>(work: (tx: { pluginStorage(plugin: string): PluginStorage }) => Promise<T>): Promise<T>;
-	/** Puts a table an earlier version of a plugin kept on its own where `readLegacyTable` can read it (for migration tests). */
-	seedLegacyTable(table: string, rows: readonly Record<string, unknown>[]): void;
-	/** Records a one-time step name as done, as an earlier version of a plugin would have (for `legacyNames` tests). */
-	recordMigration(name: string): void;
 }
 
 type Documents = Map<string, StorageItem>;
@@ -40,7 +29,6 @@ export function createMemoryPluginStorage(): MemoryPluginStorage {
 	/** `plugin/collection` to its documents. */
 	const collections = new Map<string, Documents>();
 	const recorded = new Set<string>();
-	const legacyTables = new Map<string, readonly Record<string, unknown>[]>();
 	/** Serializes `once`, like the database lock does, so concurrent calls run a step once. */
 	let queue: Promise<unknown> = Promise.resolve();
 
@@ -106,26 +94,6 @@ export function createMemoryPluginStorage(): MemoryPluginStorage {
 
 	const migrationOf = (plugin: string): PluginMigration => ({
 		collection: (name) => collectionOf(plugin, name),
-		importItem: async <T>(collection: string, item: ImportedItem<T>) => {
-			assertStorageName("collection", collection);
-			assertStorageKey(item.key);
-			assertStoredVersion(item.version ?? 1);
-			const stored = documents(plugin, collection);
-			if (stored.has(item.key)) return false;
-			const createdAt = item.createdAt ?? new Date();
-			stored.set(item.key, {
-				key: item.key,
-				value: parse(serializeStorageValue(item.value)),
-				version: item.version ?? 1,
-				createdAt,
-				updatedAt: item.updatedAt ?? createdAt,
-			});
-			return true;
-		},
-		readLegacyTable: async (table) => {
-			const rows = legacyTables.get(table);
-			return rows ? rows.map((row) => ({ ...row })) : null;
-		},
 	});
 
 	const storage = (plugin: string): PluginStorage => {
@@ -133,11 +101,11 @@ export function createMemoryPluginStorage(): MemoryPluginStorage {
 		return {
 			plugin,
 			collection: (name) => collectionOf(plugin, name),
-			once: (name, step, options) => {
+			once: (name, step) => {
 				assertMigrationName(name);
 				const run = async (): Promise<boolean> => {
 					const id = `${plugin}:${name}`;
-					if (recorded.has(id) || options?.legacyNames?.some((legacy) => recorded.has(legacy))) return false;
+					if (recorded.has(id)) return false;
 					// A step that throws leaves nothing behind: put the data back as it was.
 					const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
 					try {
@@ -157,32 +125,33 @@ export function createMemoryPluginStorage(): MemoryPluginStorage {
 		};
 	};
 
-	const transaction: MemoryPluginStorage["transaction"] = async (work) => {
-		const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
-		try {
-			return await work({
-				pluginStorage: (plugin) => ({
-					...storage(plugin),
-					once: async () => {
-						throw new Error("plugin storage: `once` cannot run inside a transaction");
-					},
-				}),
-			});
-		} catch (error) {
-			collections.clear();
-			for (const [key, docs] of before) collections.set(key, docs);
-			throw error;
-		}
+	/** Transactions run one at a time, like writers waiting on a database lock, so one that fails cannot undo what another wrote. */
+	let transactions: Promise<unknown> = Promise.resolve();
+	const transaction: MemoryPluginStorage["transaction"] = (work) => {
+		const run = async () => {
+			const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
+			try {
+				return await work({
+					pluginStorage: (plugin) => ({
+						...storage(plugin),
+						once: async () => {
+							throw new Error("plugin storage: `once` cannot run inside a transaction");
+						},
+					}),
+				});
+			} catch (error) {
+				collections.clear();
+				for (const [key, docs] of before) collections.set(key, docs);
+				throw error;
+			}
+		};
+		const result = transactions.then(run, run);
+		transactions = result.catch(() => undefined);
+		return result;
 	};
 
 	return {
 		storage,
 		transaction,
-		seedLegacyTable: (table, rows) => {
-			legacyTables.set(table, rows);
-		},
-		recordMigration: (name) => {
-			recorded.add(name);
-		},
 	};
 }

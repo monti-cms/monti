@@ -92,7 +92,6 @@ The package README has the file format, the conflict screen and the pull request
 
 The schema file and the config keep the collections, field kinds, layouts, SEO fields, plugins and seed templates of the maintainer's blog, with English labels (schema labels are site content, and this repo has no dictionary for them). The schema file was made from the blog's TypeScript config by `monti schema:extract --locale en` (the SEO fields became plain fields in the file; the plugins and `site.url` stayed in `monti.config.ts`). Left out:
 
-- the blog's own plugin `legacyListColumns()` and `admin.legacyBackupNames`, which only migrate that site's old saved admin settings and old browser recovery copies;
 - the locale list and names are written in the schema file instead of coming from the blog's `i18n` module, and `site.url` is read from `SITE_URL` as the blog does;
 - the AI style guide is written in English, since this repo keeps config text in English.
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
 import type { RenderMdxOptions } from "../render";
-import { insertSoftBreaks, renderFixture as renderFixtureOf } from "../testing";
+import { renderFixture as renderFixtureOf } from "../testing";
 
 const renderFixture = (source: string, options: Partial<RenderMdxOptions> = {}) =>
 	renderFixtureOf(source, { site: testSite, ...options });
@@ -25,15 +25,6 @@ describe("renderMdx", () => {
 		const markup = await html("첫 줄\n둘째 줄");
 		expect(markup).not.toContain("<br");
 		expect(markup).toContain("첫 줄\n둘째 줄");
-	});
-
-	it("looks the same after the soft-break migration as the old chain did: a break where there was a newline", async () => {
-		const source = "첫 줄\n둘째 줄\n셋째 줄\n\n- 항목\n  이어서";
-		const result = insertSoftBreaks(testSite, source);
-		if (result.status !== "changed") throw new Error("expected a change");
-		const markup = await html(result.mdx);
-		// Two breaks in the paragraph and one in the list item; the line endings after the breaks add no more.
-		expect(markup.match(/<br\/>/g)).toHaveLength(3);
 	});
 
 	it("does not render a body that fails the check", async () => {

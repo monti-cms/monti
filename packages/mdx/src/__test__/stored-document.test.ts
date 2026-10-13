@@ -2,7 +2,7 @@ import { readStoredDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
 import { analyze } from "../analyze";
-import { bodyFromDocument, bodyFromMdx, fromStoredDocument, toStoredDocument } from "../body";
+import { bodyFromMdx, fromStoredDocument, toStoredDocument } from "../body";
 import { serialize } from "../serialize";
 import { readSamples } from "../testing";
 import { toDocument } from "../to-document";
@@ -98,9 +98,6 @@ describe("stored document", () => {
 			expect(bodyFromMdx(testSite, body.mdx).mdx, name).toBe(body.mdx);
 			const reread = readStoredDocument(reorderKeys(JSON.parse(JSON.stringify(doc))));
 			expect(reread, name).toBeDefined();
-			const fromDoc = bodyFromDocument(testSite, reread as StoredDocument);
-			expect(fromDoc.mdx, name).toBe(body.mdx);
-			expect(fromDoc.doc, name).toEqual(doc);
 			expect(serialize(testSite, fromStoredDocument(testSite, doc)), name).toBe(body.mdx);
 		}
 	});

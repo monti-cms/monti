@@ -795,14 +795,6 @@ describe("monti init and files that already exist", () => {
 		expect(formatInitReport(report)).toContain("Already there, left as they are:\n  - monti.config.ts");
 	});
 
-	it("leaves the files of the earlier cms.config.ts setup alone", async () => {
-		const dir = fixtureApp({ "cms.config.ts": "export default {};\n", "cms.server.ts": "export const cms = {};\n" });
-		const report = await initProject({ cwd: dir, ...quiet() });
-		expect(read(dir, "cms.config.ts")).toBe("export default {};\n");
-		expect(() => read(dir, "monti.config.ts")).toThrow();
-		expect(report.notes.join("\n")).toContain("cms.config.ts and cms.server.ts from the earlier setup are left alone");
-	});
-
 	it("an existing .env.example is kept and reported, never merged", async () => {
 		const dir = fixtureApp({ ".env.example": "MINE=1\n" });
 		const report = await initProject({ cwd: dir, ...quiet() });

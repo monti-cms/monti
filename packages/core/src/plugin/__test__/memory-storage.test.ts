@@ -7,8 +7,6 @@ runPluginStorageContract({
 		const memory = createMemoryPluginStorage();
 		return {
 			storage: memory.storage,
-			seedLegacyTable: async (table, rows) => memory.seedLegacyTable(table, rows),
-			recordMigration: async (name) => memory.recordMigration(name),
 			close: async () => undefined,
 		};
 	},

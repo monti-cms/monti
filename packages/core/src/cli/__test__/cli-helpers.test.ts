@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseJsonc, resolveConfigPath } from "../config-paths";
 import { loadEnvFiles } from "../env";
-import { dbMigrate, dbSetup, runCli } from "../index";
+import { dbMigrate, runCli } from "../index";
 
 let dirs: string[] = [];
 afterEach(() => {

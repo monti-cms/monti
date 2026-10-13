@@ -7,13 +7,6 @@ import { adminRoute, ok, parseWith, readJsonBody } from "../../handler";
  */
 export const PUT = adminRoute(async ({ request, cms }) => {
 	const body = parseWith(assignKeySlotBodySchema, await readJsonBody(request));
-	const service = (await cms.apiKeys.slots()).find(
-		(entry) => entry.plugin === body.plugin && entry.slot === body.slot,
-	)?.service;
-	await cms.apiKeys.assignSlot(body.plugin, body.slot, body.key, { baseName: service ?? body.plugin });
-	return ok({
-		items: await cms.apiKeys.list(),
-		secretsAvailable: cms.apiKeys.available,
-		slots: await cms.apiKeys.slots(),
-	});
+	await cms.apiKeys.slot(body.plugin, body.slot).assign(body.key);
+	return ok(await cms.apiKeys.view());
 });

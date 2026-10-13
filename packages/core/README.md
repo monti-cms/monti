@@ -178,7 +178,6 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 
 **Safety.** The only changes init makes to an existing file are the three edits above. Every write it does make goes through one writer that refuses a path outside the project (a `..` path, an absolute path, or a symlink that leads out). Nothing is written until every question is answered, so Ctrl+C leaves the project as it was. If a write fails partway, the error lists the files already written (nothing is undone) and says to run `monti init` again, which keeps them.
 
-An app that already has a `cms.config.ts` or `cms.server.ts` keeps them: `monti init` creates no second config and no schema file next to a config it did not write, and tells you to move them into `monti.config.ts` ("Upgrading from `cms.config.ts` + `cms.server.ts`") and to run `monti schema:extract` ("The schema file").
 
 ### 3. Edit the collections
 
@@ -267,12 +266,10 @@ pnpm exec monti db:migrate   # after you update Monti: bring the tables up to da
 
 `monti db:setup` creates the schema (when `DATABASE_SCHEMA` names one that is missing) and Monti's tables in an empty database. Its first line says where (`Creating Monti's tables in host:port/db, schema "public"…`) and its last line counts them (`Done: created N tables.`). If Monti's tables are already there it changes nothing and says so (`Monti is already set up in this database (schema "public"). After updating Monti, run `monti db:migrate`.`, exit code 0). If the schema holds only tables of other apps, it adds Monti's own and says it did not touch the others.
 
-`monti db:migrate` is for after you upgrade the packages: it applies the pending migrations (including plugin tables, and the conversion steps of an older database). Running it several times gives the same result. It starts with `Bringing Monti's tables up to date with this version…` and the target, and ends with `Applied N steps, M already up to date.`, or `Already up to date.` when nothing was pending. If nothing is set up yet it says to run `monti db:setup` first and exits with 1. `cms.migrate()` (for scripts and tests) creates the tables of an empty database too.
+`monti db:migrate` is for after you upgrade the packages: it applies the pending migrations (including plugin tables). Running it several times gives the same result. It starts with `Bringing Monti's tables up to date with this version…` and the target, and ends with `Applied N steps, M already up to date.`, or `Already up to date.` when nothing was pending. If nothing is set up yet it says to run `monti db:setup` first and exits with 1. `cms.migrate()` (for scripts and tests) creates the tables of an empty database too.
 Core changes are recorded in `cms_migrations` as numbered steps, and only steps that have not run yet are run (in one transaction); even when run concurrently
 against the same schema, they run one at a time. A plugin hands over once-only work with `storage.once(name, step)` (see "Plugin storage").
-Bodies that a step cannot read as documents are kept exactly as they were (nothing is lost), and `monti db:migrate` says so in a few plain lines: how many (published, drafts, templates), the most common reason, and, only when those bodies contain `:::` blocks, that the directive syntax (`mdx({ syntax: [directiveSyntax()] })`, installed from `@monti-cms/syntax-directive`) reads them. It then writes one row per body, and every other per-body warning of the steps, to `.monti/logs/migrate-<time>.log` in the app folder and ends with `Full details: <path>`; the file exists only when there is something to report, and `monti init` puts `.monti/` (and `.env.local`) in `.gitignore`. `--verbose` also prints those rows on screen.
-`monti db:migrate --reconvert-bodies` reads the bodies that are kept as unreadable source again, with the config as it is now (after you turned on a syntax): a body that reads becomes a normal body (soft line endings made explicit as at the time, block ids, links by id, hash and search text recomputed; `version` and `updated_at` do not change), the rest stay as they are, and running it again changes only what has become readable since.
-`monti db:migrate` (and `cms.migrate()`) hand the instance's formats (the ones its plugins provide) to the migration. The old steps that read bodies kept as MDX text need the `mdx` format of `@monti-cms/mdx` only when a store has such a body ("Upgrading from MDX in core").
+A database created by an older pre-release of Monti (one whose `cms_migrations` holds steps this version does not have) is not upgraded: `monti db:migrate`, `monti db:setup`, `cms.migrate()` and `monti doctor` refuse it with the message "This database was created by an older pre-release of Monti and cannot be upgraded" and the fix "recreate it (run `monti db:setup` on a fresh schema or an empty database)". Nothing is changed in it.
 
 - Env files: by default `.env.local` and `.env` (only those that exist) are read. Values from the shell win, and earlier files win over later ones.
   Choose files with `--env-file <file>` (repeatable); `--no-env-file` reads none.
@@ -414,7 +411,7 @@ When something does not work, run this first (and after `monti init`, before you
 pnpm exec monti doctor
 ```
 
-It loads the app the way `monti db:migrate` does (the env files, then `monti.config.ts`), runs the checks of core (config, schema, database, secrets, login settings, Next files, upgrade), and prints each as `ok`, `warn` or `FAIL`. **Every warning and failure says what is wrong, where (a file, an environment variable or an option) and how to fix it**, in plain words. A check that cannot run because something before it is broken is `skip`. The exit code is 1 when a check fails (warnings do not change it). It changes nothing and never prints a secret.
+It loads the app the way `monti db:migrate` does (the env files, then `monti.config.ts`), runs the checks of core (config, schema, database, secrets, login settings, Next files), and prints each as `ok`, `warn` or `FAIL`. **Every warning and failure says what is wrong, where (a file, an environment variable or an option) and how to fix it**, in plain words. A check that cannot run because something before it is broken is `skip`. The exit code is 1 when a check fails (warnings do not change it). It changes nothing and never prints a secret.
 
 ```text
   FAIL  database/migrations   3 of 24 migrations are pending (0022_content_hash, 0023_events, 0024_x)
@@ -439,7 +436,6 @@ What it checks, in the order it prints:
 | `secrets` | `MONTI_SECRET` is set and strong enough; the old `CMS_SECRET` and `AUTH_SECRET` are still set but unused |
 | `auth` | whether the config has a login (a warning in development and a failure for production or a known host platform, with how to add GitHub login); with the email and password login, a warning while no admin account exists yet (open the admin and create the first admin); with GitHub, only the values core knows: the GitHub client id and secret (`AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`), an admin is listed in `MONTI_ADMIN_GITHUB_ID` (an entry that is a login and not a numeric id is called out), `SITE_URL`, the host trust result and why, and **the callback URL to register** in the OAuth app, derived from `SITE_URL` |
 | `next` | the three Next files exist at the admin path and use the right component (it points at a folder that does not match `admin.path`), `next.config` uses `withCms`, the admin address |
-| `upgrade` | **migration only**, for sites upgrading from the pre-overhaul setup; these checks will be removed after the owner's blog migration (#93), together with the old-data compatibility (#45). What is left of the old setup, each with the exact steps: `cms.config.ts` and `cms.server.ts` and the files that import them, old options in `monti.config.ts`, old variable names (`CMS_DATABASE_URL`, `CMS_SCHEMA`, `CMS_ADMIN_GITHUB_ID`, `CMS_DEV_AUTH_BYPASS`, `HOST_URL`), an `(admin)` route folder, `admin-components.tsx` |
 
 The same wording is used by the errors the packages throw: a missing `DATABASE_URL`, `MONTI_SECRET`, GitHub id or `S3_*` value, a database that is down or not migrated, a schema file that is not valid, a format no plugin provides, a Next file that got no instance. Each says what is wrong, where, and how to fix it (`Where:` and `Fix:` mark the parts in the one line of an error message). At run time a request that hits a database that is down or not migrated is answered `503`, and the server log has the full message.
 
@@ -474,7 +470,6 @@ There is one public `defineConfig`, the one of `@monti-cms/core/server`; `@monti
 
 `site.url` is read from the `SITE_URL` environment variable by convention, unless `site.url` in code or in the schema file sets it.
 
-When moving from `cms.config.ts` + `cms.server.ts`, see "Upgrading from `cms.config.ts` + `cms.server.ts`".
 
 | Where | Code |
 | --- | --- |
@@ -531,211 +526,6 @@ What you read is typed for a published entry: a `required` field is not optional
 - `withCms` (`next.config.ts`) runs the same check once per `next dev` start and warns.
 - A client component that needs a value from the site uses `useSite()`; one that needs a type imports it with `import type`.
 
-### Upgrading from the `@cms-config` alias
-
-- Create the instance in the config file (today `monti.config.ts`: `export const cms = defineConfig({ … })`; this note was written for `createCms({ config, server })`).
-- Remove `"@cms-config"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`; `withCms(nextConfig)` takes no options. `monti db:migrate` has no `--config` option and ignores `CMS_CONFIG_PATH`; it loads the config file, which is the instance. `@monti-cms/core/register` is gone: run scripts with plain `tsx`.
-- Admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);` instead of `export { cmsAdminMetadata as metadata } from "@monti-cms/nextjs/admin"` (the title follows the site name and admin language of the instance).
-- Rendering: `<CmsContent cms={cms} entry={entry} />` and `renderDocument(doc, { site: cms.site, … })`; `renderMdx(doc, { site })` the same way. Type the `components` table with `DocumentComponentsOf<typeof cms>` (or `DocumentComponentsFor<typeof config>`) instead of the old `DocumentComponents`, which is now the untyped table.
-- Config-derived values and helpers that were exported by `@monti-cms/core/client` (`LOCALES`, `DEFAULT_LOCALE`, `isLocale`, `localizePath`, `COLLECTIONS`, `schemaOf`, `contentPath`, `parseInternalLink`, `adminHref`, `SITE_NAME`, `BLOCKS`, `CODE_LINE_EFFECTS`, `getPluginOptions`, ...) are members of the site: `cms.site.LOCALES` on the server, `useSite().LOCALES` in client components.
-  `createTranslator(messages)` at module level becomes `site.createTranslator(messages)` or, in a component, `useTranslator(messages)`. `formatDateTimeInput` and `parseDateTimeInput` need a time zone (or use the site's: `site.formatDateTimeInput(value)`).
-- Plugins and adapters: `CmsServerPlugin` and routes are unchanged (`cms.site` is on the instance they get). A `DatabaseAdapter` receives the site (`createStore({ site })`, `migrate({ site, formats })`), and an `AuthAdapter` gets it in `create({ site, loginPath, trustHost })`.
-  Text that block and line-effect definitions pick with `createActiveTranslator` is read once when the site is created, in the admin language of that site. Anything else that translates at run time uses `site.createTranslator`.
-- Tests: no test needs to mock a config module. Create the site or the instance the test needs (`createSite(config)`, `fakeCms({ config })`, `createCms({ config, server })`), and wrap React trees in `<SiteProvider site={site}>`.
-
-### Upgrading to `@monti-cms/nextjs`
-
-All Next-specific code moved out of `@monti-cms/core` and `@monti-cms/admin` into the new package `@monti-cms/nextjs`. There are no aliases left at the old places.
-
-- Install `@monti-cms/nextjs` (`next` is its peer; core and admin no longer ask for it).
-- `next.config.ts`: `import { withCms } from "@monti-cms/core/next"` becomes `from "@monti-cms/nextjs/config"`.
-- `githubAuth` is replaced by `@monti-cms/auth`; see "Upgrading to `@monti-cms/auth`".
-- `app/api/monti/[...path]/route.ts`: `cms.routeHandler()` becomes `createRouteHandler(cms)` from `@monti-cms/nextjs`. The `CmsRouteHandler` type is exported from there too.
-- Admin layout and page: `@monti-cms/admin/next` becomes `@monti-cms/nextjs/admin` (`CmsAdminLayout`, `CmsAdminPage`, `CmsAdminPageProps`, `cmsAdminMetadata`; same props). The layout renders the App Router adapter for the admin.
-- Admin messages: the page title keys moved from the `cms-admin.next` dictionary to `cms-admin.layout` (only matters if you override `admin.messages["cms-admin.next"]`).
-- Your own `AuthAdapter`: `CmsAuth` has two optional members, `requestHeaders()` and `rethrow(error)`. Without `requestHeaders`, the development login bypass never applies.
-- Mounting the admin screens some other way than `CmsAdminLayout`: wrap them in `NextAdminRouter` (`@monti-cms/nextjs/admin`), or in `AdminRouterProvider` with your own adapter.
-
-### Upgrading to `@monti-cms/auth`
-
-GitHub login moved from NextAuth (`next-auth`, inside `@monti-cms/nextjs`) to the framework-neutral package `@monti-cms/auth`, which is built on Auth.js core and takes the ways to log in as providers.
-
-- Install `@monti-cms/auth`. `githubAuth` of `@monti-cms/nextjs/auth` is removed; replace it with the shape below.
-- The new shape: `auth: auth({ providers: [github({ clientId, clientSecret, admins: [id] })], devBypass, secret })` (with the conventional environment variables `github()` and `auth()` need no options now, see "Environment variables and `monti db:migrate`"), with `auth` from `@monti-cms/auth` and `github` from `@monti-cms/auth/github` (the host is attached by the Next integration, see "The CMS instance"). `adminIds` becomes `admins` on the provider and still takes numeric GitHub ids (logins were never matched).
-- Everyone signs in once more: sessions made by NextAuth are not read. The OAuth callback URL (`/api/monti/auth/callback/github`), `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` and `AUTH_TRUST_HOST` were unchanged by that move (the session secret is `MONTI_SECRET` now, see "Upgrading from `cms.config.ts` + `cms.server.ts`"). `next-auth` can be removed from `package.json`.
-- Account ids are qualified with the provider (`github:12345678`): `AuthContext.accountId`, `CmsAuth.devUserId`, and the author recorded for a change when the login gives no name. `isAdmin(userId)` of your own `CmsAuth` receives that value.
-- `CmsAuth` changes (for your own `AuthAdapter`): `session(request?)` may be given the request, `signIn` and `signOut` may resolve with a `Response` that the route returns as it is (a redirect that carries cookies), `AuthProvider` has an optional `icon`, and `AuthCreateContext` has `storage(plugin)` (`cms.storage`).
-- The `next-auth` module augmentation (`session.user.githubId`) is gone with NextAuth.
-
-### Upgrading from the `@cms-server` alias
-
-- The server file no longer default-exports the server config; the instance is a named export `cms` (today: `export const cms = defineConfig({ … })` of `@monti-cms/core/server`).
-- Remove `"@cms-server"` from `tsconfig.json` `paths` and from Vitest `resolve.alias`. `withCms(nextConfig, { config })` takes no `server` option any more.
-- Plugin routes and custom admin routes get a standard `Request` instead of `NextRequest`: replace `request.nextUrl` with `new URL(request.url)` and `NextResponse.json` with `Response.json`.
-- The admin API route is `createRouteHandler(cms)` of `@monti-cms/nextjs` (see "Upgrading to `@monti-cms/nextjs`").
-- Pass the instance to the admin: `<CmsAdminLayout cms={cms}>` and `<CmsAdminPage cms={cms} {...props} />` (the page file becomes a small component; `monti init` shows the shape).
-- Site pages read through `cms.read.*` instead of the free functions of `@monti-cms/core/read`; `entry.refs` replaces `createPublicImageResolver(mdx)` (`cms.read.imageResolver` is gone too, "Upgrading from MDX in core") and `cms.read.mediaUrl(id)` replaces `resolvePublicMediaUrl(id)`.
-- Gone: `getCmsContentStore`, `getCmsMediaStore`, `getCmsSecret`, `getCmsDatabase`, `loadServerPlugins` and the login free functions of `@monti-cms/core/runtime` (`authGateway`, `auth`, `signIn`, `signOut`, `handlers`, `isDevAuthBypassEnabled`, …). Use the instance:
-  `cms.store()`, `cms.mediaStore()`, `cms.secrets(pluginName)`, `cms.storage(pluginName)`, `cms.plugins()`, `cms.auth()`, `cms.authGateway`, `cms.authHandlers`.
-  Nothing hands out the raw master secret any more (`cms.secret` and `cms.server.secret` are gone too); see "Plugin secrets".
-  A plugin's route gets `cms` in its handler input, `CmsServerPlugin.features(cms)` and `migrate(storage, cms)` get it as an argument, and hooks read it from a closure over your own `cms`.
-- `@monti-cms/core/migrate` is gone: run `monti db:migrate`, or `await cms.migrate()` in a script. `monti db:migrate` now imports the config file and needs it to export `cms`.
-- Signing in and out are plain form posts to `/api/monti/v1/session/*`, not server actions (a server action cannot carry the instance). Nothing to change in apps.
-
-### Upgrading plugins that used `cms.database()`
-
-- `cms.database()`, `PluginDatabase` (with its `pool` and `once`) and `withTransaction` are gone from `@monti-cms/core` and `@monti-cms/core/plugin/server`. A plugin keeps its data in `cms.storage("<plugin name>")` (see "Plugin storage") and its `migrate(db, cms)` becomes `migrate(storage, cms)`.
-- A plugin that created tables of its own has to move that data once. Do it inside `storage.once(name, step)` with `migration.readLegacyTable(table)` and `migration.importItem(...)`; the old tables are only read, so they stay as a backup. The AI plugin did this (see its README).
-- Run `monti db:migrate` when you deploy: it creates the `plugin_documents` table and moves the AI plugin's data. Instances of the old version still write the old AI tables, so replace them all at the same time.
-- `createContentLookup(cms.database())` is `createContentLookup(cms)`. `createContentStore` and `migrateContentStore` are no longer exported from `@monti-cms/core/runtime`; tests take them from `@monti-cms/core/testing`.
-- Types such as `Entry`, `ListEntriesParams` and `CmsError` come from `@monti-cms/core/runtime` as before; they are defined in `src/core/store`, not in the Postgres adapter.
-
-### Upgrading from MDX in core
-
-MDX moved out of core into the package `@monti-cms/mdx`. Core has no MDX dependency any more (`next-mdx-remote`, `remark-*`, `rehype-*`, `unified`, `vfile` and the mdast types are gone from its `package.json`). Do this **before** deploying this version:
-
-1. Install `@monti-cms/mdx`.
-2. Add `mdx()` to `plugins` and **move** `mdx.syntax` into it: `defineConfig({ mdx: { syntax: [directiveSyntax()] } })` becomes `plugins: [mdx({ syntax: [directiveSyntax()] }), ...]`. Keep the same options (for a site that wrote directives, `directiveSyntax()` with write mode on). The `mdx` config key is gone.
-3. Nothing to import for its admin styles: `@monti-cms/admin/styles.css` already covers the MDX source panel.
-4. Replace `renderMdx` imports from `@monti-cms/core/render` with `@monti-cms/mdx/render` (or render documents with `CmsContent`), and `cms.read.imageResolver(...)` with `entry.refs` (`renderMdx(source, { refs: entry.refs })`). `renderMdx` returns `{ content, toc, unknown }` and compiles or executes no MDX.
-5. Replace imports of `@monti-cms/core/mdx`, `@monti-cms/core/syntax` and `@monti-cms/core/format/mdx`, which are removed: the syntax extension interface (`SyntaxExtension`, `SerializeContext`, `RAW_SOURCE_PARAGRAPH`, the table and comment syntax helpers) comes from `@monti-cms/mdx`, and the parser and writer (`analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `mdxFormat`, ...) from `@monti-cms/mdx/format`. Syntax extension packages peer on `@monti-cms/mdx` now.
-6. Block extensions you wrote: drop the default export of your `render` modules and keep `documentComponents` (`CmsPlugin.render` returns `{ documentComponents }`).
-7. Run `monti db:migrate`. With `mdx()` in the config, an old database upgrades with the right syntax extensions. Without it, a store that still has bodies to read through the old steps fails with a message that says to install `@monti-cms/mdx` and add `mdx()` to the plugins of the site config.
-8. Drop `monti content:rewrite` from your scripts: it is removed (`cms.rewrite` too), since there is no stored text to normalize.
-
-What else changed:
-
-- **No built-in format.** A site without a format plugin accepts documents (`doc`) only, and a text write fails with `unknown_format`. `format: "mdx"` and `?format=mdx` need `@monti-cms/mdx`.
-- **Database.** `entry_bodies.mdx` and `body_templates.mdx` are nullable (the step `0020_mdx_columns_optional`, which runs before `seed_initial_body_templates`) and are no longer written. The columns are not dropped, so old rows keep their text. The media in-use check looks in `doc`.
-- **Old steps.** `0010`, `0011`, `0012`, `0013` and `0015` keep their names in core but parse through the `mdx` format that `@monti-cms/mdx/server` supplies (`CmsFormat.legacyBodies`, "Formats"). They need the package only when a store actually has a body to read through them: a fresh store, and a store already past those steps, never need it at migrate time. `monti db:migrate` and `cms.migrate()` pass the instance's formats to the migration, so a site that lists `mdx()` migrates old data with its syntax extensions.
-- **Rendering.** `renderMdx` and `compileMDX` are not in `@monti-cms/core/render` any more: core renders documents (`CmsContent`, `renderDocument`). Block extensions export only `documentComponents` from their render modules, and `@monti-cms/blocks` has no MDX component tables.
-- **Admin.** The source panel is registered by the `mdx()` plugin (without it, there is no source toggle), and its message namespace is `cms-mdx.source` (it was `cms-admin.mdx-source`). The admin exports `SOURCE_ERROR_ID` and `useLinkPaths` (`@monti-cms/admin/hooks`); `mdxBrowserFormat` is no longer exported by `@monti-cms/admin/editor`. Recovery copies that browsers saved before documents existed are kept as an `unparsed` document, which the panel reads again.
-- **AI.** `@monti-cms/ai` peers on `@monti-cms/mdx`: its model reads and writes MDX through the `mdx` format.
-- `@monti-cms/core/notation` is a new light entry (comment syntax and table helpers for notations).
-
-## Upgrading from `cms.config.ts` + `cms.server.ts`
-
-The site was set up in two files, `cms.config.ts` (the site config, `export default defineConfig({ … })` with `defineConfig` of `@monti-cms/core`, which is now part of the one `defineConfig` of `@monti-cms/core/server`) and `cms.server.ts` (`createCms({ config, server: defineServerConfig({ … }) })`). It is one file now, `monti.config.ts`, that exports the ready instance as `cms`. `defineServerConfig` is removed (there is no shim). The `monti` command finds `monti.config.ts` (or `src/monti.config.ts`), and `monti schema:extract` is unchanged for code-first configs. This is the blog example, trimmed:
-
-```diff
--// cms.config.ts
--import { aiPlugin } from "@monti-cms/ai";
--import { bareun } from "@monti-cms/bareun";
--import { blocks } from "@monti-cms/blocks";
--import { defineConfig } from "@monti-cms/core";
--import { gitSync } from "@monti-cms/git-sync";
--import { mdx } from "@monti-cms/mdx";
--import { seo } from "@monti-cms/seo";
--import { directiveSyntax } from "@monti-cms/syntax-directive";
--import schema from "./monti.schema";
--
--export default defineConfig({
--	schema,
--	site: { url: process.env.HOST_URL || undefined },
--	plugins: [
--		mdx({ syntax: [directiveSyntax()] }),
--		...blocks(),
--		seo(),
--		aiPlugin({ siteDescription: "A personal tech blog", shared: { /* ... */ } }),
--		bareun(),
--		gitSync({ enabled: false, targets: [/* ... */] }),
--	],
--});
--
--// cms.server.ts
--import { auth } from "@monti-cms/auth";
--import { github } from "@monti-cms/auth/github";
--import { createCms, defineServerConfig, postgres } from "@monti-cms/core/server";
--import { nextHost } from "@monti-cms/nextjs/auth";
--import config from "./cms.config";
--
--export const cms = createCms({
--	config,
--	server: defineServerConfig({
--		database: postgres({ connectionString: process.env.CMS_DATABASE_URL, schema: process.env.CMS_SCHEMA }),
--		auth: auth({
--			providers: [
--				github({
--					clientId: process.env.AUTH_GITHUB_ID,
--					clientSecret: process.env.AUTH_GITHUB_SECRET,
--					admins: [process.env.CMS_ADMIN_GITHUB_ID],
--				}),
--			],
--			host: nextHost,
--			devBypass: process.env.CMS_DEV_AUTH_BYPASS === "1",
--			secret: process.env.AUTH_SECRET,
--		}),
--		secret: process.env.CMS_SECRET,
--	}),
--});
-+// monti.config.ts
-+import { aiPlugin } from "@monti-cms/ai";
-+import { auth } from "@monti-cms/auth";
-+import { github } from "@monti-cms/auth/github";
-+import { callout, chart, codeExplorer, codeRef, collapsible, color, columns, mermaid, tabs, tooltip } from "@monti-cms/blocks";
-+import { defineConfig, postgres } from "@monti-cms/core/server";
-+import { gitSync } from "@monti-cms/git-sync";
-+import { mdx } from "@monti-cms/mdx";
-+import { seo } from "@monti-cms/seo";
-+import { directiveSyntax } from "@monti-cms/syntax-directive";
-+import schema from "./monti.schema";
-+import { wordList } from "./plugins/word-list";
-+
-+export const cms = defineConfig({
-+	schema,
-+	plugins: [
-+		mdx({ syntax: [directiveSyntax()] }),
-+		callout(),
-+		collapsible(),
-+		tabs(),
-+		columns(),
-+		codeExplorer(),
-+		mermaid(),
-+		chart(),
-+		tooltip(),
-+		codeRef(),
-+		color(),
-+		seo(),
-+		aiPlugin({ siteDescription: "A personal tech blog", shared: { /* ... */ } }),
-+		wordList(), // replaces admin-components.tsx
-+		gitSync({ enabled: false, targets: [/* ... */] }),
-+	],
-+	database: postgres(), // DATABASE_URL, DATABASE_SCHEMA
-+	auth: auth({ providers: [github()] }), // AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, MONTI_ADMIN_GITHUB_ID
-+	// MONTI_SECRET signs the login session and encrypts stored values
-+});
-```
-
-Do these steps in order:
-
-1. **Merge the two files into `monti.config.ts`.** Put the site options and the server options in one `export const cms = defineConfig({ … })` (from `@monti-cms/core/server`), then delete `cms.config.ts` and `cms.server.ts`. Change every import of `@/cms.server` or `../cms.server` (the route file, the admin layout and page, your site's pages, scripts) to the new file.
-2. **Replace `...blocks()` with one line per block.** `blocks()` and `blocks({ only, omit })` are gone: `callout()`, `collapsible()`, `tabs()`, `columns()`, `codeExplorer()`, `mermaid()`, `chart()`, `tooltip()`, `codeRef()` and `color(options?)`, each imported from `@monti-cms/blocks`. List only the ones you use. Keep `tooltip()`, `codeRef()` and `color()` in the order you want overlapping marks stored in.
-3. **Rename the environment variables** (`HOST_URL` becomes `SITE_URL`, and the `site` line goes). Then delete the `process.env.X` arguments of `postgres()` and `github()`, which read the conventional names themselves.
-
-   | Before | After |
-   | --- | --- |
-   | `CMS_DATABASE_URL` | `DATABASE_URL` |
-   | `CMS_SCHEMA` | `DATABASE_SCHEMA` |
-   | `CMS_ADMIN_GITHUB_ID` | `MONTI_ADMIN_GITHUB_ID` (one numeric id, or several separated by commas) |
-   | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | unchanged |
-   | `CMS_DEV_AUTH_BYPASS` | delete: the development login is on by itself under `next dev` ("Login bypass for development") |
-   | `AUTH_TRUST_HOST` | only needed behind a proxy you run yourself; Vercel, Netlify and Cloudflare Pages are detected ("Host trust") |
-   | `HOST_URL` | `SITE_URL`, and delete the `site: { url: … }` line: `defineConfig` reads `SITE_URL` itself |
-| `CMS_SECRET`, `AUTH_SECRET` | `MONTI_SECRET`, see the next step |
-
-4. **The secret.** Set `MONTI_SECRET` to the **old `CMS_SECRET` value**: every value encrypted before (AI service keys, git-sync tokens) keeps decrypting. Or set a new `MONTI_SECRET` and keep the old one readable with `previousSecrets: [process.env.CMS_SECRET]` in `defineConfig`; values are re-encrypted with the new secret when they are saved again, and you drop the old one only after that. `AUTH_SECRET` is not read any more and can be deleted: the login session key now comes from `MONTI_SECRET`, so everyone is signed out once (sessions reset, nothing else is lost).
-5. **The host.** Delete `host: nextHost` and its import: the Next integration attaches it.
-6. **The Next files.** Move `app/(admin)/studio/*` to `app/studio/*` (route groups are optional now; the admin path is `/admin` unless `admin.path` of the schema file says otherwise, so a site whose pages were at `app/(admin)/admin` moves them to `app/admin` and keeps its URL), so there are three Monti files: `app/<admin path>/layout.tsx`, `app/<admin path>/[[...path]]/page.tsx` and `app/api/monti/[...path]/route.ts` (the layout cannot be folded into the page, see "`monti init`"). Delete `admin-components.tsx` and register its components as a plugin: `definePlugin({ name, options: {}, admin: () => import("./admin") })`, whose admin module's default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`) with a `Provider` that wraps the admin and uses `CmsAdminComponentsProvider` (`examples/blog/plugins/word-list/`). Update the imports of the three files to `monti.config.ts`.
-   Your own code that asks who is signed in (a preview layout, an `/api/admin/access` route) is outside the three files, so no integration attaches the request headers for it: call `cms.attachHost(nextHost)` (`nextHost` of `@monti-cms/nextjs/auth`) before `cms.authGateway.verifyAdmin()`, or read drafts with `previewEntry(cms, …)`, which does it. Without it the check answers "not signed in" even under the development bypass (`DEV AUTH BYPASS skipped … host: unknown` in the log).
-7. **Remove `bareun()`** if you do not want it. It is still a package, and the blog example dropped it.
-8. **Check and migrate.** Run `monti doctor`: it lists what of this guide is left (the old files, the old variable names, an `(admin)` route folder, old options in the config) with the exact steps, and fails when a `"use client"` file reaches the config. Then run `monti db:migrate`: the old database already has tables, so this is the command for it (`monti db:setup` is only for a database with no Monti tables).
-
-Three things the steps above do not show:
-
-- **The OAuth callback URL.** Only a site whose old `githubAuth` had no `basePath` keeps its GitHub OAuth callback URL. One that set `basePath: "/api/auth"` (to keep the NextAuth address) registers `<site URL>/api/monti/auth/callback/github` in the OAuth app now (`monti doctor` prints it), and deletes the old `app/api/auth/[...nextauth]` route.
-- **`monti schema:extract` loads `monti.config.ts`.** If the config imports code of your app that still uses the old packages (a `publicApi.toJson` that reads entries, say), comment that option out for the run and put it back after.
-- **Tests.** `defineConfig` throws where `window` exists, so a test that imports `monti.config.ts` (directly or through the code it tests) must not run in the `jsdom` environment: give it `// @vitest-environment node`, or build the instance the test needs with `fakeCms` from `@monti-cms/core/testing`.
-
 ## Entry points
 
 | Entry point | Used in | Contents |
@@ -777,7 +567,7 @@ Core stores a body as a document and does not read or write any text notation. A
 
 #### Stored bodies
 
-Every body (the working and published bodies of entries, the source a translation was confirmed against, and body templates) is stored as a versioned **document** (`entry_bodies.doc`, `body_templates.doc`: the parsed body as JSON). The document is the only source: nothing writes text next to it. The `mdx` columns of `entry_bodies` and `body_templates` are optional (`0020_mdx_columns_optional`) and are never written; they are not dropped, so old rows keep their text.
+Every body (the working and published bodies of entries, the source a translation was confirmed against, and body templates) is stored as a versioned **document** (`entry_bodies.doc`, `body_templates.doc`: the parsed body as JSON). The document is the only source: nothing writes text next to it, and there are no `mdx` columns.
 Saving a body in another spelling of the content it already has changes nothing (no new version). A text typed in a source panel (the `mdx()` plugin provides one) is read in the browser into a document, and the document is what is saved.
 A body that cannot become a document (its text does not parse, has front matter, or would not read back the same) is stored as an **`unparsed`** document: one node `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<the text as given>" } }`, which keeps the text exactly. A draft can hold it, the editor shows it as source, and publishing it is blocked by the issue `unparsed_body`. The reasons it was rejected (`mdx_error` with the line and column in the text, `frontmatter_present`) are reported next to it.
 
@@ -786,33 +576,25 @@ A body that cannot become a document (its text does not parse, has front matter,
 Where a finding is, is the block it is in: an issue's `position` is `{ blockId }` (a text that could not be read has `{ line, column }` in that text instead), and a body reference occurrence is `{ "type": "body", "blockId" }`.
 
 **Code blocks.** A code block is stored as its code (without annotation comments) and its annotations as data (line effects, text effects and regex rules), and a text format writes it back as Monti annotation comments, so other tools that read the text still see them.
-`monti db:migrate` runs the step `0015_code_annotations`, which converts existing documents (including the document a translation was confirmed against) and rewrites the annotation comments of code fences in their canonical form (`// @line plus` becomes `// @line plus {0-0}`, rules for the whole code come first). It recomputes the content hash and search text, which no longer holds annotation comments; `version` and `updated_at` do not change. It reads old text through the `mdx` format only when a store has such a body ("Upgrading from MDX in core").
 
 **Block ids.** Every block of the document has an `id` (8 characters of base36) that is unique within the body. It says which block is which across versions: it is not written to a text format and is not part of the content hash, so it never counts as a change.
 A body saved as text inherits ids from the version it replaces: a block that reads the same keeps its id, and so do edited, split and moved blocks (the first part of a split paragraph keeps it); blocks with no partner get new ids, and a document sent through the API keeps the ids it carries.
-`monti db:migrate` runs the step `0014_block_ids`, which gives the existing documents their ids (and gives a published body the ids of the working blocks it shares); it changes only `doc`, never the text, the hash, `version` or `updated_at`.
 The admin editor works on the document itself (no notation in between): it keeps every block's id while you edit and always saves a document, so blocks keep their ids exactly; text typed in a source panel is read in the browser into the document it reads as, whose blocks are paired with the body it replaces as above. Applying a template to an entry copies the template's document with new block ids (ids are unique within one body, and the translation and diff views pair blocks by them).
 The ids are what the admin uses to point at a block: a publish issue or reference position names its block (`position.blockId`) and opens it in the visual editor, the translation screen compares the source a translation was confirmed against with the current source block by block (a block that only moved shows as moved), and AI translation finds the block it translates by its id.
 
-**Upgrading.** The step `0013_stored_documents` adds the `doc` columns and gives every existing body its document, reading its old text through the `mdx` format of `@monti-cms/mdx` with the syntax extensions of `mdx({ syntax })` ("Upgrading from MDX in core"). It rewrote the old text in the site's notation at the time, so the stored text of many bodies changed at once; `version` and `updated_at` did not.
-Bodies that do not parse, have front matter or would not read back the same are left as they are, without a document, and each is logged (`[monti] no stored document for …`); the step `0017_unparsed_bodies` then gives them their `unparsed` document (below). Back up the database first and read the log after the run.
 
-`monti db:migrate` also runs `0017_unparsed_bodies`: every body and template that has no document gets the `unparsed` document of its text, its content hash is recomputed (text that is not a document is hashed as it always was, under its own tag), and the translation state of every translation is lifted to version 4 (`{ version: 4, baseDoc }`, the document of the source it was confirmed against; versions 2 and 3, which held the source's MDX, are still read). `mdx`, `search_text`, `version` and `updated_at` do not change.
-Nothing fails because of such a body, published ones and templates included, since the data of an existing store always migrates. The published bodies and templates among them are logged by id (`[monti] N published bodies have no document …`): they read as unparsed (a page renders it as nothing) until you fix them in the editor.
-**Reference occurrences.** A body occurrence of a stored reference used to be `{ "type": "mdx", "line", "column", "blockId"? }`. Reads accept both shapes, and the next save of the entry writes the new one (`{ "type": "body", "blockId" }`); there is no SQL migration for them.
 
 - **Entry search for pickers.** `GET /api/monti/v1/entries/search?collection=…&query=…&locale=…&publishedOnly=true&limit=20` finds entries of one collection by title for a picker (the relation field of the admin searches this way instead of loading the whole list). It answers `{ items: [{ id, title, slug, status }] }`, best title matches first (an equal title, then a title that starts with the query, a word that starts with it, a title that contains it, a slug that contains it), at most `limit` (default 20, at most 50), never the trash. Repeating `id` looks those entries up by id instead. The store port is `searchEntries` (`ListStore`).
 - **Admin entry API.** `POST /api/monti/v1/entries` and `PATCH /api/monti/v1/entries/:id` take the body as `doc` (the document JSON as read back from `working.doc` / `published.doc` of an entry) or as `body` (a text) with the `format` that reads it ("Formats"); `mdx` is gone. Sending a document and a text together, a text without its format, or a document that is not a valid stored document is `400 invalid_input`. With none of them, a new entry has an empty body and a patch keeps the current one.
   Sending back the `doc` that was read changes nothing. `GET /api/monti/v1/entries/:id?format=<name>` adds `body` (a string) to `working` and `published` (and to the source of a translation): the document as text in that format, written to be imported again. `GET /api/monti/v1/meta` reports the size limits as `limits.textBytes` (a text, in any format) and `limits.docBytes`, and the formats of the instance as `formats` (`{ name, label, mimeType, extension, canImport }`). The admin editor always sends `doc`.
-- **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and nothing writes `body_templates.mdx` any more (the column stays, optional). `POST /api/monti/v1/templates` and `PATCH /api/monti/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
+- **Template API and templates.** A body template is a document like an entry body: `body_templates.doc` is its only source and there is no `mdx` column. `POST /api/monti/v1/templates` and `PATCH /api/monti/v1/templates/:id` take `{ name, doc }` or `{ name, body, format }` (with neither, a template is empty; a patch keeps the body), and answer with `doc` and no `mdx`; `?format=<name>` on a `GET` adds `body` to each template. A text the format rejects is `422 format_import_failed` with the format's findings, because a template, unlike an entry draft, has no place to keep text that is not a document.
   The admin template manager and the template menu of the editor work on documents. Applying a template copies its document into the entry with new block ids. Seed templates (`seed.templates` in the site config) are `{ id, name, doc }` or `{ id, name, body, format }`; a text is read by its format when the migration seeds a new store, and a seed that no installed plugin can read stops the migration with a message that names the format (for `mdx`: install `@monti-cms/mdx`). Nothing like that stops a store that already has its data.
-  `monti db:migrate` runs `0019_templates_documents`: a template that has no readable document gets the `unparsed` document of its text, and `body_templates.mdx` stops being required. `version`, `updated_at` and the text already in the column do not change; nothing fails because of a template, and the ones that had no document are logged by id. Running it again changes nothing.
 - **Admin export** (`GET` or `POST /api/monti/v1/export`) is format version 4. The archive holds the documents: `working.doc.json` / `published.doc.json` for each body, `templates.json` items with `doc`, the public archive's `published.json` with `doc`, and the digests cover them. It has no MDX of its own; `format=<name>` (in the query, or `format` in the body of a `POST`) also writes each body as `working.<extension>` / `published.<extension>` and each template as `body` in that format, and `manifest.format` names it. The admin archive's texts are written to be imported again (a link to an entry that cannot be resolved keeps its id); the public archive's are for readers (it has published entries only, and an unpublished target is not a link). An unknown format is `400 unknown_format`.
 - **Public read API and public export** return the document. `cms.read.getEntry` / `listEntries` / `getPreview` give `entry.doc` (the stored document; in a list only with `body: true`, otherwise `null`) and `entry.refs`
   (`{ media: { [mediaId]: { url, width?, height?, file? } | { failure } }, links: { [entryId]: { path, title, locale } } }`: what a renderer needs for the images, files and internal links of that document, only for what the document uses; `collectRefs(doc)` lists the ids).
   A link in a document is `{ entryId }` (internal) or `{ href, title? }` (external). `entryId` is the translation group id (the source entry's id, the same id a relation holds), so `refs.links` gives the address and title in the reader's language and falls back to the source's;
   a link whose target is not published is not in `refs.links` and is drawn as plain text. Renaming a slug changes nothing in the stored document. Links are references like relations: they are in the references of the entry, block by block, and a link to an entry that does not exist (or an address nobody holds) blocks publishing (`unresolved_internal_link`). A link to an entry that is not published, or is in the trash, only warns (`unpublished_internal_link`): the page draws it as plain text until the target is published, so posts that link to each other can be published in any order.
-  Text written with the address of a post (`[x](/posts/slug)`, in any format or in a document) is turned into a link by id when it is written, if an entry holds that address; an address no entry holds stays as written and blocks publishing. Migration `0018_link_entry_ids` does this for the stored documents of an existing database (document version 3).
+  Text written with the address of a post (`[x](/posts/slug)`, in any format or in a document) is turned into a link by id when it is written, if an entry holds that address; an address no entry holds stays as written and blocks publishing.
   `entry.mdx` is gone: pass `format: "mdx"` and read `entry.body` (`{ format, text }`, "Formats"). `GET /api/monti/v1/public/entries/:collection/:slug` returns `doc` and `refs`, and with `?format=<name>` also `body: { format, text }` (an unknown format is `400 invalid_input`); lists have none of them.
   A draft that could not become a document previews with its `unparsed` document.
 
@@ -845,7 +627,6 @@ export default defineFormat({
 
 A plugin provides formats with a lazy loader, like `server` and `render`: `definePlugin({ name: "hugo", formats: () => import("./formats") })`, whose default export is a format or a list of them. A name provided twice fails when the instance loads its plugins. `cms.formats()` is the registry of one instance, and `GET /api/monti/v1/meta` lists it as `formats`.
 
-**Legacy bodies.** A format may also give `legacyBodies` (the `LegacyBodies` type of `@monti-cms/core/format`): how to read and write the text that old stores kept bodies in (`read`, `write`, `insertSoftBreaks`, `documentOf`). Only the `mdx` format has it (`@monti-cms/mdx/server` supplies it). The migration steps `0010`, `0011`, `0012`, `0013` and `0015` keep their names in core but parse through it, and ask for it only when a store has a body to read ("Upgrading from MDX in core").
 
 **The document model.** Nodes: `paragraph`, `heading` (`attrs.level`), `bulletList` and `orderedList` (each holds `listItem` nodes that hold blocks), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`; a text node has `marks` (`bold`, `italic`, `code`, `link` with `attrs.href`, ...). A block of a plugin is a node named after the block, with the block's attributes in `attrs` (`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()` (`@monti-cms/core/document`) is the document to put `content` into, and `toPlainText(site, doc)` or `documentText(site, doc, options)` (`@monti-cms/core/client`) give its text. A complete two-way format is in the [custom format recipe](../../docs/recipes/custom-format.md).
 
@@ -876,7 +657,6 @@ A plugin provides formats with a lazy loader, like `server` and `render`: `defin
 | `format_export_failed` | 500 (public API: 503 `unavailable`) | the format threw |
 | `body_too_large` | 413 | a text over `limits.textBytes` (2 MiB) or a document over `limits.docBytes` (8 MiB) |
 
-**Upgrading from the `mdx` property.** There are no aliases. Send `{ doc }` or `{ body, format: "mdx" }` instead of `{ mdx }` to the write APIs and `createDraft` / `saveDraft`; read `entry.body.text` (with `format: "mdx"`) instead of `entry.mdx`; the template API and `seed.templates` take `doc` or `{ body, format: "mdx" }`; `limits.mdxBytes` is `limits.textBytes` and the error `mdx_too_large` is `body_too_large`. The text that exports write for an internal link is the target's path, where the old `mdx` column, which nothing writes any more, held `entry:<id>`. The built-in `mdx` format is gone: it comes from `@monti-cms/mdx` ("Upgrading from MDX in core").
 
 ## Body blocks
 
@@ -1179,7 +959,6 @@ await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...) and tx.storage("
 - Deleting a key through the admin API (`DELETE /v1/api-keys/<id>?expectedVersion=`) answers `409 key_in_use` with `details.uses` while something uses it; `&force=true` deletes it anyway, and what used it finds no key and stops working. `cms.apiKeys.remove` always deletes.
 - Without a server `secret` nothing can be saved (`secret_not_configured`); keys made under a secret that is no longer listed read as `readable: false`.
 - Routes: `GET/POST /v1/api-keys`, `PATCH/DELETE /v1/api-keys/<id>`. No response contains a value.
-- A plugin that stored keys itself moves them in its `migrate(storage, cms)` hook (see the AI plugin's `moveKeysToStore`): reuse a key with the same value instead of adding a duplicate, and keep the step safe to repeat.
 
 ### Plugin storage
 
@@ -1197,7 +976,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 
 - A write names the version it expects. A different stored version fails with a `CmsError` coded `conflict` that carries the stored version (0 when there is no item), so two editors cannot overwrite each other unnoticed, and of two concurrent writers one wins. Deleting a missing item is `not_found`.
 - Plugin and collection names are lowercase words (`ai`, `action-overrides`). Values are JSON: they are stored as JSON and come back parsed, so a `Date` becomes its ISO text and `undefined` is rejected (`invalid_input`).
-- The migration hook is `CmsServerPlugin.migrate(storage, cms)`, called by `monti db:migrate` after the core tables. `storage.once(name, step)` runs `step` once (recorded in `cms_migrations` as `plugin:<plugin>:<name>`, also when called concurrently, and not at all if it throws) and returns whether it ran. `step` gets a `PluginMigration`: its collections inside the step's transaction, `importItem(collection, { key, value, version, createdAt, updatedAt })` (adds an item with the version and dates it had, never overwrites), and `readLegacyTable(table)` to read the rows of a table an earlier version of the plugin created itself (`null` when there is none; the table is only read). `once(name, step, { legacyNames })` also counts the step as done when an earlier version recorded one of those names.
+- The migration hook is `CmsServerPlugin.migrate(storage, cms)`, called by `monti db:migrate` after the core tables. `storage.once(name, step)` runs `step` once (recorded in `cms_migrations` as `plugin:<plugin>:<name>`, also when called concurrently, and not at all if it throws) and returns whether it ran. `step` gets a `PluginMigration`: its collections inside the step's transaction.
 - The Postgres adapter keeps the documents in the core table `plugin_documents` (created by the core migrations). A storage of another adapter behaves the same: `src/plugin/__test__/storage-contract.ts` is the contract, run against Postgres and against `createMemoryPluginStorage()` from `@monti-cms/core/testing`, which `fakeCms` uses by default (`fakeCms({ storage })` replaces it).
 - The plugin API has no database driver types: `PluginDatabase`, `cms.database()` and `withTransaction` are gone, and neither `@monti-cms/core` nor `@monti-cms/core/plugin/server` exports anything from `pg`.
 
@@ -1486,7 +1265,7 @@ Stays in code (monti.config.ts):
   - plugins: mdx, callout, ..., seo, ai (code; the fields they add to collections are in the schema)
 ```
 
-Then replace the collections, locales, `defaultLocale`, `timeZone`, `seed` and the data part of `site` and `admin` in the config file with `schema`, keeping `plugins` and the rest (merged into `monti.config.ts`, "Upgrading from `cms.config.ts` + `cms.server.ts`"). Loading the result back gives the same site (a test extracts and reloads the reference configs and compares them).
+Then replace the collections, locales, `defaultLocale`, `timeZone`, `seed` and the data part of `site` and `admin` in the config file with `schema`, keeping `plugins` and the rest. Loading the result back gives the same site (a test extracts and reloads the reference configs and compares them).
 
 ### Changing the schema: `monti schema:diff` and `monti schema:apply`
 

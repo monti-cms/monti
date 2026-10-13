@@ -117,40 +117,11 @@ function collectionOf<T>(db: Db, plugin: string, name: string): PluginCollection
 	};
 }
 
-/** What a migration step sees: the same collections, inside the step's transaction, plus the plugin's old tables. */
+/** What a migration step sees: the same collections, inside the step's transaction. */
 function migrationOf(client: PoolClient, qSchema: string, plugin: string): PluginMigration {
 	const db = dbOn(client, qSchema);
 	return {
 		collection: (name) => collectionOf(db, plugin, name),
-		importItem: async (collection, item) => {
-			assertStorageName("collection", collection);
-			assertStorageKey(item.key);
-			assertStoredVersion(item.version ?? 1);
-			const createdAt = item.createdAt ?? new Date();
-			const res = await db
-				.insertInto("plugin_documents")
-				.values({
-					plugin,
-					collection,
-					key: item.key,
-					value: jsonb(serializeStorageValue(item.value)),
-					version: item.version ?? 1,
-					created_at: createdAt,
-					updated_at: item.updatedAt ?? createdAt,
-				})
-				.onConflict((conflict) => conflict.columns(["plugin", "collection", "key"]).doNothing())
-				.executeTakeFirst();
-			return res.numInsertedOrUpdatedRows === 1n;
-		},
-		readLegacyTable: async (table) => {
-			if (!/^[a-z_][a-z0-9_]*$/.test(table)) return null;
-			// A table of the plugin's own is not in `Database`, so it is read with `sql`, which `withSchema` does not touch: the schema is named in the identifier.
-			const exists = await sql<{
-				found: string | null;
-			}>`select to_regclass(${`"${qSchema}"."${table}"`})::text as found`.execute(db);
-			if (!exists.rows[0]?.found) return null;
-			return (await sql<Record<string, unknown>>`select * from ${sql.id(qSchema, table)}`.execute(db)).rows;
-		},
 	};
 }
 
@@ -165,20 +136,10 @@ export function createPluginStorage(pool: Pool, schema: string | undefined, plug
 	return {
 		plugin,
 		collection: (name) => collectionOf(db, plugin, name),
-		once: async (name, step, options) => {
+		once: async (name, step) => {
 			assertMigrationName(name);
 			let ran = false;
 			await (await loadSchemaModule()).runOnce(pool, { schema: qSchema }, stepRecord(plugin, name), async (client) => {
-				if (options?.legacyNames?.length) {
-					const done = await dbOn(client, qSchema)
-						.selectFrom("cms_migrations")
-						.select("name")
-						.where("name", "in", [...options.legacyNames])
-						.limit(1)
-						.executeTakeFirst();
-					// An earlier version already did this work: the step counts as done, and its record is kept for next time.
-					if (done) return;
-				}
 				await step(migrationOf(client, qSchema, plugin));
 				ran = true;
 			});

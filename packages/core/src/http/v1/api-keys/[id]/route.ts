@@ -1,5 +1,4 @@
 import { patchApiKeyBodySchema } from "../../../../core/api-keys";
-import { CmsError } from "../../../../core/store";
 import { adminRoute, deleted, ok, readVersionedBody, readVersionQuery } from "../../handler";
 
 type IdParams = { id: string };
@@ -21,17 +20,9 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
  * places that would stop working (`details.uses`), so the admin can show them and ask again.
  */
 export const DELETE = adminRoute<IdParams>(async ({ request, params, cms }) => {
-	const expectedVersion = readVersionQuery(request);
-	const key = await cms.apiKeys.get(params.id);
-	if (!key) throw new CmsError("Key not found", "not_found");
-	if (key.uses.length > 0 && new URL(request.url).searchParams.get("force") !== "true") {
-		throw new CmsError(
-			`${key.uses.length} place${key.uses.length === 1 ? "" : "s"} use this key and would stop working`,
-			"key_in_use",
-			key.version,
-			{ uses: key.uses },
-		);
-	}
-	await cms.apiKeys.remove(params.id, { expectedVersion });
+	await cms.apiKeys.remove(params.id, {
+		expectedVersion: readVersionQuery(request),
+		force: new URL(request.url).searchParams.get("force") === "true",
+	});
 	return deleted();
 });

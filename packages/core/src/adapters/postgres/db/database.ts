@@ -13,7 +13,7 @@ import type { EntryMetadata, EntryStatus, JsonObject } from "../../../core/store
  * - A column with a default (or a sequence) is `Generated<T>` or `GeneratedAlways<T>`; a nullable column may be left out of an insert either way.
  * - `Date` is `timestamptz`, `number` is `integer`, `Int8` is `bigint` (read back as a string by the driver), `Jsonb<T>` is `jsonb`, and `boolean` is `boolean`.
  *   Anything else (`string`, the string unions) is `text` or `uuid`.
- * - The shape of a JSONB value is the type argument of `Jsonb`. Where the stored shape is not trusted (it may be a legacy one), it is `unknown`,
+ * - The shape of a JSONB value is the type argument of `Jsonb`. Where the stored shape is not trusted, it is `unknown`,
  *   and the reader that owns the column validates it (`readDoc`, `readTranslation`, `readReferenceOccurrences`).
  *
  * The schema name is not here: `createDb` puts it on every table with `withSchema`.
@@ -61,15 +61,13 @@ export interface EntryBodiesTable {
 	entry_id: string;
 	state: "working" | "published";
 	metadata: Jsonb<EntryMetadata>;
-	/** No longer written (`0020_mdx_columns_optional`); old rows may still hold the text. */
-	mdx: string | null;
 	schema_version: number;
 	content_hash: string;
 	updated_at: Date;
 	search_text: Generated<string>;
 	/** A translation state (`readTranslation` lifts old versions); `null` for a source. */
 	translation: Jsonb<unknown> | null;
-	/** The stored document (`readBodyDoc`); `null` or unreadable on a row older than stored documents. */
+	/** The stored document (`readBodyDoc`). */
 	doc: Jsonb<unknown> | null;
 }
 
@@ -112,7 +110,7 @@ export interface EntryReferencesTable {
 	target_entry_id: string | null;
 	target_media_id: string | null;
 	is_stale: boolean;
-	/** As stored: a body occurrence may still be in an old shape (`readReferenceOccurrences` reads it). */
+	/** As stored; `readReferenceOccurrences` validates it. */
 	occurrences: Jsonb<unknown>;
 }
 
@@ -134,8 +132,6 @@ export interface UserPreferencesTable {
 export interface BodyTemplatesTable {
 	id: string;
 	name: string;
-	/** No longer written (`0020_mdx_columns_optional`). */
-	mdx: string | null;
 	version: Generated<number>;
 	created_at: Date;
 	updated_at: Date;

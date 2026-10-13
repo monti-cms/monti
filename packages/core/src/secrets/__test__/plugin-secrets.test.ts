@@ -1,22 +1,11 @@
-import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../test/site";
 import { createCms } from "../../cms";
 import type { CmsServerConfig } from "../../server/define";
-import { createSecretsVault, type LegacySecretFormat } from "../plugin-secrets";
+import { createSecretsVault } from "../plugin-secrets";
 
 const vault = (secret: string | undefined, previousSecrets?: readonly string[]) =>
 	createSecretsVault({ secret, previousSecrets });
-
-/** A value as the AI plugin stored it before per-plugin keys: `v1:<iv>:<tag>:<body>` under `sha256("cms-ai-key:" + secret)`. */
-function legacyValue(plain: string, secret: string): string {
-	const iv = randomBytes(12);
-	const cipher = createCipheriv("aes-256-gcm", createHash("sha256").update(`cms-ai-key:${secret}`).digest(), iv);
-	const body = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
-	return ["v1", iv.toString("base64"), cipher.getAuthTag().toString("base64"), body.toString("base64")].join(":");
-}
-
-const LEGACY: LegacySecretFormat = { prefix: "v1", domain: "cms-ai-key:" };
 
 describe("plugin secrets: one key per plugin", () => {
 	it("encrypts and decrypts with the plugin's own key, and never stores the plain text", () => {
@@ -105,30 +94,6 @@ describe("plugin secrets: rotation", () => {
 		const readOnly = vault(undefined, ["old"]).forPlugin("ai");
 		expect(readOnly.decrypt(old)).toBe("x");
 		expect(readOnly.isCurrent(old)).toBe(false);
-	});
-});
-
-describe("plugin secrets: legacy values", () => {
-	it("reads a plugin's old-format value with its declared legacy format, and says it is not current", () => {
-		const stored = legacyValue("sk-live-1234", "master");
-		const ai = vault("master").forPlugin("ai", { legacy: LEGACY });
-		expect(ai.decrypt(stored)).toBe("sk-live-1234");
-		expect(ai.isCurrent(stored)).toBe(false);
-		expect(ai.isCurrent(ai.encrypt("sk-live-1234"))).toBe(true);
-	});
-
-	it("reads an old-format value made with a previous secret", () => {
-		const stored = legacyValue("sk-live-1234", "old");
-		expect(vault("new", ["old"]).forPlugin("ai", { legacy: LEGACY }).decrypt(stored)).toBe("sk-live-1234");
-	});
-
-	it("does not read old-format values for a plugin that did not declare the legacy format", () => {
-		expect(vault("master").forPlugin("ai").decrypt(legacyValue("x", "master"))).toBeNull();
-		expect(
-			vault("master")
-				.forPlugin("seo", { legacy: { prefix: "v1", domain: "other:" } })
-				.decrypt(legacyValue("x", "master")),
-		).toBeNull();
 	});
 });
 

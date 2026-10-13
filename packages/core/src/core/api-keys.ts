@@ -95,14 +95,10 @@ export const apiKeyChoiceSchema = z.discriminatedUnion("use", [
 export type ApiKeyChoiceInput = z.infer<typeof apiKeyChoiceSchema>;
 
 /**
- * The name a new key gets when its place picks one: `base`, or `base 2`, `base 3`, ... when that name is taken (names are compared without regard to case).
+ * The names a new key can get when its place picks one, in order: `base`, then `base 2`, `base 3`, ... (the store takes the first one that is free;
+ * names are compared without regard to case).
  */
-export function freeKeyName(base: string, taken: Iterable<string>): string {
-	const used = new Set([...taken].map((name) => name.toLowerCase()));
+export function keyNameCandidate(base: string, attempt: number): string {
 	const clean = base.trim().slice(0, API_KEY_NAME_MAX - 4) || "Key";
-	if (!used.has(clean.toLowerCase())) return clean;
-	for (let n = 2; ; n++) {
-		const candidate = `${clean} ${n}`;
-		if (!used.has(candidate.toLowerCase())) return candidate;
-	}
+	return attempt <= 1 ? clean : `${clean} ${attempt}`;
 }

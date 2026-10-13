@@ -111,26 +111,26 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(await tablesIn(schema)).toEqual([]);
 	});
 
-	it("migrate applies the steps that are pending, and says it is up to date when none are", async () => {
+	it("migrate says it is up to date when no step is pending", async () => {
 		const schema = freshSchema("update");
 		await run(dbSetup, schema);
-		// An older version of the database: the last step has not run.
-		const last = (
-			await pool.query<{ name: string }>(
-				`SELECT name FROM "${schema}".cms_migrations WHERE name ~ '^[0-9]{4}_' ORDER BY name DESC LIMIT 1`,
-			)
-		).rows[0]?.name;
-		await pool.query(`DELETE FROM "${schema}".cms_migrations WHERE name = $1`, [last]);
-
-		const update = await run(dbMigrate, schema);
-		expect(update.ok).toBe(true);
-		expect(update.lines[0]).toBe("Bringing Monti's tables up to date with this version…");
-		expect(update.text).toMatch(/Applied 1 step, \d+ already up to date\./);
-		expect(update.text).not.toContain("monti db:setup");
 
 		const none = await run(dbMigrate, schema);
 		expect(none.ok).toBe(true);
+		expect(none.lines[0]).toBe("Bringing Monti's tables up to date with this version…");
 		expect(none.lines.at(-1)).toBe("Already up to date.");
+		expect(none.text).not.toContain("monti db:setup");
+	});
+
+	it("migrate refuses a database created by an older pre-release, and says to recreate it", async () => {
+		const schema = freshSchema("outdated");
+		await run(dbSetup, schema);
+		await pool.query(`INSERT INTO "${schema}".cms_migrations (name) VALUES ('0017_unparsed_bodies')`);
+
+		const refused = await run(dbMigrate, schema);
+
+		expect(refused.ok).toBe(false);
+		expect(refused.text).toContain("cannot be upgraded");
 	});
 
 	it("the command line returns 0 for both, and 1 for migrate before setup", async () => {

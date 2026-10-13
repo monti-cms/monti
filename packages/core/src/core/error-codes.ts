@@ -74,6 +74,7 @@ export const ERROR_STATUS = {
 	database_ssl: 503,
 	database_url_invalid: 503,
 	migrations_pending: 503,
+	database_outdated: 503,
 	database_url_missing: 503,
 	config_missing: 503,
 	schema_missing: 503,

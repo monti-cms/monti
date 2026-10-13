@@ -408,12 +408,6 @@ function validate(
 		throw new Error(`cms.config: site.home "${config.site.home}" must be a path ("/") or an http(s) URL`);
 	}
 
-	if (config.admin && "legacyBackupNames" in config.admin) {
-		throw new Error(
-			"cms.config: admin.legacyBackupNames was removed; delete it (the admin UI only uses the `cms_backup` recovery database)",
-		);
-	}
-
 	validateEditorConfig(config.editor);
 
 	for (const key of ["templates", "translations"] as const) {

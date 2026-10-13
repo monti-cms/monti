@@ -71,7 +71,6 @@ export {
 	type PluginRoute,
 } from "./plugin/define";
 export type {
-	ImportedItem,
 	PluginCollection,
 	PluginMigration,
 	PluginStorage,

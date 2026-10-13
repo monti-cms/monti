@@ -44,10 +44,10 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
 5. **An array that may be empty is `= any(${array}::type[])`, not `in (...)`** (an empty `in ()` is a syntax error; `= any('{}')` matches nothing, which is what the old
    code did).
 6. **JSONB is written as a string and read as a value.** Columns are `Jsonb<T>`: `JSON.stringify(...)` on write (as before), parsed by the driver on read. A shape that may
-   be a legacy one is `unknown` and its reader validates it (`readDoc`, `readTranslation`, `readReferenceOccurrences`).
+   be trusted is `unknown` and its reader validates it (`readDoc`, `readTranslation`, `readReferenceOccurrences`).
 7. **`bigint` reads as a string** (`Int8`, `count(*)`): wrap it in `Number(...)` where the old code did.
 8. **Errors are not wrapped.** Kysely hands back the `pg` error, so `isUniqueViolation` and the `mapError` of `withTransaction` keep working.
-9. **Migrations stay plain SQL, for good.** `store/schema.ts` (the steps, `prepare`, `runOnce`) and the `*-migration.ts` data steps describe the schema as it was when they
+9. **Migrations stay plain SQL, for good.** The files in `migrations/` (the steps, `prepare`, `runOnce`) describe the schema as it was when they
    ran; they are not edited, and typing them against today's `Database` would be wrong. A new migration adds its column to `db/database.ts` in the same change.
 10. **One module per commit, the contract suite as the safety net.** Nothing in `__test__/contract` changes in a migration PR.
 11. **`kysely` stays inside `adapters/postgres`** (the import-boundary test), like `pg`.
@@ -74,7 +74,7 @@ owner's transaction early. Code that is not in a transaction uses `ctx.db()`, wh
 | `store/publish.ts` (`titleExpr`) | - | done | 4 |
 | `store/lifecycle.ts` | - | done | 5 |
 | Cleanup: `titleSql` and `translatedTitleSql`, `Queryable`, `TEMPLATE_COLUMNS` and `MEDIA_COLUMNS` (text) are gone; `FolderRow`, `MediaRow`, `TemplateRow` and `AddressRow` are now derived from `Database` | - | done | 5 |
-| `store/schema.ts`, `*-migration.ts`, `content-hash-backfill.ts` (migrations) | - | stays plain SQL | - |
+| `migrations/` (the steps, the runner) | - | stays plain SQL | - |
 
 Order: the self-contained modules first (small, few joins, no shared helpers), then the reads (they only need `titleExpr`), then the write path that shares the row helpers
 (entries, publish and the helpers move together, because they run inside one transaction and share its client), then lifecycle and the cleanup.

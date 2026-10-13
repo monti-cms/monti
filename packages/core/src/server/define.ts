@@ -17,24 +17,10 @@ import type { Decision } from "./decision";
  * Connections are created on first use. Reading the config where environment variables are absent, such as during a build, does not fail.
  */
 
-/** A body (or body template) that could not be read as a document and was kept exactly as it was: it shows as source in the editor and cannot be published. */
-export interface UnreadableBody {
-	/** Where it is stored, for the per-row detail: `entry_bodies <entry id>/working` or `body_templates <id>`. */
-	readonly where: string;
-	readonly kind: "published" | "draft" | "template";
-	/** Why the reader gave up (the format's own words), when it said. */
-	readonly reason?: string;
-	readonly detail?: string;
-	/** Its text has `:::` blocks, which the directive syntax reads. */
-	readonly hasDirective: boolean;
-}
-
 /** What a migration did: steps run now, and steps that had run before. */
 export interface MigrationSummary {
 	readonly applied: number;
 	readonly upToDate: number;
-	/** Set by `reconvertBodies`: how many unreadable bodies were read as documents now, and how many still cannot be. */
-	readonly reconverted?: { readonly converted: number; readonly remaining: number };
 }
 
 /** What a database holds of Monti, for `monti db:setup` and `monti db:migrate`. */
@@ -62,12 +48,6 @@ export interface DatabaseAdapter {
 	migrate(options: {
 		readonly site: Site;
 		readonly formats?: FormatRegistry;
-		/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti db:migrate --reconvert-bodies`). */
-		readonly reconvertBodies?: boolean;
-		/** Called once for each body a step keeps as unreadable (or that is still unreadable after `reconvertBodies`). Without it the steps log one line per body. */
-		readonly onUnreadableBody?: (body: UnreadableBody) => void;
-		/** Called with the per-body detail lines of the steps (links left as they are, ...). Without it they are logged as warnings. */
-		readonly detail?: (line: string) => void;
 	}): Promise<MigrationSummary | undefined | void>;
 	/** What the database holds of Monti right now, without changing anything. Used by `monti db:setup` and `monti db:migrate`; an adapter that cannot say leaves it out. */
 	state?(): Promise<DatabaseState>;

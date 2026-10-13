@@ -130,9 +130,3 @@ export const cms = defineConfig({
 **404와 308.** Monti는 `proxy.ts`를 주지 않는다. 페이지가 다른 Next 페이지처럼 `notFound()`와 `permanentRedirect()`를 부른다. `cacheComponents`가 꺼져 있으면 진짜 `404`와 `308`이다. 켜져 있으면 Next가 이미 페이지의 셸을 `200`으로 보냈으므로, 없는 글은 `noindex`가 붙은 페이지가 되고 옛 주소는 브라우저 안의 리다이렉트가 된다. 검색엔진은 이를 soft 404로 볼 수 있다. 엄격한 상태 코드가 필요하면 [엄격한 상태 레시피](../../docs/recipes/strict-status.md)에 짧은 `proxy.ts`와 테스트된 함수가 있다.
 
 **로그인 설정 없는 프로덕션.** `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `MONTI_SECRET` 중 하나라도 없으면 관리자 레이아웃이 `monti doctor`를 가리키는 "아직 설정되지 않았습니다" 화면을 보여 주고 전체 문제를 한 번 로그에 남긴다. 프로덕션에서 메시지를 숨기는 Next의 오류 페이지 대신이다. 공개 페이지가 아니라 관리자이므로 상태는 Next가 보내는 대로다(Cache Components에서는 `200`). `next dev`에서는 개발 로그인을 쓰므로 아무것도 보이지 않는다.
-
-## 올리기
-
-NextAuth에서 `@monti-cms/auth`로 옮기는 것(`githubAuth`는 없어졌고, 모두 한 번 다시 로그인한다)은 `@monti-cms/core` README의 "`@monti-cms/auth`로 올리기"를 본다.
-
-`@monti-cms/core/next`·`@monti-cms/core/server`·`@monti-cms/admin/next`에서 바뀐 import는 `@monti-cms/core` README의 "`@monti-cms/nextjs`로 올리기"를 본다.

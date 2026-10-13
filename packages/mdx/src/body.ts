@@ -5,7 +5,6 @@ import {
 	type CmsMark,
 	type CmsNode,
 	CORE_NODE_TYPES,
-	copyBlockIds,
 	outOfRangeAnnotationNames,
 	STORED_DOCUMENT_VERSION,
 	type StoredDocument,
@@ -224,24 +223,4 @@ export const documentToMdx = (site: Site, doc: StoredDocument, syntax: readonly 
 	const only = doc.content.length === 1 ? doc.content[0] : undefined;
 	if (only?.type === UNPARSED_NODE && typeof only.attrs?.source === "string") return only.attrs.source;
 	return serialize(site, fromStoredDocument(site, doc), syntax);
-};
-
-/**
- * A body from a stored document, through the MDX it is written as: written with `syntax` and read back, so the result is the same as from that MDX.
- * The block ids of `doc` are kept (a block without one, or with a copy of another's, gets one as `bodyFromMdx` would). Used where the MDX text has to be
- * derived from a document (the legacy store migrations).
- */
-export const bodyFromDocument = (
-	site: Site,
-	doc: StoredDocument,
-	syntax: readonly SyntaxExtension[] = [],
-	options: BodyOptions = {},
-): Body => {
-	const body = bodyFromMdx(site, serialize(site, fromStoredDocument(site, doc), syntax), syntax);
-	if (!body.doc) return body;
-	// Read back as the same document: its blocks are the given ones, in the same order. Otherwise pair them up.
-	const same = sameDocument(doc, body.doc);
-	const given = same ? copyBlockIds(body.doc.content, doc.content) : withoutBlockIds(body.doc.content);
-	const content = assignBlockIds(given, same ? [options.previous?.content] : [doc.content, options.previous?.content]);
-	return { ...body, doc: withContent(body.doc, content) };
 };

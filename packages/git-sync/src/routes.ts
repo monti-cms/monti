@@ -68,7 +68,7 @@ export const settings = {
 /** The admin screen calls this after it assigned a key to the token slot: what waited for a token goes out now. */
 export const tokenChanged = {
 	POST: adminRoute(async ({ cms }) => {
-		if (await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT))
+		if (await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read())
 			await resumeAfterToken(syncContextFor(cms));
 		return ok({ ok: true });
 	}),

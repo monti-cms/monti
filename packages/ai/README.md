@@ -140,16 +140,7 @@ const unusedAddress = defineValidator({
 
 A connection does not hold a key. It refers to a key in the central API key store (Tools > API keys, `cms.apiKeys` in the core), which keeps the keys encrypted with the server `secret`. In the connection form you either use a saved key or enter a new one; a new key is saved into the store, named after the connection ("OpenRouter", then "OpenRouter 2" if that name is taken), and the connection keeps its id. The new key and the connection are saved in one transaction, so a failed save leaves no stray key. The value never goes back to the browser, only the key's name and its last four characters. Connections that use the same key share it, so replacing the value in the API keys tab changes every connection at once, and deleting a key that connections use asks first and lists them (they stop working until another key is chosen). If the address of a connection changes and the form says nothing about the key, the key is not carried over to the new address.
 
-- **Upgrade**: `monti db:migrate` moves the keys that earlier versions stored inside the connections (the per-plugin format `mk1:...` and the oldest `v1:...` one) into the key store: one key per distinct value, named after the first connection that used it, with connections that shared a value sharing the key. It can be run again; a value already in the store is reused. A key that can no longer be decrypted (the `secret` changed without `previousSecrets`) is skipped with a warning, and its connection needs a key chosen again.
 - **Changing the secret**: see "Plugin secrets" and "API key store" in the core README.
-
-## Data moved to the plugin storage
-
-The plugin used to create its own tables (`ai_action_overrides`, `ai_custom_actions`, `ai_settings`) in the site's database. It now keeps the same data in the plugin storage
-(`cms.storage("ai")`, collections `action-overrides`, `custom-actions` and `settings`). `monti migrate` copies the rows once, with their values, versions and dates, so an editor who
-had a screen open before the upgrade still saves against the right version, and the custom actions keep their order. The old tables are only read and stay in the database as a backup:
-drop them once you have checked the site. The oldest table (`ai_features`) is read in the same way where its edited values had not been moved yet.
-Replace every instance of the old version at the same time as you run `monti migrate`; an old instance keeps writing the old tables, and those writes are not copied again.
 
 ## Fake connection (development only)
 
@@ -230,7 +221,7 @@ block's source, are left as is.
 | Entry point | Contents |
 | --- | --- |
 | `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
-| `@monti-cms/ai/server` | Server side (API routes, data migration). Loaded by the core. It is an empty entry point in browser bundles |
+| `@monti-cms/ai/server` | Server side (API routes). Loaded by the core. It is an empty entry point in browser bundles |
 | `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton`, `aiClient` |
 
 ## Development

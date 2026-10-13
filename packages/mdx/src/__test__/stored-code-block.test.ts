@@ -7,7 +7,7 @@ import {
 } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
-import { bodyFromDocument, bodyFromMdx, fromStoredDocument } from "../body";
+import { bodyFromMdx, fromStoredDocument } from "../body";
 
 const FENCE = [
 	'```ts title="a.ts"',
@@ -56,7 +56,6 @@ describe("a stored code block", () => {
 		const again = bodyFromMdx(testSite, body.mdx, undefined, { previous: body.doc });
 		expect(again.mdx).toBe(body.mdx);
 		expect(again.doc).toEqual(body.doc);
-		expect(bodyFromDocument(testSite, body.doc as StoredDocument).mdx).toBe(body.mdx);
 	});
 
 	it("gives the working document the fence text, the parsed annotations and the meta keys again", () => {

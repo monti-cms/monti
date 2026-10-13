@@ -35,7 +35,7 @@ const request = (method: string, body?: unknown) =>
 
 const post = (body: unknown, cms: Cms = cmsWith()) => bareunRoute().POST(request("POST", body), { cms });
 const assignKey = (cms: Cms, value: string) =>
-	cms.apiKeys.assignSlot("text-check-bareun", "key", { use: "new", value }, { baseName: "Bareun" });
+	cms.apiKeys.slot("text-check-bareun", "key").assign({ use: "new", value });
 
 describe("Bareun check route", () => {
 	beforeEach(() => {
@@ -105,7 +105,7 @@ describe("Bareun check route", () => {
 		const cms = cmsWith();
 		await assignKey(cms, FAKE_KEY);
 		expect((await post({ segments }, cms)).status).toBe(200);
-		await cms.apiKeys.setSlot("text-check-bareun", "key", null);
+		await cms.apiKeys.slot("text-check-bareun", "key").set(null);
 
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);
@@ -122,7 +122,7 @@ describe("Bareun check route", () => {
 		const [key] = await cms.apiKeys.list();
 		expect(key).toBeDefined();
 		if (!key) return;
-		await cms.apiKeys.remove(key.id, { expectedVersion: key.version });
+		await cms.apiKeys.remove(key.id, { expectedVersion: key.version, force: true });
 
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);

@@ -41,25 +41,18 @@ export type Issue = {
 export type { Collection };
 /**
  * Kind of reference target. The collection of content (`entry`) is decided by the relation field definition.
- * Previously saved `category` and `tag` references are converted to `entry` on read (`normalizeReferenceKind`).
  */
 export type ReferenceKind = "entry" | "media";
-
-export const normalizeReferenceKind = (kind: string): ReferenceKind => (kind === "media" ? "media" : "entry");
 
 export type ReferenceOccurrence =
 	| { readonly type: "body"; readonly blockId?: string }
 	| { readonly type: "metadata"; readonly path: string; readonly ordinal?: number };
 
-/**
- * An occurrence as stored. Rows written before bodies were checked as documents hold `{type:"mdx", line, column, blockId?}` for a body
- * occurrence; it reads as `{type:"body", blockId?}` and is rewritten in the new form the next time the references are saved.
- * Returns `undefined` for a value that is not an occurrence.
- */
+/** An occurrence as stored. Returns `undefined` for a value that is not an occurrence. */
 export const readReferenceOccurrence = (value: unknown): ReferenceOccurrence | undefined => {
 	if (typeof value !== "object" || value === null) return undefined;
 	const record = value as Record<string, unknown>;
-	if (record.type === "body" || record.type === "mdx") {
+	if (record.type === "body") {
 		return typeof record.blockId === "string" ? { type: "body", blockId: record.blockId } : { type: "body" };
 	}
 	if (record.type === "metadata" && typeof record.path === "string") {
@@ -69,10 +62,6 @@ export const readReferenceOccurrence = (value: unknown): ReferenceOccurrence | u
 	}
 	return undefined;
 };
-
-/** Whether a stored occurrence list still has an occurrence in the old shape. */
-export const hasLegacyOccurrence = (value: unknown): boolean =>
-	Array.isArray(value) && value.some((item) => (item as { type?: unknown } | null)?.type === "mdx");
 
 /** The occurrences of a stored reference row, in the current shape. */
 export const readReferenceOccurrences = (value: unknown): ReferenceOccurrence[] =>

@@ -13,7 +13,7 @@ export function bareunRoute() {
 	const POST = adminRoute(async ({ request, cms }) => {
 		const options = readBareunOptions(cms.site);
 		// The key is read from the key slot on every call. It is never sent to the browser.
-		const apiKey = (await cms.apiKeys.readSlot(BAREUN_PLUGIN_NAME, BAREUN_KEY_SLOT))?.trim();
+		const apiKey = (await cms.apiKeys.slot(BAREUN_PLUGIN_NAME, BAREUN_KEY_SLOT).read())?.trim();
 		if (!apiKey) {
 			const t = cms.site.createTranslator(bareunMessages);
 			throw new CmsError(t("error.keyMissing"), "service_unavailable");

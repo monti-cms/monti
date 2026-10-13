@@ -5,7 +5,6 @@ import { testSite } from "../../../../test/site";
 import { contentOf, docOf } from "../../../../test/stored-content";
 import type { ContentStore } from "../../../core/store";
 import { createContentStore, migrateContentStore } from "../content-store";
-import { templateMdx } from "./template-rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /** The site config's initial body templates (`seed.templates`). For a config without any, the seeding tests are skipped. */
@@ -47,7 +46,6 @@ describe("Body templates: seeding and migration in Postgres", () => {
 				// The core test config writes its seeds as documents, so no format is needed to read them.
 				expect(seed.doc).toBeDefined();
 				expect(contentOf(found.doc)).toEqual(contentOf(seed.doc));
-				expect(await templateMdx(pool, schemaName, found.id)).toBeNull();
 			}
 			const [first, second] = SEEDED.map((seed) => templates.find((t) => t.name === seed.name));
 			if (!first || !second) throw new Error("Seed templates not found.");

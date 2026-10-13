@@ -40,7 +40,7 @@ describe("defineSite", () => {
 		expect(() => defineCollection(workflowOf("publish", { kind: "item" }))).toThrow(/workflow.*removed/);
 	});
 
-	it('fails with a clear message for the removed `required: "publish"` and `admin.legacyBackupNames`', () => {
+	it('fails with a clear message for the removed `required: "publish"`', () => {
 		const old = defineCollection({
 			label: "Old",
 			kind: "document",
@@ -49,14 +49,6 @@ describe("defineSite", () => {
 		expect(() => defineSite({ collections: { old }, locales, defaultLocale: "en" })).toThrow(
 			/old\.title has required: "publish".*required: true/,
 		);
-		expect(() =>
-			defineSite({
-				collections: { topic },
-				locales,
-				defaultLocale: "en",
-				admin: { legacyBackupNames: ["old_backup"] } as never,
-			}),
-		).toThrow(/admin\.legacyBackupNames was removed/);
 	});
 
 	it("rejects collection paths that can make the same URL", () => {

@@ -27,14 +27,13 @@ export * from "./http/v1/handler";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
 export type { LoadedServerPlugin } from "./plugin/server";
 export type {
-	ImportedItem,
 	PluginCollection,
 	PluginMigration,
 	PluginStorage,
 	StorageItem,
 	StorageWriteOptions,
 } from "./plugin/storage";
-export type { LegacySecretFormat, PluginSecrets, PluginSecretsOptions } from "./secrets";
+export type { PluginSecrets } from "./secrets";
 export type { WriteResult } from "./services/content-service";
 export type {
 	AfterCommitHook,

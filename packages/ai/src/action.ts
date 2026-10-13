@@ -19,7 +19,6 @@ import {
 	isAddableCheck,
 	MAX_PROMPT_LENGTH,
 	MAX_REQUEST_LENGTH,
-	migrateCheck,
 } from "./definition";
 
 /**
@@ -379,7 +378,7 @@ export const aiActionOverrideSchemaOf = (t: CoreText) =>
 			send: z.array(z.string().max(40)).max(20),
 			threshold: z.number().min(0.01).max(0.99),
 			maxCount: z.number().int().min(1).max(20),
-			checks: z.array(z.preprocess(migrateCheck, aiCheckSchemaOf(t))).max(10),
+			checks: z.array(aiCheckSchemaOf(t)).max(10),
 		})
 		.partial();
 

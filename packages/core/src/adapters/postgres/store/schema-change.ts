@@ -23,7 +23,6 @@ interface BodyScanRow {
 	state: "working" | "published";
 	metadata: EntryMetadata;
 	doc: unknown;
-	mdx: string | null;
 	schema_version: number;
 }
 
@@ -35,7 +34,7 @@ const toScanned = (row: BodyScanRow): ScannedBody => ({
 	status: row.status,
 	state: row.state,
 	metadata: row.metadata,
-	doc: readBodyDoc(row.doc, row.mdx),
+	doc: readBodyDoc(row.doc),
 	schemaVersion: row.schema_version,
 });
 
@@ -65,7 +64,6 @@ async function readBatch(
 			"b.state",
 			"b.metadata",
 			"b.doc",
-			"b.mdx",
 			"b.schema_version",
 		])
 		.$if(collections !== undefined, (qb) =>

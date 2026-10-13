@@ -25,7 +25,7 @@ export interface CmsPlugin<
 	/**
 	 * The API keys this plugin needs, one slot each (`{ id: "key", label }`). Tools > API keys lists every slot of the installed plugins: assigned (the key's
 	 * "in use" line names it) or empty (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with
-	 * `cms.apiKeys.readSlot(<plugin name>, <slot id>)`. Read by both sides.
+	 * `cms.apiKeys.slot(<plugin name>, <slot id>).read()`. Read by both sides.
 	 */
 	readonly keySlots?: readonly PluginKeySlot[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */

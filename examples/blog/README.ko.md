@@ -92,7 +92,6 @@ function SiteCalloutView() {
 
 스키마 파일과 설정은 운영자 블로그의 컬렉션·필드 종류·레이아웃·SEO 필드·플러그인·시드 템플릿을 그대로 두고 라벨만 영어로 썼다(스키마 라벨은 사이트 콘텐츠이고, 이 저장소에는 라벨용 사전이 없다). 스키마 파일은 블로그의 TypeScript 설정에서 `monti schema:extract --locale en`으로 만들었다(SEO 필드는 파일 안의 평범한 필드가 되었고, 플러그인과 `site.url`은 `monti.config.ts`에 남았다). 뺀 것:
 
-- 그 블로그만의 플러그인 `legacyListColumns()`와 `admin.legacyBackupNames`: 그 사이트의 예전 관리자 저장 설정과 예전 브라우저 복구본을 옮기는 용도다.
 - 언어 목록과 이름은 블로그의 `i18n` 모듈에서 오지 않고 스키마 파일에 직접 적었고, `site.url`은 블로그처럼 `SITE_URL`에서 읽는다.
 - AI 문체 가이드는 이 저장소가 설정 문구를 영어로 두므로 영어로 썼다.
 

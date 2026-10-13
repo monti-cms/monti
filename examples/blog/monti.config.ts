@@ -99,5 +99,4 @@ export const cms = defineConfig({
 	// storage: ...,
 
 	// The one secret, MONTI_SECRET, signs the login session and encrypts the stored values (AI service keys, git-sync tokens).
-	// Coming from the earlier setup, either set MONTI_SECRET to the old CMS_SECRET, or keep the old one readable: previousSecrets: [process.env.CMS_SECRET]
 });

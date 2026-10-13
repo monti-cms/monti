@@ -67,16 +67,14 @@ describe("mdx()", () => {
 			return provided as import("@monti-cms/core/format").CmsFormat;
 		};
 
-		it("resolves to a format named mdx that carries the old-body reader", async () => {
+		it("resolves to a format named mdx", async () => {
 			const format = await formatOf();
 			expect(format.name).toBe("mdx");
 			expect(format.extension).toBe("mdx");
-			expect(format.legacyBodies).toBeDefined();
-			expect(typeof format.legacyBodies?.(testSite).read).toBe("function");
 			expect(typeof format.import).toBe("function");
 		});
 
-		it("writes and reads with the syntax it was given, for the format and for the old bodies", async () => {
+		it("writes and reads with the syntax it was given", async () => {
 			const doc = {
 				...docOfMdx(testSite, "x"),
 				content: [{ type: "paragraph", content: [{ type: "text", text: "word", marks: [{ type: "underline" }] }] }],
@@ -96,8 +94,6 @@ describe("mdx()", () => {
 			const extended = await formatOf({ syntax: [braces] });
 			expect(await extended.export(doc, exportContext)).toContain("{u word}");
 			expect(await plain.export(doc, exportContext)).not.toContain("{u word}");
-			expect(extended.legacyBodies?.(testSite).write(doc).text).toContain("{u word}");
-			expect(plain.legacyBodies?.(testSite).write(doc).text).not.toContain("{u word}");
 		});
 	});
 });

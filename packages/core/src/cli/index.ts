@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import { type AdminPrompts, adminResetPassword } from "./admin-command";
 import { dbMigrate, dbSetup } from "./db";
-import { DOCTOR_HELP, runDoctorCommand } from "./doctor";
+import { runDoctorCommand } from "./doctor";
 import { eventsRetry } from "./events";
 import { HELP, helpFor } from "./help";
 import { runInitCommand } from "./init-command";
@@ -17,7 +17,7 @@ import { extractSchema, formatExtractReport } from "./schema-extract";
  * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and prints what is left. See `monti init --help`.
  * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
  * - `monti db:setup [--env-file .env.local] [--no-env-file] [--config <file>]`: first-time setup: creates Monti's tables in an empty database (changes nothing when they are already there).
- * - `monti db:migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: after updating Monti, brings the tables up to date. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
+ * - `monti db:migrate [--env-file .env.local] [--no-env-file] [--config <file>]`: after updating Monti, brings the tables up to date. A database created by an older pre-release is refused: recreate it with `monti db:setup`.
  * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
  * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
  * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
@@ -156,16 +156,12 @@ export async function runCli(
 					"env-file": { type: "string", multiple: true },
 					"no-env-file": { type: "boolean" },
 					config: { type: "string" },
-					verbose: { type: "boolean" },
-					"reconvert-bodies": { type: "boolean" },
 				},
 			});
 			const ok = await dbMigrate({
 				cwd: io.cwd,
 				envFiles: values["no-env-file"] ? [] : values["env-file"],
 				config: values.config,
-				verbose: values.verbose,
-				reconvertBodies: values["reconvert-bodies"],
 				log: io.log,
 			});
 			return ok ? 0 : 1;

@@ -109,21 +109,6 @@ export type AiCheckInput = z.input<typeof aiCheckSchema>;
 export const checkKey = (check: Pick<AiCheck, "kind"> & { name?: string }) =>
 	check.kind === "code" ? `code:${check.name}` : check.kind;
 
-/** Fixed checks that moved to code checks (moved when reading stored edited values). */
-const MOVED_TO_CODE: Readonly<Record<string, string>> = {
-	unique: "unique-slug",
-	regexRuns: "regex-runs",
-	structure: "same-structure",
-};
-
-/** Converts one stored check to the current shape. Kinds that moved to code checks become the code check of the same name. */
-export function migrateCheck(value: unknown): unknown {
-	if (!value || typeof value !== "object" || !("kind" in value)) return value;
-	const { kind, enabled } = value as { kind?: unknown; enabled?: unknown };
-	const name = typeof kind === "string" ? MOVED_TO_CODE[kind] : undefined;
-	return name ? { kind: "code", name, ...(typeof enabled === "boolean" ? { enabled } : {}) } : value;
-}
-
 /** Checks any action can add in the admin UI, with initial values. The rest are set by the action definition. */
 export const ADDABLE_CHECKS = {
 	pattern: { kind: "pattern", enabled: true, pattern: ".+" },
@@ -177,26 +162,4 @@ export interface AiRunContext {
 	/** Site path (`/images/...`) of an image outside the media library. The server reads it from its own site. */
 	imageSrc?: string;
 	filename?: string;
-}
-
-/**
- * Converts values saved before the check list existed (one `check` + `maxLength`) into a check list.
- * Used when moving legacy `ai_features` rows into edited values.
- */
-export function migrateLegacyCheck(value: unknown): unknown {
-	if (!value || typeof value !== "object" || "checks" in value || !("check" in value)) return value;
-	// The format the legacy `slug` and `filename` checks used (the value as it was then).
-	const LEGACY_KEBAB = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
-	const { check, maxLength, ...rest } = value as { check?: unknown; maxLength?: unknown };
-	const legacy: Record<string, AiCheckInput[]> = {
-		slug: [
-			{ kind: "pattern", pattern: LEGACY_KEBAB },
-			{ kind: "code", name: "unique-slug" },
-		],
-		tags: [{ kind: "exists" }],
-		regex: [{ kind: "code", name: "regex-runs" }],
-		filename: [{ kind: "pattern", pattern: LEGACY_KEBAB }],
-		maxLength: typeof maxLength === "number" ? [{ kind: "maxLength", max: maxLength }] : [],
-	};
-	return { ...rest, checks: typeof check === "string" ? (legacy[check] ?? []) : [] };
 }

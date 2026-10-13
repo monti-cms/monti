@@ -5,7 +5,6 @@ import type { ApiKeyList } from "../../core/api-keys";
 import { PUT as assign } from "../../http/v1/api-keys/slots/route";
 import { defineMessages } from "../../i18n/define";
 import { definePlugin } from "../../plugin/define";
-import { migrateKeyUses } from "../api-keys";
 
 const VALUE = "sk-ant-api03-abcdefghij3f9a";
 const SECRET = "a-long-enough-test-secret";
@@ -43,27 +42,27 @@ describe("key slots", () => {
 		expect(await cms.apiKeys.slots()).toEqual([
 			{ plugin: "speller", slot: "key", label: "Spell check", service: "Speller", key: null },
 		]);
-		expect(await cms.apiKeys.readSlot("speller", "key")).toBeNull();
+		expect(await cms.apiKeys.slot("speller", "key").read()).toBeNull();
 	});
 
 	it("assigns a saved key, shows the slot among the key's uses, and the plugin reads the value through it", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
-		await cms.apiKeys.setSlot("speller", "key", key.id);
+		await cms.apiKeys.slot("speller", "key").set(key.id);
 		const [slot] = await cms.apiKeys.slots();
 		expect(slot?.key).toMatchObject({ id: key.id, name: "Bareun", tail: "3f9a" });
 		const view = await cms.apiKeys.get(key.id);
 		expect(view?.uses).toEqual([{ plugin: "speller", ref: "key", label: "Spell check" }]);
 		expect(view?.slots).toHaveLength(1);
-		expect(await cms.apiKeys.readSlot("speller", "key")).toBe(VALUE);
+		expect(await cms.apiKeys.slot("speller", "key").read()).toBe(VALUE);
 	});
 
 	it("saves a typed key together with the assignment, named after the slot", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
-		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: VALUE }, { baseName: "Spell check" });
-		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: `${VALUE}2` }, { baseName: "Spell check" });
-		expect((await cms.apiKeys.list()).map((key) => key.name)).toEqual(["Spell check", "Spell check 2"]);
-		expect(await cms.apiKeys.readSlot("speller", "key")).toBe(`${VALUE}2`);
+		await cms.apiKeys.slot("speller", "key").assign({ use: "new", value: VALUE });
+		await cms.apiKeys.slot("speller", "key").assign({ use: "new", value: `${VALUE}2` });
+		expect((await cms.apiKeys.list()).map((key) => key.name)).toEqual(["Speller", "Speller 2"]);
+		expect(await cms.apiKeys.slot("speller", "key").read()).toBe(`${VALUE}2`);
 	});
 
 	it("names a key entered for a slot after the service, not the localized label, so every language and the migrations agree", async () => {
@@ -77,18 +76,18 @@ describe("key slots", () => {
 
 	it("keeps no orphan key when the assignment cannot be written", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
-		await expect(
-			cms.apiKeys.assignSlot("speller", "nope", { use: "new", value: VALUE }, { baseName: "Spell check" }),
-		).rejects.toMatchObject({ code: "not_found" });
+		await expect(cms.apiKeys.slot("speller", "nope").assign({ use: "new", value: VALUE })).rejects.toMatchObject({
+			code: "not_found",
+		});
 		expect(await cms.apiKeys.list()).toEqual([]);
 	});
 
 	it("clears a slot, which leaves the key itself", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
-		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: VALUE }, { baseName: "Spell check" });
-		await cms.apiKeys.assignSlot("speller", "key", { use: "none" }, { baseName: "Spell check" });
+		await cms.apiKeys.slot("speller", "key").assign({ use: "new", value: VALUE });
+		await cms.apiKeys.slot("speller", "key").assign({ use: "none" });
 		expect((await cms.apiKeys.slots())[0]?.key).toBeNull();
-		expect(await cms.apiKeys.readSlot("speller", "key")).toBeNull();
+		expect(await cms.apiKeys.slot("speller", "key").read()).toBeNull();
 		const [key] = await cms.apiKeys.list();
 		expect(key?.uses).toEqual([]);
 	});
@@ -96,8 +95,11 @@ describe("key slots", () => {
 	it("deleting the assigned key empties the slot", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
 		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
-		await cms.apiKeys.setSlot("speller", "key", key.id);
-		await cms.apiKeys.remove(key.id, { expectedVersion: key.version });
+		await cms.apiKeys.slot("speller", "key").set(key.id);
+		await expect(cms.apiKeys.remove(key.id, { expectedVersion: key.version })).rejects.toMatchObject({
+			code: "key_in_use",
+		});
+		await cms.apiKeys.remove(key.id, { expectedVersion: key.version, force: true });
 		expect((await cms.apiKeys.slots())[0]?.key).toBeNull();
 	});
 
@@ -105,7 +107,7 @@ describe("key slots", () => {
 		const language = { current: "en" };
 		const cms = cmsWith([speller(language)]);
 		const key = await cms.apiKeys.add({ name: "Bareun", value: VALUE });
-		await cms.apiKeys.setSlot("speller", "key", key.id);
+		await cms.apiKeys.slot("speller", "key").set(key.id);
 		expect((await cms.apiKeys.slots())[0]?.label).toBe("Spell check");
 		language.current = "ko";
 		expect((await cms.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
@@ -134,12 +136,12 @@ describe("key slots", () => {
 		const storage = fakeCms().storage;
 		const installed = cmsWith([speller({ current: "en" })], { storage });
 		const key = await installed.apiKeys.add({ name: "Bareun", value: VALUE });
-		await installed.apiKeys.setSlot("speller", "key", key.id);
+		await installed.apiKeys.slot("speller", "key").set(key.id);
 
 		const without = cmsWith([], { storage });
 		expect(await without.apiKeys.slots()).toEqual([]);
 		expect((await without.apiKeys.get(key.id))?.uses).toEqual([]);
-		await expect(without.apiKeys.setSlot("speller", "key", key.id)).rejects.toMatchObject({ code: "not_found" });
+		await expect(without.apiKeys.slot("speller", "key").set(key.id)).rejects.toMatchObject({ code: "not_found" });
 	});
 
 	it("lists slots and assigns through the routes", async () => {
@@ -157,7 +159,7 @@ describe("key slots", () => {
 });
 
 describe("uses are stored as references", () => {
-	it("resolves each label when the keys are read, from the plugin, and drops an item that is gone", async () => {
+	it("resolves each label when the keys are read, from the plugin, and does not show an item that is gone", async () => {
 		const names = new Map([["connection:a", "Claude"]]);
 		const ai = definePlugin({
 			name: "ai",
@@ -175,23 +177,19 @@ describe("uses are stored as references", () => {
 			{ ref: "connection:b", keyId: key.id },
 		]);
 		// The stored row has no text, and a rename shows at the next read.
-		expect(JSON.stringify(await cms.storage("core-keys").collection("uses").list())).not.toContain("AI:");
+		expect(JSON.stringify(await cms.storage("core-keys").collection("assignments").list())).not.toContain("AI:");
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label)).toEqual(["AI: Claude"]);
 		names.set("connection:a", "Claude renamed");
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label)).toEqual(["AI: Claude renamed"]);
-		// The use of the item that does not exist was forgotten, not only hidden.
-		expect((await cms.storage("core-keys").collection("uses").list()).map((item) => item.key)).toEqual([
+		// Reading changes nothing: the use of the item that does not exist is dropped when the plugin reports its items again.
+		expect((await cms.storage("core-keys").collection("assignments").list()).map((item) => item.key)).toEqual([
+			"ai:connection:a",
+			"ai:connection:b",
+		]);
+		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
+		expect((await cms.storage("core-keys").collection("assignments").list()).map((item) => item.key)).toEqual([
 			"ai:connection:a",
 		]);
-	});
-
-	it("takes the text off uses written before only references were stored", async () => {
-		const cms = fakeCms({ server: { secret: SECRET } });
-		const uses = cms.storage("core-keys").collection<Record<string, unknown>>("uses");
-		await uses.set("ai:connection:a", { keyId: "k1", label: "AI connection Claude" }, { expectedVersion: 0 });
-		await migrateKeyUses(cms.storage("core-keys"));
-		expect((await uses.get("ai:connection:a"))?.value).toEqual({ keyId: "k1" });
-		await migrateKeyUses(cms.storage("core-keys"));
 	});
 });
 

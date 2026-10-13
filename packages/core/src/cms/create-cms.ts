@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { type AuthGateway, CmsAuthGateway } from "../adapters/auth/auth-gateway";
 import { explainTrustHost, resolveTrustHost } from "../adapters/auth/trust-host";
-import { type ApiKeys, type ApiKeysOptions, createApiKeys, migrateKeyUses } from "../api-keys/api-keys";
+import { type ApiKeys, type ApiKeysOptions, createApiKeys } from "../api-keys/api-keys";
 import { problemText } from "../core/problem";
 import type { ImageWarningResolvers } from "../core/snapshot";
 import { CmsError, type ContentStore, type Entry, withEventDispatch } from "../core/store";
@@ -16,16 +16,9 @@ import type { PluginStorage } from "../plugin/storage";
 import { type CmsRead, createRead } from "../read";
 import { findSchemaFile } from "../schema-file/locate";
 import { schemaSourceOf } from "../schema-file/source";
-import { createSecretsVault, type PluginSecrets, type PluginSecretsOptions } from "../secrets";
+import { createSecretsVault, type PluginSecrets } from "../secrets";
 import type { Decision } from "../server/decision";
-import type {
-	CmsAuth,
-	CmsServerConfig,
-	DatabaseAdapter,
-	DatabaseState,
-	RequestHost,
-	UnreadableBody,
-} from "../server/define";
+import type { CmsAuth, CmsServerConfig, DatabaseAdapter, DatabaseState, RequestHost } from "../server/define";
 import { createBulkService } from "../services/bulk-service";
 import { createContentService } from "../services/content-service";
 import { type CmsEvents, createEventDispatcher } from "../services/events";
@@ -33,7 +26,6 @@ import type { HookSource } from "../services/hooks";
 import { mediaUrlResolver } from "../services/media-urls";
 import { type AnyCmsConfig, createSite, type Site } from "../site";
 import { coreDecisions } from "./decisions";
-import { describeUnreadable, mergeUnreadable, unreadableLine } from "./migration-report";
 
 /** The content service of any site: input is checked at run time only. */
 type LooseContentService = ReturnType<typeof createContentService<Entry>>;
@@ -112,15 +104,6 @@ export interface CmsTransaction {
 /** What `cms.migrate()` takes. */
 export interface MigrateRunOptions {
 	readonly log?: (message: string) => void;
-	/** Also list every body that could not be read, and the other per-body detail of the steps (default: a short summary). */
-	readonly verbose?: boolean;
-	/** Read the bodies that were kept as unreadable again, with the formats and syntax extensions of the config as they are now (`monti db:migrate --reconvert-bodies`). */
-	readonly reconvertBodies?: boolean;
-	/**
-	 * Saves the full per-body detail (the lines `verbose` prints, and the warnings of the steps) when there is any, and returns where it went. The summary ends
-	 * with that place.
-	 */
-	readonly saveDetail?: (lines: readonly string[]) => string | undefined;
 }
 
 /**
@@ -161,7 +144,7 @@ export interface Cms<
 	 * name. The master secret itself is never handed out. A plugin asks for its own name (`cms.secrets("ai")`); another plugin's values do not decrypt
 	 * with it. `options.legacy` lets the plugin keep reading values it stored in an older format.
 	 */
-	secrets(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
+	secrets(plugin: string): PluginSecrets;
 	/**
 	 * The central API key store: named keys kept encrypted, with the places that use each. A plugin keeps a key's id (not its value) and reads the value with
 	 * `cms.apiKeys.read(id)` when it calls a service; see {@link ApiKeys}. The admin's Tools → API keys page manages the same keys.
@@ -357,17 +340,17 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			}
 			return transaction.call(connections.database, work) as Promise<T>;
 		};
-		const keysOn = (storage: () => PluginStorage, atomic?: ApiKeysOptions["atomic"]): ApiKeys =>
+		const keysOn = (storage: () => PluginStorage, transact?: ApiKeysOptions["transact"]): ApiKeys =>
 			createApiKeys({
 				storage,
 				secrets: vault.forPlugin(API_KEYS_SCOPE),
 				labels: keyLabels,
 				declared: declaredSlots,
-				...(atomic ? { atomic } : {}),
+				...(transact ? { transact } : {}),
 			});
 		const apiKeys: ApiKeys = keysOn(
 			() => connections.database.pluginStorage(API_KEYS_SCOPE),
-			(work) => inTransaction((tx) => work(keysOn(() => tx.pluginStorage(API_KEYS_SCOPE)))),
+			(work) => inTransaction((tx) => work(() => tx.pluginStorage(API_KEYS_SCOPE))),
 		);
 		let store: ContentStore | undefined;
 		let service: LooseContentService | undefined;
@@ -418,41 +401,15 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		};
 		const authGateway = new CmsAuthGateway(getAuth);
 
-		/** Runs the steps of the core tables and the plugins, and reports what the steps found. The callers print the first and last line. */
+		/** Runs the steps of the core tables and the plugins. The callers print the first and last line. */
 		const runMigration = async (
-			{ log = console.log, verbose = false, reconvertBodies = false, saveDetail }: MigrateRunOptions,
+			{ log = console.log }: MigrateRunOptions,
 			/** Where the line per plugin goes. First-time setup leaves it out: the plugin tables are in the count of created tables. */
 			pluginLog: (message: string) => void = log,
 		) => {
-			// The steps report each body they keep as unreadable; one body can be reported by several steps.
-			const unreadable = new Map<string, UnreadableBody>();
-			const detailLines: string[] = [];
-			const summary = await connections.database.migrate({
-				site,
-				formats: await plugins.formats(),
-				reconvertBodies,
-				onUnreadableBody: (body) => unreadable.set(body.where, mergeUnreadable(unreadable, body)),
-				detail: (line) => {
-					detailLines.push(line);
-					if (verbose) log(line);
-				},
-			});
-			await migrateKeyUses(connections.database.pluginStorage(API_KEYS_SCOPE));
+			const summary = await connections.database.migrate({ site, formats: await plugins.formats() });
 			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), pluginLog);
-			if (summary?.reconverted) {
-				const { converted, remaining } = summary.reconverted;
-				log(
-					converted === 0 && remaining === 0
-						? "No body was kept as unreadable, so there was nothing to read again."
-						: `Read the unreadable bodies again: ${converted} can be read now${remaining > 0 ? `, ${remaining} still cannot` : ""}.`,
-				);
-			}
-			const found = [...unreadable.values()];
-			if (verbose) for (const body of found) log(unreadableLine(body));
-			for (const line of describeUnreadable(found, { again: reconvertBodies })) log(line);
-			const everything = [...detailLines, ...found.map(unreadableLine)];
-			const saved = everything.length > 0 ? saveDetail?.(everything) : undefined;
-			return { summary, saved };
+			return { summary };
 		};
 
 		/** What a publish looks up for its image warnings. The stored file is checked once more when a media store is configured. */
@@ -499,7 +456,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 			isMediaConfigured: Boolean(server.media),
 			mediaStore: getMediaStore,
 			storage: (plugin) => connections.database.pluginStorage(plugin),
-			secrets: (plugin, secretsOptions) => vault.forPlugin(plugin, secretsOptions),
+			secrets: (plugin) => vault.forPlugin(plugin),
 			apiKeys,
 			transaction: (work) =>
 				inTransaction((tx) =>
@@ -537,7 +494,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				const target = connections.database.describeTarget?.();
 				log("Bringing Monti's tables up to date with this version\u2026");
 				log(`Database: ${target ?? connections.database.name}`);
-				const { summary, saved } = await runMigration(options);
+				const { summary } = await runMigration(options);
 				const applied = summary?.applied ?? 0;
 				log(
 					summary
@@ -546,7 +503,6 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 							: `Applied ${applied} step${applied === 1 ? "" : "s"}, ${summary.upToDate} already up to date.`
 						: "Done.",
 				);
-				if (saved) log(`Full details: ${saved}`);
 			},
 			databaseState: async () => connections.database.state?.(),
 			setup: async ({ log = console.log } = {}) => {

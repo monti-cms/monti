@@ -176,7 +176,9 @@ const migrations: CoreCheck = {
 		if (!IDENTIFIER.test(name)) return skip("not checked: the schema name is not valid (see above)");
 		const result = await reach(state, value);
 		if (!result.ok) return skip("not checked: the database cannot be reached (see above)");
-		const { CONTENT_STORE_MIGRATIONS } = await import("../../adapters/postgres/store/schema");
+		const { CONTENT_STORE_MIGRATIONS, databaseOutdatedError, isOutdatedMigrationName } = await import(
+			"../../adapters/postgres/migrations"
+		);
 		const applied = await withPool(value, async (pool) => {
 			try {
 				const rows = await pool.query<{ name: string }>(`SELECT name FROM "${name}".cms_migrations`);
@@ -188,6 +190,10 @@ const migrations: CoreCheck = {
 				throw error;
 			}
 		});
+		if ([...applied].some(isOutdatedMigrationName)) {
+			const { what, fix } = databaseOutdatedError().problem;
+			return fail(what, { where: `schema "${name}" (table cms_migrations)`, fix });
+		}
 		const pending = CONTENT_STORE_MIGRATIONS.filter((step) => !applied.has(step));
 		const total = CONTENT_STORE_MIGRATIONS.length;
 		if (pending.length > 0) {
@@ -202,17 +208,6 @@ const migrations: CoreCheck = {
 					fix: none
 						? "run `monti db:setup` once; on a deployed site run it as a step of the first deploy, before the new version starts"
 						: "run `monti db:migrate`; on a deployed site run it as a step of the deploy, before the new version starts",
-				},
-			);
-		}
-		const known = new Set(CONTENT_STORE_MIGRATIONS);
-		const ahead = [...applied].filter((step) => /^\d{4}_/.test(step) && !known.has(step));
-		if (ahead.length > 0) {
-			return warn(
-				`the database has ${ahead.length} migration${ahead.length === 1 ? "" : "s"} this version of Monti does not know (${ahead.slice(0, 3).join(", ")})`,
-				{
-					where: `schema "${name}" (table cms_migrations)`,
-					fix: "something newer has migrated this database: update @monti-cms/core to the same version, or point DATABASE_URL (or DATABASE_SCHEMA) at a database of this version",
 				},
 			);
 		}

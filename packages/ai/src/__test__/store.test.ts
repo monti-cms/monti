@@ -22,7 +22,6 @@ import {
 	resetAction,
 	updateAction,
 } from "../actions";
-import { migrateAi } from "../migrate";
 import { aiRegistryOf } from "../registry";
 import { type AiStore, createAiStore } from "../store";
 
@@ -37,7 +36,6 @@ describe("AI action edited-value store", () => {
 	/** Creates the core tables, then the AI plugin tables (same order as `monti db:migrate`). */
 	const migrate = async () => {
 		await migrateContentStore(pool, { schema: schemaName, site: testSite });
-		await migrateAi(pluginStorageFor(pool, schemaName, "ai"), cms);
 	};
 
 	beforeAll(async () => {
@@ -93,40 +91,6 @@ describe("AI action edited-value store", () => {
 		expect(reset.prompt).toBe(AI_ACTIONS.slug?.prompt);
 		expect(reset.enabled).toBe(false);
 		expect((await getAction(testSite, store, "slug")).prompt).toBe(AI_ACTIONS.slug?.prompt);
-	});
-
-	it("moves edited values of the legacy action table once, and does not delete the legacy table", async () => {
-		await pool.query(`
-			CREATE TABLE "${schemaName}".ai_features (
-				id UUID PRIMARY KEY, builtin TEXT UNIQUE, spec JSONB NOT NULL,
-				version INTEGER NOT NULL DEFAULT 1,
-				created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-			)`);
-		await pool.query(
-			`INSERT INTO "${schemaName}".ai_features (id, builtin, spec) VALUES
-			 (gen_random_uuid(), 'codeFold', $1), (gen_random_uuid(), 'mediaAlt', $2), (gen_random_uuid(), NULL, '{}')`,
-			[
-				JSON.stringify({ prompt: "운영자 지시문", enabled: false, modelName: "m-1", inputs: ["code", "title"] }),
-				JSON.stringify({ prompt: "지운 기능" }),
-			],
-		);
-		await pool.query(`DELETE FROM "${schemaName}".cms_migrations WHERE name LIKE 'plugin:ai:%'`);
-		await migrate();
-		expect(await getAction(testSite, store, "codeFold")).toMatchObject({
-			prompt: "운영자 지시문",
-			enabled: false,
-			modelName: "m-1",
-			send: ["code"],
-		});
-		const keys = await pluginStorageFor(pool, schemaName, "ai").collection("action-overrides").list();
-		expect(keys.map((item) => item.key)).not.toContain("mediaAlt");
-
-		// After moving once, later changes to the legacy table are not moved again.
-		await pool.query(`UPDATE "${schemaName}".ai_features SET spec = '{"prompt": "다시"}' WHERE builtin = 'codeFold'`);
-		await migrate();
-		expect((await getAction(testSite, store, "codeFold")).prompt).toBe("운영자 지시문");
-		const legacy = await pool.query(`SELECT count(*)::int AS n FROM "${schemaName}".ai_features`);
-		expect(legacy.rows[0]?.n).toBe(3);
 	});
 
 	it("the core content lookup used by code checks finds slugs used by other posts in the same collection and language", async () => {
