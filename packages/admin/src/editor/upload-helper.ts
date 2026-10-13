@@ -1,5 +1,5 @@
 import { cmsApiUrl, type Site } from "@monti-cms/core/client";
-import { cmsApiErrorMessage } from "../screens/api-error-message";
+import { cmsFetch } from "../screens/admin-api";
 import { screensMessages } from "../screens/messages";
 import { isSandboxSite } from "../screens/shared/preview-sandbox";
 import { editorMessages } from "./messages";
@@ -140,8 +140,15 @@ function putFile(site: Site, ticket: UploadTicket, file: File, onProgress?: (loa
 	});
 }
 
-const errorMessage = async (site: Site, response: Response, fallback: string) =>
-	cmsApiErrorMessage(site, await response.json().catch(() => null), fallback);
+/** Calls the admin API for an upload step: a refused or failed call keeps its message, and being offline reads as the upload's network error. */
+async function uploadCall<T>(site: Site, url: string, json: unknown, fallback: string): Promise<T> {
+	try {
+		return await cmsFetch<T>(site, url, { method: "POST", json, fallback });
+	} catch (error) {
+		if (error instanceof TypeError) throw new Error(site.createTranslator(editorMessages)("upload.networkError"));
+		throw error;
+	}
+}
 
 export interface UploadedMedia {
 	mediaId: string;
@@ -161,18 +168,19 @@ export async function uploadImageFile(
 	const prepared: PreparedUpload = input instanceof File ? { file: input, optimized: false } : input;
 	const { file, original } = prepared;
 
-	const prepareRes = await fetch(cmsApiUrl("/v1/media/uploads"), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
+	// A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).
+	if (isSandboxSite(site)) throw new Error(site.createTranslator(screensMessages)("api.previewNoWrite"));
+	const ticket = await uploadCall<UploadTicket & { mediaId: string; original?: UploadTicket }>(
+		site,
+		cmsApiUrl("/v1/media/uploads"),
+		{
 			filename: original?.name ?? file.name,
 			mimeType: file.type,
 			byteSize: file.size,
 			...(original ? { original: { mimeType: original.type, byteSize: original.size } } : {}),
-		}),
-	});
-	if (!prepareRes.ok) throw new Error(await errorMessage(site, prepareRes, t("upload.prepareFailed")));
-	const ticket = (await prepareRes.json()) as UploadTicket & { mediaId: string; original?: UploadTicket };
+		},
+		t("upload.prepareFailed"),
+	);
 
 	const total = file.size + (original?.size ?? 0);
 	let publicLoaded = 0;
@@ -191,13 +199,14 @@ export async function uploadImageFile(
 			: Promise.resolve(),
 	]);
 
-	const completeRes = await fetch(cmsApiUrl(`/v1/media/${ticket.mediaId}/complete`), {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: "{}",
-	});
-	if (!completeRes.ok) throw new Error(await errorMessage(site, completeRes, t("upload.completeFailed")));
-	const result = await completeRes.json();
+	const result = await uploadCall<{
+		mediaId: string;
+		publicUrl?: string | null;
+		width: number;
+		height: number;
+		defaultAlt?: string;
+		defaultCaption?: string;
+	}>(site, cmsApiUrl(`/v1/media/${ticket.mediaId}/complete`), {}, t("upload.completeFailed"));
 	return {
 		mediaId: result.mediaId,
 		publicUrl: result.publicUrl ?? null,
