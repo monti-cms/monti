@@ -1,4 +1,4 @@
-import { aiPlugin } from "@monti-cms/ai";
+import { ai } from "@monti-cms/ai";
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
 import { callout, codeExplorer, codeRef, collapsible, color, columns, tabs, tooltip } from "@monti-cms/blocks";
@@ -44,7 +44,7 @@ export const cms = defineConfig({
 		color(),
 		seo(),
 		// The AI screen and buttons render without an API key (running an action needs a connection saved on the admin AI screen). The style guide is appended to the polish and draft instructions.
-		aiPlugin({
+		ai({
 			siteDescription: "A personal tech blog",
 			shared: {
 				styleGuide: {

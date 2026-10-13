@@ -1,5 +1,5 @@
 import { Auth, type AuthConfig, skipCSRFCheck } from "@auth/core";
-import { defineMessages, type MessageBundle, problemText } from "@monti-cms/core";
+import { defineMessages, type MessageBundle, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
 import {
 	assertDevBypassSafe,
 	isDevAuthBypassEnabled,
@@ -167,7 +167,7 @@ export function auth(options: AuthOptions): AuthAdapter {
 				throw new Error(
 					`[cms-auth] ${problemText({
 						what: "MONTI_SECRET is not set, so login sessions cannot be signed",
-						where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+						where: `${WHERE_TO_SET_ENV}, or \`secret\` in defineConfig`,
 						fix: "set it to a long random value, for example the output of `openssl rand -base64 32`, then run `monti doctor`",
 					})}`,
 				);

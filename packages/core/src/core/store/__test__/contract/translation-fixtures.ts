@@ -10,7 +10,7 @@ import { paragraphsFormat } from "../../../../format/__test__/paragraphs-format"
 import { createFormatRegistry } from "../../../../format/registry";
 import { createContentService } from "../../../../services/content-service";
 import type { Collection } from "../../../collections";
-import type { ContentStore, Entry } from "../..";
+import type { ContentStore } from "../..";
 import { publishDraft } from "../seed";
 
 /**

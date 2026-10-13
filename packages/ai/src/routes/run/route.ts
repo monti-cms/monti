@@ -1,15 +1,18 @@
 import type { Site } from "@monti-cms/core/client";
-import { adminRoute, CmsError, ok, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/plugin/server";
 import { type AiRunBody, aiRunBodySchemaOf, inputSchemaFor, type ResolvedAiAction } from "../../action";
 import { actionWithDraft, getAction } from "../../actions";
 import { coreMessages } from "../../core.messages";
 import { AiError } from "../../errors";
+import { AI_PLUGIN_NAME } from "../../name";
 import { type AiCall, type AiRunDeps, runAiAction, streamAiAction } from "../../run";
 import { runMessages } from "../../run.messages";
 import { loadAiRuntime } from "../../settings";
 import { loadSharedTexts } from "../../shared";
 import { aiStoreFor } from "../../store";
 import { aiRunDeps } from "../ai-route";
+
+const log = pluginLog(AI_PLUGIN_NAME);
 
 /** Number of concurrent calls in a batch run. */
 const CONCURRENCY = 3;
@@ -51,7 +54,7 @@ function streamResponse(site: Site, run: (send: (event: StreamEvent) => void) =>
 				// If the screen withdrew the request (e.g. closed the dialog), nobody is receiving, so end quietly.
 				if (error instanceof Error && error.name === "AbortError") return close();
 				const known = error instanceof CmsError;
-				if (!known) console.error("AI stream failed:", error);
+				if (!known) log.error("stream failed:", error);
 				send({
 					type: "error",
 					code: known ? error.code : "upstream_failed",
@@ -102,7 +105,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 		const call: AiCall = { input: parsed as Record<string, unknown>, env: body.env, request: body.request };
 		return streamResponse(site, async (send) => {
 			const result = await streamAiAction(action, call, deps, (text) => send({ type: "delta", text }));
-			console.info(`[@monti-cms/ai] ${action.key} model=${model} stream ${Date.now() - started}ms`);
+			log.info(`${action.key} model=${model} stream ${Date.now() - started}ms`);
 			send({ type: "done", result });
 		});
 	}
@@ -110,7 +113,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
 	if (body.inputs === undefined) {
 		const result = await runOne(action, body, body.input, deps);
 		// The body and result are not kept.
-		console.info(`[@monti-cms/ai] ${action.key} model=${model} ${Date.now() - started}ms`);
+		log.info(`${action.key} model=${model} ${Date.now() - started}ms`);
 		return ok({ result });
 	}
 
@@ -131,8 +134,6 @@ export const POST = adminRoute(async ({ request, cms }) => {
 	};
 	await Promise.all(Array.from({ length: Math.min(CONCURRENCY, inputs.length) }, worker));
 	const failed = results.filter((item) => "error" in item).length;
-	console.info(
-		`[@monti-cms/ai] ${action.key} inputs=${inputs.length} failed=${failed} model=${model} ${Date.now() - started}ms`,
-	);
+	log.info(`${action.key} inputs=${inputs.length} failed=${failed} model=${model} ${Date.now() - started}ms`);
 	return ok({ results });
 });

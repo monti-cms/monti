@@ -5,7 +5,6 @@ import { contentCollection, recordCollection, recordRelationField } from "../../
 import { testSite } from "../../../../test/site";
 import { docOf } from "../../../../test/stored-content";
 import type { Collection } from "../../../core/collections";
-import type { Entry } from "../../../core/store";
 import { seedEntry } from "../../../core/store/__test__/seed";
 import type { PreparedSnapshot, Reference, StorePort } from "../../../services";
 import { createContentStore, migrateContentStore } from "../content-store";

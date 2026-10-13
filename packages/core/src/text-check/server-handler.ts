@@ -1,6 +1,12 @@
 import { CmsError } from "../core/store/errors";
 import { normalizeIssue } from "./normalize";
-import type { TextCheckContext, TextCheckerLimits, TextCheckSegment, TextIssue } from "./types";
+import {
+	DEFAULT_TEXT_CHECKER_LIMITS,
+	type TextCheckContext,
+	type TextCheckerLimits,
+	type TextCheckSegment,
+	type TextIssue,
+} from "./types";
 
 /** Function the server check route calls. The site calls the real checker with an API key. */
 export type ServerTextCheck = (
@@ -14,10 +20,11 @@ export interface TextCheckRouteOptions {
 	readonly limits?: TextCheckerLimits;
 }
 
-const DEFAULT_LIMITS = { maxSegments: 100, maxChars: 20_000 } as const;
-
 /** Validates the request body `{ segments: [{ id, text, locale }] }`. Throws a `CmsError` if it is invalid. */
-export function parseTextCheckBody(body: unknown, limits: TextCheckerLimits = DEFAULT_LIMITS): TextCheckSegment[] {
+export function parseTextCheckBody(
+	body: unknown,
+	limits: TextCheckerLimits = DEFAULT_TEXT_CHECKER_LIMITS,
+): TextCheckSegment[] {
 	const raw = (body as { segments?: unknown } | null)?.segments;
 	if (!Array.isArray(raw)) throw new CmsError("segments must be an array", "invalid_input");
 	const segments: TextCheckSegment[] = [];
@@ -29,8 +36,8 @@ export function parseTextCheckBody(body: unknown, limits: TextCheckerLimits = DE
 		ids.add(id);
 		segments.push({ id, text, locale });
 	}
-	const maxSegments = limits.maxSegments ?? DEFAULT_LIMITS.maxSegments;
-	const maxChars = limits.maxChars ?? DEFAULT_LIMITS.maxChars;
+	const maxSegments = limits.maxSegments ?? DEFAULT_TEXT_CHECKER_LIMITS.maxSegments;
+	const maxChars = limits.maxChars ?? DEFAULT_TEXT_CHECKER_LIMITS.maxChars;
 	const chars = segments.reduce((sum, segment) => sum + segment.text.length, 0);
 	if (segments.length > maxSegments || chars > maxChars)
 		throw new CmsError("Too much text in one request", "payload_too_large");

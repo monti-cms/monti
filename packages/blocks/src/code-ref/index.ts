@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { codeRefBlock } from "./definition";
 
 export { codeRefBlock } from "./definition";
@@ -15,9 +15,8 @@ export { codeRefBlock } from "./definition";
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
 export const codeRef = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "code-ref",
-		options: {},
 		blocks: [codeRefBlock],
 		admin: () => import("@monti-cms/blocks/code-ref/admin"),
 		render: () => import("@monti-cms/blocks/code-ref/render"),

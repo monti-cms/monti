@@ -1,3 +1,5 @@
+import { pluginError } from "@monti-cms/core";
+import { GIT_SYNC_PLUGIN_NAME } from "../name";
 import {
 	type BranchHead,
 	GitHubApiError,
@@ -25,7 +27,7 @@ const graphqlUrl = (apiUrl: string) => `${apiUrl.replace(/\/v3\/?$/, "").replace
 export function createGitHubClient(options: GitHubClientOptions, fetchImpl: FetchLike = fetch): GitHubClient {
 	const apiUrl = (options.apiUrl ?? DEFAULT_API_URL).replace(/\/$/, "");
 	const [owner, name] = options.repo.split("/");
-	if (!owner || !name) throw new Error(`git-sync: "${options.repo}" is not an owner/name repo`);
+	if (!owner || !name) throw pluginError(GIT_SYNC_PLUGIN_NAME, `"${options.repo}" is not an owner/name repo`);
 	const repoUrl = `${apiUrl}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
 	const headers = {
 		Authorization: `Bearer ${options.token}`,

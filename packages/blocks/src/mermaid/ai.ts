@@ -10,7 +10,7 @@ export type { AiTextSite } from "../shared/diagram-ai";
  * The contract types come from `@monti-cms/core/ai-contract`, so this block never depends on the AI plugin.
  *
  * ```ts
- * aiPlugin({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), diagramEdit: false } })
+ * ai({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), diagramEdit: false } })
  * ```
  *
  * The actions are factories (`AiActionFactory`): the AI plugin calls them with the site, so the text is in that site's admin language.

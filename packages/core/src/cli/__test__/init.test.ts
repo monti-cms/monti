@@ -77,7 +77,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(config).toContain("\tauth: auth({ providers: [password()] }),");
 		expect(config).not.toMatch(/github/i);
 		expect(config).toContain("// storage: s3Storage(),");
-		expect(config).not.toMatch(/aiPlugin|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
+		expect(config).not.toMatch(/\bai\(|gitSync|bareun|\.\.\.blocks|process\.env|createCms|defineServerConfig/);
 
 		const schema = schemaOf(dir);
 		expect(() => parseSchemaFile(schema)).not.toThrow();
@@ -731,11 +731,11 @@ describe("monti init choices", () => {
 			siteUrl: "https://blog.example.com",
 		});
 		const config = read(dir, "monti.config.ts");
-		expect(config).toContain('import { aiPlugin } from "@monti-cms/ai";');
+		expect(config).toContain('import { ai } from "@monti-cms/ai";');
 		expect(config).toContain('import { gitSync } from "@monti-cms/git-sync";');
 		expect(config).toContain('import { s3Storage } from "@monti-cms/storage-s3";');
 		expect(config).toContain('import { callout, color, tabs } from "@monti-cms/blocks";');
-		expect(config).toMatch(/\n\t\taiPlugin\(\),\n/);
+		expect(config).toMatch(/\n\t\tai\(\),\n/);
 		expect(config).toMatch(/\n\t\tgitSync\(\),\n/);
 		expect(config).toContain("\tstorage: s3Storage(),");
 		expect(config.indexOf("callout(),")).toBeLessThan(config.indexOf("tabs(),"));

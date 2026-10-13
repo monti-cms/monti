@@ -6,7 +6,7 @@ import { seoMessages } from "./messages";
 
 /**
  * Features the SEO extension adds to the AI plugin (search title and description suggestions). The `seo()` plugin adds them through `contributes.ai`, so they attach only to sites
- * that use the AI plugin. To change one: `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false`.
+ * that use the AI plugin. To change one: `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false`.
  */
 
 const fieldInput = (site: SeoSiteView) => {

@@ -67,7 +67,7 @@ The recommended length is stored in the field's `inputOptions.limit`. If you nee
   field with a `noindex` option (`validateSeoFields`).
 - **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)
   (`contributes.ai`). They attach to every collection that has the role fields, and the length is field `max` → recommended length → 60 / 155. To change one:
-  `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
+  `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
 
 ## Public pages `seoOf(collection, metadata)`
 

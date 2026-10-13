@@ -367,12 +367,12 @@ pnpm add @monti-cms/ai
 
 ```ts
 // monti.config.ts
-import { aiPlugin } from "@monti-cms/ai";
+import { ai } from "@monti-cms/ai";
 
 export const cms = defineConfig({
 	// …
 	// 기본 기능(주소·요약·태그 추천 등)이 필드 종류·역할·관계 대상으로 저절로 붙는다. 바꾸거나 끌 것만 `actions`에 적는다.
-	plugins: [aiPlugin({ siteDescription: "기술 블로그" })],
+	plugins: [ai({ siteDescription: "기술 블로그" })],
 });
 ```
 
@@ -548,6 +548,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/front-matter` | 마크다운 파일을 읽고 쓰는 도구(git-sync) | `parseFile`(YAML 프런트매터와 본문, YAML 오류의 줄 번호 포함)과 `composeFile` |
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·`Cms` 타입·오류 |
+| `@monti-cms/core/ai-contract` | AI 기능을 더하는 플러그인 | 타입만 있다. `@monti-cms/ai`가 구현하는 AI 기능·검사·기여(`AiContribution`)의 모양이라, 플러그인이 AI 플러그인에 의존하지 않고 기능을 쓴다 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti doctor`(설정을 점검하고 잘못된 것을 어떻게 고치는지 알려 줌, "문제 해결")·`monti db:migrate`(표 만들기)·`monti admin:reset-password`(이메일·비밀번호 로그인 관리자의 비밀번호 새로 정하기)·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
 | `@monti-cms/core/cli` | 명령줄 도구 | `runCli`·`runDoctor`·`runDoctorCommand(argv, { cwd, log, error })`(`monti doctor` 명령, 종료 코드를 돌려준다)·`initProject`·`addComponents`·`migrate`·`runImport`·`loadSchemaFile`·`findSchemaFile`·`extractSchema`(명령 `monti`의 코드) |
 | `@monti-cms/core/testing` | 테스트 | `testServer()`(`{ server, drop }`: 자기 스키마 위에 둔 진짜 인스턴스를 위한 `database`와 `auth` 옵션, ["훅과 플러그인 테스트하기"](#훅과-플러그인-테스트하기)), `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
@@ -864,7 +865,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 
 ## 플러그인
 
-`monti.config.ts`의 `plugins`에 한 번 적는다(예: AI 플러그인 `@monti-cms/ai`의 `aiPlugin()`). 플러그인은 모두 인자 없이 동작하는 함수다(`mdx()`·`seo()`·`aiPlugin()`·`@monti-cms/blocks`의 블록마다 `callout()` 같은 함수·`gitSync()`). `targets` 없는 `gitSync()`는 플러그인만 등록하고, `targets`에 저장소를 적기 전에는 아무것도 동기화하지 않는다. `plugins`의 순서는 순서가 중요한 곳에서 그대로 쓰인다(훅은 그 순서로 돌고, 인라인 마크 `tooltip()`·`codeRef()`·`color()`가 겹칠 때는 그 순서로 저장된다).
+`monti.config.ts`의 `plugins`에 한 번 적는다(예: AI 플러그인 `@monti-cms/ai`의 `ai()`). 플러그인은 모두 인자 없이 동작하는 함수다(`mdx()`·`seo()`·`ai()`·`@monti-cms/blocks`의 블록마다 `callout()` 같은 함수·`gitSync()`). `targets` 없는 `gitSync()`는 플러그인만 등록하고, `targets`에 저장소를 적기 전에는 아무것도 동기화하지 않는다. `plugins`의 순서는 순서가 중요한 곳에서 그대로 쓰인다(훅은 그 순서로 돌고, 인라인 마크 `tooltip()`·`codeRef()`·`color()`가 겹칠 때는 그 순서로 저장된다).
 
 ```ts
 import { definePlugin } from "@monti-cms/core";
@@ -911,6 +912,8 @@ export const myPlugin = () =>
 
 - `@monti-cms/core/plugin/server`의 `exportBodyText(cms, { format, doc, locale, scope? })`는 저장된 문서를 인스턴스의 형식으로 다시 가져올 수 있게(`purpose: "sync"`, 링크는 대상의 실제 경로) 텍스트로 쓴다. 관리자 내보내기와 같다. 본문을 다른 곳에 두는 플러그인을 위한 것이다.
 - 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute`·`publicRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
+- `cms.plugin("my-plugin")`은 플러그인이 인스턴스 하나에 대해 갖는 것이다. `storage`, `secrets`, `apiKeys`, 그리고 `once(key, factory)`: 값(`cms.site`로 만든 스토어나 클라이언트)을 한 번 만들고, 개발 중 스키마를 다시 불러오면 처음부터 다시 만든다. 그래서 낡은 사이트를 쥐고 있지 않는다. 이런 객체를 인스턴스를 키로 하는 모듈 수준 `WeakMap`에 두지 않는다.
+- 모든 플러그인 패키지가 쓰는 작은 도구는 `@monti-cms/core`에서 온다. `emptyServerPlugin`(패키지 `server.browser.ts`의 기본 내보내기), `pluginLog(이름)`·`pluginError(이름, 메시지)`(플러그인이 남기고 던지는 것의 접두어를 하나로), `envValue(env, 이름)`·`WHERE_TO_SET_ENV`(환경 변수를 읽고 어디에 두는지 알려 줌), `resolveTextCheckerLimits`(글 검사기의 한도).
 
 ### 비밀 값
 

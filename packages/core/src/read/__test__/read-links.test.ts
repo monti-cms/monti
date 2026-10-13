@@ -6,7 +6,7 @@ import { testConfig, testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import { type Cms, fakeCms } from "../../cms";
 import type { Collection } from "../../core/collections";
-import type { ContentStore, Entry } from "../../core/store";
+import type { ContentStore } from "../../core/store";
 import { publishDraft } from "../../core/store/__test__/seed";
 import { ServiceError } from "../../core/types";
 import { entryLinkIds } from "../../doc/entry-links";

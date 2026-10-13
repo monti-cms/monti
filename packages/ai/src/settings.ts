@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { ResolvedAiAction } from "./action";
 import type { AiProviderInput, AiProviderKind, AiProviderView, AiSettingsView } from "./connection";
 import { AiError } from "./errors";
-import { AI_PLUGIN_NAME } from "./plugin-name";
+import { AI_PLUGIN_NAME } from "./name";
 import {
 	type AiDecider,
 	type AiProvider,

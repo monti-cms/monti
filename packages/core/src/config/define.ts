@@ -184,7 +184,7 @@ export interface CmsConfig<
 	 * The public site renders them by the `component` name.
 	 */
 	readonly blocks?: Blocks;
-	/** Plugins (e.g. `aiPlugin()`). Names must not collide. */
+	/** Plugins (e.g. `ai()`). Names must not collide. */
 	readonly plugins?: Plugins;
 	/** Code block settings. Adds line effects (`lineEffects`) or changes the core defaults (highlight, add, delete, warning, error). */
 	readonly codeBlock?: CodeBlockConfig;

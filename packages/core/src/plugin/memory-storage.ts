@@ -3,7 +3,6 @@ import {
 	assertMigrationName,
 	assertStorageKey,
 	assertStorageName,
-	assertStoredVersion,
 	serializeStorageValue,
 	storageConflict,
 	storageNotFound,

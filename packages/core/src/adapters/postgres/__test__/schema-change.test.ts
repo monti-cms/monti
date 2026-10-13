@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { docOf } from "../../../../test/stored-content";
 import { defineSite } from "../../../config/define";
 import { computeContentHash } from "../../../core/content-hash";
-import type { Entry } from "../../../core/store";
 import { defineCollection } from "../../../schema/collection";
 import { applySchemaChange, checkSchemaChange, planSchemaChange, SchemaChangeError } from "../../../schema-change";
 import type { SchemaMigration } from "../../../schema-file/types";

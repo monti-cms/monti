@@ -3,7 +3,7 @@ import { chart } from "../../blocks/src/chart";
 import { chartBlock } from "../../blocks/src/definitions";
 import base from "../../core/test/other-site.config";
 import { seo } from "../../seo/src";
-import { aiPlugin, aiPresets } from "../src";
+import { ai, aiPresets } from "../src";
 
 /**
  * The core package's other-site config (article, topic, author; English) plus the block extension (chart), SEO extension, and AI plugin. Field actions
@@ -16,7 +16,7 @@ export default defineSite({
 	plugins: [
 		chart(),
 		seo(),
-		aiPlugin({
+		ai({
 			siteDescription: "Example site",
 			actions: {
 				// Turn off and override: turn off media caption suggestions, make summaries short.

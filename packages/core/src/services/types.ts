@@ -1,5 +1,3 @@
-import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../core/types";
-
 export * from "../core/types";
 
 import type { EntryStore, LifecycleStore } from "../core/store/ports";

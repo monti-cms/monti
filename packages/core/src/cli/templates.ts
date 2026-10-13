@@ -301,7 +301,7 @@ export function configTemplate(answers: InitAnswers): string {
 		{ from: "@monti-cms/mdx", names: ["mdx"] },
 	];
 	if (answers.directiveSyntax) imports.push({ from: "@monti-cms/syntax-directive", names: ["directiveSyntax"] });
-	if (answers.ai) imports.push({ from: "@monti-cms/ai", names: ["aiPlugin"] });
+	if (answers.ai) imports.push({ from: "@monti-cms/ai", names: ["ai"] });
 	if (answers.gitSync) imports.push({ from: "@monti-cms/git-sync", names: ["gitSync"] });
 	if (answers.storage === "s3") imports.push({ from: "@monti-cms/storage-s3", names: ["s3Storage"] });
 	const light = blocks.filter((block) => !block.needs);
@@ -339,7 +339,7 @@ export function configTemplate(answers: InitAnswers): string {
 	if (answers.ai) {
 		plugins.push(
 			"// AI writing: polish, draft and translate buttons, and the AI screen. It renders without a key; a connection is saved on the admin AI screen.",
-			"aiPlugin(),",
+			"ai(),",
 		);
 	}
 	if (answers.gitSync) {

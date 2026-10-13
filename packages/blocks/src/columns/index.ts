@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { columnBlock, columnsBlock } from "./definition";
 
 export { columnBlock, columnsBlock } from "./definition";
@@ -13,9 +13,8 @@ export { columnBlock, columnsBlock } from "./definition";
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
 export const columns = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "columns",
-		options: {},
 		blocks: [columnsBlock, columnBlock],
 		admin: () => import("@monti-cms/blocks/columns/admin"),
 		render: () => import("@monti-cms/blocks/columns/render"),

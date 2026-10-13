@@ -1,6 +1,7 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../../cms";
+import { WHERE_TO_SET_ENV } from "../../core/env";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { formatDecision } from "../../server/decision";
@@ -54,7 +55,6 @@ export function whereSet(state: DoctorState, name: string): string {
 }
 
 /** Where a variable should be set, when it is not. */
-const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 
 // ---- config ----
 
@@ -255,7 +255,7 @@ const montiSecret: CoreCheck = {
 		const available = state.cms ? state.cms.secrets("doctor").available : Boolean(value);
 		if (!available) {
 			return fail("MONTI_SECRET is not set, so login sessions cannot be signed and no key or token can be stored", {
-				where: WHERE_TO_SET,
+				where: WHERE_TO_SET_ENV,
 				fix: "generate one with `openssl rand -base64 32` and put it in MONTI_SECRET. Use the same value wherever the site runs, and keep it: values encrypted with it (AI keys, git-sync tokens) cannot be read without it",
 			});
 		}

@@ -2,7 +2,7 @@ import type { Site } from "@monti-cms/core/client";
 import type { ApiKeys, Cms, PluginCollection, PluginStorage } from "@monti-cms/core/plugin/server";
 import { AI_COLLECTIONS } from "./collections";
 import { AiError } from "./errors";
-import { AI_PLUGIN_NAME } from "./plugin-name";
+import { AI_PLUGIN_NAME } from "./name";
 import { providerMessages } from "./provider.messages";
 import type { AiSettingsStore } from "./settings";
 

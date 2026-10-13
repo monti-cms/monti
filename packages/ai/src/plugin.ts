@@ -1,6 +1,6 @@
 import { createActiveTranslator, definePlugin } from "@monti-cms/core";
 import { type AiConfig, validateAiConfig } from "./action";
-import { AI_PLUGIN_NAME } from "./plugin-name";
+import { AI_PLUGIN_NAME } from "./name";
 import { resolveAiConfig } from "./resolve";
 
 /**
@@ -11,10 +11,10 @@ import { resolveAiConfig } from "./resolve";
  * List only what you want to change or turn off in `actions`.
  *
  * ```ts
- * plugins: [aiPlugin({ siteDescription: "A personal tech blog", actions: { draft: false } })]
+ * plugins: [ai({ siteDescription: "A personal tech blog", actions: { draft: false } })]
  * ```
  */
-export function aiPlugin<const Config extends AiConfig>(config: Config = {} as Config) {
+export function ai<const Config extends AiConfig>(config: Config = {} as Config) {
 	return definePlugin({
 		name: AI_PLUGIN_NAME,
 		options: config,

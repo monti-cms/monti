@@ -5,7 +5,7 @@ import { ALL_BLOCKS } from "../../blocks/src/definitions";
 import { mermaid } from "../../blocks/src/mermaid";
 import base from "../../core/test/cms.config";
 import { seo } from "../../seo/src";
-import { aiPlugin } from "../src";
+import { ai } from "../src";
 
 /**
  * The core package's example blog config plus the same plugins as the reference blog (block extension, SEO extension, AI). Used by the AI plugin tests.
@@ -24,7 +24,7 @@ export default defineSite({
 		mermaid(),
 		chart(),
 		seo(),
-		aiPlugin({
+		ai({
 			siteDescription: "개인 기술 블로그",
 			shared: {
 				styleGuide: { label: "문체 가이드", text: "" },

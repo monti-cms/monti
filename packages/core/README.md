@@ -367,12 +367,12 @@ pnpm add @monti-cms/ai
 
 ```ts
 // monti.config.ts
-import { aiPlugin } from "@monti-cms/ai";
+import { ai } from "@monti-cms/ai";
 
 export const cms = defineConfig({
 	// …
 	// The default features (URL, summary and tag suggestions, etc.) attach automatically based on field kind, role and relation target. List only what you change or turn off in `actions`.
-	plugins: [aiPlugin({ siteDescription: "a developer blog" })],
+	plugins: [ai({ siteDescription: "a developer blog" })],
 });
 ```
 
@@ -551,6 +551,7 @@ What you read is typed for a published entry: a `required` field is not optional
 | `@monti-cms/core/front-matter` | tools that read or write Markdown files (git-sync) | `parseFile` (YAML front matter and body, with the line of a YAML error) and `composeFile` |
 | `@monti-cms/core/notation` | format and syntax extension packages | A light entry with the helpers a notation builds on: the code comment syntax (`resolveCommentSyntax`, `formatAnnotationComment`) and the table helpers. `@monti-cms/mdx` re-exports them for syntax extensions |
 | `@monti-cms/core/plugin/server` | server side of plugins | route scaffolding (`adminRoute` hands the route the `cms` instance), the `Cms` type, errors |
+| `@monti-cms/core/ai-contract` | plugins that add AI actions | types only: the shape of an AI action, check and contribution (`AiContribution`) that `@monti-cms/ai` implements, so a plugin writes its actions without depending on it |
 | `monti` (command line, package `bin`) | terminal | `monti init` (create files), `monti doctor` (check the setup and say how to fix what is wrong, "Troubleshooting"), `monti db:migrate` (create tables), `monti admin:reset-password` (set a new password for an admin of the email and password login), `monti events:retry` (deliver `afterCommit` events that are due), `monti <plugin>:<command>` (a command a plugin adds, "Plugins"), `monti schema:extract` (move a TypeScript config to the schema file), `monti schema:diff` and `monti schema:apply` (check and apply a schema change) |
 | `@monti-cms/core/cli` | command-line tooling | `runCli`, `runDoctor`, `runDoctorCommand(argv, { cwd, log, error })` (the `monti doctor` command, returns the exit code), `initProject`, `addComponents`, `migrate`, `runImport`, `loadSchemaFile`, `findSchemaFile`, `extractSchema`, `schemaDiff`, `schemaApply` (the code behind the `monti` command) |
 | `@monti-cms/core/testing` | tests | `testServer()` (`{ server, drop }`: the `database` and `auth` options for a real instance on a schema of its own, ["Testing your hooks and plugins"](#testing-your-hooks-and-plugins)), `fakeCms` (an instance over the parts a test provides), isolated-schema DB, sample data. Helpers that need MDX text are in `@monti-cms/mdx/testing` |
@@ -867,7 +868,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 
 ## Plugins
 
-List it once in `plugins` of `monti.config.ts` (e.g. `aiPlugin()` of the AI plugin `@monti-cms/ai`). Every plugin is a function that works with no arguments (`mdx()`, `seo()`, `aiPlugin()`, each block of `@monti-cms/blocks` such as `callout()`, `gitSync()`); `gitSync()` with no `targets` registers the plugin and syncs nothing until `targets` lists a repo. The order in `plugins` is kept where it matters (hooks run in that order, and the inline marks `tooltip()`, `codeRef()` and `color()` are stored in that order when they overlap).
+List it once in `plugins` of `monti.config.ts` (e.g. `ai()` of the AI plugin `@monti-cms/ai`). Every plugin is a function that works with no arguments (`mdx()`, `seo()`, `ai()`, each block of `@monti-cms/blocks` such as `callout()`, `gitSync()`); `gitSync()` with no `targets` registers the plugin and syncs nothing until `targets` lists a repo. The order in `plugins` is kept where it matters (hooks run in that order, and the inline marks `tooltip()`, `codeRef()` and `color()` are stored in that order when they overlap).
 
 ```ts
 import { definePlugin } from "@monti-cms/core";
@@ -913,6 +914,8 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 
 - `exportBodyText(cms, { format, doc, locale, scope? })` of `@monti-cms/core/plugin/server` writes a stored document as text in a format of the instance for importing again (`purpose: "sync"`, links as the real path of their target), as the admin export does. For a plugin that keeps bodies somewhere else.
 - A plugin's route gets the instance that serves it, so plugin code reads its storage (`cms.storage("<plugin name>")`), stores (`cms.store()`, `cms.mediaStore()`) and its secrets (`cms.secrets("<plugin name>")`) from it, and keeps no global state for them. `adminRoute`, `publicRoute` and the other route scaffolding come from `@monti-cms/core/plugin/server`; `features(cms)` and `migrate(storage, cms)` receive the instance too.
+- `cms.plugin("my-plugin")` is what a plugin keeps for one instance: `storage`, `secrets`, `apiKeys` and `once(key, factory)`, which makes a value (a store, a client built from `cms.site`) once and starts again after a development schema reload, so nothing keeps a stale site. Do not cache such objects in a module-level `WeakMap` keyed by the instance.
+- Small helpers every plugin package shares come from `@monti-cms/core`: `emptyServerPlugin` (the default export of a package's `server.browser.ts`), `pluginLog(name)` and `pluginError(name, message)` (one prefix for what a plugin logs and throws), `envValue(env, name)` and `WHERE_TO_SET_ENV` (reading an environment value and telling where to set it), and `resolveTextCheckerLimits` (the limits of a text checker).
 
 ### Secrets
 

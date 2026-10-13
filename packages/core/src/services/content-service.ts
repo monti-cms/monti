@@ -13,7 +13,6 @@ import type { Site } from "../site";
 import type { HookProvider } from "./hooks";
 import {
 	type Issue,
-	type PreparedSnapshot,
 	type RestorePort,
 	type SaveDraftInput,
 	ServiceError,

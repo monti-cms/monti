@@ -1,7 +1,8 @@
 import { definePlugin } from "@monti-cms/core";
+import { MDX_PLUGIN_NAME } from "./name";
 import type { SyntaxExtension } from "./syntax/types";
 
-export const MDX_PLUGIN_NAME = "mdx";
+export { MDX_PLUGIN_NAME };
 
 export interface MdxPluginOptions {
 	/**

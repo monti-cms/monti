@@ -4,7 +4,7 @@ import { z } from "zod";
 import { testSite } from "../../test/site";
 import { resolveAction } from "../action";
 import type { AiProviderInput } from "../connection";
-import { AI_PLUGIN_NAME } from "../plugin-name";
+import { AI_PLUGIN_NAME } from "../name";
 import { createDecider, createGenerator } from "../provider";
 import { aiRegistryOf } from "../registry";
 import {

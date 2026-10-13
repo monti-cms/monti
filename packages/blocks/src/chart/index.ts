@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { chartAiContribution } from "./ai";
 import { chartBlock } from "./definition";
 
@@ -17,9 +17,8 @@ export { chartMessages } from "./messages";
  * `remarkFenceBlocksToMdx`). Chart colors are the CSS variables `--chart-1` to `--chart-5` (defaults from this package's `render.css` if unset).
  */
 export const chart = () =>
-	definePlugin({
+	defineBlockPlugin({
 		name: "chart",
-		options: {},
 		blocks: [chartBlock],
 		admin: () => import("@monti-cms/blocks/chart/admin"),
 		render: () => import("@monti-cms/blocks/chart/render"),

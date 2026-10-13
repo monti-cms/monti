@@ -1,6 +1,7 @@
 import type { Entry } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, type FileToApply, readEntry, recordOf } from "./apply";
 import { exportEntry, isSyncable, parseEntryFile, sameContent } from "./entry-file";
+import { log } from "./log";
 import type { ResolvedTarget } from "./options";
 import { enqueue, flushTarget, isKnownBlob } from "./outbound";
 import { serverMessages } from "./server.messages";
@@ -240,9 +241,7 @@ export async function pullTarget(ctx: SyncContext, target: ResolvedTarget): Prom
 	});
 	// Publishes that came in while the files were being written wait in the queue: commit them now that the lock is free.
 	if ((await ctx.state.queue.list(target.id)).length > 0) {
-		await flushTarget(ctx, target).catch((error) =>
-			console.error(`[git-sync] flush of ${target.id} after a pull failed`, error),
-		);
+		await flushTarget(ctx, target).catch((error) => log.error(`flush of ${target.id} after a pull failed`, error));
 	}
 	return summary;
 }

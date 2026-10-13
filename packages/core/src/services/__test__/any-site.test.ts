@@ -11,7 +11,7 @@ import {
 } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import type { Collection } from "../../core/collections";
-import type { ContentStore, Entry } from "../../core/store";
+import type { ContentStore } from "../../core/store";
 import { duplicateDraft, publishDraft } from "../../core/store/__test__/seed";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";

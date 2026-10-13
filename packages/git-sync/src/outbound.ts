@@ -1,6 +1,7 @@
 import { CmsError, type ContentEvent, type Entry } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable } from "./entry-file";
 import type { BranchHead, FileChange, GitHubClient } from "./github/client";
+import { log } from "./log";
 import type { ResolvedTarget } from "./options";
 import type { PathPattern } from "./path-pattern";
 import { serverMessages } from "./server.messages";
@@ -461,7 +462,7 @@ function scheduleTrailingFlush(ctx: SyncContext, target: ResolvedTarget, delayMs
 	const timer = setTimeout(() => {
 		timers.delete(target.id);
 		flushTarget(ctx, target).catch((error) => {
-			if (!(error instanceof GitSyncNotConfigured)) console.error(`[git-sync] flush of ${target.id} failed`, error);
+			if (!(error instanceof GitSyncNotConfigured)) log.error(`flush of ${target.id} failed`, error);
 		});
 	}, delayMs);
 	timer.unref?.();
@@ -554,12 +555,12 @@ export async function resumeAfterToken(ctx: SyncContext): Promise<void> {
 	for (const target of ctx.targets) {
 		if ((await ctx.state.queue.list(target.id)).length === 0) continue;
 		await flushTarget(ctx, target).catch((error) =>
-			console.error(`[git-sync] flush of ${target.id} after saving the token failed`, error),
+			log.error(`flush of ${target.id} after saving the token failed`, error),
 		);
 	}
 	await ctx.cms.events
 		.retry({ all: true })
-		.catch((error) => console.error("[git-sync] event retry after saving the token failed", error));
+		.catch((error) => log.error("event retry after saving the token failed", error));
 }
 
 /** Queues every published entry of a target (the first sync) and commits them in one go. Entries already in git as they are cost nothing. */

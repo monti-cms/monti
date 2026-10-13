@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { createActiveTranslator, defineSite } from "@monti-cms/core";
+import { defineSite } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/adapters/auth";
 import type { Cms } from "@monti-cms/core/plugin/server";
 import { fakeCms } from "@monti-cms/core/testing";

@@ -5,7 +5,7 @@ import { contentCollection, fillRequiredMetadata, requiredMetadata } from "../..
 import { testConfig, testSite } from "../../../test/site";
 import { type Cms, fakeCms } from "../../cms";
 import type { Collection } from "../../core/collections";
-import type { ContentStore, Entry } from "../../core/store";
+import type { ContentStore } from "../../core/store";
 import { publishDraft, seedEntry } from "../../core/store/__test__/seed";
 import { collectRefs, imageResolverFromRefs } from "../../doc/document-refs";
 import { entryIdOfMark, entryLinkIds } from "../../doc/entry-links";
