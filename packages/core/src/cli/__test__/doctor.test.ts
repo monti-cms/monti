@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -344,6 +344,14 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(files.fix).toContain("app/api/monti/[...path]/route.ts");
 		expect(byId(report, "next/with-cms").status).toBe("fail");
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
+	});
+
+	it("names the folder init would use when only src/ exists", async () => {
+		setEnv();
+		const dir = project({ "src/index.ts": "" });
+		rmSync(path.join(dir, "app"), { recursive: true, force: true });
+		const { report } = await doctor(dir);
+		expect(byId(report, "next/files").message).toContain("no src/app/ folder");
 	});
 
 	it("does not count a comment that mentions withCms as the wrapper", async () => {

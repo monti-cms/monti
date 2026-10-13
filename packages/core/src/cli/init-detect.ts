@@ -253,6 +253,17 @@ export function ignoresEnvLocal(gitignore: string): boolean {
 		.some((line) => [".env.local", ".env*.local", ".env*", ".env", "*.local", ".env.*"].includes(line));
 }
 
+/**
+ * The App Router folder of the app in `cwd`, for `monti init` and `monti doctor` alike: `src/app` when it exists, else `app` when it exists, else the folder
+ * `init` would create (`src/app` when the project keeps its code in `src/`, which is the case when `src/` exists and `app/` does not).
+ */
+export function detectAppDir(cwd: string): { readonly dir: "app" | "src/app"; readonly exists: boolean } {
+	const exists = (folder: string) => existsSync(path.join(cwd, folder));
+	if (exists("src/app")) return { dir: "src/app", exists: true };
+	if (exists("app")) return { dir: "app", exists: true };
+	return { dir: exists("src") ? "src/app" : "app", exists: false };
+}
+
 /** Reads the app in `cwd`. Throws when there is no package.json. */
 export function detectApp(cwd: string): DetectedApp {
 	const packageFile = path.join(cwd, "package.json");
@@ -268,7 +279,7 @@ export function detectApp(cwd: string): DetectedApp {
 	const dependencies = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]);
 	const exists = (file: string) => existsSync(path.join(cwd, file));
 	const src = exists("src/app") || (exists("src") && !exists("app"));
-	const appDir = exists("src/app") ? "src/app" : exists("app") ? "app" : src ? "src/app" : "app";
+	const { dir: appDir } = detectAppDir(cwd);
 	const configRoots = src ? ["src/", ""] : [""];
 	const dev = typeof pkg.scripts?.dev === "string" ? pkg.scripts.dev : "";
 	const port = /(?:-p|--port)[ =]+(\d{2,5})/.exec(dev)?.[1];
