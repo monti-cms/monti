@@ -1,16 +1,31 @@
 "use client";
 
 import type { CollectionPreferences, PreferencesBody } from "@monti-cms/core/client";
-import { cmsApiUrl, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { type BulkOp, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { CmsApiError, errorText } from "../api/client";
+import {
+	type BulkItemResult,
+	type BulkParams,
+	type BulkSelection,
+	bulkEntries,
+	changeEntryStatus,
+	duplicateEntry,
+	type EntriesPage,
+	type EntryWriteResult,
+	entriesKeys,
+	listEntries,
+} from "../api/entries";
+import { foldersKeys, listFolders } from "../api/folders";
+import { getPreferences, preferencesKeys, savePreferences as putPreferences } from "../api/preferences";
+import { useCmsMutation } from "../api/use-cms-mutation";
 import { useAdminRouter, useAdminSearchParams } from "../router";
-import { cmsFetch, errorText } from "./admin-api";
-import { type BulkItemResult, type BulkSelection, describeBulkFailure, runBulk } from "./entries/bulk-bar";
+import { describeBulkFailure } from "./entries/bulk-bar";
 import { copyTitle } from "./entries/entry-form";
-import { actionTargets, type BulkParams, rowMenuActions, toSelection } from "./list-row-menu";
+import { actionTargets, rowMenuActions, toSelection } from "./list-row-menu";
 import {
 	isExplorerMode,
 	type ListState,
@@ -24,20 +39,10 @@ import type { MenuAction } from "./shared/action-menu";
 import { useConfirm } from "./shared/confirm-dialog";
 import type { DraggedEntry } from "./shared/entry-drag";
 import { OPEN_ITEM_PARAM } from "./shared/entry-href";
-import {
-	applyOptimistic,
-	ENTRIES_KEY,
-	type EntriesPage,
-	entriesKey,
-	fetchFolders,
-	foldersKey,
-	type OptimisticOp,
-} from "./shared/list-cache";
+import { applyOptimistic, type OptimisticOp } from "./shared/list-cache";
 import { nounVars } from "./shared/noun.messages";
 import { useFolderActions } from "./shared/use-folder-actions";
 import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
-
-const PREFERENCES_KEY = ["preferences"] as const;
 
 export type ListMode = "list" | "trash";
 
@@ -55,13 +60,11 @@ function useListState(mode: ListMode) {
 		() => parseListState(site, new URLSearchParams(searchParams.toString())),
 		[searchParams, site],
 	);
-	const queryClient = useQueryClient();
 	// Cached for the session: the list is not drawn until the settings are known, and a later fetch never reorders it under the user.
 	// A failed load falls back to the defaults (the list still works); saving a setting reports its own failure.
 	const preferencesQuery = useQuery({
-		queryKey: PREFERENCES_KEY,
-		queryFn: ({ signal }) =>
-			cmsFetch<PreferencesBody>(site, cmsApiUrl("/v1/preferences"), { signal }).catch((): PreferencesBody => ({})),
+		queryKey: preferencesKeys.all,
+		queryFn: ({ signal }) => getPreferences(site, signal).catch((): PreferencesBody => ({})),
 		staleTime: Number.POSITIVE_INFINITY,
 	});
 	const preferences = preferencesQuery.data ?? null;
@@ -91,16 +94,18 @@ function useListState(mode: ListMode) {
 	);
 
 	const collection = state.collection;
-	const savePreferences = (patch: CollectionPreferences) => {
-		queryClient.setQueryData<PreferencesBody>(PREFERENCES_KEY, (current) => ({
-			...current,
-			collections: { ...current?.collections, [collection]: { ...current?.collections?.[collection], ...patch } },
-		}));
-		void cmsFetch(site, cmsApiUrl("/v1/preferences"), {
-			method: "PUT",
-			json: { collections: { [collection]: patch } },
-		}).catch(() => toast.error(t("list.prefsSaveFailed")));
-	};
+	const preferencesMutation = useCmsMutation<CollectionPreferences, unknown, PreferencesBody>({
+		fn: (patch, { site }) => putPreferences(site, { collections: { [collection]: patch } }),
+		failure: t("list.prefsSaveFailed"),
+		optimistic: {
+			queryKey: preferencesKeys.all,
+			update: (current, patch) => ({
+				...current,
+				collections: { ...current.collections, [collection]: { ...current.collections?.[collection], ...patch } },
+			}),
+		},
+	});
+	const savePreferences = (patch: CollectionPreferences) => preferencesMutation.mutate(patch);
 
 	// The saved sort and page size only matter when the address does not say them.
 	const ready = preferences !== null || (parsed.explicit.pageSize && parsed.explicit.sort);
@@ -118,18 +123,17 @@ function useEntriesData(state: ListState, mode: ListMode, ready: boolean) {
 	const collection = state.collection;
 
 	const foldersQuery = useQuery({
-		queryKey: foldersKey(collection),
-		queryFn: ({ signal }) => fetchFolders(site, collection, signal),
+		queryKey: foldersKeys.list(collection),
+		queryFn: ({ signal }) => listFolders(site, collection, signal),
 		enabled: !isTrash,
 	});
 	const folders = useMemo(() => (isTrash ? [] : (foldersQuery.data ?? [])), [isTrash, foldersQuery.data]);
 
 	const apiQuery = listStateToApiQuery(site, state, { trash: isTrash }).toString();
-	const listKey = entriesKey(apiQuery);
+	const listKey = entriesKeys.list(apiQuery);
 	const entriesQuery = useQuery({
 		queryKey: listKey,
-		queryFn: ({ signal }) =>
-			cmsFetch<EntriesPage>(site, cmsApiUrl(`/v1/entries?${apiQuery}`), { signal, fallback: t("list.loadFailed") }),
+		queryFn: ({ signal }) => listEntries(site, apiQuery, signal, t("list.loadFailed")),
 		// Waits for the saved sort and page size, so the list is requested once with them instead of twice.
 		enabled: ready,
 		// Rows from another collection have a different column layout, so they are not kept.
@@ -181,7 +185,7 @@ function useEntryMutations({
 	options,
 	onResults,
 }: {
-	listKey: ReturnType<typeof entriesKey>;
+	listKey: ReturnType<typeof entriesKeys.list>;
 	state: ListState;
 	options: TaxonomyOptions;
 	onResults: (results: BulkItemResult[]) => void;
@@ -191,75 +195,59 @@ function useEntryMutations({
 	const queryClient = useQueryClient();
 
 	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
-	const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: ENTRIES_KEY });
+	const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: entriesKeys.all });
 
-	const mutateEntries = async (
-		op: OptimisticOp,
-		targets: BulkSelection[],
-		request: () => Promise<BulkItemResult[]>,
-		params?: BulkParams,
-	): Promise<BulkItemResult[]> => {
-		await queryClient.cancelQueries({ queryKey: listKey });
-		const previous = queryClient.getQueryData<EntriesPage>(listKey);
-		if (previous) {
-			queryClient.setQueryData<EntriesPage>(
-				listKey,
-				applyOptimistic(previous, op, new Set(targets.map((target) => target.id)), {
-					state,
-					params,
-					options,
-				}),
-			);
-		}
-		try {
-			const results = await request();
-			onResults(results);
-			return results;
-		} catch (error) {
-			if (previous) queryClient.setQueryData(listKey, previous);
-			throw error;
-		} finally {
-			void invalidateEntries();
-		}
-	};
+	/**
+	 * Applies the change to the list first, then sends the request; a failed request rolls the list back, and the list is synced to server
+	 * values once it ends. Restoring is not in the bulk API, so it requests per item. A failure is thrown to the caller (`inline`).
+	 */
+	const mutation = useCmsMutation<
+		{ op: OptimisticOp; targets: BulkSelection[]; params?: BulkParams },
+		BulkItemResult[],
+		EntriesPage
+	>({
+		fn: async ({ op, targets, params }, { site }) => {
+			if (op !== "restore") return bulkEntries(site, op, targets, params);
+			const out: BulkItemResult[] = [];
+			for (const target of targets) {
+				try {
+					await changeEntryStatus(site, target.id, "restore", { expectedVersion: target.expectedVersion });
+					out.push({ id: target.id, ok: true, version: target.expectedVersion + 1 });
+				} catch (error) {
+					out.push({ id: target.id, ok: false, error: (error instanceof CmsApiError && error.code) || "internal" });
+				}
+			}
+			return out;
+		},
+		failure: ({ op }) => t("bulk.failed", { label: op }),
+		inline: true,
+		optimistic: {
+			queryKey: listKey,
+			update: (page, { op, targets, params }) =>
+				applyOptimistic(page, op, new Set(targets.map((target) => target.id)), { state, params, options }),
+		},
+		invalidate: [entriesKeys.all],
+		onSuccess: onResults,
+	});
+
+	const run = (op: OptimisticOp, targets: BulkSelection[], params?: BulkParams) =>
+		mutation.mutateAsync({ op, targets, params });
 
 	/** Handles the action through the bulk API and reports the result. */
-	const bulk = async (
-		op: Parameters<typeof runBulk>[1],
-		label: string,
-		targets: BulkSelection[],
-		params: BulkParams = {},
-	) => {
+	const bulk = async (op: BulkOp, label: string, targets: BulkSelection[], params: BulkParams = {}) => {
 		try {
-			const results = await mutateEntries(op, targets, () => runBulk(site, op, targets, params), params);
-			announce(site, label, results, targets);
+			announce(site, label, await run(op, targets, params), targets);
 		} catch (error) {
 			toast.error(errorText(site, error, t("bulk.failed", { label })));
 		}
 	};
 
-	/** Trash restore. Not in the bulk API, so it requests per item. */
+	/** Trash restore. */
 	const restore = async (targets: BulkSelection[]) => {
-		const results = await mutateEntries("restore", targets, async () => {
-			const out: BulkItemResult[] = [];
-			for (const target of targets) {
-				try {
-					await cmsFetch(site, cmsApiUrl(`/v1/entries/${target.id}/restore`), {
-						method: "POST",
-						json: { expectedVersion: target.expectedVersion },
-					});
-					out.push({ id: target.id, ok: true, version: target.expectedVersion + 1 });
-				} catch (error) {
-					const code = (error as { code?: string }).code ?? "internal";
-					out.push({ id: target.id, ok: false, error: code });
-				}
-			}
-			return out;
-		});
-		announce(site, t("bulk.restore"), results, targets);
+		announce(site, t("bulk.restore"), await run("restore", targets), targets);
 	};
 
-	return { mutateEntries, bulk, restore, invalidateEntries };
+	return { run, bulk, restore, invalidateEntries };
 }
 
 /** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or in trash. */
@@ -337,7 +325,7 @@ export function useEntryList(mode: ListMode) {
 		collection,
 		folders,
 		onChanged: async (deletedId) => {
-			await queryClient.invalidateQueries({ queryKey: foldersKey(collection) });
+			await queryClient.invalidateQueries({ queryKey: foldersKeys.list(collection) });
 			// If the folder being viewed was deleted, go back to the all view.
 			if (deletedId && state.folder === deletedId) update({ folder: "all" });
 			else await invalidateEntries();
@@ -392,19 +380,14 @@ export function useEntryList(mode: ListMode) {
 		if (ok) await bulk("permanentDelete", t("bulk.permanentDelete"), targets);
 	};
 
-	const duplicate = async (item: ListEntriesItem) => {
-		try {
-			const copy = await cmsFetch<{ entry: { id: string } }>(site, cmsApiUrl(`/v1/entries/${item.id}/duplicate`), {
-				method: "POST",
-				json: { title: copyTitle(site, item.collection, item.title) },
-				fallback: t("duplicate.failed"),
-			});
-			toast.success(t("duplicate.done", { title: item.title || t("common.untitled") }));
-			router.navigate(site.adminEntryEditHref(copy.entry.id));
-		} catch (error) {
-			toast.error(errorText(site, error, t("duplicate.failed")));
-		}
-	};
+	const duplicateMutation = useCmsMutation<ListEntriesItem, EntryWriteResult>({
+		fn: (item, { site }) =>
+			duplicateEntry(site, item.id, { title: copyTitle(site, item.collection, item.title) }, t("duplicate.failed")),
+		success: (_copy, item) => t("duplicate.done", { title: item.title || t("common.untitled") }),
+		failure: t("duplicate.failed"),
+		onSuccess: (copy) => router.navigate(site.adminEntryEditHref(copy.entry.id)),
+	});
+	const duplicate = (item: ListEntriesItem) => duplicateMutation.mutate(item);
 
 	/** New item. Document entries are created in the edit screen in the current folder; taxonomy items through a small form. */
 	const createNew = () =>
@@ -426,7 +409,7 @@ export function useEntryList(mode: ListMode) {
 				openEditor: (target) => router.navigate(editHref(target)),
 				openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),
 				openRecord: (target) => void openRecord({ collection, id: target.id }),
-				duplicate: (target) => void duplicate(target),
+				duplicate: (target) => duplicate(target),
 				restore: (targets) => void restore(targets),
 				confirmTrash: (targets) => void confirmTrash(targets),
 				confirmArchive: (targets) => void confirmArchive(targets),
@@ -465,7 +448,7 @@ export function useEntryList(mode: ListMode) {
 		},
 		/** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
 		confirmDialog,
-		reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: [...ENTRIES_KEY, "taxonomy"] }),
+		reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: entriesKeys.taxonomy() }),
 		invalidateEntries,
 		moveEntries,
 		createNew,

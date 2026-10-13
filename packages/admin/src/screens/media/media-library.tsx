@@ -1,7 +1,7 @@
 "use client";
 
-import { cmsApiUrl, type PageSize, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type PageSize, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
 	FileText,
 	Image as ImageIcon,
@@ -16,6 +16,17 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import {
+	cleanupMedia,
+	deleteMedia,
+	listMedia,
+	type MediaItem,
+	type MediaPage,
+	mediaKeys,
+	updateMedia,
+} from "../../api/media";
+import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { cn } from "../../lib/utils/cn";
 import { readPreference, writePreference } from "../../lib/utils/site-storage";
@@ -29,7 +40,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Skeleton } from "../../ui/skeleton";
 import { Switch } from "../../ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group";
-import { cmsFetch, errorText } from "../admin-api";
 import type { MenuAction } from "../shared/action-menu";
 import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -40,7 +50,7 @@ import { ListPagination } from "../shared/list-pager";
 import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
 import { useDebounced } from "../shared/use-debounced";
 import { MediaDetailPanel } from "./media-detail-panel";
-import { type MediaItem, mediaUsages, usageNoteLabel } from "./media-item";
+import { mediaUsages, usageNoteLabel } from "./media-item";
 import { MediaGrid, MediaTable } from "./media-views";
 import { mediaMessages } from "./messages";
 
@@ -51,13 +61,6 @@ const kindOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 ];
 
 const uploadAccept = (site: Site) => `${site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")},${site.api.FILE_ACCEPT}`;
-
-const MEDIA_KEY = ["cms", "media"] as const;
-
-interface MediaPage {
-	items: MediaItem[];
-	total: number;
-}
 
 const isImageFile = (site: Site, file: File) => site.api.isImageMime(file.type);
 
@@ -92,7 +95,6 @@ function useMediaView(): [MediaView, (view: MediaView) => void] {
 export function MediaLibrary() {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
-	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState<PageSize>(25);
 	const [search, setSearch] = useState("");
@@ -122,8 +124,8 @@ export function MediaLibrary() {
 	}, [page, pageSize, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
 	const debouncedQuery = useDebounced(query, 200);
 	const mediaQuery = useQuery({
-		queryKey: [...MEDIA_KEY, debouncedQuery],
-		queryFn: ({ signal }) => cmsFetch<MediaPage>(site, cmsApiUrl(`/v1/media?${debouncedQuery}`), { signal }),
+		queryKey: mediaKeys.list(debouncedQuery),
+		queryFn: ({ signal }) => listMedia(site, debouncedQuery, signal),
 		placeholderData: keepPreviousData,
 	});
 	const items = mediaQuery.data?.items ?? [];
@@ -140,8 +142,28 @@ export function MediaLibrary() {
 		setSelectedId(id);
 	};
 
-	/** Refetches the list in the background. Rows currently visible stay as they are. */
-	const invalidateMedia = () => queryClient.invalidateQueries({ queryKey: MEDIA_KEY });
+	const uploadMutation = useCmsMutation({
+		fn: async ({ files, optimize }: { files: File[]; optimize: boolean }) => {
+			for (const [index, file] of files.entries()) {
+				const onProgress = (percent: number) => setUpload({ current: index + 1, total: files.length, percent });
+				setUpload({ current: index + 1, total: files.length, percent: 0 });
+				if (isImageFile(site, file)) {
+					const prepared = await prepareUpload(site, file, { optimize });
+					await uploadImageFile(site, prepared, onProgress);
+				} else {
+					await uploadAttachment(site, file, onProgress);
+				}
+			}
+		},
+		success: (_result, { files }) => t("library.uploaded", { count: files.length }),
+		// A failed upload does not become available. It can be retried with the same file.
+		failure: t("library.unknownError"),
+		inline: true,
+		onSuccess: () => setPage(1),
+		onError: (error) =>
+			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
+		invalidate: [mediaKeys.all],
+	});
 
 	const handleFiles = async (files: FileList | null) => {
 		if (!files?.length) return;
@@ -155,94 +177,75 @@ export function MediaLibrary() {
 			return;
 		}
 		try {
-			for (const [index, file] of list.entries()) {
-				const onProgress = (percent: number) => setUpload({ current: index + 1, total: list.length, percent });
-				setUpload({ current: index + 1, total: list.length, percent: 0 });
-				if (isImageFile(site, file)) {
-					const prepared = await prepareUpload(site, file, { optimize });
-					await uploadImageFile(site, prepared, onProgress);
-				} else {
-					await uploadAttachment(site, file, onProgress);
-				}
-			}
-			toast.success(t("library.uploaded", { count: list.length }));
-			setPage(1);
-			await invalidateMedia();
-		} catch (error) {
-			// A failed upload does not become available. It can be retried with the same file.
-			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) }));
+			await uploadMutation.mutateAsync({ files: list, optimize });
+		} catch {
+			// Reported by the mutation.
 		} finally {
 			setUpload(null);
 			if (fileInputRef.current) fileInputRef.current.value = "";
 		}
 	};
 
-	const deleteMedia = async (media: MediaItem) => {
-		// Remove from the list first, then send the request. On failure, revert; when done, sync to the server value.
-		await queryClient.cancelQueries({ queryKey: MEDIA_KEY });
-		const snapshots = queryClient.getQueriesData<MediaPage>({ queryKey: MEDIA_KEY });
-		queryClient.setQueriesData<MediaPage>({ queryKey: MEDIA_KEY }, (data) =>
-			data?.items.some((item) => item.id === media.id)
-				? { items: data.items.filter((item) => item.id !== media.id), total: Math.max(0, data.total - 1) }
-				: data,
-		);
+	const deleteMutation = useCmsMutation<MediaItem, void, MediaPage>({
+		fn: (media, { site }) => deleteMedia(site, media.id, t("library.deleteFailed")),
+		success: (_result, media) => t("library.deleted", { name: media.filename }),
+		failure: t("library.deleteFailed"),
+		// Remove from the list first, then send the request. On failure it reverts; when done, the list syncs to the server value.
+		optimistic: {
+			queryKey: mediaKeys.lists(),
+			update: (data, media) =>
+				data.items.some((item) => item.id === media.id)
+					? { items: data.items.filter((item) => item.id !== media.id), total: Math.max(0, data.total - 1) }
+					: data,
+		},
+		invalidate: [mediaKeys.all],
+	});
+
+	const removeMedia = (media: MediaItem) => {
 		// If the file being deleted is open, close it. Its edited default description is discarded with it.
 		setSelectedId((current) => {
 			if (current !== media.id) return current;
 			detailDirtyRef.current = false;
 			return null;
 		});
-		try {
-			await cmsFetch(site, cmsApiUrl(`/v1/media/${media.id}`), {
-				method: "DELETE",
-				fallback: t("library.deleteFailed"),
-			});
-			toast.success(t("library.deleted", { name: media.filename }));
-		} catch (error) {
-			for (const [key, data] of snapshots) queryClient.setQueryData(key, data);
-			toast.error(errorText(site, error, t("library.deleteFailed")));
-		} finally {
-			void invalidateMedia();
-		}
+		deleteMutation.mutate(media);
 	};
 
 	/** Saves the default description. Failure is thrown as is so it shows inside the detail panel. */
-	const saveDefaults = async (media: MediaItem, defaults: { alt: string; caption: string }) => {
-		await cmsFetch(site, cmsApiUrl(`/v1/media/${media.id}`), {
-			method: "PATCH",
-			json: { defaultAlt: defaults.alt, defaultCaption: defaults.caption },
-			fallback: t("library.saveFailed"),
-		});
-		toast.success(t("library.saved"));
-		void invalidateMedia();
-	};
+	const saveDefaultsMutation = useCmsMutation({
+		fn: ({ media, defaults }: { media: MediaItem; defaults: { alt: string; caption: string } }, { site }) =>
+			updateMedia(
+				site,
+				media.id,
+				{ defaultAlt: defaults.alt, defaultCaption: defaults.caption },
+				t("library.saveFailed"),
+			),
+		success: t("library.saved"),
+		failure: t("library.saveFailed"),
+		inline: true,
+		invalidate: [mediaKeys.all],
+	});
 
-	const rename = async (media: MediaItem, filename: string) => {
-		try {
-			await cmsFetch(site, cmsApiUrl(`/v1/media/${media.id}`), { method: "PATCH", json: { filename } });
-			toast.success(t("library.renamed", { name: filename }));
-			await invalidateMedia();
-		} catch (error) {
-			toast.error(errorText(site, error, t("library.renameFailed")));
-		}
-	};
+	const renameMutation = useCmsMutation({
+		fn: ({ media, filename }: { media: MediaItem; filename: string }, { site }) =>
+			updateMedia(site, media.id, { filename }),
+		success: (_result, { filename }) => t("library.renamed", { name: filename }),
+		failure: t("library.renameFailed"),
+		invalidate: [mediaKeys.all],
+	});
 
-	const cleanup = async () => {
-		try {
-			const result = await cmsFetch<{ removed: number; failed: string[] }>(site, cmsApiUrl("/v1/media/cleanup"), {
-				method: "POST",
-				json: {},
-			});
+	const cleanupMutation = useCmsMutation({
+		fn: (_variables: void, { site }) => cleanupMedia(site),
+		failure: t("library.cleanup.failed"),
+		onSuccess: (result) => {
 			const text = result.failed.length
 				? t("library.cleanup.doneWithFailed", { removed: result.removed, failed: result.failed.length })
 				: t("library.cleanup.done", { removed: result.removed });
 			if (result.failed.length) toast.error(text);
 			else toast.success(text);
-			void invalidateMedia();
-		} catch (error) {
-			toast.error(errorText(site, error, t("library.cleanup.failed")));
-		}
-	};
+		},
+		invalidate: [mediaKeys.all],
+	});
 
 	const setDetailDirty = useCallback((dirty: boolean) => {
 		detailDirtyRef.current = dirty;
@@ -255,7 +258,7 @@ export function MediaLibrary() {
 			confirmLabel: t("common.delete"),
 			destructive: true,
 		});
-		if (ok) await deleteMedia(media);
+		if (ok) removeMedia(media);
 	};
 
 	/** Right-click and `⋯` menu of a media tile. */
@@ -333,7 +336,7 @@ export function MediaLibrary() {
 							? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
 							: t("library.upload")}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onClick={() => void cleanup()}>
+					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
 					</Button>
 					<IconButton label={t("library.refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
@@ -419,7 +422,7 @@ export function MediaLibrary() {
 				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
 					<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 lg:p-6">
 						{loadError && (
-							<Alert variant="danger" className="mb-4 flex w-auto items-center justify-between">
+							<Alert variant="destructive" className="mb-4 flex w-auto items-center justify-between">
 								<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
 								<Button type="button" variant="outline" size="xs" onClick={() => void mediaQuery.refetch()}>
 									{t("common.retry")}
@@ -480,8 +483,8 @@ export function MediaLibrary() {
 							key={selected.id}
 							media={selected}
 							onClose={() => void openDetail(null)}
-							onSaveDefaults={(defaults) => saveDefaults(selected, defaults)}
-							onRename={(filename) => void rename(selected, filename)}
+							onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
+							onRename={(filename) => renameMutation.mutate({ media: selected, filename })}
 							onRequestDelete={() => void requestDelete(selected)}
 							onDirtyChange={setDetailDirty}
 						/>

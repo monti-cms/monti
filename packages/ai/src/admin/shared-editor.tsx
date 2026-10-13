@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
 	Empty,
@@ -17,29 +17,25 @@ import {
 	Textarea,
 	useConfirm,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, type Translator, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Translator, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { toast } from "sonner";
 import type { AiSharedItem, AiSharedView } from "../shared";
+import { aiKeys, createAiShared, deleteAiShared, getAiShared, updateAiShared } from "./api";
 import { DETAIL_PANE, InlineError, ListRow, ListSkeleton, LoadError } from "./connection-editor";
 import { sharedMessages } from "./shared-editor.messages";
-
-export const AI_SHARED_KEY = ["cms", "ai", "shared"] as const;
 
 /** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
 export const PROMPT_ROWS = 8;
 export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
 
-const SHARED_API = cmsApiUrl("/v1/ai/shared");
-
 export function useAiShared() {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
 	return useQuery({
-		queryKey: AI_SHARED_KEY,
-		queryFn: ({ signal }) => cmsFetch<AiSharedView>(site, SHARED_API, { signal, fallback: t("error.load") }),
+		queryKey: aiKeys.shared(),
+		queryFn: ({ signal }) => getAiShared(site, { signal, fallback: t("error.load") }),
 	});
 }
 
@@ -74,7 +70,7 @@ export function SharedManager({
 	const query = useAiShared();
 	const view = query.data;
 	const current = view?.items.find((item) => item.key === selected) ?? null;
-	const applySaved = (saved: AiSharedView) => queryClient.setQueryData(AI_SHARED_KEY, saved);
+	const applySaved = (saved: AiSharedView) => queryClient.setQueryData(aiKeys.shared(), saved);
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -200,8 +196,6 @@ function SharedEditor({
 	const t = useTranslator(sharedMessages);
 	const initial: Draft = item ? { key: item.key, label: item.label, text: item.text } : NEW_DRAFT;
 	const [draft, setDraft] = useState<Draft>(initial);
-	const [saving, setSaving] = useState(false);
-	const [deleting, setDeleting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const ids = { label: useId(), key: useId(), keyTitle: useId(), text: useId() };
@@ -213,35 +207,53 @@ function SharedEditor({
 	useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
 	useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
-	const save = async () => {
-		setSaving(true);
-		setError(null);
-		try {
+	const saveMutation = useCmsMutation({
+		fn: (_: undefined, { site }) => {
 			const key = item?.key ?? draft.key.trim();
-			const saved = item
-				? await cmsFetch<AiSharedView>(site, SHARED_API, {
-						method: "PATCH",
-						json: {
+			return item
+				? updateAiShared(
+						site,
+						{
 							expectedVersion: version,
 							key,
 							text: draft.text,
 							...(fromConfig ? {} : { label: draft.label.trim() }),
 						},
-						fallback: t("error.save"),
-					})
-				: await cmsFetch<AiSharedView>(site, SHARED_API, {
-						method: "POST",
-						json: { expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
-						fallback: t("error.save"),
-					});
-			onSaved(saved, key);
-			toast.success(t("toast.saved"));
-		} catch (saveError) {
+						t("error.save"),
+					)
+				: createAiShared(
+						site,
+						{ expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
+						t("error.save"),
+					);
+		},
+		success: t("toast.saved"),
+		failure: t("error.save"),
+		inline: true,
+		onSuccess: (saved) => onSaved(saved, item?.key ?? draft.key.trim()),
+		onError: (saveError) => {
 			setError(errorText(site, saveError, t("error.save")));
 			onConflict();
-		} finally {
-			setSaving(false);
-		}
+		},
+	});
+
+	const deleteMutation = useCmsMutation({
+		fn: (target: AiSharedItem, { site }) => deleteAiShared(site, target.key, version, t("error.delete")),
+		success: t("toast.deleted"),
+		failure: t("error.delete"),
+		inline: true,
+		onSuccess: (saved) => onDeleted(saved),
+		onError: (deleteError) => {
+			setError(errorText(site, deleteError, t("error.delete")));
+			onConflict();
+		},
+	});
+	const saving = saveMutation.isPending;
+	const deleting = deleteMutation.isPending;
+
+	const save = () => {
+		setError(null);
+		saveMutation.mutate(undefined);
 	};
 
 	const remove = async () => {
@@ -253,26 +265,8 @@ function SharedEditor({
 			destructive: true,
 		});
 		if (!ok) return;
-		setDeleting(true);
 		setError(null);
-		try {
-			onDeleted(
-				await cmsFetch<AiSharedView>(
-					site,
-					`${SHARED_API}?key=${encodeURIComponent(item.key)}&expectedVersion=${version}`,
-					{
-						method: "DELETE",
-						fallback: t("error.delete"),
-					},
-				),
-			);
-			toast.success(t("toast.deleted"));
-		} catch (deleteError) {
-			setError(errorText(site, deleteError, t("error.delete")));
-			onConflict();
-		} finally {
-			setDeleting(false);
-		}
+		deleteMutation.mutate(item);
 	};
 
 	const shownKey = item?.key ?? draft.key.trim();

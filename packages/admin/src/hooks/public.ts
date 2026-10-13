@@ -6,6 +6,14 @@
  */
 
 export {
+	cmsEntryClient,
+	type EntryBodyPayload,
+	type EntryEditorClient,
+	type EntrySaveInput,
+	type EntryStatusAction,
+} from "../api/entries";
+export type { CmsIssue } from "../api/error-message";
+export {
 	type BlockChild,
 	type BlockChildInit,
 	type BlockEditor,
@@ -22,17 +30,7 @@ export {
 	useBlockEditor,
 } from "../editor/blocks/use-block-editor";
 export { useLinkPaths } from "../editor/link-targets";
-export type { CmsIssue } from "../screens/api-error-message";
-export {
-	cmsEntryClient,
-	type EntryBodyPayload,
-	type EntryEditorClient,
-	type EntrySaveInput,
-	type EntryStatusAction,
-	localRecoveryStoreOf,
-	type RecoveryRecord,
-	type RecoveryStore,
-} from "../screens/entries/entry-editor-client";
+export { localRecoveryStoreOf, type RecoveryRecord, type RecoveryStore } from "../screens/entries/entry-editor-client";
 export type {
 	ConflictInfo,
 	EntryEditor,

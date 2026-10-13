@@ -1,7 +1,7 @@
 import type { Cms } from "@monti-cms/core/runtime";
 import { ImageOff } from "lucide-react";
+import { mediaNotConfiguredMessage } from "../../api/error-message";
 import type { AdminServer } from "../../host/server";
-import { mediaNotConfiguredMessage } from "../api-error-message";
 import { requireAdminPage } from "../require-admin";
 import { AdminShell } from "../shared/admin-shell";
 import { EmptyState } from "../shared/empty-state";

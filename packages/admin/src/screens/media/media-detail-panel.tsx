@@ -3,17 +3,18 @@
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
+import { errorText } from "../../api/client";
+import type { MediaItem } from "../../api/media";
 import { formatBytes } from "../../editor/upload-helper";
 import { cn } from "../../lib/utils/cn";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { Button, buttonVariants } from "../../ui/button";
 import { Field, FieldLabel } from "../../ui/field";
 import { Textarea } from "../../ui/textarea";
-import { errorText } from "../admin-api";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { SidePanelHeader } from "../shared/side-panel";
-import { copyText, type MediaItem, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
+import { copyText, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
 import { MediaThumb } from "./media-views";
 import { mediaMessages } from "./messages";
 

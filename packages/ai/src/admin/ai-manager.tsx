@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
 	Checkbox,
@@ -31,18 +31,18 @@ import {
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
-import { toast } from "sonner";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
 import type { CustomBase } from "../custom";
 import { ADDABLE_CHECKS, type AddableCheckKind, type AiCheck, type AiRunResult, checkKey } from "../definition";
 import { aiManagerMessages } from "./ai-manager.messages";
-import { AI_ACTIONS_KEY, type AiActionsResponse, runAiAction, useAiActions } from "./ai-slot-provider";
+import { runAiAction, useAiActions } from "./ai-slot-provider";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample";
+import { type AiActionsResponse, aiKeys, createAiAction, deleteAiAction, updateAiAction } from "./api";
 import {
 	ConnectionManager,
 	DETAIL_PANE,
@@ -149,8 +149,6 @@ export function AiManager() {
 		isNew?: boolean;
 		initial: string;
 	} | null>(null);
-	const [saving, setSaving] = useState(false);
-	const [deleting, setDeleting] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
 	/** The open connection. The header's Add connection changes it, so it lives outside the Connections tab. */
 	const [connection, setConnection] = useState<string | "new" | null>(null);
@@ -163,9 +161,58 @@ export function AiManager() {
 	const featureDirty = editing !== null && snapshotOf(editing.spec, editing.base) !== editing.initial;
 
 	const replaceInCache = (feature: AiActionView) =>
-		queryClient.setQueryData<AiActionsResponse>(AI_ACTIONS_KEY, (data) =>
+		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
 			data ? { ...data, items: data.items.map((item) => (item.key === feature.key ? feature : item)) } : data,
 		);
+
+	const removeMutation = useCmsMutation({
+		fn: (feature: AiActionView, { site }) => deleteAiAction(site, feature.key, feature.version, t("remove.failed")),
+		success: t("remove.done"),
+		failure: t("remove.failed"),
+		inline: true,
+		onSuccess: (_result, feature) => {
+			queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+				data ? { ...data, items: data.items.filter((item) => item.key !== feature.key) } : data,
+			);
+			setEditing(null);
+		},
+		onError: (error) => setFormError(errorText(site, error, t("remove.failed"))),
+	});
+
+	const saveMutation = useCmsMutation({
+		fn: (current: NonNullable<typeof editing>, { site }) =>
+			current.isNew && current.base
+				? createAiAction(
+						site,
+						{ base: { ...current.base, label: current.base.label.trim() }, value: current.spec },
+						t("save.failed"),
+					)
+				: updateAiAction(
+						site,
+						current.feature.key,
+						{
+							expectedVersion: current.feature.version,
+							value: current.spec,
+							...(current.base ? { base: { ...current.base, label: current.base.label.trim() } } : {}),
+						},
+						t("save.failed"),
+					),
+		success: t("save.done"),
+		failure: t("save.failed"),
+		inline: true,
+		invalidate: [aiKeys.actions()],
+		onSuccess: (saved, current) => {
+			if (current.isNew && current.base) {
+				queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+					data ? { ...data, items: [...data.items, saved] } : data,
+				);
+			} else replaceInCache(saved);
+			open(saved);
+		},
+		onError: (error) => setFormError(errorText(site, error, t("save.failed"))),
+	});
+	const saving = saveMutation.isPending;
+	const deleting = removeMutation.isPending;
 
 	/** Opens without asking (e.g. after saving). */
 	const open = (feature: AiActionView) => {
@@ -252,60 +299,14 @@ export function AiManager() {
 			destructive: true,
 		});
 		if (!ok) return;
-		setDeleting(true);
 		setFormError(null);
-		try {
-			await cmsFetch(site, cmsApiUrl(`/v1/ai/actions/${feature.key}?expectedVersion=${feature.version}`), {
-				method: "DELETE",
-				fallback: t("remove.failed"),
-			});
-			queryClient.setQueryData<AiActionsResponse>(AI_ACTIONS_KEY, (data) =>
-				data ? { ...data, items: data.items.filter((item) => item.key !== feature.key) } : data,
-			);
-			setEditing(null);
-			toast.success(t("remove.done"));
-		} catch (error) {
-			setFormError(errorText(site, error, t("remove.failed")));
-		} finally {
-			setDeleting(false);
-		}
+		removeMutation.mutate(feature);
 	};
 
-	const save = async () => {
+	const save = () => {
 		if (!editing) return;
-		setSaving(true);
 		setFormError(null);
-		try {
-			if (editing.isNew && editing.base) {
-				const created = await cmsFetch<AiActionView>(site, cmsApiUrl("/v1/ai/actions"), {
-					method: "POST",
-					json: { base: { ...editing.base, label: editing.base.label.trim() }, value: editing.spec },
-					fallback: t("save.failed"),
-				});
-				queryClient.setQueryData<AiActionsResponse>(AI_ACTIONS_KEY, (data) =>
-					data ? { ...data, items: [...data.items, created] } : data,
-				);
-				open(created);
-			} else {
-				const saved = await cmsFetch<AiActionView>(site, cmsApiUrl(`/v1/ai/actions/${editing.feature.key}`), {
-					method: "PATCH",
-					json: {
-						expectedVersion: editing.feature.version,
-						value: editing.spec,
-						...(editing.base ? { base: { ...editing.base, label: editing.base.label.trim() } } : {}),
-					},
-					fallback: t("save.failed"),
-				});
-				replaceInCache(saved);
-				open(saved);
-			}
-			toast.success(t("save.done"));
-			void queryClient.invalidateQueries({ queryKey: AI_ACTIONS_KEY });
-		} catch (error) {
-			setFormError(errorText(site, error, t("save.failed")));
-		} finally {
-			setSaving(false);
-		}
+		saveMutation.mutate(editing);
 	};
 
 	const onConnectionDirty = useCallback((dirty: boolean) => setConnectionDirty(dirty), []);

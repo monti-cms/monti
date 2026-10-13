@@ -26,6 +26,8 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
+import { cmsEntryClient } from "../../api/entries";
+import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
@@ -49,13 +51,11 @@ import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { Skeleton } from "../../ui/skeleton";
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { nounVars } from "../shared/noun.messages";
 import { INSPECTOR_PANEL_RESIZE, SIDE_PANEL_WIDTH } from "../shared/side-panel";
-import { cmsEntryClient } from "./entry-editor-client";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { ConflictInfo, RecoveryOffer, SaveStatus } from "./entry-editor-store";
 import { formText, isTranslationEntry, titleKeyOf } from "./entry-form";
@@ -630,7 +630,7 @@ export function EntryEditorShell({
 	if (loadError) {
 		return (
 			<div className="space-y-3 p-8">
-				<Alert variant="danger">
+				<Alert variant="destructive">
 					<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
 				</Alert>
 				<Link href={site.adminHref()} className={buttonVariants({ variant: "outline" })}>

@@ -2,6 +2,7 @@
 
 import { type BodyAllowed, type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { Editor, Range } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -47,9 +48,10 @@ import {
 	useCmsAdminComponents,
 	useSourceFormat,
 } from "../admin-components";
-import { errorText } from "../screens/admin-api";
-import { mediaNotConfiguredMessage } from "../screens/api-error-message";
+import { errorText } from "../api/client";
+import { mediaNotConfiguredMessage } from "../api/error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
+import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
@@ -74,7 +76,7 @@ import { InlineBubble, useMarkExtensions } from "./inline-bubble";
 import { INLINE_MARK_NAMES, inlineMarkTools } from "./inline-marks";
 import { type InternalLinkItem, insertInternalLink, parseInternalLinkTrigger } from "./internal-link";
 import { InternalLinkPopup } from "./internal-link-popup";
-import { searchLinkTargets } from "./internal-link-search";
+import { linkSearchKey, searchLinkTargets } from "./internal-link-search";
 import { type LinkDraft, LinkForm, linkDraftFromSelection } from "./link-form";
 import { editorMessages } from "./messages";
 import {
@@ -499,9 +501,22 @@ export function CmsEditor({
 	slashRef.current = slash;
 
 	const [link, setLink] = useState<{ query: string; index: number; coords: Coords } | null>(null);
-	const [linkItems, setLinkItems] = useState<InternalLinkItem[]>([]);
-	const [isLinkLoading, setIsLinkLoading] = useState(false);
-	const [linkError, setLinkError] = useState<string | null>(null);
+	// The `[[` search follows the typed text after a pause. The items already shown stay while the next ones load.
+	const linkQuery = link?.query;
+	const debouncedLinkQuery = useDebounced(linkQuery ?? "", 200);
+	const linkSearch = useQuery({
+		queryKey: linkSearchKey(debouncedLinkQuery),
+		queryFn: () => searchLinkTargets(site, debouncedLinkQuery),
+		enabled: linkQuery !== undefined,
+		placeholderData: keepPreviousData,
+		retry: false,
+	});
+	const linkItems: InternalLinkItem[] = linkSearch.data ?? [];
+	const isLinkLoading = linkQuery !== undefined && (linkSearch.isFetching || linkQuery !== debouncedLinkQuery);
+	const linkError =
+		linkQuery !== undefined && !isLinkLoading && linkSearch.isError
+			? errorText(site, linkSearch.error, t("internalLink.error"))
+			: null;
 	const linkRangeRef = useRef<Range | null>(null);
 	const linkRef = useRef(link);
 	linkRef.current = link;
@@ -708,32 +723,6 @@ export function CmsEditor({
 		});
 		rerender();
 	}, [canEdit, editor]);
-
-	const linkQuery = link?.query;
-	useEffect(() => {
-		if (linkQuery === undefined) return;
-		let cancelled = false;
-		setIsLinkLoading(true);
-		setLinkError(null);
-		const timer = setTimeout(() => {
-			searchLinkTargets(site, linkQuery)
-				.then((items) => {
-					if (!cancelled) setLinkItems(items);
-				})
-				.catch((error) => {
-					if (cancelled) return;
-					setLinkItems([]);
-					setLinkError(errorText(site, error, t("internalLink.error")));
-				})
-				.finally(() => {
-					if (!cancelled) setIsLinkLoading(false);
-				});
-		}, 200);
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
-	}, [linkQuery, site, t]);
 
 	useEffect(() => {
 		const open = () => setImageDialog({ file: null });

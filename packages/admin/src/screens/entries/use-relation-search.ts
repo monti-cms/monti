@@ -1,8 +1,10 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { cmsFetch } from "../admin-api";
+import { type EntrySearchResponse, entriesKeys, searchEntries } from "../../api/entries";
+import { useDebounced } from "../shared/use-debounced";
 import { entriesMessages } from "./messages";
 
 /** An entry a relation picker shows. `title` falls back to the slug on the server, and to "Untitled" here. */
@@ -12,8 +14,6 @@ export interface RelationEntry {
 	slug: string | null;
 	status: string;
 }
-
-type SearchResponse = { items: { id: string; title: string | null; slug: string | null; status: string }[] };
 
 /** The picker waits this long after the last keystroke before it asks the server. */
 export const RELATION_SEARCH_DEBOUNCE_MS = 250;
@@ -44,10 +44,6 @@ export function useRelationSearch({
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
 	const [query, setQuery] = useState("");
-	const [results, setResults] = useState<RelationEntry[] | null>(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(false);
-	const [refreshes, setRefreshes] = useState(0);
 	// Every entry seen so far (results, lookups, created ones) by id, and the ids a lookup already answered for.
 	const [known, setKnown] = useState<ReadonlyMap<string, RelationEntry>>(new Map());
 	const [resolved, setResolved] = useState<ReadonlySet<string>>(new Set());
@@ -57,7 +53,7 @@ export function useRelationSearch({
 	resolvedRef.current = resolved;
 
 	const toEntry = useCallback(
-		(item: SearchResponse["items"][number]): RelationEntry => ({
+		(item: EntrySearchResponse["items"][number]): RelationEntry => ({
 			id: item.id,
 			title: item.title || t("untitled"),
 			slug: item.slug,
@@ -73,75 +69,58 @@ export function useRelationSearch({
 		});
 	}, []);
 
-	// `refreshes` asks for the same search again (an entry was created).
-	// biome-ignore lint/correctness/useExhaustiveDependencies: refreshes is the trigger
+	// The first entries (no text) are asked for at once; typing waits for a pause.
+	const text = query.trim();
+	const debouncedText = useDebounced(text, RELATION_SEARCH_DEBOUNCE_MS);
+	const searchText = text === "" ? "" : debouncedText;
+	const params = new URLSearchParams({ collection });
+	if (searchText) params.set("query", searchText);
+	if (publishedOnly) params.set("publishedOnly", "true");
+	if (limit !== undefined) params.set("limit", String(limit));
+	const searchQuery = useQuery({
+		queryKey: entriesKeys.search(params.toString()),
+		queryFn: ({ signal }) => searchEntries(site, params, signal),
+		enabled,
+		retry: false,
+		placeholderData: keepPreviousData,
+	});
+	const results = useMemo(() => searchQuery.data?.items.map(toEntry) ?? null, [searchQuery.data, toEntry]);
 	useEffect(() => {
-		if (!enabled) return;
-		let cancelled = false;
-		setLoading(true);
-		const run = async () => {
-			const params = new URLSearchParams({ collection });
-			if (query.trim()) params.set("query", query.trim());
-			if (publishedOnly) params.set("publishedOnly", "true");
-			if (limit !== undefined) params.set("limit", String(limit));
-			try {
-				const data = await cmsFetch<SearchResponse>(site, cmsApiUrl(`/v1/entries/search?${params}`));
-				if (cancelled) return;
-				const found = data.items.map(toEntry);
-				setResults(found);
-				remember(found);
-				setError(false);
-			} catch {
-				if (!cancelled) setError(true);
-			} finally {
-				if (!cancelled) setLoading(false);
-			}
-		};
-		// The first entries (no text) are asked for at once; typing waits for a pause.
-		const timer = setTimeout(run, query.trim() ? RELATION_SEARCH_DEBOUNCE_MS : 0);
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
-	}, [enabled, site, collection, publishedOnly, limit, query, refreshes, toEntry, remember]);
+		if (results) remember(results);
+	}, [results, remember]);
 
+	// The entries the field holds are looked up by id once per selection, so they keep their titles whatever the search finds.
 	const selectedKey = selected.join(",");
-	// biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the selected ids
-	useEffect(() => {
-		if (!enabled) return;
-		const missing = selected.filter((id) => !knownRef.current.has(id) && !resolvedRef.current.has(id));
-		if (missing.length === 0) return;
-		let cancelled = false;
-		const lookup = async () => {
-			const found: RelationEntry[] = [];
-			try {
-				for (let from = 0; from < missing.length; from += LOOKUP_CHUNK) {
-					const params = new URLSearchParams({ collection });
-					for (const id of missing.slice(from, from + LOOKUP_CHUNK)) params.append("id", id);
-					const data = await cmsFetch<SearchResponse>(site, cmsApiUrl(`/v1/entries/search?${params}`));
-					found.push(...data.items.map(toEntry));
-				}
-			} catch {
-				// The ids stay unresolved, so the rows keep saying they are loading; the next change of the selection asks again.
-				return;
+	const lookupQuery = useQuery({
+		queryKey: entriesKeys.search(`lookup:${collection}:${selectedKey}`),
+		queryFn: async ({ signal }) => {
+			const missing = selected.filter((id) => !knownRef.current.has(id) && !resolvedRef.current.has(id));
+			const entries: RelationEntry[] = [];
+			for (let from = 0; from < missing.length; from += LOOKUP_CHUNK) {
+				const chunk = new URLSearchParams({ collection });
+				for (const id of missing.slice(from, from + LOOKUP_CHUNK)) chunk.append("id", id);
+				entries.push(...(await searchEntries(site, chunk, signal)).items.map(toEntry));
 			}
-			if (cancelled) return;
-			remember(found);
-			setResolved((current) => new Set([...current, ...missing]));
-		};
-		void lookup();
-		return () => {
-			cancelled = true;
-		};
-	}, [enabled, site, collection, selectedKey, toEntry, remember]);
+			return { ids: missing, entries };
+		},
+		enabled: enabled && selected.length > 0,
+		// The ids stay unresolved on a failure, so the rows keep saying they are loading; the next change of the selection asks again.
+		retry: false,
+	});
+	useEffect(() => {
+		const answer = lookupQuery.data;
+		if (!answer || answer.ids.length === 0) return;
+		remember(answer.entries);
+		setResolved((current) => new Set([...current, ...answer.ids]));
+	}, [lookupQuery.data, remember]);
 
 	return {
 		/** The best matches of the text typed so far. `null` until the first answer. */
 		options: results,
 		/** Whether an answer for the latest text is on its way. */
-		loading,
+		loading: searchQuery.isFetching || text !== searchText,
 		/** Whether the last search failed. */
-		error,
+		error: searchQuery.isError,
 		/** Sets the text to search for (debounced). */
 		search: setQuery,
 		/** The entry with this id if it was seen, by search, lookup or `remember`. */
@@ -153,9 +132,9 @@ export function useRelationSearch({
 		/** Shows an entry by name right away (one the user just created) and searches again. */
 		remember: (entry: RelationEntry) => {
 			remember([entry]);
-			setRefreshes((count) => count + 1);
+			void searchQuery.refetch();
 		},
 		/** Searches the same text again. */
-		reload: () => setRefreshes((count) => count + 1),
+		reload: () => void searchQuery.refetch(),
 	};
 }

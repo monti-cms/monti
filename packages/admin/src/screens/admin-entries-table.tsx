@@ -742,7 +742,7 @@ export function AdminEntriesTable({
 	return (
 		<section aria-label={t("list.label")} className="flex min-h-0 flex-1 flex-col overflow-hidden">
 			{errorMessage && (
-				<Alert variant="danger" className="mx-5 mt-3 flex w-auto items-center justify-between">
+				<Alert variant="destructive" className="mx-5 mt-3 flex w-auto items-center justify-between">
 					<AlertDescription className="col-start-auto">{errorMessage}</AlertDescription>
 					<Button type="button" variant="outline" size="xs" onClick={onRetry}>
 						{t("common.retry")}

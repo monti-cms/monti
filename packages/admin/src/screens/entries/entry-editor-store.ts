@@ -1,13 +1,14 @@
 import { bodyExcerpt, confirmedSourceState, fillFromBodyLength, type Site } from "@monti-cms/core/client";
 import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
+import { CmsApiError, errorText, isConflict } from "../../api/client";
+import type { EntryEditorClient, EntryStatusAction } from "../../api/entries";
+import type { CmsIssue } from "../../api/error-message";
 import type { BrowserFormat } from "../../browser-format";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
 import type { TranslatorFor } from "../../translator";
-import { CmsApiError, errorText } from "../admin-api";
-import type { CmsIssue } from "../api-error-message";
 import { nounVars } from "../shared/noun.messages";
-import type { EntryEditorClient, EntryStatusAction, RecoveryRecord, RecoveryStore } from "./entry-editor-client";
+import type { RecoveryRecord, RecoveryStore } from "./entry-editor-client";
 import {
 	copyTitle,
 	EMPTY_FORM,
@@ -311,8 +312,7 @@ type Failure = EditorResult<never>;
 /** An `EditorError` for something thrown by the client: the server's message, the network text, or `fallback`. */
 function failureOf(site: Site, error: unknown, fallback: string): EditorError {
 	const base = toEditorError(error, fallback);
-	const message = error instanceof CmsApiError ? error.message || fallback : errorText(site, error, fallback);
-	return { ...base, message };
+	return { ...base, message: errorText(site, error, fallback) };
 }
 
 const failed = (error: EditorError): Failure => ({ ok: false, error });
@@ -632,7 +632,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 						commit({ saveError: error, saveStatus: "session-expired" });
 						return failed(error);
 					}
-					if (caught.status === 409 && caught.code === "conflict" && m.entryId) {
+					if (isConflict(caught) && m.entryId) {
 						commit({ saveStatus: "conflict" });
 						const server = await client.get(m.entryId).catch(() => null);
 						if (server) commit({ conflict: { server, local: snapshot } });

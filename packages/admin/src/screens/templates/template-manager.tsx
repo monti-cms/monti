@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
 	type CmsNode,
@@ -12,7 +12,9 @@ import type { BodyTemplate } from "@monti-cms/core/runtime";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import { createTemplate, deleteTemplate, listTemplates, templatesKeys, updateTemplate } from "../../api/templates";
+import { useCmsMutation } from "../../api/use-cms-mutation";
 import { documentKey } from "../../editor/document-key";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { cn } from "../../lib/utils/cn";
@@ -21,7 +23,6 @@ import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
-import { cmsFetch, errorText } from "../admin-api";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -29,8 +30,6 @@ import { EmptyState } from "../shared/empty-state";
 import { formatDateOnly } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
 import { templatesMessages } from "./messages";
-
-const TEMPLATES_KEY = ["cms", "templates"] as const;
 
 const textNode = (text: string): CmsNode => ({ type: "text", text });
 const heading = (text: string): CmsNode => ({ type: "heading", attrs: { level: 2 }, content: [textNode(text)] });
@@ -57,14 +56,8 @@ export function TemplateManager() {
 	const queryClient = useQueryClient();
 	// If there is a cache, render it right away and refetch in the background. Placeholders show only when there is no cache.
 	const templatesQuery = useQuery({
-		queryKey: TEMPLATES_KEY,
-		queryFn: async ({ signal }) =>
-			(
-				await cmsFetch<{ items?: BodyTemplate[] }>(site, cmsApiUrl("/v1/templates"), {
-					signal,
-					fallback: t("list.loadFailed"),
-				})
-			).items ?? [],
+		queryKey: templatesKeys.list(),
+		queryFn: ({ signal }) => listTemplates(site, signal, t("list.loadFailed")),
 	});
 	const templates = templatesQuery.data ?? [];
 	const error =
@@ -74,7 +67,6 @@ export function TemplateManager() {
 	const [activeTemplate, setActiveTemplate] = useState<Partial<BodyTemplate> | null>(null);
 	const [editName, setEditName] = useState("");
 	const [editBody, setEditBody] = useState<StoredDocument>(() => emptyStoredDocument());
-	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
 
@@ -83,9 +75,6 @@ export function TemplateManager() {
 		activeTemplate !== null &&
 		(editName !== (activeTemplate.name ?? "") ||
 			documentKey(site, editBody) !== documentKey(site, activeTemplate.doc ?? emptyStoredDocument()));
-
-	/** Refetches the list in the background. Rows currently visible stay as they are. */
-	const invalidateTemplates = () => queryClient.invalidateQueries({ queryKey: TEMPLATES_KEY });
 
 	const show = (template: Partial<BodyTemplate> | null) => {
 		setActiveTemplate(template);
@@ -108,46 +97,38 @@ export function TemplateManager() {
 		if (await confirmDiscard(isDirty)) show(null);
 	};
 
-	const handleSave = async () => {
+	const save = useCmsMutation({
+		fn: ({ template, name, doc }: { template: Partial<BodyTemplate>; name: string; doc: StoredDocument }, { site }) =>
+			template.id
+				? updateTemplate(site, template.id, { name, doc, expectedVersion: template.version }, t("common.saveFailed"))
+				: createTemplate(site, { name, doc }, t("common.saveFailed")),
+		success: t("common.saved"),
+		failure: t("common.saveFailed"),
+		inline: true,
+		invalidate: [templatesKeys.all],
+		onSuccess: (saved, { template }) => {
+			// Keep the saved template open.
+			show(saved);
+			queryClient.setQueryData<BodyTemplate[]>(templatesKeys.list(), (current) =>
+				template.id
+					? current?.map((item) => (item.id === saved.id ? saved : item))
+					: current && !current.some((item) => item.id === saved.id)
+						? [saved, ...current]
+						: current,
+			);
+		},
+		onError: (err) => setSaveError(errorText(site, err, t("common.saveFailed"))),
+	});
+	const isSaving = save.isPending;
+
+	const handleSave = () => {
 		if (!activeTemplate || isSaving) return;
 		if (!editName.trim()) {
 			setSaveError(t("edit.nameRequired"));
 			return;
 		}
-
-		setIsSaving(true);
 		setSaveError(null);
-
-		try {
-			if (activeTemplate.id) {
-				const updated = await cmsFetch<BodyTemplate>(site, cmsApiUrl(`/v1/templates/${activeTemplate.id}`), {
-					method: "PATCH",
-					json: { name: editName.trim(), doc: editBody, expectedVersion: activeTemplate.version },
-					fallback: t("common.saveFailed"),
-				});
-				show(updated);
-				queryClient.setQueryData<BodyTemplate[]>(TEMPLATES_KEY, (current) =>
-					current?.map((item) => (item.id === updated.id ? updated : item)),
-				);
-			} else {
-				const created = await cmsFetch<BodyTemplate>(site, cmsApiUrl("/v1/templates"), {
-					method: "POST",
-					json: { name: editName.trim(), doc: editBody },
-					fallback: t("common.saveFailed"),
-				});
-				// Keep the created template open.
-				show(created);
-				queryClient.setQueryData<BodyTemplate[]>(TEMPLATES_KEY, (current) =>
-					current && !current.some((item) => item.id === created.id) ? [created, ...current] : current,
-				);
-			}
-			toast.success(t("common.saved"));
-			void invalidateTemplates();
-		} catch (err) {
-			setSaveError(errorText(site, err, t("common.saveFailed")));
-		} finally {
-			setIsSaving(false);
-		}
+		save.mutate({ template: activeTemplate, name: editName.trim(), doc: editBody });
 	};
 
 	// Save with ⌘S or Ctrl+S (only while the edit panel is open). The function is kept in a ref so it saves the latest values.
@@ -160,33 +141,23 @@ export function TemplateManager() {
 			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.isComposing) return;
 			if (event.key.toLowerCase() !== "s") return;
 			event.preventDefault();
-			void saveRef.current();
+			saveRef.current();
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [isEditing]);
 
-	const deleteTemplate = async (template: BodyTemplate) => {
-		// Remove from the list first, then send the request. On failure, revert; when done, sync to the server value.
-		await queryClient.cancelQueries({ queryKey: TEMPLATES_KEY });
-		const previous = queryClient.getQueryData<BodyTemplate[]>(TEMPLATES_KEY);
-		queryClient.setQueryData<BodyTemplate[]>(TEMPLATES_KEY, (current) =>
-			current?.filter((item) => item.id !== template.id),
-		);
-		if (activeTemplate?.id === template.id) show(null);
-		try {
-			await cmsFetch(site, cmsApiUrl(`/v1/templates/${template.id}?expectedVersion=${template.version}`), {
-				method: "DELETE",
-				fallback: t("delete.failed"),
-			});
-			toast.success(t("delete.done", { name: template.name }));
-		} catch (err) {
-			if (previous) queryClient.setQueryData(TEMPLATES_KEY, previous);
-			toast.error(errorText(site, err, t("delete.failed")));
-		} finally {
-			void invalidateTemplates();
-		}
-	};
+	const remove = useCmsMutation({
+		fn: (template: BodyTemplate, { site }) => deleteTemplate(site, template, t("delete.failed")),
+		success: (_result, template) => t("delete.done", { name: template.name }),
+		failure: t("delete.failed"),
+		// Remove from the list first, then send the request. On failure it comes back; when done, it syncs to the server value.
+		optimistic: {
+			queryKey: templatesKeys.list(),
+			update: (current: BodyTemplate[], template) => current.filter((item) => item.id !== template.id),
+		},
+		invalidate: [templatesKeys.all],
+	});
 
 	const requestDelete = async (template: BodyTemplate) => {
 		const ok = await confirm({
@@ -195,7 +166,9 @@ export function TemplateManager() {
 			confirmLabel: t("common.delete"),
 			destructive: true,
 		});
-		if (ok) await deleteTemplate(template);
+		if (!ok) return;
+		if (activeTemplate?.id === template.id) show(null);
+		remove.mutate(template);
 	};
 
 	/** Right-click and `⋯` menu of a template list row. */
@@ -221,7 +194,7 @@ export function TemplateManager() {
 				</Button>
 			</PageActions>
 			{error && (
-				<Alert variant="danger" className="mx-5 mt-3 flex w-auto items-center justify-between">
+				<Alert variant="destructive" className="mx-5 mt-3 flex w-auto items-center justify-between">
 					<AlertDescription className="col-start-auto">{error}</AlertDescription>
 					<Button type="button" variant="outline" size="xs" onClick={() => void templatesQuery.refetch()}>
 						{t("common.retry")}
@@ -304,7 +277,7 @@ export function TemplateManager() {
 										// Enter during Korean IME composition ends the character. Do not save.
 										if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
 										event.preventDefault();
-										void handleSave();
+										handleSave();
 									}}
 									placeholder={t("edit.nameLabel")}
 									className="h-8 min-w-0 max-w-2xl flex-1"
@@ -313,7 +286,7 @@ export function TemplateManager() {
 									<Button type="button" variant="outline" size="sm" onClick={() => void closeEditor()}>
 										{t("common.cancel")}
 									</Button>
-									<Button type="button" size="sm" disabled={isSaving} onClick={() => void handleSave()}>
+									<Button type="button" size="sm" disabled={isSaving} onClick={handleSave}>
 										{isSaving ? t("common.saving") : t("common.save")}
 									</Button>
 								</div>

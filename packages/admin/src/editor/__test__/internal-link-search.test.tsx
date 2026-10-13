@@ -1,7 +1,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { CmsApiError } from "../../screens/admin-api";
+import { CmsApiError } from "../../api/client";
 import { renderWithSite } from "../../test/site";
 import { InternalLinkPopup } from "../internal-link-popup";
 import { searchLinkTargets } from "../internal-link-search";

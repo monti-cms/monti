@@ -18,13 +18,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { BacklinkField, Collection, RelationField, ValueField } from "@monti-cms/core/client";
-import { cmsApiUrl, type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { errorText, isConflict } from "../../api/client";
+import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api/entries";
 import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
 import { IconButton } from "../../ui/icon-button";
-import { CmsApiError, cmsFetch, errorText } from "../admin-api";
 import type { EntryForm, FormValue } from "./entry-form";
 import { entriesMessages } from "./messages";
 import { optionOf, useRecordCreator } from "./record-create-sheet";
@@ -318,31 +320,22 @@ function useRecordKind(field: BacklinkField, options: readonly { id: string }[])
 		? site.storedField(field.from as SchemaCollection, requirement.field)?.field
 		: undefined;
 	const defaultValue = discriminant?.kind === "select" ? discriminant.defaultValue : undefined;
-	const [kinds, setKinds] = useState<ReadonlyMap<string, string>>(new Map());
-	const idsKey = options.map((option) => option.id).join(",");
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the option ids
-	useEffect(() => {
-		if (!requirement) return;
-		const missing = options.filter((option) => !kinds.has(option.id));
-		if (missing.length === 0) return;
-		let cancelled = false;
-		void Promise.all(
-			missing.map((option) =>
-				cmsFetch<RecordEntry>(site, cmsApiUrl(`/v1/entries/${option.id}`))
-					.then((record) => {
-						const value = record.working.metadata[requirement.field];
-						return [option.id, typeof value === "string" ? value : (defaultValue ?? "")] as const;
-					})
-					.catch(() => [option.id, ""] as const),
-			),
-		).then((loaded) => {
-			if (!cancelled) setKinds((current) => new Map([...current, ...loaded]));
-		});
-		return () => {
-			cancelled = true;
-		};
-	}, [idsKey, requirement?.field]);
+	// Each record's kind is read once (a record that cannot be read counts as the default kind).
+	const records = useQueries({
+		queries: options.map((option) => ({
+			queryKey: entriesKeys.detail(option.id),
+			queryFn: ({ signal }: { signal: AbortSignal }) => getEntry<RecordEntry>(site, option.id, signal),
+			enabled: Boolean(requirement),
+			retry: false,
+		})),
+	});
+	const kinds = new Map<string, string>();
+	options.forEach((option, index) => {
+		const record = records[index];
+		if (!record || !(record.data || record.isError)) return;
+		const value = requirement ? record.data?.working.metadata[requirement.field] : undefined;
+		kinds.set(option.id, record.data ? (typeof value === "string" ? value : (defaultValue ?? "")) : "");
+	});
 
 	return {
 		ready: !requirement || options.every((option) => kinds.has(option.id)),
@@ -383,7 +376,6 @@ export function BacklinkInput({
 	});
 	const creator = useRecordCreator();
 	const kind = useRecordKind(field, records.options ?? []);
-	const [fetched, setFetched] = useState<{ id: string; title: string }[] | null>(null);
 	/** Load/save failure. Shown right below the input like other relation inputs. */
 	const [error, setError] = useState<string | null>(null);
 
@@ -402,28 +394,25 @@ export function BacklinkInput({
 	);
 
 	const refreshShared = shared?.refresh;
+	// If the properties panel already loaded this post's usages, do not fetch separately.
+	const usesShared = Boolean(shared);
+	const relationsQuery = useQuery({
+		queryKey: entriesKeys.relations(targetId ?? ""),
+		queryFn: ({ signal }) =>
+			getEntryRelations<{ incomingReferences: IncomingReference[] }>(site, targetId as string, signal),
+		enabled: Boolean(targetId) && !usesShared,
+		retry: false,
+	});
 	const load = useCallback(async () => {
 		if (!targetId) return;
 		if (refreshShared) {
 			refreshShared();
 			return;
 		}
-		try {
-			const data = await cmsFetch<{ incomingReferences: IncomingReference[] }>(
-				site,
-				cmsApiUrl(`/v1/entries/${targetId}/relations`),
-			);
-			setFetched(membersOf(data.incomingReferences));
-		} catch (loadError) {
-			setError(errorText(site, loadError, t("entry.loadFailed")));
-		}
-	}, [targetId, refreshShared, membersOf, site, t]);
-
-	// If the properties panel already loaded this post's usages, do not fetch separately.
-	const usesShared = Boolean(shared);
-	useEffect(() => {
-		if (!usesShared) void load();
-	}, [usesShared, load]);
+		await relationsQuery.refetch();
+	}, [targetId, refreshShared, relationsQuery.refetch]);
+	const fetched = relationsQuery.data ? membersOf(relationsQuery.data.incomingReferences) : null;
+	const loadError = relationsQuery.error ? errorText(site, relationsQuery.error, t("entry.loadFailed")) : null;
 
 	const members = shared
 		? shared.loading && shared.references.length === 0
@@ -434,22 +423,23 @@ export function BacklinkInput({
 	/** Changes the other record's relation list and saves immediately. For a record collection, saving is publishing. */
 	const update = async (recordId: string, change: (ids: string[]) => string[]) => {
 		for (let attempt = 0; attempt < 2; attempt++) {
-			const record = await cmsFetch<RecordEntry>(site, cmsApiUrl(`/v1/entries/${recordId}`));
+			const record = await getEntry<RecordEntry>(site, recordId);
 			const current = record.working.metadata[field.via];
 			const ids = Array.isArray(current) ? current.filter((id): id is string => typeof id === "string") : [];
 			try {
-				await cmsFetch(site, cmsApiUrl(`/v1/entries/${recordId}`), {
-					method: "PATCH",
-					json: {
+				await updateEntry(
+					site,
+					recordId,
+					{
 						expectedVersion: record.version,
 						slug: record.workingSlug,
 						metadata: { ...record.working.metadata, [field.via]: change(ids) },
 					},
-					fallback: t("saveFailed"),
-				});
+					t("saveFailed"),
+				);
 				return;
 			} catch (saveError) {
-				if (!(saveError instanceof CmsApiError && saveError.code === "conflict") || attempt === 1) throw saveError;
+				if (!isConflict(saveError) || attempt === 1) throw saveError;
 			}
 		}
 	};
@@ -559,9 +549,9 @@ export function BacklinkInput({
 						: undefined
 				}
 			/>
-			{error && (
+			{(error ?? loadError) && (
 				<p role="alert" className="text-cms-destructive text-xs">
-					{error}
+					{error ?? loadError}
 				</p>
 			)}
 			<SearchError failed={records.error} />

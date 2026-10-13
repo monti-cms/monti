@@ -2,7 +2,6 @@
 
 import {
 	type Collection,
-	cmsApiUrl,
 	type Locale,
 	type SchemaCollection,
 	type Site,
@@ -10,12 +9,15 @@ import {
 	useTranslator,
 } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { CmsApiError, errorText } from "../api/client";
+import { createEntry, type EntryWriteResult, entriesKeys, getEntry, updateEntry } from "../api/entries";
+import { cmsIssueMessage } from "../api/error-message";
+import { useCmsMutation } from "../api/use-cms-mutation";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { CmsApiError, cmsFetch, errorText } from "./admin-api";
-import { cmsIssueMessage } from "./api-error-message";
 import {
 	EMPTY_FORM,
 	type EntryData,
@@ -74,7 +76,6 @@ export function RecordPanel({
 	const [form, setFormState] = useState<EntryForm>(EMPTY_FORM);
 	const [locale, setLocale] = useState<Locale>(site.DEFAULT_LOCALE);
 	const [error, setError] = useState<string | null>(null);
-	const [isSaving, setIsSaving] = useState(false);
 	const [isDirty, setIsDirty] = useState(false);
 	const { confirmDiscard, dialog } = useConfirm();
 
@@ -88,27 +89,33 @@ export function RecordPanel({
 		? t("record.slugHint", { name: site.schemaOf(collection).fields[slugFrom]?.label ?? slugFrom })
 		: undefined;
 
+	// The panel keeps the user's edits, so a reload of the entry (after a save, say) must not replace the form: it is filled once per entry.
+	const appliedRef = useRef<string | null>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset only when another entry is opened
 	useEffect(() => {
+		appliedRef.current = null;
 		setLoaded(null);
 		setFormState(id ? EMPTY_FORM : ({ ...EMPTY_FORM, ...initialRef.current } as EntryForm));
 		setLocale(site.DEFAULT_LOCALE);
 		setError(null);
 		setIsDirty(false);
-		if (!id) return;
-		let cancelled = false;
-		cmsFetch<EntryData>(site, cmsApiUrl(`/v1/entries/${id}`))
-			.then((entry) => {
-				if (cancelled) return;
-				setLoaded(entry);
-				setFormState(formFromEntry(site, entry));
-			})
-			.catch((err) => {
-				if (!cancelled) setError(errorText(site, err, t("record.loadFailed", { label })));
-			});
-		return () => {
-			cancelled = true;
-		};
-	}, [id, label, site, t]);
+	}, [id]);
+
+	const entryQuery = useQuery({
+		queryKey: entriesKeys.detail(id ?? ""),
+		queryFn: ({ signal }) => getEntry(site, id as string, signal),
+		enabled: Boolean(id),
+		gcTime: 0,
+		retry: false,
+	});
+	useEffect(() => {
+		const entry = entryQuery.data;
+		if (!id || !entry || appliedRef.current === id) return;
+		appliedRef.current = id;
+		setLoaded(entry);
+		setFormState(formFromEntry(site, entry));
+	}, [id, entryQuery.data, site]);
+	const loadError = entryQuery.error ? errorText(site, entryQuery.error, t("record.loadFailed", { label })) : null;
 
 	useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
 
@@ -121,7 +128,42 @@ export function RecordPanel({
 		if (await confirmDiscard(isDirty)) onClose();
 	};
 
-	const save = async () => {
+	const saveMutation = useCmsMutation<{ metadata: Record<string, unknown> }, EntryWriteResult>({
+		fn: ({ metadata }, { site }) =>
+			id && loaded
+				? updateEntry(
+						site,
+						id,
+						{
+							expectedVersion: loaded.version,
+							slug: form.slug.trim() || site.slugFromValues(collection, form) || null,
+							metadata,
+						},
+						t("record.saveFailed"),
+					)
+				: createEntry(
+						site,
+						{ collection, slug: form.slug.trim() || null, metadata, doc: emptyStoredDocument() },
+						t("record.saveFailed"),
+					),
+		failure: t("record.saveFailed"),
+		inline: true,
+		onSuccess: ({ entry: saved }) => {
+			// The panel stays open. Switch to the received item so the next save is based on the new revision.
+			if (id) setLoaded(saved);
+			setIsDirty(false);
+			onSaved(saved);
+		},
+		onError: (err) =>
+			setError(
+				err instanceof CmsApiError && err.issues.length > 0
+					? err.issues.map((issue) => cmsIssueMessage(site, issue)).join("\n")
+					: errorText(site, err, t("record.saveFailed")),
+			),
+	});
+	const isSaving = saveMutation.isPending;
+
+	const save = () => {
 		if (!title.trim()) return;
 		const built = metadataFromForm(
 			site,
@@ -133,43 +175,8 @@ export function RecordPanel({
 			setError(built.error);
 			return;
 		}
-		setIsSaving(true);
 		setError(null);
-		try {
-			const { entry: saved } =
-				id && loaded
-					? await cmsFetch<{ entry: EntryData }>(site, cmsApiUrl(`/v1/entries/${id}`), {
-							method: "PATCH",
-							json: {
-								expectedVersion: loaded.version,
-								slug: form.slug.trim() || site.slugFromValues(collection, form) || null,
-								metadata: built.metadata,
-							},
-							fallback: t("record.saveFailed"),
-						})
-					: await cmsFetch<{ entry: EntryData }>(site, cmsApiUrl("/v1/entries"), {
-							method: "POST",
-							json: {
-								collection,
-								slug: form.slug.trim() || null,
-								metadata: built.metadata,
-								doc: emptyStoredDocument(),
-							},
-							fallback: t("record.saveFailed"),
-						});
-			// The panel stays open. Switch to the received item so the next save is based on the new revision.
-			if (id) setLoaded(saved);
-			setIsDirty(false);
-			onSaved(saved);
-		} catch (err) {
-			setError(
-				err instanceof CmsApiError && err.issues.length > 0
-					? err.issues.map((issue) => cmsIssueMessage(site, issue)).join("\n")
-					: errorText(site, err, t("record.saveFailed")),
-			);
-		} finally {
-			setIsSaving(false);
-		}
+		saveMutation.mutate({ metadata: built.metadata });
 	};
 
 	return (
@@ -179,7 +186,7 @@ export function RecordPanel({
 				className="flex min-h-0 flex-1 flex-col"
 				onSubmit={(event) => {
 					event.preventDefault();
-					void save();
+					save();
 				}}
 			>
 				<EntryFormProvider value={{ collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }}>
@@ -236,9 +243,9 @@ export function RecordPanel({
 					</Tabs>
 				</EntryFormProvider>
 				<div className="shrink-0 space-y-2 border-t px-4 py-3">
-					{error && (
+					{(error ?? loadError) && (
 						<p role="alert" className="whitespace-pre-wrap text-cms-destructive text-xs">
-							{error}
+							{error ?? loadError}
 						</p>
 					)}
 					<div className="flex justify-end gap-2">

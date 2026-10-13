@@ -10,6 +10,7 @@ import {
 } from "@monti-cms/core/client";
 import { File, FileArchive, FileText, FileType } from "lucide-react";
 import type { KeyboardEvent } from "react";
+import type { MediaItem } from "../../api/media";
 import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
@@ -17,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { formatDateTime } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
-import { type MediaItem, usageLabel } from "./media-item";
+import { usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
 
 const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileArchive, text: FileText };

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { cmsFetch } from "../../admin-api";
+import { cmsFetch } from "../../../api/client";
 import { isSandboxSite } from "../../shared/preview-sandbox";
 import { draftSiteOf } from "../draft-site";
 import type { Obj } from "../schema-model";

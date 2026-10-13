@@ -1,15 +1,17 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import { createEntryTranslation } from "../../api/entries";
+import { useCmsMutation } from "../../api/use-cms-mutation";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import { Button } from "../../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
-import { cmsFetch, errorText } from "../admin-api";
 import { statusLabels } from "../shared/entry-status";
 import { type EntryData, isTranslationEntry } from "./entry-form";
 import { entriesMessages } from "./messages";
@@ -43,30 +45,32 @@ export function LanguageTabs({
 	const isTranslation = isTranslationEntry(entry);
 	const createDisabled = disabled || entry.status === "trashed" || creating !== null;
 
+	const translate = useCmsMutation<(typeof site.LOCALES)[number], { entry: { id: string } }>({
+		fn: (target, { site }) => createEntryTranslation(site, entry.id, target, t("lang.createFailed")),
+		success: (_created, target) => t("lang.created", { lang: site.localeLabel(target) }),
+		failure: t("lang.createFailed"),
+		onSuccess: (created) => {
+			setCreating(null);
+			router.navigate(site.adminEntryEditHref(created.entry.id));
+		},
+		onError: () => setCreating(null),
+	});
+
 	const create = async (target: (typeof site.LOCALES)[number]) => {
 		if (creating) return;
 		setCreating(target);
 		try {
 			if (!(await onBeforeCreate())) {
 				toast.error(t("lang.saveFirst"));
+				setCreating(null);
 				return;
 			}
-			const created = await cmsFetch<{ entry: { id: string } }>(
-				site,
-				cmsApiUrl(`/v1/entries/${entry.id}/translations`),
-				{
-					method: "POST",
-					json: { locale: target },
-					fallback: t("lang.createFailed"),
-				},
-			);
-			toast.success(t("lang.created", { lang: site.localeLabel(target) }));
-			router.navigate(site.adminEntryEditHref(created.entry.id));
 		} catch (error) {
 			toast.error(errorText(site, error, t("lang.createFailed")));
-		} finally {
 			setCreating(null);
+			return;
 		}
+		translate.mutate(target);
 	};
 
 	return (

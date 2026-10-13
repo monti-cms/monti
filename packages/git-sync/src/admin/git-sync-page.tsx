@@ -1,12 +1,12 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Alert,
 	AlertDescription,
-	API_KEYS_KEY,
 	type ApiKeyChoice,
 	ApiKeyField,
+	apiKeysKeys,
 	Badge,
 	Button,
 	choiceReady,
@@ -24,74 +24,24 @@ import {
 	useConfirm,
 } from "@monti-cms/admin/kit";
 import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { type DiffLine, lineDiff } from "../diff";
+import {
+	assignGitSyncKey,
+	type ConflictView,
+	flushGitSync,
+	getGitSyncStatus,
+	gitSyncKeys,
+	listGitSyncConflicts,
+	pullGitSync,
+	resolveGitSyncConflict,
+	type SlotKeyView,
+	type StatusView,
+} from "./api";
 import { gitSyncMessages } from "./page.messages";
-
-/** The shapes of the plugin's API responses, as the screen reads them (dates arrive as ISO strings). */
-interface PullSummaryView {
-	at: string;
-	head: string;
-	applied: number;
-	created: number;
-	unchanged: number;
-	conflicts: number;
-	skipped: { path: string; reason: string }[];
-	errors: { path: string; message: string }[];
-}
-
-interface TargetView {
-	id: string;
-	repo: string;
-	branch: string;
-	folder: string;
-	format: string;
-	path: string;
-	mode: "commit" | "pr";
-	prBranch: string;
-	collections: string[];
-	synced: number;
-	queued: number;
-	conflicts: number;
-	lastPull?: PullSummaryView;
-	lastFlush?: { at: string; files: number; commitSha: string; branch: string; pullRequestUrl?: string; note?: string };
-}
-
-interface SlotKeyView {
-	id: string;
-	name: string;
-	tail: string;
-	readable: boolean;
-}
-
-interface StatusView {
-	keys: { secretsAvailable: boolean; token: SlotKeyView | null; webhookSecret: SlotKeyView | null };
-	targets: TargetView[];
-}
-
-interface ConflictView {
-	id: string;
-	target: string;
-	repo: string;
-	entryId: string;
-	collection: string;
-	locale: string;
-	path: string;
-	kind: "changed" | "removed";
-	reason: "both-changed" | "unpublished-changes" | "unsynced" | "git-edit-blocks-removal";
-	detectedAt: string;
-	label: string;
-	serverText: string | null;
-	gitText: string;
-	gitSha: string;
-}
-
-const KEY = ["cms", "git-sync"] as const;
-const STATUS_KEY = [...KEY, "status"] as const;
-const CONFLICTS_KEY = [...KEY, "conflicts"] as const;
 
 type Tab = "sync" | "conflicts" | "settings";
 
@@ -99,23 +49,16 @@ type Tab = "sync" | "conflicts" | "settings";
 export function GitSyncPage() {
 	const site = useSite();
 	const t = useTranslator(gitSyncMessages);
-	const queryClient = useQueryClient();
 	const [tab, setTab] = useState<Tab>("sync");
 
 	const status = useQuery({
-		queryKey: STATUS_KEY,
-		queryFn: ({ signal }) =>
-			cmsFetch<StatusView>(site, cmsApiUrl("/v1/git-sync/status"), { signal, fallback: t("load.failed") }),
+		queryKey: gitSyncKeys.status(),
+		queryFn: ({ signal }) => getGitSyncStatus(site, { signal, fallback: t("load.failed") }),
 	});
 	const conflicts = useQuery({
-		queryKey: CONFLICTS_KEY,
-		queryFn: ({ signal }) =>
-			cmsFetch<{ items: ConflictView[] }>(site, cmsApiUrl("/v1/git-sync/conflicts"), {
-				signal,
-				fallback: t("conflicts.loadFailed"),
-			}),
+		queryKey: gitSyncKeys.conflicts(),
+		queryFn: ({ signal }) => listGitSyncConflicts(site, { signal, fallback: t("conflicts.loadFailed") }),
 	});
-	const refresh = () => queryClient.invalidateQueries({ queryKey: KEY });
 	const conflictCount = conflicts.data?.items.length ?? 0;
 
 	return (
@@ -142,7 +85,6 @@ export function GitSyncPage() {
 						error={status.error && !status.data ? errorText(site, status.error, t("load.failed")) : null}
 						loading={status.isPending}
 						onRetry={() => void status.refetch()}
-						onChanged={refresh}
 					/>
 				</TabsContent>
 				<TabsContent value="conflicts" className="min-h-0 flex-1 overflow-auto">
@@ -152,11 +94,10 @@ export function GitSyncPage() {
 							conflicts.error && !conflicts.data ? errorText(site, conflicts.error, t("conflicts.loadFailed")) : null
 						}
 						loading={conflicts.isPending}
-						onChanged={refresh}
 					/>
 				</TabsContent>
 				<TabsContent value="settings" className="min-h-0 flex-1 overflow-auto">
-					<SettingsTab status={status.data} onChanged={refresh} />
+					<SettingsTab status={status.data} />
 				</TabsContent>
 			</Tabs>
 		</div>
@@ -166,7 +107,7 @@ export function GitSyncPage() {
 function ErrorBar({ message, onRetry }: { message: string; onRetry?: () => void }) {
 	const t = useTranslator(gitSyncMessages);
 	return (
-		<Alert variant="danger" className="m-5 flex w-auto items-center justify-between">
+		<Alert variant="destructive" className="m-5 flex w-auto items-center justify-between">
 			<AlertDescription className="col-start-auto">{message}</AlertDescription>
 			{onRetry && (
 				<Button type="button" variant="outline" size="xs" onClick={onRetry}>
@@ -194,25 +135,17 @@ function SyncTab({
 	error,
 	loading,
 	onRetry,
-	onChanged,
 }: {
 	status: StatusView | undefined;
 	error: string | null;
 	loading: boolean;
 	onRetry: () => void;
-	onChanged: () => void;
 }) {
-	const site = useSite();
 	const t = useTranslator(gitSyncMessages);
 
-	const pull = useMutation({
-		mutationFn: (target: string) =>
-			cmsFetch<{ results: { target: string; summary: PullSummaryView }[] }>(site, cmsApiUrl("/v1/git-sync/pull"), {
-				method: "POST",
-				json: { target },
-				fallback: t("pull.failed"),
-			}),
-		onSuccess: ({ results }) => {
+	const pull = useCmsMutation({
+		fn: (target: string, { site }) => pullGitSync(site, target, t("pull.failed")),
+		success: ({ results }) => {
 			const total = { created: 0, applied: 0, conflicts: 0, errors: 0 };
 			for (const { summary } of results) {
 				total.created += summary.created;
@@ -220,27 +153,20 @@ function SyncTab({
 				total.conflicts += summary.conflicts;
 				total.errors += summary.errors.length;
 			}
-			toast.success(t("pull.done", total));
+			return t("pull.done", total);
 		},
-		onError: (err) => toast.error(errorText(site, err, t("pull.failed"))),
-		onSettled: onChanged,
+		failure: t("pull.failed"),
+		invalidate: [gitSyncKeys.all],
 	});
-	const flush = useMutation({
-		mutationFn: (target: string) =>
-			cmsFetch<{ results: { written: number; removed: number }[] }>(site, cmsApiUrl("/v1/git-sync/flush"), {
-				method: "POST",
-				json: { target },
-				fallback: t("flush.failed"),
+	const flush = useCmsMutation({
+		fn: (target: string, { site }) => flushGitSync(site, target, t("flush.failed")),
+		success: ({ results }) =>
+			t("flush.done", {
+				written: results.reduce((sum, item) => sum + item.written, 0),
+				removed: results.reduce((sum, item) => sum + item.removed, 0),
 			}),
-		onSuccess: ({ results }) =>
-			toast.success(
-				t("flush.done", {
-					written: results.reduce((sum, item) => sum + item.written, 0),
-					removed: results.reduce((sum, item) => sum + item.removed, 0),
-				}),
-			),
-		onError: (err) => toast.error(errorText(site, err, t("flush.failed"))),
-		onSettled: onChanged,
+		failure: t("flush.failed"),
+		invalidate: [gitSyncKeys.all],
 	});
 
 	if (loading) return <ListSkeleton />;
@@ -434,32 +360,20 @@ function ConflictsTab({
 	items,
 	error,
 	loading,
-	onChanged,
 }: {
 	items: ConflictView[] | undefined;
 	error: string | null;
 	loading: boolean;
-	onChanged: () => void;
 }) {
-	const site = useSite();
 	const t = useTranslator(gitSyncMessages);
 	const { confirm, dialog } = useConfirm();
 
-	const resolve = useMutation({
-		mutationFn: (params: { conflict: ConflictView; resolution: "git" | "server" }) =>
-			cmsFetch(site, cmsApiUrl("/v1/git-sync/conflicts/resolve"), {
-				method: "POST",
-				json: {
-					target: params.conflict.target,
-					entryId: params.conflict.entryId,
-					resolution: params.resolution,
-					gitSha: params.conflict.gitSha,
-				},
-				fallback: t("conflicts.resolve.failed"),
-			}),
-		onSuccess: (_result, params) => toast.success(t(`conflicts.resolved.${params.resolution}` as const)),
-		onError: (err) => toast.error(errorText(site, err, t("conflicts.resolve.failed"))),
-		onSettled: onChanged,
+	const resolve = useCmsMutation({
+		fn: (params: { conflict: ConflictView; resolution: "git" | "server" }, { site }) =>
+			resolveGitSyncConflict(site, params.conflict, params.resolution, t("conflicts.resolve.failed")),
+		success: (_result, params) => t(`conflicts.resolved.${params.resolution}` as const),
+		failure: t("conflicts.resolve.failed"),
+		invalidate: [gitSyncKeys.all],
 	});
 
 	const decide = async (conflict: ConflictView, resolution: "git" | "server") => {
@@ -542,10 +456,8 @@ const generateSecret = (): string => {
 const keyHint = (key: SlotKeyView) => `${key.name}${key.tail ? ` ••••${key.tail}` : ""}`;
 const keyState = (key: SlotKeyView | null) => (!key ? "unset" : key.readable ? "set" : "unreadable");
 
-function SettingsTab({ status, onChanged }: { status: StatusView | undefined; onChanged: () => void }) {
-	const site = useSite();
+function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const t = useTranslator(gitSyncMessages);
-	const queryClient = useQueryClient();
 	// What the token field shows until it is changed: the key the token uses now, or an empty new key.
 	const [picked, setPicked] = useState<ApiKeyChoice | null>(null);
 	// The webhook secret as typed or generated. It is shown only here, before it is saved: afterwards the store keeps it encrypted.
@@ -553,23 +465,16 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 	const [revealed, setRevealed] = useState(false);
 
 	// Both secrets are keys of the API key store assigned to the plugin's slots. A token is followed by the server (the slot's `onChange`), so what waited for one goes out.
-	const assign = useMutation({
-		mutationFn: (values: { slot: "token" | "webhook-secret"; key: ApiKeyChoice }) =>
-			cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), {
-				method: "PUT",
-				json: { plugin: "git-sync", ...values },
-				fallback: t("settings.save.failed"),
-			}),
+	const assign = useCmsMutation({
+		fn: (values: { slot: "token" | "webhook-secret"; key: ApiKeyChoice }, { site }) =>
+			assignGitSyncKey(site, values, t("settings.save.failed")),
+		success: t("settings.saved"),
+		failure: t("settings.save.failed"),
+		// A key may have been added to the store, and the key's uses changed.
+		invalidate: [apiKeysKeys.all, gitSyncKeys.all],
 		onSuccess: (_result, values) => {
 			if (values.slot === "token") setPicked(null);
 			else setSecret("");
-			toast.success(t("settings.saved"));
-		},
-		onError: (err) => toast.error(errorText(site, err, t("settings.save.failed"))),
-		onSettled: () => {
-			// A key may have been added to the store, and the key's uses changed.
-			void queryClient.invalidateQueries({ queryKey: API_KEYS_KEY });
-			onChanged();
 		},
 	});
 
@@ -586,7 +491,7 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 	return (
 		<div className="max-w-2xl space-y-8 p-5">
 			{!keys.secretsAvailable && (
-				<Alert variant="danger" layout="stack">
+				<Alert variant="destructive" layout="stack">
 					<AlertDescription className="col-start-auto">{t("settings.secretMissing")}</AlertDescription>
 				</Alert>
 			)}

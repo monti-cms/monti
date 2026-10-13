@@ -1,8 +1,9 @@
 "use client";
 
-import { cmsApiUrl, perSite, type Site, useSite, withBasePath } from "@monti-cms/core/client";
+import { perSite, type Site, useSite, withBasePath } from "@monti-cms/core/client";
 import { useEffect, useSyncExternalStore } from "react";
-import { CmsApiError, cmsFetch } from "../screens/admin-api";
+import { CmsApiError } from "../api/client";
+import { getEntry } from "../api/entries";
 import type { InternalLinkItem } from "./internal-link";
 
 /**
@@ -101,7 +102,7 @@ const storeOf = perSite((site: Site) => {
 	const load = (id: string) => {
 		if (inflight.has(id)) return;
 		inflight.add(id);
-		cmsFetch<EntryRow>(site, cmsApiUrl(`/v1/entries/${encodeURIComponent(id)}`))
+		getEntry<EntryRow>(site, id)
 			.then((row) => put(id, { status: "ready", target: targetOf(row) }))
 			.catch((error: unknown) => put(id, error instanceof CmsApiError && error.status === 404 ? MISSING : FAILED))
 			.finally(() => inflight.delete(id));

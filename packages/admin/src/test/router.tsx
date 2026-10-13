@@ -1,4 +1,5 @@
 import { SiteProvider } from "@monti-cms/core/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderOptions, render as renderInto } from "@testing-library/react";
 import { type ReactElement, type ReactNode, useSyncExternalStore } from "react";
 import { vi } from "vitest";
@@ -46,9 +47,12 @@ export function createTestRouter({ pathname = "/admin", search = "" }: { pathnam
 			),
 	};
 
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
 		<SiteProvider site={testSite}>
-			<AdminRouterProvider router={router}>{children}</AdminRouterProvider>
+			<QueryClientProvider client={client}>
+				<AdminRouterProvider router={router}>{children}</AdminRouterProvider>
+			</QueryClientProvider>
 		</SiteProvider>
 	);
 

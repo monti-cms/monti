@@ -10,7 +10,7 @@ import { AdminLink as Link } from "../router";
 import { Button, buttonVariants } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { AdminEntriesTable } from "./admin-entries-table";
-import { BulkBar, runBulk } from "./entries/bulk-bar";
+import { BulkBar } from "./entries/bulk-bar";
 import { toSelection } from "./list-row-menu";
 import { FilterChipBar, ListSearch } from "./list-toolbar";
 import { screensMessages } from "./messages";
@@ -38,7 +38,6 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 
 /** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
 function EntryListBody({ list }: { list: EntryList }) {
-	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const { state, data, mode } = list;
 	const isTrash = mode === "trash";
@@ -55,9 +54,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
 						folders={data.folders}
 						onClearSelection={() => list.setSelectedIds(new Set())}
-						onRun={(op, targets, params) =>
-							list.mutations.mutateEntries(op, targets, () => runBulk(site, op, targets, params), params)
-						}
+						onRun={(op, targets, params) => list.mutations.run(op, targets, params)}
 					/>
 					<AdminEntriesTable
 						collection={state.collection}

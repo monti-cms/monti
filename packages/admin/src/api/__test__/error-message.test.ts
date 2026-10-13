@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { cmsApiErrorMessage, cmsApiIssues, cmsIssueMessage } from "../api-error-message";
+import { cmsApiErrorMessage, cmsApiIssues, cmsIssueMessage } from "../error-message";
 
 describe.runIf(testSite.ADMIN_LANGUAGE === "ko")("publish feedback", () => {
 	it("keeps field paths for inline validation", () => {

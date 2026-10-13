@@ -15,12 +15,10 @@ import {
 	Tags,
 	Trash2,
 } from "lucide-react";
-import type { BulkSelection, runBulk } from "./entries/bulk-bar";
+import type { BulkParams, BulkSelection } from "../api/entries";
 import { screensMessages } from "./messages";
 import type { MenuAction } from "./shared/action-menu";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
-
-export type BulkParams = NonNullable<Parameters<typeof runBulk>[3]>;
 
 export const toSelection = (item: ListEntriesItem): BulkSelection => ({
 	id: item.id,

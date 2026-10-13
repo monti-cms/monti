@@ -19,6 +19,7 @@ import {
 	isFieldInputParts,
 	useCmsAdminComponents,
 } from "../../admin-components";
+import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
@@ -28,7 +29,6 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Textarea } from "../../ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { type EntryForm, recordTranslationKey } from "./entry-form";
 import {
 	BacklinkInput,

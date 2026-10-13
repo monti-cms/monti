@@ -1,10 +1,13 @@
 "use client";
 
-import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
+import { useQuery } from "@tanstack/react-query";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
+import { useCmsMutation } from "../../api/use-cms-mutation";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -19,16 +22,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field, FieldError, FieldLabel } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
-import { cmsFetch, errorText } from "../admin-api";
 import type { MenuAction } from "./action-menu";
 import { sharedMessages } from "./messages";
 
 type NameDialog = { mode: "create"; parentId: string | null } | { mode: "rename"; folder: Folder };
-
-interface DeleteDialog {
-	folder: Folder;
-	contents: { entryCount: number; childFolders: Folder[] } | null;
-}
 
 /** Parent candidates to move to, excluding `folder` and its descendants. The server also rejects cycles. */
 export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
@@ -115,9 +112,8 @@ export function useFolderActions({
 	const t = useTranslator(sharedMessages);
 	const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
 	const [name, setName] = useState("");
-	const [deleteDialog, setDeleteDialog] = useState<DeleteDialog | null>(null);
+	const [deleteDialog, setDeleteDialog] = useState<{ folder: Folder } | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [isBusy, setIsBusy] = useState(false);
 	// Closing the dialog returns focus to the button that opened it. If that button is gone (deleted folder), follow the browser default.
 	const returnFocusRef = useRef<HTMLElement | null>(null);
 	const rememberFocus = () => {
@@ -153,93 +149,87 @@ export function useFolderActions({
 		setNameDialog({ mode: "rename", folder });
 	};
 
-	const requestDelete = async (folder: Folder) => {
+	const requestDelete = (folder: Folder) => {
 		rememberFocus();
 		setError(null);
-		setDeleteDialog({ folder, contents: null });
-		try {
-			const contents = await cmsFetch<DeleteDialog["contents"]>(site, cmsApiUrl(`/v1/folders/${folder.id}`));
-			setDeleteDialog({ folder, contents });
-		} catch (err) {
-			setError(errorText(site, err, t("folder.loadFailed")));
-		}
+		setDeleteDialog({ folder });
 	};
+
+	// What the delete would move to the parent, read while the dialog is open.
+	const contentsQuery = useQuery({
+		queryKey: foldersKeys.contents(deleteDialog?.folder.id ?? ""),
+		queryFn: ({ signal }) => getFolderContents(site, deleteDialog?.folder.id ?? "", signal),
+		enabled: deleteDialog !== null,
+		gcTime: 0,
+		retry: false,
+	});
+	const contents = deleteDialog ? (contentsQuery.data ?? null) : null;
+	const shownError =
+		error ??
+		(deleteDialog && contentsQuery.error ? errorText(site, contentsQuery.error, t("folder.loadFailed")) : null);
 
 	/** Moves a folder to another parent (or the top level). If the same name exists, the server rejects and explains. */
-	const moveFolder = async (folder: Folder, parentId: string | null) => {
-		try {
-			await cmsFetch(site, cmsApiUrl(`/v1/folders/${folder.id}`), {
-				method: "PATCH",
-				json: { parentId, expectedVersion: folder.version },
-				fallback: t("folder.moveFailed"),
-			});
-			toast.success(t("folder.moved", { name: folder.name, destination: toFolder(parentId) }));
-			await onChanged();
-		} catch (err) {
-			toast.error(errorText(site, err, t("folder.moveFailed")));
-		}
-	};
+	const move = useCmsMutation({
+		fn: ({ folder, parentId }: { folder: Folder; parentId: string | null }, { site }) =>
+			updateFolder(site, folder.id, { parentId, expectedVersion: folder.version }, t("folder.moveFailed")),
+		success: (_result, { folder, parentId }) =>
+			t("folder.moved", { name: folder.name, destination: toFolder(parentId) }),
+		failure: t("folder.moveFailed"),
+		onSuccess: () => void onChanged(),
+	});
+	const moveFolder = (folder: Folder, parentId: string | null) => move.mutate({ folder, parentId });
 
-	const submitName = async () => {
-		if (!nameDialog || !name.trim()) return;
-		setIsBusy(true);
-		setError(null);
-		try {
-			if (nameDialog.mode === "create") {
-				await cmsFetch(site, cmsApiUrl("/v1/folders"), {
-					method: "POST",
-					json: { collection, name: name.trim(), parentId: nameDialog.parentId },
-					fallback: t("folder.addFailed"),
-				});
-				toast.success(t("folder.added", { name: name.trim() }));
-			} else {
-				await cmsFetch(site, cmsApiUrl(`/v1/folders/${nameDialog.folder.id}`), {
-					method: "PATCH",
-					json: { name: name.trim(), expectedVersion: nameDialog.folder.version },
-					fallback: t("folder.renameFailed"),
-				});
-				toast.success(t("folder.saved"));
-			}
+	const save = useCmsMutation({
+		fn: (dialog: NameDialog, { site }) => {
+			const trimmed = name.trim();
+			return dialog.mode === "create"
+				? createFolder(site, { collection, name: trimmed, parentId: dialog.parentId }, t("folder.addFailed"))
+				: updateFolder(
+						site,
+						dialog.folder.id,
+						{ name: trimmed, expectedVersion: dialog.folder.version },
+						t("folder.renameFailed"),
+					);
+		},
+		success: (_result, dialog) =>
+			dialog.mode === "create" ? t("folder.added", { name: name.trim() }) : t("folder.saved"),
+		failure: t("folder.saveFailed"),
+		inline: true,
+		onSuccess: () => {
 			setNameDialog(null);
-			await onChanged();
-		} catch (err) {
-			setError(errorText(site, err, t("folder.saveFailed")));
-		} finally {
-			setIsBusy(false);
-		}
+			void onChanged();
+		},
+		onError: (err) => setError(errorText(site, err, t("folder.saveFailed"))),
+	});
+
+	const submitName = () => {
+		if (!nameDialog || !name.trim()) return;
+		setError(null);
+		save.mutate(nameDialog);
 	};
 
-	const confirmDelete = async () => {
-		if (!deleteDialog) return;
-		setIsBusy(true);
-		setError(null);
-		try {
-			await cmsFetch(
-				site,
-				cmsApiUrl(`/v1/folders/${deleteDialog.folder.id}?expectedVersion=${deleteDialog.folder.version}`),
-				{
-					method: "DELETE",
-					fallback: t("folder.deleteFailed"),
-				},
-			);
-			const deletedId = deleteDialog.folder.id;
-			const moved = deleteDialog.contents;
-			toast.success(
-				moved && moved.entryCount + moved.childFolders.length > 0
-					? t("folder.deletedMoved", {
-							name: deleteDialog.folder.name,
-							destination: toFolder(deleteDialog.folder.parentId),
-						})
-					: t("folder.deleted", { name: deleteDialog.folder.name }),
-			);
+	const remove = useCmsMutation({
+		fn: ({ folder }: { folder: Folder }, { site }) =>
+			deleteFolder(site, folder.id, folder.version, t("folder.deleteFailed")),
+		success: (_result, { folder }) =>
+			contents && contents.entryCount + contents.childFolders.length > 0
+				? t("folder.deletedMoved", { name: folder.name, destination: toFolder(folder.parentId) })
+				: t("folder.deleted", { name: folder.name }),
+		failure: t("folder.deleteFailed"),
+		inline: true,
+		onSuccess: (_result, { folder }) => {
 			setDeleteDialog(null);
-			await onChanged(deletedId);
-		} catch (err) {
-			// If a child folder name collides in the parent, guide the user to rename first.
-			setError(errorText(site, err, t("folder.deleteFailed")));
-		} finally {
-			setIsBusy(false);
-		}
+			void onChanged(folder.id);
+		},
+		// If a child folder name collides in the parent, guide the user to rename first.
+		onError: (err) => setError(errorText(site, err, t("folder.deleteFailed"))),
+	});
+	const isBusy = save.isPending || remove.isPending;
+
+	const confirmDelete = () => {
+		if (!deleteDialog) return;
+		setError(null);
+		remove.mutate(deleteDialog);
 	};
 
 	const destination = deleteDialog ? toFolder(deleteDialog.folder.parentId) : "";
@@ -269,7 +259,7 @@ export function useFolderActions({
 						}}
 						className="space-y-4"
 					>
-						<Field data-invalid={Boolean(error) || undefined}>
+						<Field data-invalid={Boolean(shownError) || undefined}>
 							<FieldLabel htmlFor="folder-name" className="sr-only">
 								{t("folder.nameLabel")}
 							</FieldLabel>
@@ -278,7 +268,7 @@ export function useFolderActions({
 								autoFocus
 								value={name}
 								maxLength={100}
-								aria-invalid={Boolean(error) || undefined}
+								aria-invalid={Boolean(shownError) || undefined}
 								onChange={(e) => setName(e.target.value)}
 								onKeyDown={(event) => {
 									// While composing Hangul, Enter is the key that finishes the character. Do not submit the form.
@@ -287,7 +277,7 @@ export function useFolderActions({
 									}
 								}}
 							/>
-							{error && <FieldError>{error}</FieldError>}
+							{shownError && <FieldError>{shownError}</FieldError>}
 						</Field>
 						<DialogFooter>
 							<Button type="button" variant="outline" onClick={() => setNameDialog(null)}>
@@ -307,26 +297,26 @@ export function useFolderActions({
 						<AlertDialogTitle>{t("folder.deleteTitle", { name: deleteDialog?.folder.name ?? "" })}</AlertDialogTitle>
 						<AlertDialogDescription>{t("folder.deleteAsk", { itemLabel, destination })}</AlertDialogDescription>
 					</AlertDialogHeader>
-					{deleteDialog?.contents ? (
+					{contents ? (
 						<ul className="list-disc space-y-1 pl-5 text-sm">
-							<li>{t("folder.entryCount", { itemLabel, count: deleteDialog.contents.entryCount })}</li>
+							<li>{t("folder.entryCount", { itemLabel, count: contents.entryCount })}</li>
 							<li>
-								{t("folder.childCount", { count: deleteDialog.contents.childFolders.length })}
-								{deleteDialog.contents.childFolders.length > 0 &&
-									`: ${deleteDialog.contents.childFolders.map((folder) => folder.name).join(", ")}`}
+								{t("folder.childCount", { count: contents.childFolders.length })}
+								{contents.childFolders.length > 0 &&
+									`: ${contents.childFolders.map((folder) => folder.name).join(", ")}`}
 							</li>
 						</ul>
 					) : (
-						!error && (
+						!shownError && (
 							<div aria-hidden className="space-y-2">
 								<Skeleton className="h-4 w-40" />
 								<Skeleton className="h-4 w-56" />
 							</div>
 						)
 					)}
-					{error && (
+					{shownError && (
 						<p role="alert" className="text-cms-destructive text-sm">
-							{error}
+							{shownError}
 						</p>
 					)}
 					<AlertDialogFooter>
@@ -334,7 +324,7 @@ export function useFolderActions({
 						<Button
 							type="button"
 							variant="destructive"
-							disabled={!deleteDialog?.contents || isBusy}
+							disabled={!contents || isBusy}
 							onClick={() => void confirmDelete()}
 						>
 							{isBusy ? t("common.deleting") : t("common.delete")}

@@ -1,15 +1,20 @@
 import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { SuggestedTransform } from "@monti-cms/core/schema-change";
 import type { RenameInput, SchemaEditPreview, SchemaSaveResult, SchemaScreenState } from "@monti-cms/core/schema-edit";
-import { cmsFetch } from "../admin-api";
+import { cmsFetch } from "./client";
 
 /** The calls of the schema settings screen (see the `/v1/schema` routes of the admin API). */
 
-export const SCHEMA_KEY = ["cms", "schema"] as const;
+/** Query keys. */
+export const schemaKeys = {
+	all: ["cms", "schema"] as const,
+	state: () => [...schemaKeys.all, "state"] as const,
+};
 
 export type { RenameInput, SchemaEditPreview, SchemaScreenState, SuggestedTransform };
 export type SavedSchema = Extract<SchemaSaveResult, { saved: true }>;
 
+/** The schema file as the screen edits it. */
 export const fetchSchema = (site: Site, signal?: AbortSignal) =>
 	cmsFetch<SchemaScreenState>(site, cmsApiUrl("/v1/schema"), { signal });
 

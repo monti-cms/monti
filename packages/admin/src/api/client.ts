@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/client";
-import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./api-error-message";
-import { screensMessages } from "./messages";
-import { isSandboxSite, isWrite } from "./shared/preview-sandbox";
+import { screensMessages } from "../screens/messages";
+import { isSandboxSite, isWrite } from "../screens/shared/preview-sandbox";
+import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./error-message";
 
 /** Admin API error. The screen shows `message` as is and branches on `status` and `code`. */
 export class CmsApiError extends Error {
@@ -53,9 +53,17 @@ export async function cmsFetch<T = unknown>(
 	return body as T;
 }
 
-export const errorText = (site: Pick<Site, "createTranslator">, error: unknown, fallback: string) =>
+/** Whether the server refused a write because the record changed since it was read (HTTP 409 `conflict`). */
+export const isConflict = (error: unknown): boolean =>
+	error instanceof CmsApiError && error.status === 409 && error.code === "conflict";
+
+/**
+ * The one place an error becomes text for the user. An API error shows its own message (which already lists the `issues` the server found),
+ * a network error shows the offline text, and anything else shows `fallback`.
+ */
+export const errorText = (site: Pick<Site, "createTranslator">, error: unknown, fallback: string): string =>
 	error instanceof CmsApiError
-		? error.message
+		? error.message || fallback
 		: error instanceof TypeError
 			? site.createTranslator(screensMessages)("api.network")
 			: fallback;

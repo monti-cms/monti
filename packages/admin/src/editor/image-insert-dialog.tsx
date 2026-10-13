@@ -1,11 +1,13 @@
 "use client";
 
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useId, useState } from "react";
+import { mediaNotConfiguredMessage } from "../api/error-message";
+import { listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { cn } from "../lib/utils/cn";
-import { cmsFetch } from "../screens/admin-api";
-import { mediaNotConfiguredMessage } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
+import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
@@ -33,15 +35,10 @@ export interface ImageInsertion {
 	publicUrl: string | null;
 }
 
-interface LibraryItem {
-	id: string;
-	filename: string;
-	publicUrl: string | null;
-	width: number | null;
-	height: number | null;
-	defaultAlt: string;
-	defaultCaption: string;
-}
+type LibraryItem = Pick<
+	MediaItem,
+	"id" | "filename" | "publicUrl" | "width" | "height" | "defaultAlt" | "defaultCaption"
+>;
 
 interface ImageInsertDialogProps {
 	open: boolean;
@@ -90,10 +87,6 @@ export function ImageInsertDialog({
 	const [progress, setProgress] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
-	const [library, setLibrary] = useState<LibraryItem[]>([]);
-	const [isLibraryLoading, setIsLibraryLoading] = useState(false);
-	const [libraryFailed, setLibraryFailed] = useState(false);
-	const [libraryAttempt, setLibraryAttempt] = useState(0);
 
 	useEffect(() => {
 		if (!open) return;
@@ -124,33 +117,22 @@ export function ImageInsertDialog({
 		};
 	}, [file, optimize, site]);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: libraryAttempt is re-read on retry
-	useEffect(() => {
-		if (!open || tab !== "library") return;
-		let cancelled = false;
-		setIsLibraryLoading(true);
-		setLibraryFailed(false);
-		const timer = setTimeout(() => {
+	// The library list follows the typed name after a pause. The rows already shown stay while the next ones load.
+	const debouncedSearch = useDebounced(search.trim(), 250);
+	const libraryQuery = useQuery({
+		queryKey: mediaKeys.list(`library:${debouncedSearch}`),
+		queryFn: ({ signal }) => {
 			const params = new URLSearchParams({ pageSize: "24", kind: "image" });
-			if (search.trim()) params.set("search", search.trim());
-			cmsFetch<{ items?: (LibraryItem & { status?: string })[] }>(site, cmsApiUrl(`/v1/media?${params.toString()}`))
-				.then((data: { items?: (LibraryItem & { status?: string })[] }) => {
-					if (!cancelled) setLibrary((data.items ?? []).filter((item) => item.status !== "deleting"));
-				})
-				.catch(() => {
-					if (cancelled) return;
-					setLibrary([]);
-					setLibraryFailed(true);
-				})
-				.finally(() => {
-					if (!cancelled) setIsLibraryLoading(false);
-				});
-		}, 250);
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
-	}, [open, tab, search, libraryAttempt, site]);
+			if (debouncedSearch) params.set("search", debouncedSearch);
+			return listMedia(site, params, signal);
+		},
+		enabled: open && tab === "library",
+		placeholderData: keepPreviousData,
+		retry: false,
+	});
+	const library = (libraryQuery.data?.items ?? []).filter((item) => item.status !== "deleting");
+	const isLibraryLoading = open && tab === "library" && (libraryQuery.isFetching || search.trim() !== debouncedSearch);
+	const libraryFailed = libraryQuery.isError;
 
 	const isUploading = progress !== null;
 	const needsAlt = !picking && !decorative && !alt.trim();
@@ -285,10 +267,10 @@ export function ImageInsertDialog({
 									library.length === 0 &&
 									["a", "b", "c"].map((key) => <Skeleton key={key} className="h-[6.25rem] w-full rounded-md" />)}
 								{libraryFailed && !isLibraryLoading && (
-									<Alert variant="danger" className="col-span-3">
+									<Alert variant="destructive" className="col-span-3">
 										<AlertDescription className="flex items-center justify-between gap-2">
 											{t("imageDialog.libraryFailed")}
-											<Button type="button" size="xs" variant="outline" onClick={() => setLibraryAttempt((n) => n + 1)}>
+											<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
 												{t("imageDialog.retry")}
 											</Button>
 										</AlertDescription>

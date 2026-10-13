@@ -1,5 +1,5 @@
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
-import { cmsFetch } from "../screens/admin-api";
+import type { Site } from "@monti-cms/core/client";
+import { entriesKeys, listEntries } from "../api/entries";
 import type { InternalLinkItem } from "./internal-link";
 import { editorMessages } from "./messages";
 
@@ -12,9 +12,12 @@ type EntryListItem = {
 	locale?: string;
 };
 
+/** Query key of the `[[` link search for typed text. */
+export const linkSearchKey = (query: string) => [...entriesKeys.all, "link-search", query] as const;
+
 /**
  * Finds the entries a `[[` link can point to. Only collections that have a public path are searched. A translation is found through its source.
- * A failed request is thrown as the admin API error ({@link cmsFetch}) instead of turning into an empty list.
+ * A failed request is thrown as the admin API error ({@link listEntries}) instead of turning into an empty list.
  */
 export async function searchLinkTargets(site: Site, query: string): Promise<InternalLinkItem[]> {
 	const t = site.createTranslator(editorMessages);
@@ -24,7 +27,7 @@ export async function searchLinkTargets(site: Site, query: string): Promise<Inte
 		for (const status of ["draft", "published"]) params.append("status", status);
 		// One result per translation group, the source entry: its id is the id a link stores (a link follows the reader's language).
 		params.set("group", "translation");
-		const data = await cmsFetch<{ items: EntryListItem[] }>(site, cmsApiUrl(`/v1/entries?${params.toString()}`));
+		const data = await listEntries<{ items: EntryListItem[] }>(site, params);
 		return data.items.map((item) => ({
 			id: item.id,
 			collection: item.collection,

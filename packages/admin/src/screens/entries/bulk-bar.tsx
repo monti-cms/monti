@@ -1,10 +1,13 @@
 "use client";
 
 import type { BulkOp, Site } from "@monti-cms/core/client";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { errorText } from "../../api/client";
+import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
+import { cmsIssueMessage } from "../../api/error-message";
 import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
@@ -12,22 +15,12 @@ import { Checkbox } from "../../ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { cmsFetch, errorText } from "../admin-api";
-import { type CmsIssue, cmsIssueMessage } from "../api-error-message";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
 
-export type BulkUsage = { entryId: string; title: string | null; collection: string; state: string };
-
-export type BulkItemResult =
-	| { id: string; ok: true; version: number }
-	| { id: string; ok: false; error: string; issues?: CmsIssue[]; usages?: BulkUsage[] };
-
-export type BulkSelection = { id: string; expectedVersion: number; title?: string | null };
-
-type RunBulkArgs = Parameters<typeof runBulk> extends [unknown, ...infer Rest] ? Rest : never;
+type RunBulkArgs = [op: BulkOp, items: BulkSelection[], params?: BulkParams];
 
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 
@@ -147,20 +140,6 @@ export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult,
 		: base;
 }
 
-export async function runBulk(
-	site: Site,
-	op: BulkOp,
-	items: BulkSelection[],
-	params: { field?: string; ids?: string[]; id?: string | null; folderId?: string | null } = {},
-): Promise<BulkItemResult[]> {
-	const data = await cmsFetch<{ results: BulkItemResult[] }>(site, cmsApiUrl("/v1/bulk"), {
-		method: "POST",
-		json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
-		fallback: site.createTranslator(bulkBarMessages)("requestFailed"),
-	});
-	return data.results;
-}
-
 /**
  * Multi-category (tags, etc.) picker in the bulk action row. A single small button like the folder and category pickers; pressing it opens search and a checklist.
  * The button shows picked items shortened like `React +2`, so the row does not overflow.
@@ -249,7 +228,7 @@ export function BulkBar({
 	mode?: "list" | "trash";
 	onClearSelection: () => void;
 	/** Action request. The list screen passes a request that updates the list first (optimistic update). */
-	onRun?: (...args: RunBulkArgs) => ReturnType<typeof runBulk>;
+	onRun?: (...args: RunBulkArgs) => Promise<BulkItemResult[]>;
 	onDone?: (failedIds: string[]) => void;
 }) {
 	const site = useSite();
@@ -306,7 +285,7 @@ export function BulkBar({
 					: action === "folder.move"
 						? { folderId: single === "__unfiled__" ? null : single }
 						: {};
-			const out = await (onRun ?? ((...args: RunBulkArgs) => runBulk(site, ...args)))(
+			const out = await (onRun ?? ((...args: RunBulkArgs) => bulkEntries(site, ...args)))(
 				relation?.op ?? (action as BulkOp),
 				items,
 				params,

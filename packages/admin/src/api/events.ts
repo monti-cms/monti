@@ -1,5 +1,5 @@
 import { cmsApiUrl, type Site } from "@monti-cms/core/client";
-import { cmsFetch } from "../admin-api";
+import { cmsFetch } from "./client";
 
 /** Local shapes of the events API responses (dates arrive as ISO strings). */
 export interface EventDeliveryItem {
@@ -56,13 +56,56 @@ export function eventsQuery(filter: EventsFilter, page: number, pageSize: number
 	return params.toString();
 }
 
-/** Everything under this prefix is refetched after an action. */
-export const EVENTS_KEY = ["cms", "events"] as const;
-export const EVENTS_LIST_KEY = [...EVENTS_KEY, "list"] as const;
-export const EVENTS_COUNT_KEY = [...EVENTS_KEY, "count"] as const;
+/** Query keys. Everything under `all` is refetched after an action. */
+export const eventsKeys = {
+	all: ["cms", "events"] as const,
+	list: (filter: EventsFilter, page: number, pageSize: number) =>
+		[...eventsKeys.all, "list", filter, page, pageSize] as const,
+	count: () => [...eventsKeys.all, "count"] as const,
+};
+
+export interface RetryAllResult {
+	delivered: number;
+	failed: number;
+	dead: number;
+}
+
+/** One page of deliveries for a filter (`GET /v1/events`). */
+export const listEvents = (
+	site: Site,
+	filter: EventsFilter,
+	page: number,
+	pageSize: number,
+	signal?: AbortSignal,
+	fallback?: string,
+) => cmsFetch<EventsList>(site, cmsApiUrl(`/v1/events?${eventsQuery(filter, page, pageSize)}`), { signal, fallback });
+
+/** Which delivery an action is about. */
+export interface DeliveryKey {
+	eventId: string;
+	subscriber: string;
+}
+
+export const retryEvent = (site: Site, key: DeliveryKey, fallback?: string) =>
+	cmsFetch(site, cmsApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/retry`), {
+		method: "POST",
+		json: { subscriber: key.subscriber },
+		fallback,
+	});
+
+export const dismissEvent = (site: Site, key: DeliveryKey, fallback?: string) =>
+	cmsFetch(site, cmsApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/dismiss`), {
+		method: "POST",
+		json: { subscriber: key.subscriber },
+		fallback,
+	});
+
+/** Retries every failed and dead delivery. */
+export const retryAllEvents = (site: Site, fallback?: string) =>
+	cmsFetch<RetryAllResult>(site, cmsApiUrl("/v1/events/retry"), { method: "POST", json: {}, fallback });
 
 /** Number of failed and dead deliveries, for the sidebar badge. */
-export async function countFailedEvents(site: Site): Promise<number> {
-	const data = await cmsFetch<EventsList>(site, cmsApiUrl("/v1/events?limit=1"));
+export async function countFailedEvents(site: Site, signal?: AbortSignal): Promise<number> {
+	const data = await cmsFetch<EventsList>(site, cmsApiUrl("/v1/events?limit=1"), { signal });
 	return data.counts.failed + data.counts.dead;
 }

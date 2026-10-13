@@ -1,14 +1,14 @@
 "use client";
 
-import { cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { entriesKeys, listEntries } from "../../api/entries";
+import { countFailedEvents, eventsKeys } from "../../api/events";
+import { foldersKeys, listFolders } from "../../api/folders";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
-import { cmsFetch } from "../admin-api";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
-import { countFailedEvents, EVENTS_COUNT_KEY } from "../events/events-api";
-import { fetchFolders, foldersKey, TRASH_COUNT_KEY } from "./list-cache";
 import { sharedMessages } from "./messages";
 
 interface AdminNavContextValue {
@@ -43,7 +43,7 @@ async function countTrash(site: Site): Promise<number> {
 	const totals = await Promise.all(
 		site.COLLECTIONS.map(async (collection) => {
 			const query = new URLSearchParams({ collection, status: "trashed", pageSize: "25" });
-			const data = await cmsFetch<{ total: number }>(site, cmsApiUrl(`/v1/entries?${query.toString()}`));
+			const data = await listEntries<{ total: number }>(site, query);
 			return data.total;
 		}),
 	);
@@ -54,18 +54,18 @@ async function countTrash(site: Site): Promise<number> {
 export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
 	const queryClient = useQueryClient();
-	const { data } = useQuery({ queryKey: TRASH_COUNT_KEY, queryFn: () => countTrash(site) });
+	const { data } = useQuery({ queryKey: entriesKeys.trashCount(), queryFn: () => countTrash(site) });
 	// A light background fetch. Errors (for example no access) are ignored so the sidebar never breaks.
 	const { data: eventsCount } = useQuery({
-		queryKey: EVENTS_COUNT_KEY,
-		queryFn: () => countFailedEvents(site),
+		queryKey: eventsKeys.count(),
+		queryFn: ({ signal }) => countFailedEvents(site, signal),
 		retry: false,
 	});
 	// The sidebar needs to know which collections have folders, not only the open one. The list screen reads the same cache entries.
 	const folderCounts = useQueries({
 		queries: site.COLLECTIONS.map((collection) => ({
-			queryKey: foldersKey(collection),
-			queryFn: ({ signal }: { signal: AbortSignal }) => fetchFolders(site, collection, signal),
+			queryKey: foldersKeys.list(collection),
+			queryFn: ({ signal }: { signal: AbortSignal }) => listFolders(site, collection, signal),
 			retry: false,
 		})),
 		combine: (results) =>
@@ -78,7 +78,7 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 	});
 	const folderKey = JSON.stringify(folderCounts);
 	const refreshTrashCount = useCallback(
-		() => void queryClient.invalidateQueries({ queryKey: TRASH_COUNT_KEY }),
+		() => void queryClient.invalidateQueries({ queryKey: entriesKeys.trashCount() }),
 		[queryClient],
 	);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `folderKey` is the stable identity of `folderCounts`

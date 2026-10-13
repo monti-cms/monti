@@ -122,9 +122,15 @@ describe("EventsScreen", () => {
 	});
 
 	it("retries everything due", async () => {
+		let retried = false;
 		fetchMock.mockImplementation(async (_input: string, init?: RequestInit) => {
-			if (init?.method === "POST") return json({ delivered: 1, failed: 0, dead: 0, counts });
-			return json({ items: [], total: 0, counts });
+			if (init?.method === "POST") {
+				retried = true;
+				return json({ delivered: 1, failed: 0, dead: 0, counts });
+			}
+			return retried
+				? json({ items: [], total: 0, counts })
+				: json({ items: [item("e1", "search-index", "failed")], total: 1, counts });
 		});
 		renderScreen();
 		fireEvent.click(await screen.findByRole("button", { name: t("action.retryAll") }));
@@ -132,6 +138,8 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
+		// With nothing listed there is nothing to retry.
+		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
 
 	it("opens on all recent events, not only the failed ones", async () => {

@@ -1,11 +1,20 @@
 import { type Site, SiteProvider } from "@monti-cms/core/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderHookOptions, type RenderOptions, render, renderHook } from "@testing-library/react";
-import type { ComponentType, ReactElement, ReactNode } from "react";
+import { type ComponentType, type ReactElement, type ReactNode, useState } from "react";
 import { testSite } from "../../../../core/test/site";
 
-/** Provides the site (`testSite` unless a test passes its own) to a screen under test: screens read it through `useSite()`. */
+/**
+ * Provides the site (`testSite` unless a test passes its own) to a screen under test: screens read it through `useSite()`. A fresh query
+ * cache (no retries) comes with it, for the components that look server data up with `useQuery`.
+ */
 export function SiteWrapper({ children, site = testSite }: { children: ReactNode; site?: Site }) {
-	return <SiteProvider site={site}>{children}</SiteProvider>;
+	const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+	return (
+		<SiteProvider site={site}>
+			<QueryClientProvider client={client}>{children}</QueryClientProvider>
+		</SiteProvider>
+	);
 }
 
 /** `ui` inside the site provider, for `render(withSite(ui))`. */

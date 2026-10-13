@@ -8,6 +8,8 @@ import { Lock, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
@@ -15,7 +17,6 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
-import { errorText } from "../admin-api";
 import type { SchemaTab } from "../settings/tabs";
 import { useConfirm } from "../shared/confirm-dialog";
 import { PageBody } from "../shared/page-body";
@@ -27,7 +28,6 @@ import { schemaMessages } from "./messages";
 import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
 import { ReviewDialog } from "./review-dialog";
-import { fetchSchema, type SavedSchema, SCHEMA_KEY } from "./schema-api";
 import {
 	addCollection,
 	changeCount,
@@ -228,12 +228,12 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{applyFailed && (
-							<Alert variant="danger" layout="stack">
+							<Alert variant="destructive" layout="stack">
 								<AlertDescription>{t("save.applyFailedNote")}</AlertDescription>
 							</Alert>
 						)}
 						{state.issues.length > 0 && (
-							<Alert variant="danger" layout="stack" data-testid="schema-file-invalid">
+							<Alert variant="destructive" layout="stack" data-testid="schema-file-invalid">
 								<AlertTitle>{t("invalid.title")}</AlertTitle>
 								<AlertDescription className="flex flex-col gap-2">
 									<span>{t("invalid.description")}</span>
@@ -242,7 +242,7 @@ function SchemaEditor({
 							</Alert>
 						)}
 						{issues.length > 0 && !reviewing && (
-							<Alert variant="danger" layout="stack">
+							<Alert variant="destructive" layout="stack">
 								<AlertTitle>{t("issues.title")}</AlertTitle>
 								<AlertDescription>
 									<IssueList issues={issues} />
@@ -385,7 +385,7 @@ export function SchemaSettings({ tab, actionsSlot }: { tab: SchemaTab; actionsSl
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
 	const query = useQuery({
-		queryKey: SCHEMA_KEY,
+		queryKey: schemaKeys.state(),
 		queryFn: ({ signal }) => fetchSchema(site, signal),
 		// The file is the truth: a screen that was open while it changed would edit a stale copy.
 		staleTime: 0,
@@ -397,7 +397,7 @@ export function SchemaSettings({ tab, actionsSlot }: { tab: SchemaTab; actionsSl
 	return (
 		<div className="flex flex-col gap-3 p-4 lg:p-10">
 			{error ? (
-				<Alert variant="danger" layout="stack">
+				<Alert variant="destructive" layout="stack">
 					<AlertDescription className="flex items-center gap-3">
 						{error}
 						<Button type="button" variant="outline" size="sm" onClick={() => void query.refetch()}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Alert,
 	AlertDescription,
@@ -22,11 +22,10 @@ import {
 	useConfirm,
 	useDebounced,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, PlugZap, Plus, Save, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
-import { toast } from "sonner";
 import {
 	AI_PROVIDER_KINDS,
 	type AiCheckResult,
@@ -35,21 +34,26 @@ import {
 	type AiSettingsView,
 	PROVIDER_EXAMPLES,
 } from "../connection";
-import { AI_ACTIONS_KEY } from "./ai-slot-provider";
+import {
+	aiKeys,
+	checkAiProvider,
+	createAiProvider,
+	deleteAiProvider,
+	getAiSettings,
+	type ModelSource,
+	updateAiProvider,
+} from "./api";
 import { connectionMessages } from "./connection-editor.messages";
 import { OptionSelect } from "./custom-editor";
 import { useLabels } from "./labels.messages";
-import { ModelCombobox, type ModelSource, useModelList } from "./model-combobox";
-
-export const AI_SETTINGS_KEY = ["cms", "ai", "settings"] as const;
+import { ModelCombobox, useModelList } from "./model-combobox";
 
 export function useAiSettings() {
 	const site = useSite();
 	const t = useTranslator(connectionMessages);
 	return useQuery({
-		queryKey: AI_SETTINGS_KEY,
-		queryFn: ({ signal }) =>
-			cmsFetch<AiSettingsView>(site, cmsApiUrl("/v1/ai/settings"), { signal, fallback: t("error.loadList") }),
+		queryKey: aiKeys.settings(),
+		queryFn: ({ signal }) => getAiSettings(site, { signal, fallback: t("error.loadList") }),
 		// Not re-fetched every time an action is opened. Saving a connection updates the cache from the response.
 		staleTime: 60_000,
 	});
@@ -65,7 +69,7 @@ export const DETAIL_PANE = "mx-auto flex w-full max-w-3xl flex-col gap-5 p-6 tex
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
 	const t = useTranslator(connectionMessages);
 	return (
-		<Alert variant="danger" className="m-3 flex w-auto items-center justify-between gap-3">
+		<Alert variant="destructive" className="m-3 flex w-auto items-center justify-between gap-3">
 			<AlertDescription className="col-start-auto">{message}</AlertDescription>
 			<Button type="button" variant="outline" size="xs" onClick={onRetry}>
 				{t("action.retry")}
@@ -180,8 +184,8 @@ export function ConnectionManager({
 	const settings = settingsQuery.data;
 
 	const applySaved = (saved: AiSettingsView) => {
-		queryClient.setQueryData(AI_SETTINGS_KEY, saved);
-		void queryClient.invalidateQueries({ queryKey: AI_ACTIONS_KEY });
+		queryClient.setQueryData(aiKeys.settings(), saved);
+		void queryClient.invalidateQueries({ queryKey: aiKeys.actions() });
 	};
 
 	const current = settings?.providers.find((provider) => provider.id === selected) ?? null;
@@ -281,10 +285,7 @@ function ProviderEditor({
 	const { providerKindLabel } = useLabels();
 	const initial = provider ? draftOf(provider) : NEW_DRAFT;
 	const [draft, setDraft] = useState<Draft>(initial);
-	const [saving, setSaving] = useState(false);
-	const [deleting, setDeleting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [checking, setChecking] = useState(false);
 	const [check, setCheck] = useState<AiCheckResult | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const ids = { name: useId(), kind: useId(), url: useId(), model: useId() };
@@ -312,32 +313,54 @@ function ProviderEditor({
 					: null;
 	const modelList = useModelList(modelSource);
 
-	const save = async () => {
-		setSaving(true);
-		setError(null);
-		try {
+	const saveMutation = useCmsMutation({
+		fn: (_: undefined, { site }) => {
 			const json = { expectedVersion: version, provider: payload(draft) };
-			const saved = provider
-				? await cmsFetch<AiSettingsView>(site, cmsApiUrl(`/v1/ai/providers/${provider.id}`), {
-						method: "PATCH",
-						json,
-						fallback: t("error.save"),
-					})
-				: await cmsFetch<AiSettingsView>(site, cmsApiUrl("/v1/ai/providers"), {
-						method: "POST",
-						json,
-						fallback: t("error.save"),
-					});
+			return provider
+				? updateAiProvider(site, provider.id, json, t("error.save"))
+				: createAiProvider(site, json, t("error.save"));
+		},
+		success: t("toast.saved"),
+		failure: t("error.save"),
+		inline: true,
+		onSuccess: (saved) => {
 			// A new connection is appended to the end of the list.
-			const id = provider?.id ?? saved.providers.at(-1)?.id ?? "";
-			onSaved(saved, id);
-			toast.success(t("toast.saved"));
-		} catch (saveError) {
+			onSaved(saved, provider?.id ?? saved.providers.at(-1)?.id ?? "");
+		},
+		onError: (saveError) => {
 			setError(errorText(site, saveError, t("error.save")));
 			onConflict();
-		} finally {
-			setSaving(false);
-		}
+		},
+	});
+
+	const deleteMutation = useCmsMutation({
+		fn: (target: AiProviderView, { site }) => deleteAiProvider(site, target.id, version, t("error.delete")),
+		success: t("toast.deleted"),
+		failure: t("error.delete"),
+		inline: true,
+		onSuccess: (saved) => onDeleted(saved),
+		onError: (deleteError) => {
+			setError(errorText(site, deleteError, t("error.delete")));
+			onConflict();
+		},
+	});
+
+	/** Checks with the current input before saving. If no new key was entered, uses the saved key. */
+	const checkMutation = useCmsMutation({
+		fn: (_: undefined, { site }) =>
+			checkAiProvider(site, { providerId: provider?.id, provider: payload(draft) }, t("error.check")),
+		failure: t("error.check"),
+		inline: true,
+		onSuccess: setCheck,
+		onError: (checkError) => setCheck({ ok: false, message: errorText(site, checkError, t("error.check")) }),
+	});
+	const saving = saveMutation.isPending;
+	const deleting = deleteMutation.isPending;
+	const checking = checkMutation.isPending;
+
+	const save = () => {
+		setError(null);
+		saveMutation.mutate(undefined);
 	};
 
 	const remove = async () => {
@@ -349,41 +372,11 @@ function ProviderEditor({
 			destructive: true,
 		});
 		if (!ok) return;
-		setDeleting(true);
 		setError(null);
-		try {
-			onDeleted(
-				await cmsFetch<AiSettingsView>(site, cmsApiUrl(`/v1/ai/providers/${provider.id}?expectedVersion=${version}`), {
-					method: "DELETE",
-					fallback: t("error.delete"),
-				}),
-			);
-			toast.success(t("toast.deleted"));
-		} catch (deleteError) {
-			setError(errorText(site, deleteError, t("error.delete")));
-			onConflict();
-		} finally {
-			setDeleting(false);
-		}
+		deleteMutation.mutate(provider);
 	};
 
-	/** Checks with the current input before saving. If no new key was entered, uses the saved key. */
-	const runCheck = async () => {
-		setChecking(true);
-		try {
-			setCheck(
-				await cmsFetch<AiCheckResult>(site, cmsApiUrl("/v1/ai/providers/check"), {
-					method: "POST",
-					json: { providerId: provider?.id, provider: payload(draft) },
-					fallback: t("error.check"),
-				}),
-			);
-		} catch (checkError) {
-			setCheck({ ok: false, message: errorText(site, checkError, t("error.check")) });
-		} finally {
-			setChecking(false);
-		}
-	};
+	const runCheck = () => checkMutation.mutate(undefined);
 
 	return (
 		<div className={DETAIL_PANE}>
@@ -450,7 +443,7 @@ function ProviderEditor({
 			{error && <InlineError>{error}</InlineError>}
 
 			<div className="flex flex-wrap items-center gap-2">
-				<Button type="button" size="sm" disabled={saving || !dirty || !draft.name.trim()} onClick={() => void save()}>
+				<Button type="button" size="sm" disabled={saving || !dirty || !draft.name.trim()} onClick={save}>
 					<Save aria-hidden />
 					{saving ? t("action.saving") : t("action.save")}
 				</Button>

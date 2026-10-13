@@ -1,10 +1,22 @@
 "use client";
 
-import { cmsApiUrl, type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { errorText } from "../../api/client";
+import {
+	type DeliveryKey,
+	dismissEvent,
+	EVENTS_FILTERS,
+	type EventDeliveryItem,
+	type EventsFilter,
+	eventsKeys,
+	listEvents,
+	retryAllEvents,
+	retryEvent,
+} from "../../api/events";
+import { useCmsMutation } from "../../api/use-cms-mutation";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { Alert, AlertDescription } from "../../ui/alert";
@@ -12,22 +24,12 @@ import { Button } from "../../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Skeleton } from "../../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
-import { cmsFetch, errorText } from "../admin-api";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
-import {
-	EVENTS_FILTERS,
-	EVENTS_KEY,
-	EVENTS_LIST_KEY,
-	type EventDeliveryItem,
-	type EventsFilter,
-	type EventsList,
-	eventsQuery,
-} from "./events-api";
 import { eventsMessages } from "./messages";
 
 const ERROR_MAX_LENGTH = 80;
@@ -118,27 +120,17 @@ function StateHeader({
 	);
 }
 
-interface DeliveryKey {
-	eventId: string;
-	subscriber: string;
-}
-
 export function EventsScreen() {
 	const site = useSite();
 	const t = useTranslator(eventsMessages);
-	const queryClient = useQueryClient();
 	const { confirm, dialog } = useConfirm();
 
 	const [filter, setFilter] = useState<EventsFilter>("all");
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState<PageSize>(25);
 	const listQuery = useQuery({
-		queryKey: [...EVENTS_LIST_KEY, filter, page, pageSize],
-		queryFn: ({ signal }) =>
-			cmsFetch<EventsList>(site, cmsApiUrl(`/v1/events?${eventsQuery(filter, page, pageSize)}`), {
-				signal,
-				fallback: t("list.loadFailed"),
-			}),
+		queryKey: eventsKeys.list(filter, page, pageSize),
+		queryFn: ({ signal }) => listEvents(site, filter, page, pageSize, signal, t("list.loadFailed")),
 		placeholderData: keepPreviousData,
 	});
 	const items = listQuery.data?.items ?? [];
@@ -148,41 +140,24 @@ export function EventsScreen() {
 	};
 	const filterOptions = EVENTS_FILTERS.map((value) => ({ value, label: t(`filter.${value}`) }));
 	const error = listQuery.error && !listQuery.data ? errorText(site, listQuery.error, t("list.loadFailed")) : null;
-	const refresh = () => queryClient.invalidateQueries({ queryKey: EVENTS_KEY });
 
-	const retry = useMutation({
-		mutationFn: (key: DeliveryKey) =>
-			cmsFetch(site, cmsApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/retry`), {
-				method: "POST",
-				json: { subscriber: key.subscriber },
-				fallback: t("retry.failed"),
-			}),
-		onSuccess: () => toast.success(t("retry.done")),
-		onError: (err) => toast.error(errorText(site, err, t("retry.failed"))),
-		onSettled: refresh,
+	const retry = useCmsMutation({
+		fn: (key: DeliveryKey, { site }) => retryEvent(site, key, t("retry.failed")),
+		success: t("retry.done"),
+		failure: t("retry.failed"),
+		invalidate: [eventsKeys.all],
 	});
-	const dismiss = useMutation({
-		mutationFn: (key: DeliveryKey) =>
-			cmsFetch(site, cmsApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/dismiss`), {
-				method: "POST",
-				json: { subscriber: key.subscriber },
-				fallback: t("dismiss.failed"),
-			}),
-		onSuccess: () => toast.success(t("dismiss.done")),
-		onError: (err) => toast.error(errorText(site, err, t("dismiss.failed"))),
-		onSettled: refresh,
+	const dismiss = useCmsMutation({
+		fn: (key: DeliveryKey, { site }) => dismissEvent(site, key, t("dismiss.failed")),
+		success: t("dismiss.done"),
+		failure: t("dismiss.failed"),
+		invalidate: [eventsKeys.all],
 	});
-	const retryAll = useMutation({
-		mutationFn: () =>
-			cmsFetch<{ delivered: number; failed: number; dead: number }>(site, cmsApiUrl("/v1/events/retry"), {
-				method: "POST",
-				json: {},
-				fallback: t("retryAll.failed"),
-			}),
-		onSuccess: (result) =>
-			toast.success(t("retryAll.done", { delivered: result.delivered, failed: result.failed, dead: result.dead })),
-		onError: (err) => toast.error(errorText(site, err, t("retryAll.failed"))),
-		onSettled: refresh,
+	const retryAll = useCmsMutation({
+		fn: (_: void, { site }) => retryAllEvents(site, t("retryAll.failed")),
+		success: (result) => t("retryAll.done", { delivered: result.delivered, failed: result.failed, dead: result.dead }),
+		failure: t("retryAll.failed"),
+		invalidate: [eventsKeys.all],
 	});
 
 	const requestDismiss = async (key: DeliveryKey) => {
@@ -197,20 +172,22 @@ export function EventsScreen() {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			<PageActions>
-				<Button
-					type="button"
-					size="sm"
-					variant="outline"
-					disabled={retryAll.isPending}
-					onClick={() => retryAll.mutate()}
-				>
-					<RotateCw aria-hidden />
-					{t("action.retryAll")}
-				</Button>
-			</PageActions>
+			{items.length > 0 && (
+				<PageActions>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						disabled={retryAll.isPending}
+						onClick={() => retryAll.mutate()}
+					>
+						<RotateCw aria-hidden />
+						{t("action.retryAll")}
+					</Button>
+				</PageActions>
+			)}
 			{error && (
-				<Alert variant="danger" className="mx-5 mt-3 flex w-auto items-center justify-between">
+				<Alert variant="destructive" className="mx-5 mt-3 flex w-auto items-center justify-between">
 					<AlertDescription className="col-start-auto">{error}</AlertDescription>
 					<Button type="button" variant="outline" size="xs" onClick={() => void listQuery.refetch()}>
 						{t("action.retry")}
