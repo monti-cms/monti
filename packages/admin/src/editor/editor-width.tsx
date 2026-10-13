@@ -1,8 +1,8 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { type EditorWidthStep as EditorWidthStepConfig, useSite, useTranslator } from "@monti-cms/core/client";
 import { MoveHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { readPreference, writePreference } from "../lib/utils/site-storage";
 import type { TranslatorFor } from "../translator";
 import {
@@ -15,48 +15,70 @@ import {
 import { IconButton } from "../ui/icon-button";
 import { editorMessages } from "./messages";
 
+/** One width step of the editor: `key` is what the browser remembers, `width` the CSS value of the body's `max-width`. */
+export interface EditorWidthStep {
+	readonly key: string;
+	readonly label: string;
+	readonly width: string;
+}
+
+/** The width of the single built-in step ("Normal") used when the config sets no `editor.widths`. */
+export const DEFAULT_EDITOR_WIDTH = "48rem";
+/** The `max-width` of the last step, "Full": no limit. */
+export const FULL_EDITOR_WIDTH = "none";
+
+/** Key of the built-in steps. The step of the config is remembered by its label (`label:Desktop`), so a changed config still finds it. */
+const NORMAL_KEY = "normal";
+const FULL_KEY = "full";
+
 /**
- * Editor body width. Changes only the width shown while editing; unrelated to the saved content and the public page.
- * The browser remembers only the step name, so the width values can be changed here alone.
+ * The steps of the width menu, in order: the config's `editor.widths` (or "Normal" when it sets none), then "Full". The first is where the editor starts.
+ * Changes only the width shown while editing; unrelated to the saved content and the public page.
  */
-export const EDITOR_WIDTHS = {
-	/** Comfortable reading width for body text (42rem, same as Tailwind `max-w-2xl`). */
-	narrow: "42rem",
-	normal: "48rem",
-	wide: "64rem",
-	full: "none",
-} as const;
+export function resolveEditorWidths(
+	configured: readonly EditorWidthStepConfig[] | undefined,
+	t: TranslatorFor<typeof editorMessages>,
+): EditorWidthStep[] {
+	const steps: EditorWidthStep[] = configured?.length
+		? configured.map(({ label, width }) => ({ key: `label:${label}`, label, width }))
+		: [{ key: NORMAL_KEY, label: t("editorWidth.normal"), width: DEFAULT_EDITOR_WIDTH }];
+	return [...steps, { key: FULL_KEY, label: t("editorWidth.full"), width: FULL_EDITOR_WIDTH }];
+}
 
-export type EditorWidth = keyof typeof EDITOR_WIDTHS;
-
-const LABELS = (t: TranslatorFor<typeof editorMessages>): Record<EditorWidth, string> => ({
-	narrow: t("editorWidth.narrow"),
-	normal: t("editorWidth.normal"),
-	wide: t("editorWidth.wide"),
-	full: t("editorWidth.full"),
-});
 /** Name of the remembered width in the site's browser storage (`lib/utils/site-storage.ts`). */
 const STORAGE_NAME = "editor-width";
-const isEditorWidth = (value: unknown): value is EditorWidth =>
-	typeof value === "string" && Object.hasOwn(EDITOR_WIDTHS, value);
 
-/** Chosen body width. Remembered in this browser, per site; starts at the normal width if storage is unavailable. */
-export function useEditorWidth(): [EditorWidth, (width: EditorWidth) => void] {
+/**
+ * The steps of this site and the chosen one. The choice is remembered in this browser, per site, by step key; a remembered key that no step has any more
+ * (the config changed) and unavailable storage both leave the first step.
+ */
+export function useEditorWidth(): { steps: EditorWidthStep[]; step: EditorWidthStep; choose: (key: string) => void } {
 	const site = useSite();
-	const [width, setWidth] = useState<EditorWidth>("normal");
+	const t = useTranslator(editorMessages);
+	const configured = site.config.editor?.widths;
+	const steps = useMemo(() => resolveEditorWidths(configured, t), [configured, t]);
+	const [key, setKey] = useState<string | null>(null);
 	useEffect(() => {
-		const stored = readPreference(site, STORAGE_NAME);
-		if (isEditorWidth(stored)) setWidth(stored);
+		setKey(readPreference(site, STORAGE_NAME));
 	}, [site]);
-	const change = (next: EditorWidth) => {
-		setWidth(next);
+	const step = steps.find((candidate) => candidate.key === key) ?? (steps[0] as EditorWidthStep);
+	const choose = (next: string) => {
+		setKey(next);
 		writePreference(site, STORAGE_NAME, next);
 	};
-	return [width, change];
+	return { steps, step, choose };
 }
 
 /** Body width menu at the right end of the toolbar. */
-export function EditorWidthMenu({ value, onChange }: { value: EditorWidth; onChange: (width: EditorWidth) => void }) {
+export function EditorWidthMenu({
+	steps,
+	value,
+	onChange,
+}: {
+	steps: readonly EditorWidthStep[];
+	value: EditorWidthStep;
+	onChange: (key: string) => void;
+}) {
 	const t = useTranslator(editorMessages);
 	return (
 		<DropdownMenu>
@@ -72,12 +94,12 @@ export function EditorWidthMenu({ value, onChange }: { value: EditorWidth; onCha
 			<DropdownMenuContent align="end" className="w-36">
 				<DropdownMenuRadioGroup
 					aria-label={t("editorWidth.label")}
-					value={value}
-					onValueChange={(next) => isEditorWidth(next) && onChange(next)}
+					value={value.key}
+					onValueChange={(next) => typeof next === "string" && onChange(next)}
 				>
-					{(Object.keys(EDITOR_WIDTHS) as EditorWidth[]).map((width) => (
-						<DropdownMenuRadioItem key={width} value={width}>
-							{LABELS(t)[width]}
+					{steps.map((step) => (
+						<DropdownMenuRadioItem key={step.key} value={step.key}>
+							{step.label}
 						</DropdownMenuRadioItem>
 					))}
 				</DropdownMenuRadioGroup>

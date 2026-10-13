@@ -105,6 +105,23 @@ export interface AdminConfig {
 	readonly translations?: boolean;
 }
 
+/** One width step of the editor: a label for the menu and the widest the editor body gets at that step. */
+export interface EditorWidthStep {
+	/** Name shown in the editor's width menu. Not empty, and unique among the steps. */
+	readonly label: string;
+	/** A CSS length (`720px`, `48rem`, `min(100%, 60ch)`): the widest the body is while editing. */
+	readonly width: string;
+}
+
+export interface EditorConfig {
+	/**
+	 * The width steps of the editor's width menu, in the order they are listed; the first is the one the editor starts at. Set them to the width of your public
+	 * pages, and add a phone width to check how a post wraps. The admin always adds a last "Full" step with no limit. Without `widths` the menu has "Normal"
+	 * (`48rem`) and "Full". The editor remembers the step a person picked, per browser.
+	 */
+	readonly widths?: readonly EditorWidthStep[];
+}
+
 /**
  * A body template of the seed: its fixed `id` and `name`, and the body as a stored document (`doc`) or as text in a format (`body` and the `format` that reads it;
  * the format must be one the instance has, so a plugin provides it). Text is read when the migration runs.
@@ -154,6 +171,8 @@ export interface CmsConfig<
 	readonly schemaVersion?: number;
 	/** Admin UI settings. */
 	readonly admin?: AdminConfig;
+	/** The editor: the width steps of its width menu. */
+	readonly editor?: EditorConfig;
 	/**
 	 * Body blocks the site adds (`defineBlock`). Blocks such as callouts and tabs are added by putting the block extension (`@monti-cms/blocks`) in `plugins`.
 	 * The public site renders them by the `component` name.
@@ -165,6 +184,33 @@ export interface CmsConfig<
 	readonly codeBlock?: CodeBlockConfig;
 	/** Uploadable media formats and size limits. If unset, all supported formats, images up to 10MB and 40 megapixels, attachments up to 50MB. */
 	readonly media?: MediaConfig;
+}
+
+/** A number with a unit (`720px`, `48rem`, `80%`), or a `calc`, `min`, `max` or `clamp` of such lengths. Nothing that could end the declaration (`;`, braces, quotes). */
+const CSS_LENGTH =
+	/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem|em|ch|ex|vw|vh|vmin|vmax|cm|mm|in|pt|pc|%)$|^(?:calc|min|max|clamp)\([\w\s.,%+*/()-]+\)$/;
+
+/** Checks the editor's width steps: each has a non-empty unique label and a CSS length, and there is at least one when `widths` is set. */
+function validateEditorConfig(editor: EditorConfig | undefined): void {
+	const widths = editor?.widths;
+	if (widths === undefined) return;
+	if (!Array.isArray(widths) || widths.length === 0) {
+		throw new Error(
+			"cms.config: editor.widths needs at least one { label, width } step (leave it out for the default steps)",
+		);
+	}
+	const labels = new Set<string>();
+	for (const [index, step] of widths.entries()) {
+		const at = `cms.config: editor.widths[${index}]`;
+		if (typeof step?.label !== "string" || !step.label.trim()) throw new Error(`${at}.label must not be empty`);
+		if (labels.has(step.label)) throw new Error(`${at}.label "${step.label}" is used twice; labels must be unique`);
+		labels.add(step.label);
+		if (typeof step.width !== "string" || !CSS_LENGTH.test(step.width.trim())) {
+			throw new Error(
+				`${at}.width "${String(step.width)}" is not a CSS length; write a number with a unit such as "720px" or "48rem"`,
+			);
+		}
+	}
 }
 
 const ROLE_NAME = /^[A-Za-z][A-Za-z0-9-]*$/;
@@ -335,6 +381,8 @@ function validate(
 			"cms.config: admin.legacyBackupNames was removed; delete it (the admin UI only uses the `cms_backup` recovery database)",
 		);
 	}
+
+	validateEditorConfig(config.editor);
 
 	for (const key of ["templates", "translations"] as const) {
 		const value = config.admin?.[key];

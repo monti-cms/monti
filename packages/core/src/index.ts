@@ -31,6 +31,8 @@ export {
 	type CmsConfig,
 	type CollectionsConfig,
 	defineSite,
+	type EditorConfig,
+	type EditorWidthStep,
 	type LocaleConfig,
 	type LocalePrefixMode,
 	type SchemaCmsConfig,

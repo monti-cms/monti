@@ -515,7 +515,7 @@ several sites. `createSite(config)` (`@monti-cms/core/client`) resolves a config
 | Public renderer | `<CmsContent cms={cms} entry={entry} />` and `renderDocument(doc, { site: cms.site })`: the site decides which blocks, marks and code fences exist, the line effects and the highlighting themes, and which plugin components are added |
 | Code of your own | `cms.site` on the server, `useSite()` in client components. A helper that needs a site takes it as a parameter |
 
-**What reaches the browser.** `site.snapshot()` is the config as plain data: the collections, locales, `site`, `admin`, `timeZone`, `media` and `codeBlock` settings, every block (the blocks of plugins included) and, for each plugin, `name`, `nav`, `options` and `contributes` as JSON. A function inside a plugin's `options`
+**What reaches the browser.** `site.snapshot()` is the config as plain data: the collections, locales, `site`, `admin`, `timeZone`, `media`, `editor` and `codeBlock` settings, every block (the blocks of plugins included) and, for each plugin, `name`, `nav`, `options` and `contributes` as JSON. A function inside a plugin's `options`
 or `contributes`, a text override of `admin.messages` that is a function (strings stay), and a plugin's `server`, `admin`, `render`, `formats` and `validate` do not reach it: the admin layout loads the plugins' admin modules on the server and renders their providers itself. Keep what the browser needs from `options` to JSON values.
 
 **Typing.** The types follow the config you pass, with no registration step. `defineConfig({ … })` (and `createCms({ config })`) returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
@@ -1440,7 +1440,7 @@ Fix: correct the lines above in monti.schema.ts; the types of defineSchema show 
 | `site`, `admin` | Key by key, the code's value wins. A key set to `undefined` (an unset environment variable) leaves the file's value. `site.url` usually lives in code |
 | `timeZone` | The code's value wins |
 | `seed.templates` | The file's templates, then the code's |
-| `plugins`, `blocks`, `codeBlock`, `media` | Code only |
+| `plugins`, `blocks`, `codeBlock`, `media`, `editor` | Code only |
 
 **What stays in code.** Anything that needs code: plugins (so syntax extensions, formats, AI actions), block definitions with their components, hooks and the server options (database, storage, login, secrets), `codeBlock` (line effects hold labels and functions), `media`, and any option that is a function. `site.url` stays in code because it differs per environment.
 
@@ -1562,7 +1562,7 @@ The screen edits collections (label, icon, kind, public address, body and the al
 
 ## Config
 
-Everything in this table except `codeBlock` and `media` can be written in the schema file instead ("The schema file"), and `plugins` and `blocks` are always code. The rules below are the same either way.
+Everything in this table except `codeBlock`, `media` and `editor` can be written in the schema file instead ("The schema file"), and `plugins` and `blocks` are always code. The rules below are the same either way.
 
 | Item | Meaning |
 |---|---|
@@ -1581,6 +1581,7 @@ Everything in this table except `codeBlock` and `media` can be written in the sc
 | `codeBlock.lineEffects` | Add or override code block line effects ("Code block line effects"). |
 | `codeBlock.omitLineEffects` / `features` / `themes` / `languages` | Hide line effects and tools in the editor, set the highlighting themes, and add languages ("Turning code block tools off, themes and languages"). |
 | `media` | Media that can be uploaded. `maxImageBytes` (default 10MB), `maxPixels` (default 40 million), `maxFileBytes` (default 50MB) and the accepted formats `imageTypes` (among jpeg, png, webp, gif, avif) and `fileTypes` (among pdf, zip, txt, md, csv, json; an empty list accepts no attachments). The upload API, the admin file picker and `/v1/meta` follow it. |
+| `editor.widths` | The width steps of the editor's width menu: a list of `{ label, width }`, `width` being a CSS length (`"720px"`, `"48rem"`). The menu lists them in this order and the editor starts at the first; "Full" (no limit, named by the admin language) is always added last. Set them to the width of your public pages, and add a phone width (`{ label: "Mobile", width: "375px" }`) to check how a post wraps. Without it the menu has "Normal" (`48rem`) and "Full". Labels must be unique and not empty, and a width that is not a CSS length is an error when the config loads. The browser remembers the step picked, per site; a step that is no longer in the config leaves the first. |
 | `admin.locale` | Admin UI language and date and number formatting (BCP 47, e.g. `en`, `ko-KR`). If unset, the site default language (`defaultLocale`). Times are shown in `timeZone`. |
 | `admin.messages` | Override UI text: namespace → key → text. Core block labels are in `"cms.blocks"` (`<block>.label`, like `image.label`), code block effects in `"cms.code-block"`, and validation error texts in `"cms.core"` and `"cms.translation"` (the texts of reading MDX are in `"cms.mdx"`, from `@monti-cms/mdx`). |
 | `admin.templates` | `false` hides body templates in the admin: the template menu of the editor, the Settings > Templates tab (a 404 at its address). Default `true`. Stored templates are kept. |
