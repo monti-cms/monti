@@ -288,7 +288,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 		});
 	const card = (
 		<Panel ref={cardRef} className={cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH)} data-testid="fields-card">
-			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
 						{t("field.title")} <span className="font-medium text-cms-muted-foreground">{names.length}</span>
@@ -297,7 +297,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 						{t("fields.hint")}
 					</p>
 				</div>
-				<div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+				<div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
 					<IconButton
 						label={t("layout.preview")}
 						size="icon-sm"
