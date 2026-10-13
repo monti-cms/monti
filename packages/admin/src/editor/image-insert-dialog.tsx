@@ -3,6 +3,7 @@
 import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { cn } from "../lib/utils/cn";
+import { cmsFetch } from "../screens/admin-api";
 import { mediaNotConfiguredMessage } from "../screens/api-error-message";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import type { TranslatorFor } from "../translator";
@@ -132,11 +133,7 @@ export function ImageInsertDialog({
 		const timer = setTimeout(() => {
 			const params = new URLSearchParams({ pageSize: "24", kind: "image" });
 			if (search.trim()) params.set("search", search.trim());
-			fetch(cmsApiUrl(`/v1/media?${params.toString()}`))
-				.then((res) => {
-					if (!res.ok) throw new Error(String(res.status));
-					return res.json();
-				})
+			cmsFetch<{ items?: (LibraryItem & { status?: string })[] }>(site, cmsApiUrl(`/v1/media?${params.toString()}`))
 				.then((data: { items?: (LibraryItem & { status?: string })[] }) => {
 					if (!cancelled) setLibrary((data.items ?? []).filter((item) => item.status !== "deleting"));
 				})
@@ -153,7 +150,7 @@ export function ImageInsertDialog({
 			cancelled = true;
 			clearTimeout(timer);
 		};
-	}, [open, tab, search, libraryAttempt]);
+	}, [open, tab, search, libraryAttempt, site]);
 
 	const isUploading = progress !== null;
 	const needsAlt = !picking && !decorative && !alt.trim();

@@ -7,7 +7,9 @@ import { PATCH as patchFolder } from "../[id]/route";
 import { GET as getFolders } from "../route";
 
 const mockStore = {
-	listFolders: vi.fn().mockResolvedValue([{ id: "f-1", name: "Folder 1", version: 1 }]),
+	listFolders: vi
+		.fn()
+		.mockResolvedValue([{ id: "00000000-0000-4000-8000-000000000007", name: "Folder 1", version: 1 }]),
 	createFolder: vi.fn().mockImplementation((p) => Promise.resolve({ id: "f-new", version: 1, ...p })),
 	updateFolder: vi.fn().mockImplementation((p) => {
 		if (p.expectedVersion === 1) {
@@ -35,24 +37,30 @@ describe("Folders HTTP API Contract", () => {
 	});
 
 	it("PATCH /folders/:id rejects without expectedVersion with 428", async () => {
-		const req = new Request("http://localhost/api/monti/v1/folders/f-1", {
+		const req = new Request("http://localhost/api/monti/v1/folders/00000000-0000-4000-8000-000000000007", {
 			method: "PATCH",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify({ name: "Updated Name" }),
 		});
-		const res = await patchFolder(req, { params: Promise.resolve({ id: "f-1" }), cms });
+		const res = await patchFolder(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000007" }),
+			cms,
+		});
 		expect(res.status).toBe(428);
 		const data = await res.json();
 		expect(data.code).toBe("version_required");
 	});
 
 	it("PATCH /folders/:id maps conflict to 409", async () => {
-		const req = new Request("http://localhost/api/monti/v1/folders/f-1", {
+		const req = new Request("http://localhost/api/monti/v1/folders/00000000-0000-4000-8000-000000000007", {
 			method: "PATCH",
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			body: JSON.stringify({ name: "Updated Name", expectedVersion: 1 }),
 		});
-		const res = await patchFolder(req, { params: Promise.resolve({ id: "f-1" }), cms });
+		const res = await patchFolder(req, {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000007" }),
+			cms,
+		});
 		expect(res.status).toBe(409);
 		const data = await res.json();
 		expect(data.code).toBe("conflict");

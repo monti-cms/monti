@@ -5,7 +5,7 @@ import type { EntryStatus } from "../store/types";
 /**
  * Lifecycle rules: which status each transition starts from, what a source's transition does to its translations, and
  * when a trashed entry may be deleted for good. A disallowed source status is rejected with `invalid_status` (409), for example so that
- * pressing `보관 해제` or `복원` on a published entry cannot silently take it offline.
+ * pressing "unarchive" or "restore" on a published entry cannot silently take it offline.
  */
 
 export type LifecycleAction = "archive" | "unarchive" | "trash" | "restore";

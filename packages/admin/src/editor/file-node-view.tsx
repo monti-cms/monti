@@ -6,11 +6,13 @@ import {
 	fileKindOf,
 	fileTypeLabel,
 	formatFileSize,
+	useSite,
 	useTranslator,
 } from "@monti-cms/core/client";
 import { FileArchive, FileText, FileType } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn";
+import { cmsFetch } from "../screens/admin-api";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { editorMessages } from "./messages";
 
@@ -21,6 +23,7 @@ type MediaInfo = { filename: string; byteSize: number | null; mimeType: string |
 /** Edit view of the core file block (`blockViews.file`): the attached file card. Same look as the public view card, and the name can be edited directly. */
 export function FileBlockView() {
 	const t = useTranslator(editorMessages);
+	const site = useSite();
 	const block = useBlockEditor();
 	const mediaId = typeof block.values.mediaId === "string" ? block.values.mediaId : "";
 	const label = typeof block.values.label === "string" ? block.values.label : "";
@@ -30,17 +33,13 @@ export function FileBlockView() {
 	useEffect(() => {
 		if (!mediaId) return;
 		let cancelled = false;
-		fetch(cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`))
-			.then(async (response) => {
-				if (!response.ok) throw new Error("media_lookup_failed");
-				return (await response.json()) as MediaInfo;
-			})
+		cmsFetch<MediaInfo>(site, cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`))
 			.then((result) => !cancelled && setMedia(result))
 			.catch(() => !cancelled && setMedia("failed"));
 		return () => {
 			cancelled = true;
 		};
-	}, [mediaId]);
+	}, [mediaId, site]);
 
 	const info = media && media !== "failed" ? media : null;
 	const filename = info?.filename ?? "";

@@ -1,11 +1,12 @@
 "use client";
 
-import { cmsApiUrl, useTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "../lib/utils/cn";
+import { cmsFetch } from "../screens/admin-api";
 import { type SlotRequest, useSlot } from "../slots/slots";
 import type { TranslatorFor } from "../translator";
 import { Input } from "../ui/input";
@@ -50,6 +51,7 @@ const ALIGN_TOOLS = (t: TranslatorFor<typeof editorMessages>) =>
 /** Edit view of the core image block (`blockViews.image`). */
 export function ImageBlockView() {
 	const t = useTranslator(editorMessages);
+	const site = useSite();
 	const block = useBlockEditor();
 	const widthInputId = useId();
 	const altInputId = useId();
@@ -120,11 +122,10 @@ export function ImageBlockView() {
 		}
 		let cancelled = false;
 		setMediaState({ status: "checking", publicUrl: null });
-		fetch(cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`))
-			.then(async (response) => {
-				if (!response.ok) throw new Error("media_lookup_failed");
-				return (await response.json()) as { status?: string; publicUrl?: string | null };
-			})
+		cmsFetch<{ status?: string; publicUrl?: string | null }>(
+			site,
+			cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`),
+		)
 			.then((result) => {
 				if (!cancelled) setMediaState({ status: result.status ?? "unknown", publicUrl: result.publicUrl ?? null });
 			})
@@ -134,7 +135,7 @@ export function ImageBlockView() {
 		return () => {
 			cancelled = true;
 		};
-	}, [mediaId, src]);
+	}, [mediaId, src, site]);
 
 	const imageSrc = typeof src === "string" && src ? src : mediaState?.publicUrl;
 	const resolved = resolveImageUrl(typeof imageSrc === "string" ? imageSrc : undefined);

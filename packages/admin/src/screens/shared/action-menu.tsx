@@ -199,7 +199,7 @@ export function MoreActionsButton({
 	className,
 }: {
 	actions: MenuAction[];
-	/** Button name and tooltip (e.g. `'알고리즘' 폴더 작업`). */
+	/** Button name and tooltip (e.g. `'Algorithms' folder actions`). */
 	label: string;
 	className?: string;
 }) {

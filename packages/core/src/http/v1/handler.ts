@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { AuthContext } from "../../adapters/auth";
 import type { Cms } from "../../cms";
 import { actorOf, withActor } from "../../core/actor";
+import { isUuid } from "../../core/ids";
 import { HttpError, handleApiError } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
@@ -43,6 +44,11 @@ export function adminRoute<P extends Params = Params>(
 			validateSameOrigin(cms, request);
 			const auth = await cms.authGateway.verifyAdmin();
 			const params = (await context?.params) ?? ({} as P);
+			// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
+			// would reject it as a malformed value (an internal error), so it is a missing item here.
+			if (typeof params.id === "string" && !isUuid(params.id)) {
+				throw new HttpError(404, "not_found", "Not found");
+			}
 			// The store records this admin as the one who made the changes the handler writes (`changedBy`).
 			return await withActor(actorOf(auth), () => handler({ request, params, auth, cms }));
 		} catch (error) {

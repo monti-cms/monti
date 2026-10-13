@@ -6,65 +6,56 @@ import { CmsError } from "../../../../../../core/store";
 import { ServiceError } from "../../../../../../services/types";
 import { POST } from "../route";
 
-const { verifyAdmin, publish, imageWarningsForSnapshot, getMediaAsset } = vi.hoisted(() => ({
+const { verifyAdmin, publish } = vi.hoisted(() => ({
 	verifyAdmin: vi.fn(),
 	publish: vi.fn(),
-	imageWarningsForSnapshot: vi.fn(),
-	getMediaAsset: vi.fn(),
 }));
 
 const cms = fakeCms({
 	config: testConfig,
 	contentService: { publish },
-	store: { getMediaAsset },
-	mediaStore: { headFile: vi.fn() },
 	verifyAdmin: () => verifyAdmin(),
 });
 
-vi.mock("../../../../../../core/snapshot", () => ({ imageWarningsForSnapshot }));
-
 function request(body: unknown = { expectedVersion: 4 }, origin = "http://localhost") {
-	return new Request("http://localhost/api/monti/v1/entries/entry-1/publish", {
+	return new Request("http://localhost/api/monti/v1/entries/00000000-0000-4000-8000-000000000011/publish", {
 		method: "POST",
 		headers: { origin, "content-type": "application/json" },
 		body: JSON.stringify(body),
 	});
 }
 
-const context = { params: Promise.resolve({ id: "entry-1" }), cms };
+const context = { params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000011" }), cms };
 
 describe("publish HTTP contract", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		verifyAdmin.mockResolvedValue({ isAdmin: true });
-		publish.mockResolvedValue({ entry: { id: "entry-1", version: 5, status: "published" }, warnings: [] });
+		publish.mockResolvedValue({
+			entry: { id: "00000000-0000-4000-8000-000000000011", version: 5, status: "published" },
+			warnings: [],
+		});
 	});
 
 	it("returns warnings with a successful committed publish", async () => {
 		const warnings = [{ code: "image_media_not_ready", position: { line: 3, column: 2 } }];
-		publish.mockResolvedValue({ entry: { id: "entry-1", version: 5, status: "published" }, warnings });
+		publish.mockResolvedValue({
+			entry: { id: "00000000-0000-4000-8000-000000000011", version: 5, status: "published" },
+			warnings,
+		});
 		const response = await POST(request(), context);
 		expect(response.status).toBe(200);
-		expect(await response.json()).toMatchObject({ entry: { id: "entry-1", status: "published" }, warnings });
-		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
-	});
-
-	it("computes the image warnings from the snapshot the pipeline prepared", async () => {
-		const snapshot = { collection: "post" };
-		imageWarningsForSnapshot.mockResolvedValue([]);
-		await POST(request(), context);
-		const { extraWarnings } = publish.mock.calls[0][1];
-		await extraWarnings(snapshot);
-		expect(imageWarningsForSnapshot).toHaveBeenCalledWith(
-			snapshot,
-			expect.objectContaining({ getMediaAsset: expect.any(Function), headStorageKey: expect.any(Function) }),
-		);
+		expect(await response.json()).toMatchObject({
+			entry: { id: "00000000-0000-4000-8000-000000000011", status: "published" },
+			warnings,
+		});
+		expect(publish).toHaveBeenCalledWith({ id: "00000000-0000-4000-8000-000000000011", expectedVersion: 4 });
 	});
 
 	it("ignores a request publishedAt; the display date comes from the saved draft metadata", async () => {
 		const response = await POST(request({ expectedVersion: 4, publishedAt: "2020-03-04T12:00:00.000Z" }), context);
 		expect(response.status).toBe(200);
-		expect(publish).toHaveBeenCalledWith({ id: "entry-1", expectedVersion: 4 }, expect.anything());
+		expect(publish).toHaveBeenCalledWith({ id: "00000000-0000-4000-8000-000000000011", expectedVersion: 4 });
 	});
 
 	it("rejects a non-integer expectedVersion before publishing", async () => {

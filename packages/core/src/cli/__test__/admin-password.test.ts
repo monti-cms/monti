@@ -5,7 +5,7 @@ import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from ".
 import { importCms } from "../app";
 import { dbSetup } from "../db";
 import type { DoctorReport } from "../doctor";
-import { runCli } from "../index";
+import { InitCancelled, runCli } from "../index";
 import { byId, CORE_SRC, configText, project, setEnv } from "./doctor-helpers";
 
 const DATABASE = (process.env.CMS_TEST_DATABASE_URL ?? "").replace(
@@ -146,6 +146,18 @@ describe("the email and password login on the command line", () => {
 		const { code, text } = await run(dir, ["admin:reset-password"], prompts);
 		expect(code).toBe(1);
 		expect(text).toContain("not the same");
+	});
+
+	it("reset-password exits with 130 when the person cancels, like init", async () => {
+		const dir = app();
+		const prompts = {
+			text: async () => {
+				throw new InitCancelled();
+			},
+			password: async () => "",
+		};
+		const { code } = await run(dir, ["admin:reset-password"], prompts);
+		expect(code).toBe(130);
 	});
 
 	it("reset-password refuses a short password", async () => {

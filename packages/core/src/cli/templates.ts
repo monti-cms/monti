@@ -81,7 +81,7 @@ export interface InitAnswers {
 	readonly directiveSyntax: boolean;
 }
 
-/** The language's name in that language for a locale code (e.g. `ko` -> `한국어`). Falls back to the code itself. */
+/** The language's name in that language for a locale code (e.g. `ko` gives the Korean name of Korean, written in Hangul). Falls back to the code itself. */
 function languageName(code: string): string {
 	try {
 		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;

@@ -282,6 +282,13 @@ describe("Git sync screen: settings tab", () => {
 		);
 	});
 
+	it("does not show the webhook secret as plain text or offer it to the password manager as a login", async () => {
+		await openSettings();
+		const secret = (await screen.findByLabelText(t("settings.webhook"))) as HTMLInputElement;
+		expect(secret.type).toBe("password");
+		expect(secret.autocomplete).toBe("new-password");
+	});
+
 	it("forgets the token on request", async () => {
 		await openSettings();
 		fireEvent.click(await screen.findByRole("button", { name: t("settings.remove") }));

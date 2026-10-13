@@ -664,8 +664,8 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 				<div className="flex gap-2">
 					<Input
 						id="git-sync-secret"
-						type="text"
-						autoComplete="off"
+						type="password"
+						autoComplete="new-password"
 						value={secret}
 						placeholder={t("settings.webhook.new")}
 						onChange={(event) => setSecret(event.target.value)}

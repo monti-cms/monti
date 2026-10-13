@@ -120,6 +120,18 @@ describe("list screen — list settings", () => {
 		});
 	});
 
+	it("requests the list once, with the saved sort, and not first with the defaults", async () => {
+		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "asc" } } } };
+		renderList();
+		await screen.findByRole("row", { name: /가/ });
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		// The trash badge asks for trashed rows too; the list itself is the request with a sort.
+		const listRequests = entryRequests().filter((url) => url.searchParams.has("sortField"));
+		expect(listRequests).toHaveLength(1);
+		expect(listRequests[0]?.searchParams.get("sortField")).toBe("title");
+	});
+
 	it("values written in the address take precedence over saved settings", async () => {
 		nav.setSearch("collection=post&pageSize=100&sort=createdAt&dir=asc");
 		server.preferences = { collections: { post: { pageSize: 50, sort: { field: "title", direction: "desc" } } } };

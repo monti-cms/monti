@@ -9,7 +9,13 @@ import { assertPluginNamesFree, assertPluginPagesFree } from "../plugin/collisio
 import type { CmsPlugin } from "../plugin/define";
 import { validateBodyAllowed } from "../schema/allowed";
 import { type CollectionSchema, normalizeCollection } from "../schema/collection";
-import { DEFAULT_TITLE_FIELD, RESERVED_METADATA_KEYS, SUMMARY_ROLE, TITLE_ROLE } from "../schema/fields";
+import {
+	DEFAULT_TITLE_FIELD,
+	RESERVED_METADATA_KEYS,
+	type SlugField,
+	SUMMARY_ROLE,
+	TITLE_ROLE,
+} from "../schema/fields";
 import { findTitleField, valueFieldsOf } from "../schema/walk";
 import { resolveSchemaConfig } from "../schema-file/merge";
 import { SCHEMA_SOURCE } from "../schema-file/source";
@@ -251,7 +257,12 @@ const checkTab = (at: string, tab: string | undefined) => {
  */
 function validateFieldMeanings(collection: string, schema: CollectionSchema): void {
 	const roles = new Map<string, string>();
-	for (const { name, field } of valueFieldsOf(schema)) {
+	// Every field that can carry a meaning: the stored ones, and the address (which has no stored value but takes `role` and `required` like the rest).
+	const slugs: { name: string; field: SlugField }[] = [];
+	for (const [name, field] of Object.entries(schema.fields)) {
+		if (field.kind === "slug") slugs.push({ name, field });
+	}
+	for (const { name, field } of [...valueFieldsOf(schema), ...slugs]) {
 		const role = field.role;
 		if (role !== undefined) {
 			if (!ROLE_NAME.test(role)) throw new Error(`cms.config: ${collection}.${name} has an invalid role "${role}"`);
@@ -282,6 +293,11 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 				throw new Error(`cms.config: ${collection}.${name} fillFromBody.maxLength must be a positive integer`);
 			}
 		}
+		if (field.kind === "select" && !Object.hasOwn(field.options, field.defaultValue)) {
+			throw new Error(
+				`cms.config: ${collection}.${name} defaultValue "${field.defaultValue}" is not one of the options (${Object.keys(field.options).join(", ")})`,
+			);
+		}
 		if (field.kind === "media" && field.accept !== undefined && field.accept !== "image" && field.accept !== "file") {
 			throw new Error(`cms.config: ${collection}.${name} accept must be "image" or "file"`);
 		}
@@ -302,12 +318,28 @@ function validateFieldMeanings(collection: string, schema: CollectionSchema): vo
 	}
 	for (const [index, group] of (schema.layout ?? []).entries()) {
 		checkTab(`cms.config: ${collection}.layout[${index}]`, group.tab);
+		for (const fieldName of group.fields) {
+			if (!Object.hasOwn(schema.fields, fieldName)) {
+				throw new Error(
+					`cms.config: ${collection}.layout[${index}] lists "${fieldName}", which is not a field of ${collection}`,
+				);
+			}
+		}
 	}
 	for (const [name, field] of Object.entries(schema.fields)) {
 		if (RESERVED_METADATA_KEYS.includes(name)) {
 			throw new Error(`cms.config: ${collection}.${name} uses a reserved name; rename the field`);
 		}
 		checkTab(`cms.config: ${collection}.${name}`, field.tab);
+		if (field.kind === "conditional") {
+			for (const option of Object.keys(field.values)) {
+				if (!Object.hasOwn(field.discriminant.options, option)) {
+					throw new Error(
+						`cms.config: ${collection}.${name} shows fields for "${option}", which is not an option of its discriminant (${Object.keys(field.discriminant.options).join(", ")})`,
+					);
+				}
+			}
+		}
 		if (field.kind === "view" && !/^[a-z][a-z0-9-]*$/.test(field.view)) {
 			throw new Error(`cms.config: ${collection}.${name} view must be a kebab-case name`);
 		}
@@ -554,7 +586,7 @@ export function defineSite(
 	) as CmsConfig;
 	// Also accepts definitions written without `defineCollection`. The core only reads the normalized `kind`.
 	const collections = Object.fromEntries(
-		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),
+		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema, name)]),
 	);
 	const normalized = { ...config, collections };
 	validate(normalized);

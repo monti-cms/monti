@@ -52,7 +52,7 @@ interface BaseField {
 	readonly role?: FieldRole;
 	/**
 	 * Tab name in which this field is drawn in the edit screen's properties area. A `tab` on a layout group (`layout`) takes precedence. Lets field groups provided by an extension
-	 * gather in their own tab even if the site does not write a layout. If absent, it is the default tab (`속성`).
+	 * gather in their own tab even if the site does not write a layout. If absent, it is the default tab ("Properties").
 	 */
 	readonly tab?: string;
 }

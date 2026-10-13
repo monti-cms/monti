@@ -47,6 +47,45 @@ function skipLiteral(text: string, index: number): number {
 	return index;
 }
 
+/**
+ * The code of a file with its comments and the contents of its strings blanked out, except the module names of imports (after `from` or `require(`).
+ * What is left is what the program does, so a search of it is not satisfied by a comment or a string that mentions the name.
+ */
+function codeOf(text: string): string {
+	let out = "";
+	for (let i = 0; i < text.length; ) {
+		const end = skipLiteral(text, i);
+		if (end === i) {
+			out += text[i];
+			i += 1;
+			continue;
+		}
+		const literal = text.slice(i, end);
+		const isComment = literal.startsWith("//") || literal.startsWith("/*");
+		const isModuleName = !isComment && /(?:\bfrom|\brequire\()\s*$/.test(out);
+		out += isComment ? " " : isModuleName ? literal : " ";
+		i = end;
+	}
+	return out;
+}
+
+/**
+ * Whether a `next.config` file imports `withCms` from `@monti-cms/nextjs` and calls it. The doctor asks the same question of the same file, so
+ * `monti init` and `monti doctor` agree on whether the config is wrapped.
+ */
+export function usesWithCms(text: string): boolean {
+	return importsWithCms(text) && /\bwithCms\s*\(/.test(codeOf(text));
+}
+
+/** Whether the file imports `withCms` (a comment that says so does not count). */
+function importsWithCms(text: string): boolean {
+	const code = codeOf(text);
+	return (
+		/\bimport\s*(?:type\s*)?\{[^}]*\bwithCms\b[^}]*\}\s*from\s*["']@monti-cms\/nextjs(?:\/config)?["']/.test(code) ||
+		/\{[^}]*\bwithCms\b[^}]*\}\s*=\s*require\(\s*["']@monti-cms\/nextjs(?:\/config)?["']\s*\)/.test(code)
+	);
+}
+
 /** The index of the bracket that closes the one at `open` (`(`, `[` or `{`), or `-1` when there is none. */
 function matchingClose(text: string, open: number): number {
 	const pairs: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
@@ -100,6 +139,7 @@ function importInsertPoint(text: string): number {
 
 /** The text with the import line added after the last import (or at the top). */
 function withImport(text: string): string {
+	if (importsWithCms(text)) return text;
 	const at = importInsertPoint(text);
 	if (at < 0) return `${NEXT_CONFIG_IMPORT}\n${text}`;
 	return `${text.slice(0, at)}\n${NEXT_CONFIG_IMPORT}${text.slice(at)}`;
@@ -113,7 +153,7 @@ const EXPORT_DEFAULT = /^export\s+default\s+/gm;
  * `module.exports`, a `satisfies` or `as` suffix, more than one default export) is left alone and the reason is returned.
  */
 export function wrapNextConfig(file: string, text: string): TextEdit {
-	if (text.includes("withCms")) return { status: "present" };
+	if (usesWithCms(text)) return { status: "present" };
 	const exports = [...text.matchAll(EXPORT_DEFAULT)];
 	if (exports.length === 0 && /\bmodule\.exports\b/.test(text)) {
 		return {

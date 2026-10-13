@@ -18,8 +18,6 @@ import type { PluginSecrets } from "../secrets";
  * The value is never part of a view and never leaves the server.
  */
 
-/** Name of the core's storage and secrets scope. */
-export const API_KEYS_SCOPE = "core-keys";
 const KEYS = "keys";
 const USES = "uses";
 const SLOTS = "slots";

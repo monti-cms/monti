@@ -3,27 +3,33 @@
  * This module does not read the site config (the authoring API imports it).
  */
 
+/** Names the core uses in the admin meta API `features`. Cannot be used as plugin names. */
+export const CORE_FEATURE_KEYS: readonly string[] = ["folders", "references", "search", "templates", "media"];
+
+/** The storage and secrets scope of the login connection (`cms.secrets("auth")`, its plugin storage). */
+export const AUTH_SCOPE = "auth";
+/** The storage and secrets scope of the API key store. */
+export const API_KEYS_SCOPE = "core-keys";
+/** The plugin storage the core keeps the marks of `event.once` in. */
+export const EVENTS_SCOPE = "core-events";
+
 /**
- * Names the core uses in the admin meta API `features`, and the plugin storage it keeps for itself (`core-events`: the marks of `event.once`).
- * Cannot be used as plugin names.
+ * Storage and secrets scopes the core keeps for itself. A plugin reads its own scope by its name, so a plugin named like one of these would read the core's
+ * secrets and data. Cannot be used as plugin names; the core's own scopes are taken from here.
  */
-export const CORE_FEATURE_KEYS: readonly string[] = [
-	"folders",
-	"references",
-	"search",
-	"templates",
-	"media",
-	"core-events",
-];
+export const RESERVED_SCOPES: readonly string[] = [AUTH_SCOPE, API_KEYS_SCOPE, EVENTS_SCOPE];
 
 const trimSlashes = (path: string) => path.replace(/^\/+|\/+$/g, "");
 const showPage = (path: string) => `/${path}`;
 
-/** Error if a plugin name collides with a core `features` name. */
+/** Error if a plugin name collides with a core `features` name or a core storage and secrets scope. */
 export function assertPluginNamesFree(names: readonly string[]): void {
 	for (const name of names) {
 		if (CORE_FEATURE_KEYS.includes(name)) {
 			throw new Error(`cms plugin: plugin name "${name}" collides with the core feature "${name}"`);
+		}
+		if (RESERVED_SCOPES.includes(name)) {
+			throw new Error(`cms plugin: plugin name "${name}" collides with the core storage scope "${name}"`);
 		}
 	}
 }

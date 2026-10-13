@@ -10,7 +10,10 @@
 		"./format": "./src/format.ts",
 		"./render": "./src/render.tsx",
 		"./admin": "./src/admin/index.ts",
-		"./server": "./src/server.ts",
+		"./server": {
+			"browser": "./src/server.browser.ts",
+			"default": "./src/server.ts"
+		},
 		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
@@ -28,11 +31,12 @@
 		"shiki": "^3.21.0",
 		"unified": "^11.0.5",
 		"unist-util-visit": "^5.0.0",
-		"vfile": "^6.0.3"
+		"vfile": "^6.0.3",
+		"yaml": "^2.9.1"
 	},
 	"peerDependencies": {
-		"@monti-cms/core": "workspace:^",
 		"@monti-cms/admin": "workspace:^",
+		"@monti-cms/core": "workspace:^",
 		"react": ">=19"
 	},
 	"peerDependenciesMeta": {
@@ -90,6 +94,7 @@
 			},
 			"./server": {
 				"types": "./dist/server.d.ts",
+				"browser": "./dist/server.browser.js",
 				"default": "./dist/server.js"
 			},
 			"./testing": {

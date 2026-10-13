@@ -6,7 +6,8 @@ import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { formatDecision } from "../../server/decision";
 import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
-import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
+import { detectAppDir, ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
+import { usesWithCms } from "../init-edit";
 import { AUTH_CHECKS } from "./auth-checks";
 import { DATABASE_CHECKS } from "./database-checks";
 import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
@@ -320,8 +321,10 @@ const packageDeps = (state: DoctorState): Record<string, string> | undefined => 
 
 const isNextApp = (state: DoctorState): boolean => Boolean(packageDeps(state)?.next);
 
-const appDirOf = (state: DoctorState): string | undefined =>
-	exists(state, "src/app") ? "src/app" : exists(state, "app") ? "app" : undefined;
+const appDirOf = (state: DoctorState): string | undefined => {
+	const found = detectAppDir(state.cwd);
+	return found.exists ? found.dir : undefined;
+};
 
 const isGroup = (name: string) => /^\(.+\)$/.test(name);
 
@@ -410,9 +413,10 @@ const nextFiles: CoreCheck = {
 		const adminPath = state.cms?.site.ADMIN_PATH ?? "/admin";
 		const adminSegments = adminPath.split("/").filter(Boolean);
 		if (!appDir) {
-			return fail("there is no app/ folder, so there are no Next files", {
+			const folder = detectAppDir(state.cwd).dir;
+			return fail(`there is no ${folder}/ folder, so there are no Next files`, {
 				where: state.cwd,
-				fix: "Monti needs the App Router: add an app/ folder (it can sit next to pages/) and run `monti init`",
+				fix: `Monti needs the App Router: add a ${folder}/ folder (it can sit next to pages/) and run \`monti init\``,
 			});
 		}
 		const wanted = [
@@ -488,7 +492,7 @@ const nextWithCms: CoreCheck = {
 				fix: "run `monti init`, which creates next.config.ts with the withCms wrapper (withCms comes from the package @monti-cms/nextjs/config)",
 			});
 		}
-		return readFileSync(path.join(state.cwd, file), "utf8").includes("withCms")
+		return usesWithCms(readFileSync(path.join(state.cwd, file), "utf8"))
 			? ok(`${file} wraps the config in withCms`)
 			: fail(`${file} does not use withCms, so the build cannot transpile Monti's packages`, {
 					where: file,
@@ -667,7 +671,7 @@ const routeGroups: CoreCheck = {
 	title: "(admin) route folders",
 	run: (state) => {
 		const appDir = appDirOf(state);
-		if (!appDir) return skip("not checked: there is no app/ folder");
+		if (!appDir) return skip(`not checked: there is no ${detectAppDir(state.cwd).dir}/ folder`);
 		const groups: string[] = [];
 		const walk = (dir: string, depth: number) => {
 			if (depth > 2) return;
@@ -735,7 +739,7 @@ const oldApiRoute: CoreCheck = {
 	title: "app/api/cms route folder",
 	run: (state) => {
 		const appDir = appDirOf(state);
-		if (!appDir) return skip("not checked: there is no app/ folder");
+		if (!appDir) return skip(`not checked: there is no ${detectAppDir(state.cwd).dir}/ folder`);
 		const file = findRouteFile(state, appDir, ["api", "cms", "[...path]"], "route");
 		if (!file || !/@monti-cms\//.test(readFileSync(path.join(state.cwd, file), "utf8"))) {
 			return ok("no Monti route file at the old api/cms folder");

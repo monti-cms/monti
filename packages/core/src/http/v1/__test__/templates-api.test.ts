@@ -7,7 +7,7 @@ import { GET as getTemplates, POST as postTemplate } from "../templates/route";
 
 const mockTemplates = [
 	{
-		id: "t-1",
+		id: "00000000-0000-4000-8000-000000000005",
 		name: "알고리즘 풀이",
 		mdx: "## 문제",
 		version: 1,
@@ -15,7 +15,7 @@ const mockTemplates = [
 		updatedAt: new Date(),
 	},
 	{
-		id: "t-2",
+		id: "00000000-0000-4000-8000-000000000006",
 		name: "포스트 구조",
 		mdx: "## 개요",
 		version: 1,
@@ -106,28 +106,31 @@ describe("Templates API Route Contract", () => {
 	});
 
 	it("GET /templates/:id returns single template or 404", async () => {
-		const res = await getTemplate(req("http://localhost/api/monti/v1/templates/t-1"), {
-			params: Promise.resolve({ id: "t-1" }),
+		const res = await getTemplate(req("http://localhost/api/monti/v1/templates/00000000-0000-4000-8000-000000000005"), {
+			params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000005" }),
 			cms,
 		});
 		expect(res.status).toBe(200);
 		const data = await res.json();
 		expect(data.name).toBe("알고리즘 풀이");
 
-		const missingRes = await getTemplate(req("http://localhost/api/monti/v1/templates/ghost"), {
-			params: Promise.resolve({ id: "ghost" }),
-			cms,
-		});
+		const missingRes = await getTemplate(
+			req("http://localhost/api/monti/v1/templates/00000000-0000-4000-8000-000000000003"),
+			{
+				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000003" }),
+				cms,
+			},
+		);
 		expect(missingRes.status).toBe(404);
 	});
 
 	it("PATCH /templates/:id updates template and checks expectedVersion", async () => {
 		const res = await patchTemplate(
-			req("http://localhost/api/monti/v1/templates/t-1", "PATCH", {
+			req("http://localhost/api/monti/v1/templates/00000000-0000-4000-8000-000000000005", "PATCH", {
 				expectedVersion: 1,
 				name: "수정된 템플릿",
 			}),
-			{ params: Promise.resolve({ id: "t-1" }), cms },
+			{ params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000005" }), cms },
 		);
 		expect(res.status).toBe(200);
 		const data = await res.json();
@@ -135,27 +138,30 @@ describe("Templates API Route Contract", () => {
 
 		// Conflict on stale expectedVersion
 		const conflictRes = await patchTemplate(
-			req("http://localhost/api/monti/v1/templates/t-1", "PATCH", {
+			req("http://localhost/api/monti/v1/templates/00000000-0000-4000-8000-000000000005", "PATCH", {
 				expectedVersion: 99,
 				name: "충돌 테스트",
 			}),
-			{ params: Promise.resolve({ id: "t-1" }), cms },
+			{ params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000005" }), cms },
 		);
 		expect(conflictRes.status).toBe(409);
 	});
 
 	it("DELETE /templates/:id deletes template with optional expectedVersion", async () => {
-		const res = await deleteTemplate(req("http://localhost/api/monti/v1/templates/t-1?expectedVersion=1", "DELETE"), {
-			params: Promise.resolve({ id: "t-1" }),
-			cms,
-		});
+		const res = await deleteTemplate(
+			req("http://localhost/api/monti/v1/templates/00000000-0000-4000-8000-000000000005?expectedVersion=1", "DELETE"),
+			{
+				params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000005" }),
+				cms,
+			},
+		);
 		expect(res.status).toBe(200);
 		expect(await res.json()).toEqual({ ok: true });
 
 		// Conflict on stale expectedVersion
 		const conflictRes = await deleteTemplate(
-			req("http://localhost/api/monti/v1/templates/t-1?expectedVersion=99", "DELETE"),
-			{ params: Promise.resolve({ id: "t-1" }), cms },
+			req("http://localhost/api/monti/v1/templates/00000000-0000-4000-8000-000000000005?expectedVersion=99", "DELETE"),
+			{ params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000005" }), cms },
 		);
 		expect(conflictRes.status).toBe(409);
 	});

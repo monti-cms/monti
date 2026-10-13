@@ -1,6 +1,32 @@
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { detectApp, parseFrontMatterKeys } from "../init-detect";
+import { detectApp, detectAppDir, parseFrontMatterKeys } from "../init-detect";
 import { fixtureApp, POST_MDX, SRC_APP } from "./init-helpers";
+
+describe("detectAppDir", () => {
+	const dirWith = (...folders: string[]) => {
+		const dir = mkdtempSync(path.join(tmpdir(), "monti-appdir-"));
+		for (const folder of folders) mkdirSync(path.join(dir, folder), { recursive: true });
+		return dir;
+	};
+
+	it("prefers the folders that exist: src/app, then app", () => {
+		expect(detectAppDir(dirWith("src/app", "app"))).toEqual({ dir: "src/app", exists: true });
+		expect(detectAppDir(dirWith("app"))).toEqual({ dir: "app", exists: true });
+	});
+
+	it("says where the folder would be made when there is none: src/app if only src/ exists", () => {
+		expect(detectAppDir(dirWith("src"))).toEqual({ dir: "src/app", exists: false });
+		expect(detectAppDir(dirWith())).toEqual({ dir: "app", exists: false });
+	});
+
+	it("is what detectApp reports, so init and doctor look in the same place", () => {
+		const cwd = fixtureApp({ ...SRC_APP });
+		expect(detectApp(cwd).appDir).toBe(detectAppDir(cwd).dir);
+	});
+});
 
 describe("detecting the app", () => {
 	it("reads a create-next-app project", () => {

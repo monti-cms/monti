@@ -439,18 +439,22 @@ const imageWarnings = (sources: readonly CmsImageSource[], media: ResolvedTarget
 	return warnings;
 };
 
+/** What the image warnings of a publish look up: the media rows, and (optionally) whether the stored object is really there. */
+export interface ImageWarningResolvers {
+	getMediaAsset: (id: string) => Promise<{ status?: string; storageKey?: string | null } | null>;
+	headStorageKey?: (storageKey: string) => Promise<boolean>;
+}
+
 /**
- * Collects only the image warnings to include in the publish response, for a snapshot the write pipeline prepared. **Non-blocking**; if computation fails it returns an empty array.
+ * The image warnings of a snapshot the write pipeline prepared, to join `snapshot.warnings` in the publish result (this returns only the image ones,
+ * not the snapshot's own). **Non-blocking**; if computation fails it returns an empty array.
  *
  * For media that is `ready` with a `storageKey`, if `headStorageKey` is provided, the actual object in storage is checked once more.
  * If it is missing, an `image_media_missing_in_storage` warning is added. On an infrastructure error it falls back to the DB decision.
  */
 export async function imageWarningsForSnapshot(
 	snapshot: PreparedSnapshot,
-	resolvers: {
-		getMediaAsset: (id: string) => Promise<{ status?: string; storageKey?: string | null } | null>;
-		headStorageKey?: (storageKey: string) => Promise<boolean>;
-	},
+	resolvers: ImageWarningResolvers,
 ): Promise<Issue[]> {
 	try {
 		const mediaIds = [
@@ -461,7 +465,7 @@ export async function imageWarningsForSnapshot(
 			const row = await resolvers.getMediaAsset(id);
 			if (row) media.push({ id, status: row.status, storageKey: row.storageKey ?? null });
 		}
-		const warnings = [...(snapshot.warnings ?? []), ...imageWarnings(snapshot.imageSources, media)];
+		const warnings = imageWarnings(snapshot.imageSources, media);
 		if (resolvers.headStorageKey) {
 			const byId = new Map(media.map((row) => [row.id, row]));
 			for (const source of snapshot.imageSources) {
