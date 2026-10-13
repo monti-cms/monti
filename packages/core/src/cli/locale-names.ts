@@ -1,4 +1,4 @@
-import { languageName } from "../config/rules";
+import { LOCALE_CODE, languageName } from "../config/rules";
 /** Reading languages out of file and folder names (`hello.ko.mdx`, `ko/hello.mdx`), for `monti init` (which languages the site has). */
 
 /**
@@ -6,12 +6,13 @@ import { languageName } from "../config/rules";
  * too many of them are also ordinary words in a file name (`min`, `dev`, `ref`).
  */
 export function isLanguageCode(value: string): boolean {
-	const [primary = "", ...region] = value.split(/[-_]/);
-	if (!/^[A-Za-z]{2}$/.test(primary) || region.some((part) => !/^[A-Za-z0-9]{2,8}$/.test(part))) return false;
-	const code = primary.toLowerCase();
+	const code = normalizeLanguageCode(value);
+	// Two letters for the language; the whole code must be one a site can use (the shape `config/rules` holds).
+	if (!/^[a-z]{2}(-|$)/.test(code) || !LOCALE_CODE.test(code)) return false;
 	try {
-		const name = new Intl.DisplayNames(["en"], { type: "language" }).of(code);
-		return name !== undefined && name.toLowerCase() !== code;
+		const primary = code.slice(0, 2);
+		const name = new Intl.DisplayNames(["en"], { type: "language" }).of(primary);
+		return name !== undefined && name.toLowerCase() !== primary;
 	} catch {
 		return false;
 	}
