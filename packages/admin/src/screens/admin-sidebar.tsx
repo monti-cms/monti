@@ -436,7 +436,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 			</SidebarContent>
 			<SidebarFooter className="flex-row items-center gap-1 border-cms-sidebar-border border-t px-2 py-2 group-data-[collapsible=icon]:flex-col">
 				<SidebarMenu aria-label={t("sidebar.settings")} className="min-w-0 flex-1">
-					{navLink(site.adminHref("/settings/collections"), "settings", t("sidebar.settings"), <Settings2 />)}
+					{navLink(site.adminHref("/settings"), "settings", t("sidebar.settings"), <Settings2 />)}
 				</SidebarMenu>
 				<ThemeToggle className="size-8 shrink-0 text-cms-muted-foreground" />
 			</SidebarFooter>

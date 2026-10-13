@@ -109,7 +109,8 @@ describe("sidebar structure", () => {
 		expect(href(t("sidebar.events"))).toBe(site.adminHref("/events"));
 		expect(href("Tools page")).toBe(site.adminHref("/tools/tools"));
 		expect(href("More page")).toBe(site.adminHref("/tools/more"));
-		expect(href(t("sidebar.settings"))).toBe(site.adminHref("/settings/collections"));
+		// Settings opens at its first tab, which the page redirects to.
+		expect(href(t("sidebar.settings"))).toBe(site.adminHref("/settings"));
 	});
 
 	it("leaves Templates out when the site turns them off", () => {

@@ -5,7 +5,7 @@ import { SettingsScreen } from "./settings-screen";
 import { isSettingsTab, SCHEMA_TABS } from "./tabs";
 
 /**
- * `<admin path>/settings/<tab>`: one of the tabs (the schema file's `collections`, `locales`, `site`, `admin`, `file`, and `api-keys`).
+ * `<admin path>/settings/<tab>`: one of the tabs (the schema file's `site`, `locales`, `collections`, `file`, `admin`, and `api-keys`).
  * `/settings` alone goes to the first tab. An unknown tab is a 404.
  */
 export default async function AdminSettingsPage({

@@ -27,18 +27,17 @@ const server = (): AdminServer => ({
 });
 
 describe("settings tabs", () => {
-	it("are the schema file's tabs with the API keys between Admin and File; templates, the event log and plugin pages are not among them", () => {
+	it("are the schema file's tabs, Site first; templates, the event log and plugin pages are not among them", () => {
 		const ids: string[] = settingsTabs(testSite).map((tab) => tab.id);
 		expect(ids.filter((id) => id !== "api-keys")).toEqual([...SCHEMA_TABS]);
-		expect(ids.indexOf("api-keys")).toBe(ids.indexOf("admin") + 1);
-		expect(ids.indexOf("api-keys")).toBeLessThan(ids.indexOf("file"));
+		expect(ids[0]).toBe("site");
 	});
 });
 
 describe("settings page", () => {
 	it("sends the bare settings address to the first tab", async () => {
 		await expect(SettingsPage({ cms: cms(testSite), server: server(), tab: undefined })).rejects.toThrow(
-			`redirect:${testSite.adminHref("/settings/collections")}`,
+			`redirect:${testSite.adminHref(`/settings/${SCHEMA_TABS[0]}`)}`,
 		);
 	});
 

@@ -4,7 +4,7 @@ import type { Site } from "@monti-cms/core/client";
  * The tabs of the Settings page, in display order. The schema tabs all edit the one schema file (`monti.schema.ts`) and share one draft, so the screen keeps it while you move between them.
  * Body templates, the event log and the plugin pages are not Settings tabs: they have their own sidebar items and addresses.
  */
-export const SCHEMA_TABS = ["collections", "locales", "site", "admin", "file"] as const;
+export const SCHEMA_TABS = ["site", "locales", "collections", "file", "admin"] as const;
 export type SchemaTab = (typeof SCHEMA_TABS)[number];
 
 export const isSchemaTab = (tab: string): tab is SchemaTab => (SCHEMA_TABS as readonly string[]).includes(tab);
@@ -12,8 +12,8 @@ export const isSchemaTab = (tab: string): tab is SchemaTab => (SCHEMA_TABS as re
 /** The API keys tab is not part of the schema file: the keys live in the database, so it has no draft to keep. */
 export const API_KEYS_TAB = "api-keys";
 
-/** Every tab of the Settings page, in display order: the schema file's, with the API keys between Admin and File. */
-export const SETTINGS_TABS = ["collections", "locales", "site", "admin", API_KEYS_TAB, "file"] as const;
+/** Every tab of the Settings page, in display order: the schema file's, then the API keys. */
+export const SETTINGS_TABS = [...SCHEMA_TABS, API_KEYS_TAB] as const;
 export type SettingsTabId = (typeof SETTINGS_TABS)[number];
 
 export const isSettingsTab = (tab: string): tab is SettingsTabId => (SETTINGS_TABS as readonly string[]).includes(tab);
