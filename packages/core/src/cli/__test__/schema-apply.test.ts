@@ -22,6 +22,28 @@ describe("withSchemaVersion", () => {
 		);
 	});
 
+	it("changes the version of the schema itself, not text that only looks like it", () => {
+		const text = [
+			"// schemaVersion: 1 was the first one",
+			"export default defineSchema({",
+			"\tcollections: {",
+			'\t\tpost: { label: "Post", note: "schemaVersion: 3, raised often", nested: { schemaVersion: 7 } },',
+			"\t},",
+			"\tschemaVersion: 3,",
+			"});",
+			"",
+		].join("\n");
+		const result = withSchemaVersion(text, 4);
+		expect(result).toBe(text.replace("\tschemaVersion: 3,", "\tschemaVersion: 4,"));
+	});
+
+	it("adds the line when the number only appears in a note", () => {
+		const text = 'export default defineSchema({\n\tcollections: { post: { note: "schemaVersion: 3" } },\n});\n';
+		expect(withSchemaVersion(text, 2)).toBe(
+			`export default defineSchema({\n\tschemaVersion: 2,\n${text.split("\n").slice(1).join("\n")}`,
+		);
+	});
+
 	it("adds the line first in the object, in the file's indentation", () => {
 		expect(withSchemaVersion("export default defineSchema({\n  collections: {},\n});\n", 2)).toBe(
 			"export default defineSchema({\n  schemaVersion: 2,\n  collections: {},\n});\n",
