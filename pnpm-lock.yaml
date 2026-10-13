@@ -296,9 +296,6 @@ importers:
       '@monti-cms/core':
         specifier: workspace:*
         version: link:../core
-      '@tanstack/react-query':
-        specifier: ^5.104.0
-        version: 5.104.1(react@19.2.3)
       '@testing-library/dom':
         specifier: ^10.4.1
         version: 10.4.2
@@ -344,9 +341,6 @@ importers:
       react-dom:
         specifier: 19.2.3
         version: 19.2.3(react@19.2.3)
-      sonner:
-        specifier: ^2.0.8
-        version: 2.0.8(@types/react@19.3.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
