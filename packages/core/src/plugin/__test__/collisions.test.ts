@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
-import {
-	assertPluginNamesFree,
-	assertPluginPagesFree,
-	assertPluginRoutesFree,
-	CORE_SETTINGS_TABS,
-} from "../collisions";
+import { assertPluginNamesFree, assertPluginPagesFree, assertPluginRoutesFree } from "../collisions";
 
 describe("assertPluginPagesFree", () => {
 	it("accepts distinct pages", () => {
@@ -17,13 +12,18 @@ describe("assertPluginPagesFree", () => {
 		).not.toThrow();
 	});
 
-	it("rejects a page that equals a core settings tab, naming both sides", () => {
-		for (const core of CORE_SETTINGS_TABS.filter(Boolean)) {
-			expect(() => assertPluginPagesFree([{ plugin: "evil", path: core }])).toThrow(
-				new RegExp(`"/${core}" of plugin "evil" collides with the core settings tab "/${core}"`),
+	it("rejects a page without a path", () => {
+		for (const path of ["", "/", "//"]) {
+			expect(() => assertPluginPagesFree([{ plugin: "evil", path }])).toThrow(
+				/tools page "\/" of plugin "evil" has no path/,
 			);
 		}
-		expect(() => assertPluginPagesFree([{ plugin: "evil", path: "/" }])).toThrow(/collides with the core settings tab/);
+	});
+
+	it("lets a plugin page share a name with a core screen: pages live under tools/", () => {
+		for (const path of ["templates", "events", "settings", "trash", "media"]) {
+			expect(() => assertPluginPagesFree([{ plugin: "ok", path }])).not.toThrow();
+		}
 	});
 
 	it("rejects a page another plugin already uses", () => {
@@ -32,7 +32,7 @@ describe("assertPluginPagesFree", () => {
 				{ plugin: "a", path: "tools" },
 				{ plugin: "b", path: "/tools" },
 			]),
-		).toThrow(/settings tab "\/tools" of plugin "b" collides with plugin "a"/);
+		).toThrow(/tools page "\/tools" of plugin "b" collides with plugin "a"/);
 	});
 
 	it("lets one plugin name the same page twice (nav and pages)", () => {
@@ -101,12 +101,6 @@ describe("defineSite: plugin collisions", () => {
 
 	it("accepts plugins with distinct names and pages", () => {
 		expect(() => defineSite({ ...base, plugins: [plugin("a", "a"), plugin("b", "b")] })).not.toThrow();
-	});
-
-	it("rejects a nav path equal to a core settings tab", () => {
-		expect(() => defineSite({ ...base, plugins: [plugin("a", "templates")] })).toThrow(
-			/settings tab "\/templates" of plugin "a" collides with the core settings tab/,
-		);
 	});
 
 	it("rejects a nav path two plugins share", () => {

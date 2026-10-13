@@ -1,15 +1,15 @@
 # Add an admin page to a plugin
 
-Goal: a "Post stats" tab on the admin Settings page, opening a screen at `<admin path>/settings/post-stats` that shows the published and draft counts from an API route of the plugin.
+Goal: a "Post stats" item in the Tools group of the admin sidebar, opening a screen at `<admin path>/tools/post-stats` that shows the published and draft counts from an API route of the plugin.
 
 The snippets below are a sketch to adapt, not tested code.
 
 ## What you need to know
 
-1. **A plugin has three sides**, each a lazy loader: `server` (routes, hooks, commands), `admin` (screens and providers) and `nav` (the Settings tab, plain JSON) ("Plugins" in the [core README](../../packages/core/README.md)).
+1. **A plugin has three sides**, each a lazy loader: `server` (routes, hooks, commands), `admin` (screens and providers) and `nav` (the Tools page, plain JSON) ("Plugins" in the [core README](../../packages/core/README.md)).
 2. **A route** is `{ pattern, module: { GET, POST, ... } }` under `/api/monti/`. Wrap each handler with `adminRoute(...)`: it checks the login and the same-origin rule, and hands you the instance (`cms`). Only `public: true` takes the check off, for webhooks that verify themselves.
-3. **A page** is a client component in `defineAdminPlugin({ pages: { "<segment>": Component } })`. The `nav` item's `path` is the same segment: the page shows as a tab of Settings, never as a sidebar item.
-4. **Screen building blocks**: `SettingsPanel` (the body of a Settings tab: an optional count and actions over your content; the Settings page already draws the sidebar, title and tab bar) and the rest of `@monti-cms/admin/kit`; `cmsFetch` (`@monti-cms/admin/api`) for the call, with a readable error; `cmsApiUrl` and `useSite` from `@monti-cms/core/client`.
+3. **A page** is a client component in `defineAdminPlugin({ pages: { "<segment>": Component } })`. The `nav` item's `path` is the same segment: the page shows as an item of the sidebar's Tools group.
+4. **Screen building blocks**: `SettingsPanel` (the body of a Tools page: an optional count and actions over your content; the admin already draws the sidebar and the title) and the rest of `@monti-cms/admin/kit`; `cmsFetch` (`@monti-cms/admin/api`) for the call, with a readable error; `cmsApiUrl` and `useSite` from `@monti-cms/core/client`.
 
 ## A sketch
 

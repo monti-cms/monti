@@ -3,18 +3,6 @@
  * This module does not read the site config (the authoring API imports it).
  */
 
-/** A tab of the core admin Settings page (`/admin/settings/<tab>`; an empty string is the Settings page itself). A plugin page is a Settings tab too, so it cannot take one of these. Keep it identical to the admin UI's tab list. */
-export const CORE_SETTINGS_TABS: readonly string[] = [
-	"",
-	"collections",
-	"locales",
-	"site",
-	"admin",
-	"file",
-	"templates",
-	"events",
-];
-
 /**
  * Names the core uses in the admin meta API `features`, and the plugin storage it keeps for itself (`core-events`: the marks of `event.once`).
  * Cannot be used as plugin names.
@@ -41,22 +29,20 @@ export function assertPluginNamesFree(names: readonly string[]): void {
 }
 
 /**
- * Error if a plugin Settings tab (`path` in `nav`, or a key of an admin plugin's `pages`) equals a core tab or another plugin's.
- * The same path within one plugin counts as one page.
+ * Error if a plugin Tools page (`path` in `nav`, or a key of an admin plugin's `pages`) is empty or equals another plugin's.
+ * Pages live under `<admin path>/tools/`, so they cannot collide with a core screen. The same path within one plugin counts as one page.
  */
 export function assertPluginPagesFree(pages: readonly { readonly plugin: string; readonly path: string }[]): void {
 	const owners = new Map<string, string>();
 	for (const { plugin, path } of pages) {
 		const key = trimSlashes(path);
-		if (CORE_SETTINGS_TABS.includes(key)) {
-			throw new Error(
-				`cms plugin: settings tab "${showPage(key)}" of plugin "${plugin}" collides with the core settings tab "${showPage(key)}"`,
-			);
+		if (key === "") {
+			throw new Error(`cms plugin: tools page "${showPage(key)}" of plugin "${plugin}" has no path`);
 		}
 		const owner = owners.get(key);
 		if (owner !== undefined && owner !== plugin) {
 			throw new Error(
-				`cms plugin: settings tab "${showPage(key)}" of plugin "${plugin}" collides with plugin "${owner}" (same settings tab)`,
+				`cms plugin: tools page "${showPage(key)}" of plugin "${plugin}" collides with plugin "${owner}" (same tools page)`,
 			);
 		}
 		owners.set(key, plugin);

@@ -1,5 +1,7 @@
 import type { BulkOp } from "@monti-cms/core/client";
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import { cmsApiUrl, type Site } from "@monti-cms/core/client";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import { cmsFetch } from "../admin-api";
 import type { ListState } from "../list-state";
 
 /** One page of the list API response. */
@@ -13,6 +15,9 @@ export const ENTRIES_KEY = ["cms", "entries"] as const;
 export const entriesKey = (apiQuery: string) => [...ENTRIES_KEY, "list", apiQuery] as const;
 export const TRASH_COUNT_KEY = [...ENTRIES_KEY, "trash-count"] as const;
 export const foldersKey = (collection: string) => ["cms", "folders", collection] as const;
+/** The folders of a collection (the list screen and the sidebar share this query). */
+export const fetchFolders = (site: Site, collection: string, signal?: AbortSignal) =>
+	cmsFetch<Folder[]>(site, cmsApiUrl(`/v1/folders?collection=${collection}`), { signal });
 
 export type OptimisticOp = BulkOp | "restore";
 

@@ -3,12 +3,12 @@
 import { type Collection, useSite, useTranslator } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import {
+	Activity,
+	ChevronDown,
 	ChevronRight,
 	ExternalLink,
 	FileImage,
-	Folder as FolderIcon,
-	FolderOpen,
-	FolderPlus,
+	LayoutTemplate,
 	Plus,
 	Settings2,
 	Trash2,
@@ -17,8 +17,6 @@ import { type KeyboardEvent, useEffect, useState } from "react";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { buttonVariants } from "../ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { IconButton } from "../ui/icon-button";
 import { Label } from "../ui/label";
 import {
 	Sidebar,
@@ -32,8 +30,6 @@ import {
 	SidebarMenuBadge,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarMenuSub,
-	SidebarMenuSubItem,
 	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
@@ -42,16 +38,17 @@ import { Switch } from "../ui/switch";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { screensMessages } from "./messages";
+import { toolsPages } from "./settings/tabs";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/action-menu";
 import { useAdminFeatures } from "./shared/admin-features";
-import { CollectionIcon } from "./shared/collection-icon";
+import { CollectionIcon, NamedIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 
-/** Value that points to the current screen in the sidebar. Every Settings tab, plugin tabs included, is the one `settings` entry. */
-export type AdminNavId = Collection | "media" | "settings" | "trash";
+/** Value that points to the current screen in the sidebar. Every Settings tab is the one `settings` entry; a plugin page is `tools:<path>`. */
+export type AdminNavId = Collection | "media" | "templates" | "events" | "settings" | "trash" | `tools:${string}`;
 
-/** Folder navigation used only on the list screen. */
+/** Folder navigation, passed by the list screen. The sidebar draws it as a tree under the collection it belongs to. */
 export interface FolderNavigation {
 	collection: Collection;
 	/** `all` (top level) or a folder ID. */
@@ -70,8 +67,10 @@ export interface AdminSidebarProps {
 	activeNav: AdminNavId;
 	folderNav?: FolderNavigation;
 	trashCount?: number | null;
-	/** Failed and dead event deliveries: shown on the Settings entry. */
+	/** Failed and dead event deliveries: shown on the Event log entry. */
 	eventsCount?: number | null;
+	/** Folders per collection, so a collection that has some shows a chevron even while it is not the open one. */
+	folderCounts?: Readonly<Record<string, number>>;
 }
 
 /** Like a file explorer: F2 opens rename, Delete opens delete (confirm dialog). */
@@ -87,14 +86,13 @@ export function folderKeyHandler(folder: Folder, actions: FolderActions) {
 	};
 }
 
-/**
- * Tree connector lines. Draws a vertical line and an L-shaped (`ㄴ`) horizontal line on the left of each row, and the last row's vertical line stops at the horizontal line.
- * The horizontal line sits at 14px, half the row height (28px). The vertical line passes through the center of the parent folder icon (or top-level icon).
- */
-const TREE_LIST = "mx-0 translate-x-0 gap-0 border-l-0 py-0 pr-0 pl-6";
-const TREE_ITEM =
-	"before:-left-3 after:-left-3 before:absolute before:top-0 before:h-full before:w-px before:bg-cms-sidebar-foreground/20 after:absolute after:top-3.5 after:h-px after:w-3.5 after:bg-cms-sidebar-foreground/20 last:before:h-3.5";
+/** Left padding of the first level of the folder tree, so its labels line up under the collection name. */
+const TREE_INDENT = 36;
+const TREE_STEP = 16;
+const subRow =
+	"group/row flex h-7 items-center gap-1 rounded-md pr-1 text-[13px] text-cms-sidebar-foreground/80 hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground data-active:bg-cms-sidebar-accent data-active:font-medium data-active:text-cms-sidebar-accent-foreground";
 
+/** The folders of the open collection, drawn under its entry: All, the folders (nested), then Add folder. */
 function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: () => void }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -136,82 +134,63 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		},
 	});
 
-	const renderFolder = (folder: Folder) => {
+	const renderFolder = (folder: Folder, depth: number) => {
 		const children = folders.filter((f) => f.parentId === folder.id);
 		const isExpanded = expandedIds.has(folder.id);
 		const isActive = currentFolder === folder.id;
 		const actions = folderMenuActions(site, folder, nav.folders, nav.folderActions);
 		return (
-			<Collapsible
-				key={folder.id}
-				open={isExpanded}
-				onOpenChange={(open) =>
-					setExpandedIds((prev) => {
-						const next = new Set(prev);
-						if (open) next.add(folder.id);
-						else next.delete(folder.id);
-						return next;
-					})
-				}
-				render={<SidebarMenuSubItem className={TREE_ITEM} />}
-			>
+			<li key={folder.id}>
 				<ActionContextMenu
 					actions={actions}
 					trigger={
 						<div
 							{...dropProps(folder.id, folder.id)}
 							data-active={isActive || undefined}
-							className={cn(
-								"group/folder flex h-7 items-center rounded-md text-cms-sidebar-foreground hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground data-active:bg-cms-sidebar-accent data-active:font-medium data-active:text-cms-sidebar-accent-foreground",
-								dropTarget === folder.id && "ring-2 ring-cms-sidebar-ring",
-							)}
+							style={{ paddingLeft: TREE_INDENT + depth * TREE_STEP }}
+							className={cn(subRow, dropTarget === folder.id && "ring-2 ring-cms-sidebar-ring")}
 						/>
 					}
 				>
-					{/* The folder icon doubles as the expand button. When there are subfolders, hovering or focusing turns it into an arrow. */}
 					{children.length > 0 ? (
-						<CollapsibleTrigger
+						<button
+							type="button"
 							aria-label={t(isExpanded ? "sidebar.folderCollapse" : "sidebar.folderExpand", { name: folder.name })}
-							className="group/toggle flex size-6 shrink-0 items-center justify-center rounded-md outline-hidden hover:bg-cms-sidebar-foreground/10 focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring [&_svg]:size-4"
+							aria-expanded={isExpanded}
+							onClick={() =>
+								setExpandedIds((prev) => {
+									const next = new Set(prev);
+									if (isExpanded) next.delete(folder.id);
+									else next.add(folder.id);
+									return next;
+								})
+							}
+							className="flex size-4 shrink-0 items-center justify-center rounded-sm text-cms-sidebar-foreground/60 outline-hidden hover:text-cms-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring"
 						>
-							<span className="group-hover/toggle:hidden group-focus-visible/toggle:hidden">
-								{isExpanded ? <FolderOpen aria-hidden /> : <FolderIcon aria-hidden />}
-							</span>
-							<ChevronRight
-								aria-hidden
-								className={cn(
-									"hidden transition-transform group-hover/toggle:block group-focus-visible/toggle:block",
-									isExpanded && "rotate-90",
-								)}
-							/>
-						</CollapsibleTrigger>
+							<ChevronRight aria-hidden className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
+						</button>
 					) : (
-						<span aria-hidden className="flex size-6 shrink-0 items-center justify-center">
-							<FolderIcon className="size-4" />
-						</span>
+						<span aria-hidden className="size-4 shrink-0" />
 					)}
-					<SidebarMenuButton
-						size="sm"
-						isActive={isActive}
+					<button
+						type="button"
 						aria-current={isActive ? "true" : undefined}
 						onClick={() => select(folder.id)}
 						onKeyDown={folderKeyHandler(folder, nav.folderActions)}
-						className="min-w-0 flex-1 bg-transparent pl-1 hover:bg-transparent active:bg-transparent data-active:bg-transparent"
+						className="h-full min-w-0 flex-1 truncate rounded-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring"
 					>
-						<span>{folder.name}</span>
-					</SidebarMenuButton>
+						{folder.name}
+					</button>
 					<MoreActionsButton
 						actions={actions}
 						label={t("list.folderActions", { name: folder.name })}
-						className="size-6 shrink-0 text-cms-sidebar-foreground/70"
+						className="size-5 shrink-0 text-cms-sidebar-foreground/70 opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100"
 					/>
 				</ActionContextMenu>
-				{children.length > 0 && (
-					<CollapsibleContent>
-						<SidebarMenuSub className={cn(TREE_LIST, "ml-0")}>{children.map(renderFolder)}</SidebarMenuSub>
-					</CollapsibleContent>
+				{isExpanded && children.length > 0 && (
+					<ul className="flex flex-col gap-0.5">{children.map((child) => renderFolder(child, depth + 1))}</ul>
 				)}
-			</Collapsible>
+			</li>
 		);
 	};
 
@@ -220,49 +199,52 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		{
 			kind: "item",
 			label: t("list.folderAdd"),
-			icon: FolderPlus,
+			icon: Plus,
 			onSelect: () => nav.folderActions.requestCreate(null),
 		},
 		{ kind: "item", label: t("list.add", { label }), icon: Plus, onSelect: nav.onCreateEntry },
 	];
 
 	return (
-		<SidebarGroup className="flex-1 group-data-[collapsible=icon]:hidden">
-			<SidebarGroupLabel>{t("sidebar.folders")}</SidebarGroupLabel>
-			<IconButton
-				label={t("list.folderAdd")}
-				side="right"
-				size="icon-xs"
-				className="absolute top-3.5 right-3 size-5 text-cms-sidebar-foreground hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground group-data-[collapsible=icon]:hidden [&_svg]:size-4"
-				onClick={() => nav.folderActions.requestCreate(null)}
-			>
-				<Plus aria-hidden />
-			</IconButton>
-			<SidebarGroupContent className="flex flex-1 flex-col">
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<ActionContextMenu actions={blankActions} trigger={<div />}>
-							<SidebarMenuButton
-								size="sm"
-								{...dropProps("root", null)}
-								isActive={currentFolder === "all"}
-								aria-current={currentFolder === "all" ? "true" : undefined}
-								onClick={() => select("all")}
-								className={cn(dropTarget === "root" && "ring-2 ring-cms-sidebar-ring")}
-							>
-								<CollectionIcon collection={nav.collection} />
-								<span>{label}</span>
-							</SidebarMenuButton>
-						</ActionContextMenu>
-						{folders.length > 0 && (
-							<SidebarMenuSub aria-label={t("sidebar.folderTree", { label })} className={cn(TREE_LIST, "ml-1")}>
-								{folders.filter((f) => !f.parentId).map(renderFolder)}
-							</SidebarMenuSub>
-						)}
-					</SidebarMenuItem>
-				</SidebarMenu>
-				{folders.length > 0 && (
-					<Label className="mt-3 px-2 font-normal text-cms-muted-foreground text-xs">
+		<ul
+			aria-label={t("sidebar.folderTree", { label })}
+			className="mt-0.5 mb-1 flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden"
+		>
+			{folders.length > 0 && (
+				<li>
+					<ActionContextMenu actions={blankActions} trigger={<div />}>
+						<button
+							type="button"
+							{...dropProps("root", null)}
+							data-active={currentFolder === "all" || undefined}
+							aria-current={currentFolder === "all" ? "true" : undefined}
+							onClick={() => select("all")}
+							style={{ paddingLeft: TREE_INDENT }}
+							className={cn(subRow, "w-full text-left", dropTarget === "root" && "ring-2 ring-cms-sidebar-ring")}
+						>
+							{t("sidebar.folderAll")}
+						</button>
+					</ActionContextMenu>
+				</li>
+			)}
+			{folders.filter((f) => !f.parentId).map((folder) => renderFolder(folder, 0))}
+			<li>
+				<button
+					type="button"
+					onClick={() => nav.folderActions.requestCreate(null)}
+					style={{ paddingLeft: TREE_INDENT }}
+					className={cn(subRow, "w-full text-left text-cms-sidebar-foreground/50")}
+				>
+					<Plus aria-hidden className="size-3.5" />
+					{t("list.folderAdd")}
+				</button>
+			</li>
+			{folders.length > 0 && (
+				<li>
+					<Label
+						className="gap-2 py-1 font-normal text-cms-sidebar-foreground/60 text-xs"
+						style={{ paddingLeft: TREE_INDENT }}
+					>
 						<Switch
 							size="sm"
 							checked={nav.includeDescendants}
@@ -270,16 +252,14 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 						/>
 						{t("sidebar.includeDescendants")}
 					</Label>
-				)}
-				{/* Right-click menu for empty space. Attached only to the empty area below the list so it does not overlap folder row menus. */}
-				<ActionContextMenu actions={blankActions} trigger={<div aria-hidden className="min-h-16 flex-1" />} />
-			</SidebarGroupContent>
-		</SidebarGroup>
+				</li>
+			)}
+		</ul>
 	);
 }
 
-/** Left navigation area: content (collections, media), Settings, trash pinned at the bottom, virtual folder tree. */
-export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: AdminSidebarProps) {
+/** Left navigation area: Content (collections with their folders, media, templates), Tools (plugin pages, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
+export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, folderCounts }: AdminSidebarProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const { isMobile, setOpenMobile, state } = useSidebar();
@@ -293,7 +273,14 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 		if (isMobile) setOpenMobile(false);
 	};
 
-	const navLink = (href: string, id: AdminNavId, label: string, icon?: React.ReactNode, badge?: React.ReactNode) => (
+	const navLink = (
+		href: string,
+		id: AdminNavId,
+		label: string,
+		icon?: React.ReactNode,
+		badge?: React.ReactNode,
+		trailing?: React.ReactNode,
+	) => (
 		<SidebarMenuItem key={id}>
 			<SidebarMenuButton
 				isActive={activeNav === id}
@@ -301,11 +288,49 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 				render={<Link href={href} onClick={closeMobile} aria-current={activeNav === id ? "page" : undefined} />}
 			>
 				{icon}
-				<span>{label}</span>
+				<span className="flex-1">{label}</span>
+				{trailing}
 			</SidebarMenuButton>
 			{badge}
 		</SidebarMenuItem>
 	);
+
+	const collectionEntry = (collection: Collection) => {
+		const active = activeNav === collection;
+		const nav = active && folderNav?.collection === collection ? folderNav : undefined;
+		const folderCount = nav ? nav.folders.length : (folderCounts?.[collection] ?? 0);
+		const chevron =
+			folderCount > 0 ? (
+				active ? (
+					<ChevronDown
+						aria-hidden
+						className="size-3! text-cms-sidebar-foreground/60 group-data-[collapsible=icon]:hidden"
+					/>
+				) : (
+					<ChevronRight
+						aria-hidden
+						className="size-3! text-cms-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
+					/>
+				)
+			) : null;
+		return (
+			<li key={collection} className="contents">
+				{navLink(
+					site.adminHref(`?collection=${collection}`),
+					collection,
+					site.COLLECTION_DEFINITIONS[collection].label,
+					<CollectionIcon collection={collection} />,
+					undefined,
+					chevron,
+				)}
+				{nav && (
+					<SidebarMenuItem>
+						<FolderTree nav={nav} closeMobile={closeMobile} />
+					</SidebarMenuItem>
+				)}
+			</li>
+		);
+	};
 
 	return (
 		<Sidebar collapsible="icon">
@@ -359,29 +384,30 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 					<SidebarGroupLabel>{t("sidebar.content")}</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.content")}>
-							{site.COLLECTIONS.map((collection) =>
-								navLink(
-									site.adminHref(`?collection=${collection}`),
-									collection,
-									site.COLLECTION_DEFINITIONS[collection].label,
-									<CollectionIcon collection={collection} />,
-								),
-							)}
+							{site.COLLECTIONS.map(collectionEntry)}
 							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
+							{site.ADMIN_TEMPLATES &&
+								navLink(site.adminHref("/templates"), "templates", t("sidebar.templates"), <LayoutTemplate />)}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
-				<SidebarSeparator />
-				<SidebarGroup>
+				<SidebarGroup className="pt-0">
+					<SidebarGroupLabel>{t("sidebar.tools")}</SidebarGroupLabel>
 					<SidebarGroupContent>
-						<SidebarMenu aria-label={t("sidebar.settings")}>
+						<SidebarMenu aria-label={t("sidebar.tools")}>
+							{toolsPages(site).map((page) =>
+								navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />),
+							)}
 							{navLink(
-								site.adminHref("/settings/collections"),
-								"settings",
-								t("sidebar.settings"),
-								<Settings2 />,
+								site.adminHref("/events"),
+								"events",
+								t("sidebar.events"),
+								<Activity />,
 								eventsCount ? (
-									<SidebarMenuBadge aria-label={t("sidebar.settingsBadge", { count: eventsCount })}>
+									<SidebarMenuBadge
+										aria-label={t("sidebar.eventsBadge", { count: eventsCount })}
+										className="text-cms-destructive"
+									>
 										{eventsCount}
 									</SidebarMenuBadge>
 								) : null,
@@ -389,21 +415,28 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount }: 
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
-				{folderNav && <FolderTree nav={folderNav} closeMobile={closeMobile} />}
+				<SidebarSeparator />
+				<SidebarGroup className="pt-0">
+					<SidebarGroupContent>
+						<SidebarMenu aria-label={t("sidebar.trash")}>
+							{navLink(
+								site.adminHref("/trash"),
+								"trash",
+								t("sidebar.trash"),
+								<Trash2 />,
+								trashCount ? (
+									<SidebarMenuBadge aria-label={t("sidebar.trashBadge", { count: trashCount })}>
+										{trashCount}
+									</SidebarMenuBadge>
+								) : null,
+							)}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
 			</SidebarContent>
 			<SidebarFooter className="flex-row items-center gap-1 border-cms-sidebar-border border-t px-2 py-2 group-data-[collapsible=icon]:flex-col">
-				<SidebarMenu aria-label={t("sidebar.trash")} className="min-w-0 flex-1">
-					{navLink(
-						site.adminHref("/trash"),
-						"trash",
-						t("sidebar.trash"),
-						<Trash2 />,
-						trashCount ? (
-							<SidebarMenuBadge aria-label={t("sidebar.trashBadge", { count: trashCount })}>
-								{trashCount}
-							</SidebarMenuBadge>
-						) : null,
-					)}
+				<SidebarMenu aria-label={t("sidebar.settings")} className="min-w-0 flex-1">
+					{navLink(site.adminHref("/settings/collections"), "settings", t("sidebar.settings"), <Settings2 />)}
 				</SidebarMenu>
 				<ThemeToggle className="size-8 shrink-0 text-cms-muted-foreground" />
 			</SidebarFooter>

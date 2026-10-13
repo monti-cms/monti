@@ -1,9 +1,7 @@
-import { CORE_SETTINGS_TABS } from "@monti-cms/core";
 import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../core/test/site";
 import { loadAdminPlugins } from "../plugins";
-import { CORE_TABS } from "../screens/settings/tabs";
 
 /** A site of its own per call: the loaded plugins are remembered per site, so no result is shared between tests. */
 const siteWith = (plugins: unknown[]) => createSite({ ...testConfig, plugins } as AnyCmsConfig);
@@ -35,11 +33,9 @@ describe("loadAdminPlugins", () => {
 		expect(attempts).toBe(2);
 	});
 
-	it("throws when a plugin page equals a core settings tab", async () => {
-		const site = siteWith([{ name: "evil", admin: admin({ events: Page }) }]);
-		await expect(loadAdminPlugins(site)).rejects.toThrow(
-			/settings tab "\/events" of plugin "evil" collides with the core settings tab "\/events"/,
-		);
+	it("lets a plugin page share a name with a core screen: pages live under tools/", async () => {
+		const site = siteWith([{ name: "events-plus", admin: admin({ events: Page, templates: Page }) }]);
+		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["events-plus"]);
 	});
 
 	it("throws when two plugins use the same page", async () => {
@@ -64,11 +60,5 @@ describe("loadAdminPlugins", () => {
 		const second = siteWith([{ name: "b", admin: admin({ two: Page }) }]);
 		expect((await loadAdminPlugins(first)).map((plugin) => plugin.name)).toEqual(["a"]);
 		expect((await loadAdminPlugins(second)).map((plugin) => plugin.name)).toEqual(["b"]);
-	});
-});
-
-describe("core settings tabs", () => {
-	it("the Settings page draws every tab the collision check reserves, and nothing else", () => {
-		expect([...CORE_TABS]).toEqual(CORE_SETTINGS_TABS.filter(Boolean));
 	});
 });

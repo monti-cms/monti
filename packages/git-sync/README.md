@@ -37,7 +37,7 @@ export const cms = defineConfig({
 
 `gitSync()` with no `targets` registers the plugin and syncs nothing until `targets` lists a repo.
 
-Then run `monti migrate` (it creates the plugin's storage), open `/<admin path>/settings/git-sync`, and follow "Setting it up" below.
+Then run `monti migrate` (it creates the plugin's storage), open `/<admin path>/tools/git-sync`, and follow "Setting it up" below.
 
 ## Config
 
@@ -130,7 +130,7 @@ An `afterCommit` event of a synced collection puts the entry in a queue (saved i
 - **Batching.** The first publish after a quiet period (`debounceMs`) is committed at once. Publishes that follow inside the window are queued and go out in one commit when the window ends. The event of a queued entry is **deferred** (the subscriber returns `{ retryAt }`, see "Event delivery" in the core README): it is rescheduled for the end of the window, and it is not a failure, so it is not listed on the Events screen, does not count in its badge, uses no attempt and cannot dead-letter. Nothing runs in the background on serverless hosting, so the deferred events are delivered when the outbox is next run (the next write, `monti events:retry`, a cron); a process that keeps running flushes by itself when the window ends. The commit message lists what is in it.
 - **`"pr"` mode.** The commit goes to `prBranch`. If a pull request from it is open, it is added to; otherwise the branch starts again from the head of `branch` and a new pull request opens. Auto-merge is enabled when the repo allows it (otherwise the screen says the pull request waits for a merge).
 - **Records.** For each entry the plugin keeps the file path, the git blob sha it last wrote and the content hash of the published entry, in plugin storage. They are what tell a hash mismatch from "nothing to do".
-- **Failures throw**, so the outbox retries them (delay 15 s, doubling, 8 tries by default, then a dead letter in the Event log tab). The queue keeps the entry meanwhile, and "Commit the queue now" (or the next publish) sends it. **No token saved yet is not a failure:** the events are deferred for an hour (not listed as failed, not in the badge, no attempts used, never dead-lettered), the entries wait in the queue (the Sync tab shows how many), and saving the token on the Settings tab commits the queue and delivers the deferred events at once. Real errors while a token exists (401, an unknown repo, the network) fail and retry as above.
+- **Failures throw**, so the outbox retries them (delay 15 s, doubling, 8 tries by default, then a dead letter in the Event log). The queue keeps the entry meanwhile, and "Commit the queue now" (or the next publish) sends it. **No token saved yet is not a failure:** the events are deferred for an hour (not listed as failed, not in the badge, no attempts used, never dead-lettered), the entries wait in the queue (the Sync tab shows how many), and saving the token on the Settings tab commits the queue and delivers the deferred events at once. Real errors while a token exists (401, an unknown repo, the network) fail and retry as above.
 - An entry with an open conflict is not pushed until the conflict is decided.
 
 ## In: repo to CMS
@@ -181,7 +181,7 @@ All of them load the app like `monti migrate` (`--env-file`, `--no-env-file`, `-
 
 ## Admin screen
 
-`/<admin path>/settings/git-sync` (the "Git sync" tab of Settings):
+`/<admin path>/tools/git-sync` (the "Git sync" page of Tools):
 
 - **Sync**: per target the repo and branch, mode, folder, path pattern, format and collections; how many entries are synced, waiting in the queue or in conflict; the last pull (counts, files with errors, skipped files) and the last commit (files, commit, pull request link, notes); **Pull now** and **Commit the queue now**.
 - **Conflicts**: the list with the diff and the two actions. The tab shows how many there are.

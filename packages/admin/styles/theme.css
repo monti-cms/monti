@@ -53,4 +53,6 @@
 	--radius-md: calc(var(--cms-radius) - 2px);
 	--radius-lg: var(--cms-radius);
 	--radius-xl: calc(var(--cms-radius) + 4px);
+	/* Scale in use: chips 4px (sm), controls and rows 6px (md), cards 8px (lg), dialogs and the side sheet 10px (dialog). */
+	--radius-dialog: calc(var(--cms-radius) + 2px);
 }

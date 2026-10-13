@@ -1096,7 +1096,7 @@ export const myPlugin = () =>
 	definePlugin({
 		name: "my-plugin",
 		options: {}, // JSON value. Read by both the server and the browser
-		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a tab of the admin Settings page: <admin path>/settings/my
+		nav: [{ path: "my", label: "My screen", icon: "plug" }], // a page in the Tools group of the admin sidebar: <admin path>/tools/my
 		validate: ({ collections }) => {}, // called when the site config is built
 		server: () => import("my-plugin/server"), // CmsServerPlugin: API routes, table creation, meta display, hooks that need server code
 		hooks: { validate: () => undefined }, // write hooks written inline: a plugin that only adds hooks needs no `server` module (and no `options`)
@@ -1331,7 +1331,7 @@ defineConfig({
 });
 ```
 
-Every committed change is recorded in the event log, whether or not anything subscribes to it (an event with no delivery shows as "recorded (no subscribers)" and carries the actor when the change came from a request). Events older than 90 days (a fixed period, not an option) are removed by the same write-driven pass, at most once an hour per process, together with their deliveries, unless a delivery is still waiting: `pending`, `delivering`, `failed` and `dead` deliveries keep their event until they are delivered or dismissed. The admin's **Event log** tab (Settings > Event log: `/admin/settings/events` at the config default path, `/studio/settings/events` after `monti init`) is the log of all events with their delivery status, and for failed and dead deliveries it shows the last error and retries or dismisses each; the Event log tab and the sidebar Settings entry show how many there are.
+Every committed change is recorded in the event log, whether or not anything subscribes to it (an event with no delivery shows as "recorded (no subscribers)" and carries the actor when the change came from a request). Events older than 90 days (a fixed period, not an option) are removed by the same write-driven pass, at most once an hour per process, together with their deliveries, unless a delivery is still waiting: `pending`, `delivering`, `failed` and `dead` deliveries keep their event until they are delivered or dismissed. The admin's **Event log** (Tools > Event log: `/admin/events` at the config default path, `/studio/events` after `monti init`) is the log of all events with their delivery status, and for failed and dead deliveries it shows the last error and retries or dismisses each; the sidebar's Event log item shows how many there are.
 
 ## Testing your hooks and plugins
 
@@ -1530,7 +1530,7 @@ The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchem
 
 ### Editing the schema in the admin (development only)
 
-The admin has schema settings (`<admin path>/settings/collections`, in the sidebar under Settings; the Locales, Site, Admin and File tabs belong to it too) that edit `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
+The admin has schema settings (`<admin path>/settings/collections`, in the sidebar footer under Settings; the Languages, Site, Admin and File tabs belong to it too) that edit `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
 
 **Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists, can be written and is a pure literal (below). The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file`, `not_writable` or `has_code`), and the screen shows the schema read-only with a short explanation. `GET /api/monti/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
 
