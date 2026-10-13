@@ -970,7 +970,11 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
-		<section ref={cardRef} className="min-w-0 overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
+		<section
+			ref={cardRef}
+			className="min-w-0 max-w-[1000px] overflow-hidden rounded-lg border bg-cms-card"
+			data-testid="fields-card"
+		>
 			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
@@ -1067,7 +1071,10 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	return (
 		<>
 			{wide && previewOpen ? (
-				<div className="grid grid-cols-[minmax(0,1fr)_var(--panel-width)] items-start gap-6" style={sideResize.style}>
+				<div
+					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-6"
+					style={sideResize.style}
+				>
 					{card}
 					<div className="sticky top-4 flex h-[min(48rem,calc(100vh-6rem))] flex-col" data-testid="layout-preview-side">
 						<PanelResizeHandle resize={sideResize} className="-left-3.5" />

@@ -1066,6 +1066,17 @@ describe("SchemaScreen", () => {
 			vi.unstubAllGlobals();
 		});
 
+		it("caps the tree at a width that suits its columns, with the preview right beside it", async () => {
+			wideWindow();
+			await openFields();
+			const side = await screen.findByTestId("layout-preview-side");
+			const row = side.parentElement as HTMLElement;
+			// The first column stops growing at the cap; the preview follows it, not the page edge.
+			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
+			expect(screen.getByTestId("fields-card").className).toContain("max-w-[1000px]");
+			vi.unstubAllGlobals();
+		});
+
 		it("can be closed and opened again, and remembers it", async () => {
 			wideWindow();
 			await openFields();
