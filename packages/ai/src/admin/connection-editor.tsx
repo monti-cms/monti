@@ -9,6 +9,7 @@ import {
 	Button,
 	choiceReady,
 	cn,
+	EditorFooter,
 	Empty,
 	EmptyContent,
 	EmptyHeader,
@@ -21,11 +22,12 @@ import {
 	Skeleton,
 	useConfirm,
 	useDebounced,
+	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plug, PlugZap, Plus, Save, Trash2 } from "lucide-react";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { Plug, PlugZap, Plus, Save } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 import {
 	AI_PROVIDER_KINDS,
 	type AiCheckResult,
@@ -123,15 +125,6 @@ export function ListSkeleton({ rows }: { rows: number }) {
 	));
 }
 
-/** One error line (inside the edit pane). */
-export function InlineError({ children }: { children: ReactNode }) {
-	return (
-		<p role="alert" className="text-cms-destructive text-xs">
-			{children}
-		</p>
-	);
-}
-
 /** Time to wait for URL/key input to pause before fetching the model list. */
 const LIST_INPUT_DEBOUNCE_MS = 400;
 
@@ -155,8 +148,6 @@ const draftOf = (provider: AiProviderView): Draft => ({
 
 /** The draft as the server takes it: a new key with nothing typed yet is left out, so the connection keeps the key it had. */
 const payload = ({ key, ...rest }: Draft) => (choiceReady(key) && key.use !== "none" ? { ...rest, key } : rest);
-
-const sameDraft = (a: Draft, b: Draft) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * AI screen Connections tab. Keeps several connections (name, mode, URL, key, default model) and lets each action pick which connection to use.
@@ -283,21 +274,16 @@ function ProviderEditor({
 	const site = useSite();
 	const t = useTranslator(connectionMessages);
 	const { providerKindLabel } = useLabels();
-	const initial = provider ? draftOf(provider) : NEW_DRAFT;
-	const [draft, setDraft] = useState<Draft>(initial);
 	const [error, setError] = useState<string | null>(null);
 	const [check, setCheck] = useState<AiCheckResult | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const ids = { name: useId(), kind: useId(), url: useId(), model: useId() };
+	const editor = useDraftEditor({ saved: provider ? draftOf(provider) : null, empty: NEW_DRAFT, onDirtyChange });
+	const { draft, dirty } = editor;
 	const set = (patch: Partial<Draft>) => {
-		setDraft({ ...draft, ...patch });
+		editor.update(patch);
 		setCheck(null);
 	};
-	const dirty = provider === null || !sameDraft(draft, initial);
-	// A new connection with nothing entered has nothing to discard.
-	const unsaved = provider === null ? !sameDraft(draft, NEW_DRAFT) : dirty;
-	useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
-	useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
 	const example = PROVIDER_EXAMPLES[draft.kind];
 	// While typing the URL or key the list is not fetched; it is fetched once typing pauses. If the saved key is used as is, it is fetched by connection id.
@@ -440,18 +426,17 @@ function ProviderEditor({
 				</Field>
 			</FieldGroup>
 
-			{error && <InlineError>{error}</InlineError>}
-
-			<div className="flex flex-wrap items-center gap-2">
-				<Button type="button" size="sm" disabled={saving || !dirty || !draft.name.trim()} onClick={save}>
-					<Save aria-hidden />
-					{saving ? t("action.saving") : t("action.save")}
-				</Button>
-				{!provider && (
-					<Button type="button" size="sm" variant="outline" onClick={onCancel}>
-						{t("action.cancel")}
-					</Button>
-				)}
+			<EditorFooter
+				dirty={dirty}
+				saving={saving}
+				deleting={deleting}
+				canSave={Boolean(draft.name.trim())}
+				error={error}
+				saveIcon={<Save aria-hidden />}
+				onSave={save}
+				onCancel={provider ? undefined : onCancel}
+				onDelete={provider ? () => void remove() : undefined}
+			>
 				<Button
 					type="button"
 					size="sm"
@@ -462,20 +447,7 @@ function ProviderEditor({
 					<PlugZap aria-hidden />
 					{checking ? t("action.checking") : t("action.check")}
 				</Button>
-				{provider && (
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						className="ml-auto text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
-						disabled={deleting}
-						onClick={() => void remove()}
-					>
-						<Trash2 aria-hidden />
-						{deleting ? t("action.deleting") : t("action.delete")}
-					</Button>
-				)}
-			</div>
+			</EditorFooter>
 			{check && (
 				<p
 					className={cn("text-xs", check.ok ? "text-cms-muted-foreground" : "text-cms-destructive")}

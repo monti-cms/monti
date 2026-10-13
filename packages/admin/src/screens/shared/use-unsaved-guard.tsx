@@ -2,6 +2,7 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { type ReactNode, useEffect, useRef } from "react";
+import { useBeforeUnload } from "../../lib/hooks/use-before-unload";
 import { discardConfirm, useConfirm } from "./confirm-dialog";
 import { sharedMessages } from "./messages";
 
@@ -14,16 +15,7 @@ export function useUnsavedGuard(dirty: boolean): { dialog: ReactNode } {
 	const { confirm, dialog } = useConfirm();
 	const bypass = useRef(false);
 
-	useEffect(() => {
-		if (!dirty) return;
-		const warn = (event: BeforeUnloadEvent) => {
-			event.preventDefault();
-			// Some browsers show their own text and only need the property to be set.
-			event.returnValue = "";
-		};
-		window.addEventListener("beforeunload", warn);
-		return () => window.removeEventListener("beforeunload", warn);
-	}, [dirty]);
+	useBeforeUnload(dirty);
 
 	useEffect(() => {
 		if (!dirty) return;

@@ -2,7 +2,7 @@
 
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { Copy, ExternalLink } from "lucide-react";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
 import { formatBytes } from "../../editor/upload-helper";
@@ -11,9 +11,11 @@ import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { Button, buttonVariants } from "../../ui/button";
 import { Field, FieldLabel } from "../../ui/field";
 import { Textarea } from "../../ui/textarea";
+import { EditorFooter } from "../shared/editor-footer";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { SidePanelHeader } from "../shared/side-panel";
+import { useDraftEditor } from "../shared/use-draft-editor";
 import { copyText, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
 import { MediaThumb } from "./media-views";
 import { mediaMessages } from "./messages";
@@ -68,12 +70,10 @@ export function MediaDetailPanel({
 	const captionId = useId();
 	// The last saved (initially loaded) value. If the edited value differs, there are unsaved changes.
 	const [saved, setSaved] = useState({ alt: media.defaultAlt, caption: media.defaultCaption });
-	const [draft, setDraft] = useState(saved);
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const isImage = site.api.isImageMime(media.mimeType);
-	const isDirty = draft.alt !== saved.alt || draft.caption !== saved.caption;
-	useEffect(() => onDirtyChange?.(isDirty), [isDirty, onDirtyChange]);
+	const { draft, update: setDraft, dirty } = useDraftEditor({ saved, empty: saved, onDirtyChange, saving: isSaving });
 
 	const saveDefaults = async () => {
 		setIsSaving(true);
@@ -209,10 +209,7 @@ export function MediaDetailPanel({
 								void saveDefaults();
 							}}
 						>
-							<SlotScope
-								key={`alt-${media.id}`}
-								request={slot("defaultAlt", (alt) => setDraft((current) => ({ ...current, alt })))}
-							>
+							<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
 								{({ trigger, panel }) => (
 									<Field>
 										<div className="flex items-center justify-between gap-2">
@@ -224,7 +221,7 @@ export function MediaDetailPanel({
 											rows={2}
 											value={draft.alt}
 											disabled={isSaving}
-											onChange={(event) => setDraft({ ...draft, alt: event.target.value })}
+											onChange={(event) => setDraft({ alt: event.target.value })}
 											className="min-h-14 text-xs md:text-xs"
 										/>
 										{panel}
@@ -233,7 +230,7 @@ export function MediaDetailPanel({
 							</SlotScope>
 							<SlotScope
 								key={`caption-${media.id}`}
-								request={slot("defaultCaption", (caption) => setDraft((current) => ({ ...current, caption })))}
+								request={slot("defaultCaption", (caption) => setDraft({ caption }))}
 							>
 								{({ trigger, panel }) => (
 									<Field>
@@ -246,23 +243,20 @@ export function MediaDetailPanel({
 											rows={2}
 											value={draft.caption}
 											disabled={isSaving}
-											onChange={(event) => setDraft({ ...draft, caption: event.target.value })}
+											onChange={(event) => setDraft({ caption: event.target.value })}
 											className="min-h-14 text-xs md:text-xs"
 										/>
 										{panel}
 									</Field>
 								)}
 							</SlotScope>
-							{saveError && (
-								<p role="alert" className="text-cms-destructive">
-									{saveError}
-								</p>
-							)}
-							<div className="flex justify-end">
-								<Button type="submit" size="sm" disabled={media.status !== "ready" || isSaving}>
-									{isSaving ? t("common.saving") : t("common.save")}
-								</Button>
-							</div>
+							<EditorFooter
+								dirty={dirty}
+								saving={isSaving}
+								canSave={media.status === "ready"}
+								error={saveError}
+								align="end"
+							/>
 						</form>
 					</Section>
 				)}

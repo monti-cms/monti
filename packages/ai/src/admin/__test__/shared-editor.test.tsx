@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { commonMessages } from "../../../../admin/src/lib/common-messages";
 import { sharedMessages as adminSharedMessages } from "../../../../admin/src/screens/shared/messages";
 import { testSite } from "../../../test/site";
 import type { AiSharedView } from "../../shared";
@@ -13,6 +14,7 @@ import { SharedManager } from "../shared-editor";
 import { sharedMessages } from "../shared-editor.messages";
 
 const t = testSite.createTranslator(sharedMessages);
+const common = testSite.createTranslator(commonMessages);
 const adminText = testSite.createTranslator(adminSharedMessages);
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
@@ -120,7 +122,7 @@ describe("AI screen shared texts tab", () => {
 		fireEvent.click(screen.getByRole("button", { name: t("action.resetDefault") }));
 		expect((screen.getByRole("textbox", { name: t("field.content") }) as HTMLTextAreaElement).value).toBe("default");
 
-		fireEvent.click(screen.getByRole("button", { name: t("action.save") }));
+		fireEvent.click(screen.getByRole("button", { name: common("save") }));
 		await waitFor(() => expect(calls("PATCH")).toHaveLength(1));
 		expect(bodyOf(calls("PATCH")[0])).toEqual({ expectedVersion: 2, key: "styleGuide", text: "default" });
 	});
@@ -142,7 +144,7 @@ describe("AI screen shared texts tab", () => {
 		renderManager();
 		await screen.findByText(t("empty.title"));
 		fireEvent.click(screen.getByRole("button", { name: t("action.add") }));
-		const save = (await screen.findByRole("button", { name: t("action.save") })) as HTMLButtonElement;
+		const save = (await screen.findByRole("button", { name: common("save") })) as HTMLButtonElement;
 		expect(save.disabled).toBe(true);
 		fireEvent.change(screen.getByRole("textbox", { name: t("field.name") }), { target: { value: "Reader" } });
 		fireEvent.change(screen.getByRole("textbox", { name: t("field.key") }), { target: { value: "reader" } });

@@ -18,7 +18,7 @@ import { Labeled } from "../schema/controls";
 import { Section } from "../schema/section";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
-import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { useConfirm } from "../shared/confirm-dialog";
 import { PageBody } from "../shared/page-body";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
 import { apiKeysMessages } from "./messages";
@@ -31,7 +31,7 @@ export function ApiKeysSettings() {
 	const query = useApiKeys();
 	const [editing, setEditing] = useState<Editing | null>(null);
 	const [slotEditing, setSlotEditing] = useState<ApiKeySlotView | null>(null);
-	const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
+	const { confirm, dialog } = useConfirm();
 	const remove = useCmsMutation({
 		fn: (key: ApiKeyView, { site }) =>
 			deleteApiKey(site, key, { force: key.uses.length > 0, fallback: t("error.delete") }),
@@ -48,9 +48,9 @@ export function ApiKeysSettings() {
 	});
 	const list: ApiKeyList | undefined = query.data;
 
-	const askDelete = (key: ApiKeyView) => {
+	const askDelete = async (key: ApiKeyView) => {
 		const used = key.uses.length > 0;
-		setConfirmRequest({
+		const ok = await confirm({
 			title: t("delete.title", { name: key.name }),
 			description: used ? (
 				<div className="flex flex-col gap-2">
@@ -66,11 +66,9 @@ export function ApiKeysSettings() {
 			),
 			confirmLabel: t("delete.confirm"),
 			destructive: true,
-			// The dialog stays until the delete and the refetch are done. A failure is toasted by the mutation.
-			onConfirm: async () => {
-				await remove.mutateAsync(key).catch(() => {});
-			},
 		});
+		// A failure is toasted by the mutation.
+		if (ok) await remove.mutateAsync(key).catch(() => {});
 	};
 
 	const rowMenu = (key: ApiKeyView): MenuAction[] => [
@@ -134,7 +132,7 @@ export function ApiKeysSettings() {
 					onClose={() => setSlotEditing(null)}
 				/>
 			)}
-			<ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
+			{dialog}
 		</PageBody>
 	);
 }

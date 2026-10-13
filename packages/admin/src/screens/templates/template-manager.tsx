@@ -26,9 +26,11 @@ import { Skeleton } from "../../ui/skeleton";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
+import { EditorFooter } from "../shared/editor-footer";
 import { EmptyState } from "../shared/empty-state";
 import { formatDateOnly } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
+import { useDraftEditor } from "../shared/use-draft-editor";
 import { templatesMessages } from "./messages";
 
 const textNode = (text: string): CmsNode => ({ type: "text", text });
@@ -50,6 +52,108 @@ const newTemplateDoc = (t: TranslatorFor<typeof templatesMessages>): StoredDocum
 	]),
 });
 
+type TemplateDraft = { name: string; doc: StoredDocument };
+
+/**
+ * The edit panel of one template (a new template has no id). It keeps the name and body being edited, saves them, and tells the list
+ * whether there are unsaved changes. The list keys it by template, so another template starts from its own values.
+ */
+function TemplateEditPanel({
+	template,
+	onSaved,
+	onCancel,
+	onDirtyChange,
+}: {
+	template: Partial<BodyTemplate>;
+	onSaved: (saved: BodyTemplate) => void;
+	onCancel: () => void;
+	onDirtyChange: (dirty: boolean) => void;
+}) {
+	const site = useSite();
+	const t = useTranslator(templatesMessages);
+	const [saveError, setSaveError] = useState<string | null>(null);
+	const save = useCmsMutation({
+		fn: ({ name, doc }: TemplateDraft, { site }) =>
+			template.id
+				? updateTemplate(site, template.id, { name, doc, expectedVersion: template.version }, t("common.saveFailed"))
+				: createTemplate(site, { name, doc }, t("common.saveFailed")),
+		success: t("common.saved"),
+		failure: t("common.saveFailed"),
+		inline: true,
+		invalidate: [templatesKeys.all],
+		onSuccess: onSaved,
+		onError: (err) => setSaveError(errorText(site, err, t("common.saveFailed"))),
+	});
+	const saved = template.id ? { name: template.name ?? "", doc: template.doc ?? emptyStoredDocument() } : null;
+	// A new template starts as the outline; it is not a change until the user edits it.
+	const [outline] = useState(() => template.doc ?? emptyStoredDocument());
+	const { draft, update, dirty, isNew } = useDraftEditor<TemplateDraft>({
+		saved,
+		empty: { name: template.name ?? "", doc: outline },
+		equals: (a, b) => a.name === b.name && documentKey(site, a.doc) === documentKey(site, b.doc),
+		onDirtyChange,
+		saving: save.isPending,
+	});
+
+	const handleSave = () => {
+		if (save.isPending) return;
+		if (!draft.name.trim()) {
+			setSaveError(t("edit.nameRequired"));
+			return;
+		}
+		setSaveError(null);
+		save.mutate({ name: draft.name.trim(), doc: draft.doc });
+	};
+
+	// Save with ⌘S or Ctrl+S. The function is kept in a ref so it saves the latest values.
+	const saveRef = useRef(handleSave);
+	saveRef.current = handleSave;
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.isComposing) return;
+			if (event.key.toLowerCase() !== "s") return;
+			event.preventDefault();
+			saveRef.current();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
+
+	return (
+		// The body editor also contains buttons and inputs, so it is not wrapped in a <form>. Enter in the name field and ⌘S save.
+		<section
+			aria-label={template.id ? t("edit.label") : t("edit.addLabel")}
+			className="flex h-full flex-1 flex-col overflow-hidden"
+		>
+			<div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
+				<Input
+					type="text"
+					aria-label={t("edit.nameLabel")}
+					value={draft.name}
+					onChange={(e) => update({ name: e.target.value })}
+					onKeyDown={(event) => {
+						// Enter during Korean IME composition ends the character. Do not save.
+						if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+						event.preventDefault();
+						handleSave();
+					}}
+					placeholder={t("edit.nameLabel")}
+					className="h-8 min-w-0 max-w-2xl flex-1"
+				/>
+				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
+			</div>
+			{saveError && (
+				<p role="alert" className="border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs">
+					{saveError}
+				</p>
+			)}
+			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
+			</div>
+		</section>
+	);
+}
+
 export function TemplateManager() {
 	const site = useSite();
 	const t = useTranslator(templatesMessages);
@@ -63,89 +167,46 @@ export function TemplateManager() {
 	const error =
 		templatesQuery.error && !templatesQuery.data ? errorText(site, templatesQuery.error, t("list.loadFailed")) : null;
 
-	// The template open in the edit panel (a new template has no id) and the values being edited.
+	// The template open in the edit panel (a new template has no id). `editorKey` makes a panel start over when another template (or a fresh new one) opens.
 	const [activeTemplate, setActiveTemplate] = useState<Partial<BodyTemplate> | null>(null);
-	const [editName, setEditName] = useState("");
-	const [editBody, setEditBody] = useState<StoredDocument>(() => emptyStoredDocument());
-	const [saveError, setSaveError] = useState<string | null>(null);
+	const [newCount, setNewCount] = useState(0);
+	/** Whether the open template has unsaved changes. The edit panel reports it. */
+	const dirtyRef = useRef(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
 
-	/** Whether the name or body of the open template was changed. */
-	const isDirty =
-		activeTemplate !== null &&
-		(editName !== (activeTemplate.name ?? "") ||
-			documentKey(site, editBody) !== documentKey(site, activeTemplate.doc ?? emptyStoredDocument()));
-
 	const show = (template: Partial<BodyTemplate> | null) => {
+		dirtyRef.current = false;
 		setActiveTemplate(template);
-		setEditName(template?.name ?? "");
-		setEditBody(template?.doc ?? emptyStoredDocument());
-		setSaveError(null);
 	};
 
 	/** Opens another template. If there are unsaved changes, asks first whether to discard them. */
 	const openTemplate = async (template: BodyTemplate) => {
 		if (template.id === activeTemplate?.id) return;
-		if (await confirmDiscard(isDirty)) show(template);
+		if (await confirmDiscard(dirtyRef.current)) show(template);
 	};
 
 	const openNew = async () => {
-		if (await confirmDiscard(isDirty)) show({ name: "", doc: newTemplateDoc(t) });
+		if (!(await confirmDiscard(dirtyRef.current))) return;
+		setNewCount((count) => count + 1);
+		show({ name: "", doc: newTemplateDoc(t) });
 	};
 
 	const closeEditor = async () => {
-		if (await confirmDiscard(isDirty)) show(null);
+		if (await confirmDiscard(dirtyRef.current)) show(null);
 	};
 
-	const save = useCmsMutation({
-		fn: ({ template, name, doc }: { template: Partial<BodyTemplate>; name: string; doc: StoredDocument }, { site }) =>
-			template.id
-				? updateTemplate(site, template.id, { name, doc, expectedVersion: template.version }, t("common.saveFailed"))
-				: createTemplate(site, { name, doc }, t("common.saveFailed")),
-		success: t("common.saved"),
-		failure: t("common.saveFailed"),
-		inline: true,
-		invalidate: [templatesKeys.all],
-		onSuccess: (saved, { template }) => {
-			// Keep the saved template open.
-			show(saved);
-			queryClient.setQueryData<BodyTemplate[]>(templatesKeys.list(), (current) =>
-				template.id
-					? current?.map((item) => (item.id === saved.id ? saved : item))
-					: current && !current.some((item) => item.id === saved.id)
-						? [saved, ...current]
-						: current,
-			);
-		},
-		onError: (err) => setSaveError(errorText(site, err, t("common.saveFailed"))),
-	});
-	const isSaving = save.isPending;
-
-	const handleSave = () => {
-		if (!activeTemplate || isSaving) return;
-		if (!editName.trim()) {
-			setSaveError(t("edit.nameRequired"));
-			return;
-		}
-		setSaveError(null);
-		save.mutate({ template: activeTemplate, name: editName.trim(), doc: editBody });
+	const saved = (template: BodyTemplate) => {
+		// Keep the saved template open.
+		const isNew = activeTemplate?.id === undefined;
+		setActiveTemplate(template);
+		queryClient.setQueryData<BodyTemplate[]>(templatesKeys.list(), (current) =>
+			isNew
+				? current && !current.some((item) => item.id === template.id)
+					? [template, ...current]
+					: current
+				: current?.map((item) => (item.id === template.id ? template : item)),
+		);
 	};
-
-	// Save with ⌘S or Ctrl+S (only while the edit panel is open). The function is kept in a ref so it saves the latest values.
-	const saveRef = useRef(handleSave);
-	saveRef.current = handleSave;
-	const isEditing = activeTemplate !== null;
-	useEffect(() => {
-		if (!isEditing) return;
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (!(event.metaKey || event.ctrlKey) || event.altKey || event.isComposing) return;
-			if (event.key.toLowerCase() !== "s") return;
-			event.preventDefault();
-			saveRef.current();
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [isEditing]);
 
 	const remove = useCmsMutation({
 		fn: (template: BodyTemplate, { site }) => deleteTemplate(site, template, t("delete.failed")),
@@ -262,44 +323,15 @@ export function TemplateManager() {
 
 				<div className="flex flex-1 flex-col overflow-hidden">
 					{activeTemplate ? (
-						// The body editor also contains buttons and inputs, so it is not wrapped in a <form>. Enter in the name field and ⌘S save.
-						<section
-							aria-label={activeTemplate.id ? t("edit.label") : t("edit.addLabel")}
-							className="flex h-full flex-1 flex-col overflow-hidden"
-						>
-							<div className="flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
-								<Input
-									type="text"
-									aria-label={t("edit.nameLabel")}
-									value={editName}
-									onChange={(e) => setEditName(e.target.value)}
-									onKeyDown={(event) => {
-										// Enter during Korean IME composition ends the character. Do not save.
-										if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
-										event.preventDefault();
-										handleSave();
-									}}
-									placeholder={t("edit.nameLabel")}
-									className="h-8 min-w-0 max-w-2xl flex-1"
-								/>
-								<div className="flex items-center gap-2">
-									<Button type="button" variant="outline" size="sm" onClick={() => void closeEditor()}>
-										{t("common.cancel")}
-									</Button>
-									<Button type="button" size="sm" disabled={isSaving} onClick={handleSave}>
-										{isSaving ? t("common.saving") : t("common.save")}
-									</Button>
-								</div>
-							</div>
-							{saveError && (
-								<p role="alert" className="border-b bg-cms-destructive/10 px-6 py-2 text-cms-destructive text-xs">
-									{saveError}
-								</p>
-							)}
-							<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-								<CmsEditor doc={editBody} onChange={setEditBody} />
-							</div>
-						</section>
+						<TemplateEditPanel
+							key={activeTemplate.id ?? `new-${newCount}`}
+							template={activeTemplate}
+							onSaved={saved}
+							onCancel={() => void closeEditor()}
+							onDirtyChange={(dirty) => {
+								dirtyRef.current = dirty;
+							}}
+						/>
 					) : (
 						<EmptyState
 							icon={LayoutTemplate}

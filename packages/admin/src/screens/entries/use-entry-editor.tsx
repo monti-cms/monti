@@ -2,9 +2,9 @@ import { useSite } from "@monti-cms/core/client";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { cmsEntryClient, type EntryEditorClient } from "../../api/entries";
 import { cmsIssueMessage } from "../../api/error-message";
-import type { BrowserFormat } from "../../browser-format";
 import { BlockIssuesProvider, type BlockIssueTexts } from "../../editor/blocks/block-issues-context";
 import { useStoreSelector } from "../../hooks/store";
+import { useBeforeUnload } from "../../lib/hooks/use-before-unload";
 import { localRecoveryStoreOf, type RecoveryStore } from "./entry-editor-client";
 import {
 	createEntryEditor,
@@ -38,11 +38,6 @@ export interface UseEntryEditorOptions {
 	client?: EntryEditorClient;
 	/** Where the recovery copy is kept. Default: the browser's IndexedDB. */
 	recoveryStore?: RecoveryStore;
-	/**
-	 * The formats the browser can read (`useCmsAdminComponents().formats`). An old recovery copy written as text is read through the one named like its notation (`mdx`),
-	 * so it compares with the server body like any other copy.
-	 */
-	formats?: Readonly<Record<string, BrowserFormat>>;
 }
 
 /**
@@ -66,8 +61,6 @@ export interface UseEntryEditorOptions {
 export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 	const site = useSite();
 	const callbacksRef = useRef<EntryEditorCallbacks>({});
-	const formatsRef = useRef(options.formats);
-	formatsRef.current = options.formats;
 	callbacksRef.current = { onSaved: options.onSaved };
 	const [core] = useState(() =>
 		createEntryEditor({
@@ -77,7 +70,6 @@ export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 			client: options.client ?? cmsEntryClient(site),
 			recoveryStore: options.recoveryStore ?? localRecoveryStoreOf(site),
 			callbacks: () => callbacksRef.current,
-			formats: () => formatsRef.current,
 		}),
 	);
 
@@ -103,15 +95,7 @@ export function useEntryEditor(options: UseEntryEditorOptions): EntryEditor {
 	// Warn on page leave if there are changes the server does not have.
 	const saveStatus = useStoreSelector(core.store, (state) => state.saveStatus);
 	const warnOnLeave = options.warnOnLeave ?? true;
-	useEffect(() => {
-		if (!warnOnLeave || saveStatus === "saved" || saveStatus === "new") return;
-		const warn = (event: BeforeUnloadEvent) => {
-			event.preventDefault();
-			event.returnValue = "";
-		};
-		window.addEventListener("beforeunload", warn);
-		return () => window.removeEventListener("beforeunload", warn);
-	}, [saveStatus, warnOnLeave]);
+	useBeforeUnload(warnOnLeave && saveStatus !== "saved" && saveStatus !== "new");
 
 	return useStoreSelector(core.store, core.view);
 }

@@ -9,6 +9,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	EditorFooter,
 	Empty,
 	EmptyContent,
 	EmptyHeader,
@@ -29,6 +30,7 @@ import {
 	TabsTrigger,
 	Textarea,
 	useConfirm,
+	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useSite, useTranslator } from "@monti-cms/core/client";
@@ -43,15 +45,7 @@ import { aiManagerMessages } from "./ai-manager.messages";
 import { runAiAction, useAiActions } from "./ai-slot-provider";
 import { missingRequired, SampleInputs, sampleDefaults, sampleFields, sampleRun } from "./ai-test-sample";
 import { type AiActionsResponse, aiKeys, createAiAction, deleteAiAction, updateAiAction } from "./api";
-import {
-	ConnectionManager,
-	DETAIL_PANE,
-	InlineError,
-	ListRow,
-	ListSkeleton,
-	LoadError,
-	useAiSettings,
-} from "./connection-editor";
+import { ConnectionManager, DETAIL_PANE, ListRow, ListSkeleton, LoadError, useAiSettings } from "./connection-editor";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor";
 import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
@@ -114,12 +108,34 @@ const editableOf = (action: AiActionView): Editable => ({
 	checks: action.checks,
 });
 
-/** Comparison key of the edited values. If it differs from the values at open time, there is unsaved content. */
-const snapshotOf = (spec: Editable, base: CustomBase | undefined) => JSON.stringify({ spec, base });
+/** What the editor holds: the action as shown, the values being edited and, for a screen action, its basic info. */
+interface FeatureDraft {
+	feature: AiActionView;
+	spec: Editable;
+	base?: CustomBase;
+}
+
+const draftOfFeature = (feature: AiActionView): FeatureDraft => ({
+	feature,
+	spec: editableOf(feature),
+	...(feature.custom ? { base: feature.custom } : {}),
+});
+
+/** Two drafts read the same when the edited values and the action's version are the same. A different version means the server's copy moved on. */
+const sameFeatureDraft = (a: FeatureDraft | null, b: FeatureDraft | null) =>
+	a === b ||
+	(a !== null &&
+		b !== null &&
+		a.feature.key === b.feature.key &&
+		a.feature.version === b.feature.version &&
+		JSON.stringify({ spec: a.spec, base: a.base }) === JSON.stringify({ spec: b.spec, base: b.base }));
 
 /** Sample input for the test (input name -> value) and the extra request. Fields are built from the action's input types (`ai-test-sample`). */
 type Sample = { values: Record<string, string>; request: string };
 const EMPTY_SAMPLE: Sample = { values: {}, request: "" };
+
+/** The open action as the screen uses it: the draft and whether it is new. */
+type Editing = FeatureDraft & { isNew: boolean };
 
 type AiTab = "features" | "connections" | "shared";
 
@@ -141,14 +157,8 @@ export function AiManager() {
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
 	const [tab, setTab] = useState<AiTab>("features");
-	/** The action being edited. If `isNew`, it is a new screen action not yet saved (saving creates it). `initial` is the value at open time. */
-	const [editing, setEditing] = useState<{
-		feature: AiActionView;
-		spec: Editable;
-		base?: CustomBase;
-		isNew?: boolean;
-		initial: string;
-	} | null>(null);
+	/** The action opened for editing, as it was at open time. If `isNew`, it is a new screen action not yet saved (saving creates it). */
+	const [opened, setOpened] = useState<{ saved: FeatureDraft; isNew: boolean } | null>(null);
 	const [formError, setFormError] = useState<string | null>(null);
 	/** The open connection. The header's Add connection changes it, so it lives outside the Connections tab. */
 	const [connection, setConnection] = useState<string | "new" | null>(null);
@@ -157,8 +167,6 @@ export function AiManager() {
 	const [shared, setShared] = useState<string | "new" | null>(null);
 	const [sharedDirty, setSharedDirty] = useState(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
-
-	const featureDirty = editing !== null && snapshotOf(editing.spec, editing.base) !== editing.initial;
 
 	const replaceInCache = (feature: AiActionView) =>
 		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
@@ -174,13 +182,13 @@ export function AiManager() {
 			queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
 				data ? { ...data, items: data.items.filter((item) => item.key !== feature.key) } : data,
 			);
-			setEditing(null);
+			setOpened(null);
 		},
 		onError: (error) => setFormError(errorText(site, error, t("remove.failed"))),
 	});
 
 	const saveMutation = useCmsMutation({
-		fn: (current: NonNullable<typeof editing>, { site }) =>
+		fn: (current: Editing, { site }) =>
 			current.isNew && current.base
 				? createAiAction(
 						site,
@@ -214,15 +222,24 @@ export function AiManager() {
 	const saving = saveMutation.isPending;
 	const deleting = removeMutation.isPending;
 
+	// The draft follows what was opened; a closed editor holds no draft.
+	const editor = useDraftEditor<FeatureDraft | null>({
+		saved: opened && !opened.isNew ? opened.saved : null,
+		empty: opened?.isNew ? opened.saved : null,
+		equals: sameFeatureDraft,
+		saving,
+		deleting,
+	});
+	// Until the draft catches up with a newly opened action, show the action as opened.
+	const shown = opened ? (editor.draft ?? opened.saved) : null;
+	const editing: Editing | null = opened && shown ? { ...shown, isNew: opened.isNew } : null;
+	const featureDirty = opened !== null && editor.dirty;
+	const changeDraft = (change: (draft: FeatureDraft) => FeatureDraft) =>
+		editor.update((draft) => change(draft ?? (opened as { saved: FeatureDraft }).saved));
+
 	/** Opens without asking (e.g. after saving). */
 	const open = (feature: AiActionView) => {
-		const spec = editableOf(feature);
-		setEditing({
-			feature,
-			spec,
-			...(feature.custom ? { base: feature.custom } : {}),
-			initial: snapshotOf(spec, feature.custom),
-		});
+		setOpened({ saved: draftOfFeature(feature), isNew: false });
 		setFormError(null);
 	};
 
@@ -237,8 +254,7 @@ export function AiManager() {
 		if (!(await confirmDiscard(featureDirty))) return;
 		const base = NEW_CUSTOM_BASE(site);
 		const feature = draftCustomView(site, base);
-		const spec = editableOf(feature);
-		setEditing({ feature, spec, base, isNew: true, initial: snapshotOf(spec, base) });
+		setOpened({ saved: { feature, spec: editableOf(feature), base }, isNew: true });
 		setFormError(null);
 	};
 
@@ -267,7 +283,7 @@ export function AiManager() {
 		const { label: _before, ...restBefore } = editing.base ?? base;
 		const { label: _after, ...restAfter } = base;
 		if (JSON.stringify(restBefore) === JSON.stringify(restAfter)) {
-			setEditing({ ...editing, base });
+			changeDraft((draft) => ({ ...draft, base }));
 			return;
 		}
 		const draft = draftCustomView(site, base);
@@ -276,8 +292,7 @@ export function AiManager() {
 			: { ...draft, key: editing.feature.key, version: editing.feature.version, updatedAt: editing.feature.updatedAt };
 		const sameEngine = feature.engine === editing.feature.engine;
 		const { spec } = editing;
-		setEditing({
-			...editing,
+		changeDraft(() => ({
 			base,
 			feature,
 			spec: {
@@ -288,7 +303,7 @@ export function AiManager() {
 				prompt: spec.prompt,
 				...(sameEngine ? { providerId: spec.providerId, modelName: spec.modelName } : {}),
 			},
-		});
+		}));
 	};
 
 	const remove = async (feature: AiActionView) => {
@@ -409,7 +424,7 @@ export function AiManager() {
 									deleting={deleting}
 									dirty={featureDirty}
 									error={formError}
-									onChange={(spec) => setEditing({ ...editing, spec })}
+									onChange={(spec) => changeDraft((draft) => ({ ...draft, spec }))}
 									onSave={() => void save()}
 									custom={
 										editing.base
@@ -417,7 +432,7 @@ export function AiManager() {
 													base: editing.base,
 													onBaseChange: changeBase,
 													isNew: editing.isNew === true,
-													onCancel: () => setEditing(null),
+													onCancel: () => setOpened(null),
 													onDelete: () => void remove(editing.feature),
 												}
 											: undefined
@@ -826,23 +841,17 @@ function FeatureEditor({
 				</Field>
 			</FieldGroup>
 
-			{error && <InlineError>{error}</InlineError>}
-
-			<div className="flex flex-wrap items-center gap-2">
-				<Button
-					type="button"
-					size="sm"
-					disabled={saving || !dirty || (custom?.isNew === true && !custom.base.label.trim())}
-					onClick={onSave}
-				>
-					<Save aria-hidden />
-					{saving ? t("button.saving") : t("button.save")}
-				</Button>
-				{custom?.isNew && (
-					<Button type="button" size="sm" variant="outline" onClick={custom.onCancel}>
-						{t("button.cancel")}
-					</Button>
-				)}
+			<EditorFooter
+				dirty={dirty}
+				saving={saving}
+				deleting={deleting}
+				canSave={!(custom?.isNew === true && !custom.base.label.trim())}
+				error={error}
+				saveIcon={<Save aria-hidden />}
+				onSave={onSave}
+				onCancel={custom?.isNew ? custom.onCancel : undefined}
+				onDelete={custom && !custom.isNew ? custom.onDelete : undefined}
+			>
 				{defaults && (
 					<Button
 						type="button"
@@ -856,7 +865,7 @@ function FeatureEditor({
 					</Button>
 				)}
 				{!custom?.isNew && (
-					<span className="ml-auto text-cms-muted-foreground text-xs">
+					<span className="flex-1 text-right text-cms-muted-foreground text-xs">
 						{feature.updatedAt
 							? t("meta.edited", {
 									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
@@ -864,20 +873,7 @@ function FeatureEditor({
 							: t("meta.default")}
 					</span>
 				)}
-				{custom && !custom.isNew && (
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						className="text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
-						disabled={deleting}
-						onClick={custom.onDelete}
-					>
-						<Trash2 aria-hidden />
-						{deleting ? t("button.deleting") : t("button.delete")}
-					</Button>
-				)}
-			</div>
+			</EditorFooter>
 
 			<section
 				className="flex flex-col gap-2 rounded-md border bg-cms-muted/30 p-3 text-xs"

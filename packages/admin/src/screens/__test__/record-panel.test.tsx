@@ -142,6 +142,38 @@ describe("taxonomy edit panel", () => {
 		expect(screen.queryByRole("alertdialog")).toBeNull();
 	});
 
+	it("a new item with nothing entered has nothing to discard, but one with typed text asks first", async () => {
+		const { onClose } = renderPanel({ collection: "tag", id: null });
+		fireEvent.click(within(panel()).getByRole("button", { name: "취소" }));
+		await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+		expect(screen.queryByRole("alertdialog")).toBeNull();
+
+		fireEvent.change(screen.getByRole("textbox", { name: /이름/ }), { target: { value: "Vue" } });
+		fireEvent.click(within(panel()).getByRole("button", { name: "취소" }));
+		expect(await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" })).toBeTruthy();
+		expect(onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it("a new item with a prefilled name can be saved as it is and is not unsaved until edited", async () => {
+		const onClose = vi.fn();
+		const onDirtyChange = vi.fn();
+		render(
+			withSite(
+				<RecordPanel
+					target={{ collection: "tag", id: null }}
+					initial={{ title: "Svelte" }}
+					onClose={onClose}
+					onSaved={vi.fn()}
+					onDirtyChange={onDirtyChange}
+				/>,
+			),
+		);
+		expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		await waitFor(() => expect(calls("POST")).toHaveLength(1));
+		expect(bodyOf(calls("POST")[0]).metadata).toEqual({ title: "Svelte" });
+	});
+
 	it("a series edits its post list on the default locale tab", async () => {
 		renderPanel({ collection: "collection", id: null });
 		expect(await screen.findByRole("combobox", { name: "게시글 추가·빼기" })).toBeTruthy();

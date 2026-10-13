@@ -18,8 +18,10 @@ import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
 import type { SchemaTab } from "../settings/tabs";
-import { useConfirm } from "../shared/confirm-dialog";
+import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
+import { sharedMessages } from "../shared/messages";
 import { PageBody } from "../shared/page-body";
+import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
@@ -122,8 +124,10 @@ function SchemaEditor({
 	const names = Object.keys(collections);
 	const [selectedName, setSelected] = useState<string | undefined>(names[0]);
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
+	const shared = useTranslator(sharedMessages);
 	const { confirm, dialog } = useConfirm();
 	const dirty = !sameJson(draft, base);
+	const { dialog: guardDialog } = useUnsavedGuard(dirty);
 	const pending = changeCount(base, draft);
 	const savedNames = Object.keys(collectionsOf(base));
 
@@ -131,12 +135,6 @@ function SchemaEditor({
 		const message = takeSavedMessage();
 		if (message) toast.success(message);
 	}, []);
-	useEffect(() => {
-		if (!dirty) return;
-		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-		window.addEventListener("beforeunload", warn);
-		return () => window.removeEventListener("beforeunload", warn);
-	}, [dirty]);
 
 	const updateFile = (change: (file: Obj) => Obj) => setDraft((current) => change(current));
 	const context = useMemo(
@@ -152,12 +150,7 @@ function SchemaEditor({
 	);
 
 	const discard = async () => {
-		const ok = await confirm({
-			title: t("discard.title"),
-			description: t("discard.description"),
-			confirmLabel: t("discard.confirm"),
-			destructive: true,
-		});
+		const ok = await confirm(discardConfirm(shared));
 		if (!ok) return;
 		setDraft(base);
 		setRenames([]);
@@ -343,6 +336,7 @@ function SchemaEditor({
 				</div>
 			</div>
 			{dialog}
+			{guardDialog}
 			<NewCollectionDialog
 				open={creating}
 				onOpenChange={setCreating}

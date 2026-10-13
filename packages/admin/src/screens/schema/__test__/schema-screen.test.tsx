@@ -7,6 +7,7 @@ import { pressOption } from "../../../test/base-ui";
 import { createTestRouter } from "../../../test/router";
 import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
+import { sharedMessages } from "../../shared/messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
 import { schemaMessages } from "../messages";
@@ -16,6 +17,7 @@ import { SchemaSettings } from "../schema-screen";
 const nav = createTestRouter();
 const { render } = nav;
 const t = testSite.createTranslator(schemaMessages);
+const shared = testSite.createTranslator(sharedMessages);
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn(), warning: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
@@ -1183,7 +1185,7 @@ describe("SchemaScreen", () => {
 		type(label, "Article");
 		fireEvent.click(screen.getByRole("button", { name: t("actions.discard") }));
 		await act(async () => {
-			fireEvent.click(await screen.findByRole("button", { name: t("discard.confirm") }));
+			fireEvent.click(await screen.findByRole("button", { name: shared("discard.confirm") }));
 		});
 		await waitFor(() => expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).value).toBe("Post"));
 	});

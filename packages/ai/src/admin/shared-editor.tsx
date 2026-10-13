@@ -3,6 +3,7 @@
 import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
+	EditorFooter,
 	Empty,
 	EmptyContent,
 	EmptyHeader,
@@ -16,14 +17,15 @@ import {
 	Input,
 	Textarea,
 	useConfirm,
+	useDraftEditor,
 } from "@monti-cms/admin/kit";
 import { type Translator, useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
+import { useId, useState } from "react";
 import type { AiSharedItem, AiSharedView } from "../shared";
 import { aiKeys, createAiShared, deleteAiShared, getAiShared, updateAiShared } from "./api";
-import { DETAIL_PANE, InlineError, ListRow, ListSkeleton, LoadError } from "./connection-editor";
+import { DETAIL_PANE, ListRow, ListSkeleton, LoadError } from "./connection-editor";
 import { sharedMessages } from "./shared-editor.messages";
 
 /** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
@@ -148,8 +150,6 @@ interface Draft {
 
 const NEW_DRAFT: Draft = { key: "", label: "", text: "" };
 
-const sameDraft = (a: Draft, b: Draft) => a.key === b.key && a.label === b.label && a.text === b.text;
-
 /** Shows the shape to put into instructions and copies it. */
 function PlaceholderChip({ shareKey }: { shareKey: string }) {
 	const t = useTranslator(sharedMessages);
@@ -194,18 +194,19 @@ function SharedEditor({
 }) {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
-	const initial: Draft = item ? { key: item.key, label: item.label, text: item.text } : NEW_DRAFT;
-	const [draft, setDraft] = useState<Draft>(initial);
 	const [error, setError] = useState<string | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const ids = { label: useId(), key: useId(), keyTitle: useId(), text: useId() };
-	const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
+	const {
+		draft,
+		update: set,
+		dirty,
+	} = useDraftEditor({
+		saved: item ? { key: item.key, label: item.label, text: item.text } : null,
+		empty: NEW_DRAFT,
+		onDirtyChange,
+	});
 	const fromConfig = item?.source === "config";
-	const dirty = item === null || !sameDraft(draft, initial);
-	// A new text with nothing entered has nothing to discard.
-	const unsaved = item === null ? !sameDraft(draft, NEW_DRAFT) : dirty;
-	useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
-	useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
 
 	const saveMutation = useCmsMutation({
 		fn: (_: undefined, { site }) => {
@@ -325,23 +326,17 @@ function SharedEditor({
 				</Field>
 			</FieldGroup>
 
-			{error && <InlineError>{error}</InlineError>}
-
-			<div className="flex flex-wrap items-center gap-2">
-				<Button
-					type="button"
-					size="sm"
-					disabled={saving || !dirty || !draft.label.trim() || !draft.key.trim()}
-					onClick={() => void save()}
-				>
-					<Save aria-hidden />
-					{saving ? t("action.saving") : t("action.save")}
-				</Button>
-				{!item && (
-					<Button type="button" size="sm" variant="outline" onClick={onCancel}>
-						{t("action.cancel")}
-					</Button>
-				)}
+			<EditorFooter
+				dirty={dirty}
+				saving={saving}
+				deleting={deleting}
+				canSave={Boolean(draft.label.trim() && draft.key.trim())}
+				error={error}
+				saveIcon={<Save aria-hidden />}
+				onSave={save}
+				onCancel={item ? undefined : onCancel}
+				onDelete={item?.source === "added" ? () => void remove() : undefined}
+			>
 				{item?.source === "config" && (
 					<Button
 						type="button"
@@ -354,20 +349,7 @@ function SharedEditor({
 						{t("action.resetDefault")}
 					</Button>
 				)}
-				{item?.source === "added" && (
-					<Button
-						type="button"
-						size="sm"
-						variant="ghost"
-						className="ml-auto text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
-						disabled={deleting}
-						onClick={() => void remove()}
-					>
-						<Trash2 aria-hidden />
-						{deleting ? t("action.deleting") : t("action.delete")}
-					</Button>
-				)}
-			</div>
+			</EditorFooter>
 			{dialog}
 		</div>
 	);

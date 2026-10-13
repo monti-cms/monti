@@ -51,7 +51,7 @@ import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { Skeleton } from "../../ui/skeleton";
 import { Toggle } from "../../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
-import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { useConfirm } from "../shared/confirm-dialog";
 import { entryHref } from "../shared/entry-href";
 import { describeEntryStatus } from "../shared/entry-status";
 import { nounVars } from "../shared/noun.messages";
@@ -236,7 +236,6 @@ export function EntryEditorShell({
 	const router = useAdminRouter();
 	const { resolvedTheme, setTheme } = useTheme();
 	const editor = useEntryEditor({
-		formats: useCmsAdminComponents().formats,
 		adminId,
 		target:
 			mode === "edit"
@@ -277,7 +276,7 @@ export function EntryEditorShell({
 	// Closing a dialog hides it without answering it: the editor keeps the recovery copy and the conflict until they are resolved.
 	const [dismissedRecovery, setDismissedRecovery] = useState<RecoveryOffer | null>(null);
 	const [dismissedConflict, setDismissedConflict] = useState<ConflictInfo | null>(null);
-	const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+	const { confirm, dialog } = useConfirm();
 	const [incoming, setIncoming] = useState<{ items: IncomingReferenceItem[]; loading: boolean; error: string | null }>({
 		items: [],
 		loading: false,
@@ -563,29 +562,26 @@ export function EntryEditorShell({
 	};
 
 	/** Only transitions that take a published post down (archive, move to trash) ask. Unarchive and restore happen right away. */
-	const confirmLifecycle = (action: ConfirmedLifecycleAction) => {
-		setConfirm({
-			...lifecycleConfirm(site, action, entry, incoming.items, collection),
-			onConfirm: () => runLifecycle(action),
-		});
+	const confirmLifecycle = async (action: ConfirmedLifecycleAction) => {
+		const ok = await confirm(lifecycleConfirm(site, action, entry, incoming.items, collection));
+		if (ok) await runLifecycle(action);
 	};
 
-	const confirmPermanentDelete = () => {
+	const confirmPermanentDelete = async () => {
 		if (!entry) return;
-		setConfirm({
+		const ok = await confirm({
 			title: t("permanentDelete"),
 			description: t("permanentDeleteAsk", nounVars(site, collection)),
 			confirmLabel: t("permanentDelete"),
 			destructive: true,
-			onConfirm: async () => {
-				const deleted = await editor.deletePermanently();
-				if (!deleted.ok) {
-					toast.error(deleted.error.message);
-					return;
-				}
-				router.navigate(site.adminHref(`?collection=${entry.collection}&status=trashed`));
-			},
 		});
+		if (!ok) return;
+		const deleted = await editor.deletePermanently();
+		if (!deleted.ok) {
+			toast.error(deleted.error.message);
+			return;
+		}
+		router.navigate(site.adminHref(`?collection=${entry.collection}&status=trashed`));
 	};
 
 	const handleDuplicate = async () => {
@@ -1071,7 +1067,7 @@ export function EntryEditorShell({
 					onOverwrite={() => void editor.overwriteWithMine()}
 				/>
 
-				<ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+				{dialog}
 				{translationSource && (
 					<SourceChangeDialog
 						open={isSourceCompareOpen}

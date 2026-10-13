@@ -15,7 +15,7 @@ import { Checkbox } from "../../ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { useConfirm } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
@@ -251,7 +251,7 @@ export function BulkBar({
 	const [results, setResults] = useState<BulkItemResult[] | null>(null);
 	const [ranItems, setRanItems] = useState<BulkSelection[]>([]);
 	const [error, setError] = useState<string | null>(null);
-	const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+	const { confirm, dialog } = useConfirm();
 	const options = useTaxonomyOptions(collection, mode === "list");
 
 	useEffect(() => {
@@ -311,15 +311,15 @@ export function BulkBar({
 	};
 
 	// Actions that change many items at once always ask.
-	const start = () => {
+	const start = async () => {
 		if (!activeAction) return;
-		setConfirm({
+		const ok = await confirm({
 			title: activeAction.label,
 			description: activeAction.ask(selected.length, targetName()),
 			confirmLabel: activeAction.label,
 			destructive: activeAction.destructive,
-			onConfirm: () => run(selected),
 		});
+		if (ok) await run(selected);
 	};
 
 	const failures = (results ?? []).filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
@@ -434,7 +434,7 @@ export function BulkBar({
 					))}
 				</ul>
 			)}
-			<ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+			{dialog}
 		</section>
 	);
 }
