@@ -1,8 +1,8 @@
 import { Pool } from "pg";
 import { SSLMODE_FIX, sslmodeWarning } from "../../adapters/postgres/connection";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "../../adapters/postgres/explain";
-import type { CoreCheck, DoctorState } from "./core-checks";
 import { fail, fromProblem, ok, skip, warn } from "./outcome";
+import type { CoreCheck, DoctorState } from "./types";
 
 /** How long a check waits for the database before it calls it unreachable. */
 const CONNECT_TIMEOUT_MS = 8000;

@@ -5,9 +5,10 @@ import type { Cms } from "../../cms";
 import { importCms } from "../app";
 import { DEFAULT_ENV_FILES, loadEnvFiles } from "../env";
 import { locateConfig } from "../locate";
-import { CORE_CHECKS, type DoctorState, GROUP_ORDER } from "./core-checks";
+import { CORE_CHECKS, GROUP_ORDER } from "./checks";
 import { type DoctorReport, type DoctorResult, summarize } from "./format";
 import type { CheckOutcome } from "./outcome";
+import type { DoctorState } from "./types";
 
 export interface DoctorOptions {
 	/** The app folder. */

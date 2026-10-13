@@ -2,8 +2,8 @@ import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust
 import { WHERE_TO_SET_ENV } from "../../core/env";
 import { CMS_AUTH_BASE_PATH } from "../../server/define";
 import { githubLoginHowTo } from "../templates";
-import type { CoreCheck, DoctorState } from "./core-checks";
 import { fail, ok, skip, warn } from "./outcome";
+import type { CoreCheck, DoctorState } from "./types";
 
 /** The `auth` group of `monti doctor`: only the environment values and config values core itself knows about the GitHub login. */
 
