@@ -13,6 +13,7 @@ import { collectAnswers, detectedLocales, detectSystemTimeZone, type InitAnswerF
 import { findOtherNextConfig, findRootLayout, montiNextFilePath, montiNextFiles } from "./next-app";
 import { Cancelled, type Prompter } from "./prompt";
 import {
+	ADMIN_PEER_PACKAGES,
 	adminLayoutTemplate,
 	adminPageTemplate,
 	apiRouteTemplate,
@@ -476,7 +477,20 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 	}
 	const hasFailure = report.steps.some((step) => step.status === "failed");
 	const willInstall = installed || (dryRun && installing);
-	if (missing.length > 0 && !willInstall) todo.push(`Install the packages:\n${commandText(installCommand)}`);
+	if (missing.length > 0 && !willInstall) {
+		const peers = missing.filter((name) => (ADMIN_PEER_PACKAGES as readonly string[]).includes(name));
+		todo.push(
+			[
+				"Install the packages:",
+				commandText(installCommand),
+				...(peers.length > 0
+					? [
+							`${peers.join(", ")} are libraries the admin shares with your app: they are peer dependencies, so your app installs them and both use one copy.`,
+						]
+					: []),
+			].join("\n"),
+		);
+	}
 	todo.push(...manual);
 	todo.push(
 		[

@@ -558,6 +558,21 @@ export function envExampleTemplate(answers: InitAnswers): string {
 	return `${lines.join("\n")}\n`;
 }
 
+/**
+ * The libraries the admin shares with the app, which `@monti-cms/admin` (and the AI plugin and the blocks) declare as peer dependencies and so are not installed
+ * with it. They must stay peers: React Query, next-themes, sonner, Tiptap and the lucide icons keep state in a module-level context or schema, so the admin, the plugins and
+ * the app's own admin pages have to load one copy. `monti init` installs them with the Monti packages.
+ */
+export const ADMIN_PEER_PACKAGES = [
+	"next-themes",
+	"@tanstack/react-query",
+	"sonner",
+	"@tiptap/core",
+	"@tiptap/pm",
+	"@tiptap/react",
+	"lucide-react",
+] as const;
+
 /** The npm packages the answers need, besides what the app already lists. */
 export function packagesFor(answers: InitAnswers): string[] {
 	const blocks = chosenBlocks(answers.blocks);
@@ -567,13 +582,8 @@ export function packagesFor(answers: InitAnswers): string[] {
 		"@monti-cms/admin",
 		"@monti-cms/nextjs",
 		"@monti-cms/mdx",
-		"next-themes",
-		"@tanstack/react-query",
-		"sonner",
-		"@tiptap/core",
-		"@tiptap/pm",
-		"@tiptap/react",
-		...(blocks.length > 0 ? ["@monti-cms/blocks", "lucide-react"] : []),
+		...ADMIN_PEER_PACKAGES,
+		...(blocks.length > 0 ? ["@monti-cms/blocks"] : []),
 		...blocks.flatMap((block) => (block.needs ? [block.needs] : [])),
 		...(answers.directiveSyntax ? ["@monti-cms/syntax-directive"] : []),
 		...(answers.ai ? ["@monti-cms/ai"] : []),

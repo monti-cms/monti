@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { initProject, installSpecs } from "../init";
 import { CREATE_NEXT_APP, fakeHost, fixtureApp } from "./init-helpers";
@@ -90,5 +92,29 @@ describe("monti init with a GitHub spec for core", () => {
 		const step = report.steps.find((entry) => entry.name === "Install packages");
 		expect(step?.detail).toContain("'@monti-cms/admin@github:");
 		expect(report.installed).toContain("@monti-cms/admin");
+	});
+});
+
+describe("the packages init installs", () => {
+	const PACKAGES = path.resolve(import.meta.dirname, "../../../..");
+	/** The peers a package asks the app to install: not Monti's own, not React. */
+	const peersOf = (folder: string): string[] =>
+		Object.keys(
+			JSON.parse(readFileSync(path.join(PACKAGES, folder, "package.json"), "utf8")).peerDependencies ?? {},
+		).filter((name) => !name.startsWith("@monti-cms/") && name !== "react" && name !== "react-dom");
+
+	it("includes every library the admin and the AI plugin need as peers, also with no blocks", async () => {
+		for (const blocks of ["default", "none"]) {
+			const dir = fixtureApp();
+			const report = await initProject({ cwd: dir, host: fakeHost(), install: false, extras: "ai", blocks });
+			expect(report.installed).toEqual(expect.arrayContaining([...peersOf("admin"), ...peersOf("ai")]));
+		}
+	});
+
+	it("when the install is left to the person, the list says why the libraries are there", async () => {
+		const report = await initProject({ cwd: fixtureApp(), host: fakeHost(), install: false });
+		const step = report.next.find((item) => item.startsWith("Install the packages:")) ?? "";
+		expect(step).toContain("peer dependencies");
+		expect(step).toContain("lucide-react");
 	});
 });
