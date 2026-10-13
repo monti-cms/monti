@@ -6,7 +6,6 @@ import { vi } from "vitest";
 import { baseConfig } from "../../test/cms.config";
 import { gitSync } from "../index";
 import type { GitSyncTarget } from "../options";
-import { saveSettings } from "../settings";
 import { type SyncContext, syncContextFor } from "../sync";
 import { createFakeGitHub } from "../testing";
 
@@ -82,7 +81,7 @@ export async function createHarness(options: HarnessOptions = {}) {
 	const ctx: SyncContext = syncContextFor(cms);
 	if (!options.noSettings && !options.noSecret) {
 		await cms.apiKeys.slot("git-sync", "token").assign({ use: "new", value: TOKEN });
-		await saveSettings(ctx, { webhookSecret: WEBHOOK_SECRET, expectedVersion: 0 });
+		await cms.apiKeys.slot("git-sync", "webhook-secret").assign({ use: "new", value: WEBHOOK_SECRET });
 	}
 	const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
 

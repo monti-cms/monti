@@ -7,7 +7,6 @@ import type { PluginCollection, PluginStorage, StorageItem } from "@monti-cms/co
 
 /** The collections of the plugin's storage. */
 export const COLLECTIONS = {
-	settings: "settings",
 	records: "records",
 	queue: "queue",
 	conflicts: "conflicts",
@@ -15,12 +14,6 @@ export const COLLECTIONS = {
 	locks: "locks",
 	applying: "applying",
 } as const;
-
-/** The saved settings (one item, `default`). */
-export interface StoredSettings {
-	/** The secret the push webhook is signed with, encrypted with the plugin's key (`cms.secrets("git-sync")`). */
-	readonly webhookSecret: string | null;
-}
 
 /**
  * What was last synced for one entry of one target. `blobSha` is the git blob git-sync last wrote (or read) for the entry, `contentHash` the content hash of the published
@@ -152,7 +145,6 @@ const prefixOf = (target: string) => `${target}:`;
 
 /** Typed access to the plugin's storage. */
 export function createState(storage: PluginStorage) {
-	const settings = storage.collection<StoredSettings>(COLLECTIONS.settings);
 	const records = storage.collection<SyncRecord>(COLLECTIONS.records);
 	const queue = storage.collection<QueueItem>(COLLECTIONS.queue);
 	const conflicts = storage.collection<ConflictRecord>(COLLECTIONS.conflicts);
@@ -161,10 +153,6 @@ export function createState(storage: PluginStorage) {
 	const applying = storage.collection<ApplyingValue>(COLLECTIONS.applying);
 
 	return {
-		settings: {
-			get: () => settings.get("default"),
-			save: (value: StoredSettings, expectedVersion: number) => settings.set("default", value, { expectedVersion }),
-		},
 		records: {
 			get: async (target: string, entryId: string) => (await records.get(entryKey(target, entryId)))?.value ?? null,
 			/** Every record of a target, by entry id. */

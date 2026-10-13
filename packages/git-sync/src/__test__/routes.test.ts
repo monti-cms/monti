@@ -59,38 +59,33 @@ describe("the GitHub token slot", () => {
 
 	it("is not asked for while the plugin is switched off (`enabled: false`)", () => {
 		expect(gitSync({ enabled: false }).keySlots).toBeUndefined();
-		expect(gitSync({}).keySlots).toHaveLength(1);
+		expect((gitSync({}).keySlots ?? []).map((slot) => slot.id)).toEqual(["token", "webhook-secret"]);
 	});
 
-	it("is a key of the store, never in the plugin's storage, and the settings never send the token or the webhook secret back", async () => {
-		const stored = await h.cms.storage("git-sync").collection<Record<string, unknown>>("settings").get("default");
+	it("is a key of the store, never in the plugin's storage, and the status never sends the token or the webhook secret back", async () => {
 		const key = await keyNamed("GitHub");
+		const secretKey = await keyNamed("GitHub webhook");
 		expect(key).toBeDefined();
-		expect(stored?.value).not.toHaveProperty("token");
-		expect(stored?.value).not.toHaveProperty("tokenKeyId");
-		expect(String(stored?.value.webhookSecret)).toMatch(/^mk1:/);
-		expect(JSON.stringify(stored)).not.toContain(TOKEN);
-		expect(JSON.stringify(stored)).not.toContain(WEBHOOK_SECRET);
+		expect(secretKey).toBeDefined();
+		// The plugin keeps no settings of its own: both secrets are keys of the store.
+		expect(await h.cms.storage("git-sync").collection("settings").list()).toEqual([]);
 		expect(await h.cms.apiKeys.slot("git-sync", "token").read()).toBe(TOKEN);
+		expect(await h.cms.apiKeys.slot("git-sync", "webhook-secret").read()).toBe(WEBHOOK_SECRET);
 
-		const text = await (await call("settings")).text();
-		expect(JSON.parse(text)).toEqual({
+		const text = await (await call("status")).text();
+		expect(JSON.parse(text).keys).toEqual({
 			secretsAvailable: true,
-			token: { key: { id: key?.id, name: "GitHub", tail: "1234", readable: true } },
-			webhookSecret: { set: true, readable: true },
-			version: 1,
+			token: { id: key?.id, name: "GitHub", tail: "1234", readable: true },
+			webhookSecret: { id: secretKey?.id, name: "GitHub webhook", tail: "", readable: true },
 		});
 		expect(text).not.toContain(TOKEN);
 		expect(text).not.toContain(WEBHOOK_SECRET);
-		expect(await (await call("status")).text()).not.toContain(TOKEN);
 		expect((await keyNamed("GitHub"))?.slots).toHaveLength(1);
 	});
 
 	it("uses a typed key assigned through the slots route for the next GitHub call, and picks up a replaced value", async () => {
 		expect((await assign({ use: "new", value: "ghp_new_value_9999" })).status).toBe(200);
-		expect(await (await call("settings")).json()).toMatchObject({
-			token: { key: { name: "GitHub 2", tail: "9999" } },
-		});
+		expect((await (await call("status")).json()).keys).toMatchObject({ token: { name: "GitHub 2", tail: "9999" } });
 		expect(h.github.tokens).toEqual([]);
 		await publishMemo("uses-token");
 		expect(h.github.tokens.at(-1)).toBe("ghp_new_value_9999");
@@ -103,7 +98,7 @@ describe("the GitHub token slot", () => {
 
 	it("is back in the no-token state when the slot is cleared, and the key itself stays", async () => {
 		expect((await assign({ use: "none" })).status).toBe(200);
-		expect(await (await call("settings")).json()).toMatchObject({ token: { key: null } });
+		expect((await (await call("status")).json()).keys).toMatchObject({ token: null });
 		await expect(h.ctx.client(h.target)).rejects.toMatchObject({ name: "GitSyncNotConfigured" });
 		await publishMemo("after-clear");
 		// A setup state, not a failure: the entry waits in the queue and nothing reaches GitHub.
@@ -116,55 +111,48 @@ describe("the GitHub token slot", () => {
 	it("is back in the no-token state when the key is deleted", async () => {
 		const key = await keyNamed("GitHub");
 		await h.cms.apiKeys.remove(key?.id ?? "", { expectedVersion: key?.version ?? 0, force: true });
-		expect(await (await call("settings")).json()).toMatchObject({ token: { key: null } });
+		expect((await (await call("status")).json()).keys).toMatchObject({ token: null });
 		await expect(h.ctx.client(h.target)).rejects.toMatchObject({ name: "GitSyncNotConfigured" });
 		await publishMemo("after-delete");
 		expect(h.github.tokens).toEqual([]);
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(1);
 	});
 
-	it("sends what waited when the screen reports a new token, and does nothing while there is none", async () => {
+	it("sends what waited as soon as a token is assigned (the slot's onChange), and does nothing while there is none", async () => {
 		await assign({ use: "none" });
 		await publishMemo("waiting");
-		expect((await call("token-changed", "POST", {})).status).toBe(200);
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(1);
 		await assign({ use: "new", value: "ghp_late_token_0000" });
-		expect((await call("token-changed", "POST", {})).status).toBe(200);
 		expect(h.repo.files("main").has("content/memo/waiting.en.mdx")).toBe(true);
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(0);
 	});
 });
 
-describe("settings: the webhook secret", () => {
-	it("keeps what is not sent, forgets the secret on request, and ignores a token", async () => {
-		const saved = await call("settings", "PUT", { webhookSecret: "another-secret", expectedVersion: 1 });
-		expect(await saved.json()).toMatchObject({ webhookSecret: { set: true }, version: 2 });
-		const kept = await call("settings", "PUT", { expectedVersion: 2 });
-		expect(await kept.json()).toMatchObject({
-			webhookSecret: { set: true },
-			token: { key: { name: "GitHub" } },
-			version: 3,
-		});
-		const forgot = await call("settings", "PUT", { webhookSecret: null, expectedVersion: 3 });
-		expect(await forgot.json()).toMatchObject({
-			webhookSecret: { set: false },
-			token: { key: { name: "GitHub" } },
-			version: 4,
-		});
-	});
+describe("the webhook secret slot", () => {
+	const assignSecret = (key: unknown) => slots({ plugin: "git-sync", slot: "webhook-secret", key });
 
-	it("refuses a save without a version and with a stale one", async () => {
-		expect((await call("settings", "PUT", { webhookSecret: "x" })).status).toBe(428);
-		expect((await call("settings", "PUT", { webhookSecret: "x", expectedVersion: 7 })).status).toBe(409);
+	it("is a key assigned to its own slot, named after the service, and is forgotten when the slot is cleared", async () => {
+		expect((await assignSecret({ use: "new", value: "another-secret-123456" })).status).toBe(200);
+		expect((await (await call("status")).json()).keys.webhookSecret).toMatchObject({
+			name: "GitHub webhook 2",
+			tail: "3456",
+		});
+		expect((await assignSecret({ use: "none" })).status).toBe(200);
+		expect((await (await call("status")).json()).keys.webhookSecret).toBeNull();
+		expect(await h.cms.apiKeys.slot("git-sync", "webhook-secret").read()).toBeNull();
 	});
 
 	it("is not reachable from another site: the same-origin check applies to every change", async () => {
-		expect(
-			(await call("settings", "PUT", { webhookSecret: null, expectedVersion: 1 }, { origin: "https://evil.example" }))
-				.status,
-		).toBe(403);
-		expect((await call("token-changed", "POST", {}, { origin: "https://evil.example" })).status).toBe(403);
-		expect((await call("pull", "POST", {}, { origin: "https://evil.example" })).status).toBe(403);
+		const evil = { origin: "https://evil.example" };
+		const change = await h.cms.handle(
+			new Request("http://localhost/api/monti/v1/api-keys/slots", {
+				method: "PUT",
+				headers: { "content-type": "application/json", ...evil },
+				body: JSON.stringify({ plugin: "git-sync", slot: "webhook-secret", key: { use: "none" } }),
+			}),
+		);
+		expect(change.status).toBe(403);
+		expect((await call("pull", "POST", {}, evil)).status).toBe(403);
 		expect((await call("conflicts/resolve", "POST", {}, {})).status).toBe(403);
 	});
 });

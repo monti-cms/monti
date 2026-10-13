@@ -4,6 +4,8 @@ import type { GitHubClientFactory } from "./github/client";
 /** The name under which the plugin is found in the site config's `plugins`. */
 /** Id of the plugin's one API key slot: the GitHub token. */
 export const GIT_SYNC_TOKEN_SLOT = "token";
+/** The key slot of the secret the push webhook is signed with. */
+export const GIT_SYNC_WEBHOOK_SLOT = "webhook-secret";
 
 export const GIT_SYNC_PLUGIN_NAME = "git-sync";
 

@@ -7,7 +7,7 @@ Two-way sync of **published entries** with files in a GitHub repo: a separate co
 - Talks to GitHub through the API with a token and a webhook, so it works on serverless hosting. No checkout, no `git` binary.
 - Delivered through the core's event outbox (`afterCommit`): a failed push is retried, not lost.
 - The text of a file comes from a format plugin (`mdx` by default) with `purpose: "sync"`, so what is written can be read back.
-- The GitHub token is a key of the core's API key store assigned to the plugin's `token` key slot (listed under Tools > API keys, and set on the plugin's own screen too: pick a saved key or type one, which is saved as a new key). The webhook secret is saved on the same screen, encrypted with a key derived from `MONTI_SECRET` (`cms.secrets("git-sync")`). Neither is ever in config.
+- The GitHub token is a key of the core's API key store assigned to the plugin's `token` key slot (listed under Tools > API keys, and set on the plugin's own screen too: pick a saved key or type one, which is saved as a new key). The webhook secret is a key of the same store, assigned to the plugin's `webhook-secret` slot (service "GitHub webhook"); the Settings tab can generate it, show it, copy it and save it. Neither is ever in config, and a saved value is never sent back to the browser.
 
 ```ts
 // monti.config.ts
@@ -70,7 +70,7 @@ The config is checked when the site config is created: a missing collection, a p
 ## Setting it up
 
 1. **Token.** Create a fine-grained personal access token on GitHub with **read and write** access to *Contents* and *Pull requests* of the repo (a classic token with `repo` scope also works). On the Git sync screen, Settings tab, enter it (or pick a key already in the API keys). It is stored encrypted in the API key store, assigned to git-sync's token slot, and shown only as its last four characters. If the key is deleted or the slot is cleared, git-sync is back in the "no token saved yet" state. The app needs `MONTI_SECRET`; without it nothing can be saved.
-2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/monti/v1/git-sync/webhook`), content type `application/json`, the **push** event, and a secret: use "Generate" on the Settings tab, save it there, and paste the same value into GitHub. The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
+2. **Webhook** (to get changes back). In the repo: Settings, Webhooks, Add webhook. Payload URL: the one the Settings tab shows (`https://<site>/api/monti/v1/git-sync/webhook`), content type `application/json`, the **push** event, and a secret: use "Generate" on the Settings tab, "Copy" it, save it there, and paste the same value into GitHub (once saved, the value is not shown again). The route checks `X-Hub-Signature-256` against that secret and refuses anything else. The site must be reachable from GitHub.
 3. **First sync.** `monti git-sync:push --all` writes every published entry to the repo (below).
 
 Without the webhook, "Pull now" on the screen and `monti git-sync:pull` (for a cron job) bring changes in.
@@ -185,7 +185,7 @@ All of them load the app like `monti migrate` (`--env-file`, `--no-env-file`, `-
 
 - **Sync**: per target the repo and branch, mode, folder, path pattern, format and collections; how many entries are synced, waiting in the queue or in conflict; the last pull (counts, files with errors, skipped files) and the last commit (files, commit, pull request link, notes); **Pull now** and **Commit the queue now**.
 - **Conflicts**: the list with the diff and the two actions. The tab shows how many there are.
-- **Settings**: the GitHub token (a key of the API key store) and the webhook secret (write-only), the webhook payload URL.
+- **Settings**: the GitHub token and the webhook secret (both keys of the API key store, assigned to the plugin's slots; the secret has Generate, Show and Copy), the webhook payload URL.
 
 ## API
 
@@ -193,7 +193,7 @@ Under `/api/monti/v1/git-sync/`; all admin only except the webhook, which is pub
 
 | Route | |
 | --- | --- |
-| `GET status`, `GET/PUT settings` | The screen's data. `PUT` takes `webhookSecret`; values are only ever written. The token is assigned with the core's `PUT v1/api-keys/slots` (`{ plugin: "git-sync", slot: "token", key }`); `POST token-changed` is what the screen calls afterwards so the queue is sent |
+| `GET status` | The screen's data, with the two keys by name and last four characters. The token and the webhook secret are assigned with the core's `PUT v1/api-keys/slots` (`{ plugin: "git-sync", slot: "token" or "webhook-secret", key }`); assigning the token sends what waited in the queue (the slot's `onChange`) |
 | `POST pull`, `POST flush` | `{ target? }`: "Pull now" and "Commit the queue now" |
 | `GET conflicts`, `POST conflicts/resolve` | `{ target, entryId, resolution: "git" \| "server", gitSha? }` |
 | `POST webhook` | GitHub's `push` webhook (`X-Hub-Signature-256`, `X-GitHub-Event`) |

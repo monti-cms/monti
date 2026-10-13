@@ -1,8 +1,9 @@
-import { CmsError, type ContentEvent, type Entry, problemText } from "@monti-cms/core/plugin/server";
+import { CmsError, type ContentEvent, type Entry } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable } from "./entry-file";
 import type { BranchHead, FileChange, GitHubClient } from "./github/client";
 import type { ResolvedTarget } from "./options";
 import type { PathPattern } from "./path-pattern";
+import { serverMessages } from "./server.messages";
 import type { ConflictRecord, SyncRecord } from "./state";
 import { entryKey } from "./state";
 import {
@@ -353,11 +354,7 @@ export async function flushTarget(
 		const head = await client.getBranchHead(target.branch);
 		if (!head)
 			throw new GitSyncError(
-				problemText({
-					what: `The branch "${target.branch}" does not exist in ${target.repo}`,
-					where: "`branch` of the target in gitSync() of monti.config.ts",
-					fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
-				}),
+				ctx.cms.site.createTranslator(serverMessages)("branchMissing", { branch: target.branch, repo: target.repo }),
 			);
 		const plan: PlanContext = {
 			ctx,
@@ -437,7 +434,11 @@ export async function flushTarget(
 	if (result.failed.length > 0) {
 		const first = result.failed[0];
 		throw new GitSyncError(
-			`${result.failed.length} queued ${result.failed.length === 1 ? "entry" : "entries"} could not be synced (${first?.entryId}: ${first?.message}); they stay queued and are retried`,
+			ctx.cms.site.createTranslator(serverMessages)(result.failed.length === 1 ? "queueFailedOne" : "queueFailedMany", {
+				count: result.failed.length,
+				entry: first?.entryId ?? "",
+				message: first?.message ?? "",
+			}),
 		);
 	}
 	return result;
@@ -486,7 +487,7 @@ async function settle(
 	// Still queued although nothing failed: another process holds it (or a newer event queued the entry again and will flush it itself).
 	const left = await ctx.state.queue.get(target.id, entryId);
 	if (left && left.value.queuedAt <= queuedAt) {
-		throw new GitSyncError("The entry is queued but was not committed yet; it is retried");
+		throw new GitSyncError(ctx.cms.site.createTranslator(serverMessages)("notCommitted"));
 	}
 	return undefined;
 }

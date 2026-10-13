@@ -80,11 +80,10 @@ const requests = (method: string) =>
 beforeEach(() => {
 	vi.clearAllMocks();
 	status = {
-		settings: {
+		keys: {
 			secretsAvailable: true,
-			token: { key: { id: "key-1", name: "GitHub", tail: "1234", readable: true } },
-			webhookSecret: { set: false, readable: true },
-			version: 3,
+			token: { id: "key-1", name: "GitHub", tail: "1234", readable: true },
+			webhookSecret: null,
 		},
 		targets: [target],
 	};
@@ -98,9 +97,7 @@ beforeEach(() => {
 		if (method === "POST" && input === "/api/monti/v1/git-sync/flush")
 			return json({ results: [{ written: 2, removed: 0 }] });
 		if (method === "POST" && input === "/api/monti/v1/git-sync/conflicts/resolve") return json({ resolution: "git" });
-		if (method === "PUT" && input === "/api/monti/v1/git-sync/settings") return json(status);
 		if (method === "PUT" && input === "/api/monti/v1/api-keys/slots") return json({ ok: true });
-		if (method === "POST" && input === "/api/monti/v1/git-sync/token-changed") return json({ ok: true });
 		// The sidebar badges the shell asks for.
 		return json({ total: 0, items: [], counts: { failed: 0, dead: 0 } });
 	});
@@ -168,15 +165,7 @@ describe("Git sync screen: sync tab", () => {
 		renderPage();
 		expect(await screen.findByText(t("sync.empty"))).toBeTruthy();
 		cleanup();
-		status = {
-			settings: {
-				secretsAvailable: true,
-				token: { key: null },
-				webhookSecret: { set: false, readable: true },
-				version: 0,
-			},
-			targets: [target],
-		};
+		status = { keys: { secretsAvailable: true, token: null, webhookSecret: null }, targets: [target] };
 		renderPage();
 		expect(await screen.findByText(t("sync.noToken"))).toBeTruthy();
 	});
@@ -244,7 +233,7 @@ describe("Git sync screen: settings tab", () => {
 		fireEvent.click(screen.getByRole("tab", { name: new RegExp(t("tab.settings")) }));
 	};
 
-	it("shows which key the token uses without showing the token, and sends a new one with the version it saw", async () => {
+	it("shows which key the token uses without showing the token, and sends a new one to the token slot", async () => {
 		await openSettings();
 		expect(await screen.findByText(t("settings.token.state.set", { hint: "GitHub ••••1234" }))).toBeTruthy();
 		// Nothing to save while the field shows the key the token uses now.
@@ -261,11 +250,12 @@ describe("Git sync screen: settings tab", () => {
 				{ plugin: "git-sync", slot: "token", key: { use: "new", value: "ghp_brand_new" } },
 			]),
 		);
-		await waitFor(() => expect(requests("POST")).toContainEqual(["/api/monti/v1/git-sync/token-changed", {}]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t("settings.saved")));
 	});
 
-	it("shows the webhook URL, makes a webhook secret and saves it", async () => {
+	it("shows the webhook URL, makes a webhook secret that can be seen and copied, and saves it into its slot", async () => {
+		const writeText = vi.fn(async () => undefined);
+		vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
 		await openSettings();
 		const url = (await screen.findByLabelText(t("settings.webhook.url"))) as HTMLInputElement;
 		expect(url.value).toMatch(/\/api\/monti\/v1\/git-sync\/webhook$/);
@@ -273,20 +263,28 @@ describe("Git sync screen: settings tab", () => {
 		const secret = screen.getByLabelText(t("settings.webhook")) as HTMLInputElement;
 		const generated = secret.value;
 		expect(generated).toMatch(/^[0-9a-f]{64}$/);
+		// A generated secret is shown (it goes into GitHub), can be hidden again, and can be copied.
+		expect(secret.type).toBe("text");
+		fireEvent.click(screen.getByRole("button", { name: t("settings.hide") }));
+		expect(secret.type).toBe("password");
+		fireEvent.click(screen.getByRole("button", { name: t("settings.show") }));
+		expect(secret.type).toBe("text");
+		fireEvent.click(screen.getByRole("button", { name: t("settings.copy") }));
+		await waitFor(() => expect(writeText).toHaveBeenCalledWith(generated));
 		fireEvent.click(screen.getAllByRole("button", { name: t("settings.save") })[1] as HTMLElement);
 		await waitFor(() =>
 			expect(requests("PUT")).toContainEqual([
-				"/api/monti/v1/git-sync/settings",
-				{ webhookSecret: generated, expectedVersion: 3 },
+				"/api/monti/v1/api-keys/slots",
+				{ plugin: "git-sync", slot: "webhook-secret", key: { use: "new", value: generated } },
 			]),
 		);
 	});
 
-	it("does not show the webhook secret as plain text or offer it to the password manager as a login", async () => {
+	it("keeps a typed webhook secret hidden until it is shown, and does not offer it to the password manager as a login", async () => {
 		await openSettings();
 		const secret = (await screen.findByLabelText(t("settings.webhook"))) as HTMLInputElement;
 		expect(secret.type).toBe("password");
-		expect(secret.autocomplete).toBe("new-password");
+		expect(secret.autocomplete).toBe("off");
 	});
 
 	it("forgets the token on request", async () => {
@@ -298,11 +296,10 @@ describe("Git sync screen: settings tab", () => {
 				{ plugin: "git-sync", slot: "token", key: { use: "none" } },
 			]),
 		);
-		expect(requests("POST").filter(([url]) => String(url).endsWith("/token-changed"))).toEqual([]);
 	});
 
 	it("explains that nothing can be saved when the server has no CMS secret", async () => {
-		status = { ...status, settings: { ...(status.settings as object), secretsAvailable: false } };
+		status = { ...status, keys: { ...(status.keys as object), secretsAvailable: false } };
 		await openSettings();
 		expect(await screen.findByText(t("settings.secretMissing"))).toBeTruthy();
 		fireEvent.click(screen.getByRole("radio", { name: new RegExp(keyT("field.useNew")) }));

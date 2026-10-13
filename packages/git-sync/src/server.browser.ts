@@ -6,4 +6,7 @@ import type { CmsServerPlugin } from "@monti-cms/core";
  */
 const empty: CmsServerPlugin = {};
 
+/** Runs on the server only; the slot's `onChange` never reaches it in the browser. */
+export const onTokenChanged = async (): Promise<void> => undefined;
+
 export default empty;

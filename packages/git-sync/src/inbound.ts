@@ -1,8 +1,9 @@
-import { type Entry, problemText } from "@monti-cms/core/plugin/server";
+import type { Entry } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, type FileToApply, readEntry, recordOf } from "./apply";
 import { exportEntry, isSyncable, parseEntryFile, sameContent } from "./entry-file";
 import type { ResolvedTarget } from "./options";
 import { enqueue, flushTarget, isKnownBlob } from "./outbound";
+import { serverMessages } from "./server.messages";
 import type { ConflictReason, ConflictRecord, PullSummary, SyncRecord } from "./state";
 import { entryKey } from "./state";
 import { GitSyncError, type SyncContext } from "./sync";
@@ -49,11 +50,7 @@ export async function pullTarget(ctx: SyncContext, target: ResolvedTarget): Prom
 		const head = await client.getBranchHead(target.branch);
 		if (!head)
 			throw new GitSyncError(
-				problemText({
-					what: `The branch "${target.branch}" does not exist in ${target.repo}`,
-					where: "`branch` of the target in gitSync() of monti.config.ts",
-					fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
-				}),
+				ctx.cms.site.createTranslator(serverMessages)("branchMissing", { branch: target.branch, repo: target.repo }),
 			);
 		const files = await client.listFiles(head, target.folder);
 		const records = await ctx.state.records.list(target.id);

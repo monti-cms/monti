@@ -1,7 +1,9 @@
 import type { PluginCommand } from "@monti-cms/core";
+import type { Cms } from "@monti-cms/core/plugin/server";
 import { pullTarget } from "./inbound";
 import type { ResolvedTarget } from "./options";
 import { flushTarget, pushAll } from "./outbound";
+import { serverMessages } from "./server.messages";
 import { syncContextFor } from "./sync";
 
 /**
@@ -12,12 +14,19 @@ import { syncContextFor } from "./sync";
 const targetOption = { type: "string", description: "Only this target (its id); default: every target" } as const;
 
 /** The targets a command works on: the one named by `--target`, or all. */
-const pick = (targets: readonly ResolvedTarget[], wanted: string | boolean | undefined): readonly ResolvedTarget[] => {
+const pick = (
+	cms: Cms,
+	targets: readonly ResolvedTarget[],
+	wanted: string | boolean | undefined,
+): readonly ResolvedTarget[] => {
 	if (typeof wanted !== "string") return targets;
 	const found = targets.find((target) => target.id === wanted);
 	if (!found)
 		throw new Error(
-			`There is no git-sync target "${wanted}" (targets: ${targets.map((target) => target.id).join(", ") || "none"})`,
+			cms.site.createTranslator(serverMessages)("noTargetIn", {
+				id: wanted,
+				targets: targets.map((target) => target.id).join(", ") || "none",
+			}),
 		);
 	return [found];
 };
@@ -31,7 +40,7 @@ export const commands: Readonly<Record<string, PluginCommand>> = {
 			const ctx = syncContextFor(cms);
 			let conflicts = 0;
 			let errors = 0;
-			for (const target of pick(ctx.targets, args.target)) {
+			for (const target of pick(ctx.cms, ctx.targets, args.target)) {
 				const summary = await pullTarget(ctx, target);
 				log(
 					`${target.id} (${target.repo}@${target.branch}): ${summary.created} created, ${summary.applied} updated, ${summary.unchanged} unchanged, ${summary.conflicts} conflicts, ${summary.errors.length} errors`,
@@ -54,7 +63,7 @@ export const commands: Readonly<Record<string, PluginCommand>> = {
 				return 1;
 			}
 			const ctx = syncContextFor(cms);
-			for (const target of pick(ctx.targets, args.target)) {
+			for (const target of pick(ctx.cms, ctx.targets, args.target)) {
 				const result = await pushAll(ctx, target);
 				log(
 					`${target.id} (${target.repo}@${target.branch}): ${result.queued} published entries, ${result.written} files written, ${result.removed} removed, ${result.conflicts} conflicts${result.commitSha ? `, commit ${result.commitSha.slice(0, 7)} on ${result.branch}` : ", nothing to commit"}`,
@@ -69,7 +78,7 @@ export const commands: Readonly<Record<string, PluginCommand>> = {
 		options: { target: targetOption },
 		run: async ({ cms, args, log }) => {
 			const ctx = syncContextFor(cms);
-			for (const target of pick(ctx.targets, args.target)) {
+			for (const target of pick(ctx.cms, ctx.targets, args.target)) {
 				const result = await flushTarget(ctx, target);
 				log(
 					`${target.id}: ${result.written} written, ${result.removed} removed${result.commitSha ? `, commit ${result.commitSha.slice(0, 7)}` : ", nothing to commit"}`,

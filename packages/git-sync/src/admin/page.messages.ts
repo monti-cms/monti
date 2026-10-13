@@ -67,7 +67,7 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"settings.token.state.unreadable":
 			"The key can't be read any more (the CMS secret changed). Enter the token again.",
 		"settings.webhook": "Webhook secret",
-		"settings.webhook.state.set": "Saved",
+		"settings.webhook.state.set": "Using {hint}",
 		"settings.webhook.state.unset": "Not saved",
 		"settings.webhook.state.unreadable":
 			"Saved, but it can't be read any more (the CMS secret changed). Save it again.",
@@ -76,6 +76,11 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"settings.webhook.help":
 			"In the GitHub repo open Settings, Webhooks, Add webhook. Use the payload URL above, the content type application/json and this secret, and send the push event.",
 		"settings.generate": "Generate",
+		"settings.show": "Show",
+		"settings.hide": "Hide",
+		"settings.copy": "Copy",
+		"settings.copied": "Copied.",
+		"settings.copy.failed": "Couldn't copy.",
 		"settings.save": "Save",
 		"settings.remove": "Remove",
 		"settings.saved": "Saved.",
@@ -144,7 +149,7 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"settings.token.state.unset": "선택한 토큰 없음",
 		"settings.token.state.unreadable": "키를 더 이상 읽을 수 없습니다(CMS 비밀 값이 바뀜). 토큰을 다시 넣으세요.",
 		"settings.webhook": "웹훅 비밀 값",
-		"settings.webhook.state.set": "저장됨",
+		"settings.webhook.state.set": "{hint} 사용 중",
 		"settings.webhook.state.unset": "저장되지 않음",
 		"settings.webhook.state.unreadable":
 			"저장되어 있지만 더 이상 읽을 수 없습니다(CMS 비밀 값이 바뀜). 다시 저장하세요.",
@@ -153,6 +158,11 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"settings.webhook.help":
 			"GitHub 저장소의 Settings, Webhooks, Add webhook에서 위 Payload URL, 콘텐츠 형식 application/json, 이 비밀 값을 넣고 push 이벤트를 보내도록 하세요.",
 		"settings.generate": "만들기",
+		"settings.show": "보기",
+		"settings.hide": "숨기기",
+		"settings.copy": "복사",
+		"settings.copied": "복사했습니다.",
+		"settings.copy.failed": "복사하지 못했습니다.",
 		"settings.save": "저장",
 		"settings.remove": "삭제",
 		"settings.saved": "저장했습니다.",

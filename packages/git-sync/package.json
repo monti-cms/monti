@@ -20,6 +20,9 @@
 		"typecheck": "tsc --noEmit -p .",
 		"build": "node ../../scripts/build-package.mjs"
 	},
+	"dependencies": {
+		"zod": "^4.2.1"
+	},
 	"peerDependencies": {
 		"@monti-cms/admin": "workspace:^",
 		"@monti-cms/core": "workspace:^",

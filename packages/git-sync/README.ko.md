@@ -7,7 +7,7 @@
 - GitHub API와 토큰, 웹훅으로 통신하므로 서버리스에서도 돈다. 체크아웃도 `git` 실행 파일도 필요 없다.
 - 코어의 이벤트 아웃박스(`afterCommit`)로 전달하므로, push가 실패해도 잃지 않고 재시도한다.
 - 파일 본문은 형식 플러그인(기본 `mdx`)이 `purpose: "sync"`로 쓰므로, 쓴 것을 다시 읽을 수 있다.
-- GitHub 토큰은 코어 API 키 저장소의 키이며 플러그인의 `token` 키 슬롯에 할당된다(도구 > API 키에 나타나고, 플러그인 화면에서도 정할 수 있다. 저장된 키를 고르거나 값을 입력하면 새 키로 저장된다). 웹훅 비밀 값은 같은 화면에서 저장하며 `MONTI_SECRET`에서 만든 키로 암호화한다(`cms.secrets("git-sync")`). 둘 다 설정 파일에는 두지 않는다.
+- GitHub 토큰은 코어 API 키 저장소의 키이며 플러그인의 `token` 키 슬롯에 할당된다(도구 > API 키에 나타나고, 플러그인 화면에서도 정할 수 있다. 저장된 키를 고르거나 값을 입력하면 새 키로 저장된다). 웹훅 비밀 값도 같은 저장소의 키이며 플러그인의 `webhook-secret` 슬롯(서비스 "GitHub webhook")에 할당된다. 설정 탭에서 만들고, 보고, 복사하고, 저장할 수 있다. 둘 다 설정 파일에는 두지 않고, 저장된 값은 브라우저로 다시 보내지 않는다.
 
 ```ts
 // monti.config.ts
@@ -70,7 +70,7 @@ export const cms = defineConfig({
 ## 설정하기
 
 1. **토큰.** GitHub에서 저장소의 *Contents*와 *Pull requests*에 **읽기·쓰기** 권한이 있는 세분화된 개인 액세스 토큰을 만든다(`repo` 범위의 클래식 토큰도 된다). Git 동기화 화면의 설정 탭에서 입력한다(API 키에 이미 있는 키를 골라도 된다). API 키 저장소에 암호화해 저장하고 git-sync의 토큰 슬롯에 할당하며, 끝 네 글자만 보여 준다. 키를 지우거나 슬롯을 비우면 git-sync는 "아직 저장된 토큰이 없음" 상태로 돌아간다. 앱에 `MONTI_SECRET`이 있어야 하고, 없으면 아무것도 저장할 수 없다.
-2. **웹훅**(변경을 돌려받으려면). 저장소의 Settings, Webhooks, Add webhook에서 Payload URL은 설정 탭이 보여 주는 주소(`https://<사이트>/api/monti/v1/git-sync/webhook`), 콘텐츠 형식은 `application/json`, 이벤트는 **push**, 비밀 값은 설정 탭의 "만들기"로 만들어 저장한 뒤 같은 값을 GitHub에 붙여 넣는다. 라우트는 `X-Hub-Signature-256`을 그 비밀 값으로 검증하고, 맞지 않으면 거절한다. GitHub에서 사이트에 닿을 수 있어야 한다.
+2. **웹훅**(변경을 돌려받으려면). 저장소의 Settings, Webhooks, Add webhook에서 Payload URL은 설정 탭이 보여 주는 주소(`https://<사이트>/api/monti/v1/git-sync/webhook`), 콘텐츠 형식은 `application/json`, 이벤트는 **push**, 비밀 값은 설정 탭의 "만들기"로 만들고 "복사"한 뒤 저장하고, 같은 값을 GitHub에 붙여 넣는다(저장한 뒤에는 값을 다시 보여 주지 않는다). 라우트는 `X-Hub-Signature-256`을 그 비밀 값으로 검증하고, 맞지 않으면 거절한다. GitHub에서 사이트에 닿을 수 있어야 한다.
 3. **첫 동기화.** `monti git-sync:push --all`이 발행한 글을 모두 저장소에 쓴다(아래).
 
 웹훅이 없으면 화면의 "지금 가져오기"와 `monti git-sync:pull`(크론 작업용)로 변경을 가져온다.
@@ -185,7 +185,7 @@ monti git-sync:push --all [--target <id>]
 
 - **동기화**: 대상별 저장소와 브랜치, 방식, 폴더, 경로 패턴, 형식, 컬렉션. 동기화된 글, 큐에서 기다리는 글, 충돌 중인 글의 수. 마지막 가져오기(개수, 오류 파일, 건너뛴 파일)와 마지막 커밋(파일 수, 커밋, 풀 리퀘스트 링크, 알림). **지금 가져오기**와 **대기열 지금 커밋**
 - **충돌**: diff와 두 동작이 있는 목록. 탭에 개수가 표시된다
-- **설정**: GitHub 토큰(API 키 저장소의 키)과 웹훅 비밀 값(쓰기 전용), 웹훅 Payload URL
+- **설정**: GitHub 토큰과 웹훅 비밀 값(둘 다 플러그인의 슬롯에 할당된 API 키 저장소의 키이고, 비밀 값에는 만들기·보기·복사가 있다), 웹훅 Payload URL
 
 ## API
 
@@ -193,7 +193,7 @@ monti git-sync:push --all [--target <id>]
 
 | 라우트 | |
 | --- | --- |
-| `GET status`, `GET/PUT settings` | 화면의 데이터. `PUT`은 `webhookSecret`을 받는다. 값은 쓰기만 된다. 토큰은 코어의 `PUT v1/api-keys/slots`(`{ plugin: "git-sync", slot: "token", key }`)로 할당하고, `POST token-changed`는 화면이 그 뒤에 불러 대기열을 내보내게 한다 |
+| `GET status` | 화면의 데이터. 두 키는 이름과 끝 네 글자로만 나온다. 토큰과 웹훅 비밀 값은 코어의 `PUT v1/api-keys/slots`(`{ plugin: "git-sync", slot: "token" 또는 "webhook-secret", key }`)로 할당하고, 토큰을 할당하면 대기열에 있던 것이 나간다(슬롯의 `onChange`) |
 | `POST pull`, `POST flush` | `{ target? }`: "지금 가져오기"와 "대기열 지금 커밋" |
 | `GET conflicts`, `POST conflicts/resolve` | `{ target, entryId, resolution: "git" \| "server", gitSha? }` |
 | `POST webhook` | GitHub `push` 웹훅(`X-Hub-Signature-256`, `X-GitHub-Event`) |

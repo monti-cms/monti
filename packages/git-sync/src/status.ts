@@ -1,5 +1,5 @@
+import { type KeysView, keysView } from "./keys";
 import type { GitSyncMode } from "./options";
-import { type SettingsView, settingsView } from "./settings";
 import type { PullSummary, TargetStatus } from "./state";
 import type { SyncContext } from "./sync";
 
@@ -24,7 +24,8 @@ export interface TargetView {
 }
 
 export interface StatusView {
-	readonly settings: SettingsView;
+	/** The two keys the plugin uses (the GitHub token and the webhook secret). */
+	readonly keys: KeysView;
 	readonly targets: readonly TargetView[];
 }
 
@@ -54,5 +55,5 @@ export async function statusView(ctx: SyncContext): Promise<StatusView> {
 			...(status.lastFlush ? { lastFlush: status.lastFlush } : {}),
 		});
 	}
-	return { settings: await settingsView(ctx), targets };
+	return { keys: await keysView(ctx.cms), targets };
 }
