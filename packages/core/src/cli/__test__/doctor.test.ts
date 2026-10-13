@@ -346,6 +346,13 @@ describe("monti doctor on a project with missing settings", () => {
 		expect(byId(report, "next/with-cms").fix).toContain("withCms");
 	});
 
+	it("does not count a comment that mentions withCms as the wrapper", async () => {
+		setEnv();
+		const dir = project({ "next.config.ts": "// wrap the config in withCms(nextConfig) later\nexport default {};\n" });
+		const { report } = await doctor(dir);
+		expect(byId(report, "next/with-cms").status).toBe("fail");
+	});
+
 	it("notices a Monti route file left at the old app/api/cms folder", async () => {
 		setEnv();
 		const dir = project({

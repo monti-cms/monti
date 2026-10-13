@@ -7,6 +7,7 @@ import { formatDecision } from "../../server/decision";
 import { findRootLayout, hasSuppressHydrationWarning } from "../first-run";
 import { findBoundaryViolations, importsOf, sourceFiles } from "../import-boundary";
 import { ignoresEnvLocal, NEXT_CONFIG_FILES } from "../init-detect";
+import { usesWithCms } from "../init-edit";
 import { AUTH_CHECKS } from "./auth-checks";
 import { DATABASE_CHECKS } from "./database-checks";
 import { type CheckOutcome, fail, ok, skip, warn } from "./outcome";
@@ -488,7 +489,7 @@ const nextWithCms: CoreCheck = {
 				fix: "run `monti init`, which creates next.config.ts with the withCms wrapper (withCms comes from the package @monti-cms/nextjs/config)",
 			});
 		}
-		return readFileSync(path.join(state.cwd, file), "utf8").includes("withCms")
+		return usesWithCms(readFileSync(path.join(state.cwd, file), "utf8"))
 			? ok(`${file} wraps the config in withCms`)
 			: fail(`${file} does not use withCms, so the build cannot transpile Monti's packages`, {
 					where: file,
