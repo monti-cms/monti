@@ -35,7 +35,14 @@
 	--color-cms-accent: var(--cms-accent);
 	--color-cms-accent-foreground: var(--cms-accent-foreground);
 	--color-cms-destructive: var(--cms-destructive);
+	--color-cms-destructive-soft: var(--cms-destructive-soft);
+	--color-cms-destructive-foreground: var(--cms-destructive-foreground);
 	--color-cms-warning: var(--cms-warning);
+	--color-cms-warning-soft: var(--cms-warning-soft);
+	--color-cms-warning-foreground: var(--cms-warning-foreground);
+	--color-cms-success: var(--cms-success);
+	--color-cms-success-soft: var(--cms-success-soft);
+	--color-cms-success-foreground: var(--cms-success-foreground);
 	--color-cms-border: var(--cms-border);
 	--color-cms-input: var(--cms-input);
 	--color-cms-ring: var(--cms-ring);
@@ -55,4 +62,7 @@
 	--radius-xl: calc(var(--cms-radius) + 4px);
 	/* Scale in use: chips 4px (sm), controls and rows 6px (md), cards 8px (lg), dialogs and the side sheet 10px (dialog). */
 	--radius-dialog: calc(var(--cms-radius) + 2px);
+
+	/* The one shadow of a popover or a small raised control: a hairline lift beside its border, never a soft glow. Use `shadow-cms-pop`. */
+	--shadow-cms-pop: 0 1px 2px rgb(0 0 0 / 0.1);
 }

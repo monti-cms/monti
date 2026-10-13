@@ -78,7 +78,7 @@ describe("admin CSS confinement", () => {
 		const theme = themeCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
 		const names = [...theme.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]);
 		expect(names.filter((name) => name.startsWith("--color-cms-")).length).toBeGreaterThan(0);
-		for (const name of names) expect(name).toMatch(/^--(?:color-cms-|radius-(?:sm|md|lg|xl|dialog)$)/);
+		for (const name of names) expect(name).toMatch(/^--(?:color-cms-|shadow-cms-|radius-(?:sm|md|lg|xl|dialog)$)/);
 		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--cms-radius");
 		// Variant names also start with `cms-`.
 		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^cms-/);

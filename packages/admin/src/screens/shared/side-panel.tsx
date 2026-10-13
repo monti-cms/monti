@@ -16,7 +16,7 @@ export const SIDE_PANEL_WIDTH = "w-[22rem] max-w-full sm:w-[var(--panel-width)]"
  * on wide screens it sits beside the list at the width chosen with the drag handle on its left edge.
  */
 const SIDE_PANEL_DOCK =
-	"absolute inset-y-0 right-0 z-20 w-full shadow-[0_1px_2px_rgba(0,0,0,0.1)] sm:w-[var(--panel-width)] lg:relative lg:shrink-0 lg:shadow-none";
+	"absolute inset-y-0 right-0 z-20 w-full shadow-cms-pop sm:w-[var(--panel-width)] lg:relative lg:shrink-0 lg:shadow-none";
 
 /** The right slot beside a list, with a drag handle on its left edge. The panel inside fills it. */
 export function DockedPanel({ resize, children }: { resize: PanelResizeConfig; children: ReactNode }) {
