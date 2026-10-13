@@ -11,17 +11,47 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useTranslator } from "@monti-cms/core/client";
-import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
-import { type KeyboardEvent, useState } from "react";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { ArrowDown, ArrowUp, Eye, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
+import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
+import { defaultTab } from "../entries/layout-groups";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { AddFieldDialog } from "./add-field";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { FieldSheet } from "./field-sheet";
 import { branchFields, type KindTone, summarizeField } from "./field-summary";
+import {
+	addGroup,
+	addTab,
+	dropFieldOnField,
+	editGroup,
+	hasTabLevel,
+	moveFieldBy,
+	moveFieldToTab,
+	moveGroup,
+	moveGroupBy,
+	moveGroupToTab,
+	moveTab,
+	type NoPanelReason,
+	noPanelReason,
+	ownTabOf,
+	placeField,
+	placeOf,
+	removeGroup,
+	removeTab,
+	renameTab,
+	type Tree,
+	tabIsEditable,
+	tabProblem,
+	treeOf,
+	withTree,
+} from "./layout-model";
+import { LayoutPreview } from "./layout-preview";
 import { schemaMessages } from "./messages";
 import {
 	type FieldPlace,
@@ -49,10 +79,31 @@ const REQUIRED = "text-[#B45309] cms-dark:text-[#FCD34D]";
 const OPTION = "text-[#9A3412] cms-dark:text-[#FDBA74]";
 const COLUMNS =
 	"grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4 sm:grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)]";
+/** Two columns only, for when the preview takes the room beside the tree. */
+const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4";
+const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
+const INDENT = "   ";
 
 interface TreeContext {
 	readonly editing: CollectionEditing;
 	readonly onOpen: (place: FieldPlace, name: string) => void;
+	/** The settings column is left out (the preview is beside the tree). */
+	readonly compact: boolean;
+}
+
+/** Why a top-level row cannot be moved or grouped. */
+type Locked =
+	| { readonly kind: "plugin"; readonly tab: string }
+	| { readonly kind: "panel"; readonly reason: NoPanelReason };
+
+/** What a top-level row does besides what a field in a conditional branch does: it moves through the tree of tabs and groups. */
+interface TopRow {
+	readonly locked: Locked | null;
+	readonly extra: MenuAction[];
+	readonly up: () => void;
+	readonly down: () => void;
+	readonly canUp: boolean;
+	readonly canDown: boolean;
 }
 
 function Row({
@@ -65,6 +116,7 @@ function Row({
 	nested,
 	index,
 	count,
+	top,
 }: {
 	ctx: TreeContext;
 	place: FieldPlace;
@@ -75,6 +127,7 @@ function Row({
 	nested: boolean;
 	index: number;
 	count: number;
+	top?: TopRow;
 }) {
 	const t = useTranslator(schemaMessages);
 	const { disabled, file } = useSchemaEdit();
@@ -86,9 +139,10 @@ function Row({
 	const issues = useIssuesUnder(path);
 	const label = typeof field.label === "string" ? field.label : "";
 	const blocked = removeBlock(editing.collection, place, name);
+	const locked = top?.locked ?? null;
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: name,
-		disabled,
+		disabled: disabled || locked !== null,
 	});
 	const open = () => ctx.onOpen(place, name);
 	const onKeyDown = (event: KeyboardEvent) => {
@@ -104,16 +158,17 @@ function Row({
 			kind: "item",
 			label: t("row.up", { name }),
 			icon: ArrowUp,
-			disabled: disabled || index === 0,
-			onSelect: () => editing.update((collection) => moveField(collection, place, name, -1)),
+			disabled: disabled || (top ? !top.canUp || locked !== null : index === 0),
+			onSelect: () => (top ? top.up() : editing.update((collection) => moveField(collection, place, name, -1))),
 		},
 		{
 			kind: "item",
 			label: t("row.down", { name }),
 			icon: ArrowDown,
-			disabled: disabled || index === count - 1,
-			onSelect: () => editing.update((collection) => moveField(collection, place, name, 1)),
+			disabled: disabled || (top ? !top.canDown || locked !== null : index === count - 1),
+			onSelect: () => (top ? top.down() : editing.update((collection) => moveField(collection, place, name, 1))),
 		},
+		...(top && !locked ? top.extra : []),
 		{ kind: "separator" },
 		{
 			kind: "item",
@@ -141,7 +196,7 @@ function Row({
 					onClick={open}
 					onKeyDown={onKeyDown}
 					className={cn(
-						COLUMNS,
+						columnsOf(ctx.compact),
 						"min-h-[30px] cursor-pointer px-5 outline-none hover:bg-cms-muted/60 focus-visible:bg-cms-muted/60 focus-visible:ring-2 focus-visible:ring-cms-ring/50 focus-visible:ring-inset",
 						nested && "bg-cms-muted/20",
 					)}
@@ -152,6 +207,22 @@ function Row({
 						</span>
 						<span className="font-mono text-[13px]">{name}</span>
 						{label && <span className="ml-2 truncate text-cms-muted-foreground text-xs">{label}</span>}
+						{locked?.kind === "panel" && (
+							<span
+								className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs"
+								title={t(locked.reason === "title" ? "layout.notInPanel.title" : "layout.notInPanel.hidden")}
+							>
+								{t("layout.notInPanel")}
+							</span>
+						)}
+						{locked?.kind === "plugin" && (
+							<span
+								className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs"
+								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
+							>
+								{t("layout.pluginPlaced")}
+							</span>
+						)}
 						{issues.length > 0 && (
 							<span
 								role="img"
@@ -169,7 +240,12 @@ function Row({
 							</span>
 						)}
 					</div>
-					<div className="hidden min-w-0 truncate pr-8 font-mono text-cms-muted-foreground text-xs sm:block">
+					<div
+						className={cn(
+							"hidden min-w-0 truncate pr-8 font-mono text-cms-muted-foreground text-xs",
+							!ctx.compact && "sm:block",
+						)}
+					>
 						{summary.isTitle && (
 							<span data-testid="title-badge">
 								{t("sum.title")}
@@ -201,7 +277,7 @@ function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						<div className={cn(COLUMNS, "min-h-[30px] px-5")}>
+						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] px-5")}>
 							<div className="flex min-w-0 items-center">
 								<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 									{childLead}
@@ -210,7 +286,12 @@ function Row({
 								<span className={cn("font-mono text-[13px]", OPTION)}>= "{option}"</span>
 							</div>
 							<div />
-							<div className="hidden truncate font-mono text-cms-muted-foreground text-xs sm:block">
+							<div
+								className={cn(
+									"hidden truncate font-mono text-cms-muted-foreground text-xs",
+									!ctx.compact && "sm:block",
+								)}
+							>
 								{Object.keys(children).length === 0 ? t("fields.noExtra") : ""}
 							</div>
 						</div>
@@ -281,42 +362,552 @@ function FieldGroup({
 	);
 }
 
+/** An input that edits a name in place: it changes the tree on Enter or when it loses focus, and Escape gives the old name back. */
+function InlineName({
+	value,
+	label,
+	disabled,
+	inputRef,
+	onCommit,
+	className,
+}: {
+	value: string;
+	label: string;
+	disabled: boolean;
+	inputRef?: React.RefObject<HTMLInputElement | null>;
+	onCommit: (value: string) => void;
+	className?: string;
+}) {
+	const [draft, setDraft] = useState(value);
+	useEffect(() => setDraft(value), [value]);
+	const commit = () => {
+		if (draft.trim() === "" || draft.trim() === value) setDraft(value);
+		else onCommit(draft.trim());
+	};
+	return (
+		<Input
+			ref={inputRef}
+			value={draft}
+			aria-label={label}
+			disabled={disabled}
+			onChange={(event) => setDraft(event.target.value)}
+			onBlur={commit}
+			onKeyDown={(event) => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					commit();
+				} else if (event.key === "Escape") {
+					setDraft(value);
+				}
+			}}
+			className={cn(
+				"h-7 min-w-0 border-transparent bg-transparent px-1.5 font-semibold text-sm shadow-none",
+				className,
+			)}
+		/>
+	);
+}
+
+const groupId = (tab: number, index: number) => `group:${tab}:${index}`;
+const tabId = (tab: number) => `tab:${tab}`;
+const restId = (tab: number) => `rest:${tab}`;
+const parseGroupId = (id: string): { tab: number; index: number } | null => {
+	const match = /^group:(\d+):(\d+)$/.exec(id);
+	return match ? { tab: Number(match[1]), index: Number(match[2]) } : null;
+};
+const parseTabId = (id: string): number | null => {
+	const match = /^(?:tab|rest):(\d+)$/.exec(id);
+	return match ? Number(match[1]) : null;
+};
+
+interface LayoutOps {
+	/** Applies a change to the tree of the collection as it is when the change runs. */
+	readonly change: (next: (tree: Tree) => Tree) => void;
+	readonly tree: Tree;
+	readonly showTabs: boolean;
+	readonly disabled: boolean;
+}
+
+/** A tab of the panel as a row of the tree: only drawn once the collection has more than the default tab. */
+function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
+	const t = useTranslator(schemaMessages);
+	const tab = ops.tree.tabs[index];
+	const { setNodeRef, transform, transition } = useSortable({ id: tabId(index), disabled: { draggable: true } });
+	const inputRef = useRef<HTMLInputElement | null>(null);
+	if (!tab) return null;
+	const editable = tabIsEditable(ops.tree, index);
+	const count = ops.tree.tabs.length;
+	const actions: MenuAction[] = [
+		{
+			kind: "item",
+			label: t("layout.rename"),
+			icon: Pencil,
+			disabled: ops.disabled || !editable,
+			onSelect: () => inputRef.current?.focus(),
+		},
+		{
+			kind: "item",
+			label: `${t("layout.upTab")}`,
+			icon: ArrowUp,
+			disabled: ops.disabled || index < 2,
+			onSelect: () => ops.change((tree) => moveTab(tree, index, -1)),
+		},
+		{
+			kind: "item",
+			label: `${t("layout.downTab")}`,
+			icon: ArrowDown,
+			disabled: ops.disabled || index === 0 || index === count - 1,
+			onSelect: () => ops.change((tree) => moveTab(tree, index, 1)),
+		},
+		{ kind: "separator" },
+		{
+			kind: "item",
+			label: t("layout.removeTab"),
+			icon: Trash2,
+			destructive: true,
+			disabled: ops.disabled || !editable,
+			onSelect: () => ops.change((tree) => removeTab(tree, index)),
+		},
+	];
+	return (
+		<div
+			ref={setNodeRef}
+			style={{ transform: CSS.Transform.toString(transform), transition }}
+			data-testid={`tab-${index}`}
+			className="group/row relative mt-2 flex items-center gap-1 border-y bg-cms-muted/50 px-5 py-1 first:mt-0"
+		>
+			<InlineName
+				value={tab.name}
+				label={t("layout.tabName")}
+				disabled={ops.disabled || !editable}
+				inputRef={inputRef}
+				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name))}
+				className="font-semibold"
+			/>
+			{!editable && index > 0 && (
+				<span className="shrink-0 text-cms-muted-foreground text-xs" title={t("layout.tabLocked")}>
+					{t("layout.pluginPlaced")}
+				</span>
+			)}
+			<span className="flex-1" />
+			<MoreActionsButton
+				actions={actions}
+				label={t("layout.tabMenu", { name: tab.name })}
+				className="size-6 text-cms-muted-foreground"
+			/>
+		</div>
+	);
+}
+
+/** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
+function GroupRow({ ops, tab, index, indent }: { ops: LayoutOps; tab: number; index: number; indent: string }) {
+	const t = useTranslator(schemaMessages);
+	const group = ops.tree.tabs[tab]?.groups[index];
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+		id: groupId(tab, index),
+		disabled: ops.disabled,
+	});
+	const inputRef = useRef<HTMLInputElement | null>(null);
+	if (!group) return null;
+	const ref = { tab, index };
+	const count = ops.tree.tabs[tab]?.groups.length ?? 0;
+	const actions: MenuAction[] = [
+		{
+			kind: "item",
+			label: t("layout.rename"),
+			icon: Pencil,
+			disabled: ops.disabled,
+			onSelect: () => inputRef.current?.focus(),
+		},
+		{
+			kind: "item",
+			label: t("layout.collapsed"),
+			icon: group.collapsed ? X : Eye,
+			disabled: ops.disabled,
+			onSelect: () => ops.change((tree) => editGroup(tree, ref, { collapsed: !group.collapsed })),
+		},
+		{
+			kind: "item",
+			label: t("layout.upGroup"),
+			icon: ArrowUp,
+			disabled: ops.disabled || index === 0,
+			onSelect: () => ops.change((tree) => moveGroupBy(tree, ref, -1)),
+		},
+		{
+			kind: "item",
+			label: t("layout.downGroup"),
+			icon: ArrowDown,
+			disabled: ops.disabled || index === count - 1,
+			onSelect: () => ops.change((tree) => moveGroupBy(tree, ref, 1)),
+		},
+		...(ops.showTabs
+			? [
+					{
+						kind: "sub" as const,
+						label: t("layout.moveGroupToTab"),
+						items: ops.tree.tabs.flatMap((item, at): MenuAction[] =>
+							at === tab
+								? []
+								: [
+										{
+											kind: "item",
+											label: item.name,
+											onSelect: () => ops.change((tree) => moveGroupToTab(tree, ref, at)),
+										},
+									],
+						),
+					},
+				]
+			: []),
+		{ kind: "separator" },
+		{
+			kind: "item",
+			label: t("layout.removeGroup"),
+			icon: Trash2,
+			destructive: true,
+			disabled: ops.disabled,
+			onSelect: () => ops.change((tree) => removeGroup(tree, ref)),
+		},
+	];
+	return (
+		<div
+			ref={setNodeRef}
+			style={{ transform: CSS.Transform.toString(transform), transition }}
+			className={cn("group/row relative mt-1 border-y bg-cms-muted/30", isDragging && "z-10 bg-cms-card opacity-80")}
+			data-testid={`group-${tab}-${index}`}
+		>
+			<div className="flex items-center gap-1 px-5 py-0.5">
+				<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
+					{indent}
+				</span>
+				<InlineName
+					value={group.title}
+					label={t("layout.groupTitle")}
+					disabled={ops.disabled}
+					inputRef={inputRef}
+					onCommit={(title) => ops.change((tree) => editGroup(tree, ref, { title }))}
+				/>
+				{group.collapsed && (
+					<span className="shrink-0 text-cms-muted-foreground text-xs">{t("layout.collapsedMark")}</span>
+				)}
+				<span className="flex-1" />
+				<MoreActionsButton
+					actions={actions}
+					label={t("layout.groupMenu", { name: group.title })}
+					className="size-6 text-cms-muted-foreground opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100"
+				/>
+			</div>
+			<button
+				type="button"
+				ref={setActivatorNodeRef}
+				{...attributes}
+				{...listeners}
+				aria-label={t("layout.dragGroup", { name: group.title })}
+				disabled={ops.disabled}
+				className="absolute top-1/2 left-0.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+			>
+				<GripVertical aria-hidden className="size-4" />
+			</button>
+		</div>
+	);
+}
+
+/** The place for the fields in no group of a tab: drawn once the tab has groups, so a field can be dropped out of them. */
+function RestRow({ tab, indent }: { tab: number; indent: string }) {
+	const t = useTranslator(schemaMessages);
+	const { setNodeRef, transform, transition } = useSortable({ id: restId(tab), disabled: { draggable: true } });
+	return (
+		<div
+			ref={setNodeRef}
+			style={{ transform: CSS.Transform.toString(transform), transition }}
+			className="mt-1 border-y border-dashed px-5 py-1 text-cms-muted-foreground text-xs"
+			data-testid={`rest-${tab}`}
+		>
+			<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
+				{indent}
+			</span>
+			{t("layout.ungrouped")}
+		</div>
+	);
+}
+
 /**
- * The fields of a collection as one aligned tree in a single card: name and label, kind, and the settings in a few words, one line per field. A
+ * The top-level fields as the properties panel lays them out: tab, then group, then field. Fields are dragged into and out of groups and tabs (the row menus do the
+ * same without dragging). Every change writes the tree back as the order of `fields` and `layout` together.
+ */
+function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeContext }) {
+	const t = useTranslator(schemaMessages);
+	const site = useSite();
+	const { disabled } = useSchemaEdit();
+	const first = defaultTab(site);
+	const collection = editing.collection;
+	const tree = treeOf(collection, first);
+	const showTabs = hasTabLevel(tree);
+	const change = (next: (tree: Tree) => Tree) =>
+		editing.update((current) => withTree(current, next(treeOf(current, first))));
+	const ops: LayoutOps = { change, tree, showTabs, disabled };
+	const sensors = useSensors(
+		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+		useSensor(KeyboardSensor),
+	);
+	const fields = fieldsOf(collection);
+
+	const rows: { id: string; node: React.ReactNode }[] = [];
+	const fieldRow = (name: string, depth: number, locked: Locked | null) => {
+		const here = placeOf(tree, name);
+		const moveUp = locked ? tree : moveFieldBy(tree, name, -1);
+		const moveDown = locked ? tree : moveFieldBy(tree, name, 1);
+		const same = (other: Tree) => JSON.stringify(other) === JSON.stringify(tree);
+		const extra: MenuAction[] = locked
+			? []
+			: [
+					{
+						kind: "sub",
+						label: t("layout.moveFieldToGroup"),
+						items: tree.tabs.flatMap((tab, at): MenuAction[] => [
+							...tab.groups.map(
+								(group, g): MenuAction => ({
+									kind: "item",
+									label: showTabs ? `${tab.name} / ${group.title}` : group.title,
+									disabled: here?.tab === at && here.group === g,
+									onSelect: () => change((current) => placeField(current, name, at, g)),
+								}),
+							),
+							{
+								kind: "item",
+								label: showTabs ? `${tab.name} / ${t("layout.noGroup")}` : t("layout.noGroup"),
+								disabled: here?.tab === at && here.group === null,
+								onSelect: () => change((current) => placeField(current, name, at, null)),
+							},
+						]),
+					},
+					...(showTabs
+						? [
+								{
+									kind: "sub" as const,
+									label: t("layout.moveFieldToTab"),
+									items: tree.tabs.map(
+										(tab, at): MenuAction => ({
+											kind: "item",
+											label: tab.name,
+											disabled: here?.tab === at,
+											onSelect: () => change((current) => moveFieldToTab(current, name, at)),
+										}),
+									),
+								},
+							]
+						: []),
+				];
+		rows.push({
+			id: name,
+			node: (
+				<Row
+					key={name}
+					ctx={ctx}
+					place={{}}
+					name={name}
+					field={fields[name] ?? {}}
+					prefix={INDENT.repeat(depth)}
+					childLead={`${INDENT.repeat(depth)}  `}
+					nested={false}
+					index={0}
+					count={1}
+					top={{
+						locked,
+						extra,
+						up: () => change((current) => moveFieldBy(current, name, -1)),
+						down: () => change((current) => moveFieldBy(current, name, 1)),
+						canUp: !same(moveUp),
+						canDown: !same(moveDown),
+					}}
+				/>
+			),
+		});
+	};
+
+	for (const name of tree.pinned) {
+		fieldRow(name, 0, { kind: "panel", reason: noPanelReason(collection, name) ?? "hidden" });
+	}
+	for (const [at, tab] of tree.tabs.entries()) {
+		if (showTabs) rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
+		const tabDepth = showTabs ? 1 : 0;
+		for (const [g, group] of tab.groups.entries()) {
+			rows.push({
+				id: groupId(at, g),
+				node: <GroupRow key={groupId(at, g)} ops={ops} tab={at} index={g} indent={INDENT.repeat(tabDepth)} />,
+			});
+			for (const name of group.fields) fieldRow(name, tabDepth + 1, null);
+		}
+		const restDepth = tab.groups.length > 0 ? tabDepth + 1 : tabDepth;
+		if (tab.groups.length > 0) {
+			rows.push({ id: restId(at), node: <RestRow key={restId(at)} tab={at} indent={INDENT.repeat(tabDepth)} /> });
+		}
+		for (const name of tab.ungrouped) fieldRow(name, restDepth, null);
+		for (const name of tab.locked)
+			fieldRow(name, restDepth, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
+	}
+
+	const onDragEnd = ({ active, over }: DragEndEvent) => {
+		if (!over || active.id === over.id) return;
+		const from = String(active.id);
+		const to = String(over.id);
+		change((current) => {
+			const group = parseGroupId(from);
+			const toGroup = parseGroupId(to);
+			const toTab = parseTabId(to);
+			if (group) {
+				if (toGroup) return moveGroup(current, group, toGroup);
+				if (toTab !== null) return moveGroup(current, group, { tab: toTab, index: Number.MAX_SAFE_INTEGER });
+				const place = placeOf(current, to);
+				return place
+					? moveGroup(current, group, { tab: place.tab, index: place.group ?? Number.MAX_SAFE_INTEGER })
+					: current;
+			}
+			if (toGroup) return placeField(current, from, toGroup.tab, toGroup.index, 0);
+			if (toTab !== null) return placeField(current, from, toTab, null, 0);
+			return dropFieldOnField(current, from, to);
+		});
+	};
+
+	return (
+		<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+			<SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
+				{rows.map((row) => row.node)}
+			</SortableContext>
+		</DndContext>
+	);
+}
+
+const WIDE_QUERY = "(min-width: 1280px)";
+
+/** Whether the window is wide enough for the preview to sit beside the tree. */
+function useWide(): boolean {
+	const [wide, setWide] = useState(false);
+	useEffect(() => {
+		const media = window.matchMedia?.(WIDE_QUERY);
+		if (!media) return;
+		const update = () => setWide(media.matches);
+		update();
+		media.addEventListener?.("change", update);
+		return () => media.removeEventListener?.("change", update);
+	}, []);
+	return wide;
+}
+
+/** The preview on a narrower window: a panel on the right that the writer can widen, with the tree still reachable beside it. */
+function PreviewDrawer({ collection, onClose }: { collection: Obj; onClose: () => void }) {
+	const t = useTranslator(schemaMessages);
+	const resize = usePanelResize({ name: "layout-preview", defaultWidth: 384, minWidth: 320 });
+	return (
+		<aside
+			aria-label={t("layout.previewTitle")}
+			style={resize.style}
+			className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l bg-cms-popover sm:w-[var(--panel-width)]"
+			data-testid="layout-preview-drawer"
+		>
+			<PanelResizeHandle resize={resize} />
+			<div className="flex h-11 shrink-0 items-center justify-between border-b pr-2 pl-4">
+				<h2 className="font-medium text-sm">{t("layout.preview")}</h2>
+				<Button type="button" variant="ghost" size="icon-sm" aria-label={t("layout.previewClose")} onClick={onClose}>
+					<X aria-hidden />
+				</Button>
+			</div>
+			<div className="min-h-0 flex-1 overflow-y-auto p-4">
+				<LayoutPreview collection={collection} />
+			</div>
+		</aside>
+	);
+}
+
+/**
+ * The fields of a collection as one aligned tree in a single card: name and label, kind, and the settings in a few words, one line per field. The top-level
+ * fields sit in the tabs and groups of the properties panel, with a preview of that panel beside the tree (or in a side panel on a narrower window). A
  * conditional field lists its choices as branches with their own fields under them. A row opens the field in a sheet on the right.
  */
 export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const t = useTranslator(schemaMessages);
+	const site = useSite();
 	const { disabled } = useSchemaEdit();
 	const fields = fieldsOf(editing.collection);
 	const names = Object.keys(fields);
 	const [sheet, setSheet] = useState<{ place: FieldPlace; name: string } | null>(null);
 	const [adding, setAdding] = useState(false);
-	const ctx: TreeContext = { editing, onOpen: (place, name) => setSheet({ place, name }) };
-	return (
-		<section className="overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
-			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
+	const [drawer, setDrawer] = useState(false);
+	const wide = useWide();
+	const first = defaultTab(site);
+	const ctx: TreeContext = { editing, onOpen: (place, name) => setSheet({ place, name }), compact: wide };
+	const addTo = (make: (tree: Tree) => Tree) =>
+		editing.update((current) => withTree(current, make(treeOf(current, first))));
+	const unique = (base: string, taken: string[]) => {
+		let name = base;
+		for (let n = 2; taken.includes(name); n += 1) name = `${base} ${n}`;
+		return name;
+	};
+	const addGroupRow = () =>
+		addTo((tree) =>
+			addGroup(
+				tree,
+				0,
+				unique(
+					t("layout.newGroup"),
+					tree.tabs.flatMap((tab) => tab.groups.map((group) => group.title)),
+				),
+			),
+		);
+	const addTabRow = () =>
+		addTo((tree) => {
+			const name = unique(
+				t("layout.newTab"),
+				tree.tabs.map((tab) => tab.name),
+			);
+			return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
+		});
+	const card = (
+		<section className="min-w-0 overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
 						{t("field.title")} <span className="font-medium text-cms-muted-foreground">{names.length}</span>
 					</h4>
 					<p className="mt-0.5 text-cms-muted-foreground text-xs">{t("fields.hint")}</p>
 				</div>
-				<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
-					<Plus aria-hidden />
-					{t("field.add")}
-				</Button>
+				<div className="flex flex-wrap items-center gap-2">
+					{!wide && (
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							aria-pressed={drawer}
+							onClick={() => setDrawer((open) => !open)}
+						>
+							<Eye aria-hidden />
+							{t("layout.preview")}
+						</Button>
+					)}
+					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
+						<Plus aria-hidden />
+						{t("layout.addTab")}
+					</Button>
+					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addGroupRow}>
+						<Plus aria-hidden />
+						{t("layout.addGroup")}
+					</Button>
+					<Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setAdding(true)}>
+						<Plus aria-hidden />
+						{t("field.add")}
+					</Button>
+				</div>
 			</div>
-			<div className={cn(COLUMNS, "border-b px-5 py-2 text-cms-muted-foreground text-xs")} aria-hidden>
+			<div className={cn(columnsOf(wide), "border-b px-5 py-2 text-cms-muted-foreground text-xs")} aria-hidden>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
-				<span className="hidden sm:block">{t("fields.colSettings")}</span>
+				<span className={cn("hidden", !wide && "sm:block")}>{t("fields.colSettings")}</span>
 			</div>
 			<div className="py-1.5 pb-2.5">
 				{names.length === 0 ? (
 					<p className="px-5 py-3 text-cms-muted-foreground text-xs">{t("field.none")}</p>
 				) : (
-					<FieldGroup ctx={ctx} place={{}} fields={fields} lead={null} nested={false} />
+					<LayoutTree editing={editing} ctx={ctx} />
 				)}
 			</div>
 			<div className="flex flex-wrap gap-x-5 gap-y-1 border-t px-5 py-2.5 text-cms-muted-foreground text-xs">
@@ -356,5 +947,21 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 				/>
 			)}
 		</section>
+	);
+	return (
+		<>
+			{wide ? (
+				<div className="grid grid-cols-[minmax(0,1fr)_22rem] items-start gap-6">
+					{card}
+					<div className="sticky top-4 space-y-2" data-testid="layout-preview-side">
+						<p className="text-cms-muted-foreground text-xs">{t("layout.previewHint")}</p>
+						<LayoutPreview collection={editing.collection} />
+					</div>
+				</div>
+			) : (
+				card
+			)}
+			{!wide && drawer && <PreviewDrawer collection={editing.collection} onClose={() => setDrawer(false)} />}
+		</>
 	);
 }

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { pressOption } from "../../../test/base-ui";
 import { createTestRouter } from "../../../test/router";
+import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { schemaMessages } from "../messages";
@@ -738,6 +739,167 @@ describe("SchemaScreen", () => {
 		// Everything is allowed until a list is limited.
 		expect(screen.getAllByText(t("allowed.everything"))).toHaveLength(3);
 		expect(screen.queryByLabelText(t("collection.path"))).toBeNull();
+	});
+
+	describe("layout in the fields tree", () => {
+		const defaultTabName = testSite.createTranslator(entriesMessages)("tab.default");
+		const savedPost = () =>
+			(lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown>; layout?: unknown } } })
+				.collections.post;
+		const menuOf = async (name: string) => {
+			fireEvent.click(await screen.findByRole("button", { name }));
+		};
+		const openFields = async () => {
+			renderScreen();
+			await screen.findByTestId("collection-post");
+			openTab("fields");
+			await screen.findByTestId("fields-card");
+		};
+
+		it("adds a group, renames it in place, and saves the group with the order of the fields", async () => {
+			await openFields();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			const title = (await screen.findByDisplayValue(t("layout.newGroup"))) as HTMLInputElement;
+			type(title, "Details");
+			fireEvent.blur(title);
+			await screen.findByDisplayValue("Details");
+
+			await menuOf(t("fields.menu", { name: "summary" }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveFieldToGroup") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: "Details" }));
+
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			const post = savedPost();
+			expect(post.layout).toEqual([{ group: "Details", fields: ["summary"] }]);
+			// The grouped field comes first in the file; the title is pinned before everything.
+			expect(Object.keys(post.fields)).toEqual(["title", "summary", "slug", "status"]);
+		});
+
+		it("collapses a group at first", async () => {
+			await openFields();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await screen.findByDisplayValue(t("layout.newGroup"));
+			await menuOf(t("layout.groupMenu", { name: t("layout.newGroup") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.collapsed") }));
+			expect(await screen.findByText(t("layout.collapsedMark"))).toBeTruthy();
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			expect(savedPost().layout).toEqual([{ group: t("layout.newGroup"), fields: [], collapsed: true }]);
+		});
+
+		it("deletes a group, sending its fields back to no group", async () => {
+			await openFields();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await screen.findByDisplayValue(t("layout.newGroup"));
+			await menuOf(t("fields.menu", { name: "summary" }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveFieldToGroup") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newGroup") }));
+			await menuOf(t("layout.groupMenu", { name: t("layout.newGroup") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.removeGroup") }));
+			await waitFor(() => expect(screen.queryByDisplayValue(t("layout.newGroup"))).toBeNull());
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			const post = savedPost();
+			expect(post.layout).toBeUndefined();
+			expect(Object.keys(post.fields)).toEqual(["title", "summary", "slug", "status"]);
+		});
+
+		it("shows the tab level only once a second tab exists, and moves a group into it", async () => {
+			await openFields();
+			expect(screen.queryByTestId("tab-0")).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await screen.findByDisplayValue(t("layout.newGroup"));
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addTab") }));
+			await screen.findByTestId("tab-1");
+			expect(screen.getByDisplayValue(defaultTabName)).toBeTruthy();
+
+			await menuOf(t("layout.groupMenu", { name: t("layout.newGroup") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveGroupToTab") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newTab") }));
+			fireEvent.click(review());
+			await screen.findByTestId("review-summary");
+			expect(savedPost().layout).toEqual([
+				{ group: t("layout.newGroup"), fields: [], tab: t("layout.newTab") },
+				{ fields: [], tab: t("layout.newTab") },
+			]);
+		});
+
+		it("marks the title as not in the properties panel and cannot move it into a group", async () => {
+			await openFields();
+			const row = screen.getByTestId("field-title");
+			expect(within(row).getByText(t("layout.notInPanel"))).toBeTruthy();
+			expect(within(row).getByText(t("layout.notInPanel")).getAttribute("title")).toBe(t("layout.notInPanel.title"));
+			await menuOf(t("fields.menu", { name: "title" }));
+			await screen.findByRole("menuitem", { name: t("fields.edit") });
+			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToGroup") })).toBeNull();
+		});
+
+		it("shows a field a plugin placed inside its own tab, locked there, and hidden fields as not in the panel", async () => {
+			const withPlugin = schema();
+			Object.assign(withPlugin.collections.post.fields, {
+				seoTitle: { kind: "text", label: "SEO title", tab: "SEO" },
+				internal: { kind: "text", label: "Internal", hidden: true },
+			});
+			state = screenState({ schema: withPlugin });
+			await openFields();
+			expect(screen.getByTestId("tab-1")).toBeTruthy();
+			const seo = screen.getByTestId("field-seoTitle");
+			expect(within(seo).getByText(t("layout.pluginPlaced"))).toBeTruthy();
+			expect(
+				within(seo).getByRole("button", { name: t("fields.menu", { name: "seoTitle" }) }) as HTMLElement,
+			).toBeTruthy();
+			// The tab is the plugin's: it cannot be renamed.
+			expect((screen.getByDisplayValue("SEO") as HTMLInputElement).disabled).toBe(true);
+			expect(within(screen.getByTestId("field-internal")).getByText(t("layout.notInPanel"))).toBeTruthy();
+			await menuOf(t("fields.menu", { name: "seoTitle" }));
+			await screen.findByRole("menuitem", { name: t("fields.edit") });
+			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToGroup") })).toBeNull();
+			expect(screen.queryByRole("menuitem", { name: t("layout.moveFieldToTab") })).toBeNull();
+		});
+
+		it("previews the panel beside the tree on a wide window, following the tree", async () => {
+			vi.stubGlobal("matchMedia", (query: string) => ({
+				matches: query.includes("1280"),
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+			}));
+			await openFields();
+			const preview = await screen.findByTestId("layout-preview");
+			// The title is above the body, so the panel does not draw it.
+			expect(within(preview).queryByTestId("preview-field-title")).toBeNull();
+			expect(within(preview).getByTestId("preview-field-summary")).toBeTruthy();
+			expect(within(preview).getByRole("tab", { name: defaultTabName })).toBeTruthy();
+
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
+			await menuOf(t("fields.menu", { name: "summary" }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.moveFieldToGroup") }));
+			fireEvent.click(await screen.findByRole("menuitem", { name: t("layout.newGroup") }));
+			const grouped = await within(screen.getByTestId("layout-preview")).findByRole("region", {
+				name: t("layout.newGroup"),
+			});
+			expect(within(grouped).getByTestId("preview-field-summary")).toBeTruthy();
+			vi.unstubAllGlobals();
+		});
+
+		it("opens the preview in a side panel on a narrow window", async () => {
+			await openFields();
+			expect(screen.queryByTestId("layout-preview")).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			const drawer = await screen.findByTestId("layout-preview-drawer");
+			expect(within(drawer).getByTestId("layout-preview")).toBeTruthy();
+			fireEvent.click(within(drawer).getByRole("button", { name: t("layout.previewClose") }));
+			expect(screen.queryByTestId("layout-preview-drawer")).toBeNull();
+		});
+
+		it("cannot change the layout when the schema is read-only", async () => {
+			state = screenState({ access: { writable: false, reason: "production" } });
+			await openFields();
+			expect((screen.getByRole("button", { name: t("layout.addGroup") }) as HTMLButtonElement).disabled).toBe(true);
+			expect((screen.getByRole("button", { name: t("layout.addTab") }) as HTMLButtonElement).disabled).toBe(true);
+		});
 	});
 
 	it("adds a conditional field only once its options and a field are set", async () => {
