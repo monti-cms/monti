@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import type { InitHost } from "./init";
+import type { InitHost } from "./init-types";
 import type { Prompter } from "./prompt";
 
 /**

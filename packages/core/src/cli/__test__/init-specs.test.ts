@@ -2,7 +2,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { initProject, installSpecs } from "../init";
+import { initProject } from "../init";
+import { installSpecs } from "../init-install";
 import { CREATE_NEXT_APP, fakeHost, fixtureApp } from "./init-helpers";
 
 const GITHUB = "github:monti-cms/monti#release/v0.2.0-next.8&path:/core";

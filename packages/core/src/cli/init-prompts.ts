@@ -1,15 +1,9 @@
 import { isAdminPath } from "../config/define";
+import { BLOCK_CHOICES, DEFAULT_BLOCK_IDS } from "./block-choices";
+import { DEFAULT_INIT_ADMIN_PATH, DEFAULT_INIT_LOCALE, DEFAULT_INIT_TIME_ZONE, type InitAnswers } from "./init-answers";
 import type { DetectedApp } from "./init-detect";
 import { COMMON_LOCALES, languageLabel } from "./locale-names";
 import type { Prompter } from "./prompt";
-import {
-	BLOCK_CHOICES,
-	DEFAULT_BLOCK_IDS,
-	DEFAULT_INIT_ADMIN_PATH,
-	DEFAULT_INIT_LOCALE,
-	DEFAULT_INIT_TIME_ZONE,
-	type InitAnswers,
-} from "./templates";
 
 /**
  * The questions of `monti init`. Each one has a flag; a question whose flag is given is not asked, and without a terminal (or with `--yes`) every unanswered

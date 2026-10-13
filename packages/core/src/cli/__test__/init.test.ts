@@ -5,7 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import { parseSchemaFile } from "../../schema-file/format";
 import { printSchemaFile } from "../../schema-file/print";
 import { unifiedDiff } from "../diff";
-import { formatInitReport, InitError, initProject, ProjectWriter } from "../init";
+import { InitError, initProject } from "../init";
+import { formatInitReport } from "../init-report";
+import { ProjectWriter } from "../init-writer";
 import { Cancelled } from "../prompt";
 import {
 	CREATE_NEXT_APP,
@@ -386,7 +388,7 @@ describe("monti init and the package install", () => {
 	});
 
 	it("does not ask about the install when every package is already a dependency", async () => {
-		const { packagesFor } = await import("../templates");
+		const { packagesFor } = await import("../init-install");
 		const { collectAnswers } = await import("../init-prompts");
 		const { detectApp } = await import("../init-detect");
 		const answers = await collectAnswers(detectApp(fixtureApp()), { blocks: "none" });

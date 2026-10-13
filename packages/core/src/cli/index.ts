@@ -24,17 +24,12 @@ export {
 	formatBoundaryViolations,
 	SERVER_ONLY_MODULES,
 } from "./import-boundary";
-export {
-	formatInitReport,
-	InitError,
-	type InitHost,
-	type InitOptions,
-	type InitReport,
-	type InstallCommand,
-	initProject,
-} from "./init";
+export { initProject } from "./init";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect";
 export { collectAnswers, type InitAnswerFlags } from "./init-prompts";
+export { formatInitReport } from "./init-report";
+export type { InitHost, InitOptions, InitReport, InstallCommand } from "./init-types";
+export { InitError } from "./init-writer";
 export { parseJsonc } from "./jsonc";
 export {
 	CONFIG_CANDIDATES,

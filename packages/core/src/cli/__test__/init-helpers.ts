@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, vi } from "vitest";
 import { parseSchemaLiteral } from "../../schema-file/literal";
-import type { InitHost } from "../init";
+import type { InitHost } from "../init-types";
 import { Cancelled, type Prompter } from "../prompt";
 
 /** Shared by the tests of `monti init`: fixture Next apps in temp folders, a host that touches nothing, and a prompter that answers from a script. */

@@ -1,6 +1,7 @@
 import { defineCommand } from "./command";
-import { formatInitReport, initProject } from "./init";
+import { initProject } from "./init";
 import type { PackageManager } from "./init-detect";
+import { formatInitReport } from "./init-report";
 import { createClackPrompter, isInteractive } from "./prompt";
 
 const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
