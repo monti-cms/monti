@@ -13,7 +13,7 @@ export interface EventDeliveryItem {
 		workingSlug?: string | null;
 	};
 	subscriber: string;
-	state: "failed" | "dead";
+	state: "pending" | "delivering" | "delivered" | "failed" | "dead" | "dismissed";
 	attempts: number;
 	lastError: string | null;
 	nextAttemptAt: string | null;
@@ -32,6 +32,26 @@ export interface EventsList {
 	items: EventDeliveryItem[];
 	total: number;
 	counts: EventCounts;
+}
+
+/** Which deliveries the events screen lists. */
+export type EventsFilter = "all" | "failed" | "pending" | "delivered";
+export const EVENTS_FILTERS: readonly EventsFilter[] = ["all", "failed", "pending", "delivered"];
+
+const FILTER_STATES: Record<EventsFilter, readonly EventDeliveryItem["state"][]> = {
+	all: ["pending", "delivering", "delivered", "failed", "dead", "dismissed"],
+	failed: ["failed", "dead"],
+	pending: ["pending", "delivering"],
+	delivered: ["delivered"],
+};
+
+/** Query string of `GET /v1/events` for a filter and page (newest event first). */
+export function eventsQuery(filter: EventsFilter, page: number, pageSize: number): string {
+	const params = new URLSearchParams();
+	for (const state of FILTER_STATES[filter]) params.append("state", state);
+	params.set("limit", String(pageSize));
+	params.set("offset", String((page - 1) * pageSize));
+	return params.toString();
 }
 
 /** Everything under this prefix is refetched after an action. */

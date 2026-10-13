@@ -1,8 +1,19 @@
 "use client";
 
-import { cmsApiUrl, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { cmsApiUrl, type PageSize, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, Trash2, Upload } from "lucide-react";
+import {
+	FileText,
+	Image as ImageIcon,
+	LayoutGrid,
+	Link2,
+	List,
+	PanelRightOpen,
+	RefreshCw,
+	SearchX,
+	Trash2,
+	Upload,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
@@ -11,7 +22,6 @@ import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import type { TranslatorFor } from "../../translator";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { Button } from "../../ui/button";
-import { Empty, EmptyHeader, EmptyTitle } from "../../ui/empty";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
@@ -24,7 +34,9 @@ import type { MenuAction } from "../shared/action-menu";
 import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { DateRangePicker } from "../shared/date-range-picker";
+import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
+import { ListPagination } from "../shared/list-pager";
 import { SIDE_PANEL_DOCK } from "../shared/side-panel";
 import { useDebounced } from "../shared/use-debounced";
 import { MediaDetailPanel } from "./media-detail-panel";
@@ -32,7 +44,6 @@ import { type MediaItem, mediaUsages, usageNoteLabel } from "./media-item";
 import { MediaGrid, MediaTable } from "./media-views";
 import { mediaMessages } from "./messages";
 
-const PAGE_SIZE = 30;
 const kindOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 	{ value: "all", label: t("library.kind.all") },
 	{ value: "image", label: t("library.kind.image") },
@@ -83,6 +94,7 @@ export function MediaLibrary() {
 	const t = useTranslator(mediaMessages);
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState<PageSize>(25);
 	const [search, setSearch] = useState("");
 	const [used, setUsed] = useState<"all" | "used" | "unused">("all");
 	const [kind, setKind] = useState<"all" | "image" | "file">("all");
@@ -99,7 +111,7 @@ export function MediaLibrary() {
 
 	// Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
 	const query = useMemo(() => {
-		const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE), used });
+		const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
 		if (search.trim()) params.set("search", search.trim());
 		if (kind !== "all") params.set("kind", kind);
 		const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
@@ -107,7 +119,7 @@ export function MediaLibrary() {
 		if (from) params.set("uploadedFrom", from);
 		if (to) params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
 		return params.toString();
-	}, [page, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
+	}, [page, pageSize, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
 	const debouncedQuery = useDebounced(query, 200);
 	const mediaQuery = useQuery({
 		queryKey: [...MEDIA_KEY, debouncedQuery],
@@ -232,7 +244,6 @@ export function MediaLibrary() {
 		}
 	};
 
-	const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 	const setDetailDirty = useCallback((dirty: boolean) => {
 		detailDirtyRef.current = dirty;
 	}, []);
@@ -287,6 +298,15 @@ export function MediaLibrary() {
 		apply();
 		setPage(1);
 	};
+	const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
+	const clearFilters = () =>
+		setFilter(() => {
+			setSearch("");
+			setUsed("all");
+			setKind("all");
+			setUploadedFrom("");
+			setUploadedTo("");
+		});
 
 	return (
 		<AdminShell
@@ -396,54 +416,62 @@ export function MediaLibrary() {
 			</div>
 
 			<div className="relative flex min-h-0 flex-1 overflow-hidden">
-				<div className="flex-1 overflow-y-auto p-4 lg:p-6">
-					{loadError && (
-						<Alert variant="danger" className="mb-4 flex w-auto items-center justify-between">
-							<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
-							<Button type="button" variant="outline" size="xs" onClick={() => void mediaQuery.refetch()}>
-								{t("common.retry")}
-							</Button>
-						</Alert>
-					)}
-					{items.length === 0 ? (
-						loadError ? null : mediaQuery.isPending ? (
-							<ul aria-hidden className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
-								{Array.from({ length: 6 }, (_, index) => (
-									// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
-									<li key={index}>
-										<Skeleton className="aspect-square w-full rounded-lg" />
-									</li>
-								))}
-							</ul>
+				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+					<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 lg:p-6">
+						{loadError && (
+							<Alert variant="danger" className="mb-4 flex w-auto items-center justify-between">
+								<AlertDescription className="col-start-auto">{loadError}</AlertDescription>
+								<Button type="button" variant="outline" size="xs" onClick={() => void mediaQuery.refetch()}>
+									{t("common.retry")}
+								</Button>
+							</Alert>
+						)}
+						{items.length === 0 ? (
+							loadError ? null : mediaQuery.isPending ? (
+								<ul aria-hidden className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
+									{Array.from({ length: 6 }, (_, index) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
+										<li key={index}>
+											<Skeleton className="aspect-square w-full rounded-lg" />
+										</li>
+									))}
+								</ul>
+							) : filtered ? (
+								<EmptyState
+									icon={SearchX}
+									title={t("library.emptyNoMatch")}
+									description={t("library.emptyNoMatchHint")}
+									action={{ label: t("library.clearFilters"), onClick: clearFilters }}
+								/>
+							) : (
+								<EmptyState
+									icon={ImageIcon}
+									title={t("library.emptyYet")}
+									description={t("library.emptyYetHint")}
+									action={{
+										label: t("library.upload"),
+										icon: Upload,
+										onClick: () => fileInputRef.current?.click(),
+									}}
+								/>
+							)
+						) : view === "grid" ? (
+							<MediaGrid {...viewProps} />
 						) : (
-							<Empty className="py-16">
-								<EmptyHeader>
-									<EmptyTitle>{t("library.empty")}</EmptyTitle>
-								</EmptyHeader>
-							</Empty>
-						)
-					) : view === "grid" ? (
-						<MediaGrid {...viewProps} />
-					) : (
-						<MediaTable {...viewProps} />
-					)}
-					<nav aria-label={t("library.pageNav")} className="mt-4 flex items-center justify-end gap-2 text-xs">
-						<Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-							{t("library.prev")}
-						</Button>
-						<span className="tabular-nums">
-							{page} / {totalPages}
-						</span>
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							disabled={page >= totalPages}
-							onClick={() => setPage(page + 1)}
-						>
-							{t("library.next")}
-						</Button>
-					</nav>
+							<MediaTable {...viewProps} />
+						)}
+					</div>
+					<ListPagination
+						total={total}
+						shown={items.length}
+						page={page}
+						pageSize={pageSize}
+						onPageChange={setPage}
+						onPageSizeChange={(size) => {
+							setPageSize(size);
+							setPage(1);
+						}}
+					/>
 				</div>
 
 				{selected && (

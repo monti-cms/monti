@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { chooseSelectOption } from "../../../test/base-ui";
 import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { EventsScreen } from "../events-screen";
@@ -16,7 +17,12 @@ vi.mock("../../../router", () => ({
 }));
 
 const counts = { pending: 0, delivering: 0, delivered: 5, failed: 1, dead: 1, dismissed: 0 };
-const item = (eventId: string, subscriber: string, state: "failed" | "dead", kind = "published") => ({
+const item = (
+	eventId: string,
+	subscriber: string,
+	state: "failed" | "dead" | "delivered" | "pending",
+	kind = "published",
+) => ({
 	change: {
 		eventId,
 		kind,
@@ -28,7 +34,7 @@ const item = (eventId: string, subscriber: string, state: "failed" | "dead", kin
 	subscriber,
 	state,
 	attempts: 3,
-	lastError: "boom",
+	lastError: state === "failed" || state === "dead" ? "boom" : null,
 	nextAttemptAt: state === "failed" ? "2026-01-02T00:00:00.000Z" : null,
 });
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
@@ -111,6 +117,68 @@ describe("EventsScreen", () => {
 
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalled());
-		expect(await screen.findByText(t("list.empty"))).toBeTruthy();
+		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
+	});
+
+	it("opens on all recent events, not only the failed ones", async () => {
+		fetchMock.mockImplementation(async () =>
+			json({
+				items: [item("e3", "search-index", "delivered", "saved"), item("e1", "webhook", "failed")],
+				total: 2,
+				counts,
+			}),
+		);
+		renderScreen();
+
+		const deliveredRow = (await screen.findByText("slug-e3")).closest("tr") as HTMLElement;
+		expect(within(deliveredRow).getByText(t("state.delivered"))).toBeTruthy();
+		expect(within(deliveredRow).getByText(t("kind.saved"))).toBeTruthy();
+		// A delivered event has nothing to retry or dismiss; a failed one does.
+		expect(within(deliveredRow).queryByRole("button")).toBeNull();
+		const failedRow = screen.getByText("slug-e1").closest("tr") as HTMLElement;
+		expect(within(failedRow).getAllByRole("button")).toHaveLength(2);
+		const url = new URL(
+			String(fetchMock.mock.calls.map(([input]) => input).find((input) => String(input).includes("state="))),
+			"http://localhost",
+		);
+		expect(url.searchParams.getAll("state")).toEqual(
+			expect.arrayContaining(["pending", "delivered", "failed", "dead"]),
+		);
+	});
+
+	it("filters by delivery status and returns to all from the empty state", async () => {
+		const requested = () =>
+			fetchMock.mock.calls.map(([input]) => new URL(String(input), "http://localhost").searchParams.getAll("state"));
+		fetchMock.mockImplementation(async (input: string) => {
+			const states = new URL(input, "http://localhost").searchParams.getAll("state");
+			const onlyFailed = states.length === 2 && states.includes("failed");
+			return json({
+				items: onlyFailed ? [] : [item("e3", "search-index", "delivered")],
+				total: onlyFailed ? 0 : 1,
+				counts,
+			});
+		});
+		renderScreen();
+		await screen.findByText("search-index");
+
+		await chooseSelectOption(t("filter.label"), t("filter.failed"));
+		expect(await screen.findByText(t("list.emptyNoMatch"))).toBeTruthy();
+		expect(requested().at(-1)?.sort()).toEqual(["dead", "failed"]);
+
+		fireEvent.click(screen.getByRole("button", { name: t("list.clearFilters") }));
+		expect(await screen.findByText("search-index")).toBeTruthy();
+		expect(requested().at(-1)?.length).toBe(6);
+	});
+
+	it("pages through the events", async () => {
+		fetchMock.mockImplementation(async (input: string) => {
+			const offset = Number(new URL(input, "http://localhost").searchParams.get("offset"));
+			return json({ items: [item(`e${offset}`, "webhook", "delivered")], total: 60, counts });
+		});
+		renderScreen();
+		await screen.findByText("slug-e0");
+
+		fireEvent.click(screen.getByRole("button", { name: /다음 페이지/ }));
+		expect(await screen.findByText("slug-e25")).toBeTruthy();
 	});
 });
