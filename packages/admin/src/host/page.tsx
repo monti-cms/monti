@@ -1,4 +1,5 @@
 import type { Cms } from "@monti-cms/core/runtime";
+import ApiKeysPage from "../screens/api-keys/page";
 import EditEntryPage from "../screens/entries/[id]/edit/page";
 import NewEntryPage from "../screens/entries/new/page";
 import EventsPage from "../screens/events/page";
@@ -24,7 +25,7 @@ export interface AdminPageProps {
  * A single admin screen, framework-neutral. A host package renders it from the app's admin route (default `app/(admin)/admin/[[...path]]/page.tsx`). The path after the admin path
  * selects the screen. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  *
- * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` event log
+ * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` event log · `/admin/api-keys` API keys
  * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `file`, `admin` (the schema file)
  * - `/admin/tools/<path>` Tools: one page per plugin `nav` item (e.g. the AI plugin's `/admin/tools/ai`)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
@@ -44,6 +45,8 @@ export async function AdminPage({ cms, server, params, searchParams }: AdminPage
 				return <TemplatesPage cms={cms} server={server} />;
 			case "events":
 				return <EventsPage cms={cms} server={server} />;
+			case "api-keys":
+				return <ApiKeysPage cms={cms} server={server} />;
 			case "settings":
 				return <SettingsPage cms={cms} server={server} tab={undefined} />;
 			case "login":

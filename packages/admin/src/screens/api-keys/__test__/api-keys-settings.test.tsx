@@ -3,11 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { AdminQueryProvider } from "../../shared/query-provider";
-import { ApiKeysSettings } from "../api-keys-settings";
+import { ApiKeysPageScreen } from "../api-keys-page-screen";
 import { apiKeysMessages } from "../messages";
 
 const t = testSite.createTranslator(apiKeysMessages);
 
+vi.mock("../../../router", () => ({
+	AdminLink: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
+}));
 vi.mock("sonner", () => ({ Toaster: () => null, toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() } }));
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
@@ -62,7 +65,7 @@ afterEach(() => {
 const renderTab = () =>
 	render(
 		<AdminQueryProvider>
-			<ApiKeysSettings />
+			<ApiKeysPageScreen />
 		</AdminQueryProvider>,
 	);
 
@@ -70,7 +73,7 @@ const row = async (name: string) => within(await screen.findByTestId(`api-key-${
 const deleteCalls = () =>
 	fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "DELETE");
 
-describe("API keys tab", () => {
+describe("API keys page", () => {
 	it("lists each key with a masked tail and where it is used, and never a value", async () => {
 		renderTab();
 		const anthropic = await row("Anthropic");

@@ -8,7 +8,7 @@ import { z } from "zod";
  * - Decisions (`decisions`): a System One model that assigns a probability to each choice (e.g. Jev). Addresses like TypeSafe `…/v1/systemone`,
  *   OpenRouter `…/api/alpha/decisions`. Both use the `state`, `model`, `questions` -> `answers` shape.
  *
- * Keys live in the central API key store (Settings → API keys); a connection only refers to one, and only the last four characters are shown on screen. Both server and browser use this file.
+ * Keys live in the central API key store (Tools → API keys); a connection only refers to one, and only the last four characters are shown on screen. Both server and browser use this file.
  */
 
 export const AI_PROVIDER_KINDS = ["chat", "decisions"] as const;

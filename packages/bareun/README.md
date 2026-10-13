@@ -2,7 +2,7 @@
 
 English | [한국어](README.ko.md)
 
-Bareun spell and sentence checker for the `@monti-cms/core` editor. It checks Korean text, and its API key is assigned under Settings > API keys (the plugin declares one key slot, "Spell check").
+Bareun spell and sentence checker for the `@monti-cms/core` editor. It checks Korean text, and its API key is assigned under Tools > API keys (the plugin declares one key slot, "Spell check").
 The button, underlines and results panel are drawn by the admin package (see "Text checking" in the admin README). This package only provides the server route that calls Bareun and the checker registration.
 
 
@@ -17,7 +17,7 @@ export const cms = defineConfig({
 });
 ```
 
-The server needs a `secret` (`MONTI_SECRET`) so keys can be saved encrypted. Under Settings > API keys, pick a saved key or enter a new one on the "Spell check" row; clear it from the row menu.
+The server needs a `secret` (`MONTI_SECRET`) so keys can be saved encrypted. Under Tools > API keys, pick a saved key or enter a new one on the "Spell check" row; clear it from the row menu.
 A site that used the environment variable `BAREUN_API_KEY` is moved over by `monti db:migrate`:
 its value becomes the key "Bareun" and is assigned to the slot once, and the variable is not read after that. The key chosen on the former Spell check page is moved to the slot too.
 

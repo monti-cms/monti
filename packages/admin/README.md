@@ -143,12 +143,12 @@ redirects there. Saved list column names that are no longer columns are dropped 
 
 ## Navigation and Settings
 
-The sidebar has four parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (Templates, one item per plugin page, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
+The sidebar has four parts: **Content** (each collection, then Media; a collection that has folders opens them as a tree under it while it is the open one), **Tools** (Templates, one item per plugin page, then API keys, then the Event log with the failed-delivery count as a badge while some failed), **Trash** with its count, and a footer with **Settings** and the theme toggle. Every screen has its own address:
 
 | Screen | Address | Contents |
 |---|---|---|
 | Site, Languages, Collections, File, Admin | `<admin path>/settings` (opens the Site tab; `site`, `locales`, `collections`, `file`, `admin`) | Settings, the schema editor (below). The draft is shared by these tabs and survives moving to another tab. |
-| API keys | `<admin path>/settings/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and git sync pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
+| API keys | `<admin path>/api-keys` | The central key store: a row per named key with its masked tail and the places that use it; add, rename, replace the value, delete (a key in use asks first and lists what stops working). Keys are encrypted with the server `secret`; values never come back to the browser. Keys a plugin declares it needs (`keySlots`, such as the spell checker's) get a row each: empty ones offer "Add a key" (pick a saved key or enter a new one), assigned ones show in the key's "in use" line and are cleared from its row menu. AI connections and git sync pick a saved key or enter a new one (saved here, in the same request) in their own forms. |
 | Templates | `<admin path>/templates` | Body templates (a 404 when `admin.templates` is `false`). |
 | Event log | `<admin path>/events` | Event deliveries. |
 | One per plugin page | `<admin path>/tools/<path>` | A plugin's `nav` item and `pages` entry (e.g. `ai`, `git-sync`). |

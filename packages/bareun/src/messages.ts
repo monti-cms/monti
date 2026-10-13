@@ -18,7 +18,7 @@ export const bareunMessages = defineMessages("cms-bareun", {
 		"category.THINKING": "Worth a second look",
 		"category.UNKNOWN": "Needs review",
 		"issue.message": "{label}: {comment}",
-		"error.keyMissing": "No Bareun API key is set. Add the spell check key under Settings > API keys in the admin.",
+		"error.keyMissing": "No Bareun API key is set. Add the spell check key under Tools > API keys in the admin.",
 		keyLabel: "Spell check",
 	},
 	ko: {
@@ -34,7 +34,7 @@ export const bareunMessages = defineMessages("cms-bareun", {
 		"category.CONFIRM": "확인 필요",
 		"category.THINKING": "다시 생각해 볼 곳",
 		"category.UNKNOWN": "확인 필요",
-		"error.keyMissing": "바른 API 키가 없습니다. 관리자의 설정 > API 키에서 맞춤법 검사 키를 추가하세요.",
+		"error.keyMissing": "바른 API 키가 없습니다. 관리자의 도구 > API 키에서 맞춤법 검사 키를 추가하세요.",
 		keyLabel: "맞춤법 검사",
 	},
 });

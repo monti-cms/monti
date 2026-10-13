@@ -162,7 +162,7 @@ export interface Cms<
 	secrets(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
 	/**
 	 * The central API key store: named keys kept encrypted, with the places that use each. A plugin keeps a key's id (not its value) and reads the value with
-	 * `cms.apiKeys.read(id)` when it calls a service; see {@link ApiKeys}. The admin's Settings → API keys tab manages the same keys.
+	 * `cms.apiKeys.read(id)` when it calls a service; see {@link ApiKeys}. The admin's Tools → API keys page manages the same keys.
 	 */
 	readonly apiKeys: ApiKeys;
 	/**

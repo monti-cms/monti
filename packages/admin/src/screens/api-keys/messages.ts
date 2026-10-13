@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 
-/** Text of the API keys tab of Settings and of the key field AI connections, the spell checker and git sync share. */
+/** Text of the API keys page (Tools) and of the key field AI connections, the spell checker and git sync share. */
 export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 	en: {
 		title: "API keys",
@@ -145,10 +145,10 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"field.savedUsedBy": ({ uses }) => `${uses}에서도 쓰는 중`,
 		"field.useNew": "새 키 넣기",
 		"field.newInput": "새 API 키",
-		"field.newHelp": ({ name }) => `“${name}”으로 설정 → API 키에 저장돼요. 이름은 나중에 바꿀 수 있어요.`,
+		"field.newHelp": ({ name }) => `“${name}”으로 도구 → API 키에 저장돼요. 이름은 나중에 바꿀 수 있어요.`,
 		"field.noKey": "키 없음",
 		"field.unreadable": "읽을 수 없음",
 		"field.loadFailed": "저장된 키를 불러오지 못했어요.",
-		"field.secretMissing": "MONTI_SECRET이 없어서 키를 저장할 수 없어요. 설정 → API 키를 확인해 주세요.",
+		"field.secretMissing": "MONTI_SECRET이 없어서 키를 저장할 수 없어요. 도구 → API 키를 확인해 주세요.",
 	},
 });

@@ -5,16 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { SidebarTrigger } from "../../ui/sidebar";
-import { ApiKeysSettings } from "../api-keys/api-keys-settings";
 import { SchemaSettings } from "../schema/schema-screen";
 import { AdminShell } from "../shared/admin-shell";
 import { sharedMessages } from "../shared/messages";
 import { settingsMessages } from "./messages";
-import { API_KEYS_TAB, isSchemaTab, SCHEMA_TABS, type SchemaTab, type SettingsTabId, settingsTabs } from "./tabs";
+import { type SettingsTabId, settingsTabs } from "./tabs";
 
 /**
  * The Settings page: its own header (title, one line about where it is saved, the pending changes and the review button) over a row of tabs, each its own address
- * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: collections, languages, site, admin and file. They share one draft.
+ * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: site, languages, collections, file and admin. They share one draft.
  */
 export function SettingsScreen({ tab }: { tab: SettingsTabId }) {
 	const t = useTranslator(settingsMessages);
@@ -32,11 +31,6 @@ function SettingsBody({ tab }: { tab: SettingsTabId }) {
 	const tabs = settingsTabs(site);
 	// The editor puts its pending-changes line and review button here.
 	const [actions, setActions] = useState<HTMLElement | null>(null);
-	// The schema editor stays mounted while the API keys tab is open (hidden), so a draft that is not saved yet survives a look at the keys.
-	const [schemaTab, setSchemaTab] = useState<SchemaTab>(isSchemaTab(tab) ? tab : SCHEMA_TABS[0]);
-	if (isSchemaTab(tab) && tab !== schemaTab) setSchemaTab(tab);
-	const showingKeys = tab === API_KEYS_TAB;
-
 	// On a narrow screen the tab bar scrolls sideways: keep the open tab in view.
 	const activeLink = useRef<HTMLAnchorElement>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when the open tab changes
@@ -80,14 +74,7 @@ function SettingsBody({ tab }: { tab: SettingsTabId }) {
 				</nav>
 			</header>
 			<div className="flex min-h-0 flex-1 flex-col bg-cms-muted/50">
-				<div className={showingKeys ? "hidden" : "contents"}>
-					<SchemaSettings tab={schemaTab} actionsSlot={actions} />
-				</div>
-				{showingKeys && (
-					<div className="min-h-0 flex-1 overflow-y-auto">
-						<ApiKeysSettings />
-					</div>
-				)}
+				<SchemaSettings tab={tab} actionsSlot={actions} />
 			</div>
 		</>
 	);

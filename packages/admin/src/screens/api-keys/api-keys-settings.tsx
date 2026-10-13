@@ -23,9 +23,10 @@ import { Skeleton } from "../../ui/skeleton";
 import { cmsFetch, errorText } from "../admin-api";
 import { Labeled } from "../schema/controls";
 import { Section } from "../schema/section";
-import { SettingsTabBody } from "../settings/tab-body";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
+import { PageActions } from "../shared/admin-shell";
 import { ConfirmDialog, type ConfirmRequest } from "../shared/confirm-dialog";
+import { PageBody } from "../shared/page-body";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
 import { API_KEYS_KEY, useApiKeys } from "./api-keys-api";
 import { apiKeysMessages } from "./messages";
@@ -37,7 +38,7 @@ async function putSlot(site: ReturnType<typeof useSite>, plugin: string, slot: s
 	return cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), { method: "PUT", json: { plugin, slot, key }, fallback });
 }
 
-/** Settings → API keys: one card with a row per key, and the dialogs to add, rename, replace and delete. */
+/** The API keys page: one card with a row per key, the one primary action ("Add key") in the page header, and the dialogs to add, rename, replace and delete. */
 export function ApiKeysSettings() {
 	const t = useTranslator(apiKeysMessages);
 	const site = useSite();
@@ -109,7 +110,13 @@ export function ApiKeysSettings() {
 	];
 
 	return (
-		<SettingsTabBody data-testid="api-keys-settings">
+		<PageBody data-testid="api-keys-settings">
+			<PageActions>
+				<Button type="button" size="sm" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
+					<Plus aria-hidden />
+					{t("add")}
+				</Button>
+			</PageActions>
 			{list && !list.secretsAvailable && (
 				<Alert variant="danger" layout="stack">
 					<AlertTitle>{t("secret.title")}</AlertTitle>
@@ -129,16 +136,6 @@ export function ApiKeysSettings() {
 									].join(" · ")
 								: "\u00a0"}
 						</span>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							disabled={!list?.secretsAvailable}
-							onClick={() => setEditing({ mode: "add" })}
-						>
-							<Plus aria-hidden />
-							{t("add")}
-						</Button>
 					</div>
 					<KeyRows query={query} menu={rowMenu} onAssign={setSlotEditing} onRetry={() => void query.refetch()} />
 				</div>
@@ -161,7 +158,7 @@ export function ApiKeysSettings() {
 				/>
 			)}
 			<ConfirmDialog request={confirmRequest} onClose={() => setConfirmRequest(null)} />
-		</SettingsTabBody>
+		</PageBody>
 	);
 }
 

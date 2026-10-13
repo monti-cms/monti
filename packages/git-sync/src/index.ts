@@ -14,7 +14,7 @@ const t = createActiveTranslator(settingsMessages);
  * - In: GitHub's `push` webhook, "Pull now" on the admin screen and `monti git-sync:pull` write what changed in the repo to the CMS and publish it.
  * - If an entry changed on both sides since the last sync, nothing is merged: the admin screen lists the conflict with a diff and a person picks a side.
  *
- * The GitHub token is a key of the API key store assigned to the plugin's `token` slot (Settings > API keys, or the plugin's screen); the webhook secret is saved on the
+ * The GitHub token is a key of the API key store assigned to the plugin's `token` slot (Tools > API keys, or the plugin's screen); the webhook secret is saved on the
  * plugin's admin screen (encrypted with a key derived from `MONTI_SECRET`). Neither is in config.
  * It works with no arguments (`gitSync()`): no target is listed, so nothing syncs until `targets` names a repo.
  *

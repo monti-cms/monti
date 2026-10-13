@@ -47,8 +47,8 @@ describe("settings page", () => {
 		expect(stop.notFound).not.toHaveBeenCalled();
 	});
 
-	it("is a 404 for a tab nobody owns, including the screens that used to be tabs", async () => {
-		for (const tab of ["nope", "schema", "templates", "events", "ai"]) {
+	it("is a 404 for a tab nobody owns, including the screens that used to be tabs (the API keys moved to their own page)", async () => {
+		for (const tab of ["nope", "schema", "templates", "events", "ai", "api-keys"]) {
 			await expect(SettingsPage({ cms: cms(testSite), server: server(), tab })).rejects.toThrow("not-found");
 		}
 	});

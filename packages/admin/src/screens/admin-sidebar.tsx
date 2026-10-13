@@ -8,6 +8,7 @@ import {
 	ChevronRight,
 	ExternalLink,
 	FileImage,
+	KeyRound,
 	LayoutTemplate,
 	Plus,
 	Settings2,
@@ -46,7 +47,15 @@ import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/ent
 import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
 
 /** Value that points to the current screen in the sidebar. Every Settings tab is the one `settings` entry; a plugin page is `tools:<path>`. */
-export type AdminNavId = Collection | "media" | "templates" | "events" | "settings" | "trash" | `tools:${string}`;
+export type AdminNavId =
+	| Collection
+	| "media"
+	| "templates"
+	| "api-keys"
+	| "events"
+	| "settings"
+	| "trash"
+	| `tools:${string}`;
 
 /** Folder navigation, passed by the list screen. The sidebar draws it as a tree under the collection it belongs to. */
 export interface FolderNavigation {
@@ -258,7 +267,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	);
 }
 
-/** Left navigation area: Content (collections with their folders, media), Tools (templates, plugin pages, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
+/** Left navigation area: Content (collections with their folders, media), Tools (templates, plugin pages, API keys, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
 export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, folderCounts }: AdminSidebarProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
@@ -398,6 +407,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 							{toolsPages(site).map((page) =>
 								navLink(page.href, `tools:${page.path}`, page.label, <NamedIcon name={page.icon} />),
 							)}
+							{navLink(site.adminHref("/api-keys"), "api-keys", t("sidebar.apiKeys"), <KeyRound />)}
 							{navLink(
 								site.adminHref("/events"),
 								"events",
