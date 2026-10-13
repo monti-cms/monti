@@ -3,6 +3,7 @@ import { testConfig } from "../../../test/site";
 import { type Cms, fakeCms } from "../../cms";
 import type { ApiKeyList } from "../../core/api-keys";
 import { PUT as assign } from "../../http/v1/api-keys/slots/route";
+import { defineMessages } from "../../i18n/define";
 import { definePlugin } from "../../plugin/define";
 import { migrateKeyUses } from "../api-keys";
 
@@ -97,6 +98,24 @@ describe("key slots", () => {
 		language.current = "ko";
 		expect((await cms.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
 		expect((await cms.apiKeys.get(key.id))?.uses[0]?.label).toBe("맞춤법 검사");
+	});
+
+	it("works out a slot label from the site, in the admin language of the instance", async () => {
+		const messages = defineMessages("test.slot", { en: { key: "Spell check" }, ko: { key: "맞춤법 검사" } });
+		const plugin = definePlugin({
+			name: "speller",
+			keySlots: [{ id: "key", label: (site) => site.createTranslator(messages)("key") }],
+		});
+		const english = fakeCms({
+			config: { ...CONFIG([plugin as never]), admin: { locale: "en" } } as never,
+			server: { secret: SECRET },
+		});
+		expect((await english.apiKeys.slots())[0]?.label).toBe("Spell check");
+		const korean = fakeCms({
+			config: { ...CONFIG([plugin as never]), admin: { locale: "ko" } } as never,
+			server: { secret: SECRET },
+		});
+		expect((await korean.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
 	});
 
 	it("has no slot, and no use, when the plugin is not installed", async () => {

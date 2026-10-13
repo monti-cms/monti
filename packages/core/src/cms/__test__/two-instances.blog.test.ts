@@ -90,7 +90,7 @@ function stubServer(tag: string) {
 		migrate: vi.fn(async (options: { site: Site }) => {
 			sites.push(options.site);
 		}),
-		pluginStorage: vi.fn(() => ({}) as never),
+		pluginStorage: vi.fn(() => ({ once: async () => false }) as never),
 	} satisfies DatabaseAdapter;
 	const server = {
 		database,

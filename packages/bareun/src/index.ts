@@ -22,10 +22,8 @@ export const bareun = (options?: BareunOptions) =>
 		keySlots: [
 			{
 				id: BAREUN_KEY_SLOT,
-				// A getter, so the label follows the admin language at read time.
-				get label() {
-					return t("keyLabel");
-				},
+				// Worked out with the site of the instance each time, so it follows the admin language.
+				label: (site) => site.createTranslator(bareunMessages)("keyLabel"),
 			},
 		],
 		// In the browser bundle, `./server` is swapped for an empty entry point (`server.browser.ts`) (package.json `exports`).

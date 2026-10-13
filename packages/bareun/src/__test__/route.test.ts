@@ -161,12 +161,12 @@ describe("Bareun check route", () => {
 describe("Bareun key slot", () => {
 	afterEach(() => vi.unstubAllEnvs());
 
-	it("declares exactly one slot, labelled in the active language", async () => {
+	it("declares exactly one slot, labelled in the admin language of the site", async () => {
 		const cms = cmsWith();
 		const slots = await cms.apiKeys.slots();
 		expect(slots).toHaveLength(1);
 		expect(slots[0]).toMatchObject({ plugin: "text-check-bareun", slot: "key", key: null });
-		expect(slots[0]?.label).toBe(createActiveTranslator(bareunMessages)("keyLabel"));
+		expect(slots[0]?.label).toBe(cms.site.createTranslator(bareunMessages)("keyLabel"));
 		expect(bareun().keySlots).toHaveLength(1);
 	});
 

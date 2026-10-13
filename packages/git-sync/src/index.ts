@@ -36,9 +36,8 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 		keySlots: [
 			{
 				id: GIT_SYNC_TOKEN_SLOT,
-				get label() {
-					return t("keyLabel");
-				},
+				// Worked out with the site of the instance each time, so it follows the admin language.
+				label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
 			},
 		],
 		// With `enabled: false` the plugin registers nothing: no screen, hooks or routes.

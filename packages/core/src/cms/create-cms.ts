@@ -336,7 +336,11 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		};
 		const declaredSlots = () =>
 			site.plugins.flatMap((plugin) =>
-				(plugin.keySlots ?? []).map((slot) => ({ plugin: plugin.name, slot: slot.id, label: slot.label })),
+				(plugin.keySlots ?? []).map((slot) => ({
+					plugin: plugin.name,
+					slot: slot.id,
+					label: typeof slot.label === "function" ? slot.label(site) : slot.label,
+				})),
 			);
 		const inTransaction = <T>(
 			work: (tx: { pluginStorage(plugin: string): PluginStorage }) => Promise<T>,

@@ -3,6 +3,7 @@ import type { Cms } from "../cms";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { WriteHooks } from "../services/hooks";
+import type { Site } from "../site";
 import type { PluginStorage } from "./storage";
 
 /**
@@ -24,8 +25,7 @@ export interface CmsPlugin<
 	/**
 	 * The API keys this plugin needs, one slot each (`{ id: "key", label }`). Settings > API keys lists every slot of the installed plugins: assigned (the key's
 	 * "in use" line names it) or empty (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with
-	 * `cms.apiKeys.readSlot(<plugin name>, <slot id>)`. Read by both sides; `label` is read each time it is shown, so write it as a getter that follows the admin language
-	 * (the way `options.label` of the Bareun plugin does).
+	 * `cms.apiKeys.readSlot(<plugin name>, <slot id>)`. Read by both sides.
 	 */
 	readonly keySlots?: readonly PluginKeySlot[];
 	/** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
@@ -65,8 +65,11 @@ export interface CmsPlugin<
 export interface PluginKeySlot {
 	/** Lowercase letters, digits and `-`. Unique within the plugin. */
 	readonly id: string;
-	/** What the admin calls this key, in the admin language ("Spell check"). */
-	readonly label: string;
+	/**
+	 * What the admin calls this key ("Spell check"). Give a function of the site to follow the admin language (`(site) => site.createTranslator(messages)("keyLabel")`):
+	 * the core calls it with the site of the instance each time the slots are listed. A plain string is shown as it is.
+	 */
+	readonly label: string | ((site: Pick<Site, "createTranslator">) => string);
 }
 
 export interface PluginNavItem {
