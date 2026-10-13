@@ -124,13 +124,12 @@ export function ListPreview({
 	};
 
 	return (
-		<div className="flex flex-col gap-1.5" data-testid="list-preview">
-			<h4 className="font-medium text-sm">{t("list.preview")}</h4>
+		<div className="flex flex-col gap-3" data-testid="list-preview">
 			<p className="text-cms-muted-foreground text-xs">{useReal ? t("list.previewReal") : t("list.previewSample")}</p>
 			{shown.length === 0 ? (
-				<p className="rounded-md border border-dashed p-3 text-cms-muted-foreground text-xs">{t("list.previewNone")}</p>
+				<p className="rounded-lg border border-dashed p-3 text-cms-muted-foreground text-xs">{t("list.previewNone")}</p>
 			) : (
-				<div className="overflow-x-auto rounded-md border">
+				<div className="overflow-x-auto rounded-lg border bg-cms-card">
 					<table className="w-full text-left text-sm">
 						<thead className="bg-cms-muted/40 text-xs">
 							<tr>

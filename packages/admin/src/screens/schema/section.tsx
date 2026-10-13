@@ -1,0 +1,51 @@
+import type { ReactNode } from "react";
+import { cn } from "../../lib/utils/cn";
+
+/**
+ * One section of a settings screen: the title and a one-line description in a column on the left, the content in a card on the right (stacked on a narrow
+ * screen). A section is page > section > rows: the card holds fields or one list, never another bordered box.
+ */
+export function Section({
+	title,
+	description,
+	note,
+	children,
+	wide,
+	card = true,
+	className,
+	testId,
+}: {
+	title: ReactNode;
+	description?: ReactNode;
+	/** A quieter line under the description (what cannot be changed, a warning about the file). */
+	note?: ReactNode;
+	children: ReactNode;
+	/** The left column is 260px (a page of its own) instead of 220px (inside a collection). */
+	wide?: boolean;
+	/** `false` when the content is a card of its own (a list of rows with its own header). */
+	card?: boolean;
+	className?: string;
+	testId?: string;
+}) {
+	return (
+		<section
+			data-testid={testId}
+			className={cn(
+				"grid gap-x-8 gap-y-3 lg:items-start",
+				wide ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(0,1fr)]",
+				className,
+			)}
+		>
+			<div>
+				<h3 className="font-semibold text-base">{title}</h3>
+				{description && <p className="mt-1.5 text-cms-muted-foreground text-sm leading-relaxed">{description}</p>}
+				{note && <p className="mt-2.5 text-cms-muted-foreground text-xs leading-relaxed">{note}</p>}
+			</div>
+			{card ? (
+				<div className="flex min-w-0 flex-col gap-6 rounded-lg border bg-cms-card p-5">{children}</div>
+			) : (
+				<div className="min-w-0">{children}</div>
+			)}
+		</section>
+	);
+}

@@ -20,7 +20,7 @@ import {
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
-import { FieldList } from "./field-editor";
+import { FieldsCard } from "./fields-tree";
 import { ListPreview } from "./list-preview";
 import { schemaMessages } from "./messages";
 import {
@@ -44,6 +44,7 @@ import {
 	withColumns,
 	withLayout,
 } from "./schema-model";
+import { Section } from "./section";
 
 const HEADINGS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -65,8 +66,8 @@ function LimitList<T extends string | number>({
 	const { disabled } = useSchemaEdit();
 	const limited = value !== undefined;
 	return (
-		<fieldset className="flex flex-col gap-2 rounded-md border p-2.5">
-			<legend className="px-1 font-medium text-xs">{label}</legend>
+		<fieldset className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0">
+			<legend className="sr-only">{label}</legend>
 			<FlagSwitch
 				label={t("allowed.limit", { label: label.toLowerCase() })}
 				hint={limited ? undefined : t("allowed.everything")}
@@ -74,7 +75,7 @@ function LimitList<T extends string | number>({
 				onChange={(on) => onChange(on ? [...all] : undefined)}
 			/>
 			{limited && (
-				<ul className="grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3">
+				<ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
 					{all.map((item) => {
 						const id = `allowed-${label}-${item}`;
 						return (
@@ -106,14 +107,14 @@ function LimitList<T extends string | number>({
 function BodyEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<section className="flex flex-col gap-3">
+		<Section title={t("collection.bodyTitle")} description={t("collection.bodyDescription")}>
 			<FlagSwitch
 				label={t("collection.body")}
 				hint={t("collection.bodyHint")}
 				checked={hasBody(collection)}
 				onChange={(on) => update((current) => withBody(current, on, on ? allowedOf(current) : {}))}
 			/>
-		</section>
+		</Section>
 	);
 }
 
@@ -137,9 +138,7 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<div className="flex flex-col gap-2">
-			<h4 className="font-medium text-sm">{t("allowed.title")}</h4>
-			<p className="text-cms-muted-foreground text-xs">{t("allowed.hint")}</p>
+		<Section title={t("allowed.title")} description={t("allowed.hint")} note={limited ? t("allowed.note") : undefined}>
 			<LimitList
 				label={t("allowed.blocks")}
 				all={vocabulary.blocks}
@@ -159,8 +158,7 @@ function AllowedEditor({
 				nameOf={(level) => `H${level}`}
 				onChange={(value) => setAllowed("headings", value)}
 			/>
-			{limited && <p className="text-cms-muted-foreground text-xs">{t("allowed.note")}</p>}
-		</div>
+		</Section>
 	);
 }
 
@@ -183,48 +181,49 @@ function LayoutEditor({ collection, update }: { collection: Obj; update: (change
 			}),
 		);
 	return (
-		<section className="flex flex-col gap-2">
-			<p className="text-cms-muted-foreground text-xs">{t("layout.hint")}</p>
-			{groups.map((group, index) => (
-				<div key={`${group.group ?? ""}-${index}`} className="flex flex-col gap-2 rounded-lg border p-2.5">
-					<div className="flex items-end gap-2">
-						<TextInput
-							label={t("layout.group")}
-							value={group.group}
-							className="min-w-0 flex-1"
-							onChange={(value) => edit(index, { group: orUndefined(value) })}
+		<Section title={t("layout.title")} description={t("layout.description")} note={t("layout.hint")}>
+			<div className="flex flex-col divide-y">
+				{groups.map((group, index) => (
+					<div key={`${group.group ?? ""}-${index}`} className="flex flex-col gap-4 py-5 first:pt-0 last:pb-0">
+						<div className="flex items-end gap-2">
+							<TextInput
+								label={t("layout.group")}
+								value={group.group}
+								className="min-w-0 flex-1"
+								onChange={(value) => edit(index, { group: orUndefined(value) })}
+							/>
+							<TextInput
+								label={t("layout.tab")}
+								value={group.tab}
+								className="w-32"
+								onChange={(value) => edit(index, { tab: orUndefined(value) })}
+							/>
+							<RowActions
+								index={index}
+								count={groups.length}
+								name={group.group ?? t("layout.untitled")}
+								onMove={(delta) => change(moveItem(groups, index, delta))}
+								onRemove={() => change(groups.filter((_, at) => at !== index))}
+							/>
+						</div>
+						<FlagSwitch
+							label={t("layout.collapsed")}
+							checked={group.collapsed === true}
+							onChange={(on) => edit(index, { collapsed: on ? true : undefined })}
 						/>
-						<TextInput
-							label={t("layout.tab")}
-							value={group.tab}
-							className="w-32"
-							onChange={(value) => edit(index, { tab: orUndefined(value) })}
-						/>
-						<RowActions
-							index={index}
-							count={groups.length}
-							name={group.group ?? t("layout.untitled")}
-							onMove={(delta) => change(moveItem(groups, index, delta))}
-							onRemove={() => change(groups.filter((_, at) => at !== index))}
+						<OrderedNames
+							label={t("layout.fields")}
+							names={group.fields}
+							options={names}
+							onChange={(next) => edit(index, { fields: next })}
 						/>
 					</div>
-					<FlagSwitch
-						label={t("layout.collapsed")}
-						checked={group.collapsed === true}
-						onChange={(on) => edit(index, { collapsed: on ? true : undefined })}
-					/>
-					<OrderedNames
-						label={t("layout.fields")}
-						names={group.fields}
-						options={names}
-						onChange={(next) => edit(index, { fields: next })}
-					/>
-				</div>
-			))}
+				))}
+			</div>
 			<div>
 				<AddButton onClick={() => change([...groups, { fields: [] }])}>{t("layout.add")}</AddButton>
 			</div>
-		</section>
+		</Section>
 	);
 }
 
@@ -236,7 +235,7 @@ function ListEditor({ collection, update }: { collection: Obj; update: (change: 
 		.map(([name]) => name);
 	const options = [...storedFieldNames(collection), ...slugs, ...(slugs.length > 0 ? ["slug"] : []), ...SYSTEM_COLUMNS];
 	return (
-		<section className="flex flex-col gap-2">
+		<Section title={t("list.title")} description={t("list.hint")}>
 			<FlagSwitch
 				label={t("list.custom")}
 				hint={columns ? undefined : t("list.default")}
@@ -255,7 +254,7 @@ function ListEditor({ collection, update }: { collection: Obj; update: (change: 
 					onChange={(next) => update((current) => withColumns(current, next))}
 				/>
 			)}
-		</section>
+		</Section>
 	);
 }
 
@@ -288,87 +287,102 @@ export function CollectionEditor({
 		label: value || t("collection.iconDefault"),
 	}));
 	const editing = { collectionName: name, collection, update: onChange, onRename };
+	const label = typeof collection.label === "string" ? collection.label : name;
+	const kindLabel = t(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
+	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
-		<div className="flex min-w-0 flex-col gap-5" data-testid={`collection-${name}`}>
+		<div className="flex min-w-0 flex-col gap-6" data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<section className="flex flex-col gap-3">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<h3 className="font-semibold text-base">
-							{typeof collection.label === "string" ? collection.label : name}{" "}
-							<code className="font-normal text-cms-muted-foreground text-xs">{name}</code>
-						</h3>
-						<p className="text-cms-muted-foreground text-xs">
-							{isNew ? t("collection.newHint") : t("collection.nameHint")}
+			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)} className="gap-6">
+				<div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+					<div className="min-w-0">
+						<div className="flex items-baseline gap-2">
+							<h3 className="font-semibold text-lg">{label}</h3>
+							<code className="text-cms-muted-foreground text-xs">{name}</code>
+						</div>
+						<p className="mt-1 text-cms-muted-foreground text-sm">
+							{path
+								? t("collection.summary", { kind: kindLabel, path })
+								: t("collection.summaryNoPath", { kind: kindLabel })}
 						</p>
+						{isNew && <p className="mt-0.5 text-cms-muted-foreground text-xs">{t("collection.newHint")}</p>}
 					</div>
-					<Button type="button" variant="destructive" size="sm" disabled={disabled} onClick={onRemove}>
-						<Trash2 aria-hidden />
-						{t("collection.remove")}
-					</Button>
+					<TabsList className="w-full justify-start sm:w-fit">
+						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
+						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
+						<TabsTrigger value="list">{t("collection.tabs.list")}</TabsTrigger>
+						<TabsTrigger value="advanced">{t("collection.tabs.advanced")}</TabsTrigger>
+					</TabsList>
 				</div>
-			</section>
-			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)}>
-				<TabsList className="w-full justify-start sm:w-fit">
-					<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
-					<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
-					<TabsTrigger value="list">{t("collection.tabs.list")}</TabsTrigger>
-					<TabsTrigger value="advanced">{t("collection.tabs.advanced")}</TabsTrigger>
-				</TabsList>
-				<TabsContent value="basics" className="flex flex-col gap-5 pt-3">
-					<div className="grid gap-3 sm:grid-cols-2">
-						<TextInput
-							label={t("collection.label")}
-							value={collection.label as string | undefined}
-							onChange={(value) => set("label", value)}
-						/>
-						<Pick
-							label={t("collection.kind")}
-							hint={collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")}
-							value={String(collection.kind)}
-							items={[
-								{ value: "document", label: t("collection.kindDocument") },
-								{ value: "item", label: t("collection.kindItem") },
-							]}
-							onChange={(value) => set("kind", value)}
-						/>
-						<Pick
-							label={t("collection.icon")}
-							value={icon}
-							items={icons}
-							onChange={(value) => set("icon", orUndefined(value))}
-						/>
-						<TextInput
-							label={t("collection.path")}
-							hint={t("collection.pathHint")}
-							placeholder="/posts/:slug"
-							value={collection.path as string | undefined}
-							onChange={(value) => set("path", orUndefined(value))}
-						/>
-					</div>
+				<TabsContent value="basics" className="flex flex-col gap-12">
+					<Section title={t("collection.basicsTitle")} description={t("collection.basicsDescription")}>
+						<div className="flex max-w-md flex-col gap-6">
+							<TextInput
+								label={t("collection.label")}
+								value={collection.label as string | undefined}
+								onChange={(value) => set("label", value)}
+							/>
+							<Pick
+								label={t("collection.kind")}
+								hint={collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")}
+								value={String(collection.kind)}
+								items={[
+									{ value: "document", label: t("collection.kindDocument") },
+									{ value: "item", label: t("collection.kindItem") },
+								]}
+								onChange={(value) => set("kind", value)}
+							/>
+							<Pick
+								label={t("collection.icon")}
+								value={icon}
+								items={icons}
+								onChange={(value) => set("icon", orUndefined(value))}
+							/>
+							<TextInput
+								label={t("collection.path")}
+								hint={t("collection.pathHint")}
+								placeholder="/posts/:slug"
+								value={collection.path as string | undefined}
+								onChange={(value) => set("path", orUndefined(value))}
+							/>
+						</div>
+					</Section>
 					<BodyEditor collection={collection} update={onChange} />
 				</TabsContent>
-				<TabsContent value="fields" className="flex flex-col gap-5 pt-3">
-					<section className="flex flex-col gap-2">
-						<h4 className="font-medium text-sm">{t("field.title")}</h4>
-						<FieldList editing={editing} place={{}} fields={fields} kinds={FIELD_KINDS} />
-					</section>
-					<section className="flex flex-col gap-2">
-						<h4 className="font-medium text-sm">{t("layout.title")}</h4>
-						<LayoutEditor collection={collection} update={onChange} />
-					</section>
+				<TabsContent value="fields" className="flex flex-col gap-12">
+					<FieldsCard editing={editing} />
+					<LayoutEditor collection={collection} update={onChange} />
 				</TabsContent>
-				<TabsContent value="list" className="flex flex-col gap-4 pt-3">
-					<p className="text-cms-muted-foreground text-xs">{t("list.hint")}</p>
+				<TabsContent value="list" className="flex flex-col gap-12">
 					<ListEditor collection={collection} update={onChange} />
-					<ListPreview name={name} collection={collection} columns={columnsOf(collection)} saved={!isNew} />
+					<Section title={t("list.previewTitle")} card={false}>
+						<ListPreview name={name} collection={collection} columns={columnsOf(collection)} saved={!isNew} />
+					</Section>
 				</TabsContent>
-				<TabsContent value="advanced" className="flex flex-col gap-5 pt-3">
+				<TabsContent value="advanced" className="flex flex-col gap-12">
 					{hasBody(collection) ? (
 						<AllowedEditor collection={collection} update={onChange} />
 					) : (
 						<p className="text-cms-muted-foreground text-sm">{t("advanced.noBody")}</p>
 					)}
+					<Section
+						title={t("collection.dangerTitle")}
+						description={isNew ? t("collection.newHint") : t("collection.nameHint")}
+					>
+						<div>
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								disabled={disabled}
+								className="-ml-2.5 text-cms-destructive hover:text-cms-destructive"
+								onClick={onRemove}
+							>
+								<Trash2 aria-hidden />
+								{t("collection.remove")}
+							</Button>
+						</div>
+					</Section>
 				</TabsContent>
 			</Tabs>
 		</div>

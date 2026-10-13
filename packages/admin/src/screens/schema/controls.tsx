@@ -72,8 +72,8 @@ export function Labeled({
 	className?: string;
 }) {
 	return (
-		<UiField className={cn("gap-1.5", className)}>
-			<FieldLabel htmlFor={htmlFor} className="font-medium text-xs">
+		<UiField className={cn("gap-2", className)}>
+			<FieldLabel htmlFor={htmlFor} className="font-medium text-sm">
 				{label}
 			</FieldLabel>
 			{children}
@@ -90,6 +90,7 @@ export function TextInput({
 	hint,
 	type = "text",
 	className,
+	optional,
 }: {
 	label: string;
 	value: string | number | undefined;
@@ -98,11 +99,27 @@ export function TextInput({
 	hint?: ReactNode;
 	type?: "text" | "number";
 	className?: string;
+	/** Marks the field as optional with a muted "optional" next to the label (the form marks what is optional, not what is required). */
+	optional?: boolean;
 }) {
+	const t = useTranslator(schemaMessages);
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	return (
-		<Labeled label={label} hint={hint} htmlFor={id} className={className}>
+		<Labeled
+			label={
+				optional ? (
+					<>
+						{label} <span className="font-normal text-cms-muted-foreground">{t("sheet.optional")}</span>
+					</>
+				) : (
+					label
+				)
+			}
+			hint={hint}
+			htmlFor={id}
+			className={className}
+		>
 			<Input
 				id={id}
 				type={type}
@@ -137,20 +154,70 @@ export function FlagSwitch({
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	return (
-		<UiField orientation="horizontal" className="items-start gap-2">
+		<UiField orientation="horizontal" className="items-start justify-between gap-4">
+			<div className="flex flex-col gap-0.5">
+				<FieldLabel htmlFor={id} className="font-medium text-sm">
+					{label}
+				</FieldLabel>
+				{hint && <FieldDescription className="text-xs">{hint}</FieldDescription>}
+			</div>
 			<Switch
 				id={id}
 				size="sm"
 				checked={checked}
 				disabled={disabled}
+				className="mt-0.5 shrink-0"
 				onCheckedChange={(next) => onChange(next === true)}
 			/>
-			<div className="flex flex-col gap-0.5">
-				<FieldLabel htmlFor={id} className="font-normal text-sm">
-					{label}
-				</FieldLabel>
-				{hint && <FieldDescription className="text-xs">{hint}</FieldDescription>}
+		</UiField>
+	);
+}
+
+/** A few exclusive choices side by side in one rounded strip (a segmented control). */
+export function Segmented({
+	label,
+	value,
+	items,
+	onChange,
+	hint,
+}: {
+	label: string;
+	value: string;
+	items: readonly PickItem[];
+	onChange: (value: string) => void;
+	hint?: ReactNode;
+}) {
+	const { disabled } = useSchemaEdit();
+	const id = useId();
+	return (
+		<UiField className="gap-2">
+			<FieldLabel id={id} className="font-medium text-sm">
+				{label}
+			</FieldLabel>
+			<div
+				role="radiogroup"
+				aria-labelledby={id}
+				className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-cms-muted p-[3px] text-sm"
+			>
+				{items.map((item) => (
+					// biome-ignore lint/a11y/useSemanticElements: a segmented control draws radio buttons as buttons; a native radio cannot be styled as one strip
+					<button
+						key={item.value}
+						type="button"
+						role="radio"
+						aria-checked={item.value === value}
+						disabled={disabled}
+						onClick={() => onChange(item.value)}
+						className={cn(
+							"h-7 rounded-[3px] border border-transparent px-3 text-cms-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:opacity-50",
+							item.value === value && "border-cms-border bg-cms-background font-medium text-cms-foreground",
+						)}
+					>
+						{item.label}
+					</button>
+				))}
 			</div>
+			{hint && <FieldDescription className="text-xs">{hint}</FieldDescription>}
 		</UiField>
 	);
 }
@@ -346,15 +413,12 @@ export function OrderedNames({
 	const [adding, setAdding] = useState("");
 	const show = nameOf ?? ((name: string) => name);
 	return (
-		<div className="flex flex-col gap-1.5">
-			<span className="font-medium text-xs">{label}</span>
+		<div className="flex flex-col gap-2">
+			<span className="font-medium text-sm">{label}</span>
 			{names.length === 0 && <p className="text-cms-muted-foreground text-xs">{t("names.none")}</p>}
-			<ul className="flex flex-col gap-1">
+			<ul className={cn("flex flex-col divide-y overflow-hidden rounded-md border", names.length === 0 && "hidden")}>
 				{names.map((name, index) => (
-					<li
-						key={name}
-						className="flex items-center justify-between rounded-md border bg-cms-background px-2 py-0.5 text-sm"
-					>
+					<li key={name} className="flex items-center justify-between px-3 py-1 text-sm">
 						<span className="truncate">{show(name)}</span>
 						<RowActions
 							index={index}

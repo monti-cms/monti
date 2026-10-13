@@ -6,7 +6,7 @@ export const settingsMessages = defineMessages("cms-admin.settings", {
 		title: "Settings",
 		"tabs.label": "Settings sections",
 		"tab.collections": "Collections",
-		"tab.locales": "Locales",
+		"tab.locales": "Languages",
 		"tab.site": "Site",
 		"tab.admin": "Admin",
 		"tab.file": "File",

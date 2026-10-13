@@ -143,11 +143,30 @@ const renderScreen = () =>
 
 const review = () => screen.getByRole("button", { name: t("actions.review") }) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
-/** Picks the kind in the row that adds a field (the last "Kind" box on the screen). */
+/** Picks the kind in the dialog that adds a field (the last "Kind" box on the screen). */
 async function pickNewFieldKind(optionName: string) {
 	fireEvent.click(screen.getAllByRole("combobox", { name: t("field.kind") }).at(-1) as HTMLElement);
 	pressOption(await screen.findByRole("option", { name: optionName }));
 }
+/** Opens the dialog of the "Add field" button and fills the name (and kind). */
+async function startAddingField(name: string, kindName?: string) {
+	fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+	const dialog = await screen.findByTestId("add-field-dialog");
+	type(within(dialog).getByLabelText(t("field.newName")), name);
+	if (kindName) await pickNewFieldKind(kindName);
+	return dialog;
+}
+const confirmAdd = (dialog: HTMLElement) =>
+	fireEvent.click(within(dialog).getByRole("button", { name: t("field.addConfirm") }));
+/** The sheet of a field: opened by its row of the tree. */
+async function openFieldSheet(field: string) {
+	fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: field }) }));
+	return screen.findByTestId("field-sheet");
+}
+const applySheet = async (sheet: HTMLElement) => {
+	fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.apply") }));
+	await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
+};
 const openTab = (name: "basics" | "fields" | "list" | "advanced") =>
 	fireEvent.click(screen.getByRole("tab", { name: t(`collection.tabs.${name}`) }));
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
@@ -196,7 +215,7 @@ describe("SchemaScreen", () => {
 		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).value).toBe("Post");
 		expect((screen.getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/posts/:slug");
 		expect(review().disabled).toBe(true);
-		fireEvent.click(screen.getByRole("button", { name: "Tag" }));
+		fireEvent.click(screen.getByRole("button", { name: /^Tag/ }));
 		expect(await screen.findByTestId("collection-tag")).toBeTruthy();
 	});
 
@@ -217,13 +236,15 @@ describe("SchemaScreen", () => {
 		expect(reload.rememberSaved).toHaveBeenCalledWith(expect.stringContaining("3"));
 	});
 
-	it("adds a field in the file's format, after the others", async () => {
+	it("adds a field in the file's format, after the others, and opens its sheet", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		await screen.findByTestId("collection-post");
-		type(screen.getByLabelText(t("field.newName")), "rating");
-		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+		await screen.findByTestId("fields-card");
+		confirmAdd(await startAddingField("rating"));
+		const sheet = await screen.findByTestId("field-sheet");
+		expect(within(sheet).getAllByText("rating").length).toBeGreaterThan(0);
+		await applySheet(sheet);
 		expect(await screen.findByTestId("field-rating")).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
@@ -237,48 +258,149 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		await screen.findByTestId("collection-post");
-		type(screen.getByLabelText(t("field.newName")), "summary");
-		expect((screen.getByRole("button", { name: t("field.add") }) as HTMLButtonElement).disabled).toBe(true);
+		await screen.findByTestId("fields-card");
+		const dialog = await startAddingField("summary");
+		expect((within(dialog).getByRole("button", { name: t("field.addConfirm") }) as HTMLButtonElement).disabled).toBe(
+			true,
+		);
+		type(within(dialog).getByLabelText(t("field.newName")), "1bad");
+		expect((within(dialog).getByRole("button", { name: t("field.addConfirm") }) as HTMLButtonElement).disabled).toBe(
+			true,
+		);
 	});
 
-	it("shows which field is the title, lets the title field be renamed, and keeps it the title with the title role", async () => {
+	it("lists the fields as one tree: kind, required mark and settings per line, the title marked", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		await screen.findByTestId("collection-post");
+		const card = await screen.findByTestId("fields-card");
+		const row = (field: string) => within(card).getByTestId(`field-${field}`);
+		expect(within(row("title")).getByText("text")).toBeTruthy();
+		expect(within(row("title")).getByText("!")).toBeTruthy();
+		expect(within(row("summary")).queryByText("!")).toBeNull();
+		expect(within(row("slug")).getAllByText("slug")).toHaveLength(2);
+		// A choice writes its options as the settings.
+		expect(within(row("status")).getByText("draft | live")).toBeTruthy();
 		// The field named `title` is the title until a field has the role.
-		expect(within(screen.getByTestId("field-title")).getByTestId("title-badge")).toBeTruthy();
-		expect(within(screen.getByTestId("field-summary")).queryByTestId("title-badge")).toBeNull();
+		expect(within(row("title")).getByTestId("title-badge")).toBeTruthy();
+		expect(within(row("summary")).queryByTestId("title-badge")).toBeNull();
+		// No separate card per field: one card, one header with the count.
+		expect(within(card).getByRole("heading", { level: 4 }).textContent).toContain("4");
+	});
 
-		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "title" }) }));
-		const name = within(screen.getByTestId("field-title")).getByLabelText(t("field.name"));
-		type(name, "headline");
-		fireEvent.keyDown(name, { key: "Enter" });
-		const renamed = await screen.findByTestId("field-headline");
-		expect(within(renamed).getByTestId("title-badge")).toBeTruthy();
+	it("writes relation, backlink, choice and conditional fields in the tree, with the conditional options as branches", async () => {
+		const base = schema();
+		base.collections.tag.label = "Tag";
+		state = screenState({
+			schema: {
+				...base,
+				collections: {
+					...base.collections,
+					series: { label: "Series", kind: "item", fields: { title: { kind: "text", label: "Title" } } },
+					post: {
+						...base.collections.post,
+						fields: {
+							...base.collections.post.fields,
+							tagIds: { kind: "relation", label: "Tags", to: "tag", many: true, ordered: true },
+							series: { kind: "backlink", label: "Series", from: "series", via: "itemIds" },
+							cover: { kind: "media", label: "Cover" },
+							policy: {
+								kind: "conditional",
+								label: "Policy",
+								discriminant: {
+									kind: "select",
+									label: "Policy",
+									options: { normal: "Normal", deprecated: "Deprecated" },
+								},
+								values: {
+									normal: {},
+									deprecated: { replacementId: { kind: "relation", label: "Replacement", to: "post" } },
+								},
+							},
+						},
+					},
+				},
+			},
+		});
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		const card = await screen.findByTestId("fields-card");
+		const row = (field: string) => within(card).getByTestId(`field-${field}`);
+		expect(within(row("tagIds")).getByText("→ Tag[]")).toBeTruthy();
+		expect(within(row("tagIds")).getByText(new RegExp(t("sum.ordered")))).toBeTruthy();
+		expect(within(row("series")).getByText("← Series")).toBeTruthy();
+		expect(within(row("cover")).getByText("media")).toBeTruthy();
+		const policy = row("policy");
+		expect(within(policy).getByText("one of")).toBeTruthy();
+		expect(within(policy).getByText("normal | deprecated", { selector: "div" })).toBeTruthy();
+		// Each option is a branch; the field of an option sits under it, and an option without fields says so.
+		expect(within(policy).getByText('= "normal"')).toBeTruthy();
+		expect(within(policy).getByText('= "deprecated"')).toBeTruthy();
+		expect(within(policy).getByText(t("fields.noExtra"))).toBeTruthy();
+		const branch = within(policy).getByTestId("field-replacementId");
+		expect(within(branch).getByText("→ Post")).toBeTruthy();
+		const order = [...policy.querySelectorAll("[data-testid^='field-'], span")]
+			.map((node) => node.textContent)
+			.filter((text) => text === '= "deprecated"' || text === "replacementId");
+		expect(order).toEqual(['= "deprecated"', "replacementId"]);
+		// A field of a branch opens in the same sheet.
+		fireEvent.click(within(branch).getByRole("button", { name: t("field.toggle", { name: "replacementId" }) }));
+		expect(await screen.findByTestId("field-sheet")).toBeTruthy();
+	});
 
+	it("opens the field in a sheet with its name read-only, and Cancel leaves the file as it was", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		const sheet = await openFieldSheet("summary");
+		expect(within(sheet).getByText(t("sheet.nameHint"))).toBeTruthy();
+		expect(within(sheet).queryByRole("textbox", { name: t("sheet.name") })).toBeNull();
+		type(within(sheet).getByLabelText(t("sheet.label")), "Teaser");
+		fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.cancel") }));
+		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
+		expect(review().disabled).toBe(true);
+	});
+
+	it("writes the edits of the sheet to the file only on Apply", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		const sheet = await openFieldSheet("summary");
+		type(within(sheet).getByLabelText(t("sheet.label")), "Teaser");
+		fireEvent.click(within(sheet).getByRole("switch", { name: t("field.required") }));
+		await applySheet(sheet);
+		expect(review().disabled).toBe(false);
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
-		const post = (
-			lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Record<string, unknown>> } } }
-		).collections.post;
-		expect(post.fields.headline).toMatchObject({ kind: "text", role: "title" });
-		expect(post.fields.slug).toMatchObject({ from: "headline" });
-		expect(lastPreview()?.body?.renames).toEqual([
-			{ kind: "field", collection: "post", from: "title", to: "headline" },
-		]);
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
+			.collections.post.fields;
+		expect(fields.summary).toMatchObject({ kind: "text", label: "Teaser", required: true });
 	});
 
 	it("moves the title to another text field with the switch", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "summary" }) }));
-		const summary = screen.getByTestId("field-summary");
-		fireEvent.click(within(summary).getByRole("switch", { name: t("field.isTitle") }));
-		expect(within(summary).getByTestId("title-badge")).toBeTruthy();
+		const sheet = await openFieldSheet("summary");
+		fireEvent.click(within(sheet).getByRole("switch", { name: t("field.isTitle") }));
+		await applySheet(sheet);
+		expect(within(screen.getByTestId("field-summary")).getByTestId("title-badge")).toBeTruthy();
 		expect(within(screen.getByTestId("field-title")).queryByTestId("title-badge")).toBeNull();
+	});
+
+	it("changes the order from the row menu", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("fields-card");
+		fireEvent.click(screen.getByRole("button", { name: t("fields.menu", { name: "summary" }) }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: t("row.up", { name: "summary" }) }));
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown> } } })
+			.collections.post.fields;
+		expect(Object.keys(fields)).toEqual(["title", "summary", "slug", "status"]);
 	});
 
 	it("tells the server about a rename, and shows the choice of what happens to the stored values", async () => {
@@ -329,16 +451,16 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "summary" }) }));
-		const name = within(screen.getByTestId("field-summary")).getByLabelText(t("field.name"));
-		type(name, "excerpt");
-		fireEvent.keyDown(name, { key: "Enter" });
-		expect(await screen.findByTestId("field-excerpt")).toBeTruthy();
+		const sheet = await openFieldSheet("status");
+		const value = within(sheet).getAllByLabelText(t("options.value"))[0] as HTMLElement;
+		type(value, "idea");
+		fireEvent.keyDown(value, { key: "Enter" });
+		await applySheet(sheet);
 
 		fireEvent.click(review());
 		const decision = await screen.findByTestId("decision-field_removed:post:summary");
 		expect(lastPreview()?.body?.renames).toEqual([
-			{ kind: "field", collection: "post", from: "summary", to: "excerpt" },
+			{ kind: "option", collection: "post", field: "status", from: "draft", to: "idea" },
 		]);
 		expect(within(decision).getByText(t("review.entriesCount", { count: 3 }))).toBeTruthy();
 		const radios = within(decision).getAllByRole("radio") as HTMLInputElement[];
@@ -519,24 +641,37 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		await screen.findByTestId("collection-post");
-		const removeOf = (field: string) =>
-			within(screen.getByTestId(`field-${field}`)).getByRole("button", { name: t("row.remove", { name: field }) });
-		const title = removeOf("title") as HTMLButtonElement;
-		expect(title.disabled).toBe(true);
-		expect(title.getAttribute("aria-description")).toBe(t("field.removeBlocked.title"));
-		const slug = removeOf("slug") as HTMLButtonElement;
-		expect(slug.disabled).toBe(true);
-		expect(slug.getAttribute("aria-description")).toBe(t("field.removeBlocked.slug"));
-		expect((removeOf("summary") as HTMLButtonElement).disabled).toBe(false);
+		const deleteOf = async (field: string) => {
+			const sheet = await openFieldSheet(field);
+			return {
+				sheet,
+				button: within(sheet).getByRole("button", { name: t("sheet.delete") }) as HTMLButtonElement,
+			};
+		};
+		const close = async (sheet: HTMLElement) => {
+			fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.cancel") }));
+			await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
+		};
+		let opened = await deleteOf("title");
+		expect(opened.button.disabled).toBe(true);
+		expect(opened.button.getAttribute("title")).toBe(t("field.removeBlocked.title"));
+		await close(opened.sheet);
+		opened = await deleteOf("slug");
+		expect(opened.button.disabled).toBe(true);
+		expect(opened.button.getAttribute("title")).toBe(t("field.removeBlocked.slug"));
+		await close(opened.sheet);
+		opened = await deleteOf("summary");
+		expect(opened.button.disabled).toBe(false);
+		await close(opened.sheet);
 
 		// Without :slug in the address the slug field can go.
 		openTab("basics");
 		type(screen.getByLabelText(t("collection.path")), "");
 		openTab("fields");
-		expect((removeOf("slug") as HTMLButtonElement).disabled).toBe(false);
-		// The title stays undeletable even when it is renamed.
-		expect((removeOf("title") as HTMLButtonElement).disabled).toBe(true);
+		opened = await deleteOf("slug");
+		expect(opened.button.disabled).toBe(false);
+		fireEvent.click(opened.button);
+		await waitFor(() => expect(screen.queryByTestId("field-slug")).toBeNull());
 	});
 
 	it("splits a collection into tabs: Basics first, and the body limits and the list columns each in their own", async () => {
@@ -592,18 +727,14 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		await screen.findByTestId("collection-post");
-		type(screen.getByLabelText(t("field.newName")), "extra");
-		await pickNewFieldKind(t("kind.conditional"));
-		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+		await screen.findByTestId("fields-card");
+		confirmAdd(await startAddingField("extra", t("kind.conditional")));
 
 		const dialog = await screen.findByTestId("new-field-dialog");
 		// Nothing is in the collection yet.
 		expect(screen.queryByTestId("field-extra")).toBeNull();
 		expect(within(dialog).getByText(t("field.needs.branches"))).toBeTruthy();
-		const add = within(dialog)
-			.getAllByRole("button", { name: t("field.add") })
-			.at(-1) as HTMLButtonElement;
+		const add = within(dialog).getByRole("button", { name: t("field.addConfirm") }) as HTMLButtonElement;
 		expect(add.disabled).toBe(true);
 
 		// Add a field to the first option.
@@ -615,7 +746,12 @@ describe("SchemaScreen", () => {
 		fireEvent.click(add);
 
 		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
-		expect(await screen.findByTestId("field-extra")).toBeTruthy();
+		// The field exists, and its sheet is open; the tree lists the option and its field as a branch.
+		await applySheet(await screen.findByTestId("field-sheet"));
+		const row = await screen.findByTestId("field-extra");
+		expect(within(row).getByText('= "a"')).toBeTruthy();
+		expect(within(row).getByTestId("field-detail")).toBeTruthy();
+		expect(within(row).getByText(t("fields.noExtra"))).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
@@ -627,23 +763,25 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("fields");
-		await screen.findByTestId("collection-post");
-		type(screen.getByLabelText(t("field.newName")), "related");
-		await pickNewFieldKind(t("kind.relation"));
-		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+		await screen.findByTestId("fields-card");
+		confirmAdd(await startAddingField("related", t("kind.relation")));
 
 		const dialog = await screen.findByTestId("new-field-dialog");
 		expect(within(dialog).getByLabelText(t("field.relationTo"))).toBeTruthy();
 		fireEvent.click(within(dialog).getByRole("button", { name: t("field.newCancel") }));
 		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
 		expect(screen.queryByTestId("field-related")).toBeNull();
+		expect(screen.queryByTestId("field-sheet")).toBeNull();
 		expect(review().disabled).toBe(true);
 
-		// Open it again and add it: the first collection is the target.
-		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+		// Do it again and add it: the first collection is the target.
+		confirmAdd(await startAddingField("related", t("kind.relation")));
 		const again = await screen.findByTestId("new-field-dialog");
-		fireEvent.click(within(again).getByRole("button", { name: t("field.add") }));
+		fireEvent.click(within(again).getByRole("button", { name: t("field.addConfirm") }));
+		await applySheet(await screen.findByTestId("field-sheet"));
 		expect(await screen.findByTestId("field-related")).toBeTruthy();
+		// The tree names the collection it points to.
+		expect(within(screen.getByTestId("field-related")).getByText("→ Post")).toBeTruthy();
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })

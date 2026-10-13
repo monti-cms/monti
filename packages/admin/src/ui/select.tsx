@@ -30,7 +30,7 @@ function SelectTrigger({
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
-				"flex w-fit items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-cms-input bg-transparent cms-dark:bg-cms-input/30 py-2 pr-2 pl-2.5 text-sm shadow-xs outline-none transition-[color,box-shadow] cms-dark:hover:bg-cms-input/50 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-cms-destructive cms-dark:aria-invalid:border-cms-destructive/50 aria-invalid:ring-3 aria-invalid:ring-cms-destructive/20 cms-dark:aria-invalid:ring-cms-destructive/40 data-[size=default]:h-9 data-[size=sm]:h-8 data-placeholder:text-cms-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex w-fit items-center justify-between gap-1.5 whitespace-nowrap rounded-md border border-cms-input bg-transparent cms-dark:bg-cms-input/30 py-2 pr-2 pl-2.5 text-sm outline-none transition-[color,box-shadow] cms-dark:hover:bg-cms-input/50 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-cms-destructive cms-dark:aria-invalid:border-cms-destructive/50 aria-invalid:ring-3 aria-invalid:ring-cms-destructive/20 cms-dark:aria-invalid:ring-cms-destructive/40 data-[size=default]:h-9 data-[size=sm]:h-8 data-placeholder:text-cms-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -68,7 +68,7 @@ function SelectContent({
 					data-slot="select-content"
 					data-align-trigger={alignItemWithTrigger}
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-md bg-cms-popover text-cms-popover-foreground shadow-md ring-1 ring-cms-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-md bg-cms-popover text-cms-popover-foreground shadow-[0_1px_2px_rgba(0,0,0,0.1)] ring-1 ring-cms-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-closed:animate-out data-open:animate-in",
 						className,
 					)}
 					{...props}

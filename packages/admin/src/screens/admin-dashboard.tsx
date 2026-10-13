@@ -223,7 +223,7 @@ function TrashPage() {
 								aria-current={state.collection === item ? "page" : undefined}
 								className={cn(
 									buttonVariants({ variant: "ghost", size: "xs" }),
-									"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground aria-[current=page]:shadow-sm",
+									"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground",
 								)}
 							>
 								{site.COLLECTION_DEFINITIONS[item].label}

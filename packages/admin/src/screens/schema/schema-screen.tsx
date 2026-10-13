@@ -11,6 +11,7 @@ import { useAdminRouter } from "../../router";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
+import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
 import { errorText } from "../admin-api";
 import type { SchemaTab } from "../settings/tabs";
@@ -224,40 +225,42 @@ function SchemaEditor({ state, tab }: { state: SchemaScreenState; tab: SchemaTab
 						{state.issues.length === 0 && (
 							<>
 								{tab === "collections" && (
-									<div className="flex flex-col gap-4 lg:flex-row">
-										<div className="flex shrink-0 flex-col gap-2 lg:w-52">
-											{writable && (
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													className="justify-start"
-													onClick={() => setCreating(true)}
-												>
-													<Plus aria-hidden />
-													{t("collection.create")}
-												</Button>
-											)}
+									<div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+										<div className="flex shrink-0 flex-col gap-0.5 lg:w-52">
+											<div className="flex items-center justify-between pb-2 pl-2.5">
+												<span className="font-medium text-cms-muted-foreground text-xs">
+													{t("collection.railTitle")} {names.length}
+												</span>
+												{writable && (
+													<IconButton label={t("collection.create")} size="icon-xs" onClick={() => setCreating(true)}>
+														<Plus aria-hidden />
+													</IconButton>
+												)}
+											</div>
 											<nav
 												aria-label={t("tabs.collections")}
-												className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+												className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0"
 											>
 												{names.map((name) => {
 													const collection = collections[name];
 													const active = name === selected;
 													return (
-														<Button
+														<button
 															key={name}
 															type="button"
-															variant={active ? "secondary" : "ghost"}
-															size="sm"
 															aria-current={active ? "true" : undefined}
-															className={cn("shrink-0 justify-start", active && "font-medium")}
+															className={cn(
+																"flex h-8 shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-cms-muted focus-visible:ring-2 focus-visible:ring-cms-ring/50",
+																active && "border-cms-border bg-cms-card font-medium hover:bg-cms-card",
+															)}
 															onClick={() => setSelected(name)}
 														>
-															<span className="truncate">{String(collection?.label ?? name)}</span>
+															<span className="flex-1 truncate">{String(collection?.label ?? name)}</span>
 															{!savedNames.includes(name) && <Badge variant="outline">{t("collection.new")}</Badge>}
-														</Button>
+															<span className="font-normal text-cms-muted-foreground text-xs">
+																{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
+															</span>
+														</button>
 													);
 												})}
 											</nav>

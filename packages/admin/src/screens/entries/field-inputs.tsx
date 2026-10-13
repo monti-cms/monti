@@ -165,7 +165,7 @@ function SortableEntryRow({
 			style={{ transform: CSS.Transform.toString(transform), transition }}
 			className={cn(
 				"flex items-center gap-1 rounded-md border bg-cms-background px-1 py-1 text-xs",
-				isDragging && "relative z-10 shadow-md",
+				isDragging && "relative z-10 shadow-[0_1px_2px_rgba(0,0,0,0.1)]",
 			)}
 		>
 			<IconButton

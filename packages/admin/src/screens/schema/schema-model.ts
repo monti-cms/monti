@@ -386,6 +386,16 @@ export function moveField(collection: Obj, place: FieldPlace, name: string, delt
 	return updateFields(collection, place, (fields) => moveKey(fields, name, delta));
 }
 
+/** Puts `name` where `over` is (a field dropped on another one of the same list); any other name leaves the list as it is. */
+export function reorderField(collection: Obj, place: FieldPlace, name: string, over: string): Obj {
+	return updateFields(collection, place, (fields) => {
+		const keys = Object.keys(fields);
+		const from = keys.indexOf(name);
+		const to = keys.indexOf(over);
+		return from < 0 || to < 0 || from === to ? fields : moveKey(fields, name, to - from);
+	});
+}
+
 /**
  * The name of the title field of a collection: the field with the `title` role, else the one named `title` (the file only has it at the top level of `fields`).
  * `undefined` when there is none.
