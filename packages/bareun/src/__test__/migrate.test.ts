@@ -35,6 +35,17 @@ describe("Bareun migration into the key slot", () => {
 		expect((await cms.apiKeys.slots())[0]?.key?.name).toBe("Bareun");
 	});
 
+	it("does not bring the key back from the variable after it was cleared in the admin", async () => {
+		vi.stubEnv("BAREUN_API_KEY", OLD_KEY);
+		const cms = cmsWith();
+		await migrate(cms);
+		expect(await cms.apiKeys.readSlot(PLUGIN, "key")).toBe(OLD_KEY);
+
+		await cms.apiKeys.setSlot(PLUGIN, "key", null);
+		await migrate(cms);
+		expect(await cms.apiKeys.readSlot(PLUGIN, "key")).toBeNull();
+	});
+
 	it("reuses a key that already has the same value", async () => {
 		vi.stubEnv("BAREUN_API_KEY", OLD_KEY);
 		const cms = cmsWith();
