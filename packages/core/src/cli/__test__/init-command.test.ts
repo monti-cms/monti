@@ -1,20 +1,32 @@
 import { describe, expect, it } from "vitest";
+import type { CliIo } from "../command";
 import { runCli } from "../index";
-import { runInitCommand } from "../init-command";
 import { QUESTIONS } from "../init-prompts";
-import { fakeHost, fixtureApp, listFiles, read, SRC_APP, schemaOf, scriptedPrompter } from "./init-helpers";
+import {
+	type FakeHost,
+	fakeHost,
+	fixtureApp,
+	listFiles,
+	read,
+	SRC_APP,
+	schemaOf,
+	scriptedPrompter,
+} from "./init-helpers";
 
 /** The command line: flags, `--yes`, `--json`, the interactive run, and the exit codes. */
 
-function run(dir: string, argv: string[], extras: Parameters<typeof runInitCommand>[2] = {}) {
+function run(dir: string, argv: string[], extras: Pick<CliIo, "interactive" | "prompter"> & { host?: FakeHost } = {}) {
 	const out: string[] = [];
 	const err: string[] = [];
 	const host = extras.host ?? fakeHost();
-	const code = runInitCommand(
-		argv,
-		{ cwd: dir, log: (message) => out.push(message), error: (message) => err.push(message) },
-		{ interactive: false, host, ...extras },
-	);
+	const code = runCli(["init", ...argv], {
+		cwd: dir,
+		log: (message) => out.push(message),
+		error: (message) => err.push(message),
+		interactive: false,
+		initHost: host,
+		...extras,
+	});
 	return { code, out, err, host };
 }
 

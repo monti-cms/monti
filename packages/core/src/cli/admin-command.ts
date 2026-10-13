@@ -1,5 +1,6 @@
 import type { LoginAccountRefusal } from "../server/define";
 import { type AppOptions, loadApp } from "./app";
+import { appOptionsOf, defineCommand } from "./command";
 import { createClackPrompter, isInteractive, type Prompter } from "./prompt";
 
 export interface ResetPasswordOptions extends AppOptions {
@@ -7,7 +8,6 @@ export interface ResetPasswordOptions extends AppOptions {
 	readonly email?: string;
 	/** Default: the terminal, when there is one. */
 	readonly prompter?: Pick<Prompter, "text" | "password">;
-	readonly error?: (message: string) => void;
 }
 
 const REFUSALS: Record<LoginAccountRefusal, (min: number) => string> = {
@@ -33,8 +33,7 @@ async function terminalPrompter(): Promise<Prompter> {
  * the new password twice, and writes straight to the database of the app: there is no mail, so this is how a forgotten password is replaced. Returns the exit code.
  */
 export async function adminResetPassword(options: ResetPasswordOptions): Promise<number> {
-	const log = options.log ?? console.log;
-	const error = options.error ?? console.error;
+	const { log, error } = options;
 	const cms = await loadApp(options);
 	try {
 		const accounts = cms.auth().accounts;
@@ -64,3 +63,18 @@ export async function adminResetPassword(options: ResetPasswordOptions): Promise
 		await cms.close();
 	}
 }
+
+export const adminResetPasswordCommand = defineCommand({
+	name: "admin:reset-password",
+	summary: `Set a new password for an admin of the email and password login (auth({ providers: [password()] })). It asks for the new password twice
+and writes it straight to the database of monti.config.ts; there is no mail, so this is the way to replace a forgotten password. The first admin is
+created on the admin's own screen, not here.`,
+	options: { email: { type: "string", value: "<email>", help: "The admin's email (asked when left out)" } },
+	app: true,
+	run: (context) =>
+		adminResetPassword({
+			...appOptionsOf(context),
+			email: context.values.email,
+			prompter: context.prompter,
+		}),
+});

@@ -70,7 +70,7 @@ describe("the email and password login on the command line", () => {
 		const isolated = await createIsolatedTestPool();
 		pool = isolated.pool;
 		schemaName = isolated.schemaName;
-		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined })).toBe(true);
+		expect(await dbSetup({ cwd: app(), envFiles: [], log: () => undefined, error: () => undefined })).toBe(0);
 	});
 
 	afterAll(async () => {

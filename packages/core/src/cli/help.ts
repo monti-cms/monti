@@ -1,4 +1,9 @@
-import { DOCTOR_HELP } from "./doctor/command";
+const DOCTOR_HELP = `  doctor    Check the setup and say how to fix what is wrong: the config file, the schema file, the database and its migrations, the secret, the login, the Next files.
+            Every warning and failure says what is wrong, where, and how to fix it. Exit code 1 when a check fails.
+              --json                Print the result as JSON (for tools): { ok, cwd, summary, checks: [{ id, group, title, status, message, where?, fix? }] }
+              --only <list>         Run only these checks: groups or ids, comma separated (config, database, database/migrations, auth, ...)
+              --env-file <file>, --no-env-file, --config <file>   As for migrate
+`;
 
 /**
  * The help texts of the `monti` command line. Each command has its own section, so `monti <command> --help` prints only that command's, and `monti --help`
