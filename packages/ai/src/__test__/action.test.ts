@@ -7,7 +7,6 @@ import {
 	type AiActionInput,
 	type AiActionResult,
 	aiAction,
-	aiActionOverrideSchema,
 	aiInput,
 	defineValidator,
 	overrideFrom,

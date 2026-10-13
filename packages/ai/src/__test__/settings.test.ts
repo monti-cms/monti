@@ -1,4 +1,3 @@
-import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -9,7 +8,6 @@ import { AI_PLUGIN_NAME } from "../plugin-name";
 import { createDecider, createGenerator } from "../provider";
 import { aiRegistryOf } from "../registry";
 import {
-	type AiSettingsStore,
 	addAiProvider,
 	connectionForCheck,
 	connectionRef,

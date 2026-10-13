@@ -1,7 +1,6 @@
-// The AI plugin is an optional dependency, so only its types are read (this file does not load AI plugin code).
-import type { AiActionDefinition, AiContribution } from "@monti-cms/ai";
-import { type CollectionsConfig, valueFieldsOf } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
+// The contract types come from core, so this file never loads (or points at) the AI plugin.
+import { valueFieldsOf } from "@monti-cms/core";
+import type { AiActionDefinition, AiAttach, AiContribution, AiSiteView } from "@monti-cms/core/ai-contract";
 import { SEO_DEFAULT_LIMITS, SEO_ROLES } from "./fields";
 import { seoMessages } from "./messages";
 
@@ -20,20 +19,8 @@ const fieldInput = (site: SeoSiteView) => {
 	} as const;
 };
 
-/**
- * The part of the site view (`AiSiteView`) passed by the AI plugin that this file reads, and the shape of the attach target (`AiAttach`). Written here so the published type declarations
- * do not reference the AI plugin (sites without the AI plugin still pass type checking). `satisfies` checks that the shape matches.
- */
-export interface SeoSiteView {
-	readonly collections: CollectionsConfig;
-	/** `site.createTranslator`: the labels and prompts are written in the site's admin language. */
-	readonly createTranslator: Site["createTranslator"];
-}
-export interface FieldAttach {
-	readonly slot: "field";
-	readonly field: string;
-	readonly collections: readonly string[];
-}
+type SeoSiteView = Pick<AiSiteView, "collections" | "createTranslator">;
+type FieldAttach = Extract<AiAttach, { slot: "field" }>;
 
 /** Collections and fields that have that role field. One attach target per field name; length is field `max` → recommended length → default. */
 function roleTargets(site: SeoSiteView, role: string, fallback: number) {

@@ -30,29 +30,29 @@ export const AI_SLOTS = [
 	"insert",
 	"block",
 ] as const;
-export type AiSlot = (typeof AI_SLOTS)[number];
+export type { AiSlot } from "@monti-cms/core/ai-contract";
 
 /**
  * Mode. In `generate`, a chat model (LLM) answers with text. In `decide`, a decision model (System One, e.g. Jev)
  * rates the probability that each given choice fits, and only choices above the threshold become candidates. The decision model does not write text.
  */
 export const AI_ENGINES = ["generate", "decide"] as const;
-export type AiEngine = (typeof AI_ENGINES)[number];
+export type { AiEngine } from "@monti-cms/core/ai-contract";
 
 /** In decide mode, pick only one (`one`), or judge each choice separately and pick several (`many`). */
 export const AI_PICKS = ["one", "many"] as const;
-export type AiPick = (typeof AI_PICKS)[number];
+export type { AiPick } from "@monti-cms/core/ai-contract";
 
 /**
  * Result shape. `candidates` is several candidates to click, `text` is one long text, `mdx` is one body fragment (MDX),
  * `note` is a display-only note.
  */
 export const AI_RESULTS = ["candidates", "text", "mdx", "note"] as const;
-export type AiResult = (typeof AI_RESULTS)[number];
+export type { AiResult } from "@monti-cms/core/ai-contract";
 
 /** How the result is applied. `append` adds to a list value (tags, regex rules). */
 export const AI_APPLIES = ["replace", "append", "none"] as const;
-export type AiApply = (typeof AI_APPLIES)[number];
+export type { AiApply } from "@monti-cms/core/ai-contract";
 
 /**
  * Result checks. Set per action as a list (all shown in the action editor); candidates that do not pass are discarded.

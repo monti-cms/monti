@@ -1,6 +1,6 @@
 import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { createContentLookup } from "@monti-cms/core/plugin/server";
-import { type ContentStore, createContentService, type Entry } from "@monti-cms/core/runtime";
+import { type ContentStore, createContentService } from "@monti-cms/core/runtime";
 import {
 	closeGlobalPool,
 	createContentStore,
@@ -28,7 +28,7 @@ import { type AiStore, createAiStore } from "../store";
 const AI_ACTIONS = aiRegistryOf(testSite).actions;
 
 describe("AI action edited-value store", () => {
-	const cms = fakeCms({ config: testConfig });
+	const _cms = fakeCms({ config: testConfig });
 	let pool: Pool;
 	let schemaName: string;
 	let content: ContentStore;

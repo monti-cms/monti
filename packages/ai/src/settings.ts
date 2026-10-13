@@ -74,7 +74,7 @@ const viewOf = (provider: ResolvedProvider): AiProviderView => ({
 	ready: isReady(provider),
 });
 
-export async function getAiSettingsView(site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
+export async function getAiSettingsView(_site: Site, store: AiSettingsStore): Promise<AiSettingsView> {
 	const { version, providers } = await load(store);
 	return { version, providers: providers.map(viewOf), fake: isFakeAi() };
 }
@@ -253,7 +253,7 @@ export async function loadAiRuntime(site: Site, store: AiSettingsStore, spec: Ac
 
 /** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
 export async function usableActionKeys(
-	site: Site,
+	_site: Site,
 	store: AiSettingsStore,
 	actions: ReadonlyArray<ActionConnection & { key: string }>,
 ): Promise<string[]> {

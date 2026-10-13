@@ -1,8 +1,6 @@
 import type { Site } from "@monti-cms/core/client";
 import {
 	type AiActionDefinition,
-	type AiActionOverride,
-	aiActionOverrideSchema,
 	aiActionOverrideSchemaOf,
 	EDITABLE_KEYS,
 	overrideFrom,
