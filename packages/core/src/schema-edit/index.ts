@@ -19,5 +19,6 @@ export {
 	type SchemaSaveInput,
 	type SchemaSaveResult,
 	type SchemaScreenState,
+	type SiteUrlState,
 	saveSchemaEdit,
 } from "./edit";

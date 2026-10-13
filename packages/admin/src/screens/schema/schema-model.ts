@@ -70,6 +70,53 @@ export function setProp(obj: Obj, key: string, value: unknown, order: readonly s
 	return Object.fromEntries(entries);
 }
 
+const FILE_KEY_ORDER = [
+	"schemaVersion",
+	"collections",
+	"migrations",
+	"locales",
+	"defaultLocale",
+	"timeZone",
+	"site",
+	"admin",
+	"seed",
+] as const;
+/** Where each key of the `site` and `admin` settings is written when it is new. */
+const SECTION_KEY_ORDER = {
+	site: ["url", "name", "home", "previewPath", "previewLocaleParam", "localePrefix", "aliases"],
+	admin: ["path", "locale", "templates", "translations", "messages"],
+} as const;
+
+/** The `site` or `admin` settings of the file (empty when it has none). */
+export const sectionOf = (file: Obj, section: "site" | "admin"): Obj => (isObj(file[section]) ? file[section] : {});
+
+/** `file` with one setting of `site` or `admin` set (or removed when `value` is `undefined`); a section left empty is removed. */
+export function setSetting(file: Obj, section: "site" | "admin", key: string, value: unknown): Obj {
+	const next = setProp(sectionOf(file, section), key, value, SECTION_KEY_ORDER[section]);
+	return setProp(file, section, Object.keys(next).length === 0 ? undefined : next, FILE_KEY_ORDER);
+}
+
+/** One changed setting of `site` or `admin`: its path (`site.name`) and the value before and after (`undefined` when not set). */
+export interface SettingChange {
+	readonly path: string;
+	readonly from: unknown;
+	readonly to: unknown;
+}
+
+/** The settings of `site` and `admin` that differ between the saved file and the draft, in the order of the draft. */
+export function settingChanges(base: Obj, draft: Obj): SettingChange[] {
+	const changes: SettingChange[] = [];
+	for (const section of ["site", "admin"] as const) {
+		const before = sectionOf(base, section);
+		const after = sectionOf(draft, section);
+		for (const key of new Set([...Object.keys(after), ...Object.keys(before)])) {
+			if (!sameJson(before[key], after[key]))
+				changes.push({ path: `${section}.${key}`, from: before[key], to: after[key] });
+		}
+	}
+	return changes;
+}
+
 /** `record` with the key `from` named `to`, in the same place. */
 export function renameKey<T>(record: Record<string, T>, from: string, to: string): Record<string, T> {
 	return Object.fromEntries(Object.entries(record).map(([key, value]) => [key === from ? to : key, value]));

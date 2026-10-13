@@ -65,6 +65,24 @@ export interface SchemaScreenState {
 	readonly vocabulary: BodyVocabulary;
 	/** The admin path, for links to entries. */
 	readonly collections: readonly string[];
+	/** The public site URL the instance uses and where it comes from (it is not part of what the screen edits). */
+	readonly siteUrl: SiteUrlState;
+}
+
+/** The site URL (`site.url`) in effect: `env` is the `SITE_URL` variable, `schema` the schema file, `config` monti.config.ts, `none` when no one set it. */
+export interface SiteUrlState {
+	readonly url: string | null;
+	readonly from: "env" | "schema" | "config" | "none";
+}
+
+/** Reads the site URL and its origin from the "SITE_URL" decision the instance reports (the same one `monti doctor` prints). */
+function siteUrlOf(cms: Cms): SiteUrlState {
+	const url = cms.site.config.site?.url ?? null;
+	if (!url) return { url: null, from: "none" };
+	const source = cms.decisions().find((decision) => decision.topic === "SITE_URL")?.source ?? "";
+	if (source.startsWith("from env")) return { url, from: "env" };
+	if (source.includes("schema file")) return { url, from: "schema" };
+	return { url, from: "config" };
 }
 
 const relativeToCwd = (file: string) => path.relative(process.cwd(), file).split(path.sep).join("/");
@@ -115,6 +133,8 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 			locales: config.locales,
 			defaultLocale: config.defaultLocale,
 			...(config.timeZone !== undefined ? { timeZone: config.timeZone } : {}),
+			...(config.site ? { site: withoutUrl(config.site) } : {}),
+			...(config.admin ? { admin: withoutMessages(config.admin) } : {}),
 		};
 	}
 	const applied = await appliedState(cms);
@@ -134,7 +154,20 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 		codeCollections: !literal?.ok ? [] : Object.keys(config.collections).filter((name) => !inFile.includes(name)),
 		vocabulary: bodyVocabulary(cms.site),
 		collections: Object.keys(config.collections),
+		siteUrl: siteUrlOf(cms),
 	};
+}
+
+/** The site settings as the screen shows them without a schema file; the URL has its own row. */
+function withoutUrl(site: object): Record<string, unknown> {
+	const { url: _url, ...rest } = site as Record<string, unknown>;
+	return rest;
+}
+
+/** The admin settings that are data (text overrides can be functions, so they are left out). */
+function withoutMessages(admin: object): Record<string, unknown> {
+	const { messages: _messages, ...rest } = admin as Record<string, unknown>;
+	return rest;
 }
 
 /** What the writer says about a change the diff cannot tell: that a field or an option was renamed (the screen knows, it did the rename). */
