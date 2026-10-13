@@ -450,7 +450,7 @@ export async function initProject(options: InitOptions): Promise<InitReport> {
 		throw new InitError(error instanceof Error ? error.message : String(error), writer.written);
 	}
 	report.skipped = [...new Set(report.skipped)];
-	if (!dryRun) log(`Wrote ${writer.written.length} file${writer.written.length === 1 ? "" : "s"}`);
+	if (!dryRun) log(writtenLine(report));
 
 	// The package install is the one step init runs after the files: it is recorded, so a failure is named.
 	const installed = await runInstallStep({
@@ -569,6 +569,17 @@ async function runInstallStep(input: {
 		record("failed", error instanceof Error ? error.message : String(error));
 		return false;
 	}
+}
+
+/** The progress line after the files are written: what was created and what was changed, since an edit of the person's own file is not a new file. */
+export function writtenLine(report: Pick<InitReport, "created" | "overwritten" | "changed">): string {
+	const files = (count: number) => `${count} file${count === 1 ? "" : "s"}`;
+	const parts = [
+		`Created ${files(report.created.length)}`,
+		...(report.overwritten.length > 0 ? [`replaced ${report.overwritten.length}`] : []),
+		...(report.changed.length > 0 ? [`changed ${report.changed.length}`] : []),
+	];
+	return parts.join(", ");
 }
 
 const WORDS: Record<InitStep["status"], string> = {

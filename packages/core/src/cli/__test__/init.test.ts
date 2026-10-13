@@ -555,6 +555,16 @@ describe("monti init tailors what is left to the app", () => {
 		}
 	});
 
+	it("the progress line counts created files and changes to existing files apart", async () => {
+		const lines: string[] = [];
+		const dir = fixtureApp();
+		const report = await initProject({ cwd: dir, ...quiet(), log: (line) => lines.push(line) });
+		const line = lines.find((item) => item.startsWith("Created "));
+		expect(line).toBe(`Created ${report.created.length} files, changed ${report.changed.length}`);
+		expect(report.changed.length).toBeGreaterThan(0);
+		expect(lines.some((item) => item.startsWith("Wrote "))).toBe(false);
+	});
+
 	it("formats the edited <html> sensibly: one line when it fits, one attribute per line when it would be long", async () => {
 		const edited = async (tag: string) => {
 			const dir = fixtureApp({ "app/layout.tsx": CREATE_NEXT_APP_LAYOUT.replace('<html lang="en">', tag) });
