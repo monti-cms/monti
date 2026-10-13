@@ -62,6 +62,8 @@ describe("monti db:setup and monti db:migrate", () => {
 		expect(result.lines[0]).toContain(target.pathname.slice(1));
 		expect(result.lines[0]).toContain(`schema "${schema}"`);
 		expect(result.lines.at(-1)).toBe(`Done: created ${tables.length} tables.`);
+		// First-time setup is one plain story: no per-plugin "migrating" line, the plugin tables are in the count.
+		expect(result.text).not.toMatch(/migrat/i);
 		// No credentials are printed: take away what is meant to be shown and neither the user nor the password is left.
 		const allowed = [target.hostname, target.port, target.pathname.slice(1), schema, "postgres"].filter(Boolean);
 		const rest = allowed.reduce((text, part) => text.split(part).join(""), result.text);

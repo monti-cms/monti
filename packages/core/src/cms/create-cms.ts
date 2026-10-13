@@ -361,12 +361,11 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 		const authGateway = new CmsAuthGateway(getAuth);
 
 		/** Runs the steps of the core tables and the plugins, and reports what the steps found. The callers print the first and last line. */
-		const runMigration = async ({
-			log = console.log,
-			verbose = false,
-			reconvertBodies = false,
-			saveDetail,
-		}: MigrateRunOptions) => {
+		const runMigration = async (
+			{ log = console.log, verbose = false, reconvertBodies = false, saveDetail }: MigrateRunOptions,
+			/** Where the line per plugin goes. First-time setup leaves it out: the plugin tables are in the count of created tables. */
+			pluginLog: (message: string) => void = log,
+		) => {
 			// The steps report each body they keep as unreadable; one body can be reported by several steps.
 			const unreadable = new Map<string, UnreadableBody>();
 			const detailLines: string[] = [];
@@ -380,7 +379,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 					if (verbose) log(line);
 				},
 			});
-			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), log);
+			await plugins.migrate((plugin) => connections.database.pluginStorage(plugin), pluginLog);
 			if (summary?.reconverted) {
 				const { converted, remaining } = summary.reconverted;
 				log(
@@ -479,7 +478,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 						`The schema "${before.schema}" already has ${before.tables} other table${before.tables === 1 ? "" : "s"}; Monti only adds its own and does not touch them.`,
 					);
 				}
-				await runMigration({ log });
+				await runMigration({ log }, () => undefined);
 				const after = await connections.database.state?.();
 				const tables = after ? after.tables - (before?.tables ?? 0) : 0;
 				log(after ? `Done: created ${tables} table${tables === 1 ? "" : "s"}.` : "Done.");

@@ -123,7 +123,7 @@ export function createServerPlugins(
 		migrate: async (storageOf, log = console.log) => {
 			for (const plugin of await load()) {
 				if (!plugin.migrate) continue;
-				log(`Migrating plugin "${plugin.name}"...`);
+				log(`Updating the tables of plugin "${plugin.name}"\u2026`);
 				await plugin.migrate(storageOf(plugin.name), cms());
 			}
 		},
