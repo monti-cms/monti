@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { contentCollection, recordCollection, requiredMetadata } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
-import { RECORD_TRANSLATIONS_KEY } from "../../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../../schema/fields";
 import type { ServiceInput } from "../../services/types";
 import type { Collection } from "../collections";
 import { prepareSnapshot, validateForPublish } from "../snapshot";

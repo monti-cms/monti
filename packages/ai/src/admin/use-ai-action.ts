@@ -1,12 +1,12 @@
 "use client";
 
-import { type AnyCmsConfig, useSite } from "@monti-cms/core/client";
+import { type CmsConfig, useSite } from "@monti-cms/core/client";
 import { useCallback, useMemo } from "react";
 import type { AiActionView } from "../actions";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";
 import { type AiRunOptions, runAiAction, runAiActionMany, streamAiAction, useAiActions } from "./ai-slot-provider";
 
-export interface UseAiAction<K extends AiActionKey<Config>, Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface UseAiAction<K extends AiActionKey<Config>, Config extends CmsConfig = CmsConfig> {
 	/** Whether it is on and its connection is ready, so it can be called now. */
 	available: boolean;
 	/** Action definition and current values (name, ask-for-extra-request, etc.). Absent before the list is fetched. */
@@ -34,7 +34,7 @@ export interface UseAiAction<K extends AiActionKey<Config>, Config extends AnyCm
  * const result = await summary.run({ title, body }); // { kind: "text"; text: string }
  * ```
  */
-export function useAiAction<K extends AiActionKey<Config>, Config extends AnyCmsConfig = AnyCmsConfig>(
+export function useAiAction<K extends AiActionKey<Config>, Config extends CmsConfig = CmsConfig>(
 	key: K,
 	enabled = true,
 ): UseAiAction<K, Config> {

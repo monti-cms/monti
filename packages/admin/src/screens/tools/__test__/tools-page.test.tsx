@@ -1,5 +1,5 @@
 import { definePlugin } from "@monti-cms/core";
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import type { Cms } from "@monti-cms/core/runtime";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +27,7 @@ const site = createSite({
 		}),
 		definePlugin({ name: "quiet", options: {}, nav: [{ path: "quiet", label: "Quiet" }] }),
 	],
-} as AnyCmsConfig);
+} as CmsConfig);
 const cms = { site } as unknown as Cms;
 const server = (): AdminServer => ({
 	redirect: vi.fn((href: string) => {

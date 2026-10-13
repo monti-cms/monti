@@ -1,4 +1,4 @@
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import { taxonomyActions } from "../../entries/bulk-bar";
@@ -18,7 +18,7 @@ const siteLabeled = (label: string, language: "en" | "ko") => {
 			...testConfig,
 			collections: { ...testConfig.collections, [name]: { ...testConfig.collections[name], label } },
 			admin: { ...testConfig.admin, locale: language },
-		} as AnyCmsConfig),
+		} as CmsConfig),
 	};
 };
 

@@ -1,5 +1,6 @@
 import type { AuthGateway } from "../adapters/auth/auth-gateway";
 import type { ApiKeys } from "../api-keys/api-keys";
+import type { CmsConfig } from "../config/define";
 import type { ContentStore } from "../core/store";
 import type { SaveDraftInput, ServiceInput } from "../core/types";
 import type { FormatRegistry } from "../format/registry";
@@ -18,7 +19,7 @@ import type { CmsEvents } from "../services/events";
 import type { HookSource } from "../services/hooks";
 import type { MediaService } from "../services/media-service";
 import type { PreferencesService } from "../services/preferences-service";
-import type { AnyCmsConfig, Site } from "../site";
+import type { Site } from "../site";
 
 /** The content service of any site: input is checked at run time only. */
 export type LooseContentService = ReturnType<typeof createContentService>;
@@ -29,17 +30,17 @@ type IsAny<T> = 0 extends 1 & T ? true : false;
  * The content service. With the config of the instance (`Cms<typeof config>` has `ContentService<typeof config>`), `createDraft` and `saveDraft` know the
  * collections and the metadata of each, and an item collection (a tag) needs no body. Without a config it takes any collection.
  */
-export type ContentService<Config extends AnyCmsConfig = AnyCmsConfig> = Omit<
+export type ContentService<Config extends CmsConfig = CmsConfig> = Omit<
 	LooseContentService,
 	"createDraft" | "saveDraft"
 > & {
 	createDraft(
-		input: ServiceInput<IsAny<Config> extends true ? AnyCmsConfig : Config>,
+		input: ServiceInput<IsAny<Config> extends true ? CmsConfig : Config>,
 		options?: { publishImmediately?: boolean },
 	): ReturnType<LooseContentService["createDraft"]>;
 	saveDraft(
 		entryId: string,
-		input: SaveDraftInput<IsAny<Config> extends true ? AnyCmsConfig : Config>,
+		input: SaveDraftInput<IsAny<Config> extends true ? CmsConfig : Config>,
 		options?: { publishImmediately?: boolean },
 	): ReturnType<LooseContentService["saveDraft"]>;
 };
@@ -57,7 +58,7 @@ export interface HandleOptions {
 /** The server config as plugins see it: everything but the master secrets and the event delivery settings (which hold the retry secret). */
 export type PublicServerConfig = Omit<CmsServerConfig, "secret" | "previousSecrets" | "events">;
 
-export interface CreateCmsOptions<Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface CreateCmsOptions<Config extends CmsConfig = CmsConfig> {
 	/**
 	 * The site config (`defineSite(...)` of `@monti-cms/core`, the data and plugins part of what `defineConfig` takes in `monti.config.ts`): collections, locales, blocks, plugins, admin and site settings. The instance holds it, and the store, the
 	 * services, the read API, the HTTP handler, the plugins, the admin and the renderer all get it from the instance. Its type is kept, so `cms.read` knows the
@@ -108,7 +109,7 @@ export interface MigrateRunOptions {
  */
 export interface Cms<
 	// biome-ignore lint/suspicious/noExplicitAny: `Cms` alone is an instance of any site config
-	Config extends AnyCmsConfig = any,
+	Config extends CmsConfig = any,
 > {
 	/**
 	 * The site of this instance, resolved from its config: collections and their rules, locales, URLs, blocks, code block settings, admin addresses and language.

@@ -10,29 +10,30 @@ import { createLocales, type SiteLocales } from "../core/locales";
 import { createTime, type SiteTime } from "../core/time";
 import { createI18n, type SiteI18n } from "../i18n";
 import { createActiveTranslator, resolveLabels, withActiveLocale } from "../i18n/active";
-import type { CmsPlugin } from "../plugin/define";
+import type { CmsPlugin, PluginNavItem } from "../plugin/define";
 import { createSchemas, type SiteSchemas } from "../schema/derive";
 import { createPanel, type SitePanel } from "../schema/layout";
 
-/**
- * A site config that is any config: what code that works on a site without knowing which one it is accepts. The config a site writes (`defineSite(...)`) is
- * assignable to it and keeps its own, narrower type in `Site<typeof config>`.
- */
-export type AnyCmsConfig = CmsConfig;
+/** What a plugin keeps in the browser's snapshot: its `name`, `nav`, `options` and `contributes` as JSON. */
+export interface PluginSnapshot {
+	readonly name: string;
+	readonly options: unknown;
+	readonly nav?: readonly PluginNavItem[];
+	readonly contributes?: Readonly<Record<string, unknown>>;
+}
 
 /**
- * The config a site's browser code works from: the same shape as the site config, with nothing that cannot cross from the server to the browser as data. It is
- * what `site.snapshot()` returns and what `createSite` and `<SiteProvider config={...}>` accept.
+ * The config a site's browser code works from: the site config with nothing that cannot cross from the server to the browser as data. It is what `site.snapshot()`
+ * returns and what `createSite` and `<SiteProvider config={...}>` accept (it is a `CmsConfig`).
  *
  * Collections, locales, `site`, `admin`, `timeZone`, `media`, `editor` and `codeBlock` are the config's own (with the labels written as text). `blocks` holds every block of the site
- * (the blocks the plugins add included) and each plugin keeps its `name`, `nav`, `options` and `contributes` as JSON: a function inside `options` or `contributes`
- * does not reach the browser, and neither do the plugin's `server`, `admin`, `render`, `formats`, `validate` loaders.
- * Text overrides of `admin.messages` that are functions are left out the same way (strings stay).
+ * (the blocks the plugins add included) and each plugin is a {@link PluginSnapshot}: a function inside `options` or `contributes` does not reach the browser, and neither do
+ * the plugin's `server`, `admin`, `render`, `formats`, `validate` loaders. Text overrides of `admin.messages` that are functions are left out the same way (strings stay).
  */
-export type SiteSnapshot = CmsConfig;
+export type SiteSnapshot = Omit<CmsConfig, "plugins"> & { readonly plugins: readonly PluginSnapshot[] };
 
 /** One site, resolved from its config: everything that used to be a module-level constant derived from the config file. */
-export type Site<Config extends AnyCmsConfig = AnyCmsConfig> = SiteI18n &
+export type Site<Config extends CmsConfig = CmsConfig> = SiteI18n &
 	SiteLocales &
 	SiteSchemas &
 	SiteCollections &
@@ -66,7 +67,7 @@ const asData = <T>(value: T): T =>
 				JSON.stringify(value, (_key, item: unknown) => (typeof item === "function" ? undefined : item)),
 			) as T);
 
-function snapshotOf(config: AnyCmsConfig, blocks: SiteBlocks): SiteSnapshot {
+function snapshotOf(config: CmsConfig, blocks: SiteBlocks): SiteSnapshot {
 	const stringMessages = config.admin?.messages
 		? Object.fromEntries(
 				Object.entries(config.admin.messages).map(([namespace, dict]) => [
@@ -122,7 +123,7 @@ function snapshotOf(config: AnyCmsConfig, blocks: SiteBlocks): SiteSnapshot {
  *
  * The labels of block and line effect definitions (getters, because the language is not known when the config file imports them) are read here, in the admin language.
  */
-export function createSite<const Config extends AnyCmsConfig>(config: Config): Site<Config> {
+export function createSite<const Config extends CmsConfig>(config: Config): Site<Config> {
 	const i18n = createI18n(config);
 	return withActiveLocale(i18n.ADMIN_LANGUAGE, config.admin?.messages, () => {
 		const locales = createLocales(config);

@@ -1,5 +1,5 @@
 import { type Expression, type RawBuilder, sql } from "kysely";
-import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/fields";
 import type { Site } from "../../../site";
 
 /**

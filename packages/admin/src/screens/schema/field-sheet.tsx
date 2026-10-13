@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
 import { Button } from "../../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
@@ -82,7 +82,7 @@ export function FieldSheet({
 				? { ...next, discriminant: setProp(next.discriminant, key, value, FIELD_KEY_ORDER) }
 				: next;
 		});
-	const valueKind = kind !== "view" && kind !== "backlink";
+	const valueKind = fieldTraits[kind].entersValue;
 	const label = typeof field.label === "string" ? field.label : "";
 	const isTitle = !place.branch && titleFieldName(draft) === name;
 	const blocked = removeBlock(editing.collection, place, name);

@@ -8,6 +8,7 @@ import {
 	DEFAULT_TITLE_FIELD,
 	defaultCollectionPath,
 	type Field,
+	fieldTraits,
 	IssueList,
 	NAME_PATTERN,
 	RESERVED_METADATA_KEYS,
@@ -300,7 +301,7 @@ export function withKind(field: Obj, kind: FieldKindName, collections: readonly 
 	const fresh = newField(kind, typeof field.label === "string" ? field.label : "", collections);
 	const kept = Object.fromEntries(
 		Object.entries(field).filter(
-			([key]) => BASE_KEYS.includes(key) && !((kind === "view" || kind === "backlink") && NO_VALUE_KEYS.includes(key)),
+			([key]) => BASE_KEYS.includes(key) && !(!fieldTraits[kind].entersValue && NO_VALUE_KEYS.includes(key)),
 		),
 	);
 	let result: Obj = fresh;

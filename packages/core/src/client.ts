@@ -10,7 +10,7 @@ export * from "./blocks/derive";
 export * from "./config/check/collections";
 export * from "./config/check/fields";
 export { ConfigError, type Issue, IssueList, pathOf } from "./config/check/issue";
-export type { EditorConfig, EditorWidthStep } from "./config/define";
+export type { CmsConfig, EditorConfig, EditorWidthStep } from "./config/define";
 export * from "./config/rules";
 export * from "./core/admin-features";
 export * from "./core/admin-paths";

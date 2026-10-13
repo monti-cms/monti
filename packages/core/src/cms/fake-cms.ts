@@ -1,4 +1,5 @@
 import type { AuthContext, AuthGateway } from "../adapters/auth";
+import type { CmsConfig } from "../config/define";
 import { defineSite } from "../config/define";
 import type { ContentStore } from "../core/store";
 import { createFormatRegistry } from "../format/registry";
@@ -12,11 +13,10 @@ import { defineCollection } from "../schema/collection";
 import { fields } from "../schema/fields";
 import type { CmsAuth, CmsServerConfig } from "../server/define";
 import { createEventDispatcher } from "../services/events";
-import type { AnyCmsConfig } from "../site";
 import { type BulkService, type Cms, type ContentService, createCms, lazyHandle } from "./create-cms";
 
 /** What a test supplies to {@link fakeCms}. Whatever it leaves out fails loudly when the code under test touches it. */
-export interface FakeCmsParts<Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
 	/**
 	 * The site config the instance is created with. Default: a minimal one (an English site with one `page` collection), enough for code that only
 	 * needs some site. Pass the config the code under test is written against.
@@ -86,7 +86,7 @@ export const fakeAuth = (parts?: Partial<CmsAuth>): CmsServerConfig["auth"] => (
  * whose database, media store and login are the parts the test provides, so the code under test goes through `cms` exactly as in the app.
  * Several fake instances can live in one test file, each with its own parts.
  */
-export function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFIG>(
+export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 	parts: FakeCmsParts<Config> = {},
 ): Cms<Config> {
 	const memory = createMemoryPluginStorage();

@@ -13,6 +13,7 @@ import {
 	tableWidths,
 } from "../../doc/table-layout";
 import type { CmsMark, CmsNode } from "../../doc/types";
+import { CORE_BODY_MARKS } from "../../schema/allowed";
 import type { Site } from "../../site";
 import { perSite } from "../../site/per-site";
 import { validImageWidth } from "../components/image";
@@ -654,16 +655,11 @@ export const renderDocumentTree = (
 	return { content: createElement(Fragment, null, ...content), unknown: report.nodes };
 };
 
-const CORE_MARKS = new Set([
-	"bold",
-	"italic",
-	"strike",
-	"underline",
-	"superscript",
-	"subscript",
-	"code",
-	"untranslated",
-]);
+/**
+ * The marks the renderer draws with a component of the default table: the core marks a body list can name (`CORE_BODY_MARKS`) except `link`, which has its own branch
+ * (it reads an entry or an address), plus the translation note `untranslated`, which belongs to the translation flow and so is never in a body list.
+ */
+const CORE_MARKS: ReadonlySet<string> = new Set([...CORE_BODY_MARKS.filter((name) => name !== "link"), "untranslated"]);
 
 /**
  * Whether the table's cells say which are headers. A table GFM can write (no merged cells, no widths, the first row the header) has a header

@@ -1,10 +1,10 @@
-import { type AnyCmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../core/test/site";
 import { loadAdminPlugins } from "../plugins";
 
 /** A site of its own per call: the loaded plugins are remembered per site, so no result is shared between tests. */
-const siteWith = (plugins: unknown[]) => createSite({ ...testConfig, plugins } as AnyCmsConfig);
+const siteWith = (plugins: unknown[]) => createSite({ ...testConfig, plugins } as CmsConfig);
 
 const Page = () => null;
 const admin = (pages: Record<string, unknown>) => async () => ({ default: { pages } });

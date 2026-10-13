@@ -1,6 +1,6 @@
 "use client";
 
-import { OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -458,7 +458,7 @@ export function FieldEditor({
 				? { ...next, discriminant: setProp(next.discriminant, key, value, FIELD_KEY_ORDER) }
 				: next;
 		});
-	const valueKind = kind !== "view" && kind !== "backlink";
+	const valueKind = fieldTraits[kind].entersValue;
 	const label = typeof field.label === "string" ? field.label : "";
 	// The title field is a top-level text field: the one with the title role, or the one named `title`.
 	const isTitle = !place.branch && titleFieldName(editing.collection) === name;

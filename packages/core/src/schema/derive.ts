@@ -6,15 +6,24 @@ import type { CollectionSchema } from "./collection";
 import {
 	type Field,
 	type FieldRole,
+	fieldTraits,
 	isRequiredField,
-	RESERVED_METADATA_KEYS,
+	RECORD_TRANSLATIONS_KEY,
 	type SlugField,
 	type StorageType,
 	storageTypeOf,
 	type TextField,
 	type ValueField,
 } from "./fields";
-import { type StoredField, type TitleField, titleFieldOf, titleValue, valueFieldsOf } from "./walk";
+import {
+	fieldWithRole,
+	type StoredField,
+	type TitleField,
+	titleFieldOf,
+	titleValue,
+	valueFieldsOf,
+	valueWithRole,
+} from "./walk";
 
 export type { StoredField } from "./walk";
 
@@ -75,11 +84,9 @@ const isEmptyValue = (value: unknown) =>
 	(Array.isArray(value) && value.length === 0);
 
 /**
- * Metadata key that holds the per-language values of item collections (categories, tags, collections). It cannot be used as a field name (`defineSite`).
- * `{ en: { title: "..." }, ja: { ... } }`. The address and links are shared, so records are not split per language.
+ * The per-language values of item collections (categories, tags, collections), kept under the metadata key `RECORD_TRANSLATIONS_KEY`: `{ en: { title: "..." }, ja: { ... } }`.
+ * The address and links are shared, so records are not split per language.
  */
-export const RECORD_TRANSLATIONS_KEY = RESERVED_METADATA_KEYS[0] as "translations";
-
 export type RecordTranslations = { readonly [locale: string]: { readonly [field: string]: string } };
 
 /** The storage, validation and reference rules of one site's collections. */
@@ -113,7 +120,7 @@ export function createSchemas(collections: CollectionsConfig) {
 	 * with this function.
 	 */
 	function roleField(collection: SchemaCollection, role: FieldRole): StoredField | undefined {
-		return storedFields(collection).find((stored) => stored.field.role === role);
+		return fieldWithRole(schemaOf(collection), role);
 	}
 
 	/** The value (string) of that role's field. `""` if the field is missing or the value is not a string. */
@@ -122,9 +129,7 @@ export function createSchemas(collections: CollectionsConfig) {
 		role: FieldRole,
 		values: { readonly [key: string]: unknown },
 	): string {
-		const stored = roleField(collection, role);
-		const value = stored ? values[stored.name] : undefined;
-		return typeof value === "string" ? value : "";
+		return valueWithRole(schemaOf(collection), role, values);
 	}
 
 	/** The title field of a collection (see `titleFieldOf`). */
@@ -269,17 +274,22 @@ export function createSchemas(collections: CollectionsConfig) {
 		const own: string[] = [];
 		const inherit: string[] = [];
 		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
-			if (field.kind === "backlink" || field.kind === "view") continue;
+			if (!fieldTraits[field.kind].localizable) continue;
 			if (field.localized === true) own.push(name);
 			else if (field.localized === "inherit") inherit.push(name);
 		}
 		return { own, inherit };
 	}
 
+	/** Every per-language field name (`own` and `inherit` together): the keys a translation holds itself. */
+	function localizedSet(collection: SchemaCollection): ReadonlySet<string> {
+		const { own, inherit } = localizedFieldNames(collection);
+		return new Set([...own, ...inherit]);
+	}
+
 	/** Common field keys a translation must not have. Stored fields whose definition has no `localized` (not values of removed fields). */
 	function commonFieldKeys(collection: SchemaCollection, metadata: { readonly [key: string]: unknown }): string[] {
-		const { own, inherit } = localizedFieldNames(collection);
-		const localized = new Set([...own, ...inherit]);
+		const localized = localizedSet(collection);
 		// Values of removed fields are not common fields: they stay wherever they are stored.
 		return Object.keys(metadata).filter((key) => !localized.has(key) && !isOrphanedMetadataKey(collection, key));
 	}
@@ -289,8 +299,7 @@ export function createSchemas(collections: CollectionsConfig) {
 		collection: SchemaCollection,
 		metadata: { readonly [key: string]: T },
 	): Record<string, T> {
-		const { own, inherit } = localizedFieldNames(collection);
-		const localized = new Set([...own, ...inherit]);
+		const localized = localizedSet(collection);
 		return Object.fromEntries(Object.entries(metadata).filter(([key]) => localized.has(key)));
 	}
 
@@ -300,8 +309,7 @@ export function createSchemas(collections: CollectionsConfig) {
 		source: { readonly [key: string]: T },
 		translation: { readonly [key: string]: T },
 	): Record<string, T> {
-		const { own, inherit } = localizedFieldNames(collection);
-		const localized = new Set([...own, ...inherit]);
+		const localized = localizedSet(collection);
 		const common = Object.fromEntries(Object.entries(source).filter(([key]) => !localized.has(key)));
 		return { ...common, ...translation };
 	}
@@ -371,6 +379,7 @@ export function createSchemas(collections: CollectionsConfig) {
 		relationRule,
 		missingRequiredIssues,
 		localizedFieldNames,
+		localizedSet,
 		commonFieldKeys,
 		pickLocalizedMetadata,
 		mergeTranslationMetadata,

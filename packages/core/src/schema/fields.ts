@@ -153,11 +153,14 @@ export interface ViewField {
 	readonly input?: undefined;
 }
 
+/** The key under which an item collection keeps its per-language values (`metadata.translations`). */
+export const RECORD_TRANSLATIONS_KEY = "translations";
+
 /**
  * Keys the core uses separately in metadata. They cannot be used as field names (`defineSite` blocks them).
  * `translations` holds the per-language values of an item collection.
  */
-export const RESERVED_METADATA_KEYS: readonly string[] = ["translations"];
+export const RESERVED_METADATA_KEYS: readonly string[] = [RECORD_TRANSLATIONS_KEY];
 
 /** Whether the field must not be empty (`required: true`). */
 export const isRequiredField = (field: { readonly required?: true }): boolean => field.required === true;
@@ -180,6 +183,28 @@ export type ValueField = TextField | RelationField | SelectField | MediaField;
 export type Field = ValueField | SlugField | ConditionalField | BacklinkField | ViewField;
 export type FieldKind = Field["kind"];
 
+/** What a kind of field is, asked in one place instead of by listing the kinds that are not (`slug`, `backlink` and `view` are the odd ones). */
+export interface FieldTraits {
+	/** The field has a value in the entry's metadata. A conditional field stores its choice; the address has its own column, a backlink is stored on the other record, a view stores nothing. */
+	readonly stored: boolean;
+	/** The value can be per language (`localized`). */
+	readonly localizable: boolean;
+	/** A person types or picks a value for it: it takes `required`, `input` and `inputOptions` (a backlink edits the other record, a view draws a screen). */
+	readonly entersValue: boolean;
+}
+
+/** The traits of each kind of field. */
+export const fieldTraits: Readonly<Record<FieldKind, FieldTraits>> = {
+	text: { stored: true, localizable: true, entersValue: true },
+	slug: { stored: false, localizable: false, entersValue: true },
+	relation: { stored: true, localizable: true, entersValue: true },
+	select: { stored: true, localizable: true, entersValue: true },
+	media: { stored: true, localizable: true, entersValue: true },
+	conditional: { stored: true, localizable: true, entersValue: true },
+	backlink: { stored: false, localizable: false, entersValue: false },
+	view: { stored: false, localizable: false, entersValue: false },
+};
+
 type Options<F extends { kind: string }> = Omit<F, "kind">;
 
 export const fields = {
@@ -199,6 +224,9 @@ export const fields = {
 			values,
 		}) as const,
 };
+
+/** Whether the field has a value in the entry's metadata (a value field, or a conditional field with its choice). */
+export const isStoredField = (field: Field): field is ValueField | ConditionalField => fieldTraits[field.kind].stored;
 
 /** Storage format of a field value. */
 export type StorageType = "string" | "string[]";

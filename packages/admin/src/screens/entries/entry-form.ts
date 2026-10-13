@@ -147,8 +147,8 @@ const fieldsOf = (site: Site, collection: string, translation = false): readonly
 	if (!site.isCollection(collection)) return [];
 	const fields = site.storedFields(collection as SchemaCollection);
 	if (!translation) return fields;
-	const { own, inherit } = site.localizedFieldNames(collection as SchemaCollection);
-	return fields.filter(({ name }) => own.includes(name) || inherit.includes(name));
+	const localized = site.localizedSet(collection as SchemaCollection);
+	return fields.filter(({ name }) => localized.has(name));
 };
 
 /** Form key holding the translation state. Starts with `$` so it never collides with a stored field name. The value is a JSON string. */
