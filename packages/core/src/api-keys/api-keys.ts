@@ -95,7 +95,12 @@ export interface ApiKeysOptions {
 	 * use is dropped. A plugin that gives none is shown by its name.
 	 */
 	/** The slots the installed plugins declare (`CmsPlugin.keySlots`), with their labels in the admin language. */
-	readonly declared?: () => readonly { readonly plugin: string; readonly slot: string; readonly label: string }[];
+	readonly declared?: () => readonly {
+		readonly plugin: string;
+		readonly slot: string;
+		readonly label: string;
+		readonly service: string;
+	}[];
 	/** Runs work in one transaction with the key store (`cms.transaction`). Without it a typed key and its assignment are written one after the other. */
 	readonly atomic?: <T>(work: (keys: ApiKeys) => Promise<T>) => Promise<T>;
 	readonly labels?: (plugin: string, refs: readonly string[]) => Promise<Readonly<Record<string, string | null>>>;
@@ -247,6 +252,7 @@ export function createApiKeys(options: ApiKeysOptions): ApiKeys {
 					plugin: entry.plugin,
 					slot: entry.slot,
 					label: entry.label,
+					service: entry.service,
 					key: key ? { id: key.id, name: key.name, tail: key.tail, readable: key.readable } : null,
 				};
 			});

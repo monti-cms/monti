@@ -620,7 +620,7 @@ function SettingsTab({ status, onChanged }: { status: StatusView | undefined; on
 				<p className="font-medium text-sm">{t("settings.token")}</p>
 				<p className="text-cms-muted-foreground text-xs">{t("settings.token.help")}</p>
 				<p className="text-xs">{t(`settings.token.state.${tokenState}`, { hint: tokenHint })}</p>
-				<ApiKeyField label={t("settings.token")} baseName={t("settings.token")} value={choice} onChange={setPicked} />
+				<ApiKeyField label={t("settings.token")} baseName="GitHub" value={choice} onChange={setPicked} />
 				<div className="flex gap-2">
 					<Button
 						type="submit"

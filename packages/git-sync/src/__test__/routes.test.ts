@@ -89,13 +89,13 @@ describe("the GitHub token slot", () => {
 	it("uses a typed key assigned through the slots route for the next GitHub call, and picks up a replaced value", async () => {
 		expect((await assign({ use: "new", value: "ghp_new_value_9999" })).status).toBe(200);
 		expect(await (await call("settings")).json()).toMatchObject({
-			token: { key: { name: "GitHub token", tail: "9999" } },
+			token: { key: { name: "GitHub 2", tail: "9999" } },
 		});
 		expect(h.github.tokens).toEqual([]);
 		await publishMemo("uses-token");
 		expect(h.github.tokens.at(-1)).toBe("ghp_new_value_9999");
 
-		const key = await keyNamed("GitHub token");
+		const key = await keyNamed("GitHub 2");
 		await h.cms.apiKeys.update(key?.id ?? "", { expectedVersion: key?.version ?? 0, value: "ghp_rotated_token_7777" });
 		await publishMemo("rotated");
 		expect(h.github.tokens.at(-1)).toBe("ghp_rotated_token_7777");

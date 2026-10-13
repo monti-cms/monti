@@ -30,12 +30,12 @@ const key = (
 
 let keys: ReturnType<typeof key>[];
 let secretsAvailable: boolean;
-let slots: Array<{ plugin: string; slot: string; label: string; key: unknown }>;
+let slots: Array<{ plugin: string; slot: string; label: string; service: string; key: unknown }>;
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
 	secretsAvailable = true;
-	slots = [{ plugin: "speller", slot: "key", label: "Spell check", key: null }];
+	slots = [{ plugin: "speller", slot: "key", label: "Spell check", service: "Speller", key: null }];
 	keys = [
 		key("k1", "Anthropic", "91c0", [
 			{ plugin: "ai", ref: "connection:a", label: "AI connection “Claude”" },
@@ -186,6 +186,7 @@ describe("API keys tab", () => {
 				plugin: "speller",
 				slot: "key",
 				label: "Spell check",
+				service: "Speller",
 				key: { id: "k3", name: "Bareun", tail: "77e1", readable: true },
 			},
 		];

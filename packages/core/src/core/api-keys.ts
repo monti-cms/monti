@@ -19,8 +19,10 @@ export interface ApiKeyUse {
 export interface ApiKeySlotView {
 	readonly plugin: string;
 	readonly slot: string;
-	/** In the admin language. */
+	/** In the admin language. Display only. */
 	readonly label: string;
+	/** The service the key is for, in no language ("Bareun"): what a key entered for this slot is named. */
+	readonly service: string;
 	/** The assigned key (name and last characters only), or `null` when none is assigned yet. */
 	readonly key: {
 		readonly id: string;

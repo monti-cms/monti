@@ -22,6 +22,7 @@ export const bareun = (options?: BareunOptions) =>
 		keySlots: [
 			{
 				id: BAREUN_KEY_SLOT,
+				service: "Bareun",
 				// Worked out with the site of the instance each time, so it follows the admin language.
 				label: (site) => site.createTranslator(bareunMessages)("keyLabel"),
 			},

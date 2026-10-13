@@ -17,6 +17,7 @@ const speller = (language: { current: string }) =>
 		keySlots: [
 			{
 				id: "key",
+				service: "Speller",
 				get label() {
 					return language.current === "ko" ? "맞춤법 검사" : "Spell check";
 				},
@@ -39,7 +40,9 @@ const request = (body: unknown) =>
 describe("key slots", () => {
 	it("lists a plugin's declared slot as empty until a key is assigned", async () => {
 		const cms = cmsWith([speller({ current: "en" })]);
-		expect(await cms.apiKeys.slots()).toEqual([{ plugin: "speller", slot: "key", label: "Spell check", key: null }]);
+		expect(await cms.apiKeys.slots()).toEqual([
+			{ plugin: "speller", slot: "key", label: "Spell check", service: "Speller", key: null },
+		]);
 		expect(await cms.apiKeys.readSlot("speller", "key")).toBeNull();
 	});
 
@@ -61,6 +64,15 @@ describe("key slots", () => {
 		await cms.apiKeys.assignSlot("speller", "key", { use: "new", value: `${VALUE}2` }, { baseName: "Spell check" });
 		expect((await cms.apiKeys.list()).map((key) => key.name)).toEqual(["Spell check", "Spell check 2"]);
 		expect(await cms.apiKeys.readSlot("speller", "key")).toBe(`${VALUE}2`);
+	});
+
+	it("names a key entered for a slot after the service, not the localized label, so every language and the migrations agree", async () => {
+		const language = { current: "ko" };
+		const cms = cmsWith([speller(language)]);
+		await assign(request({ plugin: "speller", slot: "key", key: { use: "new", value: VALUE } }), { cms });
+		await assign(request({ plugin: "speller", slot: "key", key: { use: "new", value: `${VALUE}2` } }), { cms });
+		expect((await cms.apiKeys.list()).map((key) => key.name)).toEqual(["Speller", "Speller 2"]);
+		expect((await cms.apiKeys.slots())[0]?.label).toBe("맞춤법 검사");
 	});
 
 	it("keeps no orphan key when the assignment cannot be written", async () => {
@@ -104,7 +116,7 @@ describe("key slots", () => {
 		const messages = defineMessages("test.slot", { en: { key: "Spell check" }, ko: { key: "맞춤법 검사" } });
 		const plugin = definePlugin({
 			name: "speller",
-			keySlots: [{ id: "key", label: (site) => site.createTranslator(messages)("key") }],
+			keySlots: [{ id: "key", service: "Speller", label: (site) => site.createTranslator(messages)("key") }],
 		});
 		const english = fakeCms({
 			config: { ...CONFIG([plugin as never]), admin: { locale: "en" } } as never,
@@ -139,7 +151,7 @@ describe("key slots", () => {
 		const text = await response.text();
 		expect(text).not.toContain(VALUE);
 		const body = JSON.parse(text) as ApiKeyList;
-		expect(body.slots[0]?.key?.name).toBe("Spell check");
+		expect(body.slots[0]?.key?.name).toBe("Speller");
 		expect(body.items[0]?.uses[0]?.label).toBe("Spell check");
 	});
 });

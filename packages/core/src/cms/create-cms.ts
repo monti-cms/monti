@@ -339,6 +339,7 @@ export function createCms<const Config extends AnyCmsConfig>(options: CreateCmsO
 				(plugin.keySlots ?? []).map((slot) => ({
 					plugin: plugin.name,
 					slot: slot.id,
+					service: slot.service,
 					label: typeof slot.label === "function" ? slot.label(site) : slot.label,
 				})),
 			);

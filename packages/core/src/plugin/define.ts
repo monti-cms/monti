@@ -66,7 +66,12 @@ export interface PluginKeySlot {
 	/** Lowercase letters, digits and `-`. Unique within the plugin. */
 	readonly id: string;
 	/**
-	 * What the admin calls this key ("Spell check"). Give a function of the site to follow the admin language (`(site) => site.createTranslator(messages)("keyLabel")`):
+	 * The name of the service the key is for, the same in every language ("Bareun", "GitHub"). A key entered for this slot is saved under it (`Bareun`, then
+	 * `Bareun 2` when taken), so the stored name never depends on the admin language.
+	 */
+	readonly service: string;
+	/**
+	 * What the admin calls this key ("Spell check"), for display only. Give a function of the site to follow the admin language (`(site) => site.createTranslator(messages)("keyLabel")`):
 	 * the core calls it with the site of the instance each time the slots are listed. A plain string is shown as it is.
 	 */
 	readonly label: string | ((site: Pick<Site, "createTranslator">) => string);

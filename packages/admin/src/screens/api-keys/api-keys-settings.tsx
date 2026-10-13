@@ -321,7 +321,7 @@ function SlotDialog({ slot, onClose, onSaved }: { slot: ApiKeySlotView; onClose:
 						<DialogTitle>{t("slot.dialog.title", { label: slot.label })}</DialogTitle>
 						<DialogDescription>{t("slot.dialog.description")}</DialogDescription>
 					</DialogHeader>
-					<ApiKeyField value={current} onChange={setChoice} baseName={slot.label} />
+					<ApiKeyField value={current} onChange={setChoice} baseName={slot.service} />
 					{error && (
 						<p role="alert" className="text-cms-destructive text-xs">
 							{error}

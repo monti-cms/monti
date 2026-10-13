@@ -165,7 +165,7 @@ describe("Bareun key slot", () => {
 		const cms = cmsWith();
 		const slots = await cms.apiKeys.slots();
 		expect(slots).toHaveLength(1);
-		expect(slots[0]).toMatchObject({ plugin: "text-check-bareun", slot: "key", key: null });
+		expect(slots[0]).toMatchObject({ plugin: "text-check-bareun", slot: "key", service: "Bareun", key: null });
 		expect(slots[0]?.label).toBe(cms.site.createTranslator(bareunMessages)("keyLabel"));
 		expect(bareun().keySlots).toHaveLength(1);
 	});
