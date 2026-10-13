@@ -1,3 +1,4 @@
+import { patternUnder } from "../core/path-pattern";
 import { defaultCollectionPath } from "../core/plural";
 import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys";
 import type { ContentFolder, FrontMatterKey } from "./init-detect";
@@ -149,6 +150,6 @@ export function starterCollections(keys: readonly FrontMatterKey[], multiLocale:
 export function pathFor(folder: ContentFolder | undefined): string {
 	const last = folder?.dir.split("/").at(-1) ?? "";
 	return /^[A-Za-z][\w-]*$/.test(last) && !["content", "data", "src", "_posts"].includes(last)
-		? `/${last}/:slug`
+		? patternUnder(last)
 		: defaultCollectionPath("post");
 }

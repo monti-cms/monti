@@ -43,9 +43,11 @@ export const LOCALE_PREFIX_MODES: readonly LocalePrefixMode[] = ["except-default
 /** Default admin UI path (when `admin.path` is unset). */
 export const DEFAULT_ADMIN_PATH = "/admin";
 
-/** Admin path shape: a path of one or more segments starting with `/` (no trailing `/`), and not under `/api`. */
-export const isAdminPath = (path: string): boolean =>
-	/^(\/[A-Za-z0-9._~-]+)+$/.test(path) && !/^\/api(\/|$)/.test(path);
+/**
+ * Admin path shape: a path of one or more segments starting with `/` (no trailing `/`), and not under `/api`. A segment is plain: the admin path becomes a folder of the
+ * app (`app/(admin)/studio/[[...path]]`), so it holds letters, digits, `-` and `_` only.
+ */
+export const isAdminPath = (path: string): boolean => /^(\/[A-Za-z0-9_-]+)+$/.test(path) && !/^\/api(\/|$)/.test(path);
 
 /** `site.home`: a path (`/`) or an http(s) URL. */
 export const isHomeHref = (href: string): boolean => {
@@ -70,5 +72,14 @@ export const isTimeZone = (timeZone: string): boolean => {
 		return true;
 	} catch {
 		return false;
+	}
+};
+
+/** The language's name written in that language (`ko` gives its Hangul name), or the code itself when the runtime does not know it. */
+export const languageName = (code: string): string => {
+	try {
+		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
+	} catch {
+		return code;
 	}
 };

@@ -1,4 +1,5 @@
-import { type CmsConfig, DEFAULT_ADMIN_PATH } from "../config/define";
+import type { CmsConfig } from "../config/define";
+import { DEFAULT_ADMIN_PATH } from "../config/rules";
 import { adminHrefWith, withBasePath } from "./base-path";
 
 export { DEFAULT_ADMIN_PATH };

@@ -16,7 +16,7 @@ import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schem
 import { checkCollections } from "./check/collections";
 import { CONFIG_SOURCE, type Issue, IssueList, throwIssues } from "./check/issue";
 import { checkSite } from "./check/site";
-import { DEFAULT_ADMIN_PATH, isAdminPath, LOCALE_PREFIX_MODES, type LocalePrefixMode } from "./rules";
+import { LOCALE_PREFIX_MODES, type LocalePrefixMode } from "./rules";
 
 /**
  * Site config (`monti.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
@@ -180,8 +180,6 @@ export interface CmsConfig<
 	/** Uploadable media formats and size limits. If unset, all supported formats, images up to 10MB and 40 megapixels, attachments up to 50MB. */
 	readonly media?: MediaConfig;
 }
-
-export { DEFAULT_ADMIN_PATH, isAdminPath };
 
 /**
  * Every problem of a config, as issues. Runs the shape of the plain data first (types, enums, unknown keys), then the rules about what the values mean

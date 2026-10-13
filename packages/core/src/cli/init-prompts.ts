@@ -1,4 +1,4 @@
-import { isAdminPath } from "../config/define";
+import { isAdminPath, isHttpUrl, isTimeZone, LOCALE_CODE } from "../config/rules";
 import { BLOCK_CHOICES, DEFAULT_BLOCK_IDS } from "./block-choices";
 import { DEFAULT_INIT_ADMIN_PATH, DEFAULT_INIT_LOCALE, DEFAULT_INIT_TIME_ZONE, type InitAnswers } from "./init-answers";
 import type { DetectedApp } from "./init-detect";
@@ -39,30 +39,6 @@ export const detectSystemTimeZone = (): string | undefined => {
 	}
 };
 
-const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-
-const isTimeZone = (timeZone: string): boolean => {
-	try {
-		new Intl.DateTimeFormat("en-US", { timeZone });
-		return true;
-	} catch {
-		return false;
-	}
-};
-
-const isHttpUrl = (value: string): boolean => {
-	try {
-		const url = new URL(value);
-		return url.protocol === "http:" || url.protocol === "https:";
-	} catch {
-		return false;
-	}
-};
-
-/** An admin path becomes a folder in the app, so it is plain path segments only. */
-export const validAdminPath = (value: string): boolean =>
-	isAdminPath(value) && /^(?:\/[A-Za-z0-9_-]+)+$/.test(value) && !value.startsWith("/api");
-
 const splitList = (value: string): string[] => value.split(/[\s,]+/).filter(Boolean);
 const BLOCK_IDS = BLOCK_CHOICES.map((block) => block.id);
 const EXTRAS = ["ai", "git-sync"] as const;
@@ -88,7 +64,7 @@ const check = {
 	},
 	login: (value: string) => (["password", "github"].includes(value) ? undefined : 'must be "password" or "github"'),
 	adminPath: (value: string) =>
-		validAdminPath(value)
+		isAdminPath(value)
 			? undefined
 			: 'must be a path like "/studio" (letters, digits, - and _; not "/" and not under "/api")',
 };

@@ -1,25 +1,20 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/client";
 import { FlagSwitch, Labeled, Pick } from "./controls";
 import { schemaMessages } from "./messages";
 import { type Obj, sectionOf, setSetting } from "./schema-model";
 import { Section } from "./section";
 
 const DEFAULT_CHOICE = "__default";
-const DEFAULT_ADMIN_PATH = "/admin";
 
 /** The languages the admin has a dictionary for (its own text is translated into these; any other locale falls back to English). */
 const dictionaryLanguages = Object.keys(schemaMessages.messages);
 
 /** A language written in itself (Korean is its own name followed by `(ko)`), falling back to the code. */
-function languageName(code: string): string {
-	try {
-		const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
-		return name && name !== code ? `${name} (${code})` : code;
-	} catch {
-		return code;
-	}
+function languageLabel(code: string): string {
+	const name = languageName(code);
+	return name !== code ? `${name} (${code})` : code;
 }
 
 /** The `admin` settings of the file: the admin language and the two switches. The admin path is shown, not edited (the route folder has to move with it). */
@@ -42,7 +37,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 						value={locale ?? DEFAULT_CHOICE}
 						items={[
 							{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
-							...languages.map((code) => ({ value: code, label: languageName(code) })),
+							...languages.map((code) => ({ value: code, label: languageLabel(code) })),
 						]}
 						onChange={(value) => set("locale", value === DEFAULT_CHOICE ? undefined : value)}
 					/>

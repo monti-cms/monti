@@ -1,20 +1,12 @@
-import { DEFAULT_ADMIN_PATH } from "../config/define";
+import { DEFAULT_ADMIN_PATH, isLocalUrl } from "../config/rules";
 import { printSchemaFile } from "../schema-file/print";
 import { blockEntry, chosenBlocks } from "./block-choices";
 import { pathFor, starterCollections } from "./field-mapping";
 import { DEFAULT_INIT_LOCALE, type InitAnswers } from "./init-answers";
 import type { ContentFolder } from "./init-detect";
+import { languageLabel } from "./locale-names";
 
 /** Contents of the files `monti init` creates (developer-facing, so English). A starting point the app edits right away. */
-
-/** The language's name in that language for a locale code (e.g. `ko` gives the Korean name of Korean, written in Hangul). Falls back to the code itself. */
-function languageName(code: string): string {
-	try {
-		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
-	} catch {
-		return code;
-	}
-}
 
 /**
  * The schema file `monti init` creates (`monti.schema.ts`): the `post` collection (and the tag and category collections its front matter asks for), the locales and
@@ -43,7 +35,7 @@ export function schemaTemplate(
 			},
 			...related,
 		},
-		locales: answers.locales.map((code) => ({ code, name: languageName(code) })),
+		locales: answers.locales.map((code) => ({ code, name: languageLabel(code) })),
 		defaultLocale,
 		timeZone: answers.timeZone,
 		site: { name: options.siteName || "My site" },
@@ -247,9 +239,7 @@ export function githubLoginHowTo(siteUrl: string): string {
 export function envExampleTemplate(answers: InitAnswers): string {
 	const site = answers.siteUrl.replace(/\/+$/, "");
 	// A local address is no example of a deployed site.
-	const deployedSite = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(site)
-		? "https://example.com"
-		: site;
+	const deployedSite = isLocalUrl(site) ? "https://example.com" : site;
 	const lines: string[] = [
 		"# Copy this file to .env.local and fill it in:  cp .env.example .env.local",
 		"# .env.local is for this machine only: keep it out of git. This example file is safe to commit, so never put a real secret in it.",

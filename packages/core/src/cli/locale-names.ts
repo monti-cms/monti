@@ -1,3 +1,4 @@
+import { languageName } from "../config/rules";
 /** Reading languages out of file and folder names (`hello.ko.mdx`, `ko/hello.mdx`), for `monti init` (which languages the site has). */
 
 /**
@@ -104,9 +105,5 @@ export const COMMON_LOCALES: readonly { readonly code: string; readonly name: st
 export function languageLabel(code: string): string {
 	const common = COMMON_LOCALES.find((locale) => locale.code === code);
 	if (common) return common.name;
-	try {
-		return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
-	} catch {
-		return code;
-	}
+	return languageName(code);
 }

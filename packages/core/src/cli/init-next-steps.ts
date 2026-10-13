@@ -1,3 +1,4 @@
+import { isLocalUrl } from "../config/rules";
 import type { InitAnswers } from "./init-answers";
 import type { PackageManager } from "./init-detect";
 import { ADMIN_PEER_PACKAGES, addCommand, commandText, exec, script } from "./init-install";
@@ -21,9 +22,6 @@ export interface NextStepsInput {
 	/** Steps for the files init could not edit safely. */
 	readonly manual: readonly string[];
 }
-
-/** Whether the address is one of this computer (so it says nothing about where the site is deployed). */
-const isLocalUrl = (url: string): boolean => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url);
 
 /** What is left to do after init, in order. */
 export function nextSteps(input: NextStepsInput): string[] {
