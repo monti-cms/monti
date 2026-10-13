@@ -17,6 +17,7 @@ export * from "./core/ids";
 export * from "./core/links";
 export * from "./core/locales";
 export * from "./core/plain-text";
+export * from "./core/plural";
 export * from "./core/slug";
 export * from "./core/time";
 export * from "./core/translation/hints";

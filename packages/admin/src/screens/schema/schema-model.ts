@@ -2,7 +2,7 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
-import { DEFAULT_TITLE_FIELD, TITLE_ROLE } from "@monti-cms/core/client";
+import { DEFAULT_TITLE_FIELD, defaultCollectionPath, TITLE_ROLE } from "@monti-cms/core/client";
 
 export type Obj = Record<string, unknown>;
 
@@ -135,7 +135,14 @@ export function setCollection(file: Obj, name: string, update: (collection: Obj)
 }
 
 /** The public address a new document collection starts with, from its name. */
-export const defaultPath = (name: string): string => (name === "" ? "" : `/${name}/:slug`);
+export const defaultPath = (id: string): string => (id === "" ? "" : defaultCollectionPath(id));
+
+/** The identifier a display name suggests: lowercase ASCII words joined with `-` ("Blog posts" -> "blog-posts"). Empty when the name has no ASCII letters or digits (Korean). */
+export const idFromName = (name: string): string =>
+	name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
 
 /** Why a public address cannot be used (the file wants a `/` first and `:slug` once), or `null`. Empty is fine: the entries have no public page. */
 export function pathProblem(path: string): "slash" | "slug" | null {
@@ -145,9 +152,9 @@ export function pathProblem(path: string): "slash" | "slug" | null {
 }
 
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
-export function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string): Obj {
+export function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj {
 	let collection: Obj = {
-		label: name.charAt(0).toUpperCase() + name.slice(1),
+		label: label?.trim() || name.charAt(0).toUpperCase() + name.slice(1),
 		kind,
 		fields: {
 			title: { kind: "text", label: "Title", required: true, role: TITLE_ROLE },

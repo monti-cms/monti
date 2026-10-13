@@ -307,9 +307,9 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 				open={creating}
 				onOpenChange={setCreating}
 				taken={names}
-				onCreate={(name, kind, path) => {
-					updateFile((file) => addCollection(file, name, kind, path));
-					setSelected(name);
+				onCreate={(id, kind, path, label) => {
+					updateFile((file) => addCollection(file, id, kind, path, label));
+					setSelected(id);
 					setTab("collections");
 					setCreating(false);
 				}}

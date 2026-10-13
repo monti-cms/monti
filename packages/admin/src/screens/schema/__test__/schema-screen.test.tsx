@@ -406,7 +406,7 @@ describe("SchemaScreen", () => {
 		expect(confirm.disabled).toBe(true);
 
 		type(within(dialog).getByLabelText(t("collection.newName")), "note");
-		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/note/:slug");
+		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
 		// Each kind says what it is for.
 		expect(within(dialog).getByText(t("collection.kindDocumentExplain"))).toBeTruthy();
 		expect(within(dialog).getByText(t("collection.kindItemExplain"))).toBeTruthy();
@@ -438,6 +438,46 @@ describe("SchemaScreen", () => {
 				slug: { kind: "slug", required: true, from: "title" },
 			},
 		});
+	});
+
+	it("separates the display name from the identifier and pre-fills the address from the identifier", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
+		const dialog = await screen.findByTestId("new-collection-dialog");
+		const name = within(dialog).getByLabelText(t("collection.newName"));
+		const id = () => (within(dialog).getByLabelText(t("collection.newId")) as HTMLInputElement).value;
+		const path = () => (within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value;
+
+		type(name, "Memo");
+		expect([id(), path()]).toEqual(["memo", "/memos/:slug"]);
+		type(name, "Blog posts");
+		expect([id(), path()]).toEqual(["blog-posts", "/blog-posts/:slug"]);
+		type(name, "Category");
+		expect([id(), path()]).toEqual(["category", "/categories/:slug"]);
+
+		// A Korean name has no identifier of its own: one must be typed.
+		type(name, "메모");
+		expect(id()).toBe("");
+		expect(within(dialog).getByText(t("name.idEmpty"))).toBeTruthy();
+		const confirm = within(dialog).getByRole("button", { name: t("collection.createConfirm") }) as HTMLButtonElement;
+		expect(confirm.disabled).toBe(true);
+		type(within(dialog).getByLabelText(t("collection.newId")), "memo");
+		expect(path()).toBe("/memos/:slug");
+		expect(confirm.disabled).toBe(false);
+
+		// Once the address is edited it stops following the identifier.
+		type(within(dialog).getByLabelText(t("collection.path")), "/my/:slug");
+		type(within(dialog).getByLabelText(t("collection.newId")), "memos");
+		expect(path()).toBe("/my/:slug");
+
+		fireEvent.click(confirm);
+		expect(await screen.findByTestId("collection-memos")).toBeTruthy();
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const memos = (lastPreview()?.body?.schema as { collections: Record<string, Record<string, unknown>> }).collections
+			.memos;
+		expect(memos).toMatchObject({ label: "메모", path: "/my/:slug" });
 	});
 
 	it("leaves the address empty for an item collection", async () => {

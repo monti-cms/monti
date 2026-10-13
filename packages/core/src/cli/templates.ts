@@ -1,4 +1,5 @@
 import { DEFAULT_ADMIN_PATH } from "../config/define";
+import { defaultCollectionPath } from "../core/plural";
 import { printSchemaFile } from "../schema-file/print";
 import { CMS_STATE_KEYS, DATE_KEYS, LOCALE_KEYS, RELATION_KEYS, SUMMARY_KEYS } from "./front-matter-keys";
 import type { ContentFolder, FrontMatterKey } from "./init-detect";
@@ -232,7 +233,7 @@ export function pathFor(folder: ContentFolder | undefined): string {
 	const last = folder?.dir.split("/").at(-1) ?? "";
 	return /^[A-Za-z][\w-]*$/.test(last) && !["content", "data", "src", "_posts"].includes(last)
 		? `/${last}/:slug`
-		: "/posts/:slug";
+		: defaultCollectionPath("post");
 }
 
 /**
