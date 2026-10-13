@@ -4,6 +4,7 @@ import { defineMessages } from "@monti-cms/core";
 export const uiMessages = defineMessages("cms-admin.ui", {
 	en: {
 		close: "Close",
+		"panel.resize": "Resize panel",
 		clear: "Clear",
 		deselect: "Remove",
 		"pagination.label": "Pagination",
@@ -20,6 +21,7 @@ export const uiMessages = defineMessages("cms-admin.ui", {
 	},
 	ko: {
 		close: "닫기",
+		"panel.resize": "패널 너비 조절",
 		clear: "지우기",
 		deselect: "선택 해제",
 		"pagination.label": "페이지 이동",

@@ -6,6 +6,7 @@ import type { TranslatorFor } from "../../translator";
 import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet";
 import { RecordPanel } from "../record-panel";
 import { useConfirm } from "../shared/confirm-dialog";
+import { RECORD_PANEL_RESIZE } from "../shared/side-panel";
 import { type EntryData, type EntryFormPatch, titlePatch } from "./entry-form";
 import { entriesMessages } from "./messages";
 
@@ -63,10 +64,7 @@ export function useRecordCreator() {
 					if (!open) void confirmDiscard(dirtyRef.current).then((ok) => ok && finish(null));
 				}}
 			>
-				<SheetContent
-					showCloseButton={false}
-					className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:w-[22rem] data-[side=right]:sm:max-w-none"
-				>
+				<SheetContent showCloseButton={false} resize={RECORD_PANEL_RESIZE} className="gap-0 p-0">
 					<SheetTitle className="sr-only">{t("record.add")}</SheetTitle>
 					{request && (
 						<RecordPanel

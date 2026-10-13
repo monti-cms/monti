@@ -37,7 +37,7 @@ import { DateRangePicker } from "../shared/date-range-picker";
 import { EmptyState } from "../shared/empty-state";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
-import { SIDE_PANEL_DOCK } from "../shared/side-panel";
+import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
 import { useDebounced } from "../shared/use-debounced";
 import { MediaDetailPanel } from "./media-detail-panel";
 import { type MediaItem, mediaUsages, usageNoteLabel } from "./media-item";
@@ -475,16 +475,17 @@ export function MediaLibrary() {
 				</div>
 
 				{selected && (
-					<MediaDetailPanel
-						key={selected.id}
-						media={selected}
-						className={SIDE_PANEL_DOCK}
-						onClose={() => void openDetail(null)}
-						onSaveDefaults={(defaults) => saveDefaults(selected, defaults)}
-						onRename={(filename) => void rename(selected, filename)}
-						onRequestDelete={() => void requestDelete(selected)}
-						onDirtyChange={setDetailDirty}
-					/>
+					<DockedPanel resize={MEDIA_PANEL_RESIZE}>
+						<MediaDetailPanel
+							key={selected.id}
+							media={selected}
+							onClose={() => void openDetail(null)}
+							onSaveDefaults={(defaults) => saveDefaults(selected, defaults)}
+							onRename={(filename) => void rename(selected, filename)}
+							onRequestDelete={() => void requestDelete(selected)}
+							onDirtyChange={setDetailDirty}
+						/>
+					</DockedPanel>
 				)}
 			</div>
 			{dialog}

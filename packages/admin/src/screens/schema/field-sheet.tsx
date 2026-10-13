@@ -101,7 +101,8 @@ export function FieldSheet({
 	return (
 		<Sheet open onOpenChange={(open) => !open && onClose()}>
 			<SheetContent
-				className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-[520px]"
+				resize={{ name: "field-sheet", defaultWidth: 520, minWidth: 420 }}
+				className="gap-0"
 				data-testid="field-sheet"
 				showCloseButton
 			>
