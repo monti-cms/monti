@@ -87,8 +87,7 @@ const TONE: Record<KindTone, string> = {
 };
 const REQUIRED = "text-[#B45309] cms-dark:text-[#FCD34D]";
 const OPTION = "text-[#9A3412] cms-dark:text-[#FDBA74]";
-const COLUMNS =
-	"grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4 sm:grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)]";
+const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-4";
 /** Two columns only, for when the preview takes the room beside the tree. */
 const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4";
 const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
@@ -342,7 +341,7 @@ function Row({
 					<div
 						className={cn(
 							"hidden min-w-0 truncate pr-8 font-mono text-cms-muted-foreground text-xs",
-							!ctx.compact && "sm:block",
+							!ctx.compact && "block",
 						)}
 					>
 						{summary.isTitle && (
@@ -389,10 +388,7 @@ function Row({
 							</div>
 							<div />
 							<div
-								className={cn(
-									"hidden truncate font-mono text-cms-muted-foreground text-xs",
-									!ctx.compact && "sm:block",
-								)}
+								className={cn("hidden truncate font-mono text-cms-muted-foreground text-xs", !ctx.compact && "block")}
 							>
 								{Object.keys(children).length === 0 ? t("fields.noExtra") : ""}
 							</div>
@@ -851,6 +847,23 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 
 const WIDE_QUERY = "(min-width: 1280px)";
 
+/** The width of an element, followed as it changes; `null` until it is measured. */
+function useElementWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number | null] {
+	const ref = useRef<T | null>(null);
+	const [width, setWidth] = useState<number | null>(null);
+	useEffect(() => {
+		const element = ref.current;
+		if (!element || typeof ResizeObserver === "undefined") return;
+		const observer = new ResizeObserver(([entry]) => entry && setWidth(entry.contentRect.width));
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, []);
+	return [ref, width];
+}
+
+/** The tree shows its settings column from this card width on; narrower, it keeps the name and kind readable. */
+const SETTINGS_MIN_WIDTH = 760;
+
 /** Whether the window is wide enough for the preview to sit beside the tree. */
 function useWide(): boolean {
 	const [wide, setWide] = useState(false);
@@ -919,6 +932,8 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const [sheet, setSheet] = useState<{ place: FieldPlace; name: string } | null>(null);
 	const [adding, setAdding] = useState(false);
 	const wide = useWide();
+	const [cardRef, cardWidth] = useElementWidth<HTMLElement>();
+	const showSettings = cardWidth === null || cardWidth >= SETTINGS_MIN_WIDTH;
 	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
 	const sideResize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview-side", minWidth: 320 });
 	const { file, codeCollections } = useSchemaEdit();
@@ -926,7 +941,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const ctx: TreeContext = {
 		editing,
 		onOpen: (place, name) => setSheet({ place, name }),
-		compact: wide && previewOpen,
+		compact: !showSettings,
 	};
 	const addTo = (make: (tree: Tree) => Tree) =>
 		editing.update((current) => withTree(current, make(treeOf(current, first))));
@@ -955,7 +970,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
-		<section className="min-w-0 overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
+		<section ref={cardRef} className="min-w-0 overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
 			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
@@ -994,7 +1009,7 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
-				<span className={cn("hidden", !ctx.compact && "sm:block")}>{t("fields.colSettings")}</span>
+				<span className={cn("hidden", !ctx.compact && "block")}>{t("fields.colSettings")}</span>
 			</div>
 			<div className="py-1.5 pb-2.5">
 				{names.length === 0 ? (

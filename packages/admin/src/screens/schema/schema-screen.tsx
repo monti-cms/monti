@@ -207,7 +207,7 @@ function SchemaEditor({
 							</div>
 						)}
 				<div className="min-h-0 flex-1 overflow-y-auto">
-					<PageBody>
+					<PageBody wide={tab === "collections"}>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>

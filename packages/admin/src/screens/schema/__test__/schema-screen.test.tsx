@@ -718,6 +718,16 @@ describe("SchemaScreen", () => {
 		await waitFor(() => expect(screen.queryByTestId("field-slug")).toBeNull());
 	});
 
+	it("gives the collections workspace all the width and keeps the form-like tabs at the readable width", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		const body = () => screen.getByTestId("schema-screen").querySelector("[class*='max-w-']") as HTMLElement;
+		expect(body().className).toContain("max-w-none");
+		fireEvent.click(screen.getByRole("tab", { name: t("tabs.site") }));
+		await screen.findByTestId("site-settings");
+		expect(body().className).toContain("max-w-[1160px]");
+	});
+
 	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");

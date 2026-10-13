@@ -17,4 +17,16 @@ describe("page body", () => {
 		expect(body.className).toContain("max-w-[1160px]");
 		expect(body.className).toContain("gap-3");
 	});
+
+	it("uses all the width for a workspace page, with the same padding", () => {
+		render(
+			<PageBody data-testid="body" wide>
+				content
+			</PageBody>,
+		);
+		const body = screen.getByTestId("body");
+		expect(body.className).toContain("max-w-none");
+		expect(body.className).not.toContain("max-w-[1160px]");
+		expect(body.className).toContain("lg:px-10");
+	});
 });
