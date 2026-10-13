@@ -8,6 +8,7 @@ const page = vi.hoisted(() => (name: string) => ({ default: (props: Record<strin
 vi.mock("../../screens/settings/page", () => page("settings"));
 vi.mock("../../screens/templates/page", () => page("templates"));
 vi.mock("../../screens/events/page", () => page("events"));
+vi.mock("../../screens/api-keys/page", () => page("api-keys"));
 vi.mock("../../screens/tools/page", () => page("tools"));
 vi.mock("../../screens/trash/page", () => page("trash"));
 vi.mock("../../screens/media/page", () => page("media"));
@@ -39,8 +40,9 @@ const open = async (...path: string[]) => {
 };
 
 describe("admin addresses", () => {
-	it("gives templates, the event log and trash their own address", async () => {
+	it("gives templates, the API keys, the event log and trash their own address", async () => {
 		expect((await open("templates")).name).toBe("templates");
+		expect((await open("api-keys")).name).toBe("api-keys");
 		expect((await open("events")).name).toBe("events");
 		expect((await open("trash")).name).toBe("trash");
 	});

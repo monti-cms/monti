@@ -15,9 +15,9 @@ import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
 import { errorText } from "../admin-api";
-import { SettingsTabBody } from "../settings/tab-body";
 import type { SchemaTab } from "../settings/tabs";
 import { useConfirm } from "../shared/confirm-dialog";
+import { PageBody } from "../shared/page-body";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
@@ -144,9 +144,10 @@ function SchemaEditor({
 			vocabulary: state.vocabulary,
 			issues,
 			collectionNames: names,
+			codeCollections: state.codeCollections,
 			file: draft,
 		}),
-		[writable, state.vocabulary, issues, names, draft],
+		[writable, state.vocabulary, issues, names, state.codeCollections, draft],
 	);
 
 	const discard = async () => {
@@ -206,7 +207,7 @@ function SchemaEditor({
 							</div>
 						)}
 				<div className="min-h-0 flex-1 overflow-y-auto">
-					<SettingsTabBody>
+					<PageBody wide={tab === "collections"}>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
 								<AlertTitle>{t("readonly.title")}</AlertTitle>
@@ -337,7 +338,7 @@ function SchemaEditor({
 								{tab === "file" && <FileInfo file={draft} state={state} />}
 							</>
 						)}
-					</SettingsTabBody>
+					</PageBody>
 				</div>
 			</div>
 			{dialog}

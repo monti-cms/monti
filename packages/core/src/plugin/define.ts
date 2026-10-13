@@ -23,7 +23,7 @@ export interface CmsPlugin<
 	/** Pages to add to the Tools group of the admin sidebar. `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
 	readonly nav?: readonly PluginNavItem[];
 	/**
-	 * The API keys this plugin needs, one slot each (`{ id: "key", label }`). Settings > API keys lists every slot of the installed plugins: assigned (the key's
+	 * The API keys this plugin needs, one slot each (`{ id: "key", label }`). Tools > API keys lists every slot of the installed plugins: assigned (the key's
 	 * "in use" line names it) or empty (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with
 	 * `cms.apiKeys.readSlot(<plugin name>, <slot id>)`. Read by both sides.
 	 */

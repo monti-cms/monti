@@ -1158,7 +1158,7 @@ secrets.deriveKey("signing");               // 다른 용도(HMAC, 해시)용 32
 
 #### API 키 저장소
 
-외부 서비스용 키(AI 제공자, 맞춤법 검사기, GitHub 토큰)는 플러그인마다 따로 두지 않고 `cms.apiKeys`에 한 번만 둔다. 키마다 이름이 있고, 플러그인 저장소 범위 `core-keys`에 core 자신의 키(`cms.secrets("core-keys")`)로 암호화해서 저장하며, 관리자(설정 > API 키)에는 이름과 끝 네 글자만 보인다.
+외부 서비스용 키(AI 제공자, 맞춤법 검사기, GitHub 토큰)는 플러그인마다 따로 두지 않고 `cms.apiKeys`에 한 번만 둔다. 키마다 이름이 있고, 플러그인 저장소 범위 `core-keys`에 core 자신의 키(`cms.secrets("core-keys")`)로 암호화해서 저장하며, 관리자(도구 > API 키)에는 이름과 끝 네 글자만 보인다.
 
 ```ts
 const key = await cms.apiKeys.add({ name: "Anthropic", value });          // 또는 addNamed({ baseName: "Anthropic", value }) -> 이름이 있으면 "Anthropic 2"
@@ -1171,7 +1171,7 @@ await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...)와 tx.storage("m
 
 - 플러그인은 키의 **id**만 들고 있고 값은 서비스를 부를 때 `read`로 읽는다. 이름을 바꾸거나 값을 바꿔도 id는 같으므로 그 키를 쓰는 곳이 모두 따라간다.
 - `setUses`는 관리자가 키를 어디서 쓰는지 아는 방법이다. 글자가 아니라 **참조**(`ref`, `connection:<id>` 같은 바뀌지 않는 값)를 받는다. 항목이 바뀔 때마다(연결 저장·삭제 등) 부른다. 관리자에 보이는 글자는 키를 읽을 때 `CmsServerPlugin`의 `keyUses(cms, refs)`가 만든다. `ref`마다 관리자 언어(`cms.site.createTranslator`)로, 항목의 지금 이름을 담은 라벨을 돌려주고, 더는 없는 항목은 `null`을 돌려주어 그 사용을 지운다. `keyUses`가 없는 플러그인은 플러그인 이름으로 보인다.
-- **키 슬롯**: 정해진 키 하나가 필요한 플러그인(맞춤법 검사기 등)은 플러그인 정의에 `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })`로 선언하고(`service`는 슬롯에 넣은 키가 저장되는 언어와 무관한 이름으로, `Bareun`, 있으면 `Bareun 2`이며 이전 작업도 같은 이름을 쓴다. `label`은 표시용이고 관리자 언어를 따르도록 site를 받는 함수로 쓴다), `cms.apiKeys.readSlot(<플러그인 이름>, "key")`로 읽는다. 설정 > API 키는 설치된 플러그인의 슬롯을 모두 보여 준다. 키가 정해졌으면 그 키의 "사용 중" 줄에 이름이 나오고, 비어 있으면 저장된 키를 고르거나 새 키를 넣는 줄(새 키는 지정과 같은 트랜잭션으로 저장)이 나오며, 정해진 슬롯은 키 줄 메뉴에서 뺄 수 있다. 관리자는 `PUT /v1/api-keys/slots`에 `{ plugin, slot, key }`(`key`는 `choose`가 받는 값, `{ use: "none" }`은 비운다)를 보낸다. 플러그인 페이지도 부를 수 있다. 설치되지 않은 플러그인의 슬롯은 보이지 않고 사용으로 세지도 않는다.
+- **키 슬롯**: 정해진 키 하나가 필요한 플러그인(맞춤법 검사기 등)은 플러그인 정의에 `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })`로 선언하고(`service`는 슬롯에 넣은 키가 저장되는 언어와 무관한 이름으로, `Bareun`, 있으면 `Bareun 2`이며 이전 작업도 같은 이름을 쓴다. `label`은 표시용이고 관리자 언어를 따르도록 site를 받는 함수로 쓴다), `cms.apiKeys.readSlot(<플러그인 이름>, "key")`로 읽는다. 도구 > API 키는 설치된 플러그인의 슬롯을 모두 보여 준다. 키가 정해졌으면 그 키의 "사용 중" 줄에 이름이 나오고, 비어 있으면 저장된 키를 고르거나 새 키를 넣는 줄(새 키는 지정과 같은 트랜잭션으로 저장)이 나오며, 정해진 슬롯은 키 줄 메뉴에서 뺄 수 있다. 관리자는 `PUT /v1/api-keys/slots`에 `{ plugin, slot, key }`(`key`는 `choose`가 받는 값, `{ use: "none" }`은 비운다)를 보낸다. 플러그인 페이지도 부를 수 있다. 설치되지 않은 플러그인의 슬롯은 보이지 않고 사용으로 세지도 않는다.
 - **한 번에 저장**: `cms.transaction(work)`는 `work`를 데이터베이스 트랜잭션 하나로 돌린다(Postgres: 어느 플러그인 저장소와 키 저장소든 한 번의 `BEGIN`/`COMMIT`. 데이터베이스 어댑터의 `transaction` 포트). 안에서 `tx.apiKeys.choose(...)`로 키를 만들고 `tx.storage("my-plugin")`으로 그 키를 가리키는 항목을 쓰면, 저장이 실패해도 남는 키가 없다. 안에서 `once`는 쓸 수 없다.
 - 관리자 API로 지울 때(`DELETE /v1/api-keys/<id>?expectedVersion=`) 쓰는 곳이 있으면 `409 key_in_use`와 `details.uses`로 답한다. `&force=true`를 붙이면 그래도 지우고, 쓰던 곳은 키를 찾지 못해 멈춘다. `cms.apiKeys.remove`는 항상 지운다.
 - 서버 `secret`이 없으면 저장할 수 없다(`secret_not_configured`). 더는 나열되지 않은 비밀 값으로 만든 키는 `readable: false`로 나온다.

@@ -206,7 +206,7 @@ export function CollectionEditor({
 						{hasBody(collection) && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
 					</TabsList>
 				</div>
-				<TabsContent value="basics" className="flex flex-col gap-12">
+				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-12">
 					<Section
 						title={t("collection.basicsTitle")}
 						description={t("collection.basicsDescription")}
@@ -268,7 +268,7 @@ export function CollectionEditor({
 					<FieldsCard editing={editing} />
 				</TabsContent>
 				{hasBody(collection) && (
-					<TabsContent value="editor" className="flex flex-col gap-12">
+					<TabsContent value="editor" className="flex max-w-[1160px] flex-col gap-12">
 						<AllowedEditor collection={collection} update={onChange} />
 					</TabsContent>
 				)}

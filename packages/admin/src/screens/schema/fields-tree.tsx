@@ -18,14 +18,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, ChevronsDownUp, Eye, GripVertical, MoveRight, Plus, Trash2, X } from "lucide-react";
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
+import { readPreference, writePreference } from "../../lib/utils/site-storage";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
 import { defaultTab } from "../entries/layout-groups";
+import { INSPECTOR_PANEL_RESIZE } from "../shared/side-panel";
 import { AddFieldDialog } from "./add-field";
 import { useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
@@ -85,12 +87,10 @@ const TONE: Record<KindTone, string> = {
 };
 const REQUIRED = "text-[#B45309] cms-dark:text-[#FCD34D]";
 const OPTION = "text-[#9A3412] cms-dark:text-[#FDBA74]";
-const COLUMNS =
-	"grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4 sm:grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)]";
+const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-4";
 /** Two columns only, for when the preview takes the room beside the tree. */
-const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4";
+const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-4";
 const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
-const INDENT = "   ";
 
 interface TreeContext {
 	readonly editing: CollectionEditing;
@@ -184,6 +184,8 @@ function MoveDialog({
 /** What a top-level row does besides what a field in a conditional branch does: it moves through the tree of tabs and groups. */
 interface TopRow {
 	readonly locked: Locked | null;
+	/** The row is in a group: a rule along its left edge shows it, there is no indent. */
+	readonly member: boolean;
 	/** Places the row can be moved to without dragging. */
 	readonly destinations: Destination[];
 	readonly up: () => void;
@@ -270,7 +272,11 @@ function Row({
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("relative", isDragging && "z-10 bg-cms-card opacity-80")}
+			className={cn(
+				"relative",
+				top?.member && "before:absolute before:inset-y-0 before:left-1.5 before:w-0.5 before:bg-cms-foreground/15",
+				isDragging && "z-10 bg-cms-card opacity-80",
+			)}
 			data-testid={`field-${name}`}
 		>
 			<div className="group/row relative">
@@ -283,7 +289,7 @@ function Row({
 					onKeyDown={onKeyDown}
 					className={cn(
 						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer px-5 outline-none hover:bg-cms-muted/60 focus-visible:bg-cms-muted/60 focus-visible:ring-2 focus-visible:ring-cms-ring/50 focus-visible:ring-inset",
+						"min-h-[30px] cursor-pointer pr-5 pl-9 outline-none hover:bg-cms-muted/60 focus-visible:bg-cms-muted/60 focus-visible:ring-2 focus-visible:ring-cms-ring/50 focus-visible:ring-inset",
 						nested && "bg-cms-muted/20",
 					)}
 				>
@@ -291,8 +297,14 @@ function Row({
 						<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 							{prefix}
 						</span>
-						<span className="font-mono text-[13px]">{name}</span>
-						{label && <span className="ml-2 truncate text-cms-muted-foreground text-xs">{label}</span>}
+						<span className="max-w-[70%] shrink-0 truncate font-mono text-[13px]" title={name}>
+							{name}
+						</span>
+						{label && (
+							<span className="ml-2 min-w-0 truncate text-cms-muted-foreground text-xs" title={label}>
+								{label}
+							</span>
+						)}
 						{locked?.kind === "panel" && (
 							<span
 								className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs"
@@ -329,7 +341,7 @@ function Row({
 					<div
 						className={cn(
 							"hidden min-w-0 truncate pr-8 font-mono text-cms-muted-foreground text-xs",
-							!ctx.compact && "sm:block",
+							!ctx.compact && "block",
 						)}
 					>
 						{summary.isTitle && (
@@ -348,7 +360,7 @@ function Row({
 					{...listeners}
 					aria-label={t("fields.drag", { name })}
 					disabled={noDrag}
-					className="absolute top-1/2 left-0.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-4" />
 				</button>
@@ -366,7 +378,7 @@ function Row({
 				const children = branchFields(field, option);
 				return (
 					<div key={option}>
-						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] px-5")}>
+						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] pr-5 pl-9")}>
 							<div className="flex min-w-0 items-center">
 								<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
 									{childLead}
@@ -376,10 +388,7 @@ function Row({
 							</div>
 							<div />
 							<div
-								className={cn(
-									"hidden truncate font-mono text-cms-muted-foreground text-xs",
-									!ctx.compact && "sm:block",
-								)}
+								className={cn("hidden truncate font-mono text-cms-muted-foreground text-xs", !ctx.compact && "block")}
 							>
 								{Object.keys(children).length === 0 ? t("fields.noExtra") : ""}
 							</div>
@@ -553,7 +562,7 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			data-testid={`tab-${index}`}
-			className="group/row relative mt-2 flex items-center gap-1 border-y bg-cms-muted/50 px-5 py-1 first:mt-0"
+			className="group/row relative mt-3 flex items-center gap-1 border-y bg-cms-muted py-1.5 pr-5 pl-9 first:mt-0"
 		>
 			<InlineName
 				value={tab.name}
@@ -561,21 +570,21 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 				disabled={ops.disabled || !editable}
 				inputRef={inputRef}
 				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name))}
-				className="font-semibold"
+				className="-ml-1.5 font-semibold"
 			/>
+			<span className="flex-1" />
 			{!editable && index > 0 && (
-				<span className="shrink-0 text-cms-muted-foreground text-xs" title={t("layout.tabLocked")}>
+				<span className="shrink-0 pr-1 text-cms-muted-foreground text-xs" title={t("layout.tabLocked")}>
 					{t("layout.pluginPlaced")}
 				</span>
 			)}
-			<span className="flex-1" />
 			<RowButtons buttons={buttons} />
 		</div>
 	);
 }
 
 /** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
-function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; block: number; indent: string }) {
+function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; block: number }) {
 	const t = useTranslator(schemaMessages);
 	const group = ops.tree.tabs[tab]?.blocks[block];
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -632,11 +641,9 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 			className={cn("group/row relative mt-1 border-y bg-cms-muted/30", isDragging && "z-10 bg-cms-card opacity-80")}
 			data-testid={`group-${tab}-${block}`}
 		>
-			<div className="flex items-center gap-1 px-5 py-0.5">
-				<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
-					{indent}
-				</span>
+			<div className="flex items-center gap-1 py-0.5 pr-5 pl-9">
 				<InlineName
+					className="-ml-1.5"
 					value={group.title}
 					label={t("layout.groupTitle")}
 					disabled={ops.disabled}
@@ -665,7 +672,7 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 				{...listeners}
 				aria-label={t("layout.dragGroup", { name: group.title })}
 				disabled={ops.disabled}
-				className="absolute top-1/2 left-0.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
@@ -674,18 +681,15 @@ function GroupRow({ ops, tab, block, indent }: { ops: LayoutOps; tab: number; bl
 }
 
 /** The place to drop a field into a group that has none, or after the last block of a tab. */
-function DropRow({ id, indent, label, testId }: { id: string; indent: string; label?: string; testId: string }) {
+function DropRow({ id, label, testId }: { id: string; label?: string; testId: string }) {
 	const { setNodeRef, transform, transition } = useSortable({ id, disabled: { draggable: true } });
 	return (
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("px-5 text-cms-muted-foreground text-xs", label ? "py-1" : "h-2")}
+			className={cn("pr-5 pl-9 text-cms-muted-foreground text-xs", label ? "py-1" : "h-2")}
 			data-testid={testId}
 		>
-			<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
-				{indent}
-			</span>
 			{label}
 		</div>
 	);
@@ -713,7 +717,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	const fields = fieldsOf(collection);
 
 	const rows: { id: string; node: React.ReactNode }[] = [];
-	const fieldRow = (name: string, depth: number, locked: Locked | null) => {
+	const fieldRow = (name: string, member: boolean, locked: Locked | null) => {
 		const here = placeOf(tree, name);
 		const inGroup = here !== null && tree.tabs[here.tab]?.blocks[here.block]?.title !== null;
 		const moveUp = locked ? tree : moveFieldBy(tree, name, -1);
@@ -752,12 +756,13 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 					place={{}}
 					name={name}
 					field={fields[name] ?? {}}
-					prefix={INDENT.repeat(depth)}
-					childLead={`${INDENT.repeat(depth)}  `}
+					prefix=""
+					childLead="  "
 					nested={false}
 					index={0}
 					count={1}
 					top={{
+						member,
 						locked,
 						destinations,
 						up: () => change((current) => moveFieldBy(current, name, -1)),
@@ -771,19 +776,18 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 	};
 
 	for (const name of tree.pinned) {
-		fieldRow(name, 0, { kind: "panel", reason: noPanelReason(collection, name) ?? "hidden" });
+		fieldRow(name, false, { kind: "panel", reason: noPanelReason(collection, name) ?? "hidden" });
 	}
 	for (const [at, tab] of tree.tabs.entries()) {
 		if (showTabs) rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
-		const tabDepth = showTabs ? 1 : 0;
 		for (const [b, block] of tab.blocks.entries()) {
 			if (block.title === null) {
-				for (const name of block.fields) fieldRow(name, tabDepth, null);
+				for (const name of block.fields) fieldRow(name, false, null);
 				continue;
 			}
 			rows.push({
 				id: groupId(at, b),
-				node: <GroupRow key={groupId(at, b)} ops={ops} tab={at} block={b} indent={INDENT.repeat(tabDepth)} />,
+				node: <GroupRow key={groupId(at, b)} ops={ops} tab={at} block={b} />,
 			});
 			if (block.fields.length === 0) {
 				rows.push({
@@ -792,21 +796,20 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 						<DropRow
 							key={emptyId(at, b)}
 							id={emptyId(at, b)}
-							indent={INDENT.repeat(tabDepth + 1)}
 							label={t("layout.emptyGroup")}
 							testId={`empty-${at}-${b}`}
 						/>
 					),
 				});
 			}
-			for (const name of block.fields) fieldRow(name, tabDepth + 1, null);
+			for (const name of block.fields) fieldRow(name, true, null);
 		}
 		rows.push({
 			id: endId(at),
-			node: <DropRow key={endId(at)} id={endId(at)} indent="" testId={`end-${at}`} />,
+			node: <DropRow key={endId(at)} id={endId(at)} testId={`end-${at}`} />,
 		});
 		for (const name of tab.locked)
-			fieldRow(name, tabDepth, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
+			fieldRow(name, false, { kind: "plugin", tab: ownTabOf(collection, name) ?? tab.name });
 	}
 
 	const onDragEnd = ({ active, over }: DragEndEvent) => {
@@ -844,6 +847,23 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 
 const WIDE_QUERY = "(min-width: 1280px)";
 
+/** The width of an element, followed as it changes; `null` until it is measured. Give the element the returned ref callback: it follows the element if React replaces it. */
+function useElementWidth<T extends HTMLElement>(): [(element: T | null) => void, number | null] {
+	const [element, setElement] = useState<T | null>(null);
+	const [width, setWidth] = useState<number | null>(null);
+	useEffect(() => {
+		if (!element || typeof ResizeObserver === "undefined") return;
+		setWidth(element.getBoundingClientRect().width);
+		const observer = new ResizeObserver(([entry]) => entry && setWidth(entry.contentRect.width));
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, [element]);
+	return [setElement, width];
+}
+
+/** The tree shows its settings column from this card width on; narrower, it keeps the name and kind readable. */
+const SETTINGS_MIN_WIDTH = 760;
+
 /** Whether the window is wide enough for the preview to sit beside the tree. */
 function useWide(): boolean {
 	const [wide, setWide] = useState(false);
@@ -859,9 +879,9 @@ function useWide(): boolean {
 }
 
 /** The preview on a narrower window: a panel on the right that the writer can widen, with the tree still reachable beside it. */
-function PreviewDrawer({ collection, onClose }: { collection: Obj; onClose: () => void }) {
+function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () => void }) {
 	const t = useTranslator(schemaMessages);
-	const resize = usePanelResize({ name: "layout-preview", defaultWidth: 384, minWidth: 320 });
+	const resize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview", minWidth: 320 });
 	return (
 		<aside
 			aria-label={t("layout.previewTitle")}
@@ -876,11 +896,26 @@ function PreviewDrawer({ collection, onClose }: { collection: Obj; onClose: () =
 					<X aria-hidden />
 				</Button>
 			</div>
-			<div className="min-h-0 flex-1 overflow-y-auto p-4">
-				<LayoutPreview collection={collection} />
-			</div>
+			<div className="flex min-h-0 flex-1 flex-col p-3">{preview}</div>
 		</aside>
 	);
+}
+
+/** Whether the preview is open: remembered in this browser; open on a wide window until the writer closes it. */
+function usePreviewOpen(wide: boolean): [boolean, (open: boolean) => void] {
+	const site = useSite();
+	const [chosen, setChosen] = useState<boolean | null>(null);
+	useEffect(() => {
+		const saved = readPreference(site, "layout-preview-open");
+		setChosen(saved === "1" ? true : saved === "0" ? false : null);
+	}, [site]);
+	return [
+		chosen ?? wide,
+		(open) => {
+			setChosen(open);
+			writePreference(site, "layout-preview-open", open ? "1" : "0");
+		},
+	];
 }
 
 /**
@@ -896,10 +931,18 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const names = Object.keys(fields);
 	const [sheet, setSheet] = useState<{ place: FieldPlace; name: string } | null>(null);
 	const [adding, setAdding] = useState(false);
-	const [drawer, setDrawer] = useState(false);
 	const wide = useWide();
+	const [cardRef, cardWidth] = useElementWidth<HTMLElement>();
+	const showSettings = cardWidth === null || cardWidth >= SETTINGS_MIN_WIDTH;
+	const [previewOpen, setPreviewOpen] = usePreviewOpen(wide);
+	const sideResize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview-side", minWidth: 320 });
+	const { file, codeCollections } = useSchemaEdit();
 	const first = defaultTab(site);
-	const ctx: TreeContext = { editing, onOpen: (place, name) => setSheet({ place, name }), compact: wide };
+	const ctx: TreeContext = {
+		editing,
+		onOpen: (place, name) => setSheet({ place, name }),
+		compact: !showSettings,
+	};
 	const addTo = (make: (tree: Tree) => Tree) =>
 		editing.update((current) => withTree(current, make(treeOf(current, first))));
 	const unique = (base: string, taken: string[]) => {
@@ -927,27 +970,29 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
-		<section className="min-w-0 overflow-hidden rounded-lg border bg-cms-card" data-testid="fields-card">
-			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3.5">
+		<section
+			ref={cardRef}
+			className="min-w-0 max-w-[1000px] overflow-hidden rounded-lg border bg-cms-card"
+			data-testid="fields-card"
+		>
+			<div className="flex items-center justify-between gap-4 border-b px-4 py-3.5">
 				<div className="min-w-0">
 					<h4 className="font-semibold text-sm">
 						{t("field.title")} <span className="font-medium text-cms-muted-foreground">{names.length}</span>
 					</h4>
-					<p className="mt-0.5 text-cms-muted-foreground text-xs">{t("fields.hint")}</p>
+					<p className="mt-0.5 truncate text-cms-muted-foreground text-xs" title={t("fields.hint")}>
+						{t("fields.hint")}
+					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-2">
-					{!wide && (
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							aria-pressed={drawer}
-							onClick={() => setDrawer((open) => !open)}
-						>
-							<Eye aria-hidden />
-							{t("layout.preview")}
-						</Button>
-					)}
+				<div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+					<IconButton
+						label={t("layout.preview")}
+						size="icon-sm"
+						pressed={previewOpen}
+						onClick={() => setPreviewOpen(!previewOpen)}
+					>
+						<Eye aria-hidden />
+					</IconButton>
 					<Button type="button" variant="secondary" size="sm" disabled={disabled} onClick={addTabRow}>
 						<Plus aria-hidden />
 						{t("layout.addTab")}
@@ -962,10 +1007,13 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 					</Button>
 				</div>
 			</div>
-			<div className={cn(columnsOf(wide), "border-b px-5 py-2 text-cms-muted-foreground text-xs")} aria-hidden>
+			<div
+				className={cn(columnsOf(ctx.compact), "border-b py-2 pr-5 pl-9 text-cms-muted-foreground text-xs")}
+				aria-hidden
+			>
 				<span>{t("fields.colField")}</span>
 				<span>{t("fields.colKind")}</span>
-				<span className={cn("hidden", !wide && "sm:block")}>{t("fields.colSettings")}</span>
+				<span className={cn("hidden", !ctx.compact && "block")}>{t("fields.colSettings")}</span>
 			</div>
 			<div className="py-1.5 pb-2.5">
 				{names.length === 0 ? (
@@ -1012,20 +1060,31 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 			)}
 		</section>
 	);
+	const preview = (
+		<LayoutPreview
+			file={file}
+			collection={editing.collectionName}
+			codeCollections={codeCollections}
+			onClose={() => setPreviewOpen(false)}
+		/>
+	);
 	return (
 		<>
-			{wide ? (
-				<div className="grid grid-cols-[minmax(0,1fr)_22rem] items-start gap-6">
+			{wide && previewOpen ? (
+				<div
+					className="grid grid-cols-[minmax(0,1000px)_var(--panel-width)] items-start gap-6"
+					style={sideResize.style}
+				>
 					{card}
-					<div className="sticky top-4 space-y-2" data-testid="layout-preview-side">
-						<p className="text-cms-muted-foreground text-xs">{t("layout.previewHint")}</p>
-						<LayoutPreview collection={editing.collection} />
+					<div className="sticky top-4 flex h-[min(48rem,calc(100vh-6rem))] flex-col" data-testid="layout-preview-side">
+						<PanelResizeHandle resize={sideResize} className="-left-3.5" />
+						{preview}
 					</div>
 				</div>
 			) : (
 				card
 			)}
-			{!wide && drawer && <PreviewDrawer collection={editing.collection} onClose={() => setDrawer(false)} />}
+			{!wide && previewOpen && <PreviewDrawer preview={preview} onClose={() => setPreviewOpen(false)} />}
 		</>
 	);
 }

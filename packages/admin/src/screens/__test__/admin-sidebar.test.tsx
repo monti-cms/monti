@@ -69,7 +69,7 @@ const folderNav = (folders: Folder[], overrides: Partial<FolderNavigation> = {})
 });
 
 describe("sidebar structure", () => {
-	it("has Content (each collection, Media), Tools (Templates, plugin pages, Event log), then Trash", () => {
+	it("has Content (each collection, Media), Tools (Templates, plugin pages, API keys, Event log), then Trash", () => {
 		renderSidebar();
 		const collections = site.COLLECTIONS.map((collection) => site.COLLECTION_DEFINITIONS[collection].label);
 		expect(labels(menu(t("sidebar.content")))).toEqual([...collections, t("sidebar.media")]);
@@ -77,6 +77,7 @@ describe("sidebar structure", () => {
 			t("sidebar.templates"),
 			"Tools page",
 			"More page",
+			t("sidebar.apiKeys"),
 			t("sidebar.events"),
 		]);
 		expect(labels(menu(t("sidebar.trash")))).toEqual([t("sidebar.trash")]);
@@ -85,6 +86,8 @@ describe("sidebar structure", () => {
 		const at = (label: string) => all.indexOf(label);
 		expect(at(t("sidebar.media"))).toBeLessThan(at(t("sidebar.templates")));
 		expect(at(t("sidebar.templates"))).toBeLessThan(at("Tools page"));
+		expect(at("More page")).toBeLessThan(at(t("sidebar.apiKeys")));
+		expect(at(t("sidebar.apiKeys"))).toBeLessThan(at(t("sidebar.events")));
 		expect(at(t("sidebar.events"))).toBeLessThan(at(t("sidebar.trash")));
 		expect(at(t("sidebar.trash"))).toBeLessThan(at(t("sidebar.settings")));
 	});
@@ -107,9 +110,11 @@ describe("sidebar structure", () => {
 		const href = (name: string) => screen.getByRole("link", { name }).getAttribute("href");
 		expect(href(t("sidebar.templates"))).toBe(site.adminHref("/templates"));
 		expect(href(t("sidebar.events"))).toBe(site.adminHref("/events"));
+		expect(href(t("sidebar.apiKeys"))).toBe(site.adminHref("/api-keys"));
 		expect(href("Tools page")).toBe(site.adminHref("/tools/tools"));
 		expect(href("More page")).toBe(site.adminHref("/tools/more"));
-		expect(href(t("sidebar.settings"))).toBe(site.adminHref("/settings/collections"));
+		// Settings opens at its first tab, which the page redirects to.
+		expect(href(t("sidebar.settings"))).toBe(site.adminHref("/settings"));
 	});
 
 	it("leaves Templates out when the site turns them off", () => {

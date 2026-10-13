@@ -7,6 +7,7 @@ import { createTestRouter } from "../../../test/router";
 import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
+import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
 import { schemaMessages } from "../messages";
 import type { Obj } from "../schema-model";
 import { SchemaSettings } from "../schema-screen";
@@ -717,6 +718,16 @@ describe("SchemaScreen", () => {
 		await waitFor(() => expect(screen.queryByTestId("field-slug")).toBeNull());
 	});
 
+	it("gives the collections workspace all the width and keeps the form-like tabs at the readable width", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		const body = () => screen.getByTestId("schema-screen").querySelector("[class*='max-w-']") as HTMLElement;
+		expect(body().className).toContain("max-w-none");
+		fireEvent.click(screen.getByRole("tab", { name: t("tabs.site") }));
+		await screen.findByTestId("site-settings");
+		expect(body().className).toContain("max-w-[1160px]");
+	});
+
 	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
@@ -751,6 +762,19 @@ describe("SchemaScreen", () => {
 			const dialog = await screen.findByTestId("move-dialog");
 			fireEvent.click(within(dialog).getByRole("button", { name: destination }));
 		};
+		beforeEach(() => window.localStorage.clear());
+		const wideWindow = () =>
+			vi.stubGlobal("matchMedia", (query: string) => ({
+				matches: query.includes("1280"),
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+			}));
+		/** The labels in the preview, top to bottom: what the real panel draws and in what order. */
+		const previewLabels = () =>
+			Array.from(document.querySelectorAll('[data-testid="layout-preview"] label')).map((label) =>
+				label.textContent?.trim(),
+			);
 		const openFields = async () => {
 			renderScreen();
 			await screen.findByTestId("collection-post");
@@ -897,12 +921,7 @@ describe("SchemaScreen", () => {
 				{ group: "Classification", fields: ["status"] },
 			];
 			state = screenState({ schema: withRun });
-			vi.stubGlobal("matchMedia", (query: string) => ({
-				matches: query.includes("1280"),
-				media: query,
-				addEventListener: () => {},
-				removeEventListener: () => {},
-			}));
+			wideWindow();
 			await openFields();
 			const order = () =>
 				Array.from(document.querySelectorAll('[data-testid^="field-"], [data-testid^="group-"]')).map((row) =>
@@ -915,64 +934,160 @@ describe("SchemaScreen", () => {
 				"group-0-1",
 				"field-status",
 			]);
-			const previewOrder = () =>
-				Array.from(document.querySelectorAll('[data-testid="layout-preview"] [data-testid^="preview-field-"]')).map(
-					(row) => row.getAttribute("data-testid"),
-				);
-			expect(previewOrder()).toEqual(["preview-field-slug", "preview-field-summary", "preview-field-status"]);
+			await screen.findByTestId("layout-preview");
+			expect(previewLabels().slice(0, 2)).toEqual(["Address", "Summary"]);
 
 			// Moving another field does not move them.
 			await moveTo("status", t("layout.moveOut"));
 			await waitFor(() => expect(order().filter((id) => id !== "field-title")[0]).toBe("field-slug"));
-			expect(previewOrder().slice(0, 2)).toEqual(["preview-field-slug", "preview-field-summary"]);
+			expect(previewLabels().slice(0, 2)).toEqual(["Address", "Summary"]);
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
-			const post = savedPost();
-			expect(post.layout).toEqual([{ fields: ["slug", "summary"] }, { group: "Classification", fields: [] }]);
+			expect(savedPost().layout).toEqual([{ fields: ["slug", "summary"] }, { group: "Classification", fields: [] }]);
 			vi.unstubAllGlobals();
 		});
 
-		it("gives a conditional field's own field no drag handle when it is alone in its choice", async () => {
-			const withConditional = schema();
-			Object.assign(withConditional.collections.post.fields, {
+		it("previews the real panel beside the tree: the real inputs, the title left out, labelled as not saved", async () => {
+			wideWindow();
+			await openFields();
+			const preview = await screen.findByTestId("layout-preview");
+			expect(within(preview).getByText(t("layout.previewLabel"))).toBeTruthy();
+			// The title is above the body, so the panel does not draw it.
+			expect(within(preview).queryByLabelText(/^Title/)).toBeNull();
+			// Real inputs of each kind work: a text box takes typing, a select opens its options.
+			const summary = within(preview).getByLabelText("Summary") as HTMLTextAreaElement | HTMLInputElement;
+			fireEvent.change(summary, { target: { value: "typed in the preview" } });
+			expect((within(preview).getByLabelText("Summary") as HTMLInputElement).value).toBe("typed in the preview");
+			fireEvent.click(within(preview).getByRole("combobox", { name: /Status/ }));
+			pressOption(await screen.findByRole("option", { name: "Live" }));
+			expect(within(preview).getByRole("combobox", { name: /Status/ }).textContent).toContain("Live");
+			expect(within(preview).getAllByRole("tab").length).toBeGreaterThan(0);
+			vi.unstubAllGlobals();
+		});
+
+		it("shows a conditional field's branch only for the chosen option, switches tabs, and writes nothing", async () => {
+			const rich = schema();
+			Object.assign(rich.collections.post.fields, {
 				policy: {
 					kind: "conditional",
 					label: "Policy",
-					discriminant: { kind: "select", label: "Policy", options: { normal: "Normal", deprecated: "Deprecated" } },
-					values: { normal: {}, deprecated: { replacementId: { kind: "text", label: "Replacement" } } },
+					discriminant: {
+						kind: "select",
+						label: "Policy",
+						options: { normal: "Normal", deprecated: "Deprecated" },
+						defaultValue: "normal",
+					},
+					values: { normal: {}, deprecated: { replacement: { kind: "text", label: "Replacement note" } } },
 				},
+				seoTitle: { kind: "text", label: "SEO title", tab: "SEO" },
 			});
-			state = screenState({ schema: withConditional });
-			await openFields();
-			// The parent can be dragged; its single sub-field cannot go anywhere on its own.
-			expect(screen.getByRole("button", { name: t("fields.drag", { name: "policy" }) })).toBeTruthy();
-			expect(
-				(screen.getByRole("button", { name: t("fields.drag", { name: "replacementId" }) }) as HTMLButtonElement)
-					.disabled,
-			).toBe(true);
-		});
-
-		it("previews the panel beside the tree on a wide window, following the tree", async () => {
-			vi.stubGlobal("matchMedia", (query: string) => ({
-				matches: query.includes("1280"),
-				media: query,
-				addEventListener: () => {},
-				removeEventListener: () => {},
-			}));
+			state = screenState({ schema: rich });
+			wideWindow();
 			await openFields();
 			const preview = await screen.findByTestId("layout-preview");
-			// The title is above the body, so the panel does not draw it.
-			expect(within(preview).queryByTestId("preview-field-title")).toBeNull();
-			expect(within(preview).getByTestId("preview-field-summary")).toBeTruthy();
-			expect(within(preview).getByRole("tab", { name: defaultTabName })).toBeTruthy();
+			expect(within(preview).queryByLabelText("Replacement note")).toBeNull();
+			fireEvent.click(within(preview).getByRole("combobox", { name: /Policy/ }));
+			pressOption(await screen.findByRole("option", { name: "Deprecated" }));
+			expect(await within(preview).findByLabelText("Replacement note")).toBeTruthy();
+			fireEvent.click(within(preview).getByRole("combobox", { name: /Policy/ }));
+			pressOption(await screen.findByRole("option", { name: "Normal" }));
+			await waitFor(() => expect(within(preview).queryByLabelText("Replacement note")).toBeNull());
 
+			// A plugin's own tab is a real tab of the panel.
+			expect(within(preview).queryByLabelText("SEO title")).toBeNull();
+			fireEvent.click(within(preview).getByRole("tab", { name: "SEO" }));
+			expect(await within(preview).findByLabelText("SEO title")).toBeTruthy();
+
+			// Nothing typed or picked reached the server: only reads were made.
+			expect(requests.filter((request) => request.method !== "GET")).toEqual([]);
+			vi.unstubAllGlobals();
+		});
+
+		it("follows the draft without saving: a moved field shows in its group in the preview", async () => {
+			wideWindow();
+			await openFields();
 			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
 			fireEvent.click(screen.getByRole("button", { name: t("layout.addGroup") }));
 			await moveTo("summary", t("layout.newGroup"));
-			const grouped = await within(screen.getByTestId("layout-preview")).findByRole("region", {
+			const group = await within(screen.getByTestId("layout-preview")).findByRole("region", {
 				name: t("layout.newGroup"),
 			});
-			expect(within(grouped).getByTestId("preview-field-summary")).toBeTruthy();
+			expect(within(group).getByLabelText("Summary")).toBeTruthy();
+			expect(requests.filter((request) => request.method !== "GET")).toEqual([]);
+			vi.unstubAllGlobals();
+		});
+
+		it("opens as wide as the entry editor's properties panel, and can be resized", async () => {
+			wideWindow();
+			await openFields();
+			const side = await screen.findByTestId("layout-preview-side");
+			const handle = within(side).getByRole("separator");
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth);
+			fireEvent.keyDown(handle, { key: "ArrowLeft", shiftKey: true });
+			expect(Number(handle.getAttribute("aria-valuenow"))).toBe(INSPECTOR_PANEL_RESIZE.defaultWidth + 64);
+			vi.unstubAllGlobals();
+		});
+
+		it("shows the settings column only while the tree card is wide enough, following its width", async () => {
+			const observers: { callback: ResizeObserverCallback; element: Element | null }[] = [];
+			vi.stubGlobal(
+				"ResizeObserver",
+				class {
+					entry: { callback: ResizeObserverCallback; element: Element | null };
+					constructor(callback: ResizeObserverCallback) {
+						this.entry = { callback, element: null };
+						observers.push(this.entry);
+					}
+					observe(element: Element) {
+						this.entry.element = element;
+					}
+					unobserve() {}
+					disconnect() {}
+				},
+			);
+			await openFields();
+			const card = await screen.findByTestId("fields-card");
+			const resizeTo = (width: number) =>
+				act(() => {
+					for (const observer of observers) {
+						if (observer.element === card) {
+							observer.callback([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
+						}
+					}
+				});
+			const settingsHeader = () => within(card).getByText(t("fields.colSettings"));
+			resizeTo(500);
+			await waitFor(() => expect(settingsHeader().className).toContain("hidden"));
+			expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/);
+			resizeTo(1400);
+			await waitFor(() => expect(settingsHeader().className).toMatch(/(^|\s)block(\s|$)/));
+			resizeTo(700);
+			await waitFor(() => expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/));
+			vi.unstubAllGlobals();
+		});
+
+		it("caps the tree at a width that suits its columns, with the preview right beside it", async () => {
+			wideWindow();
+			await openFields();
+			const side = await screen.findByTestId("layout-preview-side");
+			const row = side.parentElement as HTMLElement;
+			// The first column stops growing at the cap; the preview follows it, not the page edge.
+			expect(row.className).toContain("grid-cols-[minmax(0,1000px)_var(--panel-width)]");
+			expect(screen.getByTestId("fields-card").className).toContain("max-w-[1000px]");
+			vi.unstubAllGlobals();
+		});
+
+		it("can be closed and opened again, and remembers it", async () => {
+			wideWindow();
+			await openFields();
+			await screen.findByTestId("layout-preview");
+			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			await waitFor(() => expect(screen.queryByTestId("layout-preview")).toBeNull());
+			cleanup();
+			await openFields();
+			expect(screen.queryByTestId("layout-preview")).toBeNull();
+			fireEvent.click(screen.getByRole("button", { name: t("layout.preview") }));
+			expect(await screen.findByTestId("layout-preview")).toBeTruthy();
 			vi.unstubAllGlobals();
 		});
 

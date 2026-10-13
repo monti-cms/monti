@@ -1,6 +1,7 @@
 import type { Site } from "@monti-cms/core/client";
 import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./api-error-message";
 import { screensMessages } from "./messages";
+import { isSandboxSite, isWrite } from "./shared/preview-sandbox";
 
 /** Admin API error. The screen shows `message` as is and branches on `status` and `code`. */
 export class CmsApiError extends Error {
@@ -26,6 +27,10 @@ export async function cmsFetch<T = unknown>(
 	init: Omit<RequestInit, "body"> & { json?: unknown; fallback?: string } = {},
 ): Promise<T> {
 	const { json, fallback = site.createTranslator(screensMessages)("api.fallback"), headers, ...rest } = init;
+	// A preview runs on a draft site and must not write.
+	if (isSandboxSite(site) && isWrite(rest.method)) {
+		throw new CmsApiError(0, "preview", site.createTranslator(screensMessages)("api.previewNoWrite"), [], {});
+	}
 	const response = await fetch(url, {
 		...rest,
 		headers: json === undefined ? headers : { "Content-Type": "application/json", ...headers },
