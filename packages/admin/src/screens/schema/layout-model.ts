@@ -5,6 +5,7 @@ import {
 	type PanelSource,
 	panelGroupsOf,
 } from "@monti-cms/core/client";
+import { moveWithin } from "../../lib/utils/move-within";
 import { fieldsOf, layoutOf, type Obj, setProp, withLayout } from "./schema-model";
 
 /**
@@ -253,6 +254,12 @@ export function removeGroup(tree: Tree, ref: BlockRef): Tree {
 /** Moves a block (with its fields) to the place of another block, in its tab or in another one; `to.block` past the last block means the end. */
 export function moveGroup(tree: Tree, from: BlockRef, to: BlockRef): Tree {
 	const next = copy(tree);
+	if (from.tab === to.tab) {
+		const tab = next.tabs[from.tab];
+		if (!tab) return next;
+		tab.blocks = moveWithin(tab.blocks, from.block, to.block);
+		return tidied(next);
+	}
 	const [moved] = next.tabs[from.tab]?.blocks.splice(from.block, 1) ?? [];
 	const target = next.tabs[to.tab];
 	if (!moved || !target) return copy(tree);
@@ -315,8 +322,7 @@ export function moveTab(tree: Tree, index: number, delta: -1 | 1): Tree {
 	const movable = next.tabs.filter((tab, at) => at > 0 && !pluginOnly(tab)).length;
 	const tab = next.tabs[index];
 	if (index < 1 || to < 1 || to > movable || !tab || pluginOnly(tab)) return next;
-	next.tabs.splice(index, 1);
-	next.tabs.splice(to, 0, tab);
+	next.tabs = moveWithin(next.tabs, index, to);
 	return next;
 }
 

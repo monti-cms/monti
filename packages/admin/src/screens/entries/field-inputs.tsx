@@ -10,7 +10,6 @@ import {
 	useSensors,
 } from "@dnd-kit/core";
 import {
-	arrayMove,
 	SortableContext,
 	sortableKeyboardCoordinates,
 	useSortable,
@@ -25,6 +24,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { errorText, isConflict } from "../../api/client";
 import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api/entries";
 import { cn } from "../../lib/utils/cn";
+import { moveWithin } from "../../lib/utils/move-within";
 import type { TranslatorFor } from "../../translator";
 import { IconButton } from "../../ui/icon-button";
 import type { EntryForm, FormValue } from "./entry-form";
@@ -232,11 +232,11 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 	const move = (index: number, direction: -1 | 1) => {
 		const target = index + direction;
 		if (target < 0 || target >= ids.length) return;
-		onChange(arrayMove([...ids], index, target));
+		onChange(moveWithin(ids, index, target));
 	};
 	const onDragEnd = ({ active, over }: DragEndEvent) => {
 		if (!over || active.id === over.id) return;
-		onChange(arrayMove([...ids], sortableIds.indexOf(String(active.id)), sortableIds.indexOf(String(over.id))));
+		onChange(moveWithin(ids, sortableIds.indexOf(String(active.id)), sortableIds.indexOf(String(over.id))));
 	};
 	/** Selection returned by the checklist. Remaining posts keep the current order and new posts are appended. */
 	const applySelection = (selected: string[]) => {
