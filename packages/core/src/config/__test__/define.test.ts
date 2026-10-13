@@ -381,6 +381,19 @@ describe("defineSite", () => {
 		);
 	});
 
+	it("names a collection of the config by its key, not its label, so the schema editor can place the problem", () => {
+		const retired = { label: "Blog posts", kind: "document", fields: { title }, workflow: "publish" };
+		const error = (() => {
+			try {
+				defineSite({ collections: { posts: retired as never }, locales, defaultLocale: "en" });
+			} catch (caught) {
+				return caught as Error;
+			}
+		})();
+		expect(error?.message).toMatch(/^cms\.config: collection "posts" uses `workflow`/);
+		expect(error?.message).not.toContain("Blog posts");
+	});
+
 	it("rejects the retired `list` option with the way forward", () => {
 		const old = () =>
 			defineCollection({
@@ -389,7 +402,7 @@ describe("defineSite", () => {
 				fields: { title },
 				list: { columns: ["title"] },
 			} as never);
-		expect(old).toThrow(/collection "Article" uses `list`.*list screen.*Delete the `list` key/);
+		expect(old).toThrow(/the collection labelled "Article" uses `list`.*list screen.*Delete the `list` key/);
 	});
 
 	it("checks field roles: one field per role, and the field kind fits", () => {

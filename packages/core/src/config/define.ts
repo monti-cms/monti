@@ -586,7 +586,7 @@ export function defineSite(
 	) as CmsConfig;
 	// Also accepts definitions written without `defineCollection`. The core only reads the normalized `kind`.
 	const collections = Object.fromEntries(
-		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema)]),
+		Object.entries(config.collections).map(([name, schema]) => [name, normalizeCollection(schema, name)]),
 	);
 	const normalized = { ...config, collections };
 	validate(normalized);

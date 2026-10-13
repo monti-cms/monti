@@ -94,25 +94,28 @@ export function normalizeCollection(
 		readonly body?: boolean | BodyAllowed;
 		readonly allowed?: BodyAllowed;
 	},
+	/** The key the collection has in the config. Messages name the collection by it (`collection "posts"`), which the schema editor reads as the place of the problem; without it they give the label. */
+	key?: string,
 ): CollectionSchema {
 	const { kind } = schema;
+	const named = key === undefined ? `the collection labelled "${schema.label}"` : `collection "${key}"`;
 	if ("workflow" in schema) {
 		const workflow = (schema as { readonly workflow?: unknown }).workflow;
 		const replacement = workflow === "record" ? "item" : workflow === "publish" ? "document" : undefined;
 		throw new Error(
-			`cms.config: collection "${schema.label}" uses \`workflow\`, which was removed; use \`kind\`${replacement ? ` (kind: "${replacement}" instead of workflow: "${workflow}")` : ' ("document" or "item")'}`,
+			`cms.config: ${named} uses \`workflow\`, which was removed; use \`kind\`${replacement ? ` (kind: "${replacement}" instead of workflow: "${workflow}")` : ' ("document" or "item")'}`,
 		);
 	}
 	if ("list" in schema) {
-		throw new Error(`cms.config: collection "${schema.label}" uses \`list\`. ${LIST_REMOVED}`);
+		throw new Error(`cms.config: ${named} uses \`list\`. ${LIST_REMOVED}`);
 	}
 	if (kind !== "document" && kind !== "item") {
-		throw new Error(`cms.config: collection "${schema.label}" needs kind "document" or "item"`);
+		throw new Error(`cms.config: ${named} needs kind "document" or "item"`);
 	}
 	const { body, ...rest } = schema;
 	if (body !== null && typeof body === "object") {
 		if (Array.isArray(body)) {
-			throw new Error(`cms.config: collection "${schema.label}" needs \`body\` to be true, false or an object`);
+			throw new Error(`cms.config: ${named} needs \`body\` to be true, false or an object`);
 		}
 		// The object form means the collection has a body, and limits it.
 		return { ...rest, kind, body: true, allowed: body };
