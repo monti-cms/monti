@@ -162,6 +162,17 @@ describe("editor accessibility", () => {
 		expect(screen.getByRole("menuitem", { name: /삭제/ })).toBeTruthy();
 	});
 
+	it("shows only the collection's root item when there are no folders, with the add button and no empty message", () => {
+		render(
+			<SidebarProvider>
+				<AdminSidebar activeNav="memo" folderNav={folderNav([], fakeActions())} />
+			</SidebarProvider>,
+		);
+		expect(screen.getByRole("button", { name: "메모" })).toBeTruthy();
+		expect(screen.getByRole("button", { name: "폴더 추가" })).toBeTruthy();
+		expect(screen.queryByText(/폴더가 없습니다/)).toBeNull();
+	});
+
 	it("previews folder contents before deleting and returns focus to the folder on cancel", async () => {
 		const folder: Folder = {
 			id: "folder-1",

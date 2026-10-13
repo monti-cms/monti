@@ -2,9 +2,11 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Label } from "../../ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { COLLECTION_ICON_NAMES } from "../shared/collection-icon";
 import {
 	AddButton,
@@ -19,6 +21,7 @@ import {
 	useSchemaEdit,
 } from "./controls";
 import { FieldList } from "./field-editor";
+import { ListPreview } from "./list-preview";
 import { schemaMessages } from "./messages";
 import {
 	type Allowed,
@@ -102,9 +105,30 @@ function LimitList<T extends string | number>({
 
 function BodyEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
 	const t = useTranslator(schemaMessages);
+	return (
+		<section className="flex flex-col gap-3">
+			<FlagSwitch
+				label={t("collection.body")}
+				hint={t("collection.bodyHint")}
+				checked={hasBody(collection)}
+				onChange={(on) => update((current) => withBody(current, on, on ? allowedOf(current) : {}))}
+			/>
+		</section>
+	);
+}
+
+/** Which blocks and text styles the body allows: everything unless the writer limits a list. */
+function AllowedEditor({
+	collection,
+	update,
+}: {
+	collection: Obj;
+	update: (change: (collection: Obj) => Obj) => void;
+}) {
+	const t = useTranslator(schemaMessages);
 	const { vocabulary } = useSchemaEdit();
-	const enabled = hasBody(collection);
 	const allowed = allowedOf(collection);
+	const limited = Object.values(allowed).some((list) => Array.isArray(list));
 	const setAllowed = (key: keyof Allowed, value: unknown[] | undefined) =>
 		update((current) => {
 			const next = { ...allowedOf(current) } as Record<string, unknown>;
@@ -113,39 +137,30 @@ function BodyEditor({ collection, update }: { collection: Obj; update: (change: 
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<section className="flex flex-col gap-3">
-			<FlagSwitch
-				label={t("collection.body")}
-				hint={t("collection.bodyHint")}
-				checked={enabled}
-				onChange={(on) => update((current) => withBody(current, on, on ? allowedOf(current) : {}))}
+		<div className="flex flex-col gap-2">
+			<h4 className="font-medium text-sm">{t("allowed.title")}</h4>
+			<p className="text-cms-muted-foreground text-xs">{t("allowed.hint")}</p>
+			<LimitList
+				label={t("allowed.blocks")}
+				all={vocabulary.blocks}
+				value={allowed.blocks}
+				onChange={(value) => setAllowed("blocks", value)}
 			/>
-			{enabled && (
-				<div className="flex flex-col gap-2">
-					<h4 className="font-medium text-sm">{t("allowed.title")}</h4>
-					<p className="text-cms-muted-foreground text-xs">{t("allowed.hint")}</p>
-					<LimitList
-						label={t("allowed.blocks")}
-						all={vocabulary.blocks}
-						value={allowed.blocks}
-						onChange={(value) => setAllowed("blocks", value)}
-					/>
-					<LimitList
-						label={t("allowed.marks")}
-						all={vocabulary.marks}
-						value={allowed.marks}
-						onChange={(value) => setAllowed("marks", value)}
-					/>
-					<LimitList
-						label={t("allowed.headings")}
-						all={HEADINGS}
-						value={allowed.headings}
-						nameOf={(level) => `H${level}`}
-						onChange={(value) => setAllowed("headings", value)}
-					/>
-				</div>
-			)}
-		</section>
+			<LimitList
+				label={t("allowed.marks")}
+				all={vocabulary.marks}
+				value={allowed.marks}
+				onChange={(value) => setAllowed("marks", value)}
+			/>
+			<LimitList
+				label={t("allowed.headings")}
+				all={HEADINGS}
+				value={allowed.headings}
+				nameOf={(level) => `H${level}`}
+				onChange={(value) => setAllowed("headings", value)}
+			/>
+			{limited && <p className="text-cms-muted-foreground text-xs">{t("allowed.note")}</p>}
+		</div>
 	);
 }
 
@@ -262,6 +277,7 @@ export function CollectionEditor({
 }) {
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
+	const [tab, setTab] = useState("basics");
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
 	const fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
@@ -291,50 +307,70 @@ export function CollectionEditor({
 						{t("collection.remove")}
 					</Button>
 				</div>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<TextInput
-						label={t("collection.label")}
-						value={collection.label as string | undefined}
-						onChange={(value) => set("label", value)}
-					/>
-					<Pick
-						label={t("collection.kind")}
-						hint={collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")}
-						value={String(collection.kind)}
-						items={[
-							{ value: "document", label: t("collection.kindDocument") },
-							{ value: "item", label: t("collection.kindItem") },
-						]}
-						onChange={(value) => set("kind", value)}
-					/>
-					<Pick
-						label={t("collection.icon")}
-						value={icon}
-						items={icons}
-						onChange={(value) => set("icon", orUndefined(value))}
-					/>
-					<TextInput
-						label={t("collection.path")}
-						hint={t("collection.pathHint")}
-						placeholder="/posts/:slug"
-						value={collection.path as string | undefined}
-						onChange={(value) => set("path", orUndefined(value))}
-					/>
-				</div>
 			</section>
-			<BodyEditor collection={collection} update={onChange} />
-			<section className="flex flex-col gap-2">
-				<h4 className="font-medium text-sm">{t("field.title")}</h4>
-				<FieldList editing={editing} place={{}} fields={fields} kinds={FIELD_KINDS} />
-			</section>
-			<section className="flex flex-col gap-2">
-				<h4 className="font-medium text-sm">{t("layout.title")}</h4>
-				<LayoutEditor collection={collection} update={onChange} />
-			</section>
-			<section className="flex flex-col gap-2">
-				<h4 className="font-medium text-sm">{t("list.title")}</h4>
-				<ListEditor collection={collection} update={onChange} />
-			</section>
+			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)}>
+				<TabsList className="w-full justify-start sm:w-fit">
+					<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
+					<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
+					<TabsTrigger value="list">{t("collection.tabs.list")}</TabsTrigger>
+					<TabsTrigger value="advanced">{t("collection.tabs.advanced")}</TabsTrigger>
+				</TabsList>
+				<TabsContent value="basics" className="flex flex-col gap-5 pt-3">
+					<div className="grid gap-3 sm:grid-cols-2">
+						<TextInput
+							label={t("collection.label")}
+							value={collection.label as string | undefined}
+							onChange={(value) => set("label", value)}
+						/>
+						<Pick
+							label={t("collection.kind")}
+							hint={collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")}
+							value={String(collection.kind)}
+							items={[
+								{ value: "document", label: t("collection.kindDocument") },
+								{ value: "item", label: t("collection.kindItem") },
+							]}
+							onChange={(value) => set("kind", value)}
+						/>
+						<Pick
+							label={t("collection.icon")}
+							value={icon}
+							items={icons}
+							onChange={(value) => set("icon", orUndefined(value))}
+						/>
+						<TextInput
+							label={t("collection.path")}
+							hint={t("collection.pathHint")}
+							placeholder="/posts/:slug"
+							value={collection.path as string | undefined}
+							onChange={(value) => set("path", orUndefined(value))}
+						/>
+					</div>
+					<BodyEditor collection={collection} update={onChange} />
+				</TabsContent>
+				<TabsContent value="fields" className="flex flex-col gap-5 pt-3">
+					<section className="flex flex-col gap-2">
+						<h4 className="font-medium text-sm">{t("field.title")}</h4>
+						<FieldList editing={editing} place={{}} fields={fields} kinds={FIELD_KINDS} />
+					</section>
+					<section className="flex flex-col gap-2">
+						<h4 className="font-medium text-sm">{t("layout.title")}</h4>
+						<LayoutEditor collection={collection} update={onChange} />
+					</section>
+				</TabsContent>
+				<TabsContent value="list" className="flex flex-col gap-4 pt-3">
+					<p className="text-cms-muted-foreground text-xs">{t("list.hint")}</p>
+					<ListEditor collection={collection} update={onChange} />
+					<ListPreview name={name} collection={collection} columns={columnsOf(collection)} saved={!isNew} />
+				</TabsContent>
+				<TabsContent value="advanced" className="flex flex-col gap-5 pt-3">
+					{hasBody(collection) ? (
+						<AllowedEditor collection={collection} update={onChange} />
+					) : (
+						<p className="text-cms-muted-foreground text-sm">{t("advanced.noBody")}</p>
+					)}
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 }

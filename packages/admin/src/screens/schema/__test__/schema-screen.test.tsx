@@ -1,9 +1,11 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { pressOption } from "../../../test/base-ui";
 import { createTestRouter } from "../../../test/router";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { schemaMessages } from "../messages";
+import type { Obj } from "../schema-model";
 import { SchemaScreen } from "../schema-screen";
 
 const nav = createTestRouter();
@@ -122,6 +124,13 @@ const renderScreen = () =>
 
 const review = () => screen.getByRole("button", { name: t("actions.review") }) as HTMLButtonElement;
 const type = (element: HTMLElement, value: string) => fireEvent.change(element, { target: { value } });
+/** Picks the kind in the row that adds a field (the last "Kind" box on the screen). */
+async function pickNewFieldKind(optionName: string) {
+	fireEvent.click(screen.getAllByRole("combobox", { name: t("field.kind") }).at(-1) as HTMLElement);
+	pressOption(await screen.findByRole("option", { name: optionName }));
+}
+const openTab = (name: "basics" | "fields" | "list" | "advanced") =>
+	fireEvent.click(screen.getByRole("tab", { name: t(`collection.tabs.${name}`) }));
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
 
 describe("SchemaScreen", () => {
@@ -133,7 +142,7 @@ describe("SchemaScreen", () => {
 		expect(screen.getByText(t("readonly.production"))).toBeTruthy();
 		expect((screen.getByLabelText(t("collection.label")) as HTMLInputElement).disabled).toBe(true);
 		expect(review().disabled).toBe(true);
-		expect(screen.queryByTestId("add-collection")).toBeNull();
+		expect(screen.queryByRole("button", { name: t("collection.create") })).toBeNull();
 		expect(requests.every((request) => request.method === "GET")).toBe(true);
 	});
 
@@ -189,6 +198,8 @@ describe("SchemaScreen", () => {
 	it("adds a field in the file's format, after the others", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("collection-post");
 		type(screen.getByLabelText(t("field.newName")), "rating");
 		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
 		expect(await screen.findByTestId("field-rating")).toBeTruthy();
@@ -203,12 +214,16 @@ describe("SchemaScreen", () => {
 	it("refuses a field name that is taken or malformed", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("collection-post");
 		type(screen.getByLabelText(t("field.newName")), "summary");
 		expect((screen.getByRole("button", { name: t("field.add") }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
 	it("shows which field is the title, lets the title field be renamed, and keeps it the title with the title role", async () => {
 		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
 		await screen.findByTestId("collection-post");
 		// The field named `title` is the title until a field has the role.
 		expect(within(screen.getByTestId("field-title")).getByTestId("title-badge")).toBeTruthy();
@@ -235,6 +250,8 @@ describe("SchemaScreen", () => {
 
 	it("moves the title to another text field with the switch", async () => {
 		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
 		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "summary" }) }));
 		const summary = screen.getByTestId("field-summary");
 		fireEvent.click(within(summary).getByRole("switch", { name: t("field.isTitle") }));
@@ -288,6 +305,8 @@ describe("SchemaScreen", () => {
 			});
 		};
 		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
 		fireEvent.click(await screen.findByRole("button", { name: t("field.toggle", { name: "summary" }) }));
 		const name = within(screen.getByTestId("field-summary")).getByLabelText(t("field.name"));
 		type(name, "excerpt");
@@ -360,6 +379,7 @@ describe("SchemaScreen", () => {
 	it("limits the body of a collection to the blocks that are ticked", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
+		openTab("advanced");
 		fireEvent.click(
 			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
 		);
@@ -369,6 +389,204 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("review-summary");
 		const body = (lastPreview()?.body?.schema as { collections: { post: { body: unknown } } }).collections.post.body;
 		expect(body).toEqual({ blocks: ["table", "image"] });
+	});
+
+	it("creates a collection from a dialog: title and slug come with it, the address follows the name, and the new collection is selected", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.queryByTestId("new-collection-dialog")).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
+		const dialog = await screen.findByTestId("new-collection-dialog");
+
+		const confirm = within(dialog).getByRole("button", { name: t("collection.createConfirm") }) as HTMLButtonElement;
+		expect(confirm.disabled).toBe(true);
+		// A name that is taken is refused with the reason.
+		type(within(dialog).getByLabelText(t("collection.newName")), "post");
+		expect(within(dialog).getByText(t("name.taken"))).toBeTruthy();
+		expect(confirm.disabled).toBe(true);
+
+		type(within(dialog).getByLabelText(t("collection.newName")), "note");
+		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/note/:slug");
+		// Each kind says what it is for.
+		expect(within(dialog).getByText(t("collection.kindDocumentExplain"))).toBeTruthy();
+		expect(within(dialog).getByText(t("collection.kindItemExplain"))).toBeTruthy();
+		// An address of the writer's own stays when the name changes; a wrong one is refused.
+		type(within(dialog).getByLabelText(t("collection.path")), "/notes");
+		expect(within(dialog).getByText(t("path.slug"))).toBeTruthy();
+		expect(confirm.disabled).toBe(true);
+		type(within(dialog).getByLabelText(t("collection.path")), "/notes/:slug");
+		type(within(dialog).getByLabelText(t("collection.newName")), "notes");
+		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
+
+		fireEvent.click(confirm);
+		await waitFor(() => expect(screen.queryByTestId("new-collection-dialog")).toBeNull());
+		expect(await screen.findByTestId("collection-notes")).toBeTruthy();
+		expect((screen.getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
+		openTab("fields");
+		expect(screen.getByTestId("field-title")).toBeTruthy();
+		expect(screen.getByTestId("field-slug")).toBeTruthy();
+
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const notes = (lastPreview()?.body?.schema as { collections: Record<string, Record<string, unknown>> }).collections
+			.notes;
+		expect(notes).toMatchObject({
+			kind: "document",
+			path: "/notes/:slug",
+			fields: {
+				title: { kind: "text", required: true, role: "title" },
+				slug: { kind: "slug", required: true, from: "title" },
+			},
+		});
+	});
+
+	it("leaves the address empty for an item collection", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		fireEvent.click(screen.getByRole("button", { name: t("collection.create") }));
+		const dialog = await screen.findByTestId("new-collection-dialog");
+		type(within(dialog).getByLabelText(t("collection.newName")), "category");
+		fireEvent.click(within(dialog).getByRole("radio", { name: new RegExp(t("collection.kindItem")) }));
+		expect((within(dialog).getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("");
+		fireEvent.click(within(dialog).getByRole("button", { name: t("collection.createConfirm") }));
+		expect(await screen.findByTestId("collection-category")).toBeTruthy();
+		expect((screen.getByLabelText(t("collection.path")) as HTMLInputElement).value).toBe("");
+	});
+
+	it("cannot delete the title field, and the slug field only while the address does not use :slug", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("collection-post");
+		const removeOf = (field: string) =>
+			within(screen.getByTestId(`field-${field}`)).getByRole("button", { name: t("row.remove", { name: field }) });
+		const title = removeOf("title") as HTMLButtonElement;
+		expect(title.disabled).toBe(true);
+		expect(title.getAttribute("aria-description")).toBe(t("field.removeBlocked.title"));
+		const slug = removeOf("slug") as HTMLButtonElement;
+		expect(slug.disabled).toBe(true);
+		expect(slug.getAttribute("aria-description")).toBe(t("field.removeBlocked.slug"));
+		expect((removeOf("summary") as HTMLButtonElement).disabled).toBe(false);
+
+		// Without :slug in the address the slug field can go.
+		openTab("basics");
+		type(screen.getByLabelText(t("collection.path")), "");
+		openTab("fields");
+		expect((removeOf("slug") as HTMLButtonElement).disabled).toBe(false);
+		// The title stays undeletable even when it is renamed.
+		expect((removeOf("title") as HTMLButtonElement).disabled).toBe(true);
+	});
+
+	it("splits a collection into tabs: Basics first, and the body limits and the list columns each in their own", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
+		expect(tabs).toEqual(
+			expect.arrayContaining(
+				["basics", "fields", "list", "advanced"].map((name) => t(`collection.tabs.${name as "basics"}`)),
+			),
+		);
+		// Basics is open: the address is there, the settings of the other tabs are not.
+		expect(screen.getByLabelText(t("collection.path"))).toBeTruthy();
+		expect(screen.queryByText(t("allowed.title"))).toBeNull();
+		expect(screen.queryByText(t("list.custom"))).toBeNull();
+		expect(screen.queryByTestId("field-title")).toBeNull();
+
+		openTab("advanced");
+		expect(await screen.findByText(t("allowed.title"))).toBeTruthy();
+		expect(screen.getByText(t("allowed.hint"))).toBeTruthy();
+		// Everything is allowed until a list is limited.
+		expect(screen.getAllByText(t("allowed.everything"))).toHaveLength(3);
+		expect(screen.queryByLabelText(t("collection.path"))).toBeNull();
+	});
+
+	it("previews the entry list with the chosen columns, with sample rows when there are no entries", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("list");
+		const preview = await screen.findByTestId("list-preview");
+		// The usual columns until the writer chooses their own.
+		expect(within(preview).getAllByRole("columnheader")).toHaveLength(3);
+		expect(within(preview).getByText(t("list.previewSample"))).toBeTruthy();
+
+		fireEvent.click(screen.getByRole("switch", { name: t("list.custom") }));
+		// Choosing columns starts from the title; adding one shows its column at once.
+		expect(within(screen.getByTestId("list-preview")).getAllByRole("columnheader")).toHaveLength(1);
+		fireEvent.click(screen.getByRole("combobox", { name: t("names.add", { label: t("list.columns") }) }));
+		pressOption(await screen.findByRole("option", { name: "summary" }));
+		const headers = within(screen.getByTestId("list-preview")).getAllByRole("columnheader");
+		expect(headers.map((cell) => cell.textContent)).toEqual(["Title", "Summary"]);
+		// The sample rows carry values for the field.
+		expect(within(screen.getByTestId("list-preview")).getByText("Summary 1")).toBeTruthy();
+
+		// The choice is part of the one save.
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const post = (lastPreview()?.body?.schema as { collections: { post: { list: unknown } } }).collections.post;
+		expect(post.list).toEqual({ columns: ["title", "summary"] });
+	});
+
+	it("adds a conditional field only once its options and a field are set", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("collection-post");
+		type(screen.getByLabelText(t("field.newName")), "extra");
+		await pickNewFieldKind(t("kind.conditional"));
+		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+
+		const dialog = await screen.findByTestId("new-field-dialog");
+		// Nothing is in the collection yet.
+		expect(screen.queryByTestId("field-extra")).toBeNull();
+		expect(within(dialog).getByText(t("field.needs.branches"))).toBeTruthy();
+		const add = within(dialog)
+			.getAllByRole("button", { name: t("field.add") })
+			.at(-1) as HTMLButtonElement;
+		expect(add.disabled).toBe(true);
+
+		// Add a field to the first option.
+		const inputs = within(dialog).getAllByLabelText(t("field.newName"));
+		type(inputs[0] as HTMLElement, "detail");
+		fireEvent.click(within(dialog).getAllByRole("button", { name: t("field.add") })[0] as HTMLElement);
+		await waitFor(() => expect(within(dialog).queryByText(t("field.needs.branches"))).toBeNull());
+		expect(add.disabled).toBe(false);
+		fireEvent.click(add);
+
+		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
+		expect(await screen.findByTestId("field-extra")).toBeTruthy();
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
+			.collections.post.fields;
+		expect(fields.extra).toMatchObject({ kind: "conditional", values: { a: { detail: { kind: "text" } } } });
+	});
+
+	it("adds a relation only once a target collection is chosen, and drops nothing in the file when the dialog is cancelled", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+		await screen.findByTestId("collection-post");
+		type(screen.getByLabelText(t("field.newName")), "related");
+		await pickNewFieldKind(t("kind.relation"));
+		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+
+		const dialog = await screen.findByTestId("new-field-dialog");
+		expect(within(dialog).getByLabelText(t("field.relationTo"))).toBeTruthy();
+		fireEvent.click(within(dialog).getByRole("button", { name: t("field.newCancel") }));
+		await waitFor(() => expect(screen.queryByTestId("new-field-dialog")).toBeNull());
+		expect(screen.queryByTestId("field-related")).toBeNull();
+		expect(review().disabled).toBe(true);
+
+		// Open it again and add it: the first collection is the target.
+		fireEvent.click(screen.getByRole("button", { name: t("field.add") }));
+		const again = await screen.findByTestId("new-field-dialog");
+		fireEvent.click(within(again).getByRole("button", { name: t("field.add") }));
+		expect(await screen.findByTestId("field-related")).toBeTruthy();
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		const fields = (lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, Obj> } } })
+			.collections.post.fields;
+		expect(fields.related).toMatchObject({ kind: "relation", to: "post" });
 	});
 
 	it("discards the edits after a confirmation", async () => {

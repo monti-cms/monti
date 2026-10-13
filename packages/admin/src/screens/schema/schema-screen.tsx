@@ -10,16 +10,16 @@ import { cn } from "../../lib/utils/cn";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { errorText } from "../admin-api";
 import { AdminShell } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { CollectionEditor } from "./collection-editor";
-import { IssueList, Labeled, Pick, SchemaEditProvider } from "./controls";
+import { IssueList, SchemaEditProvider } from "./controls";
 import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
+import { NewCollectionDialog } from "./new-collection-dialog";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload";
 import { ReviewDialog } from "./review-dialog";
 import { fetchSchema, type SavedSchema, SCHEMA_KEY } from "./schema-api";
@@ -28,7 +28,6 @@ import {
 	collectionsOf,
 	isObj,
 	localesOf,
-	nameProblem,
 	type Obj,
 	type Rename,
 	recordRename,
@@ -44,56 +43,6 @@ const READ_ONLY_KEY = {
 	not_writable: "readonly.notWritable",
 	has_code: "readonly.hasCode",
 } as const;
-
-function AddCollection({
-	taken,
-	onAdd,
-}: {
-	taken: readonly string[];
-	onAdd: (name: string, kind: "document" | "item") => void;
-}) {
-	const t = useTranslator(schemaMessages);
-	const [name, setName] = useState("");
-	const [kind, setKind] = useState<"document" | "item">("document");
-	const problem = name === "" ? null : nameProblem(name, taken);
-	return (
-		<div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2" data-testid="add-collection">
-			<Labeled label={t("collection.newName")} className="min-w-32 flex-1">
-				<Input
-					value={name}
-					aria-label={t("collection.newName")}
-					placeholder="article"
-					aria-invalid={problem ? true : undefined}
-					onChange={(event) => setName(event.target.value)}
-				/>
-			</Labeled>
-			<Pick
-				label={t("collection.kind")}
-				className="w-36"
-				value={kind}
-				items={[
-					{ value: "document", label: t("collection.kindDocument") },
-					{ value: "item", label: t("collection.kindItem") },
-				]}
-				onChange={(value) => setKind(value as "document" | "item")}
-			/>
-			<Button
-				type="button"
-				variant="outline"
-				size="sm"
-				disabled={name === "" || problem !== null}
-				onClick={() => {
-					onAdd(name, kind);
-					setName("");
-				}}
-			>
-				<Plus aria-hidden />
-				{t("collection.add")}
-			</Button>
-			{problem && <p className="w-full text-cms-destructive text-xs">{t(`name.${problem}`)}</p>}
-		</div>
-	);
-}
 
 /** The parts of the file the screen does not edit: site and admin settings and seed data (shown as they are), and the transforms already recorded. */
 function FileInfo({ file }: { file: Obj }) {
@@ -140,6 +89,7 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
 	const [tab, setTab] = useState("collections");
+	const [creating, setCreating] = useState(false);
 	const collections = collectionsOf(draft);
 	const names = Object.keys(collections);
 	const [selectedName, setSelected] = useState<string | undefined>(names[0]);
@@ -273,6 +223,18 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 								<TabsContent value="collections" className="pt-3">
 									<div className="flex flex-col gap-4 lg:flex-row">
 										<div className="flex shrink-0 flex-col gap-2 lg:w-52">
+											{writable && (
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="justify-start"
+													onClick={() => setCreating(true)}
+												>
+													<Plus aria-hidden />
+													{t("collection.create")}
+												</Button>
+											)}
 											<nav
 												aria-label={t("tabs.collections")}
 												className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
@@ -296,15 +258,6 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 													);
 												})}
 											</nav>
-											{writable && (
-												<AddCollection
-													taken={names}
-													onAdd={(name, kind) => {
-														updateFile((file) => addCollection(file, name, kind));
-														setSelected(name);
-													}}
-												/>
-											)}
 										</div>
 										<div className="min-w-0 flex-1">
 											{selected && collections[selected] ? (
@@ -350,6 +303,17 @@ function SchemaEditor({ state }: { state: SchemaScreenState }) {
 				</div>
 			</div>
 			{dialog}
+			<NewCollectionDialog
+				open={creating}
+				onOpenChange={setCreating}
+				taken={names}
+				onCreate={(name, kind, path) => {
+					updateFile((file) => addCollection(file, name, kind, path));
+					setSelected(name);
+					setTab("collections");
+					setCreating(false);
+				}}
+			/>
 			{state.hash !== null && (
 				<ReviewDialog
 					open={reviewing}
