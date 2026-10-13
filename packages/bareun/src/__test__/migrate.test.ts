@@ -3,26 +3,27 @@
 import { defineSite } from "@monti-cms/core";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { testConfig, testSite } from "../../test/site";
+import { testConfig } from "../../test/site";
 import { bareun } from "../index";
-import { bareunMessages } from "../messages";
 import bareunServer from "../server";
-import { getSettingsView, readApiKey } from "../settings";
 
 const OLD_KEY = "old-env-key-123456789";
+const PLUGIN = "text-check-bareun";
 
 const cmsWith = (secret = "test-secret-for-bareun") =>
 	fakeCms({ config: defineSite({ ...testConfig, plugins: [bareun()] }), server: secret ? { secret } : {} });
 
 const migrate = (cms: ReturnType<typeof cmsWith>) => {
 	expect(bareunServer.migrate).toBeDefined();
-	return bareunServer.migrate?.(cms.storage("text-check-bareun"), cms);
+	return bareunServer.migrate?.(cms.storage(PLUGIN), cms);
 };
 
-describe("Bareun migration of the old environment variable", () => {
+const legacySettings = (cms: ReturnType<typeof cmsWith>) => cms.storage(PLUGIN).collection("settings");
+
+describe("Bareun migration into the key slot", () => {
 	afterEach(() => vi.unstubAllEnvs());
 
-	it("moves the key of BAREUN_API_KEY into the key store once, and is repeatable", async () => {
+	it("moves the key of BAREUN_API_KEY into the key store and the slot once, and is repeatable", async () => {
 		vi.stubEnv("BAREUN_API_KEY", `  ${OLD_KEY} `);
 		const cms = cmsWith();
 		await migrate(cms);
@@ -30,9 +31,8 @@ describe("Bareun migration of the old environment variable", () => {
 
 		const keys = await cms.apiKeys.list();
 		expect(keys.map((key) => key.name)).toEqual(["Bareun"]);
-		expect(await readApiKey(cms)).toBe(OLD_KEY);
-		expect((await getSettingsView(cms)).key?.name).toBe("Bareun");
-		expect(keys[0]?.uses.map((use) => use.label)).toEqual([testSite.createTranslator(bareunMessages)("keyUse")]);
+		expect(await cms.apiKeys.readSlot(PLUGIN, "key")).toBe(OLD_KEY);
+		expect((await cms.apiKeys.slots())[0]?.key?.name).toBe("Bareun");
 	});
 
 	it("reuses a key that already has the same value", async () => {
@@ -41,7 +41,7 @@ describe("Bareun migration of the old environment variable", () => {
 		const existing = await cms.apiKeys.add({ name: "Mine", value: OLD_KEY });
 		await migrate(cms);
 		expect((await cms.apiKeys.list()).map((key) => key.id)).toEqual([existing.id]);
-		expect((await getSettingsView(cms)).key?.id).toBe(existing.id);
+		expect((await cms.apiKeys.slots())[0]?.key?.id).toBe(existing.id);
 	});
 
 	it("does nothing when the variable is unset or empty", async () => {
@@ -49,19 +49,16 @@ describe("Bareun migration of the old environment variable", () => {
 		const cms = cmsWith();
 		await migrate(cms);
 		expect(await cms.apiKeys.list()).toEqual([]);
-		expect((await getSettingsView(cms)).key).toBeNull();
+		expect(await cms.apiKeys.readSlot(PLUGIN, "key")).toBeNull();
 	});
 
-	it("does not replace a key that is already chosen", async () => {
+	it("does not replace a key that is already assigned", async () => {
 		const cms = cmsWith();
 		const chosen = await cms.apiKeys.add({ name: "Chosen", value: "chosen-key-123456789" });
-		await cms
-			.storage("text-check-bareun")
-			.collection("settings")
-			.set("default", { keyId: chosen.id }, { expectedVersion: 0 });
+		await cms.apiKeys.setSlot(PLUGIN, "key", chosen.id);
 		vi.stubEnv("BAREUN_API_KEY", OLD_KEY);
 		await migrate(cms);
-		expect((await getSettingsView(cms)).key?.id).toBe(chosen.id);
+		expect((await cms.apiKeys.slots())[0]?.key?.id).toBe(chosen.id);
 		expect(await cms.apiKeys.list()).toHaveLength(1);
 	});
 
@@ -71,5 +68,36 @@ describe("Bareun migration of the old environment variable", () => {
 		expect(cms.apiKeys.available).toBe(false);
 		await migrate(cms);
 		expect(await cms.apiKeys.list()).toEqual([]);
+	});
+
+	it("moves the key chosen on the old Tools page to the slot and removes the old settings item", async () => {
+		const cms = cmsWith();
+		const chosen = await cms.apiKeys.add({ name: "Chosen", value: "chosen-key-123456789" });
+		await legacySettings(cms).set("default", { keyId: chosen.id }, { expectedVersion: 0 });
+		vi.stubEnv("BAREUN_API_KEY", OLD_KEY);
+		await migrate(cms);
+		await migrate(cms);
+		expect((await cms.apiKeys.slots())[0]?.key?.id).toBe(chosen.id);
+		expect(await legacySettings(cms).get("default")).toBeNull();
+		expect(await cms.apiKeys.list()).toHaveLength(1);
+	});
+
+	it("removes an old settings item that chose no key or a deleted key, without assigning anything", async () => {
+		const cms = cmsWith();
+		await legacySettings(cms).set("default", { keyId: "gone" }, { expectedVersion: 0 });
+		await migrate(cms);
+		expect(await legacySettings(cms).get("default")).toBeNull();
+		expect(await cms.apiKeys.readSlot(PLUGIN, "key")).toBeNull();
+	});
+
+	it("leaves a slot that is already assigned alone when an old settings item names another key", async () => {
+		const cms = cmsWith();
+		const current = await cms.apiKeys.add({ name: "Current", value: "current-key-123456789" });
+		const old = await cms.apiKeys.add({ name: "Old", value: "old-key-123456789012" });
+		await cms.apiKeys.setSlot(PLUGIN, "key", current.id);
+		await legacySettings(cms).set("default", { keyId: old.id }, { expectedVersion: 0 });
+		await migrate(cms);
+		expect((await cms.apiKeys.slots())[0]?.key?.id).toBe(current.id);
+		expect(await legacySettings(cms).get("default")).toBeNull();
 	});
 });

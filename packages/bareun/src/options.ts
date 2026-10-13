@@ -8,17 +8,14 @@ const t = createActiveTranslator(bareunMessages);
 /** Name used to find the Bareun checker in the site config `plugins`. */
 export const BAREUN_PLUGIN_NAME = "text-check-bareun";
 
-/** Path of the Spell check Tools page. */
-export const BAREUN_PAGE_PATH = "spell-check";
+/** Id of the plugin's one API key slot. */
+export const BAREUN_KEY_SLOT = "key";
 
 /** Checker name (the source shown on results). */
 export const BAREUN_CHECKER_ID = "bareun";
 
 /** Server route. Appended to the core API base (`/api/monti/`). */
 export const BAREUN_ROUTE = "v1/text-check/bareun";
-
-/** Settings route (which API key Bareun uses). */
-export const BAREUN_SETTINGS_ROUTE = "v1/text-check/bareun/settings";
 
 export interface BareunOptions {
 	/** Bareun API URL. Default `https://api.bareun.ai`. Change it to use a self-hosted Bareun server. */
