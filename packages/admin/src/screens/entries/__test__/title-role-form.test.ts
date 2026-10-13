@@ -27,7 +27,6 @@ const site = createSite(
 					slug: fields.slug({ label: "Slug", from: "headline" }),
 					note: fields.text({ label: "Note" }),
 				},
-				list: { columns: ["headline", "note", "status"] },
 			}),
 			topic: defineCollection({
 				label: "Topic",
@@ -100,6 +99,7 @@ describe("the title in the edit form", () => {
 	it("is one list column, `title`, whatever the title field is named", () => {
 		const { available, defaults } = columnsFor(site, "article");
 		expect(available.filter((column) => column === "title" || column === "headline")).toEqual(["title"]);
-		expect(defaults).toEqual(["title", "note", "status"]);
+		expect(available).toContain("note");
+		expect(defaults[0]).toBe("title");
 	});
 });

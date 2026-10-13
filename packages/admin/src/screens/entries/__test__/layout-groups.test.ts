@@ -19,7 +19,6 @@ const page = defineCollection({
 		note: fields.text({ label: "Note" }),
 	},
 	layout: [{ fields: ["title", "slug", "intro", "hero"] }, { group: "Accessibility", tab: "Extra", fields: ["alt"] }],
-	list: { columns: ["title"] },
 });
 // A collection with no layout (`layout`). One group in field declaration order, and fields with their own `tab` gather in that tab.
 const plainCollection = defineCollection({

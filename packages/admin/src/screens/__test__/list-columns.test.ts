@@ -12,15 +12,13 @@ const article = defineCollection({
 		title: fields.text({ label: "Title" }),
 		permalink: fields.slug({ label: "Permalink", from: "title" }),
 	},
-	list: { columns: ["title", "permalink", "status"] },
 });
 const note = defineCollection({
 	label: "Note",
 	kind: "document",
-	fields: { title: fields.text({ label: "Title" }) },
-	list: { columns: ["title"] },
+	fields: { title: fields.text({ label: "Title" }), subtitle: fields.text({ label: "Subtitle" }) },
 });
-// A collection with no list setting (`list`): uses the default columns.
+// A collection that uses the default columns.
 const story = defineCollection({
 	label: "Story",
 	kind: "document",
@@ -49,7 +47,14 @@ describe("list columns", () => {
 	it("finds the slug column by field kind, not by name", () => {
 		const { available, defaults } = columnsFor(site, "article");
 		expect(available).toContain("slug");
-		expect(defaults).toEqual(["title", "slug", "status"]);
+		expect(defaults).not.toContain("slug");
+	});
+
+	it("offers every other stored field as a column, hidden until the writer shows it", () => {
+		const { available, defaults } = columnsFor(site, "note");
+		expect(available).toContain("subtitle");
+		expect(defaults).not.toContain("subtitle");
+		expect(available.filter((column) => column === "title")).toHaveLength(1);
 	});
 
 	it("has no slug column without a slug field, and always has a title column", () => {
@@ -58,7 +63,7 @@ describe("list columns", () => {
 		expect(available).toContain("title");
 	});
 
-	it("without a list setting the default columns are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, slug, locale, status, updated date", () => {
+	it("until the writer chooses columns the default ones are used: documents get title, status, locale, taxonomy fields, updated and published dates; items get title, slug, locale, status, updated date", () => {
 		for (const collection of ["story", "topic"]) {
 			const defaults = defaultListColumns(site, collection);
 			expect(defaults[0]).toBe("title");

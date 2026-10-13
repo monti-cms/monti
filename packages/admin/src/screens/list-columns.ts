@@ -115,7 +115,7 @@ export const columnLabel = (site: Site, collection: string, column: AdminListCol
 	columnConfig(site, collection, column).label;
 
 /**
- * Default columns when there is no list setting (`list.columns`). Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
+ * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
  * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
  */
 export function defaultListColumns(site: Site, collection: string): AdminListColumn[] {
@@ -131,8 +131,8 @@ export function defaultListColumns(site: Site, collection: string): AdminListCol
 }
 
 /**
- * Columns available in a collection and their default visibility. Built from the fields of the collection definition and `list.columns` (default columns if absent).
- * Besides system columns and taxonomy fields, fields listed in `list.columns` (text, select, relation, etc.) can also be columns.
+ * Columns available in a collection and their default visibility. Built from the fields of the collection definition.
+ * Besides system columns and taxonomy fields, the other stored fields (text, select, relation, etc.) can also be columns; the defaults are `defaultListColumns`.
  */
 export function columnsFor(
 	site: Site,
@@ -151,17 +151,16 @@ export function columnsFor(
 		return true;
 	});
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);
-	// Other fields listed in the list setting (`defineSite` verified they are stored fields).
+	// Every other stored field can be a column too (hidden until the writer shows it in the column settings).
 	// The title field is the system column `title` whatever its name, so its own name is not a second column.
 	const titleName = site.titleField(collection).name;
-	const listed = [...new Set(schema.list?.columns ?? [])];
-	const fieldColumns = listed.filter(
-		(column) => column !== titleName && !taxonomy.includes(column) && fieldColumnOf(site, collection, column),
-	);
+	const fieldColumns = valueFieldsOf(schema)
+		.map((stored) => stored.name)
+		.filter((column) => column !== titleName && !taxonomy.includes(column) && !isSystemColumn(column));
 	// Taxonomy field columns go after the locale column, and other field columns follow.
 	const at = system.indexOf(system.includes("locale") ? "locale" : "status") + 1;
 	const available = [...system.slice(0, at), ...taxonomy, ...fieldColumns, ...system.slice(at)];
-	const defaults = (schema.list?.columns ?? defaultListColumns(site, collection))
+	const defaults = defaultListColumns(site, collection)
 		.map((column) => (column === slugField ? "slug" : column === titleName ? "title" : column))
 		.filter((column) => available.includes(column));
 	return { available, defaults };

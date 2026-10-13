@@ -171,7 +171,7 @@ const applySheet = async (sheet: HTMLElement) => {
 	fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.apply") }));
 	await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 };
-const openTab = (name: "basics" | "fields" | "list" | "advanced") =>
+const openTab = (name: "basics" | "fields" | "advanced") =>
 	fireEvent.click(screen.getByRole("tab", { name: t(`collection.tabs.${name}`) }));
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
 
@@ -690,19 +690,19 @@ describe("SchemaScreen", () => {
 		await waitFor(() => expect(screen.queryByTestId("field-slug")).toBeNull());
 	});
 
-	it("splits a collection into tabs: Basics first, and the body limits and the list columns each in their own", async () => {
+	it("splits a collection into tabs: Basics first, and the body limits in their own; list columns are not chosen here", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
 		expect(tabs).toEqual(
-			expect.arrayContaining(
-				["basics", "fields", "list", "advanced"].map((name) => t(`collection.tabs.${name as "basics"}`)),
-			),
+			expect.arrayContaining(["basics", "fields", "advanced"].map((name) => t(`collection.tabs.${name as "basics"}`))),
 		);
+		// List columns are chosen on the list screen, so there is no list tab here.
+		expect(tabs).not.toContain("List");
+		expect(tabs).not.toContain("목록");
 		// Basics is open: the address is there, the settings of the other tabs are not.
 		expect(screen.getByLabelText(t("collection.path"))).toBeTruthy();
 		expect(screen.queryByText(t("allowed.title"))).toBeNull();
-		expect(screen.queryByText(t("list.custom"))).toBeNull();
 		expect(screen.queryByTestId("field-title")).toBeNull();
 
 		openTab("advanced");
@@ -711,32 +711,6 @@ describe("SchemaScreen", () => {
 		// Everything is allowed until a list is limited.
 		expect(screen.getAllByText(t("allowed.everything"))).toHaveLength(3);
 		expect(screen.queryByLabelText(t("collection.path"))).toBeNull();
-	});
-
-	it("previews the entry list with the chosen columns, with sample rows when there are no entries", async () => {
-		renderScreen();
-		await screen.findByTestId("collection-post");
-		openTab("list");
-		const preview = await screen.findByTestId("list-preview");
-		// The usual columns until the writer chooses their own.
-		expect(within(preview).getAllByRole("columnheader")).toHaveLength(3);
-		expect(await within(preview).findByText(t("list.previewSample"))).toBeTruthy();
-
-		fireEvent.click(screen.getByRole("switch", { name: t("list.custom") }));
-		// Choosing columns starts from the title; adding one shows its column at once.
-		expect(within(screen.getByTestId("list-preview")).getAllByRole("columnheader")).toHaveLength(1);
-		fireEvent.click(screen.getByRole("combobox", { name: t("names.add", { label: t("list.columns") }) }));
-		pressOption(await screen.findByRole("option", { name: "summary" }));
-		const headers = within(screen.getByTestId("list-preview")).getAllByRole("columnheader");
-		expect(headers.map((cell) => cell.textContent)).toEqual(["Title", "Summary"]);
-		// The sample rows carry values for the field.
-		expect(within(screen.getByTestId("list-preview")).getByText("Summary 1")).toBeTruthy();
-
-		// The choice is part of the one save.
-		fireEvent.click(review());
-		await screen.findByTestId("review-summary");
-		const post = (lastPreview()?.body?.schema as { collections: { post: { list: unknown } } }).collections.post;
-		expect(post.list).toEqual({ columns: ["title", "summary"] });
 	});
 
 	it("adds a conditional field only once its options and a field are set", async () => {

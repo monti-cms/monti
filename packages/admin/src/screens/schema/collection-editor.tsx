@@ -21,13 +21,11 @@ import {
 	useSchemaEdit,
 } from "./controls";
 import { FieldsCard } from "./fields-tree";
-import { ListPreview } from "./list-preview";
 import { schemaMessages } from "./messages";
 import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
-	columnsOf,
 	FIELD_KINDS,
 	fieldsOf,
 	hasBody,
@@ -36,12 +34,10 @@ import {
 	moveItem,
 	type Obj,
 	type Rename,
-	SYSTEM_COLUMNS,
 	setProp,
 	storedFieldNames,
 	titleFieldName,
 	withBody,
-	withColumns,
 	withLayout,
 } from "./schema-model";
 import { Section } from "./section";
@@ -227,37 +223,6 @@ function LayoutEditor({ collection, update }: { collection: Obj; update: (change
 	);
 }
 
-function ListEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
-	const t = useTranslator(schemaMessages);
-	const columns = columnsOf(collection);
-	const slugs = Object.entries(fieldsOf(collection))
-		.filter(([, field]) => field.kind === "slug")
-		.map(([name]) => name);
-	const options = [...storedFieldNames(collection), ...slugs, ...(slugs.length > 0 ? ["slug"] : []), ...SYSTEM_COLUMNS];
-	return (
-		<Section title={t("list.title")} description={t("list.hint")}>
-			<FlagSwitch
-				label={t("list.custom")}
-				hint={columns ? undefined : t("list.default")}
-				checked={columns !== undefined}
-				onChange={(on) =>
-					update((current) =>
-						withColumns(current, on ? [titleFieldName(current)].filter((name) => name !== undefined) : undefined),
-					)
-				}
-			/>
-			{columns && (
-				<OrderedNames
-					label={t("list.columns")}
-					names={columns}
-					options={[...new Set(options)]}
-					onChange={(next) => update((current) => withColumns(current, next))}
-				/>
-			)}
-		</Section>
-	);
-}
-
 export function CollectionEditor({
 	name,
 	collection,
@@ -310,7 +275,6 @@ export function CollectionEditor({
 					<TabsList className="w-full justify-start sm:w-fit">
 						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
 						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
-						<TabsTrigger value="list">{t("collection.tabs.list")}</TabsTrigger>
 						<TabsTrigger value="advanced">{t("collection.tabs.advanced")}</TabsTrigger>
 					</TabsList>
 				</div>
@@ -356,12 +320,6 @@ export function CollectionEditor({
 				<TabsContent value="fields" className="flex flex-col gap-12">
 					<FieldsCard editing={editing} />
 					<LayoutEditor collection={collection} update={onChange} />
-				</TabsContent>
-				<TabsContent value="list" className="flex flex-col gap-12">
-					<ListEditor collection={collection} update={onChange} />
-					<Section title={t("list.previewTitle")} card={false}>
-						<ListPreview name={name} collection={collection} columns={columnsOf(collection)} saved={!isNew} />
-					</Section>
 				</TabsContent>
 				<TabsContent value="advanced" className="flex flex-col gap-12">
 					{hasBody(collection) ? (

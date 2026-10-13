@@ -22,13 +22,11 @@ const articleCollection = defineCollection({
 		}),
 	},
 	layout: [{ tab: "Search", fields: ["robots"] }],
-	list: { columns: ["title", "slug"] },
 });
 const topicCollection = defineCollection({
 	label: "Topic",
 	kind: "item",
 	fields: { title: fields.text({ label: "Name" }), slug: fields.slug({ label: "Slug" }) },
-	list: { columns: [] },
 });
 const config = defineSite({
 	collections: { article: articleCollection, topic: topicCollection },

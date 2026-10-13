@@ -47,7 +47,7 @@ export const FIELD_KEY_ORDER = [
 	"placeholder",
 ] as const;
 
-export const COLLECTION_KEY_ORDER = ["label", "kind", "icon", "path", "body", "fields", "layout", "list"] as const;
+export const COLLECTION_KEY_ORDER = ["label", "kind", "icon", "path", "body", "fields", "layout"] as const;
 
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export function setProp(obj: Obj, key: string, value: unknown, order: readonly string[] = []): Obj {
@@ -326,7 +326,7 @@ export function recordRename(renames: readonly Rename[], next: Rename): Rename[]
 	return [...rest, { ...next, from: earlier.from }];
 }
 
-/** Replaces `from` with `to` (or removes it when `to` is `null`) in the names a collection lists besides its fields: layout groups, list columns, a slug's source. */
+/** Replaces `from` with `to` (or removes it when `to` is `null`) in the names a collection lists besides its fields: layout groups, a slug's source. */
 function rewriteReferences(collection: Obj, from: string, to: string | null): Obj {
 	let result = collection;
 	if (Array.isArray(result.layout)) {
@@ -337,16 +337,6 @@ function rewriteReferences(collection: Obj, from: string, to: string | null): Ob
 			),
 		}));
 		result = { ...result, layout };
-	}
-	const list = result.list;
-	if (isObj(list) && Array.isArray(list.columns)) {
-		result = {
-			...result,
-			list: {
-				...list,
-				columns: (list.columns as string[]).flatMap((name) => (name === from ? (to ? [to] : []) : [name])),
-			},
-		};
 	}
 	const fields = fieldsOf(result);
 	const touched = Object.entries(fields).map(([name, field]) =>
@@ -561,16 +551,6 @@ export const layoutOf = (collection: Obj): LayoutGroup[] =>
 export function withLayout(collection: Obj, layout: LayoutGroup[]): Obj {
 	return setProp(collection, "layout", layout.length > 0 ? layout : undefined, COLLECTION_KEY_ORDER);
 }
-
-export const columnsOf = (collection: Obj): string[] | undefined =>
-	isObj(collection.list) && Array.isArray(collection.list.columns) ? (collection.list.columns as string[]) : undefined;
-
-export function withColumns(collection: Obj, columns: string[] | undefined): Obj {
-	return setProp(collection, "list", columns === undefined ? undefined : { columns }, COLLECTION_KEY_ORDER);
-}
-
-/** The system columns a list can show next to the fields. */
-export const SYSTEM_COLUMNS = ["status", "locale", "updatedAt", "createdAt", "publishedAt", "folder"] as const;
 
 // ----- locales -----
 

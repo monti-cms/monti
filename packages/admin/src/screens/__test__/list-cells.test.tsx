@@ -16,7 +16,7 @@ import { columnConfig, columnsFor, fieldColumnOf } from "../list-columns";
 import { parseListState } from "../list-state";
 import { withSite } from "./site-wrapper";
 
-// A site where select, text, media and relation fields are written in the list columns (runs regardless of config).
+// A site with select, text, media and relation fields, which the writer can show as list columns.
 const article = defineCollection({
 	label: "Article",
 	kind: "document",
@@ -32,7 +32,6 @@ const article = defineCollection({
 		lead: fields.relation({ label: "Lead", to: "article" }),
 		preview: fields.view({ view: "preview" }),
 	},
-	list: { columns: ["title", "format", "subtitle", "accent", "hero", "related", "lead", "status"] },
 });
 const site = createSite(
 	defineSite({ collections: { article }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
@@ -69,6 +68,11 @@ function renderTable(items: ListEntriesItem[], components: CmsAdminComponents = 
 		state: parseListState(site, new URLSearchParams("collection=article")),
 		options: {},
 		onStateChange: vi.fn(),
+		columnSettings: {
+			visibility: Object.fromEntries(
+				["format", "subtitle", "accent", "hero", "related", "lead"].map((column) => [column, true]),
+			),
+		},
 		onColumnSettingsChange: vi.fn(),
 		selectedIds: new Set(),
 		onSelectionChange: vi.fn(),
@@ -95,14 +99,14 @@ function renderTable(items: ListEntriesItem[], components: CmsAdminComponents = 
 const rowOf = (name: RegExp) => screen.getByRole("row", { name });
 
 describe("list columns from fields", () => {
-	it("offers the listed fields as columns and shows them by default", () => {
+	it("offers the stored fields as columns, hidden by default", () => {
 		const { available, defaults } = columnsFor(site, "article");
 		expect(defaults[0]).toBe("title");
 		for (const column of ["format", "subtitle", "accent", "hero", "related", "lead"]) {
-			expect(defaults).toContain(column);
+			expect(defaults).not.toContain(column);
 			expect(available).toContain(column);
 		}
-		// Display-only fields that are not stored and fields not written in the list are not columns.
+		// Display-only fields that are not stored are not columns.
 		expect(available).not.toContain("preview");
 	});
 

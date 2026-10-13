@@ -12,7 +12,6 @@ const renamed = () => {
 	const { title, ...rest } = schema.collections.post.fields;
 	schema.collections.post.fields = { headline: { ...title, role: "title" }, ...rest };
 	schema.collections.post.fields.slug.from = "headline";
-	schema.collections.post.list = { columns: ["headline", "status"] };
 	schema.collections.post.layout = [{ fields: ["headline", "slug", "summary"] }];
 	return schema;
 };
