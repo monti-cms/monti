@@ -3,6 +3,7 @@ import { composeFile } from "@monti-cms/core/front-matter";
 import { fakeCms } from "@monti-cms/core/testing";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { baseConfig } from "../../test/cms.config";
+import { gitSync } from "../index";
 import { closeGlobalPool, createHarness, type Harness, TOKEN, WEBHOOK_SECRET } from "./harness";
 
 let h: Harness;
@@ -54,6 +55,11 @@ describe("the GitHub token slot", () => {
 			server: { secret: "a-long-test-secret" },
 		});
 		expect((await bare.apiKeys.slots()).filter((slot) => slot.plugin === "git-sync")).toEqual([]);
+	});
+
+	it("is not asked for while the plugin is switched off (`enabled: false`)", () => {
+		expect(gitSync({ enabled: false }).keySlots).toBeUndefined();
+		expect(gitSync({}).keySlots).toHaveLength(1);
 	});
 
 	it("is a key of the store, never in the plugin's storage, and the settings never send the token or the webhook secret back", async () => {

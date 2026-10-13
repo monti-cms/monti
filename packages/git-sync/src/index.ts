@@ -32,18 +32,18 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 		name: GIT_SYNC_PLUGIN_NAME,
 		options,
 		validate: (config) => validateGitSyncConfig(options, config),
-		// The GitHub token is a key of the central API key store, assigned to this slot.
-		keySlots: [
-			{
-				id: GIT_SYNC_TOKEN_SLOT,
-				// Worked out with the site of the instance each time, so it follows the admin language.
-				label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
-			},
-		],
 		// With `enabled: false` the plugin registers nothing: no screen, hooks or routes.
 		...(options.enabled === false
 			? {}
 			: {
+					// The GitHub token is a key of the central API key store, assigned to this slot.
+					keySlots: [
+						{
+							id: GIT_SYNC_TOKEN_SLOT,
+							// Worked out with the site of the instance each time, so it follows the admin language.
+							label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
+						},
+					],
 					nav: [{ path: "git-sync", label: "Git sync", icon: "git-branch" }],
 					// In the browser bundle `./server` is replaced by an empty entry point (`server.browser.ts`) (package.json `exports`).
 					server: () => import("@monti-cms/git-sync/server"),
