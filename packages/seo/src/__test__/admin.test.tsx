@@ -1,6 +1,7 @@
 import { EMPTY_FORM, type EntryForm, TooltipProvider } from "@monti-cms/admin/kit";
 import { type SlotAction, SlotRegistryProvider } from "@monti-cms/admin/slots";
 import { type Collection, SiteProvider } from "@monti-cms/core/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // The properties panel is read from the admin package source, not the public entry point (tests only).
@@ -40,27 +41,30 @@ const summaryField = testSite.roleField(collection, "summary");
 const tab = testSite.panelTabOf(collection, field(SEO_ROLES.title).name);
 
 function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] = []) {
+	const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	render(
-		<SiteProvider site={testSite}>
-			<TooltipProvider>
-				<SeoAdminProvider>
-					<SlotRegistryProvider
-						sources={[(request) => (request.target === field(SEO_ROLES.title).name ? sources : [])]}
-					>
-						<EntryFormProvider value={{ collection, form, setForm: onChange }}>
-							<InspectorPanel
-								incomingReferences={[]}
-								isLoadingIncomingReferences={false}
-								onRefreshIncomingReferences={vi.fn()}
-								onSlugChange={vi.fn()}
-								onRegenerateSlug={vi.fn()}
-								onClose={vi.fn()}
-							/>
-						</EntryFormProvider>
-					</SlotRegistryProvider>
-				</SeoAdminProvider>
-			</TooltipProvider>
-		</SiteProvider>,
+		<QueryClientProvider client={queryClient}>
+			<SiteProvider site={testSite}>
+				<TooltipProvider>
+					<SeoAdminProvider>
+						<SlotRegistryProvider
+							sources={[(request) => (request.target === field(SEO_ROLES.title).name ? sources : [])]}
+						>
+							<EntryFormProvider value={{ collection, form, setForm: onChange }}>
+								<InspectorPanel
+									incomingReferences={[]}
+									isLoadingIncomingReferences={false}
+									onRefreshIncomingReferences={vi.fn()}
+									onSlugChange={vi.fn()}
+									onRegenerateSlug={vi.fn()}
+									onClose={vi.fn()}
+								/>
+							</EntryFormProvider>
+						</SlotRegistryProvider>
+					</SeoAdminProvider>
+				</TooltipProvider>
+			</SiteProvider>
+		</QueryClientProvider>,
 	);
 	fireEvent.click(screen.getByRole("tab", { name: tab }));
 	return onChange;

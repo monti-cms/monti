@@ -92,6 +92,7 @@ export {
 	type LayoutGroup,
 	type MetadataOf,
 } from "./schema/collection";
+export type { PluginFieldSet } from "./schema/field-sets";
 export {
 	type BacklinkField,
 	type ConditionalField,

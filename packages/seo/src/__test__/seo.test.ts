@@ -1,5 +1,5 @@
 import { type CollectionsConfig, defineCollection, defineSite, fields, valueFieldsOf } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
+import { createSite, fieldSetsOf, hasFieldSet } from "@monti-cms/core/client";
 import { describe, expect, it } from "vitest";
 import { aiRegistryOf } from "../../../ai/src/registry";
 import { testConfig, testSite } from "../../test/site";
@@ -179,5 +179,18 @@ describe("current config: AI features", () => {
 		expect(layout()).toEqual([expect.objectContaining({ tab: "SEO", views: ["search"] })]);
 		expect(layout("Search")).toEqual([expect.objectContaining({ tab: "Search" })]);
 		expect(seo({ ai: false }).contributes).not.toHaveProperty("ai");
+	});
+
+	it("offers its fields to the settings screen as a field set of plain data, found in a collection by role", () => {
+		const [set] = fieldSetsOf([{ name: "seo", contributes: seo().contributes }]);
+		expect(set).toMatchObject({ id: "seo", label: "SEO", plugin: "seo" });
+		expect(set?.roles).toEqual(Object.values(SEO_ROLES));
+		expect(Object.keys(set?.fields ?? {})).toEqual(Object.keys(seoFields()));
+		// Plain data: it survives the trip to the browser and the schema file unchanged.
+		expect(JSON.parse(JSON.stringify(set?.fields))).toMatchObject({
+			seoTitle: { kind: "text", role: SEO_ROLES.title },
+		});
+		expect(hasFieldSet(set as NonNullable<typeof set>, set?.fields ?? {})).toBe(true);
+		expect(hasFieldSet(set as NonNullable<typeof set>, { title: { kind: "text" } })).toBe(false);
 	});
 });

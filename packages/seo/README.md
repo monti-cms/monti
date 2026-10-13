@@ -7,32 +7,48 @@ and a switch to hide the page from search engines. With `@monti-cms/ai`, search 
 
 ## Registration
 
+Add the plugin to the config. The fields themselves are ordinary fields of `monti.schema.ts`, found by role, so the schema file stays plain data that the settings screen can edit.
+
 ```ts
 // monti.config.ts
-import { defineConfig } from "@monti-cms/core/server";
-import { seo, seoFields } from "@monti-cms/seo";
-
-const article = defineCollection({
-	label: "Article",
-	kind: "document",
-	fields: {
-		title: fields.text({ label: "Title" }),
-		slug: fields.slug({ label: "Slug", from: "title" }),
-		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
-		...seoFields(),
-	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // the SEO fields are placed in the SEO tab by the plugin, even if not listed
-});
+import { seo } from "@monti-cms/seo";
 
 export const cms = defineConfig({
+	schema,
 	// …
 	plugins: [seo()],
 });
 ```
 
-The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
+In the settings screen, open the collection's **Fields** tab and choose **Add SEO fields**. The action is shown when the `seo()` plugin is on and the collection has no field with an SEO role yet; it writes the fields below into `monti.schema.ts` through the usual draft and review steps (names already taken get a number). The same fields can be written by hand:
 
-## Field set `seoFields(options?)`
+```ts
+// monti.schema.ts
+fields: {
+	title: { kind: "text", label: "Title" },
+	summary: { kind: "text", label: "Summary", role: "summary" },
+	searchPreview: { kind: "view", view: "search" },
+	seoTitle: { kind: "text", label: "Search title", localized: true, role: "seoTitle", input: "seo-title", inputOptions: { limit: 60 } },
+	seoDescription: { kind: "text", label: "Search description", localized: true, multiline: true, role: "seoDescription", input: "seo-description", inputOptions: { limit: 155 } },
+	ogImageId: { kind: "media", label: "Share image", localized: true, role: "ogImage", accept: "image" },
+	seoRobots: { kind: "select", label: "Hide from search engines", role: "noindex", input: "seo-noindex", options: { index: "Show", noindex: "Hide" }, defaultValue: "index" },
+	canonicalUrl: { kind: "text", label: "Original URL", localized: true, role: "canonical", placeholder: "https://" },
+},
+```
+
+The plugin places them in a tab of their own even when `layout` does not list them. The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
+
+## Field set `seoFields(options?)` (collections written in code)
+
+A collection defined in code (`defineCollection` in `monti.config.ts`) can spread the same fields with `seoFields()`. Calling a function there means the schema is no longer a plain literal, so the settings screen shows it read-only; prefer the schema file unless the collection has to stay in code.
+
+```ts
+const article = defineCollection({
+	label: "Article",
+	kind: "document",
+	fields: { title, slug, ...seoFields() },
+});
+```
 
 | Slot | Default name | Field | Role (`role`) | Edit screen |
 | --- | --- | --- | --- | --- |
