@@ -89,7 +89,7 @@ const REQUIRED = "text-[#B45309] cms-dark:text-[#FCD34D]";
 const OPTION = "text-[#9A3412] cms-dark:text-[#FDBA74]";
 const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-4";
 /** Two columns only, for when the preview takes the room beside the tree. */
-const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-x-4";
+const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-4";
 const columnsOf = (compact: boolean) => (compact ? COLUMNS_COMPACT : COLUMNS);
 
 interface TreeContext {
@@ -847,18 +847,18 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 
 const WIDE_QUERY = "(min-width: 1280px)";
 
-/** The width of an element, followed as it changes; `null` until it is measured. */
-function useElementWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number | null] {
-	const ref = useRef<T | null>(null);
+/** The width of an element, followed as it changes; `null` until it is measured. Give the element the returned ref callback: it follows the element if React replaces it. */
+function useElementWidth<T extends HTMLElement>(): [(element: T | null) => void, number | null] {
+	const [element, setElement] = useState<T | null>(null);
 	const [width, setWidth] = useState<number | null>(null);
 	useEffect(() => {
-		const element = ref.current;
 		if (!element || typeof ResizeObserver === "undefined") return;
+		setWidth(element.getBoundingClientRect().width);
 		const observer = new ResizeObserver(([entry]) => entry && setWidth(entry.contentRect.width));
 		observer.observe(element);
 		return () => observer.disconnect();
-	}, []);
-	return [ref, width];
+	}, [element]);
+	return [setElement, width];
 }
 
 /** The tree shows its settings column from this card width on; narrower, it keeps the name and kind readable. */

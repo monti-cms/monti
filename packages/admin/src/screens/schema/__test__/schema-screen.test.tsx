@@ -1028,6 +1028,44 @@ describe("SchemaScreen", () => {
 			vi.unstubAllGlobals();
 		});
 
+		it("shows the settings column only while the tree card is wide enough, following its width", async () => {
+			const observers: { callback: ResizeObserverCallback; element: Element | null }[] = [];
+			vi.stubGlobal(
+				"ResizeObserver",
+				class {
+					entry: { callback: ResizeObserverCallback; element: Element | null };
+					constructor(callback: ResizeObserverCallback) {
+						this.entry = { callback, element: null };
+						observers.push(this.entry);
+					}
+					observe(element: Element) {
+						this.entry.element = element;
+					}
+					unobserve() {}
+					disconnect() {}
+				},
+			);
+			await openFields();
+			const card = await screen.findByTestId("fields-card");
+			const resizeTo = (width: number) =>
+				act(() => {
+					for (const observer of observers) {
+						if (observer.element === card) {
+							observer.callback([{ contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
+						}
+					}
+				});
+			const settingsHeader = () => within(card).getByText(t("fields.colSettings"));
+			resizeTo(500);
+			await waitFor(() => expect(settingsHeader().className).toContain("hidden"));
+			expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/);
+			resizeTo(1400);
+			await waitFor(() => expect(settingsHeader().className).toMatch(/(^|\s)block(\s|$)/));
+			resizeTo(700);
+			await waitFor(() => expect(settingsHeader().className).not.toMatch(/(^|\s)block(\s|$)/));
+			vi.unstubAllGlobals();
+		});
+
 		it("can be closed and opened again, and remembers it", async () => {
 			wideWindow();
 			await openFields();
