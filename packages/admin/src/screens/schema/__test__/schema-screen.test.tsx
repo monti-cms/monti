@@ -171,7 +171,7 @@ const applySheet = async (sheet: HTMLElement) => {
 	fireEvent.click(within(sheet).getByRole("button", { name: t("sheet.apply") }));
 	await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
 };
-const openTab = (name: "basics" | "fields" | "advanced") =>
+const openTab = (name: "basics" | "fields" | "editor") =>
 	fireEvent.click(screen.getByRole("tab", { name: t(`collection.tabs.${name}`) }));
 const lastPreview = () => requests.filter((request) => request.url.endsWith("/preview")).at(-1);
 
@@ -524,27 +524,54 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByTestId("collection-post")).toBeNull();
 	});
 
-	it("describes what removing does under the remove section, and keeps the name note on the basics tab", async () => {
+	it("ends the basics tab with the remove section, which says what removing does", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		expect(screen.getByText(t("collection.nameHint"))).toBeTruthy();
-
-		openTab("advanced");
-		expect(await screen.findByText(t("collection.dangerDescription"))).toBeTruthy();
-		expect(screen.queryByText(t("collection.nameHint"))).toBeNull();
+		expect(screen.getByText(t("collection.dangerDescription"))).toBeTruthy();
+		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
+		expect(sections.at(-1)).toBe(t("collection.dangerTitle"));
 		const button = screen.getByRole("button", { name: t("collection.remove") });
 		expect(button.closest("section")?.querySelector(".bg-cms-card")).toBeNull();
+	});
+
+	it("labels the allowed blocks and styles by name, and keeps the id as a hint", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("editor");
+		fireEvent.click(
+			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
+		);
+		const table = await screen.findByRole("checkbox", { name: t("allowed.name.table") });
+		expect(table).toBeTruthy();
+		expect(screen.getByText(t("allowed.name.table")).getAttribute("title")).toBe("table");
+		expect(screen.queryByRole("checkbox", { name: "table" })).toBeNull();
+		expect(screen.getByRole("checkbox", { name: t("allowed.name.image") })).toBeTruthy();
+		// A block without a dictionary label falls back to its definition's label, or its id.
+		expect(screen.getByTitle("callout").textContent).toBe(testSite.BLOCK_BY_NAME.get("callout")?.label ?? "callout");
+	});
+
+	it("shows the editor tab only for a collection with a body", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.getByRole("tab", { name: t("collection.tabs.editor") })).toBeTruthy();
+		fireEvent.click(screen.getByRole("switch", { name: t("collection.body") }));
+		expect(screen.queryByRole("tab", { name: t("collection.tabs.editor") })).toBeNull();
 	});
 
 	it("limits the body of a collection to the blocks that are ticked", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		openTab("advanced");
+		openTab("editor");
 		fireEvent.click(
 			screen.getByRole("switch", { name: t("allowed.limit", { label: t("allowed.blocks").toLowerCase() }) }),
 		);
 		// Everything is ticked at first; untick one.
-		fireEvent.click(await screen.findByRole("checkbox", { name: "callout" }));
+		fireEvent.click(
+			await screen
+				.findByTitle("callout")
+				.then((label) => within(label.parentElement as HTMLElement).getByRole("checkbox")),
+		);
 		fireEvent.click(review());
 		await screen.findByTestId("review-summary");
 		const body = (lastPreview()?.body?.schema as { collections: { post: { body: unknown } } }).collections.post.body;
@@ -695,7 +722,7 @@ describe("SchemaScreen", () => {
 		await screen.findByTestId("collection-post");
 		const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
 		expect(tabs).toEqual(
-			expect.arrayContaining(["basics", "fields", "advanced"].map((name) => t(`collection.tabs.${name as "basics"}`))),
+			expect.arrayContaining(["basics", "fields", "editor"].map((name) => t(`collection.tabs.${name as "basics"}`))),
 		);
 		// List columns are chosen on the list screen, so there is no list tab here.
 		expect(tabs).not.toContain("List");
@@ -705,7 +732,7 @@ describe("SchemaScreen", () => {
 		expect(screen.queryByText(t("allowed.title"))).toBeNull();
 		expect(screen.queryByTestId("field-title")).toBeNull();
 
-		openTab("advanced");
+		openTab("editor");
 		expect(await screen.findByText(t("allowed.title"))).toBeTruthy();
 		expect(screen.getByText(t("allowed.hint"))).toBeTruthy();
 		// Everything is allowed until a list is limited.

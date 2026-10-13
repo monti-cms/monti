@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../ui/button";
@@ -88,7 +88,7 @@ function LimitList<T extends string | number>({
 										)
 									}
 								/>
-								<Label htmlFor={id} className="font-normal text-sm">
+								<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
 									{nameOf ? nameOf(item) : String(item)}
 								</Label>
 							</li>
@@ -123,8 +123,15 @@ function AllowedEditor({
 	update: (change: (collection: Obj) => Obj) => void;
 }) {
 	const t = useTranslator(schemaMessages);
+	const site = useSite();
 	const { vocabulary } = useSchemaEdit();
 	const allowed = allowedOf(collection);
+	// Core names have a label in the dictionary; blocks and text styles a plugin adds use the label of their definition.
+	const nameLabel = (id: string): string => {
+		const key = `allowed.name.${id}`;
+		if (key in schemaMessages.messages.en) return t(key as "allowed.name.table");
+		return site.BLOCK_BY_NAME.get(id)?.label ?? id;
+	};
 	const limited = Object.values(allowed).some((list) => Array.isArray(list));
 	const setAllowed = (key: keyof Allowed, value: unknown[] | undefined) =>
 		update((current) => {
@@ -138,12 +145,14 @@ function AllowedEditor({
 			<LimitList
 				label={t("allowed.blocks")}
 				all={vocabulary.blocks}
+				nameOf={nameLabel}
 				value={allowed.blocks}
 				onChange={(value) => setAllowed("blocks", value)}
 			/>
 			<LimitList
 				label={t("allowed.marks")}
 				all={vocabulary.marks}
+				nameOf={nameLabel}
 				value={allowed.marks}
 				onChange={(value) => setAllowed("marks", value)}
 			/>
@@ -151,7 +160,7 @@ function AllowedEditor({
 				label={t("allowed.headings")}
 				all={HEADINGS}
 				value={allowed.headings}
-				nameOf={(level) => `H${level}`}
+				nameOf={(level) => t("allowed.name.heading", { level })}
 				onChange={(value) => setAllowed("headings", value)}
 			/>
 		</Section>
@@ -241,7 +250,9 @@ export function CollectionEditor({
 }) {
 	const t = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
-	const [tab, setTab] = useState("basics");
+	const [chosenTab, setTab] = useState("basics");
+	// The editor tab only exists for a collection with a body.
+	const tab = chosenTab === "editor" && !hasBody(collection) ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
 	const fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
@@ -275,7 +286,7 @@ export function CollectionEditor({
 					<TabsList className="w-full justify-start sm:w-fit">
 						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
 						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
-						<TabsTrigger value="advanced">{t("collection.tabs.advanced")}</TabsTrigger>
+						{hasBody(collection) && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex flex-col gap-12">
@@ -316,17 +327,6 @@ export function CollectionEditor({
 						</div>
 					</Section>
 					<BodyEditor collection={collection} update={onChange} />
-				</TabsContent>
-				<TabsContent value="fields" className="flex flex-col gap-12">
-					<FieldsCard editing={editing} />
-					<LayoutEditor collection={collection} update={onChange} />
-				</TabsContent>
-				<TabsContent value="advanced" className="flex flex-col gap-12">
-					{hasBody(collection) ? (
-						<AllowedEditor collection={collection} update={onChange} />
-					) : (
-						<p className="text-cms-muted-foreground text-sm">{t("advanced.noBody")}</p>
-					)}
 					<Section
 						title={t("collection.dangerTitle")}
 						description={isNew ? t("collection.newHint") : t("collection.dangerDescription")}
@@ -347,6 +347,15 @@ export function CollectionEditor({
 						</div>
 					</Section>
 				</TabsContent>
+				<TabsContent value="fields" className="flex flex-col gap-12">
+					<FieldsCard editing={editing} />
+					<LayoutEditor collection={collection} update={onChange} />
+				</TabsContent>
+				{hasBody(collection) && (
+					<TabsContent value="editor" className="flex flex-col gap-12">
+						<AllowedEditor collection={collection} update={onChange} />
+					</TabsContent>
+				)}
 			</Tabs>
 		</div>
 	);
