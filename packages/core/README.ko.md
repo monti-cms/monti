@@ -1189,7 +1189,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 | `trustHost` | 선택. `Host`·`X-Forwarded-Host`를 믿을지("호스트 신뢰"). 기본값은 `AUTH_TRUST_HOST` 환경 변수, 없으면 알려진 프록시 플랫폼이 감지되거나 개발일 때 켬, 그 밖에는 끔 |
 | `publicApi` | 선택. 공개 JSON API(`/api/monti/v1/public/entries`·`/entries/:collection/:slug`, 로그인 없이 공개본만, 캐시 안 함). `{ collections, filters?: { 질의이름: 관계필드 }, toJson?(entry, { body }) }` |
 | `hooks` | 선택. 모든 콘텐츠 쓰기에 거는 훅: `transform`·`validate`·`validatePublish`·`afterCommit`(변경이 커밋된 뒤 알림이며 두 번째 인자로 인스턴스를 받는다: 캐시 갱신·웹훅·검색 색인. 실패하면 다시 시도하므로, 반복되면 안 되는 일은 `event.once`로 감싼다). "훅 계약"과 "이벤트 전달"을 본다. 플러그인도 `hooks`를 둘 수 있다 |
-| `events` | 선택. `afterCommit` 전달을 다시 시도하고 보관하는 방식: `{ maxAttempts?, backoffMs?(attempt), retentionDays?, retrySecret? }`. "이벤트 전달"을 본다 |
+| `events` | 선택. `afterCommit` 전달을 다시 시도하고 보관하는 방식: `{ maxAttempts?, backoffMs?(attempt), retrySecret? }`. "이벤트 전달"을 본다 |
 
 다른 저장소·로그인을 쓰려면 `DatabaseAdapter`·`MediaAdapter`(`storage`로)·`AuthAdapter`를 직접 만들어 넣는다. 낮은 수준의 `createCms({ config, server })`는 같은 옵션을 `CmsServerConfig`로 받고(`storage` 대신 `media`) 사이트 설정은 따로 받는다.
 
@@ -1289,7 +1289,7 @@ export const cms = defineConfig({
 - **구독자.** 설정의 `hooks.afterCommit`은 구독자 `server`, 각 플러그인의 `hooks.afterCommit`은 `plugin:<플러그인 이름>`이다. 이름은 바뀌지 않는 값이고 `cms_event_deliveries`의 전달 상태(이벤트와 구독자마다 한 행: `state`, `attempts`, `last_error`, `next_attempt_at`)의 키가 되므로, 구독자가 있는 플러그인의 이름은 바꾸지 않는다. 나중에 생긴 구독자는 생긴 뒤에 커밋된 이벤트부터 받고, 그 전의 기록은 받지 않는다.
 - **전달.** 커밋 뒤에 변경을 만든 프로세스가 같은 호출 안에서 바로 각 구독자에게 보내므로 지연은 이전과 같다. 실패는 기록하고 점점 길어지는 간격(15초에서 시작해 두 배씩, 최대 1시간. `events.backoffMs`로 바꾼다)으로 나중에 다시 시도하며, `events.maxAttempts`번(기본 8) 시도하고도 실패하면 전달이 데드레터(`dead`)가 된다. 쓰기는 되돌리지 않고, 다른 구독자도 막지 않는다.
 - **최소 한 번, 글마다 순서대로.** 이벤트는 두 번 이상 전달될 수 있다(일을 하고 나서 실패한 구독자, 끝나지 못한 시도). 그래서 **구독자는 멱등이어야 한다.** `event.eventId`는 시도마다 같고, "이미 했다"는 표시는 `event.once`(아래)가 대신 남겨 준다. 한 글의 이벤트는 커밋 순서로 전달된다. 같은 글의 앞선 이벤트가 대기 중이거나 전달 중이거나 실패해 아직 죽지 않았다면 뒤의 이벤트는 기다린다. 죽었거나 닫은 전달은 순서를 붙들지 않으므로, 죽은 것을 손으로 다시 보내면 뒤의 이벤트보다 늦게 도착할 수 있다. 글을 내보내는 구독자는 글의 현재 상태를 읽고 `version`을 비교한다. 다른 글의 이벤트는 서로 상관없다.
-- **한 번만 하기.** `await event.once(run)`은 이벤트와 구독자마다 `run`을 한 번만 돌리고 돌았는지를 알려 준다. 앞선 시도가 `run`을 끝냈다면 건너뛰고 `false`를 돌려준다. `run`이 예외를 던지면 표시하지 않으므로 다시 시도할 때 또 돈다. 표시는 `run`이 끝난 뒤에 쓰므로, 둘 사이에서 프로세스가 죽을 때만 일이 반복된다. 메시지를 보내거나 API를 부르는 구독자에게 필요한 멱등 코드는 이것이 전부다. 표시는 코어의 플러그인 저장소(`core-events`, 어떤 플러그인도 쓸 수 없는 이름)에 있고 이벤트와 함께 지워진다(`events.retentionDays`). 반복해도 해가 없는 일에는 `once`가 필요 없다.
+- **한 번만 하기.** `await event.once(run)`은 이벤트와 구독자마다 `run`을 한 번만 돌리고 돌았는지를 알려 준다. 앞선 시도가 `run`을 끝냈다면 건너뛰고 `false`를 돌려준다. `run`이 예외를 던지면 표시하지 않으므로 다시 시도할 때 또 돈다. 표시는 `run`이 끝난 뒤에 쓰므로, 둘 사이에서 프로세스가 죽을 때만 일이 반복된다. 메시지를 보내거나 API를 부르는 구독자에게 필요한 멱등 코드는 이것이 전부다. 표시는 코어의 플러그인 저장소(`core-events`, 어떤 플러그인도 쓸 수 없는 이름)에 있고 이벤트와 함께 지워진다(90일 뒤). 반복해도 해가 없는 일에는 `once`가 필요 없다.
 - **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(`Entry`: `working`과, 발행된 뒤에는 `published`가 각각 `{ metadata, doc, … }`로 있고, `publishedSlug`·`workingSlug`·`version`도 있다. `Entry`는 `@monti-cms/core/plugin/server`에서 내보낸다)를, 삭제됐다면 `null`을 돌려준다. 주소가 든 메시지를 만들 때는 `cms.site.contentPath(collection, slug)`(경로, 컬렉션에 경로가 없으면 `null`)와 `cms.site.config.site?.url`(출처, `SITE_URL`에서 온다)을 쓴다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
 - **미루기.** 아직 준비되지 않은 구독자(이벤트를 묶는 중이거나, 요청 제한이 언제 풀리는지 아는 경우)는 `{ retryAt: Date }`을 돌려주거나 `new DeferDelivery(retryAt)`을 던진다(`@monti-cms/core/server`, `@monti-cms/core/plugin/server`). 전달은 `pending`으로 돌아가 `retryAt`에 다시 도래한다. **실패가 아니다.** 로그를 남기지 않고, 이벤트 화면에 나오지 않고, 실패 배지에 들지 않고, 시도 횟수를 쓰지 않으며(`attempts`가 하나 되돌아가므로 몇 번을 미뤄도 그 시도 그대로다) dead letter가 될 수도 없다. 그 글의 뒤 이벤트 순서는 계속 잡고 있다. `cms.events.retry()`는 `deferred`가 몇 개인지 돌려주고, `retry({ all: true })`는 아직 때가 안 된 미뤄진 전달도 시도한다. git-sync가 묶음 창에 이것을 쓴다.
 
@@ -1328,7 +1328,7 @@ defineConfig({
 });
 ```
 
-끝난 이벤트는 `events.retentionDays`일(기본 30) 뒤에 같은 쓰기 쪽 정리에서 지워진다. 관리자의 **이벤트** 화면(설정 기본 경로에서는 `/admin/events`, `monti init` 뒤에는 `/studio/events`)은 실패한 전달과 죽은 전달을 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바가 그 수를 보여 준다.
+커밋된 모든 변경은 구독자가 있든 없든 이벤트 로그에 기록된다(전달이 없는 이벤트는 "기록됨 (구독자 없음)"으로 보이고, 요청에서 온 변경이면 작업자도 담긴다). 90일(옵션이 아닌 고정 기간)이 지난 이벤트는 같은 쓰기 쪽 정리에서 프로세스당 시간당 한 번 이하로 전달과 함께 지워지며, 아직 기다리는 전달이 있으면 남는다. `pending`·`delivering`·`failed`·`dead` 전달은 전달되거나 무시될 때까지 이벤트를 붙들고 있다. 관리자의 **이벤트** 화면(설정 기본 경로에서는 `/admin/events`, `monti init` 뒤에는 `/studio/events`)은 모든 이벤트를 전달 상태와 함께 보여 주는 로그이며, 실패한 전달과 죽은 전달은 마지막 오류와 함께 보여 주고 하나씩 다시 시도하거나 닫을 수 있게 하며, 사이드바가 그 수를 보여 준다.
 
 ## 훅과 플러그인 테스트하기
 

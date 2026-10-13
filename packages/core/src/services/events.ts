@@ -6,7 +6,7 @@ import {
 	DeferDelivery,
 	type EventDelivery,
 	type EventDeliveryCounts,
-	type EventDeliveryState,
+	type EventLogState,
 	type EventStore,
 	isDeferred,
 } from "../core/store";
@@ -46,8 +46,6 @@ export interface EventDeliveryOptions {
 	readonly maxAttempts?: number;
 	/** Milliseconds to wait after the given failed try (1 for the first). Default: 15 seconds, doubling, at most an hour. */
 	readonly backoffMs?: (attempt: number) => number;
-	/** How long finished events are kept, in days. Default 30. */
-	readonly retentionDays?: number;
 	/**
 	 * A secret for `POST /api/monti/v1/events/retry` (`Authorization: Bearer <secret>`), so a cron job can start the retries without an admin login.
 	 * Without it the route needs an admin session. Keep it in an environment variable.
@@ -75,17 +73,17 @@ export interface EventRetryResult {
 }
 
 export interface EventListOptions {
-	/** Default `failed` and `dead`. */
-	readonly states?: readonly EventDeliveryState[];
+	/** Default `failed` and `dead`. `recorded` lists the events that have no delivery (no subscriber). */
+	readonly states?: readonly EventLogState[];
 	readonly limit?: number;
 	readonly offset?: number;
 }
 
-/** `cms.events`: the delivery side of the outbox. */
+/** `cms.events`: the event log and the delivery side of the outbox. */
 export interface CmsEvents {
 	/** Delivers what is due (and, with `all`, what is failed): the call for a cron job, a command or a button. Never throws for a failing subscriber. */
 	retry(options?: EventRetryOptions): Promise<EventRetryResult>;
-	/** Deliveries, newest event first. */
+	/** The log, newest event first: deliveries in the states, and with `recorded` the events no subscriber was made a delivery for. */
 	list(options?: EventListOptions): Promise<{ items: EventDelivery[]; total: number }>;
 	/** How many deliveries are in each state. */
 	counts(): Promise<EventDeliveryCounts>;
@@ -113,7 +111,8 @@ export interface EventDispatcher {
 }
 
 export const DEFAULT_MAX_ATTEMPTS = 8;
-const DEFAULT_RETENTION_DAYS = 30;
+/** How long the event log keeps an event, in days; not an option. Events with a delivery still waiting (or dead, until someone retries or dismisses it) are kept past it. */
+export const EVENT_RETENTION_DAYS = 90;
 const DEFAULT_RETRY_LIMIT = 100;
 /** Leave a claimed delivery to its caller for this long before it can be claimed again (a crash or a timeout in the middle of a try). */
 const LEASE_MS = 2 * 60 * 1000;
@@ -133,7 +132,7 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 	const now = options.now ?? (() => new Date());
 	const maxAttempts = Math.max(1, options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS);
 	const backoffMs = options.backoffMs ?? defaultBackoffMs;
-	const retentionMs = (options.retentionDays ?? DEFAULT_RETENTION_DAYS) * DAY_MS;
+	const retentionMs = EVENT_RETENTION_DAYS * DAY_MS;
 	const store = options.store;
 	const fallbackMarks = memoryMarks();
 	const marksOf = () => options.marks?.() ?? fallbackMarks;

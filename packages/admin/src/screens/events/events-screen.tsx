@@ -180,6 +180,7 @@ export function EventsScreen() {
 								<TableHead>{t("column.subscriber")}</TableHead>
 								<TableHead>{t("column.kind")}</TableHead>
 								<TableHead>{t("column.entry")}</TableHead>
+								<TableHead>{t("column.actor")}</TableHead>
 								<TableHead>{t("column.state")}</TableHead>
 								<TableHead>{t("column.attempts")}</TableHead>
 								<TableHead>{t("column.lastError")}</TableHead>
@@ -192,11 +193,11 @@ export function EventsScreen() {
 						<TableBody>
 							{items.map((item) => {
 								const { change } = item;
-								const key = { eventId: change.eventId, subscriber: item.subscriber };
+								const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
 								return (
-									<TableRow key={`${change.eventId}:${item.subscriber}`}>
+									<TableRow key={`${change.eventId}:${item.subscriber ?? ""}`}>
 										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
-										<TableCell>{item.subscriber}</TableCell>
+										<TableCell>{item.subscriber ?? ""}</TableCell>
 										<TableCell>{t(`kind.${change.kind}`)}</TableCell>
 										<TableCell>
 											<span className="text-cms-muted-foreground">{change.collection} </span>
@@ -208,10 +209,15 @@ export function EventsScreen() {
 												</Link>
 											)}
 										</TableCell>
+										<TableCell>{change.actor ?? ""}</TableCell>
 										<TableCell>
 											<Badge
 												variant={
-													item.state === "dead" ? "destructive" : item.state === "delivered" ? "outline" : "secondary"
+													item.state === "dead"
+														? "destructive"
+														: item.state === "delivered" || item.state === "recorded"
+															? "outline"
+															: "secondary"
 												}
 											>
 												{t(`state.${item.state}`)}
@@ -231,7 +237,7 @@ export function EventsScreen() {
 														type="button"
 														variant="outline"
 														size="xs"
-														aria-label={t("action.retryLabel", { subscriber: item.subscriber })}
+														aria-label={t("action.retryLabel", { subscriber: item.subscriber ?? "" })}
 														disabled={retry.isPending}
 														onClick={() => retry.mutate(key)}
 													>
@@ -241,7 +247,7 @@ export function EventsScreen() {
 														type="button"
 														variant="ghost"
 														size="xs"
-														aria-label={t("action.dismissLabel", { subscriber: item.subscriber })}
+														aria-label={t("action.dismissLabel", { subscriber: item.subscriber ?? "" })}
 														onClick={() => void requestDismiss(key)}
 													>
 														{t("action.dismiss")}
