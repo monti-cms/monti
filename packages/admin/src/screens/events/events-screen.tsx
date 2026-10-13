@@ -2,14 +2,14 @@
 
 import { cmsApiUrl, type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, RotateCw, SearchX } from "lucide-react";
+import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
 import { Alert, AlertDescription } from "../../ui/alert";
-import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Skeleton } from "../../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { cmsFetch, errorText } from "../admin-api";
@@ -23,6 +23,7 @@ import {
 	EVENTS_FILTERS,
 	EVENTS_KEY,
 	EVENTS_LIST_KEY,
+	type EventDeliveryItem,
 	type EventsFilter,
 	type EventsList,
 	eventsQuery,
@@ -31,6 +32,91 @@ import { eventsMessages } from "./messages";
 
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text: string) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
+
+const STATE_TONE: Record<EventDeliveryItem["state"], string> = {
+	delivered: "text-emerald-600 cms-dark:text-emerald-400",
+	failed: "text-red-600 cms-dark:text-red-400",
+	dead: "text-red-600 cms-dark:text-red-400",
+	pending: "text-amber-600 cms-dark:text-amber-400",
+	delivering: "text-amber-600 cms-dark:text-amber-400",
+	dismissed: "text-cms-muted-foreground",
+	recorded: "text-cms-muted-foreground",
+};
+
+/** Colored dot plus the state name, like the entries list status column (never color alone). */
+function StateLabel({ state, label }: { state: EventDeliveryItem["state"]; label: string }) {
+	return (
+		<span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] text-cms-foreground/80">
+			<svg
+				aria-hidden="true"
+				focusable="false"
+				viewBox="0 0 16 16"
+				className={cn("size-3.5 shrink-0", STATE_TONE[state])}
+				fill="currentColor"
+			>
+				<circle cx="8" cy="8" r="5.5" />
+			</svg>
+			{label}
+		</span>
+	);
+}
+
+/** Status column header; its popup filters deliveries by status, like the entries list column headers. */
+function StateHeader({
+	filter,
+	options,
+	onChange,
+}: {
+	filter: EventsFilter;
+	options: { value: EventsFilter; label: string }[];
+	onChange: (next: EventsFilter) => void;
+}) {
+	const t = useTranslator(eventsMessages);
+	const filtered = filter !== "all";
+	return (
+		<Popover>
+			<PopoverTrigger
+				render={
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						className={cn(
+							"-ml-2 h-7 gap-1 px-2 font-normal text-cms-muted-foreground text-xs",
+							filtered && "text-cms-primary",
+						)}
+						aria-label={`${t("column.state")}${filtered ? t("filter.activeSuffix") : ""}`}
+					/>
+				}
+			>
+				{t("column.state")}
+				{filtered ? (
+					<ListFilter aria-hidden className="size-3.5 fill-current" data-filtered="" />
+				) : (
+					<ChevronDown aria-hidden className="size-3.5 opacity-60" />
+				)}
+			</PopoverTrigger>
+			<PopoverContent align="start" className="w-56 p-3">
+				<fieldset className="flex flex-col gap-1">
+					<legend className="sr-only">{t("filter.label")}</legend>
+					{options.map((option) => (
+						<Button
+							key={option.value}
+							type="button"
+							variant={filter === option.value ? "secondary" : "ghost"}
+							size="sm"
+							aria-pressed={filter === option.value}
+							className="justify-start"
+							onClick={() => onChange(option.value)}
+						>
+							{option.label}
+						</Button>
+					))}
+				</fieldset>
+			</PopoverContent>
+		</Popover>
+	);
+}
 
 interface DeliveryKey {
 	eventId: string;
@@ -131,24 +217,6 @@ export function EventsScreen() {
 					</Button>
 				</Alert>
 			)}
-			<div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6">
-				<Select
-					value={filter}
-					items={filterOptions}
-					onValueChange={(value) => value && changeFilter(value as EventsFilter)}
-				>
-					<SelectTrigger size="sm" aria-label={t("filter.label")}>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{filterOptions.map((option) => (
-							<SelectItem key={option.value} value={option.value}>
-								{option.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</div>
 			<div className="flex min-h-0 flex-1 flex-col overflow-auto">
 				{listQuery.isPending ? (
 					<div className="space-y-2 p-5" aria-hidden>
@@ -172,12 +240,14 @@ export function EventsScreen() {
 					<Table aria-label={t("list.label")}>
 						<TableHeader>
 							<TableRow>
+								<TableHead>
+									<StateHeader filter={filter} options={filterOptions} onChange={changeFilter} />
+								</TableHead>
 								<TableHead>{t("column.when")}</TableHead>
 								<TableHead>{t("column.subscriber")}</TableHead>
 								<TableHead>{t("column.kind")}</TableHead>
 								<TableHead>{t("column.entry")}</TableHead>
 								<TableHead>{t("column.actor")}</TableHead>
-								<TableHead>{t("column.state")}</TableHead>
 								<TableHead>{t("column.attempts")}</TableHead>
 								<TableHead>{t("column.lastError")}</TableHead>
 								<TableHead>{t("column.nextAttempt")}</TableHead>
@@ -192,6 +262,9 @@ export function EventsScreen() {
 								const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
 								return (
 									<TableRow key={`${change.eventId}:${item.subscriber ?? ""}`}>
+										<TableCell>
+											<StateLabel state={item.state} label={t(`state.${item.state}`)} />
+										</TableCell>
 										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
 										<TableCell>{item.subscriber ?? ""}</TableCell>
 										<TableCell>{t(`kind.${change.kind}`)}</TableCell>
@@ -206,19 +279,6 @@ export function EventsScreen() {
 											)}
 										</TableCell>
 										<TableCell>{change.actor ?? ""}</TableCell>
-										<TableCell>
-											<Badge
-												variant={
-													item.state === "dead"
-														? "destructive"
-														: item.state === "delivered" || item.state === "recorded"
-															? "outline"
-															: "secondary"
-												}
-											>
-												{t(`state.${item.state}`)}
-											</Badge>
-										</TableCell>
 										<TableCell className="tabular-nums">{item.attempts}</TableCell>
 										<TableCell className="max-w-64 truncate" title={item.lastError ?? undefined}>
 											{item.lastError ? truncate(item.lastError) : ""}
