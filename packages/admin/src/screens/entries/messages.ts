@@ -5,19 +5,11 @@ import { enNoun, koNoun, koObject } from "../shared/noun.messages";
 /** Messages for the editor screen (fields, restore dialog, locale tabs, property panel, source dialog, template menu). The header and shell live in `entry-editor-shell.messages.ts`. */
 export const entriesMessages = defineMessages("cms-admin.entries", {
 	en: {
-		untitled: "Untitled",
 		retry: "Try again",
-		close: "Close",
-		loading: "Loading…",
 		source: "Source",
-		saveFailed: "Couldn't save.",
 		"tab.default": "Properties",
 		"copy.suffix": " (copy)",
 
-		"lifecycle.archive": "Archive",
-		"lifecycle.unarchive": "Unarchive",
-		"lifecycle.trash": "Move to trash",
-		"lifecycle.restore": "Restore",
 		"lifecycle.success.archive": "Archived.",
 		"lifecycle.success.unarchive": "Unarchived.",
 		"lifecycle.success.trash": "Moved to the trash.",
@@ -47,7 +39,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"save.offline": "Can't reach the server.",
 		loadFailed: "Couldn't load the document.",
 		publishFailed: "Couldn't publish.",
-		deleteFailed: "Couldn't delete.",
 		duplicateFailed: "Couldn't duplicate.",
 		fillEmpty: ({ label }) => `There's no body to create ${label} from. Enter it yourself.`,
 		"editor.readOnly": (vars) => `This ${enNoun(vars)} can't be edited.`,
@@ -55,7 +46,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"editor.conflict": "Resolve the edit conflict first.",
 		"editor.unsaved": "Save your changes first.",
 		"editor.noConflict": "There is no edit conflict to resolve.",
-		"editor.noRecovery": "There is no browser copy to restore.",
 		"editor.notLoaded": (vars) => `The ${enNoun(vars)} isn't loaded yet.`,
 
 		"inspector.source": "This is the source ({locale}) value.",
@@ -73,7 +63,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lang.current": "{lang} · {status}",
 		"lang.currentSource": "{lang} source · {status}",
 		"lang.menu": "Translation menu",
-		"lang.trash": "Move to trash",
 
 		"sourceChange.changed": "Changed",
 		"sourceChange.added": "Added",
@@ -94,7 +83,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 
 		"template.applyTitle": "Apply template",
 		"template.applyAsk": "Replace the current body with the '{name}' template? What you wrote will be lost.",
-		"template.apply": "Apply",
 		"template.menu": "Templates",
 		"template.loadFailed": "Couldn't load templates.",
 		"template.none": "No templates.",
@@ -105,7 +93,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"relation.empty": "No matches.",
 		"relation.create": "Add '{label}'",
 		"relation.searchOrAdd": "Search or add",
-		"relation.search": "Search",
 		"relation.regenerate": "Regenerate from {label}",
 
 		"media.change": "Change",
@@ -147,7 +134,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.reload": "Reload",
 		"conflict.overwriteMine": "Overwrite with mine",
 		"conflict.copied": "Body copied.",
-		"conflict.copyFailed": "Couldn't copy.",
 		"conflict.summary": "Title: {title} · Slug: {slug}",
 		"conflict.noSlug": "None",
 		"conflict.copyBody": "Copy body",
@@ -155,19 +141,11 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.server": "Latest on server · v{version}",
 	},
 	ko: {
-		untitled: "제목 없음",
 		retry: "다시 시도",
-		close: "닫기",
-		loading: "불러오는 중…",
 		source: "원문",
-		saveFailed: "저장하지 못했습니다.",
 		"tab.default": "속성",
 		"copy.suffix": " (복사)",
 
-		"lifecycle.archive": "보관",
-		"lifecycle.unarchive": "보관 해제",
-		"lifecycle.trash": "휴지통으로 이동",
-		"lifecycle.restore": "복원",
 		"lifecycle.success.archive": "보관했습니다.",
 		"lifecycle.success.unarchive": "보관을 해제했습니다.",
 		"lifecycle.success.trash": "휴지통으로 옮겼습니다.",
@@ -197,7 +175,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"save.offline": "서버에 연결할 수 없습니다.",
 		loadFailed: "문서를 불러올 수 없습니다.",
 		publishFailed: "발행하지 못했습니다.",
-		deleteFailed: "삭제하지 못했습니다.",
 		duplicateFailed: "복제하지 못했습니다.",
 		fillEmpty: ({ label }) => `${josa(String(label), "을", "를")} 만들 본문이 없습니다. 직접 입력하세요.`,
 		"editor.readOnly": (vars) => `편집할 수 없는 ${koNoun(vars)}입니다.`,
@@ -205,7 +182,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"editor.conflict": "편집 충돌을 먼저 해결하세요.",
 		"editor.unsaved": "변경사항을 먼저 저장하세요.",
 		"editor.noConflict": "해결할 편집 충돌이 없습니다.",
-		"editor.noRecovery": "불러올 브라우저 임시 저장본이 없습니다.",
 		"editor.notLoaded": (vars) => `아직 ${koObject(vars)} 불러오지 못했습니다.`,
 
 		"inspector.source": "원문({locale}) 값입니다.",
@@ -223,7 +199,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"lang.current": "{lang} · {status}",
 		"lang.currentSource": "{lang} 원문 · {status}",
 		"lang.menu": "번역본 메뉴",
-		"lang.trash": "휴지통으로 이동",
 
 		"sourceChange.changed": "바뀜",
 		"sourceChange.added": "추가",
@@ -244,7 +219,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 
 		"template.applyTitle": "템플릿 적용",
 		"template.applyAsk": "지금 본문을 '{name}' 템플릿으로 바꿀까요? 쓴 본문은 사라집니다.",
-		"template.apply": "적용",
 		"template.menu": "템플릿",
 		"template.loadFailed": "템플릿을 불러오지 못했습니다.",
 		"template.none": "템플릿이 없습니다.",
@@ -255,7 +229,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"relation.empty": "일치하는 항목이 없습니다.",
 		"relation.create": "'{label}' 추가",
 		"relation.searchOrAdd": "검색하거나 추가",
-		"relation.search": "검색",
 		"relation.regenerate": ({ label }) => `${josa(String(label), "으로", "로")} 다시 만들기`,
 
 		"media.change": "바꾸기",
@@ -296,7 +269,6 @@ export const entriesMessages = defineMessages("cms-admin.entries", {
 		"conflict.reload": "다시 불러오기",
 		"conflict.overwriteMine": "내 내용으로 덮어쓰기",
 		"conflict.copied": "본문을 복사했습니다.",
-		"conflict.copyFailed": "복사하지 못했습니다.",
 		"conflict.summary": "제목: {title} · 주소: {slug}",
 		"conflict.noSlug": "없음",
 		"conflict.copyBody": "본문 복사",

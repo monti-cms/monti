@@ -28,6 +28,7 @@ import {
 } from "../../api/media";
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
+import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
@@ -93,6 +94,7 @@ const LIBRARY_PARAMS = {
 export function MediaLibrary() {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
+	const tc = useTranslator(commonMessages);
 	const router = useAdminRouter();
 	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo }, update] = useUrlState(LIBRARY_PARAMS);
 	const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
@@ -181,9 +183,9 @@ export function MediaLibrary() {
 	};
 
 	const deleteMutation = useCmsMutation<MediaItem, void, MediaPage>({
-		fn: (media, { site }) => deleteMedia(site, media.id, t("library.deleteFailed")),
+		fn: (media, { site }) => deleteMedia(site, media.id, tc("deleteFailed")),
 		success: (_result, media) => t("library.deleted", { name: media.filename }),
-		failure: t("library.deleteFailed"),
+		failure: tc("deleteFailed"),
 		// Remove from the list first, then send the request. On failure it reverts; when done, the list syncs to the server value.
 		optimistic: {
 			queryKey: mediaKeys.lists(),
@@ -208,14 +210,9 @@ export function MediaLibrary() {
 	/** Saves the default description. Failure is thrown as is so it shows inside the detail panel. */
 	const saveDefaultsMutation = useCmsMutation({
 		fn: ({ media, defaults }: { media: MediaItem; defaults: { alt: string; caption: string } }, { site }) =>
-			updateMedia(
-				site,
-				media.id,
-				{ defaultAlt: defaults.alt, defaultCaption: defaults.caption },
-				t("library.saveFailed"),
-			),
-		success: t("library.saved"),
-		failure: t("library.saveFailed"),
+			updateMedia(site, media.id, { defaultAlt: defaults.alt, defaultCaption: defaults.caption }, tc("saveFailed")),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
 		inline: true,
 		invalidate: [mediaKeys.all],
 	});
@@ -249,7 +246,7 @@ export function MediaLibrary() {
 		const ok = await confirm({
 			title: media.status === "deleting" ? t("library.delete.retryTitle") : t("library.delete.title"),
 			description: t("library.delete.ask", { name: media.filename }),
-			confirmLabel: t("common.delete"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (ok) removeMedia(media);
@@ -257,7 +254,7 @@ export function MediaLibrary() {
 
 	/** Right-click and `⋯` menu of a media tile. */
 	const mediaMenu = (media: MediaItem): MenuAction[] => [
-		{ kind: "item", label: t("common.open"), icon: PanelRightOpen, onSelect: () => void openDetail(media.id) },
+		{ kind: "item", label: tc("open"), icon: PanelRightOpen, onSelect: () => void openDetail(media.id) },
 		{
 			kind: "sub",
 			label: t("library.menu.usage"),
@@ -265,7 +262,7 @@ export function MediaLibrary() {
 			emptyLabel: t("library.menu.usageEmpty"),
 			items: mediaUsages(media).map((usage) => ({
 				kind: "item" as const,
-				label: `${usage.title || t("common.untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
+				label: `${usage.title || tc("untitled")}${usage.note ? ` · ${usageNoteLabel(t, usage.note)}` : ""}`,
 				icon: FileText,
 				onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
 			})),
@@ -273,7 +270,7 @@ export function MediaLibrary() {
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: t("common.delete"),
+			label: tc("delete"),
 			icon: Trash2,
 			shortcut: "Del",
 			destructive: true,
@@ -319,7 +316,7 @@ export function MediaLibrary() {
 					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
 					</Button>
-					<IconButton label={t("library.refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
+					<IconButton label={tc("refresh")} variant="outline" onClick={() => void mediaQuery.refetch()}>
 						<RefreshCw className={cn(mediaQuery.isFetching && "animate-spin")} aria-hidden />
 					</IconButton>
 				</div>

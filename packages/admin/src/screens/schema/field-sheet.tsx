@@ -2,6 +2,7 @@
 
 import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { Button } from "../../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
 import { LineTabs, Tabs, TabsContent, TabsTrigger } from "../../ui/tabs";
@@ -17,7 +18,7 @@ import {
 	useSchemaEdit,
 } from "./controls";
 import { type CollectionEditing, InputOptionsEditor, KindOptions, LOCALIZED_KINDS } from "./field-editor";
-import { schemaMessages } from "./messages";
+import { schemaFieldsMessages } from "./fields.messages";
 import {
 	FIELD_KEY_ORDER,
 	FIELD_KINDS,
@@ -52,7 +53,8 @@ export function FieldSheet({
 	name: string;
 	onClose: () => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
+	const tc = useTranslator(commonMessages);
 	const { disabled, collectionNames } = useSchemaEdit();
 	const [draft, setDraft] = useState<Obj>(editing.collection);
 	// Renames of options made in the copy are recorded for the review only when the copy is applied.
@@ -232,10 +234,10 @@ export function FieldSheet({
 					</Button>
 					<div className="flex-1" />
 					<Button type="button" variant="outline" size="sm" onClick={onClose}>
-						{t("sheet.cancel")}
+						{tc("cancel")}
 					</Button>
 					<Button type="button" size="sm" disabled={disabled} onClick={apply}>
-						{t("sheet.apply")}
+						{tc("apply")}
 					</Button>
 				</SheetFooter>
 			</SheetContent>

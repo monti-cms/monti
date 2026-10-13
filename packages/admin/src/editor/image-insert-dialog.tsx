@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import { listMedia, type MediaItem, mediaKeys } from "../api/media";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { useDebounced } from "../screens/shared/use-debounced";
@@ -67,6 +68,7 @@ export function ImageInsertDialog({
 }: ImageInsertDialogProps) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const title = titleProp ?? t("imageDialog.title");
 	const picking = mode === "pick";
 	const { media } = useAdminFeatures();
@@ -192,7 +194,7 @@ export function ImageInsertDialog({
 					</DialogHeader>
 					<DialogFooter>
 						<Button type="button" variant="outline" onClick={onClose}>
-							{t("imageDialog.close")}
+							{tc("close")}
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -217,7 +219,7 @@ export function ImageInsertDialog({
 					<Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
 						<TabsList variant="line" aria-label={t("imageDialog.sourceLabel")}>
 							<TabsTrigger value="upload" disabled={isUploading}>
-								{t("imageDialog.upload")}
+								{tc("upload")}
 							</TabsTrigger>
 							<TabsTrigger value="library" disabled={isUploading}>
 								{t("imageDialog.library")}
@@ -273,7 +275,7 @@ export function ImageInsertDialog({
 										<AlertDescription className="flex items-center justify-between gap-2">
 											{t("imageDialog.libraryFailed")}
 											<Button type="button" size="xs" variant="outline" onClick={() => void libraryQuery.refetch()}>
-												{t("imageDialog.retry")}
+												{tc("retry")}
 											</Button>
 										</AlertDescription>
 									</Alert>
@@ -363,13 +365,13 @@ export function ImageInsertDialog({
 								? error
 									? t("imageDialog.reupload")
 									: picking
-										? t("imageDialog.upload")
+										? tc("upload")
 										: t("imageDialog.insert")
 								: picking
 									? t("imageDialog.pick")
 									: t("imageDialog.insert")
 						}
-						cancelLabel={t("imageDialog.cancel")}
+						cancelLabel={tc("cancel")}
 					/>
 				</form>
 			</DialogContent>

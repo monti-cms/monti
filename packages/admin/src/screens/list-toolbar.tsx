@@ -3,6 +3,7 @@
 import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
+import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
@@ -53,11 +54,12 @@ function describe(site: Site, filter: ColumnFilter, state: ListState, options: T
  */
 export function filterChips(site: Site, state: ListState, options: TaxonomyOptions): FilterChip[] {
 	const t = site.createTranslator(screensMessages);
+	const tc = site.createTranslator(commonMessages);
 	const chips: FilterChip[] = [];
 	if (state.search.trim()) {
 		chips.push({
 			key: "search",
-			label: `${state.includeBody ? t("toolbar.chipBodySearch") : t("toolbar.chipSearch")}: "${state.search.trim()}"`,
+			label: `${state.includeBody ? t("toolbar.chipBodySearch") : tc("search")}: "${state.search.trim()}"`,
 			clear: { search: "", includeBody: false },
 		});
 	}

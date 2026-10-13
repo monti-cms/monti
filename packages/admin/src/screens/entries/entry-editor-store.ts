@@ -5,6 +5,7 @@ import type { EntryEditorClient, EntryStatusAction } from "../../api/entries";
 import type { CmsIssue } from "../../api/error-message";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
 import { createStateStore, type StateStore } from "../../hooks/store";
+import { commonMessages } from "../../lib/common.messages";
 import type { TranslatorFor } from "../../translator";
 import { nounVars } from "../shared/noun.messages";
 import type { RecoveryRecord, RecoveryStore } from "./entry-editor-client";
@@ -359,6 +360,7 @@ const statusFailed = (t: TranslatorFor<typeof entriesMessages>): Record<EntrySta
 export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 	const { site, adminId, target, client, recoveryStore } = config;
 	const t = site.createTranslator(entriesMessages);
+	const tc = site.createTranslator(commonMessages);
 	const callbacks = () => config.callbacks();
 
 	const initialCollection = target.mode === "new" ? target.collection : "";
@@ -633,7 +635,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 				return { ok: true, value: { entry: merged, changed: true } };
 			} catch (caught) {
 				if (caught instanceof CmsApiError) {
-					const error = toEditorError(caught, t("saveFailed"));
+					const error = toEditorError(caught, tc("saveFailed"));
 					if (caught.status === 401) {
 						commit({ saveError: error, saveStatus: "session-expired" });
 						return failed(error);
@@ -682,7 +684,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 		}
 		const entry = state().entry;
 		if (m.entryId && m.changeSeq <= m.ackSeq && entry) return { ok: true, value: { entry, changed } };
-		return failed(state().saveError ?? { code: "failed", message: t("saveFailed"), retryable: true });
+		return failed(state().saveError ?? { code: "failed", message: tc("saveFailed"), retryable: true });
 	};
 
 	const retry = async (): Promise<EditorResult<EntrySaveOutcome>> => {
@@ -824,7 +826,7 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			);
 			return { ok: true, value: undefined };
 		} catch (caught) {
-			return failed(failureOf(site, caught, t("deleteFailed")));
+			return failed(failureOf(site, caught, tc("deleteFailed")));
 		}
 	};
 

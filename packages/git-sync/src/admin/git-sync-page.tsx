@@ -10,6 +10,7 @@ import {
 	Badge,
 	Button,
 	choiceReady,
+	commonMessages,
 	EmptyState,
 	Field,
 	FieldLabel,
@@ -422,6 +423,7 @@ const keyState = (key: SlotKeyView | null) => (!key ? "unset" : key.readable ? "
 
 function SettingsTab({ status }: { status: StatusView | undefined }) {
 	const t = useTranslator(gitSyncMessages);
+	const tc = useTranslator(commonMessages);
 	// What the token field shows until it is changed: the key the token uses now, or an empty new key.
 	const [picked, setPicked] = useState<ApiKeyChoice | null>(null);
 	// The webhook secret as typed or generated. It is shown only here, before it is saved: afterwards the store keeps it encrypted.
@@ -431,9 +433,9 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 	// Both secrets are keys of the API key store assigned to the plugin's slots. A token is followed by the server (the slot's `onChange`), so what waited for one goes out.
 	const assign = useCmsMutation({
 		fn: (values: { slot: "token" | "webhook-secret"; key: ApiKeyChoice }, { site }) =>
-			assignGitSyncKey(site, values, t("settings.save.failed")),
-		success: t("settings.saved"),
-		failure: t("settings.save.failed"),
+			assignGitSyncKey(site, values, tc("saveFailed")),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
 		// A key may have been added to the store, and the key's uses changed.
 		invalidate: [apiKeysKeys.all, gitSyncKeys.all],
 		onSuccess: (_result, values) => {
@@ -479,7 +481,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						size="sm"
 						disabled={!keys.secretsAvailable || !tokenChanged || !choiceReady(choice) || assign.isPending}
 					>
-						{t("settings.save")}
+						{tc("save")}
 					</Button>
 					{tokenKey && (
 						<Button
@@ -549,7 +551,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 						onClick={() =>
 							void navigator.clipboard.writeText(secret).then(
 								() => toast.success(t("settings.copied")),
-								() => toast.error(t("settings.copy.failed")),
+								() => toast.error(tc("copyFailed")),
 							)
 						}
 					>
@@ -558,7 +560,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				</div>
 				<div className="flex gap-2">
 					<Button type="submit" size="sm" disabled={!keys.secretsAvailable || !secret.trim() || assign.isPending}>
-						{t("settings.save")}
+						{tc("save")}
 					</Button>
 					{secretKey && (
 						<Button

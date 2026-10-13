@@ -4,6 +4,7 @@ import type { Folder } from "@monti-cms/core/runtime";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { renderInRouter } from "../../test/router";
 import { SidebarProvider } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
@@ -13,6 +14,7 @@ import { withSite } from "./site-wrapper";
 afterEach(cleanup);
 
 const t = testSite.createTranslator(screensMessages);
+const tc = testSite.createTranslator(commonMessages);
 const site = createSite({
 	...testConfig,
 	plugins: [
@@ -163,7 +165,7 @@ describe("folder tree under a collection", () => {
 			.getAllByRole("button")
 			.map((button) => button.textContent?.trim())
 			.filter(Boolean);
-		expect(rows).toEqual([t("sidebar.folderAll"), "Dev", "Next.js", "Essays", t("list.folderAdd")]);
+		expect(rows).toEqual([t("sidebar.folderAll"), "Dev", "Next.js", "Essays", tc("addFolder")]);
 		// Under the collection entry, before the next collection.
 		const content = menu(t("sidebar.content"));
 		const order = [...content.querySelectorAll("a, ul[aria-label]")].map((node) => node.textContent?.trim() ?? "");
@@ -187,7 +189,7 @@ describe("folder tree under a collection", () => {
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("a");
 		fireEvent.click(within(tree()).getByRole("button", { name: t("sidebar.folderAll") }));
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("all");
-		fireEvent.click(within(tree()).getByRole("button", { name: t("list.folderAdd") }));
+		fireEvent.click(within(tree()).getByRole("button", { name: tc("addFolder") }));
 		expect(nav.folderActions.requestCreate).toHaveBeenCalledWith(null);
 	});
 
@@ -222,7 +224,7 @@ describe("folder tree under a collection", () => {
 			within(tree())
 				.getAllByRole("button")
 				.map((button) => button.textContent?.trim()),
-		).toEqual([t("list.folderAdd")]);
+		).toEqual([tc("addFolder")]);
 		expect(screen.getByRole("link", { name }).querySelector("svg[class*=chevron]")).toBeNull();
 	});
 });

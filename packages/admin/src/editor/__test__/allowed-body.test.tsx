@@ -4,6 +4,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { docOf } from "../../test/mdx";
 import { renderWithSite } from "../../test/site";
 import { editorAllowance } from "../allowed";
@@ -16,6 +17,7 @@ import { CmsEditor } from "../tiptap-editor";
  * A body that limits its blocks and marks: what the editor offers and accepts, and that a body written before the list changed opens and saves as it is.
  */
 const t = testSite.createTranslator(editorMessages);
+const tc = testSite.createTranslator(commonMessages);
 
 beforeAll(() => {
 	// jsdom has no clipboard events; ProseMirror makes one to paste HTML.
@@ -98,7 +100,7 @@ describe("what the toolbar offers", () => {
 		}
 		expect(names).toContain(t("toolbar.align"));
 		expect(names).toContain(t("toolbar.script"));
-		expect(names).toContain(t("toolbar.upload"));
+		expect(names).toContain(tc("upload"));
 		expect(names).toContain(t("inlineMarks.italic"));
 	});
 
@@ -121,7 +123,7 @@ describe("what the toolbar offers", () => {
 		expect(names).toContain(t("inlineMarks.bold"));
 		expect(names).toContain(t("toolbar.link"));
 		// Images are allowed, so uploads stay.
-		expect(names).toContain(t("toolbar.upload"));
+		expect(names).toContain(tc("upload"));
 		// The component menu lists only the block the list keeps.
 		fireEvent.click(within(toolbar).getByRole("button", { name: t("customBlockMenu.label") }));
 		const items = (await screen.findAllByRole("menuitem")).map((item) => item.textContent ?? "");

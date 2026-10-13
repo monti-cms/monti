@@ -31,6 +31,24 @@ function walk(dir: string, out: string[] = []): string[] {
 
 const isTest = (file: string) => /(^|\/)(__test__|test)\//.test(file) || /\.test\.tsx?$/.test(file);
 
+/** `text` without the argument lists of its `defineMessages(...)` calls. */
+function withoutDefinitions(text: string): string {
+	let result = text;
+	for (let from = result.indexOf("defineMessages("); from !== -1; from = result.indexOf("defineMessages(")) {
+		let depth = 0;
+		let end = from + "defineMessages".length;
+		for (; end < result.length; end++) {
+			const char = result[end] as string;
+			if (char === '"' || char === "'" || char === "`") {
+				for (end++; end < result.length && result[end] !== char; end++) if (result[end] === "\\") end++;
+			} else if (char === "(") depth++;
+			else if (char === ")" && --depth === 0) break;
+		}
+		result = result.slice(0, from) + result.slice(end + 1);
+	}
+	return result;
+}
+
 export interface MessagesAudit {
 	/** Dictionary files that do not follow the naming convention. */
 	readonly misnamed: string[];
@@ -48,8 +66,12 @@ export async function auditMessages(srcDir: string): Promise<MessagesAudit> {
 
 	const literals = new Set<string>();
 	const templates: { prefix: string; suffix: string }[] = [];
-	for (const { text } of sources) {
-		for (const match of text.matchAll(/(["'])((?:\\.|(?!\1)[^\\\n])*)\1/g)) literals.add(match[2] as string);
+	for (const { text: whole } of sources) {
+		// The dictionary itself is not a usage: a key's own `"key": "text"` line would make every key look referenced. Code beside it (a hook that builds keys) is.
+		const text = withoutDefinitions(whole);
+		// Each kind of quote is read on its own, so an apostrophe or a quote inside a template expression cannot swallow the literals around it.
+		for (const match of text.matchAll(/"((?:\\.|[^"\\\n])*)"/g)) literals.add(match[1] as string);
+		for (const match of text.matchAll(/'((?:\\.|[^'\\\n])*)'/g)) literals.add(match[1] as string);
 		for (const match of text.matchAll(/`([^`]*\$\{[^`]*)`/g)) {
 			const parts = (match[1] as string).split(/\$\{[^}]*\}/);
 			const prefix = parts[0] ?? "";

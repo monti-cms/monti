@@ -1,5 +1,5 @@
 import { useTranslator } from "@monti-cms/core/client";
-import { commonMessages } from "../lib/common-messages";
+import { commonMessages } from "../lib/common.messages";
 import { Button } from "./button";
 import { DialogFooter } from "./dialog";
 

@@ -6,6 +6,7 @@ import {
 	ApiKeyField,
 	Button,
 	choiceReady,
+	commonMessages,
 	DETAIL_PANE_FRAME,
 	EditorFooter,
 	EmptyState,
@@ -200,6 +201,7 @@ function ProviderEditor({
 }) {
 	const site = useSite();
 	const t = useTranslator(connectionMessages);
+	const tc = useTranslator(commonMessages);
 	const { providerKindLabel } = useLabels();
 	const [error, setError] = useState<string | null>(null);
 	const [check, setCheck] = useState<AiCheckResult | null>(null);
@@ -230,30 +232,30 @@ function ProviderEditor({
 		fn: (_: undefined, { site }) => {
 			const json = { expectedVersion: version, provider: payload(draft) };
 			return provider
-				? updateAiProvider(site, provider.id, json, t("error.save"))
-				: createAiProvider(site, json, t("error.save"));
+				? updateAiProvider(site, provider.id, json, tc("saveFailed"))
+				: createAiProvider(site, json, tc("saveFailed"));
 		},
-		success: t("toast.saved"),
-		failure: t("error.save"),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
 		inline: true,
 		onSuccess: (saved) => {
 			// A new connection is appended to the end of the list.
 			onSaved(saved, provider?.id ?? saved.providers.at(-1)?.id ?? "");
 		},
 		onError: (saveError) => {
-			setError(errorText(site, saveError, t("error.save")));
+			setError(errorText(site, saveError, tc("saveFailed")));
 			onConflict();
 		},
 	});
 
 	const deleteMutation = useCmsMutation({
-		fn: (target: AiProviderView, { site }) => deleteAiProvider(site, target.id, version, t("error.delete")),
-		success: t("toast.deleted"),
-		failure: t("error.delete"),
+		fn: (target: AiProviderView, { site }) => deleteAiProvider(site, target.id, version, tc("deleteFailed")),
+		success: tc("deleted"),
+		failure: tc("deleteFailed"),
 		inline: true,
 		onSuccess: (saved) => onDeleted(saved),
 		onError: (deleteError) => {
-			setError(errorText(site, deleteError, t("error.delete")));
+			setError(errorText(site, deleteError, tc("deleteFailed")));
 			onConflict();
 		},
 	});
@@ -281,7 +283,7 @@ function ProviderEditor({
 		const ok = await confirm({
 			title: t("confirm.title"),
 			description: t("confirm.description", { name: provider.name }),
-			confirmLabel: t("action.delete"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (!ok) return;

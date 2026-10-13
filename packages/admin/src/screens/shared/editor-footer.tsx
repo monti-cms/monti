@@ -1,6 +1,6 @@
 import { useTranslator } from "@monti-cms/core/client";
 import type { ReactNode } from "react";
-import { commonMessages } from "../../lib/common-messages";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
 import { FieldError } from "../../ui/field";

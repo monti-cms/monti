@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/client";
 
-/** Guidance text for API errors and publish-check issues. Keys are the codes the server sends. */
+/** Guidance text for API errors and publish-check issues. `issue.*` and `error.*` keys are the codes the server sends. */
 export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 	en: {
 		"issue.null_slug": "Enter an address (slug).",
@@ -65,6 +65,9 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		validationFailed: "Publish check failed",
 		validationFailedList: "Publish check failed:",
 		position: "line {line}, column {column}",
+		fallback: "Couldn't complete the request.",
+		previewNoWrite: "This is a preview: nothing is saved.",
+		network: "Check your network connection.",
 	},
 	ko: {
 		"issue.null_slug": "주소(slug)를 입력하세요.",
@@ -126,5 +129,8 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 		validationFailed: "발행 검증 실패",
 		validationFailedList: "발행 검증 실패:",
 		position: "{line}행 {column}열",
+		fallback: "요청을 처리하지 못했습니다.",
+		previewNoWrite: "미리보기라서 저장되지 않아요.",
+		network: "네트워크 연결을 확인하세요.",
 	},
 });

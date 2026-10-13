@@ -4,7 +4,7 @@
  */
 
 export { apiKeysKeys, useApiKeys } from "./api/api-keys";
-export { commonMessages } from "./lib/common-messages";
+export { commonMessages } from "./lib/common.messages";
 export { enumCodec, stringCodec, usePreference } from "./lib/hooks/use-preference";
 export { useSaveShortcut } from "./lib/hooks/use-save-shortcut";
 export { isComposingKey } from "./lib/keyboard";

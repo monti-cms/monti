@@ -3,6 +3,7 @@
 import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { Button } from "../../ui/button";
 import { Panel } from "../../ui/card";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
@@ -13,6 +14,7 @@ import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { Pick, useSchemaEdit } from "./controls";
+import { schemaLocalesMessages } from "./locales.messages";
 import { schemaMessages } from "./messages";
 import { collectionsOf, type Locale, localesOf, moveItem, type Obj, sectionOf, setProp } from "./schema-model";
 
@@ -49,7 +51,7 @@ function TimeZonePick({
 	value: string | undefined;
 	onChange: (value: string | undefined) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaLocalesMessages);
 	const { disabled } = useSchemaEdit();
 	const id = useId();
 	const zones = useMemo(() => zonesWith(value), [value]);
@@ -99,7 +101,8 @@ function LocaleDialog({
 	onSave: (locale: Locale) => void;
 	onClose: () => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaLocalesMessages);
+	const tc = useTranslator(commonMessages);
 	const [code, setCode] = useState(locale?.code ?? "");
 	const [name, setName] = useState(locale?.name ?? "");
 	const [label, setLabel] = useState(locale?.label ?? "");
@@ -145,8 +148,8 @@ function LocaleDialog({
 					</Labeled>
 					<DialogFormFooter
 						onCancel={onClose}
-						cancelLabel={t("locales.cancel")}
-						submitLabel={locale ? t("locales.save") : t("locales.add")}
+						cancelLabel={tc("cancel")}
+						submitLabel={locale ? tc("save") : t("locales.add")}
 						disabled={!ok}
 					/>
 				</form>
@@ -176,7 +179,8 @@ export function LocalesEditor({
 	savedCodes?: readonly string[];
 	update: (change: (file: Obj) => Obj) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaLocalesMessages);
+	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	const locales = localesOf(file);
 	const [dialog, setDialog] = useState<{ code: string | null } | null>(null);
@@ -196,14 +200,14 @@ export function LocalesEditor({
 		},
 		{
 			kind: "item",
-			label: t("row.up", { name: locale.code }),
+			label: ts("row.up", { name: locale.code }),
 			icon: ArrowUp,
 			disabled: disabled || index === 0,
 			onSelect: () => change(moveItem(locales, index, -1)),
 		},
 		{
 			kind: "item",
-			label: t("row.down", { name: locale.code }),
+			label: ts("row.down", { name: locale.code }),
 			icon: ArrowDown,
 			disabled: disabled || index === locales.length - 1,
 			onSelect: () => change(moveItem(locales, index, 1)),
@@ -211,7 +215,7 @@ export function LocalesEditor({
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: t("row.remove", { name: locale.code }),
+			label: ts("row.remove", { name: locale.code }),
 			icon: Trash2,
 			destructive: true,
 			disabled,

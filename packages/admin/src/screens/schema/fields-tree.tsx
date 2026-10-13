@@ -35,6 +35,7 @@ import { useIssuesUnder, useSchemaEdit } from "./controls";
 import type { CollectionEditing } from "./field-editor";
 import { FieldSheet } from "./field-sheet";
 import { branchFields, type KindTone, summarizeField } from "./field-summary";
+import { schemaFieldsMessages } from "./fields.messages";
 import {
 	addGroup,
 	addTab,
@@ -214,7 +215,8 @@ function Row({
 	count: number;
 	top?: TopRow;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
+	const ts = useTranslator(schemaMessages);
 	const { disabled, file } = useSchemaEdit();
 	const { editing } = ctx;
 	const summary = summarizeField(t, name, field, editing.collection, file, !place.branch);
@@ -242,13 +244,13 @@ function Row({
 	const [moving, setMoving] = useState(false);
 	const buttons: RowButton[] = [
 		{
-			label: t("row.up", { name }),
+			label: ts("row.up", { name }),
 			icon: ArrowUp,
 			disabled: disabled || (top ? !top.canUp || locked !== null : index === 0),
 			onClick: () => (top ? top.up() : editing.update((collection) => moveField(collection, place, name, -1))),
 		},
 		{
-			label: t("row.down", { name }),
+			label: ts("row.down", { name }),
 			icon: ArrowDown,
 			disabled: disabled || (top ? !top.canDown || locked !== null : index === count - 1),
 			onClick: () => (top ? top.down() : editing.update((collection) => moveField(collection, place, name, 1))),
@@ -257,7 +259,7 @@ function Row({
 			? [{ label: t("layout.move", { name }), icon: MoveRight, disabled, onClick: () => setMoving(true) }]
 			: []),
 		{
-			label: t("row.remove", { name }),
+			label: ts("row.remove", { name }),
 			icon: Trash2,
 			destructive: true,
 			disabled: disabled || blocked !== null,
@@ -519,7 +521,7 @@ interface LayoutOps {
 
 /** A tab of the panel as a row of the tree: only drawn once the collection has more than the default tab. */
 function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const site = useSite();
 	const tab = ops.tree.tabs[index];
 	const { setNodeRef, transform, transition } = useSortable({ id: tabId(index), disabled: { draggable: true } });
@@ -576,7 +578,7 @@ function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 
 /** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
 function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; block: number }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const group = ops.tree.tabs[tab]?.blocks[block];
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: groupId(tab, block),
@@ -691,7 +693,7 @@ function DropRow({ id, label, testId }: { id: string; label?: string; testId: st
  * same without dragging). Every change writes the tree back as the order of `fields` and `layout` together.
  */
 function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeContext }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const site = useSite();
 	const { disabled } = useSchemaEdit();
 	const placements = placementsOf(site.plugins);
@@ -870,7 +872,7 @@ function useWide(): boolean {
 
 /** The preview on a narrower window: a panel on the right that the writer can widen, with the tree still reachable beside it. */
 function PreviewDrawer({ preview, onClose }: { preview: ReactNode; onClose: () => void }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const resize = usePanelResize({ ...INSPECTOR_PANEL_RESIZE, name: "layout-preview", minWidth: 320 });
 	return (
 		<aside
@@ -908,7 +910,7 @@ function usePreviewOpen(wide: boolean): [boolean, (open: boolean) => void] {
  * conditional field lists its choices as branches with their own fields under them. A row opens the field in a sheet on the right.
  */
 export function FieldsCard({ editing }: { editing: CollectionEditing }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const site = useSite();
 	const { disabled } = useSchemaEdit();
 	const fields = fieldsOf(editing.collection);

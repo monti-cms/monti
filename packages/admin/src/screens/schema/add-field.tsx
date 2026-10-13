@@ -2,12 +2,14 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { Pick, useSchemaEdit } from "./controls";
 import { type CollectionEditing, NewFieldDialog } from "./field-editor";
+import { schemaFieldsMessages } from "./fields.messages";
 import { schemaMessages } from "./messages";
 import {
 	addField,
@@ -36,7 +38,9 @@ export function AddFieldDialog({
 	onClose: () => void;
 	onAdded: (name: string) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
+	const tc = useTranslator(commonMessages);
+	const ts = useTranslator(schemaMessages);
 	const { collectionNames } = useSchemaEdit();
 	const [name, setName] = useState("");
 	const [kind, setKind] = useState<FieldKindName>("text");
@@ -88,7 +92,7 @@ export function AddFieldDialog({
 					<Labeled
 						label={t("field.newName")}
 						hint={
-							name !== "" && problem ? <span className="text-cms-destructive">{t(`name.${problem}`)}</span> : undefined
+							name !== "" && problem ? <span className="text-cms-destructive">{ts(`name.${problem}`)}</span> : undefined
 						}
 					>
 						<Input
@@ -108,8 +112,8 @@ export function AddFieldDialog({
 					/>
 					<DialogFormFooter
 						onCancel={onClose}
-						cancelLabel={t("field.newCancel")}
-						submitLabel={t("field.addConfirm")}
+						cancelLabel={tc("cancel")}
+						submitLabel={tc("add")}
 						disabled={Boolean(problem)}
 					/>
 				</form>

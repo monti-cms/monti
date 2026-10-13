@@ -30,6 +30,7 @@ import { cmsEntryClient } from "../../api/entries";
 import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
+import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { cn } from "../../lib/utils/cn";
@@ -181,15 +182,15 @@ const saveFirstMessage = (t: TranslatorFor<typeof entryEditorShellMessages>, pur
 type Purpose = "publish" | "duplicate" | LifecycleAction;
 
 /** Name of each save status. */
-const saveStatusLabels = (tc: TranslatorFor<typeof entriesMessages>): Record<SaveStatus, string> => ({
-	new: tc("save.new"),
-	saved: tc("save.saved"),
-	dirty: tc("save.dirty"),
-	saving: tc("save.saving"),
-	"local-only": tc("save.local-only"),
-	failed: tc("save.failed"),
-	conflict: tc("save.conflict"),
-	"session-expired": tc("save.session-expired"),
+const saveStatusLabels = (te: TranslatorFor<typeof entriesMessages>): Record<SaveStatus, string> => ({
+	new: te("save.new"),
+	saved: te("save.saved"),
+	dirty: te("save.dirty"),
+	saving: te("save.saving"),
+	"local-only": te("save.local-only"),
+	failed: te("save.failed"),
+	conflict: te("save.conflict"),
+	"session-expired": te("save.session-expired"),
 });
 
 /** Tone of the save status dot. When adding a status, its tone must be chosen here. */
@@ -207,8 +208,8 @@ const SAVE_STATUS_TONE: Record<SaveStatus, StatusTone> = {
 /** Save status in the header. On narrow screens only the dot shows, and the name is announced to screen readers. */
 function SaveStatusIndicator({ status, backupAvailable }: { status: SaveStatus; backupAvailable: boolean }) {
 	const t = useTranslator(entryEditorShellMessages);
-	const tc = useTranslator(entriesMessages);
-	const label = `${saveStatusLabels(tc)[status]}${backupAvailable ? "" : t("backupUnavailable")}`;
+	const te = useTranslator(entriesMessages);
+	const label = `${saveStatusLabels(te)[status]}${backupAvailable ? "" : t("backupUnavailable")}`;
 	return (
 		<output
 			aria-live="polite"
@@ -233,7 +234,8 @@ export function EntryEditorShell({
 }: EntryEditorShellProps) {
 	const site = useSite();
 	const t = useTranslator(entryEditorShellMessages);
-	const tc = useTranslator(entriesMessages);
+	const te = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const propCollection = propCollectionProp ?? site.DEFAULT_COLLECTION;
 	const router = useAdminRouter();
 	const { resolvedTheme, setTheme } = useTheme();
@@ -392,16 +394,16 @@ export function EntryEditorShell({
 		() =>
 			entry?.source ? (
 				<>
-					{tc("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
+					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
 					<Link
 						href={site.adminEntryEditHref(entry.source.id)}
 						className="text-cms-primary underline-offset-2 hover:underline"
 					>
-						{tc("inspector.sourceLink")}
+						{te("inspector.sourceLink")}
 					</Link>
 				</>
 			) : undefined,
-		[entry?.source, site.adminEntryEditHref, site.localeLabel, tc],
+		[entry?.source, site.adminEntryEditHref, site.localeLabel, te],
 	);
 
 	/** Selects the start of a block in the visual editor and scrolls to it. False when the editor does not have that block. */
@@ -480,7 +482,7 @@ export function EntryEditorShell({
 	const handleSaveNow = async () => {
 		if (isReadOnly) return;
 		const saved = await editor.save();
-		if (saved.ok) toast.success(t("saved"));
+		if (saved.ok) toast.success(tc("saved"));
 		// On failure, always show the reason (a conflict opens its own conflict dialog).
 		else if (saved.error.code !== "conflict") toast.error(saved.error.message || tc("saveFailed"));
 	};
@@ -572,9 +574,9 @@ export function EntryEditorShell({
 	const confirmPermanentDelete = async () => {
 		if (!entry) return;
 		const ok = await confirm({
-			title: t("permanentDelete"),
+			title: tc("lifecycle.deletePermanently"),
 			description: t("permanentDeleteAsk", nounVars(site, collection)),
-			confirmLabel: t("permanentDelete"),
+			confirmLabel: tc("lifecycle.deletePermanently"),
 			destructive: true,
 		});
 		if (!ok) return;
@@ -670,8 +672,8 @@ export function EntryEditorShell({
 	);
 	const sourcePaneToggle = translationSource && (
 		<ToolbarToggle
-			label={tc("source")}
-			text={tc("source")}
+			label={te("source")}
+			text={te("source")}
 			icon={PanelLeft}
 			pressed={isSourcePaneOpen}
 			onPressedChange={toggleSourcePane}
@@ -744,7 +746,7 @@ export function EntryEditorShell({
 								className="text-cms-muted-foreground"
 								onClick={() => void editor.retry()}
 							>
-								{tc("retry")}
+								{te("retry")}
 							</Button>
 						)}
 						{saveStatus === "session-expired" && (
@@ -759,7 +761,7 @@ export function EntryEditorShell({
 						)}
 
 						<ToolbarAction
-							label={t("save")}
+							label={tc("save")}
 							icon={Save}
 							disabled={isReadOnly || isSubmitting || saveStatus === "saving"}
 							onClick={() => void handleSaveNow()}
@@ -802,7 +804,7 @@ export function EntryEditorShell({
 								disabled={isSubmitting}
 								onClick={() => void handlePublish()}
 							>
-								{isPublishing ? t("publishing") : t("publish")}
+								{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 							</Button>
 						) : (
 							// For an already published post, publish and "republish with today's date" are combined into one button.
@@ -816,7 +818,7 @@ export function EntryEditorShell({
 									disabled={isSubmitting}
 									onClick={() => void handlePublish()}
 								>
-									{isPublishing ? t("publishing") : t("publish")}
+									{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 								</Button>
 								<span aria-hidden className="h-4 w-px bg-cms-primary-foreground/30" />
 								<DropdownMenu>
@@ -869,7 +871,7 @@ export function EntryEditorShell({
 										{!isTranslationEntry(entry) && (
 											<DropdownMenuItem onClick={() => void handleDuplicate()}>
 												<Copy aria-hidden />
-												{t("duplicate")}
+												{tc("lifecycle.duplicate")}
 											</DropdownMenuItem>
 										)}
 										{(entry.status === "draft" || entry.status === "published") && (
@@ -886,7 +888,7 @@ export function EntryEditorShell({
 										{isTrashed ? (
 											<DropdownMenuItem variant="destructive" onClick={confirmPermanentDelete}>
 												<Trash aria-hidden />
-												{t("permanentDelete")}
+												{tc("lifecycle.deletePermanently")}
 											</DropdownMenuItem>
 										) : (
 											<DropdownMenuItem variant="destructive" onClick={() => confirmLifecycle("trash")}>

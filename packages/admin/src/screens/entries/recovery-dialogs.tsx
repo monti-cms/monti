@@ -5,6 +5,7 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
+import { commonMessages } from "../../lib/common.messages";
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -72,6 +73,7 @@ export function ConflictDialog({
 }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
 	// This replaces the latest server copy wholesale, so ask once more.
 	const overwrite = async () => {
@@ -114,7 +116,7 @@ export function ConflictDialog({
 				)}
 				<DialogFooter>
 					<Button type="button" variant="outline" onClick={onClose}>
-						{t("close")}
+						{tc("close")}
 					</Button>
 					<Button type="button" variant="outline" onClick={onReload}>
 						{t("conflict.reload")}
@@ -143,6 +145,7 @@ function ComparePanes({
 }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	// The body is shown as text in the notation of the source panel; without one, as the document itself.
 	const format = useSourceFormat();
 	const bodyText = (doc: StoredDocument) => (format ? format.export(doc) : JSON.stringify(doc, null, 2));
@@ -151,7 +154,7 @@ function ComparePanes({
 			await navigator.clipboard.writeText(body);
 			toast.success(t("conflict.copied"));
 		} catch {
-			toast.error(t("conflict.copyFailed"));
+			toast.error(tc("copyFailed"));
 		}
 	};
 	const pane = (label: string, value: EntryForm) => {
@@ -161,7 +164,7 @@ function ComparePanes({
 				<p className="font-semibold text-sm">{label}</p>
 				<p className="text-xs">
 					{t("conflict.summary", {
-						title: formTitle(site, collection, value) || t("untitled"),
+						title: formTitle(site, collection, value) || tc("untitled"),
 						slug: value.slug || t("conflict.noSlug"),
 					})}
 				</p>

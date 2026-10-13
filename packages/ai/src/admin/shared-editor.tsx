@@ -3,6 +3,7 @@
 import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
+	commonMessages,
 	DETAIL_PANE_FRAME,
 	EditorFooter,
 	EmptyState,
@@ -186,6 +187,7 @@ function SharedEditor({
 }) {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
+	const tc = useTranslator(commonMessages);
 	const [error, setError] = useState<string | null>(null);
 	const { confirm, dialog } = useConfirm();
 	const ids = { label: useId(), key: useId(), keyTitle: useId(), text: useId() };
@@ -212,32 +214,32 @@ function SharedEditor({
 							text: draft.text,
 							...(fromConfig ? {} : { label: draft.label.trim() }),
 						},
-						t("error.save"),
+						tc("saveFailed"),
 					)
 				: createAiShared(
 						site,
 						{ expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
-						t("error.save"),
+						tc("saveFailed"),
 					);
 		},
-		success: t("toast.saved"),
-		failure: t("error.save"),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
 		inline: true,
 		onSuccess: (saved) => onSaved(saved, item?.key ?? draft.key.trim()),
 		onError: (saveError) => {
-			setError(errorText(site, saveError, t("error.save")));
+			setError(errorText(site, saveError, tc("saveFailed")));
 			onConflict();
 		},
 	});
 
 	const deleteMutation = useCmsMutation({
-		fn: (target: AiSharedItem, { site }) => deleteAiShared(site, target.key, version, t("error.delete")),
-		success: t("toast.deleted"),
-		failure: t("error.delete"),
+		fn: (target: AiSharedItem, { site }) => deleteAiShared(site, target.key, version, tc("deleteFailed")),
+		success: tc("deleted"),
+		failure: tc("deleteFailed"),
 		inline: true,
 		onSuccess: (saved) => onDeleted(saved),
 		onError: (deleteError) => {
-			setError(errorText(site, deleteError, t("error.delete")));
+			setError(errorText(site, deleteError, tc("deleteFailed")));
 			onConflict();
 		},
 	});
@@ -254,7 +256,7 @@ function SharedEditor({
 		const ok = await confirm({
 			title: t("confirm.title"),
 			description: t("confirm.description", { name: item.label }),
-			confirmLabel: t("action.delete"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (!ok) return;

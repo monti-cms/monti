@@ -3,6 +3,7 @@
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -30,6 +31,7 @@ function TextFilter({
 	onApply: (value: string) => void;
 }) {
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const [draft, setDraft] = useState(value);
 	useEffect(() => setDraft(value), [value]);
 	return (
@@ -48,7 +50,7 @@ function TextFilter({
 				className="h-8"
 			/>
 			<Button type="submit" size="sm">
-				{t("filter.apply")}
+				{tc("apply")}
 			</Button>
 		</form>
 	);

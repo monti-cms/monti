@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 import { errorText } from "../../api/client";
 import { createFolder, deleteFolder, foldersKeys, getFolderContents, updateFolder } from "../../api/folders";
 import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -50,19 +51,20 @@ export function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[] {
  */
 export function folderMenuActions(site: Site, folder: Folder, folders: Folder[], actions: FolderActions): MenuAction[] {
 	const t = site.createTranslator(sharedMessages);
+	const tc = site.createTranslator(commonMessages);
 	const targets = moveTargetsFor(folder, folders);
 	return [
-		{ kind: "item", label: t("folder.addChild"), icon: FolderPlus, onSelect: () => actions.requestCreate(folder.id) },
+		{ kind: "item", label: tc("addSubfolder"), icon: FolderPlus, onSelect: () => actions.requestCreate(folder.id) },
 		{
 			kind: "item",
-			label: t("folder.rename"),
+			label: tc("rename"),
 			icon: Pencil,
 			shortcut: "F2",
 			onSelect: () => actions.requestRename(folder),
 		},
 		{
 			kind: "sub",
-			label: t("folder.move"),
+			label: tc("move"),
 			icon: FolderInput,
 			emptyLabel: t("folder.moveEmpty"),
 			items: [
@@ -87,7 +89,7 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: t("common.delete"),
+			label: tc("delete"),
 			icon: Trash2,
 			shortcut: "Del",
 			destructive: true,
@@ -111,6 +113,7 @@ export function useFolderActions({
 }) {
 	const site = useSite();
 	const t = useTranslator(sharedMessages);
+	const tc = useTranslator(commonMessages);
 	const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
 	const [name, setName] = useState("");
 	const [deleteDialog, setDeleteDialog] = useState<{ folder: Folder } | null>(null);
@@ -192,8 +195,7 @@ export function useFolderActions({
 						t("folder.renameFailed"),
 					);
 		},
-		success: (_result, dialog) =>
-			dialog.mode === "create" ? t("folder.added", { name: name.trim() }) : t("folder.saved"),
+		success: (_result, dialog) => (dialog.mode === "create" ? t("folder.added", { name: name.trim() }) : tc("saved")),
 		failure: t("folder.saveFailed"),
 		inline: true,
 		onSuccess: () => {
@@ -244,8 +246,8 @@ export function useFolderActions({
 							{nameDialog?.mode === "rename"
 								? t("folder.renameTitle")
 								: nameDialog?.parentId
-									? t("folder.addChild")
-									: t("folder.add")}
+									? tc("addSubfolder")
+									: tc("addFolder")}
 						</DialogTitle>
 						<DialogDescription>
 							{nameDialog?.mode === "create"
@@ -282,9 +284,9 @@ export function useFolderActions({
 						</Field>
 						<DialogFormFooter
 							onCancel={() => setNameDialog(null)}
-							cancelLabel={t("common.cancel")}
-							submitLabel={t("common.save")}
-							busyLabel={t("common.saving")}
+							cancelLabel={tc("cancel")}
+							submitLabel={tc("save")}
+							busyLabel={tc("saving")}
 							busy={isBusy}
 							disabled={!name.trim()}
 						/>
@@ -317,14 +319,14 @@ export function useFolderActions({
 					)}
 					{shownError && <FieldError>{shownError}</FieldError>}
 					<AlertDialogFooter>
-						<AlertDialogCancel type="button">{t("common.cancel")}</AlertDialogCancel>
+						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
 						<Button
 							type="button"
 							variant="destructive"
 							disabled={!contents || isBusy}
 							onClick={() => void confirmDelete()}
 						>
-							{isBusy ? t("common.deleting") : t("common.delete")}
+							{isBusy ? tc("deleting") : tc("delete")}
 						</Button>
 					</AlertDialogFooter>
 				</AlertDialogContent>

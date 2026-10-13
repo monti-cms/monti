@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/client";
-import { screensMessages } from "../screens/messages";
 import { isSandboxSite, isWrite } from "../screens/shared/preview-sandbox";
 import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./error-message";
+import { apiErrorMessages } from "./error-message.messages";
 
 /** Admin API error. The screen shows `message` as is and branches on `status` and `code`. */
 export class CmsApiError extends Error {
@@ -27,10 +27,10 @@ export async function cmsFetch<T = unknown>(
 	url: string,
 	init: Omit<RequestInit, "body"> & { json?: unknown; fallback?: string } = {},
 ): Promise<T> {
-	const { json, fallback = site.createTranslator(screensMessages)("api.fallback"), headers, ...rest } = init;
+	const { json, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
 	// A preview runs on a draft site and must not write.
 	if (isSandboxSite(site) && isWrite(rest.method)) {
-		throw new CmsApiError(0, "preview", site.createTranslator(screensMessages)("api.previewNoWrite"), [], {});
+		throw new CmsApiError(0, "preview", site.createTranslator(apiErrorMessages)("previewNoWrite"), [], {});
 	}
 	const response = await fetch(url, {
 		...rest,
@@ -65,5 +65,5 @@ export const errorText = (site: Pick<Site, "createTranslator">, error: unknown, 
 	error instanceof CmsApiError
 		? error.message || fallback
 		: error instanceof TypeError
-			? site.createTranslator(screensMessages)("api.network")
+			? site.createTranslator(apiErrorMessages)("network")
 			: fallback;

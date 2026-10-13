@@ -1,5 +1,5 @@
 import type { TranslatorFor } from "../../translator";
-import type { schemaMessages } from "./messages";
+import type { schemaFieldsMessages } from "./fields.messages";
 import { isObj, type Obj, optionsOf, titleFieldName } from "./schema-model";
 
 /** How a kind is drawn in the schema tree: the token and the colour family it takes. */
@@ -27,7 +27,7 @@ function collectionLabel(file: Obj, name: string): string {
 
 /** One line for a field of a collection: its kind token, whether it is required, and its settings in a few words. */
 export function summarizeField(
-	t: TranslatorFor<typeof schemaMessages>,
+	t: TranslatorFor<typeof schemaFieldsMessages>,
 	name: string,
 	field: Obj,
 	collection: Obj,

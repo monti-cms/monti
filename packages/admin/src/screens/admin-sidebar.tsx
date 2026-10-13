@@ -15,6 +15,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { Fragment, type KeyboardEvent, useEffect, useState } from "react";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { buttonVariants } from "../ui/button";
@@ -105,6 +106,7 @@ const subRow =
 function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: () => void }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const [dropTarget, setDropTarget] = useState<string | null>(null);
 	const { folders, currentFolder } = nav;
@@ -207,7 +209,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	const blankActions: MenuAction[] = [
 		{
 			kind: "item",
-			label: t("list.folderAdd"),
+			label: tc("addFolder"),
 			icon: Plus,
 			onSelect: () => nav.folderActions.requestCreate(null),
 		},
@@ -245,7 +247,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 					className={cn(subRow, "w-full text-left text-cms-sidebar-foreground/50")}
 				>
 					<Plus aria-hidden className="size-3.5" />
-					{t("list.folderAdd")}
+					{tc("addFolder")}
 				</button>
 			</li>
 			{folders.length > 0 && (

@@ -334,8 +334,11 @@ export function StatsPage() {
 자리에는 `SlotRegistryProvider`(`@monti-cms/admin/slots`)로 동작을 붙인다.
 
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
-`cn`, 확인 대화상자(`useConfirm`), 제목 줄 동작(`PageActions`), 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
-(`EntryForm`·`EntryData`)이 들어 있다. 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
+`cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`), 제목 줄 동작(`PageActions`)과 관리자 틀 안의 페이지(`ShellPage`),
+목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`·`DialogFormFooter`), 상태 부품(`StatusIndicator`·`Badge`·
+`Alert`·`LoadErrorAlert`·`FieldError`), `commonMessages`(저장·취소·다시 시도 등), `usePreference`, 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
+(`EntryForm`·`EntryData`)이 들어 있다. 색은 `--cms-success`·`--cms-warning`·`--cms-destructive` 토큰(`-soft`·`-foreground` 포함)에서 오며 원색 클래스는 쓰지 않는다.
+관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
 | 진입점 | 내용 |
 |---|---|
@@ -348,7 +351,7 @@ export function StatsPage() {
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
-| `/api` | 관리자 API 부르기(`cmsFetch`) |
+| `/api` | 관리자 API 부르기(`cmsFetch`·`CmsApiError`·`errorText`·`isConflict`)와 그것으로 쓰기(`useCmsMutation`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
 

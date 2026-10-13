@@ -3,12 +3,15 @@
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
+import { editorMessages } from "../../editor/messages";
+import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Label } from "../../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
 import { COLLECTION_ICON_NAMES } from "../shared/collection-icon";
 import { Section } from "../shared/section";
+import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
 import { FieldsCard } from "./fields-tree";
 import { schemaMessages } from "./messages";
@@ -26,6 +29,30 @@ import {
 
 const HEADINGS = [1, 2, 3, 4, 5, 6] as const;
 
+type EditorKey = Parameters<TranslatorFor<typeof editorMessages>>[0];
+
+/** The editor dictionary key that names each core block and text style in the allowed-blocks picker. */
+const EDITOR_NAME: Partial<Record<string, EditorKey>> = {
+	table: "toolbar.table",
+	taskList: "toolbar.todo",
+	math: "block.math",
+	image: "toolbar.image",
+	file: "toolbar.file",
+	codeBlock: "toolbar.codeBlock",
+	blockquote: "toolbar.quote",
+	horizontalRule: "toolbar.divider",
+	footnotes: "block.footnotes",
+	"text-align": "block.text-align",
+	bold: "inlineMarks.bold",
+	italic: "inlineMarks.italic",
+	strike: "inlineMarks.strike",
+	underline: "inlineMarks.underline",
+	code: "block.code",
+	link: "toolbar.link",
+	superscript: "inlineMarks.superscript",
+	subscript: "inlineMarks.subscript",
+};
+
 /** A list the body may be limited to: off allows everything of its kind; on shows a box per name. */
 function LimitList<T extends string | number>({
 	label,
@@ -40,7 +67,7 @@ function LimitList<T extends string | number>({
 	onChange: (value: T[] | undefined) => void;
 	nameOf?: (item: T) => string;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaCollectionMessages);
 	const { disabled } = useSchemaEdit();
 	const limited = value !== undefined;
 	return (
@@ -83,7 +110,7 @@ function LimitList<T extends string | number>({
 }
 
 function BodyEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaCollectionMessages);
 	return (
 		<Section title={t("collection.bodyTitle")} description={t("collection.bodyDescription")}>
 			<FlagSwitch
@@ -104,14 +131,15 @@ function AllowedEditor({
 	collection: Obj;
 	update: (change: (collection: Obj) => Obj) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaCollectionMessages);
+	const te = useTranslator(editorMessages);
 	const site = useSite();
 	const { vocabulary } = useSchemaEdit();
 	const allowed = allowedOf(collection);
-	// Core names have a label in the dictionary; blocks and text styles a plugin adds use the label of their definition.
+	// Core blocks and text styles are named by the editor's dictionary; ones a plugin adds use the label of their definition.
 	const nameLabel = (id: string): string => {
-		const key = `allowed.name.${id}`;
-		if (key in schemaMessages.messages.en) return t(key as "allowed.name.table");
+		const key = EDITOR_NAME[id];
+		if (key) return te(key);
 		return site.BLOCK_BY_NAME.get(id)?.label ?? id;
 	};
 	const limited = Object.values(allowed).some((list) => Array.isArray(list));
@@ -142,7 +170,7 @@ function AllowedEditor({
 				label={t("allowed.headings")}
 				all={HEADINGS}
 				value={allowed.headings}
-				nameOf={(level) => t("allowed.name.heading", { level })}
+				nameOf={(level) => te("toolbar.heading", { level })}
 				onChange={(value) => setAllowed("headings", value)}
 			/>
 		</Section>
@@ -165,7 +193,8 @@ export function CollectionEditor({
 	onRemove: () => void;
 	onRename: (rename: Rename) => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaCollectionMessages);
+	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	const [chosenTab, setTab] = useState("basics");
 	// The editor tab only exists for a collection with a body.
@@ -181,7 +210,7 @@ export function CollectionEditor({
 	}));
 	const editing = { collectionName: name, collection, update: onChange, onRename };
 	const label = typeof collection.label === "string" ? collection.label : name;
-	const kindLabel = t(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
+	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
 	const path = typeof collection.path === "string" && collection.path !== "" ? collection.path : null;
 	return (
 		<div className="flex min-w-0 flex-col gap-6" data-testid={`collection-${name}`}>
@@ -223,8 +252,8 @@ export function CollectionEditor({
 								hint={collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")}
 								value={String(collection.kind)}
 								items={[
-									{ value: "document", label: t("collection.kindDocument") },
-									{ value: "item", label: t("collection.kindItem") },
+									{ value: "document", label: ts("collection.kindDocument") },
+									{ value: "item", label: ts("collection.kindItem") },
 								]}
 								onChange={(value) => set("kind", value)}
 							/>
@@ -259,7 +288,7 @@ export function CollectionEditor({
 								onClick={onRemove}
 							>
 								<Trash2 aria-hidden />
-								{t("collection.remove")}
+								{ts("collection.remove")}
 							</Button>
 						</div>
 					</Section>

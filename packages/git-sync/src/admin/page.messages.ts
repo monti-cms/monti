@@ -79,11 +79,7 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"settings.hide": "Hide",
 		"settings.copy": "Copy",
 		"settings.copied": "Copied.",
-		"settings.copy.failed": "Couldn't copy.",
-		"settings.save": "Save",
 		"settings.remove": "Remove",
-		"settings.saved": "Saved.",
-		"settings.save.failed": "Couldn't save.",
 	},
 	ko: {
 		title: "Git 동기화",
@@ -160,10 +156,6 @@ export const gitSyncMessages = defineMessages("cms-git-sync.admin", {
 		"settings.hide": "숨기기",
 		"settings.copy": "복사",
 		"settings.copied": "복사했습니다.",
-		"settings.copy.failed": "복사하지 못했습니다.",
-		"settings.save": "저장",
 		"settings.remove": "삭제",
-		"settings.saved": "저장했습니다.",
-		"settings.save.failed": "저장하지 못했습니다.",
 	},
 });

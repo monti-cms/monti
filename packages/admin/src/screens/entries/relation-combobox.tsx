@@ -3,6 +3,7 @@
 import { useTranslator } from "@monti-cms/core/client";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import {
 	Combobox,
@@ -81,6 +82,7 @@ export function RelationCombobox({
 	showChips = true,
 }: RelationComboboxProps) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const anchor = useComboboxAnchor();
 	const [query, setQuery] = useState("");
 	const [isCreating, setIsCreating] = useState(false);
@@ -149,7 +151,7 @@ export function RelationCombobox({
 	const list = (
 		<ComboboxContent anchor={multiple ? anchor : undefined}>
 			<ComboboxEmpty>
-				<EmptyState compact title={loading ? t("loading") : t("relation.empty")} />
+				<EmptyState compact title={loading ? tc("loading") : t("relation.empty")} />
 			</ComboboxEmpty>
 			<ComboboxList>
 				{(item: Item) => (

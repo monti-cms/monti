@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { screensMessages } from "../../screens/messages";
+import { apiErrorMessages } from "../../api/error-message.messages";
 import { markSandboxSite } from "../../screens/shared/preview-sandbox";
 import { editorMessages } from "../messages";
 import { uploadImageFile } from "../upload-helper";
@@ -16,7 +16,7 @@ describe("uploadImageFile", () => {
 		vi.stubGlobal("fetch", fetchMock);
 		const sandbox = markSandboxSite(Object.create(testSite) as typeof testSite);
 		await expect(uploadImageFile(sandbox, file())).rejects.toThrow(
-			testSite.createTranslator(screensMessages)("api.previewNoWrite"),
+			testSite.createTranslator(apiErrorMessages)("previewNoWrite"),
 		);
 		expect(fetchMock).not.toHaveBeenCalled();
 	});

@@ -336,8 +336,11 @@ Edit screen extensions (`editorExtensions`) are hooks that add an element at the
 attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`), the title bar actions (`PageActions`), icon lookup (`useIconByName`), `useDebounced` and the entry form value types
-(`EntryForm`, `EntryData`). Internal admin file paths (`ui/*`, `screens/*`) are not public.
+`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`) and a page in the admin frame (`ShellPage`),
+the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`, `DialogFormFooter`), the status pieces (`StatusIndicator`, `Badge`,
+`Alert`, `LoadErrorAlert`, `FieldError`), `commonMessages` (Save, Cancel, Retry, ...), `usePreference`, icon lookup (`useIconByName`), `useDebounced` and the entry form value types
+(`EntryForm`, `EntryData`). Colors come from the `--cms-success`, `--cms-warning` and `--cms-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
+Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
@@ -350,7 +353,7 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
 | `/media` | Media picker and preview |
-| `/api` | Calling the admin API (`cmsFetch`) |
+| `/api` | Calling the admin API (`cmsFetch`, `CmsApiError`, `errorText`, `isConflict`) and writing with it (`useCmsMutation`) |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |
 

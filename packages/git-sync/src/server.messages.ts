@@ -33,7 +33,6 @@ export const serverMessages = defineMessages("cms-git-sync.server", {
 		gitVersionNoSlug: "The git version has no slug: add `slug` to its front matter",
 		gitVersionNotWritten: "The git version could not be written to the entry: {message}",
 		resolveBody: "`target`, `entryId` and `resolution` (git or server) are required",
-		invalidBody: "The request is not valid",
 	},
 	ko: {
 		pluginMissing:
@@ -63,6 +62,5 @@ export const serverMessages = defineMessages("cms-git-sync.server", {
 		gitVersionNoSlug: "git 버전에 slug가 없습니다. front matter에 `slug`를 추가하세요",
 		gitVersionNotWritten: "git 버전을 글에 쓰지 못했습니다: {message}",
 		resolveBody: "`target`, `entryId`, `resolution`(git 또는 server)이 필요합니다",
-		invalidBody: "요청이 올바르지 않습니다",
 	},
 });

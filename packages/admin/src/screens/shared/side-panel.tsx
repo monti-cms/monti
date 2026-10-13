@@ -3,10 +3,10 @@
 import { useTranslator } from "@monti-cms/core/client";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { type PanelResizeConfig, PanelResizeHandle, usePanelResize } from "../../ui/panel-resize";
-import { sharedMessages } from "./messages";
 
 /** Width classes of the right slot on wide screens: `--panel-width` comes from `usePanelResize` (written literally so Tailwind can read it). */
 export const SIDE_PANEL_WIDTH = "w-[22rem] max-w-full sm:w-[var(--panel-width)]";
@@ -50,12 +50,12 @@ export function SidePanelHeader({
 	/** Content to put instead of (or next to) the title (tabs etc.). */
 	children?: ReactNode;
 }) {
-	const t = useTranslator(sharedMessages);
+	const t = useTranslator(commonMessages);
 	return (
 		<div className={cn("flex h-11 shrink-0 items-center gap-1 border-b pr-2 pl-4", className)}>
 			{title !== undefined && <h2 className="min-w-0 flex-1 truncate font-medium text-sm">{title}</h2>}
 			{children}
-			<IconButton label={t("panel.close")} side="bottom" onClick={onClose}>
+			<IconButton label={t("close")} side="bottom" onClick={onClose}>
 				<X aria-hidden />
 			</IconButton>
 		</div>

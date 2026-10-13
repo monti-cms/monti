@@ -22,6 +22,7 @@ import {
 import { foldersKeys, listFolders } from "../api/folders";
 import { getPreferences, preferencesKeys, savePreferences as putPreferences } from "../api/preferences";
 import { useCmsMutation } from "../api/use-cms-mutation";
+import { commonMessages } from "../lib/common.messages";
 import { useAdminRouter, useAdminSearchParams } from "../router";
 import { describeBulkFailure } from "./entries/bulk-bar";
 import { copyTitle } from "./entries/entry-form";
@@ -160,13 +161,14 @@ function useEntriesData(state: ListState, mode: ListMode, ready: boolean) {
 /** Reports bulk results as notifications. Failures list the item name and reason. */
 function announce(site: Site, label: string, results: BulkItemResult[], items: BulkSelection[]) {
 	const t = site.createTranslator(screensMessages);
+	const tc = site.createTranslator(commonMessages);
 	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
 	const ok = results.length - failures.length;
 	if (failures.length === 0) {
 		toast.success(t("bulk.success", { count: ok, label }));
 		return;
 	}
-	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || t("common.untitled");
+	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
 	toast.error(ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), {
 		description: failures
 			.slice(0, 3)
@@ -192,6 +194,7 @@ function useEntryMutations({
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const queryClient = useQueryClient();
 
 	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
@@ -244,7 +247,7 @@ function useEntryMutations({
 
 	/** Trash restore. */
 	const restore = async (targets: BulkSelection[]) => {
-		announce(site, t("bulk.restore"), await run("restore", targets), targets);
+		announce(site, tc("lifecycle.restore"), await run("restore", targets), targets);
 	};
 
 	return { run, bulk, restore, invalidateEntries };
@@ -268,6 +271,7 @@ function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode
 export function useEntryList(mode: ListMode) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const router = useAdminRouter();
 	const queryClient = useQueryClient();
 	const isTrash = mode === "trash";
@@ -340,50 +344,50 @@ export function useEntryList(mode: ListMode) {
 			{ folderId },
 		);
 
-	const titleOf = (targets: BulkSelection[]) => `'${targets[0]?.title || t("common.untitled")}'`;
+	const titleOf = (targets: BulkSelection[]) => `'${targets[0]?.title || tc("untitled")}'`;
 
 	const confirmTrash = async (targets: BulkSelection[]) => {
 		const ok = await confirm({
-			title: t("bulk.trash"),
+			title: tc("lifecycle.trash"),
 			description:
 				targets.length === 1
 					? t("trash.askOne", { title: titleOf(targets) })
 					: t("trash.askMany", { count: targets.length }),
-			confirmLabel: t("bulk.trash"),
+			confirmLabel: tc("lifecycle.trash"),
 			destructive: true,
 		});
-		if (ok) await bulk("trash", t("bulk.trash"), targets);
+		if (ok) await bulk("trash", tc("lifecycle.trash"), targets);
 	};
 
 	const confirmArchive = async (targets: BulkSelection[]) => {
 		const ok = await confirm({
-			title: t("archive.title"),
+			title: tc("lifecycle.archive"),
 			description:
 				targets.length === 1
 					? t("archive.askOne", { title: titleOf(targets) })
 					: t("archive.askMany", { count: targets.length, ...nounVars(site, collection) }),
-			confirmLabel: t("archive.title"),
+			confirmLabel: tc("lifecycle.archive"),
 		});
-		if (ok) await bulk("archive", t("bulk.archive"), targets);
+		if (ok) await bulk("archive", tc("lifecycle.archive"), targets);
 	};
 
 	const confirmPermanentDelete = async (targets: BulkSelection[]) => {
 		const ok = await confirm({
-			title: t("delete.title"),
+			title: tc("lifecycle.deletePermanently"),
 			description:
 				targets.length === 1
 					? t("delete.askOne", { title: titleOf(targets) })
 					: t("delete.askMany", { count: targets.length }),
-			confirmLabel: t("delete.title"),
+			confirmLabel: tc("lifecycle.deletePermanently"),
 			destructive: true,
 		});
-		if (ok) await bulk("permanentDelete", t("bulk.permanentDelete"), targets);
+		if (ok) await bulk("permanentDelete", tc("lifecycle.deletePermanently"), targets);
 	};
 
 	const duplicateMutation = useCmsMutation<ListEntriesItem, EntryWriteResult>({
 		fn: (item, { site }) =>
 			duplicateEntry(site, item.id, { title: copyTitle(site, item.collection, item.title) }, t("duplicate.failed")),
-		success: (_copy, item) => t("duplicate.done", { title: item.title || t("common.untitled") }),
+		success: (_copy, item) => t("duplicate.done", { title: item.title || tc("untitled") }),
 		failure: t("duplicate.failed"),
 		onSuccess: (copy) => router.navigate(site.adminEntryEditHref(copy.entry.id)),
 	});

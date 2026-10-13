@@ -5,11 +5,11 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { commonMessages } from "../../lib/common.messages";
 import { docOf } from "../../test/mdx";
 import { createTestRouter } from "../../test/router";
 import { AdminClientDashboard } from "../admin-dashboard";
 import { EntryEditorShell } from "../entries/entry-editor-shell";
-import { entryEditorShellMessages } from "../entries/entry-editor-shell.messages";
 import { copyTitle } from "../entries/entry-form";
 import { entriesMessages } from "../entries/messages";
 import { columnLabel, columnsFor, fieldColumnOf } from "../list-columns";
@@ -24,8 +24,8 @@ import { withSite } from "./site-wrapper";
  */
 
 const t = testSite.createTranslator(screensMessages);
+const tc = testSite.createTranslator(commonMessages);
 const tEntries = testSite.createTranslator(entriesMessages);
-const tShell = testSite.createTranslator(entryEditorShellMessages);
 
 const content: Collection = testSite.DEFAULT_COLLECTION;
 const record = testSite.COLLECTIONS.find((name) => testSite.isItemCollection(name)) as Collection;
@@ -181,7 +181,7 @@ describe("any site: list screen", () => {
 		await act(async () => {
 			fireEvent.contextMenu(row);
 		});
-		fireEvent.click(await screen.findByRole("menuitem", { name: t("menu.duplicate") }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: tc("lifecycle.duplicate") }));
 		await waitFor(() => expect(calls("POST", "/api/monti/v1/entries/e1/duplicate")).toHaveLength(1));
 		expect(bodyOf(calls("POST", "/api/monti/v1/entries/e1/duplicate")[0])).toEqual({
 			title: copyTitle(testSite, content, "Alpha"),
@@ -193,7 +193,7 @@ describe("any site: list screen", () => {
 describe("any site: copy title", () => {
 	it("adds the copy suffix and stays within the title field's max", () => {
 		expect(copyTitle(testSite, content, "Alpha")).toBe(`Alpha${tEntries("copy.suffix")}`);
-		expect(copyTitle(testSite, content, "  ")).toBe(`${tEntries("untitled")}${tEntries("copy.suffix")}`);
+		expect(copyTitle(testSite, content, "  ")).toBe(`${tc("untitled")}${tEntries("copy.suffix")}`);
 		const field = testSite.storedField(content, "title")?.field;
 		const max = field?.kind === "text" ? field.max : undefined;
 		const long = copyTitle(testSite, content, "x".repeat(500));
@@ -228,7 +228,7 @@ describe("any site: record panel", () => {
 		fireEvent.change(within(panel).getByRole("textbox", { name: new RegExp(titleLabel(record)) }), {
 			target: { value: "New record" },
 		});
-		fireEvent.click(within(panel).getByRole("button", { name: t("common.save") }));
+		fireEvent.click(within(panel).getByRole("button", { name: tc("save") }));
 		await waitFor(() => expect(calls("POST", "/api/monti/v1/entries")).toHaveLength(1));
 		expect(bodyOf(calls("POST", "/api/monti/v1/entries")[0])).toEqual({
 			collection: record,
@@ -279,7 +279,7 @@ describe("any site: entry editor", () => {
 		}
 
 		fireEvent.change(title, { target: { value: "Changed title" } });
-		fireEvent.click(screen.getByRole("button", { name: tShell("save") }));
+		fireEvent.click(screen.getByRole("button", { name: tc("save") }));
 		await waitFor(() => expect(calls("PATCH", "/api/monti/v1/entries/entry-1")).toHaveLength(1));
 		const body = bodyOf(calls("PATCH", "/api/monti/v1/entries/entry-1")[0]);
 		expect(body.metadata.title).toBe("Changed title");

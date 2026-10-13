@@ -23,6 +23,7 @@ import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { errorText, isConflict } from "../../api/client";
 import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api/entries";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { moveWithin } from "../../lib/utils/move-within";
 import type { TranslatorFor } from "../../translator";
@@ -107,6 +108,7 @@ function SearchError({ failed }: { failed: boolean }) {
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const relation = field as RelationField;
 	const selected = typeof value === "string" && value ? [value] : [];
 	const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected });
@@ -117,7 +119,7 @@ export function EntryPicker({ field, id, value, invalid, describedBy, context, o
 				id={id}
 				aria-label={field.label}
 				placeholder={
-					waiting ? t("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) }))
+					waiting ? tc("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) }))
 				}
 				invalid={invalid}
 				describedBy={describedBy}
@@ -153,11 +155,12 @@ function SortableEntryRow({
 	onRemove: () => void;
 }) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: sortableId,
 		disabled,
 	});
-	const title = option?.title ?? t("loading");
+	const title = option?.title ?? tc("loading");
 	return (
 		<li
 			ref={setNodeRef}
@@ -215,6 +218,7 @@ function SortableEntryRow({
 export function OrderedEntryList({ field, id, value, context, onChange }: FieldInputProps) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const relation = field as RelationField;
 	const ids = Array.isArray(value) ? value : [];
 	const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected: ids });
@@ -254,7 +258,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			<RelationCombobox
 				id={id}
 				aria-label={t("entry.editList", { target })}
-				placeholder={waiting ? t("loading") : (relation.placeholder ?? t("entry.editList", { target }))}
+				placeholder={waiting ? tc("loading") : (relation.placeholder ?? t("entry.editList", { target }))}
 				disabled={context.disabled || waiting}
 				multiple
 				showChips={false}
@@ -362,6 +366,7 @@ export function BacklinkInput({
 }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	// The records come from a server search (published ones, like the old list). A conditional list keeps only the records of one kind, which is
 	// known per record, so it asks for more hits to leave enough after that filter.
 	const conditional = Boolean(site.storedField(field.from as SchemaCollection, field.via)?.when);
@@ -382,12 +387,12 @@ export function BacklinkInput({
 			for (const reference of references) {
 				const viaField = reference.occurrences.some((occurrence) => occurrence.path === field.via);
 				if (reference.state === "working" && reference.sourceCollection === field.from && viaField) {
-					found.set(reference.sourceId, reference.sourceTitle || t("untitled"));
+					found.set(reference.sourceId, reference.sourceTitle || tc("untitled"));
 				}
 			}
 			return [...found].map(([id, title]) => ({ id, title }));
 		},
-		[field.from, field.via, t],
+		[field.from, field.via, tc],
 	);
 
 	const refreshShared = shared?.refresh;
@@ -432,7 +437,7 @@ export function BacklinkInput({
 						slug: record.workingSlug,
 						metadata: { ...record.working.metadata, [field.via]: change(ids) },
 					},
-					t("saveFailed"),
+					tc("saveFailed"),
 				);
 				return;
 			} catch (saveError) {
@@ -520,7 +525,7 @@ export function BacklinkInput({
 			<RelationCombobox
 				multiple
 				aria-label={field.label}
-				placeholder={members === null || records.options === null ? t("loading") : t("relation.searchOrAdd")}
+				placeholder={members === null || records.options === null ? tc("loading") : t("relation.searchOrAdd")}
 				options={options}
 				known={known}
 				onSearch={records.search}
@@ -538,7 +543,7 @@ export function BacklinkInput({
 								});
 								if (!saved) return null;
 								createdRef.current.add(saved.id);
-								records.remember({ ...optionOf(site, t, field.from, saved), status: saved.status });
+								records.remember({ ...optionOf(site, tc("untitled"), field.from, saved), status: saved.status });
 								awaitingServerRef.current = true;
 								void load();
 								return saved.id;

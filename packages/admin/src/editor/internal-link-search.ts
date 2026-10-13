@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/client";
 import { entriesKeys, listEntries } from "../api/entries";
+import { commonMessages } from "../lib/common.messages";
 import type { InternalLinkItem } from "./internal-link";
-import { editorMessages } from "./messages";
 
 type EntryListItem = {
 	id: string;
@@ -20,7 +20,7 @@ export const linkSearchKey = (query: string) => [...entriesKeys.all, "link-searc
  * A failed request is thrown as the admin API error ({@link listEntries}) instead of turning into an empty list.
  */
 export async function searchLinkTargets(site: Site, query: string): Promise<InternalLinkItem[]> {
-	const t = site.createTranslator(editorMessages);
+	const tc = site.createTranslator(commonMessages);
 	const search = async (collection: string) => {
 		const params = new URLSearchParams({ collection, pageSize: "25" });
 		if (query) params.set("search", query);
@@ -31,7 +31,7 @@ export async function searchLinkTargets(site: Site, query: string): Promise<Inte
 		return data.items.map((item) => ({
 			id: item.id,
 			collection: item.collection,
-			title: item.title || t("toolbar.untitled"),
+			title: item.title || tc("untitled"),
 			slug: item.slug ?? "",
 			...(item.locale ? { locale: item.locale } : {}),
 			status: item.status,

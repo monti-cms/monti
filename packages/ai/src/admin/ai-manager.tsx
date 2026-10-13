@@ -5,6 +5,7 @@ import {
 	Button,
 	Checkbox,
 	cn,
+	commonMessages,
 	DETAIL_PANE_FRAME,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -151,6 +152,7 @@ type AiTab = "features" | "connections" | "shared";
 export function AiManager() {
 	const site = useSite();
 	const t = useTranslator(aiManagerMessages);
+	const tc = useTranslator(commonMessages);
 	const { engineLabel } = useLabels();
 	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
@@ -177,9 +179,9 @@ export function AiManager() {
 		);
 
 	const removeMutation = useCmsMutation({
-		fn: (feature: AiActionView, { site }) => deleteAiAction(site, feature.key, feature.version, t("remove.failed")),
-		success: t("remove.done"),
-		failure: t("remove.failed"),
+		fn: (feature: AiActionView, { site }) => deleteAiAction(site, feature.key, feature.version, tc("deleteFailed")),
+		success: tc("deleted"),
+		failure: tc("deleteFailed"),
 		inline: true,
 		onSuccess: (_result, feature) => {
 			queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
@@ -187,7 +189,7 @@ export function AiManager() {
 			);
 			setOpened(null);
 		},
-		onError: (error) => setFormError(errorText(site, error, t("remove.failed"))),
+		onError: (error) => setFormError(errorText(site, error, tc("deleteFailed"))),
 	});
 
 	const saveMutation = useCmsMutation({
@@ -196,7 +198,7 @@ export function AiManager() {
 				? createAiAction(
 						site,
 						{ base: { ...current.base, label: current.base.label.trim() }, value: current.spec },
-						t("save.failed"),
+						tc("saveFailed"),
 					)
 				: updateAiAction(
 						site,
@@ -206,10 +208,10 @@ export function AiManager() {
 							value: current.spec,
 							...(current.base ? { base: { ...current.base, label: current.base.label.trim() } } : {}),
 						},
-						t("save.failed"),
+						tc("saveFailed"),
 					),
-		success: t("save.done"),
-		failure: t("save.failed"),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
 		inline: true,
 		invalidate: [aiKeys.actions()],
 		onSuccess: (saved, current) => {
@@ -220,7 +222,7 @@ export function AiManager() {
 			} else replaceInCache(saved);
 			open(saved);
 		},
-		onError: (error) => setFormError(errorText(site, error, t("save.failed"))),
+		onError: (error) => setFormError(errorText(site, error, tc("saveFailed"))),
 	});
 	const saving = saveMutation.isPending;
 	const deleting = removeMutation.isPending;
@@ -313,7 +315,7 @@ export function AiManager() {
 		const ok = await confirm({
 			title: t("remove.title"),
 			description: t("remove.description", { label: feature.label }),
-			confirmLabel: t("remove.confirm"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (!ok) return;

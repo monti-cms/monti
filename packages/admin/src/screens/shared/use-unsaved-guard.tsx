@@ -2,16 +2,16 @@
 
 import { useTranslator } from "@monti-cms/core/client";
 import { type ReactNode, useEffect, useRef } from "react";
+import { commonMessages } from "../../lib/common.messages";
 import { useBeforeUnload } from "../../lib/hooks/use-before-unload";
 import { discardConfirm, useConfirm } from "./confirm-dialog";
-import { sharedMessages } from "./messages";
 
 /**
  * Guards a screen with unsaved changes against leaving: the browser asks before a reload or a closed tab, and a click on a link inside the
  * admin asks with the same discard dialog the rest of the admin uses. Render the returned `dialog` once on the screen.
  */
 export function useUnsavedGuard(dirty: boolean): { dialog: ReactNode } {
-	const t = useTranslator(sharedMessages);
+	const t = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
 	const bypass = useRef(false);
 

@@ -5,6 +5,7 @@ import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } from "react";
+import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
 import { Button } from "../ui/button";
 import { FieldError } from "../ui/field";
@@ -85,6 +86,7 @@ export function PopoverFormFooter({
 	onCancel: () => void;
 }) {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	return (
 		<div className="flex items-center gap-2">
 			{onRemove && (
@@ -101,10 +103,10 @@ export function PopoverFormFooter({
 			)}
 			<div className="ml-auto flex items-center gap-2">
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
-					{t("popoverForm.cancel")}
+					{tc("cancel")}
 				</Button>
 				<Button type="submit" size="sm">
-					{t("popoverForm.apply")}
+					{tc("apply")}
 				</Button>
 			</div>
 		</div>

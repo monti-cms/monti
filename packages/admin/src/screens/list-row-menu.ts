@@ -16,6 +16,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import type { BulkParams, BulkSelection } from "../api/entries";
+import { commonMessages } from "../lib/common.messages";
 import { screensMessages } from "./messages";
 import type { MenuAction } from "./shared/action-menu";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
@@ -71,6 +72,7 @@ export function rowMenuActions(
 	handlers: RowMenuHandlers,
 ): MenuAction[] {
 	const t = site.createTranslator(screensMessages);
+	const tc = site.createTranslator(commonMessages);
 	const targets = group.map(toSelection);
 	const single = group.length === 1 ? group[0] : undefined;
 	const header: MenuAction[] = single ? [] : [{ kind: "label", label: t("menu.items", { count: group.length }) }];
@@ -78,11 +80,11 @@ export function rowMenuActions(
 	if (context.mode === "trash") {
 		return [
 			...header,
-			{ kind: "item", label: t("list.restore"), icon: RotateCcw, onSelect: () => handlers.restore(targets) },
+			{ kind: "item", label: tc("lifecycle.restore"), icon: RotateCcw, onSelect: () => handlers.restore(targets) },
 			{ kind: "separator" },
 			{
 				kind: "item",
-				label: t("list.permanentDelete"),
+				label: tc("lifecycle.deletePermanently"),
 				icon: Trash2,
 				shortcut: "Del",
 				destructive: true,
@@ -94,16 +96,16 @@ export function rowMenuActions(
 	const open: MenuAction[] = !single
 		? []
 		: context.isRecord
-			? [{ kind: "item", label: t("common.open"), icon: PanelRightOpen, onSelect: () => handlers.openRecord(single) }]
+			? [{ kind: "item", label: tc("open"), icon: PanelRightOpen, onSelect: () => handlers.openRecord(single) }]
 			: [
-					{ kind: "item", label: t("common.open"), icon: SquarePen, onSelect: () => handlers.openEditor(single) },
+					{ kind: "item", label: tc("open"), icon: SquarePen, onSelect: () => handlers.openEditor(single) },
 					{
 						kind: "item",
 						label: t("menu.openNewTab"),
 						icon: ExternalLink,
 						onSelect: () => handlers.openInNewTab(single),
 					},
-					{ kind: "item", label: t("menu.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
+					{ kind: "item", label: tc("lifecycle.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
 				];
 	const allArchived = group.every((row) => row.status === "archived");
 	const addActions: MenuAction[] = site.taxonomyFieldsOf(context.collection).flatMap((stored): MenuAction[] => {
@@ -135,11 +137,16 @@ export function rowMenuActions(
 				allArchived
 					? {
 							kind: "item",
-							label: t("menu.unarchive"),
+							label: tc("lifecycle.unarchive"),
 							icon: ArchiveRestore,
-							onSelect: () => handlers.bulk("unarchive", t("bulk.unarchive"), targets),
+							onSelect: () => handlers.bulk("unarchive", tc("lifecycle.unarchive"), targets),
 						}
-					: { kind: "item", label: t("menu.archive"), icon: Archive, onSelect: () => handlers.confirmArchive(targets) },
+					: {
+							kind: "item",
+							label: tc("lifecycle.archive"),
+							icon: Archive,
+							onSelect: () => handlers.confirmArchive(targets),
+						},
 			]
 		: [{ kind: "separator" }];
 
@@ -169,7 +176,7 @@ export function rowMenuActions(
 		...contentActions,
 		{
 			kind: "item",
-			label: t("menu.trash"),
+			label: tc("lifecycle.trash"),
 			icon: Trash2,
 			shortcut: "Del",
 			destructive: true,

@@ -6,8 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { commonMessages } from "../../../../admin/src/lib/common-messages";
-import { sharedMessages as adminSharedMessages } from "../../../../admin/src/screens/shared/messages";
+import { commonMessages } from "../../../../admin/src/lib/common.messages";
 import { testSite } from "../../../test/site";
 import type { AiSharedView } from "../../shared";
 import { SharedManager } from "../shared-editor";
@@ -15,7 +14,6 @@ import { sharedMessages } from "../shared-editor.messages";
 
 const t = testSite.createTranslator(sharedMessages);
 const common = testSite.createTranslator(commonMessages);
-const adminText = testSite.createTranslator(adminSharedMessages);
 
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
@@ -118,7 +116,7 @@ describe("AI screen shared texts tab", () => {
 		expect((screen.getByRole("textbox", { name: t("field.name") }) as HTMLInputElement).disabled).toBe(true);
 		expect(screen.getByText("{{shared.styleGuide}}", { selector: "code" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: t("copy.label") })).toBeTruthy();
-		expect(screen.queryByRole("button", { name: t("action.delete") })).toBeNull();
+		expect(screen.queryByRole("button", { name: common("delete") })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("action.resetDefault") }));
 		expect((screen.getByRole("textbox", { name: t("field.content") }) as HTMLTextAreaElement).value).toBe("default");
 
@@ -134,8 +132,8 @@ describe("AI screen shared texts tab", () => {
 			target: { value: "changed" },
 		});
 		fireEvent.click(row("Style guide"));
-		expect(await screen.findByRole("alertdialog", { name: adminText("discard.title") })).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: adminText("common.cancel") }));
+		expect(await screen.findByRole("alertdialog", { name: common("discard.title") })).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: common("cancel") }));
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(screen.getByRole("heading", { name: "Tone" })).toBeTruthy();
 	});
@@ -160,9 +158,9 @@ describe("AI screen shared texts tab", () => {
 		renderManager();
 		fireEvent.click(await screen.findByRole("button", { name: /Tone/ }));
 		expect(screen.queryByRole("button", { name: t("action.resetDefault") })).toBeNull();
-		fireEvent.click(await screen.findByRole("button", { name: t("action.delete") }));
+		fireEvent.click(await screen.findByRole("button", { name: common("delete") }));
 		const dialog = await screen.findByRole("alertdialog", { name: t("confirm.title") });
-		fireEvent.click(within(dialog).getByRole("button", { name: t("action.delete") }));
+		fireEvent.click(within(dialog).getByRole("button", { name: common("delete") }));
 		expect((await screen.findByRole("alert")).textContent).toBe(
 			"Actions use this text, so it can't be deleted: Summary",
 		);

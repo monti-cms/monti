@@ -1,6 +1,6 @@
 import type { Site } from "@monti-cms/core/client";
+import { apiErrorMessages } from "../api/error-message.messages";
 import { completeUpload, requestUpload, type UploadTicket } from "../api/media";
-import { screensMessages } from "../screens/messages";
 import { isSandboxSite } from "../screens/shared/preview-sandbox";
 import { editorMessages } from "./messages";
 
@@ -164,7 +164,7 @@ export async function uploadImageFile(
 	const { file, original } = prepared;
 
 	// A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).
-	if (isSandboxSite(site)) throw new Error(site.createTranslator(screensMessages)("api.previewNoWrite"));
+	if (isSandboxSite(site)) throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
 	const ticket = await uploadCall(site, () =>
 		requestUpload(
 			site,
@@ -220,7 +220,7 @@ export async function uploadAttachment(
 ): Promise<{ mediaId: string }> {
 	const t = site.createTranslator(editorMessages);
 	// A preview of a screen runs on a draft site: nothing is uploaded from it.
-	if (isSandboxSite(site)) throw new Error(site.createTranslator(screensMessages)("api.previewNoWrite"));
+	if (isSandboxSite(site)) throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
 	const mimeType = site.api.fileTypeFor(file.name);
 	if (!mimeType) throw new Error(t("upload.unsupportedType"));
 	if (file.size > site.api.MAX_FILE_BYTES)

@@ -55,7 +55,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"delete.usedDescription": ({ count }) =>
 			`${count} ${Number(count) === 1 ? "place" : "places"} will stop working until you pick another key:`,
 		"delete.confirm": "Delete key",
-		"delete.deleting": "Deleting…",
 		"toast.added": "Key added.",
 		"toast.renamed": "Key renamed.",
 		"toast.replaced": "Key value replaced.",
@@ -70,7 +69,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"field.useNew": "Enter a new key",
 		"field.newInput": "New API key",
 		"field.newHelp": ({ name }) => `Saved as "${name}" in Settings, API keys. You can rename it later.`,
-		"field.noKey": "No key",
 		"field.unreadable": "can't be read",
 		"field.loadFailed": "Couldn't load the saved keys.",
 		"field.secretMissing": "MONTI_SECRET is not set, so a key can't be saved. See Settings, API keys.",
@@ -125,7 +123,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"delete.usedDescription": ({ count }) =>
 			`이 키를 쓰는 곳 ${count}개가 멈춰요. 다른 키를 고르기 전까지 쓸 수 없어요.`,
 		"delete.confirm": "지우기",
-		"delete.deleting": "지우는 중…",
 		"toast.added": "키를 추가했어요.",
 		"toast.renamed": "이름을 바꿨어요.",
 		"toast.replaced": "키 값을 바꿨어요.",
@@ -140,7 +137,6 @@ export const apiKeysMessages = defineMessages("cms-admin.api-keys", {
 		"field.useNew": "새 키 넣기",
 		"field.newInput": "새 API 키",
 		"field.newHelp": ({ name }) => `“${name}”으로 도구 → API 키에 저장돼요. 이름은 나중에 바꿀 수 있어요.`,
-		"field.noKey": "키 없음",
 		"field.unreadable": "읽을 수 없음",
 		"field.loadFailed": "저장된 키를 불러오지 못했어요.",
 		"field.secretMissing": "MONTI_SECRET이 없어서 키를 저장할 수 없어요. 도구 → API 키를 확인해 주세요.",

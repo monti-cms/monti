@@ -9,7 +9,15 @@ import {
 	ToolbarButton,
 } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
-import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@monti-cms/admin/kit";
+import {
+	cn,
+	commonMessages,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@monti-cms/admin/kit";
 import { useTranslator } from "@monti-cms/core/client";
 import { File, FilePlus, Folder, FolderPlus, FolderTree, Trash2 } from "lucide-react";
 import { useId } from "react";
@@ -27,6 +35,7 @@ const NEW_FOLDER = { stem: "src/new-folder", suffix: "/", language: "text" } as 
  */
 export function CodeExplorerNodeView() {
 	const t = useTranslator(codeExplorerMessages);
+	const tc = useTranslator(commonMessages);
 	const block = useBlockEditor<{ open: string }>();
 	// `editable` follows lock changes (trash, source mode).
 	const { editable, focusedChild: selectedIndex } = block;
@@ -103,7 +112,7 @@ export function CodeExplorerNodeView() {
 					<ToolbarButton label={t("add.file")} onClick={() => addEntry(NEW_FILE)}>
 						<FilePlus aria-hidden />
 					</ToolbarButton>
-					<ToolbarButton label={t("add.folder")} onClick={() => addEntry(NEW_FOLDER)}>
+					<ToolbarButton label={tc("addFolder")} onClick={() => addEntry(NEW_FOLDER)}>
 						<FolderPlus aria-hidden />
 					</ToolbarButton>
 					<BlockSettings>

@@ -17,6 +17,7 @@ import { createTemplate, deleteTemplate, listTemplates, templatesKeys, updateTem
 import { useCmsMutation } from "../../api/use-cms-mutation";
 import { documentKey } from "../../editor/document-key";
 import { CmsEditor } from "../../editor/tiptap-editor";
+import { commonMessages } from "../../lib/common.messages";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { isComposingKey } from "../../lib/keyboard";
 import type { TranslatorFor } from "../../translator";
@@ -72,18 +73,19 @@ function TemplateEditPanel({
 }) {
 	const site = useSite();
 	const t = useTranslator(templatesMessages);
+	const tc = useTranslator(commonMessages);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const save = useCmsMutation({
 		fn: ({ name, doc }: TemplateDraft, { site }) =>
 			template.id
-				? updateTemplate(site, template.id, { name, doc, expectedVersion: template.version }, t("common.saveFailed"))
-				: createTemplate(site, { name, doc }, t("common.saveFailed")),
-		success: t("common.saved"),
-		failure: t("common.saveFailed"),
+				? updateTemplate(site, template.id, { name, doc, expectedVersion: template.version }, tc("saveFailed"))
+				: createTemplate(site, { name, doc }, tc("saveFailed")),
+		success: tc("saved"),
+		failure: tc("saveFailed"),
 		inline: true,
 		invalidate: [templatesKeys.all],
 		onSuccess: onSaved,
-		onError: (err) => setSaveError(errorText(site, err, t("common.saveFailed"))),
+		onError: (err) => setSaveError(errorText(site, err, tc("saveFailed"))),
 	});
 	const saved = template.id ? { name: template.name ?? "", doc: template.doc ?? emptyStoredDocument() } : null;
 	// A new template starts as the outline; it is not a change until the user edits it.
@@ -142,6 +144,7 @@ function TemplateEditPanel({
 export function TemplateManager() {
 	const site = useSite();
 	const t = useTranslator(templatesMessages);
+	const tc = useTranslator(commonMessages);
 	const queryClient = useQueryClient();
 	// If there is a cache, render it right away and refetch in the background. Placeholders show only when there is no cache.
 	const templatesQuery = useQuery({
@@ -194,9 +197,9 @@ export function TemplateManager() {
 	};
 
 	const remove = useCmsMutation({
-		fn: (template: BodyTemplate, { site }) => deleteTemplate(site, template, t("delete.failed")),
+		fn: (template: BodyTemplate, { site }) => deleteTemplate(site, template, tc("deleteFailed")),
 		success: (_result, template) => t("delete.done", { name: template.name }),
-		failure: t("delete.failed"),
+		failure: tc("deleteFailed"),
 		// Remove from the list first, then send the request. On failure it comes back; when done, it syncs to the server value.
 		optimistic: {
 			queryKey: templatesKeys.list(),
@@ -209,7 +212,7 @@ export function TemplateManager() {
 		const ok = await confirm({
 			title: t("delete.title"),
 			description: t("delete.ask", { name: template.name }),
-			confirmLabel: t("common.delete"),
+			confirmLabel: tc("delete"),
 			destructive: true,
 		});
 		if (!ok) return;
@@ -219,11 +222,11 @@ export function TemplateManager() {
 
 	/** Right-click and `⋯` menu of a template list row. */
 	const templateMenu = (template: BodyTemplate): MenuAction[] => [
-		{ kind: "item", label: t("common.open"), icon: SquarePen, onSelect: () => void openTemplate(template) },
+		{ kind: "item", label: tc("open"), icon: SquarePen, onSelect: () => void openTemplate(template) },
 		{ kind: "separator" },
 		{
 			kind: "item",
-			label: t("common.delete"),
+			label: tc("delete"),
 			icon: Trash2,
 			shortcut: "Del",
 			destructive: true,
@@ -236,7 +239,7 @@ export function TemplateManager() {
 			<PageActions>
 				<Button type="button" size="sm" onClick={() => void openNew()}>
 					<Plus aria-hidden />
-					{t("common.add")}
+					{t("add")}
 				</Button>
 			</PageActions>
 			{error && (
@@ -278,7 +281,7 @@ export function TemplateManager() {
 					<EmptyState
 						icon={LayoutTemplate}
 						title={t("edit.empty")}
-						action={{ label: t("common.add"), icon: Plus, onClick: () => void openNew() }}
+						action={{ label: t("add"), icon: Plus, onClick: () => void openNew() }}
 					/>
 				)}
 			</MasterDetail>

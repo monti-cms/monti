@@ -11,6 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { FileArchive, FileText, FileType } from "lucide-react";
 import { getMedia, mediaKeys } from "../api/media";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { editorMessages } from "./messages";
@@ -20,6 +21,7 @@ const ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: FileA
 /** Edit view of the core file block (`blockViews.file`): the attached file card. Same look as the public view card, and the name can be edited directly. */
 export function FileBlockView() {
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const block = useBlockEditor();
 	const mediaId = typeof block.values.mediaId === "string" ? block.values.mediaId : "";
@@ -43,7 +45,7 @@ export function FileBlockView() {
 				? [fileTypeLabel(filename, info.mimeType), info.byteSize ? formatFileSize(info.byteSize) : null]
 						.filter(Boolean)
 						.join(" · ")
-				: t("fileNode.loading");
+				: tc("loading");
 
 	return (
 		<BlockFrame

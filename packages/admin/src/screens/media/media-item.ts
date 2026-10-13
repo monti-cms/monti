@@ -53,12 +53,12 @@ export const usageLabel = (t: TranslatorFor<typeof mediaMessages>, media: MediaI
 export const usageNoteLabel = (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) =>
 	t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
 
-export async function copyText(t: TranslatorFor<typeof mediaMessages>, text: string, success: string) {
+export async function copyText(text: string, success: string, failure: string) {
 	try {
 		await navigator.clipboard.writeText(text);
 		toast.success(success);
 	} catch {
-		toast.error(t("common.copyFailed"));
+		toast.error(failure);
 	}
 }
 

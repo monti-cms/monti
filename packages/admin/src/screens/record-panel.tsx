@@ -15,6 +15,7 @@ import { CmsApiError, errorText } from "../api/client";
 import { createEntry, type EntryWriteResult, entriesKeys, getEntry, updateEntry } from "../api/entries";
 import { cmsIssueMessage } from "../api/error-message";
 import { useCmsMutation } from "../api/use-cms-mutation";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { StatusIndicator } from "../ui/status-indicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -73,6 +74,7 @@ export function RecordPanel({
 }) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const initialRef = useRef(initial);
 	const [loaded, setLoaded] = useState<EntryData | null>(null);
 	const [locale, setLocale] = useState<Locale>(site.DEFAULT_LOCALE);
@@ -95,14 +97,10 @@ export function RecordPanel({
 							slug: slug || null,
 							metadata,
 						},
-						t("record.saveFailed"),
+						tc("saveFailed"),
 					)
-				: createEntry(
-						site,
-						{ collection, slug: slug || null, metadata, doc: emptyStoredDocument() },
-						t("record.saveFailed"),
-					),
-		failure: t("record.saveFailed"),
+				: createEntry(site, { collection, slug: slug || null, metadata, doc: emptyStoredDocument() }, tc("saveFailed")),
+		failure: tc("saveFailed"),
 		inline: true,
 		onSuccess: ({ entry: saved }) => {
 			// The panel stays open. Switch to the received item so the next save is based on the new revision.
@@ -113,7 +111,7 @@ export function RecordPanel({
 			setError(
 				err instanceof CmsApiError && err.issues.length > 0
 					? err.issues.map((issue) => cmsIssueMessage(site, issue)).join("\n")
-					: errorText(site, err, t("record.saveFailed")),
+					: errorText(site, err, tc("saveFailed")),
 			),
 	});
 

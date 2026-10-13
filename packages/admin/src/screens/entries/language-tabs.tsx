@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { createEntryTranslation } from "../../api/entries";
 import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import { Button } from "../../ui/button";
@@ -39,6 +40,7 @@ export function LanguageTabs({
 	onTrashTranslation: () => void;
 }) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const router = useAdminRouter();
 	const [creating, setCreating] = useState<string | null>(null);
@@ -137,7 +139,7 @@ export function LanguageTabs({
 								<DropdownMenuContent align="start">
 									<DropdownMenuItem variant="destructive" onClick={onTrashTranslation}>
 										<Trash2 aria-hidden />
-										{t("lang.trash")}
+										{tc("lifecycle.trash")}
 									</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>

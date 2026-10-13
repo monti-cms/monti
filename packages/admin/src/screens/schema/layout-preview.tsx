@@ -7,7 +7,7 @@ import { InspectorPanel } from "../entries/inspector-panel";
 import { SchemaFields } from "../entries/schema-fields";
 import { EntryFormProvider } from "../entries/use-field";
 import { draftSiteOf } from "./draft-site";
-import { schemaMessages } from "./messages";
+import { schemaFieldsMessages } from "./fields.messages";
 import type { Obj } from "./schema-model";
 
 /** Catches what the real components throw for a draft that is only half made, so one bad moment does not take the settings page down. */
@@ -82,7 +82,7 @@ export function LayoutPreview({
 	codeCollections: readonly string[];
 	onClose: () => void;
 }) {
-	const t = useTranslator(schemaMessages);
+	const t = useTranslator(schemaFieldsMessages);
 	const site = useSite();
 	const made = useMemo(() => draftSiteOf(site, file, codeCollections), [site, file, codeCollections]);
 	// While the draft cannot be made (a half-typed name), the last one that could stays.

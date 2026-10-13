@@ -4,6 +4,7 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EntrySearchResponse, entriesKeys, searchEntries } from "../../api/entries";
+import { commonMessages } from "../../lib/common.messages";
 import { useDebounced } from "../shared/use-debounced";
 import { entriesMessages } from "./messages";
 
@@ -43,6 +44,7 @@ export function useRelationSearch({
 }) {
 	const site = useSite();
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const [query, setQuery] = useState("");
 	// Every entry seen so far (results, lookups, created ones) by id, and the ids a lookup already answered for.
 	const [known, setKnown] = useState<ReadonlyMap<string, RelationEntry>>(new Map());
@@ -55,11 +57,11 @@ export function useRelationSearch({
 	const toEntry = useCallback(
 		(item: EntrySearchResponse["items"][number]): RelationEntry => ({
 			id: item.id,
-			title: item.title || t("untitled"),
+			title: item.title || tc("untitled"),
 			slug: item.slug,
 			status: item.status,
 		}),
-		[t],
+		[tc],
 	);
 	const remember = useCallback((entries: readonly RelationEntry[]) => {
 		setKnown((current) => {

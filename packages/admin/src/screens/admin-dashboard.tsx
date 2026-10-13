@@ -5,6 +5,7 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { Button, buttonVariants } from "../ui/button";
@@ -39,6 +40,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 /** List body: filter chips, bulk action row, table, taxonomy edit panel, and the dialogs list actions open. */
 function EntryListBody({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const { state, data, mode } = list;
 	const isTrash = mode === "trash";
 	const { items } = data;
@@ -91,7 +93,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 								: [
 										{
 											kind: "item",
-											label: state.folder === "all" ? t("list.folderAdd") : t("list.folderAddChild"),
+											label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
 											icon: FolderPlus,
 											onSelect: () => list.folderActions.requestCreate(state.folder === "all" ? null : state.folder),
 										},
@@ -123,7 +125,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 							onSaved={(saved) => {
 								// Keep the saved item open as is. For a new item, switch to editing the created item.
 								if (!record.id) list.showRecord({ collection: record.collection, id: saved.id });
-								toast.success(t("common.saved"));
+								toast.success(tc("saved"));
 								void list.invalidateEntries();
 								list.reloadTaxonomies();
 							}}
@@ -146,10 +148,10 @@ function useDashboardMounted() {
 
 /** Placeholder before the first render. Mimics the shape of the sidebar, header and list rows. */
 function DashboardLoading() {
-	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	return (
 		<div aria-busy="true" className="flex h-svh overflow-hidden">
-			<span className="sr-only">{t("dashboard.loading")}</span>
+			<span className="sr-only">{tc("loading")}</span>
 			<div aria-hidden className="hidden w-64 shrink-0 space-y-2 border-r p-3 md:block">
 				<Skeleton className="mb-4 h-7 w-32" />
 				{Array.from({ length: 6 }, (_, index) => (

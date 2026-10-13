@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
 import { listTemplates, templatesKeys } from "../../api/templates";
+import { commonMessages } from "../../lib/common.messages";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -36,6 +37,7 @@ export function TemplateMenu({
 	onApply: (doc: StoredDocument) => void;
 }) {
 	const t = useTranslator(entriesMessages);
+	const tc = useTranslator(commonMessages);
 	const site = useSite();
 	const [open, setOpen] = useState(false);
 	const { confirm, dialog } = useConfirm();
@@ -60,7 +62,7 @@ export function TemplateMenu({
 			!(await confirm({
 				title: t("template.applyTitle"),
 				description: t("template.applyAsk", { name: template.name }),
-				confirmLabel: t("template.apply"),
+				confirmLabel: tc("apply"),
 				destructive: true,
 			}))
 		) {
@@ -89,7 +91,7 @@ export function TemplateMenu({
 							</DropdownMenuItem>
 						</>
 					) : templates === null ? (
-						<DropdownMenuItem disabled>{t("loading")}</DropdownMenuItem>
+						<DropdownMenuItem disabled>{tc("loading")}</DropdownMenuItem>
 					) : templates.length === 0 ? (
 						<DropdownMenuItem disabled>{t("template.none")}</DropdownMenuItem>
 					) : (

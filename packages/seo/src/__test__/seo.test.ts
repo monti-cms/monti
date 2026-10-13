@@ -40,7 +40,7 @@ describe("seoFields", () => {
 		expect(bundle.seoCanonical.label).toBe("Canonical");
 		// Every language dictionary has the same labels as English.
 		const missing = Object.keys(seoMessages.messages.en).filter((key) => !(key in (seoMessages.messages.ko ?? {})));
-		expect(missing.every((key) => key.endsWith(".prompt"))).toBe(true);
+		expect(missing).toEqual([]);
 	});
 
 	it("changes names, labels, per-language values and recommended lengths, and omits slots (stored names are kept as they are)", () => {

@@ -3,6 +3,9 @@ import { defineMessages } from "@monti-cms/core";
 /**
  * Words every screen and plugin page shares: actions, lifecycle verbs and the discard prompt. A screen's own dictionary holds only what is
  * specific to that screen; use this one for the rest (`useTranslator(commonMessages)`).
+ *
+ * Dictionary files are named `messages.ts` (the main dictionary of a folder) or `<name>.messages.ts` (any other). `src/__test__/messages.test.ts` checks the
+ * naming, that English and Korean have the same keys, and that no key is left unreferenced.
  */
 export const commonMessages = defineMessages("cms-admin.common", {
 	en: {
@@ -26,6 +29,9 @@ export const commonMessages = defineMessages("cms-admin.common", {
 		upload: "Upload",
 		refresh: "Refresh",
 		loading: "Loading…",
+		saveFailed: "Couldn't save.",
+		deleteFailed: "Couldn't delete.",
+		deleted: "Deleted.",
 		copyFailed: "Couldn't copy.",
 		untitled: "Untitled",
 		addFolder: "Add folder",
@@ -62,6 +68,9 @@ export const commonMessages = defineMessages("cms-admin.common", {
 		upload: "업로드",
 		refresh: "새로고침",
 		loading: "불러오는 중…",
+		saveFailed: "저장하지 못했습니다.",
+		deleteFailed: "삭제하지 못했습니다.",
+		deleted: "삭제했습니다.",
 		copyFailed: "복사하지 못했습니다.",
 		untitled: "제목 없음",
 		addFolder: "폴더 추가",
@@ -69,7 +78,7 @@ export const commonMessages = defineMessages("cms-admin.common", {
 		"discard.title": "저장하지 않은 내용",
 		"discard.description": "저장하지 않은 내용이 있습니다. 버릴까요?",
 		"discard.confirm": "버리기",
-		"lifecycle.publish": "게시",
+		"lifecycle.publish": "발행",
 		"lifecycle.duplicate": "복제",
 		"lifecycle.archive": "보관",
 		"lifecycle.unarchive": "보관 해제",

@@ -50,6 +50,7 @@ import {
 } from "../admin-components";
 import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
+import { commonMessages } from "../lib/common.messages";
 import { useAdminFeatures } from "../screens/shared/admin-features";
 import { useDebounced } from "../screens/shared/use-debounced";
 import type { TranslatorFor } from "../translator";
@@ -435,6 +436,7 @@ export function CmsEditor({
 }: CmsEditorProps) {
 	const site = useSite();
 	const t = useTranslator(editorMessages);
+	const tc = useTranslator(commonMessages);
 	// What the body's allowed list lets a writer add. A body that already holds more still opens and saves as it is.
 	const allowance = useMemo(() => editorAllowance(site, allowed), [site, allowed]);
 	const isSourceMode = sourceView != null && sourceView !== false;
@@ -998,7 +1000,7 @@ export function CmsEditor({
 						render: () => (
 							<DropdownMenu>
 								<IconButton
-									label={t("toolbar.upload")}
+									label={tc("upload")}
 									side="bottom"
 									disabled={!canEdit}
 									onMouseDown={(event) => event.preventDefault()}

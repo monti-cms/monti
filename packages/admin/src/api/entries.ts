@@ -1,6 +1,7 @@
 import { type BulkOp, cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/runtime";
+import { commonMessages } from "../lib/common.messages";
 import { bulkBarMessages } from "../screens/entries/bulk-bar.messages";
 import type { EntryData } from "../screens/entries/entry-form";
 import { entriesMessages } from "../screens/entries/messages";
@@ -198,10 +199,11 @@ export interface EntryEditorClient {
  */
 export const cmsEntryClient = (site: Site): EntryEditorClient => {
 	const t = site.createTranslator(entriesMessages);
+	const saveFailed = site.createTranslator(commonMessages)("saveFailed");
 	return {
 		get: (id) => getEntry(site, id, undefined, t("loadFailed")),
-		create: (input) => createEntry(site, input, t("saveFailed")),
-		update: (id, input) => updateEntry(site, id, input, t("saveFailed")),
+		create: (input) => createEntry(site, input, saveFailed),
+		update: (id, input) => updateEntry(site, id, input, saveFailed),
 		publish: (id, input) => publishEntry(site, id, input, t("publishFailed")),
 		changeStatus: (id, action, input) => changeEntryStatus(site, id, action, input),
 		duplicate: (id, input) => duplicateEntry(site, id, input),

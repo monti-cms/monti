@@ -16,6 +16,7 @@ import {
 	retryEvent,
 } from "../../api/events";
 import { useCmsMutation } from "../../api/use-cms-mutation";
+import { commonMessages } from "../../lib/common.messages";
 import { enumParam, pageParam, pageSizeParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
@@ -113,6 +114,7 @@ function StateHeader({
 export function EventsScreen() {
 	const site = useSite();
 	const t = useTranslator(eventsMessages);
+	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
 
 	const [{ filter, page, pageSize }, update] = useUrlState(EVENTS_PARAMS);
@@ -252,7 +254,7 @@ export function EventsScreen() {
 														disabled={retry.isPending}
 														onClick={() => retry.mutate(key)}
 													>
-														{t("action.retry")}
+														{tc("retry")}
 													</Button>{" "}
 													<Button
 														type="button"

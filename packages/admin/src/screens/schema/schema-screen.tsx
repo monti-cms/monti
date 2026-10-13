@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
@@ -20,7 +21,6 @@ import { Skeleton } from "../../ui/skeleton";
 import type { SchemaTab } from "../settings/tabs";
 import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
 import { LoadErrorAlert } from "../shared/load-error-alert";
-import { sharedMessages } from "../shared/messages";
 import { PageBody } from "../shared/page-body";
 import { Section } from "../shared/section";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
@@ -126,7 +126,7 @@ function SchemaEditor({
 	const names = Object.keys(collections);
 	const [selectedName, setSelected] = useState<string | undefined>(names[0]);
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
-	const shared = useTranslator(sharedMessages);
+	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
 	const dirty = !sameJson(draft, base);
 	const { dialog: guardDialog } = useUnsavedGuard(dirty);
@@ -152,7 +152,7 @@ function SchemaEditor({
 	);
 
 	const discard = async () => {
-		const ok = await confirm(discardConfirm(shared));
+		const ok = await confirm(discardConfirm(tc));
 		if (!ok) return;
 		setDraft(base);
 		setRenames([]);

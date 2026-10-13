@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
 import { cmsIssueMessage } from "../../api/error-message";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
@@ -88,23 +89,45 @@ export function taxonomyActions(site: Site, collection: string): ActionDef[] {
 	];
 }
 
-const listActions = (t: TranslatorFor<typeof bulkBarMessages>, noun: { noun: string }): ActionDef[] => [
+const listActions = (
+	t: TranslatorFor<typeof bulkBarMessages>,
+	tc: TranslatorFor<typeof commonMessages>,
+	noun: { noun: string },
+): ActionDef[] => [
 	{
 		value: "folder.move",
 		label: t("folder.move"),
 		ask: (count, target) =>
 			target === null ? t("ask.folder.root", { count }) : t("ask.folder.move", { count, target }),
 	},
-	{ value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count, ...noun }), content: true },
-	{ value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count, ...noun }), content: true },
-	{ value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count, ...noun }), content: true },
-	{ value: "trash", label: t("trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
+	{
+		value: "publish",
+		label: tc("lifecycle.publish"),
+		ask: (count) => t("ask.publish", { count, ...noun }),
+		content: true,
+	},
+	{
+		value: "archive",
+		label: tc("lifecycle.archive"),
+		ask: (count) => t("ask.archive", { count, ...noun }),
+		content: true,
+	},
+	{
+		value: "unarchive",
+		label: tc("lifecycle.unarchive"),
+		ask: (count) => t("ask.unarchive", { count, ...noun }),
+		content: true,
+	},
+	{ value: "trash", label: tc("lifecycle.trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
 
-const trashActions = (t: TranslatorFor<typeof bulkBarMessages>): ActionDef[] => [
+const trashActions = (
+	t: TranslatorFor<typeof bulkBarMessages>,
+	tc: TranslatorFor<typeof commonMessages>,
+): ActionDef[] => [
 	{
 		value: "permanentDelete",
-		label: t("permanentDelete"),
+		label: tc("lifecycle.deletePermanently"),
 		ask: (count) => t("ask.permanentDelete", { count }),
 		destructive: true,
 	},
@@ -125,8 +148,9 @@ const FAILURE_CODES = new Set([
 /** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
 export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult, { ok: false }>): string {
 	const t = site.createTranslator(bulkBarMessages);
+	const tc = site.createTranslator(commonMessages);
 	if (failure.error === "in_use" && failure.usages?.length) {
-		const names = [...new Set(failure.usages.map((usage) => usage.title || t("untitled")))];
+		const names = [...new Set(failure.usages.map((usage) => usage.title || tc("untitled")))];
 		const shown = names.slice(0, 3).join(", ");
 		return t("failure.usedBy", {
 			names: names.length > 3 ? t("failure.more", { names: shown, more: names.length - 3 }) : shown,
@@ -234,16 +258,17 @@ export function BulkBar({
 }) {
 	const site = useSite();
 	const t = useTranslator(bulkBarMessages);
+	const tc = useTranslator(commonMessages);
 	const isRecord = site.isItemCollection(collection);
 	const actions = useMemo(
 		() =>
 			mode === "trash"
-				? trashActions(t)
+				? trashActions(t, tc)
 				: [
 						...taxonomyActions(site, collection),
-						...listActions(t, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
+						...listActions(t, tc, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
 					],
-		[isRecord, collection, mode, site, t],
+		[isRecord, collection, mode, site, t, tc],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
 	const [checked, setChecked] = useState<string[]>([]);

@@ -4,6 +4,7 @@ import type { BrowserFormat, EditorExtension, EditorInsertAction, EditorSelectio
 import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/editor";
 import {
 	Button,
+	commonMessages,
 	Dialog,
 	DialogContent,
 	DialogFooter,
@@ -93,6 +94,7 @@ function WriteDialog({
 }) {
 	const site = useSite();
 	const t = useTranslator(aiWriteMessages);
+	const tc = useTranslator(commonMessages);
 	const common = useTranslator(aiCommonMessages);
 	const [request, setRequest] = useState("");
 	const [state, setState] = useState<RunState>({ status: "idle" });
@@ -261,7 +263,7 @@ function WriteDialog({
 						</Button>
 					)}
 					<Button type="button" variant="outline" size="sm" onClick={onClose}>
-						{t("cancel")}
+						{tc("cancel")}
 					</Button>
 					<Button
 						type="button"

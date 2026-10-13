@@ -3,6 +3,7 @@
 import { useTranslator } from "@monti-cms/core/client";
 import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
@@ -46,6 +47,7 @@ export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-sm b
  */
 export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: ReactNode } {
 	const t = useTranslator(slotsMessages);
+	const tc = useTranslator(commonMessages);
 	const { actions, disabled, state, instruction, setInstruction, start, run, rerun, cancel, apply } =
 		useSlotActions(request);
 
@@ -108,7 +110,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 								<RefreshCw aria-hidden />
 							</IconButton>
 						)}
-						<IconButton label={t("close")} size="icon-xs" onClick={cancel}>
+						<IconButton label={tc("close")} size="icon-xs" onClick={cancel}>
 							<X aria-hidden />
 						</IconButton>
 					</span>

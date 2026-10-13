@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { Fragment, type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useCmsAdminComponents } from "../admin-components";
+import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { Badge, badgeVariants } from "../ui/badge";
@@ -350,6 +351,7 @@ export function AdminEntriesTable({
 }: TableProps) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
+	const tc = useTranslator(commonMessages);
 	const isTrash = mode === "trash";
 	const isRecord = site.isItemCollection(collection);
 	const { listCells } = useCmsAdminComponents();
@@ -382,7 +384,7 @@ export function AdminEntriesTable({
 		const cell = (item: ListEntriesItem, column: AdminListColumn) => {
 			switch (column) {
 				case "title": {
-					const title = item.title || <span className="text-cms-muted-foreground italic">{t("common.untitled")}</span>;
+					const title = item.title || <span className="text-cms-muted-foreground italic">{tc("untitled")}</span>;
 					if (isTrash) return <span className="font-medium">{title}</span>;
 					return isRecord ? (
 						<Button
@@ -479,7 +481,7 @@ export function AdminEntriesTable({
 					<Checkbox
 						checked={row.getIsSelected()}
 						onCheckedChange={(value) => row.toggleSelected(value === true)}
-						aria-label={t("list.rowSelect", { title: row.original.title ?? t("common.untitled") })}
+						aria-label={t("list.rowSelect", { title: row.original.title ?? tc("untitled") })}
 					/>
 				),
 			}),
@@ -512,7 +514,7 @@ export function AdminEntriesTable({
 						{isTrash && (
 							<>
 								<Button type="button" variant="ghost" size="xs" onClick={() => onRestore?.(row.original)}>
-									{t("list.restore")}
+									{tc("lifecycle.restore")}
 								</Button>
 								<Button
 									type="button"
@@ -521,13 +523,13 @@ export function AdminEntriesTable({
 									className="text-cms-destructive"
 									onClick={() => onPermanentDelete?.(row.original)}
 								>
-									{t("list.permanentDelete")}
+									{tc("lifecycle.deletePermanently")}
 								</Button>
 							</>
 						)}
 						<MoreActionsButton
 							actions={rowMenu(row.original)}
-							label={t("list.rowActions", { title: row.original.title ?? t("common.untitled") })}
+							label={t("list.rowActions", { title: row.original.title ?? tc("untitled") })}
 						/>
 					</div>
 				),
@@ -686,7 +688,7 @@ export function AdminEntriesTable({
 	const folderRowMenu = (folder: Folder): MenuAction[] =>
 		folderActions
 			? [
-					{ kind: "item", label: t("list.folderOpen"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
+					{ kind: "item", label: tc("open"), icon: FolderOpen, onSelect: () => onSelectFolder(folder.id) },
 					{ kind: "separator" },
 					...folderMenuActions(site, folder, folders, folderActions),
 				]
@@ -838,7 +840,7 @@ export function AdminEntriesTable({
 															event,
 															group.map((item) => ({ id: item.id, expectedVersion: item.version })),
 															group.length === 1
-																? group[0]?.title || t("common.untitled")
+																? group[0]?.title || tc("untitled")
 																: t("list.itemsCount", { count: group.length }),
 														);
 													}}
