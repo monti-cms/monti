@@ -12,7 +12,7 @@ import {
 import { preferenceKey } from "../../../lib/utils/site-storage";
 import { docOf } from "../../../test/mdx";
 import { createTestRouter } from "../../../test/router";
-import { withSite } from "../../__test__/site-wrapper";
+import { withSite } from "../../../test/site";
 import { formatDateTime } from "../../shared/format-date";
 import { EntryEditorShell } from "../entry-editor-shell";
 import { EMPTY_FORM, formFingerprint, formFromEntry } from "../entry-form";

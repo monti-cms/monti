@@ -13,7 +13,7 @@ import {
 } from "../../../hooks/public";
 import { SlotRegistryProvider } from "../../../slots/registry";
 import { docOf } from "../../../test/mdx";
-import { renderWithSite as render, renderHookWithSite as renderHook } from "../../__test__/site-wrapper";
+import { renderWithSite as render, renderHookWithSite as renderHook } from "../../../test/site";
 import { draftSiteOf } from "../../schema/draft-site";
 import { EMPTY_FORM, type EntryForm, type EntryFormPatch } from "../entry-form";
 

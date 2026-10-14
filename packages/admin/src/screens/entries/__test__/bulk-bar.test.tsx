@@ -2,7 +2,7 @@ import type { Folder } from "@monti-cms/core/runtime";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chooseSelectOption } from "../../../test/base-ui";
-import { renderWithQuery as render } from "../../../test/query";
+import { renderWithSite as render } from "../../../test/site";
 import { BulkBar } from "../bulk-bar";
 
 afterEach(() => {

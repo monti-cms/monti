@@ -6,10 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { renderInRouter } from "../../test/router";
+import { withSite } from "../../test/site";
 import { SidebarProvider } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
-import { withSite } from "./site-wrapper";
 
 afterEach(cleanup);
 

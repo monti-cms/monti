@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { AdminShell } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -33,7 +34,6 @@ const item = (
 	lastError: state === "failed" || state === "dead" ? "boom" : null,
 	nextAttemptAt: state === "failed" ? "2026-01-02T00:00:00.000Z" : null,
 });
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 let fetchMock: ReturnType<typeof vi.fn>;
 

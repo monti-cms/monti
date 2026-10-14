@@ -6,6 +6,7 @@ import { testSite } from "../../../../../core/test/site";
 import { editorMessages } from "../../../editor/messages";
 import { commonMessages } from "../../../lib/common.messages";
 import { pressOption } from "../../../test/base-ui";
+import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { entriesMessages } from "../../entries/messages";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
@@ -37,8 +38,6 @@ const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), takeSavedMessage: vi.fn(() => null) }));
 vi.mock("../reload", () => reload);
-
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 const schema = () => ({
 	schemaVersion: 2,

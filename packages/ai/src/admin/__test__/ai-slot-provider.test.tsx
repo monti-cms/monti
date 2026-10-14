@@ -4,12 +4,11 @@ import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 import { TooltipProvider } from "@monti-cms/admin/kit";
 import { type AdminRouter, AdminRouterProvider } from "@monti-cms/admin/router";
 import { useSlot } from "@monti-cms/admin/slots";
-import { SiteProvider } from "@monti-cms/core/client";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { createMdxBrowserFormat } from "@monti-cms/mdx/admin";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SiteWrapper } from "../../../../admin/src/test/site";
 import { testSite } from "../../../test/site";
 import { aiCommonMessages } from "../ai-common.messages";
 import { AiSlotProvider } from "../ai-slot-provider";
@@ -63,17 +62,15 @@ function Place() {
 
 function renderPlace(router: AdminRouter = hostRouter) {
 	render(
-		<SiteProvider site={testSite}>
+		<SiteWrapper site={testSite}>
 			<AdminRouterProvider router={router}>
-				<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-					<TooltipProvider>
-						<AiSlotProvider>
-							<Place />
-						</AiSlotProvider>
-					</TooltipProvider>
-				</QueryClientProvider>
+				<TooltipProvider>
+					<AiSlotProvider>
+						<Place />
+					</AiSlotProvider>
+				</TooltipProvider>
 			</AdminRouterProvider>
-		</SiteProvider>,
+		</SiteWrapper>,
 	);
 }
 
@@ -121,19 +118,17 @@ describe("the body an action reads", () => {
 
 	function renderBody(withFormat: boolean) {
 		render(
-			<SiteProvider site={testSite}>
+			<SiteWrapper site={testSite}>
 				<AdminRouterProvider router={hostRouter}>
-					<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-						<TooltipProvider>
-							<CmsAdminComponentsProvider components={withFormat ? { formats: { mdx: mdxBrowserFormat } } : {}}>
-								<AiSlotProvider>
-									<Body />
-								</AiSlotProvider>
-							</CmsAdminComponentsProvider>
-						</TooltipProvider>
-					</QueryClientProvider>
+					<TooltipProvider>
+						<CmsAdminComponentsProvider components={withFormat ? { formats: { mdx: mdxBrowserFormat } } : {}}>
+							<AiSlotProvider>
+								<Body />
+							</AiSlotProvider>
+						</CmsAdminComponentsProvider>
+					</TooltipProvider>
 				</AdminRouterProvider>
-			</SiteProvider>,
+			</SiteWrapper>,
 		);
 	}
 

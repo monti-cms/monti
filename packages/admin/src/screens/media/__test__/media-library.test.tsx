@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
 import { preferenceKey } from "../../../lib/utils/site-storage";
+import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { MediaLibrary } from "../media-library";
@@ -14,7 +15,6 @@ const tc = testSite.createTranslator(commonMessages);
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 const media = (id: string, fields: Record<string, unknown> = {}) => ({
 	id,
 	status: "ready",

@@ -2,7 +2,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { renderInRouter } from "../../../test/router";
-import { withSite } from "../../__test__/site-wrapper";
+import { withSite } from "../../../test/site";
 import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { settingsMessages } from "../messages";

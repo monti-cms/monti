@@ -11,10 +11,10 @@ import {
 	useCmsAdminComponents,
 } from "../../admin-components";
 import { renderInRouter as render } from "../../test/router";
+import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
 import { columnConfig, columnsFor, fieldColumnOf } from "../list-columns";
 import { parseListState } from "../list-state";
-import { withSite } from "./site-wrapper";
 
 // A site with select, text, media and relation fields, which the writer can show as list columns.
 const article = defineCollection({

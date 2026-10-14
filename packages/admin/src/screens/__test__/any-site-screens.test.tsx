@@ -6,8 +6,10 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
+import { jsonResponse as json } from "../../test/fetch";
 import { docOf } from "../../test/mdx";
 import { createTestRouter } from "../../test/router";
+import { withSite } from "../../test/site";
 import { AdminClientDashboard } from "../admin-dashboard";
 import { EntryEditorShell } from "../entries/entry-editor-shell";
 import { copyTitle } from "../entries/entry-form";
@@ -16,7 +18,6 @@ import { columnLabel, columnsFor, fieldColumnOf } from "../list-columns";
 import { screensMessages } from "../messages";
 import { RecordPanel } from "../record-panel";
 import { AdminQueryProvider } from "../shared/query-provider";
-import { withSite } from "./site-wrapper";
 
 /**
  * Admin screen checks that do not depend on settings (regression guard). Collection/field names and labels are not hard-coded but read from the current settings.
@@ -58,7 +59,6 @@ vi.mock("../entries/ai-translate", () => ({
 	useAiTranslate: () => ({ blockAction: null, toolbar: null, setEditor: () => {} }),
 }));
 
-const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data });
 type Handler = (url: URL, init: RequestInit | undefined) => unknown;
 let handle: Handler = () => undefined;
 let listed: ListEntriesItem[] = [];

@@ -1,6 +1,4 @@
-import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
+import { packageTests } from "../../vitest.shared";
 
 /**
  * Regression guard: reruns the directive tests with a config whose blocks differ from the reference blog (`test/other-site.config.ts`).
@@ -9,26 +7,9 @@ import { defineConfig } from "vitest/config";
  */
 const BLOG_FIXTURE_TESTS = ["src/**/*.blog.test.ts", "src/**/*.configured.test.{ts,tsx}"];
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "syntax-directive (other-site)",
-		environment: "node",
-		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		exclude: BLOG_FIXTURE_TESTS,
-		sequence: { groupOrder: 1 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
-			...loadEnv(mode, __dirname, ""),
-			TZ: "UTC",
-			MONTI_TEST_SITE: "other-site",
-		},
-	},
-	resolve: {
-		alias: {
-			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
-		},
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "syntax-directive",
+	site: "other-site",
+	exclude: BLOG_FIXTURE_TESTS,
+});

@@ -1,30 +1,9 @@
 import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
+import { packageTests } from "../../vitest.shared";
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "core",
-		environment: "node",
-		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		exclude: ["**/node_modules/**"],
-		// When run together from the repo root, this runs first (`vitest.config.ts`).
-		sequence: { groupOrder: 1 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			// Reads the same `.env.local` whether run from the repo root or from this package.
-			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
-			...loadEnv(mode, __dirname, ""),
-			TZ: "UTC",
-		},
-	},
-	resolve: {
-		alias: [
-			{ find: "server-only", replacement: path.resolve(__dirname, "./test/server-only.ts") },
-			// A schema file written in a temporary folder imports `defineSchema` from the package by name, as a site's does.
-			{ find: /^@monti-cms\/core$/, replacement: path.resolve(__dirname, "./src/index.ts") },
-		],
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "core",
+	// A schema file written in a temporary folder imports `defineSchema` from the package by name, as a site's does.
+	alias: [{ find: /^@monti-cms\/core$/, replacement: path.resolve(import.meta.dirname, "./src/index.ts") }],
+});
