@@ -1,2 +1,2 @@
-import type { CoreCheck } from "./core-checks.js";
+import type { CoreCheck } from "./types.js";
 export declare const AUTH_CHECKS: readonly CoreCheck[];

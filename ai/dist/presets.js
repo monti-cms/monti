@@ -3,11 +3,11 @@ import { aiAction, aiInput } from "./action.js";
 import { presetMessages } from "./presets.messages.js";
 import { regexRuns, sameStructure, uniqueSlug } from "./validators.js";
 /**
- * Default AI actions (presets). Adding `aiPlugin()` automatically enables the default actions that have an attach point on the site. List only what to change
- * under the same name in `aiPlugin({ actions })` (`false` turns it off).
+ * Default AI actions (presets). Adding `ai()` automatically enables the default actions that have an attach point on the site. List only what to change
+ * under the same name in `ai({ actions })` (`false` turns it off).
  *
  * ```ts
- * aiPlugin({ actions: { summary: aiPresets.summary({ maxLength: 120 }), draft: false } })
+ * ai({ actions: { summary: aiPresets.summary({ maxLength: 120 }), draft: false } })
  * ```
  *
  * Field actions find the field to attach to by field kind, role and relation target, not by field name. They read the body, so they attach only to collections
@@ -309,7 +309,7 @@ export const aiPresets = {
     },
     /**
      * Style polish. Polishes the text selected in the body, shows what changed, and replaces the selected text on click. The result is streamed.
-     * Given the key of a config shared text (`aiPlugin({ shared })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the shared text
+     * Given the key of a config shared text (`ai({ shared })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the shared text
      * `styleGuide` goes in when it exists. Enabled only when some collection has a body.
      */
     polish: (options = {}) => {

@@ -1,9 +1,9 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/client";
 import { useCallback, useEffect, useRef, useState, } from "react";
+import { positiveNumberCodec, usePreference } from "../lib/hooks/use-preference.js";
 import { cn } from "../lib/utils/cn.js";
-import { readPreference, writePreference } from "../lib/utils/site-storage.js";
 import { uiMessages } from "./messages.js";
 /** Below this viewport width a panel covers the screen and cannot be resized. */
 export const PANEL_RESIZE_MIN_VIEWPORT = 640;
@@ -19,13 +19,10 @@ const storageName = (name) => `panel-width:${name}`;
  * remembered per panel kind in the site's browser preferences. Missing storage means the default width.
  */
 export function usePanelResize({ name, defaultWidth, minWidth }) {
-    const site = useSite();
-    const [chosen, setChosen] = useState(null);
+    const [stored, setStored, forget] = usePreference(storageName(name), positiveNumberCodec, 0);
+    // The width while the handle is dragged; it is remembered only when the drag ends.
+    const [dragging, setDragging] = useState(null);
     const [viewport, setViewport] = useState(() => (typeof window === "undefined" ? 1280 : window.innerWidth));
-    useEffect(() => {
-        const stored = Number(readPreference(site, storageName(name)));
-        setChosen(Number.isFinite(stored) && stored > 0 ? stored : null);
-    }, [site, name]);
     useEffect(() => {
         const onResize = () => setViewport(window.innerWidth);
         onResize();
@@ -34,17 +31,20 @@ export function usePanelResize({ name, defaultWidth, minWidth }) {
     }, []);
     const max = Math.max(minWidth, Math.floor(Math.min(viewport * MAX_VIEWPORT_SHARE, viewport - VIEWPORT_MARGIN)));
     const clamp = useCallback((value) => Math.min(max, Math.max(minWidth, Math.round(value))), [max, minWidth]);
-    const width = clamp(chosen ?? defaultWidth);
+    const width = clamp(dragging ?? (stored || defaultWidth));
     const setWidth = useCallback((next, persist) => {
         const value = clamp(next);
-        setChosen(value);
-        if (persist)
-            writePreference(site, storageName(name), String(value));
-    }, [clamp, site, name]);
+        if (persist) {
+            setStored(value);
+            setDragging(null);
+        }
+        else
+            setDragging(value);
+    }, [clamp, setStored]);
     const reset = useCallback(() => {
-        setChosen(null);
-        writePreference(site, storageName(name), "");
-    }, [site, name]);
+        setDragging(null);
+        forget();
+    }, [forget]);
     return {
         width,
         min: minWidth,

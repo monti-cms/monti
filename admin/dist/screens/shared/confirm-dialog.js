@@ -2,12 +2,12 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useTranslator } from "@monti-cms/core/client";
 import { useCallback, useRef, useState } from "react";
+import { commonMessages } from "../../lib/common.messages.js";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from "../../ui/alert-dialog.js";
-import { sharedMessages } from "./messages.js";
 /** Confirm dialog for hard-to-undo actions. On cancel, focus returns to the button that opened it. */
 export function ConfirmDialog({ request, onClose }) {
-    const t = useTranslator(sharedMessages);
-    return (_jsx(AlertDialog, { open: request !== null, onOpenChange: (open) => !open && onClose(), children: _jsxs(AlertDialogContent, { children: [_jsxs(AlertDialogHeader, { children: [_jsx(AlertDialogTitle, { children: request?.title }), _jsx(AlertDialogDescription, { render: typeof request?.description === "string" ? undefined : _jsx("div", {}), children: request?.description })] }), _jsxs(AlertDialogFooter, { children: [_jsx(AlertDialogCancel, { type: "button", children: t("common.cancel") }), _jsx(AlertDialogAction, { type: "button", variant: request?.destructive ? "destructive" : "default", onClick: () => {
+    const t = useTranslator(commonMessages);
+    return (_jsx(AlertDialog, { open: request !== null, onOpenChange: (open) => !open && onClose(), children: _jsxs(AlertDialogContent, { children: [_jsxs(AlertDialogHeader, { children: [_jsx(AlertDialogTitle, { children: request?.title }), _jsx(AlertDialogDescription, { render: typeof request?.description === "string" ? undefined : _jsx("div", {}), children: request?.description })] }), _jsxs(AlertDialogFooter, { children: [_jsx(AlertDialogCancel, { type: "button", children: t("cancel") }), _jsx(AlertDialogAction, { type: "button", variant: request?.destructive ? "destructive" : "default", onClick: () => {
                                 const action = request?.onConfirm;
                                 onClose();
                                 void action?.();
@@ -25,7 +25,7 @@ export const discardConfirm = (t) => ({
  * Render `dialog` once somewhere on the screen.
  */
 export function useConfirm() {
-    const t = useTranslator(sharedMessages);
+    const t = useTranslator(commonMessages);
     const [request, setRequest] = useState(null);
     const resolveRef = useRef(null);
     const confirm = useCallback((next) => new Promise((resolve) => {

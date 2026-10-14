@@ -1,7 +1,7 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { blockNodeName, DocPreview } from "@monti-cms/admin/editor";
-import { Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsList, TabsTrigger, Textarea, } from "@monti-cms/admin/kit";
+import { Button, commonMessages, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, FieldError, isComposingKey, Tabs, TabsList, TabsTrigger, Textarea, } from "@monti-cms/admin/kit";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -30,6 +30,7 @@ function contentFor(site, format, editor, from, to, mdx) {
 function WriteDialog({ job, format, getEntry, onClose, }) {
     const site = useSite();
     const t = useTranslator(aiWriteMessages);
+    const tc = useTranslator(commonMessages);
     const common = useTranslator(aiCommonMessages);
     const [request, setRequest] = useState("");
     const [state, setState] = useState({ status: "idle" });
@@ -114,16 +115,16 @@ function WriteDialog({ job, format, getEntry, onClose, }) {
                             void run();
                     }, children: [_jsx(Textarea, { "aria-label": t("request"), value: request, rows: 3, onChange: (event) => setRequest(event.target.value), onKeyDown: (event) => {
                                 // Enter inserts a newline; Cmd/Ctrl+Enter runs.
-                                if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+                                if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
                                     event.preventDefault();
                                     if (!running)
                                         void run();
                                 }
-                            }, placeholder: job.mode === "insert" ? t("askWrite") : job.mode === "block" ? t("askChange") : t("request"), className: "max-h-48 min-h-20 resize-y text-sm", autoFocus: !fixed }), _jsx("div", { className: "flex justify-end", children: _jsxs(Button, { type: "submit", size: "sm", disabled: running, children: [state.status === "idle" ? _jsx(Sparkles, { "aria-hidden": true }) : _jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")] }) })] })), showResult && (_jsxs(Tabs, { value: view, onValueChange: (value) => setView(value), className: "min-w-0 gap-2", children: [_jsxs(TabsList, { children: [_jsx(TabsTrigger, { value: "preview", children: t("preview") }), _jsx(TabsTrigger, { value: "source", children: job.mode === "insert" ? t("sourceInsert") : t("sourceChanges") })] }), _jsx("output", { "aria-live": "polite", className: "block min-w-0", children: view === "preview" ? (_jsx(ResultPreview, { job: job, format: format, text: result, done: state.status === "done" })) : (_jsx("pre", { className: "max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-cms-muted/40 p-3 font-mono text-xs leading-relaxed", children: diff ? _jsx(DiffText, { parts: diff }) : result || t("running") })) })] })), (state.status === "error" || blockProblem) && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: state.status === "error" ? state.message : blockProblem })), _jsxs(DialogFooter, { children: [!askRequest && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "sm:mr-auto", disabled: running, onClick: () => void run(), children: [_jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : t("runAgain")] })), _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onClose, children: t("cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: state.status !== "done" || !state.text || !!blockProblem, onClick: apply, children: job.mode === "insert" ? t("insert") : t("replace") })] })] }) }));
+                            }, placeholder: job.mode === "insert" ? t("askWrite") : job.mode === "block" ? t("askChange") : t("request"), className: "max-h-48 min-h-20 resize-y text-sm", autoFocus: !fixed }), _jsx("div", { className: "flex justify-end", children: _jsxs(Button, { type: "submit", size: "sm", disabled: running, children: [state.status === "idle" ? _jsx(Sparkles, { "aria-hidden": true }) : _jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : state.status === "idle" ? t("run") : t("runAgain")] }) })] })), showResult && (_jsxs(Tabs, { value: view, onValueChange: (value) => setView(value), className: "min-w-0 gap-2", children: [_jsxs(TabsList, { children: [_jsx(TabsTrigger, { value: "preview", children: t("preview") }), _jsx(TabsTrigger, { value: "source", children: job.mode === "insert" ? t("sourceInsert") : t("sourceChanges") })] }), _jsx("output", { "aria-live": "polite", className: "block min-w-0", children: view === "preview" ? (_jsx(ResultPreview, { job: job, format: format, text: result, done: state.status === "done" })) : (_jsx("pre", { className: "max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-cms-muted/40 p-3 font-mono text-xs leading-relaxed", children: diff ? _jsx(DiffText, { parts: diff }) : result || t("running") })) })] })), (state.status === "error" || blockProblem) && (_jsx(FieldError, { children: state.status === "error" ? state.message : blockProblem })), _jsxs(DialogFooter, { children: [!askRequest && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "sm:mr-auto", disabled: running, onClick: () => void run(), children: [_jsx(RefreshCw, { "aria-hidden": true }), running ? t("running") : t("runAgain")] })), _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onClose, children: tc("cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: state.status !== "done" || !state.text || !!blockProblem, onClick: apply, children: job.mode === "insert" ? t("insert") : t("replace") })] })] }) }));
 }
 /** Text with the changes (removed and added) marked. */
 function DiffText({ parts }) {
-    return parts.map((part, index) => part.type === "same" ? (_jsx("span", { children: part.text }, index)) : part.type === "del" ? (_jsx("del", { className: "bg-cms-destructive/15 text-cms-destructive line-through", children: part.text }, index)) : (_jsx("ins", { className: "bg-emerald-500/15 cms-dark:text-emerald-400 text-emerald-700 no-underline", children: part.text }, index)));
+    return parts.map((part, index) => part.type === "same" ? (_jsx("span", { children: part.text }, index)) : part.type === "del" ? (_jsx("del", { className: "bg-cms-destructive-soft text-cms-destructive-foreground line-through", children: part.text }, index)) : (_jsx("ins", { className: "bg-cms-success-soft text-cms-success-foreground no-underline", children: part.text }, index)));
 }
 const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-cms-muted/40 p-3";
 /** A text as the rendered post. A text the format cannot read is shown as it is. */

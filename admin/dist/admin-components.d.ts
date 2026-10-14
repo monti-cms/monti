@@ -124,7 +124,7 @@ export interface EditorMarkExtension extends EditorMarkSpec {
     /** Slash (`/`) menu items. Placed after the default text format items and before the block items. */
     readonly insertActions?: readonly EditorInsertAction[];
 }
-export type { BrowserExportOptions, BrowserFormat, BrowserImportResult } from "./browser-format.js";
+export type { BrowserFormat, BrowserImportResult } from "./browser-format.js";
 /**
  * What a source panel receives. The panel edits the body as text in the notation of its format and hands the result back as a stored document: the
  * document is the only source, and the panel parses in the browser (`onChange` gets the findings at once). A text it cannot read is handed back as a

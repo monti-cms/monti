@@ -1,13 +1,13 @@
-/** Changes that return an entry, and their notification kinds. */
-const ENTRY_CHANGES = {
-    createEntryWithReferences: "created",
-    saveWorkingWithReferences: "saved",
-    publishEntry: "published",
-    archiveEntry: "archived",
-    unarchiveEntry: "unarchived",
-    trashEntry: "trashed",
-    restoreEntry: "restored",
-};
+/** The store functions that change an entry and return it; the store writes the event of each in its own transaction. */
+const ENTRY_CHANGES = [
+    "createEntryWithReferences",
+    "saveWorkingWithReferences",
+    "publishEntry",
+    "archiveEntry",
+    "unarchiveEntry",
+    "trashEntry",
+    "restoreEntry",
+];
 /**
  * Wraps the store's mutation functions so `dispatch` is called with the entry id after each commit. The store has already written the events of the change
  * in its own transaction (the outbox), so `dispatch` only delivers them. If it throws, the committed change stays and the request does not fail (the
@@ -24,7 +24,7 @@ export function withEventDispatch(store, dispatch) {
     };
     // A proxy, not a copy: the store may itself be a proxy that answers any name (the lazy adapter store), which a spread would not see.
     const overrides = new Map();
-    for (const method of Object.keys(ENTRY_CHANGES)) {
+    for (const method of ENTRY_CHANGES) {
         const original = store[method];
         if (typeof original !== "function")
             continue;

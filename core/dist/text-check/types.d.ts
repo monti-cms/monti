@@ -38,6 +38,13 @@ export interface TextCheckerLimits {
     /** Upper limit of paragraphs to send at once. */
     readonly maxSegments?: number;
 }
+/** The limits when a checker names none: 100 paragraphs and 20,000 characters per request. */
+export declare const DEFAULT_TEXT_CHECKER_LIMITS: Required<TextCheckerLimits>;
+/**
+ * Fills in the limits of a checker with defaults and rejects values that are not positive integers (`label` names the checker in the error). The server route and
+ * the browser checker both read the result, so a limit means the same on both sides.
+ */
+export declare function resolveTextCheckerLimits(limits?: TextCheckerLimits, defaults?: Required<TextCheckerLimits>, label?: string): Required<TextCheckerLimits>;
 export interface TextCheckContext {
     /** Cancels on a re-check or when the edit screen closes. Passed to `fetch` as is. */
     readonly signal: AbortSignal;

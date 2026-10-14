@@ -26,4 +26,12 @@ function TabsTrigger({ className, ...props }) {
 function TabsContent({ className, ...props }) {
     return (_jsx(TabsPrimitive.Panel, { "data-slot": "tabs-content", className: cn("flex-1 text-sm outline-none", className), ...props }));
 }
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
+/** A bar of line tabs under a header, edge to edge with a bottom border (inside a panel or a sheet). */
+function LineTabs({ className, ...props }) {
+    return (_jsx(TabsList, { variant: "line", className: cn("h-10 w-full shrink-0 justify-start gap-4 border-b", className), ...props }));
+}
+/** The line tabs that sit at the top of a page or a screen's main area. */
+function PageTabs({ className, ...props }) {
+    return _jsx(LineTabs, { className: cn("px-4", className), ...props });
+}
+export { Tabs, TabsList, TabsTrigger, TabsContent, LineTabs, PageTabs, tabsListVariants };

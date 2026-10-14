@@ -3,6 +3,10 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { CmsApiError, errorText } from "../../api/client.js";
+import { previewSchema, saveSchema, } from "../../api/schema.js";
+import { useCmsMutation } from "../../api/use-cms-mutation.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { AdminLink } from "../../router/index.js";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert.js";
 import { Badge } from "../../ui/badge.js";
@@ -10,13 +14,11 @@ import { Button } from "../../ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog.js";
 import { Input } from "../../ui/input.js";
 import { Skeleton } from "../../ui/skeleton.js";
-import { CmsApiError, errorText } from "../admin-api.js";
 import { entryHref } from "../shared/entry-href.js";
 import { describeChange, describeNoTransform, describeTransform } from "./change-text.js";
 import { IssueList } from "./controls.js";
-import { schemaMessages } from "./messages.js";
 import { reloadPage } from "./reload.js";
-import { previewSchema, saveSchema, } from "./schema-api.js";
+import { schemaReviewMessages } from "./review.messages.js";
 /** The request of the screen's edit with the picks made so far; `undefined` picks leave the choice to the server's defaults. */
 const requestOf = (draft, renames, picks) => ({
     schema: draft,
@@ -28,7 +30,7 @@ const sameTransform = (a, b) => a !== null &&
     JSON.stringify({ ...a, value: undefined }) === JSON.stringify({ ...b, value: undefined });
 /** The choices of one change the data can follow in more than one way, each with what it does; "keep" is always there. */
 function Decision({ decision, picked, onPick, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaReviewMessages);
     const site = useSite();
     const name = `decision-${decision.key}`;
     const freeText = decision.suggestions.length === 1 &&
@@ -40,11 +42,11 @@ function Decision({ decision, picked, onPick, }) {
             }), decision.sample.length > 0 && _jsx(Sample, { sample: decision.sample, entries: decision.entries, site: site })] }));
 }
 function Sample({ sample, entries, site, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaReviewMessages);
     return (_jsxs("div", { className: "text-xs", children: [_jsxs("span", { className: "text-cms-muted-foreground", children: [t("review.sample"), " "] }), _jsx("ul", { className: "inline", children: sample.map((entry, index) => (_jsxs("li", { className: "inline", children: [index > 0 && ", ", _jsx(AdminLink, { href: entryHref(site, entry.collection, entry.id), className: "underline underline-offset-2", target: "_blank", children: entry.title ?? entry.id.slice(0, 8) }), _jsxs("span", { className: "text-cms-muted-foreground", children: [" ", "(", entry.collection, ", ", entry.locale, ", ", entry.status, ")"] })] }, entry.id))) }), entries > sample.length && (_jsxs("span", { className: "text-cms-muted-foreground", children: [" ", t("review.more", { count: entries - sample.length })] }))] }));
 }
 function Impact({ impact }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaReviewMessages);
     const site = useSite();
     return (_jsxs("li", { className: "flex flex-col gap-1 rounded-md border px-3 py-2", "data-testid": `impact-${impact.key}`, children: [_jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsx("span", { className: "text-sm", children: describeChange(impact.change, t) }), impact.entries > 0 && (_jsx(Badge, { variant: impact.consequence === "deleted" ? "destructive" : "secondary", children: t("review.entriesCount", { count: impact.entries }) }))] }), impact.entries > 0 && (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t(`consequence.${impact.consequence}`) })), !impact.checked && _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.notChecked") }), impact.sample.length > 0 && _jsx(Sample, { sample: impact.sample, entries: impact.entries, site: site })] }));
 }
@@ -56,13 +58,13 @@ const settingText = (value, unset) => value === undefined ? unset : typeof value
  * the types and the dev database; the screen then reloads.
  */
 export function ReviewDialog({ open, onOpenChange, draft, renames, settings = [], baseHash, onIssues, onSaved, onApplyFailed, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaReviewMessages);
+    const tc = useTranslator(commonMessages);
     const site = useSite();
     const [preview, setPreview] = useState(null);
     const [picks, setPicks] = useState(undefined);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const skip = useRef(false);
     const request = (current) => ({
@@ -110,17 +112,18 @@ export function ReviewDialog({ open, onOpenChange, draft, renames, settings = []
             controller.abort();
         };
     }, [open, draft, renames, picks, site, onIssues, t]);
-    const save = async () => {
-        setSaving(true);
-        setSaveError(null);
-        try {
-            const result = await saveSchema(site, { ...request(picks), baseHash });
+    const saveMutation = useCmsMutation({
+        fn: (current, { site }) => saveSchema(site, { ...request(current), baseHash }),
+        failure: t("save.failed"),
+        // Each failure has its own text and effect in the dialog.
+        inline: true,
+        onSuccess: (result) => {
             if (result.saved)
                 onSaved(result);
             else
                 onOpenChange(false);
-        }
-        catch (reason) {
+        },
+        onError: (reason) => {
             if (reason instanceof CmsApiError) {
                 if (reason.code === "schema_conflict")
                     setSaveError({ message: t("save.conflict"), conflict: true });
@@ -137,15 +140,17 @@ export function ReviewDialog({ open, onOpenChange, draft, renames, settings = []
             }
             else
                 setSaveError({ message: errorText(site, reason, t("save.failed")) });
-        }
-        finally {
-            setSaving(false);
-        }
+        },
+    });
+    const saving = saveMutation.isPending;
+    const save = () => {
+        setSaveError(null);
+        saveMutation.mutate(picks);
     };
     const problems = preview?.problems ?? [];
     const ready = preview?.valid && problems.length === 0 && preview.changed && !loading && !saving;
     const dataChanges = (preview?.impacts ?? []).length;
-    return (_jsx(Dialog, { open: open, onOpenChange: onOpenChange, children: _jsxs(DialogContent, { className: "flex max-h-[85vh] w-[min(44rem,calc(100%-2rem))] max-w-none flex-col gap-4 sm:max-w-none", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: t("review.title") }), _jsx(DialogDescription, { children: t("review.description") })] }), _jsxs("div", { className: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1", "data-testid": "review-body", children: [error && (_jsx(Alert, { variant: "danger", layout: "stack", children: _jsx(AlertDescription, { children: error }) })), loading && !preview && _jsx(Skeleton, { className: "h-24 w-full" }), preview && !preview.valid && (_jsxs(Alert, { variant: "danger", layout: "stack", children: [_jsx(AlertTitle, { children: t("review.invalid") }), _jsx(AlertDescription, { children: _jsx(IssueList, { issues: preview.issues }) })] })), problems.length > 0 && (_jsxs(Alert, { variant: "danger", layout: "stack", children: [_jsx(AlertTitle, { children: t("review.problems") }), _jsx(AlertDescription, { children: _jsx("ul", { className: "list-disc pl-4", children: problems.map((problem) => (_jsx("li", { children: problem.message }, `${problem.id}:${problem.message}`))) }) })] })), preview?.valid && (_jsxs(_Fragment, { children: [_jsx("p", { className: "text-sm", "data-testid": "review-summary", children: preview.changed
+    return (_jsx(Dialog, { open: open, onOpenChange: onOpenChange, children: _jsxs(DialogContent, { className: "flex max-h-[85vh] w-[min(44rem,calc(100%-2rem))] max-w-none flex-col gap-4 sm:max-w-none", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: t("review.title") }), _jsx(DialogDescription, { children: t("review.description") })] }), _jsxs("div", { className: "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1", "data-testid": "review-body", children: [error && (_jsx(Alert, { variant: "destructive", layout: "stack", children: _jsx(AlertDescription, { children: error }) })), loading && !preview && _jsx(Skeleton, { className: "h-24 w-full" }), preview && !preview.valid && (_jsxs(Alert, { variant: "destructive", layout: "stack", children: [_jsx(AlertTitle, { children: t("review.invalid") }), _jsx(AlertDescription, { children: _jsx(IssueList, { issues: preview.issues }) })] })), problems.length > 0 && (_jsxs(Alert, { variant: "destructive", layout: "stack", children: [_jsx(AlertTitle, { children: t("review.problems") }), _jsx(AlertDescription, { children: _jsx("ul", { className: "list-disc pl-4", children: problems.map((problem) => (_jsx("li", { children: problem.message }, `${problem.id}:${problem.message}`))) }) })] })), preview?.valid && (_jsxs(_Fragment, { children: [_jsx("p", { className: "text-sm", "data-testid": "review-summary", children: preview.changed
                                         ? t("review.summary", { count: dataChanges, from: preview.currentVersion, to: preview.nextVersion })
-                                        : t("review.unchanged") }), preview.baseline === "file" && (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.baselineFile") })), preview.decisions.length > 0 && (_jsxs("section", { className: "flex flex-col gap-2", "aria-label": t("review.decisions"), children: [_jsx("h3", { className: "font-medium text-sm", children: t("review.decisions") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.decisionsHint") }), preview.decisions.map((decision) => (_jsx(Decision, { decision: decision, picked: picks?.[decision.key] ?? null, onPick: (pick) => setPicks((current) => ({ ...current, [decision.key]: pick })) }, decision.key)))] })), settings.length > 0 && (_jsxs("section", { className: "flex flex-col gap-2", "aria-label": t("review.settings"), "data-testid": "review-settings", children: [_jsx("h3", { className: "font-medium text-sm", children: t("review.settings") }), _jsx("ul", { className: "flex flex-col gap-1", children: settings.map((setting) => (_jsxs("li", { className: "text-xs", children: [_jsx("code", { children: setting.path }), ": ", settingText(setting.from, t("review.unset")), " ", "->", " ", settingText(setting.to, t("review.unset"))] }, setting.path))) })] })), preview.impacts.length > 0 && (_jsxs("section", { className: "flex flex-col gap-2", "aria-label": t("review.changes"), children: [_jsx("h3", { className: "font-medium text-sm", children: t("review.changes") }), _jsx("ul", { className: "flex flex-col gap-1.5", children: preview.impacts.map((impact) => (_jsx(Impact, { impact: impact }, impact.key))) })] })), preview.transforms.length > 0 && (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") }) }))] })), saveError && (_jsxs(Alert, { variant: "danger", layout: "stack", children: [_jsx(TriangleAlert, { "aria-hidden": true }), _jsx(AlertDescription, { children: saveError.message })] }))] }), _jsx(DialogFooter, { children: saveError?.conflict || saveError?.applyFailed ? (_jsx(Button, { type: "button", onClick: reloadPage, children: t("save.reload") })) : (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: () => onOpenChange(false), children: t("review.cancel") }), _jsx(Button, { type: "button", disabled: !ready, onClick: () => void save(), children: saving ? t("review.saving") : t("review.save") })] })) })] }) }));
+                                        : t("review.unchanged") }), preview.baseline === "file" && (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.baselineFile") })), preview.decisions.length > 0 && (_jsxs("section", { className: "flex flex-col gap-2", "aria-label": t("review.decisions"), children: [_jsx("h3", { className: "font-medium text-sm", children: t("review.decisions") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.decisionsHint") }), preview.decisions.map((decision) => (_jsx(Decision, { decision: decision, picked: picks?.[decision.key] ?? null, onPick: (pick) => setPicks((current) => ({ ...current, [decision.key]: pick })) }, decision.key)))] })), settings.length > 0 && (_jsxs("section", { className: "flex flex-col gap-2", "aria-label": t("review.settings"), "data-testid": "review-settings", children: [_jsx("h3", { className: "font-medium text-sm", children: t("review.settings") }), _jsx("ul", { className: "flex flex-col gap-1", children: settings.map((setting) => (_jsxs("li", { className: "text-xs", children: [_jsx("code", { children: setting.path }), ": ", settingText(setting.from, t("review.unset")), " ", "->", " ", settingText(setting.to, t("review.unset"))] }, setting.path))) })] })), preview.impacts.length > 0 && (_jsxs("section", { className: "flex flex-col gap-2", "aria-label": t("review.changes"), children: [_jsx("h3", { className: "font-medium text-sm", children: t("review.changes") }), _jsx("ul", { className: "flex flex-col gap-1.5", children: preview.impacts.map((impact) => (_jsx(Impact, { impact: impact }, impact.key))) })] })), preview.transforms.length > 0 && (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") }) }))] })), saveError && (_jsxs(Alert, { variant: "destructive", layout: "stack", children: [_jsx(TriangleAlert, { "aria-hidden": true }), _jsx(AlertDescription, { children: saveError.message })] }))] }), _jsx(DialogFooter, { children: saveError?.conflict || saveError?.applyFailed ? (_jsx(Button, { type: "button", onClick: reloadPage, children: t("save.reload") })) : (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: () => onOpenChange(false), children: tc("cancel") }), _jsx(Button, { type: "button", disabled: !ready, onClick: () => void save(), children: saving ? tc("saving") : t("review.save") })] })) })] }) }));
 }

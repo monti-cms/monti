@@ -1,7 +1,7 @@
 import { isUuid } from "../core/ids.js";
 import { slugify } from "../core/slug.js";
-import { isRequiredField, RESERVED_METADATA_KEYS, storageTypeOf, } from "./fields.js";
-import { titleFieldOf, titleValue, valueFieldsOf } from "./walk.js";
+import { fieldTraits, isRequiredField, RECORD_TRANSLATIONS_KEY, storageTypeOf, } from "./fields.js";
+import { fieldWithRole, titleFieldOf, titleValue, valueFieldsOf, valueWithRole, } from "./walk.js";
 /**
  * Validates the meaning of values that passed the storage format check. If there is a problem, returns the legacy API's error code.
  */
@@ -31,11 +31,6 @@ const isEmptyValue = (value) => value === undefined ||
     value === null ||
     (typeof value === "string" && value === "") ||
     (Array.isArray(value) && value.length === 0);
-/**
- * Metadata key that holds the per-language values of item collections (categories, tags, collections). It cannot be used as a field name (`defineSite`).
- * `{ en: { title: "..." }, ja: { ... } }`. The address and links are shared, so records are not split per language.
- */
-export const RECORD_TRANSLATIONS_KEY = RESERVED_METADATA_KEYS[0];
 /** The rules of the collections of one site config (`config.collections`). */
 export function createSchemas(collections) {
     const schemaOf = (collection) => collections[collection];
@@ -60,13 +55,11 @@ export function createSchemas(collections) {
      * with this function.
      */
     function roleField(collection, role) {
-        return storedFields(collection).find((stored) => stored.field.role === role);
+        return fieldWithRole(schemaOf(collection), role);
     }
     /** The value (string) of that role's field. `""` if the field is missing or the value is not a string. */
     function roleValue(collection, role, values) {
-        const stored = roleField(collection, role);
-        const value = stored ? values[stored.name] : undefined;
-        return typeof value === "string" ? value : "";
+        return valueWithRole(schemaOf(collection), role, values);
     }
     /** The title field of a collection (see `titleFieldOf`). */
     function titleField(collection) {
@@ -187,7 +180,7 @@ export function createSchemas(collections) {
         const own = [];
         const inherit = [];
         for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
-            if (field.kind === "backlink" || field.kind === "view")
+            if (!fieldTraits[field.kind].localizable)
                 continue;
             if (field.localized === true)
                 own.push(name);
@@ -196,23 +189,25 @@ export function createSchemas(collections) {
         }
         return { own, inherit };
     }
+    /** Every per-language field name (`own` and `inherit` together): the keys a translation holds itself. */
+    function localizedSet(collection) {
+        const { own, inherit } = localizedFieldNames(collection);
+        return new Set([...own, ...inherit]);
+    }
     /** Common field keys a translation must not have. Stored fields whose definition has no `localized` (not values of removed fields). */
     function commonFieldKeys(collection, metadata) {
-        const { own, inherit } = localizedFieldNames(collection);
-        const localized = new Set([...own, ...inherit]);
+        const localized = localizedSet(collection);
         // Values of removed fields are not common fields: they stay wherever they are stored.
         return Object.keys(metadata).filter((key) => !localized.has(key) && !isOrphanedMetadataKey(collection, key));
     }
     /** Picks only the per-language values to carry from the source metadata to the translation. */
     function pickLocalizedMetadata(collection, metadata) {
-        const { own, inherit } = localizedFieldNames(collection);
-        const localized = new Set([...own, ...inherit]);
+        const localized = localizedSet(collection);
         return Object.fromEntries(Object.entries(metadata).filter(([key]) => localized.has(key)));
     }
     /** Public metadata of a translation = common values of the source + per-language values of the translation. */
     function mergeTranslationMetadata(collection, source, translation) {
-        const { own, inherit } = localizedFieldNames(collection);
-        const localized = new Set([...own, ...inherit]);
+        const localized = localizedSet(collection);
         const common = Object.fromEntries(Object.entries(source).filter(([key]) => !localized.has(key)));
         return { ...common, ...translation };
     }
@@ -284,6 +279,7 @@ export function createSchemas(collections) {
         relationRule,
         missingRequiredIssues,
         localizedFieldNames,
+        localizedSet,
         commonFieldKeys,
         pickLocalizedMetadata,
         mergeTranslationMetadata,

@@ -1,3 +1,5 @@
+import { pluginError } from "@monti-cms/core";
+import { GIT_SYNC_PLUGIN_NAME } from "../name.js";
 import { GitHubApiError, } from "./client.js";
 const DEFAULT_API_URL = "https://api.github.com";
 const encodeRef = (name) => name.split("/").map(encodeURIComponent).join("/");
@@ -11,7 +13,7 @@ export function createGitHubClient(options, fetchImpl = fetch) {
     const apiUrl = (options.apiUrl ?? DEFAULT_API_URL).replace(/\/$/, "");
     const [owner, name] = options.repo.split("/");
     if (!owner || !name)
-        throw new Error(`git-sync: "${options.repo}" is not an owner/name repo`);
+        throw pluginError(GIT_SYNC_PLUGIN_NAME, `"${options.repo}" is not an owner/name repo`);
     const repoUrl = `${apiUrl}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
     const headers = {
         Authorization: `Bearer ${options.token}`,

@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { codeRefBlock } from "./definition.js";
 export { codeRefBlock } from "./definition.js";
 /**
@@ -12,9 +12,8 @@ export { codeRefBlock } from "./definition.js";
  * Line anchors (the `anchor` line effect) and the linking view are core code block features; this extension provides the body-side mark and bubble.
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export const codeRef = () => definePlugin({
+export const codeRef = () => defineBlockPlugin({
     name: "code-ref",
-    options: {},
     blocks: [codeRefBlock],
     admin: () => import("@monti-cms/blocks/code-ref/admin"),
     render: () => import("@monti-cms/blocks/code-ref/render"),

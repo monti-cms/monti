@@ -21,7 +21,6 @@ export function MediaThumb({ media, iconClassName }) {
     }
     if (!media.publicUrl)
         return _jsx(File, { className: cn("text-cms-muted-foreground", iconClassName), "aria-hidden": true });
-    // biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic
     return _jsx("img", { src: media.publicUrl, alt: "", loading: "lazy", className: "h-full w-full object-cover" });
 }
 const deleteKey = (media, onDeleteKey) => (event) => {

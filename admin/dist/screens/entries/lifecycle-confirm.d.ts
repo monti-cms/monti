@@ -10,8 +10,6 @@ export type ConfirmedLifecycleAction = Extract<LifecycleAction, "archive" | "tra
 export declare const lifecycleLabel: (site: Site) => Record<LifecycleAction, string>;
 /** Text to announce after the transition finishes. */
 export declare const lifecycleSuccess: (site: Site) => Record<LifecycleAction, string>;
-/** Text to announce when the transition fails. */
-export declare const lifecycleFailed: (site: Site) => Record<LifecycleAction, string>;
 /**
  * Confirmation text for transitions that take a published entry down. Also tells if the published version is used elsewhere,
  * and that moving the original also moves translations in the same group.

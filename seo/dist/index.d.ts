@@ -6,4 +6,4 @@ export { seoAi, seoAiContribution } from "./ai.js";
 export { SEO_DEFAULT_KEYS, SEO_DEFAULT_LABELS, SEO_DEFAULT_LIMITS, SEO_INPUTS, SEO_PREVIEW_VIEW, SEO_ROLES, type SeoFields, type SeoFieldsOptions, type SeoPart, seoFields, } from "./fields.js";
 export { SEO_PLUGIN_NAME, type SeoPluginOptions, seo } from "./plugin.js";
 export { type SeoValues, seoOf } from "./read.js";
-export { validateSeoFields } from "./validate.js";
+export { checkSeoFields } from "./validate.js";

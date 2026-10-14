@@ -70,7 +70,7 @@ export declare const aiPresets: {
         }, {
             readonly kind: "maxLength";
             readonly max: 80;
-        }, import("./action.js").AiValidator];
+        }, import("@monti-cms/core/ai-contract").AiValidator];
         readonly prompt: string;
         readonly attach: {
             readonly slot: "field";
@@ -525,7 +525,7 @@ export declare const aiPresets: {
         };
         readonly result: "mdx";
         readonly askInstruction: true;
-        readonly checks: readonly [import("./action.js").AiValidator];
+        readonly checks: readonly [import("@monti-cms/core/ai-contract").AiValidator];
         readonly prompt: string;
         readonly attach: readonly [{
             readonly slot: "translation";
@@ -555,7 +555,7 @@ export declare const aiPresets: {
     }) | undefined;
     /**
      * Style polish. Polishes the text selected in the body, shows what changed, and replaces the selected text on click. The result is streamed.
-     * Given the key of a config shared text (`aiPlugin({ shared })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the shared text
+     * Given the key of a config shared text (`ai({ shared })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the shared text
      * `styleGuide` goes in when it exists. Enabled only when some collection has a body.
      */
     polish: (options?: {
@@ -657,7 +657,7 @@ export declare const aiPresets: {
         readonly result: "candidates";
         readonly apply: "append";
         readonly askInstruction: true;
-        readonly checks: readonly [import("./action.js").AiValidator];
+        readonly checks: readonly [import("@monti-cms/core/ai-contract").AiValidator];
         readonly prompt: string;
         readonly attach: readonly [{
             readonly slot: "codeRules";
@@ -712,7 +712,7 @@ export declare const DEFAULT_AI_ACTIONS: {
         }, {
             readonly kind: "maxLength";
             readonly max: 80;
-        }, import("./action.js").AiValidator];
+        }, import("@monti-cms/core/ai-contract").AiValidator];
         readonly prompt: string;
         readonly attach: {
             readonly slot: "field";
@@ -1128,7 +1128,7 @@ export declare const DEFAULT_AI_ACTIONS: {
         };
         readonly result: "mdx";
         readonly askInstruction: true;
-        readonly checks: readonly [import("./action.js").AiValidator];
+        readonly checks: readonly [import("@monti-cms/core/ai-contract").AiValidator];
         readonly prompt: string;
         readonly attach: readonly [{
             readonly slot: "translation";
@@ -1168,7 +1168,7 @@ export declare const DEFAULT_AI_ACTIONS: {
         readonly result: "candidates";
         readonly apply: "append";
         readonly askInstruction: true;
-        readonly checks: readonly [import("./action.js").AiValidator];
+        readonly checks: readonly [import("@monti-cms/core/ai-contract").AiValidator];
         readonly prompt: string;
         readonly attach: readonly [{
             readonly slot: "codeRules";

@@ -13,11 +13,13 @@ export const SUMMARY_ROLE = "summary";
 export const TITLE_ROLE = "title";
 /** The name of the title field of a collection that does not give the title role to any field. */
 export const DEFAULT_TITLE_FIELD = "title";
+/** The key under which an item collection keeps its per-language values (`metadata.translations`). */
+export const RECORD_TRANSLATIONS_KEY = "translations";
 /**
  * Keys the core uses separately in metadata. They cannot be used as field names (`defineSite` blocks them).
  * `translations` holds the per-language values of an item collection.
  */
-export const RESERVED_METADATA_KEYS = ["translations"];
+export const RESERVED_METADATA_KEYS = [RECORD_TRANSLATIONS_KEY];
 /** Whether the field must not be empty (`required: true`). */
 export const isRequiredField = (field) => field.required === true;
 /** Default character count when filling from the body. */
@@ -32,6 +34,17 @@ export function fillFromBodyLength(field) {
     const length = fill === true ? FILL_FROM_BODY_MAX_LENGTH : (fill.maxLength ?? FILL_FROM_BODY_MAX_LENGTH);
     return field.max === undefined ? length : Math.min(length, field.max);
 }
+/** The traits of each kind of field. */
+export const fieldTraits = {
+    text: { stored: true, localizable: true, entersValue: true },
+    slug: { stored: false, localizable: false, entersValue: true },
+    relation: { stored: true, localizable: true, entersValue: true },
+    select: { stored: true, localizable: true, entersValue: true },
+    media: { stored: true, localizable: true, entersValue: true },
+    conditional: { stored: true, localizable: true, entersValue: true },
+    backlink: { stored: false, localizable: false, entersValue: false },
+    view: { stored: false, localizable: false, entersValue: false },
+};
 export const fields = {
     text: (options) => ({ kind: "text", ...options }),
     slug: (options) => ({ kind: "slug", ...options }),
@@ -48,4 +61,6 @@ export const fields = {
         values,
     }),
 };
+/** Whether the field has a value in the entry's metadata (a value field, or a conditional field with its choice). */
+export const isStoredField = (field) => fieldTraits[field.kind].stored;
 export const storageTypeOf = (field) => field.kind === "relation" && field.many ? "string[]" : "string";

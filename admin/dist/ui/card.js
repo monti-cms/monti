@@ -21,4 +21,8 @@ function CardContent({ className, ...props }) {
 function CardFooter({ className, ...props }) {
     return (_jsx("div", { "data-slot": "card-footer", className: cn("flex items-center rounded-b-lg px-(--card-spacing) [.border-t]:pt-(--card-spacing)", className), ...props }));
 }
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
+/** The plain bordered surface for a section of a screen: a list, a form group, a table. Lay out its content yourself; `Card` is for titled cards. */
+function Panel({ className, ...props }) {
+    return (_jsx("div", { "data-slot": "panel", className: cn("rounded-lg border border-cms-border bg-cms-card text-cms-card-foreground", className), ...props }));
+}
+export { Card, Panel, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };

@@ -1,8 +1,8 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { problemError } from "../core/problem.js";
-import { resolveConfigPath } from "./config-paths.js";
 import { loadEnvFiles } from "./env.js";
+import { locateConfig } from "./locate.js";
 const isCms = (value) => typeof value === "object" &&
     value !== null &&
     typeof value.migrate === "function" &&
@@ -27,11 +27,11 @@ export async function importCms(cwd, configPath) {
  * Reads env files, then loads the app's config file and returns the CMS instance it exports (see {@link importCms}).
  */
 export async function loadApp(options) {
-    const log = options.log ?? console.log;
+    const { log } = options;
     const loaded = loadEnvFiles(options.cwd, options.envFiles);
     if (loaded.length > 0 && !options.quiet)
         log(`env: ${loaded.join(", ")}`);
-    const configPath = resolveConfigPath(options.cwd, options.config);
+    const configPath = locateConfig(options.cwd, options.config);
     if (!options.quiet)
         log(`config: ${configPath}`);
     return importCms(options.cwd, configPath);

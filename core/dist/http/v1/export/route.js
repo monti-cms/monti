@@ -1,7 +1,5 @@
 import { exportScopeSchema } from "../../../core/api.js";
-import { exportText } from "../../../format/convert.js";
-import { unknownFormatError } from "../../../format/unknown.js";
-import { createExportRefs } from "../../../read/index.js";
+import { createBodyExporter } from "../../../services/body-export.js";
 import { buildExportArchive, exportTextKey, } from "../../../services/export-service.js";
 import { adminRoute, parseWith, readJsonBody, readQuery } from "../handler.js";
 /**
@@ -10,20 +8,14 @@ import { adminRoute, parseWith, readJsonBody, readQuery } from "../handler.js";
  * entries, links as readers see them (an unpublished target is not a link), images by public URL.
  */
 async function exportTexts(cms, snapshot, scope, format) {
-    const registry = await cms.formats();
-    const found = registry.get(format);
-    if (!found)
-        throw unknownFormatError(format, registry);
-    const purpose = scope === "public" ? "read" : "sync";
-    const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, scope === "public" ? "published" : "working");
+    const exporter = await createBodyExporter(cms, {
+        format,
+        purpose: scope === "public" ? "read" : "sync",
+        source: scope === "public" ? "published" : "working",
+    });
     const bodies = new Map();
     const write = async (key, doc, locale) => {
-        const { text } = await exportText(cms.site, registry, format, doc, {
-            locale,
-            purpose,
-            refs: await refsOf(doc, locale),
-        });
-        bodies.set(key, text);
+        bodies.set(key, await exporter.text(doc, locale));
     };
     for (const entry of snapshot.entries) {
         if (scope === "public") {
@@ -41,7 +33,7 @@ async function exportTexts(cms, snapshot, scope, format) {
             await write(exportTextKey(template.id, "template"), template.doc, cms.site.DEFAULT_LOCALE);
         }
     }
-    return { format: { name: found.name, extension: found.extension }, bodies };
+    return { format: exporter.format, bodies };
 }
 const buildResponse = async (cms, scope, format) => {
     const snapshot = await cms.store().readExportSnapshot();

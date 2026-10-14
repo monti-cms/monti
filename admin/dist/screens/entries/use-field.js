@@ -2,8 +2,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { useSite } from "@monti-cms/core/client";
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
+import { cmsIssueMessage } from "../../api/error-message.js";
 import { assignStateSilently, createStateStore, notifyStateStore, useStoreSelector, } from "../../hooks/store.js";
-import { cmsIssueMessage } from "../api-error-message.js";
 import { isSandboxSite } from "../shared/preview-sandbox.js";
 import { formTitle } from "./entry-form.js";
 const EntryFormContext = createContext(null);
@@ -169,7 +169,6 @@ export function useField(name) {
         label: definition?.label ?? name,
         description: definition?.description,
         required: Boolean(definition && "required" in definition && definition.required) && !locked,
-        hidden: Boolean(definition && "hidden" in definition && definition.hidden),
         value,
         setValue,
         readOnly,

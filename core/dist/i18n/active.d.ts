@@ -10,8 +10,6 @@ import { type MessageBundle, type MessageValue, type MessageVars } from "./defin
 type Overrides = Readonly<Record<string, Readonly<Record<string, MessageValue>>>>;
 /** Runs `read` with the labels of definitions picked in `nextLanguage` (and `nextOverrides` text), then restores what was set before. Synchronous only. */
 export declare function withActiveLocale<T>(nextLanguage: string, nextOverrides: Overrides | undefined, read: () => T): T;
-/** Current language of definition labels (leading part, e.g. `ko`). English outside `withActiveLocale`. */
-export declare const activeLanguage: () => string;
 /**
  * Translator for one dictionary, for the getters of definitions. Picks the language set by `withActiveLocale` on every call. Used in modules the config file reads;
  * code that runs with a site uses `site.createTranslator(bundle)`.

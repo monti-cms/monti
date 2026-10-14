@@ -24,7 +24,7 @@ async function targetId(cms, collection, field, slug) {
     return found.status === "not_found" ? null : found.entry.translationGroupId;
 }
 /** `GET /api/monti/v1/public/entries?collection&page&pageSize&locale&<filters>` — published list (newest publish date first). */
-export async function GET(request, { cms }) {
+export async function list(request, cms) {
     const config = cms.server.publicApi;
     if (!config)
         return publicError("not_found", "Not found");

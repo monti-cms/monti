@@ -20,7 +20,7 @@ function createContext(site) {
     const keySchema = z.string().regex(SHARED_KEY_PATTERN, t("shared.keyFormat"));
     return {
         t,
-        /** Config texts (`aiPlugin({ shared })`). */
+        /** Config texts (`ai({ shared })`). */
         config: aiRegistryOf(site).shared,
         addedSchema: z.object({ key: keySchema, label: labelSchema, text: textSchema }),
         itemUpdateSchema: z.object({ key: z.string(), label: labelSchema.optional(), text: textSchema }),
@@ -81,7 +81,7 @@ async function write(site, store, expectedVersion, stored) {
     const version = await store.saveAiSettings({ id: "shared", expectedVersion, value: stored });
     return viewOf(site, version, stored);
 }
-const invalid = (message) => new AiError("ai_invalid_input", message);
+const invalid = (message) => new AiError("invalid_input", message);
 const unknownKey = (site, key) => invalid(contextOf(site).t("shared.unknown", { key }));
 function parse(site, schema, input) {
     const parsed = schema.safeParse(input);

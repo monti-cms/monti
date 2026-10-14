@@ -15,27 +15,36 @@ export declare const englishCoreText: CoreText;
  * `translation` is block translation in the translation editor (block menu and `Translate all`), `selection` is the menu shown when selecting text in the body
  * (e.g. style polish, replaces the selected text), and `insert` is the slash (`/`) menu and the empty document (e.g. draft writing, inserts at the cursor).
  * `block` is a button beside the handle of one body block (e.g. a Mermaid diagram). It sends the block source and replaces the block with the changed one.
+ * @internal The contract test checks the lists against the types.
  */
 export declare const AI_SLOTS: readonly ["field", "image", "codeRules", "media", "translation", "selection", "insert", "block"];
-export type AiSlot = (typeof AI_SLOTS)[number];
+export type { AiSlot } from "@monti-cms/core/ai-contract";
 /**
  * Mode. In `generate`, a chat model (LLM) answers with text. In `decide`, a decision model (System One, e.g. Jev)
  * rates the probability that each given choice fits, and only choices above the threshold become candidates. The decision model does not write text.
+ * @internal The contract test checks the lists against the types.
  */
 export declare const AI_ENGINES: readonly ["generate", "decide"];
-export type AiEngine = (typeof AI_ENGINES)[number];
-/** In decide mode, pick only one (`one`), or judge each choice separately and pick several (`many`). */
+export type { AiEngine } from "@monti-cms/core/ai-contract";
+/**
+ * In decide mode, pick only one (`one`), or judge each choice separately and pick several (`many`).
+ * @internal The contract test checks the lists against the types.
+ */
 export declare const AI_PICKS: readonly ["one", "many"];
-export type AiPick = (typeof AI_PICKS)[number];
+export type { AiPick } from "@monti-cms/core/ai-contract";
 /**
  * Result shape. `candidates` is several candidates to click, `text` is one long text, `mdx` is one body fragment (MDX),
  * `note` is a display-only note.
+ * @internal The contract test checks the lists against the types.
  */
 export declare const AI_RESULTS: readonly ["candidates", "text", "mdx", "note"];
-export type AiResult = (typeof AI_RESULTS)[number];
-/** How the result is applied. `append` adds to a list value (tags, regex rules). */
+export type { AiResult } from "@monti-cms/core/ai-contract";
+/**
+ * How the result is applied. `append` adds to a list value (tags, regex rules).
+ * @internal The contract test checks the lists against the types.
+ */
 export declare const AI_APPLIES: readonly ["replace", "append", "none"];
-export type AiApply = (typeof AI_APPLIES)[number];
+export type { AiApply } from "@monti-cms/core/ai-contract";
 /**
  * Result checks. Set per action as a list (all shown in the action editor); candidates that do not pass are discarded.
  * Fixed checks include only those usable by any action.
@@ -98,8 +107,6 @@ export type AiCheckInput = z.input<typeof aiCheckSchema>;
 export declare const checkKey: (check: Pick<AiCheck, "kind"> & {
     name?: string;
 }) => string;
-/** Converts one stored check to the current shape. Kinds that moved to code checks become the code check of the same name. */
-export declare function migrateCheck(value: unknown): unknown;
 /** Checks any action can add in the admin UI, with initial values. The rest are set by the action definition. */
 export declare const ADDABLE_CHECKS: {
     readonly pattern: {
@@ -169,8 +176,3 @@ export interface AiRunContext {
     imageSrc?: string;
     filename?: string;
 }
-/**
- * Converts values saved before the check list existed (one `check` + `maxLength`) into a check list.
- * Used when moving legacy `ai_features` rows into edited values.
- */
-export declare function migrateLegacyCheck(value: unknown): unknown;

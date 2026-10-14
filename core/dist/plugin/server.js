@@ -1,15 +1,14 @@
 import { createFormatRegistry } from "../format/registry.js";
+/** The server side of one plugin: its inline object, or the default export of its loader. `undefined` for a plugin without one. */
+export async function serverSideOf(plugin) {
+    return typeof plugin.server === "function" ? (await plugin.server()).default : plugin.server;
+}
 /** `cms` is the instance that owns these plugins. It is passed to the plugin's `migrate` and `features`. */
 export function createServerPlugins(plugins, serverConfig, cms) {
     let loaded;
-    /** The server side of one plugin. Its `hooks` are the inline ones (`definePlugin({ hooks })`) or those of its `server` module, never both. */
+    /** The server side of one plugin: its inline object, or the default export of its loader. */
     const loadOne = async (plugin) => {
-        const server = (await plugin.server?.())?.default;
-        if (plugin.hooks && server?.hooks) {
-            throw new Error(`cms plugin "${plugin.name}": hooks are set both inline (definePlugin({ hooks })) and in its server module. Keep them in one place.`);
-        }
-        const hooks = plugin.hooks ?? server?.hooks;
-        return { name: plugin.name, ...server, ...(hooks ? { hooks } : {}) };
+        return { name: plugin.name, ...(await serverSideOf(plugin)) };
     };
     const load = () => {
         loaded ??= Promise.all(plugins.map(loadOne)).catch((error) => {
@@ -21,10 +20,11 @@ export function createServerPlugins(plugins, serverConfig, cms) {
     };
     let formats;
     const loadFormats = () => {
-        formats ??= Promise.all(plugins.map(async (plugin) => {
-            const provided = (await plugin.formats?.())?.default;
+        formats ??= load()
+            .then((servers) => Promise.all(servers.map(async (server) => {
+            const provided = await server.formats?.();
             return provided === undefined ? [] : Array.isArray(provided) ? provided : [provided];
-        }))
+        })))
             .then((lists) => createFormatRegistry(lists.flat()))
             .catch((error) => {
             formats = undefined;

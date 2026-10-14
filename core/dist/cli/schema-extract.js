@@ -2,19 +2,9 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseSchemaFile } from "../schema-file/format.js";
-import { SCHEMA_FILE_CANDIDATES } from "../schema-file/locate.js";
 import { printSchemaFile } from "../schema-file/print.js";
 import { createSite } from "../site/index.js";
-/**
- * Where a site keeps its config, in the order `monti schema:extract` looks for it: `monti.config.ts` (a config whose data is still written in code), then the
- * site config file of the earlier setup (`cms.config.ts`, a default export of `defineSite` from `@monti-cms/core`).
- */
-export const CONFIG_FILE_CANDIDATES = [
-    "monti.config.ts",
-    "src/monti.config.ts",
-    "cms.config.ts",
-    "src/cms.config.ts",
-];
+import { locateExtractConfig, SCHEMA_FILE_CANDIDATES } from "./locate.js";
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 /** Paths of the functions inside a value (what a schema file cannot hold: it is data only). */
 function functionPaths(value, at) {
@@ -114,12 +104,7 @@ export const schemaFileText = (schema) => printSchemaFile(schema);
  */
 export async function extractSchema(options) {
     const { cwd } = options;
-    const configFile = options.config ?? CONFIG_FILE_CANDIDATES.find((candidate) => existsSync(path.join(cwd, candidate)));
-    if (!configFile || !existsSync(path.resolve(cwd, configFile))) {
-        throw new Error(configFile
-            ? `config file not found: ${configFile}`
-            : `cannot find ${CONFIG_FILE_CANDIDATES[0]}; pass --config <path>`);
-    }
+    const configFile = locateExtractConfig(cwd, options.config);
     const out = options.out ?? path.join(path.dirname(configFile), SCHEMA_FILE_CANDIDATES[0]).split(path.sep).join("/");
     if (existsSync(path.resolve(cwd, out)) && !options.overwrite) {
         throw new Error(`${out} already exists; pass --overwrite to replace it`);

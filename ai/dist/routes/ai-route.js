@@ -43,13 +43,13 @@ async function fetchSiteImage(site, url, signal) {
         return null;
     const mimeType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
     if (!IMAGE_TYPES.has(mimeType))
-        throw new AiError("ai_failed", t("imageType"));
+        throw new AiError("upstream_failed", t("imageType"));
     if (Number(response.headers.get("content-length") ?? 0) > MAX_IMAGE_BYTES) {
-        throw new AiError("ai_input_too_large", t("imageTooLarge"));
+        throw new AiError("payload_too_large", t("imageTooLarge"));
     }
     const bytes = await response.arrayBuffer();
     if (bytes.byteLength > MAX_IMAGE_BYTES)
-        throw new AiError("ai_input_too_large", t("imageTooLarge"));
+        throw new AiError("payload_too_large", t("imageTooLarge"));
     return {
         mediaType: mimeType,
         data: Buffer.from(bytes).toString("base64"),
@@ -74,17 +74,17 @@ export function aiRunDeps(cms, runtime, signal, origin) {
             if (!mediaId) {
                 const url = src && origin ? siteImageUrl(src, origin) : null;
                 if (!url)
-                    throw new AiError("ai_failed", t("siteImageOnly"));
+                    throw new AiError("upstream_failed", t("siteImageOnly"));
                 return fetchSiteImage(site, url, signal);
             }
             const media = await store.getMediaAsset(mediaId);
             if (!media || media.status !== "ready" || !media.storageKey)
                 return null;
             if (!media.mimeType || !IMAGE_TYPES.has(media.mimeType)) {
-                throw new AiError("ai_failed", t("imageType"));
+                throw new AiError("upstream_failed", t("imageType"));
             }
             if ((media.byteSize ?? 0) > MAX_IMAGE_BYTES) {
-                throw new AiError("ai_input_too_large", t("imageTooLarge"));
+                throw new AiError("payload_too_large", t("imageTooLarge"));
             }
             const bytes = await cms.mediaStore().readFile({ key: media.storageKey, maxBytes: MAX_IMAGE_BYTES, signal });
             return {

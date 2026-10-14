@@ -1,11 +1,14 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
+import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { getMedia, mediaKeys } from "../api/media.js";
 import { cn } from "../lib/utils/cn.js";
 import { useSlot } from "../slots/slots.js";
+import { FieldError } from "../ui/field.js";
 import { Input } from "../ui/input.js";
 import { Separator } from "../ui/separator.js";
 import { Skeleton } from "../ui/skeleton.js";
@@ -43,6 +46,7 @@ const ALIGN_TOOLS = (t) => [
 /** Edit view of the core image block (`blockViews.image`). */
 export function ImageBlockView() {
     const t = useTranslator(editorMessages);
+    const site = useSite();
     const block = useBlockEditor();
     const widthInputId = useId();
     const altInputId = useId();
@@ -98,37 +102,25 @@ export function ImageBlockView() {
     });
     const altSlot = useSlot(imageSlot("alt"));
     const captionSlot = useSlot(imageSlot("caption"));
-    const [mediaState, setMediaState] = useState(null);
     const transform = computeImageTransform({
         crop,
         rotate,
         aspectRatio,
     });
-    useEffect(() => {
-        if (!mediaId || src) {
-            setMediaState(null);
-            return;
-        }
-        let cancelled = false;
-        setMediaState({ status: "checking", publicUrl: null });
-        fetch(cmsApiUrl(`/v1/media/${encodeURIComponent(mediaId)}`))
-            .then(async (response) => {
-            if (!response.ok)
-                throw new Error("media_lookup_failed");
-            return (await response.json());
-        })
-            .then((result) => {
-            if (!cancelled)
-                setMediaState({ status: result.status ?? "unknown", publicUrl: result.publicUrl ?? null });
-        })
-            .catch(() => {
-            if (!cancelled)
-                setMediaState({ status: "lookup-failed", publicUrl: null });
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [mediaId, src]);
+    // An image kept as a library media (no `src` in the document) looks its status and public address up.
+    const lookup = useQuery({
+        queryKey: mediaKeys.detail(mediaId),
+        queryFn: ({ signal }) => getMedia(site, mediaId, signal),
+        enabled: mediaId !== "" && !src,
+        retry: false,
+    });
+    const mediaState = !mediaId || src
+        ? null
+        : lookup.isError
+            ? { status: "lookup-failed", publicUrl: null }
+            : lookup.data
+                ? { status: lookup.data.status ?? "unknown", publicUrl: lookup.data.publicUrl ?? null }
+                : { status: "checking", publicUrl: null };
     const imageSrc = typeof src === "string" && src ? src : mediaState?.publicUrl;
     const resolved = resolveImageUrl(typeof imageSrc === "string" ? imageSrc : undefined);
     const canRender = resolved !== null && "url" in resolved;
@@ -230,7 +222,7 @@ export function ImageBlockView() {
                                             if (isValidImageWidth(e.target.value)) {
                                                 block.setValues({ width: e.target.value.trim() ? normalizeWidth(e.target.value) : null });
                                             }
-                                        }, className: "h-7 text-xs", placeholder: t("imageNode.widthPlaceholder") }), widthInvalid && (_jsx("p", { id: widthErrorId, role: "alert", className: "text-cms-destructive", children: t("imageNode.widthInvalid") }))] }), _jsxs(BlockSettingsField, { label: t("imageDialog.alt"), htmlFor: altInputId, action: !decorative ? altSlot.trigger : undefined, children: [_jsx(Textarea, { id: altInputId, value: alt || "", rows: 2, disabled: decorative, "aria-invalid": altMissing || undefined, "aria-describedby": altMissing ? altErrorId : undefined, onChange: (e) => block.setValues({ alt: e.target.value }), className: "min-h-0 text-xs md:text-xs" }), altMissing && (_jsx("p", { id: altErrorId, role: "alert", className: "text-cms-destructive", children: altRequiredMessage(t) })), altSlot.panel] }), _jsxs("label", { htmlFor: decorativeId, className: "flex items-center justify-between gap-2", children: [_jsx("span", { className: "text-cms-muted-foreground", children: t("imageDialog.decorative") }), _jsx(Switch, { id: decorativeId, size: "sm", checked: decorative, onCheckedChange: (checked) => block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null }) })] })] }), canRender && (_jsx(ToolbarButton, { label: t("imageCrop.title"), onClick: () => setIsCropDialogOpen(true), children: _jsx(Crop, { "aria-hidden": true }) }))] })), canRender ? (transform.isTransformed ? (_jsx("div", { "data-slot": "image-transform-wrapper", className: "relative w-full max-w-full overflow-hidden rounded-md bg-cms-muted", style: {
+                                        }, className: "h-7 text-xs", placeholder: t("imageNode.widthPlaceholder") }), widthInvalid && _jsx(FieldError, { id: widthErrorId, children: t("imageNode.widthInvalid") })] }), _jsxs(BlockSettingsField, { label: t("imageDialog.alt"), htmlFor: altInputId, action: !decorative ? altSlot.trigger : undefined, children: [_jsx(Textarea, { id: altInputId, value: alt || "", rows: 2, disabled: decorative, "aria-invalid": altMissing || undefined, "aria-describedby": altMissing ? altErrorId : undefined, onChange: (e) => block.setValues({ alt: e.target.value }), className: "min-h-0 text-xs md:text-xs" }), altMissing && _jsx(FieldError, { id: altErrorId, children: altRequiredMessage(t) }), altSlot.panel] }), _jsxs("label", { htmlFor: decorativeId, className: "flex items-center justify-between gap-2", children: [_jsx("span", { className: "text-cms-muted-foreground", children: t("imageDialog.decorative") }), _jsx(Switch, { id: decorativeId, size: "sm", checked: decorative, onCheckedChange: (checked) => block.setValues(checked ? { decorative: true, alt: "" } : { decorative: null }) })] })] }), canRender && (_jsx(ToolbarButton, { label: t("imageCrop.title"), onClick: () => setIsCropDialogOpen(true), children: _jsx(Crop, { "aria-hidden": true }) }))] })), canRender ? (transform.isTransformed ? (_jsx("div", { "data-slot": "image-transform-wrapper", className: "relative w-full max-w-full overflow-hidden rounded-md bg-cms-muted", style: {
                     width: previewWidth || width || "100%",
                     maxWidth: "100%",
                     ...transform.wrapperStyle,

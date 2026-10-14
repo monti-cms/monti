@@ -18,7 +18,7 @@ import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartToo
  */
 function ChartErrorCard({ errors }) {
     const t = useTranslator(chartMessages);
-    return (_jsx("div", { className: "not-prose my-6", children: _jsxs(Alert, { variant: "danger", children: [_jsx(AlertOctagon, {}), _jsx(AlertTitle, { children: t("error.title") }), _jsx(AlertDescription, { children: _jsx("ul", { className: "ml-4 list-disc space-y-1", children: errors.map((error) => (_jsx("li", { children: chartErrorLine(error, t) }, `${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`))) }) })] }) }));
+    return (_jsx("div", { className: "not-prose my-6", children: _jsxs(Alert, { variant: "destructive", children: [_jsx(AlertOctagon, {}), _jsx(AlertTitle, { children: t("error.title") }), _jsx(AlertDescription, { children: _jsx("ul", { className: "ml-4 list-disc space-y-1", children: errors.map((error) => (_jsx("li", { children: chartErrorLine(error, t) }, `${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`))) }) })] }) }));
 }
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart };
 const VALUE_LABEL_CLASS = "fill-cms-foreground font-medium text-[11px]";

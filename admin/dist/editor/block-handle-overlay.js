@@ -4,6 +4,7 @@ import { useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { commonMessages } from "../lib/common.messages.js";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger, } from "../ui/dropdown-menu.js";
 import { IconButton } from "../ui/icon-button.js";
 import { Spinner } from "../ui/spinner.js";
@@ -11,6 +12,7 @@ import { editorMessages } from "./messages.js";
 /** The ⋮⋮ handle on the left of a block and the block menu. The menu is a shadcn DropdownMenu (Base UI render prop) so it is keyboard operable too, and dragging the handle moves the block. */
 export function BlockHandleOverlay({ coords, onMoveUp, onMoveDown, onDuplicate, onDelete, onDragStart, onDragEnd, actions = [], }) {
     const t = useTranslator(editorMessages);
+    const tc = useTranslator(commonMessages);
     const [open, setOpen] = useState(false);
     if (typeof window === "undefined")
         return null;
@@ -24,5 +26,5 @@ export function BlockHandleOverlay({ coords, onMoveUp, onMoveDown, onDuplicate, 
                             // A menu opened on press closes when dragging starts.
                             setOpen(false);
                             onDragStart?.(event);
-                        }, onDragEnd: onDragEnd, className: "cursor-grab text-cms-muted-foreground active:cursor-grabbing", trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(GripVertical, { "aria-hidden": true }) }), _jsxs(DropdownMenuContent, { align: "start", side: "right", className: "min-w-56", children: [_jsxs(DropdownMenuItem, { onClick: onMoveUp, children: [_jsx(ArrowUp, { "aria-hidden": true }), t("blockHandle.moveUp"), _jsx(DropdownMenuShortcut, { children: "\u2325\u2191" })] }), _jsxs(DropdownMenuItem, { onClick: onMoveDown, children: [_jsx(ArrowDown, { "aria-hidden": true }), t("blockHandle.moveDown"), _jsx(DropdownMenuShortcut, { children: "\u2325\u2193" })] }), _jsxs(DropdownMenuItem, { onClick: onDuplicate, children: [_jsx(Copy, { "aria-hidden": true }), t("blockHandle.duplicate"), _jsx(DropdownMenuShortcut, { children: "\u21E7\u2318D" })] }), _jsx(DropdownMenuSeparator, {}), _jsxs(DropdownMenuItem, { variant: "destructive", onClick: onDelete, children: [_jsx(Trash2, { "aria-hidden": true }), t("blockHandle.delete"), _jsx(DropdownMenuShortcut, { children: "\u21E7\u2318\u232B" })] })] })] })] }), document.body);
+                        }, onDragEnd: onDragEnd, className: "cursor-grab text-cms-muted-foreground active:cursor-grabbing", trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(GripVertical, { "aria-hidden": true }) }), _jsxs(DropdownMenuContent, { align: "start", side: "right", className: "min-w-56", children: [_jsxs(DropdownMenuItem, { onClick: onMoveUp, children: [_jsx(ArrowUp, { "aria-hidden": true }), t("blockHandle.moveUp"), _jsx(DropdownMenuShortcut, { children: "\u2325\u2191" })] }), _jsxs(DropdownMenuItem, { onClick: onMoveDown, children: [_jsx(ArrowDown, { "aria-hidden": true }), t("blockHandle.moveDown"), _jsx(DropdownMenuShortcut, { children: "\u2325\u2193" })] }), _jsxs(DropdownMenuItem, { onClick: onDuplicate, children: [_jsx(Copy, { "aria-hidden": true }), t("blockHandle.duplicate"), _jsx(DropdownMenuShortcut, { children: "\u21E7\u2318D" })] }), _jsx(DropdownMenuSeparator, {}), _jsxs(DropdownMenuItem, { variant: "destructive", onClick: onDelete, children: [_jsx(Trash2, { "aria-hidden": true }), tc("delete"), _jsx(DropdownMenuShortcut, { children: "\u21E7\u2318\u232B" })] })] })] })] }), document.body);
 }

@@ -8,7 +8,7 @@ export { codeExplorerBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const codeExplorer: () => import("@monti-cms/core").CmsPlugin<"code-explorer", {}, readonly [{
+export declare const codeExplorer: () => import("@monti-cms/core").CmsPlugin<"code-explorer", Record<string, never>, readonly [{
     readonly name: "code-explorer";
     readonly label: string;
     readonly description: string;

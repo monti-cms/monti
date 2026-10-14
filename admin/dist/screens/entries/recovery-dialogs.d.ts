@@ -1,4 +1,4 @@
-import type { ConflictInfo, RecoveryOffer } from "./entry-editor-store.js";
+import type { ConflictInfo, RecoveryOffer } from "./entry-editor-types.js";
 /**
  * Asks whether to load a browser temporary copy that is not on the server (`useEntryEditor().recovery`). It is a `conflict` offer if the server has
  * changed since the copy was made. Closing the dialog only hides it; the copy is kept until the user answers.

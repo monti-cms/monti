@@ -1,6 +1,5 @@
 import { type AfterCommit, type EventDelivery, type EventDeliveryCounts, type EventLogState, type EventStore } from "../core/store/index.js";
 import type { Entry } from "../core/store/types.js";
-import type { PluginCollection } from "../plugin/storage.js";
 /**
  * Delivery of the committed changes (the outbox, `core/store/events.ts`) to the subscribers: `hooks.afterCommit` of the server config and of the plugins.
  *
@@ -11,12 +10,8 @@ import type { PluginCollection } from "../plugin/storage.js";
  *   and from the `POST /v1/events/retry` route a cron can call. That is what serverless hosting allows.
  * - Delivery is at least once and in the commit order per entry: an event is not delivered to a subscriber while an earlier event of the same entry is
  *   still waiting for it (pending, in flight, or failed and not yet dead). Subscribers must be idempotent: `event.once(run)` runs work once per event and
- *   subscriber, however many times the delivery is tried (it keeps a mark per event in `marks`, and prunes the marks with the events).
+ *   subscriber, however many times the delivery is tried (the mark is kept with the delivery, so it is pruned with the event).
  */
-/** Where `event.once` keeps its marks: a collection of the instance's plugin storage. */
-export type EventMarks = Pick<PluginCollection<{
-    at: string;
-}>, "get" | "set" | "list" | "delete">;
 /** One subscriber. The name is stable: it keys the delivery state, so renaming a subscriber starts it afresh. */
 export interface EventSubscriber {
     /** `server` for the server config, `plugin:<name>` for a plugin. */
@@ -88,8 +83,6 @@ export interface EventDispatcherOptions extends EventDeliveryOptions {
         getEntry(id: string): Promise<Entry>;
     };
     readonly subscribers: () => Promise<readonly EventSubscriber[]>;
-    /** Where `event.once` keeps its marks. Without it the marks live in the memory of the process, which only a test wants. */
-    readonly marks?: () => EventMarks;
     readonly now?: () => Date;
 }
 export interface EventDispatcher {

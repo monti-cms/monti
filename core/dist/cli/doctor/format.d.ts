@@ -1,16 +1,12 @@
-import type { CheckStatus } from "./outcome.js";
+import type { CheckOutcome } from "./outcome.js";
 /** One line of the report: a check and what it found. */
-export interface DoctorResult {
+export interface DoctorResult extends CheckOutcome {
     /** `<group>/<check>`, for example `database/migrations` or `auth/admins`. */
     readonly id: string;
     /** What the check belongs to: a part of the setup (`config`, `database`, ...). */
     readonly group: string;
     /** What the check looks at, in a few words. */
     readonly title: string;
-    readonly status: CheckStatus;
-    readonly message: string;
-    readonly where?: string;
-    readonly fix?: string;
 }
 export interface DoctorSummary {
     readonly ok: number;

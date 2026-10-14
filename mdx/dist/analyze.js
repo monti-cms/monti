@@ -132,7 +132,17 @@ export const analyze = (site, mdx, name, syntax) => {
     let tree = null;
     let frontmatter = null;
     if (raw != null) {
-        frontmatter = parseYamlMapping(raw);
+        try {
+            frontmatter = parseYamlMapping(raw);
+        }
+        catch (error) {
+            const message = error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error);
+            errors.push({
+                code: "mdx_syntax",
+                message: `front matter is not valid YAML: ${message}`,
+                position: { line: 1, column: 1 },
+            });
+        }
     }
     try {
         tree = parseMdxAst(site, body, syntax);

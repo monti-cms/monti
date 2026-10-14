@@ -2,7 +2,7 @@ import { collectRefs, EMPTY_REFS } from "../doc/document-refs.js";
 import { resolvePublicMedia, resolvePublicMediaUrl } from "../doc/public-media.js";
 import { exportText } from "../format/convert.js";
 import { unknownFormatError } from "../format/unknown.js";
-import { RECORD_TRANSLATIONS_KEY } from "../schema/derive.js";
+import { RECORD_TRANSLATIONS_KEY } from "../schema/fields.js";
 const relationFieldsOf = (site, collection) => site.storedFields(collection).filter((stored) => stored.field.kind === "relation");
 const idsOf = (value) => typeof value === "string" ? [value] : Array.isArray(value) ? value.filter((id) => typeof id === "string") : [];
 const titleOf = (site, record, locale) => {

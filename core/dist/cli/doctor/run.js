@@ -2,9 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parseEnv } from "node:util";
 import { importCms } from "../app.js";
-import { resolveConfigPath } from "../config-paths.js";
 import { DEFAULT_ENV_FILES, loadEnvFiles } from "../env.js";
-import { CORE_CHECKS, GROUP_ORDER } from "./core-checks.js";
+import { locateConfig } from "../locate.js";
+import { CORE_CHECKS, GROUP_ORDER } from "./checks.js";
 import { summarize } from "./format.js";
 /** One check may take this long (a database or a service that never answers must not hang the command). */
 const CHECK_TIMEOUT_MS = 30_000;
@@ -63,7 +63,7 @@ async function runOne(group, check, run) {
     }
 }
 /**
- * `monti doctor`: reads the env files, finds and loads the config file, then runs the checks of core (config, schema, database, secrets, login settings, Next files, upgrade), and returns what each found. It changes nothing, and never prints a secret. The instance it loads is closed before it returns.
+ * `monti doctor`: reads the env files, finds and loads the config file, then runs the checks of core (config, schema, database, secrets, login settings, Next files), and returns what each found. It changes nothing, and never prints a secret. The instance it loads is closed before it returns.
  */
 export async function runDoctor(options) {
     const env = options.env ?? process.env;
@@ -79,7 +79,7 @@ export async function runDoctor(options) {
     let configPath;
     let configError;
     try {
-        configPath = resolveConfigPath(cwd, options.config, env);
+        configPath = locateConfig(cwd, options.config, env);
     }
     catch (error) {
         configError = error instanceof Error ? error : new Error(String(error));

@@ -1,7 +1,7 @@
 import { normalizeImportedDoc } from "../../../core/import-normalize.js";
 import { readStoredDocument } from "../../../doc/stored-document.js";
-import { exportText, importText } from "../../../format/convert.js";
-import { createExportRefs } from "../../../read/index.js";
+import { importText } from "../../../format/convert.js";
+import { createBodyExporter } from "../../../services/body-export.js";
 import { mediaUrlResolver } from "../../../services/media-urls.js";
 import { linkResolverOf } from "../../../services/write-pipeline.js";
 const normalize = (cms, doc) => normalizeImportedDoc(cms.site, doc, {
@@ -35,14 +35,9 @@ export async function templateBodyOf(cms, input, previous) {
 export async function templatesJson(cms, templates, format) {
     if (format === undefined)
         return [...templates];
-    const formats = await cms.formats();
-    const refsOf = createExportRefs({ site: cms.site, store: cms.store, mediaStore: cms.mediaStore }, "working");
-    return Promise.all(templates.map(async (template) => {
-        const { text } = await exportText(cms.site, formats, format, template.doc, {
-            locale: cms.site.DEFAULT_LOCALE,
-            purpose: "sync",
-            refs: await refsOf(template.doc, cms.site.DEFAULT_LOCALE),
-        });
-        return { ...template, body: text };
-    }));
+    const exporter = await createBodyExporter(cms, { format });
+    return Promise.all(templates.map(async (template) => ({
+        ...template,
+        body: await exporter.text(template.doc, cms.site.DEFAULT_LOCALE),
+    })));
 }

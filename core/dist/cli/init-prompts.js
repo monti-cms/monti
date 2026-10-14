@@ -1,13 +1,7 @@
-import { isAdminPath } from "../config/define.js";
+import { isAdminPath, isHttpUrl, isTimeZone, LOCALE_CODE } from "../config/rules.js";
+import { BLOCK_CHOICES, DEFAULT_BLOCK_IDS } from "./block-choices.js";
+import { DEFAULT_INIT_ADMIN_PATH, DEFAULT_INIT_LOCALE, DEFAULT_INIT_TIME_ZONE } from "./init-answers.js";
 import { COMMON_LOCALES, languageLabel } from "./locale-names.js";
-import { BLOCK_CHOICES, DEFAULT_BLOCK_IDS, DEFAULT_INIT_ADMIN_PATH, DEFAULT_INIT_LOCALE, DEFAULT_INIT_TIME_ZONE, } from "./templates.js";
-/** Thrown when the person cancels a prompt (Ctrl+C). Nothing has been written at that point. */
-export class InitCancelled extends Error {
-    constructor() {
-        super("Cancelled. Nothing was written.");
-        this.name = "InitCancelled";
-    }
-}
 /** The time zone of this computer (what the OS says, as an IANA name), or `undefined` when it cannot be read. */
 export const detectSystemTimeZone = () => {
     try {
@@ -17,27 +11,6 @@ export const detectSystemTimeZone = () => {
         return undefined;
     }
 };
-const LOCALE_CODE = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-const isTimeZone = (timeZone) => {
-    try {
-        new Intl.DateTimeFormat("en-US", { timeZone });
-        return true;
-    }
-    catch {
-        return false;
-    }
-};
-const isHttpUrl = (value) => {
-    try {
-        const url = new URL(value);
-        return url.protocol === "http:" || url.protocol === "https:";
-    }
-    catch {
-        return false;
-    }
-};
-/** An admin path becomes a folder in the app, so it is plain path segments only. */
-export const validAdminPath = (value) => isAdminPath(value) && /^(?:\/[A-Za-z0-9_-]+)+$/.test(value) && !value.startsWith("/api");
 const splitList = (value) => value.split(/[\s,]+/).filter(Boolean);
 const BLOCK_IDS = BLOCK_CHOICES.map((block) => block.id);
 const EXTRAS = ["ai", "git-sync"];
@@ -62,7 +35,7 @@ const check = {
         return bad ? `"${bad}" is not a block; use default, all, none or any of ${BLOCK_IDS.join(", ")}` : undefined;
     },
     login: (value) => (["password", "github"].includes(value) ? undefined : 'must be "password" or "github"'),
-    adminPath: (value) => validAdminPath(value)
+    adminPath: (value) => isAdminPath(value)
         ? undefined
         : 'must be a path like "/studio" (letters, digits, - and _; not "/" and not under "/api")',
 };
@@ -142,7 +115,7 @@ async function askLocales(prompter, found) {
     return [...new Set([defaultLocale, ...more.filter((code) => code !== OTHER_LOCALES), ...typed])];
 }
 /**
- * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link InitCancelled} when the
+ * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link Cancelled} when the
  * person cancels, and an Error naming the flag when a flag value is wrong.
  */
 export async function collectAnswers(app, flags, prompter, systemTimeZone = detectSystemTimeZone) {
@@ -283,36 +256,4 @@ function resolveTimeZone(flag, systemTimeZone) {
     return system !== undefined && isTimeZone(system)
         ? { timeZone: system, timeZoneSource: "computer" }
         : { timeZone: DEFAULT_INIT_TIME_ZONE, timeZoneSource: "fallback" };
-}
-/** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */
-export async function createClackPrompter() {
-    const clack = await import("@clack/prompts");
-    const answer = (value) => {
-        if (clack.isCancel(value))
-            throw new InitCancelled();
-        return value;
-    };
-    return {
-        intro: (message) => clack.intro(message),
-        outro: (message) => clack.outro(message),
-        note: (body, title) => clack.note(body, title),
-        select: async (question) => answer(await clack.select({
-            message: question.message,
-            options: question.options.map((option) => ({ ...option })),
-            initialValue: question.initial,
-        })),
-        multiselect: async (question) => answer(await clack.multiselect({
-            message: question.message,
-            options: question.options.map((option) => ({ ...option })),
-            initialValues: question.initial ? [...question.initial] : [],
-            required: false,
-        })),
-        text: async (question) => answer(await clack.text({
-            message: question.message,
-            placeholder: question.placeholder,
-            initialValue: question.initial,
-            validate: question.validate ? (value) => question.validate?.(value ?? "") : undefined,
-        })),
-        confirm: async (question) => answer(await clack.confirm({ message: question.message, initialValue: question.initial })),
-    };
 }

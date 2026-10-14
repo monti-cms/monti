@@ -1,28 +1,31 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
+import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Badge } from "../../ui/badge.js";
 import { Button } from "../../ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible.js";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog.js";
+import { FieldError } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
 import { Textarea } from "../../ui/textarea.js";
-import { AddButton, countOrUndefined, FlagSwitch, IssueList, Labeled, NameInput, orUndefined, Pick, RowActions, TextInput, useIssuesUnder, useSchemaEdit, } from "./controls.js";
-import { schemaMessages } from "./messages.js";
-import { addField, addOption, allFieldNames, FIELD_KEY_ORDER, FIELD_KINDS, fieldAt, fieldProblems, fieldsOf, isObj, KINDS_WITH_SETTINGS, moveField, moveOption, newField, optionsOf, removeBlock, removeField, removeOption, renameField, renameOption, setDefaultOption, setField, setOptionLabel, setProp, setTitleField, titleFieldName, VALUE_KINDS, withKind, } from "./schema-model.js";
+import { Labeled } from "../shared/labeled.js";
+import { AddButton, countOrUndefined, FlagSwitch, IssueList, NameInput, orUndefined, Pick, RowActions, TextInput, useIssuesUnder, useSchemaEdit, } from "./controls.js";
+import { schemaFieldsMessages } from "./fields.messages.js";
+import { addField, addOption, allFieldNames, FIELD_KEY_ORDER, FIELD_KINDS, fieldAt, fieldProblems, fieldsOf, isObj, KINDS_WITH_SETTINGS, moveField, moveOption, nameProblem, newField, optionsOf, removeBlock, removeField, removeOption, renameField, renameOption, setDefaultOption, setField, setOptionLabel, setProp, setTitleField, titleFieldName, VALUE_KINDS, withKind, } from "./schema-model.js";
 /** The options of a select (or of the select a conditional field shows): value, label, default, order. */
 function OptionsEditor({ field, fieldName, editing, change, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
     const { disabled } = useSchemaEdit();
     const options = optionsOf(field);
     const values = Object.keys(options);
     const select = field.kind === "conditional" && isObj(field.discriminant) ? field.discriminant : field;
     const [draftValue, setDraftValue] = useState("");
     const taken = (value) => values.filter((item) => item !== value);
-    const addable = draftValue !== "" && /^[A-Za-z0-9_-]+$/.test(draftValue) && !values.includes(draftValue);
+    const addable = draftValue !== "" && OPTION_VALUE_PATTERN.test(draftValue) && !values.includes(draftValue);
     return (_jsxs("fieldset", { className: "flex flex-col gap-1.5", children: [_jsx("legend", { className: "font-medium text-xs", children: t("options.title") }), _jsx("ul", { className: "flex flex-col gap-1.5", children: values.map((value, index) => (_jsxs("li", { className: "flex flex-wrap items-end gap-2 rounded-md border bg-cms-background p-2", children: [_jsx(NameInput, { label: t("options.value"), value: value, taken: taken(value), className: "w-32 flex-none", onCommit: (to) => {
                                 change((current) => renameOption(current, value, to));
                                 editing.onRename({
@@ -39,7 +42,7 @@ function OptionsEditor({ field, fieldName, editing, change, }) {
 }
 /** `inputOptions`: a JSON object of text, number and flag values, checked when the writer leaves the box. */
 export function InputOptionsEditor({ value, onChange, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
     const id = useId();
     const { disabled } = useSchemaEdit();
     const [text, setText] = useState(isObj(value) ? JSON.stringify(value) : "");
@@ -61,11 +64,11 @@ export function InputOptionsEditor({ value, onChange, }) {
             setBad(true);
         }
     };
-    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, hint: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx("p", { className: "text-cms-destructive text-xs", children: t("field.inputOptionsBad") })] }));
+    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, hint: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx(FieldError, { children: t("field.inputOptionsBad") })] }));
 }
 /** What the kind of the field adds: its own options. */
 export function KindOptions({ name, field, editing, set, change, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
     const { collectionNames, file } = useSchemaEdit();
     const placeholder = (_jsx(TextInput, { label: t("field.placeholder"), value: field.placeholder, onChange: (value) => set("placeholder", orUndefined(value)) }));
     const collections = collectionNames.map((value) => ({ value, label: value }));
@@ -113,7 +116,7 @@ export function KindOptions({ name, field, editing, set, change, }) {
 }
 export const LOCALIZED_KINDS = ["text", "slug", "relation", "select", "media", "conditional"];
 export function FieldEditor({ editing, place, name, field, index, count, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
     const { disabled, collectionNames } = useSchemaEdit();
     const [open, setOpen] = useState(false);
     const path = place.branch
@@ -131,7 +134,7 @@ export function FieldEditor({ editing, place, name, field, index, count, }) {
             ? { ...next, discriminant: setProp(next.discriminant, key, value, FIELD_KEY_ORDER) }
             : next;
     });
-    const valueKind = kind !== "view" && kind !== "backlink";
+    const valueKind = fieldTraits[kind].entersValue;
     const label = typeof field.label === "string" ? field.label : "";
     // The title field is a top-level text field: the one with the title role, or the one named `title`.
     const isTitle = !place.branch && titleFieldName(editing.collection) === name;
@@ -143,14 +146,15 @@ export function FieldEditor({ editing, place, name, field, index, count, }) {
                                         { value: "shared", label: t("field.localizedShared") },
                                         { value: "localized", label: t("field.localizedOwn") },
                                         { value: "inherit", label: t("field.localizedInherit") },
-                                    ], onChange: (value) => set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined) }))] })), _jsx(KindOptions, { name: name, field: field, editing: editing, set: set, change: change }), _jsxs("details", { className: "rounded-md border border-dashed px-2.5 py-1.5 text-sm", children: [_jsx("summary", { className: "cursor-pointer text-cms-muted-foreground text-xs", children: t("field.advanced") }), _jsxs("div", { className: "mt-2 grid gap-3 sm:grid-cols-2", children: [_jsx(FlagSwitch, { label: t("field.hidden"), hint: t("field.hiddenHint"), checked: field.hidden === true, onChange: (on) => set("hidden", on ? true : undefined) }), valueKind && (_jsx(TextInput, { label: t("field.role"), hint: t("field.roleHint"), value: field.role, onChange: (value) => set("role", orUndefined(value)) })), _jsx(TextInput, { label: t("field.tab"), hint: t("field.tabHint"), value: field.tab, onChange: (value) => set("tab", orUndefined(value)) }), valueKind && (_jsx(TextInput, { label: t("field.input"), hint: t("field.inputHint"), value: field.input, onChange: (value) => set("input", orUndefined(value)) }))] }), valueKind && (_jsx("div", { className: "mt-3", children: _jsx(InputOptionsEditor, { value: field.inputOptions, onChange: (value) => set("inputOptions", value) }) }))] }), disabled && null] }) })] }));
+                                    ], onChange: (value) => set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined) }))] })), _jsx(KindOptions, { name: name, field: field, editing: editing, set: set, change: change }), _jsxs("details", { className: "rounded-md border border-dashed px-2.5 py-1.5 text-sm", children: [_jsx("summary", { className: "cursor-pointer text-cms-muted-foreground text-xs", children: t("field.advanced") }), _jsxs("div", { className: "mt-2 grid gap-3 sm:grid-cols-2", children: [valueKind && (_jsx(TextInput, { label: t("field.role"), hint: t("field.roleHint"), value: field.role, onChange: (value) => set("role", orUndefined(value)) })), valueKind && (_jsx(TextInput, { label: t("field.input"), hint: t("field.inputHint"), value: field.input, onChange: (value) => set("input", orUndefined(value)) }))] }), valueKind && (_jsx("div", { className: "mt-3", children: _jsx(InputOptionsEditor, { value: field.inputOptions, onChange: (value) => set("inputOptions", value) }) }))] }), disabled && null] }) })] }));
 }
 /**
  * The settings a new field needs, asked before it exists: the field is made in a copy of the collection and joins the real one only when its required
  * settings are complete, so there is never a half-made field in the file.
  */
 export function NewFieldDialog({ editing, place, name, kind, onClose, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
+    const tc = useTranslator(commonMessages);
     const { collectionNames } = useSchemaEdit();
     const [draft, setDraft] = useState(() => addField(editing.collection, place, name, newField(kind, name.charAt(0).toUpperCase() + name.slice(1), collectionNames)));
     const field = fieldAt(draft, place, name) ?? {};
@@ -169,21 +173,21 @@ export function NewFieldDialog({ editing, place, name, kind, onClose, }) {
                                 return current.kind === "conditional" && isObj(next.discriminant)
                                     ? { ...next, discriminant: setProp(next.discriminant, "label", value, FIELD_KEY_ORDER) }
                                     : next;
-                            }) }), _jsx(KindOptions, { name: name, field: field, editing: draftEditing, set: set, change: change }), problems.length > 0 && (_jsx("ul", { className: "flex flex-col gap-0.5 text-cms-muted-foreground text-xs", "data-testid": "new-field-problems", children: problems.map((problem) => (_jsx("li", { children: t(`field.needs.${problem}`) }, problem))) }))] }), _jsxs(DialogFooter, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: () => onClose(false), children: t("field.newCancel") }), _jsx(Button, { type: "button", disabled: problems.length > 0, onClick: () => {
+                            }) }), _jsx(KindOptions, { name: name, field: field, editing: draftEditing, set: set, change: change }), problems.length > 0 && (_jsx("ul", { className: "flex flex-col gap-0.5 text-cms-muted-foreground text-xs", "data-testid": "new-field-problems", children: problems.map((problem) => (_jsx("li", { children: t(`field.needs.${problem}`) }, problem))) }))] }), _jsxs(DialogFooter, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: () => onClose(false), children: tc("cancel") }), _jsx(Button, { type: "button", disabled: problems.length > 0, onClick: () => {
                                 editing.update(() => draft);
                                 onClose(true);
-                            }, children: t("field.addConfirm") })] })] }) }));
+                            }, children: tc("add") })] })] }) }));
 }
 /** The fields of a collection (or of one branch of a conditional field), each editable, with a row to add one. */
 export function FieldList({ editing, place, fields, kinds, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
     const { collectionNames, disabled } = useSchemaEdit();
     const names = Object.keys(fields);
     const [name, setName] = useState("");
     const [kind, setKind] = useState("text");
     const [pending, setPending] = useState(null);
     const taken = allFieldNames(editing.collection);
-    const problem = name === "" ? "empty" : taken.includes(name) ? "taken" : /^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) ? null : "pattern";
+    const problem = nameProblem(name, taken);
     return (_jsxs("div", { className: "flex flex-col gap-2", children: [names.length === 0 && _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("field.none") }), names.map((fieldName, index) => (_jsx(FieldEditor, { editing: editing, place: place, name: fieldName, field: fields[fieldName] ?? {}, index: index, count: names.length }, fieldName))), !disabled && (_jsxs("div", { className: "flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-2", children: [_jsx(Labeled, { label: t("field.newName"), className: "min-w-36 flex-1", children: _jsx(Input, { value: name, "aria-label": t("field.newName"), placeholder: "fieldName", "aria-invalid": name !== "" && problem ? true : undefined, onChange: (event) => setName(event.target.value) }) }), _jsx(Pick, { label: t("field.kind"), className: "w-40", value: kind, items: kinds.map((item) => ({ value: item, label: t(`kind.${item}`) })), onChange: (next) => setKind(next) }), _jsx(AddButton, { disabled: Boolean(problem), onClick: () => {
                             if (problem)
                                 return;

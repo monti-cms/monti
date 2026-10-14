@@ -2,7 +2,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
 import { cva } from "class-variance-authority";
 import { cn } from "../lib/utils/index.js";
 /**
- * Alert box for the admin UI. `default` is for notices, `danger` for errors such as a load failure.
+ * Alert box for the admin UI. `default` is for notices, `destructive` for errors such as a load failure, `warning` and `success` for the states between.
  * The look of body blocks (callouts, etc.) is decided by each block separately.
  */
 export const alertVariants = cva([
@@ -13,13 +13,14 @@ export const alertVariants = cva([
         layout: {
             grid: "grid grid-cols-[calc(var(--spacing)*4)_1fr] gap-x-3 gap-y-1 items-start",
             stack: "block",
+            /** A one-line notice with its action on the right (a load failure with "Retry"). */
+            inline: "flex items-center justify-between gap-3",
         },
         variant: {
             default: "border-cms-border bg-cms-card text-cms-card-foreground",
-            danger: [
-                "bg-red-50 text-red-900 border-red-200 [&>svg]:text-red-700",
-                "cms-dark:bg-red-400/25 cms-dark:text-red-50 cms-dark:border-red-300/70 cms-dark:[&>svg]:text-red-100",
-            ].join(" "),
+            destructive: "border-cms-destructive/30 bg-cms-destructive-soft text-cms-destructive-foreground [&>svg]:text-current",
+            warning: "border-cms-warning/30 bg-cms-warning-soft text-cms-warning-foreground [&>svg]:text-current",
+            success: "border-cms-success/30 bg-cms-success-soft text-cms-success-foreground [&>svg]:text-current",
         },
     },
     defaultVariants: {

@@ -5,10 +5,11 @@
  */
 export { AuthError } from "./adapters/auth/auth-gateway.js";
 export { problemError, problemText, SetupError } from "./core/problem.js";
-export { CmsError, DeferDelivery } from "./core/store/index.js";
+export { DeferDelivery } from "./core/store/index.js";
 export { ServiceError } from "./core/types.js";
 export { exportBodyText } from "./format/export-body.js";
-export { HttpError, handleApiError } from "./http/v1/error-handler.js";
+export { CmsError, ERROR_STATUS, errorResponse, handleApiError } from "./http/v1/error-handler.js";
 export * from "./http/v1/handler.js";
 export { createContentLookup } from "./plugin/content-lookup.js";
+export { pluginError, pluginLog } from "./plugin/log.js";
 export * from "./text-check/route.js";

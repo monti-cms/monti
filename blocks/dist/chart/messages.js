@@ -1,8 +1,41 @@
 import { defineMessages } from "@monti-cms/core";
+/** Instructions for the model: the same in every language, and the result language follows the body. */
+const modelText = {
+    "ai.guide": [
+        "Chart syntax (inside a ```chart code fence):",
+        "- First line: chart <bar|line|area|pie>",
+        "- Bar, line and area charts: x <column name for the horizontal axis>, then one series <column name> | <display name> | <chart-1 to chart-5> line per series",
+        "- Pie: label <name column>, value <number column>. Do not use series, show-values, hide-grid, hide-y-axis or y-range",
+        "- Optional lines: show-values, hide-grid, hide-y-axis, y-range <min> <max>",
+        "- Then a data line; below it the header row (column names separated by |), then the value rows (number columns hold numbers only)",
+        "Example:",
+        "```chart",
+        "chart bar",
+        "x month",
+        "series views | Views | chart-1",
+        "",
+        "data",
+        "month | views",
+        "Jan | 1200",
+        "Feb | 1500",
+        "```",
+    ].join("\n"),
+    "ai.draft.prompt": [
+        "Create one chart from the request and the title and body of the content.",
+        "- Answer with a single ```chart code fence only. Write nothing outside the fence",
+        "- Use only values from the request or the body. If there are none, do not invent them; mark them as example values in the column names",
+    ].join("\n"),
+    "ai.edit.prompt": [
+        "Edit the chart (```chart code fence) as requested.",
+        "- Answer with the edited ```chart code fence only. Write nothing outside the fence",
+        "- Leave the parts unrelated to the request as they are",
+        "- If there is no request, fix syntax errors",
+    ].join("\n"),
+};
 /**
  * Chart block label and description, chart syntax error messages, and AI feature messages. Syntax errors are shared by the admin UI
- * (admin language) and the public page (content language). AI instructions are text for the model, so there is only an English one;
- * the output language follows the body text.
+ * (admin language) and the public page (content language). AI instructions are text for the model, so they are the same English text in every
+ * language; the output language follows the body text.
  */
 export const chartMessages = defineMessages("cms-blocks.chart", {
     en: {
@@ -41,36 +74,7 @@ export const chartMessages = defineMessages("cms-blocks.chart", {
         "ai.check.label": "Chart syntax",
         "ai.error.notFence": "Not a single ```chart code fence.",
         "ai.error.syntax": "Chart syntax error (line {line}): {message}",
-        "ai.guide": [
-            "Chart syntax (inside a ```chart code fence):",
-            "- First line: chart <bar|line|area|pie>",
-            "- Bar, line and area charts: x <column name for the horizontal axis>, then one series <column name> | <display name> | <chart-1 to chart-5> line per series",
-            "- Pie: label <name column>, value <number column>. Do not use series, show-values, hide-grid, hide-y-axis or y-range",
-            "- Optional lines: show-values, hide-grid, hide-y-axis, y-range <min> <max>",
-            "- Then a data line; below it the header row (column names separated by |), then the value rows (number columns hold numbers only)",
-            "Example:",
-            "```chart",
-            "chart bar",
-            "x month",
-            "series views | Views | chart-1",
-            "",
-            "data",
-            "month | views",
-            "Jan | 1200",
-            "Feb | 1500",
-            "```",
-        ].join("\n"),
-        "ai.draft.prompt": [
-            "Create one chart from the request and the title and body of the content.",
-            "- Answer with a single ```chart code fence only. Write nothing outside the fence",
-            "- Use only values from the request or the body. If there are none, do not invent them; mark them as example values in the column names",
-        ].join("\n"),
-        "ai.edit.prompt": [
-            "Edit the chart (```chart code fence) as requested.",
-            "- Answer with the edited ```chart code fence only. Write nothing outside the fence",
-            "- Leave the parts unrelated to the request as they are",
-            "- If there is no request, fix syntax errors",
-        ].join("\n"),
+        ...modelText,
     },
     ko: {
         label: "차트",
@@ -108,6 +112,7 @@ export const chartMessages = defineMessages("cms-blocks.chart", {
         "ai.check.label": "차트 문법",
         "ai.error.notFence": "```chart 코드 펜스 하나가 아닙니다.",
         "ai.error.syntax": "차트 문법 오류({line}줄): {message}",
+        ...modelText,
     },
     ja: {
         "error.title": "グラフの構文エラー",

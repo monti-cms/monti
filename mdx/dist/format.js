@@ -121,14 +121,13 @@ export const createMdxFormat = (options = {}) => {
 /** The `mdx` format with no syntax extension (standard MDX). It holds nothing of a site: it reads the site from the context of each call. A site with extensions gets its own from `mdx({ syntax })`. */
 export const mdxFormat = createMdxFormat();
 export { analyze } from "./analyze.js";
-export { bodyDocument, bodyFromDocument, bodyFromMdx, documentToMdx, fromStoredDocument, toStoredDocument, } from "./body.js";
+export { bodyDocument, bodyFromMdx, documentToMdx, fromStoredDocument, toStoredDocument, } from "./body.js";
 export * from "./directives.js";
 export { mdxMessages } from "./messages.js";
 export { parseMdxAst } from "./parse.js";
 export { jsxRegistryOf, RETIRED_JSX_NAMES } from "./registry.js";
 export { remarkFenceBlocksToMdx } from "./remark-fence-blocks.js";
 export { serialize } from "./serialize.js";
-export { insertSoftBreaks } from "./soft-breaks.js";
 export { configuredSyntax, NO_SYNTAX, siteCodeLineEffects, siteSyntaxBlocks, syntaxRemarkPlugins, } from "./syntax-config.js";
 export { toDocument } from "./to-document.js";
 export { compareMdxStructure, readableMdx } from "./translation-check.js";

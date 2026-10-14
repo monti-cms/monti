@@ -3,7 +3,8 @@ import { isAllowedImageSrc } from "../doc/image-src.js";
 import { canonicalDocument, emptyStoredDocument, readStoredDocument, } from "../doc/stored-document.js";
 import { importText } from "../format/convert.js";
 import { NO_FORMATS } from "../format/registry.js";
-import { fieldValueError, RECORD_TRANSLATIONS_KEY } from "../schema/derive.js";
+import { fieldValueError } from "../schema/derive.js";
+import { RECORD_TRANSLATIONS_KEY } from "../schema/fields.js";
 import { checkDocument, isEmptyDocument } from "./body-check.js";
 import { computeContentHash } from "./content-hash.js";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "./limits.js";
@@ -339,7 +340,8 @@ const imageWarnings = (sources, media) => {
     return warnings;
 };
 /**
- * Collects only the image warnings to include in the publish response, for a snapshot the write pipeline prepared. **Non-blocking**; if computation fails it returns an empty array.
+ * The image warnings of a snapshot the write pipeline prepared, to join `snapshot.warnings` in the publish result (this returns only the image ones,
+ * not the snapshot's own). **Non-blocking**; if computation fails it returns an empty array.
  *
  * For media that is `ready` with a `storageKey`, if `headStorageKey` is provided, the actual object in storage is checked once more.
  * If it is missing, an `image_media_missing_in_storage` warning is added. On an infrastructure error it falls back to the DB decision.
@@ -355,7 +357,7 @@ export async function imageWarningsForSnapshot(snapshot, resolvers) {
             if (row)
                 media.push({ id, status: row.status, storageKey: row.storageKey ?? null });
         }
-        const warnings = [...(snapshot.warnings ?? []), ...imageWarnings(snapshot.imageSources, media)];
+        const warnings = imageWarnings(snapshot.imageSources, media);
         if (resolvers.headStorageKey) {
             const byId = new Map(media.map((row) => [row.id, row]));
             for (const source of snapshot.imageSources) {

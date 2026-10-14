@@ -1,6 +1,6 @@
 import type { Cms } from "../cms/index.js";
 import { type TextCheckRouteOptions } from "./server-handler.js";
-export { handleTextCheck, parseTextCheckBody, type ServerTextCheck, type TextCheckResponse, type TextCheckRouteOptions, } from "./server-handler.js";
+export { handleTextCheck, parseTextCheckBody, type ServerTextCheck, type TextCheckRouteOptions, } from "./server-handler.js";
 /**
  * Server route for spelling and sentence checks (`@monti-cms/core/plugin/server`). Only admins can call it (core admin auth and same-origin check),
  * it takes `{ segments }` and returns `{ issues }`. The browser side calls this route with `remoteTextChecker({ url })`.
@@ -17,6 +17,6 @@ export { handleTextCheck, parseTextCheckBody, type ServerTextCheck, type TextChe
  */
 export declare function textCheckRoute(options: TextCheckRouteOptions & {
     readonly cms?: Cms;
-}): (request: Request, context?: Partial<import("../plugin-server.js").RouteContext<{
-    [x: string]: string;
-}>> | undefined) => Promise<Response>;
+}): (request: Request, context?: {
+    readonly cms?: Cms;
+}) => Promise<Response>;

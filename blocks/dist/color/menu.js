@@ -37,7 +37,7 @@ export function applyTextColor(editor, kind, color) {
         chain.unsetMark(COLOR_MARK_NAME).run();
     }
 }
-/** Sample of the letter "가". It uses the same `.cms-color` rule as the real body, so it shows in the current theme's color. */
+/** Sample letter (a Hangul syllable). It uses the same `.cms-color` rule as the real body, so it shows in the current theme's color. */
 function Swatch({ kind, color }) {
     const t = useTranslator(colorMessages);
     const props = color

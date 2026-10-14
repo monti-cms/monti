@@ -3,7 +3,7 @@
  * it must not contain secrets or the AI SDK.
  */
 export { type AiActionDefinition, type AiActionFactory, type AiActionSource, type AiAttach, type AiChoices, type AiConfig, type AiContentLookup, type AiContribution, type AiInputSpec, type AiSharedText, type AiSiteView, type AiValidator, type AiValidatorContext, type AiValidatorResult, aiAction, aiInput, defineValidator, } from "./action.js";
-export { aiPlugin } from "./plugin.js";
+export { ai } from "./plugin.js";
 export { type AiFieldTarget, aiPresets, DEFAULT_AI_ACTIONS, fieldAttachOf, fieldTargets, KEBAB_PATTERN, smallestMax, translatableAttributes, } from "./presets.js";
 export { resolveAiActions, resolveAiConfig } from "./resolve.js";
 export { type RegexRunsRule, regexRuns, sameStructure, uniqueSlug } from "./validators.js";

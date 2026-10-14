@@ -1,3 +1,4 @@
+import { CmsError } from "../core/store/errors.js";
 import type { SchemaChangeStore } from "../core/store/ports.js";
 import type { AppliedSchemaChange, SchemaState } from "../core/store/schema-change.js";
 import type { JsonObject } from "../core/store/types.js";
@@ -53,7 +54,7 @@ export declare const schemaVersionOf: (site: Pick<Site, "config">) => number;
  */
 export declare function planSchemaChange(options: PlanOptions): Promise<SchemaPlan>;
 /** The transforms cannot run: a transform does not fit the schema, or an entry cannot be rewritten. Nothing was changed. */
-export declare class SchemaChangeError extends Error {
+export declare class SchemaChangeError extends CmsError {
     readonly problems: readonly TransformProblem[];
     constructor(message: string, problems?: readonly TransformProblem[]);
 }

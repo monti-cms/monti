@@ -355,7 +355,7 @@ export function createCodeEffectsPlugin(site) {
                     const ref = node.isText && anchor ? node.marks.find((mark) => mark.type.name === anchor.mark) : undefined;
                     if (ref && anchor && !anchors.has(String(ref.attrs[anchor.attribute])))
                         decorations.push(Decoration.inline(pos, pos + node.nodeSize, {
-                            class: "decoration-wavy decoration-red-500",
+                            class: "decoration-wavy decoration-cms-destructive",
                             title: t("anchor.missing"),
                         }));
                     return true;

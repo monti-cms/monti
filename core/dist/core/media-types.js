@@ -1,3 +1,4 @@
+import { checkKnownKeys, IssueList, pathOf } from "../config/check/issue.js";
 /**
  * Media formats the core can identify. The site config `media.imageTypes` and `fileTypes` choose from these.
  * The config validation (`config/define`) also reads this, so it does not import other modules.
@@ -18,25 +19,29 @@ export const DEFAULT_MEDIA_LIMITS = {
     maxPixels: 40_000_000,
     maxFileBytes: 50 * 1024 * 1024,
 };
-/** Config validation. Throws an error for invalid values (English message for developers). */
-export function validateMediaConfig(media) {
+const MEDIA_KEYS = ["maxImageBytes", "maxPixels", "maxFileBytes", "imageTypes", "fileTypes"];
+/** Checks the media settings of the site config. */
+export function checkMediaConfig(media) {
     if (!media)
-        return;
+        return [];
+    const list = new IssueList();
+    checkKnownKeys(list, "media", media, MEDIA_KEYS);
     for (const key of ["maxImageBytes", "maxPixels", "maxFileBytes"]) {
         const value = media[key];
         if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
-            throw new Error(`cms.config: media.${key} must be a positive integer`);
+            list.add(pathOf("media", key), "positive-integer", "must be a positive integer");
         }
     }
     const check = (key, supported) => {
-        for (const type of media[key] ?? []) {
+        for (const [index, type] of (media[key] ?? []).entries()) {
             if (!supported.includes(type)) {
-                throw new Error(`cms.config: media.${key} has unsupported type "${type}" (supported: ${supported.join(", ")})`);
+                list.add(pathOf("media", key, index), "unsupported", `"${type}" is not supported (supported: ${supported.join(", ")})`);
             }
         }
     };
     check("imageTypes", SUPPORTED_IMAGE_MIME_TYPES);
     check("fileTypes", SUPPORTED_FILE_MIME_TYPES);
     if (media.imageTypes?.length === 0)
-        throw new Error("cms.config: media.imageTypes must not be empty");
+        list.add("media.imageTypes", "empty", "must not be empty");
+    return list.issues;
 }

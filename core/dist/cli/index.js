@@ -1,204 +1,24 @@
-import { parseArgs } from "node:util";
-import { adminResetPassword } from "./admin-command.js";
-import { dbMigrate, dbSetup } from "./db.js";
-import { runDoctorCommand } from "./doctor/index.js";
-import { eventsRetry } from "./events.js";
-import { HELP, helpFor } from "./help.js";
-import { runInitCommand } from "./init-command.js";
-import { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
-import { schemaApply, schemaDiff } from "./schema-apply.js";
-import { extractSchema, formatExtractReport } from "./schema-extract.js";
 /**
- * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
- *
- * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and prints what is left. See `monti init --help`.
- * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
- * - `monti db:setup [--env-file .env.local] [--no-env-file] [--config <file>]`: first-time setup: creates Monti's tables in an empty database (changes nothing when they are already there).
- * - `monti db:migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: after updating Monti, brings the tables up to date. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
- * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
- * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
- * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
- * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>]`: writes the data part of the config file to `monti.schema.ts`.
- * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
- * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
+ * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls `runCli`. The commands are listed in `commands.ts` (the help is generated from the
+ * same table, see `monti --help`); the runner is `run.ts`.
  */
 export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate.js";
 export { adminResetPassword } from "./admin-command.js";
-export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths.js";
 export { dbMigrate, dbSetup } from "./db.js";
 export { unifiedDiff } from "./diff.js";
-export { DOCTOR_HELP, formatDoctorReport, runDoctor, runDoctorCommand, } from "./doctor/index.js";
+export { formatDoctorReport, runDoctor, } from "./doctor/index.js";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env.js";
 export { eventsRetry } from "./events.js";
 export { findBoundaryViolations, formatBoundaryViolations, SERVER_ONLY_MODULES, } from "./import-boundary.js";
-export { formatInitReport, InitError, initProject, } from "./init.js";
+export { initProject } from "./init.js";
 export { detectApp, detectPackageManager } from "./init-detect.js";
-export { collectAnswers, InitCancelled } from "./init-prompts.js";
+export { collectAnswers } from "./init-prompts.js";
+export { formatInitReport } from "./init-report.js";
+export { InitError } from "./init-writer.js";
+export { parseJsonc } from "./jsonc.js";
+export { CONFIG_CANDIDATES, EXTRACT_CONFIG_CANDIDATES, locateConfig, locateExtractConfig, locateSchema, } from "./locate.js";
 export { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
+export { Cancelled, createClackPrompter } from "./prompt.js";
+export { runCli } from "./run.js";
 export { formatApplyResult, formatSchemaPlan, schemaApply, schemaDiff, withSchemaVersion, } from "./schema-apply.js";
-export { CONFIG_FILE_CANDIDATES, extractSchema, extractSchemaData, formatExtractReport, schemaFileText, } from "./schema-extract.js";
-/** Runs the command and returns the exit code. */
-export async function runCli(argv, io = { cwd: process.cwd(), log: console.log, error: console.error }) {
-    const [command, ...rest] = argv;
-    try {
-        // `monti <command> --help` prints that command's section only. (`doctor` answers it itself, and a plugin command has its own.)
-        if (command !== undefined && (rest.includes("--help") || rest.includes("-h"))) {
-            const section = helpFor(command);
-            if (section !== undefined && command !== "doctor") {
-                io.log(section);
-                return 0;
-            }
-        }
-        if (command === "init") {
-            return await runInitCommand(rest, io);
-        }
-        if (command === "admin:reset-password") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    email: { type: "string" },
-                    "env-file": { type: "string", multiple: true },
-                    "no-env-file": { type: "boolean" },
-                    config: { type: "string" },
-                },
-            });
-            return await adminResetPassword({
-                cwd: io.cwd,
-                envFiles: values["no-env-file"] ? [] : values["env-file"],
-                config: values.config,
-                email: values.email,
-                prompts: io.adminPrompts,
-                log: io.log,
-                error: io.error,
-            });
-        }
-        if (command === "db:setup") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    "env-file": { type: "string", multiple: true },
-                    "no-env-file": { type: "boolean" },
-                    config: { type: "string" },
-                },
-            });
-            const ok = await dbSetup({
-                cwd: io.cwd,
-                envFiles: values["no-env-file"] ? [] : values["env-file"],
-                config: values.config,
-                log: io.log,
-            });
-            return ok ? 0 : 1;
-        }
-        if (command === "db:migrate") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    "env-file": { type: "string", multiple: true },
-                    "no-env-file": { type: "boolean" },
-                    config: { type: "string" },
-                    verbose: { type: "boolean" },
-                    "reconvert-bodies": { type: "boolean" },
-                },
-            });
-            const ok = await dbMigrate({
-                cwd: io.cwd,
-                envFiles: values["no-env-file"] ? [] : values["env-file"],
-                config: values.config,
-                verbose: values.verbose,
-                reconvertBodies: values["reconvert-bodies"],
-                log: io.log,
-            });
-            return ok ? 0 : 1;
-        }
-        if (command === "events:retry") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    "env-file": { type: "string", multiple: true },
-                    "no-env-file": { type: "boolean" },
-                    config: { type: "string" },
-                    all: { type: "boolean" },
-                    limit: { type: "string" },
-                },
-            });
-            const limit = values.limit === undefined ? undefined : Number(values.limit);
-            if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
-                io.error("--limit must be a positive whole number");
-                return 1;
-            }
-            const ok = await eventsRetry({
-                cwd: io.cwd,
-                envFiles: values["no-env-file"] ? [] : values["env-file"],
-                config: values.config,
-                log: io.log,
-                all: values.all,
-                limit,
-            });
-            return ok ? 0 : 1;
-        }
-        if (command === "doctor") {
-            return await runDoctorCommand(rest, io);
-        }
-        if (command === "schema:extract") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    config: { type: "string" },
-                    out: { type: "string" },
-                    overwrite: { type: "boolean" },
-                    locale: { type: "string" },
-                },
-            });
-            const report = await extractSchema({
-                cwd: io.cwd,
-                config: values.config,
-                out: values.out,
-                overwrite: values.overwrite,
-                locale: values.locale,
-            });
-            io.log(formatExtractReport(report));
-            return 0;
-        }
-        if (command === "schema:diff" || command === "schema:apply") {
-            const { values } = parseArgs({
-                args: [...rest],
-                options: {
-                    schema: { type: "string" },
-                    "env-file": { type: "string", multiple: true },
-                    "no-env-file": { type: "boolean" },
-                    config: { type: "string" },
-                    check: { type: "boolean" },
-                    "dry-run": { type: "boolean" },
-                },
-            });
-            const options = {
-                cwd: io.cwd,
-                schema: values.schema,
-                envFiles: values["no-env-file"] ? [] : values["env-file"],
-                config: values.config,
-                log: io.log,
-            };
-            if (command === "schema:diff") {
-                const result = await schemaDiff({ ...options, check: values.check });
-                io.log(result.text);
-                return result.exitCode;
-            }
-            const outcome = await schemaApply({ ...options, dryRun: values["dry-run"] });
-            io.log(outcome.text);
-            return outcome.ok ? 0 : 1;
-        }
-        if (command !== undefined && isPluginCommandName(command)) {
-            return await runPluginCommand({ cwd: io.cwd, command, argv: rest, log: io.log, error: io.error });
-        }
-        if (command === undefined || command === "help" || command === "--help" || command === "-h") {
-            io.log(HELP);
-            return 0;
-        }
-        io.error(`Unknown command: ${command}\n\n${HELP}`);
-        return 1;
-    }
-    catch (error) {
-        io.error(error instanceof Error ? error.message : String(error));
-        return 1;
-    }
-}
+export { extractSchema, extractSchemaData, formatExtractReport, schemaFileText, } from "./schema-extract.js";

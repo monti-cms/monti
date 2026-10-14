@@ -1,4 +1,4 @@
-import type { CmsIssue } from "../screens/api-error-message.js";
+import type { CmsIssue } from "../api/error-message.js";
 /**
  * Codes the editor hooks produce. Server codes pass through (`CmsApiError.code`), so the union stays open.
  *

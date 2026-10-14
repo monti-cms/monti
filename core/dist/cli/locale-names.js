@@ -1,16 +1,18 @@
+import { LOCALE_CODE, languageName } from "../config/rules.js";
 /** Reading languages out of file and folder names (`hello.ko.mdx`, `ko/hello.mdx`), for `monti init` (which languages the site has). */
 /**
  * Whether a name is the code of a real language, as a file or folder name writes it: two letters (`ko`, `pt-BR`). Three-letter codes are left out on purpose, because
  * too many of them are also ordinary words in a file name (`min`, `dev`, `ref`).
  */
 export function isLanguageCode(value) {
-    const [primary = "", ...region] = value.split(/[-_]/);
-    if (!/^[A-Za-z]{2}$/.test(primary) || region.some((part) => !/^[A-Za-z0-9]{2,8}$/.test(part)))
+    const code = normalizeLanguageCode(value);
+    // Two letters for the language; the whole code must be one a site can use (the shape `config/rules` holds).
+    if (!/^[a-z]{2}(-|$)/.test(code) || !LOCALE_CODE.test(code))
         return false;
-    const code = primary.toLowerCase();
     try {
-        const name = new Intl.DisplayNames(["en"], { type: "language" }).of(code);
-        return name !== undefined && name.toLowerCase() !== code;
+        const primary = code.slice(0, 2);
+        const name = new Intl.DisplayNames(["en"], { type: "language" }).of(primary);
+        return name !== undefined && name.toLowerCase() !== primary;
     }
     catch {
         return false;
@@ -98,10 +100,5 @@ export function languageLabel(code) {
     const common = COMMON_LOCALES.find((locale) => locale.code === code);
     if (common)
         return common.name;
-    try {
-        return new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
-    }
-    catch {
-        return code;
-    }
+    return languageName(code);
 }

@@ -1,4 +1,4 @@
-import { DEFAULT_ADMIN_PATH } from "../config/define.js";
+import { DEFAULT_ADMIN_PATH } from "../config/rules.js";
 import { adminHrefWith, withBasePath } from "./base-path.js";
 export { DEFAULT_ADMIN_PATH };
 export { adminHrefWith, CMS_API_PATH, cmsApiUrl, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path.js";

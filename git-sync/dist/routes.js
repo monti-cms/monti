@@ -1,10 +1,10 @@
-import { adminRoute, HttpError, handleApiError, json, readJsonBody, } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, ok, parseWith, publicRoute, readJsonBody, } from "@monti-cms/core/plugin/server";
+import { z } from "zod";
 import { listConflicts, resolveConflict } from "./conflicts.js";
 import { GitHubApiError } from "./github/client.js";
 import { pullTarget } from "./inbound.js";
-import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT } from "./options.js";
-import { flushTarget, resumeAfterToken } from "./outbound.js";
-import { saveSettings, settingsView } from "./settings.js";
+import { flushTarget } from "./outbound.js";
+import { serverMessages } from "./server.messages.js";
 import { statusView } from "./status.js";
 import { GitSyncError, syncContextFor } from "./sync.js";
 import { handleWebhook } from "./webhook.js";
@@ -13,11 +13,11 @@ import { handleWebhook } from "./webhook.js";
  * Errors a person can fix (no token, a branch that does not exist) are 409 with their message; GitHub failing is 502.
  */
 /** Turns what the sync code throws into the response the admin screen shows. */
-const asHttpError = (error) => {
+const toCmsError = (error) => {
     if (error instanceof GitHubApiError)
-        return new HttpError(502, "github_error", error.message);
+        return new CmsError(error.message, "upstream_failed");
     if (error instanceof GitSyncError)
-        return new HttpError(409, "git_sync", error.message);
+        return new CmsError(error.message, "precondition_failed");
     return error;
 };
 /** Runs a route and turns the errors the sync code throws into the response the admin screen shows. */
@@ -26,96 +26,59 @@ const guarded = (run) => async (input) => {
         return await run(input);
     }
     catch (error) {
-        throw asHttpError(error);
+        throw toCmsError(error);
     }
 };
-const text = (body, key) => {
-    const value = body?.[key];
-    if (value === undefined)
-        return undefined;
-    if (typeof value !== "string")
-        throw new HttpError(400, "invalid_input", `\`${key}\` must be text`);
-    return value;
-};
+const targetBodySchema = z.object({ target: z.string().optional() });
+const resolveBodySchema = z.object({
+    target: z.string().min(1),
+    entryId: z.string().min(1),
+    resolution: z.enum(["git", "server"]),
+    gitSha: z.string().optional(),
+});
 export const status = {
-    GET: adminRoute(async ({ cms }) => json(await statusView(syncContextFor(cms)))),
-};
-export const settings = {
-    GET: adminRoute(async ({ cms }) => json(await settingsView(syncContextFor(cms)))),
-    PUT: adminRoute(async ({ request, cms }) => {
-        const body = (await readJsonBody(request));
-        const expectedVersion = body.expectedVersion;
-        if (typeof expectedVersion !== "number" || !Number.isInteger(expectedVersion) || expectedVersion < 0) {
-            throw new HttpError(428, "version_required", "expectedVersion is required");
-        }
-        const webhookSecret = body.webhookSecret === null ? null : text(body, "webhookSecret");
-        return json(await saveSettings(syncContextFor(cms), { webhookSecret, expectedVersion }));
-    }),
-};
-/** The admin screen calls this after it assigned a key to the token slot: what waited for a token goes out now. */
-export const tokenChanged = {
-    POST: adminRoute(async ({ cms }) => {
-        if (await cms.apiKeys.readSlot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT))
-            await resumeAfterToken(syncContextFor(cms));
-        return json({ ok: true });
-    }),
+    GET: adminRoute(async ({ cms }) => ok(await statusView(syncContextFor(cms)))),
 };
 export const pull = {
     POST: adminRoute(guarded(async ({ request, cms }) => {
         const ctx = syncContextFor(cms);
-        const wanted = text(await readJsonBody(request), "target");
+        const { target: wanted } = parseWith(targetBodySchema, await readJsonBody(request));
         const targets = wanted === undefined ? ctx.targets : [ctx.target(wanted)];
         const results = [];
         for (const target of targets)
             results.push({ target: target.id, summary: await pullTarget(ctx, target) });
-        return json({ results });
+        return ok({ results });
     })),
 };
 export const flush = {
     POST: adminRoute(guarded(async ({ request, cms }) => {
         const ctx = syncContextFor(cms);
-        const wanted = text(await readJsonBody(request), "target");
+        const { target: wanted } = parseWith(targetBodySchema, await readJsonBody(request));
         const targets = wanted === undefined ? ctx.targets : [ctx.target(wanted)];
         const results = [];
         for (const target of targets)
             results.push(await flushTarget(ctx, target));
-        return json({ results });
+        return ok({ results });
     })),
 };
 export const conflicts = {
-    GET: adminRoute(guarded(async ({ cms }) => json({ items: await listConflicts(syncContextFor(cms)) }))),
+    GET: adminRoute(guarded(async ({ cms }) => ok({ items: await listConflicts(syncContextFor(cms)) }))),
 };
 export const resolve = {
     POST: adminRoute(guarded(async ({ request, cms }) => {
-        const body = await readJsonBody(request);
-        const target = text(body, "target");
-        const entryId = text(body, "entryId");
-        const resolution = text(body, "resolution");
-        if (!target || !entryId || (resolution !== "git" && resolution !== "server")) {
-            throw new HttpError(400, "invalid_input", "`target`, `entryId` and `resolution` (git or server) are required");
-        }
-        return json(await resolveConflict(syncContextFor(cms), {
-            target,
-            entryId,
-            resolution: resolution,
-            gitSha: text(body, "gitSha"),
-        }));
+        const body = parseWith(resolveBodySchema, await readJsonBody(request), cms.site.createTranslator(serverMessages)("resolveBody"));
+        return ok(await resolveConflict(syncContextFor(cms), { ...body, resolution: body.resolution }));
     })),
 };
 /** GitHub's `push` webhook. Public: the signature is the check, and nothing else about the request is trusted. */
 export const webhook = {
-    POST: async (request, context) => {
-        try {
-            const rawBody = await request.text();
-            const outcome = await handleWebhook(syncContextFor(context.cms), {
-                rawBody,
-                signature: request.headers.get("x-hub-signature-256"),
-                event: request.headers.get("x-github-event"),
-            });
-            return json(outcome.body, { status: outcome.status });
-        }
-        catch (error) {
-            return handleApiError(asHttpError(error));
-        }
-    },
+    POST: publicRoute(async ({ request, cms }) => {
+        const rawBody = await request.text();
+        const outcome = await handleWebhook(syncContextFor(cms), {
+            rawBody,
+            signature: request.headers.get("x-hub-signature-256"),
+            event: request.headers.get("x-github-event"),
+        });
+        return ok(outcome.body, { status: outcome.status });
+    }),
 };

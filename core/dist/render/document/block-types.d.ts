@@ -32,8 +32,6 @@ export type AttributeProps<D extends BlockDefinition> = Simplify<{
 } & {
     readonly [K in keyof D["attributes"] as AlwaysSet<D["attributes"][K]> extends true ? never : K]?: AttributeValue<D["attributes"][K]>;
 }>;
-/** The kind of a definition as a type: a text block is a mark, anything else is a block. */
-export type IsMarkBlock<D extends BlockDefinition> = D["syntax"]["kind"] extends "text" ? true : false;
 /** Definitions whose names are literals. A definition typed as the wide `BlockDefinition` (name `string`) cannot be told apart, so it adds no key. */
 export type LiteralBlock<D> = D extends BlockDefinition ? (string extends D["name"] ? never : D) : never;
 type BlocksOf<List> = List extends readonly (infer D)[] ? D : never;

@@ -202,7 +202,10 @@ const slashTablesOf = perSite((site) => {
         all: [...base, ...blocks],
     };
 });
-/** The slash menu of a site: the basic formatting items, then its block insertion items (core blocks after added blocks). */
+/**
+ * The slash menu of a site: the basic formatting items, then its block insertion items (core blocks after added blocks).
+ * @internal For tests; the menu reads the tables.
+ */
 export const slashCommands = (site) => slashTablesOf(site).all;
 /**
  * Slash menu items. `extra` are items added by edit view extensions (plugins) (appended after), and `inline` are items added by text decoration extensions

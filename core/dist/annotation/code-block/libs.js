@@ -81,6 +81,7 @@ export const createAnnotationRegistry = (annotationConfig) => {
     }
     return registry;
 };
+/** @internal Internals the tests reach. */
 export const __testable__ = {
     normalizeConfigItems,
     supportsAnnotationScope,

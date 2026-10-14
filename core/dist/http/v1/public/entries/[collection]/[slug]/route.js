@@ -1,2 +1,3 @@
+import { publicRoute } from "../../../../handler.js";
 import { getOne } from "../../../entries.js";
-export const GET = async (request, context) => getOne(request, (await context.params) ?? { collection: "", slug: "" }, context.cms);
+export const GET = publicRoute(({ request, params, cms }) => getOne(request, params, cms));

@@ -1,4 +1,4 @@
-import { settingsView } from "./settings.js";
+import { keysView } from "./keys.js";
 export async function statusView(ctx) {
     const targets = [];
     for (const target of ctx.targets) {
@@ -25,5 +25,5 @@ export async function statusView(ctx) {
             ...(status.lastFlush ? { lastFlush: status.lastFlush } : {}),
         });
     }
-    return { settings: await settingsView(ctx), targets };
+    return { keys: await keysView(ctx.cms), targets };
 }

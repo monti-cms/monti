@@ -1,14 +1,14 @@
 import type { AuthGateway } from "../adapters/auth/index.js";
+import type { CmsConfig } from "../config/define.js";
 import type { ContentStore } from "../core/store/index.js";
 import type { CmsFormat } from "../format/types.js";
 import type { MediaStore } from "../media/store.js";
 import { type LoadedServerPlugin } from "../plugin/server.js";
 import type { PluginStorage } from "../plugin/storage.js";
 import type { CmsAuth, CmsServerConfig } from "../server/define.js";
-import type { AnyCmsConfig } from "../site/index.js";
 import { type BulkService, type Cms, type ContentService } from "./create-cms.js";
 /** What a test supplies to {@link fakeCms}. Whatever it leaves out fails loudly when the code under test touches it. */
-export interface FakeCmsParts<Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
     /**
      * The site config the instance is created with. Default: a minimal one (an English site with one `page` collection), enough for code that only
      * needs some site. Pass the config the code under test is written against.
@@ -32,7 +32,7 @@ export interface FakeCmsParts<Config extends AnyCmsConfig = AnyCmsConfig> {
     /** Formats added to the built-in ones, as if a plugin provided them. Default: none. */
     readonly formats?: readonly CmsFormat[];
 }
-declare const DEFAULT_CONFIG: import("..").CmsConfig<{
+declare const DEFAULT_CONFIG: CmsConfig<{
     readonly page: import("..").CollectionSchema<{
         readonly title: {
             readonly kind: "text";
@@ -56,5 +56,5 @@ export declare const fakeAuth: (parts?: Partial<CmsAuth>) => CmsServerConfig["au
  * whose database, media store and login are the parts the test provides, so the code under test goes through `cms` exactly as in the app.
  * Several fake instances can live in one test file, each with its own parts.
  */
-export declare function fakeCms<const Config extends AnyCmsConfig = typeof DEFAULT_CONFIG>(parts?: FakeCmsParts<Config>): Cms<Config>;
+export declare function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(parts?: FakeCmsParts<Config>): Cms<Config>;
 export {};

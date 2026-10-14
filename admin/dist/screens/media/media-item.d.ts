@@ -1,32 +1,6 @@
+import type { MediaItem } from "../../api/media.js";
 import type { TranslatorFor } from "../../translator.js";
 import type { mediaMessages } from "./messages.js";
-/** One item of the media list API. */
-export interface MediaItem {
-    id: string;
-    status: "ready" | "deleting" | "pending" | "failed";
-    filename: string;
-    mimeType: string | null;
-    byteSize: number | null;
-    width: number | null;
-    height: number | null;
-    publicUrl: string | null;
-    original: {
-        mimeType: string | null;
-        byteSize: number | null;
-        width: number | null;
-        height: number | null;
-    } | null;
-    defaultAlt: string;
-    defaultCaption: string;
-    createdAt: string;
-    referencesCount: number;
-    references: {
-        entryId: string;
-        title: string | null;
-        collection: string;
-        state: "working" | "published";
-    }[];
-}
 /** One post that uses the media. Counts previously tallied separately for the draft being edited and the published post are merged into one per post. */
 export interface MediaUsage {
     entryId: string;
@@ -46,6 +20,6 @@ export declare const usageCount: (media: MediaItem) => number;
 export declare const usageLabel: (t: TranslatorFor<typeof mediaMessages>, media: MediaItem) => string;
 /** Text of the usage note (`note`). */
 export declare const usageNoteLabel: (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) => string;
-export declare function copyText(t: TranslatorFor<typeof mediaMessages>, text: string, success: string): Promise<void>;
+export declare function copyText(text: string, success: string, failure: string): Promise<void>;
 /** Appends the original file's extension to the new name (suggested names come without an extension). If it already has the same extension, leaves it as is. */
 export declare function withExtension(name: string, original: string): string;

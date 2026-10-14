@@ -1,5 +1,7 @@
+import { type Issue } from "@monti-cms/core";
+import { MDX_PLUGIN_NAME } from "./name.js";
 import type { SyntaxExtension } from "./syntax/types.js";
-export declare const MDX_PLUGIN_NAME = "mdx";
+export { MDX_PLUGIN_NAME };
 export interface MdxPluginOptions {
     /**
      * Syntax extensions, in precedence order for writing. Stored MDX is CommonMark + GFM + standard MDX JSX; an extension adds a notation (for example
@@ -9,14 +11,13 @@ export interface MdxPluginOptions {
      */
     readonly syntax?: readonly SyntaxExtension[];
 }
-/** Checks the options when the site config is created: every extension has a name, and no name is listed twice. */
-export declare const validateMdxOptions: (options: MdxPluginOptions | undefined) => void;
+/** The problems of the options: every extension has a name, and no name is listed twice. */
+export declare const checkMdxOptions: (options: MdxPluginOptions | undefined) => Issue[];
 /**
  * MDX as a format of the CMS (`@monti-cms/mdx`). Add it to the site config `plugins`.
  *
  * - the `mdx` format: `format: "mdx"` on the read and write APIs, `?format=mdx` on the export and the HTTP API, and the text the AI plugin's model reads and writes;
- * - the source panel of the admin: edit a body as MDX text, checked as it is typed;
- * - the implementation of the store migrations that predate stored documents (`0012` to `0015`), which core only calls when an old store needs them.
+ * - the source panel of the admin: edit a body as MDX text, checked as it is typed.
  *
  * ```ts
  * plugins: [mdx({ syntax: [directiveSyntax()] })]

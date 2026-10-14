@@ -1,24 +1,34 @@
-export declare const SEO_PLUGIN_NAME = "seo";
+import { type PluginFieldSet, type PluginPlacement } from "@monti-cms/core";
+export { SEO_PLUGIN_NAME } from "./name.js";
 export interface SeoPluginOptions {
     /** Adds search title and description suggestions when the AI plugin is present. Default `true`. */
     readonly ai?: boolean;
+    /** Name of the tab of the edit screen's properties panel the SEO fields are placed in (1 to 20 characters). Default `SEO`. */
+    readonly tab?: string;
 }
 /**
- * SEO extension. Add it to the site config `plugins`. Spread the fields into a collection with `seoFields()`.
+ * SEO extension. Add it to the site config `plugins`. Add the fields with the "Add SEO fields" action on the Fields tab of the settings screen (they are written into
+ * `monti.schema.ts` as plain fields), or spread `seoFields()` into a collection defined in code; the plugin places them in their own tab (`tab`, default `SEO`) of the
+ * properties panel.
  *
  * - Admin UI: search result and share preview (view field `search`), character counts for search title and description with a hint for the fallback value, and a hide switch
  * - Config validation: SEO roles are attached to fields of the right kind
  * - With the AI plugin, search title and description suggestions (`seoTitle`, `seoDescription`)
  *
  * ```ts
- * plugins: [seo(), aiPlugin()]
+ * plugins: [seo(), ai()]
  * ```
  */
 export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/core").CmsPlugin<"seo", SeoPluginOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
     readonly contributes?: {
-        readonly ai: {
+        readonly layout: readonly PluginPlacement[];
+        readonly fieldSets: readonly PluginFieldSet[];
+        readonly ai?: {
             actions: {
-                seoTitle: (site: import("./ai.js").SeoSiteView) => {
+                seoTitle: (site: {
+                    readonly collections: import("@monti-cms/core").CollectionsConfig;
+                    readonly createTranslator: import("@monti-cms/core/client").Site["createTranslator"];
+                }) => {
                     label: string;
                     input: {
                         readonly title: {
@@ -46,9 +56,16 @@ export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/cor
                         max: number;
                     }[];
                     prompt: string;
-                    attach: import("./ai.js").FieldAttach[];
+                    attach: {
+                        readonly slot: "field";
+                        readonly field: string;
+                        readonly collections?: readonly string[];
+                    }[];
                 } | undefined;
-                seoDescription: (site: import("./ai.js").SeoSiteView) => {
+                seoDescription: (site: {
+                    readonly collections: import("@monti-cms/core").CollectionsConfig;
+                    readonly createTranslator: import("@monti-cms/core/client").Site["createTranslator"];
+                }) => {
                     label: string;
                     input: {
                         readonly title: {
@@ -76,9 +93,13 @@ export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/cor
                         max: number;
                     }[];
                     prompt: string;
-                    attach: import("./ai.js").FieldAttach[];
+                    attach: {
+                        readonly slot: "field";
+                        readonly field: string;
+                        readonly collections?: readonly string[];
+                    }[];
                 } | undefined;
             };
-        };
+        } | undefined;
     } | undefined;
 };

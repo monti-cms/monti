@@ -1,1 +1,3 @@
-export { GET } from "../entries.js";
+export declare const GET: import("../../handler.js").PublicHandler<{
+    [x: string]: string;
+}>;

@@ -2,6 +2,7 @@ import { CmsError } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, recordOf } from "./apply.js";
 import { exportEntry, isSyncable, parseEntryFile } from "./entry-file.js";
 import { pushEntries } from "./outbound.js";
+import { serverMessages } from "./server.messages.js";
 import { GitSyncError } from "./sync.js";
 async function readEntry(ctx, entryId) {
     try {
@@ -63,12 +64,13 @@ export async function listConflicts(ctx) {
  * `gitSha` is the blob the person looked at: if the file changed again since, the decision is refused, so a newer edit is never decided blind.
  */
 export async function resolveConflict(ctx, params) {
+    const t = ctx.cms.site.createTranslator(serverMessages);
     const target = ctx.target(params.target);
     const conflict = await ctx.state.conflicts.get(params.target, params.entryId);
     if (!conflict)
-        throw new CmsError("There is no such conflict", "not_found");
+        throw new CmsError(t("noConflict"), "not_found");
     if (params.gitSha !== undefined && params.gitSha !== conflict.gitSha) {
-        throw new CmsError("The file changed in git since you looked at it; reload the conflict", "conflict");
+        throw new CmsError(t("conflictChanged"), "conflict");
     }
     if (params.resolution === "server") {
         const pushed = await pushEntries(ctx, target, [params.entryId]);
@@ -77,11 +79,11 @@ export async function resolveConflict(ctx, params) {
     }
     const parsed = parseEntryFile(conflict.gitText);
     if (!parsed.ok)
-        throw new GitSyncError(`The git version cannot be read: ${parsed.message}`);
+        throw new GitSyncError(t("gitVersionUnreadable", { message: parsed.message }));
     const { file } = parsed;
     const slug = file.slug ?? (await ctx.format(target)).pattern.parse(conflict.path)?.slug;
     if (!slug)
-        throw new GitSyncError("The git version has no slug: add `slug` to its front matter");
+        throw new GitSyncError(t("gitVersionNoSlug"));
     await ctx.withLock(target, async () => {
         const entry = await readEntry(ctx, params.entryId);
         let applied;
@@ -97,7 +99,7 @@ export async function resolveConflict(ctx, params) {
             });
         }
         catch (error) {
-            throw new GitSyncError(`The git version could not be written to the entry: ${describeError(error)}`);
+            throw new GitSyncError(t("gitVersionNotWritten", { message: describeError(error) }));
         }
         await ctx.state.records.put(recordOf(target, { path: conflict.path, sha: conflict.gitSha }, applied, ctx.now()));
         await ctx.state.conflicts.remove(params.target, params.entryId);

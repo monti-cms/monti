@@ -5,6 +5,8 @@ import type { EventSubscriber } from "../services/events.js";
 import type { HookSource } from "../services/hooks.js";
 import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define.js";
 import type { PluginStorage } from "./storage.js";
+/** The server side of one plugin: its inline object, or the default export of its loader. `undefined` for a plugin without one. */
+export declare function serverSideOf(plugin: Pick<CmsPlugin, "server">): Promise<CmsServerPlugin | undefined>;
 /** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
 export type LoadedServerPlugin = CmsServerPlugin & {
     readonly name: string;

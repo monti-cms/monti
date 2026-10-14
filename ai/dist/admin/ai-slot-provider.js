@@ -1,25 +1,22 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { CmsApiError, cmsFetch } from "@monti-cms/admin/api";
+import { CmsApiError } from "@monti-cms/admin/api";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider } from "@monti-cms/admin/slots";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useMemo } from "react";
 import { attachedTo } from "../registry.js";
 import { aiCommonMessages } from "./ai-common.messages.js";
+import { aiKeys, listAiActions, openAiRunStream, runAiMany, runAiOnce } from "./api.js";
 import { useMdxFormat } from "./mdx-format.js";
-export const AI_ACTIONS_KEY = ["cms", "ai", "actions"];
 export function useAiActions(enabled = true) {
     const site = useSite();
     const t = useTranslator(aiCommonMessages);
     return useQuery({
-        queryKey: AI_ACTIONS_KEY,
-        queryFn: ({ signal }) => cmsFetch(site, cmsApiUrl("/v1/ai/actions"), {
-            signal,
-            fallback: t("listFailed"),
-        }),
+        queryKey: aiKeys.actions(),
+        queryFn: ({ signal }) => listAiActions(site, { signal, fallback: t("listFailed") }),
         enabled,
         staleTime: 60_000,
     });
@@ -34,12 +31,7 @@ const requestBody = (action, options) => ({
 /** Runs an action by name. */
 export async function runAiAction(site, action, input, options = {}) {
     const t = site.createTranslator(aiCommonMessages);
-    const response = await cmsFetch(site, cmsApiUrl("/v1/ai/run"), {
-        method: "POST",
-        json: { ...requestBody(action, options), input },
-        signal: options.signal,
-        fallback: t("runFailed"),
-    });
+    const response = await runAiOnce(site, { ...requestBody(action, options), input }, { signal: options.signal, fallback: t("runFailed") });
     return response.result;
 }
 /**
@@ -49,16 +41,11 @@ export async function runAiAction(site, action, input, options = {}) {
 export async function streamAiAction(site, action, input, options) {
     const t = site.createTranslator(aiCommonMessages);
     const fallback = t("runFailed");
-    const response = await fetch(cmsApiUrl("/v1/ai/run"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...requestBody(action, options), input, stream: true }),
-        signal: options.signal,
-    });
+    const response = await openAiRunStream({ ...requestBody(action, options), input, stream: true }, options.signal);
     if (!response.ok || !response.body) {
-        const body = (await response.json().catch(() => ({})));
-        const message = typeof body.message === "string" ? body.message : fallback;
-        throw new CmsApiError(response.status, typeof body.code === "string" ? body.code : undefined, message, [], body);
+        const { error } = (await response.json().catch(() => ({})));
+        const message = typeof error?.message === "string" ? error.message : fallback;
+        throw new CmsApiError(response.status, typeof error?.code === "string" ? error.code : undefined, message, [], error ?? {});
     }
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = "";
@@ -85,17 +72,12 @@ export async function streamAiAction(site, action, input, options) {
         if (done)
             break;
     }
-    throw new CmsApiError(502, "ai_failed", t("streamCut"), [], {});
+    throw new CmsApiError(502, "upstream_failed", t("streamCut"), [], {});
 }
 /** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
 export async function runAiActionMany(site, action, inputs, options = {}) {
     const t = site.createTranslator(aiCommonMessages);
-    const response = await cmsFetch(site, cmsApiUrl("/v1/ai/run"), {
-        method: "POST",
-        json: { ...requestBody(action, options), inputs },
-        signal: options.signal,
-        fallback: t("runFailed"),
-    });
+    const response = await runAiMany(site, { ...requestBody(action, options), inputs }, { signal: options.signal, fallback: t("runFailed") });
     return response.results;
 }
 /** Converts the current state of a slot into action inputs and common information. Sends only the inputs present in the action definition. */

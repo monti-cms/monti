@@ -1,5 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useDebounced } from "@monti-cms/admin/kit";
 import { useEffect, useMemo, useState } from "react";
 const THEMES = { light: "one-light", dark: "one-dark-pro" };
 let highlighterPromise;
@@ -31,24 +32,23 @@ const styleOf = (token) => token.light || token.dark ? { color: token.light, "--
  */
 export function MdxSourceEditor({ value, className, ...props }) {
     const [highlighted, setHighlighted] = useState([]);
+    // Highlighting follows the text after a short pause; a result that arrives after the next text is dropped.
+    const settled = useDebounced(value, 120);
     useEffect(() => {
         let cancelled = false;
-        const timer = setTimeout(() => {
-            highlightMdx(value)
-                .then((lines) => {
-                if (!cancelled)
-                    setHighlighted(lines);
-            })
-                .catch(() => {
-                if (!cancelled)
-                    setHighlighted([]);
-            });
-        }, 120);
+        highlightMdx(settled)
+            .then((lines) => {
+            if (!cancelled)
+                setHighlighted(lines);
+        })
+            .catch(() => {
+            if (!cancelled)
+                setHighlighted([]);
+        });
         return () => {
             cancelled = true;
-            clearTimeout(timer);
         };
-    }, [value]);
+    }, [settled]);
     const lines = useMemo(() => value.split("\n"), [value]);
     return (_jsxs("div", { className: ["grid font-mono text-sm leading-6", className].filter(Boolean).join(" "), children: [_jsx("pre", { "aria-hidden": true, className: "pointer-events-none col-start-1 row-start-1 m-0 min-w-0 whitespace-pre-wrap break-words bg-transparent p-0 font-[inherit] text-cms-foreground cms-dark:[&_span[style]]:text-(--shiki-dark)!", children: lines.map((line, index) => {
                     const cached = highlighted[index];

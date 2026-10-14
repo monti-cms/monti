@@ -2,14 +2,30 @@
  * Extension kit. Exports in one place the parts and helpers an extension (plugin) uses to build screens, buttons and dialogs
  * that look like the admin UI. Internal admin file paths (`ui/*`, `screens/*`) are not public.
  */
+export { apiKeysKeys, useApiKeys } from "./api/api-keys.js";
+export { commonMessages } from "./lib/common.messages.js";
+export { useHydratedQuery } from "./lib/hooks/use-hydrated-query.js";
+export { enumCodec, stringCodec, usePreference } from "./lib/hooks/use-preference.js";
+export { useSaveShortcut } from "./lib/hooks/use-save-shortcut.js";
+export { isComposingKey } from "./lib/keyboard.js";
 export { cn } from "./lib/utils/cn.js";
+export { moveWithin } from "./lib/utils/move-within.js";
 export { ApiKeyField, choiceReady } from "./screens/api-keys/api-key-field.js";
-export { API_KEYS_KEY, useApiKeys } from "./screens/api-keys/api-keys-api.js";
 export { EMPTY_FORM, formList, formText, metadataFromForm } from "./screens/entries/entry-form.js";
-export { PageActions, useAdminNav } from "./screens/shared/admin-shell.js";
+export { ActionContextMenu, MoreActionsButton } from "./screens/shared/action-menu.js";
+export { PageActions, ShellPage, useAdminNav } from "./screens/shared/admin-shell.js";
 export { NamedIcon, useIconByName } from "./screens/shared/collection-icon.js";
 export { ConfirmDialog, discardConfirm, useConfirm } from "./screens/shared/confirm-dialog.js";
+export { EditorFooter } from "./screens/shared/editor-footer.js";
+export { EmptyState } from "./screens/shared/empty-state.js";
+export { DETAIL_PANE_FRAME, LIST_PANE_WIDTH, PAGE_MAX_WIDTH } from "./screens/shared/layout.js";
+export { LoadErrorAlert } from "./screens/shared/load-error-alert.js";
+export { ListPane, ListRow, MasterDetail } from "./screens/shared/master-detail.js";
+export { PageBody } from "./screens/shared/page-body.js";
+export { OPEN_ITEM } from "./screens/shared/side-panel.js";
 export { useDebounced } from "./screens/shared/use-debounced.js";
+export { useDraftEditor } from "./screens/shared/use-draft-editor.js";
+export { useUnsavedGuard } from "./screens/shared/use-unsaved-guard.js";
 export * from "./ui/alert.js";
 export * from "./ui/alert-dialog.js";
 export * from "./ui/badge.js";
@@ -22,6 +38,7 @@ export * from "./ui/combobox.js";
 export * from "./ui/command.js";
 export * from "./ui/context-menu.js";
 export * from "./ui/dialog.js";
+export * from "./ui/dialog-form-footer.js";
 export * from "./ui/dropdown-menu.js";
 export * from "./ui/empty.js";
 export * from "./ui/field.js";
@@ -36,6 +53,7 @@ export * from "./ui/separator.js";
 export * from "./ui/sheet.js";
 export * from "./ui/skeleton.js";
 export * from "./ui/spinner.js";
+export * from "./ui/status-indicator.js";
 export * from "./ui/switch.js";
 export * from "./ui/table.js";
 export * from "./ui/tabs.js";

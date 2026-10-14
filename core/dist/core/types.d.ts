@@ -1,9 +1,11 @@
+import type { CmsConfig } from "../config/define.js";
 import type { StoredDocument } from "../doc/stored-document.js";
 import type { CmsImageSource } from "../doc/types.js";
 import type { MetadataOf, PublishedMetadataOf } from "../schema/collection.js";
 import type { RecordTranslations } from "../schema/derive.js";
-import type { AnyCmsConfig } from "../site/create-site.js";
 import type { Collection } from "./collections.js";
+import type { ErrorCode } from "./error-codes.js";
+import { CmsError } from "./store/errors.js";
 import type { TranslationState } from "./translation/state.js";
 /**
  * CMS domain types. Shared by the repository implementation, service and HTTP layers; depends on none of them.
@@ -35,10 +37,8 @@ export type Issue = {
 export type { Collection };
 /**
  * Kind of reference target. The collection of content (`entry`) is decided by the relation field definition.
- * Previously saved `category` and `tag` references are converted to `entry` on read (`normalizeReferenceKind`).
  */
 export type ReferenceKind = "entry" | "media";
-export declare const normalizeReferenceKind: (kind: string) => ReferenceKind;
 export type ReferenceOccurrence = {
     readonly type: "body";
     readonly blockId?: string;
@@ -47,14 +47,8 @@ export type ReferenceOccurrence = {
     readonly path: string;
     readonly ordinal?: number;
 };
-/**
- * An occurrence as stored. Rows written before bodies were checked as documents hold `{type:"mdx", line, column, blockId?}` for a body
- * occurrence; it reads as `{type:"body", blockId?}` and is rewritten in the new form the next time the references are saved.
- * Returns `undefined` for a value that is not an occurrence.
- */
+/** An occurrence as stored. Returns `undefined` for a value that is not an occurrence. */
 export declare const readReferenceOccurrence: (value: unknown) => ReferenceOccurrence | undefined;
-/** Whether a stored occurrence list still has an occurrence in the old shape. */
-export declare const hasLegacyOccurrence: (value: unknown) => boolean;
 /** The occurrences of a stored reference row, in the current shape. */
 export declare const readReferenceOccurrences: (value: unknown) => ReferenceOccurrence[];
 export type Reference = {
@@ -76,7 +70,7 @@ export type JsonValue = string | number | boolean | null | readonly JsonValue[] 
  * The collection names of a site config: the keys of its `collections`, as the literal names when the config is typed (`defineSite(...)`) and `string` for the
  * loose config.
  */
-export type CollectionName<Config extends AnyCmsConfig = AnyCmsConfig> = keyof Config["collections"] & string;
+export type CollectionName<Config extends CmsConfig = CmsConfig> = keyof Config["collections"] & string;
 /** An item collection keeps per-locale names in `translations`. */
 type WithRecordTranslations<S, M> = S extends {
     readonly kind: "item";
@@ -87,14 +81,14 @@ type WithRecordTranslations<S, M> = S extends {
  * Collection metadata, built from the definitions in the site config's type: `MetadataFor<"post", typeof config>`. Without a config it is the loose metadata of any
  * collection.
  */
-export type MetadataFor<C extends string = string, Config extends AnyCmsConfig = AnyCmsConfig> = string extends keyof Config["collections"] ? {
+export type MetadataFor<C extends string = string, Config extends CmsConfig = CmsConfig> = string extends keyof Config["collections"] ? {
     [field: string]: unknown;
 } : C extends keyof Config["collections"] ? WithRecordTranslations<Config["collections"][C], MetadataOf<Config["collections"][C]>> : never;
 /**
  * The metadata of a published entry (what `cms.read` returns): like {@link MetadataFor}, but the `required` fields are not optional, because publishing
  * needs them (`post.metadata.title` is a `string`).
  */
-export type PublishedMetadataFor<C extends string = string, Config extends AnyCmsConfig = AnyCmsConfig> = string extends keyof Config["collections"] ? {
+export type PublishedMetadataFor<C extends string = string, Config extends CmsConfig = CmsConfig> = string extends keyof Config["collections"] ? {
     [field: string]: unknown;
 } : C extends keyof Config["collections"] ? WithRecordTranslations<Config["collections"][C], PublishedMetadataOf<Config["collections"][C]>> : never;
 /**
@@ -124,12 +118,12 @@ type InputFor<C extends string, M, Body = BodyInput> = Body & {
     /** Translation state of a translation. If omitted, the stored value is kept. A source accepts only `null`. */
     translation?: TranslationState | null;
 };
-export type ServiceInput<Config extends AnyCmsConfig = AnyCmsConfig> = {
+export type ServiceInput<Config extends CmsConfig = CmsConfig> = {
     [C in CollectionName<Config>]: InputFor<C, MetadataFor<C, Config>, Config["collections"][C] extends {
         readonly kind: "item";
     } ? BodyInput | NoBody : BodyInput>;
 }[CollectionName<Config>];
-export type SaveDraftInput<Config extends AnyCmsConfig = AnyCmsConfig> = ServiceInput<Config> & {
+export type SaveDraftInput<Config extends CmsConfig = CmsConfig> = ServiceInput<Config> & {
     expectedVersion: number;
 };
 export type InternalLinkSource = {
@@ -210,8 +204,8 @@ export type WorkingCopy = {
     readonly locale?: string;
     readonly translationGroupId?: string;
 };
-export declare class ServiceError extends Error {
-    readonly code: string;
-    readonly issues?: readonly Issue[] | undefined;
-    constructor(code: string, issues?: readonly Issue[] | undefined, message?: string);
+/** A request the service refuses; the issues say what is wrong with it. A {@link CmsError}, so the HTTP layer answers it like any other. */
+export declare class ServiceError extends CmsError {
+    constructor(code: ErrorCode, issues?: readonly Issue[], message?: string);
+    readonly issues?: readonly Issue[];
 }

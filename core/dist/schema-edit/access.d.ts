@@ -1,4 +1,5 @@
 import type { Cms } from "../cms/index.js";
+import { type SchemaLiteralIssue } from "../schema-file/literal.js";
 /**
  * Whether the settings screen may write the schema file of an instance. The decision is the server's: a production server never writes the file (it runs the schema
  * it was built with), and a development server writes it only when the file is there, can be written, and is a pure literal (the `defineSchema` import and
@@ -22,8 +23,10 @@ export type SchemaEditAccess = {
     readonly writable: false;
     readonly reason: SchemaReadOnlyReason;
     readonly file?: string;
-    /** For `has_code`: what in the file is code, with its line. */
+    /** For `has_code`: what in the file is code, with its line, in English (the command line and logs read this). */
     readonly detail?: string;
+    /** For `has_code`: the same as a code and values, which the screen translates. */
+    readonly issue?: SchemaLiteralIssue;
 };
 /**
  * Whether the server runs in development (`next dev`). Read at call time. A development-mode process that looks deployed (a hosting platform's variables, a public

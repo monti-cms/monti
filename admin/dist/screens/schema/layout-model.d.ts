@@ -1,13 +1,14 @@
+import { type NamedPlacement } from "@monti-cms/core/client";
 import { type Obj } from "./schema-model.js";
 /**
  * The properties panel of the edit screen as the fields tree shows it: tab, then an ordered list of blocks, each a titled group or a run of fields in no group.
  * A run sits exactly where the panel draws it (a `layout` group without a title), before, between or after groups, so the tree, the schema and the panel
  * say the same thing and an edit never moves fields it was not about. Saving writes the order of `fields` and `layout` together from the tree.
  *
- * It follows `layoutGroupsOf` (the rules of the real panel):
+ * The groups are not worked out here: they are core's (`panelGroupsOf`, the algorithm the real panel runs), and the tree is the same groups drawn as rows. So:
  * - a `layout` group sits in its `tab`, or in the default tab; fields in no `layout` group come last, in the default tab;
- * - a field with a `tab` of its own (placed by a plugin) is drawn in that tab, whatever the layout says: it is locked there;
- * - the title field and `hidden` fields are not drawn in the panel: they are pinned and never join a block.
+ * - the fields a plugin places (`contributes.layout`) are drawn in the plugin's tab, whatever the layout says: they are locked there;
+ * - the fields the panel does not draw (the title of a document) are pinned and never join a block.
  */
 export interface Block {
     /** The title of a group; `null` for a run of fields in no group. */
@@ -16,22 +17,18 @@ export interface Block {
     fields: string[];
 }
 export interface Tab {
+    /** The tab's id: {@link DEFAULT_TAB} for the first one, the name a person wrote for the others. The screens translate the first one to show it. */
     name: string;
     blocks: Block[];
-    /** Fields a plugin placed in this tab (their `tab`): shown here, never movable. */
+    /** Fields a plugin placed in this tab: shown here, never movable. */
     locked: string[];
 }
 export interface Tree {
-    /** Fields the panel does not draw (the title, `hidden` fields): they only define the order of `fields`. */
+    /** Fields the panel does not draw (the title of a document): they only define the order of `fields`. */
     pinned: string[];
     /** The default tab first, then the others in the order the panel shows them. */
     tabs: Tab[];
 }
-export type NoPanelReason = "title" | "hidden";
-/** Why the panel does not draw a top-level field, or `null` when it does. */
-export declare function noPanelReason(collection: Obj, name: string): NoPanelReason | null;
-/** The own tab of a field a plugin placed, or `undefined`. */
-export declare const ownTabOf: (collection: Obj, name: string) => string | undefined;
 /** Where a field is in the tree. */
 export interface Place {
     tab: number;
@@ -43,8 +40,8 @@ export interface BlockRef {
     tab: number;
     block: number;
 }
-/** The tree of a collection. `defaultTab` is the name of the panel's first tab. */
-export declare function treeOf(collection: Obj, defaultTab: string): Tree;
+/** The tree of a collection, from the groups of the real panel. `placements` are what the site's plugins place (`placementsOf(site.plugins)`). */
+export declare function treeOf(collection: Obj, placements: readonly NamedPlacement[]): Tree;
 /**
  * The collection with its fields in the order of the tree and its `layout` the tree's blocks, in place. The default tab's last run needs no entry (fields in no
  * group come last anyway); a tab other than the default one always has an entry, so it exists in the file.
@@ -77,8 +74,6 @@ export declare function moveGroup(tree: Tree, from: BlockRef, to: BlockRef): Tre
 export declare function moveGroupBy(tree: Tree, ref: BlockRef, delta: -1 | 1): Tree;
 /** Moves a group to the end of another tab. */
 export declare const moveGroupToTab: (tree: Tree, from: BlockRef, tab: number) => Tree;
-/** Moves a field, in no group, to the end of a tab. */
-export declare const moveFieldToTab: (tree: Tree, name: string, tab: number) => Tree;
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */
 export declare function tabProblem(tree: Tree, name: string, except?: number): "empty" | "taken" | null;
 export declare function addTab(tree: Tree, name: string): Tree;

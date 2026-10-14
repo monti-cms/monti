@@ -1,6 +1,6 @@
 import type { AiActionDefinition, AiConfig, AiSiteView, ResolvedAiConfig } from "./action.js";
 /**
- * Resolves the AI config (`aiPlugin(config)`) into the list of actions to run. Server (running), browser (slots) and config validation (`validate`) use the same result.
+ * Resolves the AI config (`ai(config)`) into the list of actions to run. Server (running), browser (slots) and config validation (`validate`) use the same result.
  *
  * 1. Default actions (`DEFAULT_AI_ACTIONS`)
  * 2. Actions added by other plugins (`contributes.ai.actions`, in plugin order). A name that already exists is a config error.

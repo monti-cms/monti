@@ -3,6 +3,7 @@ import { createHighlighterCore } from "shiki/core";
 import { createOnigurumaEngine } from "shiki/engine/oniguruma";
 import { bundledLanguages } from "shiki/langs";
 import { bundledThemes } from "shiki/themes";
+import { configError, pathOf } from "../../config/check/issue.js";
 import { perSite } from "../../site/per-site.js";
 import { DEFAULT_CODE_LANG_ALIAS, DEFAULT_CODE_LANGS, DEFAULT_CODE_THEMES } from "./default-code-options.js";
 import { addLineDecorations, addLineNumbers, addLineWrappers, addMetaToPre, convertInlineAnnoToRenderTag, numberCodeNotes, showsLineNumbers, } from "./transformers.js";
@@ -56,13 +57,13 @@ const loadTheme = async (key, name) => {
         return fallback;
     const load = bundledThemes[name];
     if (!load)
-        throw new Error(`cms.config: codeBlock.themes.${key}: "${name}" is not a Shiki theme`);
+        throw configError(pathOf("codeBlock", "themes", key), "shiki-theme", `"${name}" is not a Shiki theme`);
     return (await load()).default;
 };
 const loadLanguage = async (name) => {
     const load = bundledLanguages[name];
     if (!load)
-        throw new Error(`cms.config: codeBlock.languages.${name}: "${name}" is not a Shiki language`);
+        throw configError(pathOf("codeBlock", "languages", name), "shiki-language", `"${name}" is not a Shiki language`);
     return (await load()).default;
 };
 /** Highlighter options of a site (`codeBlock.themes`, `codeBlock.languages` on top of the default list). */

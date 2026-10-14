@@ -1,42 +1,26 @@
-import { type AdminPrompts } from "./admin-command.js";
-import type { Prompter } from "./init-prompts.js";
 /**
- * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls it.
- *
- * - `monti init [--yes] [--json] [--dry-run] [question flags]`: adds Monti to an existing Next app: asks (or takes flags), writes `monti.config.ts`, the schema file and the Next files, installs the packages and prints what is left. See `monti init --help`.
- * - `monti admin:reset-password [--email <email>] [env options]`: sets a new password for an admin of the built-in email and password login (asks for it; no mail).
- * - `monti db:setup [--env-file .env.local] [--no-env-file] [--config <file>]`: first-time setup: creates Monti's tables in an empty database (changes nothing when they are already there).
- * - `monti db:migrate [--env-file .env.local] [--no-env-file] [--config <file>] [--verbose] [--reconvert-bodies]`: after updating Monti, brings the tables up to date. Bodies that cannot be read are summarised in a few lines (`--verbose` lists each); `--reconvert-bodies` reads them again after the config changed.
- * - `monti events:retry [--all] [--limit <n>] [--env-file <file>] [--no-env-file] [--config <file>]`: delivers the `afterCommit` events that are due (for a cron job).
- * - `monti <plugin>:<command> [options]`: runs a command a plugin adds (`CmsServerPlugin.commands`), for example `monti git-sync:pull`.
- * - `monti doctor [--json] [--only <list>] [env options]`: checks the setup (config, schema, database and migrations, secret, login, Next files, upgrade checks for the pre-overhaul setup) and says how to fix what is wrong. Includes the check that no client component (`"use client"`) imports `monti.config.ts` or another server-only module. Exits 1 when a check fails.
- * - `monti schema:extract [--config <file>] [--out <file>] [--overwrite] [--locale <code>]`: writes the data part of the config file to `monti.schema.ts`.
- * - `monti schema:diff [--schema <file>] [--check] [env options]`: compares the schema with the one last applied to the database and lists the stored entries each change touches.
- * - `monti schema:apply [--schema <file>] [--dry-run] [env options]`: runs the data transforms of the schema file (`migrations`) once each and records the schema and its version.
+ * The `monti` command line (package `bin`). `bin/monti.mjs` registers tsx and then calls `runCli`. The commands are listed in `commands.ts` (the help is generated from the
+ * same table, see `monti --help`); the runner is `run.ts`.
  */
 export { findSchemaFile, loadSchemaFile, SCHEMA_FILE_CANDIDATES } from "../schema-file/locate.js";
-export { type AdminPrompts, adminResetPassword, type ResetPasswordOptions } from "./admin-command.js";
-export { CONFIG_CANDIDATES, parseJsonc, resolveConfigPath } from "./config-paths.js";
+export { adminResetPassword, type ResetPasswordOptions } from "./admin-command.js";
+export type { CliContext, CliIo } from "./command.js";
 export { dbMigrate, dbSetup, type MigrateOptions } from "./db.js";
 export { unifiedDiff } from "./diff.js";
-export { DOCTOR_HELP, type DoctorCommandIo, type DoctorOptions, type DoctorReport, type DoctorResult, type DoctorSummary, formatDoctorReport, runDoctor, runDoctorCommand, } from "./doctor/index.js";
+export { type DoctorOptions, type DoctorReport, type DoctorResult, type DoctorSummary, formatDoctorReport, runDoctor, } from "./doctor/index.js";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env.js";
 export { type EventsRetryOptions, eventsRetry } from "./events.js";
 export { type BoundaryViolation, findBoundaryViolations, formatBoundaryViolations, SERVER_ONLY_MODULES, } from "./import-boundary.js";
-export { formatInitReport, InitError, type InitHost, type InitOptions, type InitReport, type InstallCommand, initProject, } from "./init.js";
+export { initProject } from "./init.js";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect.js";
-export { collectAnswers, type InitAnswerFlags, InitCancelled, type Prompter } from "./init-prompts.js";
-export { isPluginCommandName, type PluginCommandRun, runPluginCommand } from "./plugin-command.js";
+export { collectAnswers, type InitAnswerFlags } from "./init-prompts.js";
+export { formatInitReport } from "./init-report.js";
+export type { InitHost, InitOptions, InitReport, InstallCommand } from "./init-types.js";
+export { InitError } from "./init-writer.js";
+export { parseJsonc } from "./jsonc.js";
+export { CONFIG_CANDIDATES, EXTRACT_CONFIG_CANDIDATES, locateConfig, locateExtractConfig, locateSchema, } from "./locate.js";
+export { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
+export { Cancelled, createClackPrompter, type Prompter } from "./prompt.js";
+export { runCli } from "./run.js";
 export { formatApplyResult, formatSchemaPlan, type SchemaApplyOutcome, type SchemaCommandOptions, type SchemaDiffResult, schemaApply, schemaDiff, withSchemaVersion, } from "./schema-apply.js";
-export { CONFIG_FILE_CANDIDATES, type ExtractedSchema, type ExtractOptions, type ExtractReport, extractSchema, extractSchemaData, formatExtractReport, type StaysInCode, schemaFileText, } from "./schema-extract.js";
-export interface CliIo {
-    readonly cwd: string;
-    readonly log: (message: string) => void;
-    readonly error: (message: string) => void;
-    /** Answers the questions of `monti init` (tests). Default: the terminal, when there is one. */
-    readonly prompter?: Prompter;
-    /** Answers the questions of `monti admin:reset-password` (tests). Default: the terminal, when there is one. */
-    readonly adminPrompts?: AdminPrompts;
-}
-/** Runs the command and returns the exit code. */
-export declare function runCli(argv: readonly string[], io?: CliIo): Promise<number>;
+export { type ExtractedSchema, type ExtractOptions, type ExtractReport, extractSchema, extractSchemaData, formatExtractReport, type StaysInCode, schemaFileText, } from "./schema-extract.js";

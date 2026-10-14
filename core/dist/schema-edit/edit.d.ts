@@ -1,7 +1,8 @@
 import type { Cms } from "../cms/index.js";
+import { type Issue } from "../config/check/issue.js";
 import { type BodyVocabulary } from "../schema/allowed.js";
 import { type ChangeImpact, type ImpactSample, type SchemaChange, SchemaChangeError, type SuggestedTransform, type TransformProblem } from "../schema-change/index.js";
-import { type SchemaIssue } from "../schema-file/format.js";
+import { type SchemaLiteralIssue } from "../schema-file/literal.js";
 import type { SchemaMigration } from "../schema-file/types.js";
 export declare const hashOf: (text: string) => string;
 /** The schema file as the screen shows it. */
@@ -10,6 +11,7 @@ export interface SchemaScreenState {
         readonly writable: boolean;
         readonly reason?: string;
         readonly detail?: string;
+        readonly issue?: SchemaLiteralIssue;
     };
     /** The path of the schema file relative to the working directory (what the screen calls the file), or `null` when there is none. */
     readonly file: string | null;
@@ -21,7 +23,7 @@ export interface SchemaScreenState {
     /** The file has comments; saving writes it again without them. */
     readonly comments: boolean;
     /** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
-    readonly issues: readonly SchemaIssue[];
+    readonly issues: readonly Issue[];
     /** The version the instance runs. */
     readonly schemaVersion: number;
     /** The schema last applied to the dev database, or `null` when none was (or the store has no schema record yet). */
@@ -85,7 +87,7 @@ export interface SchemaDecision {
 export interface SchemaEditPreview {
     /** The edit checks. When it does not, `issues` says what is wrong, with JSON paths, and the rest is empty. */
     readonly valid: boolean;
-    readonly issues: readonly SchemaIssue[];
+    readonly issues: readonly Issue[];
     /** Something would be written or applied: the content differs from the file, or a change or transform is pending. */
     readonly changed: boolean;
     /** The schema changes the stored data cares about (collections, fields, options, locales, allowed blocks), each with the entries it touches. */
@@ -114,7 +116,7 @@ export interface SchemaSaveInput extends SchemaEditInput {
 export type SchemaSaveResult = {
     readonly saved: false;
     readonly reason: "invalid";
-    readonly issues: readonly SchemaIssue[];
+    readonly issues: readonly Issue[];
 } | {
     readonly saved: false;
     readonly reason: "problems";
@@ -160,4 +162,4 @@ export type SchemaSaveResult = {
  */
 export declare function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<SchemaSaveResult>;
 export { SchemaChangeError };
-export type { SchemaIssue };
+export type { Issue };

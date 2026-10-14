@@ -1,14 +1,19 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, } from "@dnd-kit/sortable";
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { errorText, isConflict } from "../../api/client.js";
+import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api/entries.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
+import { moveWithin } from "../../lib/utils/move-within.js";
+import { FieldError } from "../../ui/field.js";
 import { IconButton } from "../../ui/icon-button.js";
-import { CmsApiError, cmsFetch, errorText } from "../admin-api.js";
 import { entriesMessages } from "./messages.js";
 import { optionOf, useRecordCreator } from "./record-create-sheet.js";
 import { RelationCombobox } from "./relation-combobox.js";
@@ -34,27 +39,29 @@ function relationOptions(t, search, selfId) {
 /** The failure of a search, under the input like the other relation inputs. */
 function SearchError({ failed }) {
     const t = useTranslator(entriesMessages);
-    return failed ? (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: t("entry.loadFailed") })) : null;
+    return failed ? _jsx(FieldError, { children: t("entry.loadFailed") }) : null;
 }
 /** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }) {
     const site = useSite();
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     const relation = field;
     const selected = typeof value === "string" && value ? [value] : [];
     const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected });
     const waiting = search.options === null && !search.error;
-    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { id: id, "aria-label": field.label, placeholder: waiting ? t("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) })), invalid: invalid, describedBy: describedBy, disabled: context.disabled || waiting, multiple: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: selected, onValueChange: (next) => onChange(next[0] ?? null) }), _jsx(SearchError, { failed: search.error })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { id: id, "aria-label": field.label, placeholder: waiting ? tc("loading") : (relation.placeholder ?? t("entry.choose", { target: targetLabel(site, relation) })), invalid: invalid, describedBy: describedBy, disabled: context.disabled || waiting, multiple: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: selected, onValueChange: (next) => onChange(next[0] ?? null) }), _jsx(SearchError, { failed: search.error })] }));
 }
 /** One row of an ordered list. Move it by dragging the handle or with the up/down buttons. */
 function SortableEntryRow({ sortableId, index, count, option, disabled, onMove, onRemove, }) {
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
         id: sortableId,
         disabled,
     });
-    const title = option?.title ?? t("loading");
-    return (_jsxs("li", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("flex items-center gap-1 rounded-md border bg-cms-background px-1 py-1 text-xs", isDragging && "relative z-10 shadow-[0_1px_2px_rgba(0,0,0,0.1)]"), children: [_jsx(IconButton, { ref: setActivatorNodeRef, size: "icon-xs", label: t("entry.drag", { title }), disabled: disabled, className: "cursor-grab touch-none text-cms-muted-foreground active:cursor-grabbing", ...attributes, ...listeners, children: _jsx(GripVertical, {}) }), _jsxs("span", { className: "min-w-0 flex-1 truncate", children: [index + 1, ". ", title, option && option.status !== "published" && option.status !== "missing" && (_jsx("span", { className: "ml-1 cms-dark:text-amber-400 text-amber-700", children: t("entry.unpublished") }))] }), _jsx(IconButton, { size: "icon-xs", label: t("entry.up", { title }), disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.down", { title }), disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.remove", { title }), disabled: disabled, onClick: onRemove, children: _jsx(X, {}) })] }));
+    const title = option?.title ?? tc("loading");
+    return (_jsxs("li", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("flex items-center gap-1 rounded-md border bg-cms-background px-1 py-1 text-xs", isDragging && "relative z-10 shadow-cms-pop"), children: [_jsx(IconButton, { ref: setActivatorNodeRef, size: "icon-xs", label: t("entry.drag", { title }), disabled: disabled, className: "cursor-grab touch-none text-cms-muted-foreground active:cursor-grabbing", ...attributes, ...listeners, children: _jsx(GripVertical, {}) }), _jsxs("span", { className: "min-w-0 flex-1 truncate", children: [index + 1, ". ", title, option && option.status !== "published" && option.status !== "missing" && (_jsx("span", { className: "ml-1 text-cms-warning-foreground", children: t("entry.unpublished") }))] }), _jsx(IconButton, { size: "icon-xs", label: t("entry.up", { title }), disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.down", { title }), disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.remove", { title }), disabled: disabled, onClick: onRemove, children: _jsx(X, {}) })] }));
 }
 /**
  * Ordered multi relation (post targets). Used by collection items.
@@ -63,6 +70,7 @@ function SortableEntryRow({ sortableId, index, count, option, disabled, onMove, 
 export function OrderedEntryList({ field, id, value, context, onChange }) {
     const site = useSite();
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     const relation = field;
     const ids = Array.isArray(value) ? value : [];
     const search = useRelationSearch({ collection: relation.to, publishedOnly: relation.publishedOnly, selected: ids });
@@ -74,12 +82,12 @@ export function OrderedEntryList({ field, id, value, context, onChange }) {
         const target = index + direction;
         if (target < 0 || target >= ids.length)
             return;
-        onChange(arrayMove([...ids], index, target));
+        onChange(moveWithin(ids, index, target));
     };
     const onDragEnd = ({ active, over }) => {
         if (!over || active.id === over.id)
             return;
-        onChange(arrayMove([...ids], sortableIds.indexOf(String(active.id)), sortableIds.indexOf(String(over.id))));
+        onChange(moveWithin(ids, sortableIds.indexOf(String(active.id)), sortableIds.indexOf(String(over.id))));
     };
     /** Selection returned by the checklist. Remaining posts keep the current order and new posts are appended. */
     const applySelection = (selected) => {
@@ -93,7 +101,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }) {
         (search.isMissing(itemId)
             ? { id: itemId, title: t("entry.missing", { target }), slug: null, status: "missing" }
             : undefined);
-    return (_jsxs("div", { className: "space-y-2", children: [_jsx(RelationCombobox, { id: id, "aria-label": t("entry.editList", { target }), placeholder: waiting ? t("loading") : (relation.placeholder ?? t("entry.editList", { target })), disabled: context.disabled || waiting, multiple: true, showChips: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: ids, onValueChange: applySelection }), _jsx(SearchError, { failed: search.error }), ids.length === 0 ? (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("entry.empty", { target }) })) : (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: onDragEnd, children: _jsx(SortableContext, { items: sortableIds, strategy: verticalListSortingStrategy, children: _jsx("ol", { "aria-label": t("entry.listAria", { target }), className: "space-y-1", children: ids.map((itemId, index) => (_jsx(SortableEntryRow, { sortableId: sortableIds[index], index: index, count: ids.length, option: rowOf(itemId), disabled: context.disabled, onMove: (direction) => move(index, direction), onRemove: () => onChange(ids.filter((_, i) => i !== index)) }, sortableIds[index]))) }) }) }))] }));
+    return (_jsxs("div", { className: "space-y-2", children: [_jsx(RelationCombobox, { id: id, "aria-label": t("entry.editList", { target }), placeholder: waiting ? tc("loading") : (relation.placeholder ?? t("entry.editList", { target })), disabled: context.disabled || waiting, multiple: true, showChips: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: ids, onValueChange: applySelection }), _jsx(SearchError, { failed: search.error }), ids.length === 0 ? (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("entry.empty", { target }) })) : (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: onDragEnd, children: _jsx(SortableContext, { items: sortableIds, strategy: verticalListSortingStrategy, children: _jsx("ol", { "aria-label": t("entry.listAria", { target }), className: "space-y-1", children: ids.map((itemId, index) => (_jsx(SortableEntryRow, { sortableId: sortableIds[index], index: index, count: ids.length, option: rowOf(itemId), disabled: context.disabled, onMove: (direction) => move(index, direction), onRemove: () => onChange(ids.filter((_, i) => i !== index)) }, sortableIds[index]))) }) }) }))] }));
 }
 /**
  * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
@@ -107,29 +115,23 @@ function useRecordKind(field, options) {
         ? site.storedField(field.from, requirement.field)?.field
         : undefined;
     const defaultValue = discriminant?.kind === "select" ? discriminant.defaultValue : undefined;
-    const [kinds, setKinds] = useState(new Map());
-    const idsKey = options.map((option) => option.id).join(",");
-    // biome-ignore lint/correctness/useExhaustiveDependencies: keyed by the option ids
-    useEffect(() => {
-        if (!requirement)
+    // Each record's kind is read once (a record that cannot be read counts as the default kind).
+    const records = useQueries({
+        queries: options.map((option) => ({
+            queryKey: entriesKeys.detail(option.id),
+            queryFn: ({ signal }) => getEntry(site, option.id, signal),
+            enabled: Boolean(requirement),
+            retry: false,
+        })),
+    });
+    const kinds = new Map();
+    options.forEach((option, index) => {
+        const record = records[index];
+        if (!record || !(record.data || record.isError))
             return;
-        const missing = options.filter((option) => !kinds.has(option.id));
-        if (missing.length === 0)
-            return;
-        let cancelled = false;
-        void Promise.all(missing.map((option) => cmsFetch(site, cmsApiUrl(`/v1/entries/${option.id}`))
-            .then((record) => {
-            const value = record.working.metadata[requirement.field];
-            return [option.id, typeof value === "string" ? value : (defaultValue ?? "")];
-        })
-            .catch(() => [option.id, ""]))).then((loaded) => {
-            if (!cancelled)
-                setKinds((current) => new Map([...current, ...loaded]));
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [idsKey, requirement?.field]);
+        const value = requirement ? record.data?.working.metadata[requirement.field] : undefined;
+        kinds.set(option.id, record.data ? (typeof value === "string" ? value : (defaultValue ?? "")) : "");
+    });
     return {
         ready: !requirement || options.every((option) => kinds.has(option.id)),
         accepts: (id) => !requirement || kinds.get(id) === requirement.value,
@@ -145,6 +147,7 @@ function useRecordKind(field, options) {
 export function BacklinkInput({ field, targetId, disabled, shared, }) {
     const site = useSite();
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     // The records come from a server search (published ones, like the old list). A conditional list keeps only the records of one kind, which is
     // known per record, so it asks for more hits to leave enough after that filter.
     const conditional = Boolean(site.storedField(field.from, field.via)?.when);
@@ -156,7 +159,6 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
     });
     const creator = useRecordCreator();
     const kind = useRecordKind(field, records.options ?? []);
-    const [fetched, setFetched] = useState(null);
     /** Load/save failure. Shown right below the input like other relation inputs. */
     const [error, setError] = useState(null);
     const membersOf = useCallback((references) => {
@@ -164,12 +166,20 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
         for (const reference of references) {
             const viaField = reference.occurrences.some((occurrence) => occurrence.path === field.via);
             if (reference.state === "working" && reference.sourceCollection === field.from && viaField) {
-                found.set(reference.sourceId, reference.sourceTitle || t("untitled"));
+                found.set(reference.sourceId, reference.sourceTitle || tc("untitled"));
             }
         }
         return [...found].map(([id, title]) => ({ id, title }));
-    }, [field.from, field.via, t]);
+    }, [field.from, field.via, tc]);
     const refreshShared = shared?.refresh;
+    // If the properties panel already loaded this post's usages, do not fetch separately.
+    const usesShared = Boolean(shared);
+    const relationsQuery = useQuery({
+        queryKey: entriesKeys.relations(targetId ?? ""),
+        queryFn: ({ signal }) => getEntryRelations(site, targetId, signal),
+        enabled: Boolean(targetId) && !usesShared,
+        retry: false,
+    });
     const load = useCallback(async () => {
         if (!targetId)
             return;
@@ -177,20 +187,10 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
             refreshShared();
             return;
         }
-        try {
-            const data = await cmsFetch(site, cmsApiUrl(`/v1/entries/${targetId}/relations`));
-            setFetched(membersOf(data.incomingReferences));
-        }
-        catch (loadError) {
-            setError(errorText(site, loadError, t("entry.loadFailed")));
-        }
-    }, [targetId, refreshShared, membersOf, site, t]);
-    // If the properties panel already loaded this post's usages, do not fetch separately.
-    const usesShared = Boolean(shared);
-    useEffect(() => {
-        if (!usesShared)
-            void load();
-    }, [usesShared, load]);
+        await relationsQuery.refetch();
+    }, [targetId, refreshShared, relationsQuery.refetch]);
+    const fetched = relationsQuery.data ? membersOf(relationsQuery.data.incomingReferences) : null;
+    const loadError = relationsQuery.error ? errorText(site, relationsQuery.error, t("entry.loadFailed")) : null;
     const members = shared
         ? shared.loading && shared.references.length === 0
             ? null
@@ -199,23 +199,19 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
     /** Changes the other record's relation list and saves immediately. For a record collection, saving is publishing. */
     const update = async (recordId, change) => {
         for (let attempt = 0; attempt < 2; attempt++) {
-            const record = await cmsFetch(site, cmsApiUrl(`/v1/entries/${recordId}`));
+            const record = await getEntry(site, recordId);
             const current = record.working.metadata[field.via];
             const ids = Array.isArray(current) ? current.filter((id) => typeof id === "string") : [];
             try {
-                await cmsFetch(site, cmsApiUrl(`/v1/entries/${recordId}`), {
-                    method: "PATCH",
-                    json: {
-                        expectedVersion: record.version,
-                        slug: record.workingSlug,
-                        metadata: { ...record.working.metadata, [field.via]: change(ids) },
-                    },
-                    fallback: t("saveFailed"),
-                });
+                await updateEntry(site, recordId, {
+                    expectedVersion: record.version,
+                    slug: record.workingSlug,
+                    metadata: { ...record.working.metadata, [field.via]: change(ids) },
+                }, tc("saveFailed"));
                 return;
             }
             catch (saveError) {
-                if (!(saveError instanceof CmsApiError && saveError.code === "conflict") || attempt === 1)
+                if (!isConflict(saveError) || attempt === 1)
                     throw saveError;
             }
         }
@@ -282,7 +278,7 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
             enqueue(() => update(recordId, (ids) => ids.filter((id) => id !== targetId)), t("backlink.removeFailed", { label: field.label }), (ids) => (ids.includes(recordId) ? ids : [...ids, recordId]));
         }
     };
-    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { multiple: true, "aria-label": field.label, placeholder: members === null || records.options === null ? t("loading") : t("relation.searchOrAdd"), options: options, known: known, onSearch: records.search, loading: records.loading || !kind.ready, value: shown, disabled: disabled || members === null || (records.options === null && !records.error), onValueChange: change, onCreate: field.createInline
+    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { multiple: true, "aria-label": field.label, placeholder: members === null || records.options === null ? tc("loading") : t("relation.searchOrAdd"), options: options, known: known, onSearch: records.search, loading: records.loading || !kind.ready, value: shown, disabled: disabled || members === null || (records.options === null && !records.error), onValueChange: change, onCreate: field.createInline
                     ? async (title) => {
                         // Open with this post already in the add field. After saving, reload the options so it shows up in the list right away.
                         const saved = await creator.create(field.from, title, {
@@ -292,10 +288,10 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
                         if (!saved)
                             return null;
                         createdRef.current.add(saved.id);
-                        records.remember({ ...optionOf(site, t, field.from, saved), status: saved.status });
+                        records.remember({ ...optionOf(site, tc("untitled"), field.from, saved), status: saved.status });
                         awaitingServerRef.current = true;
                         void load();
                         return saved.id;
                     }
-                    : undefined }), error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: error })), _jsx(SearchError, { failed: records.error }), creator.sheet] }));
+                    : undefined }), (error ?? loadError) && _jsx(FieldError, { children: error ?? loadError }), _jsx(SearchError, { failed: records.error }), creator.sheet] }));
 }

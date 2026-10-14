@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { AttributeInput, BlockSettings, ContainerToolbar } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
-import { cn, Switch } from "@monti-cms/admin/kit";
+import { cn, FieldLabel, Switch } from "@monti-cms/admin/kit";
 import { useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -40,5 +40,5 @@ export function CollapsibleNodeView() {
                             block.focus();
                         }, className: "flex-1" })] }), _jsx(Content, { className: cn("px-3 pt-2 pb-3 text-cms-foreground", 
                 // Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
-                "[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0", "[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0", !open && "hidden"), "data-cms-collapsed": open ? undefined : "" }), editable ? (_jsx(ContainerToolbar, { label: t("toolbar"), children: _jsx(BlockSettings, { children: _jsxs("label", { htmlFor: defaultOpenId, className: "flex items-center justify-between gap-2", children: [_jsx("span", { className: "text-cms-muted-foreground", children: t("defaultOpen.label") }), _jsx(Switch, { id: defaultOpenId, size: "sm", checked: defaultOpen, onCheckedChange: (checked) => setValue("defaultOpen", checked) })] }) }) })) : null] }));
+                "[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0", "[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0", !open && "hidden"), "data-cms-collapsed": open ? undefined : "" }), editable ? (_jsx(ContainerToolbar, { label: t("toolbar"), children: _jsx(BlockSettings, { children: _jsxs(FieldLabel, { htmlFor: defaultOpenId, className: "w-full items-center justify-between font-normal", children: [_jsx("span", { className: "text-cms-muted-foreground", children: t("defaultOpen.label") }), _jsx(Switch, { id: defaultOpenId, size: "sm", checked: defaultOpen, onCheckedChange: (checked) => setValue("defaultOpen", checked) })] }) }) })) : null] }));
 }

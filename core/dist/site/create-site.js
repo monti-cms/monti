@@ -8,8 +8,9 @@ import { createLinks } from "../core/links.js";
 import { createLocales } from "../core/locales.js";
 import { createTime } from "../core/time.js";
 import { createI18n } from "../i18n/index.js";
-import { resolveLabels, withActiveLocale } from "../i18n/active.js";
+import { createActiveTranslator, resolveLabels, withActiveLocale } from "../i18n/active.js";
 import { createSchemas } from "../schema/derive.js";
+import { createPanel } from "../schema/layout.js";
 /** Drops what JSON cannot hold (functions, `undefined`), and reads getters. */
 const asData = (value) => value === undefined
     ? value
@@ -42,7 +43,17 @@ function snapshotOf(config, blocks) {
         plugins: (config.plugins ?? []).map((plugin) => ({
             name: plugin.name,
             options: asData(plugin.options),
-            ...(plugin.nav ? { nav: asData(plugin.nav) } : {}),
+            ...(plugin.nav
+                ? {
+                    // A label that is a function of the site is read here, in the admin language, so the browser gets text.
+                    nav: asData(plugin.nav.map((item) => ({
+                        ...item,
+                        label: typeof item.label === "function"
+                            ? item.label({ createTranslator: createActiveTranslator })
+                            : item.label,
+                    }))),
+                }
+                : {}),
             ...(plugin.contributes ? { contributes: asData(plugin.contributes) } : {}),
         })),
     };
@@ -76,6 +87,7 @@ export function createSite(config) {
             ...createTime(config),
             ...blocks,
             ...createCodeBlock(config.codeBlock),
+            ...createPanel(schemas, plugins),
             config,
             plugins,
             getPluginOptions: (name) => plugins.find((plugin) => plugin.name === name)?.options,

@@ -1,7 +1,7 @@
 /** The keys with the places that use them. Values are never part of it. */
-export declare const GET: (request: Request, context?: Partial<import("../handler.js").RouteContext<{
+export declare const GET: import("../handler.js").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
-export declare const POST: (request: Request, context?: Partial<import("../handler.js").RouteContext<{
+}>;
+export declare const POST: import("../handler.js").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
+}>;

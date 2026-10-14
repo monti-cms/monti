@@ -1,7 +1,17 @@
-// The AI plugin is an optional dependency, so only types are imported (the block extension never loads AI plugin code).
+import { diagramAi } from "../shared/diagram-ai.js";
 import { mermaidMessages } from "./messages.js";
+/**
+ * AI features of the Mermaid block (only for sites using `@monti-cms/ai`). The `mermaid()` plugin adds them via `contributes.ai`, so they attach automatically
+ * on sites that use the AI plugin (`diagramDraft`, `diagramEdit`). To change the instructions, write an entry with the same name; to turn one off, give `false`.
+ * The contract types come from `@monti-cms/core/ai-contract`, so this block never depends on the AI plugin.
+ *
+ * ```ts
+ * ai({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), diagramEdit: false } })
+ * ```
+ *
+ * The actions are factories (`AiActionFactory`): the AI plugin calls them with the site, so the text is in that site's admin language.
+ */
 const textOf = (site) => site.createTranslator(mermaidMessages);
-const codeCheck = (check) => ({ kind: "code", ...check });
 /** Diagram types Mermaid knows (the first word of the first line). */
 const DIAGRAM_TYPES = new Set([
     "graph",
@@ -49,12 +59,6 @@ export function validateMermaid(site, value) {
     const type = first.split(/\s+/)[0] ?? "";
     return DIAGRAM_TYPES.has(type) ? undefined : t("ai.error.unknownType", { type });
 }
-/** Result syntax validation (code validation). It can also be added to other features through `checks`. */
-export const mermaidSyntax = (site) => codeCheck({
-    name: "mermaid-syntax",
-    label: textOf(site)("ai.check.label"),
-    run: (value) => validateMermaid(site, value),
-});
 /** Answer of the fake connection (development only): a diagram that passes syntax validation. If there is a diagram to fix, one node line is added. */
 const fakeMermaid = (site) => (input) => {
     const fence = input.block?.trim().match(/^(```mermaid[^\n]*\n[\s\S]*?)\n?(```)$/);
@@ -63,44 +67,16 @@ const fakeMermaid = (site) => (input) => {
     const title = (input.title?.trim() || textOf(site)("ai.fake.title")).replaceAll('"', "'");
     return `\`\`\`mermaid\ngraph TD\n  fake["(fake) ${title}"]\n\`\`\``;
 };
-export const mermaidAi = {
-    /** Create a diagram. Takes a request from the slash menu and inserts a Mermaid block at the cursor. */
-    draft: (options = {}) => (site) => {
-        const t = textOf(site);
-        return {
-            label: t("ai.draft.label"),
-            input: {
-                title: { kind: "text", label: t("ai.input.title") },
-                body: { kind: "mdx", label: t("ai.input.body") },
-            },
-            result: "mdx",
-            stream: true,
-            askInstruction: true,
-            prompt: options.prompt ?? t("ai.draft.prompt"),
-            checks: [mermaidSyntax(site)],
-            fake: fakeMermaid(site),
-            attach: [{ slot: "insert" }],
-        };
-    },
-    /** Edit a diagram. Edits as requested from next to the block handle, shows what changed, and then replaces the block. */
-    edit: (options = {}) => (site) => {
-        const t = textOf(site);
-        return {
-            label: t("ai.edit.label"),
-            input: {
-                block: { kind: "mdx", label: t("ai.input.block"), required: true },
-                title: { kind: "text", label: t("ai.input.title") },
-            },
-            result: "mdx",
-            stream: true,
-            askInstruction: true,
-            prompt: options.prompt ?? t("ai.edit.prompt"),
-            checks: [mermaidSyntax(site)],
-            fake: fakeMermaid(site),
-            attach: [{ slot: "block", block: "mermaid" }],
-        };
-    },
-};
+const diagram = diagramAi({
+    block: "mermaid",
+    syntaxName: "mermaid-syntax",
+    text: (site) => textOf(site),
+    validate: validateMermaid,
+    fake: fakeMermaid,
+});
+/** Result syntax validation (code validation). It can also be added to other features through `checks`. */
+export const mermaidSyntax = diagram.syntax;
+export const mermaidAi = { draft: diagram.draft, edit: diagram.edit };
 /** What `mermaid()` adds to the AI plugin. The feature names are the keys of the values edited in the admin AI screen. */
 export const mermaidAiContribution = {
     actions: { diagramDraft: mermaidAi.draft(), diagramEdit: mermaidAi.edit() },

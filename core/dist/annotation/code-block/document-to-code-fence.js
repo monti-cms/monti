@@ -132,6 +132,7 @@ export const fromCodeBlockDocumentToCodeFence = (document, annotationConfig) => 
         value: outputLines.join("\n"),
     };
 };
+/** @internal Internals the tests reach. */
 export const __testable__ = {
     fromLineValueToLeadingIndent,
     fromDocumentMetaToCodeFenceMeta,

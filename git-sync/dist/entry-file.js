@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { isUuid } from "@monti-cms/core/client";
 import { composeFile, parseFile } from "@monti-cms/core/front-matter";
 import { exportBodyText } from "@monti-cms/core/plugin/server";
 import { blobSha } from "./github/blob-sha.js";
@@ -29,7 +30,6 @@ const idsOf = (value) => typeof value === "string"
     : Array.isArray(value)
         ? value.filter((item) => typeof item === "string")
         : [];
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * The slug a relation target is written as for a reader in `locale`: its published slug in that language, else the source's, else any. `undefined` when the target is
  * not published (the id stands in for it).
@@ -226,7 +226,7 @@ export async function resolveRelations(cms, file, where) {
         }
         const ids = [];
         for (const value of written) {
-            if (UUID.test(value)) {
+            if (isUuid(value)) {
                 ids.push(value);
                 continue;
             }

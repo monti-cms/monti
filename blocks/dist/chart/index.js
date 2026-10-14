@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { chartAiContribution } from "./ai.js";
 import { chartBlock } from "./definition.js";
 export { chartBlock } from "./definition.js";
@@ -14,9 +14,8 @@ export { chartMessages } from "./messages.js";
  * A site can replace it via `fencePreviews.chart`. The public page is drawn by this extension's default `Chart` component, which a site can override (the code is the `source` attribute,
  * `remarkFenceBlocksToMdx`). Chart colors are the CSS variables `--chart-1` to `--chart-5` (defaults from this package's `render.css` if unset).
  */
-export const chart = () => definePlugin({
+export const chart = () => defineBlockPlugin({
     name: "chart",
-    options: {},
     blocks: [chartBlock],
     admin: () => import("@monti-cms/blocks/chart/admin"),
     render: () => import("@monti-cms/blocks/chart/render"),

@@ -94,6 +94,7 @@ export declare const apiKeyChoiceSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>], "use">;
 export type ApiKeyChoiceInput = z.infer<typeof apiKeyChoiceSchema>;
 /**
- * The name a new key gets when its place picks one: `base`, or `base 2`, `base 3`, ... when that name is taken (names are compared without regard to case).
+ * The names a new key can get when its place picks one, in order: `base`, then `base 2`, `base 3`, ... (the store takes the first one that is free;
+ * names are compared without regard to case).
  */
-export declare function freeKeyName(base: string, taken: Iterable<string>): string;
+export declare function keyNameCandidate(base: string, attempt: number): string;

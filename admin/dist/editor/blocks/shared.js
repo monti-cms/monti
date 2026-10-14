@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useTranslator } from "@monti-cms/core/client";
 import { Settings2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { isComposingKey } from "../../lib/keyboard.js";
 import { cn } from "../../lib/utils/cn.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.js";
@@ -59,7 +60,7 @@ export function AttributeInput({ value, onCommit, onEnter, onEscape, required = 
             composingRef.current = false;
             commit(event.currentTarget.value);
         }, onKeyDown: (event) => {
-            if (event.nativeEvent.isComposing || composingRef.current)
+            if (isComposingKey(event) || composingRef.current)
                 return;
             if (event.key === "Enter") {
                 event.preventDefault();

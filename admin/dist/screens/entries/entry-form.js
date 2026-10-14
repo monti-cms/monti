@@ -1,6 +1,7 @@
 import { parseTranslationState, RECORD_TRANSLATIONS_KEY, } from "@monti-cms/core/client";
 import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { documentKey } from "../../editor/document-key.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { entriesMessages } from "./messages.js";
 export const EMPTY_FORM = { slug: "", doc: emptyStoredDocument() };
 /** The form of a new entry of that collection: the title (under the name of its title field, '') and the address are empty. */
@@ -22,9 +23,10 @@ export const titlePatch = (site, collection, title) => ({
  */
 export function copyTitle(site, collection, title) {
     const t = site.createTranslator(entriesMessages);
+    const tc = site.createTranslator(commonMessages);
     // The suffix added to a duplicate's title and the name for an untitled source are screen text, so the admin screen decides them, not the repository.
     const copySuffix = t("copy.suffix");
-    const base = title?.trim() ? title : t("untitled");
+    const base = title?.trim() ? title : tc("untitled");
     const field = site.isCollection(collection) ? site.titleField(collection).field : undefined;
     const max = field?.kind === "text" ? field.max : undefined;
     const room = max === undefined ? Number.POSITIVE_INFINITY : max - Array.from(copySuffix).length;
@@ -60,8 +62,8 @@ const fieldsOf = (site, collection, translation = false) => {
     const fields = site.storedFields(collection);
     if (!translation)
         return fields;
-    const { own, inherit } = site.localizedFieldNames(collection);
-    return fields.filter(({ name }) => own.includes(name) || inherit.includes(name));
+    const localized = site.localizedSet(collection);
+    return fields.filter(({ name }) => localized.has(name));
 };
 /** Form key holding the translation state. Starts with `$` so it never collides with a stored field name. The value is a JSON string. */
 export const TRANSLATION_FORM_KEY = "$translation";
@@ -115,8 +117,6 @@ export function formFromEntry(site, entry) {
     const metadata = entry.working.metadata ?? {};
     const form = { slug: entry.workingSlug ?? "", doc: entry.working.doc };
     for (const stored of fieldsOf(site, entry.collection, isTranslationEntry(entry))) {
-        if (stored.field.hidden)
-            continue;
         form[stored.name] = toFormValue(stored, metadata[stored.name]);
     }
     Object.assign(form, recordTranslationsToForm(site, entry.collection, metadata));
@@ -144,8 +144,6 @@ function recordTranslationsToForm(site, collection, metadata) {
 export function formFromSourceMetadata(site, collection, metadata) {
     const form = { slug: "", doc: emptyStoredDocument() };
     for (const stored of fieldsOf(site, collection)) {
-        if (stored.field.hidden)
-            continue;
         form[stored.name] = toFormValue(stored, metadata[stored.name]);
     }
     return form;
@@ -183,8 +181,6 @@ export function metadataFromForm(site, form, collection, base = {}, options = {}
     }
     const values = { ...form };
     for (const { name, field, when } of fields) {
-        if (field.hidden)
-            continue;
         const active = !when || values[when.field] === when.value;
         const value = values[name];
         if (!active) {

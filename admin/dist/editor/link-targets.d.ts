@@ -38,9 +38,15 @@ export declare function rememberLinkTarget(site: Site, item: InternalLinkItem): 
 export declare function linkPathOf(site: Site, id: string): string | null;
 /** Looks the entries up and re-renders when what is known changes. Gives the paths known now. */
 export declare function useLinkPaths(ids: readonly string[]): (id: string) => string | null;
-/** Forgets every lookup of the site. For tests, which share the module. */
+/**
+ * Forgets every lookup of the site. For tests, which share the module.
+ * @internal For tests.
+ */
 export declare function resetLinkTargets(site: Site): void;
-/** Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated. */
+/**
+ * Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated.
+ * @internal For tests; the editor asks through the link view.
+ */
 export declare function requestLinkTarget(site: Site, id: string): void;
 /**
  * Where the link to this entry goes, looked up on first use and kept for the session. `null` for a link that is not to an entry.

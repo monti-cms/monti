@@ -1,7 +1,7 @@
 import { createAnnotationRegistry, supportsAnnotationScope } from "../../code-block.js";
 const hasClass = (annotation) => "class" in annotation && typeof annotation.class === "string";
 const hasRender = (annotation) => "render" in annotation && typeof annotation.render === "string";
-const resolveStyleFromRule = (registry, annotation) => {
+const resolveStyle = (registry, annotation) => {
     if (!registry)
         return;
     const rule = registry.get(annotation.name);
@@ -15,18 +15,6 @@ const resolveStyleFromRule = (registry, annotation) => {
     if (typeof rule.render !== "string")
         return;
     return { render: rule.render };
-};
-// Temporary adapter: supports legacy payloads that still carry class/render on annotations.
-const resolveStyle = (registry, annotation) => {
-    const fromRule = resolveStyleFromRule(registry, annotation);
-    if (fromRule)
-        return fromRule;
-    const fallback = {};
-    if (typeof annotation.class === "string")
-        fallback.class = annotation.class;
-    if (typeof annotation.render === "string")
-        fallback.render = annotation.render;
-    return fallback.class || fallback.render ? fallback : undefined;
 };
 const buildInlineDecoration = (lineNumber, annotation, style) => {
     if (annotation.range.start >= annotation.range.end)
@@ -122,7 +110,8 @@ export const fromCodeBlockDocumentToShikiAnnotationPayload = (document, annotati
         rowWrappers,
     };
 };
+/** @internal Internals the tests reach. */
 export const __testable__ = {
     fromCodeBlockDocumentToShikiAnnotationPayload,
-    resolveStyleFromRule,
+    resolveStyle,
 };

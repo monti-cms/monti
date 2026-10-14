@@ -61,6 +61,6 @@ function FieldError({ className, children, errors, ...props }) {
     if (!content) {
         return null;
     }
-    return (_jsx("div", { role: "alert", "data-slot": "field-error", className: cn("font-normal text-cms-destructive text-sm", className), ...props, children: content }));
+    return (_jsx("div", { role: "alert", "data-slot": "field-error", className: cn("whitespace-pre-wrap font-normal text-cms-destructive text-xs", className), ...props, children: content }));
 }
 export { Field, FieldLabel, FieldDescription, FieldError, FieldGroup, FieldLegend, FieldSeparator, FieldSet, FieldContent, FieldTitle, };

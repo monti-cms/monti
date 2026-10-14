@@ -19,8 +19,8 @@ export declare function useFolderActions({ collection, folders, onChanged, }: {
 }): {
     requestCreate: (parentId: string | null) => void;
     requestRename: (folder: Folder) => void;
-    requestDelete: (folder: Folder) => Promise<void>;
-    moveFolder: (folder: Folder, parentId: string | null) => Promise<void>;
+    requestDelete: (folder: Folder) => void;
+    moveFolder: (folder: Folder, parentId: string | null) => void;
     dialogs: import("react").JSX.Element;
 };
 export type FolderActions = Pick<ReturnType<typeof useFolderActions>, "requestCreate" | "requestRename" | "requestDelete" | "moveFolder">;

@@ -6,6 +6,9 @@ import { Lock, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
+import { errorText } from "../../api/client.js";
+import { fetchSchema, schemaKeys } from "../../api/schema.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { useAdminRouter } from "../../router/index.js";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert.js";
@@ -13,20 +16,21 @@ import { Badge } from "../../ui/badge.js";
 import { Button } from "../../ui/button.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { Skeleton } from "../../ui/skeleton.js";
-import { errorText } from "../admin-api.js";
-import { useConfirm } from "../shared/confirm-dialog.js";
+import { discardConfirm, useConfirm } from "../shared/confirm-dialog.js";
+import { LoadErrorAlert } from "../shared/load-error-alert.js";
 import { PageBody } from "../shared/page-body.js";
+import { Section } from "../shared/section.js";
+import { useUnsavedGuard } from "../shared/use-unsaved-guard.js";
 import { AdminEditor } from "./admin-editor.js";
 import { CollectionEditor } from "./collection-editor.js";
 import { IssueList, SchemaEditProvider } from "./controls.js";
+import { describeLiteralIssue } from "./literal-issue.js";
 import { LocalesEditor } from "./locales-editor.js";
 import { schemaMessages } from "./messages.js";
 import { NewCollectionDialog } from "./new-collection-dialog.js";
 import { reloadPage, rememberSaved, takeSavedMessage } from "./reload.js";
 import { ReviewDialog } from "./review-dialog.js";
-import { fetchSchema, SCHEMA_KEY } from "./schema-api.js";
 import { addCollection, changeCount, collectionsOf, isObj, localesOf, recordRename, removeCollection, sameJson, setCollection, settingChanges, } from "./schema-model.js";
-import { Section } from "./section.js";
 import { SiteEditor } from "./site-editor.js";
 /** Why a schema file may not be edited here, as the key of the sentence that says it. */
 const READ_ONLY_KEY = {
@@ -62,8 +66,10 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
     const names = Object.keys(collections);
     const [selectedName, setSelected] = useState(names[0]);
     const selected = selectedName && selectedName in collections ? selectedName : names[0];
+    const tc = useTranslator(commonMessages);
     const { confirm, dialog } = useConfirm();
     const dirty = !sameJson(draft, base);
+    const { dialog: guardDialog } = useUnsavedGuard(dirty);
     const pending = changeCount(base, draft);
     const savedNames = Object.keys(collectionsOf(base));
     useEffect(() => {
@@ -71,13 +77,6 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
         if (message)
             toast.success(message);
     }, []);
-    useEffect(() => {
-        if (!dirty)
-            return;
-        const warn = (event) => event.preventDefault();
-        window.addEventListener("beforeunload", warn);
-        return () => window.removeEventListener("beforeunload", warn);
-    }, [dirty]);
     const updateFile = (change) => setDraft((current) => change(current));
     const context = useMemo(() => ({
         disabled: !writable,
@@ -88,12 +87,7 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
         file: draft,
     }), [writable, state.vocabulary, issues, names, state.codeCollections, draft]);
     const discard = async () => {
-        const ok = await confirm({
-            title: t("discard.title"),
-            description: t("discard.description"),
-            confirmLabel: t("discard.confirm"),
-            destructive: true,
-        });
+        const ok = await confirm(discardConfirm(tc));
         if (!ok)
             return;
         setDraft(base);
@@ -106,7 +100,7 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
                         ? actionsSlot
                             ? createPortal(actions, actionsSlot)
                             : null
-                        : actions && (_jsx("div", { className: "flex items-center justify-end gap-2.5 border-b bg-cms-background px-4 py-2 lg:px-10", children: actions })), _jsx("div", { className: "min-h-0 flex-1 overflow-y-auto", children: _jsxs(PageBody, { wide: tab === "collections", children: [reason && (_jsxs(Alert, { layout: "stack", "data-testid": "schema-read-only", children: [_jsx(AlertTitle, { children: t("readonly.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-1", children: [_jsx("span", { children: t(READ_ONLY_KEY[reason]) }), reason === "has_code" && state.access.detail && (_jsx("code", { className: "text-xs", "data-testid": "schema-code-detail", children: state.access.detail }))] })] })), writable && state.comments && (_jsx(Alert, { layout: "stack", "data-testid": "schema-comments-note", children: _jsx(AlertDescription, { children: t("comments.note") }) })), applyFailed && (_jsx(Alert, { variant: "danger", layout: "stack", children: _jsx(AlertDescription, { children: t("save.applyFailedNote") }) })), state.issues.length > 0 && (_jsxs(Alert, { variant: "danger", layout: "stack", "data-testid": "schema-file-invalid", children: [_jsx(AlertTitle, { children: t("invalid.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-2", children: [_jsx("span", { children: t("invalid.description") }), _jsx(IssueList, { issues: state.issues })] })] })), issues.length > 0 && !reviewing && (_jsxs(Alert, { variant: "danger", layout: "stack", children: [_jsx(AlertTitle, { children: t("issues.title") }), _jsx(AlertDescription, { children: _jsx(IssueList, { issues: issues }) })] })), state.codeCollections.length > 0 && (_jsx(Alert, { layout: "stack", children: _jsx(AlertDescription, { children: t("code.collections", { names: state.codeCollections.join(", ") }) }) })), state.issues.length === 0 && (_jsxs(_Fragment, { children: [tab === "collections" && (_jsxs("div", { className: "flex flex-col gap-6 lg:flex-row lg:gap-8", children: [_jsxs("div", { className: "flex shrink-0 flex-col gap-0.5 lg:w-52", children: [_jsxs("div", { className: "flex items-center justify-between pb-2 pl-2.5", children: [_jsxs("span", { className: "font-medium text-cms-muted-foreground text-xs", children: [t("collection.railTitle"), " ", names.length] }), writable && (_jsx(IconButton, { label: t("collection.create"), size: "icon-xs", onClick: () => setCreating(true), children: _jsx(Plus, { "aria-hidden": true }) }))] }), _jsx("nav", { "aria-label": t("tabs.collections"), className: "flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0", children: names.map((name) => {
+                        : actions && (_jsx("div", { className: "flex items-center justify-end gap-2.5 border-b bg-cms-background px-4 py-2 lg:px-10", children: actions })), _jsx("div", { className: "min-h-0 flex-1 overflow-y-auto", children: _jsxs(PageBody, { wide: tab === "collections", children: [reason && (_jsxs(Alert, { layout: "stack", "data-testid": "schema-read-only", children: [_jsx(AlertTitle, { children: t("readonly.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-1", children: [_jsx("span", { children: t(READ_ONLY_KEY[reason]) }), reason === "has_code" && (state.access.issue || state.access.detail) && (_jsx("code", { className: "text-xs", "data-testid": "schema-code-detail", children: state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail }))] })] })), writable && state.comments && (_jsx(Alert, { layout: "stack", "data-testid": "schema-comments-note", children: _jsx(AlertDescription, { children: t("comments.note") }) })), applyFailed && (_jsx(Alert, { variant: "destructive", layout: "stack", children: _jsx(AlertDescription, { children: t("save.applyFailedNote") }) })), state.issues.length > 0 && (_jsxs(Alert, { variant: "destructive", layout: "stack", "data-testid": "schema-file-invalid", children: [_jsx(AlertTitle, { children: t("invalid.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-2", children: [_jsx("span", { children: t("invalid.description") }), _jsx(IssueList, { issues: state.issues })] })] })), issues.length > 0 && !reviewing && (_jsxs(Alert, { variant: "destructive", layout: "stack", children: [_jsx(AlertTitle, { children: t("issues.title") }), _jsx(AlertDescription, { children: _jsx(IssueList, { issues: issues }) })] })), state.codeCollections.length > 0 && (_jsx(Alert, { layout: "stack", children: _jsx(AlertDescription, { children: t("code.collections", { names: state.codeCollections.join(", ") }) }) })), state.issues.length === 0 && (_jsxs(_Fragment, { children: [tab === "collections" && (_jsxs("div", { className: "flex flex-col gap-6 lg:flex-row lg:gap-8", children: [_jsxs("div", { className: "flex shrink-0 flex-col gap-0.5 lg:w-52", children: [_jsxs("div", { className: "flex items-center justify-between pb-2 pl-2.5", children: [_jsxs("span", { className: "font-medium text-cms-muted-foreground text-xs", children: [t("collection.railTitle"), " ", names.length] }), writable && (_jsx(IconButton, { label: t("collection.create"), size: "icon-xs", onClick: () => setCreating(true), children: _jsx(Plus, { "aria-hidden": true }) }))] }), _jsx("nav", { "aria-label": t("tabs.collections"), className: "flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0", children: names.map((name) => {
                                                                 const collection = collections[name];
                                                                 const active = name === selected;
                                                                 return (_jsxs("button", { type: "button", "aria-current": active ? "true" : undefined, className: cn("flex h-8 shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-cms-muted focus-visible:ring-2 focus-visible:ring-cms-ring/50", active && "border-cms-border bg-cms-card font-medium hover:bg-cms-card"), onClick: () => setSelected(name), children: [_jsx("span", { className: "flex-1 truncate", children: String(collection?.label ?? name) }), !savedNames.includes(name) && _jsx(Badge, { variant: "outline", children: t("collection.new") }), _jsx("span", { className: "font-normal text-cms-muted-foreground text-xs", children: t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument") })] }, name));
@@ -122,7 +116,7 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
                                                                     return;
                                                             }
                                                             updateFile((file) => removeCollection(file, selected));
-                                                        } }, selected)) : (_jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("collection.none") })) })] })), tab === "locales" && (_jsx(LocalesEditor, { file: draft, savedCodes: localesOf(base).map((locale) => locale.code), update: updateFile })), tab === "site" && _jsx(SiteEditor, { file: draft, siteUrl: state.siteUrl, update: updateFile }), tab === "admin" && _jsx(AdminEditor, { file: draft, update: updateFile }), tab === "file" && _jsx(FileInfo, { file: draft, state: state })] }))] }) })] }), dialog, _jsx(NewCollectionDialog, { open: creating, onOpenChange: setCreating, taken: names, onCreate: (id, kind, path, label) => {
+                                                        } }, selected)) : (_jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("collection.none") })) })] })), tab === "locales" && (_jsx(LocalesEditor, { file: draft, savedCodes: localesOf(base).map((locale) => locale.code), update: updateFile })), tab === "site" && _jsx(SiteEditor, { file: draft, siteUrl: state.siteUrl, update: updateFile }), tab === "admin" && _jsx(AdminEditor, { file: draft, update: updateFile }), tab === "file" && _jsx(FileInfo, { file: draft, state: state })] }))] }) })] }), dialog, guardDialog, _jsx(NewCollectionDialog, { open: creating, onOpenChange: setCreating, taken: names, onCreate: (id, kind, path, label) => {
                     updateFile((file) => addCollection(file, id, kind, path, label));
                     setSelected(id);
                     if (tab !== "collections")
@@ -142,7 +136,7 @@ export function SchemaSettings({ tab, actionsSlot }) {
     const site = useSite();
     const t = useTranslator(schemaMessages);
     const query = useQuery({
-        queryKey: SCHEMA_KEY,
+        queryKey: schemaKeys.state(),
         queryFn: ({ signal }) => fetchSchema(site, signal),
         // The file is the truth: a screen that was open while it changed would edit a stale copy.
         staleTime: 0,
@@ -151,5 +145,5 @@ export function SchemaSettings({ tab, actionsSlot }) {
     const error = query.error ? errorText(site, query.error, t("load.failed")) : null;
     if (query.data)
         return _jsx(SchemaEditor, { state: query.data, tab: tab, actionsSlot: actionsSlot }, query.data.hash ?? "site");
-    return (_jsx("div", { className: "flex flex-col gap-3 p-4 lg:p-10", children: error ? (_jsx(Alert, { variant: "danger", layout: "stack", children: _jsxs(AlertDescription, { className: "flex items-center gap-3", children: [error, _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: () => void query.refetch(), children: t("load.retry") })] }) })) : (_jsx(Skeleton, { className: "h-40 w-full" })) }));
+    return (_jsx("div", { className: "flex flex-col gap-3 p-4 lg:p-10", children: error ? (_jsx(LoadErrorAlert, { message: error, onRetry: () => void query.refetch() })) : (_jsx(Skeleton, { className: "h-40 w-full" })) }));
 }

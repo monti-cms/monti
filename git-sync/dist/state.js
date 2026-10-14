@@ -4,7 +4,6 @@
  */
 /** The collections of the plugin's storage. */
 export const COLLECTIONS = {
-    settings: "settings",
     records: "records",
     queue: "queue",
     conflicts: "conflicts",
@@ -41,12 +40,9 @@ async function removeItem(collection, key) {
     }
 }
 export const entryKey = (target, entryId) => `${target}:${entryId}`;
-/** The key of a conflict: one per entry per target. */
-export const conflictKey = entryKey;
 const prefixOf = (target) => `${target}:`;
 /** Typed access to the plugin's storage. */
 export function createState(storage) {
-    const settings = storage.collection(COLLECTIONS.settings);
     const records = storage.collection(COLLECTIONS.records);
     const queue = storage.collection(COLLECTIONS.queue);
     const conflicts = storage.collection(COLLECTIONS.conflicts);
@@ -54,10 +50,6 @@ export function createState(storage) {
     const locks = storage.collection(COLLECTIONS.locks);
     const applying = storage.collection(COLLECTIONS.applying);
     return {
-        settings: {
-            get: () => settings.get("default"),
-            save: (value, expectedVersion) => settings.set("default", value, { expectedVersion }),
-        },
         records: {
             get: async (target, entryId) => (await records.get(entryKey(target, entryId)))?.value ?? null,
             /** Every record of a target, by entry id. */
@@ -86,9 +78,9 @@ export function createState(storage) {
         },
         conflicts: {
             list: async (target) => (await conflicts.list(target ? { prefix: prefixOf(target) } : undefined)).map((item) => item.value),
-            get: async (target, entryId) => (await conflicts.get(conflictKey(target, entryId)))?.value ?? null,
+            get: async (target, entryId) => (await conflicts.get(entryKey(target, entryId)))?.value ?? null,
             put: (conflict) => upsert(conflicts, conflict.id, conflict),
-            remove: (target, entryId) => removeItem(conflicts, conflictKey(target, entryId)),
+            remove: (target, entryId) => removeItem(conflicts, entryKey(target, entryId)),
         },
         status: {
             get: async (target) => (await status.get(target))?.value ?? {},

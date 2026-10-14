@@ -1,5 +1,5 @@
+import { type KeysView } from "./keys.js";
 import type { GitSyncMode } from "./options.js";
-import { type SettingsView } from "./settings.js";
 import type { PullSummary, TargetStatus } from "./state.js";
 import type { SyncContext } from "./sync.js";
 /** What the admin screen shows about one target. */
@@ -22,7 +22,8 @@ export interface TargetView {
     readonly lastFlush?: TargetStatus["lastFlush"];
 }
 export interface StatusView {
-    readonly settings: SettingsView;
+    /** The two keys the plugin uses (the GitHub token and the webhook secret). */
+    readonly keys: KeysView;
     readonly targets: readonly TargetView[];
 }
 export declare function statusView(ctx: SyncContext): Promise<StatusView>;

@@ -1,13 +1,3 @@
-/** An older value format a plugin wrote before this API existed, so its stored values stay readable. Decrypt only: new values never use it. */
-export interface LegacySecretFormat {
-    /** First part of the old value (`v1` for `v1:<iv>:<tag>:<body>`). */
-    readonly prefix: string;
-    /** The old key was `sha256(domain + secret)`; this is the `domain` string. */
-    readonly domain: string;
-}
-export interface PluginSecretsOptions {
-    readonly legacy?: LegacySecretFormat;
-}
 export interface PluginSecrets {
     /** Whether the server config has a `secret`. Without one, `encrypt` and `deriveKey` throw (`secret_not_configured`) and `decrypt` only reads previous secrets' values. */
     readonly available: boolean;
@@ -17,8 +7,7 @@ export interface PluginSecrets {
      */
     encrypt(plain: string): string;
     /**
-     * Decrypts a value of this plugin. It uses the key the value names (the current secret's or a previous secret's), or the plugin's legacy
-     * format if it declared one. `null` if the value is not this plugin's, was made with an unknown secret, or is corrupted.
+     * Decrypts a value of this plugin. It uses the key the value names (the current secret's or a previous secret's). `null` if the value is not this plugin's, was made with an unknown secret, or is corrupted.
      */
     decrypt(stored: string): string | null;
     /** Whether the value is in the current format and encrypted with the current secret. If not, `decrypt` it and `encrypt` it again. */
@@ -37,6 +26,5 @@ export declare function createSecretsVault(master: {
     readonly secret?: string;
     readonly previousSecrets?: readonly string[];
 }): {
-    forPlugin(plugin: string, options?: PluginSecretsOptions): PluginSecrets;
+    forPlugin(plugin: string): PluginSecrets;
 };
-export type SecretsVault = ReturnType<typeof createSecretsVault>;

@@ -55,15 +55,13 @@ export function seoFields(options = {}) {
             configurable: true,
         })
         : field;
-    const tab = options.tab ?? "SEO";
     const localized = options.localized ?? true;
     const limits = { ...SEO_DEFAULT_LIMITS, ...options.limits };
-    const shared = { tab, ...(localized ? { localized: true } : {}) };
+    const shared = localized ? { localized: true } : {};
     const result = {
         /** Search result and share preview. Values are read from the role fields, falling back to the title and summary when empty. */
         [key("preview")]: fields.view({
             view: SEO_PREVIEW_VIEW,
-            tab,
             ...(options.labels?.preview ? { label: options.labels.preview } : {}),
         }),
         /** Search result title. Falls back to the title when empty. */
@@ -99,7 +97,6 @@ export function seoFields(options = {}) {
             },
             defaultValue: "index",
             input: SEO_INPUTS.noindex,
-            tab,
         }), "noindex"),
         /** URL of the post first published elsewhere (canonical). */
         [key("canonical")]: lazyLabel(fields.text({

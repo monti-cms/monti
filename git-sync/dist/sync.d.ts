@@ -1,5 +1,5 @@
 import type { CmsFormat } from "@monti-cms/core/format";
-import { type Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/plugin/server";
 import type { GitHubClient } from "./github/client.js";
 import { type GitSyncOptions, type ResolvedTarget } from "./options.js";
 import { type PathPattern } from "./path-pattern.js";
@@ -52,5 +52,5 @@ export interface SyncContext {
 /** The options of the plugin as the site config gives them. */
 export declare function readOptions(cms: Cms): GitSyncOptions;
 export declare function createSyncContext(cms: Cms, deps?: SyncDeps): SyncContext;
-/** The sync context of an instance, made on first use. Each instance has its own. */
+/** The sync context of an instance, made on first use and again after a schema reload (`cms.plugin(...).once`). */
 export declare function syncContextFor(cms: Cms): SyncContext;

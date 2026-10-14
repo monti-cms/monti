@@ -4,7 +4,10 @@ import { useTranslator } from "@monti-cms/core/client";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";
 import { useId, useState } from "react";
+import { commonMessages } from "../lib/common.messages.js";
+import { isComposingKey } from "../lib/keyboard.js";
 import { Button } from "../ui/button.js";
+import { FieldError } from "../ui/field.js";
 import { Input } from "../ui/input.js";
 import { LinkTargetSummary } from "./link-target-view.js";
 import { editorMessages } from "./messages.js";
@@ -41,8 +44,6 @@ export const collapseToEnd = (chain) => chain.command(({ tr }) => {
     tr.setSelection(TextSelection.near(tr.doc.resolve(tr.selection.to), -1));
     return true;
 });
-/** Whether this Enter finishes Korean composition. The form is not submitted then. */
-export const isComposingKey = (event) => event.nativeEvent.isComposing || event.key === "Process" || event.keyCode === 229;
 /**
  * Enter handling for popover input forms (link, tooltip). Enter during Korean composition is ignored, and Enter submits even in multi-line fields (Shift+Enter inserts a line break).
  * Attach it as `<form onKeyDown={submitOnEnter}>`.
@@ -61,12 +62,12 @@ export function submitOnEnter(event) {
 }
 /** Button row below a popover input form: remove on the left, cancel and apply on the right. Shared by the link and tooltip forms. */
 export function PopoverFormFooter({ removeLabel, removeIcon, onRemove, onCancel, }) {
-    const t = useTranslator(editorMessages);
-    return (_jsxs("div", { className: "flex items-center gap-2", children: [onRemove && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", onClick: onRemove, children: [removeIcon, removeLabel] })), _jsxs("div", { className: "ml-auto flex items-center gap-2", children: [_jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onCancel, children: t("popoverForm.cancel") }), _jsx(Button, { type: "submit", size: "sm", children: t("popoverForm.apply") })] })] }));
+    const tc = useTranslator(commonMessages);
+    return (_jsxs("div", { className: "flex items-center gap-2", children: [onRemove && (_jsxs(Button, { type: "button", variant: "ghost", size: "sm", className: "text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", onClick: onRemove, children: [removeIcon, removeLabel] })), _jsxs("div", { className: "ml-auto flex items-center gap-2", children: [_jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onCancel, children: tc("cancel") }), _jsx(Button, { type: "submit", size: "sm", children: tc("apply") })] })] }));
 }
 /** One-line red error of a popover input form. */
 export function PopoverFormError({ id, children }) {
-    return (_jsx("p", { id: id, role: "alert", className: "text-cms-destructive text-xs", children: children }));
+    return _jsx(FieldError, { id: id, children: children });
 }
 /** Link address input form. Shared by the top formatting toolbar's popover and the inline bubble. */
 export function LinkForm({ editor, draft, onDone }) {

@@ -58,19 +58,22 @@ export declare function prepareSnapshot(site: Site, input: ServiceInput, options
         readonly warnings: readonly Issue[];
     };
 }): Promise<PreparedSnapshot>;
-/**
- * Collects only the image warnings to include in the publish response, for a snapshot the write pipeline prepared. **Non-blocking**; if computation fails it returns an empty array.
- *
- * For media that is `ready` with a `storageKey`, if `headStorageKey` is provided, the actual object in storage is checked once more.
- * If it is missing, an `image_media_missing_in_storage` warning is added. On an infrastructure error it falls back to the DB decision.
- */
-export declare function imageWarningsForSnapshot(snapshot: PreparedSnapshot, resolvers: {
+/** What the image warnings of a publish look up: the media rows, and (optionally) whether the stored object is really there. */
+export interface ImageWarningResolvers {
     getMediaAsset: (id: string) => Promise<{
         status?: string;
         storageKey?: string | null;
     } | null>;
     headStorageKey?: (storageKey: string) => Promise<boolean>;
-}): Promise<Issue[]>;
+}
+/**
+ * The image warnings of a snapshot the write pipeline prepared, to join `snapshot.warnings` in the publish result (this returns only the image ones,
+ * not the snapshot's own). **Non-blocking**; if computation fails it returns an empty array.
+ *
+ * For media that is `ready` with a `storageKey`, if `headStorageKey` is provided, the actual object in storage is checked once more.
+ * If it is missing, an `image_media_missing_in_storage` warning is added. On an infrastructure error it falls back to the DB decision.
+ */
+export declare function imageWarningsForSnapshot(snapshot: PreparedSnapshot, resolvers: ImageWarningResolvers): Promise<Issue[]>;
 export declare function validateForPublish(site: Site, snapshot: PreparedSnapshot, resolved: ResolvedTargets): {
     ready: boolean;
     issues: Issue[];

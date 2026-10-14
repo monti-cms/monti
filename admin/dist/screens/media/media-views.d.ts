@@ -1,5 +1,5 @@
+import type { MediaItem } from "../../api/media.js";
 import { type MenuAction } from "../shared/action-menu.js";
-import { type MediaItem } from "./media-item.js";
 /** Thumbnail for images, a type icon for other files. */
 export declare function MediaThumb({ media, iconClassName }: {
     media: MediaItem;

@@ -52,19 +52,14 @@ export interface DetectedApp {
     readonly coreSpec?: string;
     /** Whether the package.json already lists these packages. */
     readonly dependencies: ReadonlySet<string>;
-    /** Config files of an earlier Monti setup, which `init` leaves alone. */
-    readonly legacyConfig: readonly string[];
     /** The existing `monti.config.ts` (relative to cwd), if any. */
     readonly existingConfig?: string;
     /** Whether `.gitignore` covers `.env.local`. */
     readonly envLocalIgnored: boolean;
 }
-export declare const NEXT_CONFIG_FILES: readonly ["next.config.ts", "next.config.mjs", "next.config.js"];
 /** Files read per folder for front matter keys. */
 export declare const SAMPLE_FILES = 50;
 /** The `key: value` lines at the top level of a front matter block (`---` fenced) as key -> type. Empty when the file has none. */
 export declare function parseFrontMatterKeys(text: string): Map<string, FrontMatterType>;
-/** Whether a `.gitignore` line list covers `.env.local`. */
-export declare function ignoresEnvLocal(gitignore: string): boolean;
 /** Reads the app in `cwd`. Throws when there is no package.json. */
 export declare function detectApp(cwd: string): DetectedApp;

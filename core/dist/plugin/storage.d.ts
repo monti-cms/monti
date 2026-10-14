@@ -38,30 +38,9 @@ export interface PluginCollection<T = unknown> {
     /** Deletes an item. `not_found` when there is none, `conflict` when the version differs. */
     delete(key: string, options: StorageWriteOptions): Promise<void>;
 }
-/** An item as it was before the plugin used this storage (see {@link PluginMigration.importItem}). */
-export interface ImportedItem<T = unknown> {
-    readonly key: string;
-    readonly value: T;
-    /** Defaults to 1. */
-    readonly version?: number;
-    /** Default: now. */
-    readonly createdAt?: Date;
-    /** Default: `createdAt`. */
-    readonly updatedAt?: Date;
-}
 /** What one step of {@link PluginStorage.once} can do. All of it happens in one transaction: if the step throws, none of it is kept. */
 export interface PluginMigration {
     collection<T = unknown>(name: string): PluginCollection<T>;
-    /**
-     * Adds an item with the version and dates it had, unless the key already exists (an existing item is never overwritten).
-     * @returns whether the item was added
-     */
-    importItem<T>(collection: string, item: ImportedItem<T>): Promise<boolean>;
-    /**
-     * Rows of a table an earlier version of the plugin kept in the same database before it used this storage, as plain objects (column name to value),
-     * or `null` when there is no such table. The table is only read, never changed or dropped.
-     */
-    readLegacyTable(table: string): Promise<Record<string, unknown>[] | null>;
 }
 /** The storage of one plugin. */
 export interface PluginStorage {
@@ -70,12 +49,9 @@ export interface PluginStorage {
     /** A collection by name (lowercase letters, digits and `-`, starting with a letter). It exists as soon as an item is written to it. */
     collection<T = unknown>(name: string): PluginCollection<T>;
     /**
-     * The migration hook: runs `step` once and records `name` (per plugin) so it does not run again, also when called concurrently. Use it to move data from an earlier
-     * layout, e.g. out of tables the plugin used to create itself. If `step` throws nothing is recorded and the next call runs it again.
-     * `legacyNames` are names under which an earlier version already recorded the same work: if one of them is recorded, the step counts as done.
+     * The migration hook: runs `step` once and records `name` (per plugin) so it does not run again, also when called concurrently. If `step` throws nothing is
+     * recorded and the next call runs it again.
      * @returns whether it ran this time
      */
-    once(name: string, step: (migration: PluginMigration) => Promise<void>, options?: {
-        readonly legacyNames?: readonly string[];
-    }): Promise<boolean>;
+    once(name: string, step: (migration: PluginMigration) => Promise<void>): Promise<boolean>;
 }

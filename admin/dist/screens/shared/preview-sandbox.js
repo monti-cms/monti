@@ -11,10 +11,3 @@ export function markSandboxSite(site) {
 export const isSandboxSite = (site) => SANDBOX_SITES.has(site);
 /** Whether a request with this method changes something on the server. */
 export const isWrite = (method) => !["GET", "HEAD", undefined].includes(method?.toUpperCase());
-/** Thrown instead of a write made for a preview site. */
-export class SandboxWriteError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "SandboxWriteError";
-    }
-}

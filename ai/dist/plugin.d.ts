@@ -7,9 +7,9 @@ import { type AiConfig } from "./action.js";
  * List only what you want to change or turn off in `actions`.
  *
  * ```ts
- * plugins: [aiPlugin({ siteDescription: "A personal tech blog", actions: { draft: false } })]
+ * plugins: [ai({ siteDescription: "A personal tech blog", actions: { draft: false } })]
  * ```
  */
-export declare function aiPlugin<const Config extends AiConfig>(config?: Config): import("@monti-cms/core").CmsPlugin<"ai", Config, readonly import("@monti-cms/core").BlockDefinition[]> & {
+export declare function ai<const Config extends AiConfig>(config?: Config): import("@monti-cms/core").CmsPlugin<"ai", Config, readonly import("@monti-cms/core").BlockDefinition[]> & {
     readonly contributes?: Readonly<Record<string, unknown>> | undefined;
 };

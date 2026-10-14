@@ -145,7 +145,7 @@ export declare const customValueSchemaOf: (site: Site) => z.ZodObject<{
         send: z.ZodOptional<z.ZodArray<z.ZodString>>;
         threshold: z.ZodOptional<z.ZodNumber>;
         maxCount: z.ZodOptional<z.ZodNumber>;
-        checks: z.ZodOptional<z.ZodArray<z.ZodPreprocess<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        checks: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
             kind: z.ZodLiteral<"pattern">;
             enabled: z.ZodDefault<z.ZodBoolean>;
             pattern: z.ZodString;
@@ -164,7 +164,7 @@ export declare const customValueSchemaOf: (site: Site) => z.ZodObject<{
             kind: z.ZodLiteral<"code">;
             enabled: z.ZodDefault<z.ZodBoolean>;
             name: z.ZodString;
-        }, z.core.$strip>], "kind">, unknown>>>;
+        }, z.core.$strip>], "kind">>>;
     }, z.core.$strip>;
 }, z.core.$strip>;
 export type CustomValue = z.output<ReturnType<typeof customValueSchemaOf>>;

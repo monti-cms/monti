@@ -17,7 +17,7 @@ import { runMessages } from "./run.messages.js";
 export const MAX_AI_BODY_CHARS = 60_000;
 const MAX_CANDIDATES = 8;
 /**
- * Instruction at the very start of every action. Also states the content language (language of the text being edited, else the site default language) so that it is used where the instructions say "콘텐츠 언어"
+ * Instruction at the very start of every action. Also states the content language (language of the text being edited, else the site default language) so that it is used where the instructions refer to "the content language"
  * (when the language cannot be determined from the material).
  */
 const systemFrame = (call, deps) => [
@@ -82,7 +82,7 @@ async function collectMaterial(site, action, call, choices) {
             case "mdx": {
                 const text = asText(value);
                 if ((text?.length ?? 0) > MAX_AI_BODY_CHARS) {
-                    throw new AiError("ai_input_too_large", t("inputTooLarge", { label: spec.label, max: MAX_AI_BODY_CHARS.toLocaleString(site.ADMIN_LOCALE) }));
+                    throw new AiError("payload_too_large", t("inputTooLarge", { label: spec.label, max: MAX_AI_BODY_CHARS.toLocaleString(site.ADMIN_LOCALE) }));
                 }
                 add(text);
                 break;
@@ -152,9 +152,9 @@ async function runValidatorsWhole(action, call, deps, text) {
     for (const check of activeValidators(action)) {
         const result = await check.run(text, context);
         if (result === false)
-            throw new AiError("ai_failed", t("failedCheck", { label: validatorLabel(check, deps.site) }));
+            throw new AiError("upstream_failed", t("failedCheck", { label: validatorLabel(check, deps.site) }));
         if (typeof result === "string")
-            throw new AiError("ai_failed", t("failedChecks", { reason: result }));
+            throw new AiError("upstream_failed", t("failedChecks", { reason: result }));
     }
 }
 /** Only the enabled validators. */
@@ -179,7 +179,7 @@ export async function runAiAction(action, call, deps) {
     const t = deps.site.createTranslator(runMessages);
     for (const [name, spec] of Object.entries(action.input)) {
         if (spec.required && (call.input[name] === undefined || call.input[name] === "")) {
-            throw new AiError("ai_failed", t("inputMissing", { label: spec.label }));
+            throw new AiError("upstream_failed", t("inputMissing", { label: spec.label }));
         }
     }
     const choices = choiceLoader(action, deps);
@@ -191,7 +191,7 @@ export async function runAiAction(action, call, deps) {
 async function runGenerate(action, call, deps, material, choices) {
     const t = deps.site.createTranslator(runMessages);
     if (!deps.generator)
-        throw new AiError("ai_unavailable", t("noGenerator"));
+        throw new AiError("service_unavailable", t("noGenerator"));
     const content = [];
     const sections = [...material.sections];
     for (const name of action.send) {
@@ -200,12 +200,12 @@ async function runGenerate(action, call, deps, material, choices) {
         const value = call.input[name];
         const image = value?.mediaId || value?.src ? await deps.loadImage({ mediaId: value.mediaId, src: value.src }) : null;
         if (!image)
-            throw new AiError("ai_failed", t("imageUnreadable"));
+            throw new AiError("upstream_failed", t("imageUnreadable"));
         content.push({ type: "image", ...image });
         sections.push("<image>attached image</image>");
     }
     if (sections.length === 0)
-        throw new AiError("ai_failed", t("nothingToSend"));
+        throw new AiError("upstream_failed", t("nothingToSend"));
     // For candidates with options (relation/select fields), the list is also sent so the model picks only from the options. Values already entered are excluded.
     const options = action.choices && action.result === "candidates"
         ? (await choices()).filter((option) => !currentValues(action, call).includes(option.value))
@@ -235,17 +235,17 @@ async function runGenerate(action, call, deps, material, choices) {
         const text = String(output.text ?? "").trim();
         const problem = checkText(deps.site, activeChecks(action), text);
         if (problem)
-            throw new AiError("ai_failed", t("failedChecks", { reason: problem }));
+            throw new AiError("upstream_failed", t("failedChecks", { reason: problem }));
         await runValidatorsWhole(action, call, deps, text);
         return { kind: "text", text };
     }
     if (action.result === "mdx") {
         const mdx = String(output.mdx ?? "").trim();
         if (!mdx)
-            throw new AiError("ai_failed", t("emptyResult"));
+            throw new AiError("upstream_failed", t("emptyResult"));
         const verdict = readableMdx(deps.site, mdx, configuredSyntax(deps.site));
         if (!verdict.ok)
-            throw new AiError("ai_failed", verdict.reason);
+            throw new AiError("upstream_failed", verdict.reason);
         await runValidatorsWhole(action, call, deps, mdx);
         return { kind: "mdx", text: mdx };
     }
@@ -276,13 +276,13 @@ export const unfence = (text) => {
 export async function streamAiAction(action, call, deps, onDelta) {
     const t = deps.site.createTranslator(runMessages);
     if (action.engine !== "generate" || (action.result !== "text" && action.result !== "mdx")) {
-        throw new AiError("ai_invalid_input", t("notStreamable"));
+        throw new AiError("invalid_input", t("notStreamable"));
     }
     if (!deps.generator)
-        throw new AiError("ai_unavailable", t("noGenerator"));
+        throw new AiError("service_unavailable", t("noGenerator"));
     for (const [name, spec] of Object.entries(action.input)) {
         if (spec.required && (call.input[name] === undefined || call.input[name] === "")) {
-            throw new AiError("ai_failed", t("inputMissing", { label: spec.label }));
+            throw new AiError("upstream_failed", t("inputMissing", { label: spec.label }));
         }
     }
     const material = await collectMaterial(deps.site, action, call, choiceLoader(action, deps));
@@ -304,17 +304,17 @@ export async function streamAiAction(action, call, deps, onDelta) {
     }
     const text = unfence(received);
     if (!text)
-        throw new AiError("ai_failed", t("emptyResult"));
+        throw new AiError("upstream_failed", t("emptyResult"));
     if (action.result === "text") {
         const problem = checkText(deps.site, activeChecks(action), text);
         if (problem)
-            throw new AiError("ai_failed", t("failedChecks", { reason: problem }));
+            throw new AiError("upstream_failed", t("failedChecks", { reason: problem }));
         await runValidatorsWhole(action, call, deps, text);
         return { kind: "text", text };
     }
     const verdict = readableMdx(deps.site, text, configuredSyntax(deps.site));
     if (!verdict.ok)
-        throw new AiError("ai_failed", verdict.reason);
+        throw new AiError("upstream_failed", verdict.reason);
     await runValidatorsWhole(action, call, deps, text);
     return { kind: "mdx", text };
 }
@@ -332,15 +332,15 @@ const renderInstructions = (action, call, deps) => renderPrompt(action, call.inp
 async function runDecide(action, call, deps, material, choices) {
     const t = deps.site.createTranslator(runMessages);
     if (!deps.decider)
-        throw new AiError("ai_unavailable", t("noDecider"));
+        throw new AiError("service_unavailable", t("noDecider"));
     if (Object.keys(material.data).length === 0)
-        throw new AiError("ai_failed", t("nothingToSend"));
+        throw new AiError("upstream_failed", t("nothingToSend"));
     const current = new Set(currentValues(action, call));
     const options = (await choices()).filter((option) => !current.has(option.value));
     if (options.length === 0)
         return { kind: "candidates", items: [] };
     if (options.length > MAX_DECISION_OPTIONS) {
-        throw new AiError("ai_input_too_large", t("tooManyChoices", { max: MAX_DECISION_OPTIONS }));
+        throw new AiError("payload_too_large", t("tooManyChoices", { max: MAX_DECISION_OPTIONS }));
     }
     const instructions = renderInstructions(action, call, deps);
     // Ask with short keys instead of option names (safe whatever characters the names contain).

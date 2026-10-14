@@ -1,3 +1,4 @@
+import { type Issue } from "../config/check/issue.js";
 /**
  * Media formats the core can identify. The site config `media.imageTypes` and `fileTypes` choose from these.
  * The config validation (`config/define`) also reads this, so it does not import other modules.
@@ -26,5 +27,5 @@ export interface MediaConfig {
     /** Accepted attached file formats (among the supported ones). Default all. An empty list accepts no attached files. */
     readonly fileTypes?: readonly AllowedFileMime[];
 }
-/** Config validation. Throws an error for invalid values (English message for developers). */
-export declare function validateMediaConfig(media: MediaConfig | undefined): void;
+/** Checks the media settings of the site config. */
+export declare function checkMediaConfig(media: MediaConfig | undefined): Issue[];

@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/client";
 /**
  * Browser image upload. Shared by the editor and the media library.
  *

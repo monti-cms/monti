@@ -8,7 +8,7 @@ export { columnBlock, columnsBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const columns: () => import("@monti-cms/core").CmsPlugin<"columns", {}, readonly [{
+export declare const columns: () => import("@monti-cms/core").CmsPlugin<"columns", Record<string, never>, readonly [{
     readonly name: "columns";
     readonly label: string;
     readonly description: string;

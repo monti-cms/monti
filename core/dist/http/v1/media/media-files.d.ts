@@ -13,7 +13,7 @@ export interface InspectedFile {
 }
 /**
  * Inspects an uploaded staging file by its actual bytes: size, type (the client MIME is not trusted), and pixel count.
- * For attachments, checks that the `declared` type matches the actual content. Throws `HttpError` on failure.
+ * For attachments, checks that the `declared` type matches the actual content. Throws `CmsError` on failure.
  */
 export declare function inspectUploadedFile(site: Site, mediaStore: MediaStore, stagingKey: string, declared?: string | null): Promise<InspectedFile>;
 /** Header value that makes an attachment download under its original name (RFC 6266, 5987). */

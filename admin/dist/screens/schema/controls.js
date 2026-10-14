@@ -11,8 +11,9 @@ import { Input } from "../../ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { Switch } from "../../ui/switch.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip.js";
+import { HELP, Labeled } from "../shared/labeled.js";
 import { schemaMessages } from "./messages.js";
-import { moveItem, nameProblem } from "./schema-model.js";
+import { nameProblem } from "./schema-model.js";
 const Context = createContext({
     disabled: true,
     vocabulary: { blocks: [], marks: [] },
@@ -33,13 +34,6 @@ export function IssueList({ issues }) {
     if (issues.length === 0)
         return null;
     return (_jsx("ul", { className: "flex flex-col gap-0.5 text-cms-destructive text-xs", "data-testid": "schema-issues", children: issues.map((issue) => (_jsxs("li", { children: [_jsx("code", { className: "rounded bg-cms-destructive/10 px-1", children: issue.path || "(root)" }), " ", issue.message] }, `${issue.path}:${issue.message}`))) }));
-}
-/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
-const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" };
-/** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
-const HELP = "max-w-[70ch] text-xs";
-export function Labeled({ label, hint, children, htmlFor, className, control = "normal", }) {
-    return (_jsxs(UiField, { className: cn("gap-2", className), children: [_jsx(FieldLabel, { htmlFor: htmlFor, className: "font-medium text-sm", children: label }), _jsx("div", { className: cn("w-full", CONTROL_WIDTH[control]), children: children }), hint && _jsx(FieldDescription, { className: HELP, children: hint })] }));
 }
 export function TextInput({ label, value, onChange, placeholder, hint, type = "text", className, optional, }) {
     const t = useTranslator(schemaMessages);
@@ -105,20 +99,6 @@ export function RowActions({ index, count, onMove, onRemove, name, removeBlocked
     const t = useTranslator(schemaMessages);
     const { disabled } = useSchemaEdit();
     return (_jsxs("div", { className: "flex shrink-0 items-center", children: [_jsx(IconButton, { label: t("row.up", { name }), size: "icon-xs", disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, { "aria-hidden": true }) }), _jsx(IconButton, { label: t("row.down", { name }), size: "icon-xs", disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, { "aria-hidden": true }) }), removeBlocked ? (_jsxs(Tooltip, { children: [_jsx(TooltipTrigger, { render: _jsx("span", { tabIndex: 0, "data-testid": "remove-blocked" }), children: _jsx(Button, { type: "button", variant: "ghost", size: "icon-xs", disabled: true, "aria-label": t("row.remove", { name }), "aria-description": removeBlocked, className: "pointer-events-none text-cms-destructive", children: _jsx(X, { "aria-hidden": true }) }) }), _jsx(TooltipContent, { side: "top", children: removeBlocked })] })) : (_jsx(IconButton, { label: t("row.remove", { name }), size: "icon-xs", destructive: true, disabled: disabled, onClick: onRemove, children: _jsx(X, { "aria-hidden": true }) }))] }));
-}
-/** An ordered list of names picked from `options`: add from the options not in the list yet, move, remove. Used for layout groups and list columns. */
-export function OrderedNames({ label, names, options, onChange, nameOf, }) {
-    const t = useTranslator(schemaMessages);
-    const { disabled } = useSchemaEdit();
-    const rest = options.filter((name) => !names.includes(name));
-    const [adding, setAdding] = useState("");
-    const show = nameOf ?? ((name) => name);
-    return (_jsxs("div", { className: "flex flex-col gap-2", children: [_jsx("span", { className: "font-medium text-sm", children: label }), names.length === 0 && _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("names.none") }), _jsx("ul", { className: cn("flex flex-col divide-y overflow-hidden rounded-md border", names.length === 0 && "hidden"), children: names.map((name, index) => (_jsxs("li", { className: "flex items-center justify-between px-3 py-1 text-sm", children: [_jsx("span", { className: "truncate", children: show(name) }), _jsx(RowActions, { index: index, count: names.length, name: show(name), onMove: (delta) => onChange(moveItem(names, index, delta)), onRemove: () => onChange(names.filter((item) => item !== name)) })] }, name))) }), rest.length > 0 && !disabled && (_jsx("div", { className: "flex items-center gap-1.5", children: _jsxs(Select, { value: adding, items: rest.map((name) => ({ value: name, label: show(name) })), onValueChange: (next) => {
-                        if (typeof next === "string" && next) {
-                            onChange([...names, next]);
-                            setAdding("");
-                        }
-                    }, children: [_jsx(SelectTrigger, { size: "sm", className: "w-full", "aria-label": t("names.add", { label }), children: _jsxs("span", { className: "flex items-center gap-1.5 text-cms-muted-foreground", children: [_jsx(Plus, { "aria-hidden": true, className: "size-3.5" }), _jsx(SelectValue, { placeholder: t("names.addPlaceholder") })] }) }), _jsx(SelectContent, { children: rest.map((name) => (_jsx(SelectItem, { value: name, children: show(name) }, name))) })] }) }))] }));
 }
 export function AddButton({ children, onClick, disabled: off, }) {
     const { disabled } = useSchemaEdit();

@@ -3,64 +3,9 @@
  * root layout. Both work on the text of the file and decide first whether they can do it safely: a file whose shape is not one of the few simple ones is not touched, and
  * the result says why, so the step can be listed for the person to do by hand. Nothing here reads or writes a file.
  */
-import { ignoresEnvLocal } from "./init-detect.js";
+import { findHtmlTag, gitignoreCoverage, importsWithCms, suppressHydrationState, usesWithCms } from "./next-app.js";
+import { matchingClose, skipLiteral } from "./source-text.js";
 export const NEXT_CONFIG_IMPORT = 'import { withCms } from "@monti-cms/nextjs/config";';
-/** The index after the string, template literal or comment that starts at `index`; `index` itself when nothing of the kind starts there. */
-function skipLiteral(text, index) {
-    const ch = text[index];
-    if (ch === "/" && text[index + 1] === "/") {
-        const end = text.indexOf("\n", index);
-        return end === -1 ? text.length : end;
-    }
-    if (ch === "/" && text[index + 1] === "*") {
-        const end = text.indexOf("*/", index + 2);
-        return end === -1 ? text.length : end + 2;
-    }
-    if (ch === '"' || ch === "'") {
-        let i = index + 1;
-        while (i < text.length && text[i] !== ch && text[i] !== "\n")
-            i += text[i] === "\\" ? 2 : 1;
-        return i + 1;
-    }
-    if (ch === "`") {
-        let i = index + 1;
-        while (i < text.length && text[i] !== "`") {
-            if (text[i] === "\\")
-                i += 2;
-            else if (text[i] === "$" && text[i + 1] === "{") {
-                const close = matchingClose(text, i + 1);
-                i = close === -1 ? text.length : close + 1;
-            }
-            else
-                i += 1;
-        }
-        return i + 1;
-    }
-    return index;
-}
-/** The index of the bracket that closes the one at `open` (`(`, `[` or `{`), or `-1` when there is none. */
-function matchingClose(text, open) {
-    const pairs = { "(": ")", "[": "]", "{": "}" };
-    const stack = [];
-    for (let i = open; i < text.length;) {
-        const skipped = skipLiteral(text, i);
-        if (skipped !== i) {
-            i = skipped;
-            continue;
-        }
-        const ch = text[i];
-        if (pairs[ch])
-            stack.push(pairs[ch]);
-        else if (ch === ")" || ch === "]" || ch === "}") {
-            if (stack.pop() !== ch)
-                return -1;
-            if (stack.length === 0)
-                return i;
-        }
-        i += 1;
-    }
-    return -1;
-}
 /** `text` without the blank space, semicolon and comments at its end. */
 function withoutTrailingNoise(text) {
     let out = text;
@@ -95,6 +40,8 @@ function importInsertPoint(text) {
 }
 /** The text with the import line added after the last import (or at the top). */
 function withImport(text) {
+    if (importsWithCms(text))
+        return text;
     const at = importInsertPoint(text);
     if (at < 0)
         return `${NEXT_CONFIG_IMPORT}\n${text}`;
@@ -107,7 +54,7 @@ const EXPORT_DEFAULT = /^export\s+default\s+/gm;
  * `module.exports`, a `satisfies` or `as` suffix, more than one default export) is left alone and the reason is returned.
  */
 export function wrapNextConfig(file, text) {
-    if (text.includes("withCms"))
+    if (usesWithCms(text))
         return { status: "present" };
     const exports = [...text.matchAll(EXPORT_DEFAULT)];
     if (exports.length === 0 && /\bmodule\.exports\b/.test(text)) {
@@ -149,58 +96,92 @@ export function wrapNextConfig(file, text) {
     }
     return unsupported("a function or another kind of expression");
 }
-const HTML_TAG = /<html\b([^>]*?)(\s*)(\/?)>/;
 /**
  * Adds `suppressHydrationWarning` to the `<html>` tag of a root layout, after its other attributes. A layout that has it already is left as it is; a layout without an
  * `<html>` tag, with a tag init cannot read to its end (a `>` inside an attribute expression), or with `suppressHydrationWarning={false}`, is not touched.
  */
 export function addSuppressHydrationWarning(file, text) {
-    const match = HTML_TAG.exec(text);
-    if (!match) {
+    const tag = findHtmlTag(text);
+    if (!tag) {
         return { status: "manual", reason: `${file} has no <html> tag (the root layout may be somewhere else)` };
     }
-    const attributes = match[1] ?? "";
+    const { attributes } = tag;
     const opens = (attributes.match(/\{/g) ?? []).length;
     const closes = (attributes.match(/\}/g) ?? []).length;
     if (opens !== closes)
         return { status: "manual", reason: `init could not read the <html> tag of ${file} to its end` };
-    if (/\bsuppressHydrationWarning\b/.test(attributes)) {
-        return /\bsuppressHydrationWarning\s*=\s*\{\s*false\s*\}/.test(attributes)
-            ? {
-                status: "manual",
-                reason: `<html> in ${file} sets suppressHydrationWarning={false}; set it to true`,
-            }
-            : { status: "present" };
+    const state = suppressHydrationState(attributes);
+    if (state === "off") {
+        return { status: "manual", reason: `<html> in ${file} sets suppressHydrationWarning={false}; set it to true` };
     }
-    const at = (match.index ?? 0) + "<html".length + attributes.length;
+    if (state === "on")
+        return { status: "present" };
     return {
         status: "edit",
-        text: `${text.slice(0, at)} suppressHydrationWarning${text.slice(at)}`,
+        text: `${text.slice(0, tag.start)}${htmlTagWith(text, tag, "suppressHydrationWarning")}${text.slice(tag.end)}`,
         change: "added suppressHydrationWarning to <html>",
     };
 }
-/** Lines of a `.gitignore` that cover the `.monti/` folder (where `monti db:migrate` writes its logs). */
-const MONTI_FOLDER_LINES = [
-    ".monti",
-    ".monti/",
-    "/.monti",
-    "/.monti/",
-    ".monti/*",
-    ".monti/**",
-    "/.monti/*",
-    "/.monti/**",
-];
+/** Lines are kept within this width, the default of Prettier and Biome. */
+const LINE_WIDTH = 80;
+/** The attributes of a tag as separate pieces (`lang="en"`, `className={...}`), or `undefined` when they cannot be told apart safely. */
+function splitAttributes(attributes) {
+    const parts = [];
+    let current = "";
+    for (let i = 0; i < attributes.length;) {
+        const ch = attributes[i];
+        if (/\s/.test(ch)) {
+            if (current)
+                parts.push(current);
+            current = "";
+            i += 1;
+            continue;
+        }
+        const end = ch === "{" ? matchingClose(attributes, i) + 1 : skipLiteral(attributes, i);
+        if (ch === "{" && end === 0)
+            return undefined;
+        const next = end > i ? end : i + 1;
+        current += attributes.slice(i, next);
+        i = next;
+    }
+    if (current)
+        parts.push(current);
+    return parts;
+}
+/**
+ * The `<html>` tag with `attribute` added after the others, written the way the file writes it: a tag that is already on several lines gets the attribute on a line of
+ * its own, a tag that stays within the line width stays on one line, and a tag that would become too long is broken up one attribute per line.
+ */
+function htmlTagWith(text, tag, attribute) {
+    const open = text.slice(tag.start, tag.start + "<html".length);
+    const lineStart = text.lastIndexOf("\n", tag.start - 1) + 1;
+    const indent = /^[ \t]*/.exec(text.slice(lineStart))?.[0] ?? "";
+    const lineEnd = text.indexOf("\n", tag.end);
+    const after = text.slice(tag.end, lineEnd === -1 ? text.length : lineEnd);
+    const single = `${open}${tag.attributes} ${attribute}${tag.gap}${tag.closer}`;
+    if (tag.attributes.includes("\n")) {
+        // Already one attribute per line: the new one goes on the line after the last, indented like the others.
+        const lastIndent = /\n([ \t]*)\S[^\n]*$/.exec(tag.attributes)?.[1] ?? `${indent}  `;
+        return `${open}${tag.attributes}\n${lastIndent}${attribute}${tag.gap}${tag.closer}`;
+    }
+    if (indent.length + single.length + after.length <= LINE_WIDTH)
+        return single;
+    const parts = splitAttributes(tag.attributes);
+    if (!parts)
+        return single;
+    const unit = /^\t/m.test(text) ? "\t" : "  ";
+    const inner = `${indent}${unit}`;
+    return `${open}\n${[...parts, attribute].map((part) => `${inner}${part}`).join("\n")}\n${indent}${tag.closer}`;
+}
 /**
  * Adds what Monti needs kept out of git to the text of a `.gitignore` (`undefined`: there is none, so it is created): `.env.local` (it holds the secrets) and
  * `.monti/` (where `monti db:migrate` writes its logs). A line that already covers one is left alone; with both covered nothing changes.
  */
 export function ignoreForMonti(text) {
-    const lines = (text ?? "").split(/\r?\n/).map((line) => line.trim());
+    const covered = gitignoreCoverage(text ?? "");
     const missing = [
-        ...(ignoresEnvLocal(text ?? "") ? [] : [{ line: ".env.local", why: "it holds your secrets" }]),
-        ...(lines.some((line) => MONTI_FOLDER_LINES.includes(line))
-            ? []
-            : [{ line: ".monti/", why: "monti db:migrate writes its logs there" }]),
+        ...(covered.envLocal ? [] : [{ line: ".env.local", why: "it holds your secrets" }]),
+        ...(covered.montiFolder ? [] : [{ line: ".monti/", why: "monti db:migrate writes its logs there" }]),
     ];
     if (missing.length === 0)
         return { status: "present" };

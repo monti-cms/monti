@@ -8,7 +8,7 @@ export { calloutBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const callout: () => import("@monti-cms/core").CmsPlugin<"callout", {}, readonly [{
+export declare const callout: () => import("@monti-cms/core").CmsPlugin<"callout", Record<string, never>, readonly [{
     readonly name: "callout";
     readonly label: string;
     readonly description: string;

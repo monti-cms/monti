@@ -3,9 +3,9 @@
  * both write routes answer **403 `schema_read_only`** unless the server runs in development and the file can be written, whatever the screen shows. Admin only like every
  * route.
  */
-export declare const GET: (request: Request, context?: Partial<import("../handler.js").RouteContext<{
+export declare const GET: import("../handler.js").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
-export declare const PUT: (request: Request, context?: Partial<import("../handler.js").RouteContext<{
+}>;
+export declare const PUT: import("../handler.js").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
+}>;

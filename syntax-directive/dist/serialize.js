@@ -133,7 +133,7 @@ const directiveNames = (context) => {
 };
 /**
  * Escapes a `:` followed by a registered directive name as `\:`. This protects text for as long as directives are **read**.
- * Left as is, it would be read as a directive on re-parse (`:u[`, `::image` etc.). Unregistered names (`:free를`) and
+ * Left as is, it would be read as a directive on re-parse (`:u[`, `::image` etc.). Unregistered names (`:free` followed by a Korean particle) and
  * colons in times and URLs (`12:30`, `https://`) are left alone. An already escaped `\:` is kept.
  */
 export const escapeDirectiveColon = (text, context) => {

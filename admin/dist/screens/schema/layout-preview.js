@@ -7,7 +7,7 @@ import { InspectorPanel } from "../entries/inspector-panel.js";
 import { SchemaFields } from "../entries/schema-fields.js";
 import { EntryFormProvider } from "../entries/use-field.js";
 import { draftSiteOf } from "./draft-site.js";
-import { schemaMessages } from "./messages.js";
+import { schemaFieldsMessages } from "./fields.messages.js";
 /** Catches what the real components throw for a draft that is only half made, so one bad moment does not take the settings page down. */
 class PreviewBoundary extends Component {
     state = { failed: false };
@@ -43,7 +43,7 @@ function PreviewPanel({ collection, onClose }) {
  * is saved. It follows the tree and the sheets as the draft changes.
  */
 export function LayoutPreview({ file, collection, codeCollections, onClose, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaFieldsMessages);
     const site = useSite();
     const made = useMemo(() => draftSiteOf(site, file, codeCollections), [site, file, codeCollections]);
     // While the draft cannot be made (a half-typed name), the last one that could stays.

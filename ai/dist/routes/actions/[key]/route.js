@@ -1,4 +1,4 @@
-import { adminRoute, assertVersionPresent, json, parseWith, readJsonBody, readVersionQuery, } from "@monti-cms/core/plugin/server";
+import { adminRoute, assertVersionPresent, ok, parseWith, readJsonBody, readVersionQuery, } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
 import { deleteCustomAction, updateAction } from "../../../actions.js";
 import { aiStoreFor } from "../../../store.js";
@@ -11,7 +11,7 @@ export const PATCH = adminRoute(async ({ request, params, cms }) => {
     const body = await readJsonBody(request);
     assertVersionPresent(body?.expectedVersion);
     const { expectedVersion, value, base } = parseWith(patchSchema, body);
-    return json(await updateAction(cms.site, aiStoreFor(cms), params.key, expectedVersion, value, base));
+    return ok(await updateAction(cms.site, aiStoreFor(cms), params.key, expectedVersion, value, base));
 });
 /** Deletes a screen action (`?expectedVersion=`). Code actions cannot be deleted. */
 export const DELETE = adminRoute(async ({ request, params, cms }) => {

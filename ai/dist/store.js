@@ -1,6 +1,6 @@
 import { AI_COLLECTIONS } from "./collections.js";
 import { AiError } from "./errors.js";
-import { AI_PLUGIN_NAME } from "./plugin-name.js";
+import { AI_PLUGIN_NAME } from "./name.js";
 import { providerMessages } from "./provider.messages.js";
 const toRow = (item) => ({
     key: item.key,
@@ -22,7 +22,7 @@ options) {
     const built = {
         apiKeys: () => {
             if (!options.apiKeys)
-                throw new AiError("ai_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
+                throw new AiError("service_unavailable", options.site.createTranslator(providerMessages)("noSecret"));
             return options.apiKeys();
         },
         /** Runs `work` with a store whose writes (settings and the key store) are one transaction: all kept, or none if it throws. */
@@ -57,17 +57,12 @@ options) {
     holder.current = built;
     return built;
 }
-const stores = new WeakMap();
-/** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
+/** The AI store of one CMS instance, built from its plugin storage on first use. It is rebuilt when the site is reloaded (`cms.plugin(...).once`). */
 export function aiStoreFor(cms) {
-    let store = stores.get(cms);
-    if (!store) {
-        store = createAiStore(cms.storage(AI_PLUGIN_NAME), {
-            site: cms.site,
-            apiKeys: () => cms.apiKeys,
-            transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
-        });
-        stores.set(cms, store);
-    }
-    return store;
+    const plugin = cms.plugin(AI_PLUGIN_NAME);
+    return plugin.once("store", () => createAiStore(plugin.storage, {
+        site: cms.site,
+        apiKeys: () => cms.apiKeys,
+        transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
+    }));
 }

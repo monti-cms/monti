@@ -9,9 +9,9 @@ import { RECORD_PANEL_RESIZE } from "../shared/side-panel.js";
 import { titlePatch } from "./entry-form.js";
 import { entriesMessages } from "./messages.js";
 /** The saved item in the shape of a relation option. */
-export const optionOf = (site, t, collection, saved) => ({
+export const optionOf = (site, untitled, collection, saved) => ({
     id: saved.id,
-    title: site.titleOfValues(collection, saved.working?.metadata ?? {}) || saved.workingSlug || t("untitled"),
+    title: site.titleOfValues(collection, saved.working?.metadata ?? {}) || saved.workingSlug || untitled,
     slug: saved.publishedSlug ?? saved.workingSlug ?? null,
 });
 /**

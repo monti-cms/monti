@@ -6,19 +6,19 @@ The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and deci
 translation editor, the AI page of the admin Tools group (`<admin path>/tools/ai`, `/admin/tools/ai` by default), the AI API (`/api/monti/v1/ai/*`), and the AI data in the plugin storage
 (`cms.storage("ai")`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
 
-The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `aiPlugin()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
+The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `ai()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
 
 ## Registration
 
-Add `aiPlugin()` to `plugins` in `monti.config.ts`. Built-in actions turn on by themselves when there is somewhere to attach them, and
+Add `ai()` to `plugins` in `monti.config.ts`. Built-in actions turn on by themselves when there is somewhere to attach them, and
 actions added by other plugins (block extensions, SEO extension, and so on) attach by themselves too. List an action by name (key) in
 `actions` only to change or turn it off.
 
 ```ts
-import { aiAction, aiPlugin, aiPresets } from "@monti-cms/ai";
+import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 
 plugins: [
-	aiPlugin({
+	ai({
 		siteDescription: "A personal tech blog", // Goes at the very top of every action's instruction. Defaults to "website"
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // Replace (same name)
@@ -50,7 +50,7 @@ plugins: [
 - Instructions assume neither a site type ("blog") nor a language ("Korean"). When the language can't be known from the input (such as
   image alt text), they say "content language", and the runner prepends the content language (the language of the entry being edited,
   or the site default if none) to the top of the instruction.
-- If the shared text `styleGuide` (`aiPlugin({ shared: { styleGuide: … } })`) exists, it goes into the polish and draft instructions.
+- If the shared text `styleGuide` (`ai({ shared: { styleGuide: … } })`) exists, it goes into the polish and draft instructions.
   If not, nothing is added.
 - On the admin AI screen, actions are ordered: field actions first, then built-in actions, then other plugins' actions, then actions
   added in the config.
@@ -59,7 +59,7 @@ plugins: [
 
 ### Actions added by other plugins
 
-A plugin adds actions with `definePlugin({ contributes: { ai: { actions: { name: definition or factory } } } })` (`AiContribution`).
+A plugin adds actions with `definePlugin({ contributes: { ai: { actions: { name: definition or factory } } } })` (`AiContribution`). The types of an action, a check and a contribution are in `@monti-cms/core/ai-contract` (types only), so a plugin that adds actions imports them from core and does not depend on this package; this package re-exports them.
 It is ignored without the AI plugin, so an extension doesn't need to know about the AI plugin and only reads its types
 (`import type`). Adding an existing name is a config error. A site replaces it under the same name or turns it off with `false`. The
 block extension's `diagramDraft`, `diagramEdit` (Mermaid), `chartDraft`, and `chartEdit` (charts), and the SEO extension's `seoTitle`
@@ -140,16 +140,7 @@ const unusedAddress = defineValidator({
 
 A connection does not hold a key. It refers to a key in the central API key store (Tools > API keys, `cms.apiKeys` in the core), which keeps the keys encrypted with the server `secret`. In the connection form you either use a saved key or enter a new one; a new key is saved into the store, named after the connection ("OpenRouter", then "OpenRouter 2" if that name is taken), and the connection keeps its id. The new key and the connection are saved in one transaction, so a failed save leaves no stray key. The value never goes back to the browser, only the key's name and its last four characters. Connections that use the same key share it, so replacing the value in the API keys tab changes every connection at once, and deleting a key that connections use asks first and lists them (they stop working until another key is chosen). If the address of a connection changes and the form says nothing about the key, the key is not carried over to the new address.
 
-- **Upgrade**: `monti db:migrate` moves the keys that earlier versions stored inside the connections (the per-plugin format `mk1:...` and the oldest `v1:...` one) into the key store: one key per distinct value, named after the first connection that used it, with connections that shared a value sharing the key. It can be run again; a value already in the store is reused. A key that can no longer be decrypted (the `secret` changed without `previousSecrets`) is skipped with a warning, and its connection needs a key chosen again.
 - **Changing the secret**: see "Plugin secrets" and "API key store" in the core README.
-
-## Data moved to the plugin storage
-
-The plugin used to create its own tables (`ai_action_overrides`, `ai_custom_actions`, `ai_settings`) in the site's database. It now keeps the same data in the plugin storage
-(`cms.storage("ai")`, collections `action-overrides`, `custom-actions` and `settings`). `monti migrate` copies the rows once, with their values, versions and dates, so an editor who
-had a screen open before the upgrade still saves against the right version, and the custom actions keep their order. The old tables are only read and stay in the database as a backup:
-drop them once you have checked the site. The oldest table (`ai_features`) is read in the same way where its edited values had not been moved yet.
-Replace every instance of the old version at the same time as you run `monti migrate`; an old instance keeps writing the old tables, and those writes are not copied again.
 
 ## Fake connection (development only)
 
@@ -166,7 +157,7 @@ then text inputs. An action whose result must have a specific shape to pass its 
   one event per line).
 - **Shared text**: text inserted into several actions' instructions as `{{shared.key}}` (style guide, tone, audience, and so on).
   There are two kinds.
-  - Config text: `aiPlugin({ shared: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key and name,
+  - Config text: `ai({ shared: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key and name,
     and only the content is edited in the "Shared text" tab of the admin AI screen ("Reset to default" resets the input field to the
     config text). It can't be deleted. An instruction (`prompt`) in the config can only use config text (checked when the config is
     built).
@@ -207,7 +198,7 @@ The block extension's Mermaid and chart actions (create: slash menu, edit: next 
 so you don't list them. For site blocks, attach them yourself.
 
 ```ts
-aiPlugin({
+ai({
 	actions: {
 		graphvizEdit: aiAction({
 			label: "Edit graph",
@@ -229,8 +220,8 @@ block's source, are left as is.
 
 | Entry point | Contents |
 | --- | --- |
-| `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
-| `@monti-cms/ai/server` | Server side (API routes, data migration). Loaded by the core. It is an empty entry point in browser bundles |
+| `@monti-cms/ai` | `ai`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, contribution types (`AiContribution`, `AiActionFactory`, `AiSiteView`) (for the site config, shared by server and browser) |
+| `@monti-cms/ai/server` | Server side (API routes). Loaded by the core. It is an empty entry point in browser bundles |
 | `@monti-cms/ai/admin` | Admin side (AI screen, provider), `useAiAction`, `AiButton`, `aiClient` |
 
 ## Development

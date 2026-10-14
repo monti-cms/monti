@@ -1,9 +1,8 @@
 import type { BulkOp, Site } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
-import type { BulkSelection, runBulk } from "./entries/bulk-bar.js";
+import type { BulkParams, BulkSelection } from "../api/entries.js";
 import type { MenuAction } from "./shared/action-menu.js";
 import type { TaxonomyOptions } from "./shared/use-taxonomy.js";
-export type BulkParams = NonNullable<Parameters<typeof runBulk>[3]>;
 export declare const toSelection: (item: ListEntriesItem) => BulkSelection;
 /**
  * Target of right-click / Delete key. If the pressed row is one of the selected rows and two or more are selected, all selected rows; otherwise just that row.

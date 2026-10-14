@@ -1,7 +1,7 @@
 import { sql } from "kysely";
-import { assertExpectedVersionNumber, assertMigrationName, assertStorageKey, assertStorageName, assertStoredVersion, serializeStorageValue, storageConflict, storageNotFound, } from "../../core/domain/plugin-storage.js";
+import { assertExpectedVersionNumber, assertMigrationName, assertStorageKey, assertStorageName, serializeStorageValue, storageConflict, storageNotFound, } from "../../core/domain/plugin-storage.js";
 import { createDb, dbOn } from "./db/kysely.js";
-import { validateSchemaName } from "./store/context.js";
+import { validateSchemaName, withTransaction } from "./store/context.js";
 /** The migration code is loaded when a step runs, not when the adapter is created. */
 const loadSchemaModule = () => import("./store/schema.js");
 const COLUMNS = ["key", "value", "version", "created_at", "updated_at"];
@@ -83,104 +83,45 @@ function collectionOf(db, plugin, name) {
         },
     };
 }
-/** What a migration step sees: the same collections, inside the step's transaction, plus the plugin's old tables. */
+/** What a migration step sees: the same collections, inside the step's transaction. */
 function migrationOf(client, qSchema, plugin) {
     const db = dbOn(client, qSchema);
     return {
         collection: (name) => collectionOf(db, plugin, name),
-        importItem: async (collection, item) => {
-            assertStorageName("collection", collection);
-            assertStorageKey(item.key);
-            assertStoredVersion(item.version ?? 1);
-            const createdAt = item.createdAt ?? new Date();
-            const res = await db
-                .insertInto("plugin_documents")
-                .values({
-                plugin,
-                collection,
-                key: item.key,
-                value: jsonb(serializeStorageValue(item.value)),
-                version: item.version ?? 1,
-                created_at: createdAt,
-                updated_at: item.updatedAt ?? createdAt,
-            })
-                .onConflict((conflict) => conflict.columns(["plugin", "collection", "key"]).doNothing())
-                .executeTakeFirst();
-            return res.numInsertedOrUpdatedRows === 1n;
-        },
-        readLegacyTable: async (table) => {
-            if (!/^[a-z_][a-z0-9_]*$/.test(table))
-                return null;
-            // A table of the plugin's own is not in `Database`, so it is read with `sql`, which `withSchema` does not touch: the schema is named in the identifier.
-            const exists = await sql `select to_regclass(${`"${qSchema}"."${table}"`})::text as found`.execute(db);
-            if (!exists.rows[0]?.found)
-                return null;
-            return (await sql `select * from ${sql.id(qSchema, table)}`.execute(db)).rows;
-        },
     };
 }
 /** Records of one-time steps share the core migration log. A plugin's step is recorded as `plugin:<plugin>:<name>`. */
 const stepRecord = (plugin, name) => `plugin:${plugin}:${name}`;
+/** The storage of one plugin over a `Db`: the one factory behind both the pool's storage and a transaction's. */
+function storageOn(db, plugin, once) {
+    assertStorageName("plugin", plugin);
+    return { plugin, collection: (name) => collectionOf(db, plugin, name), once };
+}
 /** The storage of one plugin in a Postgres schema. The `plugin_documents` table is created by the core migrations (`monti db:migrate`). */
 export function createPluginStorage(pool, schema, plugin) {
-    assertStorageName("plugin", plugin);
     const qSchema = validateSchemaName(schema);
-    const db = createDb(pool, qSchema);
-    return {
-        plugin,
-        collection: (name) => collectionOf(db, plugin, name),
-        once: async (name, step, options) => {
-            assertMigrationName(name);
-            let ran = false;
-            await (await loadSchemaModule()).runOnce(pool, { schema: qSchema }, stepRecord(plugin, name), async (client) => {
-                if (options?.legacyNames?.length) {
-                    const done = await dbOn(client, qSchema)
-                        .selectFrom("cms_migrations")
-                        .select("name")
-                        .where("name", "in", [...options.legacyNames])
-                        .limit(1)
-                        .executeTakeFirst();
-                    // An earlier version already did this work: the step counts as done, and its record is kept for next time.
-                    if (done)
-                        return;
-                }
-                await step(migrationOf(client, qSchema, plugin));
-                ran = true;
-            });
-            return ran;
-        },
-    };
+    return storageOn(createDb(pool, qSchema), plugin, async (name, step) => {
+        assertMigrationName(name);
+        let ran = false;
+        await (await loadSchemaModule()).runOnce(pool, { schema: qSchema }, stepRecord(plugin, name), async (client) => {
+            await step(migrationOf(client, qSchema, plugin));
+            ran = true;
+        });
+        return ran;
+    });
 }
 /**
- * Runs `work` in one transaction. The storage it hands out reads and writes through the transaction's client, for any plugin, so a write to one plugin's collection and
- * one to another's (the core key store and a plugin's settings) are kept or dropped together. `once` is not available inside it.
+ * Runs `work` in one transaction (`withTransaction`). The storage it hands out reads and writes through the transaction's client, for any plugin, so a write to
+ * one plugin's collection and one to another's (the core key store and a plugin's settings) are kept or dropped together. `once` is not available inside it.
  */
-export async function inPluginTransaction(pool, schema, work) {
+export function inPluginTransaction(pool, schema, work) {
     const qSchema = validateSchemaName(schema);
-    const client = await pool.connect();
-    try {
-        await client.query("BEGIN");
+    return withTransaction(pool, (client) => {
         const db = dbOn(client, qSchema);
-        const result = await work({
-            pluginStorage: (plugin) => {
-                assertStorageName("plugin", plugin);
-                return {
-                    plugin,
-                    collection: (name) => collectionOf(db, plugin, name),
-                    once: async () => {
-                        throw new Error("plugin storage: `once` cannot run inside a transaction");
-                    },
-                };
-            },
+        return work({
+            pluginStorage: (plugin) => storageOn(db, plugin, async () => {
+                throw new Error("plugin storage: `once` cannot run inside a transaction");
+            }),
         });
-        await client.query("COMMIT");
-        return result;
-    }
-    catch (error) {
-        await client.query("ROLLBACK").catch(() => { });
-        throw error;
-    }
-    finally {
-        client.release();
-    }
+    });
 }

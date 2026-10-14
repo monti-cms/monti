@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Activity, ChevronDown, ChevronRight, ExternalLink, FileImage, KeyRound, LayoutTemplate, Plus, Settings2, Trash2, } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
+import { commonMessages } from "../lib/common.messages.js";
 import { cn } from "../lib/utils/cn.js";
 import { AdminLink as Link } from "../router/index.js";
 import { buttonVariants } from "../ui/button.js";
@@ -12,12 +13,12 @@ import { Switch } from "../ui/switch.js";
 import { ThemeToggle } from "../ui/theme-toggle.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip.js";
 import { screensMessages } from "./messages.js";
-import { toolsPages } from "./settings/tabs.js";
 import { ActionContextMenu, MoreActionsButton } from "./shared/action-menu.js";
 import { useAdminFeatures } from "./shared/admin-features.js";
 import { CollectionIcon, NamedIcon } from "./shared/collection-icon.js";
 import { isEntryDrag, readDraggedEntries } from "./shared/entry-drag.js";
 import { folderMenuActions } from "./shared/use-folder-actions.js";
+import { toolsPages } from "./tools/tools-pages.js";
 /** Like a file explorer: F2 opens rename, Delete opens delete (confirm dialog). */
 export function folderKeyHandler(folder, actions) {
     return (event) => {
@@ -39,6 +40,7 @@ const subRow = "group/row flex h-7 items-center gap-1 rounded-md pr-1 text-[13px
 function FolderTree({ nav, closeMobile }) {
     const site = useSite();
     const t = useTranslator(screensMessages);
+    const tc = useTranslator(commonMessages);
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [dropTarget, setDropTarget] = useState(null);
     const { folders, currentFolder } = nav;
@@ -94,13 +96,13 @@ function FolderTree({ nav, closeMobile }) {
     const blankActions = [
         {
             kind: "item",
-            label: t("list.folderAdd"),
+            label: tc("addFolder"),
             icon: Plus,
             onSelect: () => nav.folderActions.requestCreate(null),
         },
         { kind: "item", label: t("list.add", { label }), icon: Plus, onSelect: nav.onCreateEntry },
     ];
-    return (_jsxs("ul", { "aria-label": t("sidebar.folderTree", { label }), className: "mt-0.5 mb-1 flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden", children: [folders.length > 0 && (_jsx("li", { children: _jsx(ActionContextMenu, { actions: blankActions, trigger: _jsx("div", {}), children: _jsx("button", { type: "button", ...dropProps("root", null), "data-active": currentFolder === "all" || undefined, "aria-current": currentFolder === "all" ? "true" : undefined, onClick: () => select("all"), style: { paddingLeft: TREE_INDENT }, className: cn(subRow, "w-full text-left", dropTarget === "root" && "ring-2 ring-cms-sidebar-ring"), children: t("sidebar.folderAll") }) }) })), folders.filter((f) => !f.parentId).map((folder) => renderFolder(folder, 0)), _jsx("li", { children: _jsxs("button", { type: "button", onClick: () => nav.folderActions.requestCreate(null), style: { paddingLeft: TREE_INDENT }, className: cn(subRow, "w-full text-left text-cms-sidebar-foreground/50"), children: [_jsx(Plus, { "aria-hidden": true, className: "size-3.5" }), t("list.folderAdd")] }) }), folders.length > 0 && (_jsx("li", { children: _jsxs(Label, { className: "gap-2 py-1 font-normal text-cms-sidebar-foreground/60 text-xs", style: { paddingLeft: TREE_INDENT }, children: [_jsx(Switch, { size: "sm", checked: nav.includeDescendants, onCheckedChange: (checked) => nav.onIncludeDescendantsChange(checked === true) }), t("sidebar.includeDescendants")] }) }))] }));
+    return (_jsxs("ul", { "aria-label": t("sidebar.folderTree", { label }), className: "mt-0.5 mb-1 flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden", children: [folders.length > 0 && (_jsx("li", { children: _jsx(ActionContextMenu, { actions: blankActions, trigger: _jsx("div", {}), children: _jsx("button", { type: "button", ...dropProps("root", null), "data-active": currentFolder === "all" || undefined, "aria-current": currentFolder === "all" ? "true" : undefined, onClick: () => select("all"), style: { paddingLeft: TREE_INDENT }, className: cn(subRow, "w-full text-left", dropTarget === "root" && "ring-2 ring-cms-sidebar-ring"), children: t("sidebar.folderAll") }) }) })), folders.filter((f) => !f.parentId).map((folder) => renderFolder(folder, 0)), _jsx("li", { children: _jsxs("button", { type: "button", onClick: () => nav.folderActions.requestCreate(null), style: { paddingLeft: TREE_INDENT }, className: cn(subRow, "w-full text-left text-cms-sidebar-foreground/50"), children: [_jsx(Plus, { "aria-hidden": true, className: "size-3.5" }), tc("addFolder")] }) }), folders.length > 0 && (_jsx("li", { children: _jsxs(Label, { className: "gap-2 py-1 font-normal text-cms-sidebar-foreground/60 text-xs", style: { paddingLeft: TREE_INDENT }, children: [_jsx(Switch, { size: "sm", checked: nav.includeDescendants, onCheckedChange: (checked) => nav.onIncludeDescendantsChange(checked === true) }), t("sidebar.includeDescendants")] }) }))] }));
 }
 /** Left navigation area: Content (collections with their folders, media), Tools (templates, plugin pages, API keys, event log), Trash, and Settings with the theme toggle pinned at the bottom. */
 export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, folderCounts }) {

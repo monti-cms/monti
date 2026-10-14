@@ -5,7 +5,6 @@ import type { PluginStorage, StorageItem } from "@monti-cms/core/plugin/server";
  */
 /** The collections of the plugin's storage. */
 export declare const COLLECTIONS: {
-    readonly settings: "settings";
     readonly records: "records";
     readonly queue: "queue";
     readonly conflicts: "conflicts";
@@ -13,11 +12,6 @@ export declare const COLLECTIONS: {
     readonly locks: "locks";
     readonly applying: "applying";
 };
-/** The saved settings (one item, `default`). */
-export interface StoredSettings {
-    /** The secret the push webhook is signed with, encrypted with the plugin's key (`cms.secrets("git-sync")`). */
-    readonly webhookSecret: string | null;
-}
 /**
  * What was last synced for one entry of one target. `blobSha` is the git blob git-sync last wrote (or read) for the entry, `contentHash` the content hash of the published
  * entry it came from. A side changed since then exactly when its current value differs: that is how a hash mismatch is told apart from "nothing to do" and from a conflict.
@@ -108,14 +102,8 @@ interface ApplyingValue {
     readonly at: number;
 }
 export declare const entryKey: (target: string, entryId: string) => string;
-/** The key of a conflict: one per entry per target. */
-export declare const conflictKey: typeof entryKey;
 /** Typed access to the plugin's storage. */
 export declare function createState(storage: PluginStorage): {
-    settings: {
-        get: () => Promise<StorageItem<StoredSettings> | null>;
-        save: (value: StoredSettings, expectedVersion: number) => Promise<StorageItem<StoredSettings>>;
-    };
     records: {
         get: (target: string, entryId: string) => Promise<SyncRecord | null>;
         /** Every record of a target, by entry id. */

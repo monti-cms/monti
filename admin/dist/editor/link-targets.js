@@ -1,7 +1,8 @@
 "use client";
-import { cmsApiUrl, perSite, useSite, withBasePath } from "@monti-cms/core/client";
+import { perSite, useSite, withBasePath } from "@monti-cms/core/client";
 import { useEffect, useSyncExternalStore } from "react";
-import { CmsApiError, cmsFetch } from "../screens/admin-api.js";
+import { CmsApiError } from "../api/client.js";
+import { getEntry } from "../api/entries.js";
 /** How long a lookup is trusted. The title or address of an entry can change while the editor is open. */
 const READY_TTL_MS = 60_000;
 /** How long a failed lookup waits before it is tried again. */
@@ -50,7 +51,7 @@ const storeOf = perSite((site) => {
         if (inflight.has(id))
             return;
         inflight.add(id);
-        cmsFetch(site, cmsApiUrl(`/v1/entries/${encodeURIComponent(id)}`))
+        getEntry(site, id)
             .then((row) => put(id, { status: "ready", target: targetOf(row) }))
             .catch((error) => put(id, error instanceof CmsApiError && error.status === 404 ? MISSING : FAILED))
             .finally(() => inflight.delete(id));
@@ -123,11 +124,17 @@ export function useLinkPaths(ids) {
     }, [key, store]);
     return (id) => linkPathOf(site, id);
 }
-/** Forgets every lookup of the site. For tests, which share the module. */
+/**
+ * Forgets every lookup of the site. For tests, which share the module.
+ * @internal For tests.
+ */
 export function resetLinkTargets(site) {
     storeOf(site).reset();
 }
-/** Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated. */
+/**
+ * Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated.
+ * @internal For tests; the editor asks through the link view.
+ */
 export function requestLinkTarget(site, id) {
     storeOf(site).request(id);
 }

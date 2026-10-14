@@ -114,7 +114,7 @@ Only to change or turn one off, list it under the same name.
 ```ts
 import { mermaidAi } from "@monti-cms/blocks/mermaid/ai";
 
-aiPlugin({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), chartEdit: false } });
+ai({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), chartEdit: false } });
 ```
 
 The block extensions do not load AI plugin code (they read only its types). On sites without the AI plugin, the contribution is not used.

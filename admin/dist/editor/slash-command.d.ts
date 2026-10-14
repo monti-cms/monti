@@ -31,7 +31,10 @@ export declare const baseSlashCommands: (t: TranslatorFor<typeof editorMessages>
  * generates the slash command list for blocks with a registered insert action.
  */
 export declare function buildBlockSlashCommands(site: Site, definitions?: readonly BlockDefinition[], actions?: Record<string, BlockInsertAction>): SlashCommandItem[];
-/** The slash menu of a site: the basic formatting items, then its block insertion items (core blocks after added blocks). */
+/**
+ * The slash menu of a site: the basic formatting items, then its block insertion items (core blocks after added blocks).
+ * @internal For tests; the menu reads the tables.
+ */
 export declare const slashCommands: (site: Site) => SlashCommandItem[];
 /**
  * Slash menu items. `extra` are items added by edit view extensions (plugins) (appended after), and `inline` are items added by text decoration extensions

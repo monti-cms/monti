@@ -39,5 +39,5 @@ export declare function useRelationSearch({ collection, publishedOnly, limit, se
     /** Shows an entry by name right away (one the user just created) and searches again. */
     remember: (entry: RelationEntry) => void;
     /** Searches the same text again. */
-    reload: () => void;
+    reload: () => undefined;
 };

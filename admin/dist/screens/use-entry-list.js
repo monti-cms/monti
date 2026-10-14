@@ -1,21 +1,27 @@
 "use client";
-import { cmsApiUrl, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { CmsApiError, errorText } from "../api/client.js";
+import { bulkEntries, changeEntryStatus, duplicateEntry, entriesKeys, listEntries, } from "../api/entries.js";
+import { foldersKeys, listFolders } from "../api/folders.js";
+import { getPreferences, preferencesKeys, savePreferences as putPreferences } from "../api/preferences.js";
+import { useCmsMutation } from "../api/use-cms-mutation.js";
+import { commonMessages } from "../lib/common.messages.js";
 import { useAdminRouter, useAdminSearchParams } from "../router/index.js";
-import { cmsFetch, errorText } from "./admin-api.js";
-import { describeBulkFailure, runBulk } from "./entries/bulk-bar.js";
+import { describeBulkFailure } from "./entries/bulk-bar.js";
 import { copyTitle } from "./entries/entry-form.js";
 import { actionTargets, rowMenuActions, toSelection } from "./list-row-menu.js";
 import { isExplorerMode, listStateToApiQuery, listStateToSearchParams, parseListState, } from "./list-state.js";
 import { screensMessages } from "./messages.js";
 import { useConfirm } from "./shared/confirm-dialog.js";
 import { OPEN_ITEM_PARAM } from "./shared/entry-href.js";
-import { applyOptimistic, ENTRIES_KEY, entriesKey, fetchFolders, foldersKey, } from "./shared/list-cache.js";
+import { applyOptimistic } from "./shared/list-cache.js";
 import { nounVars } from "./shared/noun.messages.js";
 import { useFolderActions } from "./shared/use-folder-actions.js";
 import { useTaxonomyOptions } from "./shared/use-taxonomy.js";
+import { useUnsavedGuard } from "./shared/use-unsaved-guard.js";
 /**
  * List state in the address bar. When the address has no page size or sort, uses the saved per-collection settings,
  * and saves when sort, page size or column settings change.
@@ -27,7 +33,14 @@ function useListState(mode) {
     const searchParams = useAdminSearchParams();
     const basePath = mode === "trash" ? site.adminHref("/trash") : site.adminHref();
     const parsed = useMemo(() => parseListState(site, new URLSearchParams(searchParams.toString())), [searchParams, site]);
-    const [preferences, setPreferences] = useState(null);
+    // Cached for the session: the list is not drawn until the settings are known, and a later fetch never reorders it under the user.
+    // A failed load falls back to the defaults (the list still works); saving a setting reports its own failure.
+    const preferencesQuery = useQuery({
+        queryKey: preferencesKeys.all,
+        queryFn: ({ signal }) => getPreferences(site, signal).catch(() => ({})),
+        staleTime: Number.POSITIVE_INFINITY,
+    });
+    const preferences = preferencesQuery.data ?? null;
     const collectionPrefs = preferences?.collections?.[parsed.collection] ?? {};
     const state = useMemo(() => ({
         ...parsed,
@@ -40,44 +53,45 @@ function useListState(mode) {
     const navigate = useCallback((next) => router.replace(`${basePath}?${listStateToSearchParams(next).toString()}`, { scroll: false }), [router, basePath]);
     /** Updates the state and writes it to the address. Resets to the first page by default. */
     const update = useCallback((patch, options = { resetPage: true }) => navigate({ ...state, ...(options.resetPage ? { page: 1 } : {}), ...patch }), [navigate, state]);
-    useEffect(() => {
-        cmsFetch(site, cmsApiUrl("/v1/preferences"))
-            .then(setPreferences)
-            .catch(() => setPreferences({}));
-    }, [site]);
     const collection = state.collection;
-    const savePreferences = (patch) => {
-        setPreferences((current) => ({
-            ...current,
-            collections: { ...current?.collections, [collection]: { ...current?.collections?.[collection], ...patch } },
-        }));
-        void cmsFetch(site, cmsApiUrl("/v1/preferences"), {
-            method: "PUT",
-            json: { collections: { [collection]: patch } },
-        }).catch(() => toast.error(t("list.prefsSaveFailed")));
-    };
-    return { state, update, columnSettings: collectionPrefs.columns, savePreferences };
+    const preferencesMutation = useCmsMutation({
+        fn: (patch, { site }) => putPreferences(site, { collections: { [collection]: patch } }),
+        failure: t("list.prefsSaveFailed"),
+        optimistic: {
+            queryKey: preferencesKeys.all,
+            update: (current, patch) => ({
+                ...current,
+                collections: { ...current.collections, [collection]: { ...current.collections?.[collection], ...patch } },
+            }),
+        },
+    });
+    const savePreferences = (patch) => preferencesMutation.mutate(patch);
+    // The saved sort and page size only matter when the address does not say them.
+    const ready = preferences !== null || (parsed.explicit.pageSize && parsed.explicit.sort);
+    return { state, ready, update, columnSettings: collectionPrefs.columns, savePreferences };
 }
 /**
  * One page of the list plus folders. Draws from cache right away and refetches in the background. Keeps the previous rows while conditions change
  * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
-function useEntriesData(state, mode) {
+function useEntriesData(state, mode, ready) {
     const site = useSite();
     const t = useTranslator(screensMessages);
     const isTrash = mode === "trash";
     const collection = state.collection;
     const foldersQuery = useQuery({
-        queryKey: foldersKey(collection),
-        queryFn: ({ signal }) => fetchFolders(site, collection, signal),
+        queryKey: foldersKeys.list(collection),
+        queryFn: ({ signal }) => listFolders(site, collection, signal),
         enabled: !isTrash,
     });
     const folders = useMemo(() => (isTrash ? [] : (foldersQuery.data ?? [])), [isTrash, foldersQuery.data]);
     const apiQuery = listStateToApiQuery(site, state, { trash: isTrash }).toString();
-    const listKey = entriesKey(apiQuery);
+    const listKey = entriesKeys.list(apiQuery);
     const entriesQuery = useQuery({
         queryKey: listKey,
-        queryFn: ({ signal }) => cmsFetch(site, cmsApiUrl(`/v1/entries?${apiQuery}`), { signal, fallback: t("list.loadFailed") }),
+        queryFn: ({ signal }) => listEntries(site, apiQuery, signal, t("list.loadFailed")),
+        // Waits for the saved sort and page size, so the list is requested once with them instead of twice.
+        enabled: ready,
         // Rows from another collection have a different column layout, so they are not kept.
         placeholderData: (previous, previousQuery) => previousQuery && new URLSearchParams(String(previousQuery.queryKey.at(-1))).get("collection") === collection
             ? keepPreviousData(previous)
@@ -98,13 +112,14 @@ function useEntriesData(state, mode) {
 /** Reports bulk results as notifications. Failures list the item name and reason. */
 function announce(site, label, results, items) {
     const t = site.createTranslator(screensMessages);
+    const tc = site.createTranslator(commonMessages);
     const failures = results.filter((result) => !result.ok);
     const ok = results.length - failures.length;
     if (failures.length === 0) {
         toast.success(t("bulk.success", { count: ok, label }));
         return;
     }
-    const titleOf = (id) => items.find((item) => item.id === id)?.title || t("common.untitled");
+    const titleOf = (id) => items.find((item) => item.id === id)?.title || tc("untitled");
     toast.error(ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), {
         description: failures
             .slice(0, 3)
@@ -119,65 +134,54 @@ function announce(site, label, results, items) {
 function useEntryMutations({ listKey, state, options, onResults, }) {
     const site = useSite();
     const t = useTranslator(screensMessages);
+    const tc = useTranslator(commonMessages);
     const queryClient = useQueryClient();
     /** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
-    const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: ENTRIES_KEY });
-    const mutateEntries = async (op, targets, request, params) => {
-        await queryClient.cancelQueries({ queryKey: listKey });
-        const previous = queryClient.getQueryData(listKey);
-        if (previous) {
-            queryClient.setQueryData(listKey, applyOptimistic(previous, op, new Set(targets.map((target) => target.id)), {
-                state,
-                params,
-                options,
-            }));
-        }
-        try {
-            const results = await request();
-            onResults(results);
-            return results;
-        }
-        catch (error) {
-            if (previous)
-                queryClient.setQueryData(listKey, previous);
-            throw error;
-        }
-        finally {
-            void invalidateEntries();
-        }
-    };
+    const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: entriesKeys.all });
+    /**
+     * Applies the change to the list first, then sends the request; a failed request rolls the list back, and the list is synced to server
+     * values once it ends. Restoring is not in the bulk API, so it requests per item. A failure is thrown to the caller (`inline`).
+     */
+    const mutation = useCmsMutation({
+        fn: async ({ op, targets, params }, { site }) => {
+            if (op !== "restore")
+                return bulkEntries(site, op, targets, params);
+            const out = [];
+            for (const target of targets) {
+                try {
+                    await changeEntryStatus(site, target.id, "restore", { expectedVersion: target.expectedVersion });
+                    out.push({ id: target.id, ok: true, version: target.expectedVersion + 1 });
+                }
+                catch (error) {
+                    out.push({ id: target.id, ok: false, error: (error instanceof CmsApiError && error.code) || "internal" });
+                }
+            }
+            return out;
+        },
+        failure: ({ op }) => t("bulk.failed", { label: op }),
+        inline: true,
+        optimistic: {
+            queryKey: listKey,
+            update: (page, { op, targets, params }) => applyOptimistic(page, op, new Set(targets.map((target) => target.id)), { state, params, options }),
+        },
+        invalidate: [entriesKeys.all],
+        onSuccess: onResults,
+    });
+    const run = (op, targets, params) => mutation.mutateAsync({ op, targets, params });
     /** Handles the action through the bulk API and reports the result. */
     const bulk = async (op, label, targets, params = {}) => {
         try {
-            const results = await mutateEntries(op, targets, () => runBulk(site, op, targets, params), params);
-            announce(site, label, results, targets);
+            announce(site, label, await run(op, targets, params), targets);
         }
         catch (error) {
             toast.error(errorText(site, error, t("bulk.failed", { label })));
         }
     };
-    /** Trash restore. Not in the bulk API, so it requests per item. */
+    /** Trash restore. */
     const restore = async (targets) => {
-        const results = await mutateEntries("restore", targets, async () => {
-            const out = [];
-            for (const target of targets) {
-                try {
-                    await cmsFetch(site, cmsApiUrl(`/v1/entries/${target.id}/restore`), {
-                        method: "POST",
-                        json: { expectedVersion: target.expectedVersion },
-                    });
-                    out.push({ id: target.id, ok: true, version: target.expectedVersion + 1 });
-                }
-                catch (error) {
-                    const code = error.code ?? "internal";
-                    out.push({ id: target.id, ok: false, error: code });
-                }
-            }
-            return out;
-        });
-        announce(site, t("bulk.restore"), results, targets);
+        announce(site, tc("lifecycle.restore"), await run("restore", targets), targets);
     };
-    return { mutateEntries, bulk, restore, invalidateEntries };
+    return { run, bulk, restore, invalidateEntries };
 }
 /** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or in trash. */
 function explorerOf(state, folders, mode) {
@@ -197,15 +201,16 @@ function explorerOf(state, folders, mode) {
 export function useEntryList(mode) {
     const site = useSite();
     const t = useTranslator(screensMessages);
+    const tc = useTranslator(commonMessages);
     const router = useAdminRouter();
     const queryClient = useQueryClient();
     const isTrash = mode === "trash";
-    const { state, update, columnSettings, savePreferences } = useListState(mode);
+    const { state, ready, update, columnSettings, savePreferences } = useListState(mode);
     const collection = state.collection;
     const isRecord = site.isItemCollection(collection);
     const isContent = site.isDocumentCollection(collection);
     const options = useTaxonomyOptions(collection, !isTrash);
-    const data = useEntriesData(state, mode);
+    const data = useEntriesData(state, mode, ready);
     const { items, folders } = data;
     const [selectedIds, setSelectedIds] = useState(new Set());
     // Select all targets the current page only. Changing the list clears the selection.
@@ -215,9 +220,16 @@ export function useEntryList(mode) {
     const { confirm, confirmDiscard, dialog: confirmDialog } = useConfirm();
     /** Whether the taxonomy edit panel has unsaved changes. The panel reports it. */
     const recordDirtyRef = useRef(false);
+    /** The same, as state, for the guard on links that leave the list (the sidebar, another collection). */
+    const [recordDirty, setRecordDirtyState] = useState(false);
+    const { dialog: guardDialog } = useUnsavedGuard(recordDirty);
+    const setRecordDirty = (dirty) => {
+        recordDirtyRef.current = dirty;
+        setRecordDirtyState(dirty);
+    };
     /** Opens the taxonomy edit panel directly (without asking). Used to keep a saved item open as is. */
     const showRecord = (target) => {
-        recordDirtyRef.current = false;
+        setRecordDirty(false);
         setRecordTarget(target);
     };
     /** Opens the taxonomy edit panel. If there are unsaved changes, asks first whether to discard them. */
@@ -226,9 +238,15 @@ export function useEntryList(mode) {
             showRecord(target);
     };
     const closeRecord = () => {
-        recordDirtyRef.current = false;
+        setRecordDirty(false);
         setRecordTarget(null);
     };
+    // The panel belongs to the collection it was opened in: moving to another collection (the guard asked first if it had changes) closes it.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: close only when the collection changes
+    useEffect(() => {
+        if (recordTarget && recordTarget.collection !== state.collection)
+            closeRecord();
+    }, [state.collection]);
     // The address's `open` (an item opened from, e.g., media usages) opens once into the item slot and is then removed from the address.
     const searchParams = useAdminSearchParams();
     const openParam = searchParams.get(OPEN_ITEM_PARAM);
@@ -252,7 +270,7 @@ export function useEntryList(mode) {
         collection,
         folders,
         onChanged: async (deletedId) => {
-            await queryClient.invalidateQueries({ queryKey: foldersKey(collection) });
+            await queryClient.invalidateQueries({ queryKey: foldersKeys.list(collection) });
             // If the folder being viewed was deleted, go back to the all view.
             if (deletedId && state.folder === deletedId)
                 update({ folder: "all" });
@@ -261,56 +279,49 @@ export function useEntryList(mode) {
         },
     });
     const moveEntries = (folderId, entries) => void bulk("folder.move", t("bulk.move"), entries.map((entry) => ({ ...entry, title: items.find((item) => item.id === entry.id)?.title })), { folderId });
-    const titleOf = (targets) => `'${targets[0]?.title || t("common.untitled")}'`;
+    const titleOf = (targets) => `'${targets[0]?.title || tc("untitled")}'`;
     const confirmTrash = async (targets) => {
         const ok = await confirm({
-            title: t("bulk.trash"),
+            title: tc("lifecycle.trash"),
             description: targets.length === 1
                 ? t("trash.askOne", { title: titleOf(targets) })
                 : t("trash.askMany", { count: targets.length }),
-            confirmLabel: t("bulk.trash"),
+            confirmLabel: tc("lifecycle.trash"),
             destructive: true,
         });
         if (ok)
-            await bulk("trash", t("bulk.trash"), targets);
+            await bulk("trash", tc("lifecycle.trash"), targets);
     };
     const confirmArchive = async (targets) => {
         const ok = await confirm({
-            title: t("archive.title"),
+            title: tc("lifecycle.archive"),
             description: targets.length === 1
                 ? t("archive.askOne", { title: titleOf(targets) })
                 : t("archive.askMany", { count: targets.length, ...nounVars(site, collection) }),
-            confirmLabel: t("archive.title"),
+            confirmLabel: tc("lifecycle.archive"),
         });
         if (ok)
-            await bulk("archive", t("bulk.archive"), targets);
+            await bulk("archive", tc("lifecycle.archive"), targets);
     };
     const confirmPermanentDelete = async (targets) => {
         const ok = await confirm({
-            title: t("delete.title"),
+            title: tc("lifecycle.deletePermanently"),
             description: targets.length === 1
                 ? t("delete.askOne", { title: titleOf(targets) })
                 : t("delete.askMany", { count: targets.length }),
-            confirmLabel: t("delete.title"),
+            confirmLabel: tc("lifecycle.deletePermanently"),
             destructive: true,
         });
         if (ok)
-            await bulk("permanentDelete", t("bulk.permanentDelete"), targets);
+            await bulk("permanentDelete", tc("lifecycle.deletePermanently"), targets);
     };
-    const duplicate = async (item) => {
-        try {
-            const copy = await cmsFetch(site, cmsApiUrl(`/v1/entries/${item.id}/duplicate`), {
-                method: "POST",
-                json: { title: copyTitle(site, item.collection, item.title) },
-                fallback: t("duplicate.failed"),
-            });
-            toast.success(t("duplicate.done", { title: item.title || t("common.untitled") }));
-            router.navigate(site.adminEntryEditHref(copy.entry.id));
-        }
-        catch (error) {
-            toast.error(errorText(site, error, t("duplicate.failed")));
-        }
-    };
+    const duplicateMutation = useCmsMutation({
+        fn: (item, { site }) => duplicateEntry(site, item.id, { title: copyTitle(site, item.collection, item.title) }, t("duplicate.failed")),
+        success: (_copy, item) => t("duplicate.done", { title: item.title || tc("untitled") }),
+        failure: t("duplicate.failed"),
+        onSuccess: (copy) => router.navigate(site.adminEntryEditHref(copy.entry.id)),
+    });
+    const duplicate = (item) => duplicateMutation.mutate(item);
     /** New item. Document entries are created in the edit screen in the current folder; taxonomy items through a small form. */
     const createNew = () => isRecord
         ? void openRecord({ collection, id: null })
@@ -320,7 +331,7 @@ export function useEntryList(mode) {
         openEditor: (target) => router.navigate(editHref(target)),
         openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),
         openRecord: (target) => void openRecord({ collection, id: target.id }),
-        duplicate: (target) => void duplicate(target),
+        duplicate: (target) => duplicate(target),
         restore: (targets) => void restore(targets),
         confirmTrash: (targets) => void confirmTrash(targets),
         confirmArchive: (targets) => void confirmArchive(targets),
@@ -353,12 +364,12 @@ export function useEntryList(mode) {
         openRecord,
         showRecord,
         closeRecord,
-        setRecordDirty: (dirty) => {
-            recordDirtyRef.current = dirty;
-        },
+        setRecordDirty,
         /** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
         confirmDialog,
-        reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: [...ENTRIES_KEY, "taxonomy"] }),
+        /** The discard dialog of a link clicked while the panel has changes. Render once per screen. */
+        guardDialog,
+        reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: entriesKeys.taxonomy() }),
         invalidateEntries,
         moveEntries,
         createNew,

@@ -1,3 +1,4 @@
+import type { LifecycleStore } from "../core/store/ports.js";
 import { type ContentServiceOptions } from "./content-service.js";
 import type { Issue, StorePort } from "./types.js";
 export declare const BULK_OPS: readonly ["relation.add", "relation.remove", "relation.set", "folder.move", "archive", "unarchive", "trash", "publish", "permanentDelete"];
@@ -38,18 +39,12 @@ export type BulkItemResult = {
     readonly usages?: readonly BulkUsage[];
 };
 /** Contract a bulk operation requires from the store. Permanent deletion is used only in bulk operations, so it is not put in the shared `StorePort`. */
-export interface BulkStorePort<T = unknown> extends StorePort<T> {
-    /** Permanently deletes only trash items. Rejects with `in_use` (details.usages) if other content references it. */
-    permanentDeleteEntry(params: {
-        id: string;
-        expectedVersion: number;
-    }): Promise<void>;
-}
+export type BulkStorePort = StorePort & Pick<LifecycleStore, "permanentDeleteEntry">;
 /**
  * Bulk operations. Every item runs the same write pipeline as a single write (hooks included): a publish is the single publish, a relation or folder
  * change is a save. Results and errors are per item.
  */
-export declare const createBulkService: <T = unknown>(storePort: BulkStorePort<T>, options: ContentServiceOptions) => {
+export declare const createBulkService: (storePort: BulkStorePort, options: ContentServiceOptions) => {
     run: (request: BulkRequest) => Promise<{
         results: BulkItemResult[];
     }>;

@@ -1,3 +1,4 @@
+import { UUID_SOURCE } from "../config/rules.js";
 /**
  * Links in a stored document. An internal link is `{ entryId }`: the id of the translation group of the entry it points to (the source entry's id, the same
  * id a relation holds), so the link follows the reader's language and falls back to the source. An external link is `{ href, title? }`. A link never
@@ -5,7 +6,7 @@
  */
 /** How a text notation (MDX) writes an entry link: `[text](entry:<id>)`. The id is the only thing it carries. */
 export const ENTRY_LINK_PREFIX = "entry:";
-const ENTRY_LINK = /^entry:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+const ENTRY_LINK = new RegExp(`^entry:(${UUID_SOURCE})$`, "i");
 /** The text-notation address of an entry link. */
 export const entryLinkHref = (entryId) => `${ENTRY_LINK_PREFIX}${entryId}`;
 /** The entry id an address in the form `entry:<id>` names, or `undefined` for any other address. */

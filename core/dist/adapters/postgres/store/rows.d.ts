@@ -15,15 +15,14 @@ export declare function extractVisibleText(site: Site, doc: StoredDocument): str
 /** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
 export declare const readDoc: (value: unknown) => StoredDocument | null;
 /**
- * The document of a stored body. A body whose `doc` column is empty or unreadable (a row older than stored documents) reads as the document
- * of one `unparsed` node holding its `mdx` column when there is one, so every body a store hands out is a document.
+ * The document of a stored body. A body whose `doc` column is empty or not a stored document of a known version reads as the document of one empty
+ * `unparsed` node, which blocks publishing, so every body a store hands out is a document.
  */
-export declare const readBodyDoc: (value: unknown, mdx: string | null) => StoredDocument;
+export declare const readBodyDoc: (value: unknown) => StoredDocument;
 /** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
 export declare const readTranslation: (value: unknown) => TranslationState | null;
 export interface BodyRow {
     content_hash: string;
-    mdx: string | null;
     doc: StoredDocument;
     schema_version: number;
     metadata: EntryMetadata;
@@ -31,11 +30,10 @@ export interface BodyRow {
     translation: TranslationState | null;
 }
 export interface ReferenceRow {
-    /** Legacy rows may be `category` or `tag`. */
     kind: string;
     target_id: string;
     is_stale: boolean;
-    /** As stored: a body occurrence may still be in the old shape (`{type:"mdx", line, column}`). */
+    /** As stored; `readReferenceOccurrences` validates it. */
     occurrences: unknown;
 }
 /** The columns of `content_addresses` the publish check reads. */
@@ -59,14 +57,14 @@ export declare const MEDIA_COLUMN_NAMES: readonly ["id", "status", "filename", "
 /** A row of `media_assets` as `MEDIA_COLUMN_NAMES` selects it. */
 export type MediaRow = Pick<Selectable<MediaAssetsTable>, (typeof MEDIA_COLUMN_NAMES)[number]>;
 export declare const mapMediaRow: (row: MediaRow) => MediaAssetRecord;
-/** The columns of `body_templates` that make a `BodyTemplate` (the `mdx` column is no longer read). */
+/** The columns of `body_templates` that make a `BodyTemplate`. */
 export type TemplateRow = Pick<Selectable<BodyTemplatesTable>, "id" | "name" | "doc" | "version" | "created_at" | "updated_at">;
 export declare const mapTemplateRow: (row: TemplateRow) => BodyTemplate;
 /** Inserts a reference index row. Picks the FK target column by kind (same rule as the CHECK constraint). */
 export declare function insertReferences(db: Db, entryId: string, state: "working" | "published", references: readonly Reference[]): Promise<void>;
 export declare function readReferences(db: Db, entryId: string, state: "working" | "published"): Promise<Reference[]>;
 export declare function readBody(db: Db, entryId: string, state: "working" | "published"): Promise<BodyRow | undefined>;
-/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
+/** Writes the working/published body. Also updates the plain text used for search. `doc` is the only source of a body. */
 export declare function writeBody(site: Site, db: Db, entryId: string, state: "working" | "published", body: {
     metadata: EntryMetadata;
     doc: StoredDocument;

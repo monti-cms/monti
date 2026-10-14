@@ -1,18 +1,6 @@
-import { fieldsOf, layoutOf, setProp, titleFieldName, withLayout } from "./schema-model.js";
-/** Why the panel does not draw a top-level field, or `null` when it does. */
-export function noPanelReason(collection, name) {
-    const field = fieldsOf(collection)[name];
-    if (!field)
-        return null;
-    if (titleFieldName(collection) === name)
-        return "title";
-    return field.kind !== "conditional" && field.hidden === true ? "hidden" : null;
-}
-/** The own tab of a field a plugin placed, or `undefined`. */
-export const ownTabOf = (collection, name) => {
-    const tab = fieldsOf(collection)[name]?.tab;
-    return typeof tab === "string" && tab !== "" ? tab : undefined;
-};
+import { DEFAULT_TAB, isPanelField, panelGroupsOf, } from "@monti-cms/core/client";
+import { moveWithin } from "../../lib/utils/move-within.js";
+import { fieldsOf, setProp, withLayout } from "./schema-model.js";
 const copy = (tree) => structuredClone(tree);
 const isRun = (block) => block !== undefined && block.title === null;
 /** Drops empty runs and joins runs that touch: neither shows in the panel. */
@@ -32,17 +20,27 @@ function tidy(tab) {
     }
     tab.blocks = out;
 }
+/** A tab only a plugin fills: it has no group of the site's, so it exists without an entry in the layout. */
+const pluginOnly = (tab) => tab.blocks.length === 0 && tab.locked.length > 0;
+/**
+ * Cleans the blocks of every tab and puts the tabs in the order the panel draws them: the default tab, the tabs that have a group of the site's, then the tabs only a
+ * plugin fills (the panel draws what plugins place after everything the layout says).
+ */
 const tidied = (tree) => {
     for (const tab of tree.tabs)
         tidy(tab);
+    const [first, ...others] = tree.tabs;
+    if (first)
+        tree.tabs = [first, ...others.filter((tab) => !pluginOnly(tab)), ...others.filter(pluginOnly)];
     return tree;
 };
-/** The tree of a collection. `defaultTab` is the name of the panel's first tab. */
-export function treeOf(collection, defaultTab) {
-    const names = Object.keys(fieldsOf(collection));
-    const pinned = names.filter((name) => noPanelReason(collection, name) !== null);
-    const locked = (name) => !pinned.includes(name) && ownTabOf(collection, name) !== undefined;
-    const tree = { pinned, tabs: [{ name: defaultTab, blocks: [], locked: [] }] };
+/** The tree of a collection, from the groups of the real panel. `placements` are what the site's plugins place (`placementsOf(site.plugins)`). */
+export function treeOf(collection, placements) {
+    const source = collection;
+    const tree = {
+        pinned: Object.keys(fieldsOf(collection)).filter((name) => !isPanelField(source, name)),
+        tabs: [{ name: DEFAULT_TAB, blocks: [], locked: [] }],
+    };
     const tab = (name) => {
         const found = tree.tabs.find((item) => item.name === name);
         if (found)
@@ -51,32 +49,18 @@ export function treeOf(collection, defaultTab) {
         tree.tabs.push(created);
         return created;
     };
-    const placed = new Set();
-    for (const group of layoutOf(collection)) {
-        const target = tab(group.tab && group.tab !== "" ? group.tab : defaultTab);
-        const fields = group.fields.filter((name) => {
-            if (!names.includes(name) || placed.has(name) || pinned.includes(name) || locked(name))
-                return false;
-            placed.add(name);
-            return true;
-        });
-        target.blocks.push({
-            title: group.group ? group.group : null,
-            ...(group.group && group.collapsed === true ? { collapsed: true } : {}),
-            fields,
-        });
-    }
-    const rest = [];
-    for (const name of names) {
-        if (pinned.includes(name))
+    for (const group of panelGroupsOf(source, placements)) {
+        const target = tab(group.tab);
+        if (group.placedBy !== undefined) {
+            target.locked.push(...group.fields);
             continue;
-        const own = ownTabOf(collection, name);
-        if (own !== undefined)
-            tab(own).locked.push(name);
-        else if (!placed.has(name))
-            rest.push(name);
+        }
+        target.blocks.push({
+            title: group.group ?? null,
+            ...(group.collapsed === true ? { collapsed: true } : {}),
+            fields: [...group.fields],
+        });
     }
-    tree.tabs[0].blocks.push({ title: null, fields: rest });
     return tidied(tree);
 }
 /**
@@ -100,7 +84,8 @@ export function withTree(collection, tree) {
             ...tabKey,
             ...(block.collapsed === true ? { collapsed: true } : {}),
         }));
-        return at > 0 && entries.length === 0 ? [{ fields: [], ...tabKey }] : entries;
+        // A tab a plugin fills exists without an entry; any other tab needs one to exist in the file.
+        return at > 0 && entries.length === 0 && tab.locked.length === 0 ? [{ fields: [], ...tabKey }] : entries;
     });
     return withLayout(setProp(collection, "fields", ordered), layout);
 }
@@ -218,6 +203,13 @@ export function removeGroup(tree, ref) {
 /** Moves a block (with its fields) to the place of another block, in its tab or in another one; `to.block` past the last block means the end. */
 export function moveGroup(tree, from, to) {
     const next = copy(tree);
+    if (from.tab === to.tab) {
+        const tab = next.tabs[from.tab];
+        if (!tab)
+            return next;
+        tab.blocks = moveWithin(tab.blocks, from.block, to.block);
+        return tidied(next);
+    }
     const [moved] = next.tabs[from.tab]?.blocks.splice(from.block, 1) ?? [];
     const target = next.tabs[to.tab];
     if (!moved || !target)
@@ -233,8 +225,6 @@ export function moveGroupBy(tree, ref, delta) {
 }
 /** Moves a group to the end of another tab. */
 export const moveGroupToTab = (tree, from, tab) => moveGroup(tree, from, { tab, block: Number.MAX_SAFE_INTEGER });
-/** Moves a field, in no group, to the end of a tab. */
-export const moveFieldToTab = (tree, name, tab) => placeUngrouped(tree, name, tab);
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */
 export function tabProblem(tree, name, except) {
     if (name.trim() === "")
@@ -245,7 +235,7 @@ export function addTab(tree, name) {
     const next = copy(tree);
     if (tabProblem(next, name) === null)
         next.tabs.push({ name: name.trim(), blocks: [], locked: [] });
-    return next;
+    return tidied(next);
 }
 /** Whether a tab can be renamed or removed: not the default one, and not one a plugin puts fields in. */
 export const tabIsEditable = (tree, index) => index > 0 && (tree.tabs[index]?.locked.length ?? 0) === 0;
@@ -271,11 +261,11 @@ export function removeTab(tree, index) {
 export function moveTab(tree, index, delta) {
     const next = copy(tree);
     const to = index + delta;
-    if (index < 1 || to < 1 || to >= next.tabs.length)
+    const movable = next.tabs.filter((tab, at) => at > 0 && !pluginOnly(tab)).length;
+    const tab = next.tabs[index];
+    if (index < 1 || to < 1 || to > movable || !tab || pluginOnly(tab))
         return next;
-    const [moved] = next.tabs.splice(index, 1);
-    if (moved)
-        next.tabs.splice(to, 0, moved);
+    next.tabs = moveWithin(next.tabs, index, to);
     return next;
 }
 /** Whether the tree has more than the default tab: only then does the tree show the tab level. */

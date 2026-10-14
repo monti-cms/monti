@@ -57,7 +57,7 @@ export interface ContentEvent extends ContentChange {
  * The change stands even if it fails, and the failure is retried. Delivery is at least once, so it must be idempotent: wrap work that
  * must not be repeated in `event.once(...)`.
  */
-export type AfterCommit = (event: ContentEvent) => void | DeferredDelivery | Promise<void | DeferredDelivery>;
+export type AfterCommit = (event: ContentEvent) => undefined | DeferredDelivery | Promise<undefined | DeferredDelivery>;
 /**
  * What a subscriber returns (or, as {@link DeferDelivery}, throws) to say "not yet, call me again at `retryAt`", for example while it batches events. The delivery
  * is rescheduled: it is not a failure, so it is not listed as failed, does not count in the failed badge, does not use up an attempt and never dead-letters.

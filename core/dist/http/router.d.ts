@@ -5,18 +5,18 @@ import type { Cms, HandleOptions } from "../cms/index.js";
  * Every route gets the CMS instance in its context (`{ params, cms }`).
  */
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
-/** Route file. Handler params (`{ id }` etc.) differ per route, so they are called as `RouteHandler`. */
+/** A method of a route file: `route(...)` for an admin route, `publicRoute(...)` for one marked `public`. The params (`{ id }` etc.) differ per route. */
 type RouteModule = Partial<Record<Method, unknown>>;
 type CompiledRoute = {
     segments: string[];
     module: RouteModule;
-    guarded: boolean;
+    public: boolean;
 };
 /** The route and params matching the path segments. Named segments match before `[name]` segments (table order). */
 export declare function matchRoute(path: readonly string[], routes?: readonly CompiledRoute[]): {
     module: RouteModule;
     params: Record<string, string>;
-    guarded: boolean;
+    public: boolean;
 } | null;
 /** Registered admin API paths (for docs and tests). */
 export declare const CMS_ROUTE_PATTERNS: readonly string[];

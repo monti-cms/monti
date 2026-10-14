@@ -7,32 +7,48 @@ and a switch to hide the page from search engines. With `@monti-cms/ai`, search 
 
 ## Registration
 
+Add the plugin to the config. The fields themselves are ordinary fields of `monti.schema.ts`, found by role, so the schema file stays plain data that the settings screen can edit.
+
 ```ts
 // monti.config.ts
-import { defineConfig } from "@monti-cms/core/server";
-import { seo, seoFields } from "@monti-cms/seo";
-
-const article = defineCollection({
-	label: "Article",
-	kind: "document",
-	fields: {
-		title: fields.text({ label: "Title" }),
-		slug: fields.slug({ label: "Slug", from: "title" }),
-		excerpt: fields.text({ label: "Excerpt", role: "summary" }),
-		...seoFields(),
-	},
-	layout: [{ fields: ["title", "slug", "excerpt"] }], // SEO fields gather in the SEO tab even if not listed
-});
+import { seo } from "@monti-cms/seo";
 
 export const cms = defineConfig({
+	schema,
 	// …
 	plugins: [seo()],
 });
 ```
 
-The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
+In the settings screen, open the collection's **Fields** tab and choose **Add SEO fields**. The action is shown when the `seo()` plugin is on and the collection has no field with an SEO role yet; it writes the fields below into `monti.schema.ts` through the usual draft and review steps (names already taken get a number). The same fields can be written by hand:
 
-## Field set `seoFields(options?)`
+```ts
+// monti.schema.ts
+fields: {
+	title: { kind: "text", label: "Title" },
+	summary: { kind: "text", label: "Summary", role: "summary" },
+	searchPreview: { kind: "view", view: "search" },
+	seoTitle: { kind: "text", label: "Search title", localized: true, role: "seoTitle", input: "seo-title", inputOptions: { limit: 60 } },
+	seoDescription: { kind: "text", label: "Search description", localized: true, multiline: true, role: "seoDescription", input: "seo-description", inputOptions: { limit: 155 } },
+	ogImageId: { kind: "media", label: "Share image", localized: true, role: "ogImage", accept: "image" },
+	seoRobots: { kind: "select", label: "Hide from search engines", role: "noindex", input: "seo-noindex", options: { index: "Show", noindex: "Hide" }, defaultValue: "index" },
+	canonicalUrl: { kind: "text", label: "Original URL", localized: true, role: "canonical", placeholder: "https://" },
+},
+```
+
+The plugin places them in a tab of their own even when `layout` does not list them. The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` already covers it (no Tailwind needed in the app).
+
+## Field set `seoFields(options?)` (collections written in code)
+
+A collection defined in code (`defineCollection` in `monti.config.ts`) can spread the same fields with `seoFields()`. Calling a function there means the schema is no longer a plain literal, so the settings screen shows it read-only; prefer the schema file unless the collection has to stay in code.
+
+```ts
+const article = defineCollection({
+	label: "Article",
+	kind: "document",
+	fields: { title, slug, ...seoFields() },
+});
+```
 
 | Slot | Default name | Field | Role (`role`) | Edit screen |
 | --- | --- | --- | --- | --- |
@@ -43,14 +59,13 @@ The SEO panel needs no stylesheet of its own: `@monti-cms/admin/styles.css` alre
 | `noindex` | `seoNoindex` | select (`index`, `noindex`) | `noindex` | A switch in the label row. On means `noindex` |
 | `canonical` | `seoCanonical` | text | `canonical` | Canonical URL |
 
-Every field has a `tab` (default `SEO`), so they gather in that tab of the edit screen even without a `layout`. Values are found by role, not by field name,
+The `seo()` plugin places them in a tab of the edit screen of their own (default `SEO`, set with `seo({ tab })`), found by role and by the preview's view name, even without a `layout`. Values are found by role, not by field name,
 so names are up to the site.
 
 ```ts
 seoFields({
 	keys: { title: "metaTitle", image: "ogImageId" }, // field names (reuse the names of values already stored)
 	labels: { title: "Search title" }, // labels
-	tab: "Search", // tab name
 	localized: false, // keep title, description, image and canonical URL separate per language? (default true; hiding is always shared)
 	limits: { title: 70, description: 160 }, // recommended lengths: the count changes color when exceeded and it becomes the AI suggestion length (saving is not blocked)
 	omit: ["canonical"], // slots to omit
@@ -64,10 +79,10 @@ The recommended length is stored in the field's `inputOptions.limit`. If you nee
 - **Admin UI** (`@monti-cms/seo/admin`): registers the view field `search`, the input pieces `seo-title` and `seo-description` (hint and character count),
   and `seo-noindex` (switch) through `CmsAdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
 - **Config validation**: `seoTitle`, `seoDescription` and `canonical` must be text, `ogImage` must be media, and `noindex` must be a select
-  field with a `noindex` option (`validateSeoFields`).
+  field with a `noindex` option (`checkSeoFields`).
 - **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)
   (`contributes.ai`). They attach to every collection that has the role fields, and the length is field `max` → recommended length → 60 / 155. To change one:
-  `aiPlugin({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
+  `ai({ actions: { seoTitle: seoAi.title({ prompt }) } })`; to turn it off: `seoTitle: false` or `seo({ ai: false })`.
 
 ## Public pages `seoOf(collection, metadata)`
 
@@ -86,7 +101,7 @@ It reads values by role from the collection definition (the result of `defineCol
 
 | Entry point | Contents |
 | --- | --- |
-| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `validateSeoFields` (site config and public pages, shared by server and browser) |
+| `@monti-cms/seo` | `seo`, `seoFields`, `seoOf`, `seoAi`, `SEO_ROLES`, `checkSeoFields` (site config and public pages, shared by server and browser) |
 | `@monti-cms/seo/admin` | Admin-side provider (the core loads it through the plugin definition's `admin`) |
 
 ## Development

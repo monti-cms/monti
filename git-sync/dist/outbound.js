@@ -1,5 +1,7 @@
-import { CmsError, problemText } from "@monti-cms/core/plugin/server";
+import { CmsError } from "@monti-cms/core/plugin/server";
 import { exportEntry, isSyncable } from "./entry-file.js";
+import { log } from "./log.js";
+import { serverMessages } from "./server.messages.js";
 import { entryKey } from "./state.js";
 import { APPLYING_WINDOW_MS, GitSyncError, GitSyncNotConfigured, NOT_CONFIGURED_RETRY_MS, } from "./sync.js";
 /**
@@ -242,11 +244,7 @@ export async function flushTarget(ctx, target, options = {}) {
         const { pattern } = await ctx.format(target);
         const head = await client.getBranchHead(target.branch);
         if (!head)
-            throw new GitSyncError(problemText({
-                what: `The branch "${target.branch}" does not exist in ${target.repo}`,
-                where: "`branch` of the target in gitSync() of monti.config.ts",
-                fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
-            }));
+            throw new GitSyncError(ctx.cms.site.createTranslator(serverMessages)("branchMissing", { branch: target.branch, repo: target.repo }));
         const plan = {
             ctx,
             target,
@@ -324,7 +322,11 @@ export async function flushTarget(ctx, target, options = {}) {
     });
     if (result.failed.length > 0) {
         const first = result.failed[0];
-        throw new GitSyncError(`${result.failed.length} queued ${result.failed.length === 1 ? "entry" : "entries"} could not be synced (${first?.entryId}: ${first?.message}); they stay queued and are retried`);
+        throw new GitSyncError(ctx.cms.site.createTranslator(serverMessages)(result.failed.length === 1 ? "queueFailedOne" : "queueFailedMany", {
+            count: result.failed.length,
+            entry: first?.entryId ?? "",
+            message: first?.message ?? "",
+        }));
     }
     return result;
 }
@@ -345,7 +347,7 @@ function scheduleTrailingFlush(ctx, target, delayMs) {
         timers.delete(target.id);
         flushTarget(ctx, target).catch((error) => {
             if (!(error instanceof GitSyncNotConfigured))
-                console.error(`[git-sync] flush of ${target.id} failed`, error);
+                log.error(`flush of ${target.id} failed`, error);
         });
     }, delayMs);
     timer.unref?.();
@@ -365,7 +367,7 @@ async function settle(ctx, target, entryId, queuedAt) {
     // Still queued although nothing failed: another process holds it (or a newer event queued the entry again and will flush it itself).
     const left = await ctx.state.queue.get(target.id, entryId);
     if (left && left.value.queuedAt <= queuedAt) {
-        throw new GitSyncError("The entry is queued but was not committed yet; it is retried");
+        throw new GitSyncError(ctx.cms.site.createTranslator(serverMessages)("notCommitted"));
     }
     return undefined;
 }
@@ -432,11 +434,11 @@ export async function resumeAfterToken(ctx) {
     for (const target of ctx.targets) {
         if ((await ctx.state.queue.list(target.id)).length === 0)
             continue;
-        await flushTarget(ctx, target).catch((error) => console.error(`[git-sync] flush of ${target.id} after saving the token failed`, error));
+        await flushTarget(ctx, target).catch((error) => log.error(`flush of ${target.id} after saving the token failed`, error));
     }
     await ctx.cms.events
         .retry({ all: true })
-        .catch((error) => console.error("[git-sync] event retry after saving the token failed", error));
+        .catch((error) => log.error("event retry after saving the token failed", error));
 }
 /** Queues every published entry of a target (the first sync) and commits them in one go. Entries already in git as they are cost nothing. */
 export async function pushAll(ctx, target) {

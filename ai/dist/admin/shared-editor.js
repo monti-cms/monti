@@ -1,25 +1,22 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsFetch, errorText } from "@monti-cms/admin/api";
-import { Button, Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, Field, FieldGroup, FieldLabel, FieldTitle, IconButton, Input, Textarea, useConfirm, } from "@monti-cms/admin/kit";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
+import { Button, commonMessages, DETAIL_PANE_FRAME, EditorFooter, EmptyState, Field, FieldGroup, FieldLabel, FieldTitle, IconButton, Input, ListPane, ListRow, LoadErrorAlert, MasterDetail, Textarea, useConfirm, useDraftEditor, } from "@monti-cms/admin/kit";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Plus, Quote, RotateCcw, Save, Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { toast } from "sonner";
-import { DETAIL_PANE, InlineError, ListRow, ListSkeleton, LoadError } from "./connection-editor.js";
+import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
+import { useId, useState } from "react";
+import { aiKeys, createAiShared, deleteAiShared, getAiShared, updateAiShared } from "./api.js";
 import { sharedMessages } from "./shared-editor.messages.js";
-export const AI_SHARED_KEY = ["cms", "ai", "shared"];
 /** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
 export const PROMPT_ROWS = 8;
 export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
-const SHARED_API = cmsApiUrl("/v1/ai/shared");
 export function useAiShared() {
     const site = useSite();
     const t = useTranslator(sharedMessages);
     return useQuery({
-        queryKey: AI_SHARED_KEY,
-        queryFn: ({ signal }) => cmsFetch(site, SHARED_API, { signal, fallback: t("error.load") }),
+        queryKey: aiKeys.shared(),
+        queryFn: ({ signal }) => getAiShared(site, { signal, fallback: t("error.load") }),
     });
 }
 /** Shape to put into instructions. */
@@ -38,17 +35,16 @@ export function SharedManager({ selected, onOpen, onSelectedChange, onDirtyChang
     const query = useAiShared();
     const view = query.data;
     const current = view?.items.find((item) => item.key === selected) ?? null;
-    const applySaved = (saved) => queryClient.setQueryData(AI_SHARED_KEY, saved);
-    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", children: [query.error && !view && (_jsx(LoadError, { message: errorText(site, query.error, t("error.load")), onRetry: () => void query.refetch() })), _jsxs("div", { className: "flex min-h-0 flex-1 overflow-hidden", children: [_jsx("div", { className: "flex w-72 shrink-0 flex-col border-r", children: _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": t("list.label"), children: query.isPending ? (_jsx(ListSkeleton, { rows: 2 })) : view?.items.length === 0 ? (_jsx("li", { className: "px-3 py-6 text-center text-cms-muted-foreground text-xs", children: t("list.empty") })) : (view?.items.map((item) => (_jsx(ListRow, { title: item.label, detail: detailOf(t, item), current: selected === item.key, onClick: () => onOpen(item.key) }, item.key)))) }) }), _jsx("div", { className: "flex min-w-0 flex-1 flex-col overflow-y-auto", children: view && (selected === "new" || current) ? (_jsx(SharedEditor, { version: view.version, item: current, onSaved: (saved, key) => {
-                                applySaved(saved);
-                                onSelectedChange(key);
-                            }, onDeleted: (saved) => {
-                                applySaved(saved);
-                                onSelectedChange(null);
-                            }, onCancel: () => onSelectedChange(null), onConflict: () => void query.refetch(), onDirtyChange: onDirtyChange }, selected ?? "none")) : (view && (_jsxs(Empty, { className: "flex-1", children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(Quote, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("empty.title") })] }), _jsx(EmptyContent, { children: _jsxs(Button, { type: "button", size: "sm", onClick: () => onOpen("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("action.add")] }) })] }))) })] })] }));
+    const applySaved = (saved) => queryClient.setQueryData(aiKeys.shared(), saved);
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", children: [query.error && !view && (_jsx(LoadErrorAlert, { className: "m-3", message: errorText(site, query.error, t("error.load")), onRetry: () => void query.refetch() })), _jsx(MasterDetail, { list: _jsx(ListPane, { label: t("list.label"), loading: query.isPending, skeletonRows: 2, empty: view?.items.length === 0 ? _jsx(EmptyState, { compact: true, title: t("list.empty") }) : null, children: view?.items.map((item) => (_jsx(ListRow, { title: item.label, detail: detailOf(t, item), current: selected === item.key, onClick: () => onOpen(item.key) }, item.key))) }), children: view && (selected === "new" || current) ? (_jsx(SharedEditor, { version: view.version, item: current, onSaved: (saved, key) => {
+                        applySaved(saved);
+                        onSelectedChange(key);
+                    }, onDeleted: (saved) => {
+                        applySaved(saved);
+                        onSelectedChange(null);
+                    }, onCancel: () => onSelectedChange(null), onConflict: () => void query.refetch(), onDirtyChange: onDirtyChange }, selected ?? "none")) : (view && (_jsx(EmptyState, { icon: Quote, title: t("empty.title"), action: { label: t("action.add"), onClick: () => onOpen("new"), icon: Plus } }))) })] }));
 }
 const NEW_DRAFT = { key: "", label: "", text: "" };
-const sameDraft = (a, b) => a.key === b.key && a.label === b.label && a.text === b.text;
 /** Shows the shape to put into instructions and copies it. */
 function PlaceholderChip({ shareKey }) {
     const t = useTranslator(sharedMessages);
@@ -69,51 +65,53 @@ function PlaceholderChip({ shareKey }) {
 function SharedEditor({ version, item, onSaved, onDeleted, onCancel, onConflict, onDirtyChange, }) {
     const site = useSite();
     const t = useTranslator(sharedMessages);
-    const initial = item ? { key: item.key, label: item.label, text: item.text } : NEW_DRAFT;
-    const [draft, setDraft] = useState(initial);
-    const [saving, setSaving] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+    const tc = useTranslator(commonMessages);
     const [error, setError] = useState(null);
     const { confirm, dialog } = useConfirm();
     const ids = { label: useId(), key: useId(), keyTitle: useId(), text: useId() };
-    const set = (patch) => setDraft({ ...draft, ...patch });
+    const { draft, update: set, dirty, } = useDraftEditor({
+        saved: item ? { key: item.key, label: item.label, text: item.text } : null,
+        empty: NEW_DRAFT,
+        onDirtyChange,
+    });
     const fromConfig = item?.source === "config";
-    const dirty = item === null || !sameDraft(draft, initial);
-    // A new text with nothing entered has nothing to discard.
-    const unsaved = item === null ? !sameDraft(draft, NEW_DRAFT) : dirty;
-    useEffect(() => onDirtyChange(unsaved), [unsaved, onDirtyChange]);
-    useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
-    const save = async () => {
-        setSaving(true);
-        setError(null);
-        try {
+    const saveMutation = useCmsMutation({
+        fn: (_, { site }) => {
             const key = item?.key ?? draft.key.trim();
-            const saved = item
-                ? await cmsFetch(site, SHARED_API, {
-                    method: "PATCH",
-                    json: {
-                        expectedVersion: version,
-                        key,
-                        text: draft.text,
-                        ...(fromConfig ? {} : { label: draft.label.trim() }),
-                    },
-                    fallback: t("error.save"),
-                })
-                : await cmsFetch(site, SHARED_API, {
-                    method: "POST",
-                    json: { expectedVersion: version, key, label: draft.label.trim(), text: draft.text },
-                    fallback: t("error.save"),
-                });
-            onSaved(saved, key);
-            toast.success(t("toast.saved"));
-        }
-        catch (saveError) {
-            setError(errorText(site, saveError, t("error.save")));
+            return item
+                ? updateAiShared(site, {
+                    expectedVersion: version,
+                    key,
+                    text: draft.text,
+                    ...(fromConfig ? {} : { label: draft.label.trim() }),
+                }, tc("saveFailed"))
+                : createAiShared(site, { expectedVersion: version, key, label: draft.label.trim(), text: draft.text }, tc("saveFailed"));
+        },
+        success: tc("saved"),
+        failure: tc("saveFailed"),
+        inline: true,
+        onSuccess: (saved) => onSaved(saved, item?.key ?? draft.key.trim()),
+        onError: (saveError) => {
+            setError(errorText(site, saveError, tc("saveFailed")));
             onConflict();
-        }
-        finally {
-            setSaving(false);
-        }
+        },
+    });
+    const deleteMutation = useCmsMutation({
+        fn: (target, { site }) => deleteAiShared(site, target.key, version, tc("deleteFailed")),
+        success: tc("deleted"),
+        failure: tc("deleteFailed"),
+        inline: true,
+        onSuccess: (saved) => onDeleted(saved),
+        onError: (deleteError) => {
+            setError(errorText(site, deleteError, tc("deleteFailed")));
+            onConflict();
+        },
+    });
+    const saving = saveMutation.isPending;
+    const deleting = deleteMutation.isPending;
+    const save = () => {
+        setError(null);
+        saveMutation.mutate(undefined);
     };
     const remove = async () => {
         if (!item)
@@ -121,28 +119,14 @@ function SharedEditor({ version, item, onSaved, onDeleted, onCancel, onConflict,
         const ok = await confirm({
             title: t("confirm.title"),
             description: t("confirm.description", { name: item.label }),
-            confirmLabel: t("action.delete"),
+            confirmLabel: tc("delete"),
             destructive: true,
         });
         if (!ok)
             return;
-        setDeleting(true);
         setError(null);
-        try {
-            onDeleted(await cmsFetch(site, `${SHARED_API}?key=${encodeURIComponent(item.key)}&expectedVersion=${version}`, {
-                method: "DELETE",
-                fallback: t("error.delete"),
-            }));
-            toast.success(t("toast.deleted"));
-        }
-        catch (deleteError) {
-            setError(errorText(site, deleteError, t("error.delete")));
-            onConflict();
-        }
-        finally {
-            setDeleting(false);
-        }
+        deleteMutation.mutate(item);
     };
     const shownKey = item?.key ?? draft.key.trim();
-    return (_jsxs("div", { className: DETAIL_PANE, children: [_jsxs("div", { className: "min-w-0", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (item ? item.label : draft.label.trim()) || t("new.title") }), (shownKey || item?.source === "added") && (_jsx("p", { className: "truncate text-cms-muted-foreground text-xs", children: item ? detailOf(t, item) : `${placeholderOf(shownKey)} · ${t("detail.added")}` }))] }), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.label, children: t("field.name") }), _jsx(Input, { id: ids.label, value: draft.label, maxLength: 40, disabled: fromConfig, onChange: (event) => set({ label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), item ? (_jsxs(Field, { role: "group", "aria-labelledby": ids.keyTitle, children: [_jsx(FieldTitle, { id: ids.keyTitle, children: t("field.key") }), _jsx(PlaceholderChip, { shareKey: item.key })] })) : (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.key, children: t("field.key") }), _jsx(Input, { id: ids.key, value: draft.key, maxLength: 40, autoComplete: "off", spellCheck: false, onChange: (event) => set({ key: event.target.value.trim() }), className: "h-8 font-mono text-xs md:text-xs" })] })), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.text, children: t("field.content") }), _jsx(Textarea, { id: ids.text, rows: PROMPT_ROWS, value: draft.text, onChange: (event) => set({ text: event.target.value }), className: PROMPT_TEXTAREA })] })] }), error && _jsx(InlineError, { children: error }), _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Button, { type: "button", size: "sm", disabled: saving || !dirty || !draft.label.trim() || !draft.key.trim(), onClick: () => void save(), children: [_jsx(Save, { "aria-hidden": true }), saving ? t("action.saving") : t("action.save")] }), !item && (_jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: onCancel, children: t("action.cancel") })), item?.source === "config" && (_jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: draft.text === item.defaultText, onClick: () => set({ text: item.defaultText }), children: [_jsx(RotateCcw, { "aria-hidden": true }), t("action.resetDefault")] })), item?.source === "added" && (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "ml-auto text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", disabled: deleting, onClick: () => void remove(), children: [_jsx(Trash2, { "aria-hidden": true }), deleting ? t("action.deleting") : t("action.delete")] }))] }), dialog] }));
+    return (_jsxs("div", { className: DETAIL_PANE_FRAME, children: [_jsxs("div", { className: "min-w-0", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (item ? item.label : draft.label.trim()) || t("new.title") }), (shownKey || item?.source === "added") && (_jsx("p", { className: "truncate text-cms-muted-foreground text-xs", children: item ? detailOf(t, item) : `${placeholderOf(shownKey)} · ${t("detail.added")}` }))] }), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.label, children: t("field.name") }), _jsx(Input, { id: ids.label, value: draft.label, maxLength: 40, disabled: fromConfig, onChange: (event) => set({ label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), item ? (_jsxs(Field, { role: "group", "aria-labelledby": ids.keyTitle, children: [_jsx(FieldTitle, { id: ids.keyTitle, children: t("field.key") }), _jsx(PlaceholderChip, { shareKey: item.key })] })) : (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.key, children: t("field.key") }), _jsx(Input, { id: ids.key, value: draft.key, maxLength: 40, autoComplete: "off", spellCheck: false, onChange: (event) => set({ key: event.target.value.trim() }), className: "h-8 font-mono text-xs md:text-xs" })] })), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.text, children: t("field.content") }), _jsx(Textarea, { id: ids.text, rows: PROMPT_ROWS, value: draft.text, onChange: (event) => set({ text: event.target.value }), className: PROMPT_TEXTAREA })] })] }), _jsx(EditorFooter, { dirty: dirty, saving: saving, deleting: deleting, canSave: Boolean(draft.label.trim() && draft.key.trim()), error: error, saveIcon: _jsx(Save, { "aria-hidden": true }), onSave: save, onCancel: item ? undefined : onCancel, onDelete: item?.source === "added" ? () => void remove() : undefined, children: item?.source === "config" && (_jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: draft.text === item.defaultText, onClick: () => set({ text: item.defaultText }), children: [_jsx(RotateCcw, { "aria-hidden": true }), t("action.resetDefault")] })) }), dialog] }));
 }

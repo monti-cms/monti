@@ -1,29 +1,7 @@
-import type { LayoutGroup, SchemaCollection, Site } from "@monti-cms/core/client";
-/** Default tab (groups and fields without a `tab`). */
-export declare const defaultTab: (site: Pick<Site, "createTranslator">) => string;
-export declare const tabOfGroup: (site: Site, group: LayoutGroup) => string;
+import { type Site } from "@monti-cms/core/client";
 /**
- * Groups to render in the properties panel. Layout (`layout`) groups come in order, and fields not in the layout go after the last group in declaration order.
- *
- * A layout group's `tab` takes priority; if the group has no `tab`, the field's `tab` is used. Fields with their own `tab` (e.g. field groups supplied by an extension) are
- * gathered into one group per tab and placed last. The group's name is the tab name (shown as the group title on screens without tabs).
+ * What the screens add to the panel's groups, which core works out (`site.panelGroupsOf`, `site.panelTabsOf`, `site.panelTabOf`): the words of the default tab. A tab
+ * is its id everywhere in code ({@link DEFAULT_TAB} for the first one, the name a person wrote for the others), and this is the only place the id becomes text, so a
+ * tab a person calls "Properties" is not the default tab.
  */
-export declare const layoutGroupsOf: (site: Site, collection: SchemaCollection) => LayoutGroup[];
-/** What the grouping reads of a collection: the fields (for their own `tab`) and the layout. A draft of the settings screen has the same shape. */
-export interface GroupingSchema {
-    readonly fields: Readonly<Record<string, {
-        readonly tab?: string;
-    }>>;
-    readonly layout?: readonly LayoutGroup[];
-}
-/** Whether the panel draws a field: a hidden field is not (a conditional field is, its hidden option applies to what it shows). */
-export declare const isDrawnField: (field: {
-    readonly kind: string;
-    readonly hidden?: boolean;
-}) => boolean;
-/** `layoutGroupsOf` for any schema with these parts, so the settings screen's preview groups exactly like the panel. */
-export declare function layoutGroupsOfSchema(schema: GroupingSchema): LayoutGroup[];
-/** Tab names (default tab first, the rest in order of first appearance in groups). */
-export declare function tabsOf(site: Site, collection: SchemaCollection): string[];
-/** Tab that holds the field. A field attached to a conditional field uses that field's tab. When jumping to a publish problem, that tab is opened first. */
-export declare function tabOf(site: Site, collection: SchemaCollection, path: string): string;
+export declare const tabLabel: (site: Pick<Site, "createTranslator">, tab: string) => string;

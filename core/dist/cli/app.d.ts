@@ -1,12 +1,7 @@
 import type { Cms } from "../cms/index.js";
-/** What the commands that run against the app's own configuration (`migrate`) take. */
-export interface AppOptions {
-    readonly cwd: string;
-    /** Env files to read. If unset, `.env.local` and `.env` (only those that exist); an empty array reads none. */
-    readonly envFiles?: readonly string[];
-    /** Config file (`monti.config.ts`): the module that exports the CMS instance. */
-    readonly config?: string;
-    readonly log?: (message: string) => void;
+import type { AppFlags, CliContext } from "./command.js";
+/** What the commands that run against the app's own configuration (`db:migrate`, `events:retry`, ...) take: the context, and the app options. */
+export interface AppOptions extends CliContext, AppFlags {
     /** Do not print the `env:` and `config:` lines (the commands that open with a line of their own). */
     readonly quiet?: boolean;
 }

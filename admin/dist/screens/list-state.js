@@ -1,4 +1,5 @@
 import { LIST_SORT_FIELDS, } from "@monti-cms/core/client";
+import { pageParam, pageSizeParam } from "../lib/hooks/use-url-state.js";
 export const LIST_STATUSES = ["draft", "published", "archived"];
 export const DEFAULT_LIST_STATE = {
     folder: "all",
@@ -53,8 +54,6 @@ function appendRelations(params, relations) {
 }
 export function parseListState(site, params) {
     const collection = params.get("collection");
-    const pageSize = Number(params.get("pageSize"));
-    const page = Number(params.get("page"));
     const sortField = params.get("sortField") ?? "";
     const statuses = [...new Set(params.getAll("status"))].filter((status) => LIST_STATUSES.includes(status));
     const state = {
@@ -74,8 +73,8 @@ export function parseListState(site, params) {
             ? sortField
             : DEFAULT_LIST_STATE.sortField,
         sortDirection: params.get("sortDirection") === "asc" ? "asc" : "desc",
-        page: Number.isInteger(page) && page > 0 ? page : 1,
-        pageSize: pageSize === 50 || pageSize === 100 ? pageSize : 25,
+        page: pageParam.parse(params.get("page")),
+        pageSize: pageSizeParam.parse(params.get("pageSize")),
     };
     for (const key of DATE_KEYS) {
         const value = params.get(key) ?? "";

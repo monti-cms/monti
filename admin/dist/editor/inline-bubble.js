@@ -8,6 +8,7 @@ import { ChevronsLeftRightEllipsis, Eye, EyeOff, Link2, MessageSquareMore, Penci
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCmsAdminComponents, } from "../admin-components.js";
+import { isComposingKey } from "../lib/keyboard.js";
 import { cn } from "../lib/utils/cn.js";
 import { IconButton } from "../ui/icon-button.js";
 import { Separator } from "../ui/separator.js";
@@ -297,7 +298,7 @@ export function InlineBubble({ editor, actions = [], }) {
             : panel.kind === "codeTooltip"
                 ? t("inlineBubble.tooltipPanel")
                 : panel.panel.label, "data-cms-inline-bubble": true, style: style, className: cn(surface, "flex flex-col gap-3 p-3 text-xs", panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-2" : "w-80"), onKeyDown: (event) => {
-            if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+            if (event.key === "Escape" && !isComposingKey(event)) {
                 event.preventDefault();
                 closePanel();
             }

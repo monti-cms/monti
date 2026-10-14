@@ -12,6 +12,6 @@ export interface DoctorOptions {
     readonly env?: Record<string, string | undefined>;
 }
 /**
- * `monti doctor`: reads the env files, finds and loads the config file, then runs the checks of core (config, schema, database, secrets, login settings, Next files, upgrade), and returns what each found. It changes nothing, and never prints a secret. The instance it loads is closed before it returns.
+ * `monti doctor`: reads the env files, finds and loads the config file, then runs the checks of core (config, schema, database, secrets, login settings, Next files), and returns what each found. It changes nothing, and never prints a secret. The instance it loads is closed before it returns.
  */
 export declare function runDoctor(options: DoctorOptions): Promise<DoctorReport>;

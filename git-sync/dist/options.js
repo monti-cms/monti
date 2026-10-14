@@ -1,7 +1,10 @@
-/** The name under which the plugin is found in the site config's `plugins`. */
+import { pluginError } from "@monti-cms/core";
+import { GIT_SYNC_PLUGIN_NAME } from "./name.js";
+export { GIT_SYNC_PLUGIN_NAME };
 /** Id of the plugin's one API key slot: the GitHub token. */
 export const GIT_SYNC_TOKEN_SLOT = "token";
-export const GIT_SYNC_PLUGIN_NAME = "git-sync";
+/** The key slot of the secret the push webhook is signed with. */
+export const GIT_SYNC_WEBHOOK_SLOT = "webhook-secret";
 /** The file path pattern when a target gives none. */
 export const DEFAULT_PATH_PATTERN = "{collection}/{slug}.{locale}.{ext}";
 export const DEFAULT_FORMAT = "mdx";
@@ -76,7 +79,7 @@ export function resolveTarget(target, index) {
 export function resolveTargets(options) {
     const given = options.targets ?? [];
     if (!Array.isArray(given))
-        throw new Error("git-sync: `targets` must be a list");
+        throw pluginError(GIT_SYNC_PLUGIN_NAME, "`targets` must be a list");
     const targets = given.map(resolveTarget);
     const seen = new Set();
     for (const target of targets) {
@@ -85,7 +88,7 @@ export function resolveTargets(options) {
         seen.add(target.id);
     }
     if (options.debounceMs !== undefined && (!Number.isFinite(options.debounceMs) || options.debounceMs < 0)) {
-        throw new Error("git-sync: `debounceMs` must be 0 or more");
+        throw pluginError(GIT_SYNC_PLUGIN_NAME, "`debounceMs` must be 0 or more");
     }
     return targets;
 }

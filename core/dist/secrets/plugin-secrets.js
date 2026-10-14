@@ -1,4 +1,5 @@
-import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
+import { WHERE_TO_SET_ENV } from "../core/env.js";
 import { problemText } from "../core/problem.js";
 import { CmsError } from "../core/store/index.js";
 /**
@@ -15,7 +16,7 @@ const PLUGIN_NAME = /^[a-z][a-z0-9-]*$/;
 const KEY_BYTES = 32;
 const unavailable = () => new CmsError(problemText({
     what: "MONTI_SECRET is not set, so values (AI keys, tokens) cannot be encrypted",
-    where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+    where: `${WHERE_TO_SET_ENV}, or \`secret\` in defineConfig`,
     fix: "set it to a long random value (`openssl rand -base64 32`) and restart the server; `monti doctor` checks it",
 }), "secret_not_configured");
 const hkdf = (key, info) => Buffer.from(hkdfSync("sha256", key, SALT, info, KEY_BYTES));
@@ -42,27 +43,11 @@ export function createSecretsVault(master) {
     const current = master.secret || undefined;
     const previous = [...new Set(master.previousSecrets ?? [])].filter((secret) => secret && secret !== current);
     return {
-        forPlugin(plugin, options = {}) {
+        forPlugin(plugin) {
             if (!PLUGIN_NAME.test(plugin))
                 throw new Error(`cms secrets: invalid plugin name "${plugin}"`);
             const now = current ? pluginKey(current, plugin) : undefined;
             const before = previous.map((secret) => pluginKey(secret, plugin));
-            const { legacy } = options;
-            const decryptLegacy = (stored) => {
-                if (!legacy)
-                    return null;
-                const [prefix, iv, tag, body] = stored.split(":");
-                if (prefix !== legacy.prefix || !iv || !tag || !body)
-                    return null;
-                for (const secret of [current, ...previous]) {
-                    if (!secret)
-                        continue;
-                    const plain = open(createHash("sha256").update(`${legacy.domain}${secret}`).digest(), iv, tag, body);
-                    if (plain !== null)
-                        return plain;
-                }
-                return null;
-            };
             return {
                 available: Boolean(now),
                 encrypt(plain) {
@@ -82,7 +67,7 @@ export function createSecretsVault(master) {
                 decrypt(stored) {
                     const [prefix, id, iv, tag, body] = stored.split(":");
                     if (prefix !== PREFIX)
-                        return decryptLegacy(stored);
+                        return null;
                     if (!id || !iv || !tag || !body)
                         return null;
                     const found = [now, ...before].find((candidate) => candidate?.id === id);

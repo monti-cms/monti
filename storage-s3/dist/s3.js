@@ -1,7 +1,5 @@
-import { problemText } from "@monti-cms/core";
+import { envValue, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
 import { createS3MediaStore } from "./media-store.js";
-const envOf = (env, name) => env[name]?.trim() || undefined;
-const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 /** Examples that tell where each value comes from, for the services people use. */
 const FIX_HINT = "R2: S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com and S3_REGION=auto. AWS S3: S3_REGION=<bucket region> (the endpoint follows from it). MinIO: S3_ENDPOINT=http://localhost:9000 and S3_FORCE_PATH_STYLE=true. S3_PUBLIC_URL is the start of the address the uploaded files are served from (a CDN or a public bucket)";
 /** What `S3_*` names, the option that sets it, and what it is. */
@@ -14,19 +12,19 @@ const SETTINGS = [
 const missing = (variable, option, what) => {
     throw new Error(problemText({
         what: `${variable} is not set, so uploads have no ${what}`,
-        where: `${WHERE_TO_SET}, or \`s3Storage({ ${option} })\` in monti.config.ts`,
+        where: `${WHERE_TO_SET_ENV}, or \`s3Storage({ ${option} })\` in monti.config.ts`,
         fix: `set it. ${FIX_HINT}`,
     }));
 };
 /** The store config the options and the environment give, or the names of what is missing. */
 function resolve(options, env) {
-    const region = options.region || envOf(env, "S3_REGION");
-    const endpoint = options.endpoint || envOf(env, "S3_ENDPOINT") || (region ? `https://s3.${region}.amazonaws.com` : undefined);
+    const region = options.region || envValue(env, "S3_REGION");
+    const endpoint = options.endpoint || envValue(env, "S3_ENDPOINT") || (region ? `https://s3.${region}.amazonaws.com` : undefined);
     const values = {
-        bucket: options.bucket || envOf(env, "S3_BUCKET"),
-        accessKeyId: options.accessKeyId || envOf(env, "S3_ACCESS_KEY_ID"),
-        secretAccessKey: options.secretAccessKey || envOf(env, "S3_SECRET_ACCESS_KEY"),
-        publicBaseUrl: options.publicBaseUrl || envOf(env, "S3_PUBLIC_URL"),
+        bucket: options.bucket || envValue(env, "S3_BUCKET"),
+        accessKeyId: options.accessKeyId || envValue(env, "S3_ACCESS_KEY_ID"),
+        secretAccessKey: options.secretAccessKey || envValue(env, "S3_SECRET_ACCESS_KEY"),
+        publicBaseUrl: options.publicBaseUrl || envValue(env, "S3_PUBLIC_URL"),
     };
     const lacking = [
         ...(endpoint ? [] : ["S3_ENDPOINT (or S3_REGION)"]),
@@ -38,7 +36,7 @@ function resolve(options, env) {
         config: {
             endpoint: endpoint,
             region,
-            forcePathStyle: options.forcePathStyle ?? ["true", "1"].includes(envOf(env, "S3_FORCE_PATH_STYLE") ?? ""),
+            forcePathStyle: options.forcePathStyle ?? ["true", "1"].includes(envValue(env, "S3_FORCE_PATH_STYLE") ?? ""),
             bucket: values.bucket,
             accessKeyId: values.accessKeyId,
             secretAccessKey: values.secretAccessKey,

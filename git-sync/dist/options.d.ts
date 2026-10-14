@@ -1,9 +1,11 @@
-import type { PluginConfigView } from "@monti-cms/core";
+import { type PluginConfigView } from "@monti-cms/core";
 import type { GitHubClientFactory } from "./github/client.js";
-/** The name under which the plugin is found in the site config's `plugins`. */
+import { GIT_SYNC_PLUGIN_NAME } from "./name.js";
+export { GIT_SYNC_PLUGIN_NAME };
 /** Id of the plugin's one API key slot: the GitHub token. */
 export declare const GIT_SYNC_TOKEN_SLOT = "token";
-export declare const GIT_SYNC_PLUGIN_NAME = "git-sync";
+/** The key slot of the secret the push webhook is signed with. */
+export declare const GIT_SYNC_WEBHOOK_SLOT = "webhook-secret";
 /** How a publish lands in the repo. */
 export type GitSyncMode = "commit" | "pr";
 /** The file path pattern when a target gives none. */

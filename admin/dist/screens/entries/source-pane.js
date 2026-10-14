@@ -8,6 +8,7 @@ import { useCmsAdminComponents, useSourceFormat } from "../../admin-components.j
 import { documentKey } from "../../editor/document-key.js";
 import { buildEditorExtensions } from "../../editor/extensions.js";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { entriesMessages } from "./messages.js";
@@ -43,5 +44,6 @@ export function DocPreview({ doc, label: labelProp }) {
 /** The full source placed beside the translation. Scrolls separately from the translation editor. */
 export function SourcePane({ doc, locale, title, onClose, className, ref, }) {
     const t = useTranslator(entriesMessages);
-    return (_jsxs("aside", { ref: ref, "aria-label": t("sourcePane.aria"), className: cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-cms-background", className), children: [_jsxs("div", { "data-source-header": true, className: "sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-cms-background/95 px-4 backdrop-blur", children: [_jsx("h2", { className: "flex-1 font-medium text-sm", children: t("sourcePane.heading", { locale: locale.toUpperCase() }) }), _jsx(IconButton, { label: t("close"), side: "bottom", onClick: onClose, children: _jsx(X, { "aria-hidden": true, className: "size-4" }) })] }), _jsx("h1", { className: cn("px-6 pt-12 pb-5 font-semibold text-[34px] leading-tight tracking-tight", !title && "text-cms-muted-foreground/40"), children: title || t("untitled") }), _jsx("div", { className: "px-6 pt-6 pb-[35vh]", children: _jsx(DocPreview, { doc: doc, label: t("sourcePane.body") }) })] }));
+    const tc = useTranslator(commonMessages);
+    return (_jsxs("aside", { ref: ref, "aria-label": t("sourcePane.aria"), className: cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-cms-background", className), children: [_jsxs("div", { "data-source-header": true, className: "sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-cms-background/95 px-4 backdrop-blur", children: [_jsx("h2", { className: "flex-1 font-medium text-sm", children: t("sourcePane.heading", { locale: locale.toUpperCase() }) }), _jsx(IconButton, { label: tc("close"), side: "bottom", onClick: onClose, children: _jsx(X, { "aria-hidden": true, className: "size-4" }) })] }), _jsx("h1", { className: cn("px-6 pt-12 pb-5 font-semibold text-[34px] leading-tight tracking-tight", !title && "text-cms-muted-foreground/40"), children: title || tc("untitled") }), _jsx("div", { className: "px-6 pt-6 pb-[35vh]", children: _jsx(DocPreview, { doc: doc, label: t("sourcePane.body") }) })] }));
 }

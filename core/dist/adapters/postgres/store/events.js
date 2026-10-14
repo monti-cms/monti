@@ -249,6 +249,24 @@ export function createEventOps(ctx) {
                 .executeTakeFirst();
             return res.numUpdatedRows > 0n;
         },
+        isOnceDone: async ({ eventId, subscriber }) => {
+            const row = await db
+                .selectFrom("cms_event_deliveries")
+                .select("once_at")
+                .where("event_id", "=", eventId)
+                .where("subscriber", "=", subscriber)
+                .executeTakeFirst();
+            return row?.once_at != null;
+        },
+        markOnceDone: async ({ eventId, subscriber, now }) => {
+            await db
+                .updateTable("cms_event_deliveries")
+                .set({ once_at: now })
+                .where("event_id", "=", eventId)
+                .where("subscriber", "=", subscriber)
+                .where("once_at", "is", null)
+                .execute();
+        },
         pruneEvents: async ({ before }) => {
             const res = await db
                 .deleteFrom("cms_events as e")

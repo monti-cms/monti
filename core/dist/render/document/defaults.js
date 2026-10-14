@@ -32,7 +32,6 @@ const CodeBlock = ({ title, code, notes, children, ctx }) => {
 const Image = ({ src, alt, title, caption, decorative, align, width, crop, rotate, intrinsic, failure, plain, inline, node, ctx, }) => {
     if (plain && src) {
         // A Markdown image: just the picture (a block of its own sits in a paragraph, as Markdown makes it).
-        // biome-ignore lint/performance/noImgElement: public addresses differ per site, so next/image is not used
         const image = _jsx("img", { src: src, alt: alt, title: title });
         return inline ? image : _jsx("p", { children: image });
     }
@@ -80,7 +79,7 @@ const FootnoteRef = ({ index, refId, targetId }) => (_jsx("sup", { children: _js
 const Footnotes = ({ items, ctx }) => (_jsxs("section", { "data-footnotes": "true", className: "footnotes", children: [_jsx("h2", { className: "sr-only", id: "footnote-label", children: ctx.labels.footnotes }), _jsx("ol", { children: items.map((item) => (_jsx("li", { id: item.id, children: item.children }, item.id))) })] }));
 const Link = ({ href, title, entryId, children }) => 
 // An entry link whose target cannot be reached (not published, or gone) is plain text.
-entryId !== undefined && !href ? (_jsx(_Fragment, { children: children })) : (_jsx(CmsLink, { href: href ?? "", title: title, children: children }));
+entryId !== undefined && !href ? (children) : (_jsx(CmsLink, { href: href ?? "", title: title, children: children }));
 const mark = (Tag) => {
     const Component = ({ children }) => _jsx(Tag, { children: children });
     Component.displayName = `Cms${Tag}`;

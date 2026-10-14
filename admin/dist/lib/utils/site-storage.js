@@ -3,27 +3,33 @@
  * `localhost:3000` one after the other, or two admins under one domain) would otherwise share their preferences and recovery copies. Every key and database
  * name carries the namespace of the site: its name and its admin path.
  *
- * Keys written before the namespace existed (`cms:editor-width`, the `cms_backup` database) are still read once; see {@link readPreference} and `local-backup.ts`.
+ * This is the storage of per-device preferences (a panel width, a view mode). What should follow the person across devices (list columns, sort, page size)
+ * lives on the server instead (`/v1/preferences`, `api/preferences.ts`). Screens read these through `usePreference`, not directly.
  */
 /** The namespace of a site's browser storage: its name and admin path (`example.dev/admin`). */
 export const storageNamespace = (site) => `${site.SITE_NAME || "site"}${site.ADMIN_PATH}`;
 /** The `localStorage` key of a preference of this site. */
 export const preferenceKey = (site, name) => `cms:${storageNamespace(site)}:${name}`;
-/** The key a preference had before keys carried the namespace. */
-export const legacyPreferenceKey = (name) => `cms:${name}`;
-/**
- * Reads a remembered preference of this site. A site that has none yet takes the value written under the old key once and keeps it under its own (the old key stays,
- * because another site on the same origin may still read it). `null` when there is none, or when storage is unavailable.
- */
+const listeners = new Set();
+/** Calls `listener` when a preference changes, in this tab or in another one. */
+export function subscribePreferences(listener) {
+    listeners.add(listener);
+    if (listeners.size === 1 && typeof window !== "undefined")
+        window.addEventListener("storage", notify);
+    return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0 && typeof window !== "undefined")
+            window.removeEventListener("storage", notify);
+    };
+}
+function notify() {
+    for (const listener of [...listeners])
+        listener();
+}
+/** Reads a remembered preference of this site. `null` when there is none, or when storage is unavailable. */
 export function readPreference(site, name) {
     try {
-        const own = window.localStorage.getItem(preferenceKey(site, name));
-        if (own !== null)
-            return own;
-        const legacy = window.localStorage.getItem(legacyPreferenceKey(name));
-        if (legacy !== null)
-            writePreference(site, name, legacy);
-        return legacy;
+        return window.localStorage.getItem(preferenceKey(site, name));
     }
     catch {
         return null;
@@ -37,4 +43,15 @@ export function writePreference(site, name, value) {
     catch {
         // Storage is unavailable (private window, blocked site data).
     }
+    notify();
+}
+/** Forgets a preference of this site, so its screen falls back to the default. */
+export function removePreference(site, name) {
+    try {
+        window.localStorage.removeItem(preferenceKey(site, name));
+    }
+    catch {
+        // Storage is unavailable.
+    }
+    notify();
 }

@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
+import { commonMessages } from "../lib/common.messages.js";
 import { cn } from "../lib/utils/cn.js";
 import { Button } from "../ui/button.js";
 import { Checkbox } from "../ui/checkbox.js";
@@ -18,12 +19,13 @@ import { DateRangeCalendar } from "./shared/date-range-picker.js";
 import { statusLabels } from "./shared/entry-status.js";
 function TextFilter({ value, placeholder, label, onApply, }) {
     const t = useTranslator(screensMessages);
+    const tc = useTranslator(commonMessages);
     const [draft, setDraft] = useState(value);
     useEffect(() => setDraft(value), [value]);
     return (_jsxs("form", { className: "flex gap-2", onSubmit: (event) => {
             event.preventDefault();
             onApply(draft);
-        }, children: [_jsx(Input, { "aria-label": t("filter.label", { label }), value: draft, placeholder: placeholder, onChange: (event) => setDraft(event.target.value), className: "h-8" }), _jsx(Button, { type: "submit", size: "sm", children: t("filter.apply") })] }));
+        }, children: [_jsx(Input, { "aria-label": t("filter.label", { label }), value: draft, placeholder: placeholder, onChange: (event) => setDraft(event.target.value), className: "h-8" }), _jsx(Button, { type: "submit", size: "sm", children: tc("apply") })] }));
 }
 function CheckRow({ label, checked, onChange, }) {
     return (_jsxs(Label, { className: "flex items-center gap-2 rounded-sm px-2 py-1.5 font-normal hover:bg-cms-accent", children: [_jsx(Checkbox, { checked: checked, onCheckedChange: (next) => onChange(next === true) }), label] }));
@@ -55,7 +57,7 @@ export function setRelation(state, field, ids) {
     return { relations: ids.length > 0 ? { ...rest, [field]: ids } : rest };
 }
 const clearRelation = (state, field) => setRelation(state, field, []);
-/** Change that clears this filter. Used by the chip's `✕` and the popup's `필터 해제`. */
+/** Change that clears this filter. Used by the chip's `✕` and the popup's "Clear filter". */
 export function clearPatchFor(filter, state) {
     switch (filter.kind) {
         case "text":

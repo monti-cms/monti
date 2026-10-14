@@ -3,7 +3,7 @@ import { type ListState } from "./list-state.js";
 import type { TaxonomyOptions } from "./shared/use-taxonomy.js";
 /** `relations` with one taxonomy filter changed. An empty list is removed. */
 export declare function setRelation(state: ListState, field: string, ids: readonly string[]): Partial<ListState>;
-/** Change that clears this filter. Used by the chip's `✕` and the popup's `필터 해제`. */
+/** Change that clears this filter. Used by the chip's `✕` and the popup's "Clear filter". */
 export declare function clearPatchFor(filter: ColumnFilter, state: ListState): Partial<ListState>;
 /**
  * Sort/filter popup opened from the column header, like Excel. A header with a filter changes its icon shape

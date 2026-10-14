@@ -272,7 +272,7 @@ const writerOf = (site, syntax) => {
     };
     /**
      * CommonMark emphasis delimiters do not open or close if the first/last inner character is whitespace or punctuation
-     * (`**정적(Static)**과` is not emphasis; the asterisks stay as text). Only in that case is JSX written.
+     * (a bold run that ends in `)` and is followed directly by a letter, as in Korean text, is not emphasis; the asterisks stay as text). Only in that case is JSX written.
      */
     const EMPHASIS_UNSAFE_EDGE = /^[\s\p{P}\p{S}]|[\s\p{P}\p{S}]$/u;
     const EMPHASIS_DELIMITERS = {

@@ -73,8 +73,6 @@ export function summarizeField(t, name, field, collection, file, topLevel) {
             break;
         }
     }
-    if (field.hidden === true)
-        parts.push(t("sum.hidden"));
     if (field.localized === true && kind !== "conditional")
         parts.push(t("sum.localized"));
     return {

@@ -101,6 +101,7 @@ export function createZipArchive(entries, options) {
 /**
  * Minimal ZIP reader for tests and verification. Reads only the central directory and inflates deflate entries.
  * Not used for anything other than verifying export archives.
+ * @internal For tests, which read the archives the export writes.
  */
 export function readZipArchive(buffer) {
     const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);

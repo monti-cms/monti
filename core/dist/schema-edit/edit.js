@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { ConfigError } from "../config/check/issue.js";
 import { bodyVocabulary } from "../schema/allowed.js";
 import { applySchemaChange, checkSchemaChange, checkTransforms, diffSchema, SchemaChangeError, snapshotSchema, suggestTransforms, } from "../schema-change/index.js";
-import { parseSchemaFile, SchemaFileError } from "../schema-file/format.js";
+import { parseSchemaFile } from "../schema-file/format.js";
 import { parseSchemaLiteral } from "../schema-file/literal.js";
 import { printSchemaFile } from "../schema-file/print.js";
 import { schemaEditAccess } from "./access.js";
@@ -59,15 +60,7 @@ export async function readSchemaScreen(cms) {
     if (literal?.ok) {
         comments = literal.comments;
         schema = literal.value;
-        try {
-            parseSchemaFile(schema, relativeToCwd(file));
-        }
-        catch (error) {
-            issues =
-                error instanceof SchemaFileError
-                    ? [...error.issues]
-                    : [{ path: "", message: error instanceof Error ? error.message : String(error) }];
-        }
+        issues = [...checkEdit(cms, schema).issues];
     }
     const { config } = cms.site;
     if (schema === undefined && issues.length === 0) {
@@ -87,7 +80,12 @@ export async function readSchemaScreen(cms) {
     return {
         access: access.writable
             ? { writable: true }
-            : { writable: false, reason: access.reason, ...(access.detail ? { detail: access.detail } : {}) },
+            : {
+                writable: false,
+                reason: access.reason,
+                ...(access.detail ? { detail: access.detail } : {}),
+                ...(access.issue ? { issue: access.issue } : {}),
+            },
         file: file ? relativeToCwd(file) : null,
         hash: text === undefined ? null : hashOf(text),
         schema: schema ?? null,
@@ -111,19 +109,6 @@ function withoutUrl(site) {
 function withoutMessages(admin) {
     const { messages: _messages, ...rest } = admin;
     return rest;
-}
-/** A message of `defineSite` as an issue: it starts with `cms.config:` and names a collection, which gives the JSON path. */
-function issueFromError(error, collections) {
-    const message = error instanceof Error ? error.message : String(error);
-    const text = message.replace(/^cms\.config:\s*/, "");
-    const named = /^collection "([^"]+)"/.exec(text);
-    if (named?.[1])
-        return { path: `collections.${named[1]}`, message: text };
-    const dotted = /^([\w-]+)\.([\w.[\]-]+)/.exec(text);
-    if (dotted?.[1] && collections.includes(dotted[1])) {
-        return { path: `collections.${dotted[1]}.${dotted[2]}`.replace(/\.body$/, ".body"), message: text };
-    }
-    return { path: "", message: text };
 }
 const OPS = {
     renameField: "rename",
@@ -152,22 +137,16 @@ function defaultPick(suggestions, entries) {
         return null;
     return first;
 }
-/** Checks the edited content: the file format, then the rules between collections that `defineSite` checks. */
+/** Checks the edited content as the instance would: the file format, then every rule `defineSite` applies (between collections, plugins and blocks included). */
 function checkEdit(cms, schema) {
-    let parsed;
     try {
-        parsed = parseSchemaFile(schema);
-    }
-    catch (error) {
-        if (error instanceof SchemaFileError)
-            return { issues: [...error.issues] };
-        throw error;
-    }
-    try {
+        const parsed = parseSchemaFile(schema);
         return { issues: [], checked: { parsed, next: cms.forSchema(parsed) } };
     }
     catch (error) {
-        return { issues: [issueFromError(error, Object.keys(parsed.collections))] };
+        if (error instanceof ConfigError)
+            return { issues: [...error.issues] };
+        return { issues: [{ path: "", code: "error", message: error instanceof Error ? error.message : String(error) }] };
     }
 }
 /** Whether a transform was picked for a decision: it names the same field (and the same removed option). */

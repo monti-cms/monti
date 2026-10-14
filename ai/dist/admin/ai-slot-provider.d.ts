@@ -2,15 +2,10 @@ import { type Site } from "@monti-cms/core/client";
 import { type ReactNode } from "react";
 import type { AiActionView } from "../actions.js";
 import type { AiRunContext, AiRunResult } from "../definition.js";
+import { type AiRunManyResult } from "./api.js";
 /** What the request functions need of a site: its admin language for the failure text. */
 type RequestSite = Pick<Site, "createTranslator">;
-export declare const AI_ACTIONS_KEY: readonly ["cms", "ai", "actions"];
-export interface AiActionsResponse {
-    /** Names of actions that are ready to use now because their connection is ready. */
-    usable: string[];
-    items: AiActionView[];
-}
-export declare function useAiActions(enabled?: boolean): import("@tanstack/react-query").UseQueryResult<AiActionsResponse, Error>;
+export declare function useAiActions(enabled?: boolean): import("@tanstack/react-query").UseQueryResult<import("./api.js").AiActionsResponse, Error>;
 /** Common information of a run request (outside the input). */
 export interface AiRunEnv {
     collection?: string;
@@ -38,11 +33,7 @@ export declare function streamAiAction(site: RequestSite, action: string, input:
     onText: (text: string) => void;
 }): Promise<AiRunResult>;
 /** Runs the same action over several inputs (up to 8 per request). Each input gets a result or a failure reason, in order. */
-export declare function runAiActionMany(site: RequestSite, action: string, inputs: ReadonlyArray<Readonly<Record<string, unknown>>>, options?: AiRunOptions): Promise<Array<{
-    result: AiRunResult;
-} | {
-    error: string;
-}>>;
+export declare function runAiActionMany(site: RequestSite, action: string, inputs: ReadonlyArray<Readonly<Record<string, unknown>>>, options?: AiRunOptions): Promise<AiRunManyResult[]>;
 /** Converts the current state of a slot into action inputs and common information. Sends only the inputs present in the action definition. */
 export declare function inputFromContext(action: Pick<AiActionView, "input">, context: AiRunContext): {
     input: Record<string, unknown>;

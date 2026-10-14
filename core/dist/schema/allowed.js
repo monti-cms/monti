@@ -1,3 +1,4 @@
+import { IssueList, pathOf } from "../config/check/issue.js";
 /**
  * The allowed blocks and marks of a body. One list in the schema (`body` of a collection) read by the editor (toolbar, slash menu, insert menu, input
  * rules, paste) and by validation, so they cannot disagree. A body field without a list allows everything.
@@ -50,39 +51,36 @@ export function bodyVocabulary(site) {
  * Checks the body list of a collection against what the site can name. A name that is not a block or mark of the site is an error, so a typo does not
  * silently leave a block allowed (or disallowed).
  */
-export function validateBodyAllowed(collection, allowed, site) {
+export function checkBodyAllowed(collection, allowed, site) {
     if (allowed === undefined)
-        return;
-    const at = `cms.config: ${collection}.body`;
+        return [];
+    const list = new IssueList();
+    const base = pathOf("collections", collection, "body");
     const vocabulary = bodyVocabulary(site);
     const check = (key, known) => {
-        const list = allowed[key];
-        if (list === undefined)
+        const names = allowed[key];
+        if (names === undefined)
             return;
-        if (!Array.isArray(list))
-            throw new Error(`${at}.${key} must be an array of names`);
         const seen = new Set();
-        for (const name of list) {
-            if (typeof name !== "string")
-                throw new Error(`${at}.${key} must be an array of names`);
+        for (const [index, name] of names.entries()) {
+            const at = pathOf(base, key, index);
             if (!known.includes(name)) {
-                throw new Error(`${at}.${key} has unknown ${key === "blocks" ? "block" : "mark"} "${name}"; use one of: ${known.join(", ")}`);
+                list.add(at, "unknown-name", `"${name}" is not a ${key === "blocks" ? "block" : "mark"} of this site; use one of: ${known.join(", ")}`);
             }
-            if (seen.has(name))
-                throw new Error(`${at}.${key} lists "${name}" twice`);
+            else if (seen.has(name))
+                list.add(at, "duplicate", `"${name}" is listed twice`);
             seen.add(name);
         }
     };
     check("blocks", vocabulary.blocks);
     check("marks", vocabulary.marks);
-    const { headings } = allowed;
-    if (headings !== undefined) {
-        if (!Array.isArray(headings) || headings.some((level) => !HEADING_LEVELS.includes(level))) {
-            throw new Error(`${at}.headings must be an array of heading levels (${HEADING_LEVELS.join(", ")})`);
-        }
-        if (new Set(headings).size !== headings.length)
-            throw new Error(`${at}.headings lists a level twice`);
+    const seenLevels = new Set();
+    for (const [index, level] of (allowed.headings ?? []).entries()) {
+        if (seenLevels.has(level))
+            list.add(pathOf(base, "headings", index), "duplicate", `level ${level} is listed twice`);
+        seenLevels.add(level);
     }
+    return list.issues;
 }
 /** The rules of a body list. `undefined` (no list) allows everything. */
 export function bodyRules(allowed) {

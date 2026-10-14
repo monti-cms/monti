@@ -1,49 +1,11 @@
+import { type InitAnswers } from "./init-answers.js";
 import type { DetectedApp } from "./init-detect.js";
-import { type InitAnswers } from "./templates.js";
+import type { Prompter } from "./prompt.js";
 /**
  * The questions of `monti init`. Each one has a flag; a question whose flag is given is not asked, and without a terminal (or with `--yes`) every unanswered
  * question takes its default. The prompt library sits behind {@link Prompter}, so the flow is tested with scripted answers and the library is only loaded
  * when a person is at the terminal.
  */
-/** The prompts the flow uses. */
-export interface Prompter {
-    intro(message: string): void;
-    outro(message: string): void;
-    /** A framed block of text (instructions, values to copy). */
-    note(body: string, title?: string): void;
-    select<T extends string>(question: {
-        message: string;
-        options: readonly {
-            value: T;
-            label: string;
-            hint?: string;
-        }[];
-        initial?: T;
-    }): Promise<T>;
-    multiselect<T extends string>(question: {
-        message: string;
-        options: readonly {
-            value: T;
-            label: string;
-            hint?: string;
-        }[];
-        initial?: readonly T[];
-    }): Promise<T[]>;
-    text(question: {
-        message: string;
-        placeholder?: string;
-        initial?: string;
-        validate?: (value: string) => string | undefined;
-    }): Promise<string>;
-    confirm(question: {
-        message: string;
-        initial?: boolean;
-    }): Promise<boolean>;
-}
-/** Thrown when the person cancels a prompt (Ctrl+C). Nothing has been written at that point. */
-export declare class InitCancelled extends Error {
-    constructor();
-}
 /** The raw flag values (strings as typed). `undefined` means the flag was not given. */
 export interface InitAnswerFlags {
     readonly siteUrl?: string;
@@ -64,8 +26,6 @@ export interface InitAnswerFlags {
 }
 /** The time zone of this computer (what the OS says, as an IANA name), or `undefined` when it cannot be read. */
 export declare const detectSystemTimeZone: () => string | undefined;
-/** An admin path becomes a folder in the app, so it is plain path segments only. */
-export declare const validAdminPath: (value: string) => boolean;
 /** Checks every flag that was given, before anything is asked. */
 export declare function validateFlags(flags: InitAnswerFlags): void;
 /** What the questions ask, for the tests and the docs. */
@@ -88,9 +48,7 @@ export declare function detectedLocales(app: DetectedApp): {
     from: "filename" | "folder";
 } | undefined;
 /**
- * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link InitCancelled} when the
+ * Settles every question: from its flag when given, by asking when `prompter` is there, else with the default. Throws {@link Cancelled} when the
  * person cancels, and an Error naming the flag when a flag value is wrong.
  */
 export declare function collectAnswers(app: DetectedApp, flags: InitAnswerFlags, prompter?: Prompter, systemTimeZone?: () => string | undefined): Promise<InitAnswers>;
-/** The prompter for a person at the terminal, on `@clack/prompts` (loaded here, so non-interactive runs never load it). */
-export declare function createClackPrompter(): Promise<Prompter>;

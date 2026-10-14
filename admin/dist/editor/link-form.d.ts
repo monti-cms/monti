@@ -14,8 +14,6 @@ export interface LinkDraft {
 export declare function linkDraftFromSelection(editor: Editor): LinkDraft;
 /** Collapses the cursor to the end of the effect after applying it. With the cursor at the end of the effect, the inline bubble shows the applied result. */
 export declare const collapseToEnd: (chain: ChainedCommands) => ChainedCommands;
-/** Whether this Enter finishes Korean composition. The form is not submitted then. */
-export declare const isComposingKey: (event: KeyboardEvent) => boolean;
 /**
  * Enter handling for popover input forms (link, tooltip). Enter during Korean composition is ignored, and Enter submits even in multi-line fields (Shift+Enter inserts a line break).
  * Attach it as `<form onKeyDown={submitOnEnter}>`.

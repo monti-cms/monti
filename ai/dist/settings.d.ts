@@ -32,7 +32,7 @@ declare const storedProviderSchema: z.ZodObject<{
     defaultModel: z.ZodDefault<z.ZodString>;
 }, z.core.$strip>;
 type StoredProvider = z.output<typeof storedProviderSchema>;
-export declare function getAiSettingsView(site: Site, store: AiSettingsStore): Promise<AiSettingsView>;
+export declare function getAiSettingsView(_site: Site, store: AiSettingsStore): Promise<AiSettingsView>;
 /**
  * Tells the key store which connections use which key, so the API keys screen can list them and warn before a key is deleted. Only the reference
  * (`connection:<id>`) is stored; the text shown comes from {@link keyUseLabels} when the keys are read.
@@ -65,7 +65,7 @@ export interface AiRuntime {
 /** Generation/decision models to run one action. Fills only the side matching the action's mode. */
 export declare function loadAiRuntime(site: Site, store: AiSettingsStore, spec: ActionConnection): Promise<AiRuntime>;
 /** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
-export declare function usableActionKeys(site: Site, store: AiSettingsStore, actions: ReadonlyArray<ActionConnection & {
+export declare function usableActionKeys(_site: Site, store: AiSettingsStore, actions: ReadonlyArray<ActionConnection & {
     key: string;
 }>): Promise<string[]>;
 /**

@@ -1,13 +1,19 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
+import { mediaNotConfiguredMessage } from "../api/error-message.js";
+import { listMedia, mediaKeys } from "../api/media.js";
+import { commonMessages } from "../lib/common.messages.js";
 import { cn } from "../lib/utils/cn.js";
-import { mediaNotConfiguredMessage } from "../screens/api-error-message.js";
 import { useAdminFeatures } from "../screens/shared/admin-features.js";
+import { useDebounced } from "../screens/shared/use-debounced.js";
 import { Alert, AlertDescription } from "../ui/alert.js";
 import { Button } from "../ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog.js";
+import { DialogFormFooter } from "../ui/dialog-form-footer.js";
+import { FieldError } from "../ui/field.js";
 import { Input } from "../ui/input.js";
 import { Label } from "../ui/label.js";
 import { Skeleton } from "../ui/skeleton.js";
@@ -27,6 +33,7 @@ export const altRequiredMessage = (t) => t("imageDialog.altRequired");
 export function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode = "insert", title: titleProp, }) {
     const site = useSite();
     const t = useTranslator(editorMessages);
+    const tc = useTranslator(commonMessages);
     const title = titleProp ?? t("imageDialog.title");
     const picking = mode === "pick";
     const { media } = useAdminFeatures();
@@ -49,10 +56,6 @@ export function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode =
     const [progress, setProgress] = useState(null);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState("");
-    const [library, setLibrary] = useState([]);
-    const [isLibraryLoading, setIsLibraryLoading] = useState(false);
-    const [libraryFailed, setLibraryFailed] = useState(false);
-    const [libraryAttempt, setLibraryAttempt] = useState(0);
     useEffect(() => {
         if (!open)
             return;
@@ -82,43 +85,23 @@ export function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode =
             cancelled = true;
         };
     }, [file, optimize, site]);
-    // biome-ignore lint/correctness/useExhaustiveDependencies: libraryAttempt is re-read on retry
-    useEffect(() => {
-        if (!open || tab !== "library")
-            return;
-        let cancelled = false;
-        setIsLibraryLoading(true);
-        setLibraryFailed(false);
-        const timer = setTimeout(() => {
+    // The library list follows the typed name after a pause. The rows already shown stay while the next ones load.
+    const debouncedSearch = useDebounced(search.trim(), 250);
+    const libraryQuery = useQuery({
+        queryKey: mediaKeys.list(`library:${debouncedSearch}`),
+        queryFn: ({ signal }) => {
             const params = new URLSearchParams({ pageSize: "24", kind: "image" });
-            if (search.trim())
-                params.set("search", search.trim());
-            fetch(cmsApiUrl(`/v1/media?${params.toString()}`))
-                .then((res) => {
-                if (!res.ok)
-                    throw new Error(String(res.status));
-                return res.json();
-            })
-                .then((data) => {
-                if (!cancelled)
-                    setLibrary((data.items ?? []).filter((item) => item.status !== "deleting"));
-            })
-                .catch(() => {
-                if (cancelled)
-                    return;
-                setLibrary([]);
-                setLibraryFailed(true);
-            })
-                .finally(() => {
-                if (!cancelled)
-                    setIsLibraryLoading(false);
-            });
-        }, 250);
-        return () => {
-            cancelled = true;
-            clearTimeout(timer);
-        };
-    }, [open, tab, search, libraryAttempt]);
+            if (debouncedSearch)
+                params.set("search", debouncedSearch);
+            return listMedia(site, params, signal);
+        },
+        enabled: open && tab === "library",
+        placeholderData: keepPreviousData,
+        retry: false,
+    });
+    const library = (libraryQuery.data?.items ?? []).filter((item) => item.status !== "deleting");
+    const isLibraryLoading = open && tab === "library" && (libraryQuery.isFetching || search.trim() !== debouncedSearch);
+    const libraryFailed = libraryQuery.isError;
     const isUploading = progress !== null;
     const needsAlt = !picking && !decorative && !alt.trim();
     const hasImage = tab === "upload" ? Boolean(prepared) : Boolean(picked);
@@ -168,24 +151,24 @@ export function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode =
         }
     };
     if (!media) {
-        return (_jsx(Dialog, { open: open, onOpenChange: (next) => !next && onClose(), children: _jsxs(DialogContent, { className: "max-w-lg", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: title }), _jsx(DialogDescription, { children: mediaNotConfiguredMessage(site) })] }), _jsx(DialogFooter, { children: _jsx(Button, { type: "button", variant: "outline", onClick: onClose, children: t("imageDialog.close") }) })] }) }));
+        return (_jsx(Dialog, { open: open, onOpenChange: (next) => !next && onClose(), children: _jsxs(DialogContent, { className: "max-w-lg", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: title }), _jsx(DialogDescription, { children: mediaNotConfiguredMessage(site) })] }), _jsx(DialogFooter, { children: _jsx(Button, { type: "button", variant: "outline", onClick: onClose, children: tc("close") }) })] }) }));
     }
     return (_jsx(Dialog, { open: open, onOpenChange: (next) => !next && !isUploading && onClose(), children: _jsx(DialogContent, { className: "max-w-lg", showCloseButton: !isUploading, children: _jsxs("form", { onSubmit: (event) => void confirm(event), 
                 // Do not insert with the Enter that ends Korean composition. Enter also inserts in multi-line fields (Shift+Enter is a line break).
-                onKeyDown: submitOnEnter, className: "contents", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: title }), _jsx(DialogDescription, { children: t("imageDialog.description") })] }), _jsx(Tabs, { value: tab, onValueChange: (value) => setTab(value), children: _jsxs(TabsList, { variant: "line", "aria-label": t("imageDialog.sourceLabel"), children: [_jsx(TabsTrigger, { value: "upload", disabled: isUploading, children: t("imageDialog.upload") }), _jsx(TabsTrigger, { value: "library", disabled: isUploading, children: t("imageDialog.library") })] }) }), tab === "upload" ? (_jsxs("div", { className: "space-y-2 text-sm", children: [_jsx(Input, { type: "file", "aria-label": t("imageDialog.fileLabel"), accept: "image/jpeg,image/png,image/webp,image/gif,image/avif", disabled: isUploading, onChange: (event) => setFile(event.target.files?.[0] ?? null) }), file && (_jsxs(_Fragment, { children: [_jsxs(Label, { htmlFor: optimizeId, className: "font-normal", children: [_jsx(Switch, { id: optimizeId, checked: optimize, disabled: isUploading, onCheckedChange: (checked) => setOptimize(checked) }), t("imageDialog.optimize")] }), _jsx("p", { className: "text-cms-muted-foreground text-xs", "aria-live": "polite", children: prepared?.optimized
+                onKeyDown: submitOnEnter, className: "contents", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: title }), _jsx(DialogDescription, { children: t("imageDialog.description") })] }), _jsx(Tabs, { value: tab, onValueChange: (value) => setTab(value), children: _jsxs(TabsList, { variant: "line", "aria-label": t("imageDialog.sourceLabel"), children: [_jsx(TabsTrigger, { value: "upload", disabled: isUploading, children: tc("upload") }), _jsx(TabsTrigger, { value: "library", disabled: isUploading, children: t("imageDialog.library") })] }) }), tab === "upload" ? (_jsxs("div", { className: "space-y-2 text-sm", children: [_jsx(Input, { type: "file", "aria-label": t("imageDialog.fileLabel"), accept: "image/jpeg,image/png,image/webp,image/gif,image/avif", disabled: isUploading, onChange: (event) => setFile(event.target.files?.[0] ?? null) }), file && (_jsxs(_Fragment, { children: [_jsxs(Label, { htmlFor: optimizeId, className: "font-normal", children: [_jsx(Switch, { id: optimizeId, checked: optimize, disabled: isUploading, onCheckedChange: (checked) => setOptimize(checked) }), t("imageDialog.optimize")] }), _jsx("p", { className: "text-cms-muted-foreground text-xs", "aria-live": "polite", children: prepared?.optimized
                                             ? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
                                             : `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}` })] }))] })) : (_jsxs("div", { className: "space-y-2", children: [_jsx(Label, { htmlFor: searchId, className: "sr-only", children: t("imageDialog.search") }), _jsx(Input, { id: searchId, value: search, placeholder: t("imageDialog.search"), onChange: (event) => setSearch(event.target.value) }), _jsxs("div", { className: "grid max-h-64 grid-cols-3 gap-2 overflow-y-auto", "aria-busy": isLibraryLoading, children: [isLibraryLoading &&
                                         library.length === 0 &&
-                                        ["a", "b", "c"].map((key) => _jsx(Skeleton, { className: "h-[6.25rem] w-full rounded-md" }, key)), libraryFailed && !isLibraryLoading && (_jsx(Alert, { variant: "danger", className: "col-span-3", children: _jsxs(AlertDescription, { className: "flex items-center justify-between gap-2", children: [t("imageDialog.libraryFailed"), _jsx(Button, { type: "button", size: "xs", variant: "outline", onClick: () => setLibraryAttempt((n) => n + 1), children: t("imageDialog.retry") })] }) })), library.length === 0 && !isLibraryLoading && !libraryFailed && (_jsx("p", { className: "col-span-3 py-6 text-center text-cms-muted-foreground text-sm", children: t("imageDialog.libraryEmpty") })), library.map((item) => (_jsxs(Button, { type: "button", variant: "outline", "aria-pressed": picked?.id === item.id, onClick: () => pick(item), className: cn("h-auto flex-col items-stretch gap-0 overflow-hidden p-0 text-left font-normal text-xs", picked?.id === item.id && "ring-2 ring-cms-primary"), children: [item.publicUrl ? (_jsx("img", { src: item.publicUrl, alt: "", className: "h-20 w-full object-cover" })) : (_jsx("span", { className: "flex h-20 items-center justify-center bg-cms-muted", children: t("imageDialog.noPreview") })), _jsx("span", { className: "block truncate px-1 py-0.5", children: item.filename })] }, item.id)))] })] })), _jsxs("div", { className: cn("space-y-2 text-sm", picking && "hidden"), children: [_jsx(Label, { htmlFor: altId, children: t("imageDialog.alt") }), _jsx(Textarea, { id: altId, value: alt, rows: 2, disabled: decorative || isUploading, "aria-required": !decorative, "aria-invalid": showAltError || undefined, "aria-describedby": showAltError ? altErrorId : undefined, onChange: (event) => {
+                                        ["a", "b", "c"].map((key) => _jsx(Skeleton, { className: "h-[6.25rem] w-full rounded-md" }, key)), libraryFailed && !isLibraryLoading && (_jsx(Alert, { variant: "destructive", className: "col-span-3", children: _jsxs(AlertDescription, { className: "flex items-center justify-between gap-2", children: [t("imageDialog.libraryFailed"), _jsx(Button, { type: "button", size: "xs", variant: "outline", onClick: () => void libraryQuery.refetch(), children: tc("retry") })] }) })), library.length === 0 && !isLibraryLoading && !libraryFailed && (_jsx("p", { className: "col-span-3 py-6 text-center text-cms-muted-foreground text-sm", children: t("imageDialog.libraryEmpty") })), library.map((item) => (_jsxs(Button, { type: "button", variant: "outline", "aria-pressed": picked?.id === item.id, onClick: () => pick(item), className: cn("h-auto flex-col items-stretch gap-0 overflow-hidden p-0 text-left font-normal text-xs", picked?.id === item.id && "ring-2 ring-cms-primary"), children: [item.publicUrl ? (_jsx("img", { src: item.publicUrl, alt: "", className: "h-20 w-full object-cover" })) : (_jsx("span", { className: "flex h-20 items-center justify-center bg-cms-muted", children: t("imageDialog.noPreview") })), _jsx("span", { className: "block truncate px-1 py-0.5", children: item.filename })] }, item.id)))] })] })), _jsxs("div", { className: cn("space-y-2 text-sm", picking && "hidden"), children: [_jsx(Label, { htmlFor: altId, children: t("imageDialog.alt") }), _jsx(Textarea, { id: altId, value: alt, rows: 2, disabled: decorative || isUploading, "aria-required": !decorative, "aria-invalid": showAltError || undefined, "aria-describedby": showAltError ? altErrorId : undefined, onChange: (event) => {
                                     setAlt(event.target.value);
                                     setAltTouched(true);
-                                }, onBlur: () => setAltTouched(true), className: "min-h-0" }), showAltError && (_jsx("p", { id: altErrorId, role: "alert", className: "text-cms-destructive text-xs", children: altRequiredMessage(t) })), _jsxs(Label, { htmlFor: decorativeId, className: "font-normal", children: [_jsx(Switch, { id: decorativeId, checked: decorative, disabled: isUploading, onCheckedChange: (checked) => setDecorative(checked) }), t("imageDialog.decorative")] }), _jsx(Label, { htmlFor: captionId, children: t("imageDialog.caption") }), _jsx(Textarea, { id: captionId, value: caption, rows: 2, disabled: isUploading, onChange: (event) => setCaption(event.target.value), className: "min-h-0" })] }), isUploading && (_jsxs("output", { className: "flex items-center gap-2 text-sm", children: [_jsx(Spinner, {}), " ", t("imageDialog.uploading", { percent: progress ?? 0 })] })), error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-sm", children: error })), _jsxs(DialogFooter, { children: [_jsx(Button, { type: "button", variant: "outline", disabled: isUploading, onClick: onClose, children: t("imageDialog.cancel") }), _jsx(Button, { type: "submit", disabled: isUploading || !hasImage, children: tab === "upload"
-                                    ? error
-                                        ? t("imageDialog.reupload")
-                                        : picking
-                                            ? t("imageDialog.upload")
-                                            : t("imageDialog.insert")
-                                    : picking
-                                        ? t("imageDialog.pick")
-                                        : t("imageDialog.insert") })] })] }) }) }));
+                                }, onBlur: () => setAltTouched(true), className: "min-h-0" }), showAltError && _jsx(FieldError, { id: altErrorId, children: altRequiredMessage(t) }), _jsxs(Label, { htmlFor: decorativeId, className: "font-normal", children: [_jsx(Switch, { id: decorativeId, checked: decorative, disabled: isUploading, onCheckedChange: (checked) => setDecorative(checked) }), t("imageDialog.decorative")] }), _jsx(Label, { htmlFor: captionId, children: t("imageDialog.caption") }), _jsx(Textarea, { id: captionId, value: caption, rows: 2, disabled: isUploading, onChange: (event) => setCaption(event.target.value), className: "min-h-0" })] }), isUploading && (_jsxs("output", { className: "flex items-center gap-2 text-sm", children: [_jsx(Spinner, {}), " ", t("imageDialog.uploading", { percent: progress ?? 0 })] })), error && _jsx(FieldError, { className: "text-sm", children: error }), _jsx(DialogFormFooter, { onCancel: () => !isUploading && onClose(), disabled: isUploading || !hasImage, submitLabel: tab === "upload"
+                            ? error
+                                ? t("imageDialog.reupload")
+                                : picking
+                                    ? tc("upload")
+                                    : t("imageDialog.insert")
+                            : picking
+                                ? t("imageDialog.pick")
+                                : t("imageDialog.insert"), cancelLabel: tc("cancel") })] }) }) }));
 }

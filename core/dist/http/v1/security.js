@@ -1,5 +1,5 @@
 import { AuthError } from "../../adapters/auth/index.js";
-import { HttpError } from "./error-handler.js";
+import { CmsError } from "./error-handler.js";
 /**
  * Same-origin check for state-changing requests (POST, PATCH, PUT, DELETE).
  * Requires an Origin/Host match or `Sec-Fetch-Site: same-origin`, and rejects when there is no signal at all (fail-closed).
@@ -48,7 +48,7 @@ cms, request, options = {}) {
         const contentType = request.headers.get("content-type");
         const accepted = options.form ? ["application/json", "application/x-www-form-urlencoded"] : ["application/json"];
         if (!accepted.some((type) => contentType?.toLowerCase().includes(type))) {
-            throw new HttpError(415, "unsupported_media_type", `Content-Type must be ${accepted.join(" or ")}`);
+            throw new CmsError(`Content-Type must be ${accepted.join(" or ")}`, "unsupported_media_type");
         }
     }
 }

@@ -1,5 +1,5 @@
 import { SEARCH_ARRAY_QUERY_KEYS } from "../../../../core/api.js";
-import { adminRoute, json, parseWith, readQuery } from "../../handler.js";
+import { adminRoute, ok, parseWith, readQuery } from "../../handler.js";
 /**
  * Finds entries of one collection by title, for a picker (a relation field): `collection`, `query` (title, then slug), `locale`, `publishedOnly`
  * and `limit` (default 20, at most 50). The best matches come first. Answers `{ items: [{ id, title, slug, status }] }` and nothing else, so a picker
@@ -15,5 +15,5 @@ export const GET = adminRoute(async ({ request, cms }) => {
         ...(query.limit === undefined ? {} : { limit: query.limit }),
         ...(query.id === undefined ? {} : { ids: query.id }),
     });
-    return json({ items });
+    return ok({ items });
 });

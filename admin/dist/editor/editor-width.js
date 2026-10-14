@@ -2,8 +2,8 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { MoveHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { readPreference, writePreference } from "../lib/utils/site-storage.js";
+import { useMemo } from "react";
+import { stringCodec, usePreference } from "../lib/hooks/use-preference.js";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, } from "../ui/dropdown-menu.js";
 import { IconButton } from "../ui/icon-button.js";
 import { editorMessages } from "./messages.js";
@@ -24,7 +24,7 @@ export function resolveEditorWidths(configured, t) {
         : [{ key: NORMAL_KEY, label: t("editorWidth.normal"), width: DEFAULT_EDITOR_WIDTH }];
     return [...steps, { key: FULL_KEY, label: t("editorWidth.full"), width: FULL_EDITOR_WIDTH }];
 }
-/** Name of the remembered width in the site's browser storage (`lib/utils/site-storage.ts`). */
+/** Name of the remembered width in the site's browser preferences (per device, see `usePreference`). */
 const STORAGE_NAME = "editor-width";
 /**
  * The steps of this site and the chosen one. The choice is remembered in this browser, per site, by step key; a remembered key that no step has any more
@@ -35,15 +35,8 @@ export function useEditorWidth() {
     const t = useTranslator(editorMessages);
     const configured = site.config.editor?.widths;
     const steps = useMemo(() => resolveEditorWidths(configured, t), [configured, t]);
-    const [key, setKey] = useState(null);
-    useEffect(() => {
-        setKey(readPreference(site, STORAGE_NAME));
-    }, [site]);
+    const [key, choose] = usePreference(STORAGE_NAME, stringCodec, "");
     const step = steps.find((candidate) => candidate.key === key) ?? steps[0];
-    const choose = (next) => {
-        setKey(next);
-        writePreference(site, STORAGE_NAME, next);
-    };
     return { steps, step, choose };
 }
 /** Body width menu at the right end of the toolbar. */

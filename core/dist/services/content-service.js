@@ -1,4 +1,4 @@
-import { serviceInputKeys, validateExactRecord } from "../core/snapshot.js";
+import { imageWarningsForSnapshot, serviceInputKeys, validateExactRecord, } from "../core/snapshot.js";
 import { withTranslationHints } from "../core/translation/hints.js";
 import { confirmedSourceState } from "../core/translation/state.js";
 import { ServiceError, } from "./types.js";
@@ -161,9 +161,10 @@ export const createContentService = (storePort, options) => {
         /**
          * Publishes the latest saved draft. The draft goes through the write pipeline first (a hook that changed it has the change saved with the
          * publish, in one transaction), then the store checks the prepared draft against the rows it has to lock and commits.
-         * `extraWarnings` adds notices computed from the prepared draft (image state), which never block.
+         * The result's warnings include the image notices of the prepared draft (when the service has `imageChecks`), which never block.
+         * Single and bulk publishes both come through here, so they report the same.
          */
-        publish: async (params, options) => {
+        publish: async (params) => {
             const previousReferences = await storePort.getWorkingReferences({ entryId: params.id });
             const working = await storePort.getWorking({ entryId: params.id });
             const { snapshot, warnings, transformed } = await pipeline.run({
@@ -178,7 +179,10 @@ export const createContentService = (storePort, options) => {
                 },
                 prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
             });
-            const noticed = options?.extraWarnings ? await options.extraWarnings(snapshot) : (snapshot.warnings ?? []);
+            const noticed = [
+                ...(snapshot.warnings ?? []),
+                ...(options.imageChecks ? await imageWarningsForSnapshot(snapshot, options.imageChecks) : []),
+            ];
             // Notices found while the targets are locked (a link to an entry that is not published) join the ones found before the transaction.
             const locked = [];
             const onWarnings = (found) => locked.push(...found);
@@ -193,14 +197,14 @@ export const createContentService = (storePort, options) => {
                     publishedAt: params.publishedAt,
                     onWarnings,
                 })
-                : (await storePort.publishEntry({
+                : await storePort.publishEntry({
                     id: params.id,
                     expectedVersion: params.expectedVersion,
                     snapshot,
                     resetPublishedAt: params.resetPublishedAt,
                     publishedAt: params.publishedAt,
                     onWarnings,
-                }));
+                });
             return { entry, warnings: [...noticed, ...locked, ...warnings] };
         },
         /**

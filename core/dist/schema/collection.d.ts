@@ -7,8 +7,6 @@ import type { BacklinkField, Field, SlugField, ValueField, ValueOf } from "./fie
  * - `item`: saving in a small form applies straight to the current (public) value. There is no publish, archive or translation copy (e.g. tags).
  */
 export type CollectionKind = "document" | "item";
-/** Said when a collection still has the retired `list` option. */
-export declare const LIST_REMOVED = "List columns are no longer part of the schema: each admin chooses them on the list screen (Column settings). Delete the `list` key.";
 export interface LayoutGroup<Name extends string = string> {
     /** Group title in the properties panel. If absent, it is drawn continuously without a title. */
     readonly group?: string;
@@ -16,7 +14,7 @@ export interface LayoutGroup<Name extends string = string> {
     /** Collapsed at first. */
     readonly collapsed?: boolean;
     /**
-     * Tab name in which this group is drawn in the edit screen's properties area. Groups with the same name gather in one tab; if absent, it is drawn in the default tab (`속성`).
+     * Tab name in which this group is drawn in the edit screen's properties area (1 to 20 characters). Groups with the same name gather in one tab; if absent, it is drawn in the default tab. Tabs live on groups only; the fields a plugin places in a tab of its own (the SEO fields) are not the layout's to list.
      */
     readonly tab?: string;
 }
@@ -47,8 +45,8 @@ export interface CollectionSchema<Fields extends Readonly<Record<string, Field>>
      */
     readonly icon?: string;
     /**
-     * Properties panel layout. Fields not listed are drawn after the last group in declaration order. If absent, they are drawn in field declaration order,
-     * and fields that have their own `tab` gather in that tab.
+     * Properties panel layout. Fields not listed are drawn after the last group in declaration order. If absent, they are drawn in field declaration order.
+     * Plugins place their own fields in tabs of their own (`contributes.layout`); `panelGroupsOf` is the one place that works out the groups.
      */
     readonly layout?: readonly LayoutGroup[];
 }
@@ -64,9 +62,9 @@ export declare function defineCollection<const Fields extends Readonly<Record<st
     kind: Kind;
 }): CollectionSchema<Fields, Kind>;
 /**
- * Normalizes a collection definition: checks the kind and fills the body default (only `document` has a body).
- * Called by `defineCollection` and `defineSite` (an already normalized definition stays as is).
- * The retired `workflow` option (`"publish"` / `"record"`) is rejected with the `kind` to use instead.
+ * Normalizes a collection definition: fills the body default (only `document` has a body) and turns the object form of `body` into `body: true` and `allowed`.
+ * Called by `defineCollection` and `defineSite` (an already normalized definition stays as is). It does not judge the definition: `defineSite` checks the normalized
+ * collection, so a missing or unknown `kind`, a retired option and a malformed `body` are reported there, with their paths.
  */
 export declare function normalizeCollection(schema: Omit<CollectionSchema, "kind" | "body" | "allowed"> & {
     readonly kind?: CollectionKind;

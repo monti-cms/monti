@@ -1,11 +1,11 @@
 import { Pool } from "pg";
 import { SSLMODE_FIX, sslmodeWarning } from "../../adapters/postgres/connection.js";
 import { DATABASE_URL_WHERE, describeConnection, explainDatabaseError } from "../../adapters/postgres/explain.js";
-import { fail, ok, skip, warn } from "./outcome.js";
+import { fail, fromProblem, ok, skip, warn } from "./outcome.js";
 /** How long a check waits for the database before it calls it unreachable. */
 const CONNECT_TIMEOUT_MS = 8000;
-/** What the database adapter was given in `monti.config.ts` (`DatabaseAdapter.settings`); empty when it exposes none. */
-const settingsOf = (state) => state.cms?.server.database.settings?.() ?? {};
+/** What the database adapter was given in `monti.config.ts` (`DatabaseInspector.settings`); empty when it exposes none. */
+const settingsOf = (state) => state.cms?.server.database.inspector?.settings() ?? {};
 const IDENTIFIER = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const urlOf = (settings, state) => settings.connectionString || state.env.DATABASE_URL?.trim() || undefined;
 const schemaOf = (settings, state) => settings.schema || state.env.DATABASE_SCHEMA?.trim() || "public";
@@ -43,7 +43,7 @@ function reach(state, url) {
 const shortVersion = (version) => /^PostgreSQL [\d.]+/.exec(version)?.[0] ?? "PostgreSQL";
 /**
  * The `database` group of `monti doctor`: the connection string, reaching the database, the schema, and the migrations. The connection string and schema
- * come from what the adapter was given (`DatabaseAdapter.settings`), else from `DATABASE_URL` and `DATABASE_SCHEMA`. The checks open a short-lived
+ * come from what the adapter was given (`DatabaseInspector.settings`), else from `DATABASE_URL` and `DATABASE_SCHEMA`. The checks open a short-lived
  * connection of their own and change nothing.
  */
 const url = {
@@ -104,7 +104,7 @@ const connect = {
             schema: schemaOf(settings, state),
         });
         if (explained)
-            return fail(explained.problem.what, { where: explained.problem.where, fix: explained.problem.fix });
+            return fromProblem("fail", explained.problem);
         return fail(`could not connect to the database: ${result.error?.message ?? String(result.error)}`, {
             where: DATABASE_URL_WHERE,
             fix: "check that the database is running and that DATABASE_URL is right",
@@ -158,7 +158,7 @@ const migrations = {
         const result = await reach(state, value);
         if (!result.ok)
             return skip("not checked: the database cannot be reached (see above)");
-        const { CONTENT_STORE_MIGRATIONS } = await import("../../adapters/postgres/store/schema.js");
+        const { CONTENT_STORE_MIGRATIONS, databaseOutdatedError, isOutdatedMigrationName } = await import("../../adapters/postgres/migrations/index.js");
         const applied = await withPool(value, async (pool) => {
             try {
                 const rows = await pool.query(`SELECT name FROM "${name}".cms_migrations`);
@@ -172,6 +172,10 @@ const migrations = {
                 throw error;
             }
         });
+        if ([...applied].some(isOutdatedMigrationName)) {
+            const { what, fix } = databaseOutdatedError().problem;
+            return fail(what, { where: `schema "${name}" (table cms_migrations)`, fix });
+        }
         const pending = CONTENT_STORE_MIGRATIONS.filter((step) => !applied.has(step));
         const total = CONTENT_STORE_MIGRATIONS.length;
         if (pending.length > 0) {
@@ -184,14 +188,6 @@ const migrations = {
                 fix: none
                     ? "run `monti db:setup` once; on a deployed site run it as a step of the first deploy, before the new version starts"
                     : "run `monti db:migrate`; on a deployed site run it as a step of the deploy, before the new version starts",
-            });
-        }
-        const known = new Set(CONTENT_STORE_MIGRATIONS);
-        const ahead = [...applied].filter((step) => /^\d{4}_/.test(step) && !known.has(step));
-        if (ahead.length > 0) {
-            return warn(`the database has ${ahead.length} migration${ahead.length === 1 ? "" : "s"} this version of Monti does not know (${ahead.slice(0, 3).join(", ")})`, {
-                where: `schema "${name}" (table cms_migrations)`,
-                fix: "something newer has migrated this database: update @monti-cms/core to the same version, or point DATABASE_URL (or DATABASE_SCHEMA) at a database of this version",
             });
         }
         return ok(`all ${total} migrations are applied`, { where: `schema "${name}"` });

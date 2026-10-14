@@ -9,25 +9,29 @@ import { type SiteLinks } from "../core/links.js";
 import { type SiteLocales } from "../core/locales.js";
 import { type SiteTime } from "../core/time.js";
 import { type SiteI18n } from "../i18n/index.js";
-import type { CmsPlugin } from "../plugin/define.js";
+import type { CmsPlugin, PluginNavItem } from "../plugin/define.js";
 import { type SiteSchemas } from "../schema/derive.js";
+import { type SitePanel } from "../schema/layout.js";
+/** What a plugin keeps in the browser's snapshot: its `name`, `nav`, `options` and `contributes` as JSON. */
+export interface PluginSnapshot {
+    readonly name: string;
+    readonly options: unknown;
+    readonly nav?: readonly PluginNavItem[];
+    readonly contributes?: Readonly<Record<string, unknown>>;
+}
 /**
- * A site config that is any config: what code that works on a site without knowing which one it is accepts. The config a site writes (`defineSite(...)`) is
- * assignable to it and keeps its own, narrower type in `Site<typeof config>`.
- */
-export type AnyCmsConfig = CmsConfig;
-/**
- * The config a site's browser code works from: the same shape as the site config, with nothing that cannot cross from the server to the browser as data. It is
- * what `site.snapshot()` returns and what `createSite` and `<SiteProvider config={...}>` accept.
+ * The config a site's browser code works from: the site config with nothing that cannot cross from the server to the browser as data. It is what `site.snapshot()`
+ * returns and what `createSite` and `<SiteProvider config={...}>` accept (it is a `CmsConfig`).
  *
  * Collections, locales, `site`, `admin`, `timeZone`, `media`, `editor` and `codeBlock` are the config's own (with the labels written as text). `blocks` holds every block of the site
- * (the blocks the plugins add included) and each plugin keeps its `name`, `nav`, `options` and `contributes` as JSON: a function inside `options` or `contributes`
- * does not reach the browser, and neither do the plugin's `server`, `admin`, `render`, `formats`, `validate` loaders.
- * Text overrides of `admin.messages` that are functions are left out the same way (strings stay).
+ * (the blocks the plugins add included) and each plugin is a {@link PluginSnapshot}: a function inside `options` or `contributes` does not reach the browser, and neither do
+ * the plugin's `server`, `admin`, `render`, `formats`, `validate` loaders. Text overrides of `admin.messages` that are functions are left out the same way (strings stay).
  */
-export type SiteSnapshot = CmsConfig;
+export type SiteSnapshot = Omit<CmsConfig, "plugins"> & {
+    readonly plugins: readonly PluginSnapshot[];
+};
 /** One site, resolved from its config: everything that used to be a module-level constant derived from the config file. */
-export type Site<Config extends AnyCmsConfig = AnyCmsConfig> = SiteI18n & SiteLocales & SiteSchemas & SiteCollections & SiteLinks & SiteAdminPaths & SiteAdminFeatures & SiteTime & SiteBlocks & SiteCodeBlock & {
+export type Site<Config extends CmsConfig = CmsConfig> = SiteI18n & SiteLocales & SiteSchemas & SiteCollections & SiteLinks & SiteAdminPaths & SiteAdminFeatures & SiteTime & SiteBlocks & SiteCodeBlock & SitePanel & {
     /** The config the site was created from. */
     readonly config: Config;
     /** The plugins of the config (an empty list if it has none). */
@@ -49,4 +53,4 @@ export type Site<Config extends AnyCmsConfig = AnyCmsConfig> = SiteI18n & SiteLo
  *
  * The labels of block and line effect definitions (getters, because the language is not known when the config file imports them) are read here, in the admin language.
  */
-export declare function createSite<const Config extends AnyCmsConfig>(config: Config): Site<Config>;
+export declare function createSite<const Config extends CmsConfig>(config: Config): Site<Config>;

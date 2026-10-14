@@ -1,4 +1,4 @@
-import { AI_PLUGIN_NAME } from "./plugin-name.js";
+import { AI_PLUGIN_NAME } from "./name.js";
 import { resolveAiActions } from "./resolve.js";
 const registries = new WeakMap();
 /** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the shared texts. */

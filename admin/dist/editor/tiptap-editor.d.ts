@@ -20,7 +20,7 @@ interface CmsEditorProps {
     onCompositionEnd?: () => void;
     /** False when the state is not editable, such as the trash. */
     editable?: boolean;
-    /** Extra actions beside the block handle (e.g. `번역` on a translation). Shown only when usable on that block. */
+    /** Extra actions beside the block handle (e.g. "Translate" on a translation). Shown only when usable on that block. */
     blockActions?: readonly BlockAction[];
     /** Called when the editor is created or destroyed (for document-wide actions from outside). */
     onEditor?: (editor: Editor | null) => void;

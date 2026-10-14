@@ -21,7 +21,10 @@ export interface RenderInput {
     /** The site the document is rendered for: its blocks, code settings and plugins. */
     readonly site: Site;
 }
-/** Forgets which block names were already warned about (for tests). */
+/**
+ * Forgets which block names were already warned about (for tests).
+ * @internal For tests, which share the module.
+ */
 export declare const resetMissingComponentWarnings: () => void;
 export declare const renderDocumentTree: (nodes: readonly CmsNode[], input: RenderInput) => {
     content: ReactNode;

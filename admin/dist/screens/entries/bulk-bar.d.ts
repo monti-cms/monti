@@ -1,29 +1,7 @@
 import type { BulkOp, Site } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
-import { type CmsIssue } from "../api-error-message.js";
-export type BulkUsage = {
-    entryId: string;
-    title: string | null;
-    collection: string;
-    state: string;
-};
-export type BulkItemResult = {
-    id: string;
-    ok: true;
-    version: number;
-} | {
-    id: string;
-    ok: false;
-    error: string;
-    issues?: CmsIssue[];
-    usages?: BulkUsage[];
-};
-export type BulkSelection = {
-    id: string;
-    expectedVersion: number;
-    title?: string | null;
-};
-type RunBulkArgs = Parameters<typeof runBulk> extends [unknown, ...infer Rest] ? Rest : never;
+import { type BulkItemResult, type BulkParams, type BulkSelection } from "../../api/entries.js";
+type RunBulkArgs = [op: BulkOp, items: BulkSelection[], params?: BulkParams];
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
 /**
  * Actions on screen. A category action pairs a relation-field bulk action with a field name, like `relation.add:tagIds`.
@@ -57,12 +35,6 @@ export declare function taxonomyActions(site: Site, collection: string): ActionD
 export declare function describeBulkFailure(site: Site, failure: Extract<BulkItemResult, {
     ok: false;
 }>): string;
-export declare function runBulk(site: Site, op: BulkOp, items: BulkSelection[], params?: {
-    field?: string;
-    ids?: string[];
-    id?: string | null;
-    folderId?: string | null;
-}): Promise<BulkItemResult[]>;
 /**
  * Bulk actions. Apply only to items picked on the current page and show a result per item.
  * Only failed items can be rerun. The trash screen (`mode="trash"`) offers only bulk permanent delete.
@@ -74,7 +46,7 @@ export declare function BulkBar({ collection, selected, folders, mode, onClearSe
     mode?: "list" | "trash";
     onClearSelection: () => void;
     /** Action request. The list screen passes a request that updates the list first (optimistic update). */
-    onRun?: (...args: RunBulkArgs) => ReturnType<typeof runBulk>;
+    onRun?: (...args: RunBulkArgs) => Promise<BulkItemResult[]>;
     onDone?: (failedIds: string[]) => void;
 }): import("react").JSX.Element | null;
 export {};

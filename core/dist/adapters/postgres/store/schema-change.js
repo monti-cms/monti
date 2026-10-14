@@ -15,7 +15,7 @@ const toScanned = (row) => ({
     status: row.status,
     state: row.state,
     metadata: row.metadata,
-    doc: readBodyDoc(row.doc, row.mdx),
+    doc: readBodyDoc(row.doc),
     schemaVersion: row.schema_version,
 });
 /** A batch of bodies after the key `after` (entry id, state), `collections` only when given. `lock` takes the row locks of the transaction. */
@@ -36,7 +36,6 @@ async function readBatch(db, params) {
         "b.state",
         "b.metadata",
         "b.doc",
-        "b.mdx",
         "b.schema_version",
     ])
         .$if(collections !== undefined, (qb) => qb.where("e.collection", "=", sql `any(${[...collections]}::text[])`))

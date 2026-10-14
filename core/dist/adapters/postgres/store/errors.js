@@ -6,9 +6,6 @@ export function isUniqueViolation(err, constraints) {
     const names = typeof constraints === "string" ? [constraints] : constraints;
     return code === "23505" && typeof constraint === "string" && names.includes(constraint);
 }
-export function isForeignKeyViolation(err) {
-    return pgError(err).code === "23503";
-}
 /** Deadlock (40P01) and serialization failure (40001). Treated as a concurrent publish conflict. */
 export function isTransactionConflict(err) {
     const { code } = pgError(err);

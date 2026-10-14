@@ -1,3 +1,8 @@
+/**
+ * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
+ * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
+ */
+import { type PluginFieldSet } from "@monti-cms/core/client";
 export type Obj = Record<string, unknown>;
 export declare const isObj: (value: unknown) => value is Obj;
 export declare const FIELD_KINDS: readonly ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
@@ -5,7 +10,7 @@ export type FieldKindName = (typeof FIELD_KINDS)[number];
 /** The kinds a conditional field can show (the ones that store one value). */
 export declare const VALUE_KINDS: readonly ["text", "relation", "select", "media"];
 /** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
-export declare const FIELD_KEY_ORDER: readonly ["kind", "label", "description", "required", "localized", "input", "inputOptions", "hidden", "role", "tab", "fillFromBody", "multiline", "rows", "max", "from", "to", "many", "createInline", "publishedOnly", "allowUnpublished", "ordered", "view", "via", "accept", "options", "defaultValue", "discriminant", "values", "placeholder"];
+export declare const FIELD_KEY_ORDER: readonly ["kind", "label", "description", "required", "localized", "input", "inputOptions", "role", "fillFromBody", "multiline", "rows", "max", "from", "to", "many", "createInline", "publishedOnly", "allowUnpublished", "ordered", "view", "via", "accept", "options", "defaultValue", "discriminant", "values", "placeholder"];
 export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "body", "fields", "layout"];
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export declare function setProp(obj: Obj, key: string, value: unknown, order?: readonly string[]): Obj;
@@ -30,11 +35,10 @@ export declare function changeCount(base: Obj, draft: Obj): number;
 export declare function renameKey<T>(record: Record<string, T>, from: string, to: string): Record<string, T>;
 /** `record` with `key` moved by `delta` places (negative: up). */
 export declare function moveKey<T>(record: Record<string, T>, key: string, delta: number): Record<string, T>;
+/** `list` with the item at `index` moved by `delta` places (negative: up). */
 export declare function moveItem<T>(list: readonly T[], index: number, delta: number): T[];
 /** Whether two JSON values are the same, key order included. */
 export declare function sameJson(a: unknown, b: unknown): boolean;
-/** A name for a field, option or collection: what the stored values and the JSON keys are called. */
-export declare const NAME_PATTERN: RegExp;
 /** Why `name` cannot be used among `taken` names, or `null`. */
 export declare function nameProblem(name: string, taken: readonly string[]): "empty" | "pattern" | "reserved" | "taken" | null;
 export declare const collectionsOf: (file: Obj) => Record<string, Obj>;
@@ -49,8 +53,6 @@ export declare function pathProblem(path: string): "slash" | "slug" | null;
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
 export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj;
 export declare function removeCollection(file: Obj, name: string): Obj;
-/** The names of the fields that store a value, including the fields a conditional field shows (the order the entry form has them). */
-export declare function storedFieldNames(collection: Obj): string[];
 /** Every name in `fields` or inside a conditional field, for the uniqueness of a new name (the stored values share one namespace). */
 export declare function allFieldNames(collection: Obj): string[];
 /** A field of `kind` with the properties it needs. */
@@ -80,6 +82,8 @@ export type FieldPlace = {
     };
 };
 export declare function addField(collection: Obj, place: FieldPlace, name: string, field: Obj): Obj;
+/** The fields of a plugin's field set added after the others, under names the collection does not use yet. */
+export declare function addFieldSet(collection: Obj, set: Pick<PluginFieldSet, "fields">): Obj;
 export declare function setField(collection: Obj, place: FieldPlace, name: string, update: (field: Obj) => Obj): Obj;
 export declare function removeField(collection: Obj, place: FieldPlace, name: string): Obj;
 export declare function moveField(collection: Obj, place: FieldPlace, name: string, delta: number): Obj;
@@ -121,7 +125,6 @@ export interface LayoutGroup {
     collapsed?: boolean;
     tab?: string;
 }
-export declare const layoutOf: (collection: Obj) => LayoutGroup[];
 export declare function withLayout(collection: Obj, layout: LayoutGroup[]): Obj;
 export interface Locale {
     code: string;
@@ -134,7 +137,10 @@ export declare function fieldAt(collection: Obj, place: FieldPlace, name: string
 /** The kinds that cannot be added with a name alone: they open their settings first. */
 export declare const KINDS_WITH_SETTINGS: readonly FieldKindName[];
 export type FieldProblem = "options" | "optionLabel" | "branches" | "target" | "slugFrom" | "backlink" | "view";
-/** What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. */
+/**
+ * What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. The rules are
+ * core's (`checkField`, the ones `defineSite` applies to the saved file); the form only turns the codes into the names its messages use.
+ */
 export declare function fieldProblems(field: Obj, collection: Obj, collectionNames: readonly string[]): FieldProblem[];
 /**
  * Why a field cannot be deleted, or `null`. The title field is what names every entry; the slug field cannot go while the public address is made from `:slug`.

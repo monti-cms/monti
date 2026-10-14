@@ -1,42 +1,44 @@
 import type { BlockDefinition } from "../blocks/define.js";
 import type { Cms } from "../cms/index.js";
+import type { Issue } from "../config/check/issue.js";
 import type { CollectionsConfig } from "../config/define.js";
 import type { CmsFormat } from "../format/types.js";
 import type { WriteHooks } from "../services/hooks.js";
 import type { Site } from "../site/index.js";
 import type { PluginStorage } from "./storage.js";
+/** A label shown in the admin: plain text, or a function of the site that follows the admin language (`(site) => site.createTranslator(messages)("label")`). */
+export type PluginLabel = string | ((site: Pick<Site, "createTranslator">) => string);
+/** The server side of a plugin: given inline, or as a loader of a module whose default export it is (read only when used). */
+export type PluginServer = CmsServerPlugin | (() => Promise<{
+    readonly default: CmsServerPlugin;
+}>);
 /**
- * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`).
+ * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`). Its parts are grouped by who reads them:
  *
- * - Config values (`options`), Tools pages (`nav`) and config validation (`validate`) are read by both server and browser. Apart from functions, only JSON values go here.
- * - Server code (`server`) and admin UI code (`admin`) are loader functions. They are read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`)
- *   so server code stays out of the browser bundle.
+ * - **Both sides** read `options`, `blocks`, `nav`, `keySlots`, `validate` and `contributes`. Apart from functions, only JSON values go here.
+ * - **The server** reads `server`: routes, hooks, formats, commands, migrations, feature flags and the labels of key uses, inline or as a loader (`() => import("my-plugin/server")`).
+ *   A loader is read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`) so server code stays out of the browser bundle.
+ * - **The admin UI** reads `admin` (a loader), and **the public page** reads `render` (a loader).
+ *
+ * Every concept has one place: hooks only in `server`, API key slots only in `keySlots`.
  */
 export interface CmsPlugin<Name extends string = string, Options = unknown, Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> {
     readonly name: Name;
     readonly options: Options;
+    /** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
+    readonly blocks?: Blocks;
     /** Pages to add to the Tools group of the admin sidebar. `path` is a single-segment address (`<admin path>/tools/<path>`, default `/admin/tools/<path>`), rendered by the admin plugin's `pages`. */
     readonly nav?: readonly PluginNavItem[];
     /**
-     * The API keys this plugin needs, one slot each (`{ id: "key", label }`). Tools > API keys lists every slot of the installed plugins: assigned (the key's
-     * "in use" line names it) or empty (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with
-     * `cms.apiKeys.readSlot(<plugin name>, <slot id>)`. Read by both sides.
+     * The API keys this plugin needs, one slot each. Tools > API keys lists every slot of the installed plugins: assigned (the key's "in use" line names it) or empty
+     * (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with `cms.apiKeys.slot(<plugin name>, <slot id>).read()`.
+     * Uses of a key that are not slots (an item of the plugin that has its own key, like an AI connection) are reported with `cms.apiKeys.setUses` and labelled by `server.keyUses`.
      */
     readonly keySlots?: readonly PluginKeySlot[];
-    /** Body blocks (block extension). Added by the same rules as `blocks` in the site config. */
-    readonly blocks?: Blocks;
-    /** Validation called when the site config is created. Throws if the config is invalid. */
-    readonly validate?: (config: PluginConfigView) => void;
-    /**
-     * Write hooks written inline, for a plugin that only needs hooks: `definePlugin({ name, hooks })` needs no `server` module. Inline code loads with
-     * every server start (the CLI, edge and cold starts included), so keep it light; it may use secrets through `cms.secrets` or the environment. A plugin
-     * with heavy hooks, or with routes, migrations or commands, puts its hooks in `server` (a lazy module). Not both: a plugin with `hooks` here and in `server` fails when it loads.
-     */
-    readonly hooks?: WriteHooks;
-    /** Server side (API routes, migrations, hooks, commands). The default export is a `CmsServerPlugin`. Read only on the server. */
-    readonly server?: () => Promise<{
-        readonly default: CmsServerPlugin;
-    }>;
+    /** Validation called when the site config is created. Returns the issues it finds (a path into the config and a message each); `defineSite` reports them with every other problem. */
+    readonly validate?: (config: PluginConfigView) => readonly Issue[] | void;
+    /** Server side. Inline for a plugin that only needs hooks (it loads with every server start, so keep it light), or a loader for routes, commands and heavy code. */
+    readonly server?: PluginServer;
     /** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */
     readonly admin?: () => Promise<{
         readonly default: unknown;
@@ -50,15 +52,7 @@ export interface CmsPlugin<Name extends string = string, Options = unknown, Bloc
         readonly documentComponents?: unknown;
     }>;
     /**
-     * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
-     * the read and write APIs. The default export is a `CmsFormat` or a list of them. It is read on the server when the instance first needs its formats;
-     * two formats with one name (a plugin's and a built-in one included) fail there.
-     */
-    readonly formats?: () => Promise<{
-        readonly default: CmsFormat | readonly CmsFormat[];
-    }>;
-    /**
-     * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`), and the core does not read it.
+     * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`). The core reads one key itself, `layout`: the tabs of the edit screen's properties panel this plugin places its fields in (see `PluginPlacement`).
      * It is unused if no plugin receives it, so an extension can add features without knowing the receiving plugin.
      */
     readonly contributes?: Readonly<Record<string, unknown>>;
@@ -76,11 +70,17 @@ export interface PluginKeySlot {
      * What the admin calls this key ("Spell check"), for display only. Give a function of the site to follow the admin language (`(site) => site.createTranslator(messages)("keyLabel")`):
      * the core calls it with the site of the instance each time the slots are listed. A plain string is shown as it is.
      */
-    readonly label: string | ((site: Pick<Site, "createTranslator">) => string);
+    readonly label: PluginLabel;
+    /**
+     * Called after a key was assigned to the slot or the slot was cleared (in the admin, or by `cms.apiKeys.slot(...).set/assign`), once the change is saved. Use it
+     * for work that waits for the key (a sync that was held back for lack of a token). Not called for changes made inside `cms.transaction`.
+     */
+    readonly onChange?: (cms: Cms) => Promise<void> | void;
 }
 export interface PluginNavItem {
     readonly path: string;
-    readonly label: string;
+    /** The page name in the sidebar. A function of the site follows the admin language. */
+    readonly label: PluginLabel;
     /** lucide icon name (e.g. `sparkles`). */
     readonly icon?: string;
 }
@@ -114,6 +114,11 @@ export interface PluginRoute {
 export interface OwnedPluginRoute extends PluginRoute {
     readonly plugin: string;
 }
+/**
+ * The server side of a plugin, empty. A plugin package's `server.browser.ts` (the `browser` condition of its `exports`) re-exports this as the default, so the
+ * browser bundle that reads the site config gets no server code: `export { emptyServerPlugin as default } from "@monti-cms/core";`.
+ */
+export declare const emptyServerPlugin: CmsServerPlugin;
 export interface CmsServerPlugin {
     /**
      * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
@@ -135,9 +140,13 @@ export interface CmsServerPlugin {
     /**
      * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit` (which gets the
      * instance as its second argument, like the config's). They run after the server config's hooks, in the order of the plugins in the site config.
-     * A plugin may set them inline (`CmsPlugin.hooks`) or here, not in both.
      */
     readonly hooks?: WriteHooks;
+    /**
+     * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
+     * the read and write APIs. Called when the instance first needs its formats; two formats with one name (a plugin's and a built-in one included) fail there.
+     */
+    readonly formats?: () => Promise<CmsFormat | readonly CmsFormat[]> | CmsFormat | readonly CmsFormat[];
     /**
      * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti db:migrate`), runs the command with the instance and
      * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).
@@ -168,7 +177,7 @@ export interface PluginCommand {
     readonly run: (context: PluginCommandContext) => Promise<number | void>;
 }
 /**
- * Creates a plugin. A plugin package exports a function (e.g. `aiPlugin()`) that returns this value. The type of what it adds (`contributes`)
+ * Creates a plugin. A plugin package exports a function (e.g. `ai()`) that returns this value. The type of what it adds (`contributes`)
  * is preserved so the receiving plugin can read it (e.g. AI feature names).
  */
 export declare function definePlugin<const Name extends string, Options = Record<string, never>, const Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[], const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>>(plugin: Omit<CmsPlugin<Name, Options, Blocks>, "options"> & {

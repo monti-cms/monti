@@ -1,11 +1,13 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { useSite } from "@monti-cms/core/client";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { cmsEntryClient } from "../../api/entries.js";
+import { cmsIssueMessage } from "../../api/error-message.js";
 import { BlockIssuesProvider } from "../../editor/blocks/block-issues-context.js";
 import { useStoreSelector } from "../../hooks/store.js";
-import { cmsIssueMessage } from "../api-error-message.js";
-import { cmsEntryClient, localRecoveryStoreOf, } from "./entry-editor-client.js";
-import { createEntryEditor, ENTRY_EDITOR_CORE, } from "./entry-editor-store.js";
+import { useBeforeUnload } from "../../lib/hooks/use-before-unload.js";
+import { localRecoveryStoreOf } from "./entry-editor-client.js";
+import { createEntryEditor, ENTRY_EDITOR_CORE } from "./entry-editor-store.js";
 import { formFromSourceMetadata } from "./entry-form.js";
 import { EntryFormProvider } from "./use-field.js";
 /**
@@ -29,8 +31,6 @@ import { EntryFormProvider } from "./use-field.js";
 export function useEntryEditor(options) {
     const site = useSite();
     const callbacksRef = useRef({});
-    const formatsRef = useRef(options.formats);
-    formatsRef.current = options.formats;
     callbacksRef.current = { onSaved: options.onSaved };
     const [core] = useState(() => createEntryEditor({
         site,
@@ -39,7 +39,6 @@ export function useEntryEditor(options) {
         client: options.client ?? cmsEntryClient(site),
         recoveryStore: options.recoveryStore ?? localRecoveryStoreOf(site),
         callbacks: () => callbacksRef.current,
-        formats: () => formatsRef.current,
     }));
     useEffect(() => {
         core.start();
@@ -62,16 +61,7 @@ export function useEntryEditor(options) {
     // Warn on page leave if there are changes the server does not have.
     const saveStatus = useStoreSelector(core.store, (state) => state.saveStatus);
     const warnOnLeave = options.warnOnLeave ?? true;
-    useEffect(() => {
-        if (!warnOnLeave || saveStatus === "saved" || saveStatus === "new")
-            return;
-        const warn = (event) => {
-            event.preventDefault();
-            event.returnValue = "";
-        };
-        window.addEventListener("beforeunload", warn);
-        return () => window.removeEventListener("beforeunload", warn);
-    }, [saveStatus, warnOnLeave]);
+    useBeforeUnload(warnOnLeave && saveStatus !== "saved" && saveStatus !== "new");
     return useStoreSelector(core.store, core.view);
 }
 const EntryEditorContext = createContext(null);

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AiError } from "./errors.js";
-import { AI_PLUGIN_NAME } from "./plugin-name.js";
+import { AI_PLUGIN_NAME } from "./name.js";
 import { createDecider, createFakeDecider, createFakeGenerator, createGenerator, isFakeAi, } from "./provider.js";
 import { settingsMessages } from "./settings.messages.js";
 /** One connection kept in the DB. `keyId` is the id of a key in the central API key store (`null`: no key). */
@@ -38,7 +38,7 @@ const viewOf = (provider) => ({
     defaultModel: provider.defaultModel,
     ready: isReady(provider),
 });
-export async function getAiSettingsView(site, store) {
+export async function getAiSettingsView(_site, store) {
     const { version, providers } = await load(store);
     return { version, providers: providers.map(viewOf), fake: isFakeAi() };
 }
@@ -97,7 +97,7 @@ export async function updateAiProvider(site, store, expectedVersion, id, input) 
     const { providers } = await load(store);
     const current = providers.find((provider) => provider.id === id);
     if (!current)
-        throw new AiError("ai_failed", site.createTranslator(settingsMessages)("unknownConnection"));
+        throw new AiError("upstream_failed", site.createTranslator(settingsMessages)("unknownConnection"));
     const keep = input.url.replace(/\/+$/, "") !== current.url ? null : current.keyId;
     return saveWithKey(store, input, keep, (scoped, keyId) => writeProviders(site, scoped, expectedVersion, providers.map((provider) => (provider.id === id ? toStored(id, input, keyId) : plain(provider)))));
 }
@@ -145,7 +145,7 @@ export async function loadAiRuntime(site, store, spec) {
         : { generator: createGenerator(site, { baseUrl: provider.url, apiKey: key, model }), decider: null };
 }
 /** Whether each action is usable now (whether to attach a button in the slot). Returns the names of usable actions. */
-export async function usableActionKeys(site, store, actions) {
+export async function usableActionKeys(_site, store, actions) {
     if (isFakeAi())
         return actions.map((action) => action.key);
     const { providers } = await load(store);
@@ -179,9 +179,9 @@ export async function connectionForCheck(site, store, params) {
     }
     const t = site.createTranslator(settingsMessages);
     if (!url || !params.model)
-        throw new AiError("ai_unavailable", t("urlAndModel"));
+        throw new AiError("service_unavailable", t("urlAndModel"));
     if (!apiKey)
-        throw new AiError("ai_unavailable", unreadable ? t("keyAgain") : t("key"));
+        throw new AiError("service_unavailable", unreadable ? t("keyAgain") : t("key"));
     const config = { apiKey, model: params.model };
     return params.kind === "chat"
         ? { model: params.model, generator: createGenerator(site, { baseUrl: url, ...config }) }

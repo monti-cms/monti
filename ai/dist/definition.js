@@ -12,6 +12,7 @@ export const englishCoreText = (key, vars) => translate(coreMessages, "en", key,
  * `translation` is block translation in the translation editor (block menu and `Translate all`), `selection` is the menu shown when selecting text in the body
  * (e.g. style polish, replaces the selected text), and `insert` is the slash (`/`) menu and the empty document (e.g. draft writing, inserts at the cursor).
  * `block` is a button beside the handle of one body block (e.g. a Mermaid diagram). It sends the block source and replaces the block with the changed one.
+ * @internal The contract test checks the lists against the types.
  */
 export const AI_SLOTS = [
     "field",
@@ -26,16 +27,24 @@ export const AI_SLOTS = [
 /**
  * Mode. In `generate`, a chat model (LLM) answers with text. In `decide`, a decision model (System One, e.g. Jev)
  * rates the probability that each given choice fits, and only choices above the threshold become candidates. The decision model does not write text.
+ * @internal The contract test checks the lists against the types.
  */
 export const AI_ENGINES = ["generate", "decide"];
-/** In decide mode, pick only one (`one`), or judge each choice separately and pick several (`many`). */
+/**
+ * In decide mode, pick only one (`one`), or judge each choice separately and pick several (`many`).
+ * @internal The contract test checks the lists against the types.
+ */
 export const AI_PICKS = ["one", "many"];
 /**
  * Result shape. `candidates` is several candidates to click, `text` is one long text, `mdx` is one body fragment (MDX),
  * `note` is a display-only note.
+ * @internal The contract test checks the lists against the types.
  */
 export const AI_RESULTS = ["candidates", "text", "mdx", "note"];
-/** How the result is applied. `append` adds to a list value (tags, regex rules). */
+/**
+ * How the result is applied. `append` adds to a list value (tags, regex rules).
+ * @internal The contract test checks the lists against the types.
+ */
 export const AI_APPLIES = ["replace", "append", "none"];
 /**
  * Result checks. Set per action as a list (all shown in the action editor); candidates that do not pass are discarded.
@@ -78,20 +87,6 @@ export const aiCheckSchemaOf = (t) => z.discriminatedUnion("kind", [
 export const aiCheckSchema = aiCheckSchemaOf(englishCoreText);
 /** The name that points to one check in the check list. One per name for code checks, one per kind for the others. */
 export const checkKey = (check) => check.kind === "code" ? `code:${check.name}` : check.kind;
-/** Fixed checks that moved to code checks (moved when reading stored edited values). */
-const MOVED_TO_CODE = {
-    unique: "unique-slug",
-    regexRuns: "regex-runs",
-    structure: "same-structure",
-};
-/** Converts one stored check to the current shape. Kinds that moved to code checks become the code check of the same name. */
-export function migrateCheck(value) {
-    if (!value || typeof value !== "object" || !("kind" in value))
-        return value;
-    const { kind, enabled } = value;
-    const name = typeof kind === "string" ? MOVED_TO_CODE[kind] : undefined;
-    return name ? { kind: "code", name, ...(typeof enabled === "boolean" ? { enabled } : {}) } : value;
-}
 /** Checks any action can add in the admin UI, with initial values. The rest are set by the action definition. */
 export const ADDABLE_CHECKS = {
     pattern: { kind: "pattern", enabled: true, pattern: ".+" },
@@ -103,25 +98,3 @@ export const isAddableCheck = (kind) => Object.hasOwn(ADDABLE_CHECKS, kind);
 export const MAX_DECISION_OPTIONS = 255;
 export const MAX_PROMPT_LENGTH = 4000;
 export const MAX_REQUEST_LENGTH = 1000;
-/**
- * Converts values saved before the check list existed (one `check` + `maxLength`) into a check list.
- * Used when moving legacy `ai_features` rows into edited values.
- */
-export function migrateLegacyCheck(value) {
-    if (!value || typeof value !== "object" || "checks" in value || !("check" in value))
-        return value;
-    // The format the legacy `slug` and `filename` checks used (the value as it was then).
-    const LEGACY_KEBAB = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
-    const { check, maxLength, ...rest } = value;
-    const legacy = {
-        slug: [
-            { kind: "pattern", pattern: LEGACY_KEBAB },
-            { kind: "code", name: "unique-slug" },
-        ],
-        tags: [{ kind: "exists" }],
-        regex: [{ kind: "code", name: "regex-runs" }],
-        filename: [{ kind: "pattern", pattern: LEGACY_KEBAB }],
-        maxLength: typeof maxLength === "number" ? [{ kind: "maxLength", max: maxLength }] : [],
-    };
-    return { ...rest, checks: typeof check === "string" ? (legacy[check] ?? []) : [] };
-}

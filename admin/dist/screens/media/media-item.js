@@ -33,13 +33,13 @@ export const usageLabel = (t, media) => media.status === "deleting"
         : t("usage.none");
 /** Text of the usage note (`note`). */
 export const usageNoteLabel = (t, note) => t(note === "beforePublish" ? "usage.note.beforePublish" : "usage.note.publishedOnly");
-export async function copyText(t, text, success) {
+export async function copyText(text, success, failure) {
     try {
         await navigator.clipboard.writeText(text);
         toast.success(success);
     }
     catch {
-        toast.error(t("common.copyFailed"));
+        toast.error(failure);
     }
 }
 /** Appends the original file's extension to the new name (suggested names come without an extension). If it already has the same extension, leaves it as is. */

@@ -1,3 +1,4 @@
+import { type Issue } from "../config/check/issue.js";
 import { type BlockDefinition } from "./define.js";
 /**
  * Decides the body blocks the site uses: core blocks, then blocks added by plugins (block extensions), then the site config's `blocks`.
@@ -21,5 +22,10 @@ export declare function addedBlocks(sources: BlockSources | undefined): {
     readonly where: string;
     readonly block: BlockDefinition;
 }[];
-/** The block list for the config. Throws an error for an invalid config. */
+/** The block list for the config, and what is wrong with the blocks that were added. Blocks with problems are still listed, so the other checks can go on. */
+export declare function resolveBlocksChecked(sources: BlockSources | undefined): {
+    readonly blocks: readonly BlockDefinition[];
+    readonly issues: readonly Issue[];
+};
+/** The block list for the config. Throws a {@link ConfigError} for an invalid config. */
 export declare function resolveBlocks(sources: BlockSources | undefined): readonly BlockDefinition[];

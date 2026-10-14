@@ -1,7 +1,7 @@
 import type { Cms } from "../../../cms/index.js";
 /**
  * The two steps of a media upload, shared by the upload routes: `prepareMediaUpload` registers the
- * asset and issues the direct upload URL, `completeMediaUpload` inspects the stored file and makes the asset usable. Both throw `HttpError`.
+ * asset and issues the direct upload URL, `completeMediaUpload` inspects the stored file and makes the asset usable. Both throw `CmsError`.
  */
 export interface PreparedMediaUpload {
     readonly mediaId: string;

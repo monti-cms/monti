@@ -11,6 +11,7 @@
  * - Relations are resolved to the target's published version, with title and URL attached (this locale, else the source text).
  */
 import type { AuthContext } from "../adapters/auth/auth-gateway.js";
+import type { CmsConfig } from "../config/define.js";
 import type { ContentStore, PublishedSort } from "../core/store/index.js";
 import type { CollectionName, PublishedMetadataFor } from "../core/types.js";
 import { type ReadRefs } from "../doc/document-refs.js";
@@ -19,7 +20,7 @@ import type { StoredDocument } from "../doc/stored-document.js";
 import { type ExportRefs } from "../format/convert.js";
 import type { FormatRegistry } from "../format/registry.js";
 import type { MediaStore } from "../media/store.js";
-import type { AnyCmsConfig, Site } from "../site/index.js";
+import type { Site } from "../site/index.js";
 export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types.js";
 /** A published item a relation field points to. */
 export interface ReadRelation {
@@ -32,7 +33,7 @@ export interface ReadRelation {
     /** Public URL (if the collection has `path`, including the locale prefix). */
     readonly path: string | null;
 }
-export interface ReadEntry<C extends string = string, Config extends AnyCmsConfig = any> {
+export interface ReadEntry<C extends string = string, Config extends CmsConfig = any> {
     readonly id: string;
     readonly collection: C;
     /** Locale of the body shown. If it fell back to the source text, the source locale. */
@@ -73,7 +74,7 @@ export interface ReadBody {
     readonly format: string;
     readonly text: string;
 }
-export type ReadEntryResult<C extends string = string, Config extends AnyCmsConfig = any> = {
+export type ReadEntryResult<C extends string = string, Config extends CmsConfig = any> = {
     readonly status: "found";
     readonly entry: ReadEntry<C, Config>;
 }
@@ -87,7 +88,7 @@ export type ReadEntryResult<C extends string = string, Config extends AnyCmsConf
     readonly status: "not_found";
 };
 /** What the read API needs from a CMS instance. */
-export interface ReadDeps<Config extends AnyCmsConfig = AnyCmsConfig> {
+export interface ReadDeps<Config extends CmsConfig = CmsConfig> {
     /** The site of the instance: the collections, locales and URLs the reads follow. */
     readonly site: Site<Config>;
     readonly store: () => ContentStore;
@@ -101,7 +102,7 @@ export interface ReadDeps<Config extends AnyCmsConfig = AnyCmsConfig> {
  * The read API of one CMS instance (`cms.read`). Published content is read through the instance's store, so several instances in one process
  * read their own databases.
  */
-export interface CmsRead<Config extends AnyCmsConfig = any> {
+export interface CmsRead<Config extends CmsConfig = any> {
     /**
      * One entry. The URL (`slug`) is that locale's URL. For an old URL it returns `redirect`.
      * With `fallback: true`, if this locale has no translation, it returns the source text (default locale) at the same URL with `fallback: true`.
@@ -155,7 +156,7 @@ export interface CmsRead<Config extends AnyCmsConfig = any> {
     /** Public URL of one media item (shared image etc.). `null` if it is not ready or the deployment has no DB or storage. */
     mediaUrl(mediaId: string): ReturnType<typeof resolvePublicMediaUrl>;
 }
-export declare function createRead<Config extends AnyCmsConfig = AnyCmsConfig>(deps: ReadDeps<Config>): CmsRead<Config>;
+export declare function createRead<Config extends CmsConfig = CmsConfig>(deps: ReadDeps<Config>): CmsRead<Config>;
 /**
  * Resolves what documents point to, for writing them as text outside a page read: `published` resolves links the way a reader sees them (the published
  * version of the target in the document's language, else the source's; an unpublished target is not a link). `working` is for a draft or a backup: the target

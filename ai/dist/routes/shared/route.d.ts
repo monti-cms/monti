@@ -1,15 +1,15 @@
-export declare const GET: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<{
+export declare const GET: import("@monti-cms/core/plugin/server").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
-export declare const POST: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<{
+}>;
+export declare const POST: import("@monti-cms/core/plugin/server").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
-export declare const PATCH: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<{
+}>;
+export declare const PATCH: import("@monti-cms/core/plugin/server").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
-export declare const PUT: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<{
+}>;
+export declare const PUT: import("@monti-cms/core/plugin/server").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
-export declare const DELETE: (request: Request, context?: Partial<import("@monti-cms/core/plugin/server").RouteContext<{
+}>;
+export declare const DELETE: import("@monti-cms/core/plugin/server").AdminHandler<{
     [x: string]: string;
-}>> | undefined) => Promise<Response>;
+}>;

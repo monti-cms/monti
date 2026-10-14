@@ -3,7 +3,7 @@ import { useSite } from "@monti-cms/core/client";
 import { useCallback, useMemo } from "react";
 import { runAiAction, runAiActionMany, streamAiAction, useAiActions } from "./ai-slot-provider.js";
 /**
- * Calls an action of the site config (`aiPlugin({ actions })`) by name. Called as it is, any name is accepted and an input is any input; `aiClient<typeof config>()`
+ * Calls an action of the site config (`ai({ actions })`) by name. Called as it is, any name is accepted and an input is any input; `aiClient<typeof config>()`
  * gives the same hook with names, inputs and results typed by the config.
  *
  * ```ts

@@ -1,42 +1,23 @@
 import { bodyExcerpt, confirmedSourceState, fillFromBodyLength } from "@monti-cms/core/client";
 import { withoutBlockIds } from "@monti-cms/core/document";
+import { CmsApiError, isConflict } from "../../api/client.js";
 import { editorFailure, toEditorError } from "../../hooks/result.js";
 import { createStateStore } from "../../hooks/store.js";
-import { CmsApiError, errorText } from "../admin-api.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { nounVars } from "../shared/noun.messages.js";
-import { copyTitle, EMPTY_FORM, emptyFormOf, formFingerprint, formFromEntry, formText, formTitle, isTranslationEntry, metadataFromForm, stringifyTranslation, TRANSLATION_FORM_KEY, translationPayload, translationSourceOf, translationStateFromForm, } from "./entry-form.js";
-import { upgradeRecoveryRecord } from "./legacy-backup.js";
+import { createLifecycle } from "./entry-editor-lifecycle.js";
+import { createRecovery } from "./entry-editor-recovery-state.js";
+import { failed, failureOf, keepTranslationGroup, wait } from "./entry-editor-results.js";
+import { EMPTY_FORM, emptyFormOf, formFingerprint, formFromEntry, formText, isTranslationEntry, metadataFromForm, stringifyTranslation, TRANSLATION_FORM_KEY, translationPayload, translationSourceOf, translationStateFromForm, } from "./entry-form.js";
 import { backupKey } from "./local-backup.js";
 import { entriesMessages } from "./messages.js";
-/** The browser recovery copy is kept once input has paused this long (not written on every input). */
-export const RECOVERY_IDLE_MS = 5000;
+// The entry editor's engine: the form against the server (baseline, draft, save) and the public value. Recovery copies and lifecycle commands live in their own modules.
 /** The longest wait for Korean IME composition to end before a save. After that the composition marker is taken as stale and the save goes on. */
 export const COMPOSITION_WAIT_MS = 1000;
-/** The longest wait for the browser recovery copy before a save. The server save goes through even if browser storage stalls. */
-const RECOVERY_WAIT_MS = 1500;
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /** The marker the view carries so `EntryEditorProvider` can find the engine behind a value `useEntryEditor` returned. */
 export const ENTRY_EDITOR_CORE = Symbol("monti.entryEditorCore");
-/** An `EditorError` for something thrown by the client: the server's message, the network text, or `fallback`. */
-function failureOf(site, error, fallback) {
-    const base = toEditorError(error, fallback);
-    const message = error instanceof CmsApiError ? error.message || fallback : errorText(site, error, fallback);
-    return { ...base, message };
-}
-const failed = (error) => ({ ok: false, error });
 /** What a document says, without its block ids: two documents with the same key read the same. */
 const contentKey = (doc) => JSON.stringify(withoutBlockIds(doc.content));
-/** Save and publish responses carry no translation group info. Keep what was received on load and update only this entry's status. */
-function keepTranslationGroup(current, next) {
-    const translations = (current?.translations ?? next.translations)?.map((member) => member.id === next.id ? { ...member, status: next.status } : member);
-    return { translations, source: current?.source ?? next.source };
-}
-const statusFailed = (t) => ({
-    archive: t("lifecycle.failed.archive"),
-    unarchive: t("lifecycle.failed.unarchive"),
-    trash: t("lifecycle.failed.trash"),
-    restore: t("lifecycle.failed.restore"),
-});
 /**
  * The entry editor's engine: the state machine behind `useEntryEditor`, written without React so it can be driven by a test or another UI.
  *
@@ -54,7 +35,7 @@ const statusFailed = (t) => ({
 export function createEntryEditor(config) {
     const { site, adminId, target, client, recoveryStore } = config;
     const t = site.createTranslator(entriesMessages);
-    const formats = () => config.formats?.();
+    const tc = site.createTranslator(commonMessages);
     const callbacks = () => config.callbacks();
     const initialCollection = target.mode === "new" ? target.collection : "";
     const initialLoad = target.mode === "new"
@@ -82,12 +63,10 @@ export function createEntryEditor(config) {
         slugTouched: target.mode === "edit",
     });
     const state = () => store.getState();
-    /** What the save loop tracks outside the store. */
     const m = {
         entryId: null,
         version: 0,
         baseMetadata: {},
-        /** A translation saves only per-language values. */
         translation: false,
         serverFingerprint: formFingerprint(site, emptyForm),
         changeSeq: 0,
@@ -112,63 +91,22 @@ export function createEntryEditor(config) {
             }
         }
     };
-    // ---- recovery copy
-    const safely = async (task, fallback) => {
-        try {
-            return await task();
-        }
-        catch {
-            // A store that fails is the same as one that has nothing: the editor keeps working without a recovery copy.
-            return fallback;
-        }
+    const ctx = {
+        site,
+        adminId,
+        target,
+        client,
+        recoveryStore,
+        t,
+        tc,
+        callbacks,
+        emptyForm,
+        m,
+        state,
+        commit,
     };
-    /** Waits for a recovery copy write, but not for long: the server save goes through (and is reported) even if browser storage stalls. */
-    const settle = (write) => Promise.race([write, wait(RECOVERY_WAIT_MS)]);
-    const queueBackup = (task) => {
-        m.backupWrite = m.backupWrite.then(task, task);
-        return m.backupWrite;
-    };
-    const persistBackup = (snapshot, changeSeq) => {
-        const key = backupKey(adminId, m.entryId, state().collection);
-        const record = {
-            key,
-            entryId: m.entryId ?? "new",
-            baseVersion: m.version,
-            baseFingerprint: m.serverFingerprint,
-            localFingerprint: formFingerprint(site, snapshot),
-            snapshot,
-            changeSeq,
-            savedAt: Date.now(),
-        };
-        return queueBackup(async () => {
-            commit({ recoveryCopyAvailable: await safely(() => recoveryStore.put(record), false) });
-        });
-    };
-    const cancelPendingBackup = () => {
-        if (m.backupTimer)
-            clearTimeout(m.backupTimer);
-        m.backupTimer = null;
-        m.pendingBackup = null;
-    };
-    /** Writes the pending recovery copy now. */
-    const flushPendingBackup = () => {
-        const pending = m.pendingBackup;
-        cancelPendingBackup();
-        if (pending)
-            void persistBackup(pending.snapshot, pending.changeSeq);
-        return m.backupWrite;
-    };
-    const scheduleBackup = (snapshot, changeSeq) => {
-        m.pendingBackup = { snapshot, changeSeq };
-        // If input continues, count again. It is kept only after it stops.
-        if (m.backupTimer)
-            clearTimeout(m.backupTimer);
-        m.backupTimer = setTimeout(flushPendingBackup, RECOVERY_IDLE_MS);
-    };
-    const discardBackup = (key) => {
-        cancelPendingBackup();
-        return queueBackup(() => safely(() => recoveryStore.delete(key), undefined));
-    };
+    const recovery = createRecovery(ctx);
+    const { settle, persistBackup, cancelPendingBackup, flushPendingBackup, scheduleBackup, discardBackup } = recovery;
     /** Waits for Korean IME composition to end. If no end signal comes (the input vanished mid-composition), clears the marker and moves on. */
     const waitForComposition = async () => {
         if (!m.composing)
@@ -316,12 +254,12 @@ export function createEntryEditor(config) {
             }
             catch (caught) {
                 if (caught instanceof CmsApiError) {
-                    const error = toEditorError(caught, t("saveFailed"));
+                    const error = toEditorError(caught, tc("saveFailed"));
                     if (caught.status === 401) {
                         commit({ saveError: error, saveStatus: "session-expired" });
                         return failed(error);
                     }
-                    if (caught.status === 409 && caught.code === "conflict" && m.entryId) {
+                    if (isConflict(caught) && m.entryId) {
                         commit({ saveStatus: "conflict" });
                         const server = await client.get(m.entryId).catch(() => null);
                         if (server)
@@ -350,7 +288,7 @@ export function createEntryEditor(config) {
     };
     /** Sent to the server only on an explicit save or publish. */
     const save = async () => {
-        await Promise.race([flushPendingBackup(), wait(RECOVERY_WAIT_MS)]);
+        await recovery.flushBeforeSave();
         await waitForComposition();
         let changed = false;
         for (let attempt = 0; attempt < 5; attempt++) {
@@ -369,7 +307,7 @@ export function createEntryEditor(config) {
         const entry = state().entry;
         if (m.entryId && m.changeSeq <= m.ackSeq && entry)
             return { ok: true, value: { entry, changed } };
-        return failed(state().saveError ?? { code: "failed", message: t("saveFailed"), retryable: true });
+        return failed(state().saveError ?? { code: "failed", message: tc("saveFailed"), retryable: true });
     };
     const retry = async () => {
         const id = m.entryId;
@@ -421,128 +359,8 @@ export function createEntryEditor(config) {
         }
         return { ok: true, value: filled };
     };
-    const publish = async (options = {}) => {
-        const current = state();
-        if (current.readOnly)
-            return editorFailure("read_only", t("editor.readOnly", nounVars(site, current.collection)));
-        if (current.busy)
-            return editorFailure("invalid_state", t("editor.busy"));
-        if (current.saveStatus === "conflict")
-            return editorFailure("conflict", t("editor.conflict"));
-        commit({ busy: "publish", publishIssues: [] });
-        try {
-            const filled = fillFromBody();
-            if (!filled.ok)
-                return filled;
-            const saved = await save();
-            if (!saved.ok)
-                return saved;
-            const id = m.entryId;
-            if (!id)
-                return editorFailure("invalid_state", t("editor.unsaved"));
-            try {
-                const { entry: published, warnings } = await client.publish(id, {
-                    expectedVersion: m.version,
-                    ...(options.resetPublishedAt ? { resetPublishedAt: true } : {}),
-                });
-                m.version = published.version;
-                const merged = { ...published, ...keepTranslationGroup(state().entry, published) };
-                commit({ entry: merged, readOnly: merged.status === "trashed", bodyWarnings: warnings });
-                callbacks().onSaved?.(merged, { created: false });
-                return { ok: true, value: { entry: merged, warnings, filled: filled.value } };
-            }
-            catch (caught) {
-                if (caught instanceof CmsApiError && caught.code === "conflict") {
-                    const server = await client.get(id).catch(() => null);
-                    if (server)
-                        commit({ conflict: { server, local: state().form } });
-                    return failed(toEditorError(caught, t("publishFailed")));
-                }
-                if (caught instanceof CmsApiError && caught.issues.length > 0) {
-                    commit({ publishIssues: caught.issues });
-                    return failed(failureOf(site, caught, t("publishFailed")));
-                }
-                return failed(failureOf(site, caught, t("publishFailed")));
-            }
-        }
-        finally {
-            commit({ busy: null });
-        }
-    };
-    const changeStatus = async (action) => {
-        const current = state();
-        const entry = current.entry;
-        if (!entry)
-            return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
-        if (current.busy)
-            return editorFailure("invalid_state", t("editor.busy"));
-        if (action !== "restore" && m.changeSeq > m.ackSeq)
-            return editorFailure("invalid_state", t("editor.unsaved"));
-        commit({ busy: "status" });
-        try {
-            await client.changeStatus(entry.id, action, { expectedVersion: m.version });
-            // A translation sent to the trash: the UI opens the original instead, so there is nothing to reload.
-            if (action === "trash" && isTranslationEntry(entry) && entry.translationGroupId) {
-                return { ok: true, value: { entry: null, openEntryId: entry.translationGroupId } };
-            }
-            const loaded = await fetchAndApply(entry.id);
-            if (loaded)
-                callbacks().onSaved?.(loaded, { created: false });
-            return { ok: true, value: { entry: loaded } };
-        }
-        catch (caught) {
-            return failed(failureOf(site, caught, statusFailed(t)[action]));
-        }
-        finally {
-            commit({ busy: null });
-        }
-    };
-    const duplicate = async () => {
-        const current = state();
-        if (current.saveStatus === "conflict")
-            return editorFailure("conflict", t("editor.conflict"));
-        const id = m.entryId;
-        if (!id || m.changeSeq > m.ackSeq)
-            return editorFailure("invalid_state", t("editor.unsaved"));
-        try {
-            const copy = await client.duplicate(id, {
-                title: copyTitle(site, current.collection, formTitle(site, current.collection, current.form)),
-            });
-            return { ok: true, value: copy.entry };
-        }
-        catch (caught) {
-            return failed(failureOf(site, caught, t("duplicateFailed")));
-        }
-    };
-    const deletePermanently = async () => {
-        const entry = state().entry;
-        if (!entry)
-            return editorFailure("invalid_state", t("editor.notLoaded", nounVars(site, state().collection)));
-        try {
-            await client.remove(entry.id, { expectedVersion: m.version });
-            cancelPendingBackup();
-            await queueBackup(() => safely(() => recoveryStore.delete(backupKey(adminId, entry.id, entry.collection)), undefined));
-            return { ok: true, value: undefined };
-        }
-        catch (caught) {
-            return failed(failureOf(site, caught, t("deleteFailed")));
-        }
-    };
-    const restoreRecovery = () => {
-        const record = m.recoveryRecord;
-        if (!record)
-            return;
-        m.recoveryRecord = null;
-        commit({ slugTouched: true, recovery: null });
-        applyForm({ ...emptyForm, ...record.snapshot });
-    };
-    const discardRecovery = async () => {
-        const record = m.recoveryRecord;
-        m.recoveryRecord = null;
-        if (record)
-            await queueBackup(() => safely(() => recoveryStore.delete(record.key), undefined));
-        commit({ recovery: null });
-    };
+    const restoreRecovery = recovery.restoreRecovery(applyForm);
+    const { discardRecovery } = recovery;
     const overwriteWithMine = async () => {
         const conflict = state().conflict;
         if (!conflict)
@@ -578,53 +396,12 @@ export function createEntryEditor(config) {
             return;
         applyForm({ [TRANSLATION_FORM_KEY]: stringifyTranslation(confirmedSourceState(source.doc)) });
     };
-    // ---- open
-    const offerRecovery = (record, server) => {
-        m.recoveryRecord = record;
-        commit({
-            recovery: { kind: server ? "conflict" : "restore", savedAt: record.savedAt, ...(server ? { server } : {}) },
-        });
-    };
-    /** Opens the entry: loads it (or starts a new one) and compares the server's value with the browser recovery copy. */
-    const open = async (generation) => {
-        const alive = () => generation === m.generation;
-        if (target.mode === "new") {
-            if (site.isItemCollection(target.collection))
-                return;
-            const stored = await safely(() => recoveryStore.get(backupKey(adminId, null, target.collection)), null);
-            const backup = stored && upgradeRecoveryRecord(site, stored, undefined, formats());
-            if (alive() && backup && backup.localFingerprint !== backup.baseFingerprint)
-                offerRecovery(backup);
-            return;
-        }
-        commit({ load: { status: "loading" } });
-        try {
-            const loaded = await fetchAndApply(target.entryId, alive);
-            if (!loaded || !alive())
-                return;
-            const key = backupKey(adminId, loaded.id, loaded.collection);
-            const stored = await safely(() => recoveryStore.get(key), null);
-            const backup = stored && upgradeRecoveryRecord(site, stored, loaded.working.doc, formats());
-            if (backup && alive()) {
-                if (backup.localFingerprint === formFingerprint(site, state().form)) {
-                    await discardBackup(key);
-                }
-                else if (backup.baseVersion === loaded.version) {
-                    offerRecovery(backup);
-                }
-                else {
-                    // The server also changed after the recovery copy. Tell the user that loading will overwrite it.
-                    offerRecovery(backup, loaded);
-                }
-            }
-            if (alive())
-                commit({ load: { status: "ready" } });
-        }
-        catch (caught) {
-            if (alive())
-                commit({ load: { status: "error", error: failureOf(site, caught, t("loadFailed")) } });
-        }
-    };
+    const { publish, changeStatus, duplicate, deletePermanently } = createLifecycle(ctx, {
+        fillFromBody,
+        save,
+        fetchAndApply,
+        recovery,
+    });
     // ---- the public value
     const setComposing = (composing) => {
         m.composing = composing;
@@ -705,7 +482,7 @@ export function createEntryEditor(config) {
         view,
         start: () => {
             m.generation += 1;
-            void open(m.generation);
+            void recovery.open(m.generation, fetchAndApply);
         },
         stop: () => {
             m.generation += 1;

@@ -9,7 +9,7 @@ import { isReferencesEqual } from "../../../core/domain/references.js";
 import { reservationFor } from "../../../core/domain/slug-address.js";
 import { assertKnownLocale, assertTranslationMetadata, assertTranslationSource, assertTranslationStateAllowed, } from "../../../core/domain/translation.js";
 import { CmsError } from "../../../core/store/errors.js";
-import { hasLegacyOccurrence, normalizeReferenceKind, readReferenceOccurrences, } from "../../../core/types.js";
+import { readReferenceOccurrences, } from "../../../core/types.js";
 import { withTrx } from "./context.js";
 import { mapEntryWriteError } from "./errors.js";
 import { recordEvents } from "./events.js";
@@ -128,13 +128,6 @@ export function createEntryOps(ctx, publishing) {
             await assertFolder(trx, params.folderId, params.snapshot.collection);
             const body = await readBody(trx, params.entryId, "working");
             const currentRefs = await readReferences(trx, params.entryId, "working");
-            // A reference stored with a body occurrence in the old shape (`{type:"mdx"}`) is rewritten in the new one by this save.
-            const legacy = await trx
-                .selectFrom("entry_references")
-                .select("occurrences")
-                .where("entry_id", "=", params.entryId)
-                .where("state", "=", "working")
-                .execute();
             const nextSlug = params.snapshot.slug;
             // If no translation status is sent (bulk operations, etc.), keep the stored value.
             const translation = params.snapshot.translation === undefined ? (body?.translation ?? null) : params.snapshot.translation;
@@ -154,7 +147,7 @@ export function createEntryOps(ctx, publishing) {
             });
             const folderChanged = params.folderId !== undefined;
             const references = await lockDraftReferenceTargets(client, params.references);
-            const refsEqual = isReferencesEqual(currentRefs, references) && !legacy.some((row) => hasLegacyOccurrence(row.occurrences));
+            const refsEqual = isReferencesEqual(currentRefs, references);
             let version = locked.version;
             if (!bodyIdentical || !refsEqual || folderChanged) {
                 version += 1;
@@ -244,7 +237,7 @@ export function createEntryOps(ctx, publishing) {
                 collection: row.collection,
                 slug: row.working_slug,
                 metadata: row.metadata,
-                doc: readBodyDoc(row.doc, null),
+                doc: readBodyDoc(row.doc),
                 version: row.version,
                 folderId: row.folder_id,
                 locale: row.locale,
@@ -252,7 +245,7 @@ export function createEntryOps(ctx, publishing) {
             };
         },
         /**
-         * Translation group. Returns the source and translations in language order. Used by the editor's language switch and `번역본 만들기`.
+         * Translation group. Returns the source and translations in language order. Used by the editor's language switch and "Create translation".
          */
         getTranslationGroup: async (params) => {
             const rows = await db
@@ -353,7 +346,7 @@ export function createEntryOps(ctx, publishing) {
                 entryId: row.entry_id,
             }));
         },
-        /** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
+        /** The detail screen's "Usages". Returns field relations and body references split into draft and published. */
         getIncomingReferences: async (params) => {
             const rows = await db
                 .selectFrom("entry_references as r")
@@ -393,7 +386,7 @@ export function createEntryOps(ctx, publishing) {
                 sourceCollection: row.source_collection,
                 sourceTitle: row.source_title,
                 sourceSlug: row.source_slug,
-                kind: normalizeReferenceKind(row.kind),
+                kind: row.kind,
                 isStale: row.is_stale,
                 occurrences: readReferenceOccurrences(row.occurrences),
             }));

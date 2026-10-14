@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Search, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { commonMessages } from "../lib/common.messages.js";
 import { Button } from "../ui/button.js";
 import { IconButton } from "../ui/icon-button.js";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "../ui/input-group.js";
@@ -13,6 +13,7 @@ import { columnLabel, columnsFor, filterFor, isColumnFiltered } from "./list-col
 import { clearFiltersPatch } from "./list-state.js";
 import { screensMessages } from "./messages.js";
 import { statusLabels } from "./shared/entry-status.js";
+import { useDebouncedInput } from "./shared/use-debounced.js";
 const nameOf = (t, options, id) => options.find((option) => option.id === id)?.title ?? t("toolbar.unknown");
 function describe(site, filter, state, options) {
     const t = site.createTranslator(screensMessages);
@@ -40,11 +41,12 @@ function describe(site, filter, state, options) {
  */
 export function filterChips(site, state, options) {
     const t = site.createTranslator(screensMessages);
+    const tc = site.createTranslator(commonMessages);
     const chips = [];
     if (state.search.trim()) {
         chips.push({
             key: "search",
-            label: `${state.includeBody ? t("toolbar.chipBodySearch") : t("toolbar.chipSearch")}: "${state.search.trim()}"`,
+            label: `${state.includeBody ? t("toolbar.chipBodySearch") : tc("search")}: "${state.search.trim()}"`,
             clear: { search: "", includeBody: false },
         });
     }
@@ -64,14 +66,7 @@ export function filterChips(site, state, options) {
 export function ListSearch({ state, onChange, allowBody = true, }) {
     const site = useSite();
     const t = useTranslator(screensMessages);
-    const [search, setSearch] = useState(state.search);
-    useEffect(() => setSearch(state.search), [state.search]);
-    useEffect(() => {
-        if (search === state.search)
-            return;
-        const timer = setTimeout(() => onChange({ search }), 300);
-        return () => clearTimeout(timer);
-    }, [search, state.search, onChange]);
+    const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange({ search: text }));
     const isContent = site.isDocumentCollection(state.collection);
     return (_jsxs("div", { className: "flex items-center gap-3", children: [_jsxs(InputGroup, { className: "h-8 w-64", children: [_jsx(InputGroupAddon, { children: _jsx(Search, { "aria-hidden": true }) }), _jsx(InputGroupInput, { type: "search", "aria-label": t("toolbar.searchLabel"), value: search, onChange: (event) => setSearch(event.target.value), placeholder: state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder") })] }), isContent && allowBody && (_jsxs(Label, { className: "font-normal text-cms-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: state.includeBody, onCheckedChange: (checked) => onChange({ includeBody: checked === true }) }), t("toolbar.includeBody")] }))] }));
 }

@@ -36,9 +36,3 @@ export declare const bodyDocument: (body: Body, previous?: StoredDocument | null
  * given, exactly.
  */
 export declare const documentToMdx: (site: Site, doc: StoredDocument, syntax?: readonly SyntaxExtension[]) => string;
-/**
- * A body from a stored document, through the MDX it is written as: written with `syntax` and read back, so the result is the same as from that MDX.
- * The block ids of `doc` are kept (a block without one, or with a copy of another's, gets one as `bodyFromMdx` would). Used where the MDX text has to be
- * derived from a document (the legacy store migrations).
- */
-export declare const bodyFromDocument: (site: Site, doc: StoredDocument, syntax?: readonly SyntaxExtension[], options?: BodyOptions) => Body;

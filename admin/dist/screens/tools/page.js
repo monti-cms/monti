@@ -1,8 +1,8 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import { loadAdminPlugins } from "../../plugins.js";
 import { requireAdminPage } from "../require-admin.js";
-import { toolsPages } from "../settings/tabs.js";
-import { ToolsScreen } from "./tools-screen.js";
+import { ShellPage } from "../shared/admin-shell.js";
+import { toolsPages } from "./tools-pages.js";
 /**
  * `<admin path>/tools/<path>`: the page of a plugin `nav` item, drawn by the plugin's `pages` entry and framed by the admin (sidebar, title).
  * An unknown path is a 404.
@@ -13,5 +13,5 @@ export default async function AdminToolsPage({ cms, server, path }) {
     const Page = (await loadAdminPlugins(cms.site)).find((plugin) => plugin.pages?.[path])?.pages?.[path];
     if (!entry || !Page)
         return server.notFound();
-    return (_jsx(ToolsScreen, { path: path, children: _jsx(Page, {}) }));
+    return (_jsx(ShellPage, { title: entry.label, nav: `tools:${path}`, children: _jsx(Page, {}) }));
 }

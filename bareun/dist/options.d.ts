@@ -1,6 +1,6 @@
 import type { TextCheckerLimits } from "@monti-cms/core";
-/** Name used to find the Bareun checker in the site config `plugins`. */
-export declare const BAREUN_PLUGIN_NAME = "text-check-bareun";
+import { BAREUN_PLUGIN_NAME } from "./name.js";
+export { BAREUN_PLUGIN_NAME };
 /** Id of the plugin's one API key slot. */
 export declare const BAREUN_KEY_SLOT = "key";
 /** Checker name (the source shown on results). */

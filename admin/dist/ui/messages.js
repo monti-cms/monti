@@ -2,7 +2,6 @@ import { defineMessages } from "@monti-cms/core";
 /** Auxiliary messages for shared UI parts (`ui/*`): screen reader names and default labels. */
 export const uiMessages = defineMessages("cms-admin.ui", {
     en: {
-        close: "Close",
         "panel.resize": "Resize panel",
         clear: "Clear",
         deselect: "Remove",
@@ -19,7 +18,6 @@ export const uiMessages = defineMessages("cms-admin.ui", {
         "theme.toDark": "Switch to dark mode",
     },
     ko: {
-        close: "닫기",
         "panel.resize": "패널 너비 조절",
         clear: "지우기",
         deselect: "선택 해제",

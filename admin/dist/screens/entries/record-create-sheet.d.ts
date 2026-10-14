@@ -1,9 +1,7 @@
 import { type Collection, type Site } from "@monti-cms/core/client";
-import type { TranslatorFor } from "../../translator.js";
 import { type EntryData, type EntryFormPatch } from "./entry-form.js";
-import { entriesMessages } from "./messages.js";
 /** The saved item in the shape of a relation option. */
-export declare const optionOf: (site: Site, t: TranslatorFor<typeof entriesMessages>, collection: string, saved: EntryData) => {
+export declare const optionOf: (site: Site, untitled: string, collection: string, saved: EntryData) => {
     id: string;
     title: string;
     slug: string | null;

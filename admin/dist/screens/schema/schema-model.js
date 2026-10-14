@@ -2,7 +2,8 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
-import { DEFAULT_TITLE_FIELD, defaultCollectionPath, TITLE_ROLE } from "@monti-cms/core/client";
+import { checkField, checkPathPattern, DEFAULT_TITLE_FIELD, defaultCollectionPath, fieldTraits, freshSetFields, IssueList, NAME_PATTERN, RESERVED_METADATA_KEYS, TITLE_ROLE, } from "@monti-cms/core/client";
+import { moveWithin } from "../../lib/utils/move-within.js";
 export const isObj = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 export const FIELD_KINDS = ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
 /** The kinds a conditional field can show (the ones that store one value). */
@@ -16,9 +17,7 @@ export const FIELD_KEY_ORDER = [
     "localized",
     "input",
     "inputOptions",
-    "hidden",
     "role",
-    "tab",
     "fillFromBody",
     "multiline",
     "rows",
@@ -123,23 +122,11 @@ export function renameKey(record, from, to) {
 export function moveKey(record, key, delta) {
     const entries = Object.entries(record);
     const from = entries.findIndex(([name]) => name === key);
-    const to = Math.min(entries.length - 1, Math.max(0, from + delta));
-    if (from === -1 || from === to)
-        return record;
-    const [moved] = entries.splice(from, 1);
-    if (moved)
-        entries.splice(to, 0, moved);
-    return Object.fromEntries(entries);
+    return from === -1 ? record : Object.fromEntries(moveWithin(entries, from, from + delta));
 }
+/** `list` with the item at `index` moved by `delta` places (negative: up). */
 export function moveItem(list, index, delta) {
-    const next = [...list];
-    const to = Math.min(next.length - 1, Math.max(0, index + delta));
-    if (index < 0 || index >= next.length || to === index)
-        return next;
-    const [moved] = next.splice(index, 1);
-    if (moved !== undefined)
-        next.splice(to, 0, moved);
-    return next;
+    return moveWithin(list, index, index + delta);
 }
 /** Whether two JSON values are the same, key order included. */
 export function sameJson(a, b) {
@@ -154,16 +141,13 @@ export function sameJson(a, b) {
     }
     return a === b;
 }
-/** A name for a field, option or collection: what the stored values and the JSON keys are called. */
-export const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
-const RESERVED_NAMES = ["translations"];
 /** Why `name` cannot be used among `taken` names, or `null`. */
 export function nameProblem(name, taken) {
     if (name.trim() === "")
         return "empty";
     if (!NAME_PATTERN.test(name))
         return "pattern";
-    if (RESERVED_NAMES.includes(name))
+    if (RESERVED_METADATA_KEYS.includes(name))
         return "reserved";
     if (taken.includes(name))
         return "taken";
@@ -190,9 +174,7 @@ export const idFromName = (name) => name
 export function pathProblem(path) {
     if (path.trim() === "")
         return null;
-    if (!path.startsWith("/"))
-        return "slash";
-    return path.split(":slug").length === 2 ? null : "slug";
+    return checkPathPattern(path)?.code ?? null;
 }
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
 export function addCollection(file, name, kind, path, label) {
@@ -213,21 +195,6 @@ export function removeCollection(file, name) {
     return { ...file, collections: rest };
 }
 // ----- fields -----
-/** The names of the fields that store a value, including the fields a conditional field shows (the order the entry form has them). */
-export function storedFieldNames(collection) {
-    const names = [];
-    for (const [name, field] of Object.entries(fieldsOf(collection))) {
-        if (field.kind === "view" || field.kind === "backlink")
-            continue;
-        names.push(name);
-        if (field.kind === "conditional" && isObj(field.values)) {
-            for (const branch of Object.values(field.values))
-                if (isObj(branch))
-                    names.push(...Object.keys(branch));
-        }
-    }
-    return names;
-}
 /** Every name in `fields` or inside a conditional field, for the uniqueness of a new name (the stored values share one namespace). */
 export function allFieldNames(collection) {
     const names = [];
@@ -242,7 +209,7 @@ export function allFieldNames(collection) {
     return names;
 }
 /** The properties every kind of field can have, so a change of kind keeps what still applies. */
-const BASE_KEYS = ["label", "description", "required", "localized", "input", "inputOptions", "hidden", "role", "tab"];
+const BASE_KEYS = ["label", "description", "required", "localized", "input", "inputOptions", "role"];
 const NO_VALUE_KEYS = ["required", "localized", "input", "inputOptions", "role"];
 /** A field of `kind` with the properties it needs. */
 export function newField(kind, label, collections = []) {
@@ -273,7 +240,7 @@ export function newField(kind, label, collections = []) {
 /** `field` as another kind: the common properties stay (the ones the new kind can have), the rest is the new kind's defaults. */
 export function withKind(field, kind, collections) {
     const fresh = newField(kind, typeof field.label === "string" ? field.label : "", collections);
-    const kept = Object.fromEntries(Object.entries(field).filter(([key]) => BASE_KEYS.includes(key) && !((kind === "view" || kind === "backlink") && NO_VALUE_KEYS.includes(key))));
+    const kept = Object.fromEntries(Object.entries(field).filter(([key]) => BASE_KEYS.includes(key) && !(!fieldTraits[kind].entersValue && NO_VALUE_KEYS.includes(key))));
     let result = fresh;
     for (const [key, value] of Object.entries(kept)) {
         if (key === "kind")
@@ -330,6 +297,11 @@ function updateFields(collection, place, update) {
 }
 export function addField(collection, place, name, field) {
     return updateFields(collection, place, (fields) => ({ ...fields, [name]: field }));
+}
+/** The fields of a plugin's field set added after the others, under names the collection does not use yet. */
+export function addFieldSet(collection, set) {
+    const added = freshSetFields(set, fieldsOf(collection));
+    return updateFields(collection, {}, (fields) => ({ ...fields, ...added }));
 }
 export function setField(collection, place, name, update) {
     return updateFields(collection, place, (fields) => {
@@ -465,7 +437,6 @@ export function withBody(collection, enabled, allowed) {
         return collection;
     return setProp(collection, "body", body, COLLECTION_KEY_ORDER);
 }
-export const layoutOf = (collection) => Array.isArray(collection.layout) ? collection.layout : [];
 export function withLayout(collection, layout) {
     return setProp(collection, "layout", layout.length > 0 ? layout : undefined, COLLECTION_KEY_ORDER);
 }
@@ -488,47 +459,35 @@ export const KINDS_WITH_SETTINGS = [
     "backlink",
     "view",
 ];
-/** What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. */
+/** The rule codes of core that mean the form still lacks a setting, and the problem the form names for each. */
+const PROBLEM_OF_CODE = {
+    "options-empty": "options",
+    "option-label": "optionLabel",
+    "branches-empty": "branches",
+    "unknown-collection": "target",
+    "slug-source": "slugFrom",
+    "backlink-incomplete": "backlink",
+    "view-name": "view",
+};
+/**
+ * What is still missing from `field` before it can be added (the settings its kind requires), in the order the form shows them. Empty: it is complete. The rules are
+ * core's (`checkField`, the ones `defineSite` applies to the saved file); the form only turns the codes into the names its messages use.
+ */
 export function fieldProblems(field, collection, collectionNames) {
-    const problems = [];
-    const optionList = () => {
-        const options = Object.values(optionsOf(field));
-        if (options.length === 0)
-            problems.push("options");
-        else if (options.some((label) => label.trim() === ""))
-            problems.push("optionLabel");
-    };
-    switch (field.kind) {
-        case "select":
-            optionList();
-            break;
-        case "conditional": {
-            optionList();
-            const branches = isObj(field.values) ? Object.values(field.values) : [];
-            if (!branches.some((branch) => isObj(branch) && Object.keys(branch).length > 0))
-                problems.push("branches");
-            break;
-        }
-        case "relation":
-            if (typeof field.to !== "string" || !collectionNames.includes(field.to))
-                problems.push("target");
-            break;
-        case "slug": {
-            const source = typeof field.from === "string" ? fieldsOf(collection)[field.from] : undefined;
-            if (source?.kind !== "text")
-                problems.push("slugFrom");
-            break;
-        }
-        case "backlink":
-            if (!field.from || !field.via)
-                problems.push("backlink");
-            break;
-        case "view":
-            if (typeof field.view !== "string" || field.view.trim() === "")
-                problems.push("view");
-            break;
-    }
-    return problems;
+    const list = new IssueList();
+    checkField(list, "", "field", field, {
+        collectionNames,
+        fields: fieldsOf(collection),
+        body: hasBody(collection),
+    });
+    const problems = list.issues.flatMap((issue) => {
+        const problem = PROBLEM_OF_CODE[issue.code];
+        return problem === undefined ? [] : [problem === "target" && field.kind === "backlink" ? "backlink" : problem];
+    });
+    // A slug is made from a text field; core lets the address stand alone, the form asks for the source.
+    if (field.kind === "slug" && typeof field.from !== "string" && !problems.includes("slugFrom"))
+        problems.push("slugFrom");
+    return [...new Set(problems)];
 }
 /**
  * Why a field cannot be deleted, or `null`. The title field is what names every entry; the slug field cannot go while the public address is made from `:slug`.

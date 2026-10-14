@@ -1,5 +1,5 @@
 import { Auth, skipCSRFCheck } from "@auth/core";
-import { defineMessages, problemText } from "@monti-cms/core";
+import { defineMessages, describeNodeEnv, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
 import { assertDevBypassSafe, isDevAuthBypassEnabled, productionLikeEnvironment, withBasePath, } from "@monti-cms/core/adapters/auth";
 import { CMS_AUTH_BASE_PATH } from "@monti-cms/core/server";
 import { collectAdmins, ignoredAdminText } from "./admins.js";
@@ -101,7 +101,7 @@ export function auth(options) {
                                 ? "set in monti.config.ts (devBypass: true)"
                                 : 'auto-detected (NODE_ENV is "development" and no hosting platform variable is set)'
                             : nodeEnv !== "development"
-                                ? `auto-detected (NODE_ENV is "${nodeEnv}", not "development")`
+                                ? `auto-detected (${describeNodeEnv(env)}, not "development")`
                                 : `auto-detected (looks deployed: ${deployed})`,
                 },
             ];
@@ -113,7 +113,7 @@ export function auth(options) {
             if (!secrets.available) {
                 throw new Error(`[cms-auth] ${problemText({
                     what: "MONTI_SECRET is not set, so login sessions cannot be signed",
-                    where: ".env.local (and the environment settings of your host), or `secret` in defineConfig",
+                    where: `${WHERE_TO_SET_ENV}, or \`secret\` in defineConfig`,
                     fix: "set it to a long random value, for example the output of `openssl rand -base64 32`, then run `monti doctor`",
                 })}`);
             }

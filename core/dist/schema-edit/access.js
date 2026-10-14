@@ -26,8 +26,16 @@ export function schemaEditAccess(cms) {
         return { writable: false, reason: "not_writable", file };
     }
     const literal = parseSchemaLiteral(text);
-    if (!literal.ok)
-        return { writable: false, reason: "has_code", file, detail: literal.message };
+    if (!literal.ok) {
+        const { code, params, line, column } = literal;
+        return {
+            writable: false,
+            reason: "has_code",
+            file,
+            detail: literal.message,
+            issue: { code, params, line, column },
+        };
+    }
     return { writable: true, file };
 }
 /** The sentence the 403 answer carries for each reason. */

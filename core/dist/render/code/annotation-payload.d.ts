@@ -4,7 +4,7 @@ type ResolvedAnnotationStyle = {
     class?: string;
     render?: string;
 };
-declare const resolveStyleFromRule: (registry: AnnotationRegistry | undefined, annotation: Pick<CodeBlockAnnotation, "name" | "scope">) => ResolvedAnnotationStyle | undefined;
+declare const resolveStyle: (registry: AnnotationRegistry | undefined, annotation: Pick<CodeBlockAnnotation, "name" | "scope">) => ResolvedAnnotationStyle | undefined;
 declare const toLineDecorationPayload: (annotation: LineAnnotation, style: ResolvedAnnotationStyle | undefined) => {
     scope: "line";
     name: string;
@@ -32,8 +32,9 @@ export type ShikiAnnotationPayload = {
     rowWrappers: LineWrapperPayload[];
 };
 export declare const fromCodeBlockDocumentToShikiAnnotationPayload: (document: CodeBlockDocument, annotationConfig?: AnnotationConfig) => ShikiAnnotationPayload;
+/** @internal Internals the tests reach. */
 export declare const __testable__: {
     fromCodeBlockDocumentToShikiAnnotationPayload: typeof fromCodeBlockDocumentToShikiAnnotationPayload;
-    resolveStyleFromRule: typeof resolveStyleFromRule;
+    resolveStyle: typeof resolveStyle;
 };
 export {};

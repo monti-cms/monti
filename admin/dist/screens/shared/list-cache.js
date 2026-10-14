@@ -1,12 +1,3 @@
-import { cmsApiUrl } from "@monti-cms/core/client";
-import { cmsFetch } from "../admin-api.js";
-/** List cache key. Things that must be refetched along with the list, like the trash badge, also go under this prefix. */
-export const ENTRIES_KEY = ["cms", "entries"];
-export const entriesKey = (apiQuery) => [...ENTRIES_KEY, "list", apiQuery];
-export const TRASH_COUNT_KEY = [...ENTRIES_KEY, "trash-count"];
-export const foldersKey = (collection) => ["cms", "folders", collection];
-/** The folders of a collection (the list screen and the sidebar share this query). */
-export const fetchFolders = (site, collection, signal) => cmsFetch(site, cmsApiUrl(`/v1/folders?collection=${collection}`), { signal });
 /**
  * Reflects the action result into the list before the server responds (optimistic update). Applies only changes known for certain,
  * and leaves the rest (e.g. state after unarchiving) to the refetch that follows soon. Rows that drop out of the current filter are removed right away.

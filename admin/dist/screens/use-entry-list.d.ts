@@ -1,7 +1,7 @@
 import type { CollectionPreferences } from "@monti-cms/core/client";
+import { type BulkOp } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
-import { type BulkItemResult, type BulkSelection, runBulk } from "./entries/bulk-bar.js";
-import { type BulkParams } from "./list-row-menu.js";
+import { type BulkItemResult, type BulkParams, type BulkSelection } from "../api/entries.js";
 import { type ListState } from "./list-state.js";
 import type { RecordTarget } from "./record-panel.js";
 import type { MenuAction } from "./shared/action-menu.js";
@@ -44,16 +44,16 @@ export declare function useEntryList(mode: ListMode): {
     selectedIds: Set<string>;
     setSelectedIds: import("react").Dispatch<import("react").SetStateAction<Set<string>>>;
     mutations: {
-        mutateEntries: (op: OptimisticOp, targets: BulkSelection[], request: () => Promise<BulkItemResult[]>, params?: BulkParams) => Promise<BulkItemResult[]>;
-        bulk: (op: Parameters<typeof runBulk>[1], label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void>;
+        run: (op: OptimisticOp, targets: BulkSelection[], params?: BulkParams) => Promise<BulkItemResult[]>;
+        bulk: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void>;
         restore: (targets: BulkSelection[]) => Promise<void>;
         invalidateEntries: () => Promise<void>;
     };
     folderActions: {
         requestCreate: (parentId: string | null) => void;
         requestRename: (folder: Folder) => void;
-        requestDelete: (folder: Folder) => Promise<void>;
-        moveFolder: (folder: Folder, parentId: string | null) => Promise<void>;
+        requestDelete: (folder: Folder) => void;
+        moveFolder: (folder: Folder, parentId: string | null) => void;
         dialogs: import("react").JSX.Element;
     };
     recordTarget: RecordTarget | null;
@@ -63,6 +63,8 @@ export declare function useEntryList(mode: ListMode): {
     setRecordDirty: (dirty: boolean) => void;
     /** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
     confirmDialog: import("react").JSX.Element;
+    /** The discard dialog of a link clicked while the panel has changes. Render once per screen. */
+    guardDialog: import("react").ReactNode;
     reloadTaxonomies: () => undefined;
     invalidateEntries: () => Promise<void>;
     moveEntries: (folderId: string | null, entries: DraggedEntry[]) => undefined;

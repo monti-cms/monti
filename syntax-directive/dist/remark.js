@@ -3,7 +3,7 @@
  *
  * 1. {@link remarkDemoteUnknownDirectives} — turns **unregistered** names back into body text, exactly as written.
  *    A pipeline that does not handle directives outputs nothing (silent loss), so without turning them back,
- *    prose like `openai/gpt-oss-120b:free를` disappears. Measured on the 49 legacy posts, there are 2 false positives (`:free를`, `:1로`).
+ *    prose like `openai/gpt-oss-120b:free` followed by a Korean particle disappears. Measured on the 49 legacy posts, there are 2 false positives (a name or number after a colon with a Korean particle attached).
  * 2. {@link remarkDirectivesToMdx} — turns **registered** names into MDX elements. Components attach only by name
  *    (`MDX_COMPONENTS`), so they must be converted to `mdxJsxFlowElement` and `mdxJsxTextElement`.
  *    This works the same way as `remark-fence-blocks.ts`, which turns code fence blocks into MDX elements.

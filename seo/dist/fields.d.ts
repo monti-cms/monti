@@ -1,7 +1,7 @@
 import { type MediaField, type SelectField, type TextField, type ViewField } from "@monti-cms/core";
 /**
  * SEO field set (`seoFields`). Spread it into a collection's `fields`. Values are found by role (`SEO_ROLES`), not by field name, so field names and
- * labels are up to the site. Every field has a `tab` (default `SEO`), so they gather in that tab of the edit screen even without a `layout`.
+ * labels are up to the site. The `seo()` plugin places them in a tab of the edit screen of their own (`SEO`), found by role and view name, even without a `layout`.
  *
  * ```ts
  * fields: { title, slug, ...seoFields() }
@@ -56,8 +56,6 @@ export interface SeoFieldsOptions<K extends Partial<Record<SeoPart, string>> = P
     readonly labels?: Partial<Record<Exclude<SeoPart, "preview">, string>> & {
         readonly preview?: string;
     };
-    /** Edit screen tab name. Default `SEO`. */
-    readonly tab?: string;
     /** Keep title, description, image and canonical URL separate per language. Default `true` (hiding is always a shared value). */
     readonly localized?: boolean;
     /** Recommended lengths (the count changes color when exceeded; saving is not blocked). Also used for AI suggestion length. */

@@ -1,15 +1,16 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { HOST_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { useState } from "react";
 import { Button } from "../../ui/button.js";
 import { Input } from "../../ui/input.js";
-import { FlagSwitch, Labeled, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls.js";
+import { Labeled } from "../shared/labeled.js";
+import { Section } from "../shared/section.js";
+import { FlagSwitch, orUndefined, Pick, RowActions, TextInput, useSchemaEdit } from "./controls.js";
 import { schemaMessages } from "./messages.js";
 import { localesOf, moveItem, sectionOf, setSetting } from "./schema-model.js";
-import { Section } from "./section.js";
+import { schemaSiteMessages } from "./site.messages.js";
 const PREFIX_MODES = ["except-default", "always", "never"];
-const HOST = /^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:\d+)?$/;
 const URL_NOTE = {
     env: "site.url.env",
     schema: "site.url.schema",
@@ -18,7 +19,8 @@ const URL_NOTE = {
 };
 /** The `site` settings of the file: name, home link, preview address, how the language shows in addresses, and other host names. The site URL is only shown. */
 export function SiteEditor({ file, siteUrl, update, }) {
-    const t = useTranslator(schemaMessages);
+    const t = useTranslator(schemaSiteMessages);
+    const ts = useTranslator(schemaMessages);
     const { disabled } = useSchemaEdit();
     const site = sectionOf(file, "site");
     const set = (key, value) => update((current) => setSetting(current, "site", key, value));
@@ -31,9 +33,9 @@ export function SiteEditor({ file, siteUrl, update, }) {
         ? site.localePrefix
         : "except-default";
     const inPath = site.previewLocaleParam === false;
-    const addable = HOST.test(host.trim()) && !aliases.includes(host.trim());
+    const addable = HOST_PATTERN.test(host.trim()) && !aliases.includes(host.trim());
     const setAliases = (next) => set("aliases", next.length === 0 ? undefined : next);
-    return (_jsxs("div", { className: "flex flex-col gap-12", "data-testid": "site-settings", children: [_jsx(Section, { wide: true, title: t("site.identityTitle"), description: t("site.identityDescription"), children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(TextInput, { label: t("site.name"), hint: t("site.nameHint"), value: site.name, onChange: (value) => set("name", orUndefined(value)) }), _jsx(TextInput, { label: t("site.home"), hint: t("site.homeHint"), placeholder: "/", value: site.home, onChange: (value) => set("home", orUndefined(value)) })] }) }), _jsx(Section, { wide: true, title: t("site.previewTitle"), description: t("site.previewDescription"), children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(TextInput, { label: t("site.previewPath"), hint: t("site.previewPathHint"), placeholder: "/preview", value: site.previewPath, onChange: (value) => set("previewPath", orUndefined(value)) }), _jsx(TextInput, { label: t("site.previewParam"), hint: t("site.previewParamHint"), placeholder: "locale", value: typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : "", onChange: (value) => set("previewLocaleParam", orUndefined(value)) }), _jsx(FlagSwitch, { label: t("site.previewInPath"), hint: t("site.previewInPathHint"), checked: inPath, onChange: (on) => set("previewLocaleParam", on ? false : undefined) })] }) }), _jsxs(Section, { wide: true, title: t("site.addressTitle"), description: t("site.addressDescription"), children: [_jsxs("div", { className: "flex flex-col gap-2", children: [_jsx(Pick, { label: t("site.localePrefix"), hint: t("site.localePrefixHint"), control: "wide", value: mode, items: PREFIX_MODES.map((value) => ({
+    return (_jsxs("div", { className: "flex flex-col gap-12", "data-testid": "site-settings", children: [_jsx(Section, { wide: true, title: t("site.identityTitle"), description: t("site.identityDescription"), children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(TextInput, { label: ts("site.name"), hint: t("site.nameHint"), value: site.name, onChange: (value) => set("name", orUndefined(value)) }), _jsx(TextInput, { label: t("site.home"), hint: t("site.homeHint"), placeholder: "/", value: site.home, onChange: (value) => set("home", orUndefined(value)) })] }) }), _jsx(Section, { wide: true, title: t("site.previewTitle"), description: t("site.previewDescription"), children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(TextInput, { label: t("site.previewPath"), hint: t("site.previewPathHint"), placeholder: "/preview", value: site.previewPath, onChange: (value) => set("previewPath", orUndefined(value)) }), _jsx(TextInput, { label: t("site.previewParam"), hint: t("site.previewParamHint"), placeholder: "locale", value: typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : "", onChange: (value) => set("previewLocaleParam", orUndefined(value)) }), _jsx(FlagSwitch, { label: t("site.previewInPath"), hint: t("site.previewInPathHint"), checked: inPath, onChange: (on) => set("previewLocaleParam", on ? false : undefined) })] }) }), _jsxs(Section, { wide: true, title: t("site.addressTitle"), description: t("site.addressDescription"), children: [_jsxs("div", { className: "flex flex-col gap-2", children: [_jsx(Pick, { label: t("site.localePrefix"), hint: t("site.localePrefixHint"), control: "wide", value: mode, items: PREFIX_MODES.map((value) => ({
                                     value,
                                     label: t(`site.prefix.${value}`),
                                     description: t(`site.prefix.${value}.text`, { default: defaultCode, other: otherCode }),

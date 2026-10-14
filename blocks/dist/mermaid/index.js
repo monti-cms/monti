@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { mermaidAiContribution } from "./ai.js";
 import { mermaidBlock } from "./definition.js";
 export { mermaidBlock } from "./definition.js";
@@ -13,9 +13,8 @@ export { mermaidBlock } from "./definition.js";
  * replace it with `fencePreviews.mermaid`. The public page is drawn by this extension's default `Mermaid` component, which a site can override (the code is the `source` attribute,
  * `remarkFenceBlocksToMdx`).
  */
-export const mermaid = () => definePlugin({
+export const mermaid = () => defineBlockPlugin({
     name: "mermaid",
-    options: {},
     blocks: [mermaidBlock],
     admin: () => import("@monti-cms/blocks/mermaid/admin"),
     render: () => import("@monti-cms/blocks/mermaid/render"),

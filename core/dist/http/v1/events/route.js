@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { adminRoute, json, parseWith, readQuery } from "../handler.js";
+import { adminRoute, ok, parseWith, readQuery } from "../handler.js";
 const STATES = [
     "pending",
     "delivering",
@@ -25,5 +25,5 @@ export const GET = adminRoute(async ({ request, cms }) => {
         }),
         cms.events.counts(),
     ]);
-    return json({ ...list, counts });
+    return ok({ ...list, counts });
 });

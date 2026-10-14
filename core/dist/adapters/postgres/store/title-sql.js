@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive.js";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/fields.js";
 /** The collection of each row of a query across collections (`entries e`). */
 export const ROW_COLLECTION = { column: "e.collection" };
 function titleKeys(site, of) {

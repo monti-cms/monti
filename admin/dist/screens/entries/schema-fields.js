@@ -4,6 +4,8 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import { isFieldInputParts, useCmsAdminComponents, } from "../../admin-components.js";
+import { cmsIssueMessage } from "../../api/error-message.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { useSlot } from "../../slots/slots.js";
 import { Button } from "../../ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible.js";
@@ -13,11 +15,9 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { Textarea } from "../../ui/textarea.js";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip.js";
-import { cmsIssueMessage } from "../api-error-message.js";
 import { recordTranslationKey } from "./entry-form.js";
 import { BacklinkInput, EntryPicker, inputClass, multilineProps, OrderedEntryList, } from "./field-inputs.js";
 import { FieldView } from "./field-views.js";
-import { isDrawnField, layoutGroupsOf } from "./layout-groups.js";
 import { MediaInput } from "./media-image-input.js";
 import { entriesMessages } from "./messages.js";
 import { optionOf, useRecordCreator } from "./record-create-sheet.js";
@@ -45,6 +45,7 @@ function SlotFieldRow({ id, label, required, issue, help, slot, aside, children,
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }) {
     const site = useSite();
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     const relation = field;
     const selected = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
     // Published records, searched on the server as the user types; the picked ones are looked up by id so they keep their names.
@@ -52,15 +53,15 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
     const creator = useRecordCreator();
     const options = useMemo(() => (records.options ?? []).map((option) => ({ value: option.id, label: option.title })), [records.options]);
     const known = useMemo(() => records.known.map((option) => ({ value: option.id, label: option.title })), [records.known]);
-    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { id: id, multiple: Boolean(relation.many), "aria-label": relation.label, placeholder: relation.placeholder ?? (relation.createInline ? t("relation.searchOrAdd") : t("relation.search")), options: options, known: known, onSearch: records.search, loading: records.loading, value: selected, invalid: invalid, describedBy: describedBy, disabled: context.disabled, onValueChange: (next) => onChange(relation.many ? next : (next[0] ?? null)), onCreate: relation.createInline
+    return (_jsxs(_Fragment, { children: [_jsx(RelationCombobox, { id: id, multiple: Boolean(relation.many), "aria-label": relation.label, placeholder: relation.placeholder ?? (relation.createInline ? t("relation.searchOrAdd") : tc("search")), options: options, known: known, onSearch: records.search, loading: records.loading, value: selected, invalid: invalid, describedBy: describedBy, disabled: context.disabled, onValueChange: (next) => onChange(relation.many ? next : (next[0] ?? null)), onCreate: relation.createInline
                     ? async (title) => {
                         const saved = await creator.create(relation.to, title);
                         if (!saved)
                             return null;
-                        records.remember({ ...optionOf(site, t, relation.to, saved), status: saved.status });
+                        records.remember({ ...optionOf(site, tc("untitled"), relation.to, saved), status: saved.status });
                         return saved.id;
                     }
-                    : undefined }), records.error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: t("entry.loadFailed") })), creator.sheet] }));
+                    : undefined }), records.error && _jsx(FieldError, { children: t("entry.loadFailed") }), creator.sheet] }));
 }
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
 function DefaultInput({ parts, ...props }) {
@@ -108,7 +109,7 @@ function useRegisteredInput(field) {
 const ValueRow = memo(function ValueRow({ name, showDescriptions }) {
     const field = useField(name);
     const registered = useRegisteredInput(field);
-    if (!field.definition || field.hidden)
+    if (!field.definition)
         return null;
     return registered ? (_jsx(FormBoundRow, { field: field, showDescriptions: showDescriptions })) : (_jsx(ValueRowView, { field: field, showDescriptions: showDescriptions }));
 });
@@ -179,8 +180,6 @@ const ViewRow = memo(function ViewRow({ name, showDescriptions }) {
     const form = useEntryFormSelector((state) => state.form);
     const entry = useEntryFormSelector((state) => state.entry);
     const field = site.schemaOf(collection).fields[name];
-    if (field.hidden)
-        return null;
     const view = _jsx(FieldView, { view: field.view, collection: collection, form: form, entry: entry });
     return field.label ? (_jsx(FieldRow, { id: `cms-${name}`, label: field.label, help: showDescriptions ? field.description : undefined, children: view })) : (view);
 });
@@ -204,14 +203,12 @@ const BacklinkRow = memo(function BacklinkRow({ name, showDescriptions, referenc
  * and renders fields not in the layout after the last group in declaration order. For a conditional field, shows its dependent input when the condition holds.
  * The values, issues and read-only state come from the nearest `EntryFormProvider`; each field row reads them with `useField`.
  */
-export function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlaceholder, omit = [], showDescriptions = true, include, sections = "collapsible", references, }) {
+export function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlaceholder, showDescriptions = true, include, sections = "collapsible", references, }) {
     const site = useSite();
     const store = useEntryFormStore();
     const collection = useEntryFormSelector((state) => state.collection);
     const schema = site.schemaOf(collection);
     const renderField = (name) => {
-        if (omit.includes(name))
-            return null;
         const field = schema.fields[name];
         if (!field)
             return null;
@@ -228,12 +225,9 @@ export function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlaceholder, 
                 return _jsx(ValueRow, { name: name, showDescriptions: showDescriptions }, name);
         }
     };
-    const groups = layoutGroupsOf(site, collection).filter((group) => !include || include(group));
+    const groups = site.panelGroupsOf(collection).filter((group) => !include || include(group));
     return (_jsx(_Fragment, { children: groups.map((group, index) => {
-            const visible = group.fields.filter((name) => {
-                const field = schema.fields[name];
-                return field && !omit.includes(name) && isDrawnField(field);
-            });
+            const visible = group.fields;
             if (visible.length === 0)
                 return null;
             const key = `${group.group ?? "group"}-${index}`;

@@ -1,4 +1,3 @@
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const LINE_COMMENT = { prefix: "//", postfix: "" };
 /**
  * Comment syntax per language, with the aliases of each language listed beside it.
@@ -42,7 +41,4 @@ export const formatAnnotationComment = (commentSyntax, body) => {
     const prefix = commentSyntax.prefix.trim();
     const postfix = commentSyntax.postfix.trim();
     return [prefix, body, postfix].filter((segment) => segment.length > 0).join(" ");
-};
-export const __testable__ = {
-    escapeRegExp,
 };

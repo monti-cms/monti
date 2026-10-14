@@ -3,7 +3,7 @@ import { ENTRY_STATUSES, LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api.
 import { isUuid } from "../../../core/ids.js";
 import { CmsError } from "../../../core/store/errors.js";
 import { DEFAULT_ENTRY_SEARCH_LIMIT, MAX_ENTRY_SEARCH_LIMIT, } from "../../../core/store/types.js";
-import { RECORD_TRANSLATIONS_KEY } from "../../../schema/derive.js";
+import { RECORD_TRANSLATIONS_KEY } from "../../../schema/fields.js";
 import { likeContainsPattern, likePrefixPattern, likeWordPattern } from "./sql.js";
 import { ROW_COLLECTION, titleExpr } from "./title-sql.js";
 /**

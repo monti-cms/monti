@@ -1,15 +1,26 @@
+import { ERROR_STATUS, type ErrorCode } from "../../core/error-codes.js";
+import { CmsError } from "../../core/store/errors.js";
+export { CmsError, ERROR_STATUS, type ErrorCode };
 /**
- * HTTP errors that routes throw directly (malformed request, missing version, etc.). Plugin errors extend this to set the status code.
- * The response shape matches other errors: `code`, `message`, and `issues` when present.
+ * The error body of every answer: `{ error: { code, message, issues?, details? } }`. `details` is machine-readable extra data
+ * (the places a key is used, the server version of a `conflict`); `issues` are the problems found in the content.
  */
-export declare class HttpError extends Error {
-    readonly status: number;
-    readonly code: string;
-    readonly issues?: unknown;
-    /** More members of the response body (a machine-readable `reason`, say). */
-    readonly extra?: Readonly<Record<string, unknown>> | undefined;
-    constructor(status: number, code: string, message: string, issues?: unknown, 
-    /** More members of the response body (a machine-readable `reason`, say). */
-    extra?: Readonly<Record<string, unknown>> | undefined);
+export interface ErrorBody {
+    readonly error: {
+        readonly code: ErrorCode;
+        readonly message: string;
+        readonly issues?: readonly unknown[];
+        readonly details?: unknown;
+    };
 }
+/** The response for a code. Nothing outside this file picks a status: it comes from {@link ERROR_STATUS}. */
+export declare function errorResponse(code: ErrorCode, message: string, extra?: {
+    readonly issues?: readonly unknown[];
+    readonly details?: unknown;
+    readonly headers?: HeadersInit;
+}): Response;
+/** A successful answer with a body. */
+export declare const ok: (body: unknown, init?: ResponseInit) => Response;
+/** The one answer to a delete: 204, no body. */
+export declare const deleted: () => Response;
 export declare function handleApiError(error: unknown): Response;

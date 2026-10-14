@@ -1,4 +1,4 @@
-import { adminRoute, json, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, readJsonBody } from "@monti-cms/core/plugin/server";
 import { createCustomAction, listActions } from "../../actions.js";
 import { usableActionKeys } from "../../settings.js";
 import { aiStoreFor } from "../../store.js";
@@ -6,7 +6,7 @@ import { aiStoreFor } from "../../store.js";
 export const GET = adminRoute(async ({ cms }) => {
     const store = aiStoreFor(cms);
     const items = await listActions(cms.site, store);
-    return json({ usable: await usableActionKeys(cms.site, store, items), items });
+    return ok({ usable: await usableActionKeys(cms.site, store, items), items });
 });
 /**
  * Creates a screen action. The body is `{ base: { label, surface, result, engine? }, value?: edited value }`.
@@ -14,5 +14,5 @@ export const GET = adminRoute(async ({ cms }) => {
  */
 export const POST = adminRoute(async ({ request, cms }) => {
     const body = (await readJsonBody(request));
-    return json(await createCustomAction(cms.site, aiStoreFor(cms), body.base, body.value), { status: 201 });
+    return ok(await createCustomAction(cms.site, aiStoreFor(cms), body.base, body.value), { status: 201 });
 });

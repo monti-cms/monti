@@ -10,6 +10,7 @@ import { tableConverter } from "./table.js";
  * Block converter registry of a site. A block with an edit UI adds one more converter line here.
  * If two converters have the same `cmsTypes` or `tiptapTypes`, the registry test fails.
  * (However, detailed branch converters with `matches` may share the same cmsType.)
+ * @internal The registry test reads the whole list.
  */
 export const blockConvertersOf = (site) => registryOf(site).converters;
 const registryOf = perSite((site) => {

@@ -79,8 +79,3 @@ export const CmsBlockKeymap = Extension.create({
         };
     },
 });
-export const blockShortcuts = (t) => [
-    { keys: "Alt+↑ / Alt+↓", label: t("blockShortcut.move") },
-    { keys: "Mod+Shift+D", label: t("blockShortcut.duplicate") },
-    { keys: "Mod+Shift+Backspace", label: t("blockShortcut.delete") },
-];

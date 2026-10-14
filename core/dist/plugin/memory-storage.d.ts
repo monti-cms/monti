@@ -12,9 +12,5 @@ export interface MemoryPluginStorage {
     transaction<T>(work: (tx: {
         pluginStorage(plugin: string): PluginStorage;
     }) => Promise<T>): Promise<T>;
-    /** Puts a table an earlier version of a plugin kept on its own where `readLegacyTable` can read it (for migration tests). */
-    seedLegacyTable(table: string, rows: readonly Record<string, unknown>[]): void;
-    /** Records a one-time step name as done, as an earlier version of a plugin would have (for `legacyNames` tests). */
-    recordMigration(name: string): void;
 }
 export declare function createMemoryPluginStorage(): MemoryPluginStorage;

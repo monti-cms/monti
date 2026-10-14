@@ -1,4 +1,4 @@
-import { type MediaItem } from "./media-item.js";
+import type { MediaItem } from "../../api/media.js";
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.
  * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.

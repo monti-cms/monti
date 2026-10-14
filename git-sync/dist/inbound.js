@@ -1,11 +1,10 @@
-import { problemText } from "@monti-cms/core/plugin/server";
 import { applyFile, describeError, readEntry, recordOf } from "./apply.js";
 import { exportEntry, isSyncable, parseEntryFile, sameContent } from "./entry-file.js";
+import { log } from "./log.js";
 import { enqueue, flushTarget, isKnownBlob } from "./outbound.js";
+import { serverMessages } from "./server.messages.js";
 import { entryKey } from "./state.js";
 import { GitSyncError } from "./sync.js";
-// What a file is applied with lives in `apply.ts` ; these are re-exported for the callers that always had them here.
-export { applyFile, describeError, recordOf } from "./apply.js";
 /**
  * Inbound: from the repo to the CMS.
  *
@@ -37,11 +36,7 @@ export async function pullTarget(ctx, target) {
         const { pattern } = await ctx.format(target);
         const head = await client.getBranchHead(target.branch);
         if (!head)
-            throw new GitSyncError(problemText({
-                what: `The branch "${target.branch}" does not exist in ${target.repo}`,
-                where: "`branch` of the target in gitSync() of monti.config.ts",
-                fix: `create the branch in the repo (a new repo needs a first commit), or set \`branch\` to one that exists`,
-            }));
+            throw new GitSyncError(ctx.cms.site.createTranslator(serverMessages)("branchMissing", { branch: target.branch, repo: target.repo }));
         const files = await client.listFiles(head, target.folder);
         const records = await ctx.state.records.list(target.id);
         const byPath = new Map([...records.values()].map((record) => [record.path, record]));
@@ -217,7 +212,7 @@ export async function pullTarget(ctx, target) {
     });
     // Publishes that came in while the files were being written wait in the queue: commit them now that the lock is free.
     if ((await ctx.state.queue.list(target.id)).length > 0) {
-        await flushTarget(ctx, target).catch((error) => console.error(`[git-sync] flush of ${target.id} after a pull failed`, error));
+        await flushTarget(ctx, target).catch((error) => log.error(`flush of ${target.id} after a pull failed`, error));
     }
     return summary;
 }

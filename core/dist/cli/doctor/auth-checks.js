@@ -1,9 +1,9 @@
 import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust-host.js";
+import { WHERE_TO_SET_ENV } from "../../core/env.js";
 import { CMS_AUTH_BASE_PATH } from "../../server/define.js";
 import { githubLoginHowTo } from "../templates.js";
 import { fail, ok, skip, warn } from "./outcome.js";
 /** The `auth` group of `monti doctor`: only the environment values and config values core itself knows about the GitHub login. */
-const WHERE_TO_SET = ".env.local (and the environment settings of your host)";
 const GITHUB_ID = "AUTH_GITHUB_ID";
 const GITHUB_SECRET = "AUTH_GITHUB_SECRET";
 const GITHUB_ADMIN = "MONTI_ADMIN_GITHUB_ID";
@@ -24,7 +24,9 @@ const originOf = (value) => {
 };
 /** The site URL: `SITE_URL`, else the `site.url` of the config. */
 const siteUrlOf = (state) => state.env.SITE_URL?.trim() || state.cms?.site.config.site?.url?.trim() || undefined;
-/** The public address of the site as the login will see it: `AUTH_URL` wins (the login pins it), then the site's URL, else the dev server. */
+/** What stands for the address of the dev server in a message: its port is the person's to choose (`next dev -p`, `PORT`), so it is not guessed. */
+const YOUR_DEV_URL = "<your dev URL>";
+/** The public address of the site as the login will see it: `AUTH_URL` wins (the login pins it), then the site's URL; `undefined` origin when neither is set (the dev server). */
 function siteOrigin(state) {
     const pinned = originOf(state.env.AUTH_URL?.trim() || state.env.NEXTAUTH_URL?.trim() || undefined);
     if (pinned)
@@ -32,12 +34,12 @@ function siteOrigin(state) {
     const site = originOf(siteUrlOf(state));
     if (site)
         return { origin: site, from: "SITE_URL" };
-    return { origin: "http://localhost:3000", from: "the default (SITE_URL is not set)" };
+    return { origin: undefined, from: "SITE_URL is not set" };
 }
 /** In production a missing value breaks login; on a development machine the development login stands in, so it is a warning there. */
 function missingGithubValue(name, env) {
     const message = `${name} is not set, so nobody can sign in with GitHub${isProduction(env) ? "" : " (under `next dev` the development login is used instead)"}`;
-    const details = { where: WHERE_TO_SET, fix: OAUTH_APP_FIX };
+    const details = { where: WHERE_TO_SET_ENV, fix: OAUTH_APP_FIX };
     return isProduction(env) ? fail(message, details) : warn(message, details);
 }
 /** Whether the config loaded and names no `auth` (the built-in no-login stands in). */
@@ -90,7 +92,7 @@ const login = {
         const message = "the config has no login (`auth`), so nobody can sign in to the admin";
         const details = {
             where: "defineConfig in monti.config.ts",
-            fix: githubLoginHowTo(siteOrigin(state).origin),
+            fix: githubLoginHowTo(siteOrigin(state).origin ?? YOUR_DEV_URL),
         };
         return looksDeployed(state.env)
             ? fail(message, details)
@@ -161,10 +163,10 @@ const adminAccounts = {
         }
         if (any)
             return ok("at least one admin account exists", { where: "the database (plugin storage of `auth`)" });
-        const adminUrl = `${siteOrigin(state).origin}${state.cms?.site.adminHref() ?? ""}`;
+        const adminUrl = `${siteOrigin(state).origin ?? "your site"}${state.cms?.site.adminHref() ?? ""}`;
         return warn("no admin account exists yet, so nobody can sign in", {
             where: "the database",
-            fix: `open the admin (${adminUrl}) and create the first admin: right after you deploy, or beforehand by running the app in production mode against the production database (under \`next dev\` you are the admin without signing in, so the screen does not show). A forgotten password: \`monti admin:reset-password\``,
+            fix: `open ${adminUrl} once the site is deployed and create the first admin there (the screen closes after the first one)`,
         });
     },
 };
@@ -179,19 +181,21 @@ const siteUrl = {
             const message = "SITE_URL is not set, so the site does not know its public address (login callback URL, links in bodies written as full URLs)";
             const fix = "set SITE_URL to the public address, for example SITE_URL=https://your-domain.com, in the environment of the deployed site";
             return looksDeployed(state.env)
-                ? warn(message, { where: WHERE_TO_SET, fix })
-                : ok("not set; fine on a development machine (the dev server is http://localhost:3000). Set it where you deploy", { where: "SITE_URL" });
+                ? warn(message, { where: WHERE_TO_SET_ENV, fix })
+                : ok("not set; fine on a development machine (the dev server's own address is used). Set it where you deploy", {
+                    where: "SITE_URL",
+                });
         }
         const origin = originOf(value);
         if (!origin) {
             return fail(`SITE_URL is not a valid address (${value})`, {
-                where: WHERE_TO_SET,
+                where: WHERE_TO_SET_ENV,
                 fix: "write it with the scheme, for example SITE_URL=https://your-domain.com",
             });
         }
         if (looksDeployed(state.env) && /^http:\/\/(localhost|127\.)/.test(origin)) {
             return warn(`SITE_URL points at ${origin}, but this environment looks like a deployed one`, {
-                where: WHERE_TO_SET,
+                where: WHERE_TO_SET_ENV,
                 fix: "set SITE_URL to the public address of the site, for example https://your-domain.com",
             });
         }
@@ -228,10 +232,10 @@ const callbackUrl = {
     needsCms: true,
     run: (state) => {
         const { origin, from } = siteOrigin(state);
-        const url = `${origin}${CMS_AUTH_BASE_PATH}/callback/github`;
-        const note = from === "SITE_URL" || from === "AUTH_URL" || from === "NEXTAUTH_URL"
+        const url = `${origin ?? YOUR_DEV_URL}${CMS_AUTH_BASE_PATH}/callback/github`;
+        const note = origin
             ? `(from ${from})`
-            : `(SITE_URL is not set, so this is the development server's address); for the deployed site register https://<your-domain>${CMS_AUTH_BASE_PATH}/callback/github as well`;
+            : `(SITE_URL is not set: replace ${YOUR_DEV_URL} with the address of your dev server); for the deployed site register https://<your-domain>${CMS_AUTH_BASE_PATH}/callback/github as well`;
         const authUrl = originOf(state.env.AUTH_URL?.trim() || undefined);
         const siteOnly = originOf(siteUrlOf(state));
         if (authUrl && siteOnly && authUrl !== siteOnly) {

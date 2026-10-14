@@ -2,6 +2,7 @@ import type { AnnotationConfig, AnnotationRegistry, AnnotationRegistryItem, Anno
 declare const normalizeConfigItems: (annotationConfig: AnnotationConfig) => AnnotationRegistryItem[];
 export declare const supportsAnnotationScope: (item: AnnotationRegistryItem, scope: AnnotationScope) => boolean;
 export declare const createAnnotationRegistry: (annotationConfig?: AnnotationConfig) => AnnotationRegistry;
+/** @internal Internals the tests reach. */
 export declare const __testable__: {
     normalizeConfigItems: typeof normalizeConfigItems;
     supportsAnnotationScope: typeof supportsAnnotationScope;

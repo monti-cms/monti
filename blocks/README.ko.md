@@ -114,7 +114,7 @@ import "@monti-cms/blocks/styles.css";
 ```ts
 import { mermaidAi } from "@monti-cms/blocks/mermaid/ai";
 
-aiPlugin({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), chartEdit: false } });
+ai({ actions: { diagramDraft: mermaidAi.draft({ prompt: "…" }), chartEdit: false } });
 ```
 
 블록 확장은 AI 플러그인 코드를 불러오지 않는다(타입만 읽는다). AI 플러그인이 없는 사이트에서는 기여가 쓰이지 않는다.

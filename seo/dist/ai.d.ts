@@ -1,19 +1,5 @@
-import { type CollectionsConfig } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
-/**
- * The part of the site view (`AiSiteView`) passed by the AI plugin that this file reads, and the shape of the attach target (`AiAttach`). Written here so the published type declarations
- * do not reference the AI plugin (sites without the AI plugin still pass type checking). `satisfies` checks that the shape matches.
- */
-export interface SeoSiteView {
-    readonly collections: CollectionsConfig;
-    /** `site.createTranslator`: the labels and prompts are written in the site's admin language. */
-    readonly createTranslator: Site["createTranslator"];
-}
-export interface FieldAttach {
-    readonly slot: "field";
-    readonly field: string;
-    readonly collections: readonly string[];
-}
+import type { AiSiteView } from "@monti-cms/core/ai-contract";
+type SeoSiteView = Pick<AiSiteView, "collections" | "createTranslator">;
 export declare const seoAi: {
     /** Title candidates shown in search results. Attaches to the search title role (`seoTitle`) field. */
     title: (options?: {
@@ -47,7 +33,11 @@ export declare const seoAi: {
             max: number;
         }[];
         prompt: string;
-        attach: FieldAttach[];
+        attach: {
+            readonly slot: "field";
+            readonly field: string;
+            readonly collections?: readonly string[];
+        }[];
     } | undefined;
     /** Description shown in search results. Attaches to the search description role (`seoDescription`) field. */
     description: (options?: {
@@ -81,7 +71,11 @@ export declare const seoAi: {
             max: number;
         }[];
         prompt: string;
-        attach: FieldAttach[];
+        attach: {
+            readonly slot: "field";
+            readonly field: string;
+            readonly collections?: readonly string[];
+        }[];
     } | undefined;
 };
 /** What `seo()` adds to the AI plugin. The feature names (`seoTitle`, `seoDescription`) are the keys of values edited in the admin AI screen. */
@@ -115,7 +109,11 @@ export declare const seoAiContribution: {
                 max: number;
             }[];
             prompt: string;
-            attach: FieldAttach[];
+            attach: {
+                readonly slot: "field";
+                readonly field: string;
+                readonly collections?: readonly string[];
+            }[];
         } | undefined;
         seoDescription: (site: SeoSiteView) => {
             label: string;
@@ -145,7 +143,12 @@ export declare const seoAiContribution: {
                 max: number;
             }[];
             prompt: string;
-            attach: FieldAttach[];
+            attach: {
+                readonly slot: "field";
+                readonly field: string;
+                readonly collections?: readonly string[];
+            }[];
         } | undefined;
     };
 };
+export {};

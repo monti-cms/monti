@@ -1,6 +1,5 @@
-import { cmsApiUrl } from "@monti-cms/core/client";
-import { cmsApiErrorMessage } from "../screens/api-error-message.js";
-import { screensMessages } from "../screens/messages.js";
+import { apiErrorMessages } from "../api/error-message.messages.js";
+import { completeUpload, requestUpload } from "../api/media.js";
 import { isSandboxSite } from "../screens/shared/preview-sandbox.js";
 import { editorMessages } from "./messages.js";
 /** Default optimization policy. Can be changed in code. */
@@ -96,24 +95,30 @@ function putFile(site, ticket, file, onProgress) {
         xhr.send(file);
     });
 }
-const errorMessage = async (site, response, fallback) => cmsApiErrorMessage(site, await response.json().catch(() => null), fallback);
+/** Runs an admin API call of an upload step: a refused or failed call keeps its message, and being offline reads as the upload's network error. */
+async function uploadCall(site, call) {
+    try {
+        return await call();
+    }
+    catch (error) {
+        if (error instanceof TypeError)
+            throw new Error(site.createTranslator(editorMessages)("upload.networkError"));
+        throw error;
+    }
+}
 export async function uploadImageFile(site, input, onProgress) {
     const t = site.createTranslator(editorMessages);
     const prepared = input instanceof File ? { file: input, optimized: false } : input;
     const { file, original } = prepared;
-    const prepareRes = await fetch(cmsApiUrl("/v1/media/uploads"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            filename: original?.name ?? file.name,
-            mimeType: file.type,
-            byteSize: file.size,
-            ...(original ? { original: { mimeType: original.type, byteSize: original.size } } : {}),
-        }),
-    });
-    if (!prepareRes.ok)
-        throw new Error(await errorMessage(site, prepareRes, t("upload.prepareFailed")));
-    const ticket = (await prepareRes.json());
+    // A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).
+    if (isSandboxSite(site))
+        throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
+    const ticket = await uploadCall(site, () => requestUpload(site, {
+        filename: original?.name ?? file.name,
+        mimeType: file.type,
+        byteSize: file.size,
+        ...(original ? { original: { mimeType: original.type, byteSize: original.size } } : {}),
+    }, t("upload.prepareFailed")));
     const total = file.size + (original?.size ?? 0);
     let publicLoaded = 0;
     let originalLoaded = 0;
@@ -130,14 +135,7 @@ export async function uploadImageFile(site, input, onProgress) {
             })
             : Promise.resolve(),
     ]);
-    const completeRes = await fetch(cmsApiUrl(`/v1/media/${ticket.mediaId}/complete`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-    });
-    if (!completeRes.ok)
-        throw new Error(await errorMessage(site, completeRes, t("upload.completeFailed")));
-    const result = await completeRes.json();
+    const result = await uploadCall(site, () => completeUpload(site, ticket.mediaId, t("upload.completeFailed")));
     return {
         mediaId: result.mediaId,
         publicUrl: result.publicUrl ?? null,
@@ -156,7 +154,7 @@ export async function uploadAttachment(site, file, onProgress) {
     const t = site.createTranslator(editorMessages);
     // A preview of a screen runs on a draft site: nothing is uploaded from it.
     if (isSandboxSite(site))
-        throw new Error(site.createTranslator(screensMessages)("api.previewNoWrite"));
+        throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
     const mimeType = site.api.fileTypeFor(file.name);
     if (!mimeType)
         throw new Error(t("upload.unsupportedType"));

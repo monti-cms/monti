@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { applySchemaChange, checkSchemaChange, describeSchemaChange, planSchemaChange, } from "../schema-change/index.js";
+import { locateSchemaVersion } from "../schema-file/literal.js";
 import { findSchemaFile, loadSchemaFile } from "../schema-file/locate.js";
 import { loadApp } from "./app.js";
 /** What the apply does to entries that a change touches, in words. */
@@ -84,15 +85,15 @@ export function formatApplyResult(done, wroteVersion, schemaFile) {
  * object passed to `defineSchema`. Works on the text so the file's own formatting stays (and whatever else the file holds).
  */
 export function withSchemaVersion(text, version) {
-    const present = /(\bschemaVersion\s*:\s*)\d+/;
-    if (present.test(text))
-        return text.replace(present, `$1${version}`);
-    const open = /defineSchema\(\s*\{[^\S\n]*\n/.exec(text);
-    if (!open)
+    const { number, insertAt } = locateSchemaVersion(text);
+    if (number)
+        return `${text.slice(0, number.start)}${version}${text.slice(number.end)}`;
+    const lineEnd = insertAt === null ? null : /^[^\S\n]*\n/.exec(text.slice(insertAt));
+    if (insertAt === null || !lineEnd) {
         throw new Error("the schema file does not have `defineSchema({` followed by a new line");
-    const rest = text.slice(open.index + open[0].length);
-    const indent = /^[ \t]*/.exec(rest)?.[0] || "\t";
-    const at = open.index + open[0].length;
+    }
+    const at = insertAt + lineEnd[0].length;
+    const indent = /^[ \t]*/.exec(text.slice(at))?.[0] || "\t";
     return `${text.slice(0, at)}${indent}schemaVersion: ${version},\n${text.slice(at)}`;
 }
 async function load(options) {

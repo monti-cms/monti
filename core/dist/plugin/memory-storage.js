@@ -1,9 +1,8 @@
-import { assertExpectedVersionNumber, assertMigrationName, assertStorageKey, assertStorageName, assertStoredVersion, serializeStorageValue, storageConflict, storageNotFound, } from "../core/domain/plugin-storage.js";
+import { assertExpectedVersionNumber, assertMigrationName, assertStorageKey, assertStorageName, serializeStorageValue, storageConflict, storageNotFound, } from "../core/domain/plugin-storage.js";
 export function createMemoryPluginStorage() {
     /** `plugin/collection` to its documents. */
     const collections = new Map();
     const recorded = new Set();
-    const legacyTables = new Map();
     /** Serializes `once`, like the database lock does, so concurrent calls run a step once. */
     let queue = Promise.resolve();
     const documents = (plugin, collection) => {
@@ -68,38 +67,17 @@ export function createMemoryPluginStorage() {
     };
     const migrationOf = (plugin) => ({
         collection: (name) => collectionOf(plugin, name),
-        importItem: async (collection, item) => {
-            assertStorageName("collection", collection);
-            assertStorageKey(item.key);
-            assertStoredVersion(item.version ?? 1);
-            const stored = documents(plugin, collection);
-            if (stored.has(item.key))
-                return false;
-            const createdAt = item.createdAt ?? new Date();
-            stored.set(item.key, {
-                key: item.key,
-                value: parse(serializeStorageValue(item.value)),
-                version: item.version ?? 1,
-                createdAt,
-                updatedAt: item.updatedAt ?? createdAt,
-            });
-            return true;
-        },
-        readLegacyTable: async (table) => {
-            const rows = legacyTables.get(table);
-            return rows ? rows.map((row) => ({ ...row })) : null;
-        },
     });
     const storage = (plugin) => {
         assertStorageName("plugin", plugin);
         return {
             plugin,
             collection: (name) => collectionOf(plugin, name),
-            once: (name, step, options) => {
+            once: (name, step) => {
                 assertMigrationName(name);
                 const run = async () => {
                     const id = `${plugin}:${name}`;
-                    if (recorded.has(id) || options?.legacyNames?.some((legacy) => recorded.has(legacy)))
+                    if (recorded.has(id))
                         return false;
                     // A step that throws leaves nothing behind: put the data back as it was.
                     const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
@@ -121,33 +99,34 @@ export function createMemoryPluginStorage() {
             },
         };
     };
-    const transaction = async (work) => {
-        const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
-        try {
-            return await work({
-                pluginStorage: (plugin) => ({
-                    ...storage(plugin),
-                    once: async () => {
-                        throw new Error("plugin storage: `once` cannot run inside a transaction");
-                    },
-                }),
-            });
-        }
-        catch (error) {
-            collections.clear();
-            for (const [key, docs] of before)
-                collections.set(key, docs);
-            throw error;
-        }
+    /** Transactions run one at a time, like writers waiting on a database lock, so one that fails cannot undo what another wrote. */
+    let transactions = Promise.resolve();
+    const transaction = (work) => {
+        const run = async () => {
+            const before = new Map([...collections].map(([key, docs]) => [key, new Map(docs)]));
+            try {
+                return await work({
+                    pluginStorage: (plugin) => ({
+                        ...storage(plugin),
+                        once: async () => {
+                            throw new Error("plugin storage: `once` cannot run inside a transaction");
+                        },
+                    }),
+                });
+            }
+            catch (error) {
+                collections.clear();
+                for (const [key, docs] of before)
+                    collections.set(key, docs);
+                throw error;
+            }
+        };
+        const result = transactions.then(run, run);
+        transactions = result.catch(() => undefined);
+        return result;
     };
     return {
         storage,
         transaction,
-        seedLegacyTable: (table, rows) => {
-            legacyTables.set(table, rows);
-        },
-        recordMigration: (name) => {
-            recorded.add(name);
-        },
     };
 }

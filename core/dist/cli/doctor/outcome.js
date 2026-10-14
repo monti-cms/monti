@@ -1,7 +1,10 @@
-/**
- * What a `monti doctor` check reports. A check says what it found, where (a file, an environment variable or an option), and for a warn or a fail how to fix
- * it, in plain words. It never changes anything, and it never prints a secret.
- */
+/** A warn or a fail that tells a {@link Problem} an error already carries (a `SetupError`'s `problem`). */
+export const fromProblem = (status, problem) => ({
+    status,
+    message: problem.what,
+    ...(problem.where ? { where: problem.where } : {}),
+    fix: problem.fix,
+});
 /** Everything is as it should be. */
 export const ok = (message, details = {}) => ({
     status: "ok",

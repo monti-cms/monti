@@ -100,43 +100,6 @@ export type FormatImportResult = {
     readonly ok: false;
     readonly issues: readonly FormatIssue[];
 };
-/**
- * What the store migrations that predate stored documents (`0012_soft_line_endings`, `0013_stored_documents`, `0015_code_annotations`) need of the format the
- * bodies of that time were written in. Bodies were stored as MDX text then, so only the `mdx` format has it: a store that still has to run those steps
- * needs a plugin that provides it (`@monti-cms/mdx`), and a store that does not never calls it.
- */
-export interface LegacyBodies {
-    /** The text with every soft line ending inside a paragraph made explicit (`0012`). `skipped`: the text is left as it is. */
-    insertSoftBreaks(text: string): {
-        readonly status: "unchanged";
-    } | {
-        readonly status: "changed";
-        readonly text: string;
-    } | {
-        readonly status: "skipped";
-        readonly reason: string;
-        readonly detail?: string;
-    };
-    /**
-     * A body from its text (`0013`): the text as the format writes it now, and its document, or no document when the text does not read, has front matter
-     * or would not read back the same. Blocks inherit the ids of `options.previous` where they pair up.
-     */
-    read(text: string, options?: {
-        readonly previous?: StoredDocument | null;
-    }): {
-        readonly text: string;
-        readonly doc: StoredDocument | null;
-    };
-    /** A body from its document, through the text the document is written as (`0015`): the same result as `read` of that text, with the document's block ids kept. */
-    write(doc: StoredDocument, options?: {
-        readonly previous?: StoredDocument | null;
-    }): {
-        readonly text: string;
-        readonly doc: StoredDocument | null;
-    };
-    /** The document of a text, for the hash and search text of a body that is still text (`0010` to `0015`): `unparsed` for a text that does not read. */
-    documentOf(text: string): StoredDocument;
-}
 export interface CmsFormat<Name extends string = string> {
     /** The value of the `format` option, for example `mdx`. Lowercase letters, digits and hyphens. */
     readonly name: Name;
@@ -148,11 +111,6 @@ export interface CmsFormat<Name extends string = string> {
     export(doc: StoredDocument, ctx: FormatExportContext): string | Promise<string>;
     /** Text → document. Absent: the format is one-way (it can only be written, never read back). */
     import?(text: string, ctx: FormatImportContext): FormatImportResult | Promise<FormatImportResult>;
-    /**
-     * Reads and writes the text that old stores kept bodies in, for the site the store is migrated for (its blocks decide how a text reads). Only the `mdx`
-     * format has it; see {@link LegacyBodies}.
-     */
-    readonly legacyBodies?: (site: Site) => LegacyBodies;
 }
 export declare function assertFormatName(name: string): void;
 /** Declares a format. It returns the value as it is, so the literal type of `name` is kept. */

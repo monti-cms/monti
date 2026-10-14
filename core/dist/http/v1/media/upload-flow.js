@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { HttpError } from "../error-handler.js";
+import { CmsError } from "../error-handler.js";
 import { parseWith } from "../handler.js";
 import { attachmentDisposition, extensionFor, inspectUploadedFile, UPLOAD_URL_TTL_SECONDS } from "./media-files.js";
 /** The server decides the allowed type, size and file key. `raw` is the request body of `POST /media/uploads`. */
@@ -11,24 +11,24 @@ export async function prepareMediaUpload(cms, raw) {
         ...cms.site.api.ALLOWED_FILE_MIME_TYPES,
     ];
     if (input?.mimeType !== undefined && !allowed.includes(input.mimeType)) {
-        throw new HttpError(415, "unsupported_media_type", `Allowed types: ${allowed.join(", ")}`);
+        throw new CmsError(`Allowed types: ${allowed.join(", ")}`, "unsupported_media_type");
     }
     const originalMime = input?.original?.mimeType;
     if (originalMime !== undefined &&
         !cms.site.api.ALLOWED_IMAGE_MIME_TYPES.includes(originalMime)) {
-        throw new HttpError(415, "unsupported_media_type", `Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`);
+        throw new CmsError(`Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`, "unsupported_media_type");
     }
     const body = parseWith(cms.site.api.mediaUploadBodySchema, raw);
     const isFile = !cms.site.api.isImageMime(body.mimeType);
     // An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
     if (isFile && cms.site.api.fileTypeFor(body.filename) !== body.mimeType) {
-        throw new HttpError(415, "unsupported_media_type", `File extension does not match ${body.mimeType}`);
+        throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type");
     }
     const originalFile = "original" in body ? body.original : undefined;
     const limit = isFile ? cms.site.api.MAX_FILE_BYTES : cms.site.api.MAX_MEDIA_BYTES;
     for (const file of [body, originalFile]) {
         if (file && file.byteSize > limit) {
-            throw new HttpError(413, "payload_too_large", `File size exceeds the ${limit / 1024 / 1024}MiB limit (${file.byteSize} bytes)`);
+            throw new CmsError(`File size exceeds the ${limit / 1024 / 1024}MiB limit (${file.byteSize} bytes)`, "payload_too_large");
         }
     }
     const mediaId = randomUUID();
@@ -78,7 +78,7 @@ export async function completeMediaUpload(cms, mediaId) {
     const store = cms.store();
     const media = await store.getMediaAsset(mediaId);
     if (!media)
-        throw new HttpError(404, "not_found", "Media asset not found");
+        throw new CmsError("Media asset not found", "not_found");
     const mediaStore = cms.mediaStore();
     const describe = (record) => ({
         mediaId: record.id,
@@ -94,7 +94,7 @@ export async function completeMediaUpload(cms, mediaId) {
     if (media.status === "ready")
         return describe(media);
     if (media.status !== "pending" || !media.stagingKey) {
-        throw new HttpError(409, "upload_incomplete", `Media asset cannot be completed in status: ${media.status}`);
+        throw new CmsError(`Media asset cannot be completed in status: ${media.status}`, "upload_incomplete");
     }
     let file;
     let original = null;
@@ -105,7 +105,7 @@ export async function completeMediaUpload(cms, mediaId) {
     }
     catch (error) {
         // If the file is not there yet, leave it as is so it can be retried. A file that fails inspection cannot be used.
-        if (!(error instanceof HttpError) || error.code !== "upload_incomplete")
+        if (!(error instanceof CmsError) || error.code !== "upload_incomplete")
             await store.failMediaAsset(mediaId);
         throw error;
     }

@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { Button } from "../../ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
@@ -25,6 +26,7 @@ export function RecoveryDialog({ recovery, onClose, onKeepServer, onRestore, }) 
 export function ConflictDialog({ conflict, onClose, onReload, onOverwrite, }) {
     const site = useSite();
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     const { confirm, dialog } = useConfirm();
     // This replaces the latest server copy wholesale, so ask once more.
     const overwrite = async () => {
@@ -44,12 +46,13 @@ export function ConflictDialog({ conflict, onClose, onReload, onOverwrite, }) {
                                     name: conflict.server.changedBy,
                                     date: formatDateTime(site, conflict.server.changedAt),
                                 })
-                                : t("conflict.savedAt", { date: formatDateTime(site, conflict.server.changedAt) }) }))] }), conflict && (_jsx(ComparePanes, { collection: conflict.server.collection, local: conflict.local, server: formFromEntry(site, conflict.server), serverVersion: conflict.server.version })), _jsxs(DialogFooter, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: onClose, children: t("close") }), _jsx(Button, { type: "button", variant: "outline", onClick: onReload, children: t("conflict.reload") }), _jsx(Button, { type: "button", variant: "destructive", onClick: () => void overwrite(), children: t("conflict.overwriteMine") })] }), dialog] }) }));
+                                : t("conflict.savedAt", { date: formatDateTime(site, conflict.server.changedAt) }) }))] }), conflict && (_jsx(ComparePanes, { collection: conflict.server.collection, local: conflict.local, server: formFromEntry(site, conflict.server), serverVersion: conflict.server.version })), _jsxs(DialogFooter, { children: [_jsx(Button, { type: "button", variant: "outline", onClick: onClose, children: tc("close") }), _jsx(Button, { type: "button", variant: "outline", onClick: onReload, children: t("conflict.reload") }), _jsx(Button, { type: "button", variant: "destructive", onClick: () => void overwrite(), children: t("conflict.overwriteMine") })] }), dialog] }) }));
 }
 /** Side-by-side comparison on the conflict screen ("check and copy both contents"). */
 function ComparePanes({ collection, local, server, serverVersion, }) {
     const site = useSite();
     const t = useTranslator(entriesMessages);
+    const tc = useTranslator(commonMessages);
     // The body is shown as text in the notation of the source panel; without one, as the document itself.
     const format = useSourceFormat();
     const bodyText = (doc) => (format ? format.export(doc) : JSON.stringify(doc, null, 2));
@@ -59,13 +62,13 @@ function ComparePanes({ collection, local, server, serverVersion, }) {
             toast.success(t("conflict.copied"));
         }
         catch {
-            toast.error(t("conflict.copyFailed"));
+            toast.error(tc("copyFailed"));
         }
     };
     const pane = (label, value) => {
         const body = bodyText(value.doc);
         return (_jsxs("div", { className: "space-y-2 rounded border p-3", children: [_jsx("p", { className: "font-semibold text-sm", children: label }), _jsx("p", { className: "text-xs", children: t("conflict.summary", {
-                        title: formTitle(site, collection, value) || t("untitled"),
+                        title: formTitle(site, collection, value) || tc("untitled"),
                         slug: value.slug || t("conflict.noSlug"),
                     }) }), _jsx(Button, { type: "button", variant: "link", size: "xs", className: "px-0", onClick: () => void copy(body), children: t("conflict.copyBody") }), _jsx("pre", { className: "max-h-60 overflow-auto whitespace-pre-wrap text-xs", children: body })] }));
     };

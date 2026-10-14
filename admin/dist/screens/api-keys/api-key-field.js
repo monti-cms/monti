@@ -2,10 +2,10 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useTranslator } from "@monti-cms/core/client";
 import { useId } from "react";
+import { useApiKeys } from "../../api/api-keys.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Input } from "../../ui/input.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
-import { useApiKeys } from "./api-keys-api.js";
 import { apiKeysMessages } from "./messages.js";
 /** The value that goes to the server. A new key with nothing typed is no key yet. */
 export const choiceReady = (choice) => choice.use === "saved" ? choice.keyId !== "" : choice.use === "new" ? choice.value.trim() !== "" : true;

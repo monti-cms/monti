@@ -1,17 +1,20 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { errorText } from "../../api/client.js";
+import { bulkEntries } from "../../api/entries.js";
+import { cmsIssueMessage } from "../../api/error-message.js";
+import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Button } from "../../ui/button.js";
 import { Checkbox } from "../../ui/checkbox.js";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command.js";
+import { FieldError } from "../../ui/field.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
-import { cmsFetch, errorText } from "../admin-api.js";
-import { cmsIssueMessage } from "../api-error-message.js";
-import { ConfirmDialog } from "../shared/confirm-dialog.js";
+import { useConfirm } from "../shared/confirm-dialog.js";
 import { nounVars } from "../shared/noun.messages.js";
 import { useTaxonomyOptions } from "../shared/use-taxonomy.js";
 import { bulkBarMessages } from "./bulk-bar.messages.js";
@@ -47,21 +50,36 @@ export function taxonomyActions(site, collection) {
             : t("ask.relation.set", { count, ...noun, label: field.label, target }))),
     ];
 }
-const listActions = (t, noun) => [
+const listActions = (t, tc, noun) => [
     {
         value: "folder.move",
         label: t("folder.move"),
         ask: (count, target) => target === null ? t("ask.folder.root", { count }) : t("ask.folder.move", { count, target }),
     },
-    { value: "publish", label: t("publish"), ask: (count) => t("ask.publish", { count, ...noun }), content: true },
-    { value: "archive", label: t("archive"), ask: (count) => t("ask.archive", { count, ...noun }), content: true },
-    { value: "unarchive", label: t("unarchive"), ask: (count) => t("ask.unarchive", { count, ...noun }), content: true },
-    { value: "trash", label: t("trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
+    {
+        value: "publish",
+        label: tc("lifecycle.publish"),
+        ask: (count) => t("ask.publish", { count, ...noun }),
+        content: true,
+    },
+    {
+        value: "archive",
+        label: tc("lifecycle.archive"),
+        ask: (count) => t("ask.archive", { count, ...noun }),
+        content: true,
+    },
+    {
+        value: "unarchive",
+        label: tc("lifecycle.unarchive"),
+        ask: (count) => t("ask.unarchive", { count, ...noun }),
+        content: true,
+    },
+    { value: "trash", label: tc("lifecycle.trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
-const trashActions = (t) => [
+const trashActions = (t, tc) => [
     {
         value: "permanentDelete",
-        label: t("permanentDelete"),
+        label: tc("lifecycle.deletePermanently"),
         ask: (count) => t("ask.permanentDelete", { count }),
         destructive: true,
     },
@@ -80,8 +98,9 @@ const FAILURE_CODES = new Set([
 /** Reason for a single failure. If a usage blocked permanent deletion, names it as `In use: <name>`. */
 export function describeBulkFailure(site, failure) {
     const t = site.createTranslator(bulkBarMessages);
+    const tc = site.createTranslator(commonMessages);
     if (failure.error === "in_use" && failure.usages?.length) {
-        const names = [...new Set(failure.usages.map((usage) => usage.title || t("untitled")))];
+        const names = [...new Set(failure.usages.map((usage) => usage.title || tc("untitled")))];
         const shown = names.slice(0, 3).join(", ");
         return t("failure.usedBy", {
             names: names.length > 3 ? t("failure.more", { names: shown, more: names.length - 3 }) : shown,
@@ -94,14 +113,6 @@ export function describeBulkFailure(site, failure) {
             .map((issue) => cmsIssueMessage(site, issue))
             .join(" ")}`
         : base;
-}
-export async function runBulk(site, op, items, params = {}) {
-    const data = await cmsFetch(site, cmsApiUrl("/v1/bulk"), {
-        method: "POST",
-        json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
-        fallback: site.createTranslator(bulkBarMessages)("requestFailed"),
-    });
-    return data.results;
 }
 /**
  * Multi-category (tags, etc.) picker in the bulk action row. A single small button like the folder and category pickers; pressing it opens search and a checklist.
@@ -125,13 +136,14 @@ function ManyPicker({ label, options, value, onValueChange, }) {
 export function BulkBar({ collection, selected, folders, mode = "list", onClearSelection, onRun, onDone, }) {
     const site = useSite();
     const t = useTranslator(bulkBarMessages);
+    const tc = useTranslator(commonMessages);
     const isRecord = site.isItemCollection(collection);
     const actions = useMemo(() => mode === "trash"
-        ? trashActions(t)
+        ? trashActions(t, tc)
         : [
             ...taxonomyActions(site, collection),
-            ...listActions(t, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
-        ], [isRecord, collection, mode, site, t]);
+            ...listActions(t, tc, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
+        ], [isRecord, collection, mode, site, t, tc]);
     const [action, setAction] = useState(actions[0]?.value ?? "trash");
     const [checked, setChecked] = useState([]);
     const [single, setSingle] = useState("");
@@ -139,7 +151,7 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
     const [results, setResults] = useState(null);
     const [ranItems, setRanItems] = useState([]);
     const [error, setError] = useState(null);
-    const [confirm, setConfirm] = useState(null);
+    const { confirm, dialog } = useConfirm();
     const options = useTaxonomyOptions(collection, mode === "list");
     useEffect(() => {
         if (!actions.some((candidate) => candidate.value === action))
@@ -169,7 +181,7 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
                     : action === "folder.move"
                         ? { folderId: single === "__unfiled__" ? null : single }
                         : {};
-            const out = await (onRun ?? ((...args) => runBulk(site, ...args)))(relation?.op ?? action, items, params);
+            const out = await (onRun ?? ((...args) => bulkEntries(site, ...args)))(relation?.op ?? action, items, params);
             setResults(out);
             setRanItems(items);
             onDone?.(out.filter((result) => !result.ok).map((result) => result.id));
@@ -193,16 +205,17 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
         return null;
     };
     // Actions that change many items at once always ask.
-    const start = () => {
+    const start = async () => {
         if (!activeAction)
             return;
-        setConfirm({
+        const ok = await confirm({
             title: activeAction.label,
             description: activeAction.ask(selected.length, targetName()),
             confirmLabel: activeAction.label,
             destructive: activeAction.destructive,
-            onConfirm: () => run(selected),
         });
+        if (ok)
+            await run(selected);
     };
     const failures = (results ?? []).filter((result) => !result.ok);
     const successes = (results ?? []).length - failures.length;
@@ -218,5 +231,5 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
             { value: "__unfiled__", label: t("option.root") },
             ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
         ];
-    return (_jsxs("section", { "aria-label": t("bar"), className: "border-b bg-cms-primary/5 px-5 py-2", children: [_jsxs("div", { className: "flex min-h-7 flex-wrap items-center gap-2 text-sm", children: [_jsx("span", { className: "font-medium text-cms-primary", children: t("count", { count: selected.length }) }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: onClearSelection, children: t("clear") }), actions.length > 1 ? (_jsxs(Select, { value: action, items: actions.map((candidate) => ({ value: candidate.value, label: candidate.label })), onValueChange: (value) => value && setAction(value), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("kind"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: actions.map((candidate) => (_jsx(SelectItem, { value: candidate.value, children: candidate.label }, candidate.value))) })] })) : null, needsMany && (_jsx(ManyPicker, { label: relation.label, options: relationOptions, value: checked, onValueChange: setChecked })), needsSingle && (_jsxs(Select, { value: single || null, items: singleItems, onValueChange: (value) => setSingle(typeof value === "string" ? value : ""), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": relation ? t("target.aria", { label: relation.label }) : t("folder.aria"), children: _jsx(SelectValue, { placeholder: relation ? t("picker.select", { label: relation.label }) : t("folder.select") }) }), _jsx(SelectContent, { children: singleItems.map((item) => (_jsx(SelectItem, { value: item.value, children: item.label }, item.value))) })] })), _jsx(Button, { type: "button", size: "sm", variant: activeAction?.destructive ? "destructive" : "default", disabled: !canRun, onClick: start, children: isRunning ? t("running") : (activeAction?.label ?? t("run")) }), results && (_jsx("output", { className: "text-cms-muted-foreground text-xs", children: t("result", { success: successes, failed: failures.length }) })), failures.length > 0 && (_jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id))), children: t("retry") }))] }), error && (_jsx("p", { role: "alert", className: "pt-2 text-cms-destructive text-xs", children: error })), failures.length > 0 && (_jsx("ul", { className: "flex flex-col gap-1 pt-2 text-cms-destructive text-xs", children: failures.map((failure) => (_jsxs("li", { children: [_jsx("span", { className: "font-medium", children: titleOf(failure.id) }), " \u2014 ", describeBulkFailure(site, failure)] }, failure.id))) })), _jsx(ConfirmDialog, { request: confirm, onClose: () => setConfirm(null) })] }));
+    return (_jsxs("section", { "aria-label": t("bar"), className: "border-b bg-cms-primary/5 px-5 py-2", children: [_jsxs("div", { className: "flex min-h-7 flex-wrap items-center gap-2 text-sm", children: [_jsx("span", { className: "font-medium text-cms-primary", children: t("count", { count: selected.length }) }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: onClearSelection, children: t("clear") }), actions.length > 1 ? (_jsxs(Select, { value: action, items: actions.map((candidate) => ({ value: candidate.value, label: candidate.label })), onValueChange: (value) => value && setAction(value), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("kind"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: actions.map((candidate) => (_jsx(SelectItem, { value: candidate.value, children: candidate.label }, candidate.value))) })] })) : null, needsMany && (_jsx(ManyPicker, { label: relation.label, options: relationOptions, value: checked, onValueChange: setChecked })), needsSingle && (_jsxs(Select, { value: single || null, items: singleItems, onValueChange: (value) => setSingle(typeof value === "string" ? value : ""), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": relation ? t("target.aria", { label: relation.label }) : t("folder.aria"), children: _jsx(SelectValue, { placeholder: relation ? t("picker.select", { label: relation.label }) : t("folder.select") }) }), _jsx(SelectContent, { children: singleItems.map((item) => (_jsx(SelectItem, { value: item.value, children: item.label }, item.value))) })] })), _jsx(Button, { type: "button", size: "sm", variant: activeAction?.destructive ? "destructive" : "default", disabled: !canRun, onClick: start, children: isRunning ? t("running") : (activeAction?.label ?? t("run")) }), results && (_jsx("output", { className: "text-cms-muted-foreground text-xs", children: t("result", { success: successes, failed: failures.length }) })), failures.length > 0 && (_jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id))), children: t("retry") }))] }), error && _jsx(FieldError, { className: "pt-2", children: error }), failures.length > 0 && (_jsx("ul", { className: "flex flex-col gap-1 pt-2 text-cms-destructive text-xs", children: failures.map((failure) => (_jsxs("li", { children: [_jsx("span", { className: "font-medium", children: titleOf(failure.id) }), " \u2014 ", describeBulkFailure(site, failure)] }, failure.id))) })), dialog] }));
 }

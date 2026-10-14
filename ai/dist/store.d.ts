@@ -65,5 +65,5 @@ options: {
     }) => Promise<void>;
 };
 export type AiStore = ReturnType<typeof createAiStore>;
-/** The AI store of one CMS instance, built from its plugin storage on first use. Each instance has its own. */
+/** The AI store of one CMS instance, built from its plugin storage on first use. It is rebuilt when the site is reloaded (`cms.plugin(...).once`). */
 export declare function aiStoreFor(cms: Cms): AiStore;

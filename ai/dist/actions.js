@@ -1,9 +1,8 @@
-import { aiActionOverrideSchema, aiActionOverrideSchemaOf, EDITABLE_KEYS, overrideFrom, resolveAction, unknownPlaceholders, } from "./action.js";
+import { aiActionOverrideSchemaOf, EDITABLE_KEYS, overrideFrom, resolveAction, unknownPlaceholders, } from "./action.js";
 import { readOverride, viewOf } from "./action-view.js";
 import { actionsMessages } from "./actions.messages.js";
 import { coreMessages } from "./core.messages.js";
 import { customBaseSchemaOf, customDefinition, customValueSchemaOf, isCustomKey, newCustomKey, surfaceProblem, } from "./custom.js";
-import { migrateLegacyCheck } from "./definition.js";
 import { AiError } from "./errors.js";
 import { aiRegistryOf } from "./registry.js";
 import { loadSharedKeys } from "./shared.js";
@@ -16,13 +15,13 @@ async function customRow(site, store, key) {
     const row = (await store.listAiCustomActions()).find((item) => item.key === key);
     const value = row ? readCustom(site, row.value) : null;
     if (!row || !value)
-        throw new AiError("ai_unknown_action", site.createTranslator(actionsMessages)("unknownAction"));
+        throw new AiError("not_found", site.createTranslator(actionsMessages)("unknownAction"));
     return { row, value };
 }
 const definitionOf = (site, key) => {
     const definition = aiRegistryOf(site).actionDefinition(key);
     if (!definition)
-        throw new AiError("ai_unknown_action", site.createTranslator(actionsMessages)("unknownAction"));
+        throw new AiError("not_found", site.createTranslator(actionsMessages)("unknownAction"));
     return definition;
 };
 /** One action (with edited values applied). Custom actions have the same shape. */
@@ -65,11 +64,11 @@ export function actionWithEdits(site, key, edited, definition = definitionOf(sit
     if (!parsed.success) {
         const issue = parsed.error.issues[0];
         const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
-        throw new AiError("ai_invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
+        throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
     }
     const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, sharedKeys) : [];
     if (unknown.length > 0) {
-        throw new AiError("ai_invalid_input", t("unknownPlaceholder", { name: unknown[0] ?? "" }));
+        throw new AiError("invalid_input", t("unknownPlaceholder", { name: unknown[0] ?? "" }));
     }
     return resolveAction(key, definition, overrideFrom(definition, parsed.data));
 }
@@ -91,11 +90,11 @@ export async function actionWithDraft(site, store, key, edited, baseInput) {
 function readBase(site, input) {
     const parsed = customBaseSchemaOf(site).safeParse(input);
     if (!parsed.success) {
-        throw new AiError("ai_invalid_input", parsed.error.issues[0]?.message ?? site.createTranslator(actionsMessages)("invalidBase"));
+        throw new AiError("invalid_input", parsed.error.issues[0]?.message ?? site.createTranslator(actionsMessages)("invalidBase"));
     }
     const problem = surfaceProblem(site, parsed.data.surface);
     if (problem)
-        throw new AiError("ai_invalid_input", problem);
+        throw new AiError("invalid_input", problem);
     return parsed.data;
 }
 /** Creates a custom action. Takes the base info and the edited values (connection, model, prompt, checks, etc.) at once. */
@@ -111,7 +110,7 @@ export async function createCustomAction(site, store, baseInput, edited = {}) {
 /** Deletes a custom action. */
 export async function deleteCustomAction(site, store, key, expectedVersion) {
     if (!isCustomKey(key)) {
-        throw new AiError("ai_invalid_input", site.createTranslator(actionsMessages)("cannotDeleteCoded"));
+        throw new AiError("invalid_input", site.createTranslator(actionsMessages)("cannotDeleteCoded"));
     }
     await store.deleteAiCustomAction({ key, expectedVersion });
 }
@@ -138,47 +137,11 @@ export async function updateAction(site, store, key, expectedVersion, edited, ba
 /** Resets to defaults. The enabled state keeps its current value. A custom action has no default to reset to. */
 export async function resetAction(site, store, key, expectedVersion) {
     if (isCustomKey(key)) {
-        throw new AiError("ai_invalid_input", site.createTranslator(actionsMessages)("noDefaultForCustom"));
+        throw new AiError("invalid_input", site.createTranslator(actionsMessages)("noDefaultForCustom"));
     }
     const current = await getAction(site, store, key);
     const definition = definitionOf(site, key);
     const value = overrideFrom(definition, { enabled: current.enabled });
     const row = await store.saveAiActionOverride({ key, expectedVersion, value });
     return viewOf(site, resolveAction(key, definition, value), row, undefined, definition);
-}
-/**
- * Moves the stored values of the legacy AI action table (`ai_features`) into per-action edited values, keeping only values that differ from the definition.
- * Names missing from the definition (actions removed from the config, a previously deleted `mediaAlt`, etc.) give `null`.
- * The legacy `send` content list (`inputs`) becomes `send`, and inputs missing from the definition (e.g. `tags`) are dropped.
- */
-export function legacyFeatureOverride(site, key, spec) {
-    const definition = aiRegistryOf(site).actionDefinition(key);
-    if (!definition || !spec || typeof spec !== "object")
-        return null;
-    const raw = migrateLegacyCheck(spec);
-    const edited = {};
-    const take = (name, value) => {
-        const parsed = aiActionOverrideSchema.shape[name].safeParse(value);
-        if (parsed.success)
-            edited[name] = parsed.data;
-    };
-    for (const name of [
-        "enabled",
-        "askInstruction",
-        "providerId",
-        "modelName",
-        "prompt",
-        "threshold",
-        "maxCount",
-    ]) {
-        if (raw[name] !== undefined)
-            take(name, raw[name]);
-    }
-    // Actions that, like the legacy translation, did not choose what to send had an empty list. An empty list is not moved over.
-    if (Array.isArray(raw.inputs) && raw.inputs.length > 0) {
-        take("send", raw.inputs.filter((input) => typeof input === "string" && Object.hasOwn(definition.input, input)));
-    }
-    if (Array.isArray(raw.checks))
-        take("checks", raw.checks);
-    return overrideFrom(definition, resolveAction(key, definition, edited));
 }

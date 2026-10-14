@@ -5,10 +5,11 @@ import type { StoredDocument } from "../doc/stored-document.js";
 import type { MessageValue } from "../i18n/define.js";
 import type { CmsPlugin } from "../plugin/define.js";
 import { type CollectionSchema } from "../schema/collection.js";
+import { type ConfigDefaults } from "../schema-file/merge.js";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types.js";
-import { DEFAULT_ADMIN_PATH, isAdminPath, LOCALE_PREFIX_MODES, type LocalePrefixMode } from "./rules.js";
+import type { LocalePrefixMode } from "./rules.js";
 /**
- * Site config (`cms.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
+ * Site config (`monti.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
  *
  * The config is read by both the server and the admin UI (browser), so it holds **only JSON-serializable values** (plugins also hold functions).
  * Secrets (DB URL, API keys) do not go here; keep them in environment variables.
@@ -55,7 +56,7 @@ export interface SiteConfig {
      */
     readonly home?: string;
 }
-export { LOCALE_PREFIX_MODES, type LocalePrefixMode };
+export type { LocalePrefixMode };
 export interface AdminConfig {
     /**
      * Admin UI path. Default `/admin`. The app's admin route folder must use the same path
@@ -152,21 +153,13 @@ export interface CmsConfig<Collections extends CollectionsConfig = CollectionsCo
      * The public site renders them by the `component` name.
      */
     readonly blocks?: Blocks;
-    /** Plugins (e.g. `aiPlugin()`). Names must not collide. */
+    /** Plugins (e.g. `ai()`). Names must not collide. */
     readonly plugins?: Plugins;
     /** Code block settings. Adds line effects (`lineEffects`) or changes the core defaults (highlight, add, delete, warning, error). */
     readonly codeBlock?: CodeBlockConfig;
     /** Uploadable media formats and size limits. If unset, all supported formats, images up to 10MB and 40 megapixels, attachments up to 50MB. */
     readonly media?: MediaConfig;
 }
-/**
- * Can two public URL rules (of the form `/posts/:slug`) produce the same URL? If so, a body link cannot tell which collection it points to.
- * A slug lives within a single `/`-free segment, so the rules collide when the segment counts match and every segment can match:
- * literal segments must be equal; a slug segment (`prefix:slugsuffix`) matches a literal segment if the literal starts and ends with that prefix and suffix (the slug needs at least one character);
- * two slug segments can match if one prefix starts with the other and one suffix ends with the other.
- */
-export declare function pathsOverlap(a: string, b: string): boolean;
-export { DEFAULT_ADMIN_PATH, isAdminPath };
 /**
  * The config of a site that keeps its plain data in a schema file (`monti.schema.ts`): the same options as {@link CmsConfig}, plus `schema`, and without the
  * collections' and locales' own place (they come from the file; `collections` here adds collections written in code).
@@ -195,3 +188,8 @@ export interface SchemaCmsConfig<Schema extends SchemaTypes = SchemaTypes, Colle
  */
 export declare function defineSite<const Schema extends SchemaTypes, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>): CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>;
 export declare function defineSite<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;
+/**
+ * `defineSite` with a lowest layer under the config: `defaults.site` is what the file's and the code's `site` settings are laid over (the server's `defineConfig` passes
+ * the `SITE_URL` variable this way, so the environment is the weakest source of the site URL).
+ */
+export declare function buildSite(input: object, defaults?: ConfigDefaults): CmsConfig;

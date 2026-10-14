@@ -2,7 +2,7 @@ import { sql } from "kysely";
 import { documentText, SEARCH_TEXT } from "../../../core/body-text.js";
 import { CmsError } from "../../../core/store/errors.js";
 import { parseTranslationState } from "../../../core/translation/state.js";
-import { normalizeReferenceKind, readReferenceOccurrences } from "../../../core/types.js";
+import { readReferenceOccurrences } from "../../../core/types.js";
 import { emptyStoredDocument, readStoredDocument, unparsedDocument, } from "../../../doc/stored-document.js";
 /** Row-to-domain-object conversion and SQL fragments shared by several modules. */
 /**
@@ -15,10 +15,10 @@ export function extractVisibleText(site, doc) {
 /** A stored document read from a `jsonb` column. A value that is not a stored document of a known version reads as `null`. */
 export const readDoc = (value) => readStoredDocument(value) ?? null;
 /**
- * The document of a stored body. A body whose `doc` column is empty or unreadable (a row older than stored documents) reads as the document
- * of one `unparsed` node holding its `mdx` column when there is one, so every body a store hands out is a document.
+ * The document of a stored body. A body whose `doc` column is empty or not a stored document of a known version reads as the document of one empty
+ * `unparsed` node, which blocks publishing, so every body a store hands out is a document.
  */
-export const readBodyDoc = (value, mdx) => readDoc(value) ?? unparsedDocument(mdx ?? "");
+export const readBodyDoc = (value) => readDoc(value) ?? unparsedDocument("");
 /** A translation state read from a `jsonb` column. A version 2 state (no document) is lifted to version 3. */
 export const readTranslation = (value) => value === null || value === undefined ? null : (parseTranslationState(value) ?? value);
 export const mapFolderRow = (row) => ({
@@ -30,7 +30,7 @@ export const mapFolderRow = (row) => ({
     version: row.version ?? 1,
 });
 export const mapReferenceRow = (row) => ({
-    kind: normalizeReferenceKind(row.kind),
+    kind: row.kind,
     targetId: row.target_id,
     isStale: row.is_stale,
     occurrences: readReferenceOccurrences(row.occurrences),
@@ -43,7 +43,7 @@ export function mapPublishedEntryRow(row) {
         translationGroupId: row.translation_group_id,
         slug: row.slug,
         metadata: row.metadata,
-        doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc, null),
+        doc: row.doc === null || row.doc === undefined ? null : readBodyDoc(row.doc),
         publishedAt: row.published_at,
         updatedAt: row.body_updated_at,
     };
@@ -139,15 +139,15 @@ export async function readReferences(db, entryId, state) {
 export async function readBody(db, entryId, state) {
     const row = await db
         .selectFrom("entry_bodies")
-        .select(["metadata", "mdx", "doc", "schema_version", "content_hash", "updated_at", "translation"])
+        .select(["metadata", "doc", "schema_version", "content_hash", "updated_at", "translation"])
         .where("entry_id", "=", entryId)
         .where("state", "=", state)
         .executeTakeFirst();
-    return row && { ...row, doc: readBodyDoc(row.doc, row.mdx), translation: readTranslation(row.translation) };
+    return row && { ...row, doc: readBodyDoc(row.doc), translation: readTranslation(row.translation) };
 }
 /** The value a conflicting insert of `entry_bodies` proposed (`EXCLUDED.<column>`), for the `DO UPDATE` of `writeBody`. */
 const proposed = (column) => sql.ref(`excluded.${column}`);
-/** Writes the working/published body. Also updates the plain text used for search. The `mdx` column is not written: `doc` is the only source of a body. */
+/** Writes the working/published body. Also updates the plain text used for search. `doc` is the only source of a body. */
 export async function writeBody(site, db, entryId, state, body) {
     await db
         .insertInto("entry_bodies")
@@ -200,7 +200,6 @@ export async function loadEntry(db, id) {
             .as("current_slug"),
         "b.state",
         "b.metadata",
-        "b.mdx",
         "b.doc",
         "b.schema_version",
         "b.content_hash",
@@ -221,7 +220,7 @@ export async function loadEntry(db, id) {
             continue;
         const body = {
             metadata: row.metadata,
-            doc: readBodyDoc(row.doc, row.mdx),
+            doc: readBodyDoc(row.doc),
             schemaVersion: row.schema_version,
             contentHash: row.content_hash,
             updatedAt: row.body_updated_at,

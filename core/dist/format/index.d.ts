@@ -6,5 +6,5 @@
  */
 export type { FormatRegistry } from "./registry.js";
 export { createFormatRegistry, NO_FORMATS } from "./registry.js";
-export type { BlockCatalog, CmsFormat, FormatContext, FormatExportContext, FormatImportContext, FormatImportResult, FormatInfo, FormatIssue, FormatLink, FormatMedia, FormatPurpose, LegacyBodies, } from "./types.js";
+export type { BlockCatalog, CmsFormat, FormatContext, FormatExportContext, FormatImportContext, FormatImportResult, FormatInfo, FormatIssue, FormatLink, FormatMedia, FormatPurpose, } from "./types.js";
 export { assertFormatName, defineFormat } from "./types.js";

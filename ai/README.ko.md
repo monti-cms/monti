@@ -6,18 +6,18 @@
 관리자 도구의 AI 페이지(`<관리자 경로>/tools/ai`, 기본 `/admin/tools/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
-이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `aiPlugin()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
+이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `ai()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
 
 ## 등록
 
-`monti.config.ts`의 `plugins`에 `aiPlugin()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
+`monti.config.ts`의 `plugins`에 `ai()`을 적는다. 기본 기능은 붙을 곳이 있으면 저절로 켜지고, 다른 플러그인(블록 확장·SEO 확장 등)이
 더한 기능도 저절로 붙는다. 바꾸거나 끌 것만 `actions`에 기능 이름(key)으로 적는다.
 
 ```ts
-import { aiAction, aiPlugin, aiPresets } from "@monti-cms/ai";
+import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 
 plugins: [
-	aiPlugin({
+	ai({
 		siteDescription: "개인 기술 블로그", // 모든 기능의 맨 앞 지시에 들어간다. 없으면 "웹사이트"
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // 바꾸기(같은 이름)
@@ -47,13 +47,13 @@ plugins: [
   태그·카테고리는 `choices: "컬렉션"`으로 대상을 고른다.
 - 지시문은 사이트 종류("블로그")나 언어("한국어")를 가정하지 않는다. 자료에서 언어를 알 수 없을 때(이미지 대체 텍스트 등)는
   "콘텐츠 언어"를 쓰고, 실행기가 지시 맨 앞에 콘텐츠 언어(편집 중인 글의 언어, 없으면 사이트 기본 언어)를 붙인다.
-- 공통 문구 `styleGuide`(`aiPlugin({ shared: { styleGuide: … } })`)가 있으면 문체 다듬기·초안 쓰기 지시문에 넣는다. 없으면 넣지 않는다.
+- 공통 문구 `styleGuide`(`ai({ shared: { styleGuide: … } })`)가 있으면 문체 다듬기·초안 쓰기 지시문에 넣는다. 없으면 넣지 않는다.
 - 관리자 AI 화면의 기능 순서는 필드 옆 기능이 먼저, 그다음 기본 기능·다른 플러그인 기능·설정에 더한 기능 순서다.
 - `aiPresets.이름(옵션)`은 사이트 설정을 보고 기능을 만드는 함수(`AiActionFactory`)를 돌려준다. 붙을 곳이 없으면 켜지지 않는다.
 
 ### 다른 플러그인이 더하는 기능
 
-플러그인은 `definePlugin({ contributes: { ai: { actions: { 이름: 정의 또는 만드는 함수 } } } })`로 기능을 더한다(`AiContribution`).
+플러그인은 `definePlugin({ contributes: { ai: { actions: { 이름: 정의 또는 만드는 함수 } } } })`로 기능을 더한다(`AiContribution`). 기능·검사·기여의 타입은 `@monti-cms/core/ai-contract`(타입만)에 있어서, 기능을 더하는 플러그인은 이 패키지에 의존하지 않고 코어에서 가져온다. 이 패키지는 그것을 다시 내보낸다.
 AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을 몰라도 되고, 타입만 읽는다(`import type`). 이미 있는 이름을 더하면
 설정 오류다. 사이트는 같은 이름으로 바꾸거나 `false`로 끈다. 블록 확장의 `diagramDraft`·`diagramEdit`(Mermaid)·`chartDraft`·
 `chartEdit`(차트), SEO 확장의 `seoTitle`·`seoDescription`이 이렇게 붙는다.
@@ -125,16 +125,7 @@ const unusedAddress = defineValidator({
 
 연결은 키를 직접 들고 있지 않고 중앙 API 키 저장소(도구 > API 키, core의 `cms.apiKeys`)의 키를 가리킨다. 저장소는 서버 `secret`으로 키를 암호화해서 둔다. 연결 폼에서는 저장된 키를 쓰거나 새 키를 넣는다. 새 키는 저장소에 연결 이름으로 저장되고("OpenRouter", 이름이 있으면 "OpenRouter 2") 연결은 그 id만 갖는다. 새 키와 연결은 한 트랜잭션으로 저장되므로 저장이 실패해도 남는 키가 없다. 값은 브라우저로 돌아오지 않고 키 이름과 끝 네 글자만 보인다. 같은 키를 쓰는 연결은 키를 함께 쓰므로 API 키 탭에서 값을 바꾸면 모든 연결이 한꺼번에 바뀌고, 연결이 쓰는 키를 지우려 하면 먼저 묻고 그 연결들을 보여 준다(다른 키를 고를 때까지 멈춘다). 연결 주소를 바꾸면서 폼이 키에 대해 아무것도 보내지 않으면 키는 새 주소로 넘어가지 않는다.
 
-- **이전**: `monti db:migrate`가 이전 버전이 연결 안에 저장해 둔 키(플러그인별 형식 `mk1:...`와 가장 오래된 `v1:...`)를 키 저장소로 옮긴다. 값이 같은 키는 하나로 만들고 처음 쓴 연결의 이름을 붙이며, 같은 값을 쓰던 연결은 그 키를 함께 쓴다. 다시 돌려도 되고, 저장소에 이미 있는 값은 다시 만들지 않는다. 더는 풀 수 없는 키(`previousSecrets` 없이 `secret`을 바꾼 경우)는 경고만 남기고 건너뛰며, 그 연결은 키를 다시 골라야 한다.
 - **비밀 값 바꾸기**: core README의 "플러그인 비밀 값"과 "API 키 저장소"를 본다.
-
-## 플러그인 저장소로 옮겨진 데이터
-
-플러그인은 예전에 사이트 데이터베이스에 자기 표(`ai_action_overrides`·`ai_custom_actions`·`ai_settings`)를 만들었다. 지금은 같은 데이터를 플러그인 저장소
-(`cms.storage("ai")`, 컬렉션 `action-overrides`·`custom-actions`·`settings`)에 둔다. `monti migrate`가 행을 값·버전·날짜 그대로 한 번 복사하므로, 올리기 전에 화면을 열어 둔
-편집자도 맞는 버전으로 저장하고 직접 만든 동작의 순서도 그대로다. 옛 표는 읽기만 하고 백업으로 데이터베이스에 남는다. 사이트를 확인한 뒤 지워도 된다.
-가장 오래된 표(`ai_features`)는 고친 값이 아직 옮겨지지 않았을 때만 같은 방식으로 읽는다.
-`monti migrate`를 돌리는 때에 옛 버전 인스턴스를 모두 함께 바꾼다. 옛 인스턴스는 계속 옛 표에 쓰고, 그 쓰기는 다시 복사되지 않는다.
 
 ## 가짜 연결(개발 전용)
 
@@ -148,7 +139,7 @@ MDX 결과는 MDX 입력을 그대로(흘려받기는 글로 시작하는 문단
 - **흘려받기**: 기능 정의 `stream: true`(생성 방식의 글·MDX 결과)면 결과가 조금씩 보인다. 화면에서는
   `useAiAction("이름").stream(입력, { onText })`. API는 `/ai/run`에 `stream: true`(한 줄에 사건 하나인 JSON).
 - **공통 문구**: 여러 기능의 지시문에 `{{shared.키}}`로 넣는 문구(문체 가이드·말투·독자 등). 두 가지가 있다.
-  - 설정 문구: `aiPlugin({ shared: { styleGuide: { label: "문체 가이드", text: "…" } } })`. 키·이름은 설정이 정하고,
+  - 설정 문구: `ai({ shared: { styleGuide: { label: "문체 가이드", text: "…" } } })`. 키·이름은 설정이 정하고,
     관리자 AI 화면 "공통 문구" 탭에서 내용만 고친다("기본값으로"는 입력 칸을 설정 문구로 되돌린다). 삭제할 수 없다.
     설정의 지시문(`prompt`)은 설정 문구만 쓸 수 있다(설정을 만들 때 확인한다).
   - 더한 문구: "공통 문구" 탭의 "문구 추가"로 키(영문자로 시작, 영문자·숫자·`_`)·이름·내용을 적어 더한다. 키는 만든 뒤
@@ -183,7 +174,7 @@ MDX 결과는 MDX 입력을 그대로(흘려받기는 글로 시작하는 문단
 사이트 블록에는 직접 붙인다.
 
 ```ts
-aiPlugin({
+ai({
 	actions: {
 		graphvizEdit: aiAction({
 			label: "그래프 고치기",
@@ -204,8 +195,8 @@ aiPlugin({
 
 | 진입점 | 내용 |
 | --- | --- |
-| `@monti-cms/ai` | `aiPlugin`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, 기여 타입(`AiContribution`·`AiActionFactory`·`AiSiteView`) (사이트 설정용, 서버·브라우저 공용) |
-| `@monti-cms/ai/server` | 서버 쪽(API 경로·데이터 이전). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
+| `@monti-cms/ai` | `ai`, `aiAction`, `aiInput`, `aiPresets`, `resolveAiActions`, 기여 타입(`AiContribution`·`AiActionFactory`·`AiSiteView`) (사이트 설정용, 서버·브라우저 공용) |
+| `@monti-cms/ai/server` | 서버 쪽(API 경로). 본체가 불러 쓴다. 브라우저 묶음에서는 빈 진입점이다 |
 | `@monti-cms/ai/admin` | 관리자 쪽(AI 화면·공급자), `useAiAction`, `AiButton`, `aiClient` |
 
 ## 개발

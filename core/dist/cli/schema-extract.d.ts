@@ -1,10 +1,5 @@
 import type { CmsConfig } from "../config/define.js";
 import type { SchemaFile } from "../schema-file/types.js";
-/**
- * Where a site keeps its config, in the order `monti schema:extract` looks for it: `monti.config.ts` (a config whose data is still written in code), then the
- * site config file of the earlier setup (`cms.config.ts`, a default export of `defineSite` from `@monti-cms/core`).
- */
-export declare const CONFIG_FILE_CANDIDATES: readonly ["monti.config.ts", "src/monti.config.ts", "cms.config.ts", "src/cms.config.ts"];
 /** What stays in the config file, because it needs code (or differs per environment). */
 export interface StaysInCode {
     /** The part of the config (`plugins`, `blocks`, `site.url`, ...). */

@@ -1,5 +1,5 @@
 import { detectImageDimensionsAndType } from "../../../media/image-detect.js";
-import { HttpError } from "../error-handler.js";
+import { CmsError } from "../error-handler.js";
 export const UPLOAD_URL_TTL_SECONDS = 600;
 const EXTENSIONS = {
     "image/jpeg": "jpg",
@@ -47,18 +47,18 @@ function detectFileType(bytes, declared) {
 }
 /**
  * Inspects an uploaded staging file by its actual bytes: size, type (the client MIME is not trusted), and pixel count.
- * For attachments, checks that the `declared` type matches the actual content. Throws `HttpError` on failure.
+ * For attachments, checks that the `declared` type matches the actual content. Throws `CmsError` on failure.
  */
 export async function inspectUploadedFile(site, mediaStore, stagingKey, declared) {
     const head = await mediaStore.headFile({ key: stagingKey });
     if (!head)
-        throw new HttpError(409, "upload_incomplete", "File has not been uploaded to storage yet");
+        throw new CmsError("File has not been uploaded to storage yet", "upload_incomplete");
     if (declared && !site.api.isImageMime(declared)) {
         if (!site.api.ALLOWED_FILE_MIME_TYPES.includes(declared)) {
-            throw new HttpError(415, "unsupported_media_type", `File type ${declared} is not allowed`);
+            throw new CmsError(`File type ${declared} is not allowed`, "unsupported_media_type");
         }
         if (head.contentLength > site.api.MAX_FILE_BYTES) {
-            throw new HttpError(413, "payload_too_large", `Uploaded file exceeds ${site.api.MAX_FILE_BYTES} bytes`);
+            throw new CmsError(`Uploaded file exceeds ${site.api.MAX_FILE_BYTES} bytes`, "payload_too_large");
         }
         const mimeType = declared;
         const sniff = mimeType === "application/pdf" || mimeType === "application/zip" ? 8 : TEXT_SNIFF_BYTES;
@@ -69,20 +69,20 @@ export async function inspectUploadedFile(site, mediaStore, stagingKey, declared
                 : (await mediaStore.readFile({ key: stagingKey, maxBytes: head.contentLength })).subarray(0, sniff)
             : new Uint8Array();
         if (!detectFileType(bytes, mimeType)) {
-            throw new HttpError(415, "unsupported_media_type", `Uploaded file is not a valid ${mimeType} file`);
+            throw new CmsError(`Uploaded file is not a valid ${mimeType} file`, "unsupported_media_type");
         }
         return { head, detected: { mimeType, width: null, height: null } };
     }
     if (head.contentLength > site.api.MAX_MEDIA_BYTES) {
-        throw new HttpError(413, "payload_too_large", `Uploaded image exceeds ${site.api.MAX_MEDIA_BYTES} bytes`);
+        throw new CmsError(`Uploaded image exceeds ${site.api.MAX_MEDIA_BYTES} bytes`, "payload_too_large");
     }
     const bytes = await mediaStore.readFile({ key: stagingKey, maxBytes: site.api.MAX_MEDIA_BYTES + 1 });
     const detected = detectImageDimensionsAndType(bytes);
     if (!detected || !site.api.ALLOWED_IMAGE_MIME_TYPES.includes(detected.mimeType)) {
-        throw new HttpError(415, "unsupported_media_type", "Uploaded file is not a valid or allowed image format");
+        throw new CmsError("Uploaded file is not a valid or allowed image format", "unsupported_media_type");
     }
     if (detected.width * detected.height > site.api.MAX_MEDIA_PIXELS) {
-        throw new HttpError(413, "too_many_pixels", `Image exceeds ${site.api.MAX_MEDIA_PIXELS} pixels`);
+        throw new CmsError(`Image exceeds ${site.api.MAX_MEDIA_PIXELS} pixels`, "too_many_pixels");
     }
     return { head, detected };
 }

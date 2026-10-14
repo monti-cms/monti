@@ -1,10 +1,10 @@
-import { DEFAULT_TITLE_FIELD, TITLE_ROLE } from "./fields.js";
+import { DEFAULT_TITLE_FIELD, isStoredField, TITLE_ROLE, } from "./fields.js";
 /** Stored field list. Follows declaration order, and fields dependent on a conditional field come right after that field. */
 export function valueFieldsOf(schema) {
     const result = [];
     for (const [name, field] of Object.entries(schema.fields)) {
         // The address goes in the content column, and a reverse relation is stored on the other record. View fields are not stored.
-        if (field.kind === "slug" || field.kind === "backlink" || field.kind === "view")
+        if (!isStoredField(field))
             continue;
         if (field.kind === "conditional") {
             result.push({ name, field: field.discriminant });

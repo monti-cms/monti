@@ -2,7 +2,7 @@ import type { Site } from "@monti-cms/core/client";
 /**
  * Shared texts. Fill `{{shared.key}}` in the instructions of every action. There are two kinds.
  *
- * - **Config text**: text listed in the plugin config (`aiPlugin({ shared })`). The config decides keys and names; the admin screen edits only the
+ * - **Config text**: text listed in the plugin config (`ai({ shared })`). The config decides keys and names; the admin screen edits only the
  *   content (only content differing from the default is kept). Cannot be deleted.
  * - **Added text**: text added in the admin screen by entering key, name and content. The key cannot be changed after creation; delete it if no action uses it.
  *

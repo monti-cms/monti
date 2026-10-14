@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages.js";
 // Look of the editor tab bar (theme colors). The public page tab look is decided by the site.
 const TAB_TRIGGER = "relative inline-flex h-[calc(100%-1px)] items-center justify-center gap-1 whitespace-nowrap rounded-md border border-transparent px-2 py-1 font-medium text-cms-foreground/60 text-sm transition-all hover:text-cms-foreground cms-dark:text-cms-muted-foreground cms-dark:hover:text-cms-foreground";
-const TAB_TRIGGER_ACTIVE = "border-cms-border! bg-cms-background text-cms-foreground shadow-sm cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:text-cms-foreground";
+const TAB_TRIGGER_ACTIVE = "border-cms-border! bg-cms-background text-cms-foreground shadow-cms-pop cms-dark:border-cms-input cms-dark:bg-cms-input/30 cms-dark:text-cms-foreground";
 const labelOf = (values) => (typeof values.label === "string" ? values.label : "");
 /**
  * Shows only the tab bar and the selected tab's body, like the public page. The body is edited in place.

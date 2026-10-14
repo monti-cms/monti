@@ -1,9 +1,9 @@
 import type { SlugField, ValueField } from "@monti-cms/core/client";
 import { type SchemaCollection } from "@monti-cms/core/client";
 import { type ReactNode } from "react";
+import { type CmsIssue } from "../../api/error-message.js";
 import { type StateStore } from "../../hooks/store.js";
 import type { SlotRequest } from "../../slots/registry.js";
-import { type CmsIssue } from "../api-error-message.js";
 import { type EntryData, type EntryForm, type EntryFormPatch, type FormValue } from "./entry-form.js";
 /**
  * One problem found in a field. `message` is the localized text to show as it is. Branch on `code`, never on the text.
@@ -30,7 +30,6 @@ export interface FieldState<V extends FormValue = FormValue> {
     readonly label: string;
     readonly description: string | undefined;
     readonly required: boolean;
-    readonly hidden: boolean;
     readonly value: V;
     /** Changes this field only. Does nothing while `readOnly`. */
     setValue(next: V): void;

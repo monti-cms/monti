@@ -1,14 +1,15 @@
+import { commonMessages } from "../../lib/common.messages.js";
 import { nounVars } from "../shared/noun.messages.js";
 import { isTranslationEntry } from "./entry-form.js";
 import { entriesMessages } from "./messages.js";
 /** Name of the transition. Buttons and the "save first" hint use the same words. */
 export const lifecycleLabel = (site) => {
-    const t = site.createTranslator(entriesMessages);
+    const tc = site.createTranslator(commonMessages);
     return {
-        archive: t("lifecycle.archive"),
-        unarchive: t("lifecycle.unarchive"),
-        trash: t("lifecycle.trash"),
-        restore: t("lifecycle.restore"),
+        archive: tc("lifecycle.archive"),
+        unarchive: tc("lifecycle.unarchive"),
+        trash: tc("lifecycle.trash"),
+        restore: tc("lifecycle.restore"),
     };
 };
 /** Text to announce after the transition finishes. */
@@ -19,16 +20,6 @@ export const lifecycleSuccess = (site) => {
         unarchive: t("lifecycle.success.unarchive"),
         trash: t("lifecycle.success.trash"),
         restore: t("lifecycle.success.restore"),
-    };
-};
-/** Text to announce when the transition fails. */
-export const lifecycleFailed = (site) => {
-    const t = site.createTranslator(entriesMessages);
-    return {
-        archive: t("lifecycle.failed.archive"),
-        unarchive: t("lifecycle.failed.unarchive"),
-        trash: t("lifecycle.failed.trash"),
-        restore: t("lifecycle.failed.restore"),
     };
 };
 /**

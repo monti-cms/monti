@@ -1,3 +1,4 @@
+import { type Issue } from "@monti-cms/core";
 /**
  * Text color and text background color (`:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}`).
  * The body stores colors as hex values, not names. Light and dark theme values are paired, and when there is no dark value
@@ -45,5 +46,5 @@ export declare function textColorProps(attrs: TextColorAttrs): {
 };
 /** The preset if the color matches one. Used to mark the current color in the picker list. */
 export declare function paletteOf(kind: "fg" | "bg", attrs: TextColorAttrs, palette: readonly PaletteColor[]): PaletteColor | undefined;
-/** Checks that the picker list (`color({ palette })`) is valid (hex values, unique `id`s). */
-export declare function validateTextPalette(palette: readonly PaletteColor[] | undefined): void;
+/** The problems of the picker list (`color({ palette })`): hex values and unique `id`s. */
+export declare function checkTextPalette(palette: readonly PaletteColor[] | undefined): Issue[];

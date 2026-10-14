@@ -1,4 +1,3 @@
-import { migrateAi } from "./migrate.js";
 import * as resetAction from "./routes/actions/[key]/reset/route.js";
 import * as action from "./routes/actions/[key]/route.js";
 import * as actions from "./routes/actions/route.js";
@@ -25,7 +24,6 @@ const aiServer = {
         { pattern: "v1/ai/settings", module: settings },
         { pattern: "v1/ai/shared", module: shared },
     ],
-    migrate: migrateAi,
     // What the API keys screen shows for a connection that uses a key: its current name, in the admin language.
     keyUses: (cms, refs) => keyUseLabels(cms.site, aiStoreFor(cms), refs),
     // `features.ai.ready` of the admin meta API: is at least one connection ready?

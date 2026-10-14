@@ -1,11 +1,11 @@
 "use client";
-import { cmsApiUrl, useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/client";
 import { useQueries } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { cmsFetch } from "../admin-api.js";
+import { entriesKeys, listEntries } from "../../api/entries.js";
 import { sharedMessages } from "./messages.js";
 /** All active (public) records. If over 100, reads the next page too. */
-async function loadAll(site, collection) {
+async function loadAll(site, collection, signal) {
     const t = site.createTranslator(sharedMessages);
     const options = [];
     for (let page = 1; page < 50; page++) {
@@ -17,7 +17,7 @@ async function loadAll(site, collection) {
             sortDirection: "asc",
         });
         params.append("status", "published");
-        const data = await cmsFetch(site, cmsApiUrl(`/v1/entries?${params.toString()}`));
+        const data = await listEntries(site, params, signal);
         options.push(...data.items.map((item) => ({
             id: item.id,
             title: item.title || item.slug || t("taxonomy.unnamed"),
@@ -39,9 +39,9 @@ export function useTaxonomyOptions(collection, enabled = true) {
     const combine = useCallback((results) => Object.fromEntries(fields.map((stored) => [stored.name, results[targets.indexOf(stored.to)]?.data ?? []])), [fields, targets]);
     return useQueries({
         queries: targets.map((target) => ({
-            // Place it under the list cache so it is refetched together when the list is refetched.
-            queryKey: ["cms", "entries", "taxonomy", target],
-            queryFn: () => loadAll(site, target),
+            // Under the list cache's prefix, so it is refetched together when the list is refetched.
+            queryKey: entriesKeys.taxonomy(target),
+            queryFn: ({ signal }) => loadAll(site, target, signal),
             enabled,
         })),
         combine,

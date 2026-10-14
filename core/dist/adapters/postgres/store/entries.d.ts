@@ -40,7 +40,7 @@ export declare function createEntryOps(ctx: StoreContext, publishing: Publishing
         entryId: string;
     }) => Promise<WorkingCopy>;
     /**
-     * Translation group. Returns the source and translations in language order. Used by the editor's language switch and `번역본 만들기`.
+     * Translation group. Returns the source and translations in language order. Used by the editor's language switch and "Create translation".
      */
     getTranslationGroup: (params: {
         entryId: string;
@@ -83,7 +83,7 @@ export declare function createEntryOps(ctx: StoreContext, publishing: Publishing
         locale: string;
         entryId: string;
     }[]>;
-    /** The detail screen's `사용처`. Returns field relations and body references split into draft and published. */
+    /** The detail screen's "Usages". Returns field relations and body references split into draft and published. */
     getIncomingReferences: (params: {
         targetId: string;
     }) => Promise<IncomingReferenceItem[]>;

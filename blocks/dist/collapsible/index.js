@@ -1,4 +1,4 @@
-import { definePlugin } from "@monti-cms/core";
+import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { collapsibleBlock } from "./definition.js";
 export { collapsibleBlock } from "./definition.js";
 /**
@@ -10,9 +10,8 @@ export { collapsibleBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export const collapsible = () => definePlugin({
+export const collapsible = () => defineBlockPlugin({
     name: "collapsible",
-    options: {},
     blocks: [collapsibleBlock],
     admin: () => import("@monti-cms/blocks/collapsible/admin"),
     render: () => import("@monti-cms/blocks/collapsible/render"),

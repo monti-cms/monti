@@ -1,0 +1,4 @@
+import { pluginLog } from "@monti-cms/core";
+import { GIT_SYNC_PLUGIN_NAME } from "./name.js";
+/** The plugin's log: every line starts with `[git-sync]`. */
+export const log = pluginLog(GIT_SYNC_PLUGIN_NAME);

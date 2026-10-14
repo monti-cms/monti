@@ -235,7 +235,7 @@ export interface MediaMetadataStore {
         before: Date;
     }): Promise<MediaAssetRecord[]>;
 }
-/** Body templates picked from `새 글`. */
+/** Body templates picked from "New post". */
 export interface TemplateStore {
     listTemplates(): Promise<BodyTemplate[]>;
     getTemplate(id: string): Promise<BodyTemplate>;
@@ -379,7 +379,20 @@ export interface EventStore {
         eventId: string;
         subscriber: string;
     }): Promise<boolean>;
-    /** Removes events committed before `before` whose deliveries are all finished (delivered or dismissed), or that have none. Returns the number removed. */
+    /**
+     * `event.once`: whether the work for this delivery was done by an earlier try. The mark lives on the delivery row, so the pruning of the events removes it with them.
+     */
+    isOnceDone(params: {
+        eventId: string;
+        subscriber: string;
+    }): Promise<boolean>;
+    /** Marks the work of `event.once` as done for this delivery (idempotent). */
+    markOnceDone(params: {
+        eventId: string;
+        subscriber: string;
+        now: Date;
+    }): Promise<void>;
+    /** Removes events committed before `before` whose deliveries are all finished (delivered or dismissed), or that have none, with their deliveries and marks. Returns the number removed. */
     pruneEvents(params: {
         before: Date;
     }): Promise<number>;

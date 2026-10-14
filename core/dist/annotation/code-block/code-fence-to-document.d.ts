@@ -13,6 +13,7 @@ export declare const fromCodeFenceToCodeBlockDocument: (codeNode: CodeFence, ann
         end: number;
     }) => void;
 }) => CodeBlockDocument;
+/** @internal Internals the tests reach. */
 export declare const __testable__: {
     parseCodeFenceMeta: typeof parseCodeFenceMeta;
     parseAnnotationAttrs: typeof parseAnnotationAttrs;

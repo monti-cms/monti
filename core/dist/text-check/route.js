@@ -1,4 +1,5 @@
-import { adminRoute, json, readJsonBody } from "../http/v1/handler.js";
+import { handleApiError } from "../http/v1/error-handler.js";
+import { adminRoute, ok, readJsonBody, runAdminRoute } from "../http/v1/handler.js";
 import { handleTextCheck } from "./server-handler.js";
 export { handleTextCheck, parseTextCheckBody, } from "./server-handler.js";
 /**
@@ -16,8 +17,12 @@ export { handleTextCheck, parseTextCheckBody, } from "./server-handler.js";
  * A route file of the app names its instance with `cms`. A route a plugin lists in its `routes` is served by `cms.handle()`, which passes the instance, so it needs no `cms`.
  */
 export function textCheckRoute(options) {
-    return adminRoute(async ({ request }) => {
-        const result = await handleTextCheck(await readJsonBody(request), options, request.signal);
-        return json(result.body, { status: result.status });
-    }, { cms: options.cms });
+    const handler = adminRoute(async ({ request }) => ok(await handleTextCheck(await readJsonBody(request), options, request.signal)));
+    return async (request, context) => {
+        const cms = context?.cms ?? options.cms;
+        if (!cms) {
+            return handleApiError(new Error("text check route called without a CMS instance: pass `{ cms }` or serve it through `cms.handle()`"));
+        }
+        return runAdminRoute(cms, request, {}, handler);
+    };
 }

@@ -11,7 +11,6 @@ import { serialize } from "./serialize.js";
 import { toDocument } from "./to-document.js";
 export { readSample, readSamples, SAMPLES_DIR } from "./__test__/fixtures/samples.js";
 export { analyze, bodyDocument, bodyFromMdx, parseMdxAst, serialize, toDocument };
-export { insertSoftBreaks } from "./soft-breaks.js";
 export { syntaxRemarkPlugins } from "./syntax-config.js";
 /**
  * The MDX pipeline (`analyze`, `toDocument`, `serialize`) of a site with a given list of syntax extensions. A site config that does not list an extension reads

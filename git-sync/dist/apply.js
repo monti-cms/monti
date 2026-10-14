@@ -1,5 +1,6 @@
 import { CmsError, ServiceError } from "@monti-cms/core/plugin/server";
 import { RelationImportError, resolveRelations } from "./entry-file.js";
+import { serverMessages } from "./server.messages.js";
 import { GitSyncError } from "./sync.js";
 /** Writing what a file says into the CMS: the pieces the import (`inbound.ts`) and the conflict resolution (`conflicts.ts`) share. */
 /** A readable description of why a write failed: the error code and what the pipeline found, not a stack trace. */
@@ -65,7 +66,7 @@ export async function applyFile(ctx, target, input) {
                 ? (input.resolveSource?.(input.file.translationOf) ?? input.file.translationOf)
                 : undefined;
             if (!sourceId) {
-                throw new GitSyncError(`${input.path} is a "${input.locale}" file with no entry yet; add \`monti.translationOf\` (the id of the source entry) to its front matter`);
+                throw new GitSyncError(cms.site.createTranslator(serverMessages)("translationOfMissing", { path: input.path, locale: input.locale }));
             }
             current = (await service.createTranslation({ sourceId, locale: input.locale })).entry;
             created = true;

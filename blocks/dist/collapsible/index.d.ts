@@ -8,7 +8,7 @@ export { collapsibleBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const collapsible: () => import("@monti-cms/core").CmsPlugin<"collapsible", {}, readonly [{
+export declare const collapsible: () => import("@monti-cms/core").CmsPlugin<"collapsible", Record<string, never>, readonly [{
     readonly name: "collapsible";
     readonly label: string;
     readonly description: string;

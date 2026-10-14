@@ -1,9 +1,4 @@
-/**
- * Text color and text background color (`:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}`).
- * The body stores colors as hex values, not names. Light and dark theme values are paired, and when there is no dark value
- * the light value is used as is. The editor's picker list is the extension option `color({ palette })`, falling back to the default presets below.
- * Custom-picked colors are stored in the same shape.
- */
+import { IssueList, pathOf } from "@monti-cms/core";
 /** Default picker list, with the color names in the language `t` picks. Change it with the extension option `color({ palette })`. */
 export const defaultTextPalette = (t) => [
     {
@@ -98,17 +93,24 @@ export function paletteOf(kind, attrs, palette) {
         return undefined;
     return palette.find((color) => color[kind].light.toLowerCase() === light.toLowerCase());
 }
-/** Checks that the picker list (`color({ palette })`) is valid (hex values, unique `id`s). */
-export function validateTextPalette(palette) {
+/** The problems of the picker list (`color({ palette })`): hex values and unique `id`s. */
+export function checkTextPalette(palette) {
+    const list = new IssueList();
     const ids = new Set();
-    for (const color of palette ?? []) {
-        const at = `cms.config: plugins.color.palette.${color.id}`;
+    for (const [index, color] of (palette ?? []).entries()) {
+        const at = pathOf("plugins", "color", "palette", index);
         if (!color.id || ids.has(color.id))
-            throw new Error(`${at}: id is empty or duplicated`);
+            list.add(pathOf(at, "id"), "id", "must be set and unique");
         ids.add(color.id);
-        for (const value of [color.fg.light, color.fg.dark, color.bg.light, color.bg.dark]) {
+        for (const [part, value] of [
+            ["fg.light", color.fg.light],
+            ["fg.dark", color.fg.dark],
+            ["bg.light", color.bg.light],
+            ["bg.dark", color.bg.dark],
+        ]) {
             if (!isHexColor(value))
-                throw new Error(`${at}: "${value}" is not a hex color`);
+                list.add(`${at}.${part}`, "hex-color", `"${value}" is not a hex color`);
         }
     }
+    return list.issues;
 }

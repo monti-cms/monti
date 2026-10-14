@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils/cn.js";
 import { AdminLink as Link } from "../../router/index.js";
 import { SidebarTrigger } from "../../ui/sidebar.js";
 import { SchemaSettings } from "../schema/schema-screen.js";
-import { AdminShell } from "../shared/admin-shell.js";
+import { ShellPage } from "../shared/admin-shell.js";
 import { sharedMessages } from "../shared/messages.js";
 import { settingsMessages } from "./messages.js";
 import { settingsTabs } from "./tabs.js";
@@ -16,7 +16,7 @@ import { settingsTabs } from "./tabs.js";
  */
 export function SettingsScreen({ tab }) {
     const t = useTranslator(settingsMessages);
-    return (_jsx(AdminShell, { title: t("title"), sidebar: { activeNav: "settings" }, bare: true, children: _jsx(SettingsBody, { tab: tab }) }));
+    return (_jsx(ShellPage, { title: t("title"), nav: "settings", bare: true, children: _jsx(SettingsBody, { tab: tab }) }));
 }
 function SettingsBody({ tab }) {
     const site = useSite();

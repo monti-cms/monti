@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { CONFIG_CANDIDATES, parseJsonc } from "./config-paths.js";
+import { parseJsonc } from "./jsonc.js";
+import { CONFIG_CANDIDATES } from "./locate.js";
 /**
  * The import-boundary check: `monti.config.ts` holds the database and login settings and makes the server-side CMS instance, so it must never reach a client
  * bundle. A file that starts with `"use client"` and everything it imports (through relative paths and the `paths` of `tsconfig.json`) is client code. The check

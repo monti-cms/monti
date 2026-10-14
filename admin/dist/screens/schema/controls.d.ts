@@ -1,5 +1,6 @@
-import type { SchemaIssue } from "@monti-cms/core/schema-edit";
+import type { Issue } from "@monti-cms/core/client";
 import { type ReactNode } from "react";
+import { type CONTROL_WIDTH } from "../shared/labeled.js";
 import { type Obj } from "./schema-model.js";
 /** What every editor of the screen reads: whether the screen is read-only, the vocabulary of body lists, and the problems of the last check. */
 export interface SchemaEditContext {
@@ -8,7 +9,7 @@ export interface SchemaEditContext {
         readonly blocks: readonly string[];
         readonly marks: readonly string[];
     };
-    readonly issues: readonly SchemaIssue[];
+    readonly issues: readonly Issue[];
     readonly collectionNames: readonly string[];
     /** Collections defined in code: the preview keeps them next to the file's. */
     readonly codeCollections: readonly string[];
@@ -18,25 +19,10 @@ export interface SchemaEditContext {
 export declare const SchemaEditProvider: import("react").Provider<SchemaEditContext>;
 export declare const useSchemaEdit: () => SchemaEditContext;
 /** The problems of the last check at `path` or below it. */
-export declare function useIssuesUnder(path: string, exclude?: string): readonly SchemaIssue[];
+export declare function useIssuesUnder(path: string, exclude?: string): readonly Issue[];
 export declare function IssueList({ issues }: {
-    issues: readonly SchemaIssue[];
+    issues: readonly Issue[];
 }): import("react").JSX.Element | null;
-/** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
-declare const CONTROL_WIDTH: {
-    readonly narrow: "max-w-sm";
-    readonly normal: "max-w-xl";
-    readonly wide: "max-w-2xl";
-    readonly full: "";
-};
-export declare function Labeled({ label, hint, children, htmlFor, className, control, }: {
-    label: ReactNode;
-    hint?: ReactNode;
-    htmlFor?: string;
-    children: ReactNode;
-    className?: string;
-    control?: keyof typeof CONTROL_WIDTH;
-}): import("react").JSX.Element;
 export declare function TextInput({ label, value, onChange, placeholder, hint, type, className, optional, }: {
     label: string;
     value: string | number | undefined;
@@ -104,17 +90,8 @@ export declare function RowActions({ index, count, onMove, onRemove, name, remov
     /** Why the row cannot be removed: the remove button is disabled and the reason is its tooltip. */
     removeBlocked?: string;
 }): import("react").JSX.Element;
-/** An ordered list of names picked from `options`: add from the options not in the list yet, move, remove. Used for layout groups and list columns. */
-export declare function OrderedNames({ label, names, options, onChange, nameOf, }: {
-    label: string;
-    names: readonly string[];
-    options: readonly string[];
-    onChange: (names: string[]) => void;
-    nameOf?: (name: string) => string;
-}): import("react").JSX.Element;
 export declare function AddButton({ children, onClick, disabled: off, }: {
     children: ReactNode;
     onClick: () => void;
     disabled?: boolean;
 }): import("react").JSX.Element;
-export {};

@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { errorText } from "@monti-cms/admin/api";
-import { Button, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
+import { Button, isComposingKey, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -200,7 +200,7 @@ export function useAiTranslate(locales) {
                         void translateAll();
                     }, children: [features.length > 1 && (_jsx(OptionSelect, { "aria-label": t("action"), value: feature.key, options: features.map((item) => ({ value: item.key, label: item.label })), onChange: setChosenKey })), feature.askInstruction && (_jsx(Textarea, { "aria-label": t("request"), placeholder: t("request"), rows: 3, value: request, onChange: (event) => setRequest(event.target.value), onKeyDown: (event) => {
                                 // Enter inserts a newline; Cmd/Ctrl+Enter runs.
-                                if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !event.nativeEvent.isComposing) {
+                                if (event.key === "Enter" && (event.metaKey || event.ctrlKey) && !isComposingKey(event)) {
                                     event.preventDefault();
                                     void translateAll();
                                 }

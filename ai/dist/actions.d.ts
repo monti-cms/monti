@@ -1,5 +1,5 @@
 import type { Site } from "@monti-cms/core/client";
-import { type AiActionDefinition, type AiActionOverride, type ResolvedAiAction } from "./action.js";
+import { type AiActionDefinition, type ResolvedAiAction } from "./action.js";
 import { type AiActionView } from "./action-view.js";
 import { type AiSharedStore } from "./shared.js";
 /**
@@ -57,9 +57,3 @@ export declare function deleteCustomAction(site: Site, store: AiActionsStore, ke
 export declare function updateAction(site: Site, store: AiActionsStore, key: string, expectedVersion: number, edited: unknown, baseInput?: unknown): Promise<AiActionView>;
 /** Resets to defaults. The enabled state keeps its current value. A custom action has no default to reset to. */
 export declare function resetAction(site: Site, store: AiActionsStore, key: string, expectedVersion: number): Promise<AiActionView>;
-/**
- * Moves the stored values of the legacy AI action table (`ai_features`) into per-action edited values, keeping only values that differ from the definition.
- * Names missing from the definition (actions removed from the config, a previously deleted `mediaAlt`, etc.) give `null`.
- * The legacy `send` content list (`inputs`) becomes `send`, and inputs missing from the definition (e.g. `tags`) are dropped.
- */
-export declare function legacyFeatureOverride(site: Site, key: string, spec: unknown): AiActionOverride | null;

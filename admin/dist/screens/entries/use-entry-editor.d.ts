@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
-import type { BrowserFormat } from "../../browser-format.js";
-import { type EntryEditorClient, type RecoveryStore } from "./entry-editor-client.js";
-import { type EntryEditor, type EntryEditorTarget } from "./entry-editor-store.js";
+import { type EntryEditorClient } from "../../api/entries.js";
+import { type RecoveryStore } from "./entry-editor-client.js";
+import type { EntryEditor, EntryEditorTarget } from "./entry-editor-types.js";
 import { type EntryData } from "./entry-form.js";
 /**
  * Options of {@link useEntryEditor}. `adminId` and `target` are read when the editor is created: to edit another entry, mount a new editor
@@ -26,11 +26,6 @@ export interface UseEntryEditorOptions {
     client?: EntryEditorClient;
     /** Where the recovery copy is kept. Default: the browser's IndexedDB. */
     recoveryStore?: RecoveryStore;
-    /**
-     * The formats the browser can read (`useCmsAdminComponents().formats`). An old recovery copy written as text is read through the one named like its notation (`mdx`),
-     * so it compares with the server body like any other copy.
-     */
-    formats?: Readonly<Record<string, BrowserFormat>>;
 }
 /**
  * Load, local recovery copy, explicit server save, publish, status changes, and recovery and conflict state of one entry. Build an editor UI on it

@@ -1,14 +1,18 @@
 import { z } from "zod";
-import { isAdminPath, isHomeHref, isHttpUrl, isTimeZone, LOCALE_CODE, LOCALE_PREFIX_MODES } from "../config/rules.js";
+import { ConfigError, closestName, pathOf, SCHEMA_SOURCE_NAME } from "../config/check/issue.js";
+import { LOCALE_PREFIX_MODES } from "../config/rules.js";
 import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/allowed.js";
-import { LIST_REMOVED } from "../schema/collection.js";
 /**
- * The runtime check of the schema file, written with zod. The editor types come from `defineSchema`; this is the check that runs when the schema is loaded, and
- * it applies the rules a type cannot say (a default option that exists, a time zone that exists). Objects are strict: a key the format does not have is an error (this is how the retired `workflow` option and a misspelt option are caught).
- *
- * Only the shape and the rules that name one value are checked here. Rules between collections (a relation to a collection that exists, one URL pattern per
- * collection, layout names) are checked by `defineSite`, which every schema goes through.
+ * The shape of the plain data of a site: collections, locales, site and admin settings, seed templates. It is written with zod and says only what a value is: its
+ * type, the options an enum has, the keys an object may hold. Objects are strict, so a key the format does not have (a misspelt option, a retired one) is an error that
+ * names the closest key. The rules about what a value means (a default option that exists, a time zone that exists, a relation to a collection that exists) are in
+ * `config/check/`, which `defineSite` runs for every source, so the file, the code and the admin's forms are held to the same rules.
  */
+/** An object whose keys are all known: an unknown key is reported with the keys it could have been (read back by {@link shapeIssues}). */
+const KNOWN_KEYS_MARK = "\u0000known:";
+const strict = (shape) => z.strictObject(shape, {
+    error: (issue) => issue.code === "unrecognized_keys" ? `${KNOWN_KEYS_MARK}${JSON.stringify(Object.keys(shape))}` : undefined,
+});
 const text = z.string();
 const flag = z.boolean();
 const count = z.number().int().min(1);
@@ -29,17 +33,15 @@ const base = {
         .record(text, z.union([text, z.number(), flag]))
         .optional()
         .describe("Settings for the input."),
-    hidden: flag.optional().describe("Stored and validated, but no input is drawn."),
     role: text
         .optional()
         .describe("The meaning of the field: `summary`, `title` (the entry's title: a text field, not inside a conditional field), or a role a plugin reads. Unique per collection."),
-    tab: text.optional().describe("Tab of the edit screen the field is drawn in."),
 };
-const textField = z.strictObject({
+const textField = strict({
     kind: z.literal("text"),
     ...base,
     fillFromBody: z
-        .union([flag, z.strictObject({ maxLength: count.optional() })])
+        .union([flag, strict({ maxLength: count.optional() })])
         .optional()
         .describe("Filled from the start of the body when empty at publish. `true` is 160 characters."),
     multiline: flag.optional(),
@@ -47,13 +49,13 @@ const textField = z.strictObject({
     max: count.optional().describe("Maximum number of characters."),
     placeholder: text.optional(),
 });
-const slugField = z.strictObject({
+const slugField = strict({
     kind: z.literal("slug"),
     ...base,
     from: text.optional().describe("The text field the address is made from (usually `title`)."),
     placeholder: text.optional(),
 });
-const relationField = z.strictObject({
+const relationField = strict({
     kind: z.literal("relation"),
     ...base,
     to: text.describe("The collection the relation points to."),
@@ -70,17 +72,8 @@ const selectShape = {
     options: z.record(text, text).describe("Value -> label, in display order."),
     defaultValue: text,
 };
-const optionsHaveDefault = (field, ctx) => {
-    if (!Object.hasOwn(field.options, field.defaultValue)) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["defaultValue"],
-            message: `"${field.defaultValue}" is not one of the options (${Object.keys(field.options).join(", ")})`,
-        });
-    }
-};
-const selectField = z.strictObject(selectShape).superRefine(optionsHaveDefault);
-const mediaField = z.strictObject({
+const selectField = strict(selectShape);
+const mediaField = strict({
     kind: z.literal("media"),
     ...base,
     accept: z.enum(["image", "file"]).optional().describe("`image` (default) or any `file`."),
@@ -91,63 +84,44 @@ const VALUE_KINDS = "text, relation, select or media";
 const valueField = z.discriminatedUnion("kind", [textField, relationField, selectField, mediaField], {
     error: `a dependent field must be a ${VALUE_KINDS} field`,
 });
-const conditionalField = z
-    .strictObject({
+const conditionalField = strict({
     kind: z.literal("conditional"),
     label: text,
     description: text.optional(),
     localized: base.localized,
     input: base.input,
     inputOptions: base.inputOptions,
-    hidden: base.hidden,
     role: base.role,
-    tab: base.tab,
     discriminant: selectField.describe("The select that decides which fields show."),
     values: z.record(text, z.record(text, valueField)).describe("Option value -> the fields shown for it."),
-})
-    .superRefine((field, ctx) => {
-    for (const option of Object.keys(field.values)) {
-        if (!Object.hasOwn(field.discriminant.options, option)) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["values", option],
-                message: `"${option}" is not an option of the discriminant (${Object.keys(field.discriminant.options).join(", ")})`,
-            });
-        }
-    }
 });
-const backlinkField = z.strictObject({
+const backlinkField = strict({
     kind: z.literal("backlink"),
     label: text,
     description: text.optional(),
     input: base.input,
     inputOptions: base.inputOptions,
-    hidden: base.hidden,
     role: base.role,
-    tab: base.tab,
     from: text.describe("The other collection that has the relation field."),
     via: text.describe("The many relation field of that collection that points here."),
     createInline: flag.optional(),
     placeholder: text.optional(),
 });
-const viewField = z.strictObject({
+const viewField = strict({
     kind: z.literal("view"),
     view: text.describe("Name of a view registered by an admin plugin (kebab-case)."),
     label: text.optional(),
     description: text.optional(),
-    hidden: flag.optional(),
-    tab: text.optional(),
 });
 const FIELD_KINDS = "text, slug, relation, select, media, conditional, backlink or view";
 const field = z.discriminatedUnion("kind", [textField, slugField, relationField, selectField, mediaField, conditionalField, backlinkField, viewField], { error: `a field needs a "kind" of ${FIELD_KINDS}` });
-const layoutGroup = z.strictObject({
+const layoutGroup = strict({
     group: text.optional().describe("Group title. Without it the fields are drawn continuously."),
     fields: z.array(text),
     collapsed: flag.optional(),
     tab: text.optional(),
 });
-const bodyAllowed = z
-    .strictObject({
+const bodyAllowed = strict({
     blocks: z
         .array(text)
         .optional()
@@ -160,57 +134,50 @@ const bodyAllowed = z
         .array(z.literal([...HEADING_LEVELS]))
         .optional()
         .describe("Allowed heading levels (1 to 6). The editor offers levels 2 to 4. Left out: all levels."),
-})
-    .describe("What the body allows. The editor offers only these, and every save and publish warns about stored content that is not listed (it is kept as it is and never rejected).");
-const collection = z.strictObject({
+}).describe("What the body allows. The editor offers only these, and every save and publish warns about stored content that is not listed (it is kept as it is and never rejected).");
+/** What a collection has in the file and in code, apart from its body. */
+const collectionShape = {
     label: text,
     kind: z.enum(["document", "item"], { error: 'a collection needs a "kind" of document or item' }),
-    body: z
-        .union([flag, bodyAllowed])
-        .optional()
-        .describe("Whether entries have a body (default: documents do, items do not), or an object that limits the blocks, marks and heading levels the body allows."),
     fields: z
         .record(text, field)
         .describe("Field name -> definition. One text field is the title: the one with role `title`, or, when none has it, the one named `title`."),
     path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
     icon: text.optional().describe("Admin sidebar icon name (lucide)."),
     layout: z.array(layoutGroup).optional().describe("Layout of the properties panel."),
-    // Retired: any value is rejected with the way forward, instead of the generic "not part of the schema format".
-    list: z.never({ error: LIST_REMOVED }).optional(),
+};
+/** A collection as the file writes it: `body` is a flag or the object that limits it. */
+const fileCollection = strict({
+    ...collectionShape,
+    body: z
+        .union([flag, bodyAllowed])
+        .optional()
+        .describe("Whether entries have a body (default: documents do, items do not), or an object that limits the blocks, marks and heading levels the body allows."),
 });
-const locale = z.strictObject({
-    code: text.regex(LOCALE_CODE, { error: 'must look like "en", "pt-BR" or "zh-Hant"' }),
+/** A collection as `defineSite` holds it once normalized: `body` is a flag and the limits are `allowed`. */
+const normalizedCollection = strict({ ...collectionShape, body: flag, allowed: bodyAllowed.optional() });
+const locale = strict({
+    code: text,
     name: text.describe("The language's name written in that language."),
     label: text.optional().describe("Name shown in the admin. Falls back to `name`."),
 });
-const site = z.strictObject({
-    url: text
-        .refine(isHttpUrl, { error: "must be an http(s) URL" })
-        .optional()
-        .describe("Public site URL. It differs per environment, so it is usually set in code."),
+const site = strict({
+    url: text.optional().describe("Public site URL. It differs per environment, so it is usually set in code."),
     aliases: z.array(text).optional().describe("Other host names of the same site."),
     name: text.optional(),
     previewPath: text.optional().describe("Start of the draft preview URL."),
-    previewLocaleParam: z
-        .union([text.regex(/^[A-Za-z][\w-]*$/, { error: "must be a query name" }), z.literal(false)])
-        .optional(),
+    previewLocaleParam: z.union([text, z.literal(false)]).optional(),
     localePrefix: z.enum(LOCALE_PREFIX_MODES).optional(),
-    home: text.refine(isHomeHref, { error: 'must be a path ("/") or an http(s) URL' }).optional(),
+    home: text.optional(),
 });
-const admin = z.strictObject({
-    path: text.refine(isAdminPath, { error: 'must be a path like "/admin" (not "/" and not under "/api")' }).optional(),
-    locale: text
-        .refine((value) => {
-        try {
-            new Intl.DateTimeFormat(value);
-            return true;
-        }
-        catch {
-            return false;
-        }
-    }, { error: "is not a valid locale" })
-        .optional(),
-    messages: z.record(text, z.record(text, text)).optional().describe("Admin text overrides: namespace -> key -> text."),
+/** Admin settings. A text override is a string in the file; code may also give a function of the placeholders. */
+const adminShape = (message) => ({
+    path: text.optional(),
+    locale: text.optional(),
+    messages: z
+        .record(text, z.record(text, message))
+        .optional()
+        .describe("Admin text overrides: namespace -> key -> text."),
     templates: z
         .boolean()
         .optional()
@@ -220,135 +187,154 @@ const admin = z.strictObject({
         .optional()
         .describe("false hides the translation UI in the admin (language tabs, locale column and filter). A site with one locale hides it anyway."),
 });
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const admin = strict(adminShape(text));
+const adminOfCode = strict(adminShape(z.union([text, z.custom((value) => typeof value === "function")])));
 const storedDocument = z.looseObject({ type: z.literal("doc"), version: z.number(), content: z.array(z.unknown()) });
-const seedTemplate = z.union([
-    z.strictObject({ id: text.regex(UUID, { error: "must be a UUID" }), name: text, doc: storedDocument }),
-    z.strictObject({ id: text.regex(UUID, { error: "must be a UUID" }), name: text, body: text, format: text }),
-], { error: "a template needs either `doc` (a stored document) or both `body` and `format`" });
+const seedTemplate = z.union([strict({ id: text, name: text, doc: storedDocument }), strict({ id: text, name: text, body: text, format: text })], { error: "a template needs either `doc` (a stored document) or both `body` and `format`" });
 const migrationBase = {
     id: text.min(1).describe("Name of the transform, for good: it is recorded when it ran, so it runs once."),
     note: text.optional().describe("Why, for people reading the file."),
     collection: text.describe("Collection of the schema after the change."),
 };
 const migration = z.discriminatedUnion("op", [
-    z.strictObject({
+    strict({
         ...migrationBase,
         op: z.literal("renameField"),
         from: text.describe("The field name stored values are under now."),
         to: text.describe("The new field name (a field of the schema)."),
     }),
-    z.strictObject({
+    strict({
         ...migrationBase,
         op: z.literal("mapOption"),
         field: text,
         from: text.describe("The select value that is no longer an option."),
         to: text.describe("The option it becomes."),
     }),
-    z.strictObject({
+    strict({
         ...migrationBase,
         op: z.literal("dropField"),
         field: text.describe("A field the schema no longer has. Its stored values are deleted."),
     }),
-    z.strictObject({
+    strict({
         ...migrationBase,
         op: z.literal("setDefault"),
         field: text,
         value: text.describe("Stored in entries that have no value for the field (a text field, or an option of a select)."),
     }),
 ], { error: 'a migration needs an "op" of renameField, mapOption, dropField or setDefault' });
-/** The schema file; use `parseSchemaFile` to read one. */
-const schemaFileShape = z
-    .strictObject({
+/** The keys of the plain data both the schema file and the code config hold (the file adds `migrations`). */
+const plainShape = {
     schemaVersion: z
         .number()
-        .int()
-        .min(1)
         .optional()
         .describe("Version of the schema (1 if left out). `monti schema:apply` raises it when the schema changes; entries record the version they were written or transformed under."),
+    locales: z.array(locale).describe("Content locales, in the order the admin shows them."),
+    defaultLocale: text.describe("Default locale. Public URLs get no prefix for it."),
+    timeZone: text.optional().describe("IANA time zone for dates and times. UTC if unset."),
+    site: site.optional(),
+    seed: strict({ templates: z.array(seedTemplate).optional() })
+        .optional()
+        .describe("Data to seed a new store with."),
+};
+/** The schema file. */
+const schemaFileShape = strict({
+    ...plainShape,
     collections: z
-        .record(text, collection)
+        .record(text, fileCollection)
         .describe("Collection name -> definition. The name is a stored value, so do not change it in production."),
     migrations: z
         .array(migration)
         .optional()
         .describe("Data transforms `monti schema:apply` runs once each, in order (rename a field, map a removed select option, drop a field, set a default). Applied ones stay as history."),
-    locales: z
-        .array(locale)
-        .min(1, { error: "needs at least one locale" })
-        .describe("Content locales, in the order the admin shows them."),
-    defaultLocale: text.describe("Default locale. Public URLs get no prefix for it."),
-    timeZone: text
-        .refine(isTimeZone, { error: "is not an IANA time zone" })
-        .optional()
-        .describe("IANA time zone for dates and times. UTC if unset."),
-    site: site.optional(),
     admin: admin.optional(),
-    seed: z
-        .strictObject({ templates: z.array(seedTemplate).optional() })
-        .optional()
-        .describe("Data to seed a new store with."),
-})
-    .superRefine((file, ctx) => {
-    if (Object.keys(file.collections).length === 0) {
-        ctx.addIssue({ code: "custom", path: ["collections"], message: "needs at least one collection" });
-    }
+});
+/** The plain data of a merged config, as `defineSite` holds it (collections normalized). The other keys (plugins, blocks, ...) are the rules' to check. */
+const configShape = z.looseObject({
+    ...plainShape,
+    collections: z.record(text, normalizedCollection),
+    admin: adminOfCode.optional(),
+});
+const unknownKeyIssue = (path, key, message) => {
+    const known = message.startsWith(KNOWN_KEYS_MARK)
+        ? JSON.parse(message.slice(KNOWN_KEYS_MARK.length))
+        : [];
+    const near = closestName(key, known);
+    return {
+        path: pathOf("", ...path, key),
+        code: "unknown-key",
+        message: near
+            ? `is not an option; did you mean "${near}"?`
+            : `is not an option${known.length ? ` (known: ${known.join(", ")})` : ""}`,
+    };
+};
+const typeMessage = (message) => {
+    const match = /expected (\w+), received (\w+)/.exec(message);
+    if (!match)
+        return message;
+    return match[2] === "undefined"
+        ? "is required"
+        : `must be ${match[1] === "object" ? "an object" : `a ${match[1]}`} (got ${match[2]})`;
+};
+/** Runs a shape over a value and returns what is wrong with it, as issues. */
+function shapeIssues(shape, input) {
+    const result = shape.safeParse(input);
+    if (result.success)
+        return [];
+    return result.error.issues.flatMap((issue) => {
+        if (issue.code === "unrecognized_keys")
+            return issue.keys.map((key) => unknownKeyIssue(issue.path, key, issue.message));
+        const code = issue.code === "invalid_type"
+            ? issue.message.includes("received undefined")
+                ? "required"
+                : "type"
+            : issue.code === "invalid_value"
+                ? "enum"
+                : issue.code === "too_small" || issue.code === "too_big"
+                    ? "range"
+                    : "shape";
+        return [
+            {
+                path: pathOf("", ...issue.path),
+                code,
+                message: code === "required" || code === "type" ? typeMessage(issue.message) : issue.message,
+            },
+        ];
+    });
+}
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+/** The shape problems of the plain data of a merged config (collections must already be normalized). */
+export const configShapeIssues = (config) => 
+// A normalized collection keeps the body's limits in `allowed`; the place a person wrote them is `body`.
+shapeIssues(configShape, config).map((issue) => ({
+    ...issue,
+    path: issue.path.replace(/^(collections(?:\.[\w-]+|\["[^"]+"\]))\.allowed/, "$1.body"),
+}));
+/** The migration ids are unique: an id is recorded when the transform ran, so two with one id would run once. */
+function migrationIssues(file) {
     const ids = new Set();
+    const issues = [];
     for (const [index, item] of (file.migrations ?? []).entries()) {
-        if (ids.has(item.id)) {
-            ctx.addIssue({ code: "custom", path: ["migrations", index, "id"], message: `"${item.id}" is used twice` });
-        }
+        if (ids.has(item.id))
+            issues.push({
+                path: pathOf("migrations", index, "id"),
+                code: "duplicate",
+                message: `"${item.id}" is used twice`,
+            });
         ids.add(item.id);
     }
-    const codes = file.locales.map((item) => item.code);
-    for (const [index, code] of codes.entries()) {
-        if (codes.indexOf(code) !== index) {
-            ctx.addIssue({ code: "custom", path: ["locales", index, "code"], message: `"${code}" is listed twice` });
-        }
-    }
-    if (!codes.includes(file.defaultLocale)) {
-        ctx.addIssue({
-            code: "custom",
-            path: ["defaultLocale"],
-            message: `"${file.defaultLocale}" is not one of the locales (${codes.join(", ")})`,
-        });
-    }
-});
-/** A schema file that is not valid. `message` lists every problem with its path. */
-export class SchemaFileError extends Error {
-    issues;
-    source;
-    constructor(source, issues) {
-        super(`${source} is not a valid schema file:\n${issues.map((issue) => `  ${issue.path || "(root)"}: ${issue.message}`).join("\n")}\nFix: correct the lines above in ${source}; the types of \`defineSchema\` show most of them in the editor. \`monti doctor\` checks the file again.`);
-        this.name = "SchemaFileError";
-        this.source = source;
-        this.issues = issues;
-    }
+    return issues;
 }
-const IDENTIFIER = /^[A-Za-z_$][\w$-]*$/;
-const formatPath = (path) => path.reduce((out, key) => {
-    if (typeof key === "number")
-        return `${out}[${key}]`;
-    const name = String(key);
-    if (IDENTIFIER.test(name))
-        return out ? `${out}.${name}` : name;
-    return `${out}[${JSON.stringify(name)}]`;
-}, "");
 /**
- * Checks a schema file's content (the object `defineSchema` was given) and returns a copy of it. Throws a {@link SchemaFileError} naming the path of every problem.
- * `source` is what error messages call the file (its path).
+ * Checks a schema file's content (the object `defineSchema` was given) and returns a copy of it. Throws a {@link ConfigError} naming the path of every problem in its shape.
+ * What the values mean is checked by `defineSite`, which every schema goes through. `source` is what error messages call the file (its path).
  */
-export function parseSchemaFile(input, source = "monti.schema.ts") {
-    if (typeof input !== "object" || input === null || Array.isArray(input)) {
-        throw new SchemaFileError(source, [{ path: "", message: "must be an object" }]);
-    }
-    const result = schemaFileShape.safeParse(input);
-    if (result.success)
-        return result.data;
-    throw new SchemaFileError(source, result.error.issues.flatMap((issue) => issue.code === "unrecognized_keys"
-        ? issue.keys.map((key) => ({
-            path: formatPath([...issue.path, key]),
-            message: "is not part of the schema format",
-        }))
-        : [{ path: formatPath(issue.path), message: issue.message }]));
+export function parseSchemaFile(input, source = SCHEMA_SOURCE_NAME) {
+    if (!isRecord(input))
+        throw new ConfigError(source, [{ path: "", code: "type", message: "must be an object" }]);
+    const issues = shapeIssues(schemaFileShape, input);
+    if (issues.length === 0)
+        issues.push(...migrationIssues(input));
+    if (issues.length > 0)
+        throw new ConfigError(source, issues);
+    return schemaFileShape.parse(input);
 }

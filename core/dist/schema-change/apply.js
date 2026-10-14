@@ -1,4 +1,5 @@
 import { prepareSnapshot } from "../core/snapshot.js";
+import { CmsError } from "../core/store/errors.js";
 import { ServiceError } from "../core/types.js";
 import { diffSchema } from "./diff.js";
 import { applyTransforms, checkTransforms, transformCollections } from "./transforms.js";
@@ -55,10 +56,10 @@ export async function planSchemaChange(options) {
     };
 }
 /** The transforms cannot run: a transform does not fit the schema, or an entry cannot be rewritten. Nothing was changed. */
-export class SchemaChangeError extends Error {
+export class SchemaChangeError extends CmsError {
     problems;
     constructor(message, problems = []) {
-        super(message);
+        super(message, "invalid_transforms", undefined, undefined, problems);
         this.name = "SchemaChangeError";
         this.problems = problems;
     }

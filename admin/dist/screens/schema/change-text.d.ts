@@ -1,7 +1,7 @@
 import type { SchemaChange, SuggestedTransform } from "@monti-cms/core/schema-change";
 import type { TranslatorFor } from "../../translator.js";
-import type { schemaMessages } from "./messages.js";
-type T = TranslatorFor<typeof schemaMessages>;
+import type { schemaReviewMessages } from "./review.messages.js";
+type T = TranslatorFor<typeof schemaReviewMessages>;
 /** A change of the schema as one sentence. */
 export declare function describeChange(change: SchemaChange, t: T): string;
 /** What a transform does, as a choice label. */

@@ -1,4 +1,4 @@
-import { CmsApiError } from "../screens/admin-api.js";
+import { CmsApiError, isConflict } from "../api/client.js";
 /** Builds a failed result. */
 export function editorFailure(code, message, retryable = false) {
     return { ok: false, error: { code, message, retryable } };
@@ -21,7 +21,7 @@ export function toEditorError(error, fallback) {
         const base = { message: error.message || fallback, status: error.status, issues: error.issues, cause: error };
         if (error.status === 401)
             return { ...base, code: "session_expired", retryable: false };
-        if (error.status === 409 && error.code === "conflict")
+        if (isConflict(error))
             return { ...base, code: "conflict", retryable: false };
         if (error.status === 404)
             return { ...base, code: "not_found", retryable: false };

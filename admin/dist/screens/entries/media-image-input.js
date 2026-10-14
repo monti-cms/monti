@@ -1,13 +1,15 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { getMedia, mediaKeys } from "../../api/media.js";
 import { ImageInsertDialog } from "../../editor/image-insert-dialog.js";
 import { uploadAttachment } from "../../editor/upload-helper.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Button } from "../../ui/button.js";
-import { cmsFetch } from "../admin-api.js";
+import { FieldError } from "../../ui/field.js";
 import { entriesMessages } from "./messages.js";
 /** Media ID -> public URL. Shared by the input and the extension's preview. `null` if it cannot be loaded. */
 const urls = new Map();
@@ -31,8 +33,8 @@ export function useMediaUrl(mediaId) {
         if (!mediaId || urls.has(mediaId) || loading.has(mediaId))
             return;
         loading.add(mediaId);
-        cmsFetch(site, cmsApiUrl(`/v1/media/${mediaId}`))
-            .then((media) => rememberMediaUrl(mediaId, media.publicUrl))
+        getMedia(site, mediaId)
+            .then((media) => rememberMediaUrl(mediaId, media.publicUrl ?? null))
             .catch(() => rememberMediaUrl(mediaId, null))
             .finally(() => loading.delete(mediaId));
     }, [mediaId, site]);
@@ -64,27 +66,27 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }) 
     const site = useSite();
     const mediaId = typeof value === "string" ? value : "";
     const fileInput = useRef(null);
-    const [filename, setFilename] = useState(null);
     const [progress, setProgress] = useState(null);
     const [error, setError] = useState(null);
-    useEffect(() => {
-        setFilename(null);
-        if (!mediaId)
-            return;
-        let cancelled = false;
-        cmsFetch(site, cmsApiUrl(`/v1/media/${mediaId}`))
-            .then((media) => !cancelled && setFilename(media.filename ?? null))
-            .catch(() => { });
-        return () => {
-            cancelled = true;
-        };
-    }, [mediaId, site]);
+    const queryClient = useQueryClient();
+    const lookup = useQuery({
+        queryKey: mediaKeys.detail(mediaId),
+        queryFn: ({ signal }) => getMedia(site, mediaId, signal),
+        enabled: mediaId !== "",
+        retry: false,
+    });
+    const filename = mediaId ? (lookup.data?.filename ?? null) : null;
     const upload = async (file) => {
         setError(null);
         setProgress(0);
         try {
             const uploaded = await uploadAttachment(site, file, setProgress);
-            setFilename(file.name);
+            // Show the name right away; the lookup confirms it.
+            queryClient.setQueryData(mediaKeys.detail(uploaded.mediaId), {
+                filename: file.name,
+                byteSize: file.size,
+                mimeType: file.type,
+            });
             onChange(uploaded.mediaId);
         }
         catch (cause) {
@@ -99,5 +101,5 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }) 
                     event.target.value = "";
                     if (file)
                         void upload(file);
-                } }), error && (_jsx("p", { role: "alert", className: "text-cms-destructive text-xs", children: error }))] }));
+                } }), error && _jsx(FieldError, { children: error })] }));
 }

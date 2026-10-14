@@ -1,3 +1,4 @@
+import { describeNodeEnv } from "../../core/env.js";
 const parseFlag = (value) => {
     const normalized = value?.trim().toLowerCase();
     if (normalized === "true" || normalized === "1")
@@ -46,7 +47,7 @@ export function explainTrustHost(configured, env = process.env) {
     if (platform !== undefined)
         return { trusted: true, source: `auto-detected (hosting platform: ${platform} is set)` };
     if (env.NODE_ENV !== "production") {
-        return { trusted: true, source: `auto-detected (NODE_ENV is "${env.NODE_ENV ?? ""}", not production)` };
+        return { trusted: true, source: `auto-detected (${describeNodeEnv(env)}, so this is not production)` };
     }
     return { trusted: false, source: "auto-detected (production, and no known hosting platform variable is set)" };
 }

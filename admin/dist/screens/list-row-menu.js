@@ -1,4 +1,5 @@
 import { Archive, ArchiveRestore, Copy, ExternalLink, Folder as FolderIcon, FolderInput, FolderUp, PanelRightOpen, RotateCcw, SquarePen, Tag, Tags, Trash2, } from "lucide-react";
+import { commonMessages } from "../lib/common.messages.js";
 import { screensMessages } from "./messages.js";
 export const toSelection = (item) => ({
     id: item.id,
@@ -14,17 +15,18 @@ export function actionTargets(item, items, selectedIds) {
 /** Row menu. One row gets open and duplicate; several rows get the item count at the top. Trash has only restore and permanent delete. */
 export function rowMenuActions(site, group, context, handlers) {
     const t = site.createTranslator(screensMessages);
+    const tc = site.createTranslator(commonMessages);
     const targets = group.map(toSelection);
     const single = group.length === 1 ? group[0] : undefined;
     const header = single ? [] : [{ kind: "label", label: t("menu.items", { count: group.length }) }];
     if (context.mode === "trash") {
         return [
             ...header,
-            { kind: "item", label: t("list.restore"), icon: RotateCcw, onSelect: () => handlers.restore(targets) },
+            { kind: "item", label: tc("lifecycle.restore"), icon: RotateCcw, onSelect: () => handlers.restore(targets) },
             { kind: "separator" },
             {
                 kind: "item",
-                label: t("list.permanentDelete"),
+                label: tc("lifecycle.deletePermanently"),
                 icon: Trash2,
                 shortcut: "Del",
                 destructive: true,
@@ -35,16 +37,16 @@ export function rowMenuActions(site, group, context, handlers) {
     const open = !single
         ? []
         : context.isRecord
-            ? [{ kind: "item", label: t("common.open"), icon: PanelRightOpen, onSelect: () => handlers.openRecord(single) }]
+            ? [{ kind: "item", label: tc("open"), icon: PanelRightOpen, onSelect: () => handlers.openRecord(single) }]
             : [
-                { kind: "item", label: t("common.open"), icon: SquarePen, onSelect: () => handlers.openEditor(single) },
+                { kind: "item", label: tc("open"), icon: SquarePen, onSelect: () => handlers.openEditor(single) },
                 {
                     kind: "item",
                     label: t("menu.openNewTab"),
                     icon: ExternalLink,
                     onSelect: () => handlers.openInNewTab(single),
                 },
-                { kind: "item", label: t("menu.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
+                { kind: "item", label: tc("lifecycle.duplicate"), icon: Copy, onSelect: () => handlers.duplicate(single) },
             ];
     const allArchived = group.every((row) => row.status === "archived");
     const addActions = site.taxonomyFieldsOf(context.collection).flatMap((stored) => {
@@ -76,11 +78,16 @@ export function rowMenuActions(site, group, context, handlers) {
             allArchived
                 ? {
                     kind: "item",
-                    label: t("menu.unarchive"),
+                    label: tc("lifecycle.unarchive"),
                     icon: ArchiveRestore,
-                    onSelect: () => handlers.bulk("unarchive", t("bulk.unarchive"), targets),
+                    onSelect: () => handlers.bulk("unarchive", tc("lifecycle.unarchive"), targets),
                 }
-                : { kind: "item", label: t("menu.archive"), icon: Archive, onSelect: () => handlers.confirmArchive(targets) },
+                : {
+                    kind: "item",
+                    label: tc("lifecycle.archive"),
+                    icon: Archive,
+                    onSelect: () => handlers.confirmArchive(targets),
+                },
         ]
         : [{ kind: "separator" }];
     return [
@@ -109,7 +116,7 @@ export function rowMenuActions(site, group, context, handlers) {
         ...contentActions,
         {
             kind: "item",
-            label: t("menu.trash"),
+            label: tc("lifecycle.trash"),
             icon: Trash2,
             shortcut: "Del",
             destructive: true,
