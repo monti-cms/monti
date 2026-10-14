@@ -1,6 +1,4 @@
-import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
+import { packageTests } from "../../vitest.shared";
 
 /**
  * Regression guard: re-runs the AI plugin tests with a config whose collections, fields, languages and blocks differ from the reference blog (`test/other-site.config.ts`, AI actions also
@@ -24,27 +22,10 @@ const BLOG_FIXTURE_TESTS = [
 	"src/admin/__test__/ai-translate.test.ts",
 ];
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "ai (other-site)",
-		environment: "node",
-		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		exclude: BLOG_FIXTURE_TESTS,
-		setupFiles: ["../admin/src/test/setup-dom.ts"],
-		sequence: { groupOrder: 3 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
-			...loadEnv(mode, __dirname, ""),
-			TZ: "UTC",
-			MONTI_TEST_SITE: "other-site",
-		},
-	},
-	resolve: {
-		alias: {
-			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
-		},
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "ai",
+	site: "other-site",
+	dom: true,
+	exclude: BLOG_FIXTURE_TESTS,
+});

@@ -1,7 +1,5 @@
 import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
-
+import { packageTests } from "../../vitest.shared";
 import { configSensitiveTests } from "./test/config-sensitive";
 
 /**
@@ -13,34 +11,17 @@ import { configSensitiveTests } from "./test/config-sensitive";
  * Collection, field and block names are looked up from the config (`test/any-site.ts`). Tests that assert the reference blog config's values as is
  * (collection list, URLs, entry hashes, etc.) live in `*.blog.test.ts` and are skipped here.
  */
-const SITE_FILE = path.resolve(__dirname, "./test/site.ts");
+const SITE_FILE = path.resolve(import.meta.dirname, "./test/site.ts");
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "core (other-site)",
-		environment: "node",
-		globals: true,
-		include: configSensitiveTests({
-			packageDir: __dirname,
-			siteFile: SITE_FILE,
-			transitive: true,
-			skip: (file) => /\.blog\.test\.tsx?$/.test(file),
-		}),
-		sequence: { groupOrder: 1 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
-			...loadEnv(mode, __dirname, ""),
-			TZ: "UTC",
-			// `test/site.ts` picks the config the suites run against.
-			MONTI_TEST_SITE: "other-site",
-		},
-	},
-	resolve: {
-		alias: [
-			{ find: "server-only", replacement: path.resolve(__dirname, "./test/server-only.ts") },
-			{ find: /^@monti-cms\/core$/, replacement: path.resolve(__dirname, "./src/index.ts") },
-		],
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "core",
+	site: "other-site",
+	include: configSensitiveTests({
+		packageDir: import.meta.dirname,
+		siteFile: SITE_FILE,
+		transitive: true,
+		skip: (file) => /\.blog\.test\.tsx?$/.test(file),
+	}),
+	alias: [{ find: /^@monti-cms\/core$/, replacement: path.resolve(import.meta.dirname, "./src/index.ts") }],
+});

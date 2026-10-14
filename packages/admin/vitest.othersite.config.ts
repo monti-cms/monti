@@ -1,7 +1,5 @@
 import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
-
+import { packageTests } from "../../vitest.shared";
 import { configSensitiveTests } from "../core/test/config-sensitive";
 
 /**
@@ -49,38 +47,29 @@ const BLOG_FIXTURE_TESTS = [
 	"src/editor/code-block/__test__/anchor-dedupe.test.ts",
 ];
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "admin (other-site)",
-		environment: "jsdom",
-		globals: true,
-		include: configSensitiveTests({
-			packageDir: __dirname,
-			siteFile: path.resolve(__dirname, "../core/test/site.ts"),
-			// The admin helpers (`src/test/*`) render with `testSite` for every test, so following them would select all tests.
-			transitive: false,
-			// These hand `testSite` to a component that reads the config (the schema screen, link targets) without naming a collection themselves.
-			also: [
-				"src/screens/schema/__test__/schema-screen.test.tsx",
-				"src/editor/__test__/internal-link-display.test.tsx",
-				"src/editor/__test__/internal-link-search.test.tsx",
-			],
-			skip: (file) => BLOG_FIXTURE_TESTS.includes(path.relative(__dirname, file).split(path.sep).join("/")),
-		}),
-		setupFiles: ["./src/test/setup-dom.ts"],
-		sequence: { groupOrder: 2 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
-			...loadEnv(mode, __dirname, ""),
-			TZ: "UTC",
-			MONTI_TEST_SITE: "other-site",
-		},
-	},
-	resolve: {
-		alias: {
-			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
-		},
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "admin",
+	site: "other-site",
+	environment: "jsdom",
+	dom: true,
+	include: configSensitiveTests({
+		packageDir: import.meta.dirname,
+		siteFile: path.resolve(import.meta.dirname, "../core/test/site.ts"),
+		// The admin helpers (`src/test/*`) render with `testSite` for every test, so following them would select all tests.
+		transitive: false,
+		// These hand `testSite` to a component that reads the config (the schema screen, link targets) without naming a collection themselves.
+		also: [
+			"src/screens/schema/__test__/schema-screen.test.tsx",
+			"src/editor/__test__/internal-link-display.test.tsx",
+			"src/editor/__test__/internal-link-search.test.tsx",
+		],
+		skip: (file) =>
+			BLOG_FIXTURE_TESTS.includes(
+				path
+					.relative(import.meta.dirname, file)
+					.split(path.sep)
+					.join("/"),
+			),
+	}),
+});

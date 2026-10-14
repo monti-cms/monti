@@ -1,6 +1,4 @@
-import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
+import { packageTests } from "../../vitest.shared";
 
 /**
  * Regression guard: reruns the SEO extension tests with a config (`test/other-site.config.ts`) whose SEO field names, tab and language differ from the example blog.
@@ -8,27 +6,11 @@ import { defineConfig } from "vitest/config";
  */
 const BLOG_FIXTURE_TESTS = ["src/__test__/blog-seo.test.ts"];
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "seo (other-site)",
-		environment: "jsdom",
-		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		exclude: BLOG_FIXTURE_TESTS,
-		setupFiles: ["../admin/src/test/setup-dom.ts"],
-		sequence: { groupOrder: 3 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, path.resolve(__dirname, "../.."), ""),
-			...loadEnv(mode, __dirname, ""),
-			TZ: "UTC",
-			MONTI_TEST_SITE: "other-site",
-		},
-	},
-	resolve: {
-		alias: {
-			"server-only": path.resolve(__dirname, "../core/test/server-only.ts"),
-		},
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "seo",
+	site: "other-site",
+	environment: "jsdom",
+	dom: true,
+	exclude: BLOG_FIXTURE_TESTS,
+});

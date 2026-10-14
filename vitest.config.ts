@@ -1,12 +1,11 @@
-import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 // `pnpm test:quick` sets this: only the default project of each package, without the other-site and configured variants (CI runs everything).
 const QUICK = process.env.MONTI_TEST_QUICK === "1";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
 	test: {
-		// Runs all packages (`packages/*`) at once. Each package uses its own config file.
+		// Runs all packages (`packages/*`) at once. Each package's config is `packageTests` of `vitest.shared.ts` with what differs.
 		projects: [
 			"packages/*",
 			...(QUICK
@@ -18,13 +17,5 @@ export default defineConfig(({ mode }) => ({
 						"packages/*/vitest.configured.config.ts",
 					]),
 		],
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, process.cwd(), ""),
-			// Production (Vercel) runs in UTC. Running tests in the local time zone would let
-			// regressions in time-zone-sensitive logic, such as displayed dates, slip through on developer machines only.
-			TZ: "UTC",
-		},
 	},
-}));
+});

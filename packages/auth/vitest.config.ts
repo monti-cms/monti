@@ -1,20 +1,6 @@
-import path from "node:path";
-import { loadEnv } from "vite";
-import { defineConfig } from "vitest/config";
+import { packageTests } from "../../vitest.shared";
 
-export default defineConfig(({ mode }) => ({
-	test: {
-		name: "auth",
-		environment: "node",
-		globals: true,
-		include: ["src/**/*.{test,spec}.{ts,tsx}"],
-		// When run together from the repository root, it runs after the core bundle (`vitest.config.ts`).
-		sequence: { groupOrder: 3 },
-		testTimeout: 60000,
-		hookTimeout: 60000,
-		env: {
-			...loadEnv(mode, path.resolve(import.meta.dirname, "../.."), ""),
-			TZ: "UTC",
-		},
-	},
-}));
+export default packageTests({
+	dir: import.meta.dirname,
+	name: "auth",
+});
