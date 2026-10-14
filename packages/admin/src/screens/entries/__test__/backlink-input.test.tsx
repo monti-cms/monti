@@ -3,7 +3,8 @@ import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { jsonResponse as json } from "../../../test/fetch";
+import { renderWithSite as render } from "../../../test/site";
 import { BacklinkInput } from "../field-inputs";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
@@ -38,8 +39,6 @@ const shared = {
 	loading: false,
 	refresh: vi.fn(),
 };
-
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 /** Holds the save of collection `c2` until it is released with `release`. */
 function stubApi(patchStatus: number) {

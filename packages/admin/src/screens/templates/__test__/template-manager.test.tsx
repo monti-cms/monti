@@ -2,7 +2,8 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { commonMessages } from "../../../lib/common.messages";
-import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { jsonResponse as json } from "../../../test/fetch";
+import { renderWithSite as render } from "../../../test/site";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { templatesMessages } from "../messages";
 import { TemplateManager } from "../template-manager";
@@ -28,7 +29,6 @@ const template = (id: string, name: string, version = 1) => ({
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",
 });
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 let fetchMock: ReturnType<typeof vi.fn>;
 let listFails = false;

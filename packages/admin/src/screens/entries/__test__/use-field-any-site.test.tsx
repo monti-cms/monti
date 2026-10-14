@@ -3,7 +3,7 @@ import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { EntryFormProvider, type EntryFormValue, useField } from "../../../hooks/public";
-import { renderWithSite as render, SiteWrapper } from "../../__test__/site-wrapper";
+import { renderWithSite as render, SiteWrapper } from "../../../test/site";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 
 /**

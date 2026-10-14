@@ -1,8 +1,8 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { renderWithSite as render } from "../../../test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
-import { renderWithSite as render } from "../../__test__/site-wrapper";
 import { EMPTY_FORM } from "../entry-form";
 import { entriesMessages } from "../messages";
 import { RemovedFieldsNotice } from "../removed-fields-notice";

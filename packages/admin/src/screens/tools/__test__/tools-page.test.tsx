@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import type { AdminServer } from "../../../host/server";
 import { renderInRouter } from "../../../test/router";
-import { withSite } from "../../__test__/site-wrapper";
+import { withSite } from "../../../test/site";
 import { ShellPage } from "../../shared/admin-shell";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import ToolsPage from "../page";

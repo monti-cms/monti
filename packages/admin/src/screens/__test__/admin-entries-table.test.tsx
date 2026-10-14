@@ -4,12 +4,12 @@ import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { renderInRouter as render } from "../../test/router";
+import { withSite } from "../../test/site";
 import { AdminEntriesTable } from "../admin-entries-table";
 import { columnsFor } from "../list-columns";
 import { parseListState } from "../list-state";
 import { filterChips } from "../list-toolbar";
 import { screensMessages } from "../messages";
-import { withSite } from "./site-wrapper";
 
 afterEach(cleanup);
 

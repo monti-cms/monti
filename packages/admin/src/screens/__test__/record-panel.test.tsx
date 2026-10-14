@@ -3,10 +3,9 @@ import { emptyStoredDocument } from "@monti-cms/core/document";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../core/test/site";
+import { jsonResponse as json } from "../../test/fetch";
+import { withSite } from "../../test/site";
 import { RecordPanel } from "../record-panel";
-import { withSite } from "./site-wrapper";
-
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 const tag = {
 	id: "tag-1",

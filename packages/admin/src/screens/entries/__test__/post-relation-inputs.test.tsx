@@ -2,7 +2,8 @@ import type { RelationField } from "@monti-cms/core/client";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { renderWithSite as render } from "../../__test__/site-wrapper";
+import { jsonResponse as json } from "../../../test/fetch";
+import { renderWithSite as render } from "../../../test/site";
 import { EMPTY_FORM } from "../entry-form";
 import { EntryPicker, type FieldInputProps, OrderedEntryList } from "../field-inputs";
 import { entriesMessages } from "../messages";
@@ -11,8 +12,6 @@ const t = testSite.createTranslator(entriesMessages);
 
 /** Label of the relation target (`post`). Input hints use the target collection's label (the collection name if not in config). */
 const TARGET = testSite.isCollection("post") ? testSite.schemaOf("post").label : "post";
-
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 const POSTS = [
 	{ id: "p1", title: "첫 글", status: "published" },

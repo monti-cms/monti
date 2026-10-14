@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
 import { createSite, SiteProvider } from "@monti-cms/core/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { commonMessages } from "../../../../admin/src/lib/common.messages";
+import { jsonResponse as json } from "../../../../admin/src/test/fetch";
+import { SiteWrapper } from "../../../../admin/src/test/site";
 import config from "../../../test/cms.config";
 import { ConflictDiff, GitSyncPage } from "../git-sync-page";
 import { gitSyncMessages } from "../page.messages";
@@ -18,8 +19,6 @@ const keyT = (key: "field.useNew" | "field.newInput") => (key === "field.useNew"
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), message: vi.fn() }));
 vi.mock("sonner", () => ({ Toaster: () => null, toast }));
 vi.mock("../../../../admin/src/screens/admin-sidebar", () => ({ AdminSidebar: () => null }));
-
-const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body });
 
 const target = {
 	id: "site",
@@ -112,11 +111,9 @@ afterEach(() => {
 
 const renderPage = () =>
 	render(
-		<SiteProvider site={site}>
-			<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-				<GitSyncPage />
-			</QueryClientProvider>
-		</SiteProvider>,
+		<SiteWrapper site={site}>
+			<GitSyncPage />
+		</SiteWrapper>,
 	);
 
 describe("Git sync screen: sync tab", () => {

@@ -1,6 +1,7 @@
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
 import { AdminClientDashboard, AdminTrashDashboard } from "../admin-dashboard";
 import { AdminQueryProvider } from "../shared/query-provider";
@@ -32,7 +33,6 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 });
 const folder: Folder = { id: "f1", collection: "post", parentId: null, name: "뉴스", position: 0, version: 1 };
 
-const json = (data: unknown, status = 200) => ({ ok: status < 400, status, json: async () => data });
 type Handler = (url: URL, init: RequestInit | undefined) => unknown;
 
 /** Fake server. List requests read from `posts` and `trashed`, and tests accept more requests through `handle`. */

@@ -1,9 +1,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { withSite } from "../../test/site";
 import { FittingTags } from "../shared/fitting-tags";
 import { sharedMessages } from "../shared/messages";
-import { withSite } from "./site-wrapper";
 
 const t = testSite.createTranslator(sharedMessages);
 

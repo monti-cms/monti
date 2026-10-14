@@ -10,7 +10,7 @@ import {
 	useEntryEditorContext,
 	useField,
 } from "../../../hooks/public";
-import { renderWithSite as render, renderHookWithSite as renderHook } from "../../__test__/site-wrapper";
+import { renderWithSite as render, renderHookWithSite as renderHook } from "../../../test/site";
 import {
 	ENTRY,
 	fakeClient,

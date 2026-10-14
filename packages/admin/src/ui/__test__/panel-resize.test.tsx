@@ -1,6 +1,6 @@
 import { cleanup, createEvent, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { renderWithSite as render } from "../../screens/__test__/site-wrapper";
+import { renderWithSite as render } from "../../test/site";
 import { PanelResizeHandle, usePanelResize } from "../panel-resize";
 
 const CONFIG = { name: "test-panel", defaultWidth: 448, minWidth: 352 };
