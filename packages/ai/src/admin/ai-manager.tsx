@@ -35,6 +35,7 @@ import {
 	Textarea,
 	useConfirm,
 	useDraftEditor,
+	useHydratedQuery,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useSite, useTranslator } from "@monti-cms/core/client";
@@ -156,7 +157,8 @@ export function AiManager() {
 	const { engineLabel } = useLabels();
 	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
-	const featuresQuery = useAiActions();
+	// The layout's AI slot provider asks for the same list, so it can be in the cache before this page hydrates.
+	const featuresQuery = useHydratedQuery(useAiActions());
 	const _settingsQuery = useAiSettings();
 	const _sharedQuery = useAiShared();
 	const features = featuresQuery.data?.items ?? [];
