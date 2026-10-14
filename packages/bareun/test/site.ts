@@ -1,7 +1,5 @@
-import { type CmsConfig, createSite } from "@monti-cms/core/client";
-import config from "./cms.config";
+import { siteUnderTest } from "../../core/test/site-under-test";
+import blog from "./cms.config";
 
-/** The site this package's suites run against: the core package's blog config plus the Bareun checker (`cms.config.ts`). */
-export const testConfig: CmsConfig = config;
-
-export const testSite = createSite(testConfig);
+/** The core package's blog config plus the Bareun checker (`cms.config.ts`). */
+export const { testConfig, testSite } = siteUnderTest({ blog });
