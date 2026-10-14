@@ -33,9 +33,14 @@ jobs:
       - run: pnpm knip
       - run: pnpm build
 
-  test:
-    name: test
+  # The suite is CPU bound (a runner has 4 cores), so it is split by test file over three runners that run at once.
+  test-shard:
+    name: test (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         image: postgres:17
@@ -59,7 +64,16 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test:run
+      - run: pnpm test:run --shard=${{ matrix.shard }}/3
+
+  # One result under the old name, for whatever requires a check called "test".
+  test:
+    name: test
+    needs: test-shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.test-shard.result }}" = success
 
   example:
     name: example app (packed)
