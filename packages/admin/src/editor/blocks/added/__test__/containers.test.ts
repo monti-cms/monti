@@ -3,7 +3,7 @@ import { Editor } from "@tiptap/core";
 import { DOMParser as PmDOMParser } from "@tiptap/pm/model";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../../core/test/site";
-import { para, storedDoc, text, withoutIds } from "../../../../test/stored-doc";
+import { para, storedDoc, text } from "../../../../test/stored-doc";
 import { deleteBlock, duplicateBlock } from "../../../block-commands";
 import { blockInsertActions } from "../../../block-inserts";
 import { buildEditorExtensions } from "../../../extensions";

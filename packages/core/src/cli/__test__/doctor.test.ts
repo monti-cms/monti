@@ -432,6 +432,7 @@ describe("monti doctor on the media storage", () => {
 		setEnv();
 		const dir = project({
 			"monti.config.ts": withStorage(
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: the config source holds a template literal on purpose
 				"return { getPublicUrl: (key: string) => `https://files.example.com/${key}` } as never;",
 			),
 		});

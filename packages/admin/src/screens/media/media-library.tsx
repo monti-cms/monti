@@ -14,7 +14,7 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import {
@@ -227,6 +227,7 @@ export function MediaLibrary() {
 	});
 
 	const cleanupMutation = useCmsMutation({
+		// biome-ignore lint/suspicious/noConfusingVoidType: a mutation without variables, so `mutate()` takes no argument
 		fn: (_variables: void, { site }) => cleanupMedia(site),
 		failure: t("library.cleanup.failed"),
 		onSuccess: (result) => {

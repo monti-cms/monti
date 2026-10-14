@@ -144,6 +144,7 @@ export function EventsScreen() {
 		invalidate: [eventsKeys.all],
 	});
 	const retryAll = useCmsMutation({
+		// biome-ignore lint/suspicious/noConfusingVoidType: a mutation without variables, so `mutate()` takes no argument
 		fn: (_: void, { site }) => retryAllEvents(site, t("retryAll.failed")),
 		success: (result) => t("retryAll.done", { delivered: result.delivered, failed: result.failed, dead: result.dead }),
 		failure: t("retryAll.failed"),

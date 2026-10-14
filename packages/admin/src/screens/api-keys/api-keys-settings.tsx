@@ -313,6 +313,7 @@ function KeyDialog({
 	const ready = (!needsName || (name.trim() !== "" && !nameTaken)) && (!needsValue || value.trim() !== "");
 
 	const saveKey = useCmsMutation({
+		// biome-ignore lint/suspicious/noConfusingVoidType: a mutation without variables, so `mutate()` takes no argument
 		fn: (_: void, { site }) => {
 			if (!key) return createApiKey(site, { name: name.trim(), value: value.trim() }, t("error.save"));
 			return updateApiKey(

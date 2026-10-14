@@ -2,7 +2,6 @@
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { Search, X } from "lucide-react";
-import { useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import type { TranslatorFor } from "../translator";
 import { Button } from "../ui/button";

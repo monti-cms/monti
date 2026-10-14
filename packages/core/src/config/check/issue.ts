@@ -61,6 +61,7 @@ export class IssueList {
 		this.issues.push({ path, code, message });
 	}
 	/** Adds issues another check found (they keep their paths). */
+	// biome-ignore lint/suspicious/noConfusingVoidType: takes what a check hook returns, and a hook may return nothing
 	addAll(issues: readonly Issue[] | void): void {
 		if (issues) this.issues.push(...issues);
 	}

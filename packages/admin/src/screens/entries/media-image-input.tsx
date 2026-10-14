@@ -52,7 +52,6 @@ export function useMediaUrl(mediaId: string): string | null {
 export function MediaThumbnail({ mediaId, className }: { mediaId: string; className?: string }) {
 	const url = useMediaUrl(mediaId);
 	return url ? (
-		// biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic
 		<img src={url} alt="" className={cn("object-cover", className)} />
 	) : (
 		<div className={cn("flex items-center justify-center bg-cms-muted text-cms-muted-foreground", className)}>

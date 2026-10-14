@@ -1,4 +1,4 @@
-import { STORED_DOCUMENT_VERSION, type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { docOf } from "../../../test/mdx";

@@ -68,6 +68,7 @@ export interface DatabaseAdapter {
 	migrate(options: {
 		readonly site: Site;
 		readonly formats?: FormatRegistry;
+		// biome-ignore lint/suspicious/noConfusingVoidType: an adapter's migrate may be an async function that returns nothing
 	}): Promise<MigrationSummary | undefined | void>;
 	/**
 	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.

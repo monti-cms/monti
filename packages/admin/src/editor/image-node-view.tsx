@@ -332,7 +332,6 @@ export function ImageBlockView() {
 							...transform.wrapperStyle,
 						}}
 					>
-						{/* biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic and not next/image-compatible */}
 						<img
 							src={resolved && "url" in resolved ? resolved.url : ""}
 							alt={alt || ""}
@@ -348,7 +347,6 @@ export function ImageBlockView() {
 					</div>
 				) : (
 					<div className="relative overflow-hidden rounded-md bg-cms-muted">
-						{/* biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic and not next/image-compatible */}
 						<img
 							src={resolved && "url" in resolved ? resolved.url : ""}
 							alt={alt || ""}

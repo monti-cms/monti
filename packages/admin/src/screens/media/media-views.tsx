@@ -31,7 +31,6 @@ export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconCla
 		return <Icon className={cn("text-cms-muted-foreground", iconClassName)} aria-hidden />;
 	}
 	if (!media.publicUrl) return <File className={cn("text-cms-muted-foreground", iconClassName)} aria-hidden />;
-	// biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic
 	return <img src={media.publicUrl} alt="" loading="lazy" className="h-full w-full object-cover" />;
 }
 

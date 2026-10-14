@@ -85,7 +85,6 @@ export function PopoverFormFooter({
 	onRemove?: () => void;
 	onCancel: () => void;
 }) {
-	const t = useTranslator(editorMessages);
 	const tc = useTranslator(commonMessages);
 	return (
 		<div className="flex items-center gap-2">
