@@ -1,5 +1,6 @@
 "use client";
 
+import { useDebounced } from "@monti-cms/admin/kit";
 import { type ComponentProps, type CSSProperties, useEffect, useMemo, useState } from "react";
 
 type Token = { content: string; light?: string; dark?: string };
@@ -49,22 +50,21 @@ export function MdxSourceEditor({
 }: Omit<ComponentProps<"textarea">, "value"> & { value: string }) {
 	const [highlighted, setHighlighted] = useState<HighlightedLine[]>([]);
 
+	// Highlighting follows the text after a short pause; a result that arrives after the next text is dropped.
+	const settled = useDebounced(value, 120);
 	useEffect(() => {
 		let cancelled = false;
-		const timer = setTimeout(() => {
-			highlightMdx(value)
-				.then((lines) => {
-					if (!cancelled) setHighlighted(lines);
-				})
-				.catch(() => {
-					if (!cancelled) setHighlighted([]);
-				});
-		}, 120);
+		highlightMdx(settled)
+			.then((lines) => {
+				if (!cancelled) setHighlighted(lines);
+			})
+			.catch(() => {
+				if (!cancelled) setHighlighted([]);
+			});
 		return () => {
 			cancelled = true;
-			clearTimeout(timer);
 		};
-	}, [value]);
+	}, [settled]);
 
 	const lines = useMemo(() => value.split("\n"), [value]);
 
