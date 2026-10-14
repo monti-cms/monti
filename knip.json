@@ -50,5 +50,5 @@
 		}
 	},
 	"ignoreExportsUsedInFile": true,
-	"ignore": ["examples/**", "packages/*/src/**/__test__/fixtures/**"]
+	"ignore": ["examples/**", "packages/*/src/**/__test__/fixtures/**", ".claude/**"]
 }
