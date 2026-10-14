@@ -23,7 +23,7 @@ import { handleWebhook } from "./webhook";
  */
 
 /** Turns what the sync code throws into the response the admin screen shows. */
-const asHttpError = (error: unknown): unknown => {
+const toCmsError = (error: unknown): unknown => {
 	if (error instanceof GitHubApiError) return new CmsError(error.message, "upstream_failed");
 	if (error instanceof GitSyncError) return new CmsError(error.message, "precondition_failed");
 	return error;
@@ -38,7 +38,7 @@ const guarded =
 		try {
 			return await run(input);
 		} catch (error) {
-			throw asHttpError(error);
+			throw toCmsError(error);
 		}
 	};
 
