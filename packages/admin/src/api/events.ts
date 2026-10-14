@@ -100,7 +100,7 @@ export const dismissEvent = (site: Site, key: DeliveryKey, fallback?: string) =>
 		fallback,
 	});
 
-/** Retries every failed and dead delivery. */
+/** Sends the deliveries that are due: pending ones and failed ones whose next attempt has come. */
 export const retryAllEvents = (site: Site, fallback?: string) =>
 	cmsFetch<RetryAllResult>(site, cmsApiUrl("/v1/events/retry"), { method: "POST", json: {}, fallback });
 

@@ -129,7 +129,7 @@ describe("EventsScreen", () => {
 				return json({ delivered: 1, failed: 0, dead: 0, counts });
 			}
 			return retried
-				? json({ items: [], total: 0, counts })
+				? json({ items: [], total: 0, counts: { ...counts, failed: 0 } })
 				: json({ items: [item("e1", "search-index", "failed")], total: 1, counts });
 		});
 		renderScreen();
@@ -138,7 +138,20 @@ describe("EventsScreen", () => {
 		await waitFor(() => expect(posts()).toEqual([["/api/monti/v1/events/retry", {}]]));
 		await waitFor(() => expect(toast.success).toHaveBeenCalled());
 		expect(await screen.findByText(t("list.emptyYet"))).toBeTruthy();
-		// With nothing listed there is nothing to retry.
+		// Nothing pending or failed is left to retry.
+		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
+	});
+
+	it("offers no retry when nothing is pending or failed, even with events listed", async () => {
+		fetchMock.mockImplementation(async () =>
+			json({
+				items: [item("e3", null, "recorded", "saved"), item("e4", "webhook", "delivered")],
+				total: 2,
+				counts: { ...counts, failed: 0, dead: 2 },
+			}),
+		);
+		renderScreen();
+		expect(await screen.findByText("slug-e3")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: t("action.retryAll") })).toBeNull();
 	});
 
