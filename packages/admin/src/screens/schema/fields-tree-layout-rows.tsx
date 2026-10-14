@@ -64,7 +64,7 @@ function InlineName({
 				}
 			}}
 			className={cn(
-				"h-7 min-w-0 border-transparent bg-transparent px-1.5 font-semibold text-sm shadow-none",
+				"h-7 min-w-0 border-transparent bg-transparent cms-dark:bg-transparent px-1.5 font-semibold text-sm shadow-none",
 				className,
 			)}
 		/>
