@@ -15,7 +15,7 @@ const record = recordCollection;
 describe("Publishing, Lifecycle & Published-References Contracts", () => {
 	let pool: Pool;
 	let schemaName: string;
-	let store: any;
+	let store: ReturnType<typeof createContentStore>;
 
 	beforeAll(async () => {
 		const isolated = await createIsolatedTestPool();
@@ -72,6 +72,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 						contentHash: randomUUID(),
 						issues: [],
 						references: [],
+						imageSources: [],
 					},
 					references: [{ kind: "entry", targetId: tag.id, isStale: false, occurrences: [] }],
 				});
@@ -124,6 +125,7 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 					contentHash: "ts-hash-reset-2",
 					issues: [],
 					references: [],
+					imageSources: [],
 				},
 				references: [],
 			});

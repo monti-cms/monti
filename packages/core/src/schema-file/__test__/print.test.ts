@@ -16,6 +16,7 @@ describe("printSchemaFile", () => {
 	it("round-trips awkward values: quotes, escapes, odd keys, unicode, numbers, null and empty containers", async () => {
 		const data = {
 			schemaVersion: 3,
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: the text holds a literal ${...} on purpose
 			note: 'He said "hi"\nthen\tleft \\   \u{1f600} `tick` ${not}',
 			"needs-quotes": { "1st": 1, ok_key: -0.5, $dollar: 1e21, empty: {}, none: [], nothing: null },
 			list: [1, "two", true, null, ["nested", ["deep"]], { a: 1 }],

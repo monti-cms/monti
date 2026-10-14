@@ -65,7 +65,13 @@ describe("resolvePublicMedia", () => {
 	]);
 	const lookups: string[] = [];
 	const deps: PublicMediaDeps = {
-		store: () => ({ getMediaAsset: async (id: string) => (lookups.push(id), rows.get(id) ?? null) }) as never,
+		store: () =>
+			({
+				getMediaAsset: async (id: string) => {
+					lookups.push(id);
+					return rows.get(id) ?? null;
+				},
+			}) as never,
 		mediaStore: () => ({ getPublicUrl: (key: string) => `https://cdn.test/${key}` }) as never,
 	};
 

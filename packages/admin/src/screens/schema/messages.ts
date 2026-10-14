@@ -24,6 +24,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"literal.comment_unclosed": "a comment that is never closed",
 		"literal.string_unclosed": "a string that is never closed",
 		"literal.escape_malformed": "a malformed escape in a string",
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: names the syntax the schema file refuses
 		"literal.template_expression": "a template expression `${...}`",
 		"literal.expected_token": "expected {what}",
 		"literal.expected_token.found": "expected {what}, found `{found}`",
@@ -110,6 +111,7 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"literal.comment_unclosed": "닫히지 않은 주석",
 		"literal.string_unclosed": "닫히지 않은 문자열",
 		"literal.escape_malformed": "문자열 안의 잘못된 이스케이프",
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: names the syntax the schema file refuses
 		"literal.template_expression": "템플릿 식 `${...}`",
 		"literal.expected_token": "{what}가 와야 합니다",
 		"literal.expected_token.found": "{what}가 와야 하는데 `{found}`가 있습니다",

@@ -22,7 +22,6 @@ export function useDebouncedInput(
 	const [text, setText] = useState(committed);
 	const commitRef = useRef(commit);
 	commitRef.current = commit;
-	// biome-ignore lint/correctness/useExhaustiveDependencies: follows the committed value only
 	useEffect(() => setText(committed), [committed]);
 	useEffect(() => {
 		if (text === committed) return;

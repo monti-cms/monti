@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type EntrySearchResponse, entriesKeys, searchEntries } from "../../api/entries";
 import { commonMessages } from "../../lib/common.messages";
 import { useDebounced } from "../shared/use-debounced";
-import { entriesMessages } from "./messages";
 
 /** An entry a relation picker shows. `title` falls back to the slug on the server, and to "Untitled" here. */
 export interface RelationEntry {
@@ -43,7 +42,6 @@ export function useRelationSearch({
 	enabled?: boolean;
 }) {
 	const site = useSite();
-	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
 	const [query, setQuery] = useState("");
 	// Every entry seen so far (results, lookups, created ones) by id, and the ids a lookup already answered for.

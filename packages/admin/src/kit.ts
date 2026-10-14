@@ -5,6 +5,7 @@
 
 export { apiKeysKeys, useApiKeys } from "./api/api-keys";
 export { commonMessages } from "./lib/common.messages";
+export { useHydratedQuery } from "./lib/hooks/use-hydrated-query";
 export { enumCodec, stringCodec, usePreference } from "./lib/hooks/use-preference";
 export { useSaveShortcut } from "./lib/hooks/use-save-shortcut";
 export { isComposingKey } from "./lib/keyboard";

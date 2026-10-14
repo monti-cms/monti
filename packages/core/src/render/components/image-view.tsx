@@ -64,7 +64,6 @@ export function CmsImageView({
 					...transform.wrapperStyle,
 				}}
 			>
-				{/* biome-ignore lint/performance/noImgElement: public addresses differ per site, so next/image is not used */}
 				<img
 					alt={decorative ? "" : alt}
 					loading="lazy"
@@ -81,7 +80,6 @@ export function CmsImageView({
 		);
 	}
 	return (
-		// biome-ignore lint/performance/noImgElement: public addresses differ per site, so next/image is not used
 		<img
 			alt={decorative ? "" : alt}
 			className="cms-image-plain"

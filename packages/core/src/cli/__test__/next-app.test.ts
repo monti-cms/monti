@@ -31,6 +31,7 @@ describe("suppressHydrationWarning on <html>", () => {
 		expect(hasSuppressHydrationWarning('<html lang="en">\n<body />\n</html>')).toBe(false);
 		expect(hasSuppressHydrationWarning('<html lang="en" suppressHydrationWarning>')).toBe(true);
 		expect(hasSuppressHydrationWarning("<html>")).toBe(false);
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the JSX source holds a template literal on purpose
 		const multi = '<html\n  lang="en"\n  className={`${font.variable} antialiased`}\n  suppressHydrationWarning\n>';
 		expect(hasSuppressHydrationWarning(multi)).toBe(true);
 	});

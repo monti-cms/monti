@@ -5,7 +5,8 @@ import { docOf } from "../../../../test/mdx";
 import { para, storedDoc } from "../../../../test/stored-doc";
 import { buildBlockSlashCommands } from "../../../slash-command";
 import { OPAQUE_BLOCK_NAME, storedToTiptap, tiptapToStored } from "../../../tiptap-content";
-import { blockNodeName, insertContentOf } from "..";
+import { blockNodeName } from "..";
+import { insertContentOf } from "../inserts";
 import { addedNodeBlocks, defaultValues } from "../shared";
 
 // Custom blocks of the example config (`packages/core/test/cms.config.ts`): `notice` (editor node container), `embed` (raw-source box).

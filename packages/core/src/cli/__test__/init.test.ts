@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import { parseSchemaFile } from "../../schema-file/format";
 import { printSchemaFile } from "../../schema-file/print";
 import { unifiedDiff } from "../diff";
-import { InitError, initProject } from "../init";
+import { initProject } from "../init";
 import { formatInitReport } from "../init-report";
-import { ProjectWriter } from "../init-writer";
+import { InitError, ProjectWriter } from "../init-writer";
 import { Cancelled } from "../prompt";
 import {
 	CREATE_NEXT_APP,
@@ -578,6 +578,7 @@ describe("monti init tailors what is left to the app", () => {
 			'    <html lang="en" className="dark" suppressHydrationWarning>',
 		);
 		// Long (the shape create-next-app 16 writes): every attribute on its own line, the template literal intact.
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the JSX source holds a template literal on purpose
 		const className = "className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}";
 		const long = await edited(`<html lang="en" ${className}>`);
 		expect(long).toContain(

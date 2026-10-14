@@ -115,7 +115,6 @@ export function MediaDetailPanel({
 				<div className="space-y-3 p-4">
 					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border bg-cms-muted/50">
 						{isImage && media.publicUrl ? (
-							// biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic
 							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
 						) : (
 							<span className="flex flex-col items-center gap-2 text-cms-muted-foreground">

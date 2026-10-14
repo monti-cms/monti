@@ -217,7 +217,6 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 								className="relative inline-block select-none"
 								style={{ touchAction: "none" }}
 							>
-								{/* biome-ignore lint/performance/noImgElement: editor dynamic image */}
 								<img
 									ref={imgRef}
 									src={src}

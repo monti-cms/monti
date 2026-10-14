@@ -85,5 +85,3 @@ export type ErrorCode = keyof typeof ERROR_STATUS;
 
 /** Codes whose message is kept out of the response (an invariant broke; the server log has it). */
 export const HIDDEN_MESSAGE_CODES: ReadonlySet<ErrorCode> = new Set<ErrorCode>(["invalid_state"]);
-
-export const statusOfCode = (code: ErrorCode): number => ERROR_STATUS[code];

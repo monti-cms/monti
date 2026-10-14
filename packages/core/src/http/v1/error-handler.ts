@@ -4,7 +4,6 @@ import { SetupError } from "../../core/problem";
 import { CmsError } from "../../core/store/errors";
 
 export { CmsError, ERROR_STATUS, type ErrorCode };
-export { ServiceError } from "../../core/types";
 
 /**
  * The error body of every answer: `{ error: { code, message, issues?, details? } }`. `details` is machine-readable extra data

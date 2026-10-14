@@ -101,7 +101,7 @@ const post = (over: Partial<Working> = {}): Working => ({
 describe("Bulk metadata ops contract", () => {
 	it("rejects unknown op for the whole request", async () => {
 		const bulk = createBulkService(newFakeStore({}) as never, { site: testSite });
-		await expect(bulk.run({ op: "nope", items: [] } as any)).rejects.toThrowError(
+		await expect(bulk.run({ op: "nope", items: [] } as never)).rejects.toThrowError(
 			expect.objectContaining({ code: "unknown_op" }),
 		);
 	});
@@ -195,7 +195,7 @@ describe("Bulk metadata ops contract", () => {
 		const out = await bulk.run({
 			op: "relation.add",
 			field: many,
-			items: [{ id: "e1", expectedVersion: 0 } as any, { id: "e1", expectedVersion: 3 }],
+			items: [{ id: "e1", expectedVersion: 0 } as never, { id: "e1", expectedVersion: 3 }],
 			ids: ["55555555-5555-4555-8555-555555555555"],
 		});
 		expect(out.results[0]).toEqual({ id: "e1", ok: false, error: "invalid_input" });

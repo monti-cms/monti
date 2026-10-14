@@ -26,9 +26,6 @@ export function withActiveLocale<T>(nextLanguage: string, nextOverrides: Overrid
 	}
 }
 
-/** Current language of definition labels (leading part, e.g. `ko`). English outside `withActiveLocale`. */
-export const activeLanguage = (): string => language;
-
 /**
  * Translator for one dictionary, for the getters of definitions. Picks the language set by `withActiveLocale` on every call. Used in modules the config file reads;
  * code that runs with a site uses `site.createTranslator(bundle)`.

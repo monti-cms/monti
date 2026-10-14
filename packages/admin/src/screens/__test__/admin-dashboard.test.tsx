@@ -420,4 +420,28 @@ describe("taxonomy edit panel — unsaved changes", () => {
 		fireEvent.click(screen.getByRole("button", { name: "태그 추가" }));
 		expect(await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" })).toBeTruthy();
 	});
+
+	it("a link that leaves the list asks first while the panel has changes", async () => {
+		render(
+			<AdminQueryProvider>
+				<a href="/studio/events">elsewhere</a>
+				<AdminClientDashboard />
+			</AdminQueryProvider>,
+		);
+		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
+		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
+		fireEvent.change(await panelName(), { target: { value: "React!" } });
+
+		fireEvent.click(screen.getByRole("link", { name: "elsewhere" }));
+		expect(await screen.findByRole("alertdialog", { name: "저장하지 않은 내용" })).toBeTruthy();
+	});
+
+	it("moving to another collection closes the panel", async () => {
+		renderList();
+		fireEvent.click(await screen.findByRole("button", { name: "리액트" }));
+		await waitFor(async () => expect((await panelName()).value).toBe("리액트"));
+
+		act(() => nav.setSearch("collection=post"));
+		await waitFor(() => expect(screen.queryByRole("textbox", { name: /이름/ })).toBeNull());
+	});
 });

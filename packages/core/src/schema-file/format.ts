@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CONFIG_SOURCE, ConfigError, closestName, type Issue, pathOf, SCHEMA_SOURCE_NAME } from "../config/check/issue";
+import { ConfigError, closestName, type Issue, pathOf, SCHEMA_SOURCE_NAME } from "../config/check/issue";
 import { LOCALE_PREFIX_MODES } from "../config/rules";
 import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/allowed";
 import type { SchemaFile } from "./types";
@@ -410,5 +410,3 @@ export function parseSchemaFile(input: unknown, source = SCHEMA_SOURCE_NAME): Sc
 	if (issues.length > 0) throw new ConfigError(source, issues);
 	return schemaFileShape.parse(input) as unknown as SchemaFile;
 }
-
-export { CONFIG_SOURCE };

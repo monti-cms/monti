@@ -298,7 +298,6 @@ export function ImageInsertDialog({
 										)}
 									>
 										{item.publicUrl ? (
-											// biome-ignore lint/performance/noImgElement: CMS media URLs are dynamic
 											<img src={item.publicUrl} alt="" className="h-20 w-full object-cover" />
 										) : (
 											<span className="flex h-20 items-center justify-center bg-cms-muted">

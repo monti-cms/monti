@@ -15,7 +15,7 @@
 		"example:pack": "node scripts/pack-example.mjs",
 		"preview:example": "node scripts/preview-example.mjs",
 		"prepare": "husky",
-		"knip": "knip --include files,exports,types,duplicates --workspace packages/admin --workspace packages/ai --workspace packages/git-sync --workspace packages/seo --workspace packages/bareun --workspace packages/blocks"
+		"knip": "knip --include files,exports,types,duplicates && knip --production --include exports,types"
 	},
 	"lint-staged": {
 		"*.{js,jsx,ts,tsx,mjs}": [

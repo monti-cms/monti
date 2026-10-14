@@ -9,11 +9,9 @@ import * as React from "react";
 import { useIsMobile } from "../lib/hooks/use-mobile";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
-import { Input } from "./input";
 import { uiMessages } from "./messages";
 import { Separator } from "./separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./sheet";
-import { Skeleton } from "./skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";

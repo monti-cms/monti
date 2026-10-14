@@ -35,6 +35,8 @@ import {
 	Textarea,
 	useConfirm,
 	useDraftEditor,
+	useHydratedQuery,
+	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useSite, useTranslator } from "@monti-cms/core/client";
@@ -156,7 +158,8 @@ export function AiManager() {
 	const { engineLabel } = useLabels();
 	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
-	const featuresQuery = useAiActions();
+	// The layout's AI slot provider asks for the same list, so it can be in the cache before this page hydrates.
+	const featuresQuery = useHydratedQuery(useAiActions());
 	const _settingsQuery = useAiSettings();
 	const _sharedQuery = useAiShared();
 	const features = featuresQuery.data?.items ?? [];
@@ -239,6 +242,8 @@ export function AiManager() {
 	const shown = opened ? (editor.draft ?? opened.saved) : null;
 	const editing: Editing | null = opened && shown ? { ...shown, isNew: opened.isNew } : null;
 	const featureDirty = opened !== null && editor.dirty;
+	// A link that leaves the screen (the sidebar) asks first while any open editor has changes.
+	const { dialog: guardDialog } = useUnsavedGuard(featureDirty || connectionDirty || sharedDirty);
 	const changeDraft = (change: (draft: FeatureDraft) => FeatureDraft) =>
 		editor.update((draft) => change(draft ?? (opened as { saved: FeatureDraft }).saved));
 
@@ -477,6 +482,7 @@ export function AiManager() {
 				</TabsContent>
 			</Tabs>
 			{dialog}
+			{guardDialog}
 		</div>
 	);
 }

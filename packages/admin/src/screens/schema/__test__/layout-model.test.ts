@@ -7,7 +7,6 @@ import {
 	editGroup,
 	hasTabLevel,
 	moveFieldBy,
-	moveFieldToTab,
 	moveGroup,
 	moveGroupBy,
 	moveGroupToTab,
@@ -156,7 +155,7 @@ describe("layout tree", () => {
 		expect(tree.tabs.map((tab) => tab.name)).toEqual([DEFAULT, "More", "SEO"]);
 		tree = addGroup(tree, 1, "Details");
 		tree = placeField(tree, "summary", 1, 0);
-		tree = moveFieldToTab(tree, "slug", 1);
+		tree = placeUngrouped(tree, "slug", 1);
 		const saved = withTree(collection, tree);
 		expect(Object.keys(fieldsOf(saved))).toEqual(["title", "body", "cover", "summary", "slug", "seoTitle"]);
 		expect(saved.layout).toEqual([
@@ -276,7 +275,7 @@ describe("layout tree", () => {
 		expect(tree.tabs[1]?.name).toBe("Renamed");
 		expect(renameTab(tree, 0, "X").tabs[0]?.name).toBe(DEFAULT);
 		tree = addGroup(tree, 1, "G");
-		tree = placeField(moveFieldToTab(tree, "cover", 1), "cover", 1, 0);
+		tree = placeField(placeUngrouped(tree, "cover", 1), "cover", 1, 0);
 		tree = removeTab(tree, 1);
 		expect(shape(tree)[0]?.blocks).toEqual([["slug"], ["G", ["cover"]]]);
 		expect(tree.tabs.map((tab) => tab.name)).toEqual([DEFAULT, "More"]);

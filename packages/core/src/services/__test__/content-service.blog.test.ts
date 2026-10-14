@@ -47,7 +47,7 @@ describe("ContentService Contract (blog config)", () => {
 				].join("\n\n"),
 			),
 		} as never);
-		expect((snapshot as any).internalLinks).toEqual([
+		expect((snapshot as unknown as { internalLinks: unknown }).internalLinks).toEqual([
 			expect.objectContaining({
 				collection: "post",
 				slug: "draft-post",

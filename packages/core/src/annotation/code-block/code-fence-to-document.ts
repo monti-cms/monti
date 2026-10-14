@@ -828,6 +828,7 @@ export const fromCodeFenceToCodeBlockDocument = (
 	};
 };
 
+/** @internal Internals the tests reach. */
 export const __testable__ = {
 	parseCodeFenceMeta,
 	parseAnnotationAttrs,

@@ -1,5 +1,3 @@
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 export type CommentSyntax = {
 	prefix: string;
 	postfix: string;
@@ -57,8 +55,4 @@ export const formatAnnotationComment = (commentSyntax: CommentSyntax, body: stri
 	const postfix = commentSyntax.postfix.trim();
 
 	return [prefix, body, postfix].filter((segment) => segment.length > 0).join(" ");
-};
-
-export const __testable__ = {
-	escapeRegExp,
 };

@@ -55,6 +55,7 @@ const ENGLISH: Record<SchemaLiteralIssueCode, (p: SchemaLiteralIssueParams) => s
 	comment_unclosed: () => "a comment that is never closed",
 	string_unclosed: () => "a string that is never closed",
 	escape_malformed: () => "a malformed escape in a string",
+	// biome-ignore lint/suspicious/noTemplateCurlyInString: names the syntax it refuses
 	template_expression: () => "a template expression `${...}`",
 	expected_token: (p) => `expected ${p.what ?? `\`${p.expected}\``}${found(p)}`,
 	expected_value: () => "expected a value",

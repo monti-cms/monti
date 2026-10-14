@@ -125,7 +125,6 @@ const Image = ({
 }: ImageProps) => {
 	if (plain && src) {
 		// A Markdown image: just the picture (a block of its own sits in a paragraph, as Markdown makes it).
-		// biome-ignore lint/performance/noImgElement: public addresses differ per site, so next/image is not used
 		const image = <img src={src} alt={alt} title={title} />;
 		return inline ? image : <p>{image}</p>;
 	}

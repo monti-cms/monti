@@ -2,7 +2,7 @@ import type { DecorationItem } from "shiki";
 import { describe, expect, it } from "vitest";
 import type { AnnotationConfig, CodeBlockDocument } from "../../../code-block";
 import { fromCodeFenceToCodeBlockDocument } from "../../../code-block";
-import * as remarkModule from "../annotation-payload";
+import { __testable__ } from "../annotation-payload";
 
 type ComposePayloadResult = {
 	code: string;
@@ -26,16 +26,11 @@ type ComposePayloadResult = {
 	}>;
 };
 
-const fromCodeBlockDocumentToShikiAnnotationPayload = (
-	remarkModule as unknown as {
-		__testable__?: {
-			fromCodeBlockDocumentToShikiAnnotationPayload?: (
-				document: CodeBlockDocument,
-				annotationConfig?: AnnotationConfig,
-			) => ComposePayloadResult;
-		};
-	}
-).__testable__?.fromCodeBlockDocumentToShikiAnnotationPayload;
+const fromCodeBlockDocumentToShikiAnnotationPayload =
+	__testable__.fromCodeBlockDocumentToShikiAnnotationPayload as unknown as (
+		document: CodeBlockDocument,
+		annotationConfig?: AnnotationConfig,
+	) => ComposePayloadResult;
 
 const testAnnotationConfig: AnnotationConfig = {
 	annotations: [

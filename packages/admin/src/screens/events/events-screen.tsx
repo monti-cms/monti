@@ -124,6 +124,9 @@ export function EventsScreen() {
 		placeholderData: keepPreviousData,
 	});
 	const items = listQuery.data?.items ?? [];
+	/** Deliveries the retry can still send (pending or failed and due); recorded, delivered and dead ones give it nothing to do. */
+	const counts = listQuery.data?.counts;
+	const waiting = counts ? counts.pending + counts.failed : 0;
 	const changeFilter = (filter: EventsFilter) => update({ filter });
 	const filterOptions = EVENTS_FILTERS.map((value) => ({ value, label: t(`filter.${value}`) }));
 	const error = listQuery.error && !listQuery.data ? errorText(site, listQuery.error, t("list.loadFailed")) : null;
@@ -141,6 +144,7 @@ export function EventsScreen() {
 		invalidate: [eventsKeys.all],
 	});
 	const retryAll = useCmsMutation({
+		// biome-ignore lint/suspicious/noConfusingVoidType: a mutation without variables, so `mutate()` takes no argument
 		fn: (_: void, { site }) => retryAllEvents(site, t("retryAll.failed")),
 		success: (result) => t("retryAll.done", { delivered: result.delivered, failed: result.failed, dead: result.dead }),
 		failure: t("retryAll.failed"),
@@ -159,7 +163,7 @@ export function EventsScreen() {
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-			{items.length > 0 && (
+			{waiting > 0 && (
 				<PageActions>
 					<Button
 						type="button"

@@ -33,6 +33,7 @@ import { formatDateOnly } from "../shared/format-date";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { ListPane, ListRow, MasterDetail } from "../shared/master-detail";
 import { useDraftEditor } from "../shared/use-draft-editor";
+import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { templatesMessages } from "./messages";
 
 const textNode = (text: string): CmsNode => ({ type: "text", text });
@@ -161,9 +162,16 @@ export function TemplateManager() {
 	/** Whether the open template has unsaved changes. The edit panel reports it. */
 	const dirtyRef = useRef(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
+	// The same as state, for the guard on links that leave the screen.
+	const [dirty, setDirtyState] = useState(false);
+	const { dialog: guardDialog } = useUnsavedGuard(dirty);
+	const setDirty = (next: boolean) => {
+		dirtyRef.current = next;
+		setDirtyState(next);
+	};
 
 	const show = (template: Partial<BodyTemplate> | null) => {
-		dirtyRef.current = false;
+		setDirty(false);
 		setActiveTemplate(template);
 	};
 
@@ -273,9 +281,7 @@ export function TemplateManager() {
 						template={activeTemplate}
 						onSaved={saved}
 						onCancel={() => void closeEditor()}
-						onDirtyChange={(dirty) => {
-							dirtyRef.current = dirty;
-						}}
+						onDirtyChange={setDirty}
 					/>
 				) : (
 					<EmptyState
@@ -286,6 +292,7 @@ export function TemplateManager() {
 				)}
 			</MasterDetail>
 			{dialog}
+			{guardDialog}
 		</div>
 	);
 }

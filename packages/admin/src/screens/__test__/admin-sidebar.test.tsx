@@ -169,9 +169,7 @@ describe("folder tree under a collection", () => {
 		// Under the collection entry, before the next collection.
 		const content = menu(t("sidebar.content"));
 		const order = [...content.querySelectorAll("a, ul[aria-label]")].map((node) => node.textContent?.trim() ?? "");
-		expect(order.findIndex((text) => text.startsWith(t("sidebar.folderAll")))).toBeGreaterThan(
-			order.findIndex((text) => text === name),
-		);
+		expect(order.findIndex((text) => text.startsWith(t("sidebar.folderAll")))).toBeGreaterThan(order.indexOf(name));
 	});
 
 	it("hides the subfolders of a collapsed folder, and the chevron opens them", () => {

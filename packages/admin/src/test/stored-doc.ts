@@ -52,12 +52,6 @@ export const table = (
 	})),
 });
 
-const dropRowIds = (node: CmsNode): CmsNode => {
-	const { id: _id, ...rest } = node;
-	const kept = node.type === "tableRow" || node.type === "tableCell" ? rest : node;
-	return kept.content ? { ...kept, content: kept.content.map(dropRowIds) } : kept;
-};
-
 const dropIds = (node: CmsNode): CmsNode => {
 	const { id: _id, ...rest } = node;
 	return rest.content ? { ...rest, content: rest.content.map(dropIds) } : rest;

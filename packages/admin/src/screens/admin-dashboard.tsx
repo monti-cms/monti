@@ -135,6 +135,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 			</div>
 			{list.folderActions.dialogs}
 			{list.confirmDialog}
+			{list.guardDialog}
 		</>
 	);
 }

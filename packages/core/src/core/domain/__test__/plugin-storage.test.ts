@@ -5,7 +5,6 @@ import {
 	assertMigrationName,
 	assertStorageKey,
 	assertStorageName,
-	assertStoredVersion,
 	serializeStorageValue,
 	storageConflict,
 	storageNotFound,
@@ -48,8 +47,6 @@ describe("plugin storage rules", () => {
 		for (const version of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
 			expect(codeOf(() => assertExpectedVersionNumber(version))).toBe("invalid_input");
 		}
-		expect(codeOf(() => assertStoredVersion(1))).toBeNull();
-		expect(codeOf(() => assertStoredVersion(0))).toBe("invalid_input");
 	});
 
 	it("stores values as JSON text, and rejects what JSON cannot hold", () => {

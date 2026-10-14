@@ -28,19 +28,17 @@ function Harness({ doc, onReady }: { doc: StoredDocument; onReady: (editor: Edit
 	return <EditorContent editor={editor} />;
 }
 
-const mount = async (doc: StoredDocument, wrap: (node: React.ReactNode) => React.ReactNode = (node) => node) => {
+const mount = async (doc: StoredDocument, wrap: (node: React.ReactElement) => React.ReactElement = (node) => node) => {
 	let editor: Editor | null = null;
 	renderWithSite(
-		<>
-			{wrap(
-				<Harness
-					doc={doc}
-					onReady={(ready) => {
-						editor = ready;
-					}}
-				/>,
-			)}
-		</>,
+		wrap(
+			<Harness
+				doc={doc}
+				onReady={(ready) => {
+					editor = ready;
+				}}
+			/>,
+		),
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	await waitFor(() => expect(document.querySelector("[data-cms-custom-block]")).not.toBeNull());

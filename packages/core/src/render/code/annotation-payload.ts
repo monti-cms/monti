@@ -166,6 +166,7 @@ export const fromCodeBlockDocumentToShikiAnnotationPayload = (
 	};
 };
 
+/** @internal Internals the tests reach. */
 export const __testable__ = {
 	fromCodeBlockDocumentToShikiAnnotationPayload,
 	resolveStyle,
