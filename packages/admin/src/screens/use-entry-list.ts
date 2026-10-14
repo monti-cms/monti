@@ -44,6 +44,7 @@ import { applyOptimistic, type OptimisticOp } from "./shared/list-cache";
 import { nounVars } from "./shared/noun.messages";
 import { useFolderActions } from "./shared/use-folder-actions";
 import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
+import { useUnsavedGuard } from "./shared/use-unsaved-guard";
 
 export type ListMode = "list" | "trash";
 
@@ -292,9 +293,16 @@ export function useEntryList(mode: ListMode) {
 	const { confirm, confirmDiscard, dialog: confirmDialog } = useConfirm();
 	/** Whether the taxonomy edit panel has unsaved changes. The panel reports it. */
 	const recordDirtyRef = useRef(false);
+	/** The same, as state, for the guard on links that leave the list (the sidebar, another collection). */
+	const [recordDirty, setRecordDirtyState] = useState(false);
+	const { dialog: guardDialog } = useUnsavedGuard(recordDirty);
+	const setRecordDirty = (dirty: boolean) => {
+		recordDirtyRef.current = dirty;
+		setRecordDirtyState(dirty);
+	};
 	/** Opens the taxonomy edit panel directly (without asking). Used to keep a saved item open as is. */
 	const showRecord = (target: RecordTarget) => {
-		recordDirtyRef.current = false;
+		setRecordDirty(false);
 		setRecordTarget(target);
 	};
 	/** Opens the taxonomy edit panel. If there are unsaved changes, asks first whether to discard them. */
@@ -302,9 +310,14 @@ export function useEntryList(mode: ListMode) {
 		if (await confirmDiscard(recordDirtyRef.current)) showRecord(target);
 	};
 	const closeRecord = () => {
-		recordDirtyRef.current = false;
+		setRecordDirty(false);
 		setRecordTarget(null);
 	};
+	// The panel belongs to the collection it was opened in: moving to another collection (the guard asked first if it had changes) closes it.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: close only when the collection changes
+	useEffect(() => {
+		if (recordTarget && recordTarget.collection !== state.collection) closeRecord();
+	}, [state.collection]);
 	// The address's `open` (an item opened from, e.g., media usages) opens once into the item slot and is then removed from the address.
 	const searchParams = useAdminSearchParams();
 	const openParam = searchParams.get(OPEN_ITEM_PARAM);
@@ -447,11 +460,11 @@ export function useEntryList(mode: ListMode) {
 		openRecord,
 		showRecord,
 		closeRecord,
-		setRecordDirty: (dirty: boolean) => {
-			recordDirtyRef.current = dirty;
-		},
+		setRecordDirty,
 		/** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
 		confirmDialog,
+		/** The discard dialog of a link clicked while the panel has changes. Render once per screen. */
+		guardDialog,
 		reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: entriesKeys.taxonomy() }),
 		invalidateEntries,
 		moveEntries,

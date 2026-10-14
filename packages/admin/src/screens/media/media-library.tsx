@@ -52,6 +52,7 @@ import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
 import { useDebouncedInput } from "../shared/use-debounced";
+import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { MediaDetailPanel } from "./media-detail-panel";
 import { mediaUsages, usageNoteLabel } from "./media-item";
 import { MediaGrid, MediaTable } from "./media-views";
@@ -238,8 +239,12 @@ export function MediaLibrary() {
 		invalidate: [mediaKeys.all],
 	});
 
+	// The same as state, for the guard on links that leave the library while the open file has changes.
+	const [detailDirty, setDetailDirtyState] = useState(false);
+	const { dialog: guardDialog } = useUnsavedGuard(detailDirty);
 	const setDetailDirty = useCallback((dirty: boolean) => {
 		detailDirtyRef.current = dirty;
+		setDetailDirtyState(dirty);
 	}, []);
 
 	const requestDelete = async (media: MediaItem) => {
@@ -455,6 +460,7 @@ export function MediaLibrary() {
 				)}
 			</div>
 			{dialog}
+			{guardDialog}
 		</AdminShell>
 	);
 }
