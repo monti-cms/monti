@@ -168,6 +168,7 @@ export const fromCodeBlockDocumentToCodeFence = (
 	};
 };
 
+/** @internal Internals the tests reach. */
 export const __testable__ = {
 	fromLineValueToLeadingIndent,
 	fromDocumentMetaToCodeFenceMeta,

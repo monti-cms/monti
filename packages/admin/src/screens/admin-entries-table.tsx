@@ -12,7 +12,7 @@ import { ColumnResizeHandle } from "./column-resize-handle";
 import { ColumnSettingsPopover } from "./entries-table-column-settings";
 import { EntriesTableFolderRows } from "./entries-table-folder-rows";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths";
-import { columnConfig, columnLabel, columnsFor } from "./list-columns";
+import { columnConfig, columnLabel } from "./list-columns";
 import { clearFiltersPatch, isFiltered, type ListState } from "./list-state";
 import { screensMessages } from "./messages";
 import { ActionContextMenu, type MenuAction } from "./shared/action-menu";
@@ -24,8 +24,6 @@ import { OPEN_ITEM } from "./shared/side-panel";
 import type { FolderActions } from "./shared/use-folder-actions";
 import type { TaxonomyOptions } from "./shared/use-taxonomy";
 import { useEntriesTable } from "./use-entries-table";
-
-export { columnsFor };
 
 interface TableProps {
 	collection: string;

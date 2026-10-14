@@ -1,7 +1,8 @@
 import { Editor, type JSONContent } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { addedBlockInsertActions, addedNodeBlocks, blockNodeName } from "../blocks/added";
+import { addedBlockInsertActions, blockNodeName } from "../blocks/added";
+import { addedNodeBlocks } from "../blocks/added/shared";
 import { buildEditorExtensions } from "../extensions";
 import { buildBlockSlashCommands } from "../slash-command";
 import { storedToTiptap, tiptapToStored } from "../tiptap-content";

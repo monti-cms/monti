@@ -29,7 +29,7 @@ jobs:
       # Korean strings in package runtime code live only in the message dictionaries (messages.ts).
       - run: pnpm check:korean
       - run: pnpm typecheck
-      # Files and exports of the admin and the plugin admin packages that nothing uses.
+      # Files and exports of the packages that nothing uses, and exports only tests use (a test seam is tagged @internal).
       - run: pnpm knip
       - run: pnpm build
 

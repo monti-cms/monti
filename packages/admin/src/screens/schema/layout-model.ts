@@ -278,9 +278,6 @@ export function moveGroupBy(tree: Tree, ref: BlockRef, delta: -1 | 1): Tree {
 export const moveGroupToTab = (tree: Tree, from: BlockRef, tab: number): Tree =>
 	moveGroup(tree, from, { tab, block: Number.MAX_SAFE_INTEGER });
 
-/** Moves a field, in no group, to the end of a tab. */
-export const moveFieldToTab = (tree: Tree, name: string, tab: number): Tree => placeUngrouped(tree, name, tab);
-
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */
 export function tabProblem(tree: Tree, name: string, except?: number): "empty" | "taken" | null {
 	if (name.trim() === "") return "empty";

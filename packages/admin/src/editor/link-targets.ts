@@ -192,12 +192,18 @@ export function useLinkPaths(ids: readonly string[]): (id: string) => string | n
 	return (id) => linkPathOf(site, id);
 }
 
-/** Forgets every lookup of the site. For tests, which share the module. */
+/**
+ * Forgets every lookup of the site. For tests, which share the module.
+ * @internal For tests.
+ */
 export function resetLinkTargets(site: Site): void {
 	storeOf(site).reset();
 }
 
-/** Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated. */
+/**
+ * Looks the entry up when it is not known yet or the lookup is old. Safe to call often: a lookup in progress is not repeated.
+ * @internal For tests; the editor asks through the link view.
+ */
 export function requestLinkTarget(site: Site, id: string): void {
 	storeOf(site).request(id);
 }
