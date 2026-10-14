@@ -120,5 +120,3 @@ export function createSecretsVault(master: { readonly secret?: string; readonly 
 		},
 	};
 }
-
-export type SecretsVault = ReturnType<typeof createSecretsVault>;

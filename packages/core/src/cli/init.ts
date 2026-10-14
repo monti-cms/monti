@@ -21,8 +21,7 @@ import type { Cancelled, Prompter } from "./prompt";
  * (or passes `overwrite`).
  */
 
-export type { InitHost, InitOptions, InitReport, InitStep, InstallCommand } from "./init-types";
-export { InitError } from "./init-writer";
+export type { InitOptions, InitReport } from "./init-types";
 
 /** The detect stage: reads the app and refuses one `monti init` cannot work with. */
 function detectStage(options: InitOptions): { app: DetectedApp; manager: PackageManager } {

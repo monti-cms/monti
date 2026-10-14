@@ -25,13 +25,6 @@ export function assertStorageKey(key: string): void {
 		throw new CmsError("plugin storage: a key cannot be empty", "invalid_input");
 }
 
-/** What a stored version number may be: a positive integer (1 is the first write). */
-export function assertStoredVersion(version: number): void {
-	if (!Number.isInteger(version) || version < 1) {
-		throw new CmsError("plugin storage: a version is a positive integer", "invalid_input");
-	}
-}
-
 /** `expectedVersion`: 0 to create, otherwise a version that was read before. */
 export function assertExpectedVersionNumber(version: number): void {
 	if (!Number.isInteger(version) || version < 0) {

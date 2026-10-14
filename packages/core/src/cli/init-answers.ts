@@ -8,7 +8,6 @@ export const DEFAULT_INIT_LOCALE = "en";
 export const DEFAULT_INIT_TIME_ZONE = "UTC";
 /** The admin path `monti init` asks for and writes by default. */
 export const DEFAULT_INIT_ADMIN_PATH = "/studio";
-export const DEFAULT_SITE_URL = "http://localhost:3000";
 
 /** What the questions of `monti init` decided. Every field has a flag. */
 export interface InitAnswers {

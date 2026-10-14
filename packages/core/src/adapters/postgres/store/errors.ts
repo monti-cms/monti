@@ -11,10 +11,6 @@ export function isUniqueViolation(err: unknown, constraints: string | readonly s
 	return code === "23505" && typeof constraint === "string" && names.includes(constraint);
 }
 
-export function isForeignKeyViolation(err: unknown): boolean {
-	return pgError(err).code === "23503";
-}
-
 /** Deadlock (40P01) and serialization failure (40001). Treated as a concurrent publish conflict. */
 export function isTransactionConflict(err: unknown): boolean {
 	const { code } = pgError(err);

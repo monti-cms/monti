@@ -120,10 +120,6 @@ export function resolveBlocksChecked(sources: BlockSources | undefined): {
 	return { blocks: [...BUILTIN_BLOCKS, ...extra], issues: list.issues };
 }
 
-/** The issues of the blocks that were added. */
-export const checkBlocks = (sources: BlockSources | undefined): readonly Issue[] =>
-	resolveBlocksChecked(sources).issues;
-
 /** The block list for the config. Throws a {@link ConfigError} for an invalid config. */
 export function resolveBlocks(sources: BlockSources | undefined): readonly BlockDefinition[] {
 	const { blocks, issues } = resolveBlocksChecked(sources);

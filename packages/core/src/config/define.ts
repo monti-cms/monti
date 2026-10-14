@@ -17,7 +17,7 @@ import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schem
 import { checkCollections } from "./check/collections";
 import { CONFIG_SOURCE, type Issue, IssueList, throwIssues } from "./check/issue";
 import { checkSite } from "./check/site";
-import { LOCALE_PREFIX_MODES, type LocalePrefixMode } from "./rules";
+import type { LocalePrefixMode } from "./rules";
 
 /**
  * Site config (`monti.config.ts`) schema. Each site lists its collections and locales here, wraps them in `defineSite`, and exports the result as the default export.
@@ -71,7 +71,7 @@ export interface SiteConfig {
 	readonly home?: string;
 }
 
-export { LOCALE_PREFIX_MODES, type LocalePrefixMode };
+export type { LocalePrefixMode };
 
 export interface AdminConfig {
 	/**

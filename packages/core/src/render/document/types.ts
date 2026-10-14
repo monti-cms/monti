@@ -240,17 +240,6 @@ export interface MarkProps {
 	readonly ctx: RenderContext;
 }
 
-export type CoreMarkName =
-	| "bold"
-	| "italic"
-	| "strike"
-	| "underline"
-	| "superscript"
-	| "subscript"
-	| "code"
-	| "untranslated"
-	| "link";
-
 export interface CoreMarkComponents {
 	readonly link?: ComponentType<LinkProps>;
 	readonly bold?: ComponentType<MarkProps>;
