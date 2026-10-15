@@ -149,6 +149,8 @@ export interface AiActionDefinition<I extends AiInputs = AiInputs> {
 	readonly stream?: boolean;
 	/** Enabled initially? Defaults to enabled. */
 	readonly enabled?: boolean;
+	/** Hidden in the admin list by default? Defaults to false. */
+	readonly hidden?: boolean;
 	readonly attach?: readonly AiAttach[];
 	/** Text the dev-only fake connection (`CMS_AI_FAKE=1`) uses as this action's answer, built from the received inputs (name -> text). */
 	readonly fake?: (input: Readonly<Record<string, string>>) => string;

@@ -228,6 +228,8 @@ export const aiActionOverrideSchemaOf = (t: CoreText) =>
 	z
 		.object({
 			enabled: z.boolean(),
+			hidden: z.boolean(),
+			label: z.string().trim().min(1).max(60),
 			askInstruction: z.boolean(),
 			instant: z.boolean(),
 			/** Id of the connection to use. If `null`, the first connection matching the mode. */
@@ -250,6 +252,7 @@ export type AiActionOverride = z.output<typeof aiActionOverrideSchema>;
 export interface ResolvedAiAction {
 	readonly key: string;
 	readonly label: string;
+	readonly hidden: boolean;
 	readonly input: AiInputs;
 	readonly send: readonly string[];
 	readonly prompt: string;
@@ -279,6 +282,8 @@ export interface ResolvedAiAction {
 /** Names of editable values. */
 export const EDITABLE_KEYS = [
 	"enabled",
+	"hidden",
+	"label",
 	"askInstruction",
 	"instant",
 	"providerId",
@@ -316,7 +321,8 @@ export function resolveAction(
 	const send = inputNames.filter((name) => chosen.includes(name) || required.includes(name));
 	return {
 		key,
-		label: definition.label,
+		label: override.label?.trim() || definition.label,
+		hidden: override.hidden ?? definition.hidden ?? false,
 		input: definition.input,
 		send,
 		prompt: override.prompt ?? definition.prompt,

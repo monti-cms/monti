@@ -189,7 +189,9 @@ export function AiSlotProvider({ children }: { children: ReactNode }) {
 
 	const sources = useMemo<SlotSource[]>(() => {
 		const usable = new Set(data?.usable ?? []);
-		const actions = data ? data.items.filter((action) => action.enabled && usable.has(action.key)) : [];
+		const actions = data
+			? data.items.filter((action) => action.enabled && !action.hidden && usable.has(action.key))
+			: [];
 		const source: SlotSource = (place) =>
 			actions
 				.filter((action) => action.attach.some((attach) => attachedTo(attach, place)))

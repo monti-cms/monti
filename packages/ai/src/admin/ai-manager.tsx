@@ -41,7 +41,7 @@ import {
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
@@ -90,6 +90,8 @@ function usePlaceLabel() {
 type Editable = Pick<
 	AiActionView,
 	| "enabled"
+	| "hidden"
+	| "label"
 	| "askInstruction"
 	| "instant"
 	| "providerId"
@@ -103,6 +105,8 @@ type Editable = Pick<
 
 const editableOf = (action: AiActionView): Editable => ({
 	enabled: action.enabled,
+	hidden: action.hidden,
+	label: action.label,
 	askInstruction: action.askInstruction,
 	instant: action.instant,
 	providerId: action.providerId,
@@ -229,6 +233,72 @@ export function AiManager() {
 	});
 	const saving = saveMutation.isPending;
 	const deleting = removeMutation.isPending;
+
+	const [showHidden, setShowHidden] = useState(false);
+
+	const quickPatchMutation = useCmsMutation<{ feature: AiActionView; patch: Record<string, unknown> }, AiActionView>({
+		fn: ({ feature, patch }, { site }) =>
+			updateAiAction(
+				site,
+				feature.key,
+				{
+					expectedVersion: feature.version,
+					value: patch,
+				},
+				tc("saveFailed"),
+			),
+		failure: tc("saveFailed"),
+		inline: true,
+		invalidate: [aiKeys.actions()],
+		onSuccess: (saved) => {
+			replaceInCache(saved);
+			if (editing && !editing.isNew && editing.feature.key === saved.key) {
+				setOpened({ saved: draftOfFeature(saved), isNew: false });
+			}
+		},
+		onError: (error) => setFormError(errorText(site, error, tc("saveFailed"))),
+	});
+
+	const handleToggle = (feature: AiActionView, enabled: boolean) => {
+		if (editing && !editing.isNew && editing.feature.key === feature.key) {
+			changeDraft((draft) => ({ ...draft, spec: { ...draft.spec, enabled } }));
+		}
+		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+			data
+				? {
+						...data,
+						items: data.items.map((item) => (item.key === feature.key ? { ...item, enabled } : item)),
+					}
+				: data,
+		);
+		quickPatchMutation.mutate({ feature, patch: { enabled } });
+	};
+
+	const handleToggleHidden = (feature: AiActionView, hidden: boolean) => {
+		if (editing && !editing.isNew && editing.feature.key === feature.key) {
+			changeDraft((draft) => ({ ...draft, spec: { ...draft.spec, hidden } }));
+		}
+		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+			data
+				? {
+						...data,
+						items: data.items.map((item) => (item.key === feature.key ? { ...item, hidden } : item)),
+					}
+				: data,
+		);
+		quickPatchMutation.mutate({ feature, patch: { hidden } });
+	};
+
+	const restoreAllHidden = async () => {
+		const hiddenFeatures = features.filter((f) => f.hidden);
+		for (const f of hiddenFeatures) {
+			await updateAiAction(site, f.key, {
+				expectedVersion: f.version,
+				value: { hidden: false },
+			});
+		}
+		void queryClient.invalidateQueries({ queryKey: aiKeys.actions() });
+	};
 
 	// The draft follows what was opened; a closed editor holds no draft.
 	const editor = useDraftEditor<FeatureDraft | null>({
@@ -397,23 +467,87 @@ export function AiManager() {
 								}
 							>
 								{[
-									...features.map((feature) => (
-										<ListRow
-											key={feature.key}
-											title={feature.label}
-											status={
-												!feature.enabled
-													? t("status.off")
-													: usable.has(feature.key)
-														? null
-														: t("status.needsConnection")
-											}
-											detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
-											// While a new unsaved action is open, no other row in the list is shown as open.
-											current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
-											onClick={() => void openFeature(feature)}
-										/>
-									)),
+									...features
+										.filter((feature) => !feature.hidden)
+										.map((feature) => (
+											<ListRow
+												key={feature.key}
+												title={feature.label}
+												status={
+													!feature.enabled
+														? t("status.off")
+														: usable.has(feature.key)
+															? null
+															: t("status.needsConnection")
+												}
+												detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
+												// While a new unsaved action is open, no other row in the list is shown as open.
+												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
+												onClick={() => void openFeature(feature)}
+												trailing={
+													<Switch
+														size="sm"
+														checked={feature.enabled}
+														aria-label={t("toggle.enableAction", { label: feature.label })}
+														onClick={(e) => e.stopPropagation()}
+														onCheckedChange={(checked) => handleToggle(feature, checked)}
+													/>
+												}
+												actions={
+													feature.custom
+														? [
+																{
+																	kind: "item",
+																	label: tc("delete"),
+																	icon: Trash2,
+																	onSelect: () => void remove(feature),
+																	destructive: true,
+																},
+															]
+														: [
+																{
+																	kind: "item",
+																	label: t("action.hide"),
+																	icon: EyeOff,
+																	onSelect: () => handleToggleHidden(feature, true),
+																},
+															]
+												}
+												actionsLabel={feature.label}
+											/>
+										)),
+									...(showHidden
+										? features
+												.filter((feature) => feature.hidden)
+												.map((feature) => (
+													<ListRow
+														key={feature.key}
+														title={feature.label}
+														status={t("status.hidden")}
+														detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}`}
+														current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
+														onClick={() => void openFeature(feature)}
+														trailing={
+															<Switch
+																size="sm"
+																checked={feature.enabled}
+																aria-label={t("toggle.enableAction", { label: feature.label })}
+																onClick={(e) => e.stopPropagation()}
+																onCheckedChange={(checked) => handleToggle(feature, checked)}
+															/>
+														}
+														actions={[
+															{
+																kind: "item",
+																label: t("action.unhide"),
+																icon: Eye,
+																onSelect: () => handleToggleHidden(feature, false),
+															},
+														]}
+														actionsLabel={feature.label}
+													/>
+												))
+										: []),
 									...(editing?.isNew
 										? [
 												<ListRow
@@ -424,6 +558,33 @@ export function AiManager() {
 													current
 													onClick={() => {}}
 												/>,
+											]
+										: []),
+									...(features.some((feature) => feature.hidden)
+										? [
+												<li key="hidden-toggle" className="flex items-center justify-between border-t p-2">
+													<Button
+														type="button"
+														size="xs"
+														variant="ghost"
+														className="text-cms-muted-foreground hover:text-cms-foreground"
+														onClick={() => setShowHidden(!showHidden)}
+													>
+														{showHidden
+															? t("list.hideHidden", {
+																	count: features.filter((feature) => feature.hidden).length,
+																})
+															: t("list.showHidden", {
+																	count: features.filter((feature) => feature.hidden).length,
+																})}
+													</Button>
+													{showHidden && (
+														<Button type="button" size="xs" variant="outline" onClick={() => void restoreAllHidden()}>
+															<RotateCcw aria-hidden />
+															{t("button.restoreHidden")}
+														</Button>
+													)}
+												</li>,
 											]
 										: []),
 								]}
@@ -487,7 +648,7 @@ export function AiManager() {
 	);
 }
 
-/** List input for the one-of-values check. One value per line; blank lines are dropped. */
+/** Chip input for the allowed values check. Users can add tags by typing and pressing Enter or comma, and remove tags with backspace or clicking x. */
 function OneOfInput({
 	items,
 	disabled,
@@ -498,23 +659,69 @@ function OneOfInput({
 	onChange: (items: string[]) => void;
 }) {
 	const t = useTranslator(aiManagerMessages);
-	const [text, setText] = useState(items.join("\n"));
+	const [input, setInput] = useState("");
+
+	const addItem = (value: string) => {
+		const trimmed = value.trim();
+		if (trimmed && !items.includes(trimmed)) {
+			onChange([...items, trimmed]);
+			setInput("");
+		}
+	};
+
+	const removeItem = (index: number) => {
+		onChange(items.filter((_, i) => i !== index));
+	};
+
+	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+		if (isComposingKey(event)) return;
+		if (event.key === "Enter" || event.key === ",") {
+			event.preventDefault();
+			addItem(input);
+		} else if (event.key === "Backspace" && !input && items.length > 0) {
+			removeItem(items.length - 1);
+		}
+	};
+
 	return (
-		<Textarea
-			aria-label={t("check.options")}
-			rows={3}
-			value={text}
-			disabled={disabled}
-			onChange={(event) => {
-				setText(event.target.value);
-				const next = event.target.value
-					.split("\n")
-					.map((line) => line.trim())
-					.filter(Boolean);
-				if (next.length > 0) onChange(next);
-			}}
-			className="field-sizing-fixed min-h-16 min-w-0 max-w-md flex-1 font-mono text-xs md:text-xs"
-		/>
+		<div
+			className={cn(
+				"flex min-h-8 flex-1 flex-wrap items-center gap-1.5 rounded-md border border-cms-input bg-cms-background p-1 text-xs shadow-sm transition-colors focus-within:ring-1 focus-within:ring-cms-ring",
+				disabled && "cursor-not-allowed opacity-50",
+			)}
+		>
+			{items.map((item, index) => (
+				<span
+					key={item}
+					className="inline-flex items-center gap-1 rounded bg-cms-muted px-2 py-0.5 font-mono text-cms-foreground text-xs"
+				>
+					<span className="max-w-40 truncate">{item}</span>
+					{!disabled && (
+						<button
+							type="button"
+							aria-label={t("check.oneOfRemove", { item })}
+							onClick={() => removeItem(index)}
+							className="rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
+						>
+							<X className="size-3" aria-hidden />
+						</button>
+					)}
+				</span>
+			))}
+			{!disabled && (
+				<input
+					type="text"
+					value={input}
+					placeholder={items.length === 0 ? t("check.oneOfPlaceholder") : ""}
+					onChange={(e) => setInput(e.target.value)}
+					onKeyDown={handleKeyDown}
+					onBlur={() => {
+						if (input.trim()) addItem(input);
+					}}
+					className="h-6 min-w-28 flex-1 border-0 bg-transparent px-1 font-mono text-xs shadow-none outline-none placeholder:text-cms-muted-foreground/60 focus:ring-0"
+				/>
+			)}
+		</div>
 	);
 }
 
@@ -533,14 +740,17 @@ function CheckRow({
 	const t = useTranslator(aiManagerMessages);
 	const id = useId();
 	return (
-		<li className={cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start [&>label]:pt-1.5" : "items-center")}>
+		<li className={cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start pt-0.5" : "items-center")}>
 			<Switch
 				id={id}
 				size="sm"
 				checked={check.enabled}
 				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
 			/>
-			<Label htmlFor={id} className="w-20 shrink-0 font-normal text-xs">
+			<Label
+				htmlFor={id}
+				className={cn("shrink-0 font-normal text-xs", check.kind === "oneOf" ? "w-28 pt-1.5" : "w-28")}
+			>
 				{label}
 			</Label>
 			{check.kind === "pattern" && (
@@ -578,7 +788,7 @@ function CheckRow({
 					size="icon-xs"
 					destructive
 					onClick={onRemove}
-					className="ml-auto"
+					className={cn("ml-auto", check.kind === "oneOf" && "mt-1")}
 				>
 					<Trash2 aria-hidden />
 				</IconButton>
@@ -619,7 +829,14 @@ function FeatureEditor({
 	const t = useTranslator(aiManagerMessages);
 	const { checkLabel, engineLabel } = useLabels();
 	const placeLabel = usePlaceLabel();
-	const ids = { provider: useId(), prompt: useId(), threshold: useId(), sendTitle: useId(), checksTitle: useId() };
+	const ids = {
+		name: useId(),
+		provider: useId(),
+		prompt: useId(),
+		threshold: useId(),
+		sendTitle: useId(),
+		checksTitle: useId(),
+	};
 	const deciding = feature.engine === "decide";
 	const settings = useAiSettings().data;
 	const kind = deciding ? "decisions" : "chat";
@@ -639,7 +856,8 @@ function FeatureEditor({
 	// Defaults of a code action. Reset to default only reverts the input fields (enabled stays as is); saving is a separate click.
 	const defaults = custom ? null : feature.defaults;
 	const atDefaults =
-		defaults !== null && JSON.stringify({ ...defaults, enabled: spec.enabled }) === JSON.stringify(spec);
+		defaults !== null &&
+		JSON.stringify({ ...defaults, enabled: spec.enabled, hidden: spec.hidden }) === JSON.stringify(spec);
 	// Checks that can be added: those among format, length and one-of that are not present yet. An MDX result (body fragment) gets no character checks.
 	const addableChecks = (Object.keys(ADDABLE_CHECKS) as AddableCheckKind[]).filter(
 		(kind) =>
@@ -683,7 +901,7 @@ function FeatureEditor({
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 				<div className="min-w-0 flex-1">
 					<h2 className="truncate font-medium text-base">
-						{(custom ? custom.base.label.trim() : feature.label) || t("title.new")}
+						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
 					</h2>
 					<p className="truncate text-cms-muted-foreground text-xs">
 						{placeLabel(feature)} · {engineLabel(feature.engine)}
@@ -709,9 +927,23 @@ function FeatureEditor({
 				)}
 			</div>
 
-			{custom && (
+			{custom ? (
 				<section aria-label={t("section.basics")} className="rounded-md border p-3">
 					<CustomBaseFields base={custom.base} onChange={custom.onBaseChange} />
+				</section>
+			) : (
+				<section aria-label={t("section.basics")} className="rounded-md border p-3">
+					<Field>
+						<FieldLabel htmlFor={ids.name}>{t("field.name")}</FieldLabel>
+						<Input
+							id={ids.name}
+							value={spec.label ?? feature.label}
+							maxLength={60}
+							placeholder={feature.defaults?.label ?? feature.label}
+							onChange={(event) => set({ label: event.target.value })}
+							className="h-8 text-xs md:text-xs"
+						/>
+					</Field>
 				</section>
 			)}
 
@@ -858,13 +1090,19 @@ function FeatureEditor({
 				onCancel={custom?.isNew ? custom.onCancel : undefined}
 				onDelete={custom && !custom.isNew ? custom.onDelete : undefined}
 			>
+				{!custom && (
+					<Button type="button" size="sm" variant="outline" onClick={() => set({ hidden: !spec.hidden })}>
+						{spec.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
+						{spec.hidden ? t("button.unhide") : t("button.hide")}
+					</Button>
+				)}
 				{defaults && (
 					<Button
 						type="button"
 						size="sm"
 						variant="outline"
 						disabled={atDefaults}
-						onClick={() => onChange({ ...defaults, enabled: spec.enabled })}
+						onClick={() => onChange({ ...defaults, enabled: spec.enabled, hidden: false })}
 					>
 						<RotateCcw aria-hidden />
 						{t("button.reset")}
