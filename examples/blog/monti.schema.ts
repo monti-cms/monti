@@ -1,7 +1,7 @@
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
-	schemaVersion: 1,
+	schemaVersion: 3,
 	collections: {
 		post: {
 			label: "Post",
@@ -460,6 +460,7 @@ export default defineSchema({
 				},
 			},
 			icon: "layers",
+			path: "/series/:slug",
 		},
 	},
 	locales: [
@@ -474,7 +475,7 @@ export default defineSchema({
 		previewLocaleParam: false,
 		localePrefix: "always",
 	},
-	admin: { path: "/studio" },
+	admin: { path: "/studio", templates: false, translations: false },
 	seed: {
 		templates: [
 			{
