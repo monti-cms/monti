@@ -92,6 +92,7 @@ export const viewOf = (
 	attach: action.attach,
 	stream: action.stream,
 	enabled: action.enabled,
+	hidden: action.hidden,
 	askInstruction: action.askInstruction,
 	instant: action.instant,
 	providerId: action.providerId,

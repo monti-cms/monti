@@ -167,7 +167,7 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 		});
 		expect(pairs(actions.category)).toEqual(["note.shelfId"]);
 		expect(actions.category).toMatchObject({ pick: "one", choices: { from: "collection", collection: "shelf" } });
-		// Default instructions are in English and fix neither the site kind nor a language (tone and notation are handled by the shared text `styleGuide`).
+		// Default instructions are in English and fix neither the site kind nor a language (tone and notation are handled by the prompt snippet `styleGuide`).
 		for (const definition of Object.values(actions)) {
 			expect(definition.prompt).not.toMatch(/blog|React Query|Korean/i);
 		}
@@ -201,7 +201,7 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 	});
 
 	it("`false` turns off, a definition/preset replaces in place, and a new name is added", () => {
-		const custom = { ...(aiPresets.codeFold()({ ...site, sharedKeys: [] }) as AiActionDefinition), label: "내 기능" };
+		const custom = { ...(aiPresets.codeFold()({ ...site, snippetKeys: [] }) as AiActionDefinition), label: "내 기능" };
 		const actions = resolveAiActions(
 			{ actions: { draft: false, summary: aiPresets.summary({ maxLength: 50 }), mine: custom } },
 			site,
@@ -213,15 +213,15 @@ describe("turning default actions on, off, and changing them (`resolveAiActions`
 		expect(() => resolveAiActions({ actions: { nope: false } }, site)).toThrow(/does not exist/);
 	});
 
-	it("the shared text `styleGuide` goes into the instructions of writing actions only when it exists", () => {
+	it("the prompt snippet `styleGuide` goes into the instructions of writing actions only when it exists", () => {
 		const writing = ["slug", "summary", "imageAlt", "imageCaption", "mediaFilename", "translate", "polish", "draft"];
 		const without = resolveAiActions({}, site);
-		for (const key of writing) expect(without[key]?.prompt).not.toContain("{{shared.");
-		const shared = { styleGuide: { label: "Style guide", text: "" } };
-		const withGuide = resolveAiActions({ shared }, site);
-		for (const key of writing) expect(withGuide[key]?.prompt).toContain("{{shared.styleGuide}}");
+		for (const key of writing) expect(without[key]?.prompt).not.toContain("{{snippet.");
+		const snippets = { styleGuide: { label: "Style guide", text: "" } };
+		const withGuide = resolveAiActions({ snippets }, site);
+		for (const key of writing) expect(withGuide[key]?.prompt).toContain("{{snippet.styleGuide}}");
 		// Choosing actions (tags/categories) and regex actions have no writing style.
-		for (const key of ["tags", "category", "codeFold"]) expect(withGuide[key]?.prompt).not.toContain("{{shared.");
+		for (const key of ["tags", "category", "codeFold"]) expect(withGuide[key]?.prompt).not.toContain("{{snippet.");
 	});
 
 	it("a field name attaches to that field, and options attach to fields pointing to that collection", () => {

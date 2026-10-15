@@ -38,10 +38,10 @@ const build = (source: AiActionSource, site: AiSiteView): AiActionDefinition | u
 
 export function resolveAiActions(
 	config: AiConfig,
-	site: Omit<AiSiteView, "sharedKeys">,
+	site: Omit<AiSiteView, "snippetKeys">,
 	plugins: readonly PluginLike[] = [],
 ): Record<string, AiActionDefinition> {
-	const view: AiSiteView = { ...site, sharedKeys: Object.keys(config.shared ?? {}) };
+	const view: AiSiteView = { ...site, snippetKeys: Object.keys(config.snippets ?? {}) };
 	const sources = new Map<string, AiActionSource>(Object.entries(DEFAULT_AI_ACTIONS));
 	for (const plugin of plugins) {
 		if (plugin.name === AI_PLUGIN_NAME) continue;
@@ -79,12 +79,12 @@ export function resolveAiActions(
 	]);
 }
 
-/** Resolves the AI config and returns it together with the shared texts. */
+/** Resolves the AI config and returns it together with the prompt snippets. */
 export const resolveAiConfig = (
 	config: AiConfig,
-	site: Omit<AiSiteView, "sharedKeys">,
+	site: Omit<AiSiteView, "snippetKeys">,
 	plugins: readonly PluginLike[] = [],
 ): ResolvedAiConfig => ({
-	...(config.shared ? { shared: config.shared } : {}),
+	...(config.snippets ? { snippets: config.snippets } : {}),
 	actions: resolveAiActions(config, site, plugins),
 });

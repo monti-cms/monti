@@ -69,13 +69,13 @@ describe("AI action edited-value store", () => {
 		expect(updated).toMatchObject({
 			enabled: false,
 			prompt: "바꾼 지시문",
-			label: "요약 만들기",
+			label: "바꾼 이름",
 			result: "text",
 			version: 1,
-			overridden: ["enabled", "prompt"],
+			overridden: ["enabled", "label", "prompt"],
 		});
 		const row = await pluginStorageFor(pool, schemaName, "ai").collection("action-overrides").get("summary");
-		expect(row?.value).toEqual({ enabled: false, prompt: "바꾼 지시문" });
+		expect(row?.value).toEqual({ enabled: false, label: "바꾼 이름", prompt: "바꾼 지시문" });
 		await expect(updateAction(testSite, store, "summary", 0, { enabled: true })).rejects.toMatchObject({
 			code: "conflict",
 		});
@@ -189,5 +189,31 @@ describe("AI action edited-value store", () => {
 		expect((await listActions(testSite, store)).some((item) => item.key === created.key)).toBe(false);
 		await expect(getAction(testSite, store, created.key)).rejects.toMatchObject({ code: "not_found" });
 		await expect(deleteCustomAction(testSite, store, "summary", 0)).rejects.toMatchObject({ code: "invalid_input" });
+	});
+
+	it("can hide and restore built-in actions, and rename their label", async () => {
+		const initial = (await listActions(testSite, store)).find((a) => a.key === "polish");
+		if (!initial) throw new Error("polish action not found");
+		const edited = await updateAction(testSite, store, "polish", initial.version, {
+			hidden: true,
+			label: "문체 변경",
+		});
+		expect(edited.hidden).toBe(true);
+		expect(edited.label).toBe("문체 변경");
+		expect(edited.overridden).toContain("hidden");
+		expect(edited.overridden).toContain("label");
+
+		const resolved = await getAction(testSite, store, "polish");
+		expect(resolved.hidden).toBe(true);
+		expect(resolved.label).toBe("문체 변경");
+
+		const unhidden = await updateAction(testSite, store, "polish", edited.version, {
+			hidden: false,
+		});
+		expect(unhidden.hidden).toBe(false);
+
+		const reset = await resetAction(testSite, store, "polish", unhidden.version);
+		expect(reset.hidden).toBe(false);
+		expect(reset.label).toBe(AI_ACTIONS.polish?.label);
 	});
 });

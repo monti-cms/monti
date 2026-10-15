@@ -457,13 +457,13 @@ describe("AI action runner", () => {
 	});
 });
 
-describe("streaming and shared text", () => {
+describe("streaming and prompt snippet", () => {
 	const polish = resolveAction(
 		"polish",
 		aiAction({
 			label: "다듬기",
 			input: { selection: aiInput.mdx({ label: "고칠 글", required: true }) },
-			prompt: "문체를 다듬는다.\n\n문체 가이드:\n{{shared.styleGuide}}",
+			prompt: "문체를 다듬는다.\n\n문체 가이드:\n{{snippet.styleGuide}}",
 			result: "mdx",
 			stream: true,
 		}),
@@ -475,12 +475,12 @@ describe("streaming and shared text", () => {
 		const result = await streamAiAction(
 			polish,
 			call({ selection: "고칠 글" }),
-			deps(provider, { shared: { styleGuide: "짧게 쓴다." } }),
+			deps(provider, { snippets: { styleGuide: "짧게 쓴다." } }),
 			(piece) => pieces.push(piece),
 		);
 		expect(pieces.length).toBeGreaterThan(1);
 		expect(result).toEqual({ kind: "mdx", text: "**다듬은** 글" });
-		// Shared text goes into the instructions, and the answer is received as plain text, not JSON.
+		// Prompt snippet goes into the instructions, and the answer is received as plain text, not JSON.
 		expect(requests[0]?.system).toContain("짧게 쓴다.");
 	});
 
@@ -500,9 +500,9 @@ describe("streaming and shared text", () => {
 		});
 	});
 
-	it("an empty shared text is inserted as (none), and a nonexistent shared text name is left as is", async () => {
+	it("an empty prompt snippet is inserted as (none), and a nonexistent prompt snippet name is left as is", async () => {
 		const { provider, requests } = stubProvider({ streamText: "글" });
-		await streamAiAction(polish, call({ selection: "글" }), deps(provider, { shared: { styleGuide: "" } }), () => {});
+		await streamAiAction(polish, call({ selection: "글" }), deps(provider, { snippets: { styleGuide: "" } }), () => {});
 		expect(requests[0]?.system).toContain("문체 가이드:\n(none)");
 	});
 });

@@ -46,7 +46,7 @@ export const cms = defineConfig({
 		// The AI screen and buttons render without an API key (running an action needs a connection saved on the admin AI screen). The style guide is appended to the polish and draft instructions.
 		ai({
 			siteDescription: "A personal tech blog",
-			shared: {
+			snippets: {
 				styleGuide: {
 					label: "Style guide",
 					text: [

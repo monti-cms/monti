@@ -8,14 +8,14 @@ import { commonMessages } from "../../../../admin/src/lib/common.messages";
 import { jsonResponse as json } from "../../../../admin/src/test/fetch";
 import { SiteWrapper } from "../../../../admin/src/test/site";
 import { testSite } from "../../../test/site";
-import type { AiSharedView } from "../../shared";
-import { SharedManager } from "../shared-editor";
-import { sharedMessages } from "../shared-editor.messages";
+import type { AiSnippetView } from "../../snippets";
+import { SnippetManager } from "../snippet-editor";
+import { snippetMessages } from "../snippet-editor.messages";
 
-const t = testSite.createTranslator(sharedMessages);
+const t = testSite.createTranslator(snippetMessages);
 const common = testSite.createTranslator(commonMessages);
 
-const VIEW: AiSharedView = {
+const VIEW: AiSnippetView = {
 	version: 2,
 	items: [
 		{
@@ -30,7 +30,7 @@ const VIEW: AiSharedView = {
 	],
 };
 
-let view: AiSharedView;
+let view: AiSnippetView;
 let fetchMock: ReturnType<typeof vi.fn>;
 const calls = (method: string) => fetchMock.mock.calls.filter(([, init]) => init?.method === method);
 const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as RequestInit).body));
@@ -38,16 +38,16 @@ const bodyOf = (call: unknown[] | undefined) => JSON.parse(String((call?.[1] as 
 beforeEach(() => {
 	view = VIEW;
 	fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-		if (input === "/api/monti/v1/ai/shared" && !init?.method) return json(view);
-		if (input === "/api/monti/v1/ai/shared" && init?.method === "POST") {
+		if (input === "/api/monti/v1/ai/snippets" && !init?.method) return json(view);
+		if (input === "/api/monti/v1/ai/snippets" && init?.method === "POST") {
 			const body = JSON.parse(String(init.body));
 			return json(
 				{ version: 3, items: [...view.items, { source: "added", key: body.key, label: body.label, text: body.text }] },
 				201,
 			);
 		}
-		if (input === "/api/monti/v1/ai/shared" && init?.method === "PATCH") return json({ ...view, version: 3 });
-		if (input.startsWith("/api/monti/v1/ai/shared?") && init?.method === "DELETE") {
+		if (input === "/api/monti/v1/ai/snippets" && init?.method === "PATCH") return json({ ...view, version: 3 });
+		if (input.startsWith("/api/monti/v1/ai/snippets?") && init?.method === "DELETE") {
 			return json(
 				{ error: { code: "invalid_input", message: "Actions use this text, so it can't be deleted: Summary" } },
 				400,
@@ -72,7 +72,7 @@ function Harness() {
 			<button type="button" onClick={async () => (await confirmDiscard(dirty)) && setSelected("new")}>
 				add head
 			</button>
-			<SharedManager
+			<SnippetManager
 				selected={selected}
 				onOpen={async (key) => {
 					if (key !== selected && (await confirmDiscard(dirty))) setSelected(key);
@@ -94,7 +94,7 @@ const renderManager = () =>
 const list = () => screen.getByRole("list", { name: t("list.label") });
 const row = (name: string) => within(list()).getByRole("button", { name: new RegExp(name) });
 
-describe("AI screen shared texts tab", () => {
+describe("AI screen prompt snippets tab", () => {
 	it("shows the list and an empty detail, and marks the chosen text as the open row", async () => {
 		renderManager();
 		await screen.findByText(t("empty.title"));
@@ -102,7 +102,7 @@ describe("AI screen shared texts tab", () => {
 			within(list())
 				.getAllByRole("button")
 				.map((item) => item.textContent),
-		).toEqual(["Style guide{{shared.styleGuide}}", `Tone{{shared.tone}} · ${t("detail.added")}`]);
+		).toEqual(["Style guide{{snippet.styleGuide}}", `Tone{{snippet.tone}} · ${t("detail.added")}`]);
 		expect(screen.getByRole("button", { name: t("action.add") })).toBeTruthy();
 
 		fireEvent.click(row("Style guide"));
@@ -110,7 +110,7 @@ describe("AI screen shared texts tab", () => {
 		expect(row("Style guide").getAttribute("aria-current")).toBe("true");
 		// Config text: the name comes from the config, it can be reset to the default, and cannot be deleted.
 		expect((screen.getByRole("textbox", { name: t("field.name") }) as HTMLInputElement).disabled).toBe(true);
-		expect(screen.getByText("{{shared.styleGuide}}", { selector: "code" })).toBeTruthy();
+		expect(screen.getByText("{{snippet.styleGuide}}", { selector: "code" })).toBeTruthy();
 		expect(screen.getByRole("button", { name: t("copy.label") })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: common("delete") })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: t("action.resetDefault") }));
@@ -147,7 +147,7 @@ describe("AI screen shared texts tab", () => {
 		await waitFor(() => expect(calls("POST")).toHaveLength(1));
 		expect(bodyOf(calls("POST")[0])).toEqual({ expectedVersion: 2, key: "reader", label: "Reader", text: "developer" });
 		await waitFor(() => expect(row("Reader").getAttribute("aria-current")).toBe("true"));
-		expect(screen.getByText("{{shared.reader}}", { selector: "code" })).toBeTruthy();
+		expect(screen.getByText("{{snippet.reader}}", { selector: "code" })).toBeTruthy();
 	});
 
 	it("an added text asks before deletion, and shows the reason in the field when blocked", async () => {
@@ -160,7 +160,7 @@ describe("AI screen shared texts tab", () => {
 		expect((await screen.findByRole("alert")).textContent).toBe(
 			"Actions use this text, so it can't be deleted: Summary",
 		);
-		expect(calls("DELETE")[0]?.[0]).toBe("/api/monti/v1/ai/shared?key=tone&expectedVersion=2");
+		expect(calls("DELETE")[0]?.[0]).toBe("/api/monti/v1/ai/snippets?key=tone&expectedVersion=2");
 	});
 
 	it("shows a one-line notice in the list when there are no texts", async () => {

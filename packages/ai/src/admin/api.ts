@@ -3,7 +3,7 @@ import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { AiActionView } from "../actions";
 import type { AiCheckResult, AiModelInfo, AiSettingsView } from "../connection";
 import type { AiRunResult } from "../definition";
-import type { AiSharedView } from "../shared";
+import type { AiSnippetView } from "../snippets";
 
 /** Request options every function takes: cancellation, and the text for a failure the server gave no message for. */
 export interface AiRequestOptions {
@@ -26,7 +26,7 @@ export const aiKeys = {
 	all: ["cms", "ai"] as const,
 	actions: () => [...aiKeys.all, "actions"] as const,
 	settings: () => [...aiKeys.all, "settings"] as const,
-	shared: () => [...aiKeys.all, "shared"] as const,
+	snippets: () => [...aiKeys.all, "snippets"] as const,
 	models: (source: ModelSource | null) => [...aiKeys.all, "models", source] as const,
 };
 
@@ -78,21 +78,21 @@ export const checkAiProvider = (site: Site, json: unknown, fallback?: string) =>
 export const listAiModels = (site: Site, source: ModelSource, options: AiRequestOptions = {}) =>
 	cmsFetch<{ items: AiModelInfo[] }>(site, cmsApiUrl("/v1/ai/models"), { method: "POST", json: source, ...options });
 
-/** `GET /v1/ai/shared` */
-export const getAiShared = (site: Site, options: AiRequestOptions = {}) =>
-	cmsFetch<AiSharedView>(site, cmsApiUrl("/v1/ai/shared"), options);
+/** `GET /v1/ai/snippets` */
+export const getAiSnippets = (site: Site, options: AiRequestOptions = {}) =>
+	cmsFetch<AiSnippetView>(site, cmsApiUrl("/v1/ai/snippets"), options);
 
-/** `POST /v1/ai/shared` */
-export const createAiShared = (site: Site, json: unknown, fallback?: string) =>
-	cmsFetch<AiSharedView>(site, cmsApiUrl("/v1/ai/shared"), { method: "POST", json, fallback });
+/** `POST /v1/ai/snippets` */
+export const createAiSnippet = (site: Site, json: unknown, fallback?: string) =>
+	cmsFetch<AiSnippetView>(site, cmsApiUrl("/v1/ai/snippets"), { method: "POST", json, fallback });
 
-/** `PATCH /v1/ai/shared` */
-export const updateAiShared = (site: Site, json: unknown, fallback?: string) =>
-	cmsFetch<AiSharedView>(site, cmsApiUrl("/v1/ai/shared"), { method: "PATCH", json, fallback });
+/** `PATCH /v1/ai/snippets` */
+export const updateAiSnippet = (site: Site, json: unknown, fallback?: string) =>
+	cmsFetch<AiSnippetView>(site, cmsApiUrl("/v1/ai/snippets"), { method: "PATCH", json, fallback });
 
-/** `DELETE /v1/ai/shared?key=&expectedVersion=` */
-export const deleteAiShared = (site: Site, key: string, expectedVersion: number, fallback?: string) =>
-	cmsFetch<AiSharedView>(site, cmsApiUrl(`/v1/ai/shared?key=${segment(key)}&expectedVersion=${expectedVersion}`), {
+/** `DELETE /v1/ai/snippets?key=&expectedVersion=` */
+export const deleteAiSnippet = (site: Site, key: string, expectedVersion: number, fallback?: string) =>
+	cmsFetch<AiSnippetView>(site, cmsApiUrl(`/v1/ai/snippets?key=${segment(key)}&expectedVersion=${expectedVersion}`), {
 		method: "DELETE",
 		fallback,
 	});

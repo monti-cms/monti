@@ -73,6 +73,7 @@ export function ListRow({
 	actions,
 	actionsLabel,
 	onDelete,
+	trailing,
 }: {
 	title: string;
 	status?: string | null;
@@ -83,6 +84,7 @@ export function ListRow({
 	/** Name of the `⋯` button; required with `actions`. */
 	actionsLabel?: string;
 	onDelete?: () => void;
+	trailing?: ReactNode;
 }) {
 	const button = (
 		<Button
@@ -110,11 +112,17 @@ export function ListRow({
 		current ? OPEN_ITEM : "hover:bg-cms-accent/50",
 	);
 	if (!actions || actions.length === 0) {
-		return <li className={rowClass}>{button}</li>;
+		return (
+			<li className={rowClass}>
+				{button}
+				{trailing}
+			</li>
+		);
 	}
 	return (
 		<ActionContextMenu actions={actions} trigger={<li className={rowClass} />}>
 			{button}
+			{trailing}
 			<MoreActionsButton actions={actions} label={actionsLabel ?? title} />
 		</ActionContextMenu>
 	);

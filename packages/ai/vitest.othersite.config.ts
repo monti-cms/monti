@@ -7,14 +7,14 @@ import { packageTests } from "../../vitest.shared";
  * are excluded below.
  */
 const BLOG_FIXTURE_TESTS = [
-	// Uses the blog config's action keys (slug, summary, tags, category, codeFold...) and the shared style guide text as-is.
+	// Uses the blog config's action keys (slug, summary, tags, category, codeFold...) and the style guide snippet as-is.
 	"src/__test__/action.test.ts",
 	"src/__test__/plugin.test.ts",
 	"src/__test__/run-route.test.ts",
 	"src/__test__/run.test.ts",
 	"src/__test__/settings.test.ts",
-	"src/__test__/shared-route.test.ts",
-	"src/__test__/shared.test.ts",
+	"src/__test__/snippets-route.test.ts",
+	"src/__test__/snippets.test.ts",
 	"src/__test__/store.test.ts",
 	// Uses the blog blocks (callout, Mermaid, etc.), Korean source text, and several languages.
 	"src/__test__/custom.test.ts",

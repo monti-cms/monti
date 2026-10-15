@@ -218,11 +218,13 @@ export function MediaLibrary() {
 		invalidate: [mediaKeys.all],
 	});
 
+	/** Renames a file. Failure is thrown as is so it shows under the name field in the detail panel. */
 	const renameMutation = useCmsMutation({
 		fn: ({ media, filename }: { media: MediaItem; filename: string }, { site }) =>
-			updateMedia(site, media.id, { filename }),
+			updateMedia(site, media.id, { filename }, t("library.renameFailed")),
 		success: (_result, { filename }) => t("library.renamed", { name: filename }),
 		failure: t("library.renameFailed"),
+		inline: true,
 		invalidate: [mediaKeys.all],
 	});
 
@@ -453,7 +455,7 @@ export function MediaLibrary() {
 							media={selected}
 							onClose={() => void openDetail(null)}
 							onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
-							onRename={(filename) => renameMutation.mutate({ media: selected, filename })}
+							onRename={(filename) => renameMutation.mutateAsync({ media: selected, filename })}
 							onRequestDelete={() => void requestDelete(selected)}
 							onDirtyChange={setDetailDirty}
 						/>

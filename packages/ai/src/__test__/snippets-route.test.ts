@@ -7,7 +7,7 @@ import {
 	PATCH as PATCHHandler,
 	POST as POSTHandler,
 	PUT as PUTHandler,
-} from "../routes/shared/route";
+} from "../routes/snippets/route";
 
 const DELETE = routeCaller(DELETEHandler);
 const GET = routeCaller(GETHandler);
@@ -15,9 +15,9 @@ const PATCH = routeCaller(PATCHHandler);
 const POST = routeCaller(POSTHandler);
 const PUT = routeCaller(PUTHandler);
 
-/** A store holding the shared text rows and action overrides. A version mismatch gives 409. */
+/** A store holding the prompt snippet rows and action overrides. A version mismatch gives 409. */
 const state = vi.hoisted(() => ({
-	shared: null as { value: unknown; version: number } | null,
+	snippets: null as { value: unknown; version: number } | null,
 	overrides: [] as Array<{ key: string; value: unknown; version: number }>,
 }));
 
@@ -25,11 +25,11 @@ vi.mock("../store", async () => {
 	const { CmsError } = await import("@monti-cms/core/plugin/server");
 	return {
 		aiStoreFor: () => ({
-			getAiSettings: async () => state.shared,
+			getAiSettings: async () => state.snippets,
 			saveAiSettings: async ({ expectedVersion, value }: { expectedVersion: number; value: unknown }) => {
-				const version = state.shared?.version ?? 0;
+				const version = state.snippets?.version ?? 0;
 				if (version !== expectedVersion) throw new CmsError("Conflict", "conflict", version);
-				state.shared = { value, version: version + 1 };
+				state.snippets = { value, version: version + 1 };
 				return version + 1;
 			},
 			listAiActionOverrides: async () => state.overrides.map((row) => ({ ...row, updatedAt: new Date(0) })),
@@ -47,7 +47,7 @@ const call = (
 	query = "",
 ) =>
 	handler(
-		new Request(`http://localhost/api/monti/v1/ai/shared${query}`, {
+		new Request(`http://localhost/api/monti/v1/ai/snippets${query}`, {
 			method,
 			headers: { origin: "http://localhost", "content-type": "application/json" },
 			...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -55,9 +55,9 @@ const call = (
 		{ cms },
 	);
 
-describe("shared texts API", () => {
+describe("prompt snippets API", () => {
 	beforeEach(() => {
-		state.shared = null;
+		state.snippets = null;
 		state.overrides = [];
 	});
 
@@ -92,11 +92,11 @@ describe("shared texts API", () => {
 
 	it("cannot delete a text used by an edited prompt", async () => {
 		await call(POST, "POST", { expectedVersion: 0, key: "tone", label: "말투", text: "" });
-		state.overrides = [{ key: "summary", value: { prompt: "요약한다.\n{{shared.tone}}" }, version: 1 }];
+		state.overrides = [{ key: "summary", value: { prompt: "요약한다.\n{{snippet.tone}}" }, version: 1 }];
 		const res = await call(DELETE, "DELETE", undefined, "?key=tone&expectedVersion=1");
 		expect(res.status).toBe(400);
 		expect(await res.json()).toMatchObject({
-			error: { message: "이 문구를 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" },
+			error: { message: "이 조각을 쓰는 기능이 있어 삭제할 수 없습니다: 요약 만들기" },
 		});
 	});
 });

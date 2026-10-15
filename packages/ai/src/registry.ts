@@ -6,8 +6,8 @@ import type {
 	AiActionResult,
 	AiAttach,
 	AiConfig,
-	AiSharedText,
 	AiSiteView,
+	AiSnippet,
 } from "./action";
 import type { AiSlot } from "./definition";
 import { AI_PLUGIN_NAME } from "./name";
@@ -75,13 +75,13 @@ export type AiActionResultOf<K extends AiActionKey<Config>, Config extends CmsCo
 	ActionsOf<Config>[K]
 >;
 
-/** The AI actions and shared texts of one site, resolved from its config. */
+/** The AI actions and prompt snippets of one site, resolved from its config. */
 export interface AiRegistry {
 	/** Actions to run (default actions + actions added by other plugins + actions in the config, `resolveAiActions`). Empty without the AI plugin. */
 	readonly actions: Readonly<Record<string, AiActionDefinition>>;
-	/** Shared text definitions (defaults). Values edited in the admin screen are applied by the server. */
-	readonly shared: Readonly<Record<string, AiSharedText>>;
-	readonly sharedKeys: readonly string[];
+	/** Prompt snippet definitions (defaults). Values edited in the admin screen are applied by the server. */
+	readonly snippets: Readonly<Record<string, AiSnippet>>;
+	readonly snippetKeys: readonly string[];
 	/** Site description that goes into the instruction at the start of every action. */
 	readonly siteDescription: string;
 	/** The definition under the name, `undefined` if the site has no such action. */
@@ -90,8 +90,8 @@ export interface AiRegistry {
 
 const registries = new WeakMap<object, AiRegistry>();
 
-/** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the shared texts. */
-export const aiSiteViewOf = (site: Site): Omit<AiSiteView, "sharedKeys"> => ({
+/** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the prompt snippets. */
+export const aiSiteViewOf = (site: Site): Omit<AiSiteView, "snippetKeys"> => ({
 	// The schemas of the site: their labels are read in the admin language when the site is created.
 	collections: Object.fromEntries(site.COLLECTIONS.map((name) => [name, site.schemaOf(name)])) as CollectionsConfig,
 	blocks: site.BLOCKS,
@@ -106,11 +106,11 @@ function createRegistry(site: Site): AiRegistry {
 	const actions: Readonly<Record<string, AiActionDefinition>> = aiConfig
 		? resolveAiActions(aiConfig, aiSiteViewOf(site), site.plugins)
 		: {};
-	const shared: Readonly<Record<string, AiSharedText>> = aiConfig?.shared ?? {};
+	const snippets: Readonly<Record<string, AiSnippet>> = aiConfig?.snippets ?? {};
 	return {
 		actions,
-		shared,
-		sharedKeys: Object.keys(shared),
+		snippets,
+		snippetKeys: Object.keys(snippets),
 		siteDescription: aiConfig?.siteDescription?.trim() || "website",
 		actionDefinition: (key) => (Object.hasOwn(actions, key) ? actions[key] : undefined),
 	};
