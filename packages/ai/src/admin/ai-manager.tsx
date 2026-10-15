@@ -41,7 +41,7 @@ import {
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view";
 import type { AiActionView } from "../actions";
@@ -84,6 +84,17 @@ function usePlaceLabel() {
 			}
 		}
 	};
+}
+
+type FeatureGroup = "editor" | "fields" | "media" | "custom";
+const GROUP_ORDER: readonly FeatureGroup[] = ["editor", "fields", "media", "custom"];
+
+function groupOf(feature: Pick<AiActionView, "custom" | "attach">): FeatureGroup {
+	if (feature.custom) return "custom";
+	const slot = feature.attach[0]?.slot;
+	if (slot === "selection" || slot === "insert" || slot === "block" || slot === "codeRules") return "editor";
+	if (slot === "image" || slot === "media") return "media";
+	return "fields";
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -159,7 +170,6 @@ export function AiManager() {
 	const site = useSite();
 	const t = useTranslator(aiManagerMessages);
 	const tc = useTranslator(commonMessages);
-	const { engineLabel } = useLabels();
 	const placeLabel = usePlaceLabel();
 	const queryClient = useQueryClient();
 	// The layout's AI slot provider asks for the same list, so it can be in the cache before this page hydrates.
@@ -179,6 +189,15 @@ export function AiManager() {
 	const [snippet, setSnippet] = useState<string | "new" | null>(null);
 	const [snippetDirty, setSnippetDirty] = useState(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
+	const [collapsedGroups, setCollapsedGroups] = useState<Set<FeatureGroup>>(new Set());
+	const toggleGroup = useCallback((group: FeatureGroup) => {
+		setCollapsedGroups((prev) => {
+			const next = new Set(prev);
+			if (next.has(group)) next.delete(group);
+			else next.add(group);
+			return next;
+		});
+	}, []);
 
 	const replaceInCache = (feature: AiActionView) =>
 		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
@@ -272,21 +291,6 @@ export function AiManager() {
 				: data,
 		);
 		quickPatchMutation.mutate({ feature, patch: { enabled } });
-	};
-
-	const handleToggleHidden = (feature: AiActionView, hidden: boolean) => {
-		if (editing && !editing.isNew && editing.feature.key === feature.key) {
-			changeDraft((draft) => ({ ...draft, spec: { ...draft.spec, hidden } }));
-		}
-		queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
-			data
-				? {
-						...data,
-						items: data.items.map((item) => (item.key === feature.key ? { ...item, hidden } : item)),
-					}
-				: data,
-		);
-		quickPatchMutation.mutate({ feature, patch: { hidden } });
 	};
 
 	const restoreAllHidden = async () => {
@@ -404,6 +408,28 @@ export function AiManager() {
 		saveMutation.mutate(editing);
 	};
 
+	const toggleHide = (feature: AiActionView, hidden: boolean) => {
+		if (editing && !editing.isNew && editing.feature.key === feature.key) {
+			const nextEditing: Editing = {
+				...editing,
+				spec: { ...editing.spec, hidden },
+			};
+			changeDraft((draft) => ({ ...draft, spec: { ...draft.spec, hidden } }));
+			setFormError(null);
+			saveMutation.mutate(nextEditing);
+		} else {
+			queryClient.setQueryData<AiActionsResponse>(aiKeys.actions(), (data) =>
+				data
+					? {
+							...data,
+							items: data.items.map((item) => (item.key === feature.key ? { ...item, hidden } : item)),
+						}
+					: data,
+			);
+			quickPatchMutation.mutate({ feature, patch: { hidden } });
+		}
+	};
+
 	const onConnectionDirty = useCallback((dirty: boolean) => setConnectionDirty(dirty), []);
 	const onSnippetDirty = useCallback((dirty: boolean) => setSnippetDirty(dirty), []);
 
@@ -460,71 +486,59 @@ export function AiManager() {
 								label={t("list.label")}
 								loading={featuresQuery.isPending}
 								skeletonRows={4}
+								className="w-80 lg:w-88"
+								header={
+									featuresQuery.data && usable.size === 0 ? (
+										<div className="flex items-center justify-between gap-2 border-b bg-cms-muted/40 p-2.5 text-xs">
+											<span className="text-cms-muted-foreground">{t("banner.needsConnection")}</span>
+											<Button type="button" size="xs" variant="outline" onClick={() => void changeTab("connections")}>
+												{t("banner.goToConnections")}
+											</Button>
+										</div>
+									) : null
+								}
 								empty={
 									featuresQuery.data && features.length === 0 && !editing?.isNew ? (
 										<EmptyState compact title={t("list.empty")} />
 									) : null
 								}
 							>
-								{[
-									...features
-										.filter((feature) => !feature.hidden)
-										.map((feature) => (
-											<ListRow
-												key={feature.key}
-												title={feature.label}
-												status={
-													!feature.enabled
-														? t("status.off")
-														: usable.has(feature.key)
-															? null
-															: t("status.needsConnection")
-												}
-												detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
-												// While a new unsaved action is open, no other row in the list is shown as open.
-												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
-												onClick={() => void openFeature(feature)}
-												trailing={
-													<Switch
-														size="sm"
-														checked={feature.enabled}
-														aria-label={t("toggle.enableAction", { label: feature.label })}
-														onClick={(e) => e.stopPropagation()}
-														onCheckedChange={(checked) => handleToggle(feature, checked)}
+								{GROUP_ORDER.flatMap((group) => {
+									const groupFeatures = features.filter((f) => !f.hidden && groupOf(f) === group);
+									if (groupFeatures.length === 0) return [];
+									const isCollapsed = collapsedGroups.has(group);
+									return [
+										<li
+											key={`group-${group}`}
+											className="sticky top-0 z-10 border-cms-border border-y bg-cms-muted/80 backdrop-blur"
+										>
+											<button
+												type="button"
+												onClick={() => toggleGroup(group)}
+												className="flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors hover:bg-cms-muted"
+											>
+												<span className="flex items-center gap-1.5 font-semibold text-cms-foreground text-xs">
+													<ChevronDown
+														className={cn(
+															"size-3.5 text-cms-muted-foreground transition-transform duration-150",
+															isCollapsed && "-rotate-90",
+														)}
 													/>
-												}
-												actions={
-													feature.custom
-														? [
-																{
-																	kind: "item",
-																	label: tc("delete"),
-																	icon: Trash2,
-																	onSelect: () => void remove(feature),
-																	destructive: true,
-																},
-															]
-														: [
-																{
-																	kind: "item",
-																	label: t("action.hide"),
-																	icon: EyeOff,
-																	onSelect: () => handleToggleHidden(feature, true),
-																},
-															]
-												}
-												actionsLabel={feature.label}
-											/>
-										)),
-									...(showHidden
-										? features
-												.filter((feature) => feature.hidden)
-												.map((feature) => (
+													<span>{t(`group.${group}`)}</span>
+												</span>
+												<span className="rounded-full border border-cms-border/60 bg-cms-background px-1.5 py-0.5 font-mono text-[10px] text-cms-muted-foreground">
+													{groupFeatures.length}
+												</span>
+											</button>
+										</li>,
+										...(isCollapsed
+											? []
+											: groupFeatures.map((feature) => (
 													<ListRow
 														key={feature.key}
 														title={feature.label}
-														status={t("status.hidden")}
-														detail={`${placeLabel(feature)} · ${engineLabel(feature.engine)}`}
+														status={!feature.enabled ? t("status.off") : null}
+														detail={`${placeLabel(feature)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
 														current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
 														onClick={() => void openFeature(feature)}
 														trailing={
@@ -536,58 +550,67 @@ export function AiManager() {
 																onCheckedChange={(checked) => handleToggle(feature, checked)}
 															/>
 														}
-														actions={[
-															{
-																kind: "item",
-																label: t("action.unhide"),
-																icon: Eye,
-																onSelect: () => handleToggleHidden(feature, false),
-															},
-														]}
-														actionsLabel={feature.label}
 													/>
-												))
-										: []),
-									...(editing?.isNew
-										? [
-												<ListRow
-													key="new"
-													title={editing.base?.label.trim() || t("title.new")}
-													status={t("status.unsaved")}
-													detail={`${placeLabel(editing.feature)} · ${engineLabel(editing.feature.engine)}`}
-													current
-													onClick={() => {}}
-												/>,
-											]
-										: []),
-									...(features.some((feature) => feature.hidden)
-										? [
-												<li key="hidden-toggle" className="flex items-center justify-between border-t p-2">
-													<Button
-														type="button"
-														size="xs"
-														variant="ghost"
-														className="text-cms-muted-foreground hover:text-cms-foreground"
-														onClick={() => setShowHidden(!showHidden)}
-													>
-														{showHidden
-															? t("list.hideHidden", {
-																	count: features.filter((feature) => feature.hidden).length,
-																})
-															: t("list.showHidden", {
-																	count: features.filter((feature) => feature.hidden).length,
-																})}
-													</Button>
-													{showHidden && (
-														<Button type="button" size="xs" variant="outline" onClick={() => void restoreAllHidden()}>
-															<RotateCcw aria-hidden />
-															{t("button.restoreHidden")}
-														</Button>
-													)}
-												</li>,
-											]
-										: []),
-								]}
+												))),
+									];
+								})}
+								{showHidden &&
+									features
+										.filter((feature) => feature.hidden)
+										.map((feature) => (
+											<ListRow
+												key={feature.key}
+												title={feature.label}
+												status={t("status.hidden")}
+												detail={`${placeLabel(feature)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
+												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
+												onClick={() => void openFeature(feature)}
+												trailing={
+													<Switch
+														size="sm"
+														checked={feature.enabled}
+														aria-label={t("toggle.enableAction", { label: feature.label })}
+														onClick={(e) => e.stopPropagation()}
+														onCheckedChange={(checked) => handleToggle(feature, checked)}
+													/>
+												}
+											/>
+										))}
+								{editing?.isNew && (
+									<ListRow
+										key="new"
+										title={editing.base?.label.trim() || t("title.new")}
+										status={t("status.unsaved")}
+										detail={placeLabel(editing.feature)}
+										current
+										onClick={() => {}}
+									/>
+								)}
+								{features.some((feature) => feature.hidden) && (
+									<li key="hidden-toggle" className="flex items-center justify-between border-t p-2">
+										<Button
+											type="button"
+											size="xs"
+											variant="ghost"
+											className="text-cms-muted-foreground hover:text-cms-foreground"
+											onClick={() => setShowHidden(!showHidden)}
+										>
+											{showHidden
+												? t("list.hideHidden", {
+														count: features.filter((feature) => feature.hidden).length,
+													})
+												: t("list.showHidden", {
+														count: features.filter((feature) => feature.hidden).length,
+													})}
+										</Button>
+										{showHidden && (
+											<Button type="button" size="xs" variant="outline" onClick={() => void restoreAllHidden()}>
+												<RotateCcw aria-hidden />
+												{t("button.restoreHidden")}
+											</Button>
+										)}
+									</li>
+								)}
 							</ListPane>
 						}
 					>
@@ -602,6 +625,7 @@ export function AiManager() {
 								error={formError}
 								onChange={(spec) => changeDraft((draft) => ({ ...draft, spec }))}
 								onSave={() => void save()}
+								onToggleHide={(hidden) => toggleHide(editing.feature, hidden)}
 								custom={
 									editing.base
 										? {
@@ -686,7 +710,7 @@ function OneOfInput({
 	return (
 		<div
 			className={cn(
-				"flex min-h-8 flex-1 flex-wrap items-center gap-1.5 rounded-md border border-cms-input bg-cms-background p-1 text-xs shadow-sm transition-colors focus-within:ring-1 focus-within:ring-cms-ring",
+				"flex min-h-8 max-w-md flex-1 flex-wrap items-center gap-1.5 rounded-md border border-cms-input bg-cms-background p-1 text-xs shadow-sm transition-colors focus-within:ring-1 focus-within:ring-cms-ring",
 				disabled && "cursor-not-allowed opacity-50",
 			)}
 		>
@@ -739,59 +763,66 @@ function CheckRow({
 }) {
 	const t = useTranslator(aiManagerMessages);
 	const id = useId();
+	const multiline = check.kind === "oneOf" && check.items.length > 2;
 	return (
-		<li className={cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start pt-0.5" : "items-center")}>
+		<li className={cn("flex min-h-8 gap-2.5", multiline ? "items-start pt-1" : "items-center")}>
 			<Switch
 				id={id}
 				size="sm"
 				checked={check.enabled}
 				onCheckedChange={(enabled) => onChange({ ...check, enabled })}
+				className={cn(multiline && "mt-1")}
 			/>
-			<Label
-				htmlFor={id}
-				className={cn("shrink-0 font-normal text-xs", check.kind === "oneOf" ? "w-28 pt-1.5" : "w-28")}
-			>
+			<Label htmlFor={id} className={cn("w-28 shrink-0 font-normal text-xs", multiline && "pt-1.5")}>
 				{label}
 			</Label>
-			{check.kind === "pattern" && (
-				<Input
-					aria-label={t("check.pattern")}
-					value={check.pattern}
-					disabled={!check.enabled}
-					onChange={(event) => onChange({ ...check, pattern: event.target.value })}
-					className="h-8 min-w-0 flex-1 font-mono text-xs"
-				/>
-			)}
-			{check.kind === "maxLength" && (
-				<span className="flex items-center gap-2">
+			<div className="flex min-w-0 max-w-md flex-1 items-center gap-2">
+				{check.kind === "pattern" && (
 					<Input
-						type="number"
-						aria-label={t("check.maxChars")}
-						min={1}
-						max={5000}
-						value={check.max}
+						aria-label={t("check.pattern")}
+						value={check.pattern}
 						disabled={!check.enabled}
-						onChange={(event) =>
-							onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
-						}
-						className="h-8 w-20 text-xs"
+						onChange={(event) => onChange({ ...check, pattern: event.target.value })}
+						className="h-8 min-w-0 flex-1 font-mono text-xs"
 					/>
-					<span className="text-cms-muted-foreground">{t("check.charsOrLess")}</span>
-				</span>
-			)}
-			{check.kind === "oneOf" && (
-				<OneOfInput items={check.items} disabled={!check.enabled} onChange={(items) => onChange({ ...check, items })} />
-			)}
-			{onRemove && (
+				)}
+				{check.kind === "maxLength" && (
+					<span className="flex items-center gap-2">
+						<Input
+							type="number"
+							aria-label={t("check.maxChars")}
+							min={1}
+							max={5000}
+							value={check.max}
+							disabled={!check.enabled}
+							onChange={(event) =>
+								onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) })
+							}
+							className="h-8 w-20 text-xs"
+						/>
+						<span className="text-cms-muted-foreground text-xs">{t("check.charsOrLess")}</span>
+					</span>
+				)}
+				{check.kind === "oneOf" && (
+					<OneOfInput
+						items={check.items}
+						disabled={!check.enabled}
+						onChange={(items) => onChange({ ...check, items })}
+					/>
+				)}
+			</div>
+			{onRemove ? (
 				<IconButton
 					label={t("check.remove", { label })}
 					size="icon-xs"
 					destructive
 					onClick={onRemove}
-					className={cn("ml-auto", check.kind === "oneOf" && "mt-1")}
+					className={cn(multiline && "mt-1")}
 				>
 					<Trash2 aria-hidden />
 				</IconButton>
+			) : (
+				<div className="w-6 shrink-0" aria-hidden />
 			)}
 		</li>
 	);
@@ -806,6 +837,7 @@ function FeatureEditor({
 	error,
 	onChange,
 	onSave,
+	onToggleHide,
 	custom,
 }: {
 	feature: AiActionView;
@@ -816,6 +848,7 @@ function FeatureEditor({
 	error: string | null;
 	onChange: (spec: Editable) => void;
 	onSave: () => void;
+	onToggleHide?: (hidden: boolean) => void;
 	/** For a screen action: edit basic info and delete. For a new action (`isNew`), cancel instead of delete. */
 	custom?: {
 		base: CustomBase;
@@ -903,9 +936,7 @@ function FeatureEditor({
 					<h2 className="truncate font-medium text-base">
 						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
 					</h2>
-					<p className="truncate text-cms-muted-foreground text-xs">
-						{placeLabel(feature)} · {engineLabel(feature.engine)}
-					</p>
+					<p className="truncate text-cms-muted-foreground text-xs">{placeLabel(feature)}</p>
 				</div>
 				<Label className="font-normal text-xs">
 					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
@@ -1091,7 +1122,13 @@ function FeatureEditor({
 				onDelete={custom && !custom.isNew ? custom.onDelete : undefined}
 			>
 				{!custom && (
-					<Button type="button" size="sm" variant="outline" onClick={() => set({ hidden: !spec.hidden })}>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						disabled={saving}
+						onClick={() => (onToggleHide ? onToggleHide(!spec.hidden) : set({ hidden: !spec.hidden }))}
+					>
 						{spec.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
 						{spec.hidden ? t("button.unhide") : t("button.hide")}
 					</Button>
