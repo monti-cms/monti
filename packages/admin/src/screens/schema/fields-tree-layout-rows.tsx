@@ -4,7 +4,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/client";
 import { ArrowDown, ArrowUp, ChevronsDownUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
@@ -22,7 +22,8 @@ import {
 	removeTab,
 	renameTab,
 	type Tree,
-	tabIsEditable,
+	tabCanRemove,
+	tabCanRename,
 } from "./layout-model";
 
 /** An input that edits a name in place: it changes the tree on Enter or when it loses focus, and Escape gives the old name back. */
@@ -33,6 +34,7 @@ function InlineName({
 	inputRef,
 	onCommit,
 	className,
+	maxLength,
 }: {
 	value: string;
 	label: string;
@@ -40,6 +42,7 @@ function InlineName({
 	inputRef?: React.RefObject<HTMLInputElement | null>;
 	onCommit: (value: string) => void;
 	className?: string;
+	maxLength?: number;
 }) {
 	const [draft, setDraft] = useState(value);
 	useEffect(() => setDraft(value), [value]);
@@ -53,6 +56,7 @@ function InlineName({
 			value={draft}
 			aria-label={label}
 			disabled={disabled}
+			maxLength={maxLength}
 			onChange={(event) => setDraft(event.target.value)}
 			onBlur={commit}
 			onKeyDown={(event) => {
@@ -79,7 +83,7 @@ export interface LayoutOps {
 	readonly disabled: boolean;
 }
 
-/** A tab of the panel as a row of the tree: only drawn once the collection has more than the default tab. */
+/** A tab of the panel as a row of the tree: shown for all tabs including the default tab. */
 export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	const t = useTranslator(schemaFieldsMessages);
 	const site = useSite();
@@ -87,26 +91,29 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 	const { setNodeRef, transform, transition } = useSortable({ id: tabId(index), disabled: { draggable: true } });
 	const inputRef = useRef<HTMLInputElement | null>(null);
 	if (!tab) return null;
-	const editable = tabIsEditable(ops.tree, index);
+	const canRename = tabCanRename(ops.tree, index);
+	const canRemove = tabCanRemove(ops.tree, index);
 	const count = ops.tree.tabs.length;
+	const defaultName = tabLabel(site, DEFAULT_TAB);
+	const currentName = index === 0 ? (ops.tree.defaultTab ?? defaultName) : tab.name;
 	const buttons: RowButton[] = [
 		{
-			label: t("layout.upTab", { name: tabLabel(site, tab.name) }),
+			label: t("layout.upTab", { name: currentName }),
 			icon: ArrowUp,
 			disabled: ops.disabled || index < 2,
 			onClick: () => ops.change((tree) => moveTab(tree, index, -1)),
 		},
 		{
-			label: t("layout.downTab", { name: tabLabel(site, tab.name) }),
+			label: t("layout.downTab", { name: currentName }),
 			icon: ArrowDown,
 			disabled: ops.disabled || index === 0 || index === count - 1,
 			onClick: () => ops.change((tree) => moveTab(tree, index, 1)),
 		},
 		{
-			label: t("layout.removeTab", { name: tabLabel(site, tab.name) }),
+			label: t("layout.removeTab", { name: currentName }),
 			icon: Trash2,
 			destructive: true,
-			disabled: ops.disabled || !editable,
+			disabled: ops.disabled || !canRemove,
 			onClick: () => ops.change((tree) => removeTab(tree, index)),
 		},
 	];
@@ -118,15 +125,16 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 			className="group/row relative mt-3 flex items-center gap-1 border-y bg-cms-muted py-1.5 pr-5 pl-9 first:mt-0"
 		>
 			<InlineName
-				value={tabLabel(site, tab.name)}
+				value={currentName}
 				label={t("layout.tabName")}
-				disabled={ops.disabled || !editable}
+				disabled={ops.disabled || !canRename}
 				inputRef={inputRef}
-				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name))}
+				maxLength={20}
+				onCommit={(name) => ops.change((tree) => renameTab(tree, index, name, defaultName))}
 				className="-ml-1.5 font-semibold"
 			/>
 			<span className="flex-1" />
-			{!editable && index > 0 && (
+			{!canRename && index > 0 && (
 				<span className="shrink-0 pr-1 text-cms-muted-foreground text-xs" title={t("layout.tabLocked")}>
 					{t("layout.pluginPlaced")}
 				</span>
@@ -139,6 +147,7 @@ export function TabRow({ ops, index }: { ops: LayoutOps; index: number }) {
 /** A group of the panel as a row of the tree: its title is edited in place, its fields sit under it. */
 export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; block: number }) {
 	const t = useTranslator(schemaFieldsMessages);
+	const site = useSite();
 	const group = ops.tree.tabs[tab]?.blocks[block];
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
 		id: groupId(tab, block),
@@ -212,7 +221,14 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 					<MoveDialog
 						title={t("layout.moveGroupTitle", { name: group.title })}
 						destinations={ops.tree.tabs.flatMap((item, at): Destination[] =>
-							at === tab ? [] : [{ label: item.name, run: () => ops.change((tree) => moveGroupToTab(tree, ref, at)) }],
+							at === tab
+								? []
+								: [
+										{
+											label: at === 0 ? (ops.tree.defaultTab ?? tabLabel(site, item.name)) : item.name,
+											run: () => ops.change((tree) => moveGroupToTab(tree, ref, at)),
+										},
+									],
 						)}
 						onClose={() => setMoving(false)}
 					/>

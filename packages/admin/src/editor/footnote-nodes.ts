@@ -1,6 +1,6 @@
 import { type Editor, Extension, mergeAttributes, Node, type Range } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
-import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, Plugin, PluginKey, Selection } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 export const FOOTNOTE_REFERENCE_NAME = "footnoteReference";
@@ -9,7 +9,7 @@ export const FOOTNOTE_DEFINITION_NAME = "footnoteDefinition";
 /** GFM matches labels case-insensitively, so numbering and lookups use this key. The stored label is never changed. */
 export const footnoteKey = (label: string) => label.trim().replace(/\s+/g, " ").toLowerCase();
 
-const labelOf = (node: PmNode) => String(node.attrs.label ?? "");
+export const labelOf = (node: PmNode) => String(node.attrs.label ?? "");
 
 /**
  * Display numbers: the order in which each label is first referenced in the document (what the public page shows too).
@@ -51,16 +51,6 @@ const REFERENCE_CLASS = [
 	"[&.ProseMirror-selectednode]:ring-2 [&.ProseMirror-selectednode]:ring-cms-ring",
 ].join(" ");
 
-const DEFINITION_CLASS = [
-	"relative my-1 min-h-6 pl-9 text-sm",
-	// The number and label badge sits in the left gutter.
-	"before:absolute before:top-0.5 before:left-0 before:max-w-8 before:truncate before:rounded before:bg-cms-accent",
-	"before:px-1 before:text-center before:font-medium before:text-cms-accent-foreground before:text-xs before:leading-5",
-	"before:content-[attr(data-footnote-badge)]",
-	"data-[footnote-unused]:before:bg-cms-muted data-[footnote-unused]:before:text-cms-muted-foreground",
-	"data-[footnote-duplicate]:before:bg-cms-destructive/15 data-[footnote-duplicate]:before:text-cms-destructive",
-].join(" ");
-
 /**
  * GFM footnote reference (`text[^label]`). A small superscript chip that is selected and deleted as a whole.
  * The number on the chip is the order of first reference (a decoration from `CmsFootnoteNumbers`); the stored label does not change.
@@ -82,16 +72,33 @@ export const CmsFootnoteReference = Node.create({
 	renderHTML({ HTMLAttributes }) {
 		return ["sup", mergeAttributes(HTMLAttributes, { "data-footnote-ref": "", class: REFERENCE_CLASS })];
 	},
+	addProseMirrorPlugins() {
+		return [
+			new Plugin({
+				props: {
+					handleClickOn(view, _pos, node, nodePos) {
+						if (node.type.name === FOOTNOTE_REFERENCE_NAME) {
+							view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)));
+							return true;
+						}
+						return false;
+					},
+				},
+			}),
+		];
+	},
 });
 
 /**
- * GFM footnote definition (`[^label]: content`). A block with ordinary block content (paragraphs, lists, code…) that stays where it is in the source.
+ * GFM footnote definition (`[^label]: content`). Hidden in the editor canvas (edited via popup),
+ * but preserved in the document tree for GFM roundtrip and rendered at the document bottom on public pages.
  */
 export const CmsFootnoteDefinition = Node.create({
 	name: FOOTNOTE_DEFINITION_NAME,
 	group: "block",
 	content: "block+",
 	defining: true,
+	selectable: false,
 	addAttributes() {
 		return { label: labelAttribute };
 	},
@@ -99,7 +106,16 @@ export const CmsFootnoteDefinition = Node.create({
 		return [{ tag: "div[data-footnote-definition]" }];
 	},
 	renderHTML({ HTMLAttributes }) {
-		return ["div", mergeAttributes(HTMLAttributes, { "data-footnote-definition": "", class: DEFINITION_CLASS }), 0];
+		return [
+			"div",
+			mergeAttributes(HTMLAttributes, {
+				"data-footnote-definition": "",
+				class: "hidden",
+				style: "display: none;",
+				"aria-hidden": "true",
+			}),
+			0,
+		];
 	},
 });
 
@@ -155,6 +171,31 @@ export const CmsFootnoteNumbers = Extension.create({
 				props: {
 					decorations: (state) => numbersKey.getState(state),
 				},
+				appendTransaction(transactions, _oldState, newState) {
+					if (!transactions.some((tr) => tr.selectionSet)) return null;
+					const { $from } = newState.selection;
+					let insideDef = false;
+					for (let d = $from.depth; d > 0; d--) {
+						if ($from.node(d).type.name === FOOTNOTE_DEFINITION_NAME) {
+							insideDef = true;
+							break;
+						}
+					}
+					if (!insideDef) return null;
+					let firstDefPos: number | null = null;
+					newState.doc.descendants((node, pos) => {
+						if (node.type.name === FOOTNOTE_DEFINITION_NAME) {
+							if (firstDefPos === null) firstDefPos = pos;
+							return false;
+						}
+					});
+					if (firstDefPos !== null && firstDefPos > 0) {
+						const $target = newState.doc.resolve(Math.max(0, firstDefPos - 1));
+						const sel = Selection.near($target, -1);
+						return newState.tr.setSelection(sel);
+					}
+					return null;
+				},
 			}),
 		];
 	},
@@ -173,7 +214,7 @@ export const canInsertFootnote = (editor: Editor, range?: Range): boolean => {
 
 /**
  * Inserts a reference at the cursor (replacing `range`, the typed slash command) with the next numeric label, appends an empty definition at the end of
- * the document and moves the cursor into it. Does nothing where an inline reference cannot go (a code block, for example).
+ * the document and selects the newly inserted reference node so the inline editing popup opens at the cursor.
  */
 export const insertFootnote = (editor: Editor, range?: Range): boolean => {
 	if (!canInsertFootnote(editor, range)) return false;
@@ -195,8 +236,11 @@ export const insertFootnote = (editor: Editor, range?: Range): boolean => {
 					? tr.doc.content.size - last.nodeSize
 					: tr.doc.content.size;
 			tr.insert(at, created);
-			// Inside the new definition's first paragraph.
-			tr.setSelection(TextSelection.near(tr.doc.resolve(at + 1), 1));
+			// Select the newly inserted footnote reference so the inline bubble immediately appears right at the cursor.
+			const refPos = tr.selection.from - 1;
+			if (refPos >= 0 && tr.doc.nodeAt(refPos)?.type.name === FOOTNOTE_REFERENCE_NAME) {
+				tr.setSelection(NodeSelection.create(tr.doc, refPos));
+			}
 			tr.scrollIntoView();
 			return true;
 		})

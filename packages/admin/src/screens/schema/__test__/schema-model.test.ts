@@ -10,6 +10,7 @@ import {
 	fieldProblems,
 	fieldsOf,
 	hasBody,
+	moveCollection,
 	moveField,
 	nameProblem,
 	newField,
@@ -20,6 +21,7 @@ import {
 	removeOption,
 	renameField,
 	renameOption,
+	reorderCollections,
 	reorderField,
 	setProp,
 	setTitleField,
@@ -257,5 +259,29 @@ describe("changeCount", () => {
 		edited.site = { name: "Mine", home: "/" };
 		// post edited, memo added, time zone, two site settings
 		expect(changeCount(file(), edited)).toBe(5);
+	});
+});
+
+describe("collection reordering", () => {
+	const file = (): Obj => ({
+		collections: { post: post(), memo: post(), tag: post() },
+	});
+
+	it("moves a collection up or down", () => {
+		const movedUp = moveCollection(file(), "memo", -1);
+		expect(Object.keys(collectionsOf(movedUp))).toEqual(["memo", "post", "tag"]);
+
+		const movedDown = moveCollection(file(), "memo", 1);
+		expect(Object.keys(collectionsOf(movedDown))).toEqual(["post", "tag", "memo"]);
+	});
+
+	it("reorders collections to a specified order", () => {
+		const reordered = reorderCollections(file(), ["tag", "post", "memo"]);
+		expect(Object.keys(collectionsOf(reordered))).toEqual(["tag", "post", "memo"]);
+	});
+
+	it("counts collection order change as one pending change", () => {
+		const reordered = reorderCollections(file(), ["memo", "post", "tag"]);
+		expect(changeCount(file(), reordered)).toBe(1);
 	});
 });

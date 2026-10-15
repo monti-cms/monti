@@ -35,7 +35,15 @@ export function SiteCallout({
 	};
 	return (
 		<aside data-site-callout={kind} style={box}>
-			<strong style={{ display: "block", color: accent, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+			<strong
+				style={{
+					display: "block",
+					width: "100%",
+					color: accent,
+					letterSpacing: "0.04em",
+					textTransform: "uppercase",
+				}}
+			>
 				{title || kind}
 			</strong>
 			{children}

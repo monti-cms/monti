@@ -29,6 +29,15 @@
 	--chart-4: oklch(0.72 0.16 15);
 	--chart-5: oklch(0.72 0.13 310);
 }
+@media (prefers-color-scheme: dark) {
+	:where(:root:not(.light, [data-theme="light"])) {
+		--chart-1: oklch(0.75 0.13 265);
+		--chart-2: oklch(0.78 0.12 160);
+		--chart-3: oklch(0.82 0.12 70);
+		--chart-4: oklch(0.72 0.16 15);
+		--chart-5: oklch(0.72 0.13 310);
+	}
+}
 
 /* Text and background colors (`:color`, the text color extension). Values come as a light/dark theme pair, and the light value is used when there is no dark value. */
 .cms-color[data-fg] {
@@ -47,6 +56,14 @@
 :where(.dark, [data-theme="dark"]) .cms-color[data-bg] {
 	background-color: var(--cms-bg-dark, var(--cms-bg));
 }
+@media (prefers-color-scheme: dark) {
+	.cms-color[data-fg]:not(:where(.light, [data-theme="light"]) *) {
+		color: var(--cms-fg-dark, var(--cms-fg));
+	}
+	.cms-color[data-bg]:not(:where(.light, [data-theme="light"]) *) {
+		background-color: var(--cms-bg-dark, var(--cms-bg));
+	}
+}
 
 /* ------------------------------------------------------------------------------------------------
  * Default public components (`cms-block-*`)
@@ -63,6 +80,13 @@
 	--cms-block-tooltip-bg: oklch(0.96 0.005 265);
 	--cms-block-tooltip-fg: oklch(0.21 0.03 265);
 	--cms-block-accent: oklch(0.75 0.12 250);
+}
+@media (prefers-color-scheme: dark) {
+	:where(:root:not(.light, [data-theme="light"])) {
+		--cms-block-tooltip-bg: oklch(0.96 0.005 265);
+		--cms-block-tooltip-fg: oklch(0.21 0.03 265);
+		--cms-block-accent: oklch(0.75 0.12 250);
+	}
 }
 
 /* Callout */
@@ -664,4 +688,10 @@
 :where(.dark, [data-theme="dark"]) .cms-block-chart-tooltip {
 	background-color: oklch(0.24 0.02 265);
 	color: oklch(0.96 0.005 265);
+}
+@media (prefers-color-scheme: dark) {
+	.cms-block-chart-tooltip:not(:where(.light, [data-theme="light"]) *) {
+		background-color: oklch(0.24 0.02 265);
+		color: oklch(0.96 0.005 265);
+	}
 }

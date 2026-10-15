@@ -12,7 +12,11 @@ import { aiStoreFor } from "../../../store";
 
 type KeyParams = { key: string };
 
-const patchSchema = z.object({ expectedVersion: z.number().int().min(0), value: z.unknown(), base: z.unknown() });
+const patchSchema = z.object({
+	expectedVersion: z.number().int().min(0),
+	value: z.unknown(),
+	base: z.unknown().optional(),
+});
 
 /**
  * Saves editable values (enable, accept requests, connection, model, input to send, instructions, thresholds, checks). Values equal to the defaults are not kept.

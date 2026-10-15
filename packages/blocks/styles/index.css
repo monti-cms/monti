@@ -78,3 +78,11 @@
 .cms-color[data-bg]:where(.dark *, [data-theme="dark"] *) {
 	background-color: var(--cms-bg-dark, var(--cms-bg));
 }
+@media (prefers-color-scheme: dark) {
+	.cms-color[data-fg]:not(:where(.light, [data-theme="light"]) *) {
+		color: var(--cms-fg-dark, var(--cms-fg));
+	}
+	.cms-color[data-bg]:not(:where(.light, [data-theme="light"]) *) {
+		background-color: var(--cms-bg-dark, var(--cms-bg));
+	}
+}

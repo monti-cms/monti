@@ -32,12 +32,14 @@ export function LanguageTabs({
 	disabled,
 	onBeforeCreate,
 	onTrashTranslation,
+	className,
 }: {
 	entry: EntryData;
 	disabled: boolean;
 	/** Blocks translation creation when there are unsaved changes. */
 	onBeforeCreate: () => Promise<boolean>;
 	onTrashTranslation: () => void;
+	className?: string;
 }) {
 	const t = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
@@ -77,7 +79,7 @@ export function LanguageTabs({
 	};
 
 	return (
-		<nav aria-label={t("lang.nav")} className="flex flex-wrap items-center gap-1 px-4 pt-2">
+		<nav aria-label={t("lang.nav")} className={cn("mb-3.5 flex flex-wrap items-center gap-1 px-4 pt-2", className)}>
 			{site.LOCALES.map((target) => {
 				const member = members.find((item) => item.locale === target);
 				if (!member) {

@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
-import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
@@ -11,9 +11,11 @@ import { moveWithin } from "../../lib/utils/move-within";
 import { Button } from "../../ui/button";
 import { Panel } from "../../ui/card";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { Pick, useSchemaEdit } from "./controls";
@@ -61,7 +63,7 @@ function TimeZonePick({
 	const id = useId();
 	const zones = useMemo(() => zonesWith(value), [value]);
 	return (
-		<Labeled label={t("locales.timeZone")} hint={t("locales.timeZoneHelp")} htmlFor={id}>
+		<Labeled label={t("locales.timeZone")} description={t("locales.timeZoneHelp")} htmlFor={id}>
 			<Combobox
 				items={zones}
 				autoHighlight
@@ -156,12 +158,34 @@ function LocaleDialog({
 }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const tc = useTranslator(commonMessages);
-	const codeListId = useId();
+	const codeId = useId();
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState("");
 	const [code, setCode] = useState(locale?.code ?? "");
 	const [name, setName] = useState(locale?.name ?? "");
 	const [label, setLabel] = useState(locale?.label ?? "");
+	const availableCodes = useMemo(
+		() => (KNOWN_CODES as readonly string[]).filter((known) => !taken.includes(known)),
+		[taken],
+	);
 	const codeOk = locale !== undefined || (LOCALE_CODE.test(code) && !taken.includes(code));
 	const ok = codeOk && name.trim() !== "";
+
+	const handleCodeSelect = (next: string) => {
+		setCode(next);
+		if (!locale && name.trim() === "") {
+			const native = nativeNameOf(next);
+			if (native) setName(native);
+		}
+	};
+
+	const trimmedSearch = search.trim();
+	const isCustom =
+		trimmedSearch.length > 0 &&
+		!availableCodes.includes(trimmedSearch) &&
+		LOCALE_CODE.test(trimmedSearch) &&
+		!taken.includes(trimmedSearch);
+
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
 			<DialogContent className="sm:max-w-md" data-testid="locale-dialog">
@@ -177,31 +201,104 @@ function LocaleDialog({
 						onSave({ code, name: name.trim(), ...(label.trim() ? { label: label.trim() } : {}) });
 					}}
 				>
-					<Labeled label={t("locales.code")} hint={locale ? undefined : t("locales.codeHint")}>
-						<Input
-							autoFocus={!locale}
-							value={code}
-							disabled={locale !== undefined}
-							aria-label={t("locales.code")}
-							placeholder="en"
-							list={codeListId}
-							aria-invalid={code !== "" && !codeOk ? true : undefined}
-							onChange={(event) => {
-								const next = event.target.value;
-								setCode(next);
-								// Picking a known code names the language, unless a name was already typed.
-								if (!locale && name.trim() === "" && (KNOWN_CODES as readonly string[]).includes(next)) {
-									setName(nativeNameOf(next) ?? "");
-								}
-							}}
-						/>
-						<datalist id={codeListId}>
-							{KNOWN_CODES.filter((known) => !taken.includes(known)).map((known) => (
-								<option key={known} value={known}>
-									{nativeNameOf(known) ?? known}
-								</option>
-							))}
-						</datalist>
+					<Labeled label={t("locales.code")} description={locale ? undefined : t("locales.codeHint")} htmlFor={codeId}>
+						{locale !== undefined ? (
+							<Input id={codeId} value={code} disabled aria-label={t("locales.code")} />
+						) : (
+							<div className="relative">
+								<input
+									id={codeId}
+									className="sr-only"
+									aria-label={t("locales.code")}
+									tabIndex={-1}
+									value={code}
+									onChange={(event) => handleCodeSelect(event.target.value)}
+								/>
+								<Popover
+									open={open}
+									onOpenChange={(nextOpen) => {
+										setOpen(nextOpen);
+										if (!nextOpen) setSearch("");
+									}}
+								>
+									<PopoverTrigger
+										render={
+											<Button
+												type="button"
+												variant="outline"
+												role="combobox"
+												aria-expanded={open}
+												autoFocus
+												className={cn(
+													"w-full justify-between font-normal",
+													!code && "text-cms-muted-foreground",
+													code !== "" && !codeOk && "border-cms-destructive text-cms-destructive",
+												)}
+											/>
+										}
+									>
+										{code ? (
+											<span className="flex items-center gap-2 truncate">
+												<span className="font-mono font-semibold text-xs">{code}</span>
+												{nativeNameOf(code) && (
+													<span className="text-cms-muted-foreground text-xs">{nativeNameOf(code)}</span>
+												)}
+											</span>
+										) : (
+											<span>{t("locales.codePlaceholder")}</span>
+										)}
+										<ChevronsUpDown aria-hidden className="ml-auto size-4 shrink-0 opacity-50" />
+									</PopoverTrigger>
+									<PopoverContent align="start" className="w-(--anchor-width) min-w-72 p-0">
+										<Command>
+											<CommandInput
+												value={search}
+												onValueChange={setSearch}
+												placeholder={t("locales.codeSearch")}
+												aria-label={t("locales.codeSearch")}
+												autoFocus
+											/>
+											<CommandList className="max-h-60">
+												<CommandEmpty>{t("locales.codeNone")}</CommandEmpty>
+												<CommandGroup>
+													{availableCodes.map((known) => {
+														const native = nativeNameOf(known);
+														return (
+															<CommandItem
+																key={known}
+																value={`${known} ${native ?? ""}`}
+																data-checked={code === known ? "true" : undefined}
+																onSelect={() => {
+																	handleCodeSelect(known);
+																	setOpen(false);
+																}}
+															>
+																<span className="font-mono font-semibold text-xs">{known}</span>
+																{native && <span className="ml-1 text-cms-muted-foreground text-xs">{native}</span>}
+															</CommandItem>
+														);
+													})}
+												</CommandGroup>
+												{isCustom && (
+													<CommandGroup>
+														<CommandItem
+															value={trimmedSearch}
+															onSelect={() => {
+																handleCodeSelect(trimmedSearch);
+																setOpen(false);
+															}}
+														>
+															<Plus className="size-4 shrink-0 text-cms-muted-foreground" />
+															<span>{t("locales.codeCustom", { code: trimmedSearch })}</span>
+														</CommandItem>
+													</CommandGroup>
+												)}
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
+							</div>
+						)}
 					</Labeled>
 					<Labeled label={t("locales.name")}>
 						<Input
@@ -212,7 +309,7 @@ function LocaleDialog({
 							onChange={(event) => setName(event.target.value)}
 						/>
 					</Labeled>
-					<Labeled label={t("locales.label")} hint={t("locales.labelHint")}>
+					<Labeled label={t("locales.label")} description={t("locales.labelHint")}>
 						<Input value={label} aria-label={t("locales.label")} onChange={(event) => setLabel(event.target.value)} />
 					</Labeled>
 					<DialogFormFooter
@@ -398,7 +495,7 @@ export function LocalesEditor({
 				<div className="flex flex-col gap-6">
 					<Pick
 						label={t("locales.default")}
-						hint={t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) })}
+						description={t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) })}
 						value={defaultLocale}
 						items={locales.map((locale) => ({
 							value: locale.code,

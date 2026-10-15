@@ -12,7 +12,7 @@ import { Button } from "../../ui/button";
 import { Panel } from "../../ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
@@ -117,7 +117,13 @@ export function ApiKeysSettings() {
 								: "\u00a0"}
 						</span>
 					</div>
-					<KeyRows query={query} menu={rowMenu} onAssign={setSlotEditing} onRetry={() => void query.refetch()} />
+					<KeyRows
+						query={query}
+						menu={rowMenu}
+						onAssign={setSlotEditing}
+						onRetry={() => void query.refetch()}
+						onAdd={() => setEditing({ mode: "add" })}
+					/>
 				</Panel>
 			</Section>
 			{editing && (
@@ -145,11 +151,13 @@ function KeyRows({
 	menu,
 	onAssign,
 	onRetry,
+	onAdd,
 }: {
 	query: ReturnType<typeof useApiKeys>;
 	menu: (key: ApiKeyView) => MenuAction[];
 	onAssign: (slot: ApiKeySlotView) => void;
 	onRetry: () => void;
+	onAdd: () => void;
 }) {
 	const t = useTranslator(apiKeysMessages);
 	const site = useSite();
@@ -175,8 +183,14 @@ function KeyRows({
 						<KeyRound aria-hidden />
 					</EmptyMedia>
 					<EmptyTitle>{t("empty.title")}</EmptyTitle>
+					<EmptyDescription>{t("empty.description")}</EmptyDescription>
 				</EmptyHeader>
-				<p className="text-cms-muted-foreground text-sm">{t("empty.description")}</p>
+				<EmptyContent>
+					<Button type="button" size="sm" variant="outline" disabled={!list.secretsAvailable} onClick={onAdd}>
+						<Plus aria-hidden />
+						{t("add")}
+					</Button>
+				</EmptyContent>
 			</Empty>
 		);
 	}

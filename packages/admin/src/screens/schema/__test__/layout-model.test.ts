@@ -273,7 +273,9 @@ describe("layout tree", () => {
 		expect(moveTab(tree, 1, -1).tabs[0]?.name).toBe(DEFAULT);
 		tree = renameTab(tree, 1, "Renamed");
 		expect(tree.tabs[1]?.name).toBe("Renamed");
-		expect(renameTab(tree, 0, "X").tabs[0]?.name).toBe(DEFAULT);
+		expect(renameTab(tree, 0, "CustomDefault").defaultTab).toBe("CustomDefault");
+		expect(renameTab(tree, 0, "CustomDefault").tabs[0]?.name).toBe(DEFAULT);
+		expect(renameTab(renameTab(tree, 0, "CustomDefault"), 0, "").defaultTab).toBeUndefined();
 		tree = addGroup(tree, 1, "G");
 		tree = placeField(placeUngrouped(tree, "cover", 1), "cover", 1, 0);
 		tree = removeTab(tree, 1);

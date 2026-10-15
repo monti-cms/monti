@@ -192,6 +192,7 @@ export interface MediaMetadataStore {
 		filename?: string;
 		defaultAlt?: string;
 		defaultCaption?: string;
+		folderId?: string | null;
 	}): Promise<MediaAssetRecord>;
 	listMediaAssets(params?: ListMediaParams): Promise<ListMediaResult>;
 	getMediaAsset(id: string): Promise<MediaAssetRecord | null>;

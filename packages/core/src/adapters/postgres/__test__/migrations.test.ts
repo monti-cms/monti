@@ -35,7 +35,7 @@ describe("migrations", () => {
 		);
 
 	it("has exactly the baseline as its step list (a guard against renaming a step)", () => {
-		expect([...CONTENT_STORE_MIGRATIONS]).toEqual(["0001_baseline"]);
+		expect([...CONTENT_STORE_MIGRATIONS]).toEqual(["0001_baseline", "0002_media_folders"]);
 	});
 
 	it("runs one at a time even when started twice concurrently, and records the steps and the seed once", async () => {

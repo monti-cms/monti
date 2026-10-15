@@ -5,10 +5,13 @@ import { cmsIssueMessage } from "../../../api/error-message";
 import { renderWithSite as render } from "../../../test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
+import { entriesMessages } from "../messages";
 import { SchemaFields } from "../schema-fields";
 import { EntryFormProvider, type EntryFormValue } from "../use-field";
 
 afterEach(cleanup);
+
+const t = testSite.createTranslator(entriesMessages);
 
 function renderFields(value: Partial<EntryFormValue>, props: Parameters<typeof SchemaFields>[0] = {}) {
 	const setForm = vi.fn();
@@ -65,5 +68,24 @@ describe("SchemaFields on the form provider", () => {
 		);
 		fireEvent.change(screen.getByDisplayValue("S"), { target: { value: "T" } });
 		expect(setForm).not.toHaveBeenCalled();
+	});
+
+	it("fills a field from the body when clicking the fillFromBody button", () => {
+		const doc = {
+			type: "doc" as const,
+			version: 1,
+			content: [
+				{
+					type: "paragraph",
+					content: [{ type: "text", text: "This is body paragraph text." }],
+				},
+			],
+		};
+		const form: EntryForm = { ...EMPTY_FORM, doc, summary: "" };
+		const setForm = renderFields({ form }, { include: (group) => group.fields.includes("summary") });
+		const button = screen.getByRole("button", { name: t("field.fillFromBody") });
+		expect(button).toBeTruthy();
+		fireEvent.click(button);
+		expect(setForm).toHaveBeenCalledWith({ summary: "This is body paragraph text." });
 	});
 });

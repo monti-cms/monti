@@ -1,18 +1,29 @@
 import { defineBlock } from "@monti-cms/core";
 import { charEffectByName } from "@monti-cms/core/code-block";
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
-import { Editor } from "@tiptap/core";
+import type { CmsNode } from "@monti-cms/core/document";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { Editor, type JSONContent } from "@tiptap/core";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { CmsAdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { renderWithSite } from "../../test/site";
+import { para, storedDoc, text } from "../../test/stored-doc";
 import { addedMarkName, createAddedMark } from "../added-marks";
 import { buildEditorExtensions } from "../extensions";
 import { BubbleButton, InlineBubble } from "../inline-bubble";
 import { inlineBubbleTarget } from "../inline-marks";
 import { editorMessages } from "../messages";
+import { storedToTiptap } from "../tiptap-content";
+
+const ref = (label: string): CmsNode => ({ type: "footnoteReference", attrs: { label } });
+const def = (label: string, ...content: CmsNode[]): CmsNode => ({
+	type: "footnoteDefinition",
+	attrs: { label },
+	content,
+});
+const line = (...content: CmsNode[]): CmsNode => ({ type: "paragraph", content });
 
 const t = testSite.createTranslator(editorMessages);
 const tc = testSite.createTranslator(commonMessages);
@@ -54,13 +65,13 @@ afterEach(() => {
 	}
 });
 
-const createEditor = (html: string) => {
+const createEditor = (content: string | JSONContent) => {
 	const element = document.createElement("div");
 	document.body.append(element);
 	const editor = new Editor({
 		element,
 		extensions: [...buildEditorExtensions(testSite), createAddedMark(noteBlock, { inclusive: true })],
-		content: html,
+		content,
 	});
 	editors.push(editor);
 	return editor;
@@ -122,6 +133,22 @@ describe("inlineBubbleTarget", () => {
 		});
 		editor.commands.setTextSelection({ from: codeStart + 1, to: codeStart + 3 });
 		expect(inlineBubbleTarget(editor.state)).toBeNull();
+	});
+
+	it("detects footnote references and resolves their definition position and text", () => {
+		const doc = storedDoc(line(text("Hello"), ref("1")), def("1", para("Footnote description")));
+		const editor = createEditor(storedToTiptap(testSite, doc));
+		let refPos = -1;
+		editor.state.doc.descendants((node, pos) => {
+			if (node.type.name === "footnoteReference") refPos = pos;
+		});
+		editor.commands.setNodeSelection(refPos);
+		expect(inlineBubbleTarget(editor.state)).toMatchObject({
+			kind: "footnote",
+			badge: "1",
+			label: "1",
+			defText: "Footnote description",
+		});
 	});
 });
 
@@ -344,5 +371,55 @@ describe("InlineBubble", () => {
 		renderBubble(editor);
 		act(() => fireEvent.click(screen.getByRole("button", { name: t("inlineBubble.ruleDelete") })));
 		expect(editor.state.doc.child(0).attrs.rules).toEqual([]);
+	});
+
+	it("shows footnote preview bubble and allows editing in popup and removing footnote", () => {
+		const doc = storedDoc(line(text("Hello"), ref("1")), def("1", para("Footnote description")));
+		const editor = createEditor(storedToTiptap(testSite, doc));
+		let refPos = -1;
+		editor.state.doc.descendants((node, pos) => {
+			if (node.type.name === "footnoteReference") refPos = pos;
+		});
+		editor.commands.setNodeSelection(refPos);
+		editor.view.focus();
+		renderBubble(editor);
+
+		const toolbar = screen.getByRole("toolbar", { name: t("inlineBubble.footnoteTitle") });
+		expect(toolbar).toBeTruthy();
+		expect(within(toolbar).getByText("1")).toBeTruthy();
+		expect(within(toolbar).getByText("Footnote description")).toBeTruthy();
+
+		// Clicking edit opens the footnote editing popup
+		act(() => fireEvent.click(within(toolbar).getByRole("button", { name: t("inlineBubble.footnoteEdit") })));
+		const dialog = screen.getByRole("dialog", { name: t("inlineBubble.footnotePanel") });
+		expect(dialog).toBeTruthy();
+
+		// Textarea contains the current footnote description
+		const textarea = within(dialog).getByRole("textbox") as HTMLTextAreaElement;
+		expect(textarea.value).toBe("Footnote description");
+
+		// Edit the footnote description and apply
+		act(() => fireEvent.change(textarea, { target: { value: "Updated footnote" } }));
+		act(() => fireEvent.click(within(dialog).getByRole("button", { name: tc("apply") })));
+
+		// Footnote definition in editor document is updated
+		let defText = "";
+		editor.state.doc.descendants((node) => {
+			if (node.type.name === "footnoteDefinition") defText = node.textContent;
+		});
+		expect(defText).toBe("Updated footnote");
+
+		// Removing the footnote
+		act(() => {
+			editor.commands.setNodeSelection(refPos);
+			editor.view.focus();
+		});
+		const footnoteToolbar = screen.getByRole("toolbar", { name: t("inlineBubble.footnoteTitle") });
+		act(() => fireEvent.click(within(footnoteToolbar).getByRole("button", { name: t("inlineBubble.footnoteRemove") })));
+		let hasRef = false;
+		editor.state.doc.descendants((node) => {
+			if (node.type.name === "footnoteReference") hasRef = true;
+		});
+		expect(hasRef).toBe(false);
 	});
 });

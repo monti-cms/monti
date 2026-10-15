@@ -3,8 +3,8 @@ import { createMediaService, STALE_UPLOAD_AFTER_MS } from "../media-service";
 
 const media = (id: string, extra: Record<string, unknown> = {}) => ({
 	id,
-	storageKey: `media/${id}/pic.png`,
-	stagingKey: `staging/${id}/pic.png`,
+	storageKey: `media/${id}.png`,
+	stagingKey: `staging/${id}.png`,
 	original: null,
 	...extra,
 });
@@ -39,7 +39,7 @@ describe("media service", () => {
 	it("deletes every file of an asset, then its row", async () => {
 		const { service, deleted, finalized } = setup();
 		await service.delete("a");
-		expect(deleted).toEqual(["media/a/pic.png", "staging/a/pic.png", "o/key"]);
+		expect(deleted).toEqual(["media/a.png", "staging/a.png", "o/key"]);
 		expect(finalized).toEqual(["a"]);
 	});
 
@@ -51,13 +51,13 @@ describe("media service", () => {
 
 	it("cleans up stale uploads with the same rules, reports the ones it could not, and asks for uploads older than a day", async () => {
 		const { service, store, deleted, finalized, now } = setup({
-			stale: [media("ok"), media("bad", { stagingKey: "staging/bad/x" })],
+			stale: [media("ok"), media("bad", { stagingKey: "staging/bad.png" })],
 			failFor: ["staging/bad"],
 		});
 		expect(await service.cleanup()).toEqual({ removed: 1, failed: ["bad"] });
 		expect(store.listStaleUploads).toHaveBeenCalledWith({ before: new Date(now.getTime() - STALE_UPLOAD_AFTER_MS) });
 		// Only what was staged is removed: an upload that never completed has no final file.
-		expect(deleted).toEqual(["staging/ok/pic.png"]);
+		expect(deleted).toEqual(["staging/ok.png"]);
 		expect(finalized).toEqual(["ok"]);
 	});
 });

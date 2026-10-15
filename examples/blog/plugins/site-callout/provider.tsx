@@ -26,7 +26,7 @@ function SiteCalloutView() {
 						onCommit={(title) => block.setValue("title", title)}
 						onEnter={() => block.focus()}
 						onEscape={() => block.focus()}
-						className="flex-1 font-medium"
+						className="w-full font-medium"
 					/>
 				}
 			>

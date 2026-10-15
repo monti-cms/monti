@@ -187,4 +187,35 @@ describe("AI Manager UI", () => {
 			expect(screen.getByText("Write summary")).toBeInTheDocument();
 		});
 	});
+
+	it("immediately saves when clicking hide button in feature editor without requiring save button click", async () => {
+		render(
+			<SiteWrapper site={testSite}>
+				<AiManager />
+			</SiteWrapper>,
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText("Suggest slug")).toBeInTheDocument();
+		});
+
+		// Open Suggest slug feature
+		fireEvent.click(screen.getByText("Suggest slug"));
+
+		// Hide button should say "Hide"
+		const hideBtn = await screen.findByRole("button", { name: tManager("button.hide") });
+		expect(hideBtn).toBeInTheDocument();
+
+		// Clicking hide button immediately saves
+		fireEvent.click(hideBtn);
+		await waitFor(() => {
+			expect(fetchMock).toHaveBeenCalledWith(
+				expect.stringContaining("/api/monti/v1/ai/actions/slug"),
+				expect.objectContaining({
+					method: "PATCH",
+					body: expect.stringContaining('"hidden":true'),
+				}),
+			);
+		});
+	});
 });

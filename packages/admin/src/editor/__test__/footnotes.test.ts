@@ -1,9 +1,11 @@
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
 import { Editor, type JSONContent } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { para, storedDoc, text } from "../../test/stored-doc";
 import { buildEditorExtensions } from "../extensions";
+import { setFootnoteDefinitionText } from "../footnote-form";
 import { footnoteNumbers, nextFootnoteLabel } from "../footnote-nodes";
 import { editorMessages } from "../messages";
 import { filterCommands, slashCommands } from "../slash-command";
@@ -249,11 +251,13 @@ describe("Footnote slash command", () => {
 		editor.destroy();
 	});
 
-	it("moves the cursor into the new definition so the note can be typed", () => {
+	it("selects the inserted reference chip and keeps the definition at the end", () => {
 		const editor = createEditor(storedDoc(para("Hello")));
 		editor.commands.setTextSelection(6);
 		item()?.action(editor, { from: 6, to: 6 });
-		editor.commands.insertContent("The note");
+		expect(editor.state.selection instanceof NodeSelection).toBe(true);
+		expect((editor.state.selection as NodeSelection).node.type.name).toBe("footnoteReference");
+		setFootnoteDefinitionText(editor, "1", "The note");
 		const stored = saved(editor.getJSON());
 		expect(stored.content[0]?.content?.map((node) => node.type)).toEqual(["text", "footnoteReference"]);
 		expect(stored.content[1]).toMatchObject({ type: "footnoteDefinition", attrs: { label: "1" } });

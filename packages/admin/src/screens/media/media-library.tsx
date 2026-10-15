@@ -1,9 +1,12 @@
 "use client";
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	FileText,
+	Folder as FolderIcon,
+	FolderInput,
+	FolderUp,
 	Image as ImageIcon,
 	LayoutGrid,
 	Link2,
@@ -17,6 +20,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorText } from "../../api/client";
+import { foldersKeys, listFolders } from "../../api/folders";
 import {
 	cleanupMedia,
 	deleteMedia,
@@ -30,7 +34,14 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
-import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state";
+import {
+	enumParam,
+	pageParam,
+	pageSizeParam,
+	textParam,
+	type UrlParam,
+	useUrlState,
+} from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
@@ -47,11 +58,13 @@ import { AdminShell, PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { DateRangePicker } from "../shared/date-range-picker";
 import { EmptyState } from "../shared/empty-state";
+import type { DraggedEntry } from "../shared/entry-drag";
 import { entryHref } from "../shared/entry-href";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
 import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel";
 import { useDebouncedInput } from "../shared/use-debounced";
+import { useFolderActions } from "../shared/use-folder-actions";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { MediaDetailPanel } from "./media-detail-panel";
 import { mediaUsages, usageNoteLabel } from "./media-item";
@@ -77,6 +90,11 @@ const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 type MediaView = "grid" | "list";
 const VIEW_CODEC = enumCodec<MediaView>(["grid", "list"]);
 
+const descendantsParam: UrlParam<boolean> = {
+	parse: (raw) => raw === "1",
+	serialize: (value) => (value ? "1" : null),
+};
+
 /** The library's filters and page live in the address, so a refresh keeps them and the address can be shared. */
 const LIBRARY_PARAMS = {
 	page: pageParam,
@@ -86,6 +104,8 @@ const LIBRARY_PARAMS = {
 	kind: enumParam(["all", "image", "file"] as const, "all"),
 	uploadedFrom: textParam,
 	uploadedTo: textParam,
+	folder: textParam,
+	descendants: descendantsParam,
 };
 
 /**
@@ -97,7 +117,9 @@ export function MediaLibrary() {
 	const t = useTranslator(mediaMessages);
 	const tc = useTranslator(commonMessages);
 	const router = useAdminRouter();
-	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo }, update] = useUrlState(LIBRARY_PARAMS);
+	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder, descendants }, update] =
+		useUrlState(LIBRARY_PARAMS);
+	const queryClient = useQueryClient();
 	const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	/** Whether the detail panel's default description has unsaved changes. The detail panel reports it. */
@@ -114,12 +136,16 @@ export function MediaLibrary() {
 		const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
 		if (search.trim()) params.set("search", search.trim());
 		if (kind !== "all") params.set("kind", kind);
+		if (folder !== "all" && folder !== "") {
+			params.set("folderId", folder === "unfiled" ? "null" : folder);
+			if (descendants || search.trim()) params.set("includeDescendants", "true");
+		}
 		const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
 		const to = uploadedTo && site.parseDateTimeInput(`${uploadedTo}T23:59`);
 		if (from) params.set("uploadedFrom", from);
 		if (to) params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
 		return params.toString();
-	}, [page, pageSize, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
+	}, [page, pageSize, used, search, kind, folder, descendants, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
 	const mediaQuery = useQuery({
 		queryKey: mediaKeys.list(query),
 		queryFn: ({ signal }) => listMedia(site, query, signal),
@@ -128,6 +154,52 @@ export function MediaLibrary() {
 	const items = mediaQuery.data?.items ?? [];
 	const total = mediaQuery.data?.total ?? 0;
 	const selected = items.find((item) => item.id === selectedId) ?? null;
+
+	const foldersQuery = useQuery({
+		queryKey: foldersKeys.list("media"),
+		queryFn: ({ signal }) => listFolders(site, "media", signal),
+	});
+	const folders = foldersQuery.data ?? [];
+
+	const folderActions = useFolderActions({
+		collection: "media",
+		folders,
+		onChanged: async (deletedId) => {
+			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
+			if (deletedId && folder === deletedId) update({ folder: "all" });
+			else await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+		},
+	});
+
+	const moveMediaToFolder = async (media: MediaItem, targetFolderId: string | null) => {
+		const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+		const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
+		try {
+			await updateMedia(site, media.id, { folderId: targetFolderId });
+			toast.success(t("library.moved", { name: media.filename, destination }));
+			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
+		} catch (error) {
+			toast.error(errorText(site, error, t("library.moveFailed", { name: media.filename })));
+		}
+	};
+
+	const onDropEntries = async (targetFolderId: string | null, entries: DraggedEntry[]) => {
+		const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+		const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
+		try {
+			await Promise.all(entries.map((entry) => updateMedia(site, entry.id, { folderId: targetFolderId })));
+			const label =
+				entries.length === 1
+					? (items.find((item) => item.id === entries[0].id)?.filename ?? "File")
+					: `${entries.length} files`;
+			toast.success(t("library.moved", { name: label, destination }));
+			await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+			await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
+		} catch (error) {
+			toast.error(errorText(site, error, t("library.unknownError")));
+		}
+	};
 
 	const loadError = mediaQuery.error ? errorText(site, mediaQuery.error, t("library.loadFailed")) : null;
 
@@ -141,14 +213,15 @@ export function MediaLibrary() {
 
 	const uploadMutation = useCmsMutation({
 		fn: async ({ files, optimize }: { files: File[]; optimize: boolean }) => {
+			const targetFolderId = folder !== "all" && folder !== "" && folder !== "unfiled" ? folder : null;
 			for (const [index, file] of files.entries()) {
 				const onProgress = (percent: number) => setUpload({ current: index + 1, total: files.length, percent });
 				setUpload({ current: index + 1, total: files.length, percent: 0 });
 				if (isImageFile(site, file)) {
 					const prepared = await prepareUpload(site, file, { optimize });
-					await uploadImageFile(site, prepared, onProgress);
+					await uploadImageFile(site, prepared, onProgress, { folderId: targetFolderId });
 				} else {
-					await uploadAttachment(site, file, onProgress);
+					await uploadAttachment(site, file, onProgress, { folderId: targetFolderId });
 				}
 			}
 		},
@@ -159,7 +232,7 @@ export function MediaLibrary() {
 		onSuccess: () => update({ page: 1 }),
 		onError: (error) =>
 			toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
-		invalidate: [mediaKeys.all],
+		invalidate: [mediaKeys.all, foldersKeys.list("media")],
 	});
 
 	const handleFiles = async (files: FileList | null) => {
@@ -195,7 +268,7 @@ export function MediaLibrary() {
 					? { items: data.items.filter((item) => item.id !== media.id), total: Math.max(0, data.total - 1) }
 					: data,
 		},
-		invalidate: [mediaKeys.all],
+		invalidate: [mediaKeys.all, foldersKeys.list("media")],
 	});
 
 	const removeMedia = (media: MediaItem) => {
@@ -275,6 +348,35 @@ export function MediaLibrary() {
 				onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
 			})),
 		},
+		...(folders.length > 0
+			? [
+					{
+						kind: "sub" as const,
+						label: t("library.menu.moveToFolder"),
+						icon: FolderInput,
+						items: [
+							...(media.folderId
+								? [
+										{
+											kind: "item" as const,
+											label: t("detail.folder.none"),
+											icon: FolderUp,
+											onSelect: () => void moveMediaToFolder(media, null),
+										},
+									]
+								: []),
+							...folders
+								.filter((f) => f.id !== media.folderId)
+								.map((f) => ({
+									kind: "item" as const,
+									label: f.name,
+									icon: FolderIcon,
+									onSelect: () => void moveMediaToFolder(media, f.id),
+								})),
+						],
+					},
+				]
+			: []),
 		{ kind: "separator" },
 		{
 			kind: "item",
@@ -299,8 +401,27 @@ export function MediaLibrary() {
 	const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
 	const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
 
+	const currentFolder = folders.find((f) => f.id === folder);
+	const folderTitle = currentFolder ? ` · ${currentFolder.name}` : "";
+
 	return (
-		<AdminShell title={t("title")} count={mediaQuery.data ? total : undefined} sidebar={{ activeNav: "media" }}>
+		<AdminShell
+			title={`${t("title")}${folderTitle}`}
+			count={mediaQuery.data ? total : undefined}
+			sidebar={{
+				activeNav: "media",
+				folderNav: {
+					collection: "media",
+					currentFolder: folder || "all",
+					includeDescendants: descendants,
+					folders,
+					folderActions,
+					onSelectFolder: (f) => update({ folder: f ?? "all", page: 1 }),
+					onIncludeDescendantsChange: (includeDescendants) => update({ descendants: includeDescendants, page: 1 }),
+					onDropEntries,
+				},
+			}}
+		>
 			<PageActions>
 				<div className="flex flex-wrap items-center gap-2">
 					<Label className="font-normal text-cms-muted-foreground text-xs">
@@ -453,9 +574,11 @@ export function MediaLibrary() {
 						<MediaDetailPanel
 							key={selected.id}
 							media={selected}
+							folders={folders}
 							onClose={() => void openDetail(null)}
 							onSaveDefaults={(defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults })}
 							onRename={(filename) => renameMutation.mutateAsync({ media: selected, filename })}
+							onMoveFolder={(targetFolderId) => moveMediaToFolder(selected, targetFolderId)}
 							onRequestDelete={() => void requestDelete(selected)}
 							onDirtyChange={setDetailDirty}
 						/>
@@ -464,6 +587,7 @@ export function MediaLibrary() {
 			</div>
 			{dialog}
 			{guardDialog}
+			{folderActions.dialogs}
 		</AdminShell>
 	);
 }

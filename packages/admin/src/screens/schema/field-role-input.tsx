@@ -88,7 +88,7 @@ export function FieldRolePicker({
 		return (
 			<Pick
 				label={t("field.role")}
-				hint={t("field.roleFixedTitleHint")}
+				description={t("field.roleFixedTitleHint")}
 				value="title"
 				disabled
 				items={[
@@ -130,7 +130,7 @@ export function FieldRolePicker({
 		<div className="flex flex-col gap-3">
 			<Pick
 				label={t("field.role")}
-				hint={t("field.roleHint")}
+				description={t("field.roleHint")}
 				value={selectedValue}
 				disabled={disabled}
 				items={items}
@@ -188,7 +188,7 @@ export function InputOptionsEditor({
 		}
 	};
 	return (
-		<Labeled label={t("field.inputOptions")} htmlFor={id} hint={t("field.inputOptionsHint")}>
+		<Labeled label={t("field.inputOptions")} htmlFor={id} description={t("field.inputOptionsHint")}>
 			<Textarea
 				id={id}
 				rows={2}
@@ -248,7 +248,7 @@ export function FieldCustomInputPicker({
 			{registered.length > 0 ? (
 				<Pick
 					label={t("field.input")}
-					hint={t("field.inputHint")}
+					description={t("field.inputHint")}
 					value={selectedValue}
 					disabled={disabled}
 					items={items}
@@ -267,7 +267,7 @@ export function FieldCustomInputPicker({
 			) : (
 				<TextInput
 					label={t("field.input")}
-					hint={t("field.inputHint")}
+					description={t("field.inputHint")}
 					optional
 					value={value}
 					disabled={disabled}

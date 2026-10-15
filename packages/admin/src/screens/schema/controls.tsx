@@ -67,6 +67,7 @@ export function TextInput({
 	value,
 	onChange,
 	placeholder,
+	description,
 	hint,
 	type = "text",
 	className,
@@ -77,6 +78,7 @@ export function TextInput({
 	value: string | number | undefined;
 	onChange: (value: string) => void;
 	placeholder?: string;
+	description?: ReactNode;
 	hint?: ReactNode;
 	type?: "text" | "number";
 	className?: string;
@@ -99,6 +101,7 @@ export function TextInput({
 					label
 				)
 			}
+			description={description}
 			hint={hint}
 			htmlFor={id}
 			className={className}
@@ -127,22 +130,27 @@ export function FlagSwitch({
 	label,
 	checked,
 	onChange,
+	description,
 	hint,
+	className,
 }: {
 	label: string;
 	checked: boolean;
 	onChange: (value: boolean) => void;
+	description?: ReactNode;
 	hint?: ReactNode;
+	className?: string;
 }) {
 	const id = useId();
 	const { disabled } = useSchemaEdit();
+	const desc = description ?? hint;
 	return (
-		<UiField orientation="horizontal" className="max-w-3xl items-start justify-between gap-4">
+		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-4", className)}>
 			<div className="flex flex-col gap-0.5">
 				<FieldLabel htmlFor={id} className="font-medium text-sm">
 					{label}
 				</FieldLabel>
-				{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
+				{desc && <FieldDescription className={HELP}>{desc}</FieldDescription>}
 			</div>
 			<Switch
 				id={id}
@@ -162,12 +170,14 @@ export function Segmented({
 	value,
 	items,
 	onChange,
+	description,
 	hint,
 }: {
 	label: string;
 	value: string;
 	items: readonly PickItem[];
 	onChange: (value: string) => void;
+	description?: ReactNode;
 	hint?: ReactNode;
 }) {
 	const { disabled } = useSchemaEdit();
@@ -177,6 +187,7 @@ export function Segmented({
 			<FieldLabel id={id} className="font-medium text-sm">
 				{label}
 			</FieldLabel>
+			{description && <FieldDescription className={HELP}>{description}</FieldDescription>}
 			<div
 				role="radiogroup"
 				aria-labelledby={id}
@@ -217,32 +228,36 @@ export function Pick({
 	value,
 	items,
 	onChange,
+	description,
 	hint,
 	className,
 	disabled: customDisabled,
 	control = "narrow",
+	size = "default",
 }: {
 	label: string;
 	value: string;
 	items: readonly PickItem[];
 	onChange: (value: string) => void;
+	description?: ReactNode;
 	hint?: ReactNode;
 	className?: string;
 	disabled?: boolean;
 	control?: keyof typeof CONTROL_WIDTH;
+	size?: "sm" | "default";
 }) {
 	const id = useId();
 	const { disabled } = useSchemaEdit();
 	const isDisabled = disabled || customDisabled;
 	return (
-		<Labeled label={label} hint={hint} htmlFor={id} className={className} control={control}>
+		<Labeled label={label} description={description} hint={hint} htmlFor={id} className={className} control={control}>
 			<Select
 				value={value}
 				items={items as PickItem[]}
 				disabled={isDisabled}
 				onValueChange={(next) => typeof next === "string" && onChange(next)}
 			>
-				<SelectTrigger id={id} size="sm" className="w-full" aria-label={label}>
+				<SelectTrigger id={id} size={size} className="w-full" aria-label={label}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
@@ -275,6 +290,7 @@ export function NameInput({
 	onCommit,
 	disabled: forcedDisabled,
 	className,
+	description,
 	hint,
 }: {
 	label: string;
@@ -284,6 +300,7 @@ export function NameInput({
 	onCommit: (name: string) => void;
 	disabled?: boolean;
 	className?: string;
+	description?: ReactNode;
 	hint?: ReactNode;
 }) {
 	const t = useTranslator(schemaMessages);
@@ -305,7 +322,7 @@ export function NameInput({
 		onCommit(text);
 	};
 	return (
-		<Labeled label={label} htmlFor={id} className={className} hint={hint}>
+		<Labeled label={label} htmlFor={id} className={className} description={description} hint={hint}>
 			<Input
 				id={id}
 				value={text}

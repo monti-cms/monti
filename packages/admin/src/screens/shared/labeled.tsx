@@ -9,6 +9,7 @@ export const HELP = "max-w-[70ch] text-xs";
 
 export function Labeled({
 	label,
+	description,
 	hint,
 	children,
 	htmlFor,
@@ -16,6 +17,9 @@ export function Labeled({
 	control = "normal",
 }: {
 	label: ReactNode;
+	/** A field description explaining what the setting is, placed between label and control. */
+	description?: ReactNode;
+	/** An input hint or helper text, placed beneath the control. */
 	hint?: ReactNode;
 	htmlFor?: string;
 	children: ReactNode;
@@ -27,6 +31,7 @@ export function Labeled({
 			<FieldLabel htmlFor={htmlFor} className="font-medium text-sm">
 				{label}
 			</FieldLabel>
+			{description && <FieldDescription className={HELP}>{description}</FieldDescription>}
 			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
 			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
 		</UiField>

@@ -107,6 +107,7 @@ export function AddFieldDialog({
 					<Pick
 						label={t("field.kind")}
 						value={kind}
+						control="normal"
 						items={kinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 						onChange={(next) => setKind(next as FieldKindName)}
 					/>

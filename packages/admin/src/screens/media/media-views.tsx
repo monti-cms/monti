@@ -16,6 +16,7 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
+import { writeDraggedEntries } from "../shared/entry-drag";
 import { formatDateTime } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
 import { usageLabel } from "./media-item";
@@ -69,6 +70,8 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 					<Button
 						variant="outline"
 						type="button"
+						draggable
+						onDragStart={(event) => writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)}
 						aria-current={selectedId === media.id ? "true" : undefined}
 						onClick={() => onSelect(media)}
 						onKeyDown={deleteKey(media, onDeleteKey)}
@@ -138,6 +141,10 @@ export function MediaTable({ items, selectedId, dimmed, onSelect, menuFor, onDel
 								<TableRow
 									aria-current={isSelected ? "true" : undefined}
 									className={cn("cursor-pointer", isSelected && OPEN_ITEM)}
+									draggable
+									onDragStart={(event) =>
+										writeDraggedEntries(event, [{ id: media.id, expectedVersion: 0 }], media.filename)
+									}
 									onClick={() => onSelect(media)}
 								/>
 							}

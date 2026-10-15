@@ -48,19 +48,19 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 			<header className="shrink-0 border-b bg-cms-background px-4 pt-5 lg:px-10 lg:pt-6">
 				<div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
 					<div className="min-w-0">
-						<div className="flex items-center gap-2">
+						<div className="flex flex-wrap items-center gap-2.5">
 							<SidebarTrigger
 								aria-label={shared("shell.openSidebar")}
 								className="-ml-1 text-cms-muted-foreground md:hidden"
 							/>
 							<h1 className="font-semibold text-[22px] leading-tight tracking-tight">{t("title")}</h1>
+							<div
+								ref={setFileLine}
+								className="flex items-center gap-1.5 empty:hidden"
+								data-testid="settings-file-line"
+							/>
 						</div>
 						<p className="mt-1 text-cms-muted-foreground text-sm">{t("description")}</p>
-						<p
-							ref={setFileLine}
-							className="mt-0.5 text-cms-muted-foreground text-xs empty:hidden"
-							data-testid="settings-file-line"
-						/>
 					</div>
 					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
 				</div>

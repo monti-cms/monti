@@ -123,20 +123,6 @@ function LimitList<T extends string | number>({
 	);
 }
 
-function BodyEditor({ collection, update }: { collection: Obj; update: (change: (collection: Obj) => Obj) => void }) {
-	const t = useTranslator(schemaCollectionMessages);
-	return (
-		<Section title={t("collection.bodyTitle")} description={t("collection.bodyDescription")}>
-			<FlagSwitch
-				label={t("collection.body")}
-				hint={t("collection.bodyHint")}
-				checked={hasBody(collection)}
-				onChange={(on) => update((current) => withBody(current, on, on ? allowedOf(current) : {}))}
-			/>
-		</Section>
-	);
-}
-
 /** Which blocks and text styles the body allows: everything unless the writer limits a list. */
 function AllowedEditor({
 	collection,
@@ -216,8 +202,9 @@ export function CollectionEditor({
 	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	const chosenTab = section ?? "basics";
-	// The editor tab only exists for a collection with a body.
-	const tab = chosenTab === "editor" && !hasBody(collection) ? "basics" : chosenTab;
+	const isEditorAvailable = collection.kind !== "item" && hasBody(collection);
+	// The editor tab only exists for a document collection with a body.
+	const tab = chosenTab === "editor" && !isEditorAvailable ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
 	const _fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
@@ -246,7 +233,7 @@ export function CollectionEditor({
 					<TabsList className="w-fit justify-start">
 						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
 						<TabsTrigger value="fields">{t("collection.tabs.fields")}</TabsTrigger>
-						{hasBody(collection) && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
+						{isEditorAvailable && <TabsTrigger value="editor">{t("collection.tabs.editor")}</TabsTrigger>}
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-12">
@@ -263,19 +250,44 @@ export function CollectionEditor({
 							/>
 							<Pick
 								label={t("collection.kind")}
-								hint={collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")}
+								description={
+									collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")
+								}
 								value={String(collection.kind)}
 								items={[
 									{ value: "document", label: ts("collection.kindDocument") },
 									{ value: "item", label: ts("collection.kindItem") },
 								]}
-								onChange={(value) => set("kind", value)}
+								onChange={(value) => {
+									onChange((current) => {
+										let next = setProp(current, "kind", value, COLLECTION_KEY_ORDER);
+										if (value === "item" && hasBody(next)) {
+											next = withBody(next, false, {});
+										} else if (value === "document" && !hasBody(next)) {
+											next = withBody(next, true, {});
+										}
+										return next;
+									});
+								}}
 							/>
 							<IconPicker
 								label={t("collection.icon")}
 								value={typeof collection.icon === "string" ? collection.icon : undefined}
 								kind={typeof collection.kind === "string" ? collection.kind : undefined}
 								onChange={(value) => set("icon", value)}
+							/>
+						</div>
+					</Section>
+					<Section title={t("collection.featuresTitle")} description={t("collection.featuresDescription")}>
+						<div className="flex flex-col gap-6">
+							<FlagSwitch
+								label={t("collection.folders")}
+								description={t("collection.foldersHint")}
+								checked={typeof collection.folders === "boolean" ? collection.folders : collection.kind !== "item"}
+								onChange={(on) => {
+									const isDefault = on === (collection.kind !== "item");
+									set("folders", isDefault ? undefined : on);
+								}}
 							/>
 							<PublicPathField
 								path={typeof collection.path === "string" ? collection.path : ""}
@@ -284,7 +296,6 @@ export function CollectionEditor({
 							/>
 						</div>
 					</Section>
-					<BodyEditor collection={collection} update={onChange} />
 					<Section
 						title={t("collection.dangerTitle")}
 						description={isNew ? t("collection.newHint") : t("collection.dangerDescription")}
@@ -308,7 +319,7 @@ export function CollectionEditor({
 				<TabsContent value="fields" className="flex flex-col gap-12">
 					<FieldsCard editing={editing} />
 				</TabsContent>
-				{hasBody(collection) && (
+				{isEditorAvailable && (
 					<TabsContent value="editor" className="flex max-w-[1160px] flex-col gap-12">
 						<AllowedEditor collection={collection} update={onChange} />
 					</TabsContent>

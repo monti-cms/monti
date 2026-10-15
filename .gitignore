@@ -16,6 +16,7 @@ coverage
 
 # Bundle files installed by the example app (`pnpm example:pack`)
 examples/blog/vendor
+examples/**/AGENTS.md
 
 # misc
 .DS_Store

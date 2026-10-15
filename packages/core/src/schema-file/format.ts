@@ -180,6 +180,8 @@ const collectionShape = {
 		),
 	path: text.optional().describe("Public address shape with `:slug` once, e.g. `/posts/:slug`."),
 	icon: text.optional().describe("Admin sidebar icon name (lucide)."),
+	folders: flag.optional().describe("Whether entries can be organized into virtual folders."),
+	defaultTab: text.optional().describe("Custom title for the default properties tab."),
 	layout: z.array(layoutGroup).optional().describe("Layout of the properties panel."),
 };
 

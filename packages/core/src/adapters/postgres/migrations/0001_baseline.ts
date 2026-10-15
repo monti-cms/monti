@@ -70,6 +70,7 @@ export const up: MigrationUp = (client, qSchema, { site }) =>
 
 		CREATE TABLE "${qSchema}".media_assets (
 			id UUID PRIMARY KEY,
+			folder_id UUID REFERENCES "${qSchema}".folders(id) ON DELETE NO ACTION,
 			status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'ready', 'failed', 'deleting')),
 			filename TEXT NOT NULL DEFAULT '',
 			mime_type TEXT,

@@ -50,6 +50,10 @@ export interface CollectionSchema<
 	 * If absent or unknown, it is the default icon for the kind.
 	 */
 	readonly icon?: string;
+	/** Whether entries can be organized into virtual folders. If absent, document collections enable folders by default. */
+	readonly folders?: boolean;
+	/** Custom title for the default properties tab. If absent, the admin's translated default is used. */
+	readonly defaultTab?: string;
 	/**
 	 * Properties panel layout. Fields not listed are drawn after the last group in declaration order. If absent, they are drawn in field declaration order.
 	 * Plugins place their own fields in tabs of their own (`contributes.layout`); `panelGroupsOf` is the one place that works out the groups.

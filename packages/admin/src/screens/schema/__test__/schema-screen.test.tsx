@@ -313,10 +313,39 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		expect(await screen.findByTestId("collection-post")).toBeTruthy();
 		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).value).toBe("Post");
-		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("posts");
+		expect((screen.getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value).toBe(
+			"posts",
+		);
 		expect(review().disabled).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: /^Tag/ }));
 		expect(await screen.findByTestId("collection-tag")).toBeTruthy();
+	});
+
+	it("reorders collections with row buttons and sends the new order on save", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(review().disabled).toBe(true);
+
+		// Post is first (index 0), Tag is second (index 1).
+		// Move Tag up.
+		const tagUp = screen.getByRole("button", { name: t("collection.moveUp", { name: "Tag" }) });
+		expect((tagUp as HTMLButtonElement).disabled).toBe(false);
+		fireEvent.click(tagUp);
+
+		// Now Tag should be first. review button is enabled.
+		expect(review().disabled).toBe(false);
+		fireEvent.click(review());
+
+		await screen.findByTestId("review-summary");
+		const previewBody = lastPreview()?.body as { schema?: { collections?: Record<string, unknown> } };
+		expect(Object.keys(previewBody?.schema?.collections ?? {})).toEqual(["tag", "post"]);
+
+		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
+		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
+		const put = requests.find((request) => request.method === "PUT");
+		expect(
+			Object.keys((put?.body as { schema?: { collections?: Record<string, unknown> } })?.schema?.collections ?? {}),
+		).toEqual(["tag", "post"]);
 	});
 
 	it("checks an edit before saving: the request carries the edited file, and the save sends the hash it started from", async () => {
@@ -334,6 +363,21 @@ describe("SchemaScreen", () => {
 		const put = requests.find((request) => request.method === "PUT");
 		expect(put?.body).toMatchObject({ baseHash: "hash-1", schema: { collections: { post: { label: "Article" } } } });
 		expect(reload.rememberSaved).toHaveBeenCalledWith(expect.stringContaining("3"));
+	});
+
+	it("toggles collection folders on and off", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		const foldersSwitch = screen.getByRole("switch", { name: tCollection("collection.folders") });
+		expect(foldersSwitch.getAttribute("aria-checked")).toBe("true");
+
+		fireEvent.click(foldersSwitch);
+		expect(foldersSwitch.getAttribute("aria-checked")).toBe("false");
+		expect(review().disabled).toBe(false);
+		fireEvent.click(review());
+
+		await screen.findByTestId("review-summary");
+		expect(lastPreview()?.body).toMatchObject({ schema: { collections: { post: { folders: false } } } });
 	});
 
 	it("adds a field in the file's format, after the others, and opens its sheet", async () => {
@@ -686,7 +730,8 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		expect(screen.getByRole("tab", { name: tCollection("collection.tabs.editor") })).toBeTruthy();
-		fireEvent.click(screen.getByRole("switch", { name: tCollection("collection.body") }));
+		fireEvent.click(screen.getByRole("combobox", { name: tCollection("collection.kind") }));
+		pressOption(await screen.findByRole("option", { name: t("collection.kindItem") }));
 		expect(screen.queryByRole("tab", { name: tCollection("collection.tabs.editor") })).toBeNull();
 	});
 
@@ -723,21 +768,27 @@ describe("SchemaScreen", () => {
 		expect(confirm.disabled).toBe(true);
 
 		type(within(dialog).getByLabelText(tCollection("collection.newName")), "note");
-		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("notes");
+		expect(
+			(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value,
+		).toBe("notes");
 		// Each kind says what it is for.
 		expect(within(dialog).getByText(tCollection("collection.kindDocumentExplain"))).toBeTruthy();
 		expect(within(dialog).getByText(tCollection("collection.kindItemExplain"))).toBeTruthy();
 		// Only the middle of the address is typed: the slash before it and `/:slug` after it are text.
 		expect(within(dialog).getByText("/:slug")).toBeTruthy();
 		// An address of the writer's own stays when the name changes.
-		type(within(dialog).getByLabelText(tCollection("collection.path")), "ideas");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }), "ideas");
 		type(within(dialog).getByLabelText(tCollection("collection.newName")), "notes");
-		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("ideas");
+		expect(
+			(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value,
+		).toBe("ideas");
 
 		fireEvent.click(confirm);
 		await waitFor(() => expect(screen.queryByTestId("new-collection-dialog")).toBeNull());
 		expect(await screen.findByTestId("collection-notes")).toBeTruthy();
-		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("ideas");
+		expect((screen.getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value).toBe(
+			"ideas",
+		);
 		openTab("fields");
 		expect(screen.getByTestId("field-title")).toBeTruthy();
 		expect(screen.getByTestId("field-slug")).toBeTruthy();
@@ -764,7 +815,7 @@ describe("SchemaScreen", () => {
 		const name = within(dialog).getByLabelText(tCollection("collection.newName"));
 		const id = () => (within(dialog).getByLabelText(tCollection("collection.newId")) as HTMLInputElement).value;
 		const path = () =>
-			`/${(within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value}/:slug`;
+			`/${(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }) as HTMLInputElement).value}/:slug`;
 
 		type(name, "Memo");
 		expect([id(), path()]).toEqual(["memo", "/memos/:slug"]);
@@ -786,7 +837,7 @@ describe("SchemaScreen", () => {
 		expect(confirm.disabled).toBe(false);
 
 		// Once the address is edited it stops following the identifier.
-		type(within(dialog).getByLabelText(tCollection("collection.path")), "my");
+		type(within(dialog).getByRole("textbox", { name: tCollection("collection.path") }), "my");
 		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memos");
 		expect(path()).toBe("/my/:slug");
 
@@ -806,10 +857,10 @@ describe("SchemaScreen", () => {
 		const dialog = await screen.findByTestId("new-collection-dialog");
 		type(within(dialog).getByLabelText(tCollection("collection.newName")), "category");
 		fireEvent.click(within(dialog).getByRole("radio", { name: new RegExp(t("collection.kindItem")) }));
-		expect(within(dialog).queryByLabelText(tCollection("collection.path"))).toBeNull();
+		expect(within(dialog).queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
 		fireEvent.click(within(dialog).getByRole("button", { name: tCollection("collection.createConfirm") }));
 		expect(await screen.findByTestId("collection-category")).toBeTruthy();
-		expect(screen.queryByLabelText(tCollection("collection.path"))).toBeNull();
+		expect(screen.queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
 	});
 
 	it("cannot delete the title field, and the slug field only while the address does not use :slug", async () => {
@@ -841,7 +892,7 @@ describe("SchemaScreen", () => {
 
 		// Without :slug in the address the slug field can go.
 		openTab("basics");
-		fireEvent.click(screen.getByRole("switch", { name: tCollection("collection.hasPage") }));
+		fireEvent.click(screen.getByRole("switch", { name: tCollection("collection.path") }));
 		openTab("fields");
 		opened = await deleteOf("slug");
 		expect(opened.button.disabled).toBe(false);
@@ -916,7 +967,7 @@ describe("SchemaScreen", () => {
 		expect(tabs).not.toContain("List");
 		expect(tabs).not.toContain("목록");
 		// Basics is open: the address is there, the settings of the other tabs are not.
-		expect(screen.getByLabelText(tCollection("collection.path"))).toBeTruthy();
+		expect(screen.getByRole("textbox", { name: tCollection("collection.path") })).toBeTruthy();
 		expect(screen.queryByText(tCollection("allowed.title"))).toBeNull();
 		expect(screen.queryByTestId("field-title")).toBeNull();
 
@@ -925,7 +976,7 @@ describe("SchemaScreen", () => {
 		expect(screen.getByText(tCollection("allowed.hint"))).toBeTruthy();
 		// Everything is allowed by default: all 3 sections have "Allow all".
 		expect(screen.getAllByText(tCollection("allowed.all"))).toHaveLength(3);
-		expect(screen.queryByLabelText(tCollection("collection.path"))).toBeNull();
+		expect(screen.queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
 	});
 
 	describe("layout in the fields tree", () => {
@@ -934,8 +985,11 @@ describe("SchemaScreen", () => {
 		const seoTab =
 			placementsOf(testSite.plugins).find((placement) => placement.roles?.includes("seoTitle"))?.tab ?? "SEO";
 		const savedPost = () =>
-			(lastPreview()?.body?.schema as { collections: { post: { fields: Record<string, unknown>; layout?: unknown } } })
-				.collections.post;
+			(
+				lastPreview()?.body?.schema as {
+					collections: { post: { fields: Record<string, unknown>; layout?: unknown; defaultTab?: unknown } };
+				}
+			).collections.post;
 		/** Moves a field with the row's move button: it opens a list of places. */
 		const moveTo = async (field: string, destination: string) => {
 			fireEvent.click(await screen.findByRole("button", { name: tFields("layout.move", { name: field }) }));
@@ -1050,14 +1104,22 @@ describe("SchemaScreen", () => {
 			expect(Object.keys(post.fields)).toEqual(["title", "slug", "status", "summary"]);
 		});
 
-		it("shows the tab level only once a second tab exists, and moves a group into it", async () => {
+		it("shows the default tab by default, renames it, and moves a group into a new tab", async () => {
 			await openFields();
-			expect(screen.queryByTestId("tab-0")).toBeNull();
+			expect(screen.getByTestId("tab-0")).toBeTruthy();
+			expect(screen.getByDisplayValue(defaultTabName)).toBeTruthy();
+
+			// The default tab can be renamed.
+			const defaultTabInput = screen.getByDisplayValue(defaultTabName) as HTMLInputElement;
+			expect(defaultTabInput.disabled).toBe(false);
+			type(defaultTabInput, "CustomTab");
+			fireEvent.blur(defaultTabInput);
+			await screen.findByDisplayValue("CustomTab");
+
 			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addGroup") }));
 			await screen.findByDisplayValue(tFields("layout.newGroup"));
 			fireEvent.click(screen.getByRole("button", { name: tFields("layout.addTab") }));
 			await screen.findByTestId("tab-1");
-			expect(screen.getByDisplayValue(defaultTabName)).toBeTruthy();
 
 			fireEvent.click(
 				await screen.findByRole("button", { name: tFields("layout.moveGroup", { name: tFields("layout.newGroup") }) }),
@@ -1067,6 +1129,7 @@ describe("SchemaScreen", () => {
 			);
 			fireEvent.click(review());
 			await screen.findByTestId("review-summary");
+			expect(savedPost().defaultTab).toBe("CustomTab");
 			expect(savedPost().layout).toEqual([
 				{ group: tFields("layout.newGroup"), fields: [], tab: tFields("layout.newTab") },
 			]);

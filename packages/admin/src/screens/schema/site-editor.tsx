@@ -54,13 +54,13 @@ export function SiteEditor({
 				<div className="flex flex-col gap-6">
 					<TextInput
 						label={ts("site.name")}
-						hint={t("site.nameHint")}
+						description={t("site.nameHint")}
 						value={site.name as string | undefined}
 						onChange={(value) => set("name", orUndefined(value))}
 					/>
 					<TextInput
 						label={t("site.home")}
-						hint={t("site.homeHint")}
+						description={t("site.homeHint")}
 						placeholder="/"
 						value={site.home as string | undefined}
 						onChange={(value) => set("home", orUndefined(value))}
@@ -71,21 +71,21 @@ export function SiteEditor({
 				<div className="flex flex-col gap-6">
 					<TextInput
 						label={t("site.previewPath")}
-						hint={t("site.previewPathHint")}
+						description={t("site.previewPathHint")}
 						placeholder="/preview"
 						value={site.previewPath as string | undefined}
 						onChange={(value) => set("previewPath", orUndefined(value))}
 					/>
 					<TextInput
 						label={t("site.previewParam")}
-						hint={t("site.previewParamHint")}
+						description={t("site.previewParamHint")}
 						placeholder="locale"
 						value={typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : ""}
 						onChange={(value) => set("previewLocaleParam", orUndefined(value))}
 					/>
 					<FlagSwitch
 						label={t("site.previewInPath")}
-						hint={t("site.previewInPathHint")}
+						description={t("site.previewInPathHint")}
 						checked={inPath}
 						onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
 					/>
@@ -95,7 +95,7 @@ export function SiteEditor({
 				<div className="flex flex-col gap-2">
 					<Pick
 						label={t("site.localePrefix")}
-						hint={t("site.localePrefixHint")}
+						description={t("site.localePrefixHint")}
 						control="wide"
 						value={mode}
 						items={PREFIX_MODES.map((value) => ({
@@ -110,7 +110,7 @@ export function SiteEditor({
 					</p>
 				</div>
 				<div className="flex flex-col gap-2 border-t pt-6">
-					<Labeled label={t("site.aliases")} hint={t("site.aliasesHint")} control="normal">
+					<Labeled label={t("site.aliases")} description={t("site.aliasesHint")} control="normal">
 						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
 							{aliases.map((alias, index) => (
 								<li key={alias} className="flex items-center gap-2 px-3 py-1" data-testid={`alias-${alias}`}>
@@ -151,7 +151,7 @@ export function SiteEditor({
 					)}
 				</div>
 				<div className="border-t pt-6">
-					<Labeled label={t("site.url")} hint={t("site.urlHint")} control="normal">
+					<Labeled label={t("site.url")} description={t("site.urlHint")} control="normal">
 						<div className="flex flex-col gap-0.5 rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="site-url">
 							{siteUrl.url && <code className="text-xs">{siteUrl.url}</code>}
 							<span className="text-cms-muted-foreground text-xs">{t(URL_NOTE[siteUrl.from])}</span>

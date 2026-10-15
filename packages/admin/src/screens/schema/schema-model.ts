@@ -60,7 +60,17 @@ export const FIELD_KEY_ORDER = [
 	"placeholder",
 ] as const;
 
-export const COLLECTION_KEY_ORDER = ["label", "kind", "icon", "path", "body", "fields", "layout"] as const;
+export const COLLECTION_KEY_ORDER = [
+	"label",
+	"kind",
+	"icon",
+	"path",
+	"folders",
+	"body",
+	"defaultTab",
+	"fields",
+	"layout",
+] as const;
 
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export function setProp(obj: Obj, key: string, value: unknown, order: readonly string[] = []): Obj {
@@ -138,7 +148,11 @@ export function changeCount(base: Obj, draft: Obj): number {
 	const before = collectionsOf(base);
 	const after = collectionsOf(draft);
 	let count = 0;
-	for (const name of new Set([...Object.keys(before), ...Object.keys(after)])) {
+	const beforeKeys = Object.keys(before);
+	const afterKeys = Object.keys(after);
+	const sameNames = beforeKeys.length === afterKeys.length && beforeKeys.every((key) => key in after);
+	if (sameNames && !sameJson(beforeKeys, afterKeys)) count += 1;
+	for (const name of new Set([...beforeKeys, ...afterKeys])) {
 		if (!sameJson(before[name], after[name])) count += 1;
 	}
 	for (const key of ["locales", "defaultLocale", "timeZone"]) {
@@ -232,6 +246,24 @@ export function addCollection(file: Obj, name: string, kind: "document" | "item"
 export function removeCollection(file: Obj, name: string): Obj {
 	const { [name]: _removed, ...rest } = collectionsOf(file);
 	return { ...file, collections: rest };
+}
+
+/** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */
+export function moveCollection(file: Obj, name: string, delta: number): Obj {
+	return { ...file, collections: moveKey(collectionsOf(file), name, delta) };
+}
+
+/** `file` with its `collections` keys arranged in `newOrder`. */
+export function reorderCollections(file: Obj, newOrder: readonly string[]): Obj {
+	const collections = collectionsOf(file);
+	const reordered: Record<string, Obj> = {};
+	for (const name of newOrder) {
+		if (name in collections) reordered[name] = collections[name] as Obj;
+	}
+	for (const [name, col] of Object.entries(collections)) {
+		if (!reordered[name]) reordered[name] = col;
+	}
+	return { ...file, collections: reordered };
 }
 
 // ----- fields -----

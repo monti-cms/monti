@@ -30,6 +30,7 @@ export function ListPane({
 	skeletonRows = 3,
 	empty,
 	header,
+	className,
 	children,
 }: {
 	label: string;
@@ -38,13 +39,17 @@ export function ListPane({
 	/** Shown in place of the rows when `children` is empty (pass `null` while an error is showing instead). */
 	empty?: ReactNode;
 	header?: ReactNode;
+	className?: string;
 	children?: ReactNode;
 }) {
 	const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
 	return (
-		<div className={cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH)}>
+		<div className={cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH, className)}>
 			{header}
-			<ul className="min-h-0 flex-1 divide-y overflow-y-auto" aria-label={label}>
+			<ul
+				className={cn("min-h-0 flex-1 divide-y overflow-y-auto", !hasRows && !loading && "flex flex-col")}
+				aria-label={label}
+			>
 				{loading
 					? Array.from({ length: skeletonRows }, (_, index) => (
 							// biome-ignore lint/suspicious/noArrayIndexKey: placeholder
@@ -54,7 +59,7 @@ export function ListPane({
 						))
 					: hasRows
 						? children
-						: empty && <li>{empty}</li>}
+						: empty && <li className="flex flex-1 items-center justify-center p-4 text-center">{empty}</li>}
 			</ul>
 		</div>
 	);

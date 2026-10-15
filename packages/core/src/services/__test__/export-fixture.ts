@@ -182,6 +182,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 	media: [
 		{
 			id: "44444444-4444-4444-8444-444444444444",
+			folderId: null,
 			status: "ready",
 			filename: "draft-only.png",
 			mimeType: "image/png",
@@ -199,6 +200,7 @@ export const makeExportFixtureSnapshot = (): ExportSnapshot => ({
 		},
 		{
 			id: "99999999-9999-4999-8999-999999999999",
+			folderId: null,
 			status: "ready",
 			filename: "working-only.png",
 			mimeType: "image/png",

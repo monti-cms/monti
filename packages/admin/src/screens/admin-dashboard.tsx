@@ -235,27 +235,31 @@ function TrashPage() {
 
 function ListPage() {
 	const list = useEntryList("list");
-	const { state, update } = list;
+	const { state, update, foldersEnabled } = list;
 	const { folders } = list.data;
 	const folderLabel =
-		state.folder !== "all" ? ` · ${folders.find((folder) => folder.id === state.folder)?.name ?? ""}` : "";
+		foldersEnabled && state.folder !== "all"
+			? ` · ${folders.find((folder) => folder.id === state.folder)?.name ?? ""}`
+			: "";
 	return (
 		<AdminShell
 			title={`${list.label}${folderLabel}`}
 			count={list.data.total}
 			sidebar={{
 				activeNav: state.collection,
-				folderNav: {
-					collection: state.collection,
-					currentFolder: state.folder,
-					includeDescendants: state.includeDescendants,
-					folders,
-					folderActions: list.folderActions,
-					onSelectFolder: (folder) => update({ folder }),
-					onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
-					onDropEntries: list.moveEntries,
-					onCreateEntry: list.createNew,
-				},
+				folderNav: foldersEnabled
+					? {
+							collection: state.collection,
+							currentFolder: state.folder,
+							includeDescendants: state.includeDescendants,
+							folders,
+							folderActions: list.folderActions,
+							onSelectFolder: (folder) => update({ folder }),
+							onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
+							onDropEntries: list.moveEntries,
+							onCreateEntry: list.createNew,
+						}
+					: undefined,
 			}}
 		>
 			<PageActions>
