@@ -2,6 +2,7 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
+import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
@@ -54,7 +55,7 @@ const EDITOR_NAME: Partial<Record<string, EditorKey>> = {
 	subscript: "inlineMarks.subscript",
 };
 
-/** A list the body may be limited to: off allows everything of its kind; on shows a box per name. */
+/** A list the body may be limited to: "Allow all" checkbox allows everything; below are checkboxes per item, always visible. */
 function LimitList<T extends string | number>({
 	label,
 	all,
@@ -70,42 +71,54 @@ function LimitList<T extends string | number>({
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const { disabled } = useSchemaEdit();
-	const limited = value !== undefined;
+	const allId = useId();
+	const allowedCount = value === undefined ? all.length : all.filter((item) => value.includes(item)).length;
+	const allAllowed = allowedCount === all.length;
+	const someAllowed = allowedCount > 0 && !allAllowed;
 	return (
 		<fieldset className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0">
 			<legend className="sr-only">{label}</legend>
-			<FlagSwitch
-				label={t("allowed.limit", { label: label.toLowerCase() })}
-				hint={limited ? undefined : t("allowed.everything")}
-				checked={limited}
-				onChange={(on) => onChange(on ? [...all] : undefined)}
-			/>
-			{limited && (
-				<ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
-					{all.map((item) => {
-						const id = `allowed-${label}-${item}`;
-						return (
-							<li key={String(item)} className="flex items-center gap-2">
-								<Checkbox
-									id={id}
-									checked={value.includes(item)}
-									disabled={disabled}
-									onCheckedChange={(on) =>
-										onChange(
-											on === true
-												? all.filter((one) => one === item || value.includes(one))
-												: value.filter((one) => one !== item),
-										)
-									}
-								/>
-								<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
-									{nameOf ? nameOf(item) : String(item)}
-								</Label>
-							</li>
-						);
-					})}
-				</ul>
-			)}
+			<div className="flex items-center justify-between">
+				<span className="font-medium text-sm">{label}</span>
+				<div className="flex items-center gap-2">
+					<Checkbox
+						id={allId}
+						checked={allAllowed}
+						indeterminate={someAllowed}
+						disabled={disabled}
+						onCheckedChange={(on) => onChange(on === true ? undefined : [])}
+					/>
+					<Label htmlFor={allId} className="cursor-pointer font-normal text-cms-muted-foreground text-sm">
+						{t("allowed.all")}
+					</Label>
+				</div>
+			</div>
+			<ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+				{all.map((item) => {
+					const id = `allowed-${label}-${item}`;
+					const checked = value === undefined || value.includes(item);
+					return (
+						<li key={String(item)} className="flex items-center gap-2">
+							<Checkbox
+								id={id}
+								checked={checked}
+								disabled={disabled}
+								onCheckedChange={(on) => {
+									const currentList = value === undefined ? [...all] : value;
+									const nextList =
+										on === true
+											? all.filter((one) => one === item || currentList.includes(one))
+											: currentList.filter((one) => one !== item);
+									onChange(nextList.length === all.length ? undefined : nextList);
+								}}
+							/>
+							<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
+								{nameOf ? nameOf(item) : String(item)}
+							</Label>
+						</li>
+					);
+				})}
+			</ul>
 		</fieldset>
 	);
 }
@@ -154,11 +167,11 @@ function AllowedEditor({
 	return (
 		<Section title={t("allowed.title")} description={t("allowed.hint")} note={limited ? t("allowed.note") : undefined}>
 			<LimitList
-				label={t("allowed.blocks")}
-				all={vocabulary.blocks}
-				nameOf={nameLabel}
-				value={allowed.blocks}
-				onChange={(value) => setAllowed("blocks", value)}
+				label={t("allowed.headings")}
+				all={HEADINGS}
+				value={allowed.headings}
+				nameOf={(level) => te("toolbar.heading", { level })}
+				onChange={(value) => setAllowed("headings", value)}
 			/>
 			<LimitList
 				label={t("allowed.marks")}
@@ -168,11 +181,11 @@ function AllowedEditor({
 				onChange={(value) => setAllowed("marks", value)}
 			/>
 			<LimitList
-				label={t("allowed.headings")}
-				all={HEADINGS}
-				value={allowed.headings}
-				nameOf={(level) => te("toolbar.heading", { level })}
-				onChange={(value) => setAllowed("headings", value)}
+				label={t("allowed.blocks")}
+				all={vocabulary.blocks}
+				nameOf={nameLabel}
+				value={allowed.blocks}
+				onChange={(value) => setAllowed("blocks", value)}
 			/>
 		</Section>
 	);

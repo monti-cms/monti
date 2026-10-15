@@ -673,11 +673,6 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("editor");
-		fireEvent.click(
-			screen.getByRole("switch", {
-				name: tCollection("allowed.limit", { label: tCollection("allowed.blocks").toLowerCase() }),
-			}),
-		);
 		const table = await screen.findByRole("checkbox", { name: te("toolbar.table") });
 		expect(table).toBeTruthy();
 		expect(screen.getByText(te("toolbar.table")).getAttribute("title")).toBe("table");
@@ -699,11 +694,6 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
 		openTab("editor");
-		fireEvent.click(
-			screen.getByRole("switch", {
-				name: tCollection("allowed.limit", { label: tCollection("allowed.blocks").toLowerCase() }),
-			}),
-		);
 		// Everything is ticked at first; untick one.
 		fireEvent.click(
 			await screen
@@ -889,8 +879,8 @@ describe("SchemaScreen", () => {
 		openTab("editor");
 		expect(await screen.findByText(tCollection("allowed.title"))).toBeTruthy();
 		expect(screen.getByText(tCollection("allowed.hint"))).toBeTruthy();
-		// Everything is allowed until a list is limited.
-		expect(screen.getAllByText(tCollection("allowed.everything"))).toHaveLength(3);
+		// Everything is allowed by default: all 3 sections have "Allow all".
+		expect(screen.getAllByText(tCollection("allowed.all"))).toHaveLength(3);
 		expect(screen.queryByLabelText(tCollection("collection.path"))).toBeNull();
 	});
 

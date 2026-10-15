@@ -52,8 +52,7 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"allowed.blocks": "Blocks",
 		"allowed.marks": "Marks",
 		"allowed.headings": "Headings",
-		"allowed.limit": "Limit {label}",
-		"allowed.everything": "Everything is allowed.",
+		"allowed.all": "Allow all",
 	},
 	ko: {
 		"collection.createTitle": "새 컬렉션",
@@ -104,7 +103,6 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"allowed.blocks": "블록",
 		"allowed.marks": "서식",
 		"allowed.headings": "제목",
-		"allowed.limit": "{label} 제한",
-		"allowed.everything": "모두 허용합니다.",
+		"allowed.all": "모두 허용",
 	},
 });
