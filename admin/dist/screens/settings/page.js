@@ -3,7 +3,7 @@ import { requireAdminPage } from "../require-admin.js";
 import { SettingsScreen } from "./settings-screen.js";
 import { isSchemaTab, SCHEMA_TABS } from "./tabs.js";
 /**
- * `<admin path>/settings/<tab>`: one of the tabs (the schema file's `site`, `locales`, `collections`, `file`, and `admin`).
+ * `<admin path>/settings/<tab>`: one of the tabs (the schema file's `site`, `locales`, `collections` and `admin`).
  * `/settings` alone goes to the first tab. An unknown tab is a 404.
  */
 export default async function AdminSettingsPage({ cms, server, tab, }) {

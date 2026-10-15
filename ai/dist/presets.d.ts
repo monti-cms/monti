@@ -555,7 +555,7 @@ export declare const aiPresets: {
     }) | undefined;
     /**
      * Style polish. Polishes the text selected in the body, shows what changed, and replaces the selected text on click. The result is streamed.
-     * Given the key of a config shared text (`ai({ shared })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the shared text
+     * Given the key of a config prompt snippet (`ai({ snippets })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the prompt snippet
      * `styleGuide` goes in when it exists. Enabled only when some collection has a body.
      */
     polish: (options?: {

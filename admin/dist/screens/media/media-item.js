@@ -42,8 +42,22 @@ export async function copyText(text, success, failure) {
         toast.error(failure);
     }
 }
+/** The extension of a file name (with the dot, as written), or an empty string. The server reads the extension the same way. */
+const extensionOf = (filename) => /\.[^./\\]{1,16}$/.exec(filename)?.[0] ?? "";
+/** A file name as its editable stem and its extension, which a rename keeps. */
+export function splitFilename(filename) {
+    const extension = extensionOf(filename);
+    return { stem: filename.slice(0, filename.length - extension.length), extension };
+}
 /** Appends the original file's extension to the new name (suggested names come without an extension). If it already has the same extension, leaves it as is. */
 export function withExtension(name, original) {
-    const extension = /\.[A-Za-z0-9]{1,8}$/.exec(original)?.[0]?.toLowerCase() ?? "";
-    return extension && !name.toLowerCase().endsWith(extension) ? `${name}${extension}` : name;
+    const extension = extensionOf(original);
+    return extension && !name.toLowerCase().endsWith(extension.toLowerCase()) ? `${name}${extension}` : name;
+}
+/** Why a stem cannot be a file name, or `null`. The server checks the same rules. */
+export function stemProblem(stem) {
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this rejects
+    if (/[/\\\u0000-\u001f\u007f]/.test(stem) || stem.trim() === "." || stem.trim() === "..")
+        return "invalid";
+    return stem.trim() === "" ? "empty" : null;
 }

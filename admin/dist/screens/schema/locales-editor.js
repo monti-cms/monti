@@ -1,19 +1,24 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages.js";
+import { cn } from "../../lib/utils/cn.js";
+import { moveWithin } from "../../lib/utils/move-within.js";
 import { Button } from "../../ui/button.js";
 import { Panel } from "../../ui/card.js";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog.js";
 import { DialogFormFooter } from "../../ui/dialog-form-footer.js";
 import { Input } from "../../ui/input.js";
-import { MoreActionsButton } from "../shared/action-menu.js";
 import { Labeled } from "../shared/labeled.js";
 import { Section } from "../shared/section.js";
 import { Pick, useSchemaEdit } from "./controls.js";
+import { SortableList } from "./fields-tree-dnd.js";
+import { RowButtons } from "./fields-tree-rows.js";
 import { schemaLocalesMessages } from "./locales.messages.js";
 import { schemaMessages } from "./messages.js";
 import { collectionsOf, localesOf, moveItem, sectionOf, setProp } from "./schema-model.js";
@@ -48,10 +53,58 @@ function TimeZonePick({ value, onChange, }) {
     const zones = useMemo(() => zonesWith(value), [value]);
     return (_jsx(Labeled, { label: t("locales.timeZone"), hint: t("locales.timeZoneHelp"), htmlFor: id, children: _jsxs(Combobox, { items: zones, autoHighlight: true, disabled: disabled, value: value ?? null, onValueChange: (next) => onChange(next ?? undefined), children: [_jsx(ComboboxInput, { id: id, "aria-label": t("locales.timeZone"), placeholder: "Asia/Seoul", showClear: value !== undefined, disabled: disabled, className: "w-full" }), _jsxs(ComboboxContent, { children: [_jsx(ComboboxEmpty, { children: t("locales.timeZoneNone") }), _jsx(ComboboxList, { children: (zone) => (_jsxs(ComboboxItem, { value: zone, children: [_jsx("span", { className: "truncate", children: zone }), _jsx("span", { className: "ml-auto text-cms-muted-foreground text-xs", children: offsetOf(zone) })] }, zone)) })] })] }) }));
 }
+/** Common language codes offered while typing a code. Any other valid code can still be typed. */
+const KNOWN_CODES = [
+    "ar",
+    "bn",
+    "cs",
+    "da",
+    "de",
+    "el",
+    "en",
+    "es",
+    "fa",
+    "fi",
+    "fr",
+    "he",
+    "hi",
+    "hu",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "ms",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "pt-BR",
+    "ro",
+    "ru",
+    "sv",
+    "th",
+    "tr",
+    "uk",
+    "vi",
+    "zh",
+    "zh-CN",
+    "zh-TW",
+];
+/** The autonym of a language in its own language (for example the localized name for `ko`), or undefined when the runtime does not know the code. */
+function nativeNameOf(code) {
+    try {
+        const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
+        return name && name !== code ? name : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
 /** The dialog that adds a language or edits one. The code of a saved language is a stored value, so editing shows it but does not change it. */
 function LocaleDialog({ locale, taken, onSave, onClose, }) {
     const t = useTranslator(schemaLocalesMessages);
     const tc = useTranslator(commonMessages);
+    const codeListId = useId();
     const [code, setCode] = useState(locale?.code ?? "");
     const [name, setName] = useState(locale?.name ?? "");
     const [label, setLabel] = useState(locale?.label ?? "");
@@ -62,7 +115,14 @@ function LocaleDialog({ locale, taken, onSave, onClose, }) {
                         if (!ok)
                             return;
                         onSave({ code, name: name.trim(), ...(label.trim() ? { label: label.trim() } : {}) });
-                    }, children: [_jsx(Labeled, { label: t("locales.code"), hint: locale ? undefined : t("locales.codeHint"), children: _jsx(Input, { autoFocus: !locale, value: code, disabled: locale !== undefined, "aria-label": t("locales.code"), placeholder: "en", "aria-invalid": code !== "" && !codeOk ? true : undefined, onChange: (event) => setCode(event.target.value) }) }), _jsx(Labeled, { label: t("locales.name"), children: _jsx(Input, { autoFocus: locale !== undefined, value: name, "aria-label": t("locales.name"), placeholder: "English", onChange: (event) => setName(event.target.value) }) }), _jsx(Labeled, { label: t("locales.label"), hint: t("locales.labelHint"), children: _jsx(Input, { value: label, "aria-label": t("locales.label"), onChange: (event) => setLabel(event.target.value) }) }), _jsx(DialogFormFooter, { onCancel: onClose, cancelLabel: tc("cancel"), submitLabel: locale ? tc("save") : t("locales.add"), disabled: !ok })] })] }) }));
+                    }, children: [_jsxs(Labeled, { label: t("locales.code"), hint: locale ? undefined : t("locales.codeHint"), children: [_jsx(Input, { autoFocus: !locale, value: code, disabled: locale !== undefined, "aria-label": t("locales.code"), placeholder: "en", list: codeListId, "aria-invalid": code !== "" && !codeOk ? true : undefined, onChange: (event) => {
+                                        const next = event.target.value;
+                                        setCode(next);
+                                        // Picking a known code names the language, unless a name was already typed.
+                                        if (!locale && name.trim() === "" && KNOWN_CODES.includes(next)) {
+                                            setName(nativeNameOf(next) ?? "");
+                                        }
+                                    } }), _jsx("datalist", { id: codeListId, children: KNOWN_CODES.filter((known) => !taken.includes(known)).map((known) => (_jsx("option", { value: known, children: nativeNameOf(known) ?? known }, known))) })] }), _jsx(Labeled, { label: t("locales.name"), children: _jsx(Input, { autoFocus: locale !== undefined, value: name, "aria-label": t("locales.name"), placeholder: "English", onChange: (event) => setName(event.target.value) }) }), _jsx(Labeled, { label: t("locales.label"), hint: t("locales.labelHint"), children: _jsx(Input, { value: label, "aria-label": t("locales.label"), onChange: (event) => setLabel(event.target.value) }) }), _jsx(DialogFormFooter, { onCancel: onClose, cancelLabel: tc("cancel"), submitLabel: locale ? tc("save") : t("locales.add"), disabled: !ok })] })] }) }));
 }
 /** A public address of the first collection that has one, with `:slug` filled in: the example the language settings show. */
 function examplePath(file) {
@@ -73,6 +133,15 @@ function examplePath(file) {
     return "/posts/hello";
 }
 const PREFIX_MODES = ["except-default", "always", "never"];
+/** One language of the list: a grip to drag it, and its buttons on hover (the same way a field row is reordered). */
+function LocaleRow({ locale, isDefault, dragDisabled, buttons, }) {
+    const t = useTranslator(schemaLocalesMessages);
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+        id: locale.code,
+        disabled: dragDisabled,
+    });
+    return (_jsxs("li", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("group/row relative flex min-h-14 items-center gap-3.5 bg-cms-card py-2 pr-4 pl-9", isDragging && "z-10 opacity-80 shadow-md"), "data-testid": `locale-${locale.code}`, children: [_jsx("button", { type: "button", ref: setActivatorNodeRef, ...attributes, ...listeners, "aria-label": t("locales.drag", { name: locale.name }), disabled: dragDisabled, className: "absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100", children: _jsx(GripVertical, { "aria-hidden": true, className: "size-4" }) }), _jsx("span", { className: "flex h-6 min-w-9 items-center justify-center rounded-sm bg-cms-muted px-1.5 font-mono text-xs", children: locale.code }), _jsxs("div", { className: "min-w-0 flex-1", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "truncate font-medium text-sm", children: locale.name }), isDefault && (_jsx("span", { className: "rounded-sm bg-cms-primary/10 px-1.5 py-px text-cms-primary text-xs", children: t("locales.defaultBadge") }))] }), _jsx("div", { className: "truncate text-cms-muted-foreground text-xs", children: t("locales.adminName", { label: locale.label ?? locale.name }) })] }), _jsx(RowButtons, { buttons: buttons })] }));
+}
 /** The content languages (code, name, admin name) as one list, the default one, and the time zone. A saved language's code is a stored value, so it is not editable; add a new language instead. */
 export function LocalesEditor({ file, update, }) {
     const t = useTranslator(schemaLocalesMessages);
@@ -86,39 +155,39 @@ export function LocalesEditor({ file, update, }) {
     const editing = dialog?.code ? locales.find((locale) => locale.code === dialog.code) : undefined;
     const mode = PREFIX_MODES.find((value) => value === sectionOf(file, "site").localePrefix) ?? "except-default";
     const other = locales.find((locale) => locale.code !== defaultLocale)?.code ?? "en";
-    const menu = (locale, index) => [
-        {
-            kind: "item",
-            label: t("locales.edit"),
-            icon: Pencil,
-            disabled,
-            onSelect: () => setDialog({ code: locale.code }),
-        },
-        {
-            kind: "item",
-            label: ts("row.up", { name: locale.code }),
-            icon: ArrowUp,
-            disabled: disabled || index === 0,
-            onSelect: () => change(moveItem(locales, index, -1)),
-        },
-        {
-            kind: "item",
-            label: ts("row.down", { name: locale.code }),
-            icon: ArrowDown,
-            disabled: disabled || index === locales.length - 1,
-            onSelect: () => change(moveItem(locales, index, 1)),
-        },
-        { kind: "separator" },
-        {
-            kind: "item",
-            label: ts("row.remove", { name: locale.code }),
-            icon: Trash2,
-            destructive: true,
-            disabled,
-            onSelect: () => change(locales.filter((_, at) => at !== index)),
-        },
-    ];
-    return (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(Section, { wide: true, card: false, title: t("locales.contentTitle"), description: t("locales.contentDescription"), note: t("locales.contentNote"), testId: "locales-content", children: _jsxs(Panel, { className: "overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between gap-4 border-b px-4 py-3", children: [_jsx("span", { className: "text-cms-muted-foreground text-sm", children: t("locales.count", { count: locales.length }) }), _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, onClick: () => setDialog({ code: null }), children: [_jsx(Plus, { "aria-hidden": true }), t("locales.add")] })] }), _jsx("ul", { className: "divide-y", children: locales.map((locale, index) => (_jsxs("li", { className: "flex min-h-14 items-center gap-3.5 px-4 py-2", "data-testid": `locale-${locale.code}`, children: [_jsx("span", { className: "flex h-6 min-w-9 items-center justify-center rounded-sm bg-cms-muted px-1.5 font-mono text-xs", children: locale.code }), _jsxs("div", { className: "min-w-0 flex-1", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "truncate font-medium text-sm", children: locale.name }), locale.code === defaultLocale && (_jsx("span", { className: "rounded-sm bg-cms-primary/10 px-1.5 py-px text-cms-primary text-xs", children: t("locales.defaultBadge") }))] }), _jsx("div", { className: "truncate text-cms-muted-foreground text-xs", children: t("locales.adminName", { label: locale.label ?? locale.name }) })] }), _jsx(MoreActionsButton, { actions: menu(locale, index), label: t("locales.menu", { name: locale.name }), className: "size-7 shrink-0 text-cms-muted-foreground" })] }, locale.code))) })] }) }), _jsx(Section, { wide: true, title: t("locales.defaultTitle"), description: t("locales.defaultDescription"), testId: "locales-default", children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("locales.default"), hint: t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) }), value: defaultLocale, items: locales.map((locale) => ({
+    const buttons = (locale, index) => {
+        const isDefault = locale.code === defaultLocale;
+        return [
+            {
+                label: t("locales.editNamed", { name: locale.name }),
+                icon: Pencil,
+                disabled,
+                onClick: () => setDialog({ code: locale.code }),
+            },
+            {
+                label: ts("row.up", { name: locale.code }),
+                icon: ArrowUp,
+                disabled: disabled || index === 0,
+                onClick: () => change(moveItem(locales, index, -1)),
+            },
+            {
+                label: ts("row.down", { name: locale.code }),
+                icon: ArrowDown,
+                disabled: disabled || index === locales.length - 1,
+                onClick: () => change(moveItem(locales, index, 1)),
+            },
+            {
+                label: ts("row.remove", { name: locale.code }),
+                icon: Trash2,
+                destructive: true,
+                disabled: disabled || isDefault,
+                title: isDefault ? t("locales.removeBlockedDefault") : undefined,
+                onClick: () => change(locales.filter((_, at) => at !== index)),
+            },
+        ];
+    };
+    const onDrop = (from, to) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
+    return (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(Section, { wide: true, card: false, title: t("locales.contentTitle"), description: t("locales.contentDescription"), note: t("locales.contentNote"), testId: "locales-content", children: _jsxs(Panel, { className: "overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between gap-4 border-b px-4 py-3", children: [_jsx("span", { className: "text-cms-muted-foreground text-sm", children: t("locales.count", { count: locales.length }) }), _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, onClick: () => setDialog({ code: null }), children: [_jsx(Plus, { "aria-hidden": true }), t("locales.add")] })] }), _jsx("ul", { className: "divide-y", children: _jsx(SortableList, { items: taken, onDragEnd: onDrop, children: locales.map((locale, index) => (_jsx(LocaleRow, { locale: locale, isDefault: locale.code === defaultLocale, dragDisabled: disabled, buttons: buttons(locale, index) }, locale.code))) }) })] }) }), _jsx(Section, { wide: true, title: t("locales.defaultTitle"), description: t("locales.defaultDescription"), testId: "locales-default", children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("locales.default"), hint: t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) }), value: defaultLocale, items: locales.map((locale) => ({
                                 value: locale.code,
                                 label: `${locale.label ?? locale.name} (${locale.code})`,
                             })), onChange: (value) => update((current) => ({ ...current, defaultLocale: value })) }), _jsx(TimeZonePick, { value: typeof file.timeZone === "string" ? file.timeZone : undefined, onChange: (value) => update((current) => setProp(current, "timeZone", value, [

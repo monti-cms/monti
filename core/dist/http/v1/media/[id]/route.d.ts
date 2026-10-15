@@ -3,7 +3,7 @@ type IdParams = {
 };
 /** Media detail. Also used when the editor shows an image from `mediaId` alone (including a check of the stored file). */
 export declare const GET: import("../../handler.js").AdminHandler<IdParams>;
-/** Edits the default alt and caption. Bodies already written do not change. */
+/** Edits the file name, or the default alt and caption. A new name keeps the file's extension. Bodies already written do not change. */
 export declare const PATCH: import("../../handler.js").AdminHandler<IdParams>;
 /**
  * Deletes only unused files. Marks the row `deleting`, deletes the file, and removes the row on success.

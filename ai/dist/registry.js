@@ -1,7 +1,7 @@
 import { AI_PLUGIN_NAME } from "./name.js";
 import { resolveAiActions } from "./resolve.js";
 const registries = new WeakMap();
-/** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the shared texts. */
+/** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the prompt snippets. */
 export const aiSiteViewOf = (site) => ({
     // The schemas of the site: their labels are read in the admin language when the site is created.
     collections: Object.fromEntries(site.COLLECTIONS.map((name) => [name, site.schemaOf(name)])),
@@ -16,11 +16,11 @@ function createRegistry(site) {
     const actions = aiConfig
         ? resolveAiActions(aiConfig, aiSiteViewOf(site), site.plugins)
         : {};
-    const shared = aiConfig?.shared ?? {};
+    const snippets = aiConfig?.snippets ?? {};
     return {
         actions,
-        shared,
-        sharedKeys: Object.keys(shared),
+        snippets,
+        snippetKeys: Object.keys(snippets),
         siteDescription: aiConfig?.siteDescription?.trim() || "website",
         actionDefinition: (key) => (Object.hasOwn(actions, key) ? actions[key] : undefined),
     };

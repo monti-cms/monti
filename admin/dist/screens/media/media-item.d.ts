@@ -21,5 +21,12 @@ export declare const usageLabel: (t: TranslatorFor<typeof mediaMessages>, media:
 /** Text of the usage note (`note`). */
 export declare const usageNoteLabel: (t: TranslatorFor<typeof mediaMessages>, note: NonNullable<MediaUsage["note"]>) => string;
 export declare function copyText(text: string, success: string, failure: string): Promise<void>;
+/** A file name as its editable stem and its extension, which a rename keeps. */
+export declare function splitFilename(filename: string): {
+    stem: string;
+    extension: string;
+};
 /** Appends the original file's extension to the new name (suggested names come without an extension). If it already has the same extension, leaves it as is. */
 export declare function withExtension(name: string, original: string): string;
+/** Why a stem cannot be a file name, or `null`. The server checks the same rules. */
+export declare function stemProblem(stem: string): "empty" | "invalid" | null;

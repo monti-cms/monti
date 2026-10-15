@@ -8,7 +8,7 @@ const contributionOf = (plugin) => {
 /** Builds one action from its source (a definition, or a function of the site). */
 const build = (source, site) => typeof source === "function" ? source(site) : source;
 export function resolveAiActions(config, site, plugins = []) {
-    const view = { ...site, sharedKeys: Object.keys(config.shared ?? {}) };
+    const view = { ...site, snippetKeys: Object.keys(config.snippets ?? {}) };
     const sources = new Map(Object.entries(DEFAULT_AI_ACTIONS));
     for (const plugin of plugins) {
         if (plugin.name === AI_PLUGIN_NAME)
@@ -39,8 +39,8 @@ export function resolveAiActions(config, site, plugins = []) {
         ...built.filter(([, definition]) => !onField(definition)),
     ]);
 }
-/** Resolves the AI config and returns it together with the shared texts. */
+/** Resolves the AI config and returns it together with the prompt snippets. */
 export const resolveAiConfig = (config, site, plugins = []) => ({
-    ...(config.shared ? { shared: config.shared } : {}),
+    ...(config.snippets ? { snippets: config.snippets } : {}),
     actions: resolveAiActions(config, site, plugins),
 });

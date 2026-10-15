@@ -40,11 +40,11 @@ export interface AiRunDeps {
     content: AiContentLookup;
     /** Locale code -> name written in that language (language input of the instructions). */
     languageName: (code: string) => string;
-    /** Shared texts (with edited values applied). Fills `{{shared.name}}` in the instructions. */
-    shared?: Readonly<Record<string, string>>;
+    /** Prompt snippets (with edited values applied). Fills `{{snippet.name}}` in the instructions. */
+    snippets?: Readonly<Record<string, string>>;
     signal?: AbortSignal;
 }
-/** Input and shared information for one run. */
+/** Input and context for one run. */
 export interface AiCall {
     readonly input: Readonly<Record<string, unknown>>;
     readonly env: AiRunEnv;

@@ -123,7 +123,9 @@ export function AiSlotProvider({ children }) {
     const format = useMdxFormat();
     const sources = useMemo(() => {
         const usable = new Set(data?.usable ?? []);
-        const actions = data ? data.items.filter((action) => action.enabled && usable.has(action.key)) : [];
+        const actions = data
+            ? data.items.filter((action) => action.enabled && !action.hidden && usable.has(action.key))
+            : [];
         const source = (place) => actions
             .filter((action) => action.attach.some((attach) => attachedTo(attach, place)))
             .map((action) => ({

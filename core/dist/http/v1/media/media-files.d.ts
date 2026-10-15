@@ -18,3 +18,8 @@ export interface InspectedFile {
 export declare function inspectUploadedFile(site: Site, mediaStore: MediaStore, stagingKey: string, declared?: string | null): Promise<InspectedFile>;
 /** Header value that makes an attachment download under its original name (RFC 6266, 5987). */
 export declare function attachmentDisposition(filename: string): string;
+/**
+ * Why a new file name is not acceptable, or `null`. The name is a display and download name, so it stays one plain name (no path, no control
+ * characters), has something before the extension, and keeps the extension of the file: the stored type does not change with a rename.
+ */
+export declare function renameProblem(current: string, next: string): string | null;

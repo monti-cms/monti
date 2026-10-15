@@ -1,6 +1,7 @@
 import { mediaPatchBodySchema } from "../../../../core/api.js";
 import { CmsError } from "../../error-handler.js";
 import { adminRoute, deleted, ok, parseWith, readJsonBody } from "../../handler.js";
+import { renameProblem } from "../media-files.js";
 /** Media detail. Also used when the editor shows an image from `mediaId` alone (including a check of the stored file). */
 export const GET = adminRoute(async ({ params, cms }) => {
     const media = await cms.store().getMediaAsset(params.id);
@@ -19,9 +20,17 @@ export const GET = adminRoute(async ({ params, cms }) => {
         originalUrl: media.original?.storageKey ? mediaStore.getPublicUrl(media.original.storageKey) : null,
     });
 });
-/** Edits the default alt and caption. Bodies already written do not change. */
+/** Edits the file name, or the default alt and caption. A new name keeps the file's extension. Bodies already written do not change. */
 export const PATCH = adminRoute(async ({ request, params, cms }) => {
     const body = parseWith(mediaPatchBodySchema, await readJsonBody(request));
+    if (body.filename !== undefined) {
+        const media = await cms.store().getMediaAsset(params.id);
+        if (!media)
+            throw new CmsError("Media asset not found", "not_found");
+        const problem = renameProblem(media.filename, body.filename.normalize("NFC"));
+        if (problem)
+            throw new CmsError(problem, "invalid_input");
+    }
     return ok(await cms.store().updateMediaMetadata({ id: params.id, ...body }));
 });
 /**

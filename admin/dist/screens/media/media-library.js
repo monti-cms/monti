@@ -192,10 +192,12 @@ export function MediaLibrary() {
         inline: true,
         invalidate: [mediaKeys.all],
     });
+    /** Renames a file. Failure is thrown as is so it shows under the name field in the detail panel. */
     const renameMutation = useCmsMutation({
-        fn: ({ media, filename }, { site }) => updateMedia(site, media.id, { filename }),
+        fn: ({ media, filename }, { site }) => updateMedia(site, media.id, { filename }, t("library.renameFailed")),
         success: (_result, { filename }) => t("library.renamed", { name: filename }),
         failure: t("library.renameFailed"),
+        inline: true,
         invalidate: [mediaKeys.all],
     });
     const cleanupMutation = useCmsMutation({
@@ -276,5 +278,5 @@ export function MediaLibrary() {
                                             label: t("library.upload"),
                                             icon: Upload,
                                             onClick: () => fileInputRef.current?.click(),
-                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults }), onRename: (filename) => renameMutation.mutate({ media: selected, filename }), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog, guardDialog] }));
+                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults }), onRename: (filename) => renameMutation.mutateAsync({ media: selected, filename }), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog, guardDialog] }));
 }

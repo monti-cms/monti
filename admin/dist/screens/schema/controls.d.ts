@@ -23,7 +23,7 @@ export declare function useIssuesUnder(path: string, exclude?: string): readonly
 export declare function IssueList({ issues }: {
     issues: readonly Issue[];
 }): import("react").JSX.Element | null;
-export declare function TextInput({ label, value, onChange, placeholder, hint, type, className, optional, }: {
+export declare function TextInput({ label, value, onChange, placeholder, hint, type, className, optional, disabled: customDisabled, }: {
     label: string;
     value: string | number | undefined;
     onChange: (value: string) => void;
@@ -33,6 +33,7 @@ export declare function TextInput({ label, value, onChange, placeholder, hint, t
     className?: string;
     /** Marks the field as optional with a muted "optional" next to the label (the form marks what is optional, not what is required). */
     optional?: boolean;
+    disabled?: boolean;
 }): import("react").JSX.Element;
 /** A text value that is `undefined` when empty (an optional property of the file). */
 export declare const orUndefined: (value: string) => string | undefined;
@@ -57,13 +58,14 @@ export interface PickItem {
     /** A muted line under the label in the list of choices (the closed select shows the label only). */
     readonly description?: string;
 }
-export declare function Pick({ label, value, items, onChange, hint, className, control, }: {
+export declare function Pick({ label, value, items, onChange, hint, className, disabled: customDisabled, control, }: {
     label: string;
     value: string;
     items: readonly PickItem[];
     onChange: (value: string) => void;
     hint?: ReactNode;
     className?: string;
+    disabled?: boolean;
     control?: keyof typeof CONTROL_WIDTH;
 }): import("react").JSX.Element;
 /**

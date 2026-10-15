@@ -5,7 +5,7 @@ import { Button, Checkbox, cn, commonMessages, DETAIL_PANE_FRAME, DropdownMenu, 
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 import { draftCustomView } from "../action-view.js";
 import { ADDABLE_CHECKS, checkKey } from "../definition.js";
@@ -17,7 +17,7 @@ import { ConnectionManager, useAiSettings } from "./connection-editor.js";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor.js";
 import { useLabels } from "./labels.messages.js";
 import { ModelCombobox, useModelList } from "./model-combobox.js";
-import { PROMPT_ROWS, PROMPT_TEXTAREA, SharedManager, useAiShared } from "./shared-editor.js";
+import { PROMPT_ROWS, PROMPT_TEXTAREA, SnippetManager, useAiSnippets } from "./snippet-editor.js";
 /** Visible name of the attach target. For a field, it is the name in the collection definition. */
 function usePlaceLabel() {
     const site = useSite();
@@ -50,6 +50,8 @@ function usePlaceLabel() {
 }
 const editableOf = (action) => ({
     enabled: action.enabled,
+    hidden: action.hidden,
+    label: action.label,
     askInstruction: action.askInstruction,
     instant: action.instant,
     providerId: action.providerId,
@@ -76,7 +78,7 @@ const EMPTY_SAMPLE = { values: {}, request: "" };
 /**
  * Admin AI screen. The Actions tab lists actions defined in code and actions created in the screen; for each action you edit enabled, ask-for-request,
  * connection, model, content to send, instructions and checks, then test before saving. The Connections tab stores several service URLs, keys and default models.
- * The Shared texts tab edits and adds the text that goes into `{{shared.key}}` in instructions. All three tabs are a list + a detail pane.
+ * The Prompt snippets tab edits and adds the text that goes into `{{snippet.key}}` in instructions. All three tabs are a list + a detail pane.
  * Opening another item or tab with unsaved content asks whether to discard it.
  */
 export function AiManager() {
@@ -89,7 +91,7 @@ export function AiManager() {
     // The layout's AI slot provider asks for the same list, so it can be in the cache before this page hydrates.
     const featuresQuery = useHydratedQuery(useAiActions());
     const _settingsQuery = useAiSettings();
-    const _sharedQuery = useAiShared();
+    const _snippetsQuery = useAiSnippets();
     const features = featuresQuery.data?.items ?? [];
     const usable = new Set(featuresQuery.data?.usable ?? []);
     const [tab, setTab] = useState("features");
@@ -99,9 +101,9 @@ export function AiManager() {
     /** The open connection. The header's Add connection changes it, so it lives outside the Connections tab. */
     const [connection, setConnection] = useState(null);
     const [connectionDirty, setConnectionDirty] = useState(false);
-    /** The open shared text. The header's Add text changes it, so it lives outside the Shared texts tab. */
-    const [shared, setShared] = useState(null);
-    const [sharedDirty, setSharedDirty] = useState(false);
+    /** The open prompt snippet. The header's Add snippet changes it, so it lives outside the Prompt snippets tab. */
+    const [snippet, setSnippet] = useState(null);
+    const [snippetDirty, setSnippetDirty] = useState(false);
     const { confirm, confirmDiscard, dialog } = useConfirm();
     const replaceInCache = (feature) => queryClient.setQueryData(aiKeys.actions(), (data) => data ? { ...data, items: data.items.map((item) => (item.key === feature.key ? feature : item)) } : data);
     const removeMutation = useCmsMutation({
@@ -139,6 +141,57 @@ export function AiManager() {
     });
     const saving = saveMutation.isPending;
     const deleting = removeMutation.isPending;
+    const [showHidden, setShowHidden] = useState(false);
+    const quickPatchMutation = useCmsMutation({
+        fn: ({ feature, patch }, { site }) => updateAiAction(site, feature.key, {
+            expectedVersion: feature.version,
+            value: patch,
+        }, tc("saveFailed")),
+        failure: tc("saveFailed"),
+        inline: true,
+        invalidate: [aiKeys.actions()],
+        onSuccess: (saved) => {
+            replaceInCache(saved);
+            if (editing && !editing.isNew && editing.feature.key === saved.key) {
+                setOpened({ saved: draftOfFeature(saved), isNew: false });
+            }
+        },
+        onError: (error) => setFormError(errorText(site, error, tc("saveFailed"))),
+    });
+    const handleToggle = (feature, enabled) => {
+        if (editing && !editing.isNew && editing.feature.key === feature.key) {
+            changeDraft((draft) => ({ ...draft, spec: { ...draft.spec, enabled } }));
+        }
+        queryClient.setQueryData(aiKeys.actions(), (data) => data
+            ? {
+                ...data,
+                items: data.items.map((item) => (item.key === feature.key ? { ...item, enabled } : item)),
+            }
+            : data);
+        quickPatchMutation.mutate({ feature, patch: { enabled } });
+    };
+    const handleToggleHidden = (feature, hidden) => {
+        if (editing && !editing.isNew && editing.feature.key === feature.key) {
+            changeDraft((draft) => ({ ...draft, spec: { ...draft.spec, hidden } }));
+        }
+        queryClient.setQueryData(aiKeys.actions(), (data) => data
+            ? {
+                ...data,
+                items: data.items.map((item) => (item.key === feature.key ? { ...item, hidden } : item)),
+            }
+            : data);
+        quickPatchMutation.mutate({ feature, patch: { hidden } });
+    };
+    const restoreAllHidden = async () => {
+        const hiddenFeatures = features.filter((f) => f.hidden);
+        for (const f of hiddenFeatures) {
+            await updateAiAction(site, f.key, {
+                expectedVersion: f.version,
+                value: { hidden: false },
+            });
+        }
+        void queryClient.invalidateQueries({ queryKey: aiKeys.actions() });
+    };
     // The draft follows what was opened; a closed editor holds no draft.
     const editor = useDraftEditor({
         saved: opened && !opened.isNew ? opened.saved : null,
@@ -152,7 +205,7 @@ export function AiManager() {
     const editing = opened && shown ? { ...shown, isNew: opened.isNew } : null;
     const featureDirty = opened !== null && editor.dirty;
     // A link that leaves the screen (the sidebar) asks first while any open editor has changes.
-    const { dialog: guardDialog } = useUnsavedGuard(featureDirty || connectionDirty || sharedDirty);
+    const { dialog: guardDialog } = useUnsavedGuard(featureDirty || connectionDirty || snippetDirty);
     const changeDraft = (change) => editor.update((draft) => change(draft ?? opened.saved));
     /** Opens without asking (e.g. after saving). */
     const open = (feature) => {
@@ -181,15 +234,15 @@ export function AiManager() {
         if (await confirmDiscard(connectionDirty))
             setConnection(id);
     };
-    const openShared = async (key) => {
-        if (key === shared)
+    const openSnippet = async (key) => {
+        if (key === snippet)
             return;
-        if (await confirmDiscard(sharedDirty))
-            setShared(key);
+        if (await confirmDiscard(snippetDirty))
+            setSnippet(key);
     };
-    /** Switches tabs. Closing the Connections or Shared texts tab discards the input, so it asks if there is unsaved content. */
+    /** Switches tabs. Closing the Connections or Prompt snippets tab discards the input, so it asks if there is unsaved content. */
     const changeTab = async (next) => {
-        const dirty = (tab === "connections" && connectionDirty) || (tab === "shared" && sharedDirty);
+        const dirty = (tab === "connections" && connectionDirty) || (tab === "snippets" && snippetDirty);
         if (await confirmDiscard(dirty))
             setTab(next);
     };
@@ -244,19 +297,61 @@ export function AiManager() {
         saveMutation.mutate(editing);
     };
     const onConnectionDirty = useCallback((dirty) => setConnectionDirty(dirty), []);
-    const onSharedDirty = useCallback((dirty) => setSharedDirty(dirty), []);
-    const headerActions = tab === "features" ? (_jsxs(Button, { type: "button", size: "sm", onClick: () => void startNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("add.feature")] })) : tab === "connections" ? (_jsxs(Button, { type: "button", size: "sm", onClick: () => void openConnection("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("add.connection")] })) : (_jsxs(Button, { type: "button", size: "sm", onClick: () => void openShared("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("add.shared")] }));
-    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [_jsx(PageActions, { children: headerActions }), _jsxs(Tabs, { value: tab, onValueChange: (value) => void changeTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(PageTabs, { children: [_jsxs(TabsTrigger, { value: "features", className: "flex-none px-0 text-xs", children: [_jsx(Sparkles, { "aria-hidden": true }), t("tab.features")] }), _jsxs(TabsTrigger, { value: "connections", className: "flex-none px-0 text-xs", children: [_jsx(Plug, { "aria-hidden": true }), t("tab.connections")] }), _jsxs(TabsTrigger, { value: "shared", className: "flex-none px-0 text-xs", children: [_jsx(Quote, { "aria-hidden": true }), t("tab.shared")] })] }), _jsxs(TabsContent, { value: "features", className: "flex min-h-0 flex-1 flex-col", children: [featuresQuery.error && !featuresQuery.data && (_jsx(LoadErrorAlert, { className: "m-3", message: errorText(site, featuresQuery.error, t("list.loadFailed")), onRetry: () => void featuresQuery.refetch() })), _jsx(MasterDetail, { list: _jsx(ListPane, { label: t("list.label"), loading: featuresQuery.isPending, skeletonRows: 4, empty: featuresQuery.data && features.length === 0 && !editing?.isNew ? (_jsx(EmptyState, { compact: true, title: t("list.empty") })) : null, children: [
-                                        ...features.map((feature) => (_jsx(ListRow, { title: feature.label, status: !feature.enabled
+    const onSnippetDirty = useCallback((dirty) => setSnippetDirty(dirty), []);
+    const headerActions = tab === "features" ? (_jsxs(Button, { type: "button", size: "sm", onClick: () => void startNew(), children: [_jsx(Plus, { "aria-hidden": true }), t("add.feature")] })) : tab === "connections" ? (_jsxs(Button, { type: "button", size: "sm", onClick: () => void openConnection("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("add.connection")] })) : (_jsxs(Button, { type: "button", size: "sm", onClick: () => void openSnippet("new"), children: [_jsx(Plus, { "aria-hidden": true }), t("add.snippet")] }));
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [_jsx(PageActions, { children: headerActions }), _jsxs(Tabs, { value: tab, onValueChange: (value) => void changeTab(value), className: "flex min-h-0 flex-1 flex-col gap-0", children: [_jsxs(PageTabs, { children: [_jsxs(TabsTrigger, { value: "features", className: "flex-none px-0 text-xs", children: [_jsx(Sparkles, { "aria-hidden": true }), t("tab.features")] }), _jsxs(TabsTrigger, { value: "connections", className: "flex-none px-0 text-xs", children: [_jsx(Plug, { "aria-hidden": true }), t("tab.connections")] }), _jsxs(TabsTrigger, { value: "snippets", className: "flex-none px-0 text-xs", children: [_jsx(Quote, { "aria-hidden": true }), t("tab.snippets")] })] }), _jsxs(TabsContent, { value: "features", className: "flex min-h-0 flex-1 flex-col", children: [featuresQuery.error && !featuresQuery.data && (_jsx(LoadErrorAlert, { className: "m-3", message: errorText(site, featuresQuery.error, t("list.loadFailed")), onRetry: () => void featuresQuery.refetch() })), _jsx(MasterDetail, { list: _jsx(ListPane, { label: t("list.label"), loading: featuresQuery.isPending, skeletonRows: 4, empty: featuresQuery.data && features.length === 0 && !editing?.isNew ? (_jsx(EmptyState, { compact: true, title: t("list.empty") })) : null, children: [
+                                        ...features
+                                            .filter((feature) => !feature.hidden)
+                                            .map((feature) => (_jsx(ListRow, { title: feature.label, status: !feature.enabled
                                                 ? t("status.off")
                                                 : usable.has(feature.key)
                                                     ? null
                                                     : t("status.needsConnection"), detail: `${placeLabel(feature)} · ${engineLabel(feature.engine)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`, 
                                             // While a new unsaved action is open, no other row in the list is shown as open.
-                                            current: editing !== null && !editing.isNew && editing.feature.key === feature.key, onClick: () => void openFeature(feature) }, feature.key))),
+                                            current: editing !== null && !editing.isNew && editing.feature.key === feature.key, onClick: () => void openFeature(feature), trailing: _jsx(Switch, { size: "sm", checked: feature.enabled, "aria-label": t("toggle.enableAction", { label: feature.label }), onClick: (e) => e.stopPropagation(), onCheckedChange: (checked) => handleToggle(feature, checked) }), actions: feature.custom
+                                                ? [
+                                                    {
+                                                        kind: "item",
+                                                        label: tc("delete"),
+                                                        icon: Trash2,
+                                                        onSelect: () => void remove(feature),
+                                                        destructive: true,
+                                                    },
+                                                ]
+                                                : [
+                                                    {
+                                                        kind: "item",
+                                                        label: t("action.hide"),
+                                                        icon: EyeOff,
+                                                        onSelect: () => handleToggleHidden(feature, true),
+                                                    },
+                                                ], actionsLabel: feature.label }, feature.key))),
+                                        ...(showHidden
+                                            ? features
+                                                .filter((feature) => feature.hidden)
+                                                .map((feature) => (_jsx(ListRow, { title: feature.label, status: t("status.hidden"), detail: `${placeLabel(feature)} · ${engineLabel(feature.engine)}`, current: editing !== null && !editing.isNew && editing.feature.key === feature.key, onClick: () => void openFeature(feature), trailing: _jsx(Switch, { size: "sm", checked: feature.enabled, "aria-label": t("toggle.enableAction", { label: feature.label }), onClick: (e) => e.stopPropagation(), onCheckedChange: (checked) => handleToggle(feature, checked) }), actions: [
+                                                    {
+                                                        kind: "item",
+                                                        label: t("action.unhide"),
+                                                        icon: Eye,
+                                                        onSelect: () => handleToggleHidden(feature, false),
+                                                    },
+                                                ], actionsLabel: feature.label }, feature.key)))
+                                            : []),
                                         ...(editing?.isNew
                                             ? [
                                                 _jsx(ListRow, { title: editing.base?.label.trim() || t("title.new"), status: t("status.unsaved"), detail: `${placeLabel(editing.feature)} · ${engineLabel(editing.feature.engine)}`, current: true, onClick: () => { } }, "new"),
+                                            ]
+                                            : []),
+                                        ...(features.some((feature) => feature.hidden)
+                                            ? [
+                                                _jsxs("li", { className: "flex items-center justify-between border-t p-2", children: [_jsx(Button, { type: "button", size: "xs", variant: "ghost", className: "text-cms-muted-foreground hover:text-cms-foreground", onClick: () => setShowHidden(!showHidden), children: showHidden
+                                                                ? t("list.hideHidden", {
+                                                                    count: features.filter((feature) => feature.hidden).length,
+                                                                })
+                                                                : t("list.showHidden", {
+                                                                    count: features.filter((feature) => feature.hidden).length,
+                                                                }) }), showHidden && (_jsxs(Button, { type: "button", size: "xs", variant: "outline", onClick: () => void restoreAllHidden(), children: [_jsx(RotateCcw, { "aria-hidden": true }), t("button.restoreHidden")] }))] }, "hidden-toggle"),
                                             ]
                                             : []),
                                     ] }), children: editing ? (_jsx(FeatureEditor, { feature: editing.feature, spec: editing.spec, saving: saving, deleting: deleting, dirty: featureDirty, error: formError, onChange: (spec) => changeDraft((draft) => ({ ...draft, spec })), onSave: () => void save(), custom: editing.base
@@ -267,34 +362,57 @@ export function AiManager() {
                                             onCancel: () => setOpened(null),
                                             onDelete: () => void remove(editing.feature),
                                         }
-                                        : undefined }, editing.isNew ? "new" : editing.feature.key)) : (featuresQuery.data && (_jsx(EmptyState, { icon: Sparkles, title: t("empty.pick"), action: { label: t("add.feature"), onClick: () => void startNew(), icon: Plus } }))) })] }), _jsx(TabsContent, { value: "shared", className: "flex min-h-0 flex-1 flex-col", children: _jsx(SharedManager, { selected: shared, onOpen: (key) => void openShared(key), onSelectedChange: setShared, onDirtyChange: onSharedDirty }) }), _jsx(TabsContent, { value: "connections", className: "flex min-h-0 flex-1 flex-col", children: _jsx(ConnectionManager, { selected: connection, onOpen: (id) => void openConnection(id), onSelectedChange: setConnection, onDirtyChange: onConnectionDirty }) })] }), dialog, guardDialog] }));
+                                        : undefined }, editing.isNew ? "new" : editing.feature.key)) : (featuresQuery.data && (_jsx(EmptyState, { icon: Sparkles, title: t("empty.pick"), action: { label: t("add.feature"), onClick: () => void startNew(), icon: Plus } }))) })] }), _jsx(TabsContent, { value: "snippets", className: "flex min-h-0 flex-1 flex-col", children: _jsx(SnippetManager, { selected: snippet, onOpen: (key) => void openSnippet(key), onSelectedChange: setSnippet, onDirtyChange: onSnippetDirty }) }), _jsx(TabsContent, { value: "connections", className: "flex min-h-0 flex-1 flex-col", children: _jsx(ConnectionManager, { selected: connection, onOpen: (id) => void openConnection(id), onSelectedChange: setConnection, onDirtyChange: onConnectionDirty }) })] }), dialog, guardDialog] }));
 }
-/** List input for the one-of-values check. One value per line; blank lines are dropped. */
+/** Chip input for the allowed values check. Users can add tags by typing and pressing Enter or comma, and remove tags with backspace or clicking x. */
 function OneOfInput({ items, disabled, onChange, }) {
     const t = useTranslator(aiManagerMessages);
-    const [text, setText] = useState(items.join("\n"));
-    return (_jsx(Textarea, { "aria-label": t("check.options"), rows: 3, value: text, disabled: disabled, onChange: (event) => {
-            setText(event.target.value);
-            const next = event.target.value
-                .split("\n")
-                .map((line) => line.trim())
-                .filter(Boolean);
-            if (next.length > 0)
-                onChange(next);
-        }, className: "field-sizing-fixed min-h-16 min-w-0 max-w-md flex-1 font-mono text-xs md:text-xs" }));
+    const [input, setInput] = useState("");
+    const addItem = (value) => {
+        const trimmed = value.trim();
+        if (trimmed && !items.includes(trimmed)) {
+            onChange([...items, trimmed]);
+            setInput("");
+        }
+    };
+    const removeItem = (index) => {
+        onChange(items.filter((_, i) => i !== index));
+    };
+    const handleKeyDown = (event) => {
+        if (isComposingKey(event))
+            return;
+        if (event.key === "Enter" || event.key === ",") {
+            event.preventDefault();
+            addItem(input);
+        }
+        else if (event.key === "Backspace" && !input && items.length > 0) {
+            removeItem(items.length - 1);
+        }
+    };
+    return (_jsxs("div", { className: cn("flex min-h-8 flex-1 flex-wrap items-center gap-1.5 rounded-md border border-cms-input bg-cms-background p-1 text-xs shadow-sm transition-colors focus-within:ring-1 focus-within:ring-cms-ring", disabled && "cursor-not-allowed opacity-50"), children: [items.map((item, index) => (_jsxs("span", { className: "inline-flex items-center gap-1 rounded bg-cms-muted px-2 py-0.5 font-mono text-cms-foreground text-xs", children: [_jsx("span", { className: "max-w-40 truncate", children: item }), !disabled && (_jsx("button", { type: "button", "aria-label": t("check.oneOfRemove", { item }), onClick: () => removeItem(index), className: "rounded-sm opacity-70 hover:opacity-100 focus:outline-none", children: _jsx(X, { className: "size-3", "aria-hidden": true }) }))] }, item))), !disabled && (_jsx("input", { type: "text", value: input, placeholder: items.length === 0 ? t("check.oneOfPlaceholder") : "", onChange: (e) => setInput(e.target.value), onKeyDown: handleKeyDown, onBlur: () => {
+                    if (input.trim())
+                        addItem(input);
+                }, className: "h-6 min-w-28 flex-1 border-0 bg-transparent px-1 font-mono text-xs shadow-none outline-none placeholder:text-cms-muted-foreground/60 focus:ring-0" }))] }));
 }
 /** One check row. Toggle it on/off; edit a regex for format, a character count for length, or a value list for one-of. Added checks can be deleted. */
 function CheckRow({ check, label, onChange, onRemove, }) {
     const t = useTranslator(aiManagerMessages);
     const id = useId();
-    return (_jsxs("li", { className: cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start [&>label]:pt-1.5" : "items-center"), children: [_jsx(Switch, { id: id, size: "sm", checked: check.enabled, onCheckedChange: (enabled) => onChange({ ...check, enabled }) }), _jsx(Label, { htmlFor: id, className: "w-20 shrink-0 font-normal text-xs", children: label }), check.kind === "pattern" && (_jsx(Input, { "aria-label": t("check.pattern"), value: check.pattern, disabled: !check.enabled, onChange: (event) => onChange({ ...check, pattern: event.target.value }), className: "h-8 min-w-0 flex-1 font-mono text-xs" })), check.kind === "maxLength" && (_jsxs("span", { className: "flex items-center gap-2", children: [_jsx(Input, { type: "number", "aria-label": t("check.maxChars"), min: 1, max: 5000, value: check.max, disabled: !check.enabled, onChange: (event) => onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) }), className: "h-8 w-20 text-xs" }), _jsx("span", { className: "text-cms-muted-foreground", children: t("check.charsOrLess") })] })), check.kind === "oneOf" && (_jsx(OneOfInput, { items: check.items, disabled: !check.enabled, onChange: (items) => onChange({ ...check, items }) })), onRemove && (_jsx(IconButton, { label: t("check.remove", { label }), size: "icon-xs", destructive: true, onClick: onRemove, className: "ml-auto", children: _jsx(Trash2, { "aria-hidden": true }) }))] }));
+    return (_jsxs("li", { className: cn("flex min-h-8 gap-2", check.kind === "oneOf" ? "items-start pt-0.5" : "items-center"), children: [_jsx(Switch, { id: id, size: "sm", checked: check.enabled, onCheckedChange: (enabled) => onChange({ ...check, enabled }) }), _jsx(Label, { htmlFor: id, className: cn("shrink-0 font-normal text-xs", check.kind === "oneOf" ? "w-28 pt-1.5" : "w-28"), children: label }), check.kind === "pattern" && (_jsx(Input, { "aria-label": t("check.pattern"), value: check.pattern, disabled: !check.enabled, onChange: (event) => onChange({ ...check, pattern: event.target.value }), className: "h-8 min-w-0 flex-1 font-mono text-xs" })), check.kind === "maxLength" && (_jsxs("span", { className: "flex items-center gap-2", children: [_jsx(Input, { type: "number", "aria-label": t("check.maxChars"), min: 1, max: 5000, value: check.max, disabled: !check.enabled, onChange: (event) => onChange({ ...check, max: Math.min(5000, Math.max(1, Number(event.target.value) || 1)) }), className: "h-8 w-20 text-xs" }), _jsx("span", { className: "text-cms-muted-foreground", children: t("check.charsOrLess") })] })), check.kind === "oneOf" && (_jsx(OneOfInput, { items: check.items, disabled: !check.enabled, onChange: (items) => onChange({ ...check, items }) })), onRemove && (_jsx(IconButton, { label: t("check.remove", { label }), size: "icon-xs", destructive: true, onClick: onRemove, className: cn("ml-auto", check.kind === "oneOf" && "mt-1"), children: _jsx(Trash2, { "aria-hidden": true }) }))] }));
 }
 function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange, onSave, custom, }) {
     const site = useSite();
     const t = useTranslator(aiManagerMessages);
     const { checkLabel, engineLabel } = useLabels();
     const placeLabel = usePlaceLabel();
-    const ids = { provider: useId(), prompt: useId(), threshold: useId(), sendTitle: useId(), checksTitle: useId() };
+    const ids = {
+        name: useId(),
+        provider: useId(),
+        prompt: useId(),
+        threshold: useId(),
+        sendTitle: useId(),
+        checksTitle: useId(),
+    };
     const deciding = feature.engine === "decide";
     const settings = useAiSettings().data;
     const kind = deciding ? "decisions" : "chat";
@@ -310,7 +428,8 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
     const set = (patch) => onChange({ ...spec, ...patch });
     // Defaults of a code action. Reset to default only reverts the input fields (enabled stays as is); saving is a separate click.
     const defaults = custom ? null : feature.defaults;
-    const atDefaults = defaults !== null && JSON.stringify({ ...defaults, enabled: spec.enabled }) === JSON.stringify(spec);
+    const atDefaults = defaults !== null &&
+        JSON.stringify({ ...defaults, enabled: spec.enabled, hidden: spec.hidden }) === JSON.stringify(spec);
     // Checks that can be added: those among format, length and one-of that are not present yet. An MDX result (body fragment) gets no character checks.
     const addableChecks = Object.keys(ADDABLE_CHECKS).filter((kind) => feature.result !== "mdx" && feature.result !== "note" && !spec.checks.some((check) => check.kind === kind));
     const uses = (input) => spec.send.includes(input);
@@ -344,11 +463,11 @@ function FeatureEditor({ feature, spec, saving, deleting, dirty, error, onChange
             setTest({ status: "error", message: errorText(site, runError, t("test.failed")) });
         }
     };
-    return (_jsxs("div", { className: DETAIL_PANE_FRAME, children: [_jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2", children: [_jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (custom ? custom.base.label.trim() : feature.label) || t("title.new") }), _jsxs("p", { className: "truncate text-cms-muted-foreground text-xs", children: [placeLabel(feature), " \u00B7 ", engineLabel(feature.engine)] })] }), _jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.enabled, onCheckedChange: (enabled) => set({ enabled }) }), t("toggle.on")] }), _jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.askInstruction, onCheckedChange: (askInstruction) => set({ askInstruction }) }), t("toggle.ask")] }), feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (_jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.instant, onCheckedChange: (instant) => set({ instant }) }), t("toggle.instant")] }))] }), custom && (_jsx("section", { "aria-label": t("section.basics"), className: "rounded-md border p-3", children: _jsx(CustomBaseFields, { base: custom.base, onChange: custom.onBaseChange }) })), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.provider, children: t("field.connection") }), _jsxs("div", { className: "flex min-w-0 items-center gap-2", children: [_jsx(OptionSelect, { id: ids.provider, value: spec.providerId ?? "", options: providerOptions, onChange: (value) => set({ providerId: value || null, modelName: "" }) }), _jsx(ModelCombobox, { "aria-label": t("field.model"), value: spec.modelName, models: modelList.models, loading: modelList.loading, error: modelList.error, placeholder: chosen?.defaultModel || t("field.defaultModel"), onChange: (modelName) => set({ modelName }) })] })] }), inputs.length > 0 && (_jsxs(Field, { role: "group", "aria-labelledby": ids.sendTitle, children: [_jsx(FieldTitle, { id: ids.sendTitle, children: t("field.send") }), _jsx("div", { className: "flex flex-wrap gap-3", children: inputs.map(([name, input]) => (_jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Checkbox, { checked: uses(name) || input.required, disabled: input.required, onCheckedChange: (checked) => set({
+    return (_jsxs("div", { className: DETAIL_PANE_FRAME, children: [_jsxs("div", { className: "flex flex-wrap items-center gap-x-4 gap-y-2", children: [_jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("h2", { className: "truncate font-medium text-base", children: (custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new") }), _jsxs("p", { className: "truncate text-cms-muted-foreground text-xs", children: [placeLabel(feature), " \u00B7 ", engineLabel(feature.engine)] })] }), _jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.enabled, onCheckedChange: (enabled) => set({ enabled }) }), t("toggle.on")] }), _jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.askInstruction, onCheckedChange: (askInstruction) => set({ askInstruction }) }), t("toggle.ask")] }), feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (_jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Switch, { size: "sm", checked: spec.instant, onCheckedChange: (instant) => set({ instant }) }), t("toggle.instant")] }))] }), custom ? (_jsx("section", { "aria-label": t("section.basics"), className: "rounded-md border p-3", children: _jsx(CustomBaseFields, { base: custom.base, onChange: custom.onBaseChange }) })) : (_jsx("section", { "aria-label": t("section.basics"), className: "rounded-md border p-3", children: _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.name, children: t("field.name") }), _jsx(Input, { id: ids.name, value: spec.label ?? feature.label, maxLength: 60, placeholder: feature.defaults?.label ?? feature.label, onChange: (event) => set({ label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }) })), _jsxs(FieldGroup, { className: "gap-5", children: [_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.provider, children: t("field.connection") }), _jsxs("div", { className: "flex min-w-0 items-center gap-2", children: [_jsx(OptionSelect, { id: ids.provider, value: spec.providerId ?? "", options: providerOptions, onChange: (value) => set({ providerId: value || null, modelName: "" }) }), _jsx(ModelCombobox, { "aria-label": t("field.model"), value: spec.modelName, models: modelList.models, loading: modelList.loading, error: modelList.error, placeholder: chosen?.defaultModel || t("field.defaultModel"), onChange: (modelName) => set({ modelName }) })] })] }), inputs.length > 0 && (_jsxs(Field, { role: "group", "aria-labelledby": ids.sendTitle, children: [_jsx(FieldTitle, { id: ids.sendTitle, children: t("field.send") }), _jsx("div", { className: "flex flex-wrap gap-3", children: inputs.map(([name, input]) => (_jsxs(Label, { className: "font-normal text-xs", children: [_jsx(Checkbox, { checked: uses(name) || input.required, disabled: input.required, onCheckedChange: (checked) => set({
                                                 send: checked === true ? [...spec.send, name] : spec.send.filter((item) => item !== name),
                                             }) }), input.label] }, name))) })] })), deciding && (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.threshold, children: t("field.threshold") }), _jsxs("div", { className: "flex items-center gap-2 text-xs", children: [_jsx(Input, { id: ids.threshold, type: "number", min: 1, max: 99, value: Math.round(spec.threshold * 100), onChange: (event) => set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 }), className: "h-8 w-20 text-xs md:text-xs" }), _jsx("span", { className: "text-cms-muted-foreground", children: t("field.percentOrMore") }), _jsx(Input, { type: "number", "aria-label": t("field.maxCount"), min: 1, max: 20, value: spec.maxCount, onChange: (event) => set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) }), className: "ml-3 h-8 w-16 text-xs md:text-xs" }), _jsx("span", { className: "text-cms-muted-foreground", children: t("field.countUpTo") })] })] })), _jsxs(Field, { role: "group", "aria-labelledby": ids.checksTitle, children: [_jsx(FieldTitle, { id: ids.checksTitle, children: t("field.checks") }), _jsxs("div", { className: "flex flex-col gap-1.5 text-xs", children: [_jsx("ul", { className: "flex flex-col gap-1.5", "aria-label": t("field.checks"), children: spec.checks.map((check, index) => (_jsx(CheckRow, { check: check, label: check.kind === "code" ? (feature.validatorLabels[check.name] ?? check.name) : checkLabel(check.kind), onChange: (next) => set({ checks: spec.checks.map((item, i) => (i === index ? next : item)) }), onRemove: feature.definedChecks.includes(checkKey(check))
                                                 ? undefined
-                                                : () => set({ checks: spec.checks.filter((_, i) => i !== index) }) }, checkKey(check)))) }), addableChecks.length > 0 && (_jsxs(DropdownMenu, { children: [_jsxs(DropdownMenuTrigger, { render: _jsx(Button, { type: "button", size: "xs", variant: "ghost", className: "self-start text-cms-muted-foreground" }), children: [_jsx(Plus, { "aria-hidden": true }), t("field.addCheck")] }), _jsx(DropdownMenuContent, { align: "start", className: "min-w-32", children: addableChecks.map((kind) => (_jsxs(DropdownMenuItem, { onClick: () => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] }), children: [_jsx(Plus, { "aria-hidden": true }), checkLabel(kind)] }, kind))) })] }))] })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.prompt, children: deciding ? t("field.criteria") : t("field.prompt") }), _jsx(Textarea, { id: ids.prompt, rows: PROMPT_ROWS, value: spec.prompt, onChange: (event) => set({ prompt: event.target.value }), className: PROMPT_TEXTAREA })] })] }), _jsxs(EditorFooter, { dirty: dirty, saving: saving, deleting: deleting, canSave: !(custom?.isNew === true && !custom.base.label.trim()), error: error, saveIcon: _jsx(Save, { "aria-hidden": true }), onSave: onSave, onCancel: custom?.isNew ? custom.onCancel : undefined, onDelete: custom && !custom.isNew ? custom.onDelete : undefined, children: [defaults && (_jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: atDefaults, onClick: () => onChange({ ...defaults, enabled: spec.enabled }), children: [_jsx(RotateCcw, { "aria-hidden": true }), t("button.reset")] })), !custom?.isNew && (_jsx("span", { className: "flex-1 text-right text-cms-muted-foreground text-xs", children: feature.updatedAt
+                                                : () => set({ checks: spec.checks.filter((_, i) => i !== index) }) }, checkKey(check)))) }), addableChecks.length > 0 && (_jsxs(DropdownMenu, { children: [_jsxs(DropdownMenuTrigger, { render: _jsx(Button, { type: "button", size: "xs", variant: "ghost", className: "self-start text-cms-muted-foreground" }), children: [_jsx(Plus, { "aria-hidden": true }), t("field.addCheck")] }), _jsx(DropdownMenuContent, { align: "start", className: "min-w-32", children: addableChecks.map((kind) => (_jsxs(DropdownMenuItem, { onClick: () => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] }), children: [_jsx(Plus, { "aria-hidden": true }), checkLabel(kind)] }, kind))) })] }))] })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.prompt, children: deciding ? t("field.criteria") : t("field.prompt") }), _jsx(Textarea, { id: ids.prompt, rows: PROMPT_ROWS, value: spec.prompt, onChange: (event) => set({ prompt: event.target.value }), className: PROMPT_TEXTAREA })] })] }), _jsxs(EditorFooter, { dirty: dirty, saving: saving, deleting: deleting, canSave: !(custom?.isNew === true && !custom.base.label.trim()), error: error, saveIcon: _jsx(Save, { "aria-hidden": true }), onSave: onSave, onCancel: custom?.isNew ? custom.onCancel : undefined, onDelete: custom && !custom.isNew ? custom.onDelete : undefined, children: [!custom && (_jsxs(Button, { type: "button", size: "sm", variant: "outline", onClick: () => set({ hidden: !spec.hidden }), children: [spec.hidden ? _jsx(Eye, { "aria-hidden": true }) : _jsx(EyeOff, { "aria-hidden": true }), spec.hidden ? t("button.unhide") : t("button.hide")] })), defaults && (_jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: atDefaults, onClick: () => onChange({ ...defaults, enabled: spec.enabled, hidden: false }), children: [_jsx(RotateCcw, { "aria-hidden": true }), t("button.reset")] })), !custom?.isNew && (_jsx("span", { className: "flex-1 text-right text-cms-muted-foreground text-xs", children: feature.updatedAt
                             ? t("meta.edited", {
                                 time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
                             })

@@ -99,7 +99,7 @@ export function CustomBaseFields({ base, onChange }) {
                             const option = placeOptions.find((item) => item.value === value);
                             if (option)
                                 setSurface(option.surface ?? firstField(site));
-                        } })] }), base.surface.slot === "field" ? (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.field, children: t("field.field") }), _jsx(OptionSelect, { id: ids.field, value: fieldValue, options: fieldOptions, onChange: (value) => {
+                        } }), _jsx("p", { className: "mt-1 text-cms-muted-foreground text-xs", children: t(`place.hint.${base.surface.slot}`) })] }), base.surface.slot === "field" ? (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.field, children: t("field.field") }), _jsx(OptionSelect, { id: ids.field, value: fieldValue, options: fieldOptions, onChange: (value) => {
                             const [collection, field] = value.split(":");
                             if (collection && field)
                                 setSurface({ slot: "field", field, collections: [collection] });

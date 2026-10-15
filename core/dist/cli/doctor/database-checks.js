@@ -57,7 +57,7 @@ const url = {
         if (!value) {
             return fail("DATABASE_URL is not set, so there is no database to connect to", {
                 where: DATABASE_URL_WHERE,
-                fix: "put your Postgres URL in DATABASE_URL, for example DATABASE_URL=postgres://user:password@localhost:5432/monti. ",
+                fix: "put your Postgres URL in DATABASE_URL, for example DATABASE_URL=postgres://user:password@host:5432/monti. ",
             });
         }
         if (/^["']|["']$|\s/.test(value)) {

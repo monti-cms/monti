@@ -6,37 +6,37 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
 import { useId, useState } from "react";
-import { aiKeys, createAiShared, deleteAiShared, getAiShared, updateAiShared } from "./api.js";
-import { sharedMessages } from "./shared-editor.messages.js";
-/** Shape of the instruction and shared text input fields (both are text that goes into instructions). */
+import { aiKeys, createAiSnippet, deleteAiSnippet, getAiSnippets, updateAiSnippet } from "./api.js";
+import { snippetMessages } from "./snippet-editor.messages.js";
+/** Shape of the instruction and prompt snippet input fields (both are text that goes into instructions). */
 export const PROMPT_ROWS = 8;
 export const PROMPT_TEXTAREA = "min-h-40 text-xs md:text-xs";
-export function useAiShared() {
+export function useAiSnippets() {
     const site = useSite();
-    const t = useTranslator(sharedMessages);
+    const t = useTranslator(snippetMessages);
     return useQuery({
-        queryKey: aiKeys.shared(),
-        queryFn: ({ signal }) => getAiShared(site, { signal, fallback: t("error.load") }),
+        queryKey: aiKeys.snippets(),
+        queryFn: ({ signal }) => getAiSnippets(site, { signal, fallback: t("error.load") }),
     });
 }
 /** Shape to put into instructions. */
-const placeholderOf = (key) => `{{shared.${key}}}`;
+const placeholderOf = (key) => `{{snippet.${key}}}`;
 const detailOf = (t, item) => `${placeholderOf(item.key)}${item.source === "added" ? ` · ${t("detail.added")}` : ""}`;
 /**
- * AI screen Shared texts tab. The list and edit pane of texts (e.g. a style guide) that go into the instructions of several actions as `{{shared.key}}`.
+ * AI screen Prompt snippets tab. The list and edit pane of texts (e.g. a style guide) that go into the instructions of several actions as `{{snippet.key}}`.
  * For a text written in the config, only the content is edited; for a text added by the admin, the name and content are edited or it is deleted. A saved text is used right away by
  * every action run afterwards. The AI screen holds the open text (`selected`), because the header's Add text and tab switching ask about
  * unsaved content.
  */
-export function SharedManager({ selected, onOpen, onSelectedChange, onDirtyChange, }) {
+export function SnippetManager({ selected, onOpen, onSelectedChange, onDirtyChange, }) {
     const site = useSite();
-    const t = useTranslator(sharedMessages);
+    const t = useTranslator(snippetMessages);
     const queryClient = useQueryClient();
-    const query = useAiShared();
+    const query = useAiSnippets();
     const view = query.data;
     const current = view?.items.find((item) => item.key === selected) ?? null;
-    const applySaved = (saved) => queryClient.setQueryData(aiKeys.shared(), saved);
-    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", children: [query.error && !view && (_jsx(LoadErrorAlert, { className: "m-3", message: errorText(site, query.error, t("error.load")), onRetry: () => void query.refetch() })), _jsx(MasterDetail, { list: _jsx(ListPane, { label: t("list.label"), loading: query.isPending, skeletonRows: 2, empty: view?.items.length === 0 ? _jsx(EmptyState, { compact: true, title: t("list.empty") }) : null, children: view?.items.map((item) => (_jsx(ListRow, { title: item.label, detail: detailOf(t, item), current: selected === item.key, onClick: () => onOpen(item.key) }, item.key))) }), children: view && (selected === "new" || current) ? (_jsx(SharedEditor, { version: view.version, item: current, onSaved: (saved, key) => {
+    const applySaved = (saved) => queryClient.setQueryData(aiKeys.snippets(), saved);
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", children: [query.error && !view && (_jsx(LoadErrorAlert, { className: "m-3", message: errorText(site, query.error, t("error.load")), onRetry: () => void query.refetch() })), _jsx(MasterDetail, { list: _jsx(ListPane, { label: t("list.label"), loading: query.isPending, skeletonRows: 2, empty: view?.items.length === 0 ? _jsx(EmptyState, { compact: true, title: t("list.empty") }) : null, children: view?.items.map((item) => (_jsx(ListRow, { title: item.label, detail: detailOf(t, item), current: selected === item.key, onClick: () => onOpen(item.key) }, item.key))) }), children: view && (selected === "new" || current) ? (_jsx(SnippetEditor, { version: view.version, item: current, onSaved: (saved, key) => {
                         applySaved(saved);
                         onSelectedChange(key);
                     }, onDeleted: (saved) => {
@@ -47,7 +47,7 @@ export function SharedManager({ selected, onOpen, onSelectedChange, onDirtyChang
 const NEW_DRAFT = { key: "", label: "", text: "" };
 /** Shows the shape to put into instructions and copies it. */
 function PlaceholderChip({ shareKey }) {
-    const t = useTranslator(sharedMessages);
+    const t = useTranslator(snippetMessages);
     const [copied, setCopied] = useState(false);
     const text = placeholderOf(shareKey);
     const copy = async () => {
@@ -62,9 +62,9 @@ function PlaceholderChip({ shareKey }) {
     };
     return (_jsxs("div", { className: "flex items-center gap-1", children: [_jsx("code", { className: "rounded-md border bg-cms-muted px-2 py-1 font-mono text-xs", children: text }), _jsx(IconButton, { label: copied ? t("copy.done") : t("copy.label"), size: "icon-xs", onClick: () => void copy(), children: copied ? _jsx(Check, { "aria-hidden": true, className: "text-cms-primary" }) : _jsx(Copy, { "aria-hidden": true }) })] }));
 }
-function SharedEditor({ version, item, onSaved, onDeleted, onCancel, onConflict, onDirtyChange, }) {
+function SnippetEditor({ version, item, onSaved, onDeleted, onCancel, onConflict, onDirtyChange, }) {
     const site = useSite();
-    const t = useTranslator(sharedMessages);
+    const t = useTranslator(snippetMessages);
     const tc = useTranslator(commonMessages);
     const [error, setError] = useState(null);
     const { confirm, dialog } = useConfirm();
@@ -79,13 +79,13 @@ function SharedEditor({ version, item, onSaved, onDeleted, onCancel, onConflict,
         fn: (_, { site }) => {
             const key = item?.key ?? draft.key.trim();
             return item
-                ? updateAiShared(site, {
+                ? updateAiSnippet(site, {
                     expectedVersion: version,
                     key,
                     text: draft.text,
                     ...(fromConfig ? {} : { label: draft.label.trim() }),
                 }, tc("saveFailed"))
-                : createAiShared(site, { expectedVersion: version, key, label: draft.label.trim(), text: draft.text }, tc("saveFailed"));
+                : createAiSnippet(site, { expectedVersion: version, key, label: draft.label.trim(), text: draft.text }, tc("saveFailed"));
         },
         success: tc("saved"),
         failure: tc("saveFailed"),
@@ -97,7 +97,7 @@ function SharedEditor({ version, item, onSaved, onDeleted, onCancel, onConflict,
         },
     });
     const deleteMutation = useCmsMutation({
-        fn: (target, { site }) => deleteAiShared(site, target.key, version, tc("deleteFailed")),
+        fn: (target, { site }) => deleteAiSnippet(site, target.key, version, tc("deleteFailed")),
         success: tc("deleted"),
         failure: tc("deleteFailed"),
         inline: true,

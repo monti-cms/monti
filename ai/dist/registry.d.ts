@@ -1,6 +1,6 @@
 import type { CmsPlugin, PluginNamed } from "@monti-cms/core";
 import type { CmsConfig, Site } from "@monti-cms/core/client";
-import type { AiActionDefinition, AiActionInput, AiActionResult, AiAttach, AiSharedText, AiSiteView } from "./action.js";
+import type { AiActionDefinition, AiActionInput, AiActionResult, AiAttach, AiSiteView, AiSnippet } from "./action.js";
 import type { AiSlot } from "./definition.js";
 import { AI_PLUGIN_NAME } from "./name.js";
 import type { DEFAULT_AI_ACTIONS } from "./presets.js";
@@ -48,20 +48,20 @@ export type AiActionKey<Config extends CmsConfig = CmsConfig> = keyof ActionsOf<
 export type AiActionInputOf<K extends AiActionKey<Config>, Config extends CmsConfig = CmsConfig> = AiActionInput<ActionsOf<Config>[K]>;
 /** Result of an action of the config. */
 export type AiActionResultOf<K extends AiActionKey<Config>, Config extends CmsConfig = CmsConfig> = AiActionResult<ActionsOf<Config>[K]>;
-/** The AI actions and shared texts of one site, resolved from its config. */
+/** The AI actions and prompt snippets of one site, resolved from its config. */
 export interface AiRegistry {
     /** Actions to run (default actions + actions added by other plugins + actions in the config, `resolveAiActions`). Empty without the AI plugin. */
     readonly actions: Readonly<Record<string, AiActionDefinition>>;
-    /** Shared text definitions (defaults). Values edited in the admin screen are applied by the server. */
-    readonly shared: Readonly<Record<string, AiSharedText>>;
-    readonly sharedKeys: readonly string[];
+    /** Prompt snippet definitions (defaults). Values edited in the admin screen are applied by the server. */
+    readonly snippets: Readonly<Record<string, AiSnippet>>;
+    readonly snippetKeys: readonly string[];
     /** Site description that goes into the instruction at the start of every action. */
     readonly siteDescription: string;
     /** The definition under the name, `undefined` if the site has no such action. */
     actionDefinition(key: string): AiActionDefinition | undefined;
 }
-/** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the shared texts. */
-export declare const aiSiteViewOf: (site: Site) => Omit<AiSiteView, "sharedKeys">;
+/** What a function that creates actions (`AiActionFactory`) sees of a site, apart from the prompt snippets. */
+export declare const aiSiteViewOf: (site: Site) => Omit<AiSiteView, "snippetKeys">;
 /** The AI registry of a site. Built once per site and kept as long as the site lives. */
 export declare function aiRegistryOf(site: Site): AiRegistry;
 /** What a UI slot looks up. A field slot is the field name and collection; others are the target inside the slot. */

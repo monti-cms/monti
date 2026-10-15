@@ -7,7 +7,7 @@ import { AI_PLUGIN_NAME } from "../../name.js";
 import { runAiAction, streamAiAction } from "../../run.js";
 import { runMessages } from "../../run.messages.js";
 import { loadAiRuntime } from "../../settings.js";
-import { loadSharedTexts } from "../../shared.js";
+import { loadSnippets } from "../../snippets.js";
 import { aiStoreFor } from "../../store.js";
 import { aiRunDeps } from "../ai-route.js";
 const log = pluginLog(AI_PLUGIN_NAME);
@@ -76,7 +76,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
     const runtime = await loadAiRuntime(site, store, action);
     const deps = {
         ...aiRunDeps(cms, runtime, request.signal, new URL(request.url).origin),
-        shared: await loadSharedTexts(site, store),
+        snippets: await loadSnippets(site, store),
     };
     const model = action.engine === "decide" ? runtime.decider?.model : runtime.generator?.model;
     const started = Date.now();

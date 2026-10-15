@@ -1,10 +1,10 @@
 import { adminRoute, CmsError, ok, readVersionedBody, readVersionQuery } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
 import { listActions } from "../../actions.js";
-import { addShared, deleteShared, getSharedView, updateShared, updateSharedItem } from "../../shared.js";
+import { addSnippet, deleteSnippet, getSnippetView, updateSnippetItem, updateSnippets } from "../../snippets.js";
 import { aiStoreFor } from "../../store.js";
 /**
- * Shared texts. Every request returns the whole changed list (`{ version, items }`). To edit, send `expectedVersion`;
+ * Prompt snippets. Every request returns the whole changed list (`{ version, items }`). To edit, send `expectedVersion`;
  * a different version gives 409.
  *
  * - `GET`: config texts and added texts (`source: "config" | "added"`).
@@ -14,18 +14,18 @@ import { aiStoreFor } from "../../store.js";
  * - `DELETE ?key=&expectedVersion=`: deletes an added text. Blocked if an action uses it in its instructions.
  */
 const versioned = z.looseObject({ expectedVersion: z.number().int().min(0) });
-export const GET = adminRoute(async ({ cms }) => ok(await getSharedView(cms.site, aiStoreFor(cms))));
+export const GET = adminRoute(async ({ cms }) => ok(await getSnippetView(cms.site, aiStoreFor(cms))));
 export const POST = adminRoute(async ({ request, cms }) => {
     const { expectedVersion, ...item } = await readVersionedBody(request, versioned);
-    return ok(await addShared(cms.site, aiStoreFor(cms), expectedVersion, item), { status: 201 });
+    return ok(await addSnippet(cms.site, aiStoreFor(cms), expectedVersion, item), { status: 201 });
 });
 export const PATCH = adminRoute(async ({ request, cms }) => {
     const { expectedVersion, ...item } = await readVersionedBody(request, versioned);
-    return ok(await updateSharedItem(cms.site, aiStoreFor(cms), expectedVersion, item));
+    return ok(await updateSnippetItem(cms.site, aiStoreFor(cms), expectedVersion, item));
 });
 export const PUT = adminRoute(async ({ request, cms }) => {
     const { expectedVersion, texts } = await readVersionedBody(request, versioned);
-    return ok(await updateShared(cms.site, aiStoreFor(cms), expectedVersion, { texts }));
+    return ok(await updateSnippets(cms.site, aiStoreFor(cms), expectedVersion, { texts }));
 });
 const readKey = (request) => {
     const key = new URL(request.url).searchParams.get("key");
@@ -37,5 +37,5 @@ export const DELETE = adminRoute(async ({ request, cms }) => {
     const store = aiStoreFor(cms);
     const key = readKey(request);
     const expectedVersion = readVersionQuery(request);
-    return ok(await deleteShared(cms.site, store, expectedVersion, key, await listActions(cms.site, store)));
+    return ok(await deleteSnippet(cms.site, store, expectedVersion, key, await listActions(cms.site, store)));
 });

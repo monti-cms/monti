@@ -38,7 +38,7 @@ options: {
         value: unknown;
     }) => Promise<AiActionOverrideRow>;
     /**
-     * One AI settings row (as stored). `default` is the service connection and `shared` is the edited shared text. `null` if none.
+     * One AI settings row (as stored). `default` is the service connection and `shared` is the edited prompt snippets (the stored row name `shared` is kept). `null` if none.
      */
     getAiSettings: (id?: AiSettingsId) => Promise<{
         value: unknown;

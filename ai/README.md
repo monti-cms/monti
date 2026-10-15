@@ -50,7 +50,7 @@ plugins: [
 - Instructions assume neither a site type ("blog") nor a language ("Korean"). When the language can't be known from the input (such as
   image alt text), they say "content language", and the runner prepends the content language (the language of the entry being edited,
   or the site default if none) to the top of the instruction.
-- If the shared text `styleGuide` (`ai({ shared: { styleGuide: … } })`) exists, it goes into the polish and draft instructions.
+- If the prompt snippet `styleGuide` (`ai({ snippets: { styleGuide: … } })`) exists, it goes into the polish and draft instructions.
   If not, nothing is added.
 - On the admin AI screen, actions are ordered: field actions first, then built-in actions, then other plugins' actions, then actions
   added in the config.
@@ -155,26 +155,26 @@ then text inputs. An action whose result must have a specific shape to pass its 
 - **Streaming**: with `stream: true` in the action definition (text or MDX results from the generate engine), the result appears
   gradually. In the UI, use `useAiAction("name").stream(input, { onText })`. In the API, pass `stream: true` to `/ai/run` (JSON with
   one event per line).
-- **Shared text**: text inserted into several actions' instructions as `{{shared.key}}` (style guide, tone, audience, and so on).
+- **Prompt snippet**: text inserted into several actions' instructions as `{{snippet.key}}` (style guide, tone, audience, and so on).
   There are two kinds.
-  - Config text: `ai({ shared: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key and name,
-    and only the content is edited in the "Shared text" tab of the admin AI screen ("Reset to default" resets the input field to the
-    config text). It can't be deleted. An instruction (`prompt`) in the config can only use config text (checked when the config is
+  - Config snippet: `ai({ snippets: { styleGuide: { label: "Style guide", text: "…" } } })`. The config decides the key and name,
+    and only the content is edited in the "Prompt snippets" tab of the admin AI screen ("Reset to default" resets the input field to the
+    config snippet). It can't be deleted. An instruction (`prompt`) in the config can only use config snippets (checked when the config is
     built).
-  - Added text: in the "Shared text" tab, "Add text" lets you add a key (starts with a letter; letters, digits, and `_`), a name, and
-    the content. The key can't be changed after creation and must not clash with config text or other text. It can be used by
+  - Added snippet: in the "Prompt snippets" tab, "Add snippet" lets you add a key (starts with a letter; letters, digits, and `_`), a name, and
+    the content. The key can't be changed after creation and must not clash with config snippets or other snippets. It can be used by
     instructions edited in the admin screen and by UI actions. It can't be deleted while an action's instruction uses it (the action
     name is shown).
 
-  Both are stored in the `shared` item of the `settings` collection as `{ texts: { key: edited content }, added: [{ key, label, text }] }`
-  (the old shape is still read). The API is `/ai/shared`: `GET` (list, `source: "config" | "added"`),
+  Both are stored in the `shared` item (the stored row name is kept) of the `settings` collection as `{ texts: { key: edited content }, added: [{ key, label, text }] }`
+  (the old shape is still read). The API is `/ai/snippets`: `GET` (list, `source: "config" | "added"`),
   `POST { expectedVersion, key, label, text }` (add), `PATCH { expectedVersion, key, label?, text }` (edit one),
   `PUT { expectedVersion, texts }` (edit many), and `DELETE ?key=&expectedVersion=` (delete). All return the updated list, and a
   version mismatch returns 409.
 - **Polish and draft**: `polish` (the menu that appears when you select text in the body; shows the changes, then applies them) and
-  `draft` (slash menu and empty-document toolbar; inserts at the cursor). If the shared text `styleGuide` exists, it is used
-  automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`. Shared text added in the
-  admin screen goes into the instruction as `{{shared.key}}` in the admin screen.
+  `draft` (slash menu and empty-document toolbar; inserts at the cursor). If the prompt snippet `styleGuide` exists, it is used
+  automatically; for a different key, pass the style guide with `aiPresets.polish({ styleGuide: "key" })`. Prompt snippets added in the
+  admin screen go into the instruction as `{{snippet.key}}` in the admin screen.
 - **Try it**: on the admin AI screen, run an action before saving from the bottom right of the action. The fields are built from the
   action's input kinds (text, MDX, and code get multi-line fields, current value gets a single-line field, an image takes a media ID
   or site path, and locale uses the site config's locale picker). Only the inputs to send, required inputs, and locale inputs are

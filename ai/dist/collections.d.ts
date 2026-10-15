@@ -4,6 +4,6 @@ export declare const AI_COLLECTIONS: {
     readonly actionOverrides: "action-overrides";
     /** Actions made in the admin AI screen. The value holds the basic info and the edited values. */
     readonly customActions: "custom-actions";
-    /** AI service connections (address, encrypted key, model): one item, `default`. The edited shared texts are the `shared` item. */
+    /** AI service connections (address, encrypted key, model): one item, `default`. The edited prompt snippets are the `shared` item (the stored row name is kept). */
     readonly settings: "settings";
 };

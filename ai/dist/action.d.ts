@@ -106,8 +106,8 @@ type AttachableSlot<I> = {
 export declare const defineValidator: (check: Omit<AiValidator, "kind">) => AiValidator;
 /** The display name of a code check in the site's admin language. */
 export declare const validatorLabel: (check: Pick<AiValidator, "label">, site: Pick<Site, "createTranslator">) => string;
-/** One shared snippet (e.g. a style guide). Inserted into prompts as `{{shared.name}}` and edited in the admin AI screen. */
-export interface AiSharedText {
+/** One prompt snippet (e.g. a style guide). Inserted into prompts as `{{snippet.name}}` and edited in the admin AI screen. */
+export interface AiSnippet {
     readonly label: string;
     /** Default text. If an edited value exists in the admin UI, that is used. */
     readonly text: string;
@@ -117,10 +117,10 @@ export interface AiConfig {
     /** Site description. Goes into the leading instruction of every action ("You are the editing assistant of the CMS for this site: {this}"). Defaults to "website". */
     readonly siteDescription?: string;
     /**
-     * Shared snippets used by several actions. Insert into a prompt as `{{shared.name}}`. If `styleGuide` exists, it goes into the prompts of the
+     * Prompt snippets used by several actions. Insert into a prompt as `{{snippet.name}}`. If `styleGuide` exists, it goes into the prompts of the
      * default style polish and draft actions.
      */
-    readonly shared?: Readonly<Record<string, AiSharedText>>;
+    readonly snippets?: Readonly<Record<string, AiSnippet>>;
     /**
      * Actions to replace or add. Default actions (`aiPresets`, those with an attach point on the site) and actions added by other plugins are enabled without being listed.
      * Giving a definition (or `aiPresets.name(options)`) under the same name replaces it, `false` removes it, and a new name adds it.
@@ -129,7 +129,7 @@ export interface AiConfig {
 }
 /** The resolved list of actions (name -> definition). Read by the runner, the UI and the checks. */
 export interface ResolvedAiConfig {
-    readonly shared?: Readonly<Record<string, AiSharedText>>;
+    readonly snippets?: Readonly<Record<string, AiSnippet>>;
     readonly actions: Readonly<Record<string, AiActionDefinition>>;
 }
 /** `{{name}}` in the prompt. */
@@ -139,9 +139,9 @@ type LocaleInputNames<I> = {
         readonly kind: "locale";
     } ? K : never;
 }[keyof I];
-/** Raises a type error if the prompt has a `{{name}}` that is neither a locale input nor a shared text (`shared.name`). Shared text names are checked by the plugin config. */
-type PromptCheck<P extends string, I> = string extends P ? unknown : [Exclude<Placeholders<P>, LocaleInputNames<I> | `shared.${string}`>] extends [never] ? unknown : {
-    readonly "The prompt can only use locale inputs and shared texts as {{name}}": Exclude<Placeholders<P>, LocaleInputNames<I> | `shared.${string}`>;
+/** Raises a type error if the prompt has a `{{name}}` that is neither a locale input nor a prompt snippet (`snippet.name`). Prompt snippet names are checked by the plugin config. */
+type PromptCheck<P extends string, I> = string extends P ? unknown : [Exclude<Placeholders<P>, LocaleInputNames<I> | `snippet.${string}`>] extends [never] ? unknown : {
+    readonly "The prompt can only use locale inputs and prompt snippets as {{name}}": Exclude<Placeholders<P>, LocaleInputNames<I> | `snippet.${string}`>;
 };
 /**
  * Defines an action. Types check the prompt's `{{name}}` and the attach point (whether the slot can fill all inputs).
@@ -197,6 +197,8 @@ export type AiActionInput<D> = D extends {
 /** Values editable in the admin UI. Only values that differ from the definition are stored in the DB. */
 export declare const aiActionOverrideSchemaOf: (t: CoreText) => z.ZodObject<{
     enabled: z.ZodOptional<z.ZodBoolean>;
+    hidden: z.ZodOptional<z.ZodBoolean>;
+    label: z.ZodOptional<z.ZodString>;
     askInstruction: z.ZodOptional<z.ZodBoolean>;
     instant: z.ZodOptional<z.ZodBoolean>;
     providerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -229,6 +231,8 @@ export declare const aiActionOverrideSchemaOf: (t: CoreText) => z.ZodObject<{
 /** The edited-value schema with English messages: reads stored values and builds definitions, where no message is shown. */
 export declare const aiActionOverrideSchema: z.ZodObject<{
     enabled: z.ZodOptional<z.ZodBoolean>;
+    hidden: z.ZodOptional<z.ZodBoolean>;
+    label: z.ZodOptional<z.ZodString>;
     askInstruction: z.ZodOptional<z.ZodBoolean>;
     instant: z.ZodOptional<z.ZodBoolean>;
     providerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -263,6 +267,7 @@ export type AiActionOverride = z.output<typeof aiActionOverrideSchema>;
 export interface ResolvedAiAction {
     readonly key: string;
     readonly label: string;
+    readonly hidden: boolean;
     readonly input: AiInputs;
     readonly send: readonly string[];
     readonly prompt: string;
@@ -289,7 +294,7 @@ export interface ResolvedAiAction {
     readonly fake?: (input: Readonly<Record<string, string>>) => string;
 }
 /** Names of editable values. */
-export declare const EDITABLE_KEYS: readonly ["enabled", "askInstruction", "instant", "providerId", "modelName", "prompt", "send", "threshold", "maxCount", "checks"];
+export declare const EDITABLE_KEYS: readonly ["enabled", "hidden", "label", "askInstruction", "instant", "providerId", "modelName", "prompt", "send", "threshold", "maxCount", "checks"];
 export type AiActionEditable = Pick<ResolvedAiAction, (typeof EDITABLE_KEYS)[number]>;
 /**
  * Applies edited values onto the definition. Checks keep the definition's kinds in the definition's order with the user's edited enabled state and values applied, then
@@ -300,14 +305,14 @@ export declare function resolveAction(key: string, definition: AiActionDefinitio
 /** Keeps only the edited values that differ from the definition (defaults). This is the shape stored in the DB. */
 export declare function overrideFrom(definition: AiActionDefinition, edited: Partial<AiActionEditable>): AiActionOverride;
 /**
- * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing shared text (`shared.name`). Used for definition checks and pre-save checks.
+ * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing prompt snippet (`snippet.name`). Used for definition checks and pre-save checks.
  */
-export declare function unknownPlaceholders(prompt: string, input: AiInputs, sharedKeys?: readonly string[]): string[];
+export declare function unknownPlaceholders(prompt: string, input: AiInputs, snippetKeys?: readonly string[]): string[];
 /**
- * The prompt to run. Replaces `{{locale input}}` with the language name and `{{shared.name}}` with the shared text, and appends locale inputs not used in the prompt
+ * The prompt to run. Replaces `{{locale input}}` with the language name and `{{snippet.name}}` with the prompt snippet, and appends locale inputs not used in the prompt
  * as `name: language` lines. Finally appends the extra request given at run time (only for actions with `askInstruction` on).
  */
-export declare function renderPrompt(action: Pick<ResolvedAiAction, "prompt" | "input" | "askInstruction">, values: Readonly<Record<string, unknown>>, languageName: (code: string) => string, request?: string, shared?: Readonly<Record<string, string>>): string;
+export declare function renderPrompt(action: Pick<ResolvedAiAction, "prompt" | "input" | "askInstruction">, values: Readonly<Record<string, unknown>>, languageName: (code: string) => string, request?: string, snippets?: Readonly<Record<string, string>>): string;
 /** Validation of action inputs. Names not in the definition are dropped. */
 export declare function inputSchemaFor(input: AiInputs, t: CoreText): z.ZodObject<{
     [x: string]: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;

@@ -35,11 +35,12 @@ export function IssueList({ issues }) {
         return null;
     return (_jsx("ul", { className: "flex flex-col gap-0.5 text-cms-destructive text-xs", "data-testid": "schema-issues", children: issues.map((issue) => (_jsxs("li", { children: [_jsx("code", { className: "rounded bg-cms-destructive/10 px-1", children: issue.path || "(root)" }), " ", issue.message] }, `${issue.path}:${issue.message}`))) }));
 }
-export function TextInput({ label, value, onChange, placeholder, hint, type = "text", className, optional, }) {
+export function TextInput({ label, value, onChange, placeholder, hint, type = "text", className, optional, disabled: customDisabled, }) {
     const t = useTranslator(schemaMessages);
     const id = useId();
     const { disabled } = useSchemaEdit();
-    return (_jsx(Labeled, { label: optional ? (_jsxs(_Fragment, { children: [label, " ", _jsx("span", { className: "font-normal text-cms-muted-foreground", children: t("sheet.optional") })] })) : (label), hint: hint, htmlFor: id, className: className, children: _jsx(Input, { id: id, type: type, min: type === "number" ? 1 : undefined, value: value ?? "", placeholder: placeholder, disabled: disabled, onChange: (event) => onChange(event.target.value) }) }));
+    const isDisabled = disabled || customDisabled;
+    return (_jsx(Labeled, { label: optional ? (_jsxs(_Fragment, { children: [label, " ", _jsx("span", { className: "font-normal text-cms-muted-foreground", children: t("sheet.optional") })] })) : (label), hint: hint, htmlFor: id, className: className, children: _jsx(Input, { id: id, type: type, min: type === "number" ? 1 : undefined, value: value ?? "", placeholder: placeholder, disabled: isDisabled, onChange: (event) => onChange(event.target.value) }) }));
 }
 /** A text value that is `undefined` when empty (an optional property of the file). */
 export const orUndefined = (value) => (value === "" ? undefined : value);
@@ -58,10 +59,11 @@ export function Segmented({ label, value, items, onChange, hint, }) {
     const id = useId();
     return (_jsxs(UiField, { className: "gap-2", children: [_jsx(FieldLabel, { id: id, className: "font-medium text-sm", children: label }), _jsx("div", { role: "radiogroup", "aria-labelledby": id, className: "flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-cms-muted p-[3px] text-sm", children: items.map((item) => (_jsx("button", { type: "button", role: "radio", "aria-checked": item.value === value, disabled: disabled, onClick: () => onChange(item.value), className: cn("h-7 rounded-[3px] border border-transparent px-3 text-cms-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:opacity-50", item.value === value && "border-cms-border bg-cms-background font-medium text-cms-foreground"), children: item.label }, item.value))) }), hint && _jsx(FieldDescription, { className: HELP, children: hint })] }));
 }
-export function Pick({ label, value, items, onChange, hint, className, control = "narrow", }) {
+export function Pick({ label, value, items, onChange, hint, className, disabled: customDisabled, control = "narrow", }) {
     const id = useId();
     const { disabled } = useSchemaEdit();
-    return (_jsx(Labeled, { label: label, hint: hint, htmlFor: id, className: className, control: control, children: _jsxs(Select, { value: value, items: items, disabled: disabled, onValueChange: (next) => typeof next === "string" && onChange(next), children: [_jsx(SelectTrigger, { id: id, size: "sm", className: "w-full", "aria-label": label, children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: items.map((item) => (_jsx(SelectItem, { value: item.value, children: item.description ? (_jsxs("span", { className: "flex flex-col gap-0.5", children: [_jsx("span", { children: item.label }), _jsx("span", { className: "whitespace-normal text-cms-muted-foreground text-xs", children: item.description })] })) : (item.label) }, item.value))) })] }) }));
+    const isDisabled = disabled || customDisabled;
+    return (_jsx(Labeled, { label: label, hint: hint, htmlFor: id, className: className, control: control, children: _jsxs(Select, { value: value, items: items, disabled: isDisabled, onValueChange: (next) => typeof next === "string" && onChange(next), children: [_jsx(SelectTrigger, { id: id, size: "sm", className: "w-full", "aria-label": label, children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: items.map((item) => (_jsx(SelectItem, { value: item.value, children: item.description ? (_jsxs("span", { className: "flex flex-col gap-0.5", children: [_jsx("span", { children: item.label }), _jsx("span", { className: "whitespace-normal text-cms-muted-foreground text-xs", children: item.description })] })) : (item.label) }, item.value))) })] }) }));
 }
 /**
  * An input for a name (a field, an option, a collection): the change is taken when the writer leaves the input or presses Enter, and a name that cannot be used

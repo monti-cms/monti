@@ -2,13 +2,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
+import { useCmsAdminComponents } from "../../admin-components.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { Button } from "../../ui/button.js";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet.js";
 import { LineTabs, Tabs, TabsContent, TabsTrigger } from "../../ui/tabs.js";
 import { Labeled } from "../shared/labeled.js";
 import { FlagSwitch, IssueList, orUndefined, Pick, Segmented, TextInput, useIssuesUnder, useSchemaEdit, } from "./controls.js";
-import { InputOptionsEditor, KindOptions, LOCALIZED_KINDS } from "./field-editor.js";
+import { KindOptions, LOCALIZED_KINDS } from "./field-editor.js";
+import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input.js";
 import { schemaFieldsMessages } from "./fields.messages.js";
 import { FIELD_KEY_ORDER, FIELD_KINDS, fieldAt, isObj, removeBlock, removeField, setField, setProp, setTitleField, titleFieldName, VALUE_KINDS, withKind, } from "./schema-model.js";
 /**
@@ -48,6 +50,11 @@ export function FieldSheet({ editing, place, name, onClose, }) {
     const valueKind = fieldTraits[kind].entersValue;
     const label = typeof field.label === "string" ? field.label : "";
     const isTitle = !place.branch && titleFieldName(draft) === name;
+    const isSlug = !place.branch && (kind === "slug" || name === "slug");
+    const isFixed = isTitle || isSlug;
+    const { fieldInputs } = useCmsAdminComponents();
+    const hasPluginInputs = Object.keys(fieldInputs ?? {}).length > 0;
+    const hasCustomInput = typeof field.input === "string" && field.input.length > 0;
     const blocked = removeBlock(editing.collection, place, name);
     const branchKinds = place.branch ? VALUE_KINDS : FIELD_KINDS;
     const apply = () => {
@@ -64,5 +71,5 @@ export function FieldSheet({ editing, place, name, onClose, }) {
                                                         { value: "shared", label: t("field.localizedShared") },
                                                         { value: "localized", label: t("field.localizedOwn") },
                                                         { value: "inherit", label: t("field.localizedInherit") },
-                                                    ], onChange: (value) => set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined) }))] }))] }), _jsxs(TabsContent, { value: "advanced", className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("field.kind"), hint: t("sheet.kindHint"), value: kind, items: branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) })), onChange: (next) => change((current) => withKind(current, next, collectionNames)) }), valueKind && (_jsx(TextInput, { label: t("field.role"), hint: t("field.roleHint"), optional: true, value: field.role, onChange: (value) => set("role", orUndefined(value)) })), valueKind && (_jsx(TextInput, { label: t("field.input"), hint: t("field.inputHint"), optional: true, value: field.input, onChange: (value) => set("input", orUndefined(value)) })), valueKind && (_jsx(InputOptionsEditor, { value: field.inputOptions, onChange: (value) => set("inputOptions", value) }))] })] })] }), _jsxs(SheetFooter, { className: "mt-0 flex-row items-center gap-2 border-t px-6 py-3.5", children: [_jsx(Button, { type: "button", variant: "ghost", size: "sm", disabled: disabled || blocked !== null, title: blocked ? t(`field.removeBlocked.${blocked}`) : undefined, className: "-ml-2.5 text-cms-destructive hover:text-cms-destructive", onClick: remove, children: t("sheet.delete") }), _jsx("div", { className: "flex-1" }), _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onClose, children: tc("cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: disabled, onClick: apply, children: tc("apply") })] })] }) }));
+                                                    ], onChange: (value) => set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined) }))] }))] }), _jsxs(TabsContent, { value: "advanced", className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("field.kind"), hint: isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : t("sheet.kindHint"), value: kind, disabled: isFixed, items: branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) })), onChange: (next) => change((current) => withKind(current, next, collectionNames)) }), !isSlug && valueKind && (_jsx(FieldRolePicker, { role: field.role, kind: kind, isTitle: isTitle, onChange: (role) => set("role", role) })), !isFixed && valueKind && (hasPluginInputs || hasCustomInput) && (_jsx(FieldCustomInputPicker, { value: field.input, options: field.inputOptions, onChangeInput: (input) => set("input", input), onChangeOptions: (opts) => set("inputOptions", opts) }))] })] })] }), _jsxs(SheetFooter, { className: "mt-0 flex-row items-center gap-2 border-t px-6 py-3.5", children: [_jsx(Button, { type: "button", variant: "ghost", size: "sm", disabled: disabled || blocked !== null, title: blocked ? t(`field.removeBlocked.${blocked}`) : undefined, className: "-ml-2.5 text-cms-destructive hover:text-cms-destructive", onClick: remove, children: t("sheet.delete") }), _jsx("div", { className: "flex-1" }), _jsx(Button, { type: "button", variant: "outline", size: "sm", onClick: onClose, children: tc("cancel") }), _jsx(Button, { type: "button", size: "sm", disabled: disabled, onClick: apply, children: tc("apply") })] })] }) }));
 }

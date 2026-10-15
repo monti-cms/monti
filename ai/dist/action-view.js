@@ -27,6 +27,7 @@ export const viewOf = (site, action, row, custom, definition) => ({
     attach: action.attach,
     stream: action.stream,
     enabled: action.enabled,
+    hidden: action.hidden,
     askInstruction: action.askInstruction,
     instant: action.instant,
     providerId: action.providerId,

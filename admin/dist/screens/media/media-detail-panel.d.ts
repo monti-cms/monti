@@ -2,8 +2,9 @@ import type { MediaItem } from "../../api/media.js";
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.
  * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.
- * Name and default description have AI slots (file name, alt text, caption suggestions). The default description is saved only by pressing `Save`,
- * and unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
+ * The file name (its stem; the extension stays) and the default description are inputs with an AI button beside them (file name, alt text, caption
+ * suggestions). A suggestion only fills the input. The name is saved by its own button and the default description by pressing `Save`;
+ * unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
  */
 export declare function MediaDetailPanel({ media, className, onClose, onSaveDefaults, onRename, onRequestDelete, onDirtyChange, }: {
     media: MediaItem;
@@ -14,7 +15,8 @@ export declare function MediaDetailPanel({ media, className, onClose, onSaveDefa
         alt: string;
         caption: string;
     }) => Promise<void>;
-    onRename: (filename: string) => void;
+    /** Renames the file (the whole new name, extension included). Rejects on failure. The error shows under the field. */
+    onRename: (filename: string) => Promise<void>;
     onRequestDelete: () => void;
     onDirtyChange?: (dirty: boolean) => void;
 }): import("react").JSX.Element;

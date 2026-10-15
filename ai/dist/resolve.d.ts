@@ -14,7 +14,7 @@ interface PluginLike {
     readonly name: string;
     readonly contributes?: Readonly<Record<string, unknown>>;
 }
-export declare function resolveAiActions(config: AiConfig, site: Omit<AiSiteView, "sharedKeys">, plugins?: readonly PluginLike[]): Record<string, AiActionDefinition>;
-/** Resolves the AI config and returns it together with the shared texts. */
-export declare const resolveAiConfig: (config: AiConfig, site: Omit<AiSiteView, "sharedKeys">, plugins?: readonly PluginLike[]) => ResolvedAiConfig;
+export declare function resolveAiActions(config: AiConfig, site: Omit<AiSiteView, "snippetKeys">, plugins?: readonly PluginLike[]): Record<string, AiActionDefinition>;
+/** Resolves the AI config and returns it together with the prompt snippets. */
+export declare const resolveAiConfig: (config: AiConfig, site: Omit<AiSiteView, "snippetKeys">, plugins?: readonly PluginLike[]) => ResolvedAiConfig;
 export {};

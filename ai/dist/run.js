@@ -328,7 +328,7 @@ const fakeHint = (action, material, choices = []) => {
     };
 };
 /** Instructions for this run. Fills the language input with the language name and, if requests are enabled, appends the extra request. */
-const renderInstructions = (action, call, deps) => renderPrompt(action, call.input, deps.languageName, call.request, deps.shared);
+const renderInstructions = (action, call, deps) => renderPrompt(action, call.input, deps.languageName, call.request, deps.snippets);
 async function runDecide(action, call, deps, material, choices) {
     const t = deps.site.createTranslator(runMessages);
     if (!deps.decider)

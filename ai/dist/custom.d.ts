@@ -137,6 +137,8 @@ export declare const customValueSchemaOf: (site: Site) => z.ZodObject<{
     }, z.core.$strip>;
     override: z.ZodObject<{
         enabled: z.ZodOptional<z.ZodBoolean>;
+        hidden: z.ZodOptional<z.ZodBoolean>;
+        label: z.ZodOptional<z.ZodString>;
         askInstruction: z.ZodOptional<z.ZodBoolean>;
         instant: z.ZodOptional<z.ZodBoolean>;
         providerId: z.ZodOptional<z.ZodNullable<z.ZodString>>;

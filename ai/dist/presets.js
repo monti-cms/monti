@@ -67,12 +67,12 @@ export const KEBAB_PATTERN = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
 /** Language to use when there are no surrounding paragraphs. The runner appends "Content language" (the content's language, else the site's default language) to the instruction. */
 const LANGUAGE_RULE = "- Write in the language of the surrounding paragraphs if given, otherwise in the content language";
 /**
- * Appends the style guide shared text to the end of the prompt, only when `styleGuide` is in the options or the site has a `styleGuide` shared text.
- * Writing rules like tone and notation are handled by this shared text, not the prompt (they differ per site).
+ * Appends the style guide prompt snippet to the end of the prompt, only when `styleGuide` is in the options or the site has a `styleGuide` prompt snippet.
+ * Writing rules like tone and notation are handled by this prompt snippet, not the prompt (they differ per site).
  */
 const withStyleGuide = (site, option, text) => {
     const styleGuide = styleGuideOf(site, option);
-    return styleGuide ? [...text, "", "Style guide:", `{{shared.${styleGuide}}}`] : text;
+    return styleGuide ? [...text, "", "Style guide:", `{{snippet.${styleGuide}}}`] : text;
 };
 /** Block attributes to translate (`translatable` in the definition, and `childValue` pointing to the child attribute value to translate). */
 export function translatableAttributes(site) {
@@ -309,7 +309,7 @@ export const aiPresets = {
     },
     /**
      * Style polish. Polishes the text selected in the body, shows what changed, and replaces the selected text on click. The result is streamed.
-     * Given the key of a config shared text (`ai({ shared })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the shared text
+     * Given the key of a config prompt snippet (`ai({ snippets })`) as `styleGuide`, that text (e.g. a style guide) goes into the prompt. If missing, the prompt snippet
      * `styleGuide` goes in when it exists. Enabled only when some collection has a body.
      */
     polish: (options = {}) => {
@@ -390,8 +390,8 @@ function firstRelationTarget(site, options, many) {
     return undefined;
 }
 const hasBody = (site) => Object.values(site.collections).some((schema) => schema.body);
-/** Name of the shared text to put in the prompt. If no option, the `styleGuide` text when it exists. */
-const styleGuideOf = (site, option) => option ?? (site.sharedKeys.includes("styleGuide") ? "styleGuide" : undefined);
+/** Name of the prompt snippet to put in the prompt. If no option, the `styleGuide` text when it exists. */
+const styleGuideOf = (site, option) => option ?? (site.snippetKeys.includes("styleGuide") ? "styleGuide" : undefined);
 /**
  * Actions enabled by default (name -> creating function). The order is the admin AI screen's order (field actions first). Not enabled
  * if the site has no attach point.

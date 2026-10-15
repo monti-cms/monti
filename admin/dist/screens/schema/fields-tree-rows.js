@@ -35,7 +35,7 @@ const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-ce
 const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-4";
 export const columnsOf = (compact) => (compact ? COLUMNS_COMPACT : COLUMNS);
 export function RowButtons({ buttons }) {
-    return (_jsx("div", { className: "absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-cms-card/95 opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100", children: buttons.map((button) => (_jsx(IconButton, { label: button.label, size: "icon-xs", destructive: button.destructive, pressed: button.pressed, disabled: button.disabled, onClick: button.onClick, children: _jsx(button.icon, { "aria-hidden": true }) }, button.label))) }));
+    return (_jsx("div", { className: "absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-cms-card/95 opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100", children: buttons.map((button) => (_jsx(IconButton, { label: button.label, size: "icon-xs", destructive: button.destructive, pressed: button.pressed, disabled: button.disabled, title: button.title, onClick: button.onClick, children: _jsx(button.icon, { "aria-hidden": true }) }, button.label))) }));
 }
 /** Where a row can go, as a list to pick from. */
 export function MoveDialog({ title, destinations, onClose, }) {

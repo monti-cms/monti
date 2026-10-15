@@ -34,6 +34,7 @@ export interface RowButton {
     readonly disabled?: boolean;
     readonly destructive?: boolean;
     readonly pressed?: boolean;
+    readonly title?: string;
 }
 export declare function RowButtons({ buttons }: {
     buttons: RowButton[];

@@ -4,7 +4,7 @@ export const aiKeys = {
     all: ["cms", "ai"],
     actions: () => [...aiKeys.all, "actions"],
     settings: () => [...aiKeys.all, "settings"],
-    shared: () => [...aiKeys.all, "shared"],
+    snippets: () => [...aiKeys.all, "snippets"],
     models: (source) => [...aiKeys.all, "models", source],
 };
 const segment = (value) => encodeURIComponent(value);
@@ -34,14 +34,14 @@ export const deleteAiProvider = (site, id, expectedVersion, fallback) => cmsFetc
 export const checkAiProvider = (site, json, fallback) => cmsFetch(site, cmsApiUrl("/v1/ai/providers/check"), { method: "POST", json, fallback });
 /** `POST /v1/ai/models` */
 export const listAiModels = (site, source, options = {}) => cmsFetch(site, cmsApiUrl("/v1/ai/models"), { method: "POST", json: source, ...options });
-/** `GET /v1/ai/shared` */
-export const getAiShared = (site, options = {}) => cmsFetch(site, cmsApiUrl("/v1/ai/shared"), options);
-/** `POST /v1/ai/shared` */
-export const createAiShared = (site, json, fallback) => cmsFetch(site, cmsApiUrl("/v1/ai/shared"), { method: "POST", json, fallback });
-/** `PATCH /v1/ai/shared` */
-export const updateAiShared = (site, json, fallback) => cmsFetch(site, cmsApiUrl("/v1/ai/shared"), { method: "PATCH", json, fallback });
-/** `DELETE /v1/ai/shared?key=&expectedVersion=` */
-export const deleteAiShared = (site, key, expectedVersion, fallback) => cmsFetch(site, cmsApiUrl(`/v1/ai/shared?key=${segment(key)}&expectedVersion=${expectedVersion}`), {
+/** `GET /v1/ai/snippets` */
+export const getAiSnippets = (site, options = {}) => cmsFetch(site, cmsApiUrl("/v1/ai/snippets"), options);
+/** `POST /v1/ai/snippets` */
+export const createAiSnippet = (site, json, fallback) => cmsFetch(site, cmsApiUrl("/v1/ai/snippets"), { method: "POST", json, fallback });
+/** `PATCH /v1/ai/snippets` */
+export const updateAiSnippet = (site, json, fallback) => cmsFetch(site, cmsApiUrl("/v1/ai/snippets"), { method: "PATCH", json, fallback });
+/** `DELETE /v1/ai/snippets?key=&expectedVersion=` */
+export const deleteAiSnippet = (site, key, expectedVersion, fallback) => cmsFetch(site, cmsApiUrl(`/v1/ai/snippets?key=${segment(key)}&expectedVersion=${expectedVersion}`), {
     method: "DELETE",
     fallback,
 });

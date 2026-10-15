@@ -9,7 +9,6 @@ export const settingsMessages = defineMessages("cms-admin.settings", {
         "tab.locales": "Languages",
         "tab.site": "Site",
         "tab.admin": "Admin",
-        "tab.file": "File",
     },
     ko: {
         title: "설정",
@@ -19,6 +18,5 @@ export const settingsMessages = defineMessages("cms-admin.settings", {
         "tab.locales": "언어",
         "tab.site": "사이트",
         "tab.admin": "관리자",
-        "tab.file": "파일",
     },
 });

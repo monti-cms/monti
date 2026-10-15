@@ -57,6 +57,8 @@ export function aiAction(definition) {
 export const aiActionOverrideSchemaOf = (t) => z
     .object({
     enabled: z.boolean(),
+    hidden: z.boolean(),
+    label: z.string().trim().min(1).max(60),
     askInstruction: z.boolean(),
     instant: z.boolean(),
     /** Id of the connection to use. If `null`, the first connection matching the mode. */
@@ -75,6 +77,8 @@ export const aiActionOverrideSchema = aiActionOverrideSchemaOf(englishCoreText);
 /** Names of editable values. */
 export const EDITABLE_KEYS = [
     "enabled",
+    "hidden",
+    "label",
     "askInstruction",
     "instant",
     "providerId",
@@ -101,7 +105,8 @@ export function resolveAction(key, definition, override = {}) {
     const send = inputNames.filter((name) => chosen.includes(name) || required.includes(name));
     return {
         key,
-        label: definition.label,
+        label: override.label?.trim() || definition.label,
+        hidden: override.hidden ?? definition.hidden ?? false,
         input: definition.input,
         send,
         prompt: override.prompt ?? definition.prompt,
@@ -149,28 +154,28 @@ export function overrideFrom(definition, edited) {
 // ---------------------------------------------------------------------------
 // Prompt
 // ---------------------------------------------------------------------------
-const PLACEHOLDER = /\{\{\s*((?:shared\.)?[A-Za-z][A-Za-z0-9_]*)\s*\}\}/g;
-const SHARED_PREFIX = "shared.";
+const PLACEHOLDER = /\{\{\s*((?:snippet\.)?[A-Za-z][A-Za-z0-9_]*)\s*\}\}/g;
+const SNIPPET_PREFIX = "snippet.";
 /**
- * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing shared text (`shared.name`). Used for definition checks and pre-save checks.
+ * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing prompt snippet (`snippet.name`). Used for definition checks and pre-save checks.
  */
-export function unknownPlaceholders(prompt, input, sharedKeys = []) {
+export function unknownPlaceholders(prompt, input, snippetKeys = []) {
     const names = [...prompt.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
     return [
-        ...new Set(names.filter((name) => name.startsWith(SHARED_PREFIX)
-            ? !sharedKeys.includes(name.slice(SHARED_PREFIX.length))
+        ...new Set(names.filter((name) => name.startsWith(SNIPPET_PREFIX)
+            ? !snippetKeys.includes(name.slice(SNIPPET_PREFIX.length))
             : input[name]?.kind !== "locale")),
     ];
 }
 /**
- * The prompt to run. Replaces `{{locale input}}` with the language name and `{{shared.name}}` with the shared text, and appends locale inputs not used in the prompt
+ * The prompt to run. Replaces `{{locale input}}` with the language name and `{{snippet.name}}` with the prompt snippet, and appends locale inputs not used in the prompt
  * as `name: language` lines. Finally appends the extra request given at run time (only for actions with `askInstruction` on).
  */
-export function renderPrompt(action, values, languageName, request, shared = {}) {
+export function renderPrompt(action, values, languageName, request, snippets = {}) {
     const used = new Set();
     const prompt = action.prompt.replace(PLACEHOLDER, (whole, name) => {
-        if (name.startsWith(SHARED_PREFIX)) {
-            const text = shared[name.slice(SHARED_PREFIX.length)];
+        if (name.startsWith(SNIPPET_PREFIX)) {
+            const text = snippets[name.slice(SNIPPET_PREFIX.length)];
             return text === undefined ? whole : text.trim() || "(none)";
         }
         const value = values[name];
@@ -264,10 +269,10 @@ function findField(collections, collection, field) {
 export function checkAiConfig(ai, collections, blocks) {
     const list = new IssueList();
     const bad = (path, code, message) => list.add(path, code, message);
-    const sharedKeys = Object.keys(ai.shared ?? {});
-    for (const key of sharedKeys) {
+    const snippetKeys = Object.keys(ai.snippets ?? {});
+    for (const key of snippetKeys) {
         if (!NAME.test(key))
-            bad(pathOf("plugins", "ai", "shared", key), "name", "name must be letters, digits or _");
+            bad(pathOf("plugins", "ai", "snippets", key), "name", "name must be letters, digits or _");
     }
     for (const [key, action] of Object.entries(ai.actions)) {
         const where = pathOf("plugins", "ai", "actions", key);
@@ -281,9 +286,9 @@ export function checkAiConfig(ai, collections, blocks) {
             if (!action.input[name])
                 bad(where, "send", `send lists unknown input "${name}"`);
         }
-        const unknown = unknownPlaceholders(action.prompt, action.input, sharedKeys);
+        const unknown = unknownPlaceholders(action.prompt, action.input, snippetKeys);
         if (unknown.length > 0) {
-            bad(where, "prompt", `prompt can only use locale inputs and shared texts, not {{${unknown[0]}}}`);
+            bad(where, "prompt", `prompt can only use locale inputs and prompt snippets, not {{${unknown[0]}}}`);
         }
         const choices = action.choices;
         if (choices?.from === "collection" && !collections[choices.collection]) {

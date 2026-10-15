@@ -2,7 +2,7 @@ import { type Site } from "@monti-cms/core/client";
 import type { AiActionView } from "../actions.js";
 import type { AiCheckResult, AiModelInfo, AiSettingsView } from "../connection.js";
 import type { AiRunResult } from "../definition.js";
-import type { AiSharedView } from "../shared.js";
+import type { AiSnippetView } from "../snippets.js";
 /** Request options every function takes: cancellation, and the text for a failure the server gave no message for. */
 export interface AiRequestOptions {
     signal?: AbortSignal;
@@ -30,7 +30,7 @@ export declare const aiKeys: {
     all: readonly ["cms", "ai"];
     actions: () => readonly ["cms", "ai", "actions"];
     settings: () => readonly ["cms", "ai", "settings"];
-    shared: () => readonly ["cms", "ai", "shared"];
+    snippets: () => readonly ["cms", "ai", "snippets"];
     models: (source: ModelSource | null) => readonly ["cms", "ai", "models", ModelSource | null];
 };
 /** `GET /v1/ai/actions` */
@@ -55,14 +55,14 @@ export declare const checkAiProvider: (site: Site, json: unknown, fallback?: str
 export declare const listAiModels: (site: Site, source: ModelSource, options?: AiRequestOptions) => Promise<{
     items: AiModelInfo[];
 }>;
-/** `GET /v1/ai/shared` */
-export declare const getAiShared: (site: Site, options?: AiRequestOptions) => Promise<AiSharedView>;
-/** `POST /v1/ai/shared` */
-export declare const createAiShared: (site: Site, json: unknown, fallback?: string) => Promise<AiSharedView>;
-/** `PATCH /v1/ai/shared` */
-export declare const updateAiShared: (site: Site, json: unknown, fallback?: string) => Promise<AiSharedView>;
-/** `DELETE /v1/ai/shared?key=&expectedVersion=` */
-export declare const deleteAiShared: (site: Site, key: string, expectedVersion: number, fallback?: string) => Promise<AiSharedView>;
+/** `GET /v1/ai/snippets` */
+export declare const getAiSnippets: (site: Site, options?: AiRequestOptions) => Promise<AiSnippetView>;
+/** `POST /v1/ai/snippets` */
+export declare const createAiSnippet: (site: Site, json: unknown, fallback?: string) => Promise<AiSnippetView>;
+/** `PATCH /v1/ai/snippets` */
+export declare const updateAiSnippet: (site: Site, json: unknown, fallback?: string) => Promise<AiSnippetView>;
+/** `DELETE /v1/ai/snippets?key=&expectedVersion=` */
+export declare const deleteAiSnippet: (site: Site, key: string, expectedVersion: number, fallback?: string) => Promise<AiSnippetView>;
 /** `POST /v1/ai/run` with one input. */
 export declare const runAiOnce: (site: Pick<Site, "createTranslator">, json: unknown, options: AiRequestOptions) => Promise<{
     result: AiRunResult;

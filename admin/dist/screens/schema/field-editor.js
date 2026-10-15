@@ -2,18 +2,18 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
+import { useCmsAdminComponents } from "../../admin-components.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Badge } from "../../ui/badge.js";
 import { Button } from "../../ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible.js";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog.js";
-import { FieldError } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
-import { Textarea } from "../../ui/textarea.js";
 import { Labeled } from "../shared/labeled.js";
 import { AddButton, countOrUndefined, FlagSwitch, IssueList, NameInput, orUndefined, Pick, RowActions, TextInput, useIssuesUnder, useSchemaEdit, } from "./controls.js";
+import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input.js";
 import { schemaFieldsMessages } from "./fields.messages.js";
 import { addField, addOption, allFieldNames, FIELD_KEY_ORDER, FIELD_KINDS, fieldAt, fieldProblems, fieldsOf, isObj, KINDS_WITH_SETTINGS, moveField, moveOption, nameProblem, newField, optionsOf, removeBlock, removeField, removeOption, renameField, renameOption, setDefaultOption, setField, setOptionLabel, setProp, setTitleField, titleFieldName, VALUE_KINDS, withKind, } from "./schema-model.js";
 /** The options of a select (or of the select a conditional field shows): value, label, default, order. */
@@ -39,32 +39,6 @@ function OptionsEditor({ field, fieldName, editing, change, }) {
                             change((current) => addOption(current, draftValue, draftValue.charAt(0).toUpperCase() + draftValue.slice(1)));
                             setDraftValue("");
                         }, children: t("options.add") })] }))] }));
-}
-/** `inputOptions`: a JSON object of text, number and flag values, checked when the writer leaves the box. */
-export function InputOptionsEditor({ value, onChange, }) {
-    const t = useTranslator(schemaFieldsMessages);
-    const id = useId();
-    const { disabled } = useSchemaEdit();
-    const [text, setText] = useState(isObj(value) ? JSON.stringify(value) : "");
-    const [bad, setBad] = useState(false);
-    const commit = () => {
-        if (text.trim() === "") {
-            setBad(false);
-            onChange(undefined);
-            return;
-        }
-        try {
-            const parsed = JSON.parse(text);
-            const ok = isObj(parsed) && Object.values(parsed).every((item) => ["string", "number", "boolean"].includes(typeof item));
-            setBad(!ok);
-            if (ok)
-                onChange(parsed);
-        }
-        catch {
-            setBad(true);
-        }
-    };
-    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, hint: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx(FieldError, { children: t("field.inputOptionsBad") })] }));
 }
 /** What the kind of the field adds: its own options. */
 export function KindOptions({ name, field, editing, set, change, }) {
@@ -138,15 +112,20 @@ export function FieldEditor({ editing, place, name, field, index, count, }) {
     const label = typeof field.label === "string" ? field.label : "";
     // The title field is a top-level text field: the one with the title role, or the one named `title`.
     const isTitle = !place.branch && titleFieldName(editing.collection) === name;
+    const isSlug = !place.branch && (kind === "slug" || name === "slug");
+    const isFixed = isTitle || isSlug;
+    const { fieldInputs } = useCmsAdminComponents();
+    const hasPluginInputs = Object.keys(fieldInputs ?? {}).length > 0;
+    const hasCustomInput = typeof field.input === "string" && field.input.length > 0;
     const blocked = removeBlock(editing.collection, place, name);
     return (_jsxs(Collapsible, { open: open, onOpenChange: setOpen, className: "rounded-lg border bg-cms-card", "data-testid": `field-${name}`, children: [_jsxs("div", { className: "flex items-center gap-1 pr-1", children: [_jsxs(CollapsibleTrigger, { "aria-label": t("field.toggle", { name }), className: "group/field flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-cms-ring", children: [_jsx(ChevronRight, { "aria-hidden": true, className: cn("size-4 shrink-0 transition-transform", open && "rotate-90") }), _jsx("code", { className: "shrink-0 font-medium text-sm", children: name }), _jsx("span", { className: "truncate text-cms-muted-foreground text-xs", children: label }), _jsx(Badge, { variant: "secondary", className: "shrink-0", children: t(`kind.${kind}`) }), isTitle && (_jsx(Badge, { variant: "outline", className: "shrink-0", "data-testid": "title-badge", children: t("field.titleBadge") })), field.required === true && (_jsx(Badge, { variant: "outline", className: "shrink-0", children: t("field.requiredBadge") })), issues.length > 0 && (_jsx(Badge, { variant: "destructive", className: "shrink-0", children: t("field.problems", { count: issues.length }) }))] }), _jsx(RowActions, { index: index, count: count, name: name, onMove: (delta) => editing.update((collection) => moveField(collection, place, name, delta)), onRemove: () => editing.update((collection) => removeField(collection, place, name)), removeBlocked: blocked ? t(`field.removeBlocked.${blocked}`) : undefined })] }), _jsx(CollapsibleContent, { children: _jsxs("div", { className: "flex flex-col gap-3 border-t px-3 py-3", children: [_jsx(IssueList, { issues: issues }), _jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [_jsx(NameInput, { label: t("field.name"), value: name, taken: allFieldNames(editing.collection).filter((item) => item !== name), hint: t("field.nameHint"), onCommit: (to) => {
                                         editing.update((collection) => renameField(collection, place, name, to));
                                         editing.onRename({ kind: "field", collection: editing.collectionName, from: name, to });
-                                    } }), _jsx(Pick, { label: t("field.kind"), value: kind, items: branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) })), onChange: (next) => change((current) => withKind(current, next, collectionNames)) }), _jsx(TextInput, { label: t("field.label"), value: label, onChange: (value) => setBoth("label", value) }), _jsx(TextInput, { label: t("field.description"), value: field.description, onChange: (value) => setBoth("description", orUndefined(value)) })] }), valueKind && (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [kind === "text" && !place.branch && (_jsx(FlagSwitch, { label: t("field.isTitle"), hint: t("field.isTitleHint"), checked: isTitle, onChange: (on) => on && editing.update((collection) => setTitleField(collection, name)) })), kind !== "conditional" && (_jsx(FlagSwitch, { label: t("field.required"), hint: t("field.requiredHint"), checked: field.required === true, onChange: (on) => set("required", on ? true : undefined) })), LOCALIZED_KINDS.includes(kind) && (_jsx(Pick, { label: t("field.localized"), value: field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared", items: [
+                                    } }), _jsx(Pick, { label: t("field.kind"), hint: isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : undefined, value: kind, disabled: isFixed, items: branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) })), onChange: (next) => change((current) => withKind(current, next, collectionNames)) }), _jsx(TextInput, { label: t("field.label"), value: label, onChange: (value) => setBoth("label", value) }), _jsx(TextInput, { label: t("field.description"), value: field.description, onChange: (value) => setBoth("description", orUndefined(value)) })] }), valueKind && (_jsxs("div", { className: "grid gap-3 sm:grid-cols-2", children: [kind === "text" && !place.branch && (_jsx(FlagSwitch, { label: t("field.isTitle"), hint: t("field.isTitleHint"), checked: isTitle, onChange: (on) => on && editing.update((collection) => setTitleField(collection, name)) })), kind !== "conditional" && (_jsx(FlagSwitch, { label: t("field.required"), hint: t("field.requiredHint"), checked: field.required === true, onChange: (on) => set("required", on ? true : undefined) })), LOCALIZED_KINDS.includes(kind) && (_jsx(Pick, { label: t("field.localized"), value: field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared", items: [
                                         { value: "shared", label: t("field.localizedShared") },
                                         { value: "localized", label: t("field.localizedOwn") },
                                         { value: "inherit", label: t("field.localizedInherit") },
-                                    ], onChange: (value) => set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined) }))] })), _jsx(KindOptions, { name: name, field: field, editing: editing, set: set, change: change }), _jsxs("details", { className: "rounded-md border border-dashed px-2.5 py-1.5 text-sm", children: [_jsx("summary", { className: "cursor-pointer text-cms-muted-foreground text-xs", children: t("field.advanced") }), _jsxs("div", { className: "mt-2 grid gap-3 sm:grid-cols-2", children: [valueKind && (_jsx(TextInput, { label: t("field.role"), hint: t("field.roleHint"), value: field.role, onChange: (value) => set("role", orUndefined(value)) })), valueKind && (_jsx(TextInput, { label: t("field.input"), hint: t("field.inputHint"), value: field.input, onChange: (value) => set("input", orUndefined(value)) }))] }), valueKind && (_jsx("div", { className: "mt-3", children: _jsx(InputOptionsEditor, { value: field.inputOptions, onChange: (value) => set("inputOptions", value) }) }))] }), disabled && null] }) })] }));
+                                    ], onChange: (value) => set("localized", value === "localized" ? true : value === "inherit" ? "inherit" : undefined) }))] })), _jsx(KindOptions, { name: name, field: field, editing: editing, set: set, change: change }), _jsxs("details", { className: "rounded-md border border-dashed px-2.5 py-1.5 text-sm", children: [_jsx("summary", { className: "cursor-pointer text-cms-muted-foreground text-xs", children: t("field.advanced") }), _jsxs("div", { className: "mt-3 flex flex-col gap-4", children: [!isSlug && valueKind && (_jsx(FieldRolePicker, { role: field.role, kind: kind, isTitle: isTitle, onChange: (role) => set("role", role) })), !isFixed && valueKind && (hasPluginInputs || hasCustomInput) && (_jsx(FieldCustomInputPicker, { value: field.input, options: field.inputOptions, onChangeInput: (input) => set("input", input), onChangeOptions: (opts) => set("inputOptions", opts) }))] })] }), disabled && null] }) })] }));
 }
 /**
  * The settings a new field needs, asked before it exists: the field is made in a copy of the collection and joins the real one only when its required

@@ -6,7 +6,7 @@ import { useBeforeUnload } from "../../lib/hooks/use-before-unload.js";
 import { discardConfirm, useConfirm } from "./confirm-dialog.js";
 /**
  * Guards a screen with unsaved changes against leaving: the browser asks before a reload or a closed tab, and a click on a link inside the
- * admin asks with the same discard dialog the rest of the admin uses. Render the returned `dialog` once on the screen.
+ * admin asks with the same discard dialog the rest of the admin uses. Links inside an element marked `data-unsaved-guard="off"` are not a way out and pass. Render the returned `dialog` once on the screen.
  */
 export function useUnsavedGuard(dirty) {
     const t = useTranslator(commonMessages);
@@ -23,6 +23,9 @@ export function useUnsavedGuard(dirty) {
                 return;
             const anchor = event.target?.closest?.("a[href]");
             if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download"))
+                return;
+            // Links that only move within the screen (its tabs) keep the draft, so they are not a way out.
+            if (anchor.closest("[data-unsaved-guard='off']"))
                 return;
             const url = new URL(anchor.href, window.location.href);
             if (url.origin !== window.location.origin)

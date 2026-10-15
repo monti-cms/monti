@@ -5,7 +5,7 @@ import { coreMessages } from "./core.messages.js";
 import { customBaseSchemaOf, customDefinition, customValueSchemaOf, isCustomKey, newCustomKey, surfaceProblem, } from "./custom.js";
 import { AiError } from "./errors.js";
 import { aiRegistryOf } from "./registry.js";
-import { loadSharedKeys } from "./shared.js";
+import { loadSnippetKeys } from "./snippets.js";
 /** One stored custom action row. `null` if its shape does not fit (when the definition changed and no longer matches). */
 const readCustom = (site, value) => {
     const parsed = customValueSchemaOf(site).safeParse(value);
@@ -50,10 +50,10 @@ export async function listActions(site, store) {
     return [...code, ...custom];
 }
 /**
- * Builds an action to test or save with editable values. `{{name}}` in the prompt only accepts locale inputs and shared texts (`sharedKeys`: the config's texts and
+ * Builds an action to test or save with editable values. `{{name}}` in the prompt only accepts locale inputs and prompt snippets (`snippetKeys`: the config's texts and
  * those added in the admin UI). Values that cannot be edited (name, result shape, etc.) are ignored if sent.
  */
-export function actionWithEdits(site, key, edited, definition = definitionOf(site, key), sharedKeys = aiRegistryOf(site).sharedKeys) {
+export function actionWithEdits(site, key, edited, definition = definitionOf(site, key), snippetKeys = aiRegistryOf(site).snippetKeys) {
     const t = site.createTranslator(actionsMessages);
     const parsed = aiActionOverrideSchemaOf(site.createTranslator(coreMessages)).safeParse(edited && typeof edited === "object"
         ? Object.fromEntries(EDITABLE_KEYS.filter((name) => name in edited).map((name) => [
@@ -66,7 +66,7 @@ export function actionWithEdits(site, key, edited, definition = definitionOf(sit
         const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
         throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
     }
-    const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, sharedKeys) : [];
+    const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, snippetKeys) : [];
     if (unknown.length > 0) {
         throw new AiError("invalid_input", t("unknownPlaceholder", { name: unknown[0] ?? "" }));
     }
@@ -77,14 +77,14 @@ export function actionWithEdits(site, key, edited, definition = definitionOf(sit
  * unsaved action), otherwise from the saved base info.
  */
 export async function actionWithDraft(site, store, key, edited, baseInput) {
-    const sharedKeys = await loadSharedKeys(site, store);
+    const snippetKeys = await loadSnippetKeys(site, store);
     if (!isCustomKey(key))
-        return actionWithEdits(site, key, edited, definitionOf(site, key), sharedKeys);
+        return actionWithEdits(site, key, edited, definitionOf(site, key), snippetKeys);
     if (baseInput !== undefined) {
-        return actionWithEdits(site, key, edited, customDefinition(site, readBase(site, baseInput)), sharedKeys);
+        return actionWithEdits(site, key, edited, customDefinition(site, readBase(site, baseInput)), snippetKeys);
     }
     const { value } = await customRow(site, store, key);
-    return actionWithEdits(site, key, edited, customDefinition(site, value.base), sharedKeys);
+    return actionWithEdits(site, key, edited, customDefinition(site, value.base), snippetKeys);
 }
 /** Validates the base info of a custom action. */
 function readBase(site, input) {
@@ -102,7 +102,7 @@ export async function createCustomAction(site, store, baseInput, edited = {}) {
     const base = readBase(site, baseInput);
     const key = newCustomKey();
     const definition = customDefinition(site, base);
-    const action = actionWithEdits(site, key, edited, definition, await loadSharedKeys(site, store));
+    const action = actionWithEdits(site, key, edited, definition, await loadSnippetKeys(site, store));
     const value = { base, override: overrideFrom(definition, action) };
     const row = await store.saveAiCustomAction({ key, expectedVersion: 0, value });
     return viewOf(site, resolveAction(key, definition, value.override), row, value);
@@ -123,13 +123,13 @@ export async function updateAction(site, store, key, expectedVersion, edited, ba
         const { value: current } = await customRow(site, store, key);
         const base = baseInput === undefined ? current.base : readBase(site, baseInput);
         const definition = customDefinition(site, base);
-        const action = actionWithEdits(site, key, edited, definition, await loadSharedKeys(site, store));
+        const action = actionWithEdits(site, key, edited, definition, await loadSnippetKeys(site, store));
         const value = { base, override: overrideFrom(definition, action) };
         const row = await store.saveAiCustomAction({ key, expectedVersion, value });
         return viewOf(site, resolveAction(key, definition, value.override), row, value);
     }
     const definition = definitionOf(site, key);
-    const action = actionWithEdits(site, key, edited, definition, await loadSharedKeys(site, store));
+    const action = actionWithEdits(site, key, edited, definition, await loadSnippetKeys(site, store));
     const value = overrideFrom(definition, action);
     const row = await store.saveAiActionOverride({ key, expectedVersion, value });
     return viewOf(site, action, row, undefined, definition);

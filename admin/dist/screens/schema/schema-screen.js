@@ -3,19 +3,19 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { errorText } from "../../api/client.js";
 import { fetchSchema, schemaKeys } from "../../api/schema.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
-import { useAdminRouter } from "../../router/index.js";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert.js";
 import { Badge } from "../../ui/badge.js";
 import { Button } from "../../ui/button.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { Skeleton } from "../../ui/skeleton.js";
+import { rememberScroll, takeScroll, useSettingsParam } from "../settings/place.js";
 import { discardConfirm, useConfirm } from "../shared/confirm-dialog.js";
 import { LoadErrorAlert } from "../shared/load-error-alert.js";
 import { PageBody } from "../shared/page-body.js";
@@ -39,8 +39,15 @@ const READ_ONLY_KEY = {
     not_writable: "readonly.notWritable",
     has_code: "readonly.hasCode",
 };
-/** The file on disk and the version the database has, then the parts of the file the screen does not edit: seed data, the admin text overrides (shown as they are), and the transforms already recorded. */
-function FileInfo({ file, state }) {
+/** The same reasons in a few words, for the line under the Settings title. */
+const READ_ONLY_SHORT_KEY = {
+    production: "readonly.short.production",
+    no_schema_file: "readonly.short.noFile",
+    not_writable: "readonly.short.notWritable",
+    has_code: "readonly.short.hasCode",
+};
+/** The parts of the file the screen does not edit: seed data, the admin text overrides (shown as they are), and the transforms already recorded. Nothing shows when the file has none of them. */
+function FileRest({ file }) {
     const t = useTranslator(schemaMessages);
     const migrations = Array.isArray(file.migrations) ? file.migrations : [];
     const messages = isObj(file.admin) ? file.admin.messages : undefined;
@@ -48,12 +55,17 @@ function FileInfo({ file, state }) {
         ...(messages !== undefined ? [[t("file.messages"), messages]] : []),
         ...(file.seed !== undefined ? [["seed", file.seed]] : []),
     ];
-    return (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(Section, { wide: true, title: t("file.statusTitle"), description: t("file.statusDescription"), note: t("file.hint"), children: _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsx("code", { className: "rounded-sm bg-cms-muted px-1.5 py-0.5 text-xs", children: state.file ?? t("status.noFile") }), _jsx(Badge, { variant: "secondary", children: t("status.version", { version: state.schemaVersion }) }), _jsx(Badge, { variant: "outline", children: state.applied ? t("status.applied", { version: state.applied.schemaVersion }) : t("status.notApplied") })] }) }), rest.map(([title, value]) => (_jsx(Section, { wide: true, title: title, children: _jsx("pre", { className: "max-h-64 overflow-auto rounded-md bg-cms-muted/60 p-3 text-xs", children: JSON.stringify(value, null, 2) }) }, title))), _jsx(Section, { wide: true, title: t("file.migrations"), children: migrations.length === 0 ? (_jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("file.noMigrations") })) : (_jsx("ul", { className: "-my-2 flex flex-col divide-y text-sm", children: migrations.map((migration) => (_jsxs("li", { className: "flex items-center gap-2 py-2", children: [_jsx("code", { className: "text-xs", children: String(migration.id) }), " ", _jsx("span", { className: "text-cms-muted-foreground text-xs", children: String(migration.op) })] }, String(migration.id)))) })) })] }));
+    if (rest.length === 0 && migrations.length === 0)
+        return null;
+    return (_jsxs(_Fragment, { children: [rest.map(([title, value]) => (_jsx(Section, { wide: true, title: title, note: t("file.hint"), children: _jsx("pre", { className: "max-h-64 overflow-auto rounded-md bg-cms-muted/60 p-3 text-xs", children: JSON.stringify(value, null, 2) }) }, title))), migrations.length > 0 && (_jsx(Section, { wide: true, title: t("file.migrations"), children: _jsx("ul", { className: "-my-2 flex flex-col divide-y text-sm", children: migrations.map((migration) => (_jsxs("li", { className: "flex items-center gap-2 py-2", children: [_jsx("code", { className: "text-xs", children: String(migration.id) }), " ", _jsx("span", { className: "text-cms-muted-foreground text-xs", children: String(migration.op) })] }, String(migration.id)))) }) }))] }));
 }
-function SchemaEditor({ state, tab, actionsSlot, }) {
+/** The line under the Settings title: the schema file, its version, and why it is read-only when it is. */
+function FileLine({ state, reason }) {
     const t = useTranslator(schemaMessages);
-    const site = useSite();
-    const router = useAdminRouter();
+    return (_jsxs(_Fragment, { children: [state.file ?? t("status.noFile"), " \u00B7 ", t("status.version", { version: state.schemaVersion }), reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`] }));
+}
+function SchemaEditor({ state, tab, actionsSlot, fileSlot, onTab, }) {
+    const t = useTranslator(schemaMessages);
     const base = useMemo(() => (isObj(state.schema) ? state.schema : {}), [state.schema]);
     const writable = state.access.writable;
     const [draft, setDraft] = useState(base);
@@ -64,7 +76,14 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
     const [creating, setCreating] = useState(false);
     const collections = collectionsOf(draft);
     const names = Object.keys(collections);
-    const [selectedName, setSelected] = useState(names[0]);
+    // Which collection is open and which of its parts live in the address, so a reload after saving comes back to the same place.
+    const [selectedName, setSelectedName] = useSettingsParam("collection");
+    const [section, setSection] = useSettingsParam("section");
+    const setSelected = (name) => {
+        setSelectedName(name);
+        setSection(undefined);
+    };
+    const scroller = useRef(null);
     const selected = selectedName && selectedName in collections ? selectedName : names[0];
     const tc = useTranslator(commonMessages);
     const { confirm, dialog } = useConfirm();
@@ -76,6 +95,12 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
         const message = takeSavedMessage();
         if (message)
             toast.success(message);
+    }, []);
+    // After the reload that follows a save, scroll back to where the writer was.
+    useLayoutEffect(() => {
+        const top = takeScroll();
+        if (top !== null && scroller.current)
+            scroller.current.scrollTop = top;
     }, []);
     const updateFile = (change) => setDraft((current) => change(current));
     const context = useMemo(() => ({
@@ -95,16 +120,18 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
         setIssues([]);
     };
     const actions = (_jsxs(_Fragment, { children: [!writable && (_jsxs(Badge, { variant: "outline", className: "gap-1", children: [_jsx(Lock, { "aria-hidden": true }), t("status.readOnly")] })), dirty && writable && (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "ghost", size: "sm", onClick: () => void discard(), children: t("actions.discard") }), _jsx("span", { className: "hidden text-cms-muted-foreground text-xs sm:inline", children: t("header.pending", { count: pending }) })] })), _jsx(Button, { type: "button", variant: dirty && writable ? "default" : "outline", size: "sm", disabled: !writable || !dirty, onClick: () => setReviewing(true), children: dirty && writable ? t("actions.review") : t("actions.noChanges") })] }));
-    const reason = state.access.writable ? null : state.access.reason;
-    return (_jsxs(SchemaEditProvider, { value: context, children: [_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", "data-testid": "schema-screen", children: [actions && actionsSlot !== undefined
+    const reason = state.access.writable
+        ? null
+        : (state.access.reason ?? null);
+    return (_jsxs(SchemaEditProvider, { value: context, children: [_jsxs("div", { className: "flex min-h-0 flex-1 flex-col", "data-testid": "schema-screen", children: [fileSlot ? createPortal(_jsx(FileLine, { state: state, reason: reason }), fileSlot) : null, actions && actionsSlot !== undefined
                         ? actionsSlot
                             ? createPortal(actions, actionsSlot)
                             : null
-                        : actions && (_jsx("div", { className: "flex items-center justify-end gap-2.5 border-b bg-cms-background px-4 py-2 lg:px-10", children: actions })), _jsx("div", { className: "min-h-0 flex-1 overflow-y-auto", children: _jsxs(PageBody, { wide: tab === "collections", children: [reason && (_jsxs(Alert, { layout: "stack", "data-testid": "schema-read-only", children: [_jsx(AlertTitle, { children: t("readonly.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-1", children: [_jsx("span", { children: t(READ_ONLY_KEY[reason]) }), reason === "has_code" && (state.access.issue || state.access.detail) && (_jsx("code", { className: "text-xs", "data-testid": "schema-code-detail", children: state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail }))] })] })), writable && state.comments && (_jsx(Alert, { layout: "stack", "data-testid": "schema-comments-note", children: _jsx(AlertDescription, { children: t("comments.note") }) })), applyFailed && (_jsx(Alert, { variant: "destructive", layout: "stack", children: _jsx(AlertDescription, { children: t("save.applyFailedNote") }) })), state.issues.length > 0 && (_jsxs(Alert, { variant: "destructive", layout: "stack", "data-testid": "schema-file-invalid", children: [_jsx(AlertTitle, { children: t("invalid.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-2", children: [_jsx("span", { children: t("invalid.description") }), _jsx(IssueList, { issues: state.issues })] })] })), issues.length > 0 && !reviewing && (_jsxs(Alert, { variant: "destructive", layout: "stack", children: [_jsx(AlertTitle, { children: t("issues.title") }), _jsx(AlertDescription, { children: _jsx(IssueList, { issues: issues }) })] })), state.codeCollections.length > 0 && (_jsx(Alert, { layout: "stack", children: _jsx(AlertDescription, { children: t("code.collections", { names: state.codeCollections.join(", ") }) }) })), state.issues.length === 0 && (_jsxs(_Fragment, { children: [tab === "collections" && (_jsxs("div", { className: "flex flex-col gap-6 lg:flex-row lg:gap-8", children: [_jsxs("div", { className: "flex shrink-0 flex-col gap-0.5 lg:w-52", children: [_jsxs("div", { className: "flex items-center justify-between pb-2 pl-2.5", children: [_jsxs("span", { className: "font-medium text-cms-muted-foreground text-xs", children: [t("collection.railTitle"), " ", names.length] }), writable && (_jsx(IconButton, { label: t("collection.create"), size: "icon-xs", onClick: () => setCreating(true), children: _jsx(Plus, { "aria-hidden": true }) }))] }), _jsx("nav", { "aria-label": t("tabs.collections"), className: "flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0", children: names.map((name) => {
+                        : actions && (_jsx("div", { className: "flex items-center justify-end gap-2.5 border-b bg-cms-background px-4 py-2 lg:px-10", children: actions })), _jsx("div", { ref: scroller, className: "min-h-0 flex-1 overflow-y-auto", children: _jsxs(PageBody, { wide: tab === "collections", children: [reason && (_jsxs(Alert, { layout: "stack", "data-testid": "schema-read-only", children: [_jsx(AlertTitle, { children: t("readonly.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-1", children: [_jsx("span", { children: t(READ_ONLY_KEY[reason]) }), reason === "has_code" && (state.access.issue || state.access.detail) && (_jsx("code", { className: "text-xs", "data-testid": "schema-code-detail", children: state.access.issue ? describeLiteralIssue(t, state.access.issue) : state.access.detail }))] })] })), writable && state.comments && (_jsx(Alert, { layout: "stack", "data-testid": "schema-comments-note", children: _jsx(AlertDescription, { children: t("comments.note") }) })), applyFailed && (_jsx(Alert, { variant: "destructive", layout: "stack", children: _jsx(AlertDescription, { children: t("save.applyFailedNote") }) })), state.issues.length > 0 && (_jsxs(Alert, { variant: "destructive", layout: "stack", "data-testid": "schema-file-invalid", children: [_jsx(AlertTitle, { children: t("invalid.title") }), _jsxs(AlertDescription, { className: "flex flex-col gap-2", children: [_jsx("span", { children: t("invalid.description") }), _jsx(IssueList, { issues: state.issues })] })] })), issues.length > 0 && !reviewing && (_jsxs(Alert, { variant: "destructive", layout: "stack", children: [_jsx(AlertTitle, { children: t("issues.title") }), _jsx(AlertDescription, { children: _jsx(IssueList, { issues: issues }) })] })), state.codeCollections.length > 0 && (_jsx(Alert, { layout: "stack", children: _jsx(AlertDescription, { children: t("code.collections", { names: state.codeCollections.join(", ") }) }) })), state.issues.length === 0 && (_jsxs(_Fragment, { children: [tab === "collections" && (_jsxs("div", { className: "flex flex-col gap-6 lg:flex-row lg:gap-8", children: [_jsxs("div", { className: "flex shrink-0 flex-col gap-0.5 lg:w-52", children: [_jsxs("div", { className: "flex items-center justify-between pb-2 pl-2.5", children: [_jsxs("span", { className: "font-medium text-cms-muted-foreground text-xs", children: [t("collection.railTitle"), " ", names.length] }), writable && (_jsx(IconButton, { label: t("collection.create"), size: "icon-xs", onClick: () => setCreating(true), children: _jsx(Plus, { "aria-hidden": true }) }))] }), _jsx("nav", { "aria-label": t("tabs.collections"), className: "flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0", children: names.map((name) => {
                                                                 const collection = collections[name];
                                                                 const active = name === selected;
                                                                 return (_jsxs("button", { type: "button", "aria-current": active ? "true" : undefined, className: cn("flex h-8 shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-cms-muted focus-visible:ring-2 focus-visible:ring-cms-ring/50", active && "border-cms-border bg-cms-card font-medium hover:bg-cms-card"), onClick: () => setSelected(name), children: [_jsx("span", { className: "flex-1 truncate", children: String(collection?.label ?? name) }), !savedNames.includes(name) && _jsx(Badge, { variant: "outline", children: t("collection.new") }), _jsx("span", { className: "font-normal text-cms-muted-foreground text-xs", children: t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument") })] }, name));
-                                                            }) })] }), _jsx("div", { className: "min-w-0 flex-1", children: selected && collections[selected] ? (_jsx(CollectionEditor, { name: selected, collection: collections[selected], isNew: !savedNames.includes(selected), onChange: (change) => updateFile((file) => setCollection(file, selected, change)), onRename: (rename) => setRenames((current) => recordRename(current, rename)), onRemove: async () => {
+                                                            }) })] }), _jsx("div", { className: "min-w-0 flex-1", children: selected && collections[selected] ? (_jsx(CollectionEditor, { name: selected, section: section, onSection: setSection, collection: collections[selected], isNew: !savedNames.includes(selected), onChange: (change) => updateFile((file) => setCollection(file, selected, change)), onRename: (rename) => setRenames((current) => recordRename(current, rename)), onRemove: async () => {
                                                             if (savedNames.includes(selected)) {
                                                                 const ok = await confirm({
                                                                     title: t("collection.removeTitle", { name: selected }),
@@ -116,13 +143,14 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
                                                                     return;
                                                             }
                                                             updateFile((file) => removeCollection(file, selected));
-                                                        } }, selected)) : (_jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("collection.none") })) })] })), tab === "locales" && (_jsx(LocalesEditor, { file: draft, savedCodes: localesOf(base).map((locale) => locale.code), update: updateFile })), tab === "site" && _jsx(SiteEditor, { file: draft, siteUrl: state.siteUrl, update: updateFile }), tab === "admin" && _jsx(AdminEditor, { file: draft, update: updateFile }), tab === "file" && _jsx(FileInfo, { file: draft, state: state })] }))] }) })] }), dialog, guardDialog, _jsx(NewCollectionDialog, { open: creating, onOpenChange: setCreating, taken: names, onCreate: (id, kind, path, label) => {
+                                                        } }, selected)) : (_jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("collection.none") })) })] })), tab === "locales" && (_jsx(LocalesEditor, { file: draft, savedCodes: localesOf(base).map((locale) => locale.code), update: updateFile })), tab === "site" && _jsx(SiteEditor, { file: draft, siteUrl: state.siteUrl, update: updateFile }), tab === "admin" && (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(AdminEditor, { file: draft, update: updateFile }), _jsx(FileRest, { file: draft })] }))] }))] }) })] }), dialog, guardDialog, _jsx(NewCollectionDialog, { open: creating, onOpenChange: setCreating, taken: names, onCreate: (id, kind, path, label) => {
                     updateFile((file) => addCollection(file, id, kind, path, label));
                     setSelected(id);
                     if (tab !== "collections")
-                        router.navigate(site.adminHref("/settings/collections"));
+                        onTab?.("collections");
                     setCreating(false);
                 } }), state.hash !== null && (_jsx(ReviewDialog, { open: reviewing, onOpenChange: setReviewing, draft: draft, renames: renames, settings: settingChanges(base, draft), baseHash: state.hash, onIssues: setIssues, onApplyFailed: () => setApplyFailed(true), onSaved: (saved) => {
+                    rememberScroll(scroller.current?.scrollTop ?? 0);
                     rememberSaved(t("save.done", {
                         version: saved.schemaVersion,
                         transforms: saved.transforms.length,
@@ -132,7 +160,7 @@ function SchemaEditor({ state, tab, actionsSlot, }) {
                 } }))] }));
 }
 /** The schema file editor: edits `monti.schema.ts` on the development server, shows it read-only everywhere else. `tab` is the Settings tab being shown. */
-export function SchemaSettings({ tab, actionsSlot }) {
+export function SchemaSettings({ tab, actionsSlot, fileSlot, onTab, }) {
     const site = useSite();
     const t = useTranslator(schemaMessages);
     const query = useQuery({
@@ -144,6 +172,6 @@ export function SchemaSettings({ tab, actionsSlot }) {
     });
     const error = query.error ? errorText(site, query.error, t("load.failed")) : null;
     if (query.data)
-        return _jsx(SchemaEditor, { state: query.data, tab: tab, actionsSlot: actionsSlot }, query.data.hash ?? "site");
+        return (_jsx(SchemaEditor, { state: query.data, tab: tab, actionsSlot: actionsSlot, fileSlot: fileSlot, onTab: onTab }, query.data.hash ?? "site"));
     return (_jsx("div", { className: "flex flex-col gap-3 p-4 lg:p-10", children: error ? (_jsx(LoadErrorAlert, { message: error, onRetry: () => void query.refetch() })) : (_jsx(Skeleton, { className: "h-40 w-full" })) }));
 }

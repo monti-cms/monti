@@ -7,11 +7,6 @@ export interface CollectionEditing {
     /** A field or option was renamed: the review offers it as a rename. */
     readonly onRename: (rename: Rename) => void;
 }
-/** `inputOptions`: a JSON object of text, number and flag values, checked when the writer leaves the box. */
-export declare function InputOptionsEditor({ value, onChange, }: {
-    value: unknown;
-    onChange: (value: Obj | undefined) => void;
-}): import("react").JSX.Element;
 /** What the kind of the field adds: its own options. */
 export declare function KindOptions({ name, field, editing, set, change, }: {
     name: string;

@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/client";
 import { type AiActionDefinition, type ResolvedAiAction } from "./action.js";
 import { type AiActionView } from "./action-view.js";
-import { type AiSharedStore } from "./shared.js";
+import { type AiSnippetStore } from "./snippets.js";
 /**
  * Handles action definitions (config) and edited values (DB) together. Used by the admin AI screen and the run API.
  * Edited values under names missing from the definition are ignored (when an action was removed from the config).
@@ -13,7 +13,7 @@ type Row = {
     updatedAt: Date;
 };
 export type { AiActionView } from "./action-view.js";
-export interface AiActionsStore extends Pick<AiSharedStore, "getAiSettings"> {
+export interface AiActionsStore extends Pick<AiSnippetStore, "getAiSettings"> {
     listAiActionOverrides(): Promise<Row[]>;
     saveAiActionOverride(params: {
         key: string;
@@ -37,10 +37,10 @@ export declare function getAction(site: Site, store: AiActionsStore, key: string
 /** All coded actions in config order, then custom actions in creation order. */
 export declare function listActions(site: Site, store: AiActionsStore): Promise<AiActionView[]>;
 /**
- * Builds an action to test or save with editable values. `{{name}}` in the prompt only accepts locale inputs and shared texts (`sharedKeys`: the config's texts and
+ * Builds an action to test or save with editable values. `{{name}}` in the prompt only accepts locale inputs and prompt snippets (`snippetKeys`: the config's texts and
  * those added in the admin UI). Values that cannot be edited (name, result shape, etc.) are ignored if sent.
  */
-export declare function actionWithEdits(site: Site, key: string, edited: unknown, definition?: AiActionDefinition, sharedKeys?: readonly string[]): ResolvedAiAction;
+export declare function actionWithEdits(site: Site, key: string, edited: unknown, definition?: AiActionDefinition, snippetKeys?: readonly string[]): ResolvedAiAction;
 /**
  * Action to test with unsaved edited values (the AI screen's `Test`). A custom action is built from the base info (`base`) if given (e.g. a new, still
  * unsaved action), otherwise from the saved base info.

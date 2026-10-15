@@ -28,7 +28,7 @@ export function ListPane({ label, loading = false, skeletonRows = 3, empty, head
  * One row of a {@link ListPane}: the title with a status to its right, and a dim line under it. With `actions` the row also opens a context
  * menu and shows a `⋯` button; `onDelete` is called on the Delete key.
  */
-export function ListRow({ title, status, detail, current, onClick, actions, actionsLabel, onDelete, }) {
+export function ListRow({ title, status, detail, current, onClick, actions, actionsLabel, onDelete, trailing, }) {
     const button = (_jsxs(Button, { variant: "ghost", type: "button", "aria-current": current ? "true" : undefined, onClick: onClick, onKeyDown: (event) => {
             if (onDelete && event.key === "Delete") {
                 event.preventDefault();
@@ -37,7 +37,7 @@ export function ListRow({ title, status, detail, current, onClick, actions, acti
         }, className: "h-auto min-w-0 flex-1 flex-col items-start gap-0.5 px-1 py-1 text-left font-normal hover:bg-transparent", children: [_jsxs("span", { className: "flex w-full items-center gap-2", children: [_jsx("span", { className: "truncate font-medium text-sm", children: title }), status && _jsx("span", { className: "ml-auto shrink-0 text-cms-muted-foreground text-xs", children: status })] }), detail && _jsx("span", { className: "w-full truncate text-cms-muted-foreground text-xs", children: detail })] }));
     const rowClass = cn("group flex items-center justify-between gap-2 px-2 py-1.5 transition-colors", current ? OPEN_ITEM : "hover:bg-cms-accent/50");
     if (!actions || actions.length === 0) {
-        return _jsx("li", { className: rowClass, children: button });
+        return (_jsxs("li", { className: rowClass, children: [button, trailing] }));
     }
-    return (_jsxs(ActionContextMenu, { actions: actions, trigger: _jsx("li", { className: rowClass }), children: [button, _jsx(MoreActionsButton, { actions: actions, label: actionsLabel ?? title })] }));
+    return (_jsxs(ActionContextMenu, { actions: actions, trigger: _jsx("li", { className: rowClass }), children: [button, trailing, _jsx(MoreActionsButton, { actions: actions, label: actionsLabel ?? title })] }));
 }

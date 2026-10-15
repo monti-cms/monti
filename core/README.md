@@ -19,7 +19,7 @@ Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.9&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.10&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.9&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.9&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.9&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.10&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.10&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.10&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
@@ -1341,7 +1341,7 @@ The store side is the `SchemaChangeStore` port (`readSchemaState`, `appliedSchem
 
 ### Editing the schema in the admin (development only)
 
-The admin has schema settings (`<admin path>/settings/collections`, in the sidebar footer under Settings; the Languages, Site, Admin and File tabs belong to it too) that edit `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
+The admin has schema settings (`<admin path>/settings/collections`, in the sidebar footer under Settings; the Languages, Site and Admin tabs belong to it too) that edit `monti.schema.ts`. It is a thin layer over the API above: the same diff, impact check and transforms, with the file written for you.
 
 **Who may write.** Only a server that runs in development (`NODE_ENV=development`, which `next dev` sets) and whose schema file exists, can be written and is a pure literal (below). The decision is made on the server (`schemaEditAccess(cms)` of `@monti-cms/core/schema-edit`), not by the screen: in production `PUT /api/monti/v1/schema` and `POST /api/monti/v1/schema/preview` answer **403 `schema_read_only`** (with a `reason`: `production`, `no_schema_file`, `not_writable` or `has_code`), and the screen shows the schema read-only with a short explanation. `GET /api/monti/v1/schema` works everywhere (a production server only reads the file). Every route needs an admin, like the rest of the admin API, and the write routes also check the same origin.
 

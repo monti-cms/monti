@@ -1,0 +1,38 @@
+import { defineMessages } from "@monti-cms/core";
+/** Texts of the AI screen's Prompt snippets tab. */
+export const snippetMessages = defineMessages("cms-ai.admin.snippets", {
+    en: {
+        "error.load": "Couldn't load the prompt snippets.",
+        "list.label": "Prompt snippets",
+        "list.empty": "No prompt snippets.",
+        "empty.title": "Select a snippet",
+        "detail.added": "Custom",
+        "new.title": "New snippet",
+        "field.name": "Name",
+        "field.key": "Key",
+        "field.content": "Content",
+        "action.add": "Add snippet",
+        "action.resetDefault": "Reset to default",
+        "copy.label": "Copy",
+        "copy.done": "Copied",
+        "confirm.title": "Delete snippet",
+        "confirm.description": "Delete '{name}'?",
+    },
+    ko: {
+        "error.load": "프롬프트 조각을 불러올 수 없습니다.",
+        "list.label": "프롬프트 조각 목록",
+        "list.empty": "프롬프트 조각이 없습니다.",
+        "empty.title": "조각을 고르세요",
+        "detail.added": "직접 만듦",
+        "new.title": "새 조각",
+        "field.name": "이름",
+        "field.key": "키",
+        "field.content": "내용",
+        "action.add": "조각 추가",
+        "action.resetDefault": "기본값으로",
+        "copy.label": "복사",
+        "copy.done": "복사했습니다",
+        "confirm.title": "조각 삭제",
+        "confirm.description": "'{name}'을(를) 삭제할까요?",
+    },
+});

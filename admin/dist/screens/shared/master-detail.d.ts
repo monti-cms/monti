@@ -24,7 +24,7 @@ export declare function ListPane({ label, loading, skeletonRows, empty, header, 
  * One row of a {@link ListPane}: the title with a status to its right, and a dim line under it. With `actions` the row also opens a context
  * menu and shows a `⋯` button; `onDelete` is called on the Delete key.
  */
-export declare function ListRow({ title, status, detail, current, onClick, actions, actionsLabel, onDelete, }: {
+export declare function ListRow({ title, status, detail, current, onClick, actions, actionsLabel, onDelete, trailing, }: {
     title: string;
     status?: string | null;
     detail?: ReactNode;
@@ -34,4 +34,5 @@ export declare function ListRow({ title, status, detail, current, onClick, actio
     /** Name of the `⋯` button; required with `actions`. */
     actionsLabel?: string;
     onDelete?: () => void;
+    trailing?: ReactNode;
 }): import("react").JSX.Element;
