@@ -1,8 +1,8 @@
 "use client";
 
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
-import { Copy, ExternalLink } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { Check, Copy, ExternalLink } from "lucide-react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
 import { formatBytes } from "../../editor/upload-helper";
@@ -10,14 +10,24 @@ import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { Button, buttonVariants } from "../../ui/button";
-import { Field, FieldLabel } from "../../ui/field";
+import { Field, FieldError, FieldLabel } from "../../ui/field";
+import { IconButton } from "../../ui/icon-button";
+import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
 import { EditorFooter } from "../shared/editor-footer";
 import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { SidePanelHeader } from "../shared/side-panel";
 import { useDraftEditor } from "../shared/use-draft-editor";
-import { copyText, mediaUsages, usageCount, usageNoteLabel, withExtension } from "./media-item";
+import {
+	copyText,
+	mediaUsages,
+	splitFilename,
+	stemProblem,
+	usageCount,
+	usageNoteLabel,
+	withExtension,
+} from "./media-item";
 import { MediaThumb } from "./media-views";
 import { mediaMessages } from "./messages";
 
@@ -44,8 +54,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.
  * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.
- * Name and default description have AI slots (file name, alt text, caption suggestions). The default description is saved only by pressing `Save`,
- * and unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
+ * The file name (its stem; the extension stays) and the default description are inputs with an AI button beside them (file name, alt text, caption
+ * suggestions). A suggestion only fills the input. The name is saved by its own button and the default description by pressing `Save`;
+ * unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
  */
 export function MediaDetailPanel({
 	media,
@@ -61,7 +72,8 @@ export function MediaDetailPanel({
 	onClose: () => void;
 	/** Saves the default description. Rejects on failure. The error shows inside the field. */
 	onSaveDefaults: (defaults: { alt: string; caption: string }) => Promise<void>;
-	onRename: (filename: string) => void;
+	/** Renames the file (the whole new name, extension included). Rejects on failure. The error shows under the field. */
+	onRename: (filename: string) => Promise<void>;
 	onRequestDelete: () => void;
 	onDirtyChange?: (dirty: boolean) => void;
 }) {
@@ -75,7 +87,40 @@ export function MediaDetailPanel({
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const isImage = site.api.isImageMime(media.mimeType);
-	const { draft, update: setDraft, dirty } = useDraftEditor({ saved, empty: saved, onDirtyChange, saving: isSaving });
+	const { draft, update: setDraft, dirty } = useDraftEditor({ saved, empty: saved, saving: isSaving });
+
+	// The file name is edited as its stem; the extension stays. After a rename the draft starts from the new name.
+	const { stem: savedStem, extension } = splitFilename(media.filename);
+	const [stem, setStem] = useState(savedStem);
+	const [renaming, setRenaming] = useState(false);
+	const [renameError, setRenameError] = useState<string | null>(null);
+	const [prevSavedStem, setPrevSavedStem] = useState(savedStem);
+	if (prevSavedStem !== savedStem) {
+		setPrevSavedStem(savedStem);
+		setStem(savedStem);
+	}
+	const nameDirty = stem !== savedStem;
+	const problem = stemProblem(stem);
+	const nameFieldId = useId();
+	const nameErrorId = useId();
+
+	// Both forms report to the parent as one: leaving with either one unsaved asks first.
+	const anyDirty = dirty || nameDirty;
+	useEffect(() => onDirtyChange?.(anyDirty), [anyDirty, onDirtyChange]);
+	useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
+	const saveName = async () => {
+		if (!nameDirty || problem) return;
+		setRenaming(true);
+		setRenameError(null);
+		try {
+			await onRename(`${stem.trim()}${extension}`);
+		} catch (error) {
+			setRenameError(errorText(site, error, t("library.renameFailed")));
+		} finally {
+			setRenaming(false);
+		}
+	};
 
 	const saveDefaults = async () => {
 		setIsSaving(true);
@@ -99,7 +144,7 @@ export function MediaDetailPanel({
 		getContext: () => ({
 			mediaId: media.id,
 			filename: media.filename,
-			current: target === "filename" ? media.filename : target === "defaultAlt" ? draft.alt : draft.caption,
+			current: target === "filename" ? `${stem}${extension}` : target === "defaultAlt" ? draft.alt : draft.caption,
 		}),
 		apply,
 	});
@@ -163,18 +208,62 @@ export function MediaDetailPanel({
 					<dl className="space-y-3">
 						<SlotScope
 							key={`filename-${media.id}`}
-							request={slot("filename", (stem) => onRename(withExtension(stem, media.filename)))}
+							request={slot("filename", (suggestion) => {
+								// A suggestion comes without the extension; one that carries it is kept as is.
+								setStem(splitFilename(withExtension(suggestion, media.filename)).stem);
+								setRenameError(null);
+							})}
 						>
 							{({ trigger, panel }) => (
-								<div className="space-y-1">
-									<div className="flex items-start gap-1">
-										<div className="min-w-0 flex-1">
-											<Row label={t("detail.row.filename")}>{media.filename}</Row>
+								<form
+									className="space-y-1"
+									onSubmit={(event) => {
+										event.preventDefault();
+										void saveName();
+									}}
+								>
+									<Field data-invalid={problem && nameDirty ? true : undefined}>
+										<div className="flex items-center justify-between gap-2">
+											<FieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FieldLabel>
+											{isImage && trigger}
 										</div>
-										{isImage && trigger}
-									</div>
+										<div className="flex items-center gap-1.5">
+											<Input
+												id={nameFieldId}
+												value={stem}
+												disabled={renaming || media.status !== "ready"}
+												aria-invalid={(problem !== null && nameDirty) || renameError !== null || undefined}
+												aria-describedby={renameError || (problem && nameDirty) ? nameErrorId : undefined}
+												onChange={(event) => {
+													setStem(event.target.value);
+													setRenameError(null);
+												}}
+												className="h-8 min-w-0 flex-1 text-xs md:text-xs"
+											/>
+											{extension && (
+												<span className="shrink-0 text-cms-muted-foreground" title={t("detail.filename.extensionKept")}>
+													{extension}
+												</span>
+											)}
+											<IconButton
+												type="submit"
+												label={t("detail.filename.save")}
+												size="icon-sm"
+												variant="outline"
+												disabled={!nameDirty || problem !== null || renaming}
+											>
+												<Check aria-hidden />
+											</IconButton>
+										</div>
+										{(renameError || (problem && nameDirty)) && (
+											<FieldError id={nameErrorId}>
+												{renameError ??
+													(problem === "empty" ? t("detail.filename.empty") : t("detail.filename.invalid"))}
+											</FieldError>
+										)}
+									</Field>
 									{panel}
-								</div>
+								</form>
 							)}
 						</SlotScope>
 						<Row label={t("detail.row.type")}>

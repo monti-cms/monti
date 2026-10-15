@@ -141,6 +141,68 @@ describe("media library", () => {
 		await waitFor(() => expect(toast.success).toHaveBeenCalledWith(tc("saved")));
 	});
 
+	describe("file name field", () => {
+		const nameField = (detail: HTMLElement) =>
+			within(detail).getByRole("textbox", { name: t("detail.row.filename") }) as HTMLInputElement;
+		const saveName = (detail: HTMLElement) =>
+			within(detail).getByRole("button", { name: t("detail.filename.save") }) as HTMLButtonElement;
+
+		it("edits the name without its extension and renames with the extension kept", async () => {
+			await renderLibrary();
+			const detail = await openDetail(/cat\.png$/);
+			expect(nameField(detail).value).toBe("cat");
+			expect(within(detail).getByText(".png")).toBeTruthy();
+			expect(saveName(detail).disabled).toBe(true);
+
+			fireEvent.change(nameField(detail), { target: { value: "고양이 사진" } });
+			fireEvent.click(saveName(detail));
+
+			await waitFor(() => expect(calls("PATCH", "/api/monti/v1/media/cat")).toHaveLength(1));
+			expect(JSON.parse(String(calls("PATCH", "/api/monti/v1/media/cat")[0]?.[1]?.body))).toEqual({
+				filename: "고양이 사진.png",
+			});
+			await waitFor(() =>
+				expect(toast.success).toHaveBeenCalledWith(t("library.renamed", { name: "고양이 사진.png" })),
+			);
+		});
+
+		it("does not send an empty name or one with a slash, and says why", async () => {
+			await renderLibrary();
+			const detail = await openDetail(/cat\.png$/);
+			fireEvent.change(nameField(detail), { target: { value: "  " } });
+			expect(within(detail).getByText(t("detail.filename.empty"))).toBeTruthy();
+			expect(saveName(detail).disabled).toBe(true);
+			fireEvent.change(nameField(detail), { target: { value: "a/b" } });
+			expect(within(detail).getByText(t("detail.filename.invalid"))).toBeTruthy();
+			expect(saveName(detail).disabled).toBe(true);
+			expect(calls("PATCH", "/api/monti/v1/media/cat")).toHaveLength(0);
+		});
+
+		it("shows the server's reason under the field and keeps what was typed", async () => {
+			const ok = fetchMock.getMockImplementation() as (input: string, init?: RequestInit) => Promise<unknown>;
+			fetchMock.mockImplementation(async (input: string, init?: RequestInit) =>
+				init?.method === "PATCH"
+					? json({ error: { code: "invalid_input", message: "The file name must keep the extension .png" } }, 400)
+					: ok(input, init),
+			);
+			await renderLibrary();
+			const detail = await openDetail(/cat\.png$/);
+			fireEvent.change(nameField(detail), { target: { value: "tabby" } });
+			fireEvent.click(saveName(detail));
+			expect(await within(detail).findByText("The file name must keep the extension .png")).toBeTruthy();
+			expect(nameField(detail).value).toBe("tabby");
+			expect(toast.error).not.toHaveBeenCalled();
+		});
+
+		it("asks before leaving the file while the name has an unsaved change", async () => {
+			await renderLibrary();
+			const detail = await openDetail(/cat\.png$/);
+			fireEvent.change(nameField(detail), { target: { value: "tabby" } });
+			fireEvent.click(screen.getByRole("button", { name: /dog\.png$/ }));
+			expect(await screen.findByRole("alertdialog", { name: tc("discard.title") })).toBeTruthy();
+		});
+	});
+
 	it("opening another file with an edited default description asks whether to discard", async () => {
 		await renderLibrary();
 		const detail = await openDetail(/cat\.png$/);

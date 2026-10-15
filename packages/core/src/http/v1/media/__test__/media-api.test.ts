@@ -5,12 +5,13 @@ import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
 import { routeCaller } from "../../../../testing";
 import { POST as handleCompleteHandler } from "../[id]/complete/route";
-import { DELETE as handleDeleteMediaHandler } from "../[id]/route";
+import { DELETE as handleDeleteMediaHandler, PATCH as handlePatchMediaHandler } from "../[id]/route";
 import { GET as handleListMediaHandler } from "../route";
 import { POST as handleUploadsHandler } from "../uploads/route";
 
 const handleComplete = routeCaller(handleCompleteHandler);
 const handleDeleteMedia = routeCaller(handleDeleteMediaHandler);
+const handlePatchMedia = routeCaller(handlePatchMediaHandler);
 const handleListMedia = routeCaller(handleListMediaHandler);
 const handleUploads = routeCaller(handleUploadsHandler);
 
@@ -23,6 +24,7 @@ const mockFailMediaAsset = vi.fn();
 const mockListMediaAssets = vi.fn();
 const mockBeginMediaDelete = vi.fn();
 const mockFinalizeMediaDelete = vi.fn();
+const mockUpdateMediaMetadata = vi.fn();
 
 const mockPrepareUpload = vi.fn();
 const mockHeadFile = vi.fn();
@@ -41,6 +43,7 @@ const cms = fakeCms({
 		listMediaAssets: mockListMediaAssets,
 		beginMediaDelete: mockBeginMediaDelete,
 		finalizeMediaDelete: mockFinalizeMediaDelete,
+		updateMediaMetadata: mockUpdateMediaMetadata,
 	},
 	mediaStore: {
 		prepareUpload: mockPrepareUpload,
@@ -557,5 +560,65 @@ describe("attachment upload", () => {
 		);
 		expect(res.status).toBe(415);
 		expect(mockFailMediaAsset).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000102");
+	});
+
+	describe("PATCH /media/:id file name", () => {
+		const id = "00000000-0000-4000-8000-0000000000aa";
+		const rename = (filename: string) =>
+			handlePatchMedia(
+				new Request(`http://localhost/api/monti/v1/media/${id}`, {
+					method: "PATCH",
+					headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+					body: JSON.stringify({ filename }),
+				}),
+				{ params: Promise.resolve({ id }), cms },
+			);
+
+		beforeEach(() => {
+			mockGetMediaAsset.mockResolvedValue({ id, filename: "Photo.PNG", mimeType: "image/png", status: "ready" });
+			mockUpdateMediaMetadata.mockResolvedValue({ id, filename: "sunset.PNG" });
+		});
+
+		it("renames to a plain name that keeps the extension, ignoring the case of the extension", async () => {
+			expect((await rename("sunset.png")).status).toBe(200);
+			expect(mockUpdateMediaMetadata).toHaveBeenCalledWith({ id, filename: "sunset.png" });
+		});
+
+		it("rejects a name that changes the extension, so the stored type cannot drift", async () => {
+			const res = await rename("sunset.pdf");
+			expect(res.status).toBe(400);
+			expect((await res.json()).error.code).toBe("invalid_input");
+			expect(mockUpdateMediaMetadata).not.toHaveBeenCalled();
+		});
+
+		it.each([
+			"a/b.png",
+			"a\\b.png",
+			"line\nbreak.png",
+			".png",
+			"  .png",
+			"..",
+		])("rejects the name %j as it is not one plain name", async (name) => {
+			expect((await rename(name)).status).toBe(400);
+			expect(mockUpdateMediaMetadata).not.toHaveBeenCalled();
+		});
+
+		it("answers 404 for a file that does not exist", async () => {
+			mockGetMediaAsset.mockResolvedValue(null);
+			expect((await rename("sunset.png")).status).toBe(404);
+		});
+
+		it("leaves the default description edits alone: they do not read the file name", async () => {
+			const res = await handlePatchMedia(
+				new Request(`http://localhost/api/monti/v1/media/${id}`, {
+					method: "PATCH",
+					headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+					body: JSON.stringify({ defaultAlt: "A sunset" }),
+				}),
+				{ params: Promise.resolve({ id }), cms },
+			);
+			expect(res.status).toBe(200);
+			expect(mockGetMediaAsset).not.toHaveBeenCalled();
+		});
 	});
 });

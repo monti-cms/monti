@@ -113,3 +113,22 @@ export function attachmentDisposition(filename: string): string {
 	const ascii = filename.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
 	return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
+
+/** The extension of a file name (lowercase, with the dot), or an empty string. */
+const extensionOf = (filename: string) => /\.[^./\\]{1,16}$/.exec(filename)?.[0]?.toLowerCase() ?? "";
+
+/**
+ * Why a new file name is not acceptable, or `null`. The name is a display and download name, so it stays one plain name (no path, no control
+ * characters), has something before the extension, and keeps the extension of the file: the stored type does not change with a rename.
+ */
+export function renameProblem(current: string, next: string): string | null {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this rejects
+	if (/[/\\\u0000-\u001f\u007f]/.test(next) || next === "." || next === "..") {
+		return "A file name can't contain slashes or control characters";
+	}
+	const extension = extensionOf(current);
+	if (extensionOf(next) !== extension) return `The file name must keep the extension ${extension || "(none)"}`;
+	if (next.slice(0, next.length - extension.length).trim() === "")
+		return "The file name needs a name before the extension";
+	return null;
+}
