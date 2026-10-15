@@ -313,7 +313,7 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		expect(await screen.findByTestId("collection-post")).toBeTruthy();
 		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).value).toBe("Post");
-		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("/posts/:slug");
+		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("posts");
 		expect(review().disabled).toBe(true);
 		fireEvent.click(screen.getByRole("button", { name: /^Tag/ }));
 		expect(await screen.findByTestId("collection-tag")).toBeTruthy();
@@ -733,26 +733,21 @@ describe("SchemaScreen", () => {
 		expect(confirm.disabled).toBe(true);
 
 		type(within(dialog).getByLabelText(tCollection("collection.newName")), "note");
-		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe(
-			"/notes/:slug",
-		);
+		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("notes");
 		// Each kind says what it is for.
 		expect(within(dialog).getByText(tCollection("collection.kindDocumentExplain"))).toBeTruthy();
 		expect(within(dialog).getByText(tCollection("collection.kindItemExplain"))).toBeTruthy();
-		// An address of the writer's own stays when the name changes; a wrong one is refused.
-		type(within(dialog).getByLabelText(tCollection("collection.path")), "/notes");
-		expect(within(dialog).getByText(tCollection("path.slug"))).toBeTruthy();
-		expect(confirm.disabled).toBe(true);
-		type(within(dialog).getByLabelText(tCollection("collection.path")), "/notes/:slug");
+		// Only the middle of the address is typed: the slash before it and `/:slug` after it are text.
+		expect(within(dialog).getByText("/:slug")).toBeTruthy();
+		// An address of the writer's own stays when the name changes.
+		type(within(dialog).getByLabelText(tCollection("collection.path")), "ideas");
 		type(within(dialog).getByLabelText(tCollection("collection.newName")), "notes");
-		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe(
-			"/notes/:slug",
-		);
+		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("ideas");
 
 		fireEvent.click(confirm);
 		await waitFor(() => expect(screen.queryByTestId("new-collection-dialog")).toBeNull());
 		expect(await screen.findByTestId("collection-notes")).toBeTruthy();
-		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("/notes/:slug");
+		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("ideas");
 		openTab("fields");
 		expect(screen.getByTestId("field-title")).toBeTruthy();
 		expect(screen.getByTestId("field-slug")).toBeTruthy();
@@ -763,7 +758,7 @@ describe("SchemaScreen", () => {
 			.notes;
 		expect(notes).toMatchObject({
 			kind: "document",
-			path: "/notes/:slug",
+			path: "/ideas/:slug",
 			fields: {
 				title: { kind: "text", required: true, role: "title" },
 				slug: { kind: "slug", required: true, from: "title" },
@@ -778,7 +773,8 @@ describe("SchemaScreen", () => {
 		const dialog = await screen.findByTestId("new-collection-dialog");
 		const name = within(dialog).getByLabelText(tCollection("collection.newName"));
 		const id = () => (within(dialog).getByLabelText(tCollection("collection.newId")) as HTMLInputElement).value;
-		const path = () => (within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value;
+		const path = () =>
+			`/${(within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value}/:slug`;
 
 		type(name, "Memo");
 		expect([id(), path()]).toEqual(["memo", "/memos/:slug"]);
@@ -800,7 +796,7 @@ describe("SchemaScreen", () => {
 		expect(confirm.disabled).toBe(false);
 
 		// Once the address is edited it stops following the identifier.
-		type(within(dialog).getByLabelText(tCollection("collection.path")), "/my/:slug");
+		type(within(dialog).getByLabelText(tCollection("collection.path")), "my");
 		type(within(dialog).getByLabelText(tCollection("collection.newId")), "memos");
 		expect(path()).toBe("/my/:slug");
 
@@ -820,10 +816,10 @@ describe("SchemaScreen", () => {
 		const dialog = await screen.findByTestId("new-collection-dialog");
 		type(within(dialog).getByLabelText(tCollection("collection.newName")), "category");
 		fireEvent.click(within(dialog).getByRole("radio", { name: new RegExp(t("collection.kindItem")) }));
-		expect((within(dialog).getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("");
+		expect(within(dialog).queryByLabelText(tCollection("collection.path"))).toBeNull();
 		fireEvent.click(within(dialog).getByRole("button", { name: tCollection("collection.createConfirm") }));
 		expect(await screen.findByTestId("collection-category")).toBeTruthy();
-		expect((screen.getByLabelText(tCollection("collection.path")) as HTMLInputElement).value).toBe("");
+		expect(screen.queryByLabelText(tCollection("collection.path"))).toBeNull();
 	});
 
 	it("cannot delete the title field, and the slug field only while the address does not use :slug", async () => {
@@ -855,7 +851,7 @@ describe("SchemaScreen", () => {
 
 		// Without :slug in the address the slug field can go.
 		openTab("basics");
-		type(screen.getByLabelText(tCollection("collection.path")), "");
+		fireEvent.click(screen.getByRole("switch", { name: tCollection("collection.hasPage") }));
 		openTab("fields");
 		opened = await deleteOf("slug");
 		expect(opened.button.disabled).toBe(false);

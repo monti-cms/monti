@@ -10,6 +10,7 @@ import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
 import { schemaMessages } from "./messages";
+import { PublicPathField } from "./public-path-field";
 import { defaultPath, idFromName, nameProblem, pathProblem } from "./schema-model";
 
 type Kind = "document" | "item";
@@ -49,7 +50,6 @@ function NewCollectionForm({
 	const ts = useTranslator(schemaMessages);
 	const nameId = useId();
 	const idFieldId = useId();
-	const pathId = useId();
 	const [name, setName] = useState("");
 	// `null`: not typed yet, so the identifier is the one the name suggests.
 	const [typedId, setTypedId] = useState<string | null>(null);
@@ -122,21 +122,7 @@ function NewCollectionForm({
 					</label>
 				))}
 			</fieldset>
-			<Labeled
-				label={t("collection.path")}
-				htmlFor={pathId}
-				hint={`${t("collection.pathHint")} ${t("collection.newPathHint")}`}
-			>
-				<Input
-					id={pathId}
-					value={path}
-					placeholder="/posts/:slug"
-					autoComplete="off"
-					aria-invalid={pathIssue ? true : undefined}
-					onChange={(event) => setTypedPath(event.target.value)}
-				/>
-				{pathIssue && <FieldError className="text-xs">{t(`path.${pathIssue}`)}</FieldError>}
-			</Labeled>
+			<PublicPathField path={path} suggested={defaultPath(id)} onChange={setTypedPath} />
 			<DialogFormFooter
 				onCancel={onCancel}
 				cancelLabel={tc("cancel")}

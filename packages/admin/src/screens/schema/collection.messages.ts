@@ -13,7 +13,9 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 			"Used in code and addresses. Letters, digits, - and _. Stored with every entry and cannot be changed here later.",
 		"collection.kindDocumentExplain": "Posts with a body, e.g. posts, notes",
 		"collection.kindItemExplain": "Short entries without a body, e.g. categories, tags",
-		"collection.newPathHint": "Leave empty if these entries have no public page.",
+		"collection.hasPage": "Each entry has a page on the site",
+		"collection.hasPageHint":
+			"Turn this on when the site shows an entry at its own address. The address is also what the public read API, links to entries in a body, the sitemap and previews use. Leave it off for entries that only fill in other entries, such as categories and tags.",
 		"path.slash": "Start the address with /.",
 		"path.slug": "Use :slug exactly once.",
 		"collection.nameHint": "The collection name is stored with every entry and cannot be changed here.",
@@ -25,7 +27,8 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.icon": "Icon",
 		"collection.iconDefault": "Default for the kind",
 		"collection.path": "Public address",
-		"collection.pathHint": "Where entries live on the site, with one :slug. Needed for links to entries in the body.",
+		"collection.pathHint":
+			"The part before the entry's slug, e.g. /posts/hello-world. :slug is replaced with each entry's slug field.",
 		"collection.body": "Has a body",
 		"collection.bodyHint": "Documents have a body by default; items do not.",
 		"collection.basicsTitle": "Basics",
@@ -64,7 +67,9 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 			"코드와 주소에 쓰입니다. 영문자, 숫자, -, _만 쓸 수 있습니다. 모든 항목에 저장되므로 나중에 여기서 바꿀 수 없습니다.",
 		"collection.kindDocumentExplain": "본문이 있는 글. 예: 게시글, 노트",
 		"collection.kindItemExplain": "본문 없는 짧은 항목. 예: 카테고리, 태그",
-		"collection.newPathHint": "이 항목들에 공개 페이지가 없으면 비워 두세요.",
+		"collection.hasPage": "항목마다 사이트에 페이지가 있어요",
+		"collection.hasPageHint":
+			"사이트가 항목을 자기 주소에서 보여 줄 때 켜 세요. 이 주소는 공개 읽기 API, 본문의 항목 링크, 사이트맵, 미리보기에도 쓰입니다. 카테고리나 태그처럼 다른 항목을 채우기만 하는 항목이면 끄세요.",
 		"path.slash": "주소는 /로 시작해야 합니다.",
 		"path.slug": ":slug를 정확히 한 번 넣으세요.",
 		"collection.nameHint": "컬렉션 이름은 모든 항목에 저장되므로 여기서 바꿀 수 없습니다.",
@@ -77,7 +82,7 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.iconDefault": "종류별 기본값",
 		"collection.path": "공개 주소",
 		"collection.pathHint":
-			"사이트에서 항목이 놓이는 주소이며 :slug가 하나 들어갑니다. 본문에서 항목으로 링크하려면 필요합니다.",
+			"항목의 슬러그 앞에 붙는 부분이에요. 예: /posts/hello-world. :slug는 항목마다 슬러그 필드 값으로 바뀝니다.",
 		"collection.body": "본문 있음",
 		"collection.bodyHint": "문서는 기본으로 본문이 있고 항목은 없습니다.",
 		"collection.basicsTitle": "기본 정보",

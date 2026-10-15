@@ -14,10 +14,12 @@ import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
 import { FieldsCard } from "./fields-tree";
 import { schemaMessages } from "./messages";
+import { PublicPathField } from "./public-path-field";
 import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
+	defaultPath,
 	fieldsOf,
 	hasBody,
 	type Obj,
@@ -267,11 +269,9 @@ export function CollectionEditor({
 								items={icons}
 								onChange={(value) => set("icon", orUndefined(value))}
 							/>
-							<TextInput
-								label={t("collection.path")}
-								hint={t("collection.pathHint")}
-								placeholder="/posts/:slug"
-								value={collection.path as string | undefined}
+							<PublicPathField
+								path={typeof collection.path === "string" ? collection.path : ""}
+								suggested={defaultPath(name)}
 								onChange={(value) => set("path", orUndefined(value))}
 							/>
 						</div>
