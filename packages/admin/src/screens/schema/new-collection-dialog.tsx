@@ -80,7 +80,7 @@ function NewCollectionForm({
 				<DialogTitle>{t("collection.createTitle")}</DialogTitle>
 				<DialogDescription>{t("collection.createDescription")}</DialogDescription>
 			</DialogHeader>
-			<Labeled label={t("collection.newName")} htmlFor={nameId} hint={t("collection.newNameHint")}>
+			<Labeled label={t("collection.newName")} htmlFor={nameId} description={t("collection.newNameHint")}>
 				<Input
 					id={nameId}
 					value={name}
@@ -89,7 +89,7 @@ function NewCollectionForm({
 					onChange={(event) => setName(event.target.value)}
 				/>
 			</Labeled>
-			<Labeled label={t("collection.newId")} htmlFor={idFieldId} hint={t("collection.newIdHint")}>
+			<Labeled label={t("collection.newId")} htmlFor={idFieldId} description={t("collection.newIdHint")}>
 				<Input
 					id={idFieldId}
 					value={id}

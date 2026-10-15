@@ -8,7 +8,7 @@ export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 	en: {
 		"review.title": "Review changes",
 		"review.description":
-			"Nothing is written until you save. Saving rewrites monti.schema.ts and updates the development database.",
+			"Nothing is modified until saved. Saving updates monti.schema.ts and the development database.",
 		"review.loadFailed": "Couldn't check the changes.",
 		"review.invalid": "The schema does not check",
 		"review.problems": "A data transform does not fit the new schema",
@@ -17,8 +17,8 @@ export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 		"review.unchanged": "Nothing to save.",
 		"review.baselineFile":
 			"This database has no applied schema yet, so changes are compared with the schema the server runs now.",
-		"review.decisions": "Decide what happens to the stored values",
-		"review.decisionsHint": "These changes leave stored values behind. Pick how to treat them.",
+		"review.decisions": "Stored data handling",
+		"review.decisionsHint": "Choose how to treat stored values affected by these changes.",
 		"review.changes": "What the entries see",
 		"review.settings": "Settings that change",
 		"review.unset": "(not set)",
@@ -79,16 +79,16 @@ export const schemaReviewMessages = defineMessages("cms-admin.schema.review", {
 	ko: {
 		"review.title": "변경 검토",
 		"review.description":
-			"저장하기 전에는 아무것도 쓰지 않습니다. 저장하면 monti.schema.ts를 다시 쓰고 개발 데이터베이스를 갱신합니다.",
+			"저장하기 전까지는 파일이 변경되지 않습니다. 저장 시 monti.schema.ts 및 개발 데이터베이스가 갱신됩니다.",
 		"review.loadFailed": "변경을 확인하지 못했습니다.",
 		"review.invalid": "스키마가 올바르지 않습니다",
 		"review.problems": "데이터 변환이 새 스키마와 맞지 않습니다",
 		"review.summary": ({ count, from, to }) =>
 			`${Number(count) === 0 ? "저장된 데이터에 영향을 주는 변경은 없습니다" : `저장된 데이터에 영향을 주는 변경 ${count}개`}. ${from === to ? `스키마 버전 ${to} 유지` : `스키마 버전 ${from} → ${to}`}.`,
 		"review.unchanged": "저장할 내용이 없습니다.",
-		"review.baselineFile": "이 데이터베이스에는 적용된 스키마가 아직 없어서, 서버가 지금 쓰는 스키마와 비교합니다.",
-		"review.decisions": "저장된 값을 어떻게 할지 정하세요",
-		"review.decisionsHint": "이 변경은 저장된 값을 남깁니다. 어떻게 다룰지 고르세요.",
+		"review.baselineFile": "데이터베이스에 적용된 스키마가 없어 현재 서버에서 실행 중인 스키마와 비교합니다.",
+		"review.decisions": "기존 데이터 처리 방식",
+		"review.decisionsHint": "스키마 변경으로 남겨지는 기존 데이터의 처리 방식을 선택하세요.",
 		"review.changes": "항목에 미치는 영향",
 		"review.settings": "바뀌는 설정",
 		"review.unset": "(설정 안 함)",

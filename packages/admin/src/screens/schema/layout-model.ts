@@ -6,7 +6,7 @@ import {
 	panelGroupsOf,
 } from "@monti-cms/core/client";
 import { moveWithin } from "../../lib/utils/move-within";
-import { fieldsOf, type Obj, setProp, withLayout } from "./schema-model";
+import { COLLECTION_KEY_ORDER, fieldsOf, type Obj, setProp, withLayout } from "./schema-model";
 
 /**
  * The properties panel of the edit screen as the fields tree shows it: tab, then an ordered list of blocks, each a titled group or a run of fields in no group.
@@ -34,6 +34,8 @@ export interface Tab {
 }
 
 export interface Tree {
+	/** Custom title for the default properties tab. If omitted, uses the admin's translated default ("Properties"). */
+	defaultTab?: string;
 	/** Fields the panel does not draw (the title of a document): they only define the order of `fields`. */
 	pinned: string[];
 	/** The default tab first, then the others in the order the panel shows them. */
@@ -92,6 +94,9 @@ const tidied = (tree: Tree): Tree => {
 export function treeOf(collection: Obj, placements: readonly NamedPlacement[]): Tree {
 	const source = collection as unknown as PanelSource;
 	const tree: Tree = {
+		...(typeof collection.defaultTab === "string" && collection.defaultTab.trim() !== ""
+			? { defaultTab: collection.defaultTab.trim() }
+			: {}),
 		pinned: Object.keys(fieldsOf(collection)).filter((name) => !isPanelField(source, name)),
 		tabs: [{ name: DEFAULT_TAB, blocks: [], locked: [] }],
 	};
@@ -141,7 +146,9 @@ export function withTree(collection: Obj, tree: Tree): Obj {
 		// A tab a plugin fills exists without an entry; any other tab needs one to exist in the file.
 		return at > 0 && entries.length === 0 && tab.locked.length === 0 ? [{ fields: [], ...tabKey }] : entries;
 	});
-	return withLayout(setProp(collection, "fields", ordered), layout);
+	const withFields = setProp(collection, "fields", ordered);
+	const withDefaultTab = setProp(withFields, "defaultTab", tree.defaultTab, COLLECTION_KEY_ORDER);
+	return withLayout(withDefaultTab, layout);
 }
 
 export function placeOf(tree: Tree, name: string): Place | null {
@@ -279,9 +286,20 @@ export const moveGroupToTab = (tree: Tree, from: BlockRef, tab: number): Tree =>
 	moveGroup(tree, from, { tab, block: Number.MAX_SAFE_INTEGER });
 
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */
-export function tabProblem(tree: Tree, name: string, except?: number): "empty" | "taken" | null {
-	if (name.trim() === "") return "empty";
-	return tree.tabs.some((tab, at) => at !== except && tab.name === name.trim()) ? "taken" : null;
+export function tabProblem(
+	tree: Tree,
+	name: string,
+	except?: number,
+	defaultLabel?: string,
+): "empty" | "taken" | "too-long" | null {
+	const trimmed = name.trim();
+	if (trimmed === "") return "empty";
+	if (trimmed.length > 20) return "too-long";
+	const currentNameOf = (at: number) => {
+		if (at === 0) return (tree.defaultTab ?? defaultLabel ?? "").trim();
+		return tree.tabs[at]?.name.trim() ?? "";
+	};
+	return tree.tabs.some((_tab, at) => at !== except && currentNameOf(at) === trimmed) ? "taken" : null;
 }
 
 export function addTab(tree: Tree, name: string): Tree {
@@ -290,14 +308,37 @@ export function addTab(tree: Tree, name: string): Tree {
 	return tidied(next);
 }
 
-/** Whether a tab can be renamed or removed: not the default one, and not one a plugin puts fields in. */
-export const tabIsEditable = (tree: Tree, index: number): boolean =>
+/** Whether a tab can be renamed: any tab that is not locked by a plugin. */
+export const tabCanRename = (tree: Tree, index: number): boolean => (tree.tabs[index]?.locked.length ?? 0) === 0;
+
+/** Whether a tab can be removed: only user-added tabs after the default tab, and not locked by a plugin. */
+export const tabCanRemove = (tree: Tree, index: number): boolean =>
 	index > 0 && (tree.tabs[index]?.locked.length ?? 0) === 0;
 
-export function renameTab(tree: Tree, index: number, name: string): Tree {
+/** Whether a tab can be moved: only user-added tabs after the default tab, and not plugin-only. */
+export const tabCanMove = (tree: Tree, index: number): boolean => index > 0 && !pluginOnly(tree.tabs[index] as Tab);
+
+/** Whether a tab can be removed: not the default one, and not one a plugin puts fields in. */
+export const tabIsEditable = tabCanRemove;
+
+export function renameTab(tree: Tree, index: number, name: string, defaultLabel?: string): Tree {
 	const next = copy(tree);
 	const tab = next.tabs[index];
-	if (tab && tabIsEditable(tree, index) && tabProblem(tree, name, index) === null) tab.name = name.trim();
+	if (!tab || !tabCanRename(tree, index)) return next;
+	const trimmed = name.trim();
+	if (index === 0) {
+		if (trimmed === "" || (defaultLabel !== undefined && trimmed === defaultLabel.trim())) {
+			delete next.defaultTab;
+			return next;
+		}
+		if (tabProblem(tree, trimmed, 0, defaultLabel) === null) {
+			next.defaultTab = trimmed;
+		}
+		return next;
+	}
+	if (tabProblem(tree, trimmed, index, defaultLabel) === null) {
+		tab.name = trimmed;
+	}
 	return next;
 }
 
@@ -306,7 +347,7 @@ export function removeTab(tree: Tree, index: number): Tree {
 	const next = copy(tree);
 	const removed = next.tabs[index];
 	const first = next.tabs[0];
-	if (!removed || !first || !tabIsEditable(tree, index)) return next;
+	if (!removed || !first || !tabCanRemove(tree, index)) return next;
 	next.tabs.splice(index, 1);
 	first.blocks.push(...removed.blocks);
 	return tidied(next);
@@ -323,5 +364,5 @@ export function moveTab(tree: Tree, index: number, delta: -1 | 1): Tree {
 	return next;
 }
 
-/** Whether the tree has more than the default tab: only then does the tree show the tab level. */
+/** Whether the tree has more than the default tab. */
 export const hasTabLevel = (tree: Tree): boolean => tree.tabs.length > 1;

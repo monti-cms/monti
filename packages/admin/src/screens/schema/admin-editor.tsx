@@ -34,7 +34,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 				<div>
 					<Pick
 						label={t("admin.locale")}
-						hint={t("admin.localeHint")}
+						description={t("admin.localeHint")}
 						value={locale ?? DEFAULT_CHOICE}
 						items={[
 							{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
@@ -47,14 +47,14 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 			<Section wide title={t("admin.featuresTitle")} description={t("admin.featuresDescription")}>
 				<FlagSwitch
 					label={t("admin.templates")}
-					hint={t("admin.templatesHint")}
+					description={t("admin.templatesHint")}
 					checked={admin.templates !== false}
 					onChange={(on) => set("templates", on ? undefined : false)}
 				/>
 				<div className="border-t pt-6">
 					<FlagSwitch
 						label={t("admin.translations")}
-						hint={t("admin.translationsHint")}
+						description={t("admin.translationsHint")}
 						checked={admin.translations !== false}
 						onChange={(on) => set("translations", on ? undefined : false)}
 					/>
@@ -62,7 +62,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 			</Section>
 			<Section wide title={t("admin.addressTitle")} description={t("admin.addressDescription")}>
 				<div>
-					<Labeled label={t("admin.path")} hint={t("admin.pathNote")}>
+					<Labeled label={t("admin.path")} description={t("admin.pathNote")}>
 						<code className="w-fit rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="admin-path">
 							{path}
 						</code>

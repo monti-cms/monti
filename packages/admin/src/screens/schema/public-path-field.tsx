@@ -4,7 +4,6 @@ import { useTranslator } from "@monti-cms/core/client";
 import { useId, useState } from "react";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
-import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, useSchemaEdit } from "./controls";
 import { pathProblem } from "./schema-model";
@@ -49,17 +48,20 @@ export function PublicPathField({
 	return (
 		<div className="flex flex-col gap-4">
 			<FlagSwitch
-				label={t("collection.hasPage")}
-				hint={t("collection.hasPageHint")}
+				label={t("collection.path")}
+				description={t("collection.pathDescription")}
 				checked={hasPage}
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>
 			{hasPage && (
-				<Labeled label={t("collection.path")} htmlFor={id} hint={t("collection.pathHint")}>
+				<div className="ml-2 flex flex-col gap-1.5 border-cms-border/70 border-l-2 pt-0.5 pl-4">
 					<div className="flex items-center gap-1 font-mono text-sm">
-						<span className="text-cms-muted-foreground">/</span>
+						<span className="text-cms-muted-foreground" aria-hidden="true">
+							/
+						</span>
 						<Input
 							id={id}
+							aria-label={t("collection.path")}
 							value={shown}
 							disabled={disabled}
 							autoComplete="off"
@@ -70,10 +72,13 @@ export function PublicPathField({
 								onChange(pathOfSegment(event.target.value));
 							}}
 						/>
-						<span className="text-cms-muted-foreground">{segment === "" ? ":slug" : "/:slug"}</span>
+						<span className="text-cms-muted-foreground" aria-hidden="true">
+							{segment === "" ? ":slug" : "/:slug"}
+						</span>
 					</div>
+					<p className="text-cms-muted-foreground text-xs">{t("collection.pathHint")}</p>
 					{issue && <FieldError className="text-xs">{t(`path.${issue}`)}</FieldError>}
-				</Labeled>
+				</div>
 			)}
 		</div>
 	);

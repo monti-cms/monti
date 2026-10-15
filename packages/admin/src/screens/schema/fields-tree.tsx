@@ -1,6 +1,6 @@
 "use client";
 
-import { fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
 import { Eye, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { booleanCodec, type PreferenceCodec, usePreference } from "../../lib/hooks/use-preference";
@@ -73,23 +73,26 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 		const destinations: Destination[] = locked
 			? []
 			: [
-					...tree.tabs.flatMap((tab, at): Destination[] => [
-						...tab.blocks.flatMap((block, g): Destination[] =>
-							block.title === null
-								? []
-								: [
-										{
-											label: showTabs ? `${tabLabel(site, tab.name)} / ${block.title}` : block.title,
-											disabled: here?.tab === at && here.block === g,
-											run: () => change((current) => placeField(current, name, at, g)),
-										},
-									],
-						),
-						{
-							label: showTabs ? `${tabLabel(site, tab.name)} / ${t("layout.noGroup")}` : t("layout.noGroup"),
-							run: () => change((current) => placeUngrouped(current, name, at)),
-						},
-					]),
+					...tree.tabs.flatMap((tab, at): Destination[] => {
+						const currentTabName = at === 0 ? (tree.defaultTab ?? tabLabel(site, tab.name)) : tab.name;
+						return [
+							...tab.blocks.flatMap((block, g): Destination[] =>
+								block.title === null
+									? []
+									: [
+											{
+												label: showTabs ? `${currentTabName} / ${block.title}` : block.title,
+												disabled: here?.tab === at && here.block === g,
+												run: () => change((current) => placeField(current, name, at, g)),
+											},
+										],
+							),
+							{
+								label: showTabs ? `${currentTabName} / ${t("layout.noGroup")}` : t("layout.noGroup"),
+								run: () => change((current) => placeUngrouped(current, name, at)),
+							},
+						];
+					}),
 					...(inGroup
 						? [{ label: t("layout.moveOut"), run: () => change((current) => moveOutOfGroup(current, name)) }]
 						: []),
@@ -126,7 +129,7 @@ function LayoutTree({ editing, ctx }: { editing: CollectionEditing; ctx: TreeCon
 		fieldRow(name, false, { kind: "panel" });
 	}
 	for (const [at, tab] of tree.tabs.entries()) {
-		if (showTabs) rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
+		rows.push({ id: tabId(at), node: <TabRow key={tabId(at)} ops={ops} index={at} /> });
 		for (const [b, block] of tab.blocks.entries()) {
 			if (block.title === null) {
 				for (const name of block.fields) fieldRow(name, false, null);
@@ -280,11 +283,12 @@ export function FieldsCard({ editing }: { editing: CollectionEditing }) {
 	const addSet = (set: (typeof offeredSets)[number]) => editing.update((current) => addFieldSet(current, set));
 	const addTabRow = () =>
 		addTo((tree) => {
+			const defaultName = tabLabel(site, DEFAULT_TAB);
 			const name = unique(
 				t("layout.newTab"),
-				tree.tabs.map((tab) => tab.name),
+				tree.tabs.map((tab, at) => (at === 0 ? (tree.defaultTab ?? defaultName) : tab.name)),
 			);
-			return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
+			return tabProblem(tree, name, undefined, defaultName) === null ? addTab(tree, name) : tree;
 		});
 	const card = (
 		<Panel ref={cardRef} className={cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH)} data-testid="fields-card">

@@ -136,7 +136,7 @@ export function FieldSheet({
 							<section className="flex flex-col gap-6">
 								<TextInput
 									label={t("sheet.label")}
-									hint={t("sheet.labelHint")}
+									description={t("sheet.labelHint")}
 									value={label}
 									onChange={(value) => setBoth("label", value)}
 								/>
@@ -146,7 +146,7 @@ export function FieldSheet({
 									value={field.description as string | undefined}
 									onChange={(value) => setBoth("description", orUndefined(value))}
 								/>
-								<Labeled label={t("sheet.name")} hint={t("sheet.nameHint")}>
+								<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
 									<div className="flex h-9 items-center rounded-md bg-cms-muted px-3 text-sm">
 										<code>{name}</code>
 									</div>
@@ -157,7 +157,7 @@ export function FieldSheet({
 								{kind === "text" && !place.branch && (
 									<FlagSwitch
 										label={t("field.isTitle")}
-										hint={t("field.isTitleHint")}
+										description={t("field.isTitleHint")}
 										checked={isTitle}
 										onChange={(on) => on && draftEditing.update((collection) => setTitleField(collection, name))}
 									/>
@@ -170,7 +170,7 @@ export function FieldSheet({
 									{kind !== "conditional" && (
 										<FlagSwitch
 											label={t("field.required")}
-											hint={t("field.requiredHint")}
+											description={t("field.requiredHint")}
 											checked={field.required === true}
 											onChange={(on) => set("required", on ? true : undefined)}
 										/>
@@ -178,7 +178,7 @@ export function FieldSheet({
 									{LOCALIZED_KINDS.includes(kind) && (
 										<Segmented
 											label={t("field.localized")}
-											hint={t("sheet.localizedHint")}
+											description={t("sheet.localizedHint")}
 											value={
 												field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared"
 											}
@@ -198,7 +198,7 @@ export function FieldSheet({
 						<TabsContent value="advanced" className="flex flex-col gap-6">
 							<Pick
 								label={t("field.kind")}
-								hint={
+								description={
 									isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : t("sheet.kindHint")
 								}
 								value={kind}

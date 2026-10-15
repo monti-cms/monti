@@ -39,6 +39,7 @@ import {
 	fieldAt,
 	fieldProblems,
 	fieldsOf,
+	hasBody,
 	isObj,
 	KINDS_WITH_SETTINGS,
 	moveField,
@@ -213,23 +214,27 @@ export function KindOptions({
 						value={field.max as number | undefined}
 						onChange={(value) => set("max", countOrUndefined(value))}
 					/>
-					<FlagSwitch
-						label={t("field.fillFromBody")}
-						hint={t("field.fillFromBodyHint")}
-						checked={Boolean(fill)}
-						onChange={(on) => set("fillFromBody", on ? true : undefined)}
-					/>
-					{Boolean(fill) && (
-						<TextInput
-							label={t("field.fillLength")}
-							type="number"
-							value={isObj(fill) ? (fill.maxLength as number | undefined) : undefined}
-							placeholder="160"
-							onChange={(value) => {
-								const maxLength = countOrUndefined(value);
-								set("fillFromBody", maxLength === undefined ? true : { maxLength });
-							}}
-						/>
+					{hasBody(editing.collection) && (
+						<>
+							<FlagSwitch
+								label={t("field.fillFromBody")}
+								description={t("field.fillFromBodyHint")}
+								checked={Boolean(fill)}
+								onChange={(on) => set("fillFromBody", on ? true : undefined)}
+							/>
+							{Boolean(fill) && (
+								<TextInput
+									label={t("field.fillLength")}
+									type="number"
+									value={isObj(fill) ? (fill.maxLength as number | undefined) : undefined}
+									placeholder="160"
+									onChange={(value) => {
+										const maxLength = countOrUndefined(value);
+										set("fillFromBody", maxLength === undefined ? true : { maxLength });
+									}}
+								/>
+							)}
+						</>
 					)}
 					{placeholder}
 				</div>
@@ -243,7 +248,7 @@ export function KindOptions({
 				<div className="flex flex-col gap-5">
 					<Pick
 						label={t("field.slugFrom")}
-						hint={t("field.slugFromHint")}
+						description={t("field.slugFromHint")}
 						value={typeof field.from === "string" ? field.from : ""}
 						items={[{ value: "", label: t("none") }, ...texts]}
 						onChange={(value) => set("from", orUndefined(value))}
@@ -270,7 +275,7 @@ export function KindOptions({
 					{field.many === true && (
 						<FlagSwitch
 							label={t("field.ordered")}
-							hint={t("field.orderedHint")}
+							description={t("field.orderedHint")}
 							checked={field.ordered === true}
 							onChange={(on) => set("ordered", on ? true : undefined)}
 						/>
@@ -325,7 +330,7 @@ export function KindOptions({
 					/>
 					<Pick
 						label={t("field.backlinkVia")}
-						hint={t("field.backlinkViaHint")}
+						description={t("field.backlinkViaHint")}
 						value={typeof field.via === "string" ? field.via : ""}
 						items={relations}
 						onChange={(value) => set("via", value)}
@@ -343,7 +348,7 @@ export function KindOptions({
 			return (
 				<TextInput
 					label={t("field.view")}
-					hint={t("field.viewHint")}
+					description={t("field.viewHint")}
 					value={field.view as string | undefined}
 					onChange={(value) => set("view", value)}
 				/>
@@ -477,7 +482,7 @@ export function FieldEditor({
 							label={t("field.name")}
 							value={name}
 							taken={allFieldNames(editing.collection).filter((item) => item !== name)}
-							hint={t("field.nameHint")}
+							description={t("field.nameHint")}
 							onCommit={(to) => {
 								editing.update((collection) => renameField(collection, place, name, to));
 								editing.onRename({ kind: "field", collection: editing.collectionName, from: name, to });
@@ -485,7 +490,7 @@ export function FieldEditor({
 						/>
 						<Pick
 							label={t("field.kind")}
-							hint={isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : undefined}
+							description={isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : undefined}
 							value={kind}
 							disabled={isFixed}
 							items={branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
@@ -503,7 +508,7 @@ export function FieldEditor({
 							{kind === "text" && !place.branch && (
 								<FlagSwitch
 									label={t("field.isTitle")}
-									hint={t("field.isTitleHint")}
+									description={t("field.isTitleHint")}
 									checked={isTitle}
 									onChange={(on) => on && editing.update((collection) => setTitleField(collection, name))}
 								/>
@@ -511,7 +516,7 @@ export function FieldEditor({
 							{kind !== "conditional" && (
 								<FlagSwitch
 									label={t("field.required")}
-									hint={t("field.requiredHint")}
+									description={t("field.requiredHint")}
 									checked={field.required === true}
 									onChange={(on) => set("required", on ? true : undefined)}
 								/>

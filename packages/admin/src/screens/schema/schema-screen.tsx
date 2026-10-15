@@ -1,10 +1,12 @@
 "use client";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Issue } from "@monti-cms/core/client";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { SchemaScreenState } from "@monti-cms/core/schema-edit";
 import { useQuery } from "@tanstack/react-query";
-import { Lock, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
@@ -12,6 +14,7 @@ import { errorText } from "../../api/client";
 import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
+import { moveWithin } from "../../lib/utils/move-within";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
@@ -27,6 +30,8 @@ import { useUnsavedGuard } from "../shared/use-unsaved-guard";
 import { AdminEditor } from "./admin-editor";
 import { CollectionEditor } from "./collection-editor";
 import { IssueList, SchemaEditProvider } from "./controls";
+import { SortableList } from "./fields-tree-dnd";
+import { type RowButton, RowButtons } from "./fields-tree-rows";
 import { describeLiteralIssue } from "./literal-issue";
 import { LocalesEditor } from "./locales-editor";
 import { schemaMessages } from "./messages";
@@ -39,10 +44,12 @@ import {
 	collectionsOf,
 	isObj,
 	localesOf,
+	moveCollection,
 	type Obj,
 	type Rename,
 	recordRename,
 	removeCollection,
+	reorderCollections,
 	sameJson,
 	setCollection,
 	settingChanges,
@@ -100,14 +107,98 @@ function FileRest({ file }: { file: Obj }) {
 	);
 }
 
-/** The line under the Settings title: the schema file, its version, and why it is read-only when it is. */
+/** The chip next to the Settings title: the schema file, its version, and why it is read-only when it is. */
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<>
+		<span className="inline-flex items-center gap-1.5 rounded-full border border-cms-border bg-cms-muted/40 px-2.5 py-0.5 font-mono text-cms-muted-foreground text-xs">
 			{state.file ?? t("status.noFile")} · {t("status.version", { version: state.schemaVersion })}
 			{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
-		</>
+		</span>
+	);
+}
+
+function CollectionNavItem({
+	name,
+	collection,
+	active,
+	isNew,
+	writable,
+	index,
+	total,
+	onSelect,
+	onMove,
+}: {
+	name: string;
+	collection: Obj | undefined;
+	active: boolean;
+	isNew: boolean;
+	writable: boolean;
+	index: number;
+	total: number;
+	onSelect: () => void;
+	onMove: (delta: number) => void;
+}) {
+	const t = useTranslator(schemaMessages);
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+		id: name,
+		disabled: !writable,
+	});
+
+	const label = String(collection?.label ?? name);
+	const buttons: RowButton[] = [
+		{
+			label: t("collection.moveUp", { name: label }),
+			icon: ArrowUp,
+			disabled: !writable || index === 0,
+			onClick: () => onMove(-1),
+		},
+		{
+			label: t("collection.moveDown", { name: label }),
+			icon: ArrowDown,
+			disabled: !writable || index === total - 1,
+			onClick: () => onMove(1),
+		},
+	];
+
+	return (
+		<div
+			ref={setNodeRef}
+			style={{ transform: CSS.Translate.toString(transform), transition }}
+			className={cn("group/row relative flex items-center", isDragging && "z-10 opacity-80")}
+			data-testid={`collection-nav-${name}`}
+		>
+			{writable && (
+				<button
+					type="button"
+					ref={setActivatorNodeRef}
+					{...attributes}
+					{...listeners}
+					aria-label={t("collection.drag", { name: label })}
+					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 group-hover/row:opacity-100"
+				>
+					<GripVertical aria-hidden className="size-3.5" />
+				</button>
+			)}
+			<button
+				type="button"
+				aria-current={active ? "true" : undefined}
+				className={cn(
+					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-cms-muted focus-visible:ring-2 focus-visible:ring-cms-ring/50",
+					writable &&
+						"group-focus-within/row:pr-14 group-focus-within/row:pl-7 group-hover/row:pr-14 group-hover/row:pl-7",
+					active && "border-cms-border bg-cms-card font-medium hover:bg-cms-card",
+				)}
+				onClick={onSelect}
+			>
+				<span className="flex-1 truncate">{label}</span>
+				{isNew && <Badge variant="outline">{t("collection.new")}</Badge>}
+				<span className="font-normal text-cms-muted-foreground text-xs">
+					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
+				</span>
+			</button>
+			{writable && <RowButtons buttons={buttons} />}
+		</div>
 	);
 }
 
@@ -281,7 +372,7 @@ function SchemaEditor({
 							<>
 								{tab === "collections" && (
 									<div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-										<div className="flex shrink-0 flex-col gap-0.5 lg:w-52">
+										<div className="flex shrink-0 flex-col gap-0.5 lg:w-56">
 											<div className="flex items-center justify-between pb-2 pl-2.5">
 												<span className="font-medium text-cms-muted-foreground text-xs">
 													{t("collection.railTitle")} {names.length}
@@ -296,28 +387,31 @@ function SchemaEditor({
 												aria-label={t("tabs.collections")}
 												className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0"
 											>
-												{names.map((name) => {
-													const collection = collections[name];
-													const active = name === selected;
-													return (
-														<button
+												<SortableList
+													items={names}
+													onDragEnd={(from, to) => {
+														const fromIndex = names.indexOf(from);
+														const toIndex = names.indexOf(to);
+														if (fromIndex !== -1 && toIndex !== -1) {
+															updateFile((file) => reorderCollections(file, moveWithin(names, fromIndex, toIndex)));
+														}
+													}}
+												>
+													{names.map((name, index) => (
+														<CollectionNavItem
 															key={name}
-															type="button"
-															aria-current={active ? "true" : undefined}
-															className={cn(
-																"flex h-8 shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-cms-muted focus-visible:ring-2 focus-visible:ring-cms-ring/50",
-																active && "border-cms-border bg-cms-card font-medium hover:bg-cms-card",
-															)}
-															onClick={() => setSelected(name)}
-														>
-															<span className="flex-1 truncate">{String(collection?.label ?? name)}</span>
-															{!savedNames.includes(name) && <Badge variant="outline">{t("collection.new")}</Badge>}
-															<span className="font-normal text-cms-muted-foreground text-xs">
-																{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
-															</span>
-														</button>
-													);
-												})}
+															name={name}
+															collection={collections[name]}
+															active={name === selected}
+															isNew={!savedNames.includes(name)}
+															writable={writable}
+															index={index}
+															total={names.length}
+															onSelect={() => setSelected(name)}
+															onMove={(delta) => updateFile((file) => moveCollection(file, name, delta))}
+														/>
+													))}
+												</SortableList>
 											</nav>
 										</div>
 										<div className="min-w-0 flex-1">
