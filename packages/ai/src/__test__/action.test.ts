@@ -21,13 +21,13 @@ import { presetMessages } from "../presets.messages";
 import { aiRegistryOf, aiSiteViewOf, attachedTo } from "../registry";
 
 const presetText = testSite.createTranslator(presetMessages);
-const { actions: AI_ACTIONS, shared: AI_SHARED } = aiRegistryOf(testSite);
+const { actions: AI_ACTIONS, snippets: AI_SNIPPETS } = aiRegistryOf(testSite);
 
 /** Whether the two types are the same (for type checking). */
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 
 /** Builds a preset (factory function) from the example config. The test fails if there is nowhere to attach it. */
-const site = { ...aiSiteViewOf(testSite), sharedKeys: [] };
+const site = { ...aiSiteViewOf(testSite), snippetKeys: [] };
 type Def<F> = F extends (...args: never[]) => infer D ? NonNullable<D> : never;
 function build<F extends AiActionFactory>(factory: F): Def<F> {
 	const definition = factory(site);
@@ -184,7 +184,7 @@ describe("AI action definition", () => {
 	it("every action in the example config follows the definition rules", () => {
 		expect(
 			checkAiConfig(
-				{ actions: AI_ACTIONS, shared: AI_SHARED } as Parameters<typeof checkAiConfig>[0],
+				{ actions: AI_ACTIONS, snippets: AI_SNIPPETS } as Parameters<typeof checkAiConfig>[0],
 				testSite.config.collections,
 			),
 		).toEqual([]);
@@ -214,7 +214,7 @@ describe("AI action definition", () => {
 		expect(attachedTo({ slot: "block", block: "mermaid" }, { slot: "block", target: "chart" })).toBe(false);
 	});
 
-	it("only shared text names can go into instructions, and streaming is only for generate mode's text/MDX results", () => {
+	it("only prompt snippet names can go into instructions, and streaming is only for generate mode's text/MDX results", () => {
 		const base = { actions: {} };
 		const action = (patch: object) => ({
 			label: "x",
@@ -227,14 +227,14 @@ describe("AI action definition", () => {
 			checkAiConfig(
 				{
 					...base,
-					shared: { guide: { label: "가이드", text: "" } },
-					actions: { a: action({ prompt: "{{shared.guide}}" }) },
+					snippets: { guide: { label: "가이드", text: "" } },
+					actions: { a: action({ prompt: "{{snippet.guide}}" }) },
 				},
 				{},
 			),
 		).toEqual([]);
-		expect(checkAiConfig({ ...base, actions: { a: action({ prompt: "{{shared.nope}}" }) } }, {})[0]?.message).toMatch(
-			/shared texts/,
+		expect(checkAiConfig({ ...base, actions: { a: action({ prompt: "{{snippet.nope}}" }) } }, {})[0]?.message).toMatch(
+			/prompt snippets/,
 		);
 		expect(
 			checkAiConfig({ ...base, actions: { a: action({ stream: true, result: "candidates" }) } }, {})[0]?.code,

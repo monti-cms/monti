@@ -7,6 +7,7 @@ import { providerMessages } from "./provider.messages";
 import type { AiSettingsStore } from "./settings";
 
 /** Row name in the AI settings (collection `settings`). */
+// The row id `shared` is the name the prompt snippets were first stored under; it is kept as is (stored data, not user-visible).
 export type AiSettingsId = "default" | "shared";
 
 /** One row of edited values per action name. */
@@ -71,7 +72,7 @@ export function createAiStore(
 			toRow(await overrides.set(params.key, params.value, { expectedVersion: params.expectedVersion })),
 
 		/**
-		 * One AI settings row (as stored). `default` is the service connection and `shared` is the edited shared text. `null` if none.
+		 * One AI settings row (as stored). `default` is the service connection and `shared` is the edited prompt snippets (the stored row name `shared` is kept). `null` if none.
 		 */
 		getAiSettings: async (id: AiSettingsId = "default"): Promise<{ value: unknown; version: number } | null> => {
 			const item = await settings.get(id);

@@ -162,8 +162,8 @@ export interface AiSiteView {
 	readonly locales: readonly { readonly code: string }[];
 	/** Translator of one dictionary in the site's admin language (`site.createTranslator`), for the labels of the actions a function creates. */
 	readonly createTranslator: Site["createTranslator"];
-	/** Names of the AI config's shared snippets (`ai({ shared })`). */
-	readonly sharedKeys: readonly string[];
+	/** Names of the AI config's prompt snippets (`ai({ snippets })`). */
+	readonly snippetKeys: readonly string[];
 }
 
 /**

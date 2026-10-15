@@ -5,23 +5,23 @@ import { aiRegistryOf } from "./registry";
 import { settingsMessages } from "./settings.messages";
 
 /**
- * Shared texts. Fill `{{shared.key}}` in the instructions of every action. There are two kinds.
+ * Prompt snippets. Fill `{{snippet.key}}` in the instructions of every action. There are two kinds.
  *
- * - **Config text**: text listed in the plugin config (`ai({ shared })`). The config decides keys and names; the admin screen edits only the
+ * - **Config text**: text listed in the plugin config (`ai({ snippets })`). The config decides keys and names; the admin screen edits only the
  *   content (only content differing from the default is kept). Cannot be deleted.
  * - **Added text**: text added in the admin screen by entering key, name and content. The key cannot be changed after creation; delete it if no action uses it.
  *
- * Both are kept in one `shared` row of the AI settings table as `{ texts: { key: edited content }, added: [{ key, label, text }] }`.
+ * Both are kept in one `shared` row (the stored row name is kept) of the AI settings table as `{ texts: { key: edited content }, added: [{ key, label, text }] }`.
  * The old shape (config text key -> edited content) is also read, and saving changes it to the new shape.
  */
 
-export interface AiSharedStore {
+export interface AiSnippetStore {
 	getAiSettings(id: "shared"): Promise<{ value: unknown; version: number } | null>;
 	saveAiSettings(params: { id: "shared"; expectedVersion: number; value: unknown }): Promise<number>;
 }
 
-/** One shared text shown in the admin screen. */
-export type AiSharedItem =
+/** One prompt snippet shown in the admin screen. */
+export type AiSnippetItem =
 	| {
 			source: "config";
 			key: string;
@@ -32,36 +32,36 @@ export type AiSharedItem =
 	  }
 	| { source: "added"; key: string; label: string; text: string };
 
-export interface AiSharedView {
+export interface AiSnippetView {
 	version: number;
 	/** Config texts (in config order), then added texts (in added order). */
-	items: AiSharedItem[];
+	items: AiSnippetItem[];
 }
 
-export const MAX_SHARED_TEXT = 4000;
-export const MAX_SHARED_LABEL = 40;
+export const MAX_SNIPPET_TEXT = 4000;
+export const MAX_SNIPPET_LABEL = 40;
 /** Number of texts that can be added. */
-export const MAX_ADDED_SHARED = 30;
-/** Shared text key. Same as the config's naming rule (`validateAiConfig`). */
-export const SHARED_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
+export const MAX_ADDED_SNIPPETS = 30;
+/** Prompt snippet key. Same as the config's naming rule (`validateAiConfig`). */
+export const SNIPPET_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
 
 type AddedText = { key: string; label: string; text: string };
 type Stored = { texts: Record<string, string>; added: AddedText[] };
 
-/** What one site's shared texts need: its messages and the request schemas that report them. Built once per site. */
+/** What one site's prompt snippets need: its messages and the request schemas that report them. Built once per site. */
 function createContext(site: Site) {
 	const t = site.createTranslator(settingsMessages);
-	const textSchema = z.string().max(MAX_SHARED_TEXT, t("shared.textTooLong", { max: MAX_SHARED_TEXT }));
+	const textSchema = z.string().max(MAX_SNIPPET_TEXT, t("snippet.textTooLong", { max: MAX_SNIPPET_TEXT }));
 	const labelSchema = z
 		.string()
 		.trim()
-		.min(1, t("shared.labelRequired"))
-		.max(MAX_SHARED_LABEL, t("shared.labelTooLong", { max: MAX_SHARED_LABEL }));
-	const keySchema = z.string().regex(SHARED_KEY_PATTERN, t("shared.keyFormat"));
+		.min(1, t("snippet.labelRequired"))
+		.max(MAX_SNIPPET_LABEL, t("snippet.labelTooLong", { max: MAX_SNIPPET_LABEL }));
+	const keySchema = z.string().regex(SNIPPET_KEY_PATTERN, t("snippet.keyFormat"));
 	return {
 		t,
-		/** Config texts (`ai({ shared })`). */
-		config: aiRegistryOf(site).shared,
+		/** Config texts (`ai({ snippets })`). */
+		config: aiRegistryOf(site).snippets,
 		addedSchema: z.object({ key: keySchema, label: labelSchema, text: textSchema }),
 		itemUpdateSchema: z.object({ key: z.string(), label: labelSchema.optional(), text: textSchema }),
 		textsUpdateSchema: z.object({ texts: z.record(z.string(), textSchema) }),
@@ -83,7 +83,7 @@ const stringsOf = (value: unknown): Record<string, string> =>
 	value && typeof value === "object" && !Array.isArray(value)
 		? Object.fromEntries(
 				Object.entries(value).filter(
-					(entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length <= MAX_SHARED_TEXT,
+					(entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length <= MAX_SNIPPET_TEXT,
 				),
 			)
 		: {};
@@ -109,17 +109,17 @@ function readStored(site: Site, value: unknown): Stored {
 
 async function load(
 	site: Site,
-	store: Pick<AiSharedStore, "getAiSettings">,
+	store: Pick<AiSnippetStore, "getAiSettings">,
 ): Promise<{ version: number; stored: Stored }> {
 	const row = await store.getAiSettings("shared");
 	return { version: row?.version ?? 0, stored: readStored(site, row?.value) };
 }
 
-const viewOf = (site: Site, version: number, stored: Stored): AiSharedView => ({
+const viewOf = (site: Site, version: number, stored: Stored): AiSnippetView => ({
 	version,
 	items: [
 		...Object.entries(contextOf(site).config).map(
-			([key, definition]): AiSharedItem => ({
+			([key, definition]): AiSnippetItem => ({
 				source: "config",
 				key,
 				label: definition.label,
@@ -128,21 +128,26 @@ const viewOf = (site: Site, version: number, stored: Stored): AiSharedView => ({
 				overridden: Object.hasOwn(stored.texts, key),
 			}),
 		),
-		...stored.added.map((item): AiSharedItem => ({ source: "added", ...item })),
+		...stored.added.map((item): AiSnippetItem => ({ source: "added", ...item })),
 	],
 });
 
-async function write(site: Site, store: AiSharedStore, expectedVersion: number, stored: Stored): Promise<AiSharedView> {
+async function write(
+	site: Site,
+	store: AiSnippetStore,
+	expectedVersion: number,
+	stored: Stored,
+): Promise<AiSnippetView> {
 	const version = await store.saveAiSettings({ id: "shared", expectedVersion, value: stored });
 	return viewOf(site, version, stored);
 }
 
 const invalid = (message: string) => new AiError("invalid_input", message);
-const unknownKey = (site: Site, key: string) => invalid(contextOf(site).t("shared.unknown", { key }));
+const unknownKey = (site: Site, key: string) => invalid(contextOf(site).t("snippet.unknown", { key }));
 
 function parse<S extends z.ZodType>(site: Site, schema: S, input: unknown): z.output<S> {
 	const parsed = schema.safeParse(input);
-	if (!parsed.success) throw invalid(parsed.error.issues[0]?.message ?? contextOf(site).t("shared.invalid"));
+	if (!parsed.success) throw invalid(parsed.error.issues[0]?.message ?? contextOf(site).t("snippet.invalid"));
 	return parsed.data;
 }
 
@@ -152,53 +157,53 @@ function setConfigText(site: Site, stored: Stored, key: string, text: string): S
 	return { ...stored, texts: text === contextOf(site).config[key]?.text ? texts : { ...texts, [key]: text } };
 }
 
-/** Shared texts to show in the admin screen. */
-export async function getSharedView(site: Site, store: AiSharedStore): Promise<AiSharedView> {
+/** Prompt snippets to show in the admin screen. */
+export async function getSnippetView(site: Site, store: AiSnippetStore): Promise<AiSnippetView> {
 	const { version, stored } = await load(site, store);
 	return viewOf(site, version, stored);
 }
 
-/** Shared texts to put into the instructions (key -> content). Config texts have edited values applied, and added texts are included too. */
-export async function loadSharedTexts(
+/** Prompt snippets to put into the instructions (key -> content). Config texts have edited values applied, and added texts are included too. */
+export async function loadSnippets(
 	site: Site,
-	store: Pick<AiSharedStore, "getAiSettings">,
+	store: Pick<AiSnippetStore, "getAiSettings">,
 ): Promise<Record<string, string>> {
 	const { version, stored } = await load(site, store);
 	return Object.fromEntries(viewOf(site, version, stored).items.map((item) => [item.key, item.text]));
 }
 
-/** Keys usable as `{{shared.key}}` in the instructions (config texts and added texts). Checked when saving instructions in the admin screen. */
-export async function loadSharedKeys(site: Site, store: Pick<AiSharedStore, "getAiSettings">): Promise<string[]> {
-	return Object.keys(await loadSharedTexts(site, store));
+/** Keys usable as `{{snippet.key}}` in the instructions (config texts and added texts). Checked when saving instructions in the admin screen. */
+export async function loadSnippetKeys(site: Site, store: Pick<AiSnippetStore, "getAiSettings">): Promise<string[]> {
+	return Object.keys(await loadSnippets(site, store));
 }
 
-/** Adds a shared text. The body is `{ key, label, text }`. The key must not collide with config texts or added texts. */
-export async function addShared(
+/** Adds a prompt snippet. The body is `{ key, label, text }`. The key must not collide with config texts or added texts. */
+export async function addSnippet(
 	site: Site,
-	store: AiSharedStore,
+	store: AiSnippetStore,
 	expectedVersion: number,
 	input: unknown,
-): Promise<AiSharedView> {
+): Promise<AiSnippetView> {
 	const { t, addedSchema } = contextOf(site);
 	const item = parse(site, addedSchema, input);
 	const { stored } = await load(site, store);
 	if (isConfigKey(site, item.key) || stored.added.some((added) => added.key === item.key)) {
-		throw invalid(t("shared.keyTaken", { key: item.key }));
+		throw invalid(t("snippet.keyTaken", { key: item.key }));
 	}
-	if (stored.added.length >= MAX_ADDED_SHARED) throw invalid(t("shared.tooMany", { max: MAX_ADDED_SHARED }));
+	if (stored.added.length >= MAX_ADDED_SNIPPETS) throw invalid(t("snippet.tooMany", { max: MAX_ADDED_SNIPPETS }));
 	return write(site, store, expectedVersion, { ...stored, added: [...stored.added, item] });
 }
 
 /**
- * Edits one shared text. The body is `{ key, label?, text }`. A config text edits only content (the config decides the name),
+ * Edits one prompt snippet. The body is `{ key, label?, text }`. A config text edits only content (the config decides the name),
  * and an added text edits name and content. The key is not changed.
  */
-export async function updateSharedItem(
+export async function updateSnippetItem(
 	site: Site,
-	store: AiSharedStore,
+	store: AiSnippetStore,
 	expectedVersion: number,
 	input: unknown,
-): Promise<AiSharedView> {
+): Promise<AiSnippetView> {
 	const { key, label, text } = parse(site, contextOf(site).itemUpdateSchema, input);
 	const { stored } = await load(site, store);
 	if (isConfigKey(site, key)) return write(site, store, expectedVersion, setConfigText(site, stored, key, text));
@@ -210,15 +215,15 @@ export async function updateSharedItem(
 }
 
 /**
- * Edits the content of several shared texts at once. The body is `{ texts: { key: content } }`, and texts not listed are left alone.
+ * Edits the content of several prompt snippets at once. The body is `{ texts: { key: content } }`, and texts not listed are left alone.
  * For config texts, an edited value equal to the default is removed. Unknown keys are rejected.
  */
-export async function updateShared(
+export async function updateSnippets(
 	site: Site,
-	store: AiSharedStore,
+	store: AiSnippetStore,
 	expectedVersion: number,
 	input: unknown,
-): Promise<AiSharedView> {
+): Promise<AiSnippetView> {
 	const { texts } = parse(site, contextOf(site).textsUpdateSchema, input);
 	let { stored } = await load(site, store);
 	for (const [key, text] of Object.entries(texts)) {
@@ -232,27 +237,27 @@ export async function updateShared(
 	return write(site, store, expectedVersion, stored);
 }
 
-/** Whether the instructions use this text as `{{shared.key}}`. */
-export function usesShared(prompt: string, key: string): boolean {
-	return new RegExp(`\\{\\{\\s*shared\\.${key}\\s*\\}\\}`).test(prompt);
+/** Whether the instructions use this text as `{{snippet.key}}`. */
+export function usesSnippet(prompt: string, key: string): boolean {
+	return new RegExp(`\\{\\{\\s*snippet\\.${key}\\s*\\}\\}`).test(prompt);
 }
 
 /**
  * Deletes an added text. A config text cannot be deleted. If an action uses this text in its instructions (`features`: code action instructions and
  * edited instructions, UI actions), it is blocked and the action names are reported.
  */
-export async function deleteShared(
+export async function deleteSnippet(
 	site: Site,
-	store: AiSharedStore,
+	store: AiSnippetStore,
 	expectedVersion: number,
 	key: string,
 	features: readonly { readonly label: string; readonly prompt: string }[],
-): Promise<AiSharedView> {
+): Promise<AiSnippetView> {
 	const { t } = contextOf(site);
-	if (isConfigKey(site, key)) throw invalid(t("shared.configCannotDelete"));
+	if (isConfigKey(site, key)) throw invalid(t("snippet.configCannotDelete"));
 	const { stored } = await load(site, store);
 	if (!stored.added.some((item) => item.key === key)) throw unknownKey(site, key);
-	const users = features.filter((feature) => usesShared(feature.prompt, key)).map((feature) => feature.label);
-	if (users.length > 0) throw invalid(t("shared.inUse", { users: users.join(", ") }));
+	const users = features.filter((feature) => usesSnippet(feature.prompt, key)).map((feature) => feature.label);
+	if (users.length > 0) throw invalid(t("snippet.inUse", { users: users.join(", ") }));
 	return write(site, store, expectedVersion, { ...stored, added: stored.added.filter((item) => item.key !== key) });
 }

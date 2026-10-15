@@ -21,16 +21,16 @@ describe("AI registry of a site", () => {
 		expect(aiRegistryOf(first).actionDefinition("imageCaption")).toBeDefined();
 	});
 
-	it("resolves the actions, the shared texts and the site description from the AI plugin options of that site", () => {
+	it("resolves the actions, the prompt snippets and the site description from the AI plugin options of that site", () => {
 		const site = createSite(blog);
 		const registry = aiRegistryOf(site);
 		expect(registry.siteDescription).toBe("개인 기술 블로그");
-		expect(registry.sharedKeys).toEqual(["styleGuide"]);
-		expect(registry.shared.styleGuide?.label).toBe("문체 가이드");
+		expect(registry.snippetKeys).toEqual(["styleGuide"]);
+		expect(registry.snippets.styleGuide?.label).toBe("문체 가이드");
 		expect(registry.actionDefinition("slug")).toBe(registry.actions.slug);
 		expect(registry.actionDefinition("toString")).toBeUndefined();
 		expect(Object.keys(registry.actions)).toEqual(
-			Object.keys(resolveAiActions({ shared: registry.shared }, aiSiteViewOf(site), site.plugins)),
+			Object.keys(resolveAiActions({ snippets: registry.snippets }, aiSiteViewOf(site), site.plugins)),
 		);
 	});
 
@@ -38,7 +38,7 @@ describe("AI registry of a site", () => {
 		const site = createSite({ ...blog, plugins: [] });
 		const registry = aiRegistryOf(site);
 		expect(registry.actions).toEqual({});
-		expect(registry.sharedKeys).toEqual([]);
+		expect(registry.snippetKeys).toEqual([]);
 		expect(registry.siteDescription).toBe("website");
 	});
 });
@@ -60,7 +60,7 @@ describe("AI registry in the browser (site made from the JSON snapshot)", () => 
 			expect(Object.keys(mine.input), key).toEqual(Object.keys(definition?.input ?? {}));
 			expect(() => resolveAction(key, mine), key).not.toThrow();
 		}
-		expect(browser.sharedKeys).toEqual(server.sharedKeys);
+		expect(browser.snippetKeys).toEqual(server.snippetKeys);
 		expect(browser.siteDescription).toBe(server.siteDescription);
 	});
 

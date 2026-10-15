@@ -8,7 +8,7 @@ import * as providerCheck from "./routes/providers/check/route";
 import * as providers from "./routes/providers/route";
 import * as run from "./routes/run/route";
 import * as settings from "./routes/settings/route";
-import * as shared from "./routes/shared/route";
+import * as snippets from "./routes/snippets/route";
 import { getAiSettingsView, keyUseLabels } from "./settings";
 import { aiStoreFor } from "./store";
 
@@ -24,7 +24,7 @@ const aiServer: CmsServerPlugin = {
 		{ pattern: "v1/ai/providers/[id]", module: provider },
 		{ pattern: "v1/ai/run", module: run },
 		{ pattern: "v1/ai/settings", module: settings },
-		{ pattern: "v1/ai/shared", module: shared },
+		{ pattern: "v1/ai/snippets", module: snippets },
 	],
 	// What the API keys screen shows for a connection that uses a key: its current name, in the admin language.
 	keyUses: (cms, refs) => keyUseLabels(cms.site, aiStoreFor(cms), refs),

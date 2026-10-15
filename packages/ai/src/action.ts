@@ -122,8 +122,8 @@ export const validatorLabel = (check: Pick<AiValidator, "label">, site: Pick<Sit
 
 const isValidator = (check: AiCheckInput | AiValidator): check is AiValidator => "run" in check;
 
-/** One shared snippet (e.g. a style guide). Inserted into prompts as `{{shared.name}}` and edited in the admin AI screen. */
-export interface AiSharedText {
+/** One prompt snippet (e.g. a style guide). Inserted into prompts as `{{snippet.name}}` and edited in the admin AI screen. */
+export interface AiSnippet {
 	readonly label: string;
 	/** Default text. If an edited value exists in the admin UI, that is used. */
 	readonly text: string;
@@ -150,10 +150,10 @@ export interface AiConfig {
 	/** Site description. Goes into the leading instruction of every action ("You are the editing assistant of the CMS for this site: {this}"). Defaults to "website". */
 	readonly siteDescription?: string;
 	/**
-	 * Shared snippets used by several actions. Insert into a prompt as `{{shared.name}}`. If `styleGuide` exists, it goes into the prompts of the
+	 * Prompt snippets used by several actions. Insert into a prompt as `{{snippet.name}}`. If `styleGuide` exists, it goes into the prompts of the
 	 * default style polish and draft actions.
 	 */
-	readonly shared?: Readonly<Record<string, AiSharedText>>;
+	readonly snippets?: Readonly<Record<string, AiSnippet>>;
 	/**
 	 * Actions to replace or add. Default actions (`aiPresets`, those with an attach point on the site) and actions added by other plugins are enabled without being listed.
 	 * Giving a definition (or `aiPresets.name(options)`) under the same name replaces it, `false` removes it, and a new name adds it.
@@ -163,22 +163,22 @@ export interface AiConfig {
 
 /** The resolved list of actions (name -> definition). Read by the runner, the UI and the checks. */
 export interface ResolvedAiConfig {
-	readonly shared?: Readonly<Record<string, AiSharedText>>;
+	readonly snippets?: Readonly<Record<string, AiSnippet>>;
 	readonly actions: Readonly<Record<string, AiActionDefinition>>;
 }
 
 /** `{{name}}` in the prompt. */
 type Placeholders<S extends string> = S extends `${string}{{${infer P}}}${infer Rest}` ? P | Placeholders<Rest> : never;
 type LocaleInputNames<I> = { [K in keyof I]: I[K] extends { readonly kind: "locale" } ? K : never }[keyof I];
-/** Raises a type error if the prompt has a `{{name}}` that is neither a locale input nor a shared text (`shared.name`). Shared text names are checked by the plugin config. */
+/** Raises a type error if the prompt has a `{{name}}` that is neither a locale input nor a prompt snippet (`snippet.name`). Prompt snippet names are checked by the plugin config. */
 type PromptCheck<P extends string, I> = string extends P
 	? unknown
-	: [Exclude<Placeholders<P>, LocaleInputNames<I> | `shared.${string}`>] extends [never]
+	: [Exclude<Placeholders<P>, LocaleInputNames<I> | `snippet.${string}`>] extends [never]
 		? unknown
 		: {
-				readonly "The prompt can only use locale inputs and shared texts as {{name}}": Exclude<
+				readonly "The prompt can only use locale inputs and prompt snippets as {{name}}": Exclude<
 					Placeholders<P>,
-					LocaleInputNames<I> | `shared.${string}`
+					LocaleInputNames<I> | `snippet.${string}`
 				>;
 			};
 
@@ -368,19 +368,19 @@ export function overrideFrom(definition: AiActionDefinition, edited: Partial<AiA
 // Prompt
 // ---------------------------------------------------------------------------
 
-const PLACEHOLDER = /\{\{\s*((?:shared\.)?[A-Za-z][A-Za-z0-9_]*)\s*\}\}/g;
-const SHARED_PREFIX = "shared.";
+const PLACEHOLDER = /\{\{\s*((?:snippet\.)?[A-Za-z][A-Za-z0-9_]*)\s*\}\}/g;
+const SNIPPET_PREFIX = "snippet.";
 
 /**
- * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing shared text (`shared.name`). Used for definition checks and pre-save checks.
+ * Of the prompt's `{{name}}`, those that are neither a locale input nor an existing prompt snippet (`snippet.name`). Used for definition checks and pre-save checks.
  */
-export function unknownPlaceholders(prompt: string, input: AiInputs, sharedKeys: readonly string[] = []): string[] {
+export function unknownPlaceholders(prompt: string, input: AiInputs, snippetKeys: readonly string[] = []): string[] {
 	const names = [...prompt.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
 	return [
 		...new Set(
 			names.filter((name) =>
-				name.startsWith(SHARED_PREFIX)
-					? !sharedKeys.includes(name.slice(SHARED_PREFIX.length))
+				name.startsWith(SNIPPET_PREFIX)
+					? !snippetKeys.includes(name.slice(SNIPPET_PREFIX.length))
 					: input[name]?.kind !== "locale",
 			),
 		),
@@ -388,7 +388,7 @@ export function unknownPlaceholders(prompt: string, input: AiInputs, sharedKeys:
 }
 
 /**
- * The prompt to run. Replaces `{{locale input}}` with the language name and `{{shared.name}}` with the shared text, and appends locale inputs not used in the prompt
+ * The prompt to run. Replaces `{{locale input}}` with the language name and `{{snippet.name}}` with the prompt snippet, and appends locale inputs not used in the prompt
  * as `name: language` lines. Finally appends the extra request given at run time (only for actions with `askInstruction` on).
  */
 export function renderPrompt(
@@ -396,12 +396,12 @@ export function renderPrompt(
 	values: Readonly<Record<string, unknown>>,
 	languageName: (code: string) => string,
 	request?: string,
-	shared: Readonly<Record<string, string>> = {},
+	snippets: Readonly<Record<string, string>> = {},
 ): string {
 	const used = new Set<string>();
 	const prompt = action.prompt.replace(PLACEHOLDER, (whole, name: string) => {
-		if (name.startsWith(SHARED_PREFIX)) {
-			const text = shared[name.slice(SHARED_PREFIX.length)];
+		if (name.startsWith(SNIPPET_PREFIX)) {
+			const text = snippets[name.slice(SNIPPET_PREFIX.length)];
 			return text === undefined ? whole : text.trim() || "(none)";
 		}
 		const value = values[name];
@@ -525,9 +525,9 @@ function findField(
 export function checkAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): Issue[] {
 	const list = new IssueList();
 	const bad = (path: string, code: string, message: string) => list.add(path, code, message);
-	const sharedKeys = Object.keys(ai.shared ?? {});
-	for (const key of sharedKeys) {
-		if (!NAME.test(key)) bad(pathOf("plugins", "ai", "shared", key), "name", "name must be letters, digits or _");
+	const snippetKeys = Object.keys(ai.snippets ?? {});
+	for (const key of snippetKeys) {
+		if (!NAME.test(key)) bad(pathOf("plugins", "ai", "snippets", key), "name", "name must be letters, digits or _");
 	}
 	for (const [key, action] of Object.entries(ai.actions)) {
 		const where = pathOf("plugins", "ai", "actions", key);
@@ -537,9 +537,9 @@ export function checkAiConfig(ai: ResolvedAiConfig, collections: CollectionsView
 		for (const name of action.send ?? []) {
 			if (!action.input[name]) bad(where, "send", `send lists unknown input "${name}"`);
 		}
-		const unknown = unknownPlaceholders(action.prompt, action.input, sharedKeys);
+		const unknown = unknownPlaceholders(action.prompt, action.input, snippetKeys);
 		if (unknown.length > 0) {
-			bad(where, "prompt", `prompt can only use locale inputs and shared texts, not {{${unknown[0]}}}`);
+			bad(where, "prompt", `prompt can only use locale inputs and prompt snippets, not {{${unknown[0]}}}`);
 		}
 
 		const choices = action.choices;

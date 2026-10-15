@@ -26,7 +26,7 @@ export default defineSite({
 		seo(),
 		ai({
 			siteDescription: "개인 기술 블로그",
-			shared: {
+			snippets: {
 				styleGuide: { label: "문체 가이드", text: "" },
 			},
 		}),

@@ -55,7 +55,7 @@ import { ConnectionManager, useAiSettings } from "./connection-editor";
 import { CustomBaseFields, NEW_CUSTOM_BASE, OptionSelect } from "./custom-editor";
 import { useLabels } from "./labels.messages";
 import { ModelCombobox, useModelList } from "./model-combobox";
-import { PROMPT_ROWS, PROMPT_TEXTAREA, SharedManager, useAiShared } from "./shared-editor";
+import { PROMPT_ROWS, PROMPT_TEXTAREA, SnippetManager, useAiSnippets } from "./snippet-editor";
 
 /** Visible name of the attach target. For a field, it is the name in the collection definition. */
 function usePlaceLabel() {
@@ -143,12 +143,12 @@ const EMPTY_SAMPLE: Sample = { values: {}, request: "" };
 /** The open action as the screen uses it: the draft and whether it is new. */
 type Editing = FeatureDraft & { isNew: boolean };
 
-type AiTab = "features" | "connections" | "shared";
+type AiTab = "features" | "connections" | "snippets";
 
 /**
  * Admin AI screen. The Actions tab lists actions defined in code and actions created in the screen; for each action you edit enabled, ask-for-request,
  * connection, model, content to send, instructions and checks, then test before saving. The Connections tab stores several service URLs, keys and default models.
- * The Shared texts tab edits and adds the text that goes into `{{shared.key}}` in instructions. All three tabs are a list + a detail pane.
+ * The Prompt snippets tab edits and adds the text that goes into `{{snippet.key}}` in instructions. All three tabs are a list + a detail pane.
  * Opening another item or tab with unsaved content asks whether to discard it.
  */
 export function AiManager() {
@@ -161,7 +161,7 @@ export function AiManager() {
 	// The layout's AI slot provider asks for the same list, so it can be in the cache before this page hydrates.
 	const featuresQuery = useHydratedQuery(useAiActions());
 	const _settingsQuery = useAiSettings();
-	const _sharedQuery = useAiShared();
+	const _snippetsQuery = useAiSnippets();
 	const features = featuresQuery.data?.items ?? [];
 	const usable = new Set(featuresQuery.data?.usable ?? []);
 	const [tab, setTab] = useState<AiTab>("features");
@@ -171,9 +171,9 @@ export function AiManager() {
 	/** The open connection. The header's Add connection changes it, so it lives outside the Connections tab. */
 	const [connection, setConnection] = useState<string | "new" | null>(null);
 	const [connectionDirty, setConnectionDirty] = useState(false);
-	/** The open shared text. The header's Add text changes it, so it lives outside the Shared texts tab. */
-	const [shared, setShared] = useState<string | "new" | null>(null);
-	const [sharedDirty, setSharedDirty] = useState(false);
+	/** The open prompt snippet. The header's Add snippet changes it, so it lives outside the Prompt snippets tab. */
+	const [snippet, setSnippet] = useState<string | "new" | null>(null);
+	const [snippetDirty, setSnippetDirty] = useState(false);
 	const { confirm, confirmDiscard, dialog } = useConfirm();
 
 	const replaceInCache = (feature: AiActionView) =>
@@ -243,7 +243,7 @@ export function AiManager() {
 	const editing: Editing | null = opened && shown ? { ...shown, isNew: opened.isNew } : null;
 	const featureDirty = opened !== null && editor.dirty;
 	// A link that leaves the screen (the sidebar) asks first while any open editor has changes.
-	const { dialog: guardDialog } = useUnsavedGuard(featureDirty || connectionDirty || sharedDirty);
+	const { dialog: guardDialog } = useUnsavedGuard(featureDirty || connectionDirty || snippetDirty);
 	const changeDraft = (change: (draft: FeatureDraft) => FeatureDraft) =>
 		editor.update((draft) => change(draft ?? (opened as { saved: FeatureDraft }).saved));
 
@@ -273,14 +273,14 @@ export function AiManager() {
 		if (await confirmDiscard(connectionDirty)) setConnection(id);
 	};
 
-	const openShared = async (key: string | "new") => {
-		if (key === shared) return;
-		if (await confirmDiscard(sharedDirty)) setShared(key);
+	const openSnippet = async (key: string | "new") => {
+		if (key === snippet) return;
+		if (await confirmDiscard(snippetDirty)) setSnippet(key);
 	};
 
-	/** Switches tabs. Closing the Connections or Shared texts tab discards the input, so it asks if there is unsaved content. */
+	/** Switches tabs. Closing the Connections or Prompt snippets tab discards the input, so it asks if there is unsaved content. */
 	const changeTab = async (next: AiTab) => {
-		const dirty = (tab === "connections" && connectionDirty) || (tab === "shared" && sharedDirty);
+		const dirty = (tab === "connections" && connectionDirty) || (tab === "snippets" && snippetDirty);
 		if (await confirmDiscard(dirty)) setTab(next);
 	};
 
@@ -335,7 +335,7 @@ export function AiManager() {
 	};
 
 	const onConnectionDirty = useCallback((dirty: boolean) => setConnectionDirty(dirty), []);
-	const onSharedDirty = useCallback((dirty: boolean) => setSharedDirty(dirty), []);
+	const onSnippetDirty = useCallback((dirty: boolean) => setSnippetDirty(dirty), []);
 
 	const headerActions =
 		tab === "features" ? (
@@ -349,9 +349,9 @@ export function AiManager() {
 				{t("add.connection")}
 			</Button>
 		) : (
-			<Button type="button" size="sm" onClick={() => void openShared("new")}>
+			<Button type="button" size="sm" onClick={() => void openSnippet("new")}>
 				<Plus aria-hidden />
-				{t("add.shared")}
+				{t("add.snippet")}
 			</Button>
 		);
 	return (
@@ -371,9 +371,9 @@ export function AiManager() {
 						<Plug aria-hidden />
 						{t("tab.connections")}
 					</TabsTrigger>
-					<TabsTrigger value="shared" className="flex-none px-0 text-xs">
+					<TabsTrigger value="snippets" className="flex-none px-0 text-xs">
 						<Quote aria-hidden />
-						{t("tab.shared")}
+						{t("tab.snippets")}
 					</TabsTrigger>
 				</PageTabs>
 				<TabsContent value="features" className="flex min-h-0 flex-1 flex-col">
@@ -464,12 +464,12 @@ export function AiManager() {
 						)}
 					</MasterDetail>
 				</TabsContent>
-				<TabsContent value="shared" className="flex min-h-0 flex-1 flex-col">
-					<SharedManager
-						selected={shared}
-						onOpen={(key) => void openShared(key)}
-						onSelectedChange={setShared}
-						onDirtyChange={onSharedDirty}
+				<TabsContent value="snippets" className="flex min-h-0 flex-1 flex-col">
+					<SnippetManager
+						selected={snippet}
+						onOpen={(key) => void openSnippet(key)}
+						onSelectedChange={setSnippet}
+						onDirtyChange={onSnippetDirty}
 					/>
 				</TabsContent>
 				<TabsContent value="connections" className="flex min-h-0 flex-1 flex-col">
