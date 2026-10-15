@@ -139,6 +139,9 @@ describe("monti init in a fresh create-next-app", () => {
 			expect(example).toContain(name);
 		}
 		expect(example).toContain("openssl rand -base64 32");
+		// The local hint assumes no user and no password (a Docker default fails on a Homebrew Postgres).
+		expect(example).toContain("postgres://localhost/monti");
+		expect(example).not.toContain("postgres:postgres");
 		// The default login (email and password) needs no setting at all.
 		expect(example).not.toMatch(/GITHUB|OAuth/i);
 		// The schema is a commented line with a reason, not a value and not a question.
@@ -149,7 +152,7 @@ describe("monti init in a fresh create-next-app", () => {
 		expect(example).not.toContain("S3_BUCKET");
 		// Every non-comment line is a name with an empty value or a placeholder, never a real secret.
 		for (const line of example.split("\n").filter((entry) => entry && !entry.startsWith("#"))) {
-			expect(line).toMatch(/^(DATABASE_URL=postgres:\/\/user:password@localhost:5432\/monti|[A-Z0-9_]+=[a-z0-9]*)$/);
+			expect(line).toMatch(/^(DATABASE_URL=postgres:\/\/user:password@host:5432\/monti|[A-Z0-9_]+=[a-z0-9]*)$/);
 		}
 	});
 
