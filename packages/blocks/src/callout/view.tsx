@@ -44,7 +44,7 @@ export function CalloutNodeView() {
 						onCommit={(title) => setValue("title", title)}
 						onEnter={() => block.focus()}
 						onEscape={() => block.focus()}
-						className="flex-1 font-medium tracking-tight"
+						className="w-full flex-1 font-medium tracking-tight"
 					/>
 				</div>
 				{/* Set the first and last child margins to 0 so the vertical margins of inner blocks (custom blocks wrapped by react-renderer) do not add to the box padding. */}

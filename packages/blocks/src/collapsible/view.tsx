@@ -66,7 +66,7 @@ export function CollapsibleNodeView() {
 						setOpen(true);
 						block.focus();
 					}}
-					className="flex-1"
+					className="w-full flex-1"
 				/>
 			</div>
 			<Content
