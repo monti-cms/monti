@@ -1,6 +1,7 @@
 "use client";
 
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import type { Folder } from "@monti-cms/core/runtime";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { errorText } from "../../api/client";
@@ -13,6 +14,7 @@ import { Button, buttonVariants } from "../../ui/button";
 import { Field, FieldError, FieldLabel } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { Textarea } from "../../ui/textarea";
 import { EditorFooter } from "../shared/editor-footer";
 import { entryHref } from "../shared/entry-href";
@@ -51,6 +53,18 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 	);
 }
 
+function folderPath(folder: Folder, folders: Folder[]): string {
+	const parts: string[] = [folder.name];
+	let curr = folder;
+	while (curr.parentId) {
+		const parent = folders.find((f) => f.id === curr.parentId);
+		if (!parent) break;
+		parts.unshift(parent.name);
+		curr = parent;
+	}
+	return parts.join(" / ");
+}
+
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.
  * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.
@@ -60,26 +74,32 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
  */
 export function MediaDetailPanel({
 	media,
+	folders,
 	className,
 	onClose,
 	onSaveDefaults,
 	onRename,
+	onMoveFolder,
 	onRequestDelete,
 	onDirtyChange,
 }: {
 	media: MediaItem;
+	folders?: Folder[];
 	className?: string;
 	onClose: () => void;
 	/** Saves the default description. Rejects on failure. The error shows inside the field. */
 	onSaveDefaults: (defaults: { alt: string; caption: string }) => Promise<void>;
 	/** Renames the file (the whole new name, extension included). Rejects on failure. The error shows under the field. */
 	onRename: (filename: string) => Promise<void>;
+	/** Moves the file to another folder (or null for root). */
+	onMoveFolder?: (folderId: string | null) => Promise<void>;
 	onRequestDelete: () => void;
 	onDirtyChange?: (dirty: boolean) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	const tc = useTranslator(commonMessages);
+	const [movingFolder, setMovingFolder] = useState(false);
 	const altId = useId();
 	const captionId = useId();
 	// The last saved (initially loaded) value. If the edited value differs, there are unsaved changes.
@@ -280,6 +300,33 @@ export function MediaDetailPanel({
 							<Row label={t("detail.row.original")}>
 								{media.original.width}×{media.original.height} · {formatBytes(media.original.byteSize ?? 0)} ·{" "}
 								{media.original.mimeType}
+							</Row>
+						)}
+						{folders && (
+							<Row label={t("detail.row.folder")}>
+								<Select
+									value={media.folderId ?? "root"}
+									disabled={movingFolder || !onMoveFolder}
+									onValueChange={(val) => {
+										if (!onMoveFolder) return;
+										const nextId = val === "root" ? null : val;
+										if (nextId === (media.folderId ?? null)) return;
+										setMovingFolder(true);
+										void onMoveFolder(nextId).finally(() => setMovingFolder(false));
+									}}
+								>
+									<SelectTrigger className="h-8 text-xs">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="root">{t("detail.folder.none")}</SelectItem>
+										{folders.map((f) => (
+											<SelectItem key={f.id} value={f.id}>
+												{folderPath(f, folders)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</Row>
 						)}
 						<Row label={t("detail.row.uploadedAt")}>{formatDateTime(site, media.createdAt)}</Row>

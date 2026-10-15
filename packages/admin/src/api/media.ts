@@ -4,6 +4,7 @@ import { cmsFetch } from "./client";
 /** One item of the media list API. */
 export interface MediaItem {
 	id: string;
+	folderId?: string | null;
 	status: "ready" | "deleting" | "pending" | "failed";
 	filename: string;
 	mimeType: string | null;
@@ -32,6 +33,7 @@ export interface MediaInfo {
 	mimeType: string | null;
 	status?: string;
 	publicUrl?: string | null;
+	folderId?: string | null;
 }
 
 /** Where to PUT the bytes of one file, as the server prepares it. */
@@ -46,6 +48,7 @@ export interface UploadRequest {
 	mimeType: string;
 	byteSize: number;
 	original?: { mimeType: string; byteSize: number };
+	folderId?: string | null;
 }
 
 export interface UploadPlan extends UploadTicket {
@@ -81,11 +84,11 @@ export const getMedia = (site: Site, id: string, signal?: AbortSignal) =>
 export const listMedia = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
 	cmsFetch<MediaPage>(site, cmsApiUrl(`/v1/media?${query.toString()}`), { signal });
 
-/** `PATCH /v1/media/:id`: renames the file, or sets its default description. */
+/** `PATCH /v1/media/:id`: renames the file, sets default description, or moves to a folder. */
 export const updateMedia = (
 	site: Site,
 	id: string,
-	patch: { filename: string } | { defaultAlt: string; defaultCaption: string },
+	patch: { filename?: string; defaultAlt?: string; defaultCaption?: string; folderId?: string | null },
 	fallback?: string,
 ) => cmsFetch<void>(site, mediaUrl(id), { method: "PATCH", json: patch, fallback });
 

@@ -70,7 +70,16 @@ export function cmsIssueMessage(site: ApiErrorSite, issue: CmsIssue): string {
 	const known =
 		field ?? (issue.code && hasMessage(`issue.${issue.code}`) ? t(`issue.${issue.code}` as never) : undefined);
 	const detail = known && issue.code && DETAILED_CODES.has(issue.code) && issue.message ? ` — ${issue.message}` : "";
-	const label = known ? `${known}${detail}` : issue.message || issue.code || t("validationFailed");
+	let customMessage = issue.message;
+	if (
+		customMessage &&
+		(customMessage.includes("expected") ||
+			customMessage.includes("Invalid input") ||
+			customMessage.includes("Required"))
+	) {
+		customMessage = t("issue.missing_field");
+	}
+	const label = known ? `${known}${detail}` : customMessage || issue.code || t("validationFailed");
 	const { line, column } = issue.position ?? {};
 	const location = line !== undefined && column !== undefined ? t("position", { line, column }) : issue.path;
 	return location ? `${label} (${location})` : label;
