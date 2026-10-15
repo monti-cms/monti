@@ -88,6 +88,54 @@ function TimeZonePick({
 	);
 }
 
+/** Common language codes offered while typing a code. Any other valid code can still be typed. */
+const KNOWN_CODES = [
+	"ar",
+	"bn",
+	"cs",
+	"da",
+	"de",
+	"el",
+	"en",
+	"es",
+	"fa",
+	"fi",
+	"fr",
+	"he",
+	"hi",
+	"hu",
+	"id",
+	"it",
+	"ja",
+	"ko",
+	"ms",
+	"nl",
+	"no",
+	"pl",
+	"pt",
+	"pt-BR",
+	"ro",
+	"ru",
+	"sv",
+	"th",
+	"tr",
+	"uk",
+	"vi",
+	"zh",
+	"zh-CN",
+	"zh-TW",
+] as const;
+
+/** The name of a language in its own language (`한국어` for `ko`), or undefined when the runtime does not know the code. */
+function nativeNameOf(code: string): string | undefined {
+	try {
+		const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
+		return name && name !== code ? name : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 /** The dialog that adds a language or edits one. The code of a saved language is a stored value, so editing shows it but does not change it. */
 function LocaleDialog({
 	locale,
@@ -103,6 +151,7 @@ function LocaleDialog({
 }) {
 	const t = useTranslator(schemaLocalesMessages);
 	const tc = useTranslator(commonMessages);
+	const codeListId = useId();
 	const [code, setCode] = useState(locale?.code ?? "");
 	const [name, setName] = useState(locale?.name ?? "");
 	const [label, setLabel] = useState(locale?.label ?? "");
@@ -130,9 +179,24 @@ function LocaleDialog({
 							disabled={locale !== undefined}
 							aria-label={t("locales.code")}
 							placeholder="en"
+							list={codeListId}
 							aria-invalid={code !== "" && !codeOk ? true : undefined}
-							onChange={(event) => setCode(event.target.value)}
+							onChange={(event) => {
+								const next = event.target.value;
+								setCode(next);
+								// Picking a known code names the language, unless a name was already typed.
+								if (!locale && name.trim() === "" && (KNOWN_CODES as readonly string[]).includes(next)) {
+									setName(nativeNameOf(next) ?? "");
+								}
+							}}
 						/>
+						<datalist id={codeListId}>
+							{KNOWN_CODES.filter((known) => !taken.includes(known)).map((known) => (
+								<option key={known} value={known}>
+									{nativeNameOf(known) ?? known}
+								</option>
+							))}
+						</datalist>
 					</Labeled>
 					<Labeled label={t("locales.name")}>
 						<Input
