@@ -13,7 +13,7 @@ import { type SchemaTab, settingsTabs } from "./tabs";
 
 /**
  * The Settings page: its own header (title, one line about where it is saved, the pending changes and the review button) over a row of tabs, each its own address
- * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: site, languages, collections, file and admin. They share one draft.
+ * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: site, languages, collections and admin. They share one draft.
  */
 export function SettingsScreen({ tab }: { tab: SchemaTab }) {
 	const t = useTranslator(settingsMessages);
@@ -31,6 +31,8 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 	const tabs = settingsTabs(site);
 	// The editor puts its pending-changes line and review button here.
 	const [actions, setActions] = useState<HTMLElement | null>(null);
+	// ... and the line that names the schema file and its version.
+	const [fileLine, setFileLine] = useState<HTMLElement | null>(null);
 	// On a narrow screen the tab bar scrolls sideways: keep the open tab in view.
 	const activeLink = useRef<HTMLAnchorElement>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when the open tab changes
@@ -51,6 +53,11 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 							<h1 className="font-semibold text-[22px] leading-tight tracking-tight">{t("title")}</h1>
 						</div>
 						<p className="mt-1 text-cms-muted-foreground text-sm">{t("description")}</p>
+						<p
+							ref={setFileLine}
+							className="mt-0.5 text-cms-muted-foreground text-xs empty:hidden"
+							data-testid="settings-file-line"
+						/>
 					</div>
 					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
 				</div>
@@ -74,7 +81,7 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 				</nav>
 			</header>
 			<div className="flex min-h-0 flex-1 flex-col bg-cms-muted/50">
-				<SchemaSettings tab={tab} actionsSlot={actions} />
+				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} />
 			</div>
 		</>
 	);

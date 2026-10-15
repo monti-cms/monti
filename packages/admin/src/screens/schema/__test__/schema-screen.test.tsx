@@ -138,8 +138,10 @@ afterEach(() => {
 /** Stands in for the Settings page: the schema editor and the buttons that move between its tabs (the page does this with links). */
 function SchemaTabs() {
 	const [tab, setTab] = useState<SchemaTab>("collections");
+	const [fileLine, setFileLine] = useState<HTMLElement | null>(null);
 	return (
 		<>
+			<p ref={setFileLine} data-testid="file-line" />
 			<div role="tablist">
 				{SCHEMA_TABS.map((name) => (
 					<button key={name} type="button" role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>
@@ -147,7 +149,7 @@ function SchemaTabs() {
 					</button>
 				))}
 			</div>
-			<SchemaSettings tab={tab} />
+			<SchemaSettings tab={tab} fileSlot={fileLine} />
 		</>
 	);
 }
@@ -232,6 +234,33 @@ describe("SchemaScreen", () => {
 		expect(t("readonly.hasCode")).toContain("monti.schema.ts");
 		expect((screen.getByLabelText(tCollection("collection.label")) as HTMLInputElement).disabled).toBe(true);
 		expect(review().disabled).toBe(true);
+	});
+
+	it("names the schema file and its version in the header line, with the reason when it is read-only", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.getByTestId("file-line").textContent).toBe(
+			`monti.schema.ts · ${t("status.version", { version: 2 })}`,
+		);
+		cleanup();
+
+		state = screenState({ access: { writable: false, reason: "production" } });
+		renderScreen();
+		await screen.findByTestId("schema-read-only");
+		expect(screen.getByTestId("file-line").textContent).toContain(t("readonly.short.production"));
+	});
+
+	it("has no tab for the file: its seed data and recorded transforms sit under the Admin tab", async () => {
+		state = screenState({
+			schema: { ...schema(), seed: { post: [] }, migrations: [{ id: "m1", op: "rename" }] },
+		});
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		expect(screen.queryByRole("tab", { name: "file" })).toBeNull();
+		fireEvent.click(screen.getByRole("tab", { name: "admin" }));
+		expect(await screen.findByText("m1")).toBeTruthy();
+		expect(screen.getByText(t("file.migrations"))).toBeTruthy();
+		expect(screen.getByText("seed")).toBeTruthy();
 	});
 
 	it("tells that saving drops the comments of a file that has them", async () => {
