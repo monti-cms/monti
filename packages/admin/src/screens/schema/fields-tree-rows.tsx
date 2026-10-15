@@ -71,6 +71,7 @@ export interface RowButton {
 	readonly disabled?: boolean;
 	readonly destructive?: boolean;
 	readonly pressed?: boolean;
+	readonly title?: string;
 }
 
 export function RowButtons({ buttons }: { buttons: RowButton[] }) {
@@ -84,6 +85,7 @@ export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 					destructive={button.destructive}
 					pressed={button.pressed}
 					disabled={button.disabled}
+					title={button.title}
 					onClick={button.onClick}
 				>
 					<button.icon aria-hidden />

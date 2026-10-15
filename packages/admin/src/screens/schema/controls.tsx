@@ -71,6 +71,7 @@ export function TextInput({
 	type = "text",
 	className,
 	optional,
+	disabled: customDisabled,
 }: {
 	label: string;
 	value: string | number | undefined;
@@ -81,10 +82,12 @@ export function TextInput({
 	className?: string;
 	/** Marks the field as optional with a muted "optional" next to the label (the form marks what is optional, not what is required). */
 	optional?: boolean;
+	disabled?: boolean;
 }) {
 	const t = useTranslator(schemaMessages);
 	const id = useId();
 	const { disabled } = useSchemaEdit();
+	const isDisabled = disabled || customDisabled;
 	return (
 		<Labeled
 			label={
@@ -106,7 +109,7 @@ export function TextInput({
 				min={type === "number" ? 1 : undefined}
 				value={value ?? ""}
 				placeholder={placeholder}
-				disabled={disabled}
+				disabled={isDisabled}
 				onChange={(event) => onChange(event.target.value)}
 			/>
 		</Labeled>
@@ -216,6 +219,7 @@ export function Pick({
 	onChange,
 	hint,
 	className,
+	disabled: customDisabled,
 	control = "narrow",
 }: {
 	label: string;
@@ -224,16 +228,18 @@ export function Pick({
 	onChange: (value: string) => void;
 	hint?: ReactNode;
 	className?: string;
+	disabled?: boolean;
 	control?: keyof typeof CONTROL_WIDTH;
 }) {
 	const id = useId();
 	const { disabled } = useSchemaEdit();
+	const isDisabled = disabled || customDisabled;
 	return (
 		<Labeled label={label} hint={hint} htmlFor={id} className={className} control={control}>
 			<Select
 				value={value}
 				items={items as PickItem[]}
-				disabled={disabled}
+				disabled={isDisabled}
 				onValueChange={(next) => typeof next === "string" && onChange(next)}
 			>
 				<SelectTrigger id={id} size="sm" className="w-full" aria-label={label}>

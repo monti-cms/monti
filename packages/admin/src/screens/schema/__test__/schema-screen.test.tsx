@@ -849,6 +849,50 @@ describe("SchemaScreen", () => {
 		await waitFor(() => expect(screen.queryByTestId("field-slug")).toBeNull());
 	});
 
+	it("locks title and slug field kinds and options, shows role picker with descriptions", async () => {
+		renderScreen();
+		await screen.findByTestId("collection-post");
+		openTab("fields");
+
+		// Title field sheet
+		let sheet = await openFieldSheet("title");
+		fireEvent.click(within(sheet).getByRole("tab", { name: tFields("sheet.tabAdvanced") }));
+		const titleKindSelect = within(sheet).getByRole("combobox", { name: tFields("field.kind") }) as HTMLButtonElement;
+		expect(titleKindSelect.disabled).toBe(true);
+		expect(within(sheet).getByText(tFields("field.kindFixedTitleHint"))).toBeTruthy();
+		const titleRoleSelect = within(sheet).getByRole("combobox", { name: tFields("field.role") }) as HTMLButtonElement;
+		expect(titleRoleSelect.disabled).toBe(true);
+		expect(within(sheet).getByText(tFields("field.roleFixedTitleHint"))).toBeTruthy();
+		// No custom input or input options shown since no plugins register custom inputs and field has none
+		expect(within(sheet).queryByLabelText(tFields("field.input"))).toBeNull();
+		expect(within(sheet).queryByLabelText(tFields("field.inputOptions"))).toBeNull();
+		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
+		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
+
+		// Slug field sheet
+		sheet = await openFieldSheet("slug");
+		fireEvent.click(within(sheet).getByRole("tab", { name: tFields("sheet.tabAdvanced") }));
+		const slugKindSelect = within(sheet).getByRole("combobox", { name: tFields("field.kind") }) as HTMLButtonElement;
+		expect(slugKindSelect.disabled).toBe(true);
+		expect(within(sheet).getByText(tFields("field.kindFixedSlugHint"))).toBeTruthy();
+		// Slug has neither role nor custom input
+		expect(within(sheet).queryByRole("combobox", { name: tFields("field.role") })).toBeNull();
+		expect(within(sheet).queryByLabelText(tFields("field.input"))).toBeNull();
+		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
+		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
+
+		// Summary field sheet (regular text field)
+		sheet = await openFieldSheet("summary");
+		fireEvent.click(within(sheet).getByRole("tab", { name: tFields("sheet.tabAdvanced") }));
+		const summaryKindSelect = within(sheet).getByRole("combobox", { name: tFields("field.kind") }) as HTMLButtonElement;
+		expect(summaryKindSelect.disabled).toBe(false);
+		const summaryRoleSelect = within(sheet).getByRole("combobox", { name: tFields("field.role") }) as HTMLButtonElement;
+		expect(summaryRoleSelect.disabled).toBe(false);
+		expect(within(sheet).queryByLabelText(tFields("field.input"))).toBeNull();
+		fireEvent.click(within(sheet).getByRole("button", { name: tc("cancel") }));
+		await waitFor(() => expect(screen.queryByTestId("field-sheet")).toBeNull());
+	});
+
 	it("gives the collections workspace all the width and keeps the form-like tabs at the readable width", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
@@ -1413,6 +1457,12 @@ describe("SchemaScreen", () => {
 
 		it("changes the default language and removes a language from the row menu", async () => {
 			const content = await openLocales();
+			const enRemoveInitial = within(screen.getByTestId("locale-en")).getByRole("button", {
+				name: t("row.remove", { name: "en" }),
+			}) as HTMLButtonElement;
+			expect(enRemoveInitial.disabled).toBe(true);
+			expect(enRemoveInitial.getAttribute("title")).toBe(tLocales("locales.removeBlockedDefault"));
+
 			fireEvent.click(within(content).getByRole("button", { name: tLocales("locales.add") }));
 			const dialog = await screen.findByTestId("locale-dialog");
 			type(within(dialog).getByLabelText(tLocales("locales.code")), "ko");
@@ -1424,9 +1474,16 @@ describe("SchemaScreen", () => {
 			const ko = screen.getByTestId("locale-ko");
 			expect(within(ko).getByText(tLocales("locales.defaultBadge"))).toBeTruthy();
 			expect(within(screen.getByTestId("locale-en")).queryByText(tLocales("locales.defaultBadge"))).toBeNull();
-			fireEvent.click(
-				within(screen.getByTestId("locale-en")).getByRole("button", { name: t("row.remove", { name: "en" }) }),
-			);
+
+			const koRemove = within(ko).getByRole("button", { name: t("row.remove", { name: "ko" }) }) as HTMLButtonElement;
+			expect(koRemove.disabled).toBe(true);
+			expect(koRemove.getAttribute("title")).toBe(tLocales("locales.removeBlockedDefault"));
+
+			const enRemove = within(screen.getByTestId("locale-en")).getByRole("button", {
+				name: t("row.remove", { name: "en" }),
+			}) as HTMLButtonElement;
+			expect(enRemove.disabled).toBe(false);
+			fireEvent.click(enRemove);
 			await waitFor(() => expect(screen.queryByTestId("locale-en")).toBeNull());
 		});
 

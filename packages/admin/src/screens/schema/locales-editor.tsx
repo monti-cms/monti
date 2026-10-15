@@ -318,33 +318,37 @@ export function LocalesEditor({
 	const editing = dialog?.code ? locales.find((locale) => locale.code === dialog.code) : undefined;
 	const mode = PREFIX_MODES.find((value) => value === sectionOf(file, "site").localePrefix) ?? "except-default";
 	const other = locales.find((locale) => locale.code !== defaultLocale)?.code ?? "en";
-	const buttons = (locale: Locale, index: number): RowButton[] => [
-		{
-			label: t("locales.editNamed", { name: locale.name }),
-			icon: Pencil,
-			disabled,
-			onClick: () => setDialog({ code: locale.code }),
-		},
-		{
-			label: ts("row.up", { name: locale.code }),
-			icon: ArrowUp,
-			disabled: disabled || index === 0,
-			onClick: () => change(moveItem(locales, index, -1)),
-		},
-		{
-			label: ts("row.down", { name: locale.code }),
-			icon: ArrowDown,
-			disabled: disabled || index === locales.length - 1,
-			onClick: () => change(moveItem(locales, index, 1)),
-		},
-		{
-			label: ts("row.remove", { name: locale.code }),
-			icon: Trash2,
-			destructive: true,
-			disabled,
-			onClick: () => change(locales.filter((_, at) => at !== index)),
-		},
-	];
+	const buttons = (locale: Locale, index: number): RowButton[] => {
+		const isDefault = locale.code === defaultLocale;
+		return [
+			{
+				label: t("locales.editNamed", { name: locale.name }),
+				icon: Pencil,
+				disabled,
+				onClick: () => setDialog({ code: locale.code }),
+			},
+			{
+				label: ts("row.up", { name: locale.code }),
+				icon: ArrowUp,
+				disabled: disabled || index === 0,
+				onClick: () => change(moveItem(locales, index, -1)),
+			},
+			{
+				label: ts("row.down", { name: locale.code }),
+				icon: ArrowDown,
+				disabled: disabled || index === locales.length - 1,
+				onClick: () => change(moveItem(locales, index, 1)),
+			},
+			{
+				label: ts("row.remove", { name: locale.code }),
+				icon: Trash2,
+				destructive: true,
+				disabled: disabled || isDefault,
+				title: isDefault ? t("locales.removeBlockedDefault") : undefined,
+				onClick: () => change(locales.filter((_, at) => at !== index)),
+			},
+		];
+	};
 	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
 		<div className="flex flex-col gap-12">

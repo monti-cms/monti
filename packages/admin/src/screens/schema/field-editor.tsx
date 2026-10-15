@@ -2,16 +2,15 @@
 
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
 import { ChevronRight } from "lucide-react";
-import { useId, useState } from "react";
+import { useState } from "react";
+import { useCmsAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../ui/dialog";
-import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
-import { Textarea } from "../../ui/textarea";
 import { Labeled } from "../shared/labeled";
 import {
 	AddButton,
@@ -26,6 +25,9 @@ import {
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
+import { FieldCustomInputPicker, FieldRolePicker, InputOptionsEditor } from "./field-role-input";
+export { FieldCustomInputPicker, FieldRolePicker, InputOptionsEditor };
+
 import { schemaFieldsMessages } from "./fields.messages";
 import {
 	addField,
@@ -161,52 +163,6 @@ function OptionsEditor({
 				</div>
 			)}
 		</fieldset>
-	);
-}
-
-/** `inputOptions`: a JSON object of text, number and flag values, checked when the writer leaves the box. */
-export function InputOptionsEditor({
-	value,
-	onChange,
-}: {
-	value: unknown;
-	onChange: (value: Obj | undefined) => void;
-}) {
-	const t = useTranslator(schemaFieldsMessages);
-	const id = useId();
-	const { disabled } = useSchemaEdit();
-	const [text, setText] = useState(isObj(value) ? JSON.stringify(value) : "");
-	const [bad, setBad] = useState(false);
-	const commit = () => {
-		if (text.trim() === "") {
-			setBad(false);
-			onChange(undefined);
-			return;
-		}
-		try {
-			const parsed: unknown = JSON.parse(text);
-			const ok =
-				isObj(parsed) && Object.values(parsed).every((item) => ["string", "number", "boolean"].includes(typeof item));
-			setBad(!ok);
-			if (ok) onChange(parsed as Obj);
-		} catch {
-			setBad(true);
-		}
-	};
-	return (
-		<Labeled label={t("field.inputOptions")} htmlFor={id} hint={t("field.inputOptionsHint")}>
-			<Textarea
-				id={id}
-				rows={2}
-				value={text}
-				disabled={disabled}
-				aria-invalid={bad || undefined}
-				className="font-mono text-xs"
-				onChange={(event) => setText(event.target.value)}
-				onBlur={commit}
-			/>
-			{bad && <FieldError>{t("field.inputOptionsBad")}</FieldError>}
-		</Labeled>
 	);
 }
 
@@ -464,6 +420,11 @@ export function FieldEditor({
 	const label = typeof field.label === "string" ? field.label : "";
 	// The title field is a top-level text field: the one with the title role, or the one named `title`.
 	const isTitle = !place.branch && titleFieldName(editing.collection) === name;
+	const isSlug = !place.branch && (kind === "slug" || name === "slug");
+	const isFixed = isTitle || isSlug;
+	const { fieldInputs } = useCmsAdminComponents();
+	const hasPluginInputs = Object.keys(fieldInputs ?? {}).length > 0;
+	const hasCustomInput = typeof field.input === "string" && field.input.length > 0;
 	const blocked = removeBlock(editing.collection, place, name);
 
 	return (
@@ -525,7 +486,9 @@ export function FieldEditor({
 						/>
 						<Pick
 							label={t("field.kind")}
+							hint={isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : undefined}
 							value={kind}
+							disabled={isFixed}
 							items={branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 							onChange={(next) => change((current) => withKind(current, next as FieldKindName, collectionNames))}
 						/>
@@ -573,29 +536,24 @@ export function FieldEditor({
 					<KindOptions name={name} field={field} editing={editing} set={set} change={change} />
 					<details className="rounded-md border border-dashed px-2.5 py-1.5 text-sm">
 						<summary className="cursor-pointer text-cms-muted-foreground text-xs">{t("field.advanced")}</summary>
-						<div className="mt-2 grid gap-3 sm:grid-cols-2">
-							{valueKind && (
-								<TextInput
-									label={t("field.role")}
-									hint={t("field.roleHint")}
-									value={field.role as string | undefined}
-									onChange={(value) => set("role", orUndefined(value))}
+						<div className="mt-3 flex flex-col gap-4">
+							{!isSlug && valueKind && (
+								<FieldRolePicker
+									role={field.role as string | undefined}
+									kind={kind}
+									isTitle={isTitle}
+									onChange={(role) => set("role", role)}
 								/>
 							)}
-							{valueKind && (
-								<TextInput
-									label={t("field.input")}
-									hint={t("field.inputHint")}
+							{!isFixed && valueKind && (hasPluginInputs || hasCustomInput) && (
+								<FieldCustomInputPicker
 									value={field.input as string | undefined}
-									onChange={(value) => set("input", orUndefined(value))}
+									options={field.inputOptions}
+									onChangeInput={(input) => set("input", input)}
+									onChangeOptions={(opts) => set("inputOptions", opts)}
 								/>
 							)}
 						</div>
-						{valueKind && (
-							<div className="mt-3">
-								<InputOptionsEditor value={field.inputOptions} onChange={(value) => set("inputOptions", value)} />
-							</div>
-						)}
 					</details>
 					{disabled && null}
 				</div>
