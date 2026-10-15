@@ -55,5 +55,5 @@ function ErrorAlert({ text }) {
 }
 /** One labelled input of the login forms. */
 function TextField({ id, label, hint, ...props }) {
-    return (_jsxs("div", { className: "flex flex-col gap-1.5", children: [_jsx(Label, { htmlFor: id, children: label }), _jsx(Input, { id: id, required: true, ...props }), hint ? _jsx("p", { className: "text-cms-muted-foreground text-xs", children: hint }) : null] }));
+    return (_jsxs("div", { className: "flex flex-col gap-1.5", children: [_jsx(Label, { htmlFor: id, children: label }), hint ? _jsx("p", { className: "text-cms-muted-foreground text-xs", children: hint }) : null, _jsx(Input, { id: id, required: true, ...props })] }));
 }

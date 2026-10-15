@@ -23,11 +23,12 @@ export declare function useIssuesUnder(path: string, exclude?: string): readonly
 export declare function IssueList({ issues }: {
     issues: readonly Issue[];
 }): import("react").JSX.Element | null;
-export declare function TextInput({ label, value, onChange, placeholder, hint, type, className, optional, disabled: customDisabled, }: {
+export declare function TextInput({ label, value, onChange, placeholder, description, hint, type, className, optional, disabled: customDisabled, }: {
     label: string;
     value: string | number | undefined;
     onChange: (value: string) => void;
     placeholder?: string;
+    description?: ReactNode;
     hint?: ReactNode;
     type?: "text" | "number";
     className?: string;
@@ -38,18 +39,21 @@ export declare function TextInput({ label, value, onChange, placeholder, hint, t
 /** A text value that is `undefined` when empty (an optional property of the file). */
 export declare const orUndefined: (value: string) => string | undefined;
 export declare const countOrUndefined: (value: string) => number | undefined;
-export declare function FlagSwitch({ label, checked, onChange, hint, }: {
+export declare function FlagSwitch({ label, checked, onChange, description, hint, className, }: {
     label: string;
     checked: boolean;
     onChange: (value: boolean) => void;
+    description?: ReactNode;
     hint?: ReactNode;
+    className?: string;
 }): import("react").JSX.Element;
 /** A few exclusive choices side by side in one rounded strip (a segmented control). */
-export declare function Segmented({ label, value, items, onChange, hint, }: {
+export declare function Segmented({ label, value, items, onChange, description, hint, }: {
     label: string;
     value: string;
     items: readonly PickItem[];
     onChange: (value: string) => void;
+    description?: ReactNode;
     hint?: ReactNode;
 }): import("react").JSX.Element;
 export interface PickItem {
@@ -58,21 +62,23 @@ export interface PickItem {
     /** A muted line under the label in the list of choices (the closed select shows the label only). */
     readonly description?: string;
 }
-export declare function Pick({ label, value, items, onChange, hint, className, disabled: customDisabled, control, }: {
+export declare function Pick({ label, value, items, onChange, description, hint, className, disabled: customDisabled, control, size, }: {
     label: string;
     value: string;
     items: readonly PickItem[];
     onChange: (value: string) => void;
+    description?: ReactNode;
     hint?: ReactNode;
     className?: string;
     disabled?: boolean;
     control?: keyof typeof CONTROL_WIDTH;
+    size?: "sm" | "default";
 }): import("react").JSX.Element;
 /**
  * An input for a name (a field, an option, a collection): the change is taken when the writer leaves the input or presses Enter, and a name that cannot be used
  * is refused with the reason, so a half-typed name never renames anything.
  */
-export declare function NameInput({ label, value, taken, onCommit, disabled: forcedDisabled, className, hint, }: {
+export declare function NameInput({ label, value, taken, onCommit, disabled: forcedDisabled, className, description, hint, }: {
     label: string;
     value: string;
     /** The other names it must differ from. */
@@ -80,6 +86,7 @@ export declare function NameInput({ label, value, taken, onCommit, disabled: for
     onCommit: (name: string) => void;
     disabled?: boolean;
     className?: string;
+    description?: ReactNode;
     hint?: ReactNode;
 }): import("react").JSX.Element;
 /** Up, down and remove buttons of one row of a list. */

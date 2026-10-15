@@ -1,7 +1,7 @@
 import { adminRoute, ok, parseWith, readJsonBody } from "../handler.js";
 /** Folder tree per collection. */
 export const GET = adminRoute(async ({ request, cms }) => {
-    const collection = parseWith(cms.site.api.collectionSchema, new URL(request.url).searchParams.get("collection"), "collection is required");
+    const collection = parseWith(cms.site.api.folderCollectionSchema, new URL(request.url).searchParams.get("collection"), "collection is required");
     return ok(await cms.store().listFolders({ collection }));
 });
 export const POST = adminRoute(async ({ request, cms }) => {

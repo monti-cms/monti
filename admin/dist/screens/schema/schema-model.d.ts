@@ -11,7 +11,7 @@ export type FieldKindName = (typeof FIELD_KINDS)[number];
 export declare const VALUE_KINDS: readonly ["text", "relation", "select", "media"];
 /** The order a field's properties are written in: the common ones, then the ones of the kind (the order of the field format in `format.ts` of core). */
 export declare const FIELD_KEY_ORDER: readonly ["kind", "label", "description", "required", "localized", "input", "inputOptions", "role", "fillFromBody", "multiline", "rows", "max", "from", "to", "many", "createInline", "publishedOnly", "allowUnpublished", "ordered", "view", "via", "accept", "options", "defaultValue", "discriminant", "values", "placeholder"];
-export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "body", "fields", "layout"];
+export declare const COLLECTION_KEY_ORDER: readonly ["label", "kind", "icon", "path", "folders", "body", "defaultTab", "fields", "layout"];
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export declare function setProp(obj: Obj, key: string, value: unknown, order?: readonly string[]): Obj;
 /** The `site` or `admin` settings of the file (empty when it has none). */
@@ -53,6 +53,10 @@ export declare function pathProblem(path: string): "slash" | "slug" | null;
 /** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
 export declare function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj;
 export declare function removeCollection(file: Obj, name: string): Obj;
+/** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */
+export declare function moveCollection(file: Obj, name: string, delta: number): Obj;
+/** `file` with its `collections` keys arranged in `newOrder`. */
+export declare function reorderCollections(file: Obj, newOrder: readonly string[]): Obj;
 /** Every name in `fields` or inside a conditional field, for the uniqueness of a new name (the stored values share one namespace). */
 export declare function allFieldNames(collection: Obj): string[];
 /** A field of `kind` with the properties it needs. */

@@ -24,6 +24,8 @@ export interface Tab {
     locked: string[];
 }
 export interface Tree {
+    /** Custom title for the default properties tab. If omitted, uses the admin's translated default ("Properties"). */
+    defaultTab?: string;
     /** Fields the panel does not draw (the title of a document): they only define the order of `fields`. */
     pinned: string[];
     /** The default tab first, then the others in the order the panel shows them. */
@@ -75,14 +77,20 @@ export declare function moveGroupBy(tree: Tree, ref: BlockRef, delta: -1 | 1): T
 /** Moves a group to the end of another tab. */
 export declare const moveGroupToTab: (tree: Tree, from: BlockRef, tab: number) => Tree;
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */
-export declare function tabProblem(tree: Tree, name: string, except?: number): "empty" | "taken" | null;
+export declare function tabProblem(tree: Tree, name: string, except?: number, defaultLabel?: string): "empty" | "taken" | "too-long" | null;
 export declare function addTab(tree: Tree, name: string): Tree;
-/** Whether a tab can be renamed or removed: not the default one, and not one a plugin puts fields in. */
-export declare const tabIsEditable: (tree: Tree, index: number) => boolean;
-export declare function renameTab(tree: Tree, index: number, name: string): Tree;
+/** Whether a tab can be renamed: any tab that is not locked by a plugin. */
+export declare const tabCanRename: (tree: Tree, index: number) => boolean;
+/** Whether a tab can be removed: only user-added tabs after the default tab, and not locked by a plugin. */
+export declare const tabCanRemove: (tree: Tree, index: number) => boolean;
+/** Whether a tab can be moved: only user-added tabs after the default tab, and not plugin-only. */
+export declare const tabCanMove: (tree: Tree, index: number) => boolean;
+/** Whether a tab can be removed: not the default one, and not one a plugin puts fields in. */
+export declare const tabIsEditable: typeof tabCanRemove;
+export declare function renameTab(tree: Tree, index: number, name: string, defaultLabel?: string): Tree;
 /** Removes a tab; its blocks go to the end of the default tab. */
 export declare function removeTab(tree: Tree, index: number): Tree;
 /** Moves a tab one step; the default tab stays first. */
 export declare function moveTab(tree: Tree, index: number, delta: -1 | 1): Tree;
-/** Whether the tree has more than the default tab: only then does the tree show the tab level. */
+/** Whether the tree has more than the default tab. */
 export declare const hasTabLevel: (tree: Tree) => boolean;

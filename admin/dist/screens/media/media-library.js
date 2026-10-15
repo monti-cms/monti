@@ -1,17 +1,18 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSite, useTranslator } from "@monti-cms/core/client";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { FileText, Image as ImageIcon, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, SearchX, Trash2, Upload, } from "lucide-react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Folder as FolderIcon, FolderInput, FolderUp, Image as ImageIcon, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, SearchX, Trash2, Upload, } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorText } from "../../api/client.js";
+import { foldersKeys, listFolders } from "../../api/folders.js";
 import { cleanupMedia, deleteMedia, listMedia, mediaKeys, updateMedia, } from "../../api/media.js";
 import { useCmsMutation } from "../../api/use-cms-mutation.js";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference.js";
-import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state.js";
+import { enumParam, pageParam, pageSizeParam, textParam, useUrlState, } from "../../lib/hooks/use-url-state.js";
 import { cn } from "../../lib/utils/cn.js";
 import { useAdminRouter } from "../../router/index.js";
 import { Button } from "../../ui/button.js";
@@ -31,6 +32,7 @@ import { ListPagination } from "../shared/list-pager.js";
 import { LoadErrorAlert } from "../shared/load-error-alert.js";
 import { DockedPanel, MEDIA_PANEL_RESIZE } from "../shared/side-panel.js";
 import { useDebouncedInput } from "../shared/use-debounced.js";
+import { useFolderActions } from "../shared/use-folder-actions.js";
 import { useUnsavedGuard } from "../shared/use-unsaved-guard.js";
 import { MediaDetailPanel } from "./media-detail-panel.js";
 import { mediaUsages, usageNoteLabel } from "./media-item.js";
@@ -49,6 +51,10 @@ const usedOptions = (t) => [
     { value: "unused", label: t("library.used.unused") },
 ];
 const VIEW_CODEC = enumCodec(["grid", "list"]);
+const descendantsParam = {
+    parse: (raw) => raw === "1",
+    serialize: (value) => (value ? "1" : null),
+};
 /** The library's filters and page live in the address, so a refresh keeps them and the address can be shared. */
 const LIBRARY_PARAMS = {
     page: pageParam,
@@ -58,6 +64,8 @@ const LIBRARY_PARAMS = {
     kind: enumParam(["all", "image", "file"], "all"),
     uploadedFrom: textParam,
     uploadedTo: textParam,
+    folder: textParam,
+    descendants: descendantsParam,
 };
 /**
  * Media library. Grid and list views, file name search, filters for type, upload date and usage, newest upload first.
@@ -68,7 +76,8 @@ export function MediaLibrary() {
     const t = useTranslator(mediaMessages);
     const tc = useTranslator(commonMessages);
     const router = useAdminRouter();
-    const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo }, update] = useUrlState(LIBRARY_PARAMS);
+    const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder, descendants }, update] = useUrlState(LIBRARY_PARAMS);
+    const queryClient = useQueryClient();
     const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
     const [selectedId, setSelectedId] = useState(null);
     /** Whether the detail panel's default description has unsaved changes. The detail panel reports it. */
@@ -86,6 +95,11 @@ export function MediaLibrary() {
             params.set("search", search.trim());
         if (kind !== "all")
             params.set("kind", kind);
+        if (folder !== "all" && folder !== "") {
+            params.set("folderId", folder === "unfiled" ? "null" : folder);
+            if (descendants || search.trim())
+                params.set("includeDescendants", "true");
+        }
         const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
         const to = uploadedTo && site.parseDateTimeInput(`${uploadedTo}T23:59`);
         if (from)
@@ -93,7 +107,7 @@ export function MediaLibrary() {
         if (to)
             params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
         return params.toString();
-    }, [page, pageSize, used, search, kind, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
+    }, [page, pageSize, used, search, kind, folder, descendants, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
     const mediaQuery = useQuery({
         queryKey: mediaKeys.list(query),
         queryFn: ({ signal }) => listMedia(site, query, signal),
@@ -102,6 +116,51 @@ export function MediaLibrary() {
     const items = mediaQuery.data?.items ?? [];
     const total = mediaQuery.data?.total ?? 0;
     const selected = items.find((item) => item.id === selectedId) ?? null;
+    const foldersQuery = useQuery({
+        queryKey: foldersKeys.list("media"),
+        queryFn: ({ signal }) => listFolders(site, "media", signal),
+    });
+    const folders = foldersQuery.data ?? [];
+    const folderActions = useFolderActions({
+        collection: "media",
+        folders,
+        onChanged: async (deletedId) => {
+            await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
+            if (deletedId && folder === deletedId)
+                update({ folder: "all" });
+            else
+                await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+        },
+    });
+    const moveMediaToFolder = async (media, targetFolderId) => {
+        const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+        const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
+        try {
+            await updateMedia(site, media.id, { folderId: targetFolderId });
+            toast.success(t("library.moved", { name: media.filename, destination }));
+            await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+            await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
+        }
+        catch (error) {
+            toast.error(errorText(site, error, t("library.moveFailed", { name: media.filename })));
+        }
+    };
+    const onDropEntries = async (targetFolderId, entries) => {
+        const targetFolder = targetFolderId ? folders.find((f) => f.id === targetFolderId) : null;
+        const destination = targetFolder ? `'${targetFolder.name}'` : t("detail.folder.none");
+        try {
+            await Promise.all(entries.map((entry) => updateMedia(site, entry.id, { folderId: targetFolderId })));
+            const label = entries.length === 1
+                ? (items.find((item) => item.id === entries[0].id)?.filename ?? "File")
+                : `${entries.length} files`;
+            toast.success(t("library.moved", { name: label, destination }));
+            await queryClient.invalidateQueries({ queryKey: mediaKeys.all });
+            await queryClient.invalidateQueries({ queryKey: foldersKeys.list("media") });
+        }
+        catch (error) {
+            toast.error(errorText(site, error, t("library.unknownError")));
+        }
+    };
     const loadError = mediaQuery.error ? errorText(site, mediaQuery.error, t("library.loadFailed")) : null;
     /** Opens in the detail panel (null to close). If there is an unsaved default description, asks first whether to discard it. */
     const openDetail = async (id) => {
@@ -114,15 +173,16 @@ export function MediaLibrary() {
     };
     const uploadMutation = useCmsMutation({
         fn: async ({ files, optimize }) => {
+            const targetFolderId = folder !== "all" && folder !== "" && folder !== "unfiled" ? folder : null;
             for (const [index, file] of files.entries()) {
                 const onProgress = (percent) => setUpload({ current: index + 1, total: files.length, percent });
                 setUpload({ current: index + 1, total: files.length, percent: 0 });
                 if (isImageFile(site, file)) {
                     const prepared = await prepareUpload(site, file, { optimize });
-                    await uploadImageFile(site, prepared, onProgress);
+                    await uploadImageFile(site, prepared, onProgress, { folderId: targetFolderId });
                 }
                 else {
-                    await uploadAttachment(site, file, onProgress);
+                    await uploadAttachment(site, file, onProgress, { folderId: targetFolderId });
                 }
             }
         },
@@ -132,7 +192,7 @@ export function MediaLibrary() {
         inline: true,
         onSuccess: () => update({ page: 1 }),
         onError: (error) => toast.error(t("library.uploadFailed", { error: errorText(site, error, t("library.unknownError")) })),
-        invalidate: [mediaKeys.all],
+        invalidate: [mediaKeys.all, foldersKeys.list("media")],
     });
     const handleFiles = async (files) => {
         if (!files?.length)
@@ -172,7 +232,7 @@ export function MediaLibrary() {
                 ? { items: data.items.filter((item) => item.id !== media.id), total: Math.max(0, data.total - 1) }
                 : data,
         },
-        invalidate: [mediaKeys.all],
+        invalidate: [mediaKeys.all, foldersKeys.list("media")],
     });
     const removeMedia = (media) => {
         // If the file being deleted is open, close it. Its edited default description is discarded with it.
@@ -247,6 +307,35 @@ export function MediaLibrary() {
                 onSelect: () => router.navigate(entryHref(site, usage.collection, usage.entryId)),
             })),
         },
+        ...(folders.length > 0
+            ? [
+                {
+                    kind: "sub",
+                    label: t("library.menu.moveToFolder"),
+                    icon: FolderInput,
+                    items: [
+                        ...(media.folderId
+                            ? [
+                                {
+                                    kind: "item",
+                                    label: t("detail.folder.none"),
+                                    icon: FolderUp,
+                                    onSelect: () => void moveMediaToFolder(media, null),
+                                },
+                            ]
+                            : []),
+                        ...folders
+                            .filter((f) => f.id !== media.folderId)
+                            .map((f) => ({
+                            kind: "item",
+                            label: f.name,
+                            icon: FolderIcon,
+                            onSelect: () => void moveMediaToFolder(media, f.id),
+                        })),
+                    ],
+                },
+            ]
+            : []),
         { kind: "separator" },
         {
             kind: "item",
@@ -268,7 +357,21 @@ export function MediaLibrary() {
     };
     const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
     const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
-    return (_jsxs(AdminShell, { title: t("title"), count: mediaQuery.data ? total : undefined, sidebar: { activeNav: "media" }, children: [_jsx(PageActions, { children: _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Label, { className: "font-normal text-cms-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: optimize, onCheckedChange: (checked) => setOptimize(checked === true) }), t("library.optimize")] }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, hidden: true, accept: uploadAccept(site), onChange: (event) => void handleFiles(event.target.files) }), _jsxs(Button, { type: "button", size: "sm", disabled: upload !== null, onClick: () => fileInputRef.current?.click(), children: [_jsx(Upload, { "aria-hidden": true }), upload
+    const currentFolder = folders.find((f) => f.id === folder);
+    const folderTitle = currentFolder ? ` · ${currentFolder.name}` : "";
+    return (_jsxs(AdminShell, { title: `${t("title")}${folderTitle}`, count: mediaQuery.data ? total : undefined, sidebar: {
+            activeNav: "media",
+            folderNav: {
+                collection: "media",
+                currentFolder: folder || "all",
+                includeDescendants: descendants,
+                folders,
+                folderActions,
+                onSelectFolder: (f) => update({ folder: f ?? "all", page: 1 }),
+                onIncludeDescendantsChange: (includeDescendants) => update({ descendants: includeDescendants, page: 1 }),
+                onDropEntries,
+            },
+        }, children: [_jsx(PageActions, { children: _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Label, { className: "font-normal text-cms-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: optimize, onCheckedChange: (checked) => setOptimize(checked === true) }), t("library.optimize")] }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, hidden: true, accept: uploadAccept(site), onChange: (event) => void handleFiles(event.target.files) }), _jsxs(Button, { type: "button", size: "sm", disabled: upload !== null, onClick: () => fileInputRef.current?.click(), children: [_jsx(Upload, { "aria-hidden": true }), upload
                                     ? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
                                     : t("library.upload")] }), _jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: () => cleanupMutation.mutate(), children: t("library.cleanup") }), _jsx(IconButton, { label: tc("refresh"), variant: "outline", onClick: () => void mediaQuery.refetch(), children: _jsx(RefreshCw, { className: cn(mediaQuery.isFetching && "animate-spin"), "aria-hidden": true }) })] }) }), _jsxs("div", { className: "flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6", children: [_jsx(Input, { type: "search", "aria-label": t("library.search"), value: searchText, placeholder: t("library.search"), onChange: (event) => setSearchText(event.target.value), className: "h-8 w-56" }), _jsxs(Select, { value: kind, items: kindOptions(t), onValueChange: (value) => value && update({ kind: value }), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.kindLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: kindOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsxs(Select, { value: used, items: usedOptions(t), onValueChange: (value) => value && update({ used: value }), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.usedLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: usedOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsx(DateRangePicker, { label: t("library.uploadedDate"), from: uploadedFrom, to: uploadedTo, onChange: (from, to) => update({ uploadedFrom: from, uploadedTo: to }) }), _jsxs(ToggleGroup, { "aria-label": t("library.view"), variant: "outline", size: "sm", spacing: 0, value: [view], onValueChange: (next) => {
                             const picked = next[0];
@@ -278,5 +381,5 @@ export function MediaLibrary() {
                                             label: t("library.upload"),
                                             icon: Upload,
                                             onClick: () => fileInputRef.current?.click(),
-                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults }), onRename: (filename) => renameMutation.mutateAsync({ media: selected, filename }), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog, guardDialog] }));
+                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, folders: folders, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults }), onRename: (filename) => renameMutation.mutateAsync({ media: selected, filename }), onMoveFolder: (targetFolderId) => moveMediaToFolder(selected, targetFolderId), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog, guardDialog, folderActions.dialogs] }));
 }

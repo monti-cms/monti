@@ -72,6 +72,7 @@ export interface ContentAddressesTable {
 }
 export interface MediaAssetsTable {
     id: string;
+    folder_id: string | null;
     status: Generated<"pending" | "ready" | "failed" | "deleting">;
     filename: Generated<string>;
     mime_type: string | null;

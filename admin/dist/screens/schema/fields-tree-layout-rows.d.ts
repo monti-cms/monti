@@ -6,7 +6,7 @@ export interface LayoutOps {
     readonly showTabs: boolean;
     readonly disabled: boolean;
 }
-/** A tab of the panel as a row of the tree: only drawn once the collection has more than the default tab. */
+/** A tab of the panel as a row of the tree: shown for all tabs including the default tab. */
 export declare function TabRow({ ops, index }: {
     ops: LayoutOps;
     index: number;

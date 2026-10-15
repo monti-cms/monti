@@ -7,7 +7,7 @@ import { type FolderActions } from "./shared/use-folder-actions.js";
 export type AdminNavId = Collection | "media" | "templates" | "api-keys" | "events" | "settings" | "trash" | `tools:${string}`;
 /** Folder navigation, passed by the list screen. The sidebar draws it as a tree under the collection it belongs to. */
 export interface FolderNavigation {
-    collection: Collection;
+    collection: Collection | "media";
     /** `all` (top level) or a folder ID. */
     currentFolder: string;
     includeDescendants: boolean;
@@ -17,7 +17,7 @@ export interface FolderNavigation {
     onIncludeDescendantsChange: (value: boolean) => void;
     /** When a list row is dragged and dropped onto a folder (or the top level). */
     onDropEntries: (folderId: string | null, entries: DraggedEntry[]) => void;
-    onCreateEntry: () => void;
+    onCreateEntry?: () => void;
 }
 export interface AdminSidebarProps {
     activeNav: AdminNavId;

@@ -51,6 +51,7 @@ export function mapPublishedEntryRow(row) {
 /** The columns of `media_assets` that make a `MediaAssetRecord`, in the order the queries select them. */
 export const MEDIA_COLUMN_NAMES = [
     "id",
+    "folder_id",
     "status",
     "filename",
     "mime_type",
@@ -74,6 +75,7 @@ export const MEDIA_COLUMN_NAMES = [
 const toNumberOrNull = (value) => (value === null ? null : Number(value));
 export const mapMediaRow = (row) => ({
     id: row.id,
+    folderId: row.folder_id ?? null,
     status: row.status,
     filename: row.filename,
     mimeType: row.mime_type,

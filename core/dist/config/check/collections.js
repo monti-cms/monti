@@ -55,6 +55,9 @@ export function checkCollection(list, name, schema, collections) {
     }
     checkRoles(list, base, schema);
     checkTitle(list, base, schema);
+    if (schema.defaultTab !== undefined) {
+        checkTabName(list, pathOf(base, "defaultTab"), schema.defaultTab);
+    }
     for (const [index, group] of (schema.layout ?? []).entries()) {
         const at = pathOf(base, "layout", index);
         checkTabName(list, pathOf(at, "tab"), group.tab);

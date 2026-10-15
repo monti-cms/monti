@@ -12,6 +12,7 @@ import { Button, buttonVariants } from "../../ui/button.js";
 import { Field, FieldError, FieldLabel } from "../../ui/field.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { Input } from "../../ui/input.js";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { Textarea } from "../../ui/textarea.js";
 import { EditorFooter } from "../shared/editor-footer.js";
 import { entryHref } from "../shared/entry-href.js";
@@ -29,6 +30,18 @@ function Section({ title, children }) {
 function Row({ label, children }) {
     return (_jsxs("div", { className: "space-y-0.5", children: [_jsx("dt", { className: "text-[11px] text-cms-muted-foreground", children: label }), _jsx("dd", { className: "break-all", children: children })] }));
 }
+function folderPath(folder, folders) {
+    const parts = [folder.name];
+    let curr = folder;
+    while (curr.parentId) {
+        const parent = folders.find((f) => f.id === curr.parentId);
+        if (!parent)
+            break;
+        parts.unshift(parent.name);
+        curr = parent;
+    }
+    return parts.join(" / ");
+}
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.
  * From the top: preview -> immediate actions (copy URL/ID, open) -> info -> default description (images) -> usages -> delete.
@@ -36,10 +49,11 @@ function Row({ label, children }) {
  * suggestions). A suggestion only fills the input. The name is saved by its own button and the default description by pressing `Save`;
  * unsaved changes are reported through `onDirtyChange` (used to ask before opening or closing another file).
  */
-export function MediaDetailPanel({ media, className, onClose, onSaveDefaults, onRename, onRequestDelete, onDirtyChange, }) {
+export function MediaDetailPanel({ media, folders, className, onClose, onSaveDefaults, onRename, onMoveFolder, onRequestDelete, onDirtyChange, }) {
     const site = useSite();
     const t = useTranslator(mediaMessages);
     const tc = useTranslator(commonMessages);
+    const [movingFolder, setMovingFolder] = useState(false);
     const altId = useId();
     const captionId = useId();
     // The last saved (initially loaded) value. If the edited value differs, there are unsaved changes.
@@ -119,7 +133,15 @@ export function MediaDetailPanel({ media, className, onClose, onSaveDefaults, on
                                                                     setStem(event.target.value);
                                                                     setRenameError(null);
                                                                 }, className: "h-8 min-w-0 flex-1 text-xs md:text-xs" }), extension && (_jsx("span", { className: "shrink-0 text-cms-muted-foreground", title: t("detail.filename.extensionKept"), children: extension })), _jsx(IconButton, { type: "submit", label: t("detail.filename.save"), size: "icon-sm", variant: "outline", disabled: !nameDirty || problem !== null || renaming, children: _jsx(Check, { "aria-hidden": true }) })] }), (renameError || (problem && nameDirty)) && (_jsx(FieldError, { id: nameErrorId, children: renameError ??
-                                                            (problem === "empty" ? t("detail.filename.empty") : t("detail.filename.invalid")) }))] }), panel] })) }, `filename-${media.id}`), _jsx(Row, { label: t("detail.row.type"), children: isImage ? (media.mimeType ?? "—") : fileTypeLabel(media.filename, media.mimeType) }), isImage ? (_jsxs(Row, { label: t("detail.row.public"), children: [media.width, "\u00D7", media.height, " \u00B7 ", formatBytes(media.byteSize ?? 0)] })) : (_jsx(Row, { label: t("detail.row.size"), children: formatFileSize(media.byteSize ?? 0) })), isImage && media.original && (_jsxs(Row, { label: t("detail.row.original"), children: [media.original.width, "\u00D7", media.original.height, " \u00B7 ", formatBytes(media.original.byteSize ?? 0), " \u00B7", " ", media.original.mimeType] })), _jsx(Row, { label: t("detail.row.uploadedAt"), children: formatDateTime(site, media.createdAt) }), _jsx(Row, { label: t("detail.row.id"), children: _jsx("code", { className: "text-[11px]", children: media.id }) })] }) }), isImage && (_jsxs(Section, { title: t("detail.section.defaults"), children: [_jsx("p", { className: "text-cms-muted-foreground", children: t("detail.defaultsHelp") }), _jsxs("form", { className: "space-y-3", onSubmit: (event) => {
+                                                            (problem === "empty" ? t("detail.filename.empty") : t("detail.filename.invalid")) }))] }), panel] })) }, `filename-${media.id}`), _jsx(Row, { label: t("detail.row.type"), children: isImage ? (media.mimeType ?? "—") : fileTypeLabel(media.filename, media.mimeType) }), isImage ? (_jsxs(Row, { label: t("detail.row.public"), children: [media.width, "\u00D7", media.height, " \u00B7 ", formatBytes(media.byteSize ?? 0)] })) : (_jsx(Row, { label: t("detail.row.size"), children: formatFileSize(media.byteSize ?? 0) })), isImage && media.original && (_jsxs(Row, { label: t("detail.row.original"), children: [media.original.width, "\u00D7", media.original.height, " \u00B7 ", formatBytes(media.original.byteSize ?? 0), " \u00B7", " ", media.original.mimeType] })), folders && (_jsx(Row, { label: t("detail.row.folder"), children: _jsxs(Select, { value: media.folderId ?? "root", disabled: movingFolder || !onMoveFolder, onValueChange: (val) => {
+                                            if (!onMoveFolder)
+                                                return;
+                                            const nextId = val === "root" ? null : val;
+                                            if (nextId === (media.folderId ?? null))
+                                                return;
+                                            setMovingFolder(true);
+                                            void onMoveFolder(nextId).finally(() => setMovingFolder(false));
+                                        }, children: [_jsx(SelectTrigger, { className: "h-8 text-xs", children: _jsx(SelectValue, {}) }), _jsxs(SelectContent, { children: [_jsx(SelectItem, { value: "root", children: t("detail.folder.none") }), folders.map((f) => (_jsx(SelectItem, { value: f.id, children: folderPath(f, folders) }, f.id)))] })] }) })), _jsx(Row, { label: t("detail.row.uploadedAt"), children: formatDateTime(site, media.createdAt) }), _jsx(Row, { label: t("detail.row.id"), children: _jsx("code", { className: "text-[11px]", children: media.id }) })] }) }), isImage && (_jsxs(Section, { title: t("detail.section.defaults"), children: [_jsx("p", { className: "text-cms-muted-foreground", children: t("detail.defaultsHelp") }), _jsxs("form", { className: "space-y-3", onSubmit: (event) => {
                                     event.preventDefault();
                                     void saveDefaults();
                                 }, children: [_jsx(SlotScope, { request: slot("defaultAlt", (alt) => setDraft({ alt })), children: ({ trigger, panel }) => (_jsxs(Field, { children: [_jsxs("div", { className: "flex items-center justify-between gap-2", children: [_jsx(FieldLabel, { htmlFor: altId, children: t("detail.defaultAlt") }), trigger] }), _jsx(Textarea, { id: altId, rows: 2, value: draft.alt, disabled: isSaving, onChange: (event) => setDraft({ alt: event.target.value }), className: "min-h-14 text-xs md:text-xs" }), panel] })) }, `alt-${media.id}`), _jsx(SlotScope, { request: slot("defaultCaption", (caption) => setDraft({ caption })), children: ({ trigger, panel }) => (_jsxs(Field, { children: [_jsxs("div", { className: "flex items-center justify-between gap-2", children: [_jsx(FieldLabel, { htmlFor: captionId, children: t("detail.defaultCaption") }), trigger] }), _jsx(Textarea, { id: captionId, rows: 2, value: draft.caption, disabled: isSaving, onChange: (event) => setDraft({ caption: event.target.value }), className: "min-h-14 text-xs md:text-xs" }), panel] })) }, `caption-${media.id}`), _jsx(EditorFooter, { dirty: dirty, saving: isSaving, canSave: media.status === "ready", error: saveError, align: "end" })] })] })), _jsx(Section, { title: t("detail.section.usage", { count: usageCount(media) }), children: media.referencesCount === 0 ? (_jsx("p", { className: "text-cms-muted-foreground", children: t("detail.noUsage") })) : (_jsx("ul", { className: "space-y-1", children: mediaUsages(media).map((usage) => (_jsx("li", { children: _jsxs("a", { href: withBasePath(entryHref(site, usage.collection, usage.entryId)), className: "flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-cms-accent", children: [_jsx("span", { className: "min-w-0 flex-1 truncate", children: usage.title || tc("untitled") }), usage.note && (_jsx("span", { className: "shrink-0 text-cms-muted-foreground text-xs", children: usageNoteLabel(t, usage.note) }))] }) }, usage.entryId))) })) })] }), _jsxs("div", { className: "shrink-0 space-y-1.5 border-t px-4 py-3", children: [_jsx(Button, { type: "button", variant: "destructive", size: "sm", className: "w-full", disabled: media.referencesCount > 0, onClick: onRequestDelete, children: media.status === "deleting" ? t("detail.retryDelete") : tc("delete") }), media.referencesCount > 0 && (_jsx("p", { className: "text-center text-[11px] text-cms-muted-foreground", children: t("detail.inUse") }))] })] }));

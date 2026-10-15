@@ -18,6 +18,7 @@ export declare function createMediaOps(ctx: StoreContext): {
         filename?: string;
         defaultAlt?: string;
         defaultCaption?: string;
+        folderId?: string | null;
     }) => Promise<MediaAssetRecord>;
     /** Library: only completed and deleting files are shown. Files waiting for upload are targets of the cleanup job. */
     listMediaAssets: (params?: ListMediaParams) => Promise<ListMediaResult>;

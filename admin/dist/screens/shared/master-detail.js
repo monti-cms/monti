@@ -16,13 +16,13 @@ export function MasterDetail({ list, children }) {
 /**
  * The list column. While `loading` it shows `skeletonRows` placeholders; with no rows it shows `empty`. A `header` (a notice, a toolbar) sits above the rows.
  */
-export function ListPane({ label, loading = false, skeletonRows = 3, empty, header, children, }) {
+export function ListPane({ label, loading = false, skeletonRows = 3, empty, header, className, children, }) {
     const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
-    return (_jsxs("div", { className: cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH), children: [header, _jsx("ul", { className: "min-h-0 flex-1 divide-y overflow-y-auto", "aria-label": label, children: loading
+    return (_jsxs("div", { className: cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH, className), children: [header, _jsx("ul", { className: cn("min-h-0 flex-1 divide-y overflow-y-auto", !hasRows && !loading && "flex flex-col"), "aria-label": label, children: loading
                     ? Array.from({ length: skeletonRows }, (_, index) => (_jsx("li", { className: "p-3", "aria-hidden": true, children: _jsx(Skeleton, { className: "h-9 w-full" }) }, index)))
                     : hasRows
                         ? children
-                        : empty && _jsx("li", { children: empty }) })] }));
+                        : empty && _jsx("li", { className: "flex flex-1 items-center justify-center p-4 text-center", children: empty }) })] }));
 }
 /**
  * One row of a {@link ListPane}: the title with a status to its right, and a dim line under it. With `actions` the row also opens a context

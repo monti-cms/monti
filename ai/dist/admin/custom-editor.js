@@ -95,11 +95,11 @@ export function CustomBaseFields({ base, onChange }) {
     const fieldOptions = fieldOptionsOf(site);
     const engines = customEngines(site, base.surface);
     const fieldValue = base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
-    return (_jsxs("div", { className: "grid gap-5 sm:grid-cols-2", children: [_jsxs(Field, { className: "sm:col-span-2", children: [_jsx(FieldLabel, { htmlFor: ids.label, children: t("field.name") }), _jsx(Input, { id: ids.label, value: base.label, maxLength: 40, onChange: (event) => onChange({ ...base, label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.place, children: t("field.place") }), _jsx(OptionSelect, { id: ids.place, value: placeValue(base.surface), options: placeOptions, onChange: (value) => {
+    return (_jsxs("div", { className: "grid gap-5 sm:grid-cols-2", children: [_jsxs(Field, { className: "sm:col-span-2", children: [_jsx(FieldLabel, { htmlFor: ids.label, children: t("field.name") }), _jsx(Input, { id: ids.label, value: base.label, maxLength: 40, onChange: (event) => onChange({ ...base, label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.place, children: t("field.place") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t(`place.hint.${base.surface.slot}`) }), _jsx(OptionSelect, { id: ids.place, value: placeValue(base.surface), options: placeOptions, onChange: (value) => {
                             const option = placeOptions.find((item) => item.value === value);
                             if (option)
                                 setSurface(option.surface ?? firstField(site));
-                        } }), _jsx("p", { className: "mt-1 text-cms-muted-foreground text-xs", children: t(`place.hint.${base.surface.slot}`) })] }), base.surface.slot === "field" ? (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.field, children: t("field.field") }), _jsx(OptionSelect, { id: ids.field, value: fieldValue, options: fieldOptions, onChange: (value) => {
+                        } })] }), base.surface.slot === "field" ? (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.field, children: t("field.field") }), _jsx(OptionSelect, { id: ids.field, value: fieldValue, options: fieldOptions, onChange: (value) => {
                             const [collection, field] = value.split(":");
                             if (collection && field)
                                 setSurface({ slot: "field", field, collections: [collection] });

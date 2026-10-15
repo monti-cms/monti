@@ -59,7 +59,7 @@ export function FieldRolePicker({ role, kind, isTitle, disabled, onChange, }) {
     const t = useTranslator(schemaFieldsMessages);
     const [customActive, setCustomActive] = useState(false);
     if (isTitle) {
-        return (_jsx(Pick, { label: t("field.role"), hint: t("field.roleFixedTitleHint"), value: "title", disabled: true, items: [
+        return (_jsx(Pick, { label: t("field.role"), description: t("field.roleFixedTitleHint"), value: "title", disabled: true, items: [
                 {
                     value: "title",
                     label: t("field.roleTitle"),
@@ -88,7 +88,7 @@ export function FieldRolePicker({ role, kind, isTitle, disabled, onChange, }) {
             description: t("field.roleCustomDesc"),
         },
     ];
-    return (_jsxs("div", { className: "flex flex-col gap-3", children: [_jsx(Pick, { label: t("field.role"), hint: t("field.roleHint"), value: selectedValue, disabled: disabled, items: items, onChange: (next) => {
+    return (_jsxs("div", { className: "flex flex-col gap-3", children: [_jsx(Pick, { label: t("field.role"), description: t("field.roleHint"), value: selectedValue, disabled: disabled, items: items, onChange: (next) => {
                     if (next === ROLE_NONE) {
                         setCustomActive(false);
                         onChange(undefined);
@@ -125,7 +125,7 @@ export function InputOptionsEditor({ value, onChange, }) {
             setBad(true);
         }
     };
-    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, hint: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx(FieldError, { children: t("field.inputOptionsBad") })] }));
+    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, description: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx(FieldError, { children: t("field.inputOptionsBad") })] }));
 }
 export function FieldCustomInputPicker({ value, options, disabled, onChangeInput, onChangeOptions, }) {
     const t = useTranslator(schemaFieldsMessages);
@@ -151,7 +151,7 @@ export function FieldCustomInputPicker({ value, options, disabled, onChangeInput
             description: t("field.inputCustomDesc"),
         },
     ];
-    return (_jsxs("div", { className: "flex flex-col gap-4", children: [registered.length > 0 ? (_jsx(Pick, { label: t("field.input"), hint: t("field.inputHint"), value: selectedValue, disabled: disabled, items: items, onChange: (next) => {
+    return (_jsxs("div", { className: "flex flex-col gap-4", children: [registered.length > 0 ? (_jsx(Pick, { label: t("field.input"), description: t("field.inputHint"), value: selectedValue, disabled: disabled, items: items, onChange: (next) => {
                     if (next === ROLE_NONE) {
                         setCustomActive(false);
                         onChangeInput(undefined);
@@ -163,5 +163,5 @@ export function FieldCustomInputPicker({ value, options, disabled, onChangeInput
                         setCustomActive(false);
                         onChangeInput(next);
                     }
-                } })) : (_jsx(TextInput, { label: t("field.input"), hint: t("field.inputHint"), optional: true, value: value, disabled: disabled, onChange: (val) => onChangeInput(orUndefined(val)) })), registered.length > 0 && (selectedValue === ROLE_CUSTOM || customActive) && (_jsx(TextInput, { label: t("field.inputCustomName"), value: value, disabled: disabled, placeholder: "inputName", onChange: (val) => onChangeInput(orUndefined(val)) })), _jsx(InputOptionsEditor, { value: options, onChange: onChangeOptions })] }));
+                } })) : (_jsx(TextInput, { label: t("field.input"), description: t("field.inputHint"), optional: true, value: value, disabled: disabled, onChange: (val) => onChangeInput(orUndefined(val)) })), registered.length > 0 && (selectedValue === ROLE_CUSTOM || customActive) && (_jsx(TextInput, { label: t("field.inputCustomName"), value: value, disabled: disabled, placeholder: "inputName", onChange: (val) => onChangeInput(orUndefined(val)) })), _jsx(InputOptionsEditor, { value: options, onChange: onChangeOptions })] }));
 }

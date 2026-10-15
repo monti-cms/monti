@@ -117,13 +117,23 @@ export function createFolderOps(ctx) {
                 .set({ folder_id: curr.parent_id })
                 .where("folder_id", "=", params.id)
                 .execute();
+            await trx
+                .updateTable("media_assets")
+                .set({ folder_id: curr.parent_id })
+                .where("folder_id", "=", params.id)
+                .execute();
             await trx.deleteFrom("folders").where("id", "=", params.id).execute();
         }, { mapError: mapFolderError }),
         /** Preview before folder deletion: the number of direct entries and child folders. */
         getFolderContents: async (params) => {
-            const [entries, children] = await Promise.all([
+            const [entries, media, children] = await Promise.all([
                 db
                     .selectFrom("entries")
+                    .select((eb) => eb.fn.countAll().as("count"))
+                    .where("folder_id", "=", params.id)
+                    .executeTakeFirst(),
+                db
+                    .selectFrom("media_assets")
                     .select((eb) => eb.fn.countAll().as("count"))
                     .where("folder_id", "=", params.id)
                     .executeTakeFirst(),
@@ -135,7 +145,10 @@ export function createFolderOps(ctx) {
                     .orderBy("id", "asc")
                     .execute(),
             ]);
-            return { entryCount: Number(entries?.count ?? 0), childFolders: children.map(mapFolderRow) };
+            return {
+                entryCount: Number(entries?.count ?? 0) + Number(media?.count ?? 0),
+                childFolders: children.map(mapFolderRow),
+            };
         },
         listFolders: async (params) => {
             const rows = await db

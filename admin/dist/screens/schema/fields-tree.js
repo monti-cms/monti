@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_TAB, fieldSetsOf, hasFieldSet, placementsOf, useSite, useTranslator } from "@monti-cms/core/client";
 import { Eye, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { booleanCodec, usePreference } from "../../lib/hooks/use-preference.js";
@@ -47,21 +47,24 @@ function LayoutTree({ editing, ctx }) {
         const destinations = locked
             ? []
             : [
-                ...tree.tabs.flatMap((tab, at) => [
-                    ...tab.blocks.flatMap((block, g) => block.title === null
-                        ? []
-                        : [
-                            {
-                                label: showTabs ? `${tabLabel(site, tab.name)} / ${block.title}` : block.title,
-                                disabled: here?.tab === at && here.block === g,
-                                run: () => change((current) => placeField(current, name, at, g)),
-                            },
-                        ]),
-                    {
-                        label: showTabs ? `${tabLabel(site, tab.name)} / ${t("layout.noGroup")}` : t("layout.noGroup"),
-                        run: () => change((current) => placeUngrouped(current, name, at)),
-                    },
-                ]),
+                ...tree.tabs.flatMap((tab, at) => {
+                    const currentTabName = at === 0 ? (tree.defaultTab ?? tabLabel(site, tab.name)) : tab.name;
+                    return [
+                        ...tab.blocks.flatMap((block, g) => block.title === null
+                            ? []
+                            : [
+                                {
+                                    label: showTabs ? `${currentTabName} / ${block.title}` : block.title,
+                                    disabled: here?.tab === at && here.block === g,
+                                    run: () => change((current) => placeField(current, name, at, g)),
+                                },
+                            ]),
+                        {
+                            label: showTabs ? `${currentTabName} / ${t("layout.noGroup")}` : t("layout.noGroup"),
+                            run: () => change((current) => placeUngrouped(current, name, at)),
+                        },
+                    ];
+                }),
                 ...(inGroup
                     ? [{ label: t("layout.moveOut"), run: () => change((current) => moveOutOfGroup(current, name)) }]
                     : []),
@@ -83,8 +86,7 @@ function LayoutTree({ editing, ctx }) {
         fieldRow(name, false, { kind: "panel" });
     }
     for (const [at, tab] of tree.tabs.entries()) {
-        if (showTabs)
-            rows.push({ id: tabId(at), node: _jsx(TabRow, { ops: ops, index: at }, tabId(at)) });
+        rows.push({ id: tabId(at), node: _jsx(TabRow, { ops: ops, index: at }, tabId(at)) });
         for (const [b, block] of tab.blocks.entries()) {
             if (block.title === null) {
                 for (const name of block.fields)
@@ -196,8 +198,9 @@ export function FieldsCard({ editing }) {
     const offeredSets = fieldSetsOf(site.plugins).filter((set) => !hasFieldSet(set, fields));
     const addSet = (set) => editing.update((current) => addFieldSet(current, set));
     const addTabRow = () => addTo((tree) => {
-        const name = unique(t("layout.newTab"), tree.tabs.map((tab) => tab.name));
-        return tabProblem(tree, name) === null ? addTab(tree, name) : tree;
+        const defaultName = tabLabel(site, DEFAULT_TAB);
+        const name = unique(t("layout.newTab"), tree.tabs.map((tab, at) => (at === 0 ? (tree.defaultTab ?? defaultName) : tab.name)));
+        return tabProblem(tree, name, undefined, defaultName) === null ? addTab(tree, name) : tree;
     });
     const card = (_jsxs(Panel, { ref: cardRef, className: cn("min-w-0 overflow-hidden", TREE_MAX_WIDTH), "data-testid": "fields-card", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3.5", children: [_jsxs("div", { className: "min-w-0", children: [_jsxs("h4", { className: "font-semibold text-sm", children: [t("field.title"), " ", _jsx("span", { className: "font-medium text-cms-muted-foreground", children: names.length })] }), _jsx("p", { className: "mt-0.5 truncate text-cms-muted-foreground text-xs", title: t("fields.hint"), children: t("fields.hint") })] }), _jsxs("div", { className: "flex flex-wrap items-center gap-2 whitespace-nowrap", children: [_jsx(IconButton, { label: t("layout.preview"), size: "icon-sm", pressed: previewOpen, onClick: () => setPreviewOpen(!previewOpen), children: _jsx(Eye, { "aria-hidden": true }) }), _jsxs(Button, { type: "button", variant: "secondary", size: "sm", disabled: disabled, onClick: addTabRow, children: [_jsx(Plus, { "aria-hidden": true }), t("layout.addTab")] }), _jsxs(Button, { type: "button", variant: "secondary", size: "sm", disabled: disabled, onClick: addGroupRow, children: [_jsx(Plus, { "aria-hidden": true }), t("layout.addGroup")] }), offeredSets.map((set) => (_jsxs(Button, { type: "button", variant: "secondary", size: "sm", disabled: disabled, onClick: () => addSet(set), children: [_jsx(Plus, { "aria-hidden": true }), t("fields.addSet", { name: set.label })] }, `${set.plugin}:${set.id}`))), _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, onClick: () => setAdding(true), children: [_jsx(Plus, { "aria-hidden": true }), t("field.add")] })] })] }), _jsxs("div", { className: cn(columnsOf(ctx.compact), "border-b py-2 pr-5 pl-9 text-cms-muted-foreground text-xs"), "aria-hidden": true, children: [_jsx("span", { children: t("fields.colField") }), _jsx("span", { children: t("fields.colKind") }), _jsx("span", { className: cn("hidden", !ctx.compact && "block"), children: t("fields.colSettings") })] }), _jsx("div", { className: "py-1.5 pb-2.5", children: names.length === 0 ? (_jsx("p", { className: "px-5 py-3 text-cms-muted-foreground text-xs", children: t("field.none") })) : (_jsx(LayoutTree, { editing: editing, ctx: ctx })) }), _jsxs("div", { className: "flex flex-wrap gap-x-5 gap-y-1 border-t px-5 py-2.5 text-cms-muted-foreground text-xs", children: [_jsxs("span", { children: [_jsx("span", { className: cn("font-mono", REQUIRED), children: "!" }), " ", t("fields.legendRequired")] }), _jsxs("span", { children: [_jsx("span", { className: cn("font-mono", TONE.relation), children: "\u2192" }), " ", t("fields.legendRelation")] }), _jsxs("span", { children: [_jsx("span", { className: cn("font-mono", TONE.backlink), children: "\u2190" }), " ", t("fields.legendBacklink")] }), _jsxs("span", { children: [_jsx("span", { className: cn("font-mono", OPTION), children: "= \"\u2026\"" }), " ", t("fields.legendOption")] }), _jsx("span", { className: "flex-1" }), _jsx("span", { children: t("fields.legendOpen") })] }), adding && (_jsx(AddFieldDialog, { editing: editing, place: {}, onClose: () => setAdding(false), onAdded: (name) => {
                     setAdding(false);

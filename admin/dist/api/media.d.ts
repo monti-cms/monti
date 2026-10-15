@@ -2,6 +2,7 @@ import { type Site } from "@monti-cms/core/client";
 /** One item of the media list API. */
 export interface MediaItem {
     id: string;
+    folderId?: string | null;
     status: "ready" | "deleting" | "pending" | "failed";
     filename: string;
     mimeType: string | null;
@@ -38,6 +39,7 @@ export interface MediaInfo {
     mimeType: string | null;
     status?: string;
     publicUrl?: string | null;
+    folderId?: string | null;
 }
 /** Where to PUT the bytes of one file, as the server prepares it. */
 export interface UploadTicket {
@@ -53,6 +55,7 @@ export interface UploadRequest {
         mimeType: string;
         byteSize: number;
     };
+    folderId?: string | null;
 }
 export interface UploadPlan extends UploadTicket {
     mediaId: string;
@@ -78,12 +81,12 @@ export declare const mediaKeys: {
 export declare const getMedia: (site: Site, id: string, signal?: AbortSignal) => Promise<MediaInfo>;
 /** `GET /v1/media?<query>` */
 export declare const listMedia: (site: Site, query: string | URLSearchParams, signal?: AbortSignal) => Promise<MediaPage>;
-/** `PATCH /v1/media/:id`: renames the file, or sets its default description. */
+/** `PATCH /v1/media/:id`: renames the file, sets default description, or moves to a folder. */
 export declare const updateMedia: (site: Site, id: string, patch: {
-    filename: string;
-} | {
-    defaultAlt: string;
-    defaultCaption: string;
+    filename?: string;
+    defaultAlt?: string;
+    defaultCaption?: string;
+    folderId?: string | null;
 }, fallback?: string) => Promise<void>;
 /** `DELETE /v1/media/:id` */
 export declare const deleteMedia: (site: Site, id: string, fallback?: string) => Promise<void>;

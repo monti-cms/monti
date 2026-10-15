@@ -50,6 +50,14 @@ export type InlineBubbleTarget = {
     pos: number;
     marks: ActiveInlineMark[];
     rules: ActiveCodeRule[];
+} | {
+    kind: "footnote";
+    from: number;
+    to: number;
+    label: string;
+    badge: string;
+    defPos: number | null;
+    defText: string;
 };
 /**
  * Target for showing the inline bubble.

@@ -4,7 +4,6 @@ import { useTranslator } from "@monti-cms/core/client";
 import { useId, useState } from "react";
 import { FieldError } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
-import { Labeled } from "../shared/labeled.js";
 import { schemaCollectionMessages } from "./collection.messages.js";
 import { FlagSwitch, useSchemaEdit } from "./controls.js";
 import { pathProblem } from "./schema-model.js";
@@ -35,8 +34,8 @@ export function PublicPathField({ path, suggested, onChange, }) {
     const [draft, setDraft] = useState(segment);
     const shown = pathOfSegment(draft) === path ? draft : segment;
     const issue = hasPage ? pathProblem(path) : null;
-    return (_jsxs("div", { className: "flex flex-col gap-4", children: [_jsx(FlagSwitch, { label: t("collection.hasPage"), hint: t("collection.hasPageHint"), checked: hasPage, onChange: (on) => onChange(on ? suggested || "/:slug" : "") }), hasPage && (_jsxs(Labeled, { label: t("collection.path"), htmlFor: id, hint: t("collection.pathHint"), children: [_jsxs("div", { className: "flex items-center gap-1 font-mono text-sm", children: [_jsx("span", { className: "text-cms-muted-foreground", children: "/" }), _jsx(Input, { id: id, value: shown, disabled: disabled, autoComplete: "off", placeholder: "posts", className: "max-w-48 font-mono", onChange: (event) => {
+    return (_jsxs("div", { className: "flex flex-col gap-4", children: [_jsx(FlagSwitch, { label: t("collection.path"), description: t("collection.pathDescription"), checked: hasPage, onChange: (on) => onChange(on ? suggested || "/:slug" : "") }), hasPage && (_jsxs("div", { className: "ml-2 flex flex-col gap-1.5 border-cms-border/70 border-l-2 pt-0.5 pl-4", children: [_jsxs("div", { className: "flex items-center gap-1 font-mono text-sm", children: [_jsx("span", { className: "text-cms-muted-foreground", "aria-hidden": "true", children: "/" }), _jsx(Input, { id: id, "aria-label": t("collection.path"), value: shown, disabled: disabled, autoComplete: "off", placeholder: "posts", className: "max-w-48 font-mono", onChange: (event) => {
                                     setDraft(event.target.value);
                                     onChange(pathOfSegment(event.target.value));
-                                } }), _jsx("span", { className: "text-cms-muted-foreground", children: segment === "" ? ":slug" : "/:slug" })] }), issue && _jsx(FieldError, { className: "text-xs", children: t(`path.${issue}`) })] }))] }));
+                                } }), _jsx("span", { className: "text-cms-muted-foreground", "aria-hidden": "true", children: segment === "" ? ":slug" : "/:slug" })] }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("collection.pathHint") }), issue && _jsx(FieldError, { className: "text-xs", children: t(`path.${issue}`) })] }))] }));
 }

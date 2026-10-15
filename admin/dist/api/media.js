@@ -12,7 +12,7 @@ const mediaUrl = (id) => cmsApiUrl(`/v1/media/${encodeURIComponent(id)}`);
 export const getMedia = (site, id, signal) => cmsFetch(site, mediaUrl(id), { signal });
 /** `GET /v1/media?<query>` */
 export const listMedia = (site, query, signal) => cmsFetch(site, cmsApiUrl(`/v1/media?${query.toString()}`), { signal });
-/** `PATCH /v1/media/:id`: renames the file, or sets its default description. */
+/** `PATCH /v1/media/:id`: renames the file, sets default description, or moves to a folder. */
 export const updateMedia = (site, id, patch, fallback) => cmsFetch(site, mediaUrl(id), { method: "PATCH", json: patch, fallback });
 /** `DELETE /v1/media/:id` */
 export const deleteMedia = (site, id, fallback) => cmsFetch(site, mediaUrl(id), { method: "DELETE", fallback });

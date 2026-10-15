@@ -2,12 +2,16 @@ import { problemError } from "../../../core/problem.js";
 import { NO_FORMATS } from "../../../format/registry.js";
 import { validateSchemaName, withTransaction } from "../store/context.js";
 import { up as baseline } from "./0001_baseline.js";
+import { up as mediaFolders } from "./0002_media_folders.js";
 import { seedInitialBodyTemplates } from "./seed-initial-body-templates.js";
 /**
  * The schema steps, in the order they run. A change to the schema is a new file `NNNN_name.ts` in this folder with the next number, added at the end
  * of this list. Do not edit a step that has shipped: it does not run again on a store that already ran it.
  */
-const STEPS = [{ name: "0001_baseline", up: baseline }];
+const STEPS = [
+    { name: "0001_baseline", up: baseline },
+    { name: "0002_media_folders", up: mediaFolders },
+];
 /** The name the seed job of the initial body templates is recorded under. */
 const SEED_JOB = "seed_initial_body_templates";
 /** List of step names (for tests and docs). */

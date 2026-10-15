@@ -38,7 +38,17 @@ export const FIELD_KEY_ORDER = [
     "values",
     "placeholder",
 ];
-export const COLLECTION_KEY_ORDER = ["label", "kind", "icon", "path", "body", "fields", "layout"];
+export const COLLECTION_KEY_ORDER = [
+    "label",
+    "kind",
+    "icon",
+    "path",
+    "folders",
+    "body",
+    "defaultTab",
+    "fields",
+    "layout",
+];
 /** `obj` with `key` set (or removed when `value` is `undefined`). A new key goes after the last key before it in `order` that is present, else at the end. */
 export function setProp(obj, key, value, order = []) {
     if (value === undefined) {
@@ -104,7 +114,12 @@ export function changeCount(base, draft) {
     const before = collectionsOf(base);
     const after = collectionsOf(draft);
     let count = 0;
-    for (const name of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const beforeKeys = Object.keys(before);
+    const afterKeys = Object.keys(after);
+    const sameNames = beforeKeys.length === afterKeys.length && beforeKeys.every((key) => key in after);
+    if (sameNames && !sameJson(beforeKeys, afterKeys))
+        count += 1;
+    for (const name of new Set([...beforeKeys, ...afterKeys])) {
         if (!sameJson(before[name], after[name]))
             count += 1;
     }
@@ -193,6 +208,24 @@ export function addCollection(file, name, kind, path, label) {
 export function removeCollection(file, name) {
     const { [name]: _removed, ...rest } = collectionsOf(file);
     return { ...file, collections: rest };
+}
+/** `file` with the collection `name` moved by `delta` places in `collections` (negative: up). */
+export function moveCollection(file, name, delta) {
+    return { ...file, collections: moveKey(collectionsOf(file), name, delta) };
+}
+/** `file` with its `collections` keys arranged in `newOrder`. */
+export function reorderCollections(file, newOrder) {
+    const collections = collectionsOf(file);
+    const reordered = {};
+    for (const name of newOrder) {
+        if (name in collections)
+            reordered[name] = collections[name];
+    }
+    for (const [name, col] of Object.entries(collections)) {
+        if (!reordered[name])
+            reordered[name] = col;
+    }
+    return { ...file, collections: reordered };
 }
 // ----- fields -----
 /** Every name in `fields` or inside a conditional field, for the uniqueness of a new name (the stored values share one namespace). */

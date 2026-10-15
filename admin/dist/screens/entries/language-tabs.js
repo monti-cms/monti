@@ -25,7 +25,7 @@ const STATUS_TONE = {
  * Language tabs above the title. Switch between languages of the same translation group; for a missing language, create a translation.
  * A translation is a draft copied from the original's per-language values and body saved on the server.
  */
-export function LanguageTabs({ entry, disabled, onBeforeCreate, onTrashTranslation, }) {
+export function LanguageTabs({ entry, disabled, onBeforeCreate, onTrashTranslation, className, }) {
     const t = useTranslator(entriesMessages);
     const tc = useTranslator(commonMessages);
     const site = useSite();
@@ -62,7 +62,7 @@ export function LanguageTabs({ entry, disabled, onBeforeCreate, onTrashTranslati
         }
         translate.mutate(target);
     };
-    return (_jsx("nav", { "aria-label": t("lang.nav"), className: "flex flex-wrap items-center gap-1 px-4 pt-2", children: site.LOCALES.map((target) => {
+    return (_jsx("nav", { "aria-label": t("lang.nav"), className: cn("mb-3.5 flex flex-wrap items-center gap-1 px-4 pt-2", className), children: site.LOCALES.map((target) => {
             const member = members.find((item) => item.locale === target);
             if (!member) {
                 return (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", disabled: createDisabled, "aria-label": t("lang.add", { lang: site.localeLabel(target) }), className: "h-7 gap-1 border border-dashed px-2 text-cms-muted-foreground text-xs", onClick: () => void create(target), children: [_jsx(Plus, { "aria-hidden": true, className: "size-3" }), target.toUpperCase()] }, target));

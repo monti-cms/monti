@@ -11,13 +11,14 @@ export declare function MasterDetail({ list, children }: {
 /**
  * The list column. While `loading` it shows `skeletonRows` placeholders; with no rows it shows `empty`. A `header` (a notice, a toolbar) sits above the rows.
  */
-export declare function ListPane({ label, loading, skeletonRows, empty, header, children, }: {
+export declare function ListPane({ label, loading, skeletonRows, empty, header, className, children, }: {
     label: string;
     loading?: boolean;
     skeletonRows?: number;
     /** Shown in place of the rows when `children` is empty (pass `null` while an error is showing instead). */
     empty?: ReactNode;
     header?: ReactNode;
+    className?: string;
     children?: ReactNode;
 }): import("react").JSX.Element;
 /**

@@ -2,7 +2,11 @@ import { adminRoute, assertVersionPresent, ok, parseWith, readJsonBody, readVers
 import { z } from "zod";
 import { deleteCustomAction, updateAction } from "../../../actions.js";
 import { aiStoreFor } from "../../../store.js";
-const patchSchema = z.object({ expectedVersion: z.number().int().min(0), value: z.unknown(), base: z.unknown() });
+const patchSchema = z.object({
+    expectedVersion: z.number().int().min(0),
+    value: z.unknown(),
+    base: z.unknown().optional(),
+});
 /**
  * Saves editable values (enable, accept requests, connection, model, input to send, instructions, thresholds, checks). Values equal to the defaults are not kept.
  * Screen actions also edit `base` (name, where it attaches, result shape).

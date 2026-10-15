@@ -5,4 +5,10 @@ import { entriesMessages } from "./messages.js";
  * is its id everywhere in code ({@link DEFAULT_TAB} for the first one, the name a person wrote for the others), and this is the only place the id becomes text, so a
  * tab a person calls "Properties" is not the default tab.
  */
-export const tabLabel = (site, tab) => tab === DEFAULT_TAB ? site.createTranslator(entriesMessages)("tab.default") : tab;
+export const tabLabel = (site, tab, collection) => {
+    if (tab === DEFAULT_TAB) {
+        const custom = collection && site.isCollection?.(collection) ? site.schemaOf?.(collection)?.defaultTab : undefined;
+        return custom || site.createTranslator(entriesMessages)("tab.default");
+    }
+    return tab;
+};

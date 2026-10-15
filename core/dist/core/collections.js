@@ -13,6 +13,7 @@ export function createCollections(collections, schemas) {
                 kind: schema.kind,
                 fields: schemas.storageTypes(name),
                 ...(relations.length > 0 ? { relations } : {}),
+                ...(schema.folders !== undefined ? { folders: schema.folders } : {}),
             },
         ];
     }));

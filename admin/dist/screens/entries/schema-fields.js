@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { bodyExcerpt, fillFromBodyLength, useSite, useTranslator, } from "@monti-cms/core/client";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import { isFieldInputParts, useCmsAdminComponents, } from "../../admin-components.js";
@@ -10,6 +10,7 @@ import { useSlot } from "../../slots/slots.js";
 import { Button } from "../../ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible.js";
 import { FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet, Field as UiField } from "../../ui/field.js";
+import { IconButton } from "../../ui/icon-button.js";
 import { Input } from "../../ui/input.js";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "../../ui/input-group.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
@@ -34,12 +35,12 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
         return (_jsx(SlotFieldRow, { id: id, label: label, required: required, issue: issue, help: help, slot: slot, aside: aside, children: children }));
     }
     const labelNode = (_jsxs(FieldLabel, { htmlFor: id, className: "font-semibold text-cms-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-cms-destructive", children: "*" })] }));
-    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [aside ? (_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [labelNode, aside] })) : (labelNode), children, issue && _jsx(FieldError, { id: `${id}-error`, children: cmsIssueMessage(site, issue) }), help && _jsx(FieldDescription, { className: "text-[11px] leading-tight", children: help })] }));
+    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [aside ? (_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [labelNode, aside] })) : (labelNode), help && _jsx(FieldDescription, { className: "text-[11px] leading-tight", children: help }), children, issue && _jsx(FieldError, { id: `${id}-error`, children: cmsIssueMessage(site, issue) })] }));
 }
 function SlotFieldRow({ id, label, required, issue, help, slot, aside, children, }) {
     const site = useSite();
     const { trigger, panel } = useSlot(slot);
-    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [_jsxs(FieldLabel, { htmlFor: id, className: "font-semibold text-cms-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-cms-destructive", children: "*" })] }), aside || trigger ? (_jsxs("span", { className: "flex items-center gap-1", children: [aside, trigger] })) : null] }), children, panel, issue && _jsx(FieldError, { id: `${id}-error`, children: cmsIssueMessage(site, issue) }), help && _jsx(FieldDescription, { className: "text-[11px] leading-tight", children: help })] }));
+    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [_jsxs(FieldLabel, { htmlFor: id, className: "font-semibold text-cms-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-cms-destructive", children: "*" })] }), aside || trigger ? (_jsxs("span", { className: "flex items-center gap-1", children: [aside, trigger] })) : null] }), help && _jsx(FieldDescription, { className: "text-[11px] leading-tight", children: help }), children, panel, issue && _jsx(FieldError, { id: `${id}-error`, children: cmsIssueMessage(site, issue) })] }));
 }
 /** Relation to a record target (category, tag, collection). Search and pick; with `createInline`, a missing name can be created right from the list. */
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }) {
@@ -119,6 +120,8 @@ function FormBoundRow({ field, showDescriptions }) {
     return _jsx(ValueRowView, { field: field, showDescriptions: showDescriptions, form: form });
 }
 function ValueRowView({ field, showDescriptions, form, }) {
+    const site = useSite();
+    const t = useTranslator(entriesMessages);
     const store = useEntryFormStore();
     const collection = useEntryFormSelector((state) => state.collection);
     const entryId = useEntryFormSelector((state) => state.entryId);
@@ -147,7 +150,17 @@ function ValueRowView({ field, showDescriptions, form, }) {
     const parts = registered && isFieldInputParts(registered) ? registered : undefined;
     const Aside = parts?.Aside;
     const Input = parts?.Input;
-    return (_jsx(FieldRow, { id: field.ids.input, label: field.label, required: field.required, issue: field.error?.issue, help: help, slot: Input === null ? undefined : (field.slotRequest ?? undefined), aside: Aside ? _jsx(Aside, { ...props }) : undefined, children: Input === null ? null : Input ? _jsx(Input, { ...props }) : _jsx(DefaultInput, { ...props, parts: parts }) }));
+    const canFillFromBody = definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+    const fillFromBodyButton = canFillFromBody ? (_jsx(IconButton, { label: t("field.fillFromBody"), size: "icon-xs", side: "bottom", disabled: field.readOnly, onClick: () => {
+            const currentDoc = store.getState().form.doc;
+            if (!currentDoc)
+                return;
+            const length = fillFromBodyLength(definition);
+            const excerpt = bodyExcerpt(site, currentDoc, length);
+            field.setValue(excerpt);
+        }, className: "text-cms-muted-foreground hover:text-cms-foreground", children: _jsx(RefreshCw, { "aria-hidden": true, className: "size-3" }) })) : null;
+    const aside = fillFromBodyButton || Aside ? (_jsxs("div", { className: "flex items-center gap-1", children: [fillFromBodyButton, Aside && _jsx(Aside, { ...props })] })) : undefined;
+    return (_jsx(FieldRow, { id: field.ids.input, label: field.label, required: field.required, issue: field.error?.issue, help: help, slot: Input === null ? undefined : (field.slotRequest ?? undefined), aside: aside, children: Input === null ? null : Input ? _jsx(Input, { ...props }) : _jsx(DefaultInput, { ...props, parts: parts }) }));
 }
 const SlugRow = memo(function SlugRow({ name, showDescriptions, onSlugChange, onRegenerateSlug, placeholder, }) {
     const site = useSite();

@@ -44,12 +44,16 @@ export interface UploadedMedia {
     defaultAlt: string;
     defaultCaption: string;
 }
-export declare function uploadImageFile(site: Site, input: File | PreparedUpload, onProgress?: (percent: number) => void): Promise<UploadedMedia>;
+export declare function uploadImageFile(site: Site, input: File | PreparedUpload, onProgress?: (percent: number) => void, options?: {
+    folderId?: string | null;
+}): Promise<UploadedMedia>;
 export declare const formatBytes: (bytes: number) => string;
 /**
  * Uploads an attachment file. The format is decided by the file name extension (browsers give inconsistent types for code files).
  * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.
  */
-export declare function uploadAttachment(site: Site, file: File, onProgress?: (percent: number) => void): Promise<{
+export declare function uploadAttachment(site: Site, file: File, onProgress?: (percent: number) => void, options?: {
+    folderId?: string | null;
+}): Promise<{
     mediaId: string;
 }>;

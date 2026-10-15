@@ -37,6 +37,7 @@ export declare function useEntryList(mode: ListMode): {
         isRefreshing: boolean;
         retry: () => undefined;
     };
+    foldersEnabled: boolean;
     explorer: {
         folders: Folder[];
         parent: string | null;

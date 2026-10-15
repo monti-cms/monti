@@ -5,6 +5,6 @@ import { FieldDescription, FieldLabel, Field as UiField } from "../../ui/field.j
 export const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" };
 /** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
 export const HELP = "max-w-[70ch] text-xs";
-export function Labeled({ label, hint, children, htmlFor, className, control = "normal", }) {
-    return (_jsxs(UiField, { className: cn("gap-2", className), children: [_jsx(FieldLabel, { htmlFor: htmlFor, className: "font-medium text-sm", children: label }), _jsx("div", { className: cn("w-full", CONTROL_WIDTH[control]), children: children }), hint && _jsx(FieldDescription, { className: HELP, children: hint })] }));
+export function Labeled({ label, description, hint, children, htmlFor, className, control = "normal", }) {
+    return (_jsxs(UiField, { className: cn("gap-2", className), children: [_jsx(FieldLabel, { htmlFor: htmlFor, className: "font-medium text-sm", children: label }), description && _jsx(FieldDescription, { className: HELP, children: description }), _jsx("div", { className: cn("w-full", CONTROL_WIDTH[control]), children: children }), hint && _jsx(FieldDescription, { className: HELP, children: hint })] }));
 }

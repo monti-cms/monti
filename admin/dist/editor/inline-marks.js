@@ -1,10 +1,11 @@
 import { ruleMatches } from "@monti-cms/core/code-block";
-import { TextSelection } from "@tiptap/pm/state";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { Bold, CodeXml, Italic, Strikethrough, Subscript, Superscript, Underline } from "lucide-react";
 import { allowanceOfState } from "./allowed-extension.js";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark.js";
 import { codeEffectsKey, rulesOf } from "./code-block/effects-plugin.js";
 import { selectedBlocks } from "./drag/index.js";
+import { FOOTNOTE_DEFINITION_NAME, FOOTNOTE_REFERENCE_NAME, footnoteKey, footnoteNumbers, labelOf, } from "./footnote-nodes.js";
 import { editorMessages } from "./messages.js";
 /** Names of the marks of the inline tools, in the order the tools are shown. */
 export const INLINE_MARK_NAMES = ["bold", "italic", "underline", "strike", "code", "superscript", "subscript"];
@@ -135,8 +136,44 @@ function markRange($pos, mark, side) {
  * Not shown for block (marquee) selection, cell selection, node selection, selection spanning code blocks, or a code block in raw-source editing.
  */
 export function inlineBubbleTarget(state, detailed = []) {
-    const order = bubbleMarkOrder(detailed);
     const { selection } = state;
+    let footnoteNode = null;
+    let footnoteFrom = -1;
+    let footnoteTo = -1;
+    if (selection instanceof NodeSelection && selection.node.type.name === FOOTNOTE_REFERENCE_NAME) {
+        footnoteNode = selection.node;
+        footnoteFrom = selection.from;
+        footnoteTo = selection.to;
+    }
+    else if (selection instanceof TextSelection && selection.empty) {
+        if (selection.$from.nodeAfter?.type.name === FOOTNOTE_REFERENCE_NAME) {
+            footnoteNode = selection.$from.nodeAfter;
+            footnoteFrom = selection.from;
+            footnoteTo = selection.from + footnoteNode.nodeSize;
+        }
+        else if (selection.$from.nodeBefore?.type.name === FOOTNOTE_REFERENCE_NAME) {
+            footnoteNode = selection.$from.nodeBefore;
+            footnoteFrom = selection.from - footnoteNode.nodeSize;
+            footnoteTo = selection.from;
+        }
+    }
+    if (footnoteNode) {
+        const label = labelOf(footnoteNode);
+        const key = footnoteKey(label);
+        const number = footnoteNumbers(state.doc).get(key);
+        const badge = number !== undefined ? String(number) : label;
+        let defPos = null;
+        let defText = "";
+        state.doc.descendants((node, pos) => {
+            if (node.type.name === FOOTNOTE_DEFINITION_NAME && footnoteKey(labelOf(node)) === key) {
+                defPos = pos;
+                defText = node.textContent.trim().replace(/\s+/g, " ");
+                return false;
+            }
+        });
+        return { kind: "footnote", from: footnoteFrom, to: footnoteTo, label, badge, defPos, defText };
+    }
+    const order = bubbleMarkOrder(detailed);
     if (!(selection instanceof TextSelection) || selectedBlocks(state))
         return null;
     // The bubble is not shown when lines are picked in the code block line number gutter or while linking body text to code (the menu and guide line are used).

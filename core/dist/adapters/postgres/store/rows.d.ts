@@ -53,7 +53,7 @@ export declare function mapPublishedEntryRow(row: {
     body_updated_at: Date;
 }): PublishedEntryRecord;
 /** The columns of `media_assets` that make a `MediaAssetRecord`, in the order the queries select them. */
-export declare const MEDIA_COLUMN_NAMES: readonly ["id", "status", "filename", "mime_type", "byte_size", "width", "height", "staging_key", "storage_key", "original_storage_key", "original_staging_key", "original_mime_type", "original_byte_size", "original_width", "original_height", "default_alt", "default_caption", "created_at", "updated_at", "ready_at"];
+export declare const MEDIA_COLUMN_NAMES: readonly ["id", "folder_id", "status", "filename", "mime_type", "byte_size", "width", "height", "staging_key", "storage_key", "original_storage_key", "original_staging_key", "original_mime_type", "original_byte_size", "original_width", "original_height", "default_alt", "default_caption", "created_at", "updated_at", "ready_at"];
 /** A row of `media_assets` as `MEDIA_COLUMN_NAMES` selects it. */
 export type MediaRow = Pick<Selectable<MediaAssetsTable>, (typeof MEDIA_COLUMN_NAMES)[number]>;
 export declare const mapMediaRow: (row: MediaRow) => MediaAssetRecord;

@@ -19,7 +19,7 @@ Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.10&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.11&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.10&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.10&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.10&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.11&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.11&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.11&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
@@ -1437,8 +1437,7 @@ A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It i
 - **Tabs.** `tab: "name"` on a `layout` group creates a tab with that name in the edit screen's properties panel (1 to 20 characters). Tabs live on groups only; a field has
   no `tab`. A plugin that provides a field set (e.g. `seoFields()` of the SEO extension) places it with the `layout` key of its `contributes`: a tab name, and the
   roles and view names of its fields (`{ tab: "SEO", roles: [...], views: [...] }`, the type is `PluginPlacement`). Those fields are drawn in that tab whatever the site's `layout`
-  says, and the settings screen shows them locked there. The first tab holds the groups with no `tab`; it is the default tab and has no name of its own: its title is only the admin's wording, so a
-  tab you call "Properties" is a different tab. `site.panelGroupsOf(collection)`, `site.panelTabsOf(collection)` and `site.panelTabOf(collection, path)` are the one
+  says, and the settings screen shows them locked there. The first tab holds the groups with no `tab`; it is the default tab. Its title defaults to the admin's wording ("Properties"), or `defaultTab: "name"` on the collection schema can set a custom title. `site.panelGroupsOf(collection)`, `site.panelTabsOf(collection)` and `site.panelTabOf(collection, path)` are the one
   place that works out the groups, for the panel, the item panel and the settings screen alike. The title of a document is the heading of the edit screen and is not drawn in the panel.
 - **View field.** `fields.view({ view: "name" })` is a field that stores no value and draws a view in that spot. The admin extension registers the view
   with `fieldViews` (e.g. `search` of the SEO extension). If no view is registered, nothing is drawn.

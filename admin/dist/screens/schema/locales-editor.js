@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
-import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
@@ -11,9 +11,11 @@ import { moveWithin } from "../../lib/utils/move-within.js";
 import { Button } from "../../ui/button.js";
 import { Panel } from "../../ui/card.js";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox.js";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog.js";
 import { DialogFormFooter } from "../../ui/dialog-form-footer.js";
 import { Input } from "../../ui/input.js";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.js";
 import { Labeled } from "../shared/labeled.js";
 import { Section } from "../shared/section.js";
 import { Pick, useSchemaEdit } from "./controls.js";
@@ -51,7 +53,7 @@ function TimeZonePick({ value, onChange, }) {
     const { disabled } = useSchemaEdit();
     const id = useId();
     const zones = useMemo(() => zonesWith(value), [value]);
-    return (_jsx(Labeled, { label: t("locales.timeZone"), hint: t("locales.timeZoneHelp"), htmlFor: id, children: _jsxs(Combobox, { items: zones, autoHighlight: true, disabled: disabled, value: value ?? null, onValueChange: (next) => onChange(next ?? undefined), children: [_jsx(ComboboxInput, { id: id, "aria-label": t("locales.timeZone"), placeholder: "Asia/Seoul", showClear: value !== undefined, disabled: disabled, className: "w-full" }), _jsxs(ComboboxContent, { children: [_jsx(ComboboxEmpty, { children: t("locales.timeZoneNone") }), _jsx(ComboboxList, { children: (zone) => (_jsxs(ComboboxItem, { value: zone, children: [_jsx("span", { className: "truncate", children: zone }), _jsx("span", { className: "ml-auto text-cms-muted-foreground text-xs", children: offsetOf(zone) })] }, zone)) })] })] }) }));
+    return (_jsx(Labeled, { label: t("locales.timeZone"), description: t("locales.timeZoneHelp"), htmlFor: id, children: _jsxs(Combobox, { items: zones, autoHighlight: true, disabled: disabled, value: value ?? null, onValueChange: (next) => onChange(next ?? undefined), children: [_jsx(ComboboxInput, { id: id, "aria-label": t("locales.timeZone"), placeholder: "Asia/Seoul", showClear: value !== undefined, disabled: disabled, className: "w-full" }), _jsxs(ComboboxContent, { children: [_jsx(ComboboxEmpty, { children: t("locales.timeZoneNone") }), _jsx(ComboboxList, { children: (zone) => (_jsxs(ComboboxItem, { value: zone, children: [_jsx("span", { className: "truncate", children: zone }), _jsx("span", { className: "ml-auto text-cms-muted-foreground text-xs", children: offsetOf(zone) })] }, zone)) })] })] }) }));
 }
 /** Common language codes offered while typing a code. Any other valid code can still be typed. */
 const KNOWN_CODES = [
@@ -104,25 +106,47 @@ function nativeNameOf(code) {
 function LocaleDialog({ locale, taken, onSave, onClose, }) {
     const t = useTranslator(schemaLocalesMessages);
     const tc = useTranslator(commonMessages);
-    const codeListId = useId();
+    const codeId = useId();
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
     const [code, setCode] = useState(locale?.code ?? "");
     const [name, setName] = useState(locale?.name ?? "");
     const [label, setLabel] = useState(locale?.label ?? "");
+    const availableCodes = useMemo(() => KNOWN_CODES.filter((known) => !taken.includes(known)), [taken]);
     const codeOk = locale !== undefined || (LOCALE_CODE.test(code) && !taken.includes(code));
     const ok = codeOk && name.trim() !== "";
+    const handleCodeSelect = (next) => {
+        setCode(next);
+        if (!locale && name.trim() === "") {
+            const native = nativeNameOf(next);
+            if (native)
+                setName(native);
+        }
+    };
+    const trimmedSearch = search.trim();
+    const isCustom = trimmedSearch.length > 0 &&
+        !availableCodes.includes(trimmedSearch) &&
+        LOCALE_CODE.test(trimmedSearch) &&
+        !taken.includes(trimmedSearch);
     return (_jsx(Dialog, { open: true, onOpenChange: (open) => !open && onClose(), children: _jsxs(DialogContent, { className: "sm:max-w-md", "data-testid": "locale-dialog", children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: locale ? t("locales.editTitle", { name: locale.name }) : t("locales.addTitle") }), _jsx(DialogDescription, { children: t("locales.contentNote") })] }), _jsxs("form", { className: "flex flex-col gap-6", onSubmit: (event) => {
                         event.preventDefault();
                         if (!ok)
                             return;
                         onSave({ code, name: name.trim(), ...(label.trim() ? { label: label.trim() } : {}) });
-                    }, children: [_jsxs(Labeled, { label: t("locales.code"), hint: locale ? undefined : t("locales.codeHint"), children: [_jsx(Input, { autoFocus: !locale, value: code, disabled: locale !== undefined, "aria-label": t("locales.code"), placeholder: "en", list: codeListId, "aria-invalid": code !== "" && !codeOk ? true : undefined, onChange: (event) => {
-                                        const next = event.target.value;
-                                        setCode(next);
-                                        // Picking a known code names the language, unless a name was already typed.
-                                        if (!locale && name.trim() === "" && KNOWN_CODES.includes(next)) {
-                                            setName(nativeNameOf(next) ?? "");
-                                        }
-                                    } }), _jsx("datalist", { id: codeListId, children: KNOWN_CODES.filter((known) => !taken.includes(known)).map((known) => (_jsx("option", { value: known, children: nativeNameOf(known) ?? known }, known))) })] }), _jsx(Labeled, { label: t("locales.name"), children: _jsx(Input, { autoFocus: locale !== undefined, value: name, "aria-label": t("locales.name"), placeholder: "English", onChange: (event) => setName(event.target.value) }) }), _jsx(Labeled, { label: t("locales.label"), hint: t("locales.labelHint"), children: _jsx(Input, { value: label, "aria-label": t("locales.label"), onChange: (event) => setLabel(event.target.value) }) }), _jsx(DialogFormFooter, { onCancel: onClose, cancelLabel: tc("cancel"), submitLabel: locale ? tc("save") : t("locales.add"), disabled: !ok })] })] }) }));
+                    }, children: [_jsx(Labeled, { label: t("locales.code"), description: locale ? undefined : t("locales.codeHint"), htmlFor: codeId, children: locale !== undefined ? (_jsx(Input, { id: codeId, value: code, disabled: true, "aria-label": t("locales.code") })) : (_jsxs("div", { className: "relative", children: [_jsx("input", { id: codeId, className: "sr-only", "aria-label": t("locales.code"), tabIndex: -1, value: code, onChange: (event) => handleCodeSelect(event.target.value) }), _jsxs(Popover, { open: open, onOpenChange: (nextOpen) => {
+                                            setOpen(nextOpen);
+                                            if (!nextOpen)
+                                                setSearch("");
+                                        }, children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "outline", role: "combobox", "aria-expanded": open, autoFocus: true, className: cn("w-full justify-between font-normal", !code && "text-cms-muted-foreground", code !== "" && !codeOk && "border-cms-destructive text-cms-destructive") }), children: [code ? (_jsxs("span", { className: "flex items-center gap-2 truncate", children: [_jsx("span", { className: "font-mono font-semibold text-xs", children: code }), nativeNameOf(code) && (_jsx("span", { className: "text-cms-muted-foreground text-xs", children: nativeNameOf(code) }))] })) : (_jsx("span", { children: t("locales.codePlaceholder") })), _jsx(ChevronsUpDown, { "aria-hidden": true, className: "ml-auto size-4 shrink-0 opacity-50" })] }), _jsx(PopoverContent, { align: "start", className: "w-(--anchor-width) min-w-72 p-0", children: _jsxs(Command, { children: [_jsx(CommandInput, { value: search, onValueChange: setSearch, placeholder: t("locales.codeSearch"), "aria-label": t("locales.codeSearch"), autoFocus: true }), _jsxs(CommandList, { className: "max-h-60", children: [_jsx(CommandEmpty, { children: t("locales.codeNone") }), _jsx(CommandGroup, { children: availableCodes.map((known) => {
+                                                                        const native = nativeNameOf(known);
+                                                                        return (_jsxs(CommandItem, { value: `${known} ${native ?? ""}`, "data-checked": code === known ? "true" : undefined, onSelect: () => {
+                                                                                handleCodeSelect(known);
+                                                                                setOpen(false);
+                                                                            }, children: [_jsx("span", { className: "font-mono font-semibold text-xs", children: known }), native && _jsx("span", { className: "ml-1 text-cms-muted-foreground text-xs", children: native })] }, known));
+                                                                    }) }), isCustom && (_jsx(CommandGroup, { children: _jsxs(CommandItem, { value: trimmedSearch, onSelect: () => {
+                                                                            handleCodeSelect(trimmedSearch);
+                                                                            setOpen(false);
+                                                                        }, children: [_jsx(Plus, { className: "size-4 shrink-0 text-cms-muted-foreground" }), _jsx("span", { children: t("locales.codeCustom", { code: trimmedSearch }) })] }) }))] })] }) })] })] })) }), _jsx(Labeled, { label: t("locales.name"), children: _jsx(Input, { autoFocus: locale !== undefined, value: name, "aria-label": t("locales.name"), placeholder: "English", onChange: (event) => setName(event.target.value) }) }), _jsx(Labeled, { label: t("locales.label"), description: t("locales.labelHint"), children: _jsx(Input, { value: label, "aria-label": t("locales.label"), onChange: (event) => setLabel(event.target.value) }) }), _jsx(DialogFormFooter, { onCancel: onClose, cancelLabel: tc("cancel"), submitLabel: locale ? tc("save") : t("locales.add"), disabled: !ok })] })] }) }));
 }
 /** A public address of the first collection that has one, with `:slug` filled in: the example the language settings show. */
 function examplePath(file) {
@@ -187,7 +211,7 @@ export function LocalesEditor({ file, update, }) {
         ];
     };
     const onDrop = (from, to) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
-    return (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(Section, { wide: true, card: false, title: t("locales.contentTitle"), description: t("locales.contentDescription"), note: t("locales.contentNote"), testId: "locales-content", children: _jsxs(Panel, { className: "overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between gap-4 border-b px-4 py-3", children: [_jsx("span", { className: "text-cms-muted-foreground text-sm", children: t("locales.count", { count: locales.length }) }), _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, onClick: () => setDialog({ code: null }), children: [_jsx(Plus, { "aria-hidden": true }), t("locales.add")] })] }), _jsx("ul", { className: "divide-y", children: _jsx(SortableList, { items: taken, onDragEnd: onDrop, children: locales.map((locale, index) => (_jsx(LocaleRow, { locale: locale, isDefault: locale.code === defaultLocale, dragDisabled: disabled, buttons: buttons(locale, index) }, locale.code))) }) })] }) }), _jsx(Section, { wide: true, title: t("locales.defaultTitle"), description: t("locales.defaultDescription"), testId: "locales-default", children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("locales.default"), hint: t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) }), value: defaultLocale, items: locales.map((locale) => ({
+    return (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(Section, { wide: true, card: false, title: t("locales.contentTitle"), description: t("locales.contentDescription"), note: t("locales.contentNote"), testId: "locales-content", children: _jsxs(Panel, { className: "overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between gap-4 border-b px-4 py-3", children: [_jsx("span", { className: "text-cms-muted-foreground text-sm", children: t("locales.count", { count: locales.length }) }), _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, onClick: () => setDialog({ code: null }), children: [_jsx(Plus, { "aria-hidden": true }), t("locales.add")] })] }), _jsx("ul", { className: "divide-y", children: _jsx(SortableList, { items: taken, onDragEnd: onDrop, children: locales.map((locale, index) => (_jsx(LocaleRow, { locale: locale, isDefault: locale.code === defaultLocale, dragDisabled: disabled, buttons: buttons(locale, index) }, locale.code))) }) })] }) }), _jsx(Section, { wide: true, title: t("locales.defaultTitle"), description: t("locales.defaultDescription"), testId: "locales-default", children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("locales.default"), description: t(`locales.addresses.${mode}`, { default: defaultLocale, other, path: examplePath(file) }), value: defaultLocale, items: locales.map((locale) => ({
                                 value: locale.code,
                                 label: `${locale.label ?? locale.name} (${locale.code})`,
                             })), onChange: (value) => update((current) => ({ ...current, defaultLocale: value })) }), _jsx(TimeZonePick, { value: typeof file.timeZone === "string" ? file.timeZone : undefined, onChange: (value) => update((current) => setProp(current, "timeZone", value, [

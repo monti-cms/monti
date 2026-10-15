@@ -219,12 +219,19 @@ export const mediaPatchBodySchema = z.object({
     filename: z.string().trim().min(1).max(255).optional(),
     defaultAlt: z.string().max(1000).optional(),
     defaultCaption: z.string().max(1000).optional(),
+    folderId: z.uuid().nullable().optional(),
 });
 export const mediaListQuerySchema = z.object({
     search: z.string().optional(),
     mimeType: z.string().optional(),
     kind: z.enum(["all", "image", "file"]).default("all"),
     used: z.enum(["all", "used", "unused"]).default("all"),
+    folderId: z
+        .string()
+        .optional()
+        .transform((val) => (val === undefined ? undefined : val === "null" || val === "" ? null : val))
+        .pipe(z.union([z.uuid(), z.null(), z.undefined()])),
+    includeDescendants: booleanQuery,
     uploadedFrom: dateQuery,
     uploadedTo: dateQuery,
     page: z.coerce.number().int().min(1).default(1),
@@ -234,6 +241,7 @@ const oneOf = (values) => z.enum(values);
 /** Request schemas and upload rules of one site. A `Site` carries them (`site.api`). */
 export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }) {
     const collectionSchema = oneOf(COLLECTIONS);
+    const folderCollectionSchema = z.union([collectionSchema, z.literal("media")]);
     /** Uploadable image formats (site config `media.imageTypes`, default all supported formats). */
     const ALLOWED_IMAGE_MIME_TYPES = MEDIA?.imageTypes ?? SUPPORTED_IMAGE_MIME_TYPES;
     const MAX_MEDIA_BYTES = MEDIA?.maxImageBytes ?? DEFAULT_MEDIA_LIMITS.maxImageBytes;
@@ -293,7 +301,7 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }) {
     })
         .refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
     const createFolderBodySchema = z.object({
-        collection: collectionSchema,
+        collection: folderCollectionSchema,
         name: folderNameSchema,
         parentId: z.uuid().nullable().optional().default(null),
         position: z.number().int().min(0).optional().default(0),
@@ -329,6 +337,7 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }) {
         uploadFileSchema.extend({
             filename: z.string().trim().min(1).max(255),
             original: uploadFileSchema.optional(),
+            folderId: z.uuid().nullable().optional(),
         }),
         // Attached file. The format must match the file name's extension (the route checks).
         z.object({
@@ -337,10 +346,12 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }) {
                 .refine((type) => ALLOWED_FILE_MIME_TYPES.includes(type), "File type is not allowed"),
             byteSize: z.number().int().positive(),
             filename: z.string().trim().min(1).max(255),
+            folderId: z.uuid().nullable().optional(),
         }),
     ]);
     return {
         collectionSchema,
+        folderCollectionSchema,
         listEntriesQuerySchema,
         searchEntriesQuerySchema,
         createEntryBodySchema,

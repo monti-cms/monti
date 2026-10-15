@@ -141,6 +141,7 @@ export declare const mediaPatchBodySchema: z.ZodObject<{
     filename: z.ZodOptional<z.ZodString>;
     defaultAlt: z.ZodOptional<z.ZodString>;
     defaultCaption: z.ZodOptional<z.ZodString>;
+    folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
 }, z.core.$strip>;
 export declare const mediaListQuerySchema: z.ZodObject<{
     search: z.ZodOptional<z.ZodString>;
@@ -155,6 +156,13 @@ export declare const mediaListQuerySchema: z.ZodObject<{
         unused: "unused";
         used: "used";
     }>>;
+    folderId: z.ZodPipe<z.ZodPipe<z.ZodOptional<z.ZodString>, z.ZodTransform<string | null | undefined, string | undefined>>, z.ZodUnion<readonly [z.ZodUUID, z.ZodNull, z.ZodUndefined]>>;
+    includeDescendants: z.ZodPipe<z.ZodOptional<z.ZodEnum<{
+        0: "0";
+        1: "1";
+        false: "false";
+        true: "true";
+    }>>, z.ZodTransform<boolean | undefined, "0" | "1" | "false" | "true" | undefined>>;
     uploadedFrom: z.ZodPipe<z.ZodOptional<z.ZodISODateTime>, z.ZodTransform<Date | undefined, string | undefined>>;
     uploadedTo: z.ZodPipe<z.ZodOptional<z.ZodISODateTime>, z.ZodTransform<Date | undefined, string | undefined>>;
     page: z.ZodDefault<z.ZodCoercedNumber<unknown>>;
@@ -176,6 +184,9 @@ export declare function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiPar
     collectionSchema: z.ZodEnum<{
         [x: string]: string;
     }>;
+    folderCollectionSchema: z.ZodUnion<readonly [z.ZodEnum<{
+        [x: string]: string;
+    }>, z.ZodLiteral<"media">]>;
     listEntriesQuerySchema: z.ZodObject<{
         collection: z.ZodEnum<{
             [x: string]: string;
@@ -264,9 +275,9 @@ export declare function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiPar
         folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
     }, z.core.$strip>;
     createFolderBodySchema: z.ZodObject<{
-        collection: z.ZodEnum<{
+        collection: z.ZodUnion<readonly [z.ZodEnum<{
             [x: string]: string;
-        }>;
+        }>, z.ZodLiteral<"media">]>;
         name: z.ZodString;
         parentId: z.ZodDefault<z.ZodOptional<z.ZodNullable<z.ZodUUID>>>;
         position: z.ZodDefault<z.ZodOptional<z.ZodNumber>>;
@@ -327,6 +338,7 @@ export declare function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiPar
             }>;
             byteSize: z.ZodNumber;
         }, z.core.$strip>>;
+        folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
     }, z.core.$strip>, z.ZodObject<{
         mimeType: z.ZodEnum<{
             "application/json": "application/json";
@@ -338,6 +350,7 @@ export declare function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiPar
         }>;
         byteSize: z.ZodNumber;
         filename: z.ZodString;
+        folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
     }, z.core.$strip>]>;
 };
 export type ListEntriesQuery = z.infer<SiteApi["listEntriesQuerySchema"]>;

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
+import { assertFolderInCollection } from "../../../core/domain/folders.js";
 import { CmsError } from "../../../core/store/errors.js";
 import { withTrx } from "./context.js";
 import { MEDIA_COLUMN_NAMES, mapMediaRow } from "./rows.js";
@@ -17,11 +18,20 @@ export function createMediaOps(ctx) {
     };
     return {
         createMediaAsset: async (input) => {
+            if (input.folderId) {
+                const folder = await db
+                    .selectFrom("folders")
+                    .select("collection")
+                    .where("id", "=", input.folderId)
+                    .executeTakeFirst();
+                assertFolderInCollection(folder?.collection, "media");
+            }
             const now = new Date();
             const row = await db
                 .insertInto("media_assets")
                 .values({
                 id: input.id ?? randomUUID(),
+                folder_id: input.folderId ?? null,
                 status: "pending",
                 filename: input.filename,
                 mime_type: input.mimeType,
@@ -84,14 +94,32 @@ export function createMediaOps(ctx) {
         },
         /** The library's default alt and caption. They are copied only on insert, so bodies already written do not change. */
         updateMediaMetadata: async (params) => {
+            if (params.folderId) {
+                const folder = await db
+                    .selectFrom("folders")
+                    .select("collection")
+                    .where("id", "=", params.folderId)
+                    .executeTakeFirst();
+                assertFolderInCollection(folder?.collection, "media");
+            }
+            const setValues = {
+                updated_at: sql `now()`,
+            };
+            if (params.defaultAlt !== undefined) {
+                setValues.default_alt = params.defaultAlt;
+            }
+            if (params.defaultCaption !== undefined) {
+                setValues.default_caption = params.defaultCaption;
+            }
+            if (params.filename !== undefined) {
+                setValues.filename = params.filename.normalize("NFC");
+            }
+            if (params.folderId !== undefined) {
+                setValues.folder_id = params.folderId;
+            }
             const row = await db
                 .updateTable("media_assets")
-                .set({
-                default_alt: sql `coalesce(${params.defaultAlt ?? null}, default_alt)`,
-                default_caption: sql `coalesce(${params.defaultCaption ?? null}, default_caption)`,
-                filename: sql `coalesce(${params.filename?.normalize("NFC") ?? null}, filename)`,
-                updated_at: sql `now()`,
-            })
+                .set(setValues)
                 .where("id", "=", params.id)
                 .where("status", "=", "ready")
                 .returning(MEDIA_COLUMN_NAMES)
@@ -111,6 +139,22 @@ export function createMediaOps(ctx) {
                 .leftJoin("entry_bodies as eb", (join) => join.onRef("eb.entry_id", "=", "r.entry_id").onRef("eb.state", "=", "r.state"))
                 .where("m.status", "in", ["ready", "deleting"])
                 .groupBy("m.id");
+            if (params.folderId === null) {
+                grouped = grouped.where("m.folder_id", "is", null);
+            }
+            else if (params.folderId !== undefined) {
+                const folderId = params.folderId;
+                grouped = grouped.where(params.includeDescendants
+                    ? sql `m.folder_id in (
+							with recursive descendants as (
+								select id from ${sql.id(qSchema, "folders")} where id = ${folderId}
+								union all
+								select f.id from ${sql.id(qSchema, "folders")} f join descendants d on f.parent_id = d.id
+							)
+							select id from descendants
+						)`
+                    : (eb) => eb("m.folder_id", "=", folderId));
+            }
             if (params.search?.trim()) {
                 grouped = grouped.where("m.filename", "ilike", likeContainsPattern(params.search.trim()));
             }

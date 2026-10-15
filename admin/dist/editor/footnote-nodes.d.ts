@@ -4,6 +4,7 @@ export declare const FOOTNOTE_REFERENCE_NAME = "footnoteReference";
 export declare const FOOTNOTE_DEFINITION_NAME = "footnoteDefinition";
 /** GFM matches labels case-insensitively, so numbering and lookups use this key. The stored label is never changed. */
 export declare const footnoteKey: (label: string) => string;
+export declare const labelOf: (node: PmNode) => string;
 /**
  * Display numbers: the order in which each label is first referenced in the document (what the public page shows too).
  * Keyed by `footnoteKey`. Definitions do not take part, so a definition nobody references has no number.
@@ -17,7 +18,8 @@ export declare const nextFootnoteLabel: (doc: PmNode) => string;
  */
 export declare const CmsFootnoteReference: Node<any, any>;
 /**
- * GFM footnote definition (`[^label]: content`). A block with ordinary block content (paragraphs, lists, code…) that stays where it is in the source.
+ * GFM footnote definition (`[^label]: content`). Hidden in the editor canvas (edited via popup),
+ * but preserved in the document tree for GFM roundtrip and rendered at the document bottom on public pages.
  */
 export declare const CmsFootnoteDefinition: Node<any, any>;
 /** Shows each footnote's number and flags problems (a reference without a definition, an unused or duplicate definition) as the document changes. */
@@ -27,6 +29,6 @@ export declare const FOOTNOTE_EXTENSIONS: (Extension<any, any> | Node<any, any>)
 export declare const canInsertFootnote: (editor: Editor, range?: Range) => boolean;
 /**
  * Inserts a reference at the cursor (replacing `range`, the typed slash command) with the next numeric label, appends an empty definition at the end of
- * the document and moves the cursor into it. Does nothing where an inline reference cannot go (a code block, for example).
+ * the document and selects the newly inserted reference node so the inline editing popup opens at the cursor.
  */
 export declare const insertFootnote: (editor: Editor, range?: Range) => boolean;

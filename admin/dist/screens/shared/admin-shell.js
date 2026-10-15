@@ -9,6 +9,7 @@ import { countFailedEvents, eventsKeys } from "../../api/events.js";
 import { foldersKeys, listFolders } from "../../api/folders.js";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar.js";
 import { AdminSidebar } from "../admin-sidebar.js";
+import { useAdminFeatures } from "./admin-features.js";
 import { sharedMessages } from "./messages.js";
 const AdminNavContext = createContext(null);
 /** The element on the right of the shell's title bar, where a page's own actions go (see {@link PageActions}). */
@@ -68,6 +69,7 @@ export function AdminNavProvider({ children }) {
     const site = useSite();
     const queryClient = useQueryClient();
     const ready = useNavQueriesReady();
+    const features = useAdminFeatures();
     const { data } = useQuery({ queryKey: entriesKeys.trashCount(), queryFn: () => countTrash(site), enabled: ready });
     // A light background fetch. Errors (for example no access) are ignored so the sidebar never breaks.
     const { data: eventsCount } = useQuery({
@@ -76,15 +78,18 @@ export function AdminNavProvider({ children }) {
         retry: false,
         enabled: ready,
     });
+    const folderTargets = useMemo(() => [...site.COLLECTIONS, ...(features.media ? ["media"] : [])], [site.COLLECTIONS, features.media]);
     // The sidebar needs to know which collections have folders, not only the open one. The list screen reads the same cache entries.
     const folderCounts = useQueries({
-        queries: site.COLLECTIONS.map((collection) => ({
+        queries: folderTargets.map((collection) => ({
             queryKey: foldersKeys.list(collection),
             queryFn: ({ signal }) => listFolders(site, collection, signal),
-            retry: false,
-            enabled: ready,
+            enabled: ready &&
+                (collection === "media" ||
+                    (site.COLLECTION_DEFINITIONS[collection]?.folders ??
+                        site.COLLECTION_DEFINITIONS[collection]?.kind !== "item")),
         })),
-        combine: (results) => Object.fromEntries(site.COLLECTIONS.flatMap((collection, index) => {
+        combine: (results) => Object.fromEntries(folderTargets.flatMap((collection, index) => {
             const folders = results[index]?.data;
             return folders ? [[collection, folders.length]] : [];
         })),

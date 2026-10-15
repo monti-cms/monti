@@ -1,6 +1,6 @@
 import { DEFAULT_TAB, isPanelField, panelGroupsOf, } from "@monti-cms/core/client";
 import { moveWithin } from "../../lib/utils/move-within.js";
-import { fieldsOf, setProp, withLayout } from "./schema-model.js";
+import { COLLECTION_KEY_ORDER, fieldsOf, setProp, withLayout } from "./schema-model.js";
 const copy = (tree) => structuredClone(tree);
 const isRun = (block) => block !== undefined && block.title === null;
 /** Drops empty runs and joins runs that touch: neither shows in the panel. */
@@ -38,6 +38,9 @@ const tidied = (tree) => {
 export function treeOf(collection, placements) {
     const source = collection;
     const tree = {
+        ...(typeof collection.defaultTab === "string" && collection.defaultTab.trim() !== ""
+            ? { defaultTab: collection.defaultTab.trim() }
+            : {}),
         pinned: Object.keys(fieldsOf(collection)).filter((name) => !isPanelField(source, name)),
         tabs: [{ name: DEFAULT_TAB, blocks: [], locked: [] }],
     };
@@ -87,7 +90,9 @@ export function withTree(collection, tree) {
         // A tab a plugin fills exists without an entry; any other tab needs one to exist in the file.
         return at > 0 && entries.length === 0 && tab.locked.length === 0 ? [{ fields: [], ...tabKey }] : entries;
     });
-    return withLayout(setProp(collection, "fields", ordered), layout);
+    const withFields = setProp(collection, "fields", ordered);
+    const withDefaultTab = setProp(withFields, "defaultTab", tree.defaultTab, COLLECTION_KEY_ORDER);
+    return withLayout(withDefaultTab, layout);
 }
 export function placeOf(tree, name) {
     for (const [tab, node] of tree.tabs.entries()) {
@@ -226,10 +231,18 @@ export function moveGroupBy(tree, ref, delta) {
 /** Moves a group to the end of another tab. */
 export const moveGroupToTab = (tree, from, tab) => moveGroup(tree, from, { tab, block: Number.MAX_SAFE_INTEGER });
 /** Why a tab name cannot be used (`taken` when another tab has it, `empty`), or `null`. */
-export function tabProblem(tree, name, except) {
-    if (name.trim() === "")
+export function tabProblem(tree, name, except, defaultLabel) {
+    const trimmed = name.trim();
+    if (trimmed === "")
         return "empty";
-    return tree.tabs.some((tab, at) => at !== except && tab.name === name.trim()) ? "taken" : null;
+    if (trimmed.length > 20)
+        return "too-long";
+    const currentNameOf = (at) => {
+        if (at === 0)
+            return (tree.defaultTab ?? defaultLabel ?? "").trim();
+        return tree.tabs[at]?.name.trim() ?? "";
+    };
+    return tree.tabs.some((_tab, at) => at !== except && currentNameOf(at) === trimmed) ? "taken" : null;
 }
 export function addTab(tree, name) {
     const next = copy(tree);
@@ -237,13 +250,33 @@ export function addTab(tree, name) {
         next.tabs.push({ name: name.trim(), blocks: [], locked: [] });
     return tidied(next);
 }
-/** Whether a tab can be renamed or removed: not the default one, and not one a plugin puts fields in. */
-export const tabIsEditable = (tree, index) => index > 0 && (tree.tabs[index]?.locked.length ?? 0) === 0;
-export function renameTab(tree, index, name) {
+/** Whether a tab can be renamed: any tab that is not locked by a plugin. */
+export const tabCanRename = (tree, index) => (tree.tabs[index]?.locked.length ?? 0) === 0;
+/** Whether a tab can be removed: only user-added tabs after the default tab, and not locked by a plugin. */
+export const tabCanRemove = (tree, index) => index > 0 && (tree.tabs[index]?.locked.length ?? 0) === 0;
+/** Whether a tab can be moved: only user-added tabs after the default tab, and not plugin-only. */
+export const tabCanMove = (tree, index) => index > 0 && !pluginOnly(tree.tabs[index]);
+/** Whether a tab can be removed: not the default one, and not one a plugin puts fields in. */
+export const tabIsEditable = tabCanRemove;
+export function renameTab(tree, index, name, defaultLabel) {
     const next = copy(tree);
     const tab = next.tabs[index];
-    if (tab && tabIsEditable(tree, index) && tabProblem(tree, name, index) === null)
-        tab.name = name.trim();
+    if (!tab || !tabCanRename(tree, index))
+        return next;
+    const trimmed = name.trim();
+    if (index === 0) {
+        if (trimmed === "" || (defaultLabel !== undefined && trimmed === defaultLabel.trim())) {
+            delete next.defaultTab;
+            return next;
+        }
+        if (tabProblem(tree, trimmed, 0, defaultLabel) === null) {
+            next.defaultTab = trimmed;
+        }
+        return next;
+    }
+    if (tabProblem(tree, trimmed, index, defaultLabel) === null) {
+        tab.name = trimmed;
+    }
     return next;
 }
 /** Removes a tab; its blocks go to the end of the default tab. */
@@ -251,7 +284,7 @@ export function removeTab(tree, index) {
     const next = copy(tree);
     const removed = next.tabs[index];
     const first = next.tabs[0];
-    if (!removed || !first || !tabIsEditable(tree, index))
+    if (!removed || !first || !tabCanRemove(tree, index))
         return next;
     next.tabs.splice(index, 1);
     first.blocks.push(...removed.blocks);
@@ -268,5 +301,5 @@ export function moveTab(tree, index, delta) {
     next.tabs = moveWithin(next.tabs, index, to);
     return next;
 }
-/** Whether the tree has more than the default tab: only then does the tree show the tab level. */
+/** Whether the tree has more than the default tab. */
 export const hasTabLevel = (tree) => tree.tabs.length > 1;

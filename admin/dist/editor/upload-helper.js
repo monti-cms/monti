@@ -106,7 +106,7 @@ async function uploadCall(site, call) {
         throw error;
     }
 }
-export async function uploadImageFile(site, input, onProgress) {
+export async function uploadImageFile(site, input, onProgress, options) {
     const t = site.createTranslator(editorMessages);
     const prepared = input instanceof File ? { file: input, optimized: false } : input;
     const { file, original } = prepared;
@@ -117,6 +117,7 @@ export async function uploadImageFile(site, input, onProgress) {
         filename: original?.name ?? file.name,
         mimeType: file.type,
         byteSize: file.size,
+        ...(options?.folderId ? { folderId: options.folderId } : {}),
         ...(original ? { original: { mimeType: original.type, byteSize: original.size } } : {}),
     }, t("upload.prepareFailed")));
     const total = file.size + (original?.size ?? 0);
@@ -150,7 +151,7 @@ export const formatBytes = (bytes) => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 
  * Uploads an attachment file. The format is decided by the file name extension (browsers give inconsistent types for code files).
  * Rejects before uploading if the format is not accepted or the site setting limit (`media.maxFileBytes`) is exceeded.
  */
-export async function uploadAttachment(site, file, onProgress) {
+export async function uploadAttachment(site, file, onProgress, options) {
     const t = site.createTranslator(editorMessages);
     // A preview of a screen runs on a draft site: nothing is uploaded from it.
     if (isSandboxSite(site))
@@ -161,6 +162,6 @@ export async function uploadAttachment(site, file, onProgress) {
     if (file.size > site.api.MAX_FILE_BYTES)
         throw new Error(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
     const typed = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
-    const uploaded = await uploadImageFile(site, typed, onProgress);
+    const uploaded = await uploadImageFile(site, typed, onProgress, options);
     return { mediaId: uploaded.mediaId };
 }

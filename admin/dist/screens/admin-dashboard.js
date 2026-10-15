@@ -98,21 +98,25 @@ function TrashPage() {
 }
 function ListPage() {
     const list = useEntryList("list");
-    const { state, update } = list;
+    const { state, update, foldersEnabled } = list;
     const { folders } = list.data;
-    const folderLabel = state.folder !== "all" ? ` · ${folders.find((folder) => folder.id === state.folder)?.name ?? ""}` : "";
+    const folderLabel = foldersEnabled && state.folder !== "all"
+        ? ` · ${folders.find((folder) => folder.id === state.folder)?.name ?? ""}`
+        : "";
     return (_jsxs(AdminShell, { title: `${list.label}${folderLabel}`, count: list.data.total, sidebar: {
             activeNav: state.collection,
-            folderNav: {
-                collection: state.collection,
-                currentFolder: state.folder,
-                includeDescendants: state.includeDescendants,
-                folders,
-                folderActions: list.folderActions,
-                onSelectFolder: (folder) => update({ folder }),
-                onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
-                onDropEntries: list.moveEntries,
-                onCreateEntry: list.createNew,
-            },
+            folderNav: foldersEnabled
+                ? {
+                    collection: state.collection,
+                    currentFolder: state.folder,
+                    includeDescendants: state.includeDescendants,
+                    folders,
+                    folderActions: list.folderActions,
+                    onSelectFolder: (folder) => update({ folder }),
+                    onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
+                    onDropEntries: list.moveEntries,
+                    onCreateEntry: list.createNew,
+                }
+                : undefined,
         }, children: [_jsx(PageActions, { children: _jsx(EntryListHeaderActions, { list: list }) }), _jsx(EntryListBody, { list: list })] }));
 }

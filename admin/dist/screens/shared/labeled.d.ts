@@ -8,8 +8,11 @@ export declare const CONTROL_WIDTH: {
 };
 /** The longest line of a help text: it spans the card, but never wider than is comfortable to read. */
 export declare const HELP = "max-w-[70ch] text-xs";
-export declare function Labeled({ label, hint, children, htmlFor, className, control, }: {
+export declare function Labeled({ label, description, hint, children, htmlFor, className, control, }: {
     label: ReactNode;
+    /** A field description explaining what the setting is, placed between label and control. */
+    description?: ReactNode;
+    /** An input hint or helper text, placed beneath the control. */
     hint?: ReactNode;
     htmlFor?: string;
     children: ReactNode;

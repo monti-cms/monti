@@ -12,7 +12,7 @@ import { Button } from "../../ui/button.js";
 import { Panel } from "../../ui/card.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog.js";
 import { DialogFormFooter } from "../../ui/dialog-form-footer.js";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty.js";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty.js";
 import { FieldError } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
 import { Skeleton } from "../../ui/skeleton.js";
@@ -76,9 +76,9 @@ export function ApiKeysSettings() {
                                             ? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
                                             : []),
                                     ].join(" · ")
-                                    : "\u00a0" }) }), _jsx(KeyRows, { query: query, menu: rowMenu, onAssign: setSlotEditing, onRetry: () => void query.refetch() })] }) }), editing && (_jsx(KeyDialog, { editing: editing, taken: (list?.items ?? []).filter((item) => editing.mode === "add" || item.id !== editing.key.id), onClose: () => setEditing(null) }, editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`)), slotEditing && (_jsx(SlotDialog, { slot: slotEditing, onClose: () => setSlotEditing(null) }, `${slotEditing.plugin}:${slotEditing.slot}`)), dialog] }));
+                                    : "\u00a0" }) }), _jsx(KeyRows, { query: query, menu: rowMenu, onAssign: setSlotEditing, onRetry: () => void query.refetch(), onAdd: () => setEditing({ mode: "add" }) })] }) }), editing && (_jsx(KeyDialog, { editing: editing, taken: (list?.items ?? []).filter((item) => editing.mode === "add" || item.id !== editing.key.id), onClose: () => setEditing(null) }, editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`)), slotEditing && (_jsx(SlotDialog, { slot: slotEditing, onClose: () => setSlotEditing(null) }, `${slotEditing.plugin}:${slotEditing.slot}`)), dialog] }));
 }
-function KeyRows({ query, menu, onAssign, onRetry, }) {
+function KeyRows({ query, menu, onAssign, onRetry, onAdd, }) {
     const t = useTranslator(apiKeysMessages);
     const site = useSite();
     const list = query.data;
@@ -90,7 +90,7 @@ function KeyRows({ query, menu, onAssign, onRetry, }) {
     }
     const emptySlots = list.slots.filter((slot) => !slot.key);
     if (list.items.length === 0 && list.slots.length === 0) {
-        return (_jsxs(Empty, { children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(KeyRound, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("empty.title") })] }), _jsx("p", { className: "text-cms-muted-foreground text-sm", children: t("empty.description") })] }));
+        return (_jsxs(Empty, { children: [_jsxs(EmptyHeader, { children: [_jsx(EmptyMedia, { variant: "icon", children: _jsx(KeyRound, { "aria-hidden": true }) }), _jsx(EmptyTitle, { children: t("empty.title") }), _jsx(EmptyDescription, { children: t("empty.description") })] }), _jsx(EmptyContent, { children: _jsxs(Button, { type: "button", size: "sm", variant: "outline", disabled: !list.secretsAvailable, onClick: onAdd, children: [_jsx(Plus, { "aria-hidden": true }), t("add")] }) })] }));
     }
     return (_jsxs("ul", { className: "divide-y", "aria-label": t("title"), children: [list.items.map((key) => (_jsxs("li", { className: "flex items-center gap-3.5 px-4 py-3", "data-testid": `api-key-${key.name}`, children: [_jsxs("div", { className: "min-w-0 flex-1", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "truncate font-medium text-sm", children: key.name }), !key.readable && (_jsx(Badge, { variant: "destructive", title: t("row.unreadableHint"), children: t("row.unreadable") }))] }), _jsx("p", { className: "mt-0.5 truncate text-cms-muted-foreground text-xs", children: !key.readable
                                     ? t("row.unreadableHint")

@@ -16,6 +16,7 @@ export interface CollectionDefinition {
     readonly kind: CollectionKind;
     readonly fields: Readonly<Record<string, FieldType>>;
     readonly relations?: readonly CollectionRelation[];
+    readonly folders?: boolean;
 }
 /** The collections of one site. */
 export type SiteCollections = ReturnType<typeof createCollections>;
