@@ -158,6 +158,7 @@ export async function uploadImageFile(
 	site: Site,
 	input: File | PreparedUpload,
 	onProgress?: (percent: number) => void,
+	options?: { folderId?: string | null },
 ): Promise<UploadedMedia> {
 	const t = site.createTranslator(editorMessages);
 	const prepared: PreparedUpload = input instanceof File ? { file: input, optimized: false } : input;
@@ -172,6 +173,7 @@ export async function uploadImageFile(
 				filename: original?.name ?? file.name,
 				mimeType: file.type,
 				byteSize: file.size,
+				...(options?.folderId ? { folderId: options.folderId } : {}),
 				...(original ? { original: { mimeType: original.type, byteSize: original.size } } : {}),
 			},
 			t("upload.prepareFailed"),
@@ -217,6 +219,7 @@ export async function uploadAttachment(
 	site: Site,
 	file: File,
 	onProgress?: (percent: number) => void,
+	options?: { folderId?: string | null },
 ): Promise<{ mediaId: string }> {
 	const t = site.createTranslator(editorMessages);
 	// A preview of a screen runs on a draft site: nothing is uploaded from it.
@@ -226,6 +229,6 @@ export async function uploadAttachment(
 	if (file.size > site.api.MAX_FILE_BYTES)
 		throw new Error(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
 	const typed = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
-	const uploaded = await uploadImageFile(site, typed, onProgress);
+	const uploaded = await uploadImageFile(site, typed, onProgress, options);
 	return { mediaId: uploaded.mediaId };
 }

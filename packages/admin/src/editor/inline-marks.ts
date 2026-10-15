@@ -1,14 +1,21 @@
 import type { Site } from "@monti-cms/core/client";
 import { type CodeRule, ruleMatches } from "@monti-cms/core/code-block";
 import type { Editor } from "@tiptap/core";
-import type { Mark, ResolvedPos } from "@tiptap/pm/model";
-import { type EditorState, TextSelection } from "@tiptap/pm/state";
+import type { Mark, Node as PmNode, ResolvedPos } from "@tiptap/pm/model";
+import { type EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { Bold, CodeXml, Italic, Strikethrough, Subscript, Superscript, Underline } from "lucide-react";
 import type { TranslatorFor } from "../translator";
 import { allowanceOfState } from "./allowed-extension";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark";
 import { codeEffectsKey, rulesOf } from "./code-block/effects-plugin";
 import { selectedBlocks } from "./drag";
+import {
+	FOOTNOTE_DEFINITION_NAME,
+	FOOTNOTE_REFERENCE_NAME,
+	footnoteKey,
+	footnoteNumbers,
+	labelOf,
+} from "./footnote-nodes";
 import { editorMessages } from "./messages";
 import type { ToolbarItem } from "./toolbar-button";
 
@@ -149,7 +156,16 @@ export interface ActiveCodeRule {
 
 export type InlineBubbleTarget =
 	| { kind: "selection"; from: number; to: number }
-	| { kind: "marks"; pos: number; marks: ActiveInlineMark[]; rules: ActiveCodeRule[] };
+	| { kind: "marks"; pos: number; marks: ActiveInlineMark[]; rules: ActiveCodeRule[] }
+	| {
+			kind: "footnote";
+			from: number;
+			to: number;
+			label: string;
+			badge: string;
+			defPos: number | null;
+			defText: string;
+	  };
 
 /** Range where the same mark continues, starting from the character just before (before) or after (after) `$pos`. */
 function markRange($pos: ResolvedPos, mark: Mark, side: "before" | "after"): { from: number; to: number } {
@@ -173,8 +189,44 @@ function markRange($pos: ResolvedPos, mark: Mark, side: "before" | "after"): { f
  * Not shown for block (marquee) selection, cell selection, node selection, selection spanning code blocks, or a code block in raw-source editing.
  */
 export function inlineBubbleTarget(state: EditorState, detailed: readonly string[] = []): InlineBubbleTarget | null {
-	const order = bubbleMarkOrder(detailed);
 	const { selection } = state;
+	let footnoteNode: PmNode | null = null;
+	let footnoteFrom = -1;
+	let footnoteTo = -1;
+
+	if (selection instanceof NodeSelection && selection.node.type.name === FOOTNOTE_REFERENCE_NAME) {
+		footnoteNode = selection.node;
+		footnoteFrom = selection.from;
+		footnoteTo = selection.to;
+	} else if (selection instanceof TextSelection && selection.empty) {
+		if (selection.$from.nodeAfter?.type.name === FOOTNOTE_REFERENCE_NAME) {
+			footnoteNode = selection.$from.nodeAfter;
+			footnoteFrom = selection.from;
+			footnoteTo = selection.from + footnoteNode.nodeSize;
+		} else if (selection.$from.nodeBefore?.type.name === FOOTNOTE_REFERENCE_NAME) {
+			footnoteNode = selection.$from.nodeBefore;
+			footnoteFrom = selection.from - footnoteNode.nodeSize;
+			footnoteTo = selection.from;
+		}
+	}
+
+	if (footnoteNode) {
+		const label = labelOf(footnoteNode);
+		const key = footnoteKey(label);
+		const number = footnoteNumbers(state.doc).get(key);
+		const badge = number !== undefined ? String(number) : label;
+		let defPos: number | null = null;
+		let defText = "";
+		state.doc.descendants((node, pos) => {
+			if (node.type.name === FOOTNOTE_DEFINITION_NAME && footnoteKey(labelOf(node)) === key) {
+				defPos = pos;
+				defText = node.textContent.trim().replace(/\s+/g, " ");
+				return false;
+			}
+		});
+		return { kind: "footnote", from: footnoteFrom, to: footnoteTo, label, badge, defPos, defText };
+	}
+	const order = bubbleMarkOrder(detailed);
 	if (!(selection instanceof TextSelection) || selectedBlocks(state)) return null;
 	// The bubble is not shown when lines are picked in the code block line number gutter or while linking body text to code (the menu and guide line are used).
 	const effects = codeEffectsKey.getState(state);

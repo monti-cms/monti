@@ -36,6 +36,7 @@ import { allowanceOfState } from "./allowed-extension";
 import { BLOCK_TOOLBAR } from "./blocks/shared";
 import { CODE_TOOLTIP_MARK_NAME } from "./code-block/code-tooltip-mark";
 import { codeEffectsKey, expandRule, removeRule, setFoldOpen } from "./code-block/effects-plugin";
+import { FootnoteForm, removeFootnote } from "./footnote-form";
 import {
 	type ActiveCodeRule,
 	type ActiveInlineMark,
@@ -65,6 +66,7 @@ const CODE_TOOLTIP_LABELS = (t: TranslatorFor<typeof editorMessages>): MarkTextL
 type Panel =
 	| { kind: "link"; draft: LinkDraft }
 	| { kind: "codeTooltip"; active: boolean; initial: string; range?: { from: number; to: number } }
+	| { kind: "footnote"; target: Extract<InlineBubbleTarget, { kind: "footnote" }> }
 	| { kind: "extension"; panel: EditorBubblePanel };
 
 /**
@@ -116,7 +118,7 @@ export function BubbleButton({
 
 /** Screen area to attach the bubble to. Effects with settings (link, tooltip, extension styles) attach to their range, the rest to the cursor. */
 function anchorRange(target: InlineBubbleTarget, ranged: readonly string[]): { from: number; to: number } {
-	if (target.kind === "selection") return target;
+	if (target.kind === "selection" || target.kind === "footnote") return target;
 	const primary = target.marks[0];
 	if (primary && ranged.includes(primary.name)) return primary;
 	const rule = target.rules[0];
@@ -214,6 +216,17 @@ export function InlineBubble({
 		if (!target && panel) setPanel(null);
 	}, [target, panel]);
 
+	const dismissedEmptyRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (target?.kind === "footnote") {
+			if (!target.defText && panel?.kind !== "footnote" && dismissedEmptyRef.current !== target.label) {
+				setPanel({ kind: "footnote", target });
+			}
+		} else {
+			dismissedEmptyRef.current = null;
+		}
+	}, [target, panel]);
+
 	// Follow the text on scroll and window resize (the bubble floats at a fixed screen position).
 	useEffect(() => {
 		if (!visible) return;
@@ -267,6 +280,9 @@ export function InlineBubble({
 	};
 
 	const closePanel = () => {
+		if (panel?.kind === "footnote" && target?.kind === "footnote" && !target.defText) {
+			dismissedEmptyRef.current = target.label;
+		}
 		setPanel(null);
 		setTyping(false);
 		editor.commands.focus();
@@ -470,6 +486,33 @@ export function InlineBubble({
 		));
 	};
 
+	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
+		<div className="flex items-center gap-1">
+			<span className="flex size-5 shrink-0 items-center justify-center rounded bg-cms-accent font-medium text-cms-accent-foreground text-xs leading-none">
+				{target.badge}
+			</span>
+			<button
+				type="button"
+				onClick={() => setPanel({ kind: "footnote", target })}
+				className="max-w-48 truncate px-1 text-left text-cms-muted-foreground text-xs hover:text-cms-foreground"
+				title={target.defText || t("inlineBubble.footnoteEmpty")}
+			>
+				{target.defText || t("inlineBubble.footnoteEmpty")}
+			</button>
+			<BubbleButton label={t("inlineBubble.footnoteEdit")} onClick={() => setPanel({ kind: "footnote", target })}>
+				<Pencil aria-hidden className="size-4" />
+			</BubbleButton>
+			<BubbleButton
+				label={t("inlineBubble.footnoteRemove")}
+				onClick={act(() => {
+					removeFootnote(editor, target);
+				})}
+			>
+				<X aria-hidden className="size-4" />
+			</BubbleButton>
+		</div>
+	);
+
 	// In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
 	// A text style the body's allowed list does not allow gets no button, but one already in the text still shows its details above.
 	const bubbleTools = (group: "format" | "link") =>
@@ -545,7 +588,9 @@ export function InlineBubble({
 						? t("inlineBubble.linkPanel")
 						: panel.kind === "codeTooltip"
 							? t("inlineBubble.tooltipPanel")
-							: panel.panel.label
+							: panel.kind === "footnote"
+								? t("inlineBubble.footnotePanel")
+								: panel.panel.label
 				}
 				data-cms-inline-bubble
 				style={style}
@@ -574,6 +619,8 @@ export function InlineBubble({
 						range={panel.range}
 						onDone={closePanel}
 					/>
+				) : panel.kind === "footnote" ? (
+					<FootnoteForm editor={editor} target={panel.target} onDone={closePanel} />
 				) : (
 					panel.panel.content
 				)}
@@ -582,12 +629,22 @@ export function InlineBubble({
 			<div
 				ref={bubbleRef}
 				role="toolbar"
-				aria-label={target.kind === "selection" ? t("inlineBubble.selectionLabel") : t("inlineBubble.effectLabel")}
+				aria-label={
+					target.kind === "selection"
+						? t("inlineBubble.selectionLabel")
+						: target.kind === "footnote"
+							? t("inlineBubble.footnoteTitle")
+							: t("inlineBubble.effectLabel")
+				}
 				data-cms-inline-bubble
 				style={style}
 				className={BLOCK_TOOLBAR}
 			>
-				{target.kind === "selection" ? renderSelectionTools() : renderMarks(target.marks, target.rules)}
+				{target.kind === "selection"
+					? renderSelectionTools()
+					: target.kind === "footnote"
+						? renderFootnote(target)
+						: renderMarks(target.marks, target.rules)}
 			</div>
 		),
 		document.body,
