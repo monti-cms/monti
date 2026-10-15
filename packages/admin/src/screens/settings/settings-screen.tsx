@@ -9,11 +9,12 @@ import { SchemaSettings } from "../schema/schema-screen";
 import { ShellPage } from "../shared/admin-shell";
 import { sharedMessages } from "../shared/messages";
 import { settingsMessages } from "./messages";
+import { useSettingsTab } from "./place";
 import { type SchemaTab, settingsTabs } from "./tabs";
 
 /**
  * The Settings page: its own header (title, one line about where it is saved, the pending changes and the review button) over a row of tabs, each its own address
- * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: site, languages, collections, file and admin. They share one draft.
+ * (`<admin path>/settings/<tab>`). The tabs are the schema file editor's: site, languages, collections and admin. They share one draft.
  */
 export function SettingsScreen({ tab }: { tab: SchemaTab }) {
 	const t = useTranslator(settingsMessages);
@@ -24,13 +25,17 @@ export function SettingsScreen({ tab }: { tab: SchemaTab }) {
 	);
 }
 
-function SettingsBody({ tab }: { tab: SchemaTab }) {
+function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
+	// Moving between tabs changes the address in place: the page, and the draft in it, stay.
+	const { tab, go } = useSettingsTab(renderedTab);
 	const site = useSite();
 	const t = useTranslator(settingsMessages);
 	const shared = useTranslator(sharedMessages);
 	const tabs = settingsTabs(site);
 	// The editor puts its pending-changes line and review button here.
 	const [actions, setActions] = useState<HTMLElement | null>(null);
+	// ... and the line that names the schema file and its version.
+	const [fileLine, setFileLine] = useState<HTMLElement | null>(null);
 	// On a narrow screen the tab bar scrolls sideways: keep the open tab in view.
 	const activeLink = useRef<HTMLAnchorElement>(null);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: runs when the open tab changes
@@ -51,15 +56,30 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 							<h1 className="font-semibold text-[22px] leading-tight tracking-tight">{t("title")}</h1>
 						</div>
 						<p className="mt-1 text-cms-muted-foreground text-sm">{t("description")}</p>
+						<p
+							ref={setFileLine}
+							className="mt-0.5 text-cms-muted-foreground text-xs empty:hidden"
+							data-testid="settings-file-line"
+						/>
 					</div>
 					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
 				</div>
-				<nav aria-label={t("tabs.label")} className="mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto">
+				<nav
+					aria-label={t("tabs.label")}
+					data-unsaved-guard="off"
+					className="mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto"
+				>
 					{tabs.map((entry) => {
 						const active = entry.id === tab;
 						return (
 							<Link
 								key={entry.id}
+								onClick={(event) => {
+									// A click that opens a new tab or window goes the way of a link.
+									if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+									event.preventDefault();
+									go(entry.id);
+								}}
 								ref={active ? activeLink : undefined}
 								href={entry.href}
 								aria-current={active ? "page" : undefined}
@@ -74,7 +94,7 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 				</nav>
 			</header>
 			<div className="flex min-h-0 flex-1 flex-col bg-cms-muted/50">
-				<SchemaSettings tab={tab} actionsSlot={actions} />
+				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} onTab={go} />
 			</div>
 		</>
 	);

@@ -1,7 +1,7 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { renderInRouter } from "../../../test/router";
+import { createTestRouter, renderInRouter } from "../../../test/router";
 import { withSite } from "../../../test/site";
 import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
@@ -21,7 +21,11 @@ vi.mock("../../schema/schema-screen", () => ({
 const t = testSite.createTranslator(settingsMessages);
 const sidebarText = testSite.createTranslator(screensMessages);
 
-afterEach(cleanup);
+afterEach(() => {
+	cleanup();
+	// The open tab is read from the address: start every test from one that names no tab.
+	window.history.replaceState(null, "", "/");
+});
 
 const element = (tab: SchemaTab) =>
 	withSite(
@@ -58,6 +62,24 @@ describe("settings tabs", () => {
 			.map((link) => link.textContent);
 		expect(names).not.toContain(sidebarText("sidebar.templates"));
 		expect(names).not.toContain(sidebarText("sidebar.events"));
+	});
+
+	it("moves between tabs in place: the address changes, the editor and its draft stay, and no navigation is asked of the router", () => {
+		window.history.replaceState(null, "", "/admin/settings/collections?collection=tag&section=fields");
+		const nav = createTestRouter();
+		nav.render(element("collections"));
+		const editor = screen.getByText(/schema editor: collections/);
+		fireEvent.click(within(tabBar()).getByRole("link", { name: t("tab.locales") }));
+		expect(screen.getByText(/schema editor: locales/)).toBe(editor);
+		expect(window.location.pathname).toBe("/admin/settings/locales");
+		// The collection that was open is still named in the address for the way back.
+		expect(window.location.search).toBe("?collection=tag&section=fields");
+		expect(nav.navigate).not.toHaveBeenCalled();
+		expect(
+			within(tabBar())
+				.getByRole("link", { name: t("tab.locales") })
+				.getAttribute("aria-current"),
+		).toBe("page");
 	});
 
 	it("shows the schema editor for the open tab", () => {

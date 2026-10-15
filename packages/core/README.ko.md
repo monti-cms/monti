@@ -1339,7 +1339,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 ### 관리자에서 스키마 편집하기 (개발 서버 전용)
 
-관리자에는 `monti.schema.ts`를 편집하는 스키마 설정(`<관리자 경로>/settings/collections`, 사이드바 맨 아래 설정. 언어·사이트·관리자·파일 탭도 여기에 속한다)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
+관리자에는 `monti.schema.ts`를 편집하는 스키마 설정(`<관리자 경로>/settings/collections`, 사이드바 맨 아래 설정. 언어·사이트·관리자 탭도 여기에 속한다)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
 
 **누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/monti/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
 

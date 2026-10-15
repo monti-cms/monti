@@ -69,7 +69,7 @@ export function postgres(options: PostgresOptions = {}): DatabaseAdapter {
 				{
 					what: `${DATABASE_URL_ENV} is not set, so there is no database to connect to`,
 					where: DATABASE_URL_WHERE,
-					fix: `put your Postgres URL in ${DATABASE_URL_ENV}, for example ${DATABASE_URL_ENV}=postgres://user:password@localhost:5432/monti, then run \`monti doctor\``,
+					fix: `put your Postgres URL in ${DATABASE_URL_ENV}, for example ${DATABASE_URL_ENV}=postgres://user:password@host:5432/monti, then run \`monti doctor\``,
 				},
 				undefined,
 				"database_url_missing",

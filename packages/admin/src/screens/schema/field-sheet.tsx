@@ -2,6 +2,7 @@
 
 import { fieldTraits, useTranslator } from "@monti-cms/core/client";
 import { useRef, useState } from "react";
+import { useCmsAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { Button } from "../../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../ui/sheet";
@@ -17,7 +18,8 @@ import {
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
-import { type CollectionEditing, InputOptionsEditor, KindOptions, LOCALIZED_KINDS } from "./field-editor";
+import { type CollectionEditing, KindOptions, LOCALIZED_KINDS } from "./field-editor";
+import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 import { schemaFieldsMessages } from "./fields.messages";
 import {
 	FIELD_KEY_ORDER,
@@ -87,6 +89,11 @@ export function FieldSheet({
 	const valueKind = fieldTraits[kind].entersValue;
 	const label = typeof field.label === "string" ? field.label : "";
 	const isTitle = !place.branch && titleFieldName(draft) === name;
+	const isSlug = !place.branch && (kind === "slug" || name === "slug");
+	const isFixed = isTitle || isSlug;
+	const { fieldInputs } = useCmsAdminComponents();
+	const hasPluginInputs = Object.keys(fieldInputs ?? {}).length > 0;
+	const hasCustomInput = typeof field.input === "string" && field.input.length > 0;
 	const blocked = removeBlock(editing.collection, place, name);
 	const branchKinds = place.branch ? VALUE_KINDS : FIELD_KINDS;
 
@@ -191,31 +198,29 @@ export function FieldSheet({
 						<TabsContent value="advanced" className="flex flex-col gap-6">
 							<Pick
 								label={t("field.kind")}
-								hint={t("sheet.kindHint")}
+								hint={
+									isTitle ? t("field.kindFixedTitleHint") : isSlug ? t("field.kindFixedSlugHint") : t("sheet.kindHint")
+								}
 								value={kind}
+								disabled={isFixed}
 								items={branchKinds.map((item) => ({ value: item, label: t(`kind.${item}`) }))}
 								onChange={(next) => change((current) => withKind(current, next as FieldKindName, collectionNames))}
 							/>
-							{valueKind && (
-								<TextInput
-									label={t("field.role")}
-									hint={t("field.roleHint")}
-									optional
-									value={field.role as string | undefined}
-									onChange={(value) => set("role", orUndefined(value))}
+							{!isSlug && valueKind && (
+								<FieldRolePicker
+									role={field.role as string | undefined}
+									kind={kind}
+									isTitle={isTitle}
+									onChange={(role) => set("role", role)}
 								/>
 							)}
-							{valueKind && (
-								<TextInput
-									label={t("field.input")}
-									hint={t("field.inputHint")}
-									optional
+							{!isFixed && valueKind && (hasPluginInputs || hasCustomInput) && (
+								<FieldCustomInputPicker
 									value={field.input as string | undefined}
-									onChange={(value) => set("input", orUndefined(value))}
+									options={field.inputOptions}
+									onChangeInput={(input) => set("input", input)}
+									onChangeOptions={(opts) => set("inputOptions", opts)}
 								/>
-							)}
-							{valueKind && (
-								<InputOptionsEditor value={field.inputOptions} onChange={(value) => set("inputOptions", value)} />
 							)}
 						</TabsContent>
 					</div>

@@ -2,23 +2,25 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Label } from "../../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
-import { COLLECTION_ICON_NAMES } from "../shared/collection-icon";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
 import { FieldsCard } from "./fields-tree";
+import { IconPicker } from "./icon-picker";
 import { schemaMessages } from "./messages";
+import { PublicPathField } from "./public-path-field";
 import {
 	type Allowed,
 	allowedOf,
 	COLLECTION_KEY_ORDER,
+	defaultPath,
 	fieldsOf,
 	hasBody,
 	type Obj,
@@ -53,7 +55,7 @@ const EDITOR_NAME: Partial<Record<string, EditorKey>> = {
 	subscript: "inlineMarks.subscript",
 };
 
-/** A list the body may be limited to: off allows everything of its kind; on shows a box per name. */
+/** A list the body may be limited to: "Allow all" checkbox allows everything; below are checkboxes per item, always visible. */
 function LimitList<T extends string | number>({
 	label,
 	all,
@@ -69,42 +71,54 @@ function LimitList<T extends string | number>({
 }) {
 	const t = useTranslator(schemaCollectionMessages);
 	const { disabled } = useSchemaEdit();
-	const limited = value !== undefined;
+	const allId = useId();
+	const allowedCount = value === undefined ? all.length : all.filter((item) => value.includes(item)).length;
+	const allAllowed = allowedCount === all.length;
+	const someAllowed = allowedCount > 0 && !allAllowed;
 	return (
 		<fieldset className="flex flex-col gap-3 border-t pt-6 first:border-t-0 first:pt-0">
 			<legend className="sr-only">{label}</legend>
-			<FlagSwitch
-				label={t("allowed.limit", { label: label.toLowerCase() })}
-				hint={limited ? undefined : t("allowed.everything")}
-				checked={limited}
-				onChange={(on) => onChange(on ? [...all] : undefined)}
-			/>
-			{limited && (
-				<ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
-					{all.map((item) => {
-						const id = `allowed-${label}-${item}`;
-						return (
-							<li key={String(item)} className="flex items-center gap-2">
-								<Checkbox
-									id={id}
-									checked={value.includes(item)}
-									disabled={disabled}
-									onCheckedChange={(on) =>
-										onChange(
-											on === true
-												? all.filter((one) => one === item || value.includes(one))
-												: value.filter((one) => one !== item),
-										)
-									}
-								/>
-								<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
-									{nameOf ? nameOf(item) : String(item)}
-								</Label>
-							</li>
-						);
-					})}
-				</ul>
-			)}
+			<div className="flex items-center justify-between">
+				<span className="font-medium text-sm">{label}</span>
+				<div className="flex items-center gap-2">
+					<Checkbox
+						id={allId}
+						checked={allAllowed}
+						indeterminate={someAllowed}
+						disabled={disabled}
+						onCheckedChange={(on) => onChange(on === true ? undefined : [])}
+					/>
+					<Label htmlFor={allId} className="cursor-pointer font-normal text-cms-muted-foreground text-sm">
+						{t("allowed.all")}
+					</Label>
+				</div>
+			</div>
+			<ul className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+				{all.map((item) => {
+					const id = `allowed-${label}-${item}`;
+					const checked = value === undefined || value.includes(item);
+					return (
+						<li key={String(item)} className="flex items-center gap-2">
+							<Checkbox
+								id={id}
+								checked={checked}
+								disabled={disabled}
+								onCheckedChange={(on) => {
+									const currentList = value === undefined ? [...all] : value;
+									const nextList =
+										on === true
+											? all.filter((one) => one === item || currentList.includes(one))
+											: currentList.filter((one) => one !== item);
+									onChange(nextList.length === all.length ? undefined : nextList);
+								}}
+							/>
+							<Label htmlFor={id} title={String(item)} className="font-normal text-sm">
+								{nameOf ? nameOf(item) : String(item)}
+							</Label>
+						</li>
+					);
+				})}
+			</ul>
 		</fieldset>
 	);
 }
@@ -153,11 +167,11 @@ function AllowedEditor({
 	return (
 		<Section title={t("allowed.title")} description={t("allowed.hint")} note={limited ? t("allowed.note") : undefined}>
 			<LimitList
-				label={t("allowed.blocks")}
-				all={vocabulary.blocks}
-				nameOf={nameLabel}
-				value={allowed.blocks}
-				onChange={(value) => setAllowed("blocks", value)}
+				label={t("allowed.headings")}
+				all={HEADINGS}
+				value={allowed.headings}
+				nameOf={(level) => te("toolbar.heading", { level })}
+				onChange={(value) => setAllowed("headings", value)}
 			/>
 			<LimitList
 				label={t("allowed.marks")}
@@ -167,11 +181,11 @@ function AllowedEditor({
 				onChange={(value) => setAllowed("marks", value)}
 			/>
 			<LimitList
-				label={t("allowed.headings")}
-				all={HEADINGS}
-				value={allowed.headings}
-				nameOf={(level) => te("toolbar.heading", { level })}
-				onChange={(value) => setAllowed("headings", value)}
+				label={t("allowed.blocks")}
+				all={vocabulary.blocks}
+				nameOf={nameLabel}
+				value={allowed.blocks}
+				onChange={(value) => setAllowed("blocks", value)}
 			/>
 		</Section>
 	);
@@ -179,6 +193,8 @@ function AllowedEditor({
 
 export function CollectionEditor({
 	name,
+	section,
+	onSection,
 	collection,
 	isNew,
 	onChange,
@@ -186,6 +202,9 @@ export function CollectionEditor({
 	onRename,
 }: {
 	name: string;
+	/** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
+	section: string | undefined;
+	onSection: (section: string) => void;
 	collection: Obj;
 	/** Not in the file on disk yet: its name can still be taken back. */
 	isNew: boolean;
@@ -196,18 +215,13 @@ export function CollectionEditor({
 	const t = useTranslator(schemaCollectionMessages);
 	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
-	const [chosenTab, setTab] = useState("basics");
+	const chosenTab = section ?? "basics";
 	// The editor tab only exists for a collection with a body.
 	const tab = chosenTab === "editor" && !hasBody(collection) ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
 	const _fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
 		onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
-	const icon = typeof collection.icon === "string" ? collection.icon : "";
-	const icons = [...new Set(["", ...COLLECTION_ICON_NAMES, ...(icon ? [icon] : [])])].map((value) => ({
-		value,
-		label: value || t("collection.iconDefault"),
-	}));
 	const editing = { collectionName: name, collection, update: onChange, onRename };
 	const label = typeof collection.label === "string" ? collection.label : name;
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
@@ -215,7 +229,7 @@ export function CollectionEditor({
 	return (
 		<div className="flex min-w-0 flex-col gap-6" data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)} className="gap-6">
+			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)} className="gap-6">
 				<div className="flex flex-col items-start gap-3">
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">
@@ -257,17 +271,15 @@ export function CollectionEditor({
 								]}
 								onChange={(value) => set("kind", value)}
 							/>
-							<Pick
+							<IconPicker
 								label={t("collection.icon")}
-								value={icon}
-								items={icons}
-								onChange={(value) => set("icon", orUndefined(value))}
+								value={typeof collection.icon === "string" ? collection.icon : undefined}
+								kind={typeof collection.kind === "string" ? collection.kind : undefined}
+								onChange={(value) => set("icon", value)}
 							/>
-							<TextInput
-								label={t("collection.path")}
-								hint={t("collection.pathHint")}
-								placeholder="/posts/:slug"
-								value={collection.path as string | undefined}
+							<PublicPathField
+								path={typeof collection.path === "string" ? collection.path : ""}
+								suggested={defaultPath(name)}
 								onChange={(value) => set("path", orUndefined(value))}
 							/>
 						</div>
