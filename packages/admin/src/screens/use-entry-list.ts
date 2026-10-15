@@ -118,7 +118,7 @@ function useListState(mode: ListMode) {
  * One page of the list plus folders. Draws from cache right away and refetches in the background. Keeps the previous rows while conditions change
  * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
-function useEntriesData(state: ListState, mode: ListMode, ready: boolean) {
+function useEntriesData(state: ListState, mode: ListMode, ready: boolean, foldersEnabled = true) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const isTrash = mode === "trash";
@@ -127,9 +127,12 @@ function useEntriesData(state: ListState, mode: ListMode, ready: boolean) {
 	const foldersQuery = useQuery({
 		queryKey: foldersKeys.list(collection),
 		queryFn: ({ signal }) => listFolders(site, collection, signal),
-		enabled: !isTrash,
+		enabled: !isTrash && foldersEnabled,
 	});
-	const folders = useMemo(() => (isTrash ? [] : (foldersQuery.data ?? [])), [isTrash, foldersQuery.data]);
+	const folders = useMemo(
+		() => (!foldersEnabled || isTrash ? [] : (foldersQuery.data ?? [])),
+		[foldersEnabled, isTrash, foldersQuery.data],
+	);
 
 	const apiQuery = listStateToApiQuery(site, state, { trash: isTrash }).toString();
 	const listKey = entriesKeys.list(apiQuery);
@@ -255,8 +258,8 @@ function useEntryMutations({
 }
 
 /** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or in trash. */
-function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode) {
-	if (mode === "trash" || !isExplorerMode(state)) return null;
+function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode, foldersEnabled = true) {
+	if (!foldersEnabled || mode === "trash" || !isExplorerMode(state)) return null;
 	const current = state.folder === "all" ? null : state.folder;
 	const currentFolder = current ? folders.find((folder) => folder.id === current) : undefined;
 	return {
@@ -278,11 +281,13 @@ export function useEntryList(mode: ListMode) {
 	const isTrash = mode === "trash";
 	const { state, ready, update, columnSettings, savePreferences } = useListState(mode);
 	const collection = state.collection;
+	const def = site.COLLECTION_DEFINITIONS[collection];
 	const isRecord = site.isItemCollection(collection);
 	const isContent = site.isDocumentCollection(collection);
+	const foldersEnabled = def?.folders ?? isContent;
 	const options = useTaxonomyOptions(collection, !isTrash);
 
-	const data = useEntriesData(state, mode, ready);
+	const data = useEntriesData(state, mode, ready, foldersEnabled);
 	const { items, folders } = data;
 
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -451,7 +456,8 @@ export function useEntryList(mode: ListMode) {
 		columnSettings,
 		savePreferences,
 		data,
-		explorer: explorerOf(state, folders, mode),
+		foldersEnabled,
+		explorer: explorerOf(state, folders, mode, foldersEnabled),
 		selectedIds,
 		setSelectedIds,
 		mutations,

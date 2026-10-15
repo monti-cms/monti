@@ -9,6 +9,7 @@ import { countFailedEvents, eventsKeys } from "../../api/events";
 import { foldersKeys, listFolders } from "../../api/folders";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
+import { useAdminFeatures } from "./admin-features";
 import { sharedMessages } from "./messages";
 
 interface AdminNavContextValue {
@@ -111,6 +112,7 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
 	const queryClient = useQueryClient();
 	const ready = useNavQueriesReady();
+	const features = useAdminFeatures();
 	const { data } = useQuery({ queryKey: entriesKeys.trashCount(), queryFn: () => countTrash(site), enabled: ready });
 	// A light background fetch. Errors (for example no access) are ignored so the sidebar never breaks.
 	const { data: eventsCount } = useQuery({
@@ -119,17 +121,24 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 		retry: false,
 		enabled: ready,
 	});
+	const folderTargets = useMemo(
+		() => [...site.COLLECTIONS, ...(features.media ? ["media"] : [])],
+		[site.COLLECTIONS, features.media],
+	);
 	// The sidebar needs to know which collections have folders, not only the open one. The list screen reads the same cache entries.
 	const folderCounts = useQueries({
-		queries: site.COLLECTIONS.map((collection) => ({
+		queries: folderTargets.map((collection) => ({
 			queryKey: foldersKeys.list(collection),
 			queryFn: ({ signal }: { signal: AbortSignal }) => listFolders(site, collection, signal),
-			retry: false,
-			enabled: ready,
+			enabled:
+				ready &&
+				(collection === "media" ||
+					(site.COLLECTION_DEFINITIONS[collection]?.folders ??
+						site.COLLECTION_DEFINITIONS[collection]?.kind !== "item")),
 		})),
 		combine: (results) =>
 			Object.fromEntries(
-				site.COLLECTIONS.flatMap((collection, index) => {
+				folderTargets.flatMap((collection, index) => {
 					const folders = results[index]?.data;
 					return folders ? [[collection, folders.length] as const] : [];
 				}),

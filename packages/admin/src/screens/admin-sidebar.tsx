@@ -60,7 +60,7 @@ export type AdminNavId =
 
 /** Folder navigation, passed by the list screen. The sidebar draws it as a tree under the collection it belongs to. */
 export interface FolderNavigation {
-	collection: Collection;
+	collection: Collection | "media";
 	/** `all` (top level) or a folder ID. */
 	currentFolder: string;
 	includeDescendants: boolean;
@@ -70,7 +70,7 @@ export interface FolderNavigation {
 	onIncludeDescendantsChange: (value: boolean) => void;
 	/** When a list row is dragged and dropped onto a folder (or the top level). */
 	onDropEntries: (folderId: string | null, entries: DraggedEntry[]) => void;
-	onCreateEntry: () => void;
+	onCreateEntry?: () => void;
 }
 
 export interface AdminSidebarProps {
@@ -205,7 +205,9 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		);
 	};
 
-	const label = site.COLLECTION_DEFINITIONS[nav.collection].label;
+	const label = site.isCollection(nav.collection)
+		? site.COLLECTION_DEFINITIONS[nav.collection].label
+		: t("sidebar.media");
 	const blankActions: MenuAction[] = [
 		{
 			kind: "item",
@@ -213,7 +215,9 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 			icon: Plus,
 			onSelect: () => nav.folderActions.requestCreate(null),
 		},
-		{ kind: "item", label: t("list.add", { label }), icon: Plus, onSelect: nav.onCreateEntry },
+		...(nav.onCreateEntry
+			? [{ kind: "item" as const, label: t("list.add", { label }), icon: Plus, onSelect: nav.onCreateEntry }]
+			: []),
 	];
 
 	return (
@@ -308,8 +312,10 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 
 	const collectionEntry = (collection: Collection) => {
 		const active = activeNav === collection;
-		const nav = active && folderNav?.collection === collection ? folderNav : undefined;
-		const folderCount = nav ? nav.folders.length : (folderCounts?.[collection] ?? 0);
+		const def = site.COLLECTION_DEFINITIONS[collection];
+		const foldersEnabled = def?.folders ?? def?.kind !== "item";
+		const nav = foldersEnabled && active && folderNav?.collection === collection ? folderNav : undefined;
+		const folderCount = foldersEnabled ? (nav ? nav.folders.length : (folderCounts?.[collection] ?? 0)) : 0;
 		const chevron =
 			folderCount > 0 ? (
 				active ? (
@@ -334,6 +340,36 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					undefined,
 					chevron,
 				)}
+				{nav && (
+					<SidebarMenuItem>
+						<FolderTree nav={nav} closeMobile={closeMobile} />
+					</SidebarMenuItem>
+				)}
+			</Fragment>
+		);
+	};
+
+	const mediaEntry = () => {
+		const active = activeNav === "media";
+		const nav = active && folderNav?.collection === "media" ? folderNav : undefined;
+		const folderCount = nav ? nav.folders.length : (folderCounts?.media ?? 0);
+		const chevron =
+			folderCount > 0 ? (
+				active ? (
+					<ChevronDown
+						aria-hidden
+						className="size-3! text-cms-sidebar-foreground/60 group-data-[collapsible=icon]:hidden"
+					/>
+				) : (
+					<ChevronRight
+						aria-hidden
+						className="size-3! text-cms-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
+					/>
+				)
+			) : null;
+		return (
+			<Fragment key="media">
+				{navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />, undefined, chevron)}
 				{nav && (
 					<SidebarMenuItem>
 						<FolderTree nav={nav} closeMobile={closeMobile} />
@@ -396,7 +432,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					<SidebarGroupContent>
 						<SidebarMenu aria-label={t("sidebar.content")}>
 							{site.COLLECTIONS.map(collectionEntry)}
-							{features.media && navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />)}
+							{features.media && mediaEntry()}
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>

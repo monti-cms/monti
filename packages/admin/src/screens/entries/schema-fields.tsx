@@ -7,10 +7,18 @@ import type {
 	PanelGroup,
 	RelationField,
 	SlugField,
+	TextField,
 	ValueField,
 	ViewField,
 } from "@monti-cms/core/client";
-import { type Locale, type SchemaCollection, useSite, useTranslator } from "@monti-cms/core/client";
+import {
+	bodyExcerpt,
+	fillFromBodyLength,
+	type Locale,
+	type SchemaCollection,
+	useSite,
+	useTranslator,
+} from "@monti-cms/core/client";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {
@@ -25,6 +33,7 @@ import { type SlotRequest, useSlot } from "../../slots/slots";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
 import { FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet, Field as UiField } from "../../ui/field";
+import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "../../ui/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
@@ -109,9 +118,9 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			) : (
 				labelNode
 			)}
+			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 			{children}
 			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(site, issue)}</FieldError>}
-			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 		</UiField>
 	);
 }
@@ -141,10 +150,10 @@ function SlotFieldRow({
 					</span>
 				) : null}
 			</div>
+			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 			{children}
 			{panel}
 			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(site, issue)}</FieldError>}
-			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 		</UiField>
 	);
 }
@@ -318,6 +327,8 @@ function ValueRowView({
 	showDescriptions: boolean;
 	form?: EntryForm;
 }) {
+	const site = useSite();
+	const t = useTranslator(entriesMessages);
 	const store = useEntryFormStore();
 	const collection = useEntryFormSelector((state) => state.collection);
 	const entryId = useEntryFormSelector((state) => state.entryId);
@@ -347,6 +358,37 @@ function ValueRowView({
 	const parts = registered && isFieldInputParts(registered) ? registered : undefined;
 	const Aside = parts?.Aside;
 	const Input = parts?.Input;
+
+	const canFillFromBody =
+		definition.kind === "text" && Boolean(definition.fillFromBody) && site.schemaOf(collection).body;
+
+	const fillFromBodyButton = canFillFromBody ? (
+		<IconButton
+			label={t("field.fillFromBody")}
+			size="icon-xs"
+			side="bottom"
+			disabled={field.readOnly}
+			onClick={() => {
+				const currentDoc = store.getState().form.doc;
+				if (!currentDoc) return;
+				const length = fillFromBodyLength(definition as TextField);
+				const excerpt = bodyExcerpt(site, currentDoc, length);
+				field.setValue(excerpt);
+			}}
+			className="text-cms-muted-foreground hover:text-cms-foreground"
+		>
+			<RefreshCw aria-hidden className="size-3" />
+		</IconButton>
+	) : null;
+
+	const aside =
+		fillFromBodyButton || Aside ? (
+			<div className="flex items-center gap-1">
+				{fillFromBodyButton}
+				{Aside && <Aside {...props} />}
+			</div>
+		) : undefined;
+
 	return (
 		<FieldRow
 			id={field.ids.input}
@@ -355,7 +397,7 @@ function ValueRowView({
 			issue={field.error?.issue}
 			help={help}
 			slot={Input === null ? undefined : (field.slotRequest ?? undefined)}
-			aside={Aside ? <Aside {...props} /> : undefined}
+			aside={aside}
 		>
 			{Input === null ? null : Input ? <Input {...props} /> : <DefaultInput {...props} parts={parts} />}
 		</FieldRow>

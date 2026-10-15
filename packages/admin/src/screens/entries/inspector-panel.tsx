@@ -99,7 +99,7 @@ export function InspectorPanel({
 				<TabsList variant="line" className="h-full flex-1 justify-start gap-3">
 					{tabs.map((name) => (
 						<TabsTrigger key={name} value={name} className="flex-none px-0 text-xs">
-							{tabLabel(site, name)}
+							{tabLabel(site, name, collection)}
 							{issuesIn(name) > 0 && <StatusIndicator size="xs" tone="destructive" />}
 						</TabsTrigger>
 					))}
