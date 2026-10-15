@@ -26,6 +26,9 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.kindItemHint": "A small record saved in one step (a tag, a category).",
 		"collection.icon": "Icon",
 		"collection.iconDefault": "Default for the kind",
+		"collection.iconSearch": "Search icons...",
+		"collection.iconNone": "No matching icon.",
+		"collection.iconClear": "Use default icon",
 		"collection.path": "Public address",
 		"collection.pathHint":
 			"The part before the entry's slug, e.g. /posts/hello-world. :slug is replaced with each entry's slug field.",
@@ -79,6 +82,9 @@ export const schemaCollectionMessages = defineMessages("cms-admin.schema.collect
 		"collection.kindItemHint": "한 번에 저장하는 작은 기록입니다(태그, 카테고리).",
 		"collection.icon": "아이콘",
 		"collection.iconDefault": "종류별 기본값",
+		"collection.iconSearch": "아이콘 검색...",
+		"collection.iconNone": "일치하는 아이콘이 없습니다.",
+		"collection.iconClear": "기본 아이콘으로 설정",
 		"collection.path": "공개 주소",
 		"collection.pathHint":
 			"항목의 슬러그 앞에 붙는 부분이에요. 예: /posts/hello-world. :slug는 항목마다 슬러그 필드 값으로 바뀝니다.",

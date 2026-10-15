@@ -9,11 +9,11 @@ import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Label } from "../../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
-import { COLLECTION_ICON_NAMES } from "../shared/collection-icon";
 import { Section } from "../shared/section";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, IssueList, orUndefined, Pick, TextInput, useIssuesUnder, useSchemaEdit } from "./controls";
 import { FieldsCard } from "./fields-tree";
+import { IconPicker } from "./icon-picker";
 import { schemaMessages } from "./messages";
 import { PublicPathField } from "./public-path-field";
 import {
@@ -222,11 +222,6 @@ export function CollectionEditor({
 	const _fields = fieldsOf(collection);
 	const set = (key: string, value: unknown) =>
 		onChange((current) => setProp(current, key, value, COLLECTION_KEY_ORDER));
-	const icon = typeof collection.icon === "string" ? collection.icon : "";
-	const icons = [...new Set(["", ...COLLECTION_ICON_NAMES, ...(icon ? [icon] : [])])].map((value) => ({
-		value,
-		label: value || t("collection.iconDefault"),
-	}));
 	const editing = { collectionName: name, collection, update: onChange, onRename };
 	const label = typeof collection.label === "string" ? collection.label : name;
 	const kindLabel = ts(collection.kind === "item" ? "collection.kindItem" : "collection.kindDocument");
@@ -276,11 +271,11 @@ export function CollectionEditor({
 								]}
 								onChange={(value) => set("kind", value)}
 							/>
-							<Pick
+							<IconPicker
 								label={t("collection.icon")}
-								value={icon}
-								items={icons}
-								onChange={(value) => set("icon", orUndefined(value))}
+								value={typeof collection.icon === "string" ? collection.icon : undefined}
+								kind={typeof collection.kind === "string" ? collection.kind : undefined}
+								onChange={(value) => set("icon", value)}
 							/>
 							<PublicPathField
 								path={typeof collection.path === "string" ? collection.path : ""}
