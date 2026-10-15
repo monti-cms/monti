@@ -1,19 +1,24 @@
 "use client";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { fillPattern, LOCALE_CODE, useTranslator } from "@monti-cms/core/client";
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
+import { cn } from "../../lib/utils/cn";
+import { moveWithin } from "../../lib/utils/move-within";
 import { Button } from "../../ui/button";
 import { Panel } from "../../ui/card";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "../../ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Input } from "../../ui/input";
-import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { Pick, useSchemaEdit } from "./controls";
+import { SortableList } from "./fields-tree-dnd";
+import { type RowButton, RowButtons } from "./fields-tree-rows";
 import { schemaLocalesMessages } from "./locales.messages";
 import { schemaMessages } from "./messages";
 import { collectionsOf, type Locale, localesOf, moveItem, type Obj, sectionOf, setProp } from "./schema-model";
@@ -233,6 +238,65 @@ function examplePath(file: Obj): string {
 
 const PREFIX_MODES = ["except-default", "always", "never"] as const;
 
+/** One language of the list: a grip to drag it, and its buttons on hover (the same way a field row is reordered). */
+function LocaleRow({
+	locale,
+	isDefault,
+	dragDisabled,
+	buttons,
+}: {
+	locale: Locale;
+	isDefault: boolean;
+	dragDisabled: boolean;
+	buttons: RowButton[];
+}) {
+	const t = useTranslator(schemaLocalesMessages);
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+		id: locale.code,
+		disabled: dragDisabled,
+	});
+	return (
+		<li
+			ref={setNodeRef}
+			style={{ transform: CSS.Translate.toString(transform), transition }}
+			className={cn(
+				"group/row relative flex min-h-14 items-center gap-3.5 bg-cms-card py-2 pr-4 pl-9",
+				isDragging && "z-10 opacity-80 shadow-md",
+			)}
+			data-testid={`locale-${locale.code}`}
+		>
+			<button
+				type="button"
+				ref={setActivatorNodeRef}
+				{...attributes}
+				{...listeners}
+				aria-label={t("locales.drag", { name: locale.name })}
+				disabled={dragDisabled}
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+			>
+				<GripVertical aria-hidden className="size-4" />
+			</button>
+			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-cms-muted px-1.5 font-mono text-xs">
+				{locale.code}
+			</span>
+			<div className="min-w-0 flex-1">
+				<div className="flex items-center gap-2">
+					<span className="truncate font-medium text-sm">{locale.name}</span>
+					{isDefault && (
+						<span className="rounded-sm bg-cms-primary/10 px-1.5 py-px text-cms-primary text-xs">
+							{t("locales.defaultBadge")}
+						</span>
+					)}
+				</div>
+				<div className="truncate text-cms-muted-foreground text-xs">
+					{t("locales.adminName", { label: locale.label ?? locale.name })}
+				</div>
+			</div>
+			<RowButtons buttons={buttons} />
+		</li>
+	);
+}
+
 /** The content languages (code, name, admin name) as one list, the default one, and the time zone. A saved language's code is a stored value, so it is not editable; add a new language instead. */
 export function LocalesEditor({
 	file,
@@ -254,38 +318,34 @@ export function LocalesEditor({
 	const editing = dialog?.code ? locales.find((locale) => locale.code === dialog.code) : undefined;
 	const mode = PREFIX_MODES.find((value) => value === sectionOf(file, "site").localePrefix) ?? "except-default";
 	const other = locales.find((locale) => locale.code !== defaultLocale)?.code ?? "en";
-	const menu = (locale: Locale, index: number): MenuAction[] => [
+	const buttons = (locale: Locale, index: number): RowButton[] => [
 		{
-			kind: "item",
-			label: t("locales.edit"),
+			label: t("locales.editNamed", { name: locale.name }),
 			icon: Pencil,
 			disabled,
-			onSelect: () => setDialog({ code: locale.code }),
+			onClick: () => setDialog({ code: locale.code }),
 		},
 		{
-			kind: "item",
 			label: ts("row.up", { name: locale.code }),
 			icon: ArrowUp,
 			disabled: disabled || index === 0,
-			onSelect: () => change(moveItem(locales, index, -1)),
+			onClick: () => change(moveItem(locales, index, -1)),
 		},
 		{
-			kind: "item",
 			label: ts("row.down", { name: locale.code }),
 			icon: ArrowDown,
 			disabled: disabled || index === locales.length - 1,
-			onSelect: () => change(moveItem(locales, index, 1)),
+			onClick: () => change(moveItem(locales, index, 1)),
 		},
-		{ kind: "separator" },
 		{
-			kind: "item",
 			label: ts("row.remove", { name: locale.code }),
 			icon: Trash2,
 			destructive: true,
 			disabled,
-			onSelect: () => change(locales.filter((_, at) => at !== index)),
+			onClick: () => change(locales.filter((_, at) => at !== index)),
 		},
 	];
+	const onDrop = (from: string, to: string) => change(moveWithin(locales, taken.indexOf(from), taken.indexOf(to)));
 	return (
 		<div className="flex flex-col gap-12">
 			<Section
@@ -311,35 +371,17 @@ export function LocalesEditor({
 						</Button>
 					</div>
 					<ul className="divide-y">
-						{locales.map((locale, index) => (
-							<li
-								key={locale.code}
-								className="flex min-h-14 items-center gap-3.5 px-4 py-2"
-								data-testid={`locale-${locale.code}`}
-							>
-								<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-cms-muted px-1.5 font-mono text-xs">
-									{locale.code}
-								</span>
-								<div className="min-w-0 flex-1">
-									<div className="flex items-center gap-2">
-										<span className="truncate font-medium text-sm">{locale.name}</span>
-										{locale.code === defaultLocale && (
-											<span className="rounded-sm bg-cms-primary/10 px-1.5 py-px text-cms-primary text-xs">
-												{t("locales.defaultBadge")}
-											</span>
-										)}
-									</div>
-									<div className="truncate text-cms-muted-foreground text-xs">
-										{t("locales.adminName", { label: locale.label ?? locale.name })}
-									</div>
-								</div>
-								<MoreActionsButton
-									actions={menu(locale, index)}
-									label={t("locales.menu", { name: locale.name })}
-									className="size-7 shrink-0 text-cms-muted-foreground"
+						<SortableList items={taken} onDragEnd={onDrop}>
+							{locales.map((locale, index) => (
+								<LocaleRow
+									key={locale.code}
+									locale={locale}
+									isDefault={locale.code === defaultLocale}
+									dragDisabled={disabled}
+									buttons={buttons(locale, index)}
 								/>
-							</li>
-						))}
+							))}
+						</SortableList>
 					</ul>
 				</Panel>
 			</Section>

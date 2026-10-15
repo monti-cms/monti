@@ -1412,8 +1412,7 @@ describe("SchemaScreen", () => {
 			const row = await screen.findByTestId("locale-fr");
 			expect(within(row).getByText(tLocales("locales.adminName", { label: "French" }))).toBeTruthy();
 
-			fireEvent.click(within(row).getByRole("button", { name: tLocales("locales.menu", { name: "Français" }) }));
-			fireEvent.click(await screen.findByRole("menuitem", { name: tLocales("locales.edit") }));
+			fireEvent.click(within(row).getByRole("button", { name: tLocales("locales.editNamed", { name: "Français" }) }));
 			const edit = await screen.findByTestId("locale-dialog");
 			expect((within(edit).getByLabelText(tLocales("locales.code")) as HTMLInputElement).disabled).toBe(true);
 			fireEvent.click(within(edit).getByRole("button", { name: tc("cancel") }));
@@ -1440,12 +1439,25 @@ describe("SchemaScreen", () => {
 			expect(within(ko).getByText(tLocales("locales.defaultBadge"))).toBeTruthy();
 			expect(within(screen.getByTestId("locale-en")).queryByText(tLocales("locales.defaultBadge"))).toBeNull();
 			fireEvent.click(
-				within(screen.getByTestId("locale-en")).getByRole("button", {
-					name: tLocales("locales.menu", { name: "English" }),
-				}),
+				within(screen.getByTestId("locale-en")).getByRole("button", { name: t("row.remove", { name: "en" }) }),
 			);
-			fireEvent.click(await screen.findByRole("menuitem", { name: t("row.remove", { name: "en" }) }));
 			await waitFor(() => expect(screen.queryByTestId("locale-en")).toBeNull());
+		});
+
+		it("reorders languages with the row buttons, and has a handle to drag each one", async () => {
+			const content = await openLocales();
+			fireEvent.click(within(content).getByRole("button", { name: tLocales("locales.add") }));
+			const dialog = await screen.findByTestId("locale-dialog");
+			type(within(dialog).getByLabelText(tLocales("locales.code")), "ko");
+			type(within(dialog).getByLabelText(tLocales("locales.name")), "한국어");
+			fireEvent.click(within(dialog).getByRole("button", { name: tLocales("locales.add") }));
+			const ko = await screen.findByTestId("locale-ko");
+			expect(within(ko).getByRole("button", { name: tLocales("locales.drag", { name: "한국어" }) })).toBeTruthy();
+			fireEvent.click(within(ko).getByRole("button", { name: t("row.up", { name: "ko" }) }));
+			await waitFor(() => {
+				const order = screen.getAllByTestId(/^locale-[a-z]/).map((row) => row.getAttribute("data-testid"));
+				expect(order).toEqual(["locale-ko", "locale-en"]);
+			});
 		});
 	});
 
