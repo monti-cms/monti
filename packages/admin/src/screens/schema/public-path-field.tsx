@@ -11,12 +11,11 @@ import { pathProblem } from "./schema-model";
 
 /**
  * The part of an address that can be edited on its own: `/posts/:slug` is `posts` between a fixed `/` and a fixed `/:slug`.
- * An address of another shape (`:slug` with something after it, say) has no such part and is edited as a whole.
  */
-export function segmentOf(path: string): string | null {
-	const match = /^\/((?:[^:/\s][^:\s]*)?)(?:\/)?:slug$/.exec(path);
-	if (!match) return null;
-	return (match[1] ?? "").replace(/\/$/, "");
+export function segmentOf(path: string): string {
+	const clean = path.trim().replace(/^https?:\/\/[^/]+/i, "");
+	const withoutSlug = clean.replace(/\/:slug(?:\/.*)?$|:slug$/, "");
+	return withoutSlug.replace(/^\/+|\/+$/g, "").replace(/[\s:]/g, "");
 }
 
 /** The address a segment makes: `posts` is `/posts/:slug`, nothing is `/:slug`. Spaces and colons cannot be part of it, and the slashes around it are the page's own. */
@@ -44,8 +43,8 @@ export function PublicPathField({
 	const hasPage = path.trim() !== "";
 	const segment = segmentOf(path);
 	// What is being typed: it may end in a slash that the address does not have yet (`blog/` on the way to `blog/posts`).
-	const [draft, setDraft] = useState(segment ?? "");
-	const shown = pathOfSegment(draft) === path ? draft : (segment ?? "");
+	const [draft, setDraft] = useState(segment);
+	const shown = pathOfSegment(draft) === path ? draft : segment;
 	const issue = hasPage ? pathProblem(path) : null;
 	return (
 		<div className="flex flex-col gap-4">
@@ -57,33 +56,22 @@ export function PublicPathField({
 			/>
 			{hasPage && (
 				<Labeled label={t("collection.path")} htmlFor={id} hint={t("collection.pathHint")}>
-					{segment === null ? (
+					<div className="flex items-center gap-1 font-mono text-sm">
+						<span className="text-cms-muted-foreground">/</span>
 						<Input
 							id={id}
-							value={path}
+							value={shown}
 							disabled={disabled}
 							autoComplete="off"
-							aria-invalid={issue ? true : undefined}
-							onChange={(event) => onChange(event.target.value)}
+							placeholder="posts"
+							className="max-w-48 font-mono"
+							onChange={(event) => {
+								setDraft(event.target.value);
+								onChange(pathOfSegment(event.target.value));
+							}}
 						/>
-					) : (
-						<div className="flex items-center gap-1 font-mono text-sm">
-							<span className="text-cms-muted-foreground">/</span>
-							<Input
-								id={id}
-								value={shown}
-								disabled={disabled}
-								autoComplete="off"
-								placeholder="posts"
-								className="max-w-48 font-mono"
-								onChange={(event) => {
-									setDraft(event.target.value);
-									onChange(pathOfSegment(event.target.value));
-								}}
-							/>
-							<span className="text-cms-muted-foreground">{segment === "" ? ":slug" : "/:slug"}</span>
-						</div>
-					)}
+						<span className="text-cms-muted-foreground">{segment === "" ? ":slug" : "/:slug"}</span>
+					</div>
 					{issue && <FieldError className="text-xs">{t(`path.${issue}`)}</FieldError>}
 				</Labeled>
 			)}

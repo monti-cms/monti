@@ -6,12 +6,13 @@ describe("the editable part of a public address", () => {
 		expect(segmentOf("/posts/:slug")).toBe("posts");
 		expect(segmentOf("/blog/posts/:slug")).toBe("blog/posts");
 		expect(segmentOf("/:slug")).toBe("");
+		expect(segmentOf("")).toBe("");
 	});
 
-	it("is none for an address of another shape, which is then edited as a whole", () => {
-		expect(segmentOf("/posts/:slug/amp")).toBeNull();
-		expect(segmentOf("posts/:slug")).toBeNull();
-		expect(segmentOf("/posts")).toBeNull();
+	it("extracts the segment cleanly even without slashes or :slug", () => {
+		expect(segmentOf("posts/:slug")).toBe("posts");
+		expect(segmentOf("/posts")).toBe("posts");
+		expect(segmentOf("posts")).toBe("posts");
 	});
 
 	it("makes the address back, without spaces, colons or slashes around it", () => {
