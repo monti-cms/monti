@@ -320,7 +320,7 @@ describe("Media Upload API Endpoints", () => {
 				stagingKey: expect.stringMatching(/\.webp$/),
 				original: expect.objectContaining({
 					mimeType: "image/jpeg",
-					stagingKey: expect.stringMatching(/original-.*\.jpg$/),
+					stagingKey: expect.stringMatching(/-original\.jpg$/),
 				}),
 			}),
 		);

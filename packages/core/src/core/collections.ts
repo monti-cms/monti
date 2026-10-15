@@ -21,6 +21,7 @@ export interface CollectionDefinition {
 	readonly kind: CollectionKind;
 	readonly fields: Readonly<Record<string, FieldType>>;
 	readonly relations?: readonly CollectionRelation[];
+	readonly folders?: boolean;
 }
 
 /** The collections of one site. */
@@ -46,6 +47,7 @@ export function createCollections(
 					kind: schema.kind,
 					fields: schemas.storageTypes(name),
 					...(relations.length > 0 ? { relations } : {}),
+					...(schema.folders !== undefined ? { folders: schema.folders } : {}),
 				},
 			];
 		}),

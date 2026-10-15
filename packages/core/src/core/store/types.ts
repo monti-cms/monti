@@ -107,6 +107,7 @@ export interface MediaOriginalFile {
 
 export interface MediaAssetRecord {
 	id: string;
+	folderId: string | null;
 	status: "pending" | "ready" | "failed" | "deleting";
 	filename: string;
 	mimeType: string | null;
@@ -126,6 +127,7 @@ export interface MediaAssetRecord {
 
 export interface CreateMediaAssetInput {
 	id?: string;
+	folderId?: string | null;
 	filename: string;
 	mimeType: string;
 	byteSize: number;
@@ -162,6 +164,8 @@ export interface ListMediaParams {
 	/** Images only (`image`) or non-image attachments only (`file`). */
 	kind?: "all" | "image" | "file";
 	used?: "all" | "used" | "unused";
+	folderId?: string | null;
+	includeDescendants?: boolean;
 	uploadedFrom?: Date;
 	uploadedTo?: Date;
 	page?: number;

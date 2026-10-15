@@ -1435,8 +1435,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 - **탭.** `layout` 묶음에 `tab: "이름"`을 두면 편집 화면 속성 칸에 그 이름의 탭이 생긴다(1~20자). 탭은 묶음에만 있고 필드에는 `tab`이 없다.
   필드 묶음을 주는 플러그인(예: SEO 확장의 `seoFields()`)은 `contributes`의 `layout` 키로 자리를 정한다: 탭 이름과 그 필드의 역할·보기 이름
   (`{ tab: "SEO", roles: [...], views: [...] }`, 타입은 `PluginPlacement`). 그 필드는 사이트의 `layout`이 뭐라 하든 그 탭에 그려지고,
-  설정 화면에는 거기에 잠긴 것으로 보인다. 첫 탭은 `tab`이 없는 묶음을 담는 기본 탭이고 제 이름이 없다. 보이는 제목은 관리자의 문구일 뿐이라
-  `속성`이라 이름 붙인 탭은 다른 탭이다. `site.panelGroupsOf(collection)`·`site.panelTabsOf(collection)`·`site.panelTabOf(collection, path)`가
+  설정 화면에는 거기에 잠긴 것으로 보인다. 첫 탭은 `tab`이 없는 묶음을 담는 기본 탭이다. 보이는 제목은 기본적으로 관리자의 문구("속성")이며, 컬렉션 스키마의 `defaultTab: "이름"`으로 원하는 제목을 지정할 수 있다. `site.panelGroupsOf(collection)`·`site.panelTabsOf(collection)`·`site.panelTabOf(collection, path)`가
   속성 칸, 항목 칸, 설정 화면이 함께 쓰는 하나뿐인 묶음 계산이다. 문서의 제목은 편집 화면의 제목줄이라 속성 칸에는 그리지 않는다.
 - **보기 필드.** `fields.view({ view: "이름" })`은 값을 저장하지 않고 그 자리에 화면을 그리는 필드다. 화면은 관리자 확장이
   `fieldViews`로 등록한다(예: SEO 확장의 `search`). 등록한 화면이 없으면 아무것도 그리지 않는다.

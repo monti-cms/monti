@@ -62,10 +62,8 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 	}
 
 	const mediaId = randomUUID();
-	const stagingKey = `staging/${mediaId}/${randomUUID()}.${extensionFor(body.mimeType)}`;
-	const originalStagingKey = originalFile
-		? `staging/${mediaId}/original-${randomUUID()}.${extensionFor(originalFile.mimeType)}`
-		: null;
+	const stagingKey = `staging/${mediaId}.${extensionFor(body.mimeType)}`;
+	const originalStagingKey = originalFile ? `staging/${mediaId}-original.${extensionFor(originalFile.mimeType)}` : null;
 
 	await cms.store().createMediaAsset({
 		id: mediaId,
@@ -73,6 +71,7 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 		mimeType: body.mimeType,
 		byteSize: body.byteSize,
 		stagingKey,
+		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 		...(originalFile && originalStagingKey
 			? {
 					original: {
@@ -144,7 +143,7 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 		throw error;
 	}
 
-	const finalKey = `media/${mediaId}/${randomUUID()}.${extensionFor(file.detected.mimeType)}`;
+	const finalKey = `media/${mediaId}.${extensionFor(file.detected.mimeType)}`;
 	await mediaStore.promoteFile({
 		stagingKey: media.stagingKey,
 		finalKey,
@@ -157,7 +156,7 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 	});
 	let originalKey: string | null = null;
 	if (original && media.original?.stagingKey) {
-		originalKey = `media/${mediaId}/original-${randomUUID()}.${extensionFor(original.detected.mimeType)}`;
+		originalKey = `media/${mediaId}-original.${extensionFor(original.detected.mimeType)}`;
 		await mediaStore.promoteFile({
 			stagingKey: media.original.stagingKey,
 			finalKey: originalKey,
