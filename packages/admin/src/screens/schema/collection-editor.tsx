@@ -2,7 +2,6 @@
 
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
 import { editorMessages } from "../../editor/messages";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
@@ -179,6 +178,8 @@ function AllowedEditor({
 
 export function CollectionEditor({
 	name,
+	section,
+	onSection,
 	collection,
 	isNew,
 	onChange,
@@ -186,6 +187,9 @@ export function CollectionEditor({
 	onRename,
 }: {
 	name: string;
+	/** The open part of the editor (`basics`, `fields` or `editor`); the screen keeps it in the address. */
+	section: string | undefined;
+	onSection: (section: string) => void;
 	collection: Obj;
 	/** Not in the file on disk yet: its name can still be taken back. */
 	isNew: boolean;
@@ -196,7 +200,7 @@ export function CollectionEditor({
 	const t = useTranslator(schemaCollectionMessages);
 	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
-	const [chosenTab, setTab] = useState("basics");
+	const chosenTab = section ?? "basics";
 	// The editor tab only exists for a collection with a body.
 	const tab = chosenTab === "editor" && !hasBody(collection) ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
@@ -215,7 +219,7 @@ export function CollectionEditor({
 	return (
 		<div className="flex min-w-0 flex-col gap-6" data-testid={`collection-${name}`}>
 			<IssueList issues={issues} />
-			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && setTab(value)} className="gap-6">
+			<Tabs value={tab} onValueChange={(value) => typeof value === "string" && onSection(value)} className="gap-6">
 				<div className="flex flex-col items-start gap-3">
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">

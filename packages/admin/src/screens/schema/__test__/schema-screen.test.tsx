@@ -9,6 +9,7 @@ import { pressOption } from "../../../test/base-ui";
 import { jsonResponse as json } from "../../../test/fetch";
 import { createTestRouter } from "../../../test/router";
 import { entriesMessages } from "../../entries/messages";
+import { rememberScroll, takeScroll } from "../../settings/place";
 import { SCHEMA_TABS, type SchemaTab } from "../../settings/tabs";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { INSPECTOR_PANEL_RESIZE } from "../../shared/side-panel";
@@ -98,6 +99,7 @@ let requests: { method: string; url: string; body?: Record<string, unknown> }[];
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	window.history.replaceState(null, "", "/admin/settings/collections");
 	state = screenState();
 	previewAnswer = () => previewOf();
 	saveAnswer = () => ({
@@ -248,6 +250,43 @@ describe("SchemaScreen", () => {
 		renderScreen();
 		await screen.findByTestId("schema-read-only");
 		expect(screen.getByTestId("file-line").textContent).toContain(t("readonly.short.production"));
+	});
+
+	it("keeps the open collection and its part across tabs and a reload, and puts the scroll back after a save", async () => {
+		renderScreen();
+		fireEvent.click(await screen.findByRole("button", { name: /^Tag/ }));
+		await screen.findByTestId("collection-tag");
+		openTab("fields");
+		expect(window.location.search).toBe("?collection=tag&section=fields");
+
+		// Another tab and back: the same collection and part.
+		fireEvent.click(screen.getByRole("tab", { name: "site" }));
+		fireEvent.click(screen.getByRole("tab", { name: "collections" }));
+		await screen.findByTestId("collection-tag");
+		expect(screen.getByRole("tab", { name: tCollection("collection.tabs.fields") }).getAttribute("aria-selected")).toBe(
+			"true",
+		);
+
+		// A reload (a fresh render of the same address) lands in the same place, scrolled where it was.
+		cleanup();
+		rememberScroll(180);
+		renderScreen();
+		await screen.findByTestId("collection-tag");
+		expect(screen.getByRole("tab", { name: tCollection("collection.tabs.fields") }).getAttribute("aria-selected")).toBe(
+			"true",
+		);
+		expect((screen.getByTestId("schema-screen").querySelector(".overflow-y-auto") as HTMLElement).scrollTop).toBe(180);
+	});
+
+	it("remembers how far the page was scrolled when it saves, before the reload", async () => {
+		renderScreen();
+		type(await screen.findByLabelText(tCollection("collection.label")), "Article");
+		(screen.getByTestId("schema-screen").querySelector(".overflow-y-auto") as HTMLElement).scrollTop = 75;
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
+		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
+		expect(takeScroll()).toBe(75);
 	});
 
 	it("has no tab for the file: its seed data and recorded transforms sit under the Admin tab", async () => {

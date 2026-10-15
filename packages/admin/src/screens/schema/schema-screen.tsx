@@ -5,19 +5,19 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { SchemaScreenState } from "@monti-cms/core/schema-edit";
 import { useQuery } from "@tanstack/react-query";
 import { Lock, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { errorText } from "../../api/client";
 import { fetchSchema, type SavedSchema, schemaKeys } from "../../api/schema";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
-import { useAdminRouter } from "../../router";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { IconButton } from "../../ui/icon-button";
 import { Skeleton } from "../../ui/skeleton";
+import { rememberScroll, takeScroll, useSettingsParam } from "../settings/place";
 import type { SchemaTab } from "../settings/tabs";
 import { discardConfirm, useConfirm } from "../shared/confirm-dialog";
 import { LoadErrorAlert } from "../shared/load-error-alert";
@@ -116,15 +116,15 @@ function SchemaEditor({
 	tab,
 	actionsSlot,
 	fileSlot,
+	onTab,
 }: {
 	state: SchemaScreenState;
 	tab: SchemaTab;
 	actionsSlot?: HTMLElement | null;
 	fileSlot?: HTMLElement | null;
+	onTab?: (tab: SchemaTab) => void;
 }) {
 	const t = useTranslator(schemaMessages);
-	const site = useSite();
-	const router = useAdminRouter();
 	const base = useMemo(() => (isObj(state.schema) ? (state.schema as Obj) : {}), [state.schema]);
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
@@ -135,7 +135,14 @@ function SchemaEditor({
 	const [creating, setCreating] = useState(false);
 	const collections = collectionsOf(draft);
 	const names = Object.keys(collections);
-	const [selectedName, setSelected] = useState<string | undefined>(names[0]);
+	// Which collection is open and which of its parts live in the address, so a reload after saving comes back to the same place.
+	const [selectedName, setSelectedName] = useSettingsParam("collection");
+	const [section, setSection] = useSettingsParam("section");
+	const setSelected = (name: string) => {
+		setSelectedName(name);
+		setSection(undefined);
+	};
+	const scroller = useRef<HTMLDivElement>(null);
 	const selected = selectedName && selectedName in collections ? selectedName : names[0];
 	const tc = useTranslator(commonMessages);
 	const { confirm, dialog } = useConfirm();
@@ -147,6 +154,11 @@ function SchemaEditor({
 	useEffect(() => {
 		const message = takeSavedMessage();
 		if (message) toast.success(message);
+	}, []);
+	// After the reload that follows a save, scroll back to where the writer was.
+	useLayoutEffect(() => {
+		const top = takeScroll();
+		if (top !== null && scroller.current) scroller.current.scrollTop = top;
 	}, []);
 
 	const updateFile = (change: (file: Obj) => Obj) => setDraft((current) => change(current));
@@ -216,7 +228,7 @@ function SchemaEditor({
 								{actions}
 							</div>
 						)}
-				<div className="min-h-0 flex-1 overflow-y-auto">
+				<div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
 					<PageBody wide={tab === "collections"}>
 						{reason && (
 							<Alert layout="stack" data-testid="schema-read-only">
@@ -313,6 +325,8 @@ function SchemaEditor({
 												<CollectionEditor
 													key={selected}
 													name={selected}
+													section={section}
+													onSection={setSection}
 													collection={collections[selected]}
 													isNew={!savedNames.includes(selected)}
 													onChange={(change) => updateFile((file) => setCollection(file, selected, change))}
@@ -364,7 +378,7 @@ function SchemaEditor({
 				onCreate={(id, kind, path, label) => {
 					updateFile((file) => addCollection(file, id, kind, path, label));
 					setSelected(id);
-					if (tab !== "collections") router.navigate(site.adminHref("/settings/collections"));
+					if (tab !== "collections") onTab?.("collections");
 					setCreating(false);
 				}}
 			/>
@@ -379,6 +393,7 @@ function SchemaEditor({
 					onIssues={setIssues}
 					onApplyFailed={() => setApplyFailed(true)}
 					onSaved={(saved: SavedSchema) => {
+						rememberScroll(scroller.current?.scrollTop ?? 0);
 						rememberSaved(
 							t("save.done", {
 								version: saved.schemaVersion,
@@ -399,10 +414,13 @@ export function SchemaSettings({
 	tab,
 	actionsSlot,
 	fileSlot,
+	onTab,
 }: {
 	tab: SchemaTab;
 	actionsSlot?: HTMLElement | null;
 	fileSlot?: HTMLElement | null;
+	/** Moves the Settings page to another tab (the page owns the tabs). */
+	onTab?: (tab: SchemaTab) => void;
 }) {
 	const site = useSite();
 	const t = useTranslator(schemaMessages);
@@ -422,6 +440,7 @@ export function SchemaSettings({
 				tab={tab}
 				actionsSlot={actionsSlot}
 				fileSlot={fileSlot}
+				onTab={onTab}
 			/>
 		);
 	return (

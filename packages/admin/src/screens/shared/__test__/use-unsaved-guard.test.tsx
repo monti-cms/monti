@@ -7,6 +7,17 @@ function Screen({ dirty, onNavigate }: { dirty: boolean; onNavigate: () => void 
 	const { dialog } = useUnsavedGuard(dirty);
 	return (
 		<div>
+			<nav data-unsaved-guard="off">
+				<a
+					href="/admin/settings/locales"
+					onClick={(event) => {
+						event.preventDefault();
+						onNavigate();
+					}}
+				>
+					locales
+				</a>
+			</nav>
 			<a
 				href="/admin/media"
 				onClick={(event) => {
@@ -37,6 +48,14 @@ describe("useUnsavedGuard", () => {
 		const discard = await screen.findByRole("button", { name: /버리기|Discard/ });
 		act(() => discard.click());
 		await waitFor(() => expect(onNavigate).toHaveBeenCalledOnce());
+	});
+
+	it("lets links inside an element marked as staying on the screen through without asking", () => {
+		const onNavigate = vi.fn();
+		createTestRouter().render(<Screen dirty onNavigate={onNavigate} />);
+		act(() => screen.getByText("locales").click());
+		expect(onNavigate).toHaveBeenCalledOnce();
+		expect(screen.queryByRole("button", { name: /버리기|Discard/ })).toBeNull();
 	});
 
 	it("stays when the person cancels", async () => {

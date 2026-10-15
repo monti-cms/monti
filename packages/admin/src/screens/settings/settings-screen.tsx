@@ -9,6 +9,7 @@ import { SchemaSettings } from "../schema/schema-screen";
 import { ShellPage } from "../shared/admin-shell";
 import { sharedMessages } from "../shared/messages";
 import { settingsMessages } from "./messages";
+import { useSettingsTab } from "./place";
 import { type SchemaTab, settingsTabs } from "./tabs";
 
 /**
@@ -24,7 +25,9 @@ export function SettingsScreen({ tab }: { tab: SchemaTab }) {
 	);
 }
 
-function SettingsBody({ tab }: { tab: SchemaTab }) {
+function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
+	// Moving between tabs changes the address in place: the page, and the draft in it, stay.
+	const { tab, go } = useSettingsTab(renderedTab);
 	const site = useSite();
 	const t = useTranslator(settingsMessages);
 	const shared = useTranslator(sharedMessages);
@@ -61,12 +64,22 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 					</div>
 					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
 				</div>
-				<nav aria-label={t("tabs.label")} className="mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto">
+				<nav
+					aria-label={t("tabs.label")}
+					data-unsaved-guard="off"
+					className="mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto"
+				>
 					{tabs.map((entry) => {
 						const active = entry.id === tab;
 						return (
 							<Link
 								key={entry.id}
+								onClick={(event) => {
+									// A click that opens a new tab or window goes the way of a link.
+									if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+									event.preventDefault();
+									go(entry.id);
+								}}
 								ref={active ? activeLink : undefined}
 								href={entry.href}
 								aria-current={active ? "page" : undefined}
@@ -81,7 +94,7 @@ function SettingsBody({ tab }: { tab: SchemaTab }) {
 				</nav>
 			</header>
 			<div className="flex min-h-0 flex-1 flex-col bg-cms-muted/50">
-				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} />
+				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} onTab={go} />
 			</div>
 		</>
 	);
