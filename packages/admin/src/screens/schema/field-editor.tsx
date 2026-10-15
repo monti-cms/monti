@@ -25,8 +25,7 @@ import {
 	useIssuesUnder,
 	useSchemaEdit,
 } from "./controls";
-import { FieldCustomInputPicker, FieldRolePicker, InputOptionsEditor } from "./field-role-input";
-export { FieldCustomInputPicker, FieldRolePicker, InputOptionsEditor };
+import { FieldCustomInputPicker, FieldRolePicker } from "./field-role-input";
 
 import { schemaFieldsMessages } from "./fields.messages";
 import {

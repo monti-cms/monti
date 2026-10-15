@@ -86,7 +86,6 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"file.messages": "Admin text overrides (admin.messages)",
 		"site.name": "Site name",
 		"file.migrations": "Recorded data transforms",
-		"file.noMigrations": "None yet.",
 		"save.done": ({ version, transforms, entries: rewritten }) =>
 			`Schema saved as version ${version}${Number(transforms) > 0 ? `; ${transforms} data transform(s) ran (${entries(rewritten)} rewritten)` : ""}.`,
 		"save.applyFailedNote":
@@ -173,7 +172,6 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"file.messages": "관리자 문구 덮어쓰기 (admin.messages)",
 		"site.name": "사이트 이름",
 		"file.migrations": "기록된 데이터 변환",
-		"file.noMigrations": "아직 없습니다.",
 		"save.done": ({ version, transforms, entries: rewritten }) =>
 			`스키마를 저장했습니다(버전 ${version})${Number(transforms) > 0 ? `. 데이터 변환 ${transforms}개를 실행했습니다(항목 ${rewritten}개 다시 씀)` : ""}.`,
 		"save.applyFailedNote":

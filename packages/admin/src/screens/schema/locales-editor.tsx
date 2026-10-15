@@ -131,7 +131,7 @@ const KNOWN_CODES = [
 	"zh-TW",
 ] as const;
 
-/** The name of a language in its own language (`한국어` for `ko`), or undefined when the runtime does not know the code. */
+/** The autonym of a language in its own language (for example the localized name for `ko`), or undefined when the runtime does not know the code. */
 function nativeNameOf(code: string): string | undefined {
 	try {
 		const name = new Intl.DisplayNames([code], { type: "language" }).of(code);
