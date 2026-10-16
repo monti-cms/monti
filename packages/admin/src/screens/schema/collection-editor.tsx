@@ -151,7 +151,7 @@ function AllowedEditor({
 			return withBody(current, true, next as Allowed);
 		});
 	return (
-		<Section title={t("allowed.title")} description={t("allowed.hint")} note={limited ? t("allowed.note") : undefined}>
+		<Section title={t("allowed.title")} note={limited ? t("allowed.note") : undefined}>
 			<LimitList
 				label={t("allowed.headings")}
 				all={HEADINGS}
@@ -224,11 +224,8 @@ export function CollectionEditor({
 							<code className="text-cms-muted-foreground text-xs">{name}</code>
 						</div>
 						<p className="mt-1 text-cms-muted-foreground text-sm">
-							{path
-								? t("collection.summary", { kind: kindLabel, path })
-								: t("collection.summaryNoPath", { kind: kindLabel })}
+							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
 						</p>
-						{isNew && <p className="mt-0.5 text-cms-muted-foreground text-xs">{t("collection.newHint")}</p>}
 					</div>
 					<TabsList className="w-fit justify-start">
 						<TabsTrigger value="basics">{t("collection.tabs.basics")}</TabsTrigger>
@@ -237,11 +234,7 @@ export function CollectionEditor({
 					</TabsList>
 				</div>
 				<TabsContent value="basics" className="flex max-w-[1160px] flex-col gap-12">
-					<Section
-						title={t("collection.basicsTitle")}
-						description={t("collection.basicsDescription")}
-						note={isNew ? undefined : t("collection.nameHint")}
-					>
+					<Section title={t("collection.basicsTitle")}>
 						<div className="flex flex-col gap-6">
 							<TextInput
 								label={t("collection.label")}
@@ -250,9 +243,6 @@ export function CollectionEditor({
 							/>
 							<Pick
 								label={t("collection.kind")}
-								description={
-									collection.kind === "item" ? t("collection.kindItemHint") : t("collection.kindDocumentHint")
-								}
 								value={String(collection.kind)}
 								items={[
 									{ value: "document", label: ts("collection.kindDocument") },
@@ -278,11 +268,10 @@ export function CollectionEditor({
 							/>
 						</div>
 					</Section>
-					<Section title={t("collection.featuresTitle")} description={t("collection.featuresDescription")}>
+					<Section title={t("collection.featuresTitle")}>
 						<div className="flex flex-col gap-6">
 							<FlagSwitch
 								label={t("collection.folders")}
-								description={t("collection.foldersHint")}
 								checked={typeof collection.folders === "boolean" ? collection.folders : collection.kind !== "item"}
 								onChange={(on) => {
 									const isDefault = on === (collection.kind !== "item");
@@ -298,7 +287,7 @@ export function CollectionEditor({
 					</Section>
 					<Section
 						title={t("collection.dangerTitle")}
-						description={isNew ? t("collection.newHint") : t("collection.dangerDescription")}
+						description={isNew ? undefined : t("collection.dangerDescription")}
 						card={false}
 					>
 						<div className="flex justify-end">

@@ -3,7 +3,7 @@
 import { useTranslator } from "@monti-cms/core/client";
 import { useId, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
@@ -78,9 +78,8 @@ function NewCollectionForm({
 		>
 			<DialogHeader>
 				<DialogTitle>{t("collection.createTitle")}</DialogTitle>
-				<DialogDescription>{t("collection.createDescription")}</DialogDescription>
 			</DialogHeader>
-			<Labeled label={t("collection.newName")} htmlFor={nameId} description={t("collection.newNameHint")}>
+			<Labeled label={t("collection.newName")} htmlFor={nameId}>
 				<Input
 					id={nameId}
 					value={name}

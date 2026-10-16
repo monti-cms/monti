@@ -50,52 +50,46 @@ export function SiteEditor({
 	const setAliases = (next: string[]) => set("aliases", next.length === 0 ? undefined : next);
 	return (
 		<div className="flex flex-col gap-12" data-testid="site-settings">
-			<Section wide title={t("site.identityTitle")} description={t("site.identityDescription")}>
+			<Section wide title={t("site.identityTitle")}>
 				<div className="flex flex-col gap-6">
 					<TextInput
 						label={ts("site.name")}
-						description={t("site.nameHint")}
 						value={site.name as string | undefined}
 						onChange={(value) => set("name", orUndefined(value))}
 					/>
 					<TextInput
 						label={t("site.home")}
-						description={t("site.homeHint")}
 						placeholder="/"
 						value={site.home as string | undefined}
 						onChange={(value) => set("home", orUndefined(value))}
 					/>
 				</div>
 			</Section>
-			<Section wide title={t("site.previewTitle")} description={t("site.previewDescription")}>
+			<Section wide title={t("site.previewTitle")}>
 				<div className="flex flex-col gap-6">
 					<TextInput
 						label={t("site.previewPath")}
-						description={t("site.previewPathHint")}
 						placeholder="/preview"
 						value={site.previewPath as string | undefined}
 						onChange={(value) => set("previewPath", orUndefined(value))}
 					/>
 					<TextInput
 						label={t("site.previewParam")}
-						description={t("site.previewParamHint")}
 						placeholder="locale"
 						value={typeof site.previewLocaleParam === "string" ? site.previewLocaleParam : ""}
 						onChange={(value) => set("previewLocaleParam", orUndefined(value))}
 					/>
 					<FlagSwitch
 						label={t("site.previewInPath")}
-						description={t("site.previewInPathHint")}
 						checked={inPath}
 						onChange={(on) => set("previewLocaleParam", on ? false : undefined)}
 					/>
 				</div>
 			</Section>
-			<Section wide title={t("site.addressTitle")} description={t("site.addressDescription")}>
+			<Section wide title={t("site.addressTitle")}>
 				<div className="flex flex-col gap-2">
 					<Pick
 						label={t("site.localePrefix")}
-						description={t("site.localePrefixHint")}
 						control="wide"
 						value={mode}
 						items={PREFIX_MODES.map((value) => ({
@@ -105,12 +99,9 @@ export function SiteEditor({
 						}))}
 						onChange={(value) => set("localePrefix", value)}
 					/>
-					<p className="max-w-[70ch] text-cms-muted-foreground text-xs" data-testid="locale-prefix-explanations">
-						{t(`site.prefix.${mode}.text`, { default: defaultCode, other: otherCode })}
-					</p>
 				</div>
 				<div className="flex flex-col gap-2 border-t pt-6">
-					<Labeled label={t("site.aliases")} description={t("site.aliasesHint")} control="normal">
+					<Labeled label={t("site.aliases")} control="normal">
 						<ul className={aliases.length > 0 ? "flex flex-col divide-y overflow-hidden rounded-md border" : "hidden"}>
 							{aliases.map((alias, index) => (
 								<li key={alias} className="flex items-center gap-2 px-3 py-1" data-testid={`alias-${alias}`}>
@@ -151,7 +142,7 @@ export function SiteEditor({
 					)}
 				</div>
 				<div className="border-t pt-6">
-					<Labeled label={t("site.url")} description={t("site.urlHint")} control="normal">
+					<Labeled label={t("site.url")} control="normal">
 						<div className="flex flex-col gap-0.5 rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="site-url">
 							{siteUrl.url && <code className="text-xs">{siteUrl.url}</code>}
 							<span className="text-cms-muted-foreground text-xs">{t(URL_NOTE[siteUrl.from])}</span>
