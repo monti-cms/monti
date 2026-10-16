@@ -19,6 +19,8 @@ function fakeDatabase(tag: string) {
 				completeDelivery: vi.fn(async () => undefined),
 				failDelivery: vi.fn(async () => "failed" as const),
 				pruneEvents: vi.fn(async () => 0),
+				deliverySubscribers: vi.fn(async () => [] as string[]),
+				renameSubscriber: vi.fn(async () => 0),
 				getPreferences: async () => ({ editor: { inspectorOpen: tag === "a" } }),
 				listPublishedTranslations: async () => [
 					{ collection: contentCollection, slug: `slug-${tag}`, locale: defaultLocale },
@@ -58,7 +60,7 @@ function serverFor(tag: string, extra: Partial<CmsServerConfig> = {}) {
 		database,
 		auth: { name: tag, create: () => fakeAuth(tag) },
 		secret: `secret-${tag}`,
-		hooks: { afterCommit },
+		hooks: { afterCommit: [{ name: "notify", run: afterCommit }] },
 		...extra,
 	};
 	return { server, database, afterCommit };
@@ -133,7 +135,7 @@ describe("createCms: an instance owns its server resources", () => {
 		const b = serverFor("b");
 		const cmsA = createCms({ config: testConfig, server: a.server });
 		const cmsB = createCms({ config: testConfig, server: b.server });
-		expect((await cmsA.writeHooks()).map((source) => source.owner)).toEqual(["server"]);
+		expect((await cmsA.writeHooks()).map((source) => source.owner)).toEqual([]);
 
 		const claim = (subscriber: string): ClaimedDelivery => ({
 			change: { eventId: "ev1", kind: "saved", entryId: "e1" } as ContentChange,
@@ -142,7 +144,7 @@ describe("createCms: an instance owns its server resources", () => {
 		});
 		const storeA = cmsA.store() as unknown as ReturnType<typeof a.database.createStore>;
 		const storeB = cmsB.store() as unknown as ReturnType<typeof b.database.createStore>;
-		storeA.claims.push(claim("server"));
+		storeA.claims.push(claim("server:notify"));
 		await cmsA.events.retry();
 		expect(a.afterCommit).toHaveBeenCalledTimes(1);
 		expect(a.afterCommit).toHaveBeenCalledWith(expect.objectContaining({ eventId: "ev1", kind: "saved", attempt: 1 }), {
@@ -150,9 +152,9 @@ describe("createCms: an instance owns its server resources", () => {
 		});
 		expect(b.afterCommit).not.toHaveBeenCalled();
 		// Each instance claims for its own subscribers, on its own store.
-		expect(storeA.claimDeliveries).toHaveBeenCalledWith(expect.objectContaining({ subscribers: ["server"] }));
+		expect(storeA.claimDeliveries).toHaveBeenCalledWith(expect.objectContaining({ subscribers: ["server:notify"] }));
 		expect(storeB.claimDeliveries).not.toHaveBeenCalled();
-		storeB.claims.push(claim("server"));
+		storeB.claims.push(claim("server:notify"));
 		await cmsB.events.retry();
 		expect(b.afterCommit).toHaveBeenCalledTimes(1);
 		expect(a.afterCommit).toHaveBeenCalledTimes(1);
@@ -210,7 +212,7 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect(after.plugin("ai").secrets.decrypt(sealed)).toBe("x");
 		(after.store() as unknown as { claims: ClaimedDelivery[] }).claims.push({
 			change: { eventId: "ev", kind: "saved", entryId: "e" } as ContentChange,
-			subscriber: "server",
+			subscriber: "server:notify",
 			attempts: 1,
 		});
 		await after.events.retry();

@@ -108,7 +108,7 @@ describe("a failed push is retried through the outbox, not lost", () => {
 		expect(await h.ctx.state.queue.list("site")).toHaveLength(1);
 		const failed = await h.cms.events.list();
 		expect(failed.items.find((item) => item.change.entryId === entry.id)).toMatchObject({
-			subscriber: "plugin:git-sync",
+			subscriber: "plugin:git-sync:sync",
 			state: "failed",
 			lastError: expect.stringContaining("502"),
 		});

@@ -5,7 +5,14 @@ import type { PluginContext } from "../plugin/context";
 import type { Collection, Issue, PreparedSnapshot } from "./types";
 
 /**
- * Write hooks. The server config (`hooks` of `cms.server.ts`) and plugins (`ServerPlugin.hooks`) register them with the same shape.
+ * Write hooks. The server config (`hooks` of `monti.config.ts`) and plugins (`ServerPlugin.hooks`) register them with the same shape: a list per stage.
+ * There are two kinds, and they behave differently:
+ *
+ * - **Checks before the save** (`transform`, `validate`, `validatePublish`) run inside the request, one after another, and can change or block the write.
+ *   A check that throws fails the write with `hook_failed` (naming its owner) and nothing is stored.
+ * - **Subscribers after the save** (`afterCommit`) are notified once the change is committed. Each is its own subscriber of the event outbox, with a name,
+ *   its own delivery state and its own retries; a failure is retried later and never undoes the write.
+ *
  * Every content write runs the same stages (`write-pipeline.ts`):
  *
  * 1. build the input (from the request, or from the stored draft)
@@ -14,10 +21,10 @@ import type { Collection, Issue, PreparedSnapshot } from "./types";
  * 4. `validate`: may add failures and warnings
  * 5. publish (and restoring a record), `validatePublish`: may add failures and warnings
  * 6. store commit, one transaction per entry
- * 7. `afterCommit`: a failure is logged and never undoes the committed write
+ * 7. `afterCommit`: delivered from the outbox, at least once
  *
- * Hooks run outside the database transaction and get no database client. The server config's hooks run first, then the plugins' in config order.
- * A hook that throws fails the write with `hook_failed` (naming its owner) and nothing is stored.
+ * Hooks run outside the database transaction and get no database client. The order is the server config's lists first, then the plugins' in config order,
+ * and within a list the order it is written in.
  */
 
 /**
@@ -100,42 +107,96 @@ export type AfterCommitHook<S extends ServerScope = ServerScope> = (
 ) => ReturnType<AfterCommit>;
 
 /**
- * The write hooks of one owner. Every hook gets its own argument, then the scope: `{ cms }` for the server config's hooks, `{ cms, plugin }` for a plugin's
- * (`WriteHooks<PluginScope>`).
+ * One subscriber after the save: a `name` and the function the outbox delivers each committed change to. The name keys its delivery state
+ * (`<owner>:<name>`, e.g. `plugin:git-sync:sync`), so keep it stable: renaming it starts the subscriber over on the changes that are still undelivered.
+ * Lowercase letters, digits and `-`, unique within its owner.
  */
-export interface WriteHooks<S extends ServerScope = ServerScope> {
-	readonly transform?: TransformHook<S>;
-	readonly validate?: ValidateHook<S>;
-	readonly validatePublish?: ValidatePublishHook<S>;
-	/** After the transaction commits (create, save, publish, archive, trash, restore, delete). The change stands even if it fails. */
-	readonly afterCommit?: AfterCommitHook<S>;
+export interface AfterCommitSubscriber<S extends ServerScope = ServerScope> {
+	readonly name: string;
+	readonly run: AfterCommitHook<S>;
 }
 
-/** The hooks of one owner with their scope given, as the write pipeline and the event dispatcher call them. */
+/**
+ * The write hooks of one owner, a list per stage. Every hook gets its own argument, then the scope: `{ cms }` for the server config's hooks,
+ * `{ cms, plugin }` for a plugin's (`WriteHooks<PluginScope>`).
+ */
+export interface WriteHooks<S extends ServerScope = ServerScope> {
+	/** Check before the save: changes the data, in order. */
+	readonly transform?: readonly TransformHook<S>[];
+	/** Check before the save: adds failures (which block the write) and warnings, for every write. */
+	readonly validate?: readonly ValidateHook<S>[];
+	/** Check before the save: adds failures and warnings, for a publish and for restoring a record. */
+	readonly validatePublish?: readonly ValidatePublishHook<S>[];
+	/**
+	 * Subscribers after the save (create, save, publish, archive, trash, restore, delete): each is delivered every committed change on its own, retried when it
+	 * fails. The change stands whatever they do.
+	 */
+	readonly afterCommit?: readonly AfterCommitSubscriber<S>[];
+}
+
+/** One check before the save with its scope given, as the write pipeline calls it. */
 export interface BoundHooks {
 	readonly transform?: (context: WriteHookContext) => ReturnType<TransformHook>;
 	readonly validate?: (context: ValidationHookContext) => ReturnType<ValidateHook>;
 	readonly validatePublish?: (context: ValidationHookContext) => ReturnType<ValidateHook>;
-	readonly afterCommit?: (event: ContentEvent) => ReturnType<AfterCommit>;
 }
 
-/** Gives each hook its scope, read when the hook runs (a development schema reload gives the instance new parts). */
-export function bindHooks<S extends ServerScope>(hooks: WriteHooks<S>, scope: () => S): BoundHooks {
-	const { transform, validate, validatePublish, afterCommit } = hooks;
-	return {
-		...(transform ? { transform: (context: WriteHookContext) => transform(context, scope()) } : {}),
-		...(validate ? { validate: (context: ValidationHookContext) => validate(context, scope()) } : {}),
-		...(validatePublish
-			? { validatePublish: (context: ValidationHookContext) => validatePublish(context, scope()) }
-			: {}),
-		...(afterCommit ? { afterCommit: (event: ContentEvent) => afterCommit(event, scope()) } : {}),
-	};
-}
-
-/** Hooks with the owner that registered them: `server` for the server config, `plugin:<name>` for a plugin. */
+/** A check before the save with the owner that registered it: `server` for the server config, `plugin:<name>` for a plugin. */
 export interface HookSource {
 	readonly owner: string;
 	readonly hooks: BoundHooks;
+}
+
+/**
+ * The checks before the save of one owner, one source per hook in the order they run (all its `transform`s, then its `validate`s, then its
+ * `validatePublish`es; the pipeline picks a stage at a time). Each gets its scope when it runs, so a development schema reload is seen.
+ */
+export function checkSources<S extends ServerScope>(owner: string, hooks: WriteHooks<S>, scope: () => S): HookSource[] {
+	return [
+		...(hooks.transform ?? []).map((hook) => ({
+			owner,
+			hooks: { transform: (context: WriteHookContext) => hook(context, scope()) },
+		})),
+		...(hooks.validate ?? []).map((hook) => ({
+			owner,
+			hooks: { validate: (context: ValidationHookContext) => hook(context, scope()) },
+		})),
+		...(hooks.validatePublish ?? []).map((hook) => ({
+			owner,
+			hooks: { validatePublish: (context: ValidationHookContext) => hook(context, scope()) },
+		})),
+	];
+}
+
+const SUBSCRIBER_NAME = /^[a-z][a-z0-9-]*$/;
+
+/** The outbox key of a subscriber after the save: its owner and its name. */
+export const subscriberKey = (owner: string, name: string): string => `${owner}:${name}`;
+
+/**
+ * The subscribers after the save of one owner, keyed `<owner>:<name>`, each with its scope given when it runs. Throws when a name is not valid or
+ * is used twice by the owner.
+ */
+export function afterCommitSubscribers<S extends ServerScope>(
+	owner: string,
+	hooks: WriteHooks<S>,
+	scope: () => S,
+): { readonly name: string; readonly handler: (event: ContentEvent) => ReturnType<AfterCommit> }[] {
+	const seen = new Set<string>();
+	return (hooks.afterCommit ?? []).map(({ name, run }) => {
+		if (!SUBSCRIBER_NAME.test(name)) {
+			throw new Error(
+				`afterCommit of ${owner}: "${name}" is not a valid subscriber name. Use lowercase letters, digits and "-", starting with a letter.`,
+			);
+		}
+		if (seen.has(name)) {
+			throw new Error(
+				`afterCommit of ${owner}: the subscriber name "${name}" is used twice. Give each subscriber its own name.`,
+			);
+		}
+		seen.add(name);
+		return { name: subscriberKey(owner, name), handler: (event: ContentEvent) => run(event, scope()) };
+	});
 }
 
 /** Hooks in the order they run. May be read on every write, so it should return a cached list. */

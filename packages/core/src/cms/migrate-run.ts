@@ -1,18 +1,22 @@
+import type { EventStore } from "../core/store";
 import type { ServerPlugins } from "../plugin/server";
 import type { Site } from "../site";
 import type { SharedConnections } from "./connections";
+import { moveOldSubscriberKeys } from "./subscriber-keys";
 import type { CmsHost, MigrateRunOptions } from "./types";
 
 /**
  * The commands that create or update the tables (`monti db:setup`, `monti db:migrate`): the core tables first (the database adapter's `migrate`), then each
- * plugin's `migrate` hook. The messages go to `log`; the command-line tool prints the first and last line itself.
+ * plugin's `migrate` hook, then the one-time move of the outbox's old subscriber keys (`moveOldSubscriberKeys`). The messages go to `log`; the command-line tool prints the first and last line itself.
  */
 export function createMigrator(parts: {
 	readonly connections: Pick<SharedConnections, "database">;
 	readonly site: Site;
-	readonly plugins: Pick<ServerPlugins, "formats" | "migrate">;
+	readonly plugins: Pick<ServerPlugins, "formats" | "migrate" | "eventSubscribers">;
+	/** The event store, for moving the deliveries of the old subscriber keys. */
+	readonly events: () => Pick<EventStore, "deliverySubscribers" | "renameSubscriber">;
 }): Pick<CmsHost, "migrate" | "databaseState" | "setup"> {
-	const { connections, site, plugins } = parts;
+	const { connections, site, plugins, events } = parts;
 	const { database } = connections;
 
 	/** Runs the steps of the core tables and the plugins. */
@@ -23,6 +27,7 @@ export function createMigrator(parts: {
 	) => {
 		const summary = await database.migrate({ site, formats: await plugins.formats() });
 		await plugins.migrate(pluginLog);
+		await moveOldSubscriberKeys({ store: events(), subscribers: await plugins.eventSubscribers(), log });
 		return { summary };
 	};
 
