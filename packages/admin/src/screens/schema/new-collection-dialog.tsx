@@ -11,7 +11,7 @@ import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
 import { schemaMessages } from "./messages";
 import { PublicPathField } from "./public-path-field";
-import { defaultPath, idFromName, nameProblem, pathProblem } from "./schema-model";
+import { collectionNameProblem, defaultPath, idFromName, pathProblem } from "./schema-model";
 
 type Kind = "document" | "item";
 
@@ -58,7 +58,7 @@ function NewCollectionForm({
 	const [typedPath, setTypedPath] = useState<string | null>(null);
 	const id = typedId ?? idFromName(name);
 	const path = typedPath ?? (kind === "document" ? defaultPath(id) : "");
-	const idIssue = id === "" ? (name.trim() === "" ? null : "idEmpty") : nameProblem(id, taken);
+	const idIssue = id === "" ? (name.trim() === "" ? null : "idEmpty") : collectionNameProblem(id, taken);
 	const pathIssue = pathProblem(path);
 	const ready = name.trim() !== "" && id !== "" && idIssue === null && pathIssue === null;
 	const kinds: { value: Kind; label: string; explain: string }[] = [

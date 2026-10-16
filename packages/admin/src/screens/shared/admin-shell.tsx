@@ -130,11 +130,7 @@ export function AdminNavProvider({ children }: { children: ReactNode }) {
 		queries: folderTargets.map((collection) => ({
 			queryKey: foldersKeys.list(collection),
 			queryFn: ({ signal }: { signal: AbortSignal }) => listFolders(site, collection, signal),
-			enabled:
-				ready &&
-				(collection === "media" ||
-					(site.COLLECTION_DEFINITIONS[collection]?.folders ??
-						site.COLLECTION_DEFINITIONS[collection]?.kind !== "item")),
+			enabled: ready && site.foldersEnabled(collection),
 		})),
 		combine: (results) =>
 			Object.fromEntries(

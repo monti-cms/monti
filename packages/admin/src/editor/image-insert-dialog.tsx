@@ -24,7 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import { submitOnEnter } from "./link-form";
 import { editorMessages } from "./messages";
-import { formatBytes, type PreparedUpload, prepareUpload, uploadImageFile } from "./upload-helper";
+import { formatBytes, imageAccept, type PreparedUpload, prepareUpload, uploadImageFile } from "./upload-helper";
 
 /** Notice for when an image that needs a description has no alt text. Shared by the insert dialog and image settings. */
 export const altRequiredMessage = (t: TranslatorFor<typeof editorMessages>) => t("imageDialog.altRequired");
@@ -232,7 +232,7 @@ export function ImageInsertDialog({
 							<Input
 								type="file"
 								aria-label={t("imageDialog.fileLabel")}
-								accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+								accept={imageAccept(site)}
 								disabled={isUploading}
 								onChange={(event) => setFile(event.target.files?.[0] ?? null)}
 							/>

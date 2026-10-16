@@ -1,4 +1,5 @@
 import { describeNodeEnv } from "../../core/env";
+import { brandErrorClass } from "../../core/error-brand";
 import { problemText } from "../../core/problem";
 import type { AuthContext, CmsAuth } from "../../server/define";
 import { isLoopbackRequest, productionLikeEnvironment } from "./dev-bypass";
@@ -23,6 +24,7 @@ export class AuthError extends Error {
 		this.name = "AuthError";
 	}
 }
+brandErrorClass(AuthError, "AuthError");
 
 /** Whether a GitHub numeric ID is in the admin list. Ignores leading zeros and rejects non-numeric values. */
 export function isAllowedAdminId(

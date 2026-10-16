@@ -1,5 +1,5 @@
 import { CmsError } from "../../error-handler";
-import { publicRoute } from "../../handler";
+import { publicRoute, readFormBody } from "../../handler";
 import { validateSameOrigin } from "../../security";
 
 const field = (form: FormData, name: string): string => {
@@ -22,7 +22,7 @@ export const POST = publicRoute(async ({ request, cms }) => {
 			status: 303,
 			headers: { location: `${cms.site.adminUrl("/login")}?error=${encodeURIComponent(error)}` },
 		});
-	const form = await request.formData();
+	const form = await readFormBody(request);
 	const email = field(form, "email");
 	const password = field(form, "password");
 	if (password !== field(form, "confirm")) return back("confirm");

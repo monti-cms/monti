@@ -28,7 +28,14 @@ export interface EditRequest {
 export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSignal) =>
 	cmsFetch<SchemaEditPreview>(site, cmsApiUrl("/v1/schema/preview"), { method: "POST", json: request, signal });
 
-export const saveSchema = (site: Site, request: EditRequest & { readonly baseHash: string }) =>
+/**
+ * Saves an edit. `acknowledged` names the impacts of the preview the writer saw: the server refuses a save whose changes leave stored entries worse off
+ * unless their keys are here (`schema_unacknowledged`).
+ */
+export const saveSchema = (
+	site: Site,
+	request: EditRequest & { readonly baseHash: string; readonly acknowledged: readonly string[] },
+) =>
 	cmsFetch<SavedSchema | { saved: false; reason: "unchanged" }>(site, cmsApiUrl("/v1/schema"), {
 		method: "PUT",
 		json: request,

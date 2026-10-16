@@ -1,3 +1,4 @@
+import { brandErrorClass } from "./error-brand";
 import type { ErrorCode } from "./error-codes";
 /**
  * The wording of a setup problem, shared by the errors core and the plugins throw and by `monti doctor`: what is wrong, where it is, and how to fix it.
@@ -53,6 +54,7 @@ export class SetupError extends Error {
 	/** The driver's error code when this explains a driver error, else the same as `kind`. */
 	readonly code: string;
 }
+brandErrorClass(SetupError, "SetupError");
 
 /** A {@link SetupError} for the problem. `cause` keeps the error underneath (a driver error, say); `kind` names the kind of problem. */
 export function problemError(problem: Problem, cause?: unknown, kind?: ErrorCode): SetupError {

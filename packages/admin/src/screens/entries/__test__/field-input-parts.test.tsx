@@ -4,6 +4,7 @@ import { testSite } from "../../../../../core/test/site";
 import { CmsAdminComponentsProvider, type FieldInputParts } from "../../../admin-components";
 import { renderWithSite as render } from "../../../test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
+import { AdminFeaturesProvider } from "../../shared/admin-features";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
 import { entriesMessages } from "../messages";
 import { SchemaFields } from "../schema-fields";
@@ -120,5 +121,22 @@ describe("media field (`fields.media`)", () => {
 		if (!media) return;
 		renderFields(media, { ...EMPTY_FORM, title: "x" });
 		expect(screen.getByRole("button", { name: media.field.label }).textContent).toBe(t("media.chooseImage"));
+	});
+
+	it("cannot pick when the server has no media storage", () => {
+		if (!media) return;
+		const target = media;
+		render(
+			<TooltipProvider>
+				<AdminFeaturesProvider features={{ media: false }}>
+					<EntryFormProvider
+						value={{ collection: target.collection, form: { ...EMPTY_FORM, title: "x" }, setForm: vi.fn() }}
+					>
+						<SchemaFields include={(group) => group.fields.includes(target.name)} />
+					</EntryFormProvider>
+				</AdminFeaturesProvider>
+			</TooltipProvider>,
+		);
+		expect((screen.getByRole("button", { name: target.field.label }) as HTMLButtonElement).disabled).toBe(true);
 	});
 });

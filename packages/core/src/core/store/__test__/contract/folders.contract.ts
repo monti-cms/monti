@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
 import { testSite } from "../../../../../test/site";
 import { CmsError, type ContentStore } from "../..";
@@ -21,20 +21,23 @@ function expectCmsError(err: unknown, code: string): void {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** A second folder scope that always uses folders: the media library. Used where a test needs folders of another collection. */
+const OTHER_SCOPE = "media";
+
 /** Contract of FolderStore. */
 export const foldersContract: ContractSuite = (factory) => {
 	describe("FolderStore: folders", () => {
 		let session: StoreSession;
 		let store: ContentStore;
 
-		beforeAll(async () => {
+		beforeEach(async () => {
 			session = await factory.create();
 			store = session.store;
 			// Required-for-publish values (such as the reference blog's category) are looked up in the config and filled in.
 			fillRequiredMetadata(store);
 		});
 
-		afterAll(async () => {
+		afterEach(async () => {
 			await session.close();
 		});
 
@@ -67,32 +70,57 @@ export const foldersContract: ContractSuite = (factory) => {
 		// -----------------------------------------------------------------------
 
 		it("1. create/list nesting with UUID validity, collection isolation, deterministic listFolders order (parentId/root grouping → position ASC → id ASC) including same-position siblings", async () => {
-			const r1 = await store.createFolder({ collection: "fc1", parentId: null, name: "Root1", position: 20 });
-			const r2 = await store.createFolder({ collection: "fc1", parentId: null, name: "Root2", position: 10 });
+			const r1 = await store.createFolder({
+				collection: contentCollection,
+				parentId: null,
+				name: "Root1",
+				position: 20,
+			});
+			const r2 = await store.createFolder({
+				collection: contentCollection,
+				parentId: null,
+				name: "Root2",
+				position: 10,
+			});
 			// r2 (10) should come before r1 (20)
 
 			// UUID validity
 			expect(r1.id).toMatch(UUID_RE);
 
-			expect(r1.collection).toBe("fc1");
+			expect(r1.collection).toBe(contentCollection);
 			expect(r1.parentId).toBeNull();
 			expect(r1.name).toBe("Root1");
 			expect(typeof r1.position).toBe("number");
 
 			// Nested child
-			const c1 = await store.createFolder({ collection: "fc1", parentId: r1.id, name: "Child1", position: 20 });
+			const c1 = await store.createFolder({
+				collection: contentCollection,
+				parentId: r1.id,
+				name: "Child1",
+				position: 20,
+			});
 			expect(c1.parentId).toBe(r1.id);
 
 			// Explicit position
-			const c2 = await store.createFolder({ collection: "fc1", parentId: r1.id, name: "Child2", position: 10 });
+			const c2 = await store.createFolder({
+				collection: contentCollection,
+				parentId: r1.id,
+				name: "Child2",
+				position: 10,
+			});
 			expect(c2.position).toBe(10);
 
 			// Same-position siblings under r1 to prove id ASC tie-break
-			const c3 = await store.createFolder({ collection: "fc1", parentId: r1.id, name: "Child3", position: 10 });
+			const c3 = await store.createFolder({
+				collection: contentCollection,
+				parentId: r1.id,
+				name: "Child3",
+				position: 10,
+			});
 			expect(c3.position).toBe(10);
 
 			// List returns all including nested — assert deterministic order directly
-			const list = await store.listFolders({ collection: "fc1" });
+			const list = await store.listFolders({ collection: contentCollection });
 			expect(list).toHaveLength(5);
 
 			// Verify returned order: parentId/root grouping then position ASC then id ASC
@@ -104,9 +132,9 @@ export const foldersContract: ContractSuite = (factory) => {
 			const expectedIds = [...rRoots.map((f) => f.id), ...rChildren.map((f) => f.id)];
 			expect(list.map((f) => f.id)).toEqual(expectedIds);
 
-			// Collection isolation — fc1 folders not in fc_other
-			await store.createFolder({ collection: "fc_other", parentId: null, name: "OtherRoot" });
-			const otherList = await store.listFolders({ collection: "fc_other" });
+			// Collection isolation — folders of one scope are not listed in another
+			await store.createFolder({ collection: OTHER_SCOPE, parentId: null, name: "OtherRoot" });
+			const otherList = await store.listFolders({ collection: OTHER_SCOPE });
 			expect(otherList).toHaveLength(1);
 			expect(otherList[0].name).toBe("OtherRoot");
 		}, 30_000);
@@ -117,36 +145,40 @@ export const foldersContract: ContractSuite = (factory) => {
 
 		it("2. root and nested exact duplicate => CmsError conflict; same name other parent/collection allowed", async () => {
 			// Root duplicate — exact match
-			await store.createFolder({ collection: "fc2", parentId: null, name: "Docs" });
+			await store.createFolder({ collection: contentCollection, parentId: null, name: "Docs" });
 
 			let err1: unknown;
 			try {
-				await store.createFolder({ collection: "fc2", parentId: null, name: "Docs" });
+				await store.createFolder({ collection: contentCollection, parentId: null, name: "Docs" });
 			} catch (e) {
 				err1 = e;
 			}
 			expectCmsError(err1, "folder_name_conflict");
 
 			// Nested parent — duplicate under SAME nested parent (exact)
-			const nestedParent = await store.createFolder({ collection: "fc2", parentId: null, name: "Nested" });
-			await store.createFolder({ collection: "fc2", parentId: nestedParent.id, name: "Sub" });
+			const nestedParent = await store.createFolder({ collection: contentCollection, parentId: null, name: "Nested" });
+			await store.createFolder({ collection: contentCollection, parentId: nestedParent.id, name: "Sub" });
 
 			// exact duplicate under same nested parent
 			let err3: unknown;
 			try {
-				await store.createFolder({ collection: "fc2", parentId: nestedParent.id, name: "Sub" });
+				await store.createFolder({ collection: contentCollection, parentId: nestedParent.id, name: "Sub" });
 			} catch (e) {
 				err3 = e;
 			}
 			expectCmsError(err3, "folder_name_conflict");
 
 			// Same name under different parent is OK
-			const otherParent = await store.createFolder({ collection: "fc2", parentId: null, name: "Other" });
-			const nested = await store.createFolder({ collection: "fc2", parentId: otherParent.id, name: "Docs" });
+			const otherParent = await store.createFolder({ collection: contentCollection, parentId: null, name: "Other" });
+			const nested = await store.createFolder({
+				collection: contentCollection,
+				parentId: otherParent.id,
+				name: "Docs",
+			});
 			expect(nested.name).toBe("Docs");
 
 			// Same name in different collection is OK
-			const crossCol = await store.createFolder({ collection: "fc2x", parentId: null, name: "Docs" });
+			const crossCol = await store.createFolder({ collection: OTHER_SCOPE, parentId: null, name: "Docs" });
 			expect(crossCol.name).toBe("Docs");
 		}, 30_000);
 
@@ -155,11 +187,11 @@ export const foldersContract: ContractSuite = (factory) => {
 		// -----------------------------------------------------------------------
 
 		it("3. rename/move/reorder success; self and descendant => exact invalid_input and exact unchanged folder rows; cross-collection parent => invalid_input unchanged; atomic unchanged on conflict", async () => {
-			const r = await store.createFolder({ collection: "fc3", parentId: null, name: "R" });
-			const ch1 = await store.createFolder({ collection: "fc3", parentId: r.id, name: "CH1" });
-			const ch2 = await store.createFolder({ collection: "fc3", parentId: ch1.id, name: "CH2" });
-			const r2 = await store.createFolder({ collection: "fc3", parentId: null, name: "R2" });
-			const _r3 = await store.createFolder({ collection: "fc3", parentId: null, name: "R3" });
+			const r = await store.createFolder({ collection: contentCollection, parentId: null, name: "R" });
+			const ch1 = await store.createFolder({ collection: contentCollection, parentId: r.id, name: "CH1" });
+			const ch2 = await store.createFolder({ collection: contentCollection, parentId: ch1.id, name: "CH2" });
+			const r2 = await store.createFolder({ collection: contentCollection, parentId: null, name: "R2" });
+			const _r3 = await store.createFolder({ collection: contentCollection, parentId: null, name: "R3" });
 
 			// Rename
 			const renamed = await store.updateFolder({ id: ch1.id, name: "CH1_Renamed" });
@@ -174,7 +206,7 @@ export const foldersContract: ContractSuite = (factory) => {
 			expect(reordered.position).toBe(999);
 
 			// Self-cycle → invalid_input
-			const beforeSelf = await store.listFolders({ collection: "fc3" });
+			const beforeSelf = await store.listFolders({ collection: contentCollection });
 			let selfErr: unknown;
 			try {
 				await store.updateFolder({ id: ch1.id, parentId: ch1.id });
@@ -182,11 +214,11 @@ export const foldersContract: ContractSuite = (factory) => {
 				selfErr = e;
 			}
 			expectCmsError(selfErr, "invalid_input");
-			const afterSelf = await store.listFolders({ collection: "fc3" });
+			const afterSelf = await store.listFolders({ collection: contentCollection });
 			expect(afterSelf).toEqual(beforeSelf);
 
 			// Descendant cycle → invalid_input (move R under ch2)
-			const beforeDesc = await store.listFolders({ collection: "fc3" });
+			const beforeDesc = await store.listFolders({ collection: contentCollection });
 			let descErr: unknown;
 			try {
 				await store.updateFolder({ id: r.id, parentId: ch2.id });
@@ -194,7 +226,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				descErr = e;
 			}
 			expectCmsError(descErr, "invalid_input");
-			const afterDesc = await store.listFolders({ collection: "fc3" });
+			const afterDesc = await store.listFolders({ collection: contentCollection });
 			expect(afterDesc).toEqual(beforeDesc);
 
 			// Rename-to-conflict -> conflict, atomic unchanged
@@ -205,7 +237,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				renameConflictErr = e;
 			}
 			expectCmsError(renameConflictErr, "folder_name_conflict");
-			const afterRenameConflict = await store.listFolders({ collection: "fc3" });
+			const afterRenameConflict = await store.listFolders({ collection: contentCollection });
 			expect(afterRenameConflict).toEqual(beforeDesc);
 
 			// Move-to-parent with conflicting sibling -> conflict, atomic unchanged
@@ -216,12 +248,12 @@ export const foldersContract: ContractSuite = (factory) => {
 				moveConflictErr = e;
 			}
 			expectCmsError(moveConflictErr, "folder_name_conflict");
-			const afterMoveConflict = await store.listFolders({ collection: "fc3" });
+			const afterMoveConflict = await store.listFolders({ collection: contentCollection });
 			expect(afterMoveConflict).toEqual(beforeDesc);
 
 			// Cross-collection parent → invalid_input
-			const crossRoot = await store.createFolder({ collection: "fc3_other", parentId: null, name: "XR" });
-			const beforeCross = await store.listFolders({ collection: "fc3" });
+			const crossRoot = await store.createFolder({ collection: OTHER_SCOPE, parentId: null, name: "XR" });
+			const beforeCross = await store.listFolders({ collection: contentCollection });
 			let crossErr: unknown;
 			try {
 				await store.updateFolder({ id: ch1.id, parentId: crossRoot.id });
@@ -229,18 +261,18 @@ export const foldersContract: ContractSuite = (factory) => {
 				crossErr = e;
 			}
 			expectCmsError(crossErr, "invalid_input");
-			const afterCross = await store.listFolders({ collection: "fc3" });
+			const afterCross = await store.listFolders({ collection: contentCollection });
 			expect(afterCross).toEqual(beforeCross);
 
 			// createFolder using parent in another collection -> invalid_input
 			let createCrossErr: unknown;
 			try {
-				await store.createFolder({ collection: "fc3", parentId: crossRoot.id, name: "BadChild" });
+				await store.createFolder({ collection: contentCollection, parentId: crossRoot.id, name: "BadChild" });
 			} catch (e) {
 				createCrossErr = e;
 			}
 			expectCmsError(createCrossErr, "invalid_input");
-			const afterCreateCross = await store.listFolders({ collection: "fc3" });
+			const afterCreateCross = await store.listFolders({ collection: contentCollection });
 			expect(afterCreateCross).toEqual(beforeCross);
 		}, 30_000);
 
@@ -327,7 +359,7 @@ export const foldersContract: ContractSuite = (factory) => {
 			// Capture pre-attempt state for full comparison after
 			const preAttempt = await store.getEntry(entry.id);
 
-			const crossFolder = await store.createFolder({ collection: "fc4_other", parentId: null, name: "XF" });
+			const crossFolder = await store.createFolder({ collection: OTHER_SCOPE, parentId: null, name: "XF" });
 			let crossErr: unknown;
 			try {
 				await moveToFolder(store, {
@@ -507,5 +539,41 @@ export const foldersContract: ContractSuite = (factory) => {
 			}
 			expectCmsError(deleteErr, "not_found");
 		}, 30_000);
+		// -----------------------------------------------------------------------
+		// 8  collections without folders
+		// -----------------------------------------------------------------------
+
+		describe("a collection without folders", () => {
+			const noFolders = testSite.COLLECTIONS.find((name) => !testSite.foldersEnabled(name));
+
+			it.skipIf(!noFolders)(
+				"rejects creating and listing folders with invalid_input",
+				async () => {
+					const collection = noFolders as string;
+					await expect(store.createFolder({ collection, parentId: null, name: "Nope" })).rejects.toMatchObject({
+						code: "invalid_input",
+					});
+					await expect(store.listFolders({ collection })).rejects.toMatchObject({ code: "invalid_input" });
+				},
+				30_000,
+			);
+
+			it.skipIf(!noFolders)(
+				"rejects moving an entry into a folder of another collection",
+				async () => {
+					const collection = noFolders as string;
+					const folder = await store.createFolder({ collection: contentCollection, parentId: null, name: "Elsewhere" });
+					await expect(
+						seedEntry(store, { collection, slug: null, metadata: { title: "T" }, folderId: folder.id }),
+					).rejects.toMatchObject({ code: "invalid_input" });
+					const entry = await seedEntry(store, { collection, slug: null, metadata: { title: "T" } });
+					await expect(
+						moveToFolder(store, { entryId: entry.id, folderId: folder.id, expectedVersion: entry.version }),
+					).rejects.toMatchObject({ code: "invalid_input" });
+					expect((await store.getEntry(entry.id)).folderId).toBeNull();
+				},
+				30_000,
+			);
+		});
 	});
 };

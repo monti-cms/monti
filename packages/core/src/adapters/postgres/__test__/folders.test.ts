@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { contentCollection } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
 import { CmsError } from "../../../core/store";
 import { createContentStore, migrateContentStore } from "../content-store";
@@ -72,8 +73,8 @@ describe("Folders in Postgres", () => {
 		let triggerCreated = false;
 		let funcCreated = false;
 
-		const fA = await store.createFolder({ collection: "fc8", parentId: null, name: "A" });
-		const fB = await store.createFolder({ collection: "fc8", parentId: null, name: "B" });
+		const fA = await store.createFolder({ collection: contentCollection, parentId: null, name: "A" });
+		const fB = await store.createFolder({ collection: contentCollection, parentId: null, name: "B" });
 
 		let p1: Promise<unknown> | undefined;
 		let p2: Promise<unknown> | undefined;
@@ -129,7 +130,7 @@ describe("Folders in Postgres", () => {
 			const err = (rejected[0] as PromiseRejectedResult).reason;
 			expectCmsError(err, "invalid_input");
 
-			const folders = await store.listFolders({ collection: "fc8" });
+			const folders = await store.listFolders({ collection: contentCollection });
 			const map = new Map(folders.map((f) => [f.id, f.parentId]));
 
 			const aParent = map.get(fA.id);

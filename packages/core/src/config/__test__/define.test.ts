@@ -500,6 +500,14 @@ describe("defineSite", () => {
 		});
 	});
 
+	it("rejects a collection named like the media library", () => {
+		const media = defineCollection({ label: "Media", kind: "item", fields: { title, slug } });
+		const issues = issuesOf(() => defineSite({ collections: { media }, locales, defaultLocale: "en" }));
+		expect(issues).toContainEqual(expect.objectContaining({ path: "collections.media" }));
+		// The same collection under another name is fine.
+		expect(issuesOf(() => defineSite({ collections: { gallery: media }, locales, defaultLocale: "en" }))).toEqual([]);
+	});
+
 	it("rejects a collection with more than one slug field", () => {
 		const twoSlugs = defineCollection({
 			label: "Page",

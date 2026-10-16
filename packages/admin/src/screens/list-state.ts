@@ -112,10 +112,13 @@ export function parseListState(
 	const statuses = [...new Set(params.getAll("status"))].filter((status): status is ListStatus =>
 		(LIST_STATUSES as readonly string[]).includes(status),
 	);
+	const listed = site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION;
+	const folder = params.get("folder");
 	const state: ListState = {
 		...DEFAULT_LIST_STATE,
-		collection: site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION,
-		folder: !params.get("folder") || params.get("folder") === "unfiled" ? "all" : (params.get("folder") as string),
+		collection: listed,
+		// A collection without folders has no folder to be in, so a `?folder=` left in the URL is ignored.
+		folder: !site.foldersEnabled(listed) || !folder || folder === "unfiled" ? "all" : folder,
 		includeDescendants: params.get("descendants") === "1",
 		search: params.get("search") ?? "",
 		includeBody: params.get("body") === "1",
@@ -123,12 +126,9 @@ export function parseListState(
 		slugContains: params.get("slug") ?? "",
 		statuses,
 		hasChanges: params.get("changes") === "1",
-		relations: readRelations(
-			site,
-			params.getAll("relation"),
-			site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION,
-		),
-		locales: [...new Set(params.getAll("locale"))].filter(site.isLocale),
+		relations: readRelations(site, params.getAll("relation"), listed),
+		// The locale filter is hidden without translations, so a `?locale=` left in the URL must not filter the list.
+		locales: site.ADMIN_TRANSLATIONS ? [...new Set(params.getAll("locale"))].filter(site.isLocale) : [],
 		sortField: (LIST_SORT_FIELDS as readonly string[]).includes(sortField)
 			? (sortField as ListSortField)
 			: DEFAULT_LIST_STATE.sortField,
@@ -192,7 +192,8 @@ export function listStateToApiQuery(site: Site, state: ListState, options: { tra
 		pageSize: String(state.pageSize),
 	});
 	if (!options.trash && site.schemaOf(state.collection).kind === "document") query.set("group", "translation");
-	if (!options.trash) {
+	// A collection without folders lists everything: entries filed in folders before its folders were turned off stay in the list.
+	if (!options.trash && site.foldersEnabled(state.collection)) {
 		// Browse mode shows only items directly in the current location; search, filters or "include subfolders" show everything under the current location.
 		const flat = !isExplorerMode(state);
 		if (state.folder === "all") {

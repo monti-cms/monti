@@ -259,7 +259,13 @@ export function ReviewDialog({
 	}, [open, draft, renames, picks, site, onIssues, t]);
 
 	const saveMutation = useCmsMutation({
-		fn: (current: Picks | undefined, { site }) => saveSchema(site, { ...request(current), baseHash }),
+		// The impacts this dialog showed are the ones the writer reviewed; the server refuses a lossy change it was not told was seen.
+		fn: (current: Picks | undefined, { site }) =>
+			saveSchema(site, {
+				...request(current),
+				baseHash,
+				acknowledged: (preview?.impacts ?? []).map((impact) => impact.key),
+			}),
 		failure: t("save.failed"),
 		// Each failure has its own text and effect in the dialog.
 		inline: true,

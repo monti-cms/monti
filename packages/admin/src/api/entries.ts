@@ -1,6 +1,6 @@
 import { type BulkOp, cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import type { IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { EntryStatus, IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/runtime";
 import { commonMessages } from "../lib/common.messages";
 import { bulkBarMessages } from "../screens/entries/bulk-bar.messages";
 import type { EntryData } from "../screens/entries/entry-form";
@@ -154,7 +154,8 @@ export type BulkItemResult =
 	| { id: string; ok: true; version: number }
 	| { id: string; ok: false; error: string; issues?: CmsIssue[]; usages?: BulkUsage[] };
 
-export type BulkSelection = { id: string; expectedVersion: number; title?: string | null };
+/** A row a bulk action targets. `status`, when known, lets a lifecycle action leave out rows it cannot change (`canTransition`). */
+export type BulkSelection = { id: string; expectedVersion: number; title?: string | null; status?: EntryStatus };
 
 export type BulkParams = { field?: string; ids?: string[]; id?: string | null; folderId?: string | null };
 

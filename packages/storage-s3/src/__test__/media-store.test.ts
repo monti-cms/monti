@@ -17,8 +17,27 @@ describe("S3 media store", () => {
 				// @ts-expect-error testing runtime validation
 				contentType: "image/svg+xml",
 				expiresInSeconds: 600,
+				byteSize: 1,
 			}),
 		).rejects.toThrow(/disallowed|unsupported/i);
+	});
+
+	it("prepareUpload signs the declared size into the URL so a larger body is refused", async () => {
+		const store = createS3MediaStore({
+			accessKeyId: "test-key",
+			secretAccessKey: "test-sec",
+			bucket: "test-bucket",
+			endpoint: "https://test.r2.cloudflarestorage.com",
+			publicBaseUrl: "https://media.example.com",
+		});
+		const upload = await store.prepareUpload({
+			stagingKey: "staging/a.png",
+			contentType: "image/png",
+			expiresInSeconds: 600,
+			byteSize: 1234,
+		});
+		const signed = new URL(upload.url).searchParams.get("X-Amz-SignedHeaders") ?? "";
+		expect(signed.split(";")).toContain("content-length");
 	});
 
 	it("getPublicUrl constructs canonical URL from finalKey", () => {

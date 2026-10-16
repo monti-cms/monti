@@ -3,6 +3,7 @@ import type { AuthContext } from "../../adapters/auth";
 import type { Cms } from "../../cms";
 import { actorOf, withActor } from "../../core/actor";
 import { isUuid } from "../../core/ids";
+import { MAX_FORM_BYTES, MAX_REQUEST_BYTES } from "../../core/limits";
 import { CmsError, deleted, handleApiError, ok } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
@@ -90,9 +91,63 @@ export const adminRoute = <P extends Params = Params>(handler: AdminHandler<P>):
 /** Declares the handler of a `public: true` route. It needs no login and checks the request itself. */
 export const publicRoute = <P extends Params = Params>(handler: PublicHandler<P>): PublicHandler<P> => handler;
 
-/** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
+const tooLarge = (maxBytes: number) => new CmsError(`Request body exceeds ${maxBytes} bytes`, "payload_too_large");
+
+/**
+ * Reads the raw body, at most `maxBytes` of it. A declared `Content-Length` over the cap is refused before a byte is read; a body that does not declare one
+ * (chunked) is read as a stream, counted, and cancelled the moment it passes the cap. `Content-Length` alone is not trusted: it can be missing or wrong.
+ * 413 when over. Public routes use this too, so nothing is read unbounded before login or before a signature check.
+ */
+export async function readBodyBytes(
+	request: Request,
+	maxBytes: number = MAX_REQUEST_BYTES,
+): Promise<Uint8Array<ArrayBuffer>> {
+	const declared = Number(request.headers.get("content-length"));
+	if (Number.isFinite(declared) && declared > maxBytes) throw tooLarge(maxBytes);
+	if (!request.body) return new Uint8Array();
+	const reader = request.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		total += value.byteLength;
+		if (total > maxBytes) {
+			await reader.cancel().catch(() => {});
+			throw tooLarge(maxBytes);
+		}
+		chunks.push(value);
+	}
+	const bytes = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return bytes;
+}
+
+/** Reads the body as UTF-8 text, at most `maxBytes` of it (see `readBodyBytes`). */
+export async function readBodyText(request: Request, maxBytes: number = MAX_REQUEST_BYTES): Promise<string> {
+	return new TextDecoder().decode(await readBodyBytes(request, maxBytes));
+}
+
+/** Reads a form post (urlencoded or multipart), at most `maxBytes` of it. The size is checked before the form is parsed. */
+export async function readFormBody(request: Request, maxBytes: number = MAX_FORM_BYTES): Promise<FormData> {
+	const bytes = await readBodyBytes(request, maxBytes);
+	const contentType = request.headers.get("content-type");
+	try {
+		return await new Response(new Blob([bytes]), {
+			headers: contentType ? { "content-type": contentType } : {},
+		}).formData();
+	} catch {
+		throw new CmsError("Request body is not a valid form", "invalid_input");
+	}
+}
+
+/** Reads the JSON body, at most `MAX_REQUEST_BYTES`. 413 if larger, 400 if malformed. A missing body is treated as `{}`. */
 export async function readJsonBody(request: Request): Promise<unknown> {
-	const text = await request.text();
+	const text = await readBodyText(request);
 	if (!text.trim()) return {};
 	try {
 		return JSON.parse(text);
