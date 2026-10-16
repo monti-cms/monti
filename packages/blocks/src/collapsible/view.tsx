@@ -1,7 +1,7 @@
 "use client";
 
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
 import { AttributeInput, BlockSettings, ContainerToolbar } from "@monti-cms/admin/blocks";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn, FormFieldLabel, Switch } from "@monti-cms/admin/kit";
 import { useTranslator } from "@monti-cms/core/site";
 import { ChevronRight } from "lucide-react";

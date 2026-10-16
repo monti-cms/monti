@@ -25,7 +25,6 @@
 		"./internal/import-boundary": "./src/cli/import-boundary.ts",
 		"./internal/schema-change": "./src/schema-change/index.ts",
 		"./internal/schema-edit": "./src/schema-edit/index.ts",
-		"./internal/plugins": "./src/internal-plugins.ts",
 		"./internal/host": "./src/internal-host.ts",
 		"./render.css": "./render.css"
 	},
@@ -158,10 +157,6 @@
 			"./internal/schema-edit": {
 				"types": "./dist/schema-edit/index.d.ts",
 				"default": "./dist/schema-edit/index.js"
-			},
-			"./internal/plugins": {
-				"types": "./dist/internal-plugins.d.ts",
-				"default": "./dist/internal-plugins.js"
 			},
 			"./internal/host": {
 				"types": "./dist/internal-host.d.ts",

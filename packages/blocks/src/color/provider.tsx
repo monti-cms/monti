@@ -1,6 +1,6 @@
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
+import type { AdminComponents } from "@monti-cms/admin";
 import {
 	allowsMark,
 	BubbleButton,
@@ -11,7 +11,6 @@ import {
 import { DropdownMenuSeparator } from "@monti-cms/admin/kit";
 import { useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
-import type { ReactNode } from "react";
 import { cleanTextColor, textColorProps } from "./colors";
 import { colorBlock } from "./definition";
 import { COLOR_MARK_NAME, TextColorIcon, TextColorMenu, TextColorMenuItems, TextColorPanel } from "./menu";
@@ -64,9 +63,5 @@ export const colorMarkExtension: EditorMarkExtension = {
 	bubble: { group: "format", Button: ColorBubbleButton },
 };
 
-const components: AdminComponents = { marks: { [colorBlock.name]: colorMarkExtension } };
-
-/** Registers the text color mark's editor display, format tool, and bubble in the admin UI. */
-export function ColorProvider({ children }: { children: ReactNode }) {
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+/** The text color mark's editor display, format tool, and bubble. */
+export const colorComponents: AdminComponents = { marks: { [colorBlock.name]: colorMarkExtension } };

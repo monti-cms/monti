@@ -1,8 +1,8 @@
-import { defineBlockAdmin } from "../shared/define-block-admin";
-import { TooltipProvider } from "./provider";
+import { defineAdminPlugin } from "@monti-cms/admin";
+import { tooltipComponents } from "./provider";
 
 /** Editor registration (for putting into `marks` of `AdminComponentsProvider` in tests or hand-built views). */
-export { OPEN_TOOLTIP_EVENT, TOOLTIP_MARK, TooltipProvider, tooltipMarkExtension } from "./provider";
+export { OPEN_TOOLTIP_EVENT, TOOLTIP_MARK, tooltipMarkExtension } from "./provider";
 
 /** Admin UI side of the tooltip extension. Registers the editor's tooltip display and tools. */
-export default defineBlockAdmin(TooltipProvider);
+export default defineAdminPlugin({ components: tooltipComponents });

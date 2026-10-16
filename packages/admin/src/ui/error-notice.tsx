@@ -6,7 +6,7 @@ import { uiMessages } from "./messages";
 
 /**
  * An error as the person reads it: what went wrong, what to do (when known), and the developer text folded under "Details".
- * Build the notice with `errorNotice()` of `@monti-cms/admin/api`.
+ * Build the notice with `errorNotice()` of `@monti-cms/admin`.
  */
 function ErrorNoticeView({ notice, className, ...props }: React.ComponentProps<"div"> & { notice: Notice }) {
 	const t = useTranslator(uiMessages);

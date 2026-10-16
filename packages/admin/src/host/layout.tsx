@@ -8,6 +8,7 @@ import { Toaster } from "../ui/sonner";
 import { TooltipProvider } from "../ui/tooltip";
 import { AdminThemeProvider } from "./admin-theme-provider";
 import { layoutMessages } from "./messages";
+import { AdminPluginScope } from "./plugin-scope";
 import { SetupProblemScreen, setupProblemOf } from "./setup-problem";
 
 /**
@@ -59,13 +60,14 @@ export async function AdminLayout({
 	// A server whose login is not set up shows what to do, instead of an error page with the message hidden.
 	if (setupProblemOf(cms) !== undefined) return <SetupProblemScreen cms={cms} />;
 	const plugins = await loadAdminPlugins(cms.site);
-	// Plugin providers wrap from the outside in registration order, inside the server data cache.
-	const content = plugins.reduceRight<ReactNode>(
-		(inner, { name, Provider }) => (Provider ? <Provider key={name}>{inner}</Provider> : inner),
-		<TooltipProvider>
-			<div className="cms-admin min-h-screen bg-cms-background text-cms-foreground">{children}</div>
-			{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
-		</TooltipProvider>,
+	// The plugins' declarations (components, slots, providers) are applied in the browser, from the outside in registration order.
+	const content = (
+		<AdminPluginScope plugins={plugins}>
+			<TooltipProvider>
+				<div className="cms-admin min-h-screen bg-cms-background text-cms-foreground">{children}</div>
+				{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
+			</TooltipProvider>
+		</AdminPluginScope>
 	);
 	// The browser gets the site as data (collections, locales, blocks, addresses, admin language), never a config file.
 	const app = (

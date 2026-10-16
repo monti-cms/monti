@@ -1,8 +1,7 @@
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
+import { defineAdminPlugin } from "@monti-cms/admin";
 import { defineTextChecker, type TextIssue } from "@monti-cms/core";
-import type { ReactNode } from "react";
 
 /** A small checker that only looks at a banned-word list and runs in the browser (a free checker, so `auto: true` would be fine too). */
 const WORDS: Readonly<Record<string, { readonly message: string; readonly suggestions: readonly string[] }>> = {
@@ -39,9 +38,5 @@ const wordListChecker = defineTextChecker({
 	},
 });
 
-const components: AdminComponents = { textCheckers: [wordListChecker] };
-
-/** Wraps the admin UI (the provider of the plugin's admin side) and hands it the checker. */
-export function WordListProvider({ children }: { children: ReactNode }) {
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+/** The admin side of the word-list plugin: the checker, added to the editor's text checks. */
+export default defineAdminPlugin({ components: { textCheckers: [wordListChecker] } });

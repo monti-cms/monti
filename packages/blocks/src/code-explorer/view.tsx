@@ -1,5 +1,6 @@
 "use client";
 
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
 import {
 	AttributeInput,
 	BlockSettings,
@@ -8,7 +9,6 @@ import {
 	formatMeta,
 	ToolbarButton,
 } from "@monti-cms/admin/blocks";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import {
 	cn,
 	commonMessages,

@@ -1,6 +1,6 @@
 "use client";
 
-import { apiErrorOf, CmsApiError } from "@monti-cms/admin/api";
+import { apiErrorOf, CmsApiError } from "@monti-cms/admin";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";

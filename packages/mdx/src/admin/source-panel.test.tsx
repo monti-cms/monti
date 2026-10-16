@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import { AdminComponentsProvider, useAdminComponents, useFormat } from "@monti-cms/admin";
-import { CmsApiError } from "@monti-cms/admin/api";
+import { AdminComponentsProvider, CmsApiError, useAdminComponents, useFormat } from "@monti-cms/admin";
 import { defineSite } from "@monti-cms/core";
 import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
-import { createSite, SiteProvider } from "@monti-cms/core/site";
+import { createSite, SiteProvider, useSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, renderHook, render as renderWithoutSite, screen, waitFor } from "@testing-library/react";
 import type { Root } from "mdast";
 import { type ReactElement, type ReactNode, useState } from "react";
@@ -15,7 +14,7 @@ import type { SyntaxExtension } from "../syntax";
 import { docOfMdx as docOf } from "../testing";
 import { createMdxBrowserFormat } from "./format";
 import { mdxSourceMessages } from "./messages";
-import { MdxAdminProvider } from "./provider";
+import { mdxComponents } from "./provider";
 import { lineOfBlock, MdxSourcePanel } from "./source-panel";
 
 const mocks = vi.hoisted(() => ({ adminFetch: vi.fn() }));
@@ -238,20 +237,25 @@ describe("registering the source panel and the format", () => {
 		],
 	};
 
+	/** What the admin applies for `mdx()`'s admin side: its components, made from the site in scope. */
+	const MdxAdmin = ({ children }: { children: ReactNode }) => (
+		<AdminComponentsProvider components={mdxComponents(useSite())}>{children}</AdminComponentsProvider>
+	);
+
 	const MdxWrapper = ({ children }: { children: ReactNode }) => (
 		<SiteWrapper>
-			<MdxAdminProvider>{children}</MdxAdminProvider>
+			<MdxAdmin>{children}</MdxAdmin>
 		</SiteWrapper>
 	);
 
-	it("MdxAdminProvider registers one source panel for mdx, which is MdxSourcePanel", () => {
+	it("the mdx admin components register one source panel for mdx, which is MdxSourcePanel", () => {
 		const { result } = renderHook(() => useAdminComponents(), { wrapper: MdxWrapper });
 		const panels = result.current.sourcePanels?.filter((panel) => panel.format === "mdx") ?? [];
 		expect(panels).toHaveLength(1);
 		expect(panels[0]?.Panel).toBe(MdxSourcePanel);
 	});
 
-	it("MdxAdminProvider registers the mdx format, found by name and absent without the provider", () => {
+	it("the mdx admin components register the mdx format, found by name and absent without the provider", () => {
 		expect(renderHook(() => useFormat("mdx"), { wrapper: SiteWrapper }).result.current).toBeUndefined();
 		const { result } = renderHook(() => useFormat("mdx"), { wrapper: MdxWrapper });
 		expect(result.current?.name).toBe("mdx");
@@ -262,7 +266,7 @@ describe("registering the source panel and the format", () => {
 		const syntaxSite = createSite(defineSite({ ...testConfig, plugins: [mdx({ syntax: [atNotation] })] } as never));
 		const Wrapper = ({ children }: { children: ReactNode }) => (
 			<SiteProvider site={syntaxSite}>
-				<MdxAdminProvider>{children}</MdxAdminProvider>
+				<MdxAdmin>{children}</MdxAdmin>
 			</SiteProvider>
 		);
 		const { result } = renderHook(() => useFormat("mdx"), { wrapper: Wrapper });
@@ -280,7 +284,7 @@ describe("registering the source panel and the format", () => {
 			wrapper: ({ children }) => (
 				<SiteWrapper>
 					<AdminComponentsProvider components={{ sourcePanels: [{ format: "other", label: "Other", Panel: Other }] }}>
-						<MdxAdminProvider>{children}</MdxAdminProvider>
+						<MdxAdmin>{children}</MdxAdmin>
 					</AdminComponentsProvider>
 				</SiteWrapper>
 			),

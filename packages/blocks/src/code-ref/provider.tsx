@@ -1,6 +1,6 @@
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
+import type { AdminComponents } from "@monti-cms/admin";
 import {
 	addedMarkName,
 	allowsMark,
@@ -16,7 +16,6 @@ import { cn } from "@monti-cms/admin/kit";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { Code2, Unlink } from "lucide-react";
-import type { ReactNode } from "react";
 import { codeRefBlock } from "./definition";
 import { codeRefMessages } from "./messages";
 
@@ -89,9 +88,5 @@ export const codeRefMarkExtension: EditorMarkExtension = {
 	detail: CodeRefDetail,
 };
 
-const components: AdminComponents = { marks: { [codeRefBlock.name]: codeRefMarkExtension } };
-
-/** Registers the code-ref mark's editor display and bubble in the admin UI. */
-export function CodeRefProvider({ children }: { children: ReactNode }) {
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+/** The code-ref mark's editor display and bubble. */
+export const codeRefComponents: AdminComponents = { marks: { [codeRefBlock.name]: codeRefMarkExtension } };

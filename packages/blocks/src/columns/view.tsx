@@ -1,7 +1,7 @@
 "use client";
 
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
 import { ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn } from "@monti-cms/admin/kit";
 import { useTranslator } from "@monti-cms/core/site";
 import { Columns2, GripVertical, Plus, Trash2 } from "lucide-react";

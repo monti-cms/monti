@@ -1,6 +1,5 @@
 import type { StoredDocument } from "@monti-cms/core/document";
-import type { EntryStatus, IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/site";
-import { adminApiUrl, type BulkOp, type Site } from "@monti-cms/core/site";
+import type { BulkOp, EntryStatus, IncomingReferenceItem, ListEntriesItem, Site } from "@monti-cms/core/site";
 import { commonMessages } from "../lib/common.messages";
 import { bulkBarMessages } from "../screens/entries/bulk-bar.messages";
 import type { EntryData } from "../screens/entries/entry-form";
@@ -52,7 +51,7 @@ export interface EntryWriteResult {
 	readonly warnings: readonly CmsIssue[];
 }
 
-const entryUrl = (id: string) => adminApiUrl(`/v1/entries/${encodeURIComponent(id)}`);
+const entryUrl = (id: string) => `/v1/entries/${encodeURIComponent(id)}`;
 
 export const getEntry = <T = EntryData>(site: Site, id: string, signal?: AbortSignal, fallback?: string) =>
 	adminFetch<T>(site, entryUrl(id), { signal, fallback });
@@ -63,11 +62,11 @@ export const listEntries = <T = EntriesPage>(
 	query: string | URLSearchParams,
 	signal?: AbortSignal,
 	fallback?: string,
-) => adminFetch<T>(site, adminApiUrl(`/v1/entries?${query.toString()}`), { signal, fallback });
+) => adminFetch<T>(site, `/v1/entries?${query.toString()}`, { signal, fallback });
 
 /** `GET /v1/entries/search?<query>` (relation pickers: title search, or lookup by `id`). */
 export const searchEntries = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
-	adminFetch<EntrySearchResponse>(site, adminApiUrl(`/v1/entries/search?${query.toString()}`), { signal });
+	adminFetch<EntrySearchResponse>(site, `/v1/entries/search?${query.toString()}`, { signal });
 
 /** `POST /v1/entries` */
 export const createEntry = <T = EntryWriteResult>(
@@ -81,7 +80,7 @@ export const createEntry = <T = EntryWriteResult>(
 		translation?: unknown;
 	},
 	fallback?: string,
-) => adminFetch<T>(site, adminApiUrl("/v1/entries"), { method: "POST", json: input, fallback });
+) => adminFetch<T>(site, "/v1/entries", { method: "POST", json: input, fallback });
 
 /** `PATCH /v1/entries/:id` */
 export const updateEntry = <T = EntryWriteResult>(
@@ -166,7 +165,7 @@ export async function bulkEntries(
 	items: BulkSelection[],
 	params: BulkParams = {},
 ): Promise<BulkItemResult[]> {
-	const data = await adminFetch<{ results: BulkItemResult[] }>(site, adminApiUrl("/v1/bulk"), {
+	const data = await adminFetch<{ results: BulkItemResult[] }>(site, "/v1/bulk", {
 		method: "POST",
 		json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
 		fallback: site.createTranslator(bulkBarMessages)("requestFailed"),

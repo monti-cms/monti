@@ -193,7 +193,7 @@ export interface AdminComponents {
 	 * A view registered here replaces the default view of that block.
 	 *
 	 * A view takes no props. It reads and writes its block with `useBlockEditor`, draws the nested body of a container with `Content`, and
-	 * wraps itself in `BlockFrame` (all from `@monti-cms/admin/hooks`). Without a registered view, a core block uses its default view and any
+	 * wraps itself in `BlockFrame` (all from `@monti-cms/admin`). Without a registered view, a core block uses its default view and any
 	 * other added block the default box holding the block name, attribute inputs and body.
 	 *
 	 * @experimental

@@ -1,7 +1,7 @@
 "use client";
 
 import type { BrowserFormat, EditorExtension, EditorInsertAction, EditorSelectionAction } from "@monti-cms/admin";
-import { errorNotice, type ErrorNotice as Notice } from "@monti-cms/admin/api";
+import { errorNotice, type ErrorNotice as Notice } from "@monti-cms/admin";
 import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/editor";
 import {
 	Button,

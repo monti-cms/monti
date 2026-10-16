@@ -1,4 +1,4 @@
-import { adminApiUrl, type Site } from "@monti-cms/core/site";
+import type { Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** Local shapes of the events API responses (dates arrive as ISO strings). */
@@ -78,8 +78,7 @@ export const listEvents = (
 	pageSize: number,
 	signal?: AbortSignal,
 	fallback?: string,
-) =>
-	adminFetch<EventsList>(site, adminApiUrl(`/v1/events?${eventsQuery(filter, page, pageSize)}`), { signal, fallback });
+) => adminFetch<EventsList>(site, `/v1/events?${eventsQuery(filter, page, pageSize)}`, { signal, fallback });
 
 /** Which delivery an action is about. */
 export interface DeliveryKey {
@@ -88,14 +87,14 @@ export interface DeliveryKey {
 }
 
 export const retryEvent = (site: Site, key: DeliveryKey, fallback?: string) =>
-	adminFetch(site, adminApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/retry`), {
+	adminFetch(site, `/v1/events/${encodeURIComponent(key.eventId)}/retry`, {
 		method: "POST",
 		json: { subscriber: key.subscriber },
 		fallback,
 	});
 
 export const dismissEvent = (site: Site, key: DeliveryKey, fallback?: string) =>
-	adminFetch(site, adminApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/dismiss`), {
+	adminFetch(site, `/v1/events/${encodeURIComponent(key.eventId)}/dismiss`, {
 		method: "POST",
 		json: { subscriber: key.subscriber },
 		fallback,
@@ -103,10 +102,10 @@ export const dismissEvent = (site: Site, key: DeliveryKey, fallback?: string) =>
 
 /** Sends the deliveries that are due: pending ones and failed ones whose next attempt has come. */
 export const retryAllEvents = (site: Site, fallback?: string) =>
-	adminFetch<RetryAllResult>(site, adminApiUrl("/v1/events/retry"), { method: "POST", json: {}, fallback });
+	adminFetch<RetryAllResult>(site, "/v1/events/retry", { method: "POST", json: {}, fallback });
 
 /** Number of failed and dead deliveries, for the sidebar badge. */
 export async function countFailedEvents(site: Site, signal?: AbortSignal): Promise<number> {
-	const data = await adminFetch<EventsList>(site, adminApiUrl("/v1/events?limit=1"), { signal });
+	const data = await adminFetch<EventsList>(site, "/v1/events?limit=1", { signal });
 	return data.counts.failed + data.counts.dead;
 }

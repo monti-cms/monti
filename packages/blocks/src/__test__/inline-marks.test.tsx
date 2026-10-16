@@ -1,3 +1,4 @@
+import { AdminComponentsProvider } from "@monti-cms/admin";
 import { buildEditorExtensions, CmsEditor } from "@monti-cms/admin/editor";
 import { analyze, serialize, toDocument } from "@monti-cms/mdx/format";
 import { readSamples } from "@monti-cms/mdx/testing";
@@ -6,13 +7,13 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { CodeRefProvider, codeRefMarkExtension } from "../code-ref/provider";
-import { ColorProvider, colorMarkExtension } from "../color/provider";
+import { codeRefComponents, codeRefMarkExtension } from "../code-ref/provider";
+import { colorComponents, colorMarkExtension } from "../color/provider";
 import { docOfMdx, mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 import { renderSite as site } from "../test/render-config";
 import { WithSite } from "../test/site";
 import { tooltipMessages } from "../tooltip/messages";
-import { TooltipProvider, tooltipMarkExtension } from "../tooltip/provider";
+import { tooltipComponents, tooltipMarkExtension } from "../tooltip/provider";
 
 /**
  * Inline marks of the block extensions (tooltip, code ref, text color). The core editor does not know the mark names; it only renders the shapes and tools the extensions register.
@@ -40,11 +41,11 @@ const MARKS = { tooltip: tooltipExtension, "code-ref": codeRefMarkExtension, col
 /** Admin UI with all three mark extensions added, like the reference blog setup. */
 const WithMarks = ({ children }: { children: ReactNode }) => (
 	<WithSite>
-		<TooltipProvider>
-			<CodeRefProvider>
-				<ColorProvider>{children}</ColorProvider>
-			</CodeRefProvider>
-		</TooltipProvider>
+		<AdminComponentsProvider components={tooltipComponents(site)}>
+			<AdminComponentsProvider components={codeRefComponents}>
+				<AdminComponentsProvider components={colorComponents}>{children}</AdminComponentsProvider>
+			</AdminComponentsProvider>
+		</AdminComponentsProvider>
 	</WithSite>
 );
 

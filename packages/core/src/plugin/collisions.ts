@@ -63,10 +63,6 @@ export function checkPluginPages(pages: readonly { readonly plugin: string; read
 	return list.issues;
 }
 
-/** Throws a {@link ConfigError} if a plugin Tools page is empty or collides. */
-export const assertPluginPagesFree = (pages: readonly { readonly plugin: string; readonly path: string }[]): void =>
-	throwIssues(CONFIG_SOURCE, checkPluginPages(pages));
-
 /** `[name]` segments with different names but the same shape count as the same route. */
 const shape = (pattern: string) =>
 	pattern

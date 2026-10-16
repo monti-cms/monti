@@ -31,7 +31,7 @@ pnpm 12는 esbuild 설치 스크립트를 허락하지 않으면 설치를 멈�
 | `monti.schema.ts` | 사이트의 데이터이며 `defineSchema({ ... })` 리터럴이다. 코어 README의 스키마 파일 형식("스키마 파일")을 따른다: 컬렉션(`post`·`memo`·`category`·`tag`·`collection`), 작업 기록 필드, SEO 필드(평범한 필드로), 레이아웃, 언어, 시간대, 시드 템플릿, 관리자 경로 `admin.path: "/studio"`, 주소 규칙 `site.localePrefix: "always"`(`/ko/posts/…`, `/en/posts/…`), 미리보기 언어는 경로(`previewLocaleParam: false`). `defineSchema`가 타입을 주므로 에디터가 자동 완성하고, `cms.read`와 테마가 컬렉션 이름과 컬렉션별 메타데이터를 알며 손으로 쓴 타입은 없다. 평범한 데이터로 남아 있는 동안 관리자 스키마 화면이 파일 전체를 다시 쓴다(주석은 사라진다) |
 | `monti.config.ts` | 하나뿐인 설정 파일이자 CMS 인스턴스: `cms = defineConfig({ schema, plugins, database, auth })`를 내보낸다(`defineConfig`·`postgres`는 `@monti-cms/core/server`, `auth`·`github`는 `@monti-cms/auth`). 플러그인 목록은 기능마다 한 줄이다(지시문 표기의 `mdx`, 각 블록, `seo()`, `ai()`, `wordList()`, 꺼 둔 `gitSync()`). `site.url`은 `SITE_URL`에서 읽는다(`defineConfig`의 관례). DB·로그인·비밀 값은 환경 변수에서 온다(`.env.example`). 관리자·API 라우트·사이트 페이지(`cms.read.*`)·`monti` 명령이 모두 여기서 `cms`를 불러온다. 서버 전용이라 브라우저에서 불러오면 오류가 나고, `"use client"` 파일이 이것을 (직접 또는 다른 파일을 거쳐) 불러오면 `pnpm exec monti doctor`가 실패한다. `next dev`도 같은 경우에 경고한다 |
 | `app/studio/` | 관리자 화면: `layout.tsx`(미리 만든 `@monti-cms/admin/styles.css`와 `@monti-cms/blocks/styles.css`를 불러오고 `CmsAdminLayout`을 그린다)와 `[[...path]]/page.tsx`(`CmsAdminPage`를 그린다). `@monti-cms/nextjs/admin`을 쓴다. 화면을 옮길 때마다 관리자가 다시 마운트되지 않도록 레이아웃을 페이지와 분리했다(nextjs README "파일") |
-| `plugins/word-list/` | 관리자 확장 예시로, 직접 만든 맞춤법 검사를 플러그인으로 썼다: `index.ts`(관리자 쪽을 지정하는 `definePlugin`), `admin.ts`(`defineAdminPlugin({ Provider })`), `provider.tsx`(`AdminComponentsProvider`로 관리자를 감싸는 클라이언트 컴포넌트). `monti.config.ts`의 `plugins: [...]`에 한 줄로 들어간다 |
+| `plugins/word-list/` | 관리자 확장 예시로, 직접 만든 맞춤법 검사를 플러그인으로 썼다: `index.ts`(관리자 쪽을 지정하는 `definePlugin`)와 `admin.tsx`(`"use client"` 모듈: 검사기와 `defineAdminPlugin({ components: { textCheckers: [...] } })`). `monti.config.ts`의 `plugins: [...]`에 한 줄로 들어간다 |
 | `app/(site)/[locale]/posts/`, `app/(site)/preview/`, `components/post-view.tsx`, `post-meta.tsx`, `pagination.tsx` | 글 목록, 글, 초안 미리보기 페이지. 설치한 레지스트리 항목이 아니라 평범한 앱 코드입니다(앞으로의 스타터 템플릿). `cms.read`(`listEntries`, `getEntry`, `previewEntry`)로 읽고, 본문은 `ArticleBody`로 그리며, 다른 Next 페이지처럼 `notFound()`와 `permanentRedirect()`를 씁니다. 이 사이트는 `/ko/...` 주소를 쓰므로 페이지가 `params.locale`을 읽습니다. `cacheComponents`가 꺼져 있으면 없는 글은 진짜 404, 옛 주소는 진짜 308입니다. 켜져 있으면(여기처럼) Next가 `noindex` 페이지와 클라이언트 쪽 리다이렉트를 주며, `pnpm example:check`는 엄격한 상태 코드를 옵션을 끈 빌드에서만 확인합니다. 블록에는 `components`가 필요 없습니다. 플러그인이 공개 컴포넌트를 가져옵니다. `proxy.ts`는 없습니다(docs/recipes/strict-status.md에 예가 있습니다) |
 | `app/(site)/[locale]/memos/` | 메모 목록과 메모 페이지. 같은 방식으로 `cms.read`와 `ArticleBody`로 썼습니다 |
 | `components/article-body.tsx` | 글 본문. 문서를 `CmsContent`로 그리고 목차를 선택적으로 붙입니다. 글 페이지와 메모 페이지가 쓰는 평범한 앱 코드이며 자유롭게 고쳐도 됩니다. 가져올 때 쓰는 `@/*` 별칭이 `tsconfig.json`에 있습니다 |
@@ -58,7 +58,7 @@ const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof callo
 <CmsContent cms={cms} entry={entry} components={{ blocks: { callout: PublicSiteCallout } }} />;
 ```
 
-관리자 편집기에서는 블록 뷰가 같은 컴포넌트로 편집 가능한 본문을 감싼다(`plugins/site-callout/`, `monti.config.ts`에 `siteCallout()` 한 줄, `plugins/word-list/`와 같은 방식으로 등록). `useBlockEditor()`, `BlockFrame`, `Content`는 `@monti-cms/admin/hooks`에서, `AttributeInput`과 `ContainerToolbar`는 `@monti-cms/admin/blocks`에서 가져온다.
+관리자 편집기에서는 블록 뷰가 같은 컴포넌트로 편집 가능한 본문을 감싼다(`plugins/site-callout/`, `monti.config.ts`에 `siteCallout()` 한 줄, `plugins/word-list/`와 같은 방식으로 등록). `useBlockEditor()`, `BlockFrame`, `Content`는 `@monti-cms/admin`에서, `AttributeInput`과 `ContainerToolbar`는 `@monti-cms/admin/blocks`에서 가져온다.
 
 ```tsx
 function SiteCalloutView() {
@@ -74,7 +74,7 @@ function SiteCalloutView() {
 	);
 }
 
-// provider.tsx ("use client"): <AdminComponentsProvider components={{ blockViews: { callout: SiteCalloutView } }}>
+export default defineAdminPlugin({ components: { blockViews: { callout: SiteCalloutView } } }); // admin.tsx, "use client" 모듈
 ```
 
 ## Git 동기화 (기본은 꺼 둠)

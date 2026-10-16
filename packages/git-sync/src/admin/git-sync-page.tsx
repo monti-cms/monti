@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText, useCmsMutation } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin";
 import {
 	Alert,
 	AlertDescription,

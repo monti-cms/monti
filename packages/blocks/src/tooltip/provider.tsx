@@ -1,6 +1,6 @@
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
+import type { AdminComponents } from "@monti-cms/admin";
 import {
 	addedMarkName,
 	allowsMark,
@@ -13,10 +13,9 @@ import {
 	MarkTextPopover,
 	removeInlineMark,
 } from "@monti-cms/admin/editor";
-import { type Translator, useTranslator } from "@monti-cms/core/site";
+import { type Site, type Translator, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { MessageSquareMore, Pencil, X } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
 import { keywordList } from "../shared/text";
 import { tooltipBlock } from "./definition";
 import { tooltipMessages } from "./messages";
@@ -140,9 +139,7 @@ export const tooltipMarkExtension = (t: TooltipText): EditorMarkExtension => ({
 	],
 });
 
-/** Registers the tooltip mark's editor display, format tool, bubble, and slash menu in the admin UI. */
-export function TooltipProvider({ children }: { children: ReactNode }) {
-	const t = useTranslator(tooltipMessages);
-	const components = useMemo<AdminComponents>(() => ({ marks: { [tooltipBlock.name]: tooltipMarkExtension(t) } }), [t]);
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+/** The tooltip mark's editor display, format tool, bubble and slash menu, in the admin language of the site. */
+export const tooltipComponents = (site: Site): AdminComponents => ({
+	marks: { [tooltipBlock.name]: tooltipMarkExtension(site.createTranslator(tooltipMessages)) },
+});

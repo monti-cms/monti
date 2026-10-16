@@ -136,14 +136,14 @@ export const bannerBlock = defineBlock({ name: "banner", syntax: { kind: "contai
 
 // Plugin: the block and the admin side (optional)
 export const banner = () =>
-	definePlugin({ name: "banner", options: {}, blocks: [bannerBlock], admin: () => import("./banner/admin") });
+	definePlugin({ name: "banner", blocks: [bannerBlock], admin: () => import("./banner/admin") });
 
-// banner/admin.ts: a provider that supplies the edit screen (blockViews, built on useBlockEditor and Content)
-export default defineAdminPlugin({ Provider: BannerProvider });
+// banner/admin.tsx ("use client"): the edit screen (blockViews, built on useBlockEditor and Content) and the menu icon, declared
+export default defineAdminPlugin({ components: { blockViews: { banner: BannerView }, icons: { flag: Flag } } });
 ```
 
 Without an edit screen, the block is edited with the admin's default box. If the menu icon (`editor.icon`) is not among the admin package's default icons,
-register it with `icons` in the provider (all blocks in this package do so). Mark translatable attributes (title, tab name) with `translatable: true`. See "Body blocks" in the `@monti-cms/core` README and
+declare it in `icons` of the same `components` (all blocks in this package do so). Mark translatable attributes (title, tab name) with `translatable: true`. See "Body blocks" in the `@monti-cms/core` README and
 "Block edit screens" in the `@monti-cms/admin` README for details.
 
 ## Development

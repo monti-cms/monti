@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText } from "@monti-cms/admin/api";
+import { errorText } from "@monti-cms/admin";
 import { Button, Spinner } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
 import { useSite, useTranslator } from "@monti-cms/core/site";

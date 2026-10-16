@@ -1,5 +1,5 @@
-import { defineBlockAdmin } from "../shared/define-block-admin";
-import { CollapsibleProvider } from "./provider";
+import { defineAdminPlugin } from "@monti-cms/admin";
+import { collapsibleComponents } from "./provider";
 
 /** Admin UI side of the collapsible block plugin. Registers the whole editing view (`blockViews`). */
-export default defineBlockAdmin(CollapsibleProvider);
+export default defineAdminPlugin({ components: collapsibleComponents });
