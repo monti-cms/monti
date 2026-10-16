@@ -31,20 +31,28 @@ export const canTransition = (action: LifecycleAction, status: EntryStatus): boo
 
 export function assertTransitionAllowed(action: LifecycleAction, status: EntryStatus, version: number): void {
 	if (!canTransition(action, status)) {
-		throw new CmsError(`Cannot change status from ${status}`, "invalid_status", { serverVersion: version });
+		throw new CmsError(`Cannot change status from ${status}`, "invalid_status", {
+			serverVersion: version,
+			notice: { key: `entry.${action}.status` },
+		});
 	}
 }
 
 /** A trashed entry is restored before it is duplicated, as before it is edited. */
 export function assertDuplicable(status: EntryStatus): void {
 	if (status === "trashed")
-		throw new CmsError("A trashed entry must be restored before it is duplicated", "invalid_status");
+		throw new CmsError("A trashed entry must be restored before it is duplicated", "invalid_status", {
+			notice: { key: "entry.duplicate.trashed" },
+		});
 }
 
 /** Record collections (tags, categories, ...) have no archive. */
 export function assertArchivable(site: Site, collection: string, version: number): void {
 	if (site.isItemCollection(collection)) {
-		throw new CmsError("Record collections cannot be archived", "invalid_status", { serverVersion: version });
+		throw new CmsError("Record collections cannot be archived", "invalid_status", {
+			serverVersion: version,
+			notice: { key: "entry.archive.record" },
+		});
 	}
 }
 
@@ -68,7 +76,10 @@ export function assertRestoreSnapshot(snapshot: unknown): void {
 /** Only a trashed entry can be deleted for good. */
 export function assertDeletable(status: EntryStatus, version: number): void {
 	if (status !== "trashed") {
-		throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", { serverVersion: version });
+		throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", {
+			serverVersion: version,
+			notice: { key: "entry.delete.not_trashed" },
+		});
 	}
 }
 

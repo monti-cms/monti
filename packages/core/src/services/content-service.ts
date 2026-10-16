@@ -145,12 +145,18 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 		 * If called on a translation, it is created from that group's source.
 		 */
 		createTranslation: async (params: { sourceId: string; locale: string }): Promise<WriteResult> => {
-			if (!site.isLocale(params.locale)) throw new ServiceError("invalid_input");
+			if (!site.isLocale(params.locale)) {
+				throw new ServiceError("invalid_input", undefined, undefined, {
+					notice: { key: "translation.locale_unknown", vars: { locale: params.locale } },
+				});
+			}
 			const picked = await storePort.getWorking({ entryId: params.sourceId });
 			const sourceId = picked.translationGroupId ?? params.sourceId;
 			const source = sourceId === params.sourceId ? picked : await storePort.getWorking({ entryId: sourceId });
 			if (!site.isCollection(source.collection) || site.isItemCollection(source.collection)) {
-				throw new ServiceError("invalid_input");
+				throw new ServiceError("invalid_input", undefined, undefined, {
+					notice: { key: "translation.not_translatable" },
+				});
 			}
 			// A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
 			// becomes translation notes (faded source text). Per-language values such as title and summary are emptied (the edit screen shows the source title as a placeholder).
@@ -185,9 +191,13 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 		duplicate: async (params: { id: string; title?: string }): Promise<WriteResult> => {
 			const source = await storePort.getWorking({ entryId: params.id });
 			assertDuplicable(source.status);
-			if (site.isItemCollection(source.collection)) throw new ServiceError("invalid_input");
+			if (site.isItemCollection(source.collection)) {
+				throw new ServiceError("invalid_input", undefined, undefined, { notice: { key: "entry.duplicate.record" } });
+			}
 			if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
-				throw new ServiceError("invalid_input");
+				throw new ServiceError("invalid_input", undefined, undefined, {
+					notice: { key: "entry.duplicate.translation" },
+				});
 			}
 			const metadata =
 				params.title === undefined

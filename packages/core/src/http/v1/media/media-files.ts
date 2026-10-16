@@ -2,11 +2,28 @@ import { type AllowedFileMime, extensionFor, isImageType, MEDIA_TYPES, sniffFile
 import { detectImageDimensionsAndType } from "../../../media/image-detect";
 import type { AllowedMediaMime, MediaStore } from "../../../media/store";
 import type { Site } from "../../../site";
-import { CmsError } from "../error-handler";
+import { CmsError, type NoticeRef } from "../error-handler";
 
 export const UPLOAD_URL_TTL_SECONDS = 600;
 
 export { extensionFor };
+
+/** File types as a person knows them (`JPG, PNG, PDF`: the first extension of each type, in capitals), for a notice that lists what is allowed. */
+export function typeNames(mimeTypes: readonly string[]): string {
+	const names = mimeTypes.map((mime) =>
+		(mime in MEDIA_TYPES ? extensionFor(mime as keyof typeof MEDIA_TYPES) : mime).toUpperCase(),
+	);
+	return [...new Set(names)].join(", ");
+}
+
+/** A size limit as a person reads it (`10 MB`, `2.5 MB`). */
+export const megabytes = (bytes: number): string => `${Number((bytes / 1024 / 1024).toFixed(1))} MB`;
+
+/** The notice of a file that is over the size limit. */
+export const sizeNotice = (limit: number): NoticeRef => ({
+	key: "media.upload.size",
+	vars: { limit: megabytes(limit) },
+});
 
 export interface InspectedFile {
 	head: NonNullable<Awaited<ReturnType<MediaStore["headFile"]>>>;
@@ -37,10 +54,17 @@ export async function inspectUploadedFile(
 
 	if (declared && !isImageType(declared)) {
 		if (!(site.api.ALLOWED_FILE_MIME_TYPES as readonly string[]).includes(declared)) {
-			throw new CmsError(`File type ${declared} is not allowed`, "unsupported_media_type");
+			throw new CmsError(`File type ${declared} is not allowed`, "unsupported_media_type", {
+				notice: {
+					key: "media.upload.type",
+					vars: { types: typeNames([...site.api.ALLOWED_IMAGE_MIME_TYPES, ...site.api.ALLOWED_FILE_MIME_TYPES]) },
+				},
+			});
 		}
 		if (head.contentLength > site.api.MAX_FILE_BYTES) {
-			throw new CmsError(`Uploaded file exceeds ${site.api.MAX_FILE_BYTES} bytes`, "payload_too_large");
+			throw new CmsError(`Uploaded file exceeds ${site.api.MAX_FILE_BYTES} bytes`, "payload_too_large", {
+				notice: sizeNotice(site.api.MAX_FILE_BYTES),
+			});
 		}
 		const mimeType = declared as AllowedFileMime;
 		const sniff = MEDIA_TYPES[mimeType].sniffBytes;
@@ -52,18 +76,24 @@ export async function inspectUploadedFile(
 					: (await mediaStore.readFile({ key: stagingKey, maxBytes: head.contentLength })).subarray(0, sniff)
 				: new Uint8Array();
 		if (!sniffFile(bytes, mimeType)) {
-			throw new CmsError(`Uploaded file is not a valid ${mimeType} file`, "unsupported_media_type");
+			throw new CmsError(`Uploaded file is not a valid ${mimeType} file`, "unsupported_media_type", {
+				notice: { key: "media.upload.content_file", vars: { type: typeNames([mimeType]) } },
+			});
 		}
 		return { head, detected: { mimeType, width: null, height: null } };
 	}
 
 	if (head.contentLength > site.api.MAX_MEDIA_BYTES) {
-		throw new CmsError(`Uploaded image exceeds ${site.api.MAX_MEDIA_BYTES} bytes`, "payload_too_large");
+		throw new CmsError(`Uploaded image exceeds ${site.api.MAX_MEDIA_BYTES} bytes`, "payload_too_large", {
+			notice: sizeNotice(site.api.MAX_MEDIA_BYTES),
+		});
 	}
 	const bytes = await mediaStore.readFile({ key: stagingKey, maxBytes: site.api.MAX_MEDIA_BYTES + 1 });
 	const detected = detectImageDimensionsAndType(bytes);
 	if (!detected || !(site.api.ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(detected.mimeType)) {
-		throw new CmsError("Uploaded file is not a valid or allowed image format", "unsupported_media_type");
+		throw new CmsError("Uploaded file is not a valid or allowed image format", "unsupported_media_type", {
+			notice: { key: "media.upload.content_image", vars: { types: typeNames(site.api.ALLOWED_IMAGE_MIME_TYPES) } },
+		});
 	}
 	if (detected.width * detected.height > site.api.MAX_MEDIA_PIXELS) {
 		throw new CmsError(`Image exceeds ${site.api.MAX_MEDIA_PIXELS} pixels`, "too_many_pixels");
@@ -78,20 +108,19 @@ export function attachmentDisposition(filename: string): string {
 }
 
 /** The extension of a file name (lowercase, with the dot), or an empty string. */
-const extensionOf = (filename: string) => /\.[^./\\]{1,16}$/.exec(filename)?.[0]?.toLowerCase() ?? "";
+export const extensionOf = (filename: string) => /\.[^./\\]{1,16}$/.exec(filename)?.[0]?.toLowerCase() ?? "";
 
 /**
- * Why a new file name is not acceptable, or `null`. The name is a display and download name, so it stays one plain name (no path, no control
+ * Why a new file name is not acceptable (the notice for the person), or `null`. The name is a display and download name, so it stays one plain name (no path, no control
  * characters), has something before the extension, and keeps the extension of the file: the stored type does not change with a rename.
  */
-export function renameProblem(current: string, next: string): string | null {
+export function renameProblem(current: string, next: string): NoticeRef | null {
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this rejects
-	if (/[/\\\u0000-\u001f\u007f]/.test(next) || next === "." || next === "..") {
-		return "A file name can't contain slashes or control characters";
-	}
+	if (/[/\\\u0000-\u001f\u007f]/.test(next) || next === "." || next === "..") return { key: "media.rename.slash" };
 	const extension = extensionOf(current);
-	if (extensionOf(next) !== extension) return `The file name must keep the extension ${extension || "(none)"}`;
-	if (next.slice(0, next.length - extension.length).trim() === "")
-		return "The file name needs a name before the extension";
+	if (extensionOf(next) !== extension) {
+		return extension ? { key: "media.rename.extension", vars: { extension } } : { key: "media.rename.no_extension" };
+	}
+	if (next.slice(0, next.length - extension.length).trim() === "") return { key: "media.rename.empty" };
 	return null;
 }

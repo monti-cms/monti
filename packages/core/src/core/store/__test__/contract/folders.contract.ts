@@ -214,6 +214,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				selfErr = e;
 			}
 			expectCmsError(selfErr, "invalid_input");
+			expect((selfErr as CmsError).notice).toEqual({ key: "folder.cycle" });
 			const afterSelf = await store.listFolders({ collection: contentCollection });
 			expect(afterSelf).toEqual(beforeSelf);
 
@@ -226,6 +227,7 @@ export const foldersContract: ContractSuite = (factory) => {
 				descErr = e;
 			}
 			expectCmsError(descErr, "invalid_input");
+			expect((descErr as CmsError).notice).toEqual({ key: "folder.cycle" });
 			const afterDesc = await store.listFolders({ collection: contentCollection });
 			expect(afterDesc).toEqual(beforeDesc);
 

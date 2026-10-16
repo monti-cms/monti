@@ -36,6 +36,7 @@ export class AiError extends CmsError {
 
 	/** The raw words underneath, when there are any. */
 	get detail(): string | undefined {
-		return this.message === this.notice?.what ? undefined : this.message;
+		const notice = this.notice;
+		return notice && "what" in notice && this.message === notice.what ? undefined : this.message;
 	}
 }

@@ -18,7 +18,7 @@ const COLUMNS = ["id", "name", "doc", "version", "created_at", "updated_at"] as 
 
 const mapTemplateError = (err: unknown) =>
 	isUniqueViolation(err, ["body_templates_name_idx", "body_templates_pkey"])
-		? new CmsError("Template name already exists", "conflict")
+		? new CmsError("Template name already exists", "conflict", { notice: { key: "template.name_taken" } })
 		: err;
 
 /**
@@ -32,7 +32,9 @@ const storedTemplateDoc = (site: Site, value: unknown, previous?: StoredDocument
 	} catch {
 		throw new CmsError("Template body is not a stored document", "invalid_input");
 	}
-	if (size > MAX_DOC_BYTES) throw new CmsError("Template body is too large", "invalid_input");
+	if (size > MAX_DOC_BYTES) {
+		throw new CmsError("Template body is too large", "invalid_input", { notice: { key: "template.too_large" } });
+	}
 	const read = readStoredDocument(value, site);
 	if (!read) throw new CmsError("Template body is not a stored document", "invalid_input");
 	const doc = canonicalDocument(site, read);
@@ -61,7 +63,9 @@ export function createTemplateOps(ctx: StoreContext) {
 
 		createTemplate: async (data: { name: string; doc?: unknown }): Promise<BodyTemplate> => {
 			const name = (data.name || "").trim();
-			if (!name) throw new CmsError("Template name is required", "invalid_input");
+			if (!name) {
+				throw new CmsError("Template name is required", "invalid_input", { notice: { key: "template.name_empty" } });
+			}
 			const doc = storedTemplateDoc(site, data.doc === undefined ? emptyStoredDocument() : data.doc);
 			const now = new Date();
 			try {
@@ -95,7 +99,11 @@ export function createTemplateOps(ctx: StoreContext) {
 					if (cur.version !== params.expectedVersion)
 						throw new CmsError("Conflict", "conflict", { serverVersion: cur.version });
 					const name = params.name !== undefined ? params.name.trim() : cur.name;
-					if (!name) throw new CmsError("Template name cannot be empty", "invalid_input");
+					if (!name) {
+						throw new CmsError("Template name cannot be empty", "invalid_input", {
+							notice: { key: "template.name_empty" },
+						});
+					}
 
 					// A name-only update keeps the stored body as it is.
 					const doc =

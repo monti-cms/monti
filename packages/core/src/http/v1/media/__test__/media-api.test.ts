@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../test/site";
 import { AuthError } from "../../../../adapters/auth";
 import { fakeCms } from "../../../../cms";
+import { noticeMessages } from "../../../../core/error-notice";
 import { CmsError } from "../../../../core/store";
+import type { NoticeKey } from "../../../../core/store/errors";
+import type { MessageVars } from "../../../../i18n/define";
 import { routeCaller } from "../../../../testing";
 import { POST as handleCompleteHandler } from "../[id]/complete/route";
 import { DELETE as handleDeleteMediaHandler, PATCH as handlePatchMediaHandler } from "../[id]/route";
+import { renameProblem, typeNames } from "../media-files";
 import { GET as handleListMediaHandler } from "../route";
 import { POST as handleUploadsHandler } from "../uploads/route";
 
@@ -56,6 +60,16 @@ const cms = fakeCms({
 	verifyAdmin: () => mockVerifyAdmin(),
 });
 
+/** What the person reads for a notice key in the answer: the `message`, and the `fix` when the key has one. */
+const notice = (key: NoticeKey, vars?: MessageVars) => {
+	const t = cms.site.createTranslator(noticeMessages);
+	const fixKey = `${key}.fix`;
+	return {
+		message: t(key, vars),
+		...(fixKey in noticeMessages.messages.en ? { fix: t(fixKey as NoticeKey, vars) } : {}),
+	};
+};
+
 describe("Media Upload API Endpoints", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -100,6 +114,8 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(413);
+		const limit = `${cms.site.api.MAX_MEDIA_BYTES / 1024 / 1024} MB`;
+		expect((await res.json()).error).toMatchObject(notice("media.upload.size", { limit }));
 	});
 
 	it("POST /media/uploads rejects disallowed MIME types (SVG, PDF, text)", async () => {
@@ -119,6 +135,8 @@ describe("Media Upload API Endpoints", () => {
 
 		const res = await handleUploads(req, { cms });
 		expect(res.status).toBe(415);
+		const types = typeNames([...cms.site.api.ALLOWED_IMAGE_MIME_TYPES, ...cms.site.api.ALLOWED_FILE_MIME_TYPES]);
+		expect((await res.json()).error).toMatchObject(notice("media.upload.type", { types }));
 	});
 
 	it("POST /media/uploads creates pending asset and returns presigned PUT URL", async () => {
@@ -567,9 +585,17 @@ describe("attachment upload", () => {
 			201,
 		);
 		expect((await upload({ filename: "main.ts", mimeType: "text/plain", byteSize: 100 })).status).toBe(201);
-		expect((await upload({ filename: "run.exe", mimeType: "text/plain", byteSize: 100 })).status).toBe(415);
+		const mismatch = await upload({ filename: "run.exe", mimeType: "text/plain", byteSize: 100 });
+		expect(mismatch.status).toBe(415);
+		expect((await mismatch.json()).error).toMatchObject(notice("media.upload.extension", { extension: ".exe" }));
+		const noExtension = await upload({ filename: "README", mimeType: "text/plain", byteSize: 100 });
+		expect((await noExtension.json()).error).toMatchObject(notice("media.upload.no_extension"));
 		expect((await upload({ filename: "page.html", mimeType: "text/html", byteSize: 100 })).status).toBe(415);
-		expect((await upload({ filename: "big.zip", mimeType: "application/zip", byteSize: 60_000_000 })).status).toBe(413);
+		const big = await upload({ filename: "big.zip", mimeType: "application/zip", byteSize: 60_000_000 });
+		expect(big.status).toBe(413);
+		expect((await big.json()).error).toMatchObject(
+			notice("media.upload.size", { limit: `${cms.site.api.MAX_FILE_BYTES / 1024 / 1024} MB` }),
+		);
 		expect(mockCreateMediaAsset).toHaveBeenCalledWith(
 			expect.objectContaining({
 				filename: "보고서.pdf",
@@ -643,6 +669,9 @@ describe("attachment upload", () => {
 			},
 		);
 		expect(res.status).toBe(415);
+		expect((await res.json()).error).toMatchObject(
+			notice("media.upload.content_file", { type: typeNames(["text/plain"]) }),
+		);
 		expect(mockFailMediaAsset).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000102");
 	});
 
@@ -671,20 +700,29 @@ describe("attachment upload", () => {
 		it("rejects a name that changes the extension, so the stored type cannot drift", async () => {
 			const res = await rename("sunset.pdf");
 			expect(res.status).toBe(400);
-			expect((await res.json()).error.code).toBe("invalid_input");
+			const { error } = await res.json();
+			expect(error.code).toBe("invalid_input");
+			expect(error).toMatchObject(notice("media.rename.extension", { extension: ".png" }));
 			expect(mockUpdateMediaMetadata).not.toHaveBeenCalled();
 		});
 
 		it.each([
-			"a/b.png",
-			"a\\b.png",
-			"line\nbreak.png",
-			".png",
-			"  .png",
-			"..",
-		])("rejects the name %j as it is not one plain name", async (name) => {
-			expect((await rename(name)).status).toBe(400);
+			["a/b.png", "media.rename.slash"],
+			["a\\b.png", "media.rename.slash"],
+			["line\nbreak.png", "media.rename.slash"],
+			["..", "media.rename.slash"],
+			[".png", "media.rename.empty"],
+			["  .png", "media.rename.empty"],
+		] as const)("rejects the name %j as it is not one plain name, and says why", async (name, key) => {
+			const res = await rename(name);
+			expect(res.status).toBe(400);
+			expect((await res.json()).error).toMatchObject(notice(key));
 			expect(mockUpdateMediaMetadata).not.toHaveBeenCalled();
+		});
+
+		it("says a file without an extension cannot get one", () => {
+			expect(renameProblem("README", "README.md")).toEqual({ key: "media.rename.no_extension" });
+			expect(renameProblem("README", "NOTES")).toBeNull();
 		});
 
 		it("answers 404 for a file that does not exist", async () => {
