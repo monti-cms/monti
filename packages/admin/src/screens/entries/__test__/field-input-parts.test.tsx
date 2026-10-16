@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { CmsAdminComponentsProvider, type FieldInputParts } from "../../../admin-components";
+import { AdminComponentsProvider, type FieldInputParts } from "../../../admin-components";
 import { renderWithSite as render } from "../../../test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
 import { AdminFeaturesProvider } from "../../shared/admin-features";
@@ -43,11 +43,11 @@ function renderFields(
 ) {
 	render(
 		<TooltipProvider>
-			<CmsAdminComponentsProvider components={{ fieldInputs }}>
+			<AdminComponentsProvider components={{ fieldInputs }}>
 				<EntryFormProvider value={{ collection: target.collection, form, setForm: onChange }}>
 					<SchemaFields include={(group) => group.fields.includes(target.name)} />
 				</EntryFormProvider>
-			</CmsAdminComponentsProvider>
+			</AdminComponentsProvider>
 		</TooltipProvider>,
 	);
 	return onChange;

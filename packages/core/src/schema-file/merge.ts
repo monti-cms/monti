@@ -1,4 +1,4 @@
-import { CONFIG_SOURCE, type Issue, pathOf, SCHEMA_SOURCE_NAME, throwIssues } from "../config/check/issue";
+import { CONFIG_SOURCE, type ConfigIssue, pathOf, SCHEMA_SOURCE_NAME, throwIssues } from "../config/check/issue";
 import type { SiteConfig } from "../config/define";
 import { parseSchemaFile } from "./format";
 
@@ -45,7 +45,7 @@ export function resolveSchemaConfig(config: CodeConfig, defaults: ConfigDefaults
 	const file = parseSchemaFile(option, SCHEMA_SOURCE_NAME);
 	const source = SCHEMA_SOURCE_NAME;
 
-	const issues: Issue[] = [];
+	const issues: ConfigIssue[] = [];
 	for (const key of ["locales", "defaultLocale", "schemaVersion"] as const) {
 		if (code[key] !== undefined) {
 			issues.push({

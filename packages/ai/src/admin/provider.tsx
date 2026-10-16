@@ -1,13 +1,13 @@
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { AiSlotProvider } from "./ai-slot-provider";
 import { useAiTranslateExtension } from "./ai-translate";
 import { useAiWriteExtension } from "./ai-write";
 
-const components: CmsAdminComponents = {
+const components: AdminComponents = {
 	editorExtensions: [useAiTranslateExtension, useAiWriteExtension],
 	// Icons picked by name by sidebar items (`nav`) and slash menu items.
 	icons: { sparkles: Sparkles },
@@ -17,7 +17,7 @@ const components: CmsAdminComponents = {
 export function AiAdminProvider({ children }: { children: ReactNode }) {
 	return (
 		<AiSlotProvider>
-			<CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>
+			<AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>
 		</AiSlotProvider>
 	);
 }

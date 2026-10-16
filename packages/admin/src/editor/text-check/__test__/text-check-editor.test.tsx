@@ -7,7 +7,7 @@ import type { PluginKey } from "@tiptap/pm/state";
 import { useMemo } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { CmsAdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
+import { AdminComponentsProvider, useEditorExtensions } from "../../../admin-components";
 import { pressOption } from "../../../test/base-ui";
 import { docOf } from "../../../test/mdx";
 import { renderWithSite } from "../../../test/site";
@@ -103,7 +103,7 @@ const renderEditor = async (content: string, checkers: readonly TextChecker[], l
 	let editor: Editor | null = null;
 	const onChange = vi.fn();
 	renderWithSite(
-		<CmsAdminComponentsProvider components={{ textCheckers: checkers }}>
+		<AdminComponentsProvider components={{ textCheckers: checkers }}>
 			<Harness
 				content={content}
 				locale={locale}
@@ -112,7 +112,7 @@ const renderEditor = async (content: string, checkers: readonly TextChecker[], l
 					editor = ready;
 				}}
 			/>
-		</CmsAdminComponentsProvider>,
+		</AdminComponentsProvider>,
 	);
 	await screen.findByRole("toolbar", { name: tEditor("toolbar.format") });
 	await waitFor(() => expect(editor).not.toBeNull());
@@ -152,11 +152,11 @@ describe("spellcheck button", () => {
 	it("adds one button per checker when several extensions provide checkers", async () => {
 		const other = defineTextChecker({ ...fakeChecker(), id: "other", label: "다른 검사" });
 		renderWithSite(
-			<CmsAdminComponentsProvider components={{ textCheckers: [fakeChecker()] }}>
-				<CmsAdminComponentsProvider components={{ textCheckers: [other] }}>
+			<AdminComponentsProvider components={{ textCheckers: [fakeChecker()] }}>
+				<AdminComponentsProvider components={{ textCheckers: [other] }}>
 					<Harness content={"틀린말\n"} locale="ko" onChange={vi.fn()} onReady={() => {}} />
-				</CmsAdminComponentsProvider>
-			</CmsAdminComponentsProvider>,
+				</AdminComponentsProvider>
+			</AdminComponentsProvider>,
 		);
 		await screen.findByRole("toolbar", { name: tEditor("toolbar.format") });
 		await waitFor(() => expect(checkButton()).not.toBeNull());

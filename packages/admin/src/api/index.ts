@@ -1,8 +1,8 @@
 /** The admin API for screens and plugins: the request helper, its errors, and the mutation hook. */
 export {
+	adminFetch,
 	apiErrorOf,
 	CmsApiError,
-	cmsFetch,
 	type ErrorNotice,
 	errorNotice,
 	errorText,

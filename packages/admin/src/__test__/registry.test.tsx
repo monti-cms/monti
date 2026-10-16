@@ -2,10 +2,10 @@ import type { StoredDocument } from "@monti-cms/core/document";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+	AdminComponentsProvider,
 	type BrowserFormat,
-	CmsAdminComponentsProvider,
 	type SourcePanelRegistration,
-	useCmsAdminComponents,
+	useAdminComponents,
 	useFormat,
 	useSourceFormat,
 } from "../admin-components";
@@ -20,7 +20,7 @@ const fakeFormat = (name: string): BrowserFormat => ({
 const panel = (format: string): SourcePanelRegistration => ({ format, label: `${format} panel`, Panel: () => null });
 
 function Probe() {
-	const components = useCmsAdminComponents();
+	const components = useAdminComponents();
 	const found = useFormat("alpha");
 	const missing = useFormat("nothing");
 	const source = useSourceFormat();
@@ -44,15 +44,11 @@ describe("the admin components registry", () => {
 
 	it("adds source panels and formats up across nested providers, outer ones first", () => {
 		render(
-			<CmsAdminComponentsProvider
-				components={{ sourcePanels: [panel("alpha")], formats: { alpha: fakeFormat("alpha") } }}
-			>
-				<CmsAdminComponentsProvider
-					components={{ sourcePanels: [panel("beta")], formats: { beta: fakeFormat("beta") } }}
-				>
+			<AdminComponentsProvider components={{ sourcePanels: [panel("alpha")], formats: { alpha: fakeFormat("alpha") } }}>
+				<AdminComponentsProvider components={{ sourcePanels: [panel("beta")], formats: { beta: fakeFormat("beta") } }}>
 					<Probe />
-				</CmsAdminComponentsProvider>
-			</CmsAdminComponentsProvider>,
+				</AdminComponentsProvider>
+			</AdminComponentsProvider>,
 		);
 		const result = probed();
 		expect(result.panels).toHaveLength(2);
@@ -62,34 +58,34 @@ describe("the admin components registry", () => {
 
 	it("finds a registered format by name, and gives undefined for any other name", () => {
 		render(
-			<CmsAdminComponentsProvider components={{ formats: { alpha: fakeFormat("alpha") } }}>
+			<AdminComponentsProvider components={{ formats: { alpha: fakeFormat("alpha") } }}>
 				<Probe />
-			</CmsAdminComponentsProvider>,
+			</AdminComponentsProvider>,
 		);
 		expect(probed()).toMatchObject({ found: "ALPHA", missing: true });
 	});
 
 	it("uses the format of the first registered panel as the source format", () => {
 		render(
-			<CmsAdminComponentsProvider
+			<AdminComponentsProvider
 				components={{
 					sourcePanels: [panel("beta")],
 					formats: { alpha: fakeFormat("alpha"), beta: fakeFormat("beta") },
 				}}
 			>
-				<CmsAdminComponentsProvider components={{ sourcePanels: [panel("alpha")] }}>
+				<AdminComponentsProvider components={{ sourcePanels: [panel("alpha")] }}>
 					<Probe />
-				</CmsAdminComponentsProvider>
-			</CmsAdminComponentsProvider>,
+				</AdminComponentsProvider>
+			</AdminComponentsProvider>,
 		);
 		expect(probed().source).toBe("beta");
 	});
 
 	it("has no source format without a registered panel", () => {
 		render(
-			<CmsAdminComponentsProvider components={{ formats: { alpha: fakeFormat("alpha") } }}>
+			<AdminComponentsProvider components={{ formats: { alpha: fakeFormat("alpha") } }}>
 				<Probe />
-			</CmsAdminComponentsProvider>,
+			</AdminComponentsProvider>,
 		);
 		expect(probed().source).toBeNull();
 	});

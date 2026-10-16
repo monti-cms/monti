@@ -2,9 +2,9 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import { useId, useState } from "react";
-import { useCmsAdminComponents } from "../../admin-components";
+import { useAdminComponents } from "../../admin-components";
 import type { TranslatorFor } from "../../translator";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { Textarea } from "../../ui/textarea";
 import { Labeled } from "../shared/labeled";
 import { orUndefined, Pick, type PickItem, TextInput, useSchemaEdit } from "./controls";
@@ -199,7 +199,7 @@ export function InputOptionsEditor({
 				onChange={(event) => setText(event.target.value)}
 				onBlur={commit}
 			/>
-			{bad && <FieldError>{t("field.inputOptionsBad")}</FieldError>}
+			{bad && <FormFieldError>{t("field.inputOptionsBad")}</FormFieldError>}
 		</Labeled>
 	);
 }
@@ -218,7 +218,7 @@ export function FieldCustomInputPicker({
 	onChangeOptions: (options: Obj | undefined) => void;
 }) {
 	const t = useTranslator(schemaFieldsMessages);
-	const { fieldInputs } = useCmsAdminComponents();
+	const { fieldInputs } = useAdminComponents();
 	const registered = Object.keys(fieldInputs ?? {});
 	const [customActive, setCustomActive] = useState(false);
 

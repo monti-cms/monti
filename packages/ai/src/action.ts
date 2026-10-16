@@ -1,4 +1,4 @@
-import { type Issue, IssueList, pathOf } from "@monti-cms/core";
+import { type ConfigIssue, IssueList, pathOf } from "@monti-cms/core";
 import type {
 	AiActionDefinition,
 	AiActionSource,
@@ -528,7 +528,11 @@ function findField(
 }
 
 /** Checks that the AI config matches the collection definitions, slots and result shapes. */
-export function checkAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): Issue[] {
+export function checkAiConfig(
+	ai: ResolvedAiConfig,
+	collections: CollectionsView,
+	blocks?: readonly string[],
+): ConfigIssue[] {
 	const list = new IssueList();
 	const bad = (path: string, code: string, message: string) => list.add(path, code, message);
 	const snippetKeys = Object.keys(ai.snippets ?? {});

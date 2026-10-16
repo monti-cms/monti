@@ -15,7 +15,7 @@ import { cmsSchemaExtensions } from "./tiptap-schema";
 /**
  * Editor extension assembly. Feature extensions (key handling, drag, plugins) are added to this list.
  * Schema nodes go in `tiptap-schema.ts`, core block nodes (image, file, math) in `block-views.ts`,
- * and CmsNode ↔ Tiptap conversion in `converters/`. The look of added text styles (`marks`) is provided by the admin extension (`CmsAdminComponents.marks`).
+ * and CmsNode ↔ Tiptap conversion in `converters/`. The look of added text styles (`marks`) is provided by the admin extension (`AdminComponents.marks`).
  * `allowance` is what the body's allowed list lets a writer add (`allowed.ts`); without it everything is allowed.
  */
 export function buildEditorExtensions(

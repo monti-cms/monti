@@ -38,7 +38,7 @@ export const seo = (options: SeoPluginOptions = {}) => {
 	return definePlugin({
 		name: SEO_PLUGIN_NAME,
 		options,
-		validate: checkSeoFields,
+		checkConfig: checkSeoFields,
 		admin: () => import("@monti-cms/seo/admin"),
 		contributes: { layout, fieldSets, ...(options.ai === false ? {} : { ai: seoAiContribution }) },
 	});

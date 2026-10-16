@@ -7,7 +7,7 @@ The snippets below are a sketch to adapt, not tested code.
 ## What you need to know
 
 1. **A view field** (`{ kind: "view", view: "reading-time" }`) stores no value. It draws, in its place in the properties panel, the screen registered under that name.
-2. **Admin components are registered by a plugin's admin side**: `definePlugin({ admin: () => import("./admin") })`, whose default export is `defineAdminPlugin({ Provider })`. The `Provider` is a `"use client"` component that wraps the admin and calls `CmsAdminComponentsProvider` with `fieldViews` ("Adding site components" in the [admin README](../../packages/admin/README.md)).
+2. **Admin components are registered by a plugin's admin side**: `definePlugin({ admin: () => import("./admin") })`, whose default export is `defineAdminPlugin({ Provider })`. The `Provider` is a `"use client"` component that wraps the admin and calls `AdminComponentsProvider` with `fieldViews` ("Adding site components" in the [admin README](../../packages/admin/README.md)).
 3. **The screen receives `{ collection, form, entry }`.** `form` is the entry as it is being edited, and its `form.doc` is the live body (a stored document), so the number follows the typing. `entry` is what the server last saved.
 4. **`useSite()`** gives the site (`site.DEFAULT_LOCALE`, ...) and **`toPlainText(site, doc)`** (`@monti-cms/core/site`) gives the readable text of a document in any notation.
 
@@ -18,7 +18,7 @@ The screen and its provider. `Intl.Segmenter` finds words in any language, so Ko
 ```tsx
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider, type FieldViewProps } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider, type FieldViewProps } from "@monti-cms/admin";
 import { toPlainText, useSite } from "@monti-cms/core/site";
 import type { ReactNode } from "react";
 
@@ -36,10 +36,10 @@ function ReadingTimeView({ form, entry }: FieldViewProps) {
 	return <p>{minutes} min read</p>;
 }
 
-const components: CmsAdminComponents = { fieldViews: { "reading-time": ReadingTimeView } }; // by the `view` name of the field
+const components: AdminComponents = { fieldViews: { "reading-time": ReadingTimeView } }; // by the `view` name of the field
 
 export function ReadingTimeProvider({ children }: { children: ReactNode }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }
 ```
 

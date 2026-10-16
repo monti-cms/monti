@@ -4,7 +4,7 @@ import { type Cms, createCms } from "../cms";
 import { buildSite, type CmsConfig, type CollectionsConfig, type SchemaCmsConfig } from "../config/define";
 import { problemError } from "../core/problem";
 import type { PublicApiOptions } from "../http/v1/public/options";
-import type { CmsPlugin } from "../plugin/define";
+import type { Plugin } from "../plugin/define";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
 import type { EventDeliveryOptions } from "../services/events";
 import type { WriteHooks } from "../services/hooks";
@@ -96,7 +96,7 @@ const isServerKey = (key: string): key is (typeof SERVER_KEYS)[number] =>
 export function defineConfig<
 	const Schema extends SchemaTypes,
 	const Collections extends CollectionsConfig = Record<never, never>,
-	const Plugins extends readonly CmsPlugin[] = readonly [],
+	const Plugins extends readonly Plugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
 >(
 	config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks> & MontiServerOptions,
@@ -104,7 +104,7 @@ export function defineConfig<
 export function defineConfig<
 	const Collections extends CollectionsConfig,
 	const Locale extends string,
-	const Plugins extends readonly CmsPlugin[] = readonly [],
+	const Plugins extends readonly Plugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
 >(
 	config: CmsConfig<Collections, Locale, Plugins, Blocks> & MontiServerOptions,

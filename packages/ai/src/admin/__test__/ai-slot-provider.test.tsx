@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { AdminComponentsProvider } from "@monti-cms/admin";
 import { TooltipProvider } from "@monti-cms/admin/kit";
 import { type AdminRouter, AdminRouterProvider } from "@monti-cms/admin/router";
 import { useSlot } from "@monti-cms/admin/slots";
@@ -121,11 +121,11 @@ describe("the body an action reads", () => {
 			<SiteWrapper site={testSite}>
 				<AdminRouterProvider router={hostRouter}>
 					<TooltipProvider>
-						<CmsAdminComponentsProvider components={withFormat ? { formats: { mdx: mdxBrowserFormat } } : {}}>
+						<AdminComponentsProvider components={withFormat ? { formats: { mdx: mdxBrowserFormat } } : {}}>
 							<AiSlotProvider>
 								<Body />
 							</AiSlotProvider>
-						</CmsAdminComponentsProvider>
+						</AdminComponentsProvider>
 					</TooltipProvider>
 				</AdminRouterProvider>
 			</SiteWrapper>,

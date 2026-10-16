@@ -5,10 +5,10 @@ import { cleanup, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	type CmsAdminComponents,
-	CmsAdminComponentsProvider,
+	type AdminComponents,
+	AdminComponentsProvider,
 	type ListCellProps,
-	useCmsAdminComponents,
+	useAdminComponents,
 } from "../../admin-components";
 import { renderInRouter as render } from "../../test/router";
 import { withSite } from "../../test/site";
@@ -59,7 +59,7 @@ const item = (id: string, fields: Partial<ListEntriesItem> = {}): ListEntriesIte
 	...fields,
 });
 
-function renderTable(items: ListEntriesItem[], components: CmsAdminComponents = {}) {
+function renderTable(items: ListEntriesItem[], components: AdminComponents = {}) {
 	const props: ComponentProps<typeof AdminEntriesTable> = {
 		collection: "article",
 		items,
@@ -88,9 +88,9 @@ function renderTable(items: ListEntriesItem[], components: CmsAdminComponents = 
 	};
 	render(
 		withSite(
-			<CmsAdminComponentsProvider components={components}>
+			<AdminComponentsProvider components={components}>
 				<AdminEntriesTable {...props} />
-			</CmsAdminComponentsProvider>,
+			</AdminComponentsProvider>,
 			site,
 		),
 	);
@@ -180,17 +180,17 @@ describe("listCells extension", () => {
 		expect(within(rowOf(/first/)).getByTestId("status").textContent).toBe("state:draft");
 		cleanup();
 		render(
-			<CmsAdminComponentsProvider components={{ listCells: { status: Status } }}>
-				<CmsAdminComponentsProvider components={{ listCells: { format: Format } }}>
+			<AdminComponentsProvider components={{ listCells: { status: Status } }}>
+				<AdminComponentsProvider components={{ listCells: { format: Format } }}>
 					<Probe />
-				</CmsAdminComponentsProvider>
-			</CmsAdminComponentsProvider>,
+				</AdminComponentsProvider>
+			</AdminComponentsProvider>,
 		);
 		expect(screen.getByTestId("keys").textContent).toBe("status,format");
 	});
 });
 
 function Probe() {
-	const { listCells } = useCmsAdminComponents();
+	const { listCells } = useAdminComponents();
 	return <span data-testid="keys">{Object.keys(listCells ?? {}).join(",")}</span>;
 }

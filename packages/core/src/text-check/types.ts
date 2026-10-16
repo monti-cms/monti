@@ -1,6 +1,6 @@
 /**
  * Common shape of spelling and sentence check extensions. The core ships no checker at all. A site or extension builds the checkers it needs
- * and puts them in the admin extension point `textCheckers` (`CmsAdminComponentsProvider`), and the editor draws the buttons, underlines and result window.
+ * and puts them in the admin extension point `textCheckers` (`AdminComponentsProvider`), and the editor draws the buttons, underlines and result window.
  *
  * Positions are always UTF-16 positions within a paragraph (the check unit) (JS string indexes). A checker that gives byte, code point or sentence based positions
  * converts them on the checker side before returning.

@@ -13,11 +13,11 @@ import {
 	DropdownMenuTrigger,
 	EditorFooter,
 	EmptyState,
-	Field,
-	FieldError,
-	FieldGroup,
-	FieldLabel,
-	FieldTitle,
+	FormField,
+	FormFieldError,
+	FormFieldGroup,
+	FormFieldLabel,
+	FormFieldTitle,
 	IconButton,
 	Input,
 	isComposingKey,
@@ -976,8 +976,8 @@ function FeatureEditor({
 				</section>
 			) : (
 				<section aria-label={t("section.basics")} className="rounded-md border p-3">
-					<Field>
-						<FieldLabel htmlFor={ids.name}>{t("field.name")}</FieldLabel>
+					<FormField>
+						<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
 						<Input
 							id={ids.name}
 							value={spec.label ?? feature.label}
@@ -986,13 +986,13 @@ function FeatureEditor({
 							onChange={(event) => set({ label: event.target.value })}
 							className="h-8 text-xs md:text-xs"
 						/>
-					</Field>
+					</FormField>
 				</section>
 			)}
 
-			<FieldGroup className="gap-5">
-				<Field>
-					<FieldLabel htmlFor={ids.provider}>{t("field.connection")}</FieldLabel>
+			<FormFieldGroup className="gap-5">
+				<FormField>
+					<FormFieldLabel htmlFor={ids.provider}>{t("field.connection")}</FormFieldLabel>
 					<div className="flex min-w-0 items-center gap-2">
 						<OptionSelect
 							id={ids.provider}
@@ -1010,11 +1010,11 @@ function FeatureEditor({
 							onChange={(modelName) => set({ modelName })}
 						/>
 					</div>
-				</Field>
+				</FormField>
 
 				{inputs.length > 0 && (
-					<Field role="group" aria-labelledby={ids.sendTitle}>
-						<FieldTitle id={ids.sendTitle}>{t("field.send")}</FieldTitle>
+					<FormField role="group" aria-labelledby={ids.sendTitle}>
+						<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
 						<div className="flex flex-wrap gap-3">
 							{inputs.map(([name, input]) => (
 								<Label key={name} className="font-normal text-xs">
@@ -1031,12 +1031,12 @@ function FeatureEditor({
 								</Label>
 							))}
 						</div>
-					</Field>
+					</FormField>
 				)}
 
 				{deciding && (
-					<Field>
-						<FieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FieldLabel>
+					<FormField>
+						<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
 						<div className="flex items-center gap-2 text-xs">
 							<Input
 								id={ids.threshold}
@@ -1061,11 +1061,11 @@ function FeatureEditor({
 							/>
 							<span className="text-cms-muted-foreground">{t("field.countUpTo")}</span>
 						</div>
-					</Field>
+					</FormField>
 				)}
 
-				<Field role="group" aria-labelledby={ids.checksTitle}>
-					<FieldTitle id={ids.checksTitle}>{t("field.checks")}</FieldTitle>
+				<FormField role="group" aria-labelledby={ids.checksTitle}>
+					<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
 					<div className="flex flex-col gap-1.5 text-xs">
 						<ul className="flex flex-col gap-1.5" aria-label={t("field.checks")}>
 							{spec.checks.map((check, index) => (
@@ -1108,10 +1108,10 @@ function FeatureEditor({
 							</DropdownMenu>
 						)}
 					</div>
-				</Field>
+				</FormField>
 
-				<Field>
-					<FieldLabel htmlFor={ids.prompt}>{deciding ? t("field.criteria") : t("field.prompt")}</FieldLabel>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.prompt}>{deciding ? t("field.criteria") : t("field.prompt")}</FormFieldLabel>
 					<Textarea
 						id={ids.prompt}
 						rows={PROMPT_ROWS}
@@ -1119,8 +1119,8 @@ function FeatureEditor({
 						onChange={(event) => set({ prompt: event.target.value })}
 						className={PROMPT_TEXTAREA}
 					/>
-				</Field>
-			</FieldGroup>
+				</FormField>
+			</FormFieldGroup>
 
 			<EditorFooter
 				dirty={dirty}
@@ -1209,7 +1209,7 @@ function FeatureEditor({
 					defaults={sampleStart}
 					onChange={(name, value) => setSample({ ...sample, values: { ...sample.values, [name]: value } })}
 				/>
-				{test?.status === "error" && <FieldError>{test.message}</FieldError>}
+				{test?.status === "error" && <FormFieldError>{test.message}</FormFieldError>}
 				{test?.status === "done" &&
 					(test.result.kind === "candidates" ? (
 						test.result.items.length === 0 ? (

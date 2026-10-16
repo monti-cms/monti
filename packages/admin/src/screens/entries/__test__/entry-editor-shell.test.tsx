@@ -5,7 +5,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";
 import {
-	CmsAdminComponentsProvider,
+	AdminComponentsProvider,
 	type SourcePanelProps,
 	type SourcePanelRegistration,
 } from "../../../admin-components";
@@ -175,7 +175,7 @@ const TEXT_PANEL: SourcePanelRegistration = { format: "text", label: SOURCE_LABE
 
 /** The edit screen as the admin layout renders it, with a fake source panel registered (the admin knows no text notation). */
 const renderShell = (ui: React.ReactElement, sourcePanels: SourcePanelRegistration[] = [TEXT_PANEL]) =>
-	render(withSite(<CmsAdminComponentsProvider components={{ sourcePanels }}>{ui}</CmsAdminComponentsProvider>));
+	render(withSite(<AdminComponentsProvider components={{ sourcePanels }}>{ui}</AdminComponentsProvider>));
 const renderEdit = () => renderShell(<EntryEditorShell mode="edit" initialEntryId="entry-1" adminId={ADMIN} />);
 const editorTitle = () => screen.findByRole("textbox", { name: "제목" });
 

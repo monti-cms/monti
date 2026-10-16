@@ -1,6 +1,6 @@
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import { AttributeInput, ContainerToolbar } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import type { ReactNode } from "react";
@@ -51,9 +51,9 @@ function SiteCalloutView() {
 	);
 }
 
-const components: CmsAdminComponents = { blockViews: { callout: SiteCalloutView } };
+const components: AdminComponents = { blockViews: { callout: SiteCalloutView } };
 
 /** Registers the view in the admin UI. Later providers win over the `callout()` plugin's own view. */
 export function SiteCalloutProvider({ children }: { children: ReactNode }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }

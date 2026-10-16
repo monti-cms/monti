@@ -1,5 +1,5 @@
 import type { BlockDefinition } from "../blocks/define";
-import { type Issue, IssueList, pathOf } from "../config/check/issue";
+import { type ConfigIssue, IssueList, pathOf } from "../config/check/issue";
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsNode } from "../doc/types";
 
@@ -92,7 +92,11 @@ export function bodyVocabulary(site: BodyRulesSite): BodyVocabulary {
  * Checks the body list of a collection against what the site can name. A name that is not a block or mark of the site is an error, so a typo does not
  * silently leave a block allowed (or disallowed).
  */
-export function checkBodyAllowed(collection: string, allowed: BodyAllowed | undefined, site: BodyRulesSite): Issue[] {
+export function checkBodyAllowed(
+	collection: string,
+	allowed: BodyAllowed | undefined,
+	site: BodyRulesSite,
+): ConfigIssue[] {
 	if (allowed === undefined) return [];
 	const list = new IssueList();
 	const base = pathOf("collections", collection, "body");

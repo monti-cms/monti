@@ -14,7 +14,7 @@ import {
 	bodyExcerpt,
 	fillFromBodyLength,
 	type Locale,
-	type SchemaCollection,
+	type SchemaCollectionName,
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/site";
@@ -24,14 +24,21 @@ import {
 	type FieldInputEntry,
 	type FieldInputParts,
 	isFieldInputParts,
-	useCmsAdminComponents,
+	useAdminComponents,
 } from "../../admin-components";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { Button } from "../../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible";
-import { FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet, Field as UiField } from "../../ui/field";
+import {
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldLabel,
+	FormFieldLegend,
+	FormFieldSet,
+	FormField as UiField,
+} from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "../../ui/input-group";
@@ -103,9 +110,9 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		);
 	}
 	const labelNode = (
-		<FieldLabel htmlFor={id} className="font-semibold text-cms-muted-foreground text-xs">
+		<FormFieldLabel htmlFor={id} className="font-semibold text-cms-muted-foreground text-xs">
 			{label} {required && <span className="text-cms-destructive">*</span>}
-		</FieldLabel>
+		</FormFieldLabel>
 	);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
@@ -117,9 +124,9 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			) : (
 				labelNode
 			)}
-			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
+			{help && <FormFieldDescription className="text-[11px] leading-tight">{help}</FormFieldDescription>}
 			{children}
-			{issue && <FieldError id={`${id}-error`}>{issueLine(issue)}</FieldError>}
+			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
 		</UiField>
 	);
 }
@@ -139,9 +146,9 @@ function SlotFieldRow({
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
 			<div className="flex min-h-6 items-center justify-between gap-2">
-				<FieldLabel htmlFor={id} className="font-semibold text-cms-muted-foreground text-xs">
+				<FormFieldLabel htmlFor={id} className="font-semibold text-cms-muted-foreground text-xs">
 					{label} {required && <span className="text-cms-destructive">*</span>}
-				</FieldLabel>
+				</FormFieldLabel>
 				{aside || trigger ? (
 					<span className="flex items-center gap-1">
 						{aside}
@@ -149,10 +156,10 @@ function SlotFieldRow({
 					</span>
 				) : null}
 			</div>
-			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
+			{help && <FormFieldDescription className="text-[11px] leading-tight">{help}</FormFieldDescription>}
 			{children}
 			{panel}
-			{issue && <FieldError id={`${id}-error`}>{issueLine(issue)}</FieldError>}
+			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
 		</UiField>
 	);
 }
@@ -202,7 +209,7 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
 						: undefined
 				}
 			/>
-			{records.error && <FieldError>{t("entry.loadFailed")}</FieldError>}
+			{records.error && <FormFieldError>{t("entry.loadFailed")}</FormFieldError>}
 			{creator.sheet}
 		</>
 	);
@@ -213,7 +220,7 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
 	const { field, id, value, invalid, describedBy, context, onChange } = props;
-	const { fieldInputs } = useCmsAdminComponents();
+	const { fieldInputs } = useAdminComponents();
 	const registered = field.input ? fieldInputs?.[field.input] : undefined;
 	if (registered && !isFieldInputParts(registered)) {
 		const Custom = registered;
@@ -290,7 +297,7 @@ interface RowProps {
 
 /** The entry a site registered under the field's `input` name, if any. */
 function useRegisteredInput(field: FieldState): FieldInputEntry | undefined {
-	const { fieldInputs } = useCmsAdminComponents();
+	const { fieldInputs } = useAdminComponents();
 	const input = field.definition && "input" in field.definition ? field.definition.input : undefined;
 	return input ? fieldInputs?.[input] : undefined;
 }
@@ -333,7 +340,7 @@ function ValueRowView({
 	const entryId = useEntryFormSelector((state) => state.entryId);
 	const locale = useEntryFormSelector((state) => state.locale);
 	const entry = useEntryFormSelector((state) => state.entry);
-	const { fieldInputs } = useCmsAdminComponents();
+	const { fieldInputs } = useAdminComponents();
 	const definition = field.definition as ValueField;
 	const locked = field.readOnlyReason === "locked";
 
@@ -658,8 +665,8 @@ function LayoutSection({
 	const [open, setOpen] = useState(defaultOpen);
 	return (
 		<Collapsible open={open} onOpenChange={setOpen}>
-			<FieldSet className="gap-3">
-				<FieldLegend variant="label" className="mb-0">
+			<FormFieldSet className="gap-3">
+				<FormFieldLegend variant="label" className="mb-0">
 					<CollapsibleTrigger
 						render={
 							<Button
@@ -673,9 +680,9 @@ function LayoutSection({
 						<ChevronRight className={`transition-transform ${open ? "rotate-90" : ""}`} />
 						{title}
 					</CollapsibleTrigger>
-				</FieldLegend>
+				</FormFieldLegend>
 				<CollapsibleContent className="space-y-4">{children}</CollapsibleContent>
-			</FieldSet>
+			</FormFieldSet>
 		</Collapsible>
 	);
 }
@@ -684,7 +691,7 @@ function LayoutSection({
  * One language's values of a record collection (category, tag, collection). Used by the language tab of the category edit panel.
  * If left empty, that language's page also uses the default language value. Reads the form from the nearest `EntryFormProvider`.
  */
-export function RecordLocaleFields({ collection, locale }: { collection: SchemaCollection; locale: Locale }) {
+export function RecordLocaleFields({ collection, locale }: { collection: SchemaCollectionName; locale: Locale }) {
 	const site = useSite();
 	return (
 		<div className="space-y-4">
@@ -700,7 +707,7 @@ function RecordLocaleField({
 	name,
 	locale,
 }: {
-	collection: SchemaCollection;
+	collection: SchemaCollectionName;
 	name: string;
 	locale: Locale;
 }) {

@@ -12,8 +12,8 @@ import {
 	choiceReady,
 	commonMessages,
 	EmptyState,
-	Field,
-	FieldLabel,
+	FormField,
+	FormFieldLabel,
 	Input,
 	LoadErrorAlert,
 	PageTabs,
@@ -24,7 +24,7 @@ import {
 	TabsTrigger,
 	useConfirm,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/site";
+import { adminApiUrl, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -446,7 +446,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 
 	if (!status) return <ListSkeleton />;
 	const { keys } = status;
-	const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${cmsApiUrl("/v1/git-sync/webhook")}`;
+	const webhookUrl = `${typeof window === "undefined" ? "" : window.location.origin}${adminApiUrl("/v1/git-sync/webhook")}`;
 	const tokenKey = keys.token;
 	const savedChoice: ApiKeyChoice = tokenKey ? { use: "saved", keyId: tokenKey.id } : { use: "new", value: "" };
 	const choice = picked ?? savedChoice;
@@ -504,18 +504,18 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					if (secret.trim()) assign.mutate({ slot: "webhook-secret", key: { use: "new", value: secret.trim() } });
 				}}
 			>
-				<FieldLabel htmlFor="git-sync-secret" className="font-medium text-sm">
+				<FormFieldLabel htmlFor="git-sync-secret" className="font-medium text-sm">
 					{t("settings.webhook")}
-				</FieldLabel>
+				</FormFieldLabel>
 				<p className="text-xs">
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</p>
-				<Field className="gap-1">
-					<FieldLabel htmlFor="git-sync-url" className="text-cms-muted-foreground text-xs">
+				<FormField className="gap-1">
+					<FormFieldLabel htmlFor="git-sync-url" className="text-cms-muted-foreground text-xs">
 						{t("settings.webhook.url")}
-					</FieldLabel>
+					</FormFieldLabel>
 					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-xs" />
-				</Field>
+				</FormField>
 				<p className="text-cms-muted-foreground text-xs">{t("settings.webhook.help")}</p>
 				<div className="flex flex-wrap gap-2">
 					<Input

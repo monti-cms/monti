@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ConfigError, closestName, type Issue, pathOf, SCHEMA_SOURCE_NAME } from "../config/check/issue";
+import { ConfigError, type ConfigIssue, closestName, pathOf, SCHEMA_SOURCE_NAME } from "../config/check/issue";
 import { LOCALE_PREFIX_MODES } from "../config/rules";
 import { CORE_BODY_BLOCKS, CORE_BODY_MARKS, HEADING_LEVELS } from "../schema/allowed";
 import type { SchemaFile } from "./types";
@@ -325,7 +325,7 @@ const configShape = z.looseObject({
 	admin: adminOfCode.optional(),
 });
 
-const unknownKeyIssue = (path: readonly PropertyKey[], key: string, message: string): Issue => {
+const unknownKeyIssue = (path: readonly PropertyKey[], key: string, message: string): ConfigIssue => {
 	const known = message.startsWith(KNOWN_KEYS_MARK)
 		? (JSON.parse(message.slice(KNOWN_KEYS_MARK.length)) as string[])
 		: [];
@@ -348,10 +348,10 @@ const typeMessage = (message: string): string => {
 };
 
 /** Runs a shape over a value and returns what is wrong with it, as issues. */
-function shapeIssues(shape: z.ZodType, input: unknown): Issue[] {
+function shapeIssues(shape: z.ZodType, input: unknown): ConfigIssue[] {
 	const result = shape.safeParse(input);
 	if (result.success) return [];
-	return result.error.issues.flatMap((issue): Issue[] => {
+	return result.error.issues.flatMap((issue): ConfigIssue[] => {
 		if (issue.code === "unrecognized_keys")
 			return issue.keys.map((key) => unknownKeyIssue(issue.path, key, issue.message));
 		const code =
@@ -378,7 +378,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** The shape problems of the plain data of a merged config (collections must already be normalized). */
-export const configShapeIssues = (config: unknown): Issue[] =>
+export const configShapeIssues = (config: unknown): ConfigIssue[] =>
 	// A normalized collection keeps the body's limits in `allowed`; the place a person wrote them is `body`.
 	shapeIssues(configShape, config).map((issue) => ({
 		...issue,
@@ -386,9 +386,9 @@ export const configShapeIssues = (config: unknown): Issue[] =>
 	}));
 
 /** The migration ids are unique: an id is recorded when the transform ran, so two with one id would run once. */
-function migrationIssues(file: SchemaFile): Issue[] {
+function migrationIssues(file: SchemaFile): ConfigIssue[] {
 	const ids = new Set<string>();
-	const issues: Issue[] = [];
+	const issues: ConfigIssue[] = [];
 	for (const [index, item] of (file.migrations ?? []).entries()) {
 		if (ids.has(item.id))
 			issues.push({

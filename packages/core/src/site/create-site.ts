@@ -10,7 +10,7 @@ import { createLocales, type SiteLocales } from "../core/locales";
 import { createTime, type SiteTime } from "../core/time";
 import { createI18n, type SiteI18n } from "../i18n";
 import { createActiveTranslator, resolveLabels, withActiveLocale } from "../i18n/active";
-import type { CmsPlugin, PluginNavItem } from "../plugin/define";
+import type { Plugin, PluginNavItem } from "../plugin/define";
 import { createSchemas, type SiteSchemas } from "../schema/derive";
 import { createPanel, type SitePanel } from "../schema/layout";
 
@@ -47,7 +47,7 @@ export type Site<Config extends CmsConfig = CmsConfig> = SiteI18n &
 		/** The config the site was created from. */
 		readonly config: Config;
 		/** The plugins of the config (an empty list if it has none). */
-		readonly plugins: readonly CmsPlugin[];
+		readonly plugins: readonly Plugin[];
 		/**
 		 * The `options` of a plugin picked by name from `plugins` in the site config. This is the official way for an extension to read its own config. `undefined`
 		 * if that plugin is not in the config.
@@ -131,7 +131,7 @@ export function createSite<const Config extends CmsConfig>(config: Config): Site
 		const collections = createCollections(config.collections, schemas);
 		const links = createLinks(config, { collections, schemas, locales });
 		const blocks = createBlocks(config);
-		const plugins: readonly CmsPlugin[] = config.plugins ?? [];
+		const plugins: readonly Plugin[] = config.plugins ?? [];
 		const api = createApi({ COLLECTIONS: collections.COLLECTIONS, LOCALES: locales.LOCALES, media: config.media });
 		let snapshot: SiteSnapshot | undefined;
 		return {

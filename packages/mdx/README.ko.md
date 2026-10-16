@@ -96,7 +96,7 @@ const { content, toc, unknown } = await renderMdx(source, { site: cms.site, loca
 
 ## 원문 패널
 
-`mdx()` 플러그인은 관리자 공급자로 **원문 패널**과 `mdx` 형식의 브라우저 쪽을 관리자에 등록한다(`useCmsAdminComponents().sourcePanels`, `useFormat("mdx")`). 편집기 도구 줄 끝의 토글이 본문을 시각 편집기와 MDX 글 사이에서 바꾼다. 글은 입력하는 동안 브라우저에서 해석되고, 저장되는 것은 그 글이 읽히는 문서다. 읽히지 않는 글은 발견한 것을 옆에 보이며 `unparsed` 문서로 보관된다.
+`mdx()` 플러그인은 관리자 공급자로 **원문 패널**과 `mdx` 형식의 브라우저 쪽을 관리자에 등록한다(`useAdminComponents().sourcePanels`, `useFormat("mdx")`). 편집기 도구 줄 끝의 토글이 본문을 시각 편집기와 MDX 글 사이에서 바꾼다. 글은 입력하는 동안 브라우저에서 해석되고, 저장되는 것은 그 글이 읽히는 문서다. 읽히지 않는 글은 발견한 것을 옆에 보이며 `unparsed` 문서로 보관된다.
 `plugins`에 `mdx()`가 없으면 원문 토글이 없다. 패널의 문구는 이름공간 `cms-mdx.source`에 있다. 문서가 생기기 전에 브라우저가 저장한 복구 사본(본문이 `form.mdx`의 MDX)은 `unparsed` 문서로 보관되고, 패널이 다시 읽는다.
 
 ## 문법 확장

@@ -72,12 +72,12 @@ import {
 	Zap,
 } from "lucide-react";
 import { useCallback } from "react";
-import { useCmsAdminComponents } from "../../admin-components";
+import { useAdminComponents } from "../../admin-components";
 
 /**
  * Built-in icons selectable by a collection definition's `icon`, a plugin sidebar item's `icon`, a block definition's `editor.icon`, or a code-line effect's `icon` (lucide name).
  * Only frequently used ones are included so not every icon is bundled. For other names, plugins/the site
- * register them through `icons` of `CmsAdminComponentsProvider`. For an unknown collection icon name, publishable collections use a document icon and taxonomy collections a tag icon.
+ * register them through `icons` of `AdminComponentsProvider`. For an unknown collection icon name, publishable collections use a document icon and taxonomy collections a tag icon.
  */
 export const ICONS: Readonly<Record<string, LucideIcon>> = {
 	archive: Archive,
@@ -151,11 +151,11 @@ export const ICONS: Readonly<Record<string, LucideIcon>> = {
 export const COLLECTION_ICON_NAMES = Object.keys(ICONS);
 
 /**
- * Function that picks an icon by name. Looks at registered icons (`CmsAdminComponents.icons`) first, then the built-in icons.
+ * Function that picks an icon by name. Looks at registered icons (`AdminComponents.icons`) first, then the built-in icons.
  * `undefined` for an unknown name.
  */
 export function useIconByName(): (name: string | undefined) => LucideIcon | undefined {
-	const { icons } = useCmsAdminComponents();
+	const { icons } = useAdminComponents();
 	return useCallback((name) => (name ? (icons?.[name] ?? ICONS[name]) : undefined), [icons]);
 }
 

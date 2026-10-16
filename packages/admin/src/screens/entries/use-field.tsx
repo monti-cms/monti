@@ -2,7 +2,7 @@
 
 import type { SlugField, ValueField } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
-import { type SchemaCollection, useSite } from "@monti-cms/core/site";
+import { type SchemaCollectionName, useSite } from "@monti-cms/core/site";
 import { createContext, type ReactNode, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import {
@@ -84,7 +84,7 @@ export interface FieldState<V extends FormValue = FormValue> {
  * @experimental
  */
 export interface EntryFormValue {
-	readonly collection: SchemaCollection;
+	readonly collection: SchemaCollectionName;
 	readonly form: EntryForm;
 	/** Applies a partial change: only the given keys change. Keys the form does not edit (values of removed fields) are left alone. */
 	readonly setForm: (patch: EntryFormPatch) => void;
@@ -104,7 +104,7 @@ export interface EntryFormValue {
 
 /** What the fields read. A store, so a field subscribes to its own slice. */
 interface EntryFormState {
-	collection: SchemaCollection;
+	collection: SchemaCollectionName;
 	form: EntryForm;
 	setForm: (patch: EntryFormPatch) => void;
 	issues: readonly CmsIssue[];
@@ -197,7 +197,7 @@ interface ResolvedField {
 }
 
 /** The definition of a field by name (nested fields of a conditional field included) and whether a translation shares it. */
-function resolveField(site: Site, collection: SchemaCollection, name: string): ResolvedField {
+function resolveField(site: Site, collection: SchemaCollectionName, name: string): ResolvedField {
 	const fields = site.schemaOf(collection).fields;
 	const own = fields[name];
 	if (own?.kind === "slug") return { definition: own, lockable: false };
@@ -336,6 +336,6 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 	);
 }
 
-function summaryOf(site: Site, collection: SchemaCollection, form: EntryForm): string | undefined {
+function summaryOf(site: Site, collection: SchemaCollectionName, form: EntryForm): string | undefined {
 	return site.roleValue(collection, "summary", form) || undefined;
 }

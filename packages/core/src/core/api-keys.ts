@@ -15,7 +15,7 @@ export interface ApiKeyUse {
 	readonly label: string;
 }
 
-/** A key a plugin says it needs (`CmsPlugin.keySlots`), with the key assigned to it. */
+/** A key a plugin says it needs (`Plugin.keySlots`), with the key assigned to it. */
 export interface ApiKeySlotView {
 	readonly plugin: string;
 	readonly slot: string;

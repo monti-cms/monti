@@ -2,7 +2,7 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
-import { useCmsAdminComponents } from "../../../admin-components";
+import { useAdminComponents } from "../../../admin-components";
 import { cn } from "../../../lib/utils/cn";
 import { blocksMessages } from "../messages";
 
@@ -49,7 +49,7 @@ export class PreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBou
 }
 
 /**
- * Loads and renders the fence preview the site provided (`CmsAdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
+ * Loads and renders the fence preview the site provided (`AdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
  */
 export function LazyFencePreview({
 	lang,
@@ -65,7 +65,7 @@ export function LazyFencePreview({
 	emptyText: string;
 }) {
 	const t = useTranslator(blocksMessages);
-	const load = useCmsAdminComponents().fencePreviews?.[lang];
+	const load = useAdminComponents().fencePreviews?.[lang];
 	const [Renderer, setRenderer] = useState<ComponentType<{ source: string; className?: string }> | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
 

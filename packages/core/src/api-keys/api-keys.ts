@@ -72,7 +72,7 @@ export interface ApiKeys {
 	/** Every key with the places that use it, by name. */
 	list(): Promise<ApiKeyView[]>;
 	get(id: string): Promise<ApiKeyView | null>;
-	/** The keys the installed plugins ask for (`CmsPlugin.keySlots`), each with the key assigned to it or `null`. */
+	/** The keys the installed plugins ask for (`Plugin.keySlots`), each with the key assigned to it or `null`. */
 	slots(): Promise<ApiKeySlotView[]>;
 	/** A slot of an installed plugin. It throws `not_found` when the plugin has no such slot. */
 	slot(plugin: string, slot: string): ApiKeySlot;
@@ -112,7 +112,7 @@ export interface ApiKeysOptions {
 	 * use is not shown. A plugin that gives none is shown by its name.
 	 */
 	readonly labels?: (plugin: string, refs: readonly string[]) => Promise<Readonly<Record<string, string | null>>>;
-	/** The slots the installed plugins declare (`CmsPlugin.keySlots`), with their labels in the admin language. */
+	/** The slots the installed plugins declare (`Plugin.keySlots`), with their labels in the admin language. */
 	readonly declared?: () => readonly {
 		readonly plugin: string;
 		readonly slot: string;

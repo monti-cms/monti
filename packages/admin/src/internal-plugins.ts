@@ -1,10 +1,10 @@
 import { assertPluginPagesFree } from "@monti-cms/core/internal/plugins";
 import type { Site } from "@monti-cms/core/site";
-import type { CmsAdminPlugin } from "./plugins";
+import type { AdminPlugin } from "./plugins";
 
 /** Internal to the Monti packages (`@monti-cms/admin/internal/plugins`), with no stability promise: the host loads the admin side of a site's plugins with it. */
 
-type LoadedAdminPlugins = Promise<readonly (CmsAdminPlugin & { readonly name: string })[]>;
+type LoadedAdminPlugins = Promise<readonly (AdminPlugin & { readonly name: string })[]>;
 
 const loadedBySite = new WeakMap<object, LoadedAdminPlugins>();
 
@@ -19,7 +19,7 @@ export function loadAdminPlugins(site: Pick<Site, "plugins">): LoadedAdminPlugin
 	const loaded: LoadedAdminPlugins = Promise.all(
 		site.plugins.map(async (plugin) => ({
 			name: plugin.name,
-			...((await plugin.admin?.())?.default as CmsAdminPlugin | undefined),
+			...((await plugin.admin?.())?.default as AdminPlugin | undefined),
 		})),
 	)
 		.then((plugins) => {

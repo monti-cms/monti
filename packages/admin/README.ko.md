@@ -22,7 +22,7 @@
 ## 사이트 컴포넌트 넣기
 
 필드 입력·블록 편집 화면·코드 펜스 미리보기는 확장이 넣고 사이트가 더하거나 바꾼다(예: 블록 확장의 Mermaid·차트는 기본
-미리보기를 준다). 사이트는 자기 플러그인으로 넣는다. 플러그인이 관리자 쪽을 지정하면 관리자가 그것을 불러온다(`app/`에 따로 둘 파일은 없다). 그 관리자 쪽의 Provider는 관리자를 감싸고 `CmsAdminComponentsProvider`를 쓰는 클라이언트 컴포넌트다. 같은 이름이면 확장의 것보다 사이트의 것이 이긴다.
+미리보기를 준다). 사이트는 자기 플러그인으로 넣는다. 플러그인이 관리자 쪽을 지정하면 관리자가 그것을 불러온다(`app/`에 따로 둘 파일은 없다). 그 관리자 쪽의 Provider는 관리자를 감싸고 `AdminComponentsProvider`를 쓰는 클라이언트 컴포넌트다. 같은 이름이면 확장의 것보다 사이트의 것이 이긴다.
 
 ```ts
 // plugins/site-admin/index.ts
@@ -42,7 +42,7 @@ export default defineAdminPlugin({ Provider: SiteAdminComponents });
 ```tsx
 // plugins/site-admin/provider.tsx
 "use client";
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { AdminComponentsProvider } from "@monti-cms/admin";
 
 const components = {
 	fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
@@ -51,7 +51,7 @@ const components = {
 };
 
 export function SiteAdminComponents({ children }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }
 ```
 
@@ -88,7 +88,7 @@ const components = { icons: { eye: Eye } };
 ### 원문 패널
 
 도구 줄 끝의 원문 토글은 본문을 어떤 표기법의 글로 고친다. 표기법은 플러그인의 것이다. **원문 패널**이 등록되어 있을 때만 토글이 보이고, 등록은 다른 사이트 컴포넌트와 같은 공급자로 한다
-(`useCmsAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
+(`useAdminComponents().sourcePanels`). 여러 개면 먼저 등록한 것을 쓴다.
 
 ```tsx
 // `@monti-cms/mdx`의 `mdx()` 플러그인이 대신 등록해 주는 것:
@@ -131,7 +131,7 @@ const components = {
 ```
 
 `layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(첫 탭은 `tab`이 없는 묶음을 담고, SEO 필드처럼 플러그인이 두는 필드는 제 탭을 가진다). 묶음은 core가 계산하고(`site.panelGroupsOf`), 설정 화면의 필드 트리도 같은 묶음으로 그린다. 보기 필드
-(`fields.view({ view })`)는 그 자리에 `CmsAdminComponentsProvider`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
+(`fields.view({ view })`)는 그 자리에 `AdminComponentsProvider`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
 등록한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `@monti-cms/core/site`의 `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)는 스케치다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
 `@monti-cms/admin/media`의 `MediaThumbnail`·`useMediaUrl`을 쓴다(SEO 확장 `@monti-cms/seo`의 검색 미리보기가 예시다).
 날짜·시각은 사이트 설정의 `timeZone`으로, 표기는 `admin.locale`(기본 `ko-KR`)로 보인다. 관계 입력의 안내 문구는 대상 컬렉션의
@@ -200,7 +200,7 @@ function NoticeView() {
 
 블록 확장의 글자 꾸밈(`syntax.kind: "text"`, `editor.view: "mark"`, 예: `@monti-cms/blocks`의 툴팁·코드 연결·글자색)은 관리자
 화면이 정의에서 편집기 마크(`cms` + 파스칼 이름, `addedMarkName("tooltip")` → `cmsTooltip`)와 저장 문서 변환을 만든다. 본체
-편집기는 꾸밈 이름을 모르고, 확장이 `CmsAdminComponentsProvider`의 `marks`(블록 이름 → `EditorMarkExtension`)로 준 것만 그린다.
+편집기는 꾸밈 이름을 모르고, 확장이 `AdminComponentsProvider`의 `marks`(블록 이름 → `EditorMarkExtension`)로 준 것만 그린다.
 
 ```tsx
 import type { EditorMarkExtension } from "@monti-cms/admin/editor";
@@ -239,7 +239,7 @@ const components = { marks: { note } };
 ```tsx
 "use client";
 import { defineTextChecker } from "@monti-cms/core";
-import type { CmsAdminComponents } from "@monti-cms/admin";
+import type { AdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
 	id: "my-words",
@@ -253,7 +253,7 @@ const myChecker = defineTextChecker({
 	],
 });
 
-const components: CmsAdminComponents = { textCheckers: [myChecker] };
+const components: AdminComponents = { textCheckers: [myChecker] };
 ```
 
 - 검사 단위는 문단(제목·목록 항목·표 칸 등 글이 든 블록) 하나다: `{ id, text, locale }`. 결과의 `start`·`end`는 그 문단 안의
@@ -309,21 +309,21 @@ export const POST = textCheckRoute({
 ```ts
 export default defineAdminPlugin({
 	pages: { my: MyPage }, // 도구의 "my" 페이지: <관리자 경로>/tools/my(기본 /admin/tools/my, 클라이언트 컴포넌트). 로그인 확인은 관리자 화면이 한다
-	Provider: MyProvider, // 관리자 화면 전체를 감싼다. 안에서 CmsAdminComponentsProvider로 입력·편집 화면 확장을 더한다
+	Provider: MyProvider, // 관리자 화면 전체를 감싼다. 안에서 AdminComponentsProvider로 입력·편집 화면 확장을 더한다
 });
 ```
 
-페이지는 클라이언트 컴포넌트이고 사이드바 도구 묶음의 항목으로 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바와 제목은 관리자가 이미 둔다). `PageActions`(`@monti-cms/admin/kit`)는 페이지의 주된 동작 하나를 제목 줄 오른쪽에 둔다. 플러그인 API는 `cmsFetch(site, cmsApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `cmsApiUrl`과 `useSite`는 `@monti-cms/core/site`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
+페이지는 클라이언트 컴포넌트이고 사이드바 도구 묶음의 항목으로 나온다. 이름은 플러그인 정의의 `nav` 항목(`{ path: "my", label, icon }`)이 정하고, 페이지는 본문만 그린다(사이드바와 제목은 관리자가 이미 둔다). `PageActions`(`@monti-cms/admin/kit`)는 페이지의 주된 동작 하나를 제목 줄 오른쪽에 둔다. 플러그인 API는 `adminFetch(site, adminApiUrl("/v1/<플러그인>/<경로>"))`(`@monti-cms/admin/api`, `adminApiUrl`과 `useSite`는 `@monti-cms/core/site`)로 부른다. 실패하면 `CmsApiError`를 던지며 그 `message`가 보여 줄 문구다.
 
 ```tsx
 "use client";
-import { cmsFetch } from "@monti-cms/admin/api";
-import { cmsApiUrl, useSite } from "@monti-cms/core/site";
+import { adminFetch } from "@monti-cms/admin/api";
+import { adminApiUrl, useSite } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
 	const site = useSite();
-	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
+	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => adminFetch<{ published: number }>(site, adminApiUrl("/v1/post-stats/summary"), { signal }) });
 	return <div>{stats.data?.published}</div>;
 }
 ```
@@ -336,13 +336,13 @@ export function StatsPage() {
 화면을 관리자와 같은 모양으로 만들 때는 확장용 묶음 `@monti-cms/admin/kit`을 쓴다. 단추·입력 칸·대화상자·메뉴·표 같은 부품,
 `cn`, 확인 대화상자(`useConfirm`)와 저장 안 한 변경 가드(`useUnsavedGuard`), 제목 줄 동작(`PageActions`)과 관리자 틀 안의 페이지(`ShellPage`),
 목록-편집 배치(`MasterDetail`·`ListPane`·`ListRow`), 편집 폼 부품(`useDraftEditor`·`EditorFooter`·`DialogFormFooter`), 상태 부품(`StatusIndicator`·`Badge`·
-`Alert`·`LoadErrorAlert`·`FieldError`), `commonMessages`(저장·취소·다시 시도 등), `usePreference`, 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
+`Alert`·`LoadErrorAlert`·`FormFieldError`), `commonMessages`(저장·취소·다시 시도 등), `usePreference`, 아이콘 찾기(`useIconByName`), `useDebounced`, 글 입력값 타입
 (`EntryForm`·`EntryData`)이 들어 있다. 색은 `--cms-success`·`--cms-warning`·`--cms-destructive` 토큰(`-soft`·`-foreground` 포함)에서 오며 원색 클래스는 쓰지 않는다.
 관리자 내부 파일 경로(`ui/*`·`screens/*`)는 공개하지 않는다.
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 사이트 컴포넌트 넣기(`CmsAdminComponentsProvider`: 원문 패널·형식·`useFormat`)·속성 칸·목록 칸 타입 |
+| `@monti-cms/admin` | 사이트 컴포넌트 넣기(`AdminComponentsProvider`: 원문 패널·형식·`useFormat`)·속성 칸·목록 칸 타입 |
 | `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
 | `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
@@ -351,7 +351,7 @@ export function StatsPage() {
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/media` | 미디어 고르기·미리보기 |
-| `/api` | 관리자 API 부르기(`cmsFetch`·`CmsApiError`·`errorText`·`isConflict`)와 그것으로 쓰기(`useCmsMutation`) |
+| `/api` | 관리자 API 부르기(`adminFetch`·`CmsApiError`·`errorText`·`isConflict`)와 그것으로 쓰기(`useCmsMutation`) |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
 

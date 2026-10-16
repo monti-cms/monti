@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { cmsFetch } from "../../../api/client";
+import { adminFetch } from "../../../api/client";
 import { isSandboxSite } from "../../shared/preview-sandbox";
 import { draftSiteOf } from "../draft-site";
 import type { Obj } from "../schema-model";
@@ -38,11 +38,11 @@ describe("draft site", () => {
 		const site = draftSiteOf(testSite, draft(), []);
 		expect(site && isSandboxSite(site)).toBe(true);
 		if (!site) return;
-		await expect(cmsFetch(site, "/api/x", { method: "POST", json: {} })).rejects.toMatchObject({ code: "preview" });
-		await expect(cmsFetch(site, "/api/x", { method: "PATCH", json: {} })).rejects.toMatchObject({ code: "preview" });
+		await expect(adminFetch(site, "/api/x", { method: "POST", json: {} })).rejects.toMatchObject({ code: "preview" });
+		await expect(adminFetch(site, "/api/x", { method: "PATCH", json: {} })).rejects.toMatchObject({ code: "preview" });
 		expect(fetchMock).not.toHaveBeenCalled();
-		await expect(cmsFetch(site, "/api/x")).resolves.toEqual({ items: [] });
+		await expect(adminFetch(site, "/api/x")).resolves.toEqual({ items: [] });
 		// The running site is not affected.
-		await expect(cmsFetch(testSite, "/api/x", { method: "POST", json: {} })).resolves.toBeTruthy();
+		await expect(adminFetch(testSite, "/api/x", { method: "POST", json: {} })).resolves.toBeTruthy();
 	});
 });

@@ -4,11 +4,11 @@ import type { TranslationState } from "../translation/state";
 import type { ReferenceKind, ReferenceOccurrence } from "../types";
 
 export type JsonPrimitive = string | number | boolean | null;
-export interface JsonArray extends Array<JsonValue> {}
+export interface JsonArray extends Array<MutableJsonValue> {}
 export interface JsonObject {
-	[key: string]: JsonValue;
+	[key: string]: MutableJsonValue;
 }
-export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+export type MutableJsonValue = JsonPrimitive | JsonObject | JsonArray;
 export type EntryMetadata = JsonObject;
 
 export type EntryStatus = "draft" | "published" | "archived" | "trashed";

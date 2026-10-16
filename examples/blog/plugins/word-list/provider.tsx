@@ -1,6 +1,6 @@
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import { defineTextChecker, type TextIssue } from "@monti-cms/core";
 import type { ReactNode } from "react";
 
@@ -39,9 +39,9 @@ const wordListChecker = defineTextChecker({
 	},
 });
 
-const components: CmsAdminComponents = { textCheckers: [wordListChecker] };
+const components: AdminComponents = { textCheckers: [wordListChecker] };
 
 /** Wraps the admin UI (the provider of the plugin's admin side) and hands it the checker. */
 export function WordListProvider({ children }: { children: ReactNode }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }

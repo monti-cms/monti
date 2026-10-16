@@ -184,7 +184,7 @@ export interface Cms<
 	/** Write hooks in the order they run: the server config's first, then the plugins'. */
 	writeHooks(): Promise<readonly HookSource[]>;
 	/**
-	 * The formats a body can be read and written in: the built-in ones, then those the plugins add (`CmsPlugin.formats`). Loaded on first use.
+	 * The formats a body can be read and written in: the built-in ones, then those the plugins add (`Plugin.formats`). Loaded on first use.
 	 * A name provided twice throws.
 	 */
 	formats(): Promise<FormatRegistry>;

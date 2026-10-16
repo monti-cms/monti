@@ -2,7 +2,7 @@ import { emptyStoredDocument, STORED_DOCUMENT_VERSION, type StoredDocument } fro
 import {
 	parseTranslationState,
 	RECORD_TRANSLATIONS_KEY,
-	type SchemaCollection,
+	type SchemaCollectionName,
 	type Site,
 	type StoredField,
 	type TranslationState,
@@ -146,9 +146,9 @@ export function translationSourceOf(site: Site, entry: EntryData | null): Transl
 /** Stored fields the form handles. For a translation, only fields that are `localized` in the definition (shared values belong to the original). */
 const fieldsOf = (site: Site, collection: string, translation = false): readonly StoredField[] => {
 	if (!site.isCollection(collection)) return [];
-	const fields = site.storedFields(collection as SchemaCollection);
+	const fields = site.storedFields(collection as SchemaCollectionName);
 	if (!translation) return fields;
-	const localized = site.localizedSet(collection as SchemaCollection);
+	const localized = site.localizedSet(collection as SchemaCollectionName);
 	return fields.filter(({ name }) => localized.has(name));
 };
 
@@ -231,7 +231,7 @@ function recordTranslationsToForm(
 	if (!site.isCollection(collection)) return {};
 	const translations = (metadata[RECORD_TRANSLATIONS_KEY] ?? {}) as Record<string, Record<string, unknown>>;
 	const values: Record<string, string> = {};
-	for (const field of site.recordLocalizedFields(collection as SchemaCollection)) {
+	for (const field of site.recordLocalizedFields(collection as SchemaCollectionName)) {
 		for (const locale of site.PREFIXED_LOCALES)
 			values[recordTranslationKey(field, locale)] = text(translations[locale]?.[field]);
 	}
@@ -282,7 +282,7 @@ export function metadataFromForm(
 	// The form has no input for the value of a removed field, so it goes back as stored instead of being dropped.
 	if (site.isCollection(collection)) {
 		for (const key of Object.keys(base)) {
-			if (site.isOrphanedMetadataKey(collection as SchemaCollection, key)) metadata[key] = base[key];
+			if (site.isOrphanedMetadataKey(collection as SchemaCollectionName, key)) metadata[key] = base[key];
 		}
 	}
 	for (const { name } of fields) {
@@ -327,7 +327,7 @@ export function metadataFromForm(
 
 	// Per-language name and description of a record collection. Empty languages are not added.
 	const localizedRecordFields = site.isCollection(collection)
-		? site.recordLocalizedFields(collection as SchemaCollection)
+		? site.recordLocalizedFields(collection as SchemaCollectionName)
 		: [];
 	if (localizedRecordFields.length > 0) {
 		const translations: Record<string, Record<string, string>> = {};

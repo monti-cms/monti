@@ -25,7 +25,7 @@ export const color = (options: ColorOptions = {}) =>
 		name: "color",
 		options,
 		blocks: [colorBlock],
-		validate: () => checkTextPalette(options.palette),
+		checkConfig: () => checkTextPalette(options.palette),
 		admin: () => import("@monti-cms/blocks/color/admin"),
 		render: () => import("@monti-cms/blocks/color/render"),
 	});

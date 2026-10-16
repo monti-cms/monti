@@ -18,7 +18,7 @@ import {
 	ComboboxValue,
 	useComboboxAnchor,
 } from "../../ui/combobox";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { EmptyState } from "../shared/empty-state";
 import { entriesMessages } from "./messages";
 
@@ -170,7 +170,7 @@ export function RelationCombobox({
 		</ComboboxContent>
 	);
 
-	const errorText = error && <FieldError>{error}</FieldError>;
+	const errorText = error && <FormFieldError>{error}</FormFieldError>;
 
 	if (multiple) {
 		return (

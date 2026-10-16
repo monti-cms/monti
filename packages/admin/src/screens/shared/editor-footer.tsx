@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 
 /**
  * The action row under an edit form: the error of the last attempt, Save (enabled while there are unsaved changes), Cancel (when `onCancel` is
@@ -45,7 +45,7 @@ export function EditorFooter({
 	const busy = saving || deleting;
 	return (
 		<div className={cn("space-y-2", className)}>
-			{error && <FieldError className="whitespace-pre-wrap">{error}</FieldError>}
+			{error && <FormFieldError className="whitespace-pre-wrap">{error}</FormFieldError>}
 			<div className={cn("flex flex-wrap items-center gap-2", align === "end" && "justify-end")}>
 				<Button type={onSave ? "button" : "submit"} size="sm" disabled={busy || !dirty || !canSave} onClick={onSave}>
 					{saveIcon}

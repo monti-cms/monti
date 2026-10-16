@@ -3,7 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
-import type { Issue } from "@monti-cms/core/site";
+import type { ConfigIssue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, Lock, Plus } from "lucide-react";
@@ -220,7 +220,7 @@ function SchemaEditor({
 	const writable = state.access.writable;
 	const [draft, setDraft] = useState<Obj>(base);
 	const [renames, setRenames] = useState<Rename[]>([]);
-	const [issues, setIssues] = useState<readonly Issue[]>([]);
+	const [issues, setIssues] = useState<readonly ConfigIssue[]>([]);
 	const [reviewing, setReviewing] = useState(false);
 	const [applyFailed, setApplyFailed] = useState(false);
 	const [creating, setCreating] = useState(false);

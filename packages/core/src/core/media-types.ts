@@ -1,4 +1,4 @@
-import { checkKnownKeys, type Issue, IssueList, pathOf } from "../config/check/issue";
+import { type ConfigIssue, checkKnownKeys, IssueList, pathOf } from "../config/check/issue";
 /** Only the start of a text file is read to check it. */
 export const TEXT_SNIFF_BYTES = 64 * 1024;
 
@@ -180,7 +180,7 @@ export interface MediaConfig {
 const MEDIA_KEYS = ["maxImageBytes", "maxPixels", "maxFileBytes", "imageTypes", "fileTypes"];
 
 /** Checks the media settings of the site config. */
-export function checkMediaConfig(media: MediaConfig | undefined): Issue[] {
+export function checkMediaConfig(media: MediaConfig | undefined): ConfigIssue[] {
 	if (!media) return [];
 	const list = new IssueList();
 	checkKnownKeys(list, "media", media, MEDIA_KEYS);

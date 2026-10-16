@@ -1,4 +1,4 @@
-import { CONFIG_SOURCE, type Issue, IssueList, pathOf, throwIssues } from "../config/check/issue";
+import { CONFIG_SOURCE, type ConfigIssue, IssueList, pathOf, throwIssues } from "../config/check/issue";
 import { type BlockDefinition, RESERVED_BLOCK_ATTRIBUTES } from "./define";
 import { BUILTIN_BLOCKS } from "./definitions";
 
@@ -36,7 +36,7 @@ export function addedBlocks(
 /** The block list for the config, and what is wrong with the blocks that were added. Blocks with problems are still listed, so the other checks can go on. */
 export function resolveBlocksChecked(sources: BlockSources | undefined): {
 	readonly blocks: readonly BlockDefinition[];
-	readonly issues: readonly Issue[];
+	readonly issues: readonly ConfigIssue[];
 } {
 	const list = new IssueList();
 	const added = addedBlocks(sources);

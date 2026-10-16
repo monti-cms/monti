@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Labeled } from "../shared/labeled";
 import { schemaCollectionMessages } from "./collection.messages";
@@ -97,7 +97,7 @@ function NewCollectionForm({
 					aria-invalid={idIssue ? true : undefined}
 					onChange={(event) => setTypedId(event.target.value)}
 				/>
-				{idIssue && <FieldError className="text-xs">{ts(`name.${idIssue}`)}</FieldError>}
+				{idIssue && <FormFieldError className="text-xs">{ts(`name.${idIssue}`)}</FormFieldError>}
 			</Labeled>
 			<fieldset className="flex flex-col gap-2">
 				<legend className="mb-1.5 font-medium text-xs">{t("collection.kind")}</legend>

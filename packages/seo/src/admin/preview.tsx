@@ -4,7 +4,7 @@ import type { FieldViewProps } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
 import { cn, commonMessages, Panel } from "@monti-cms/admin/kit";
 import { MediaThumbnail } from "@monti-cms/admin/media";
-import { type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { SEO_ROLES } from "../fields";
 import { seoMessages } from "../messages";
 
@@ -15,7 +15,7 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
  */
 export function seoRoleValue(
 	site: Pick<Site, "roleField">,
-	collection: SchemaCollection,
+	collection: SchemaCollectionName,
 	role: string,
 	form: EntryForm,
 	entry: Pick<EntryData, "source"> | null,
@@ -29,7 +29,7 @@ export function seoRoleValue(
 /** Title and description for the search result and share preview. Falls back to the title and summary when empty. */
 export function seoPreviewText(
 	site: Pick<Site, "roleField" | "titleOfValues">,
-	collection: SchemaCollection,
+	collection: SchemaCollectionName,
 	form: EntryForm,
 	entry: Pick<EntryData, "source"> | null,
 ) {
@@ -46,7 +46,7 @@ export function SeoPreview({
 	form,
 	entry,
 }: {
-	collection: SchemaCollection;
+	collection: SchemaCollectionName;
 	form: EntryForm;
 	entry: EntryData | null;
 }) {

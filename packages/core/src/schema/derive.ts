@@ -35,9 +35,9 @@ export type { StoredField } from "./walk";
  */
 
 /** Collection names (keys of `collections` in the site config). Follows declaration order. */
-export type SchemaCollection = string;
+export type SchemaCollectionName = string;
 /** Target collection of a relation. `to` and `from` in the definition are strings, and `defineSite` has checked they are real collections. */
-export type RelationTarget = SchemaCollection;
+export type RelationTarget = SchemaCollectionName;
 
 /**
  * Validates the meaning of values that passed the storage format check. If there is a problem, returns the legacy API's error code.
@@ -94,12 +94,12 @@ export type SiteSchemas = ReturnType<typeof createSchemas>;
 
 /** The rules of the collections of one site config (`config.collections`). */
 export function createSchemas(collections: CollectionsConfig) {
-	const schemaOf = (collection: SchemaCollection): CollectionSchema => collections[collection] as CollectionSchema;
+	const schemaOf = (collection: SchemaCollectionName): CollectionSchema => collections[collection] as CollectionSchema;
 
-	const storedCache = new Map<SchemaCollection, readonly StoredField[]>();
+	const storedCache = new Map<SchemaCollectionName, readonly StoredField[]>();
 
 	/** Stored field list. Follows declaration order, and fields dependent on a conditional field come right after that field. */
-	function storedFields(collection: SchemaCollection): readonly StoredField[] {
+	function storedFields(collection: SchemaCollectionName): readonly StoredField[] {
 		const cached = storedCache.get(collection);
 		if (cached) return cached;
 		const result = Object.freeze(valueFieldsOf(schemaOf(collection)));
@@ -107,11 +107,11 @@ export function createSchemas(collections: CollectionsConfig) {
 		return result;
 	}
 
-	function storedField(collection: SchemaCollection, name: string): StoredField | undefined {
+	function storedField(collection: SchemaCollectionName, name: string): StoredField | undefined {
 		return storedFields(collection).find((stored) => stored.name === name);
 	}
 
-	function slugFieldOf(collection: SchemaCollection): SlugField | undefined {
+	function slugFieldOf(collection: SchemaCollectionName): SlugField | undefined {
 		return Object.values(schemaOf(collection).fields).find((field): field is SlugField => field.kind === "slug");
 	}
 
@@ -119,13 +119,13 @@ export function createSchemas(collections: CollectionsConfig) {
 	 * The stored field with that role (`role`). `undefined` if none. Library and extension code looks up values such as the summary not by field name but
 	 * with this function.
 	 */
-	function roleField(collection: SchemaCollection, role: FieldRole): StoredField | undefined {
+	function roleField(collection: SchemaCollectionName, role: FieldRole): StoredField | undefined {
 		return fieldWithRole(schemaOf(collection), role);
 	}
 
 	/** The value (string) of that role's field. `""` if the field is missing or the value is not a string. */
 	function roleValue(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		role: FieldRole,
 		values: { readonly [key: string]: unknown },
 	): string {
@@ -133,17 +133,17 @@ export function createSchemas(collections: CollectionsConfig) {
 	}
 
 	/** The title field of a collection (see `titleFieldOf`). */
-	function titleField(collection: SchemaCollection): TitleField {
+	function titleField(collection: SchemaCollectionName): TitleField {
 		return titleFieldOf(schemaOf(collection));
 	}
 
 	/** The title in the stored values (metadata) of a collection. `null` if it is not a string. */
-	function titleOfValues(collection: SchemaCollection, values: { readonly [key: string]: unknown }): string | null {
+	function titleOfValues(collection: SchemaCollectionName, values: { readonly [key: string]: unknown }): string | null {
 		return titleValue(schemaOf(collection), values);
 	}
 
 	/** A field filled from the start of the body when publishing if empty (`fillFromBody`). */
-	function fillFromBodyFields(collection: SchemaCollection): (StoredField & { readonly field: TextField })[] {
+	function fillFromBodyFields(collection: SchemaCollectionName): (StoredField & { readonly field: TextField })[] {
 		return storedFields(collection).filter(
 			(stored): stored is StoredField & { readonly field: TextField } =>
 				stored.field.kind === "text" && Boolean(stored.field.fillFromBody),
@@ -153,19 +153,19 @@ export function createSchemas(collections: CollectionsConfig) {
 	/**
 	 * Address built from the value that the address field's `from` points to. `""` if `from` is absent or the value is empty (not generated automatically).
 	 */
-	function slugFromValues(collection: SchemaCollection, values: { readonly [key: string]: unknown }): string {
+	function slugFromValues(collection: SchemaCollectionName, values: { readonly [key: string]: unknown }): string {
 		const from = slugFieldOf(collection)?.from;
 		const source = from ? values[from] : undefined;
 		return typeof source === "string" ? slugify(source) : "";
 	}
 
 	/** Field name → storage format. Same shape as the legacy `COLLECTION_DEFINITIONS.fields`. */
-	function storageTypes(collection: SchemaCollection): Record<string, StorageType> {
+	function storageTypes(collection: SchemaCollectionName): Record<string, StorageType> {
 		return Object.fromEntries(storedFields(collection).map(({ name, field }) => [name, storageTypeOf(field)]));
 	}
 
 	/** List of relation fields. Same shape as the legacy `COLLECTION_DEFINITIONS.relations`. */
-	function relationsOf(collection: SchemaCollection): { field: string; kind: "entry"; to: RelationTarget }[] {
+	function relationsOf(collection: SchemaCollectionName): { field: string; kind: "entry"; to: RelationTarget }[] {
 		return storedFields(collection).flatMap(({ name, field }) =>
 			field.kind === "relation" ? [{ field: name, kind: "entry" as const, to: field.to as RelationTarget }] : [],
 		);
@@ -175,12 +175,15 @@ export function createSchemas(collections: CollectionsConfig) {
 	 * Whether a metadata key is an "orphaned value": a value whose field is no longer in the schema (the site removed the field).
 	 * The per-language names of an item collection (`translations`) are not orphaned: the core owns that key.
 	 */
-	function isOrphanedMetadataKey(collection: SchemaCollection, key: string): boolean {
+	function isOrphanedMetadataKey(collection: SchemaCollectionName, key: string): boolean {
 		return key !== RECORD_TRANSLATIONS_KEY && !storedField(collection, key);
 	}
 
 	/** Keys of the metadata whose fields are no longer in the schema, in the order they are stored. They are kept, never validated or shown as fields. */
-	function orphanedMetadataKeys(collection: SchemaCollection, metadata: { readonly [key: string]: unknown }): string[] {
+	function orphanedMetadataKeys(
+		collection: SchemaCollectionName,
+		metadata: { readonly [key: string]: unknown },
+	): string[] {
 		return Object.keys(metadata).filter((key) => isOrphanedMetadataKey(collection, key));
 	}
 
@@ -189,7 +192,7 @@ export function createSchemas(collections: CollectionsConfig) {
 	 * One entry per field, in declaration order, listing each unknown value once.
 	 */
 	function unknownSelectValues(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		metadata: { readonly [key: string]: unknown },
 	): { path: string; values: string[] }[] {
 		const found: { path: string; values: string[] }[] = [];
@@ -206,7 +209,10 @@ export function createSchemas(collections: CollectionsConfig) {
 	}
 
 	/** The metadata as the current schema types it: values of removed fields are left out (the public read shows no orphaned values). */
-	function schemaMetadata<T>(collection: SchemaCollection, metadata: { readonly [key: string]: T }): Record<string, T> {
+	function schemaMetadata<T>(
+		collection: SchemaCollectionName,
+		metadata: { readonly [key: string]: T },
+	): Record<string, T> {
 		return Object.fromEntries(Object.entries(metadata).filter(([key]) => !isOrphanedMetadataKey(collection, key)));
 	}
 
@@ -216,7 +222,7 @@ export function createSchemas(collections: CollectionsConfig) {
 	 * filtering "unused", and blocking deletion of files in use.
 	 */
 	function metadataReferences(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		metadata: { readonly [key: string]: unknown },
 	): MetadataReference[] {
 		const references: MetadataReference[] = [];
@@ -237,7 +243,7 @@ export function createSchemas(collections: CollectionsConfig) {
 
 	/** Target collection a relation field expects, and whether unpublished targets are allowed. */
 	function relationRule(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		path: string,
 	): { to: RelationTarget; allowUnpublished: boolean } | undefined {
 		const stored = storedField(collection, path);
@@ -247,7 +253,7 @@ export function createSchemas(collections: CollectionsConfig) {
 
 	/** Problems of fields (`required`) that must not be empty when publishing (when saving for item collections). */
 	function missingRequiredIssues(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		snapshot: { slug: string | null; metadata: { readonly [key: string]: unknown } },
 		options: { localizedOnly?: boolean } = {},
 	): { code: string; path: string; message?: string }[] {
@@ -270,7 +276,7 @@ export function createSchemas(collections: CollectionsConfig) {
 	}
 
 	/** Names of per-language fields. Unmarked fields are shared by the translation group. */
-	function localizedFieldNames(collection: SchemaCollection): { own: string[]; inherit: string[] } {
+	function localizedFieldNames(collection: SchemaCollectionName): { own: string[]; inherit: string[] } {
 		const own: string[] = [];
 		const inherit: string[] = [];
 		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
@@ -282,13 +288,13 @@ export function createSchemas(collections: CollectionsConfig) {
 	}
 
 	/** Every per-language field name (`own` and `inherit` together): the keys a translation holds itself. */
-	function localizedSet(collection: SchemaCollection): ReadonlySet<string> {
+	function localizedSet(collection: SchemaCollectionName): ReadonlySet<string> {
 		const { own, inherit } = localizedFieldNames(collection);
 		return new Set([...own, ...inherit]);
 	}
 
 	/** Common field keys a translation must not have. Stored fields whose definition has no `localized` (not values of removed fields). */
-	function commonFieldKeys(collection: SchemaCollection, metadata: { readonly [key: string]: unknown }): string[] {
+	function commonFieldKeys(collection: SchemaCollectionName, metadata: { readonly [key: string]: unknown }): string[] {
 		const localized = localizedSet(collection);
 		// Values of removed fields are not common fields: they stay wherever they are stored.
 		return Object.keys(metadata).filter((key) => !localized.has(key) && !isOrphanedMetadataKey(collection, key));
@@ -296,7 +302,7 @@ export function createSchemas(collections: CollectionsConfig) {
 
 	/** Picks only the per-language values to carry from the source metadata to the translation. */
 	function pickLocalizedMetadata<T>(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		metadata: { readonly [key: string]: T },
 	): Record<string, T> {
 		const localized = localizedSet(collection);
@@ -305,7 +311,7 @@ export function createSchemas(collections: CollectionsConfig) {
 
 	/** Public metadata of a translation = common values of the source + per-language values of the translation. */
 	function mergeTranslationMetadata<T>(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		source: { readonly [key: string]: T },
 		translation: { readonly [key: string]: T },
 	): Record<string, T> {
@@ -315,7 +321,7 @@ export function createSchemas(collections: CollectionsConfig) {
 	}
 
 	/** Text fields of an item collection that can have per-language values. */
-	function recordLocalizedFields(collection: SchemaCollection): string[] {
+	function recordLocalizedFields(collection: SchemaCollectionName): string[] {
 		const schema = schemaOf(collection);
 		if (schema.kind !== "item") return [];
 		return Object.entries(schema.fields)
@@ -328,7 +334,7 @@ export function createSchemas(collections: CollectionsConfig) {
 	 * Empty values and empty languages are removed. For a bad shape, it returns `error` so the v1 error code can be thrown.
 	 */
 	function normalizeRecordTranslations(
-		collection: SchemaCollection,
+		collection: SchemaCollectionName,
 		value: unknown,
 		locales: readonly string[],
 	): { value: RecordTranslations } | { error: ErrorCode; path?: string; label?: string } {

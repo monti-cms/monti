@@ -1,6 +1,6 @@
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import {
 	addedMarkName,
 	allowsMark,
@@ -143,9 +143,6 @@ export const tooltipMarkExtension = (t: TooltipText): EditorMarkExtension => ({
 /** Registers the tooltip mark's editor display, format tool, bubble, and slash menu in the admin UI. */
 export function TooltipProvider({ children }: { children: ReactNode }) {
 	const t = useTranslator(tooltipMessages);
-	const components = useMemo<CmsAdminComponents>(
-		() => ({ marks: { [tooltipBlock.name]: tooltipMarkExtension(t) } }),
-		[t],
-	);
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	const components = useMemo<AdminComponents>(() => ({ marks: { [tooltipBlock.name]: tooltipMarkExtension(t) } }), [t]);
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }

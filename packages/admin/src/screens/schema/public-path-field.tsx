@@ -2,7 +2,7 @@
 
 import { useTranslator } from "@monti-cms/core/site";
 import { useId, useState } from "react";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { schemaCollectionMessages } from "./collection.messages";
 import { FlagSwitch, useSchemaEdit } from "./controls";
@@ -75,7 +75,7 @@ export function PublicPathField({
 							{segment === "" ? ":slug" : "/:slug"}
 						</span>
 					</div>
-					{issue && <FieldError className="text-xs">{t(`path.${issue}`)}</FieldError>}
+					{issue && <FormFieldError className="text-xs">{t(`path.${issue}`)}</FormFieldError>}
 				</div>
 			)}
 		</div>

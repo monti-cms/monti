@@ -2,7 +2,7 @@ import type { Collection } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { CmsAdminComponentsProvider, type FieldViewProps } from "../../../admin-components";
+import { AdminComponentsProvider, type FieldViewProps } from "../../../admin-components";
 import { renderWithSite as render } from "../../../test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
@@ -81,9 +81,7 @@ describe("properties panel: the tab a plugin places fields in", () => {
 		const [, view] = viewField;
 		const Custom = ({ form }: FieldViewProps) => <p>preview: {String(form.title)}</p>;
 		renderPanel(found.collection, { ...EMPTY_FORM, title: "Title" }, (panel) => (
-			<CmsAdminComponentsProvider components={{ fieldViews: { [view.view]: Custom } }}>
-				{panel}
-			</CmsAdminComponentsProvider>
+			<AdminComponentsProvider components={{ fieldViews: { [view.view]: Custom } }}>{panel}</AdminComponentsProvider>
 		));
 		fireEvent.click(screen.getByRole("tab", { name: found.tab }));
 		expect(await screen.findByText("preview: Title")).toBeTruthy();

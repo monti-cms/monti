@@ -50,7 +50,7 @@ export function withCms(nextConfig: NextConfig): NextConfig {
 	checkImportBoundaryInDev(process.cwd());
 	return {
 		...nextConfig,
-		// Tells the server and browser bundles Next `basePath` (read by `cmsApiUrl()` and `withBasePath()`). Site code has nothing to do.
+		// Tells the server and browser bundles Next `basePath` (read by `adminApiUrl()` and `withBasePath()`). Site code has nothing to do.
 		env: { ...nextConfig.env, NEXT_PUBLIC_CMS_BASE_PATH: nextConfig.basePath?.replace(/\/+$/, "") ?? "" },
 		transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), ...PACKAGES])],
 	};

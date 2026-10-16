@@ -1,5 +1,5 @@
 import type { Cms } from "@monti-cms/core/server";
-import { cmsApiUrl } from "@monti-cms/core/site";
+import { adminApiUrl } from "@monti-cms/core/site";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
@@ -80,14 +80,14 @@ export default async function AdminLoginPage({
 							<AlertDescription className="mt-1 text-xs">
 								{t("forbidden", { provider, accountId: accountId ?? "" })}
 							</AlertDescription>
-							<form method="post" action={cmsApiUrl("/v1/session/sign-out")} className="mt-3">
+							<form method="post" action={adminApiUrl("/v1/session/sign-out")} className="mt-3">
 								<Button type="submit" variant="link" size="xs">
 									{t("signOut")}
 								</Button>
 							</form>
 						</Alert>
 					) : firstAdmin ? (
-						<form method="post" action={cmsApiUrl("/v1/session/first-admin")} className="flex flex-col gap-4">
+						<form method="post" action={adminApiUrl("/v1/session/first-admin")} className="flex flex-col gap-4">
 							{errorText ? <ErrorAlert text={errorText} /> : null}
 							<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
 							<TextField
@@ -123,7 +123,7 @@ export default async function AdminLoginPage({
 								<form
 									key={authProvider.id}
 									method="post"
-									action={cmsApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
+									action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 									className="flex flex-col gap-4"
 								>
 									<TextField id="email" name="email" label={t("email")} type="email" autoComplete="email" />
@@ -144,7 +144,7 @@ export default async function AdminLoginPage({
 									<form
 										key={authProvider.id}
 										method="post"
-										action={cmsApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
+										action={adminApiUrl(`/v1/session/sign-in/${encodeURIComponent(authProvider.id)}`)}
 									>
 										<Button type="submit" className="w-full">
 											{authProvider.icon ? (

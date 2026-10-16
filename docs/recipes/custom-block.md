@@ -58,7 +58,7 @@ The editor view, registered by block name in a provider (the `admin` module's de
 ```tsx
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import type { ReactNode } from "react";
 
@@ -78,10 +78,10 @@ function NoticeView() {
 	);
 }
 
-const components: CmsAdminComponents = { blockViews: { notice: NoticeView } }; // by block name
+const components: AdminComponents = { blockViews: { notice: NoticeView } }; // by block name
 
 export function NoticeProvider({ children }: { children: ReactNode }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }
 ```
 

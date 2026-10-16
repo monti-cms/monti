@@ -1,13 +1,13 @@
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import type { ReactNode } from "react";
 import { SEO_INPUTS, SEO_PREVIEW_VIEW } from "../fields";
 import { seoDescriptionInput, seoNoindexInput, seoTitleInput } from "./inputs";
 import { SeoPreviewView } from "./preview";
 
 /** What the SEO extension adds to the admin UI: the search preview (view field) and the search title, description and hide inputs. */
-export const SEO_ADMIN_COMPONENTS: CmsAdminComponents = {
+export const SEO_ADMIN_COMPONENTS: AdminComponents = {
 	fieldViews: { [SEO_PREVIEW_VIEW]: SeoPreviewView },
 	fieldInputs: {
 		[SEO_INPUTS.title]: seoTitleInput,
@@ -17,5 +17,5 @@ export const SEO_ADMIN_COMPONENTS: CmsAdminComponents = {
 };
 
 export function SeoAdminProvider({ children }: { readonly children: ReactNode }) {
-	return <CmsAdminComponentsProvider components={SEO_ADMIN_COMPONENTS}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={SEO_ADMIN_COMPONENTS}>{children}</AdminComponentsProvider>;
 }

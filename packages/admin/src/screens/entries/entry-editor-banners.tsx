@@ -6,7 +6,7 @@ import type { FormatIssue } from "@monti-cms/core/format";
 import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { Button } from "../../ui/button";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { nounVars } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import type { EntryEditor } from "./entry-editor-types";
@@ -52,7 +52,7 @@ export function EntryEditorBanners({
 				</output>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
-				<FieldError className="border-b px-4 py-2 text-sm">{editor.saveError.message}</FieldError>
+				<FormFieldError className="border-b px-4 py-2 text-sm">{editor.saveError.message}</FormFieldError>
 			)}
 			{publishIssues.length > 0 && (
 				<ul className="max-h-36 overflow-y-auto border-b px-4 py-2 text-sm" aria-label={t("publishProblems")}>

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat } from "@monti-cms/admin";
+import { AdminComponentsProvider, useAdminComponents, useFormat } from "@monti-cms/admin";
 import { CmsApiError } from "@monti-cms/admin/api";
 import { defineSite } from "@monti-cms/core";
 import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
@@ -18,14 +18,14 @@ import { mdxSourceMessages } from "./messages";
 import { MdxAdminProvider } from "./provider";
 import { lineOfBlock, MdxSourcePanel } from "./source-panel";
 
-const mocks = vi.hoisted(() => ({ cmsFetch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ adminFetch: vi.fn() }));
 
 // The lookups of the entries a link points to go through the admin API (`fetch`); the panel reads the answers the test gives: a resolved
 // value is the entry, a `CmsApiError` is the error answer the server sends.
 beforeEach(() => {
 	vi.stubGlobal("fetch", async (input: string) => {
 		try {
-			const body = await mocks.cmsFetch(input);
+			const body = await mocks.adminFetch(input);
 			return { ok: true, status: 200, json: async () => body };
 		} catch (error) {
 			const failure = error as { status?: number; code?: string; message?: string };
@@ -174,7 +174,7 @@ describe("internal links in the source text", () => {
 	let ID = "";
 	const linked = () => docOf(testSite, `앞 [상세 글](entry:${ID}) 뒤\n`);
 	const answerFound = () =>
-		mocks.cmsFetch.mockResolvedValue({
+		mocks.adminFetch.mockResolvedValue({
 			id: ID,
 			collection: COLLECTION,
 			status: "published",
@@ -184,12 +184,12 @@ describe("internal links in the source text", () => {
 			working: { metadata: { title: "상세" } },
 		});
 	const answerMissing = () =>
-		mocks.cmsFetch.mockRejectedValue(new CmsApiError(404, "not_found", "not found", [], { code: "not_found" }));
+		mocks.adminFetch.mockRejectedValue(new CmsApiError(404, "not_found", "not found", [], { code: "not_found" }));
 
 	beforeEach(() => {
 		counter += 1;
 		ID = `6f1c0b0e-3c1d-4a0e-9f5a-${String(counter).padStart(12, "0")}`;
-		mocks.cmsFetch.mockReset();
+		mocks.adminFetch.mockReset();
 	});
 
 	it("are written with the entry's address once it is looked up, not as entry:<id>", async () => {
@@ -202,7 +202,7 @@ describe("internal links in the source text", () => {
 	it("keep entry:<id> when the entry cannot be resolved", async () => {
 		answerMissing();
 		render(<MdxSourcePanel doc={linked()} onChange={() => {}} />);
-		await waitFor(() => expect(mocks.cmsFetch).toHaveBeenCalled());
+		await waitFor(() => expect(mocks.adminFetch).toHaveBeenCalled());
 		expect(textarea().value).toContain(`(entry:${ID})`);
 	});
 
@@ -245,7 +245,7 @@ describe("registering the source panel and the format", () => {
 	);
 
 	it("MdxAdminProvider registers one source panel for mdx, which is MdxSourcePanel", () => {
-		const { result } = renderHook(() => useCmsAdminComponents(), { wrapper: MdxWrapper });
+		const { result } = renderHook(() => useAdminComponents(), { wrapper: MdxWrapper });
 		const panels = result.current.sourcePanels?.filter((panel) => panel.format === "mdx") ?? [];
 		expect(panels).toHaveLength(1);
 		expect(panels[0]?.Panel).toBe(MdxSourcePanel);
@@ -276,14 +276,12 @@ describe("registering the source panel and the format", () => {
 
 	it("adds its panel to the ones other providers registered", () => {
 		const Other = () => null;
-		const { result } = renderHook(() => useCmsAdminComponents(), {
+		const { result } = renderHook(() => useAdminComponents(), {
 			wrapper: ({ children }) => (
 				<SiteWrapper>
-					<CmsAdminComponentsProvider
-						components={{ sourcePanels: [{ format: "other", label: "Other", Panel: Other }] }}
-					>
+					<AdminComponentsProvider components={{ sourcePanels: [{ format: "other", label: "Other", Panel: Other }] }}>
 						<MdxAdminProvider>{children}</MdxAdminProvider>
-					</CmsAdminComponentsProvider>
+					</AdminComponentsProvider>
 				</SiteWrapper>
 			),
 		});

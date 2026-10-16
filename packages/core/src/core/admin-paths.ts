@@ -3,7 +3,7 @@ import { DEFAULT_ADMIN_PATH } from "../config/rules";
 import { adminHrefWith, withBasePath } from "./base-path";
 
 export { DEFAULT_ADMIN_PATH };
-export { adminHrefWith, CMS_API_PATH, cmsApiUrl, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path";
+export { adminApiUrl, adminHrefWith, CMS_API_PATH, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path";
 
 /** The admin addresses of one site. */
 export type SiteAdminPaths = ReturnType<typeof createAdminPaths>;

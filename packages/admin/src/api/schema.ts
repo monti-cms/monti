@@ -5,8 +5,8 @@ import type {
 	SchemaSaveResult,
 	SchemaScreenState,
 } from "@monti-cms/core/internal/schema-edit";
-import { cmsApiUrl, type Site } from "@monti-cms/core/site";
-import { cmsFetch } from "./client";
+import { adminApiUrl, type Site } from "@monti-cms/core/site";
+import { adminFetch } from "./client";
 
 /** The calls of the schema settings screen (see the `/v1/schema` routes of the admin API). */
 
@@ -21,7 +21,7 @@ export type SavedSchema = Extract<SchemaSaveResult, { saved: true }>;
 
 /** The schema file as the screen edits it. */
 export const fetchSchema = (site: Site, signal?: AbortSignal) =>
-	cmsFetch<SchemaScreenState>(site, cmsApiUrl("/v1/schema"), { signal });
+	adminFetch<SchemaScreenState>(site, adminApiUrl("/v1/schema"), { signal });
 
 /** What the screen sends to check or save an edit. `transforms` left out means the server's defaults. */
 export interface EditRequest {
@@ -31,7 +31,7 @@ export interface EditRequest {
 }
 
 export const previewSchema = (site: Site, request: EditRequest, signal?: AbortSignal) =>
-	cmsFetch<SchemaEditPreview>(site, cmsApiUrl("/v1/schema/preview"), { method: "POST", json: request, signal });
+	adminFetch<SchemaEditPreview>(site, adminApiUrl("/v1/schema/preview"), { method: "POST", json: request, signal });
 
 /**
  * Saves an edit. `acknowledged` names the impacts of the preview the writer saw: the server refuses a save whose changes leave stored entries worse off
@@ -41,7 +41,7 @@ export const saveSchema = (
 	site: Site,
 	request: EditRequest & { readonly baseHash: string; readonly acknowledged: readonly string[] },
 ) =>
-	cmsFetch<SavedSchema | { saved: false; reason: "unchanged" }>(site, cmsApiUrl("/v1/schema"), {
+	adminFetch<SavedSchema | { saved: false; reason: "unchanged" }>(site, adminApiUrl("/v1/schema"), {
 		method: "PUT",
 		json: request,
 	});

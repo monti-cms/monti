@@ -10,7 +10,7 @@ export * from "./blocks/definitions";
 export * from "./blocks/derive";
 export * from "./config/check/collections";
 export * from "./config/check/fields";
-export type { Issue } from "./config/check/issue";
+export type { ConfigIssue } from "./config/check/issue";
 
 export {
 	DEFAULT_ADMIN_PATH,
@@ -62,7 +62,7 @@ export * from "./core/path-pattern";
 export * from "./core/plain-text";
 export * from "./core/plural";
 export * from "./core/slug";
-// Data shapes the stores return. The store's own `JsonValue` (mutable) is left out: `./core/types` already exports the readonly one under that name.
+// Data shapes the stores return. The store's own mutable JSON type (`MutableJsonValue`) is left out: `./core/types` exports the readonly `JsonValue`.
 export type {
 	BodyTemplate,
 	CompleteMediaAssetInput,
@@ -110,6 +110,7 @@ export type {
 	BodyPosition,
 	Collection,
 	InternalLinkSource,
+	Issue,
 	JsonValue,
 	MetadataValue,
 	PreparedSnapshot,

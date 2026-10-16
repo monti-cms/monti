@@ -1,5 +1,5 @@
 import { checkTabName } from "../config/check/fields";
-import { type Issue, IssueList, pathOf } from "../config/check/issue";
+import { type ConfigIssue, IssueList, pathOf } from "../config/check/issue";
 import type { CollectionSchema, LayoutGroup } from "./collection";
 import { findTitleField } from "./walk";
 
@@ -75,7 +75,7 @@ export function placementsOf(
 /** The problems of what plugins place: a tab name the panel can show, and role and view names that are text. */
 export function checkPlacements(
 	plugins: readonly { readonly name: string; readonly contributes?: Readonly<Record<string, unknown>> }[],
-): Issue[] {
+): ConfigIssue[] {
 	const list = new IssueList();
 	for (const plugin of plugins) {
 		const placed = plugin.contributes?.[LAYOUT_CONTRIBUTION];

@@ -22,7 +22,7 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 ## Adding site components
 
 Field inputs, block edit screens and code fence previews are added by extensions, and the site can add to or override them (e.g. the block extension's Mermaid and chart provide a default
-preview). The site adds its own through a plugin of its own: the plugin names an admin side, and the admin loads it (there is no separate file in `app/`). The Provider of that admin side is a client component that wraps the admin and uses `CmsAdminComponentsProvider`. If the site's entry has the same name as an extension's, the site's wins.
+preview). The site adds its own through a plugin of its own: the plugin names an admin side, and the admin loads it (there is no separate file in `app/`). The Provider of that admin side is a client component that wraps the admin and uses `AdminComponentsProvider`. If the site's entry has the same name as an extension's, the site's wins.
 
 ```ts
 // plugins/site-admin/index.ts
@@ -42,7 +42,7 @@ Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugin
 ```tsx
 // plugins/site-admin/provider.tsx
 "use client";
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { AdminComponentsProvider } from "@monti-cms/admin";
 
 const components = {
 	fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
@@ -51,7 +51,7 @@ const components = {
 };
 
 export function SiteAdminComponents({ children }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }
 ```
 
@@ -89,7 +89,7 @@ involved in loading it into the editor or saving it from there.
 ### Source panels
 
 The source toggle at the end of the toolbar edits the body as text in some notation. The notation is a plugin's: the toggle is shown only when a **source panel** is registered, in the
-same provider as the other site components (`useCmsAdminComponents().sourcePanels`). With several registered, the first one is used.
+same provider as the other site components (`useAdminComponents().sourcePanels`). With several registered, the first one is used.
 
 ```tsx
 // what the `mdx()` plugin of @monti-cms/mdx registers for you:
@@ -133,7 +133,7 @@ const components = {
 ```
 
 Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
-(`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `CmsAdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/site` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
+(`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `AdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/site` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
 uses `MediaThumbnail` and `useMediaUrl` from `@monti-cms/admin/media` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
@@ -202,7 +202,7 @@ function NoticeView() {
 
 A block extension's text mark (`syntax.kind: "text"`, `editor.view: "mark"`, e.g. tooltip, code link and text color in `@monti-cms/blocks`) makes the admin
 UI build the editor mark (`cms` + Pascal-case name, `addedMarkName("tooltip")` -> `cmsTooltip`) and the stored document conversion from the definition. The core
-editor does not know mark names and renders only what an extension provides through `marks` (block name -> `EditorMarkExtension`) of `CmsAdminComponentsProvider`.
+editor does not know mark names and renders only what an extension provides through `marks` (block name -> `EditorMarkExtension`) of `AdminComponentsProvider`.
 
 ```tsx
 import type { EditorMarkExtension } from "@monti-cms/admin/editor";
@@ -241,7 +241,7 @@ The Bareun checker is `@monti-cms/bareun`, a plugin you list in `plugins` of `mo
 ```tsx
 "use client";
 import { defineTextChecker } from "@monti-cms/core";
-import type { CmsAdminComponents } from "@monti-cms/admin";
+import type { AdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
 	id: "my-words",
@@ -255,7 +255,7 @@ const myChecker = defineTextChecker({
 	],
 });
 
-const components: CmsAdminComponents = { textCheckers: [myChecker] };
+const components: AdminComponents = { textCheckers: [myChecker] };
 ```
 
 - The unit of checking is one paragraph (a block holding text, such as a heading, list item or table cell): `{ id, text, locale }`. A result's `start` and `end` are
@@ -311,21 +311,21 @@ The module that a plugin definition's `admin` loads provides `defineAdminPlugin(
 ```ts
 export default defineAdminPlugin({
 	pages: { my: MyPage }, // the "my" page of Tools: <admin path>/tools/my (default /admin/tools/my, a client component). The admin UI handles the login check
-	Provider: MyProvider, // wraps the whole admin UI. Inside it, add input and edit screen extensions with CmsAdminComponentsProvider
+	Provider: MyProvider, // wraps the whole admin UI. Inside it, add input and edit screen extensions with AdminComponentsProvider
 });
 ```
 
-A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/site`), which throws a `CmsApiError` whose `message` is the text to show:
+A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `adminFetch(site, adminApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `adminApiUrl` and `useSite` from `@monti-cms/core/site`), which throws a `CmsApiError` whose `message` is the text to show:
 
 ```tsx
 "use client";
-import { cmsFetch } from "@monti-cms/admin/api";
-import { cmsApiUrl, useSite } from "@monti-cms/core/site";
+import { adminFetch } from "@monti-cms/admin/api";
+import { adminApiUrl, useSite } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
 	const site = useSite();
-	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
+	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => adminFetch<{ published: number }>(site, adminApiUrl("/v1/post-stats/summary"), { signal }) });
 	return <div>{stats.data?.published}</div>;
 }
 ```
@@ -338,13 +338,13 @@ attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
 `cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`) and a page in the admin frame (`ShellPage`),
 the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`, `DialogFormFooter`), the status pieces (`StatusIndicator`, `Badge`,
-`Alert`, `LoadErrorAlert`, `FieldError`), `commonMessages` (Save, Cancel, Retry, ...), `usePreference`, icon lookup (`useIconByName`), `useDebounced` and the entry form value types
+`Alert`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `usePreference`, icon lookup (`useIconByName`), `useDebounced` and the entry form value types
 (`EntryForm`, `EntryData`). Colors come from the `--cms-success`, `--cms-warning` and `--cms-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
 Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | Adding site components (`CmsAdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types |
+| `@monti-cms/admin` | Adding site components (`AdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
@@ -353,7 +353,7 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 | `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
 | `/media` | Media picker and preview |
-| `/api` | Calling the admin API (`cmsFetch`, `CmsApiError`, `errorText`, `isConflict`) and writing with it (`useCmsMutation`) |
+| `/api` | Calling the admin API (`adminFetch`, `CmsApiError`, `errorText`, `isConflict`) and writing with it (`useCmsMutation`) |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |
 

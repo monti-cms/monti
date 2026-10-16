@@ -159,7 +159,7 @@ export { SOURCE_ERROR_ID } from "./source-error-id";
 
 import type { Field, TextChecker } from "@monti-cms/core";
 
-/** A source panel a plugin registers (`CmsAdminComponents.sourcePanels`). */
+/** A source panel a plugin registers (`AdminComponents.sourcePanels`). */
 export interface SourcePanelRegistration {
 	/** The format the panel edits (`mdx`). */
 	readonly format: string;
@@ -169,11 +169,11 @@ export interface SourcePanelRegistration {
 }
 
 /**
- * Components a site or plugin puts in the admin UI. Provided inside the admin layout with `CmsAdminComponentsProvider`.
+ * Components a site or plugin puts in the admin UI. Provided inside the admin layout with `AdminComponentsProvider`.
  * A server layout cannot pass functions to the browser, so a client component renders this provider.
  * Nested providers add inner values to outer ones (inner wins on the same name).
  */
-export interface CmsAdminComponents {
+export interface AdminComponents {
 	/**
 	 * Editor preview of a code fence block (e.g. `mermaid`, `chart`). The key is the fence language, and the value is a function that loads
 	 * a component that renders the source (`source`) (a heavy renderer is loaded only when the preview opens). If absent, the source is shown as is.
@@ -274,17 +274,17 @@ export interface FieldViewProps {
 	readonly entry: EntryData | null;
 }
 
-const CmsAdminComponentsContext = createContext<CmsAdminComponents>({});
+const CmsAdminComponentsContext = createContext<AdminComponents>({});
 
-export function CmsAdminComponentsProvider({
+export function AdminComponentsProvider({
 	components,
 	children,
 }: {
-	components: CmsAdminComponents;
+	components: AdminComponents;
 	children: ReactNode;
 }) {
 	const parent = useContext(CmsAdminComponentsContext);
-	const value = useMemo<CmsAdminComponents>(
+	const value = useMemo<AdminComponents>(
 		() => ({
 			fencePreviews: { ...parent.fencePreviews, ...components.fencePreviews },
 			fieldInputs: { ...parent.fieldInputs, ...components.fieldInputs },
@@ -303,17 +303,17 @@ export function CmsAdminComponentsProvider({
 	return <CmsAdminComponentsContext.Provider value={value}>{children}</CmsAdminComponentsContext.Provider>;
 }
 
-export const useCmsAdminComponents = () => useContext(CmsAdminComponentsContext);
+export const useAdminComponents = () => useContext(CmsAdminComponentsContext);
 
 /**
  * The browser side of a format by name (`mdx`), or `undefined` when no plugin registered it. The format is a plugin's: code that needs a notation (AI, the
  * source panel) asks for it here instead of importing a parser.
  */
-export const useFormat = (name: string): BrowserFormat | undefined => useCmsAdminComponents().formats?.[name];
+export const useFormat = (name: string): BrowserFormat | undefined => useAdminComponents().formats?.[name];
 
 /** The format of the registered source panel (the notation a body is shown as text in), or `undefined` when no panel is registered. */
 export function useSourceFormat(): BrowserFormat | undefined {
-	const { sourcePanels, formats } = useCmsAdminComponents();
+	const { sourcePanels, formats } = useAdminComponents();
 	const name = sourcePanels?.[0]?.format;
 	return name === undefined ? undefined : formats?.[name];
 }
@@ -322,7 +322,7 @@ const NO_CHECKERS: readonly TextChecker[] = [];
 
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
 export function useEditorExtensions(context: EditorExtensionContext): Required<EditorExtensionResult> {
-	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useCmsAdminComponents();
+	const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
 	// The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
 	const results = [
 		...editorExtensions.map((extension) => extension(context)),

@@ -1,4 +1,4 @@
-import type { CmsServerPlugin } from "@monti-cms/core";
+import type { ServerPlugin } from "@monti-cms/core";
 import * as resetAction from "./routes/actions/[key]/reset/route";
 import * as action from "./routes/actions/[key]/route";
 import * as actions from "./routes/actions/route";
@@ -13,7 +13,7 @@ import { getAiSettingsView, keyUseLabels } from "./settings";
 import { aiStoreFor } from "./store";
 
 /** Server side of the AI plugin. Loaded by the core API handler and `monti db:migrate`. Not included in the browser bundle. */
-const aiServer: CmsServerPlugin = {
+const aiServer: ServerPlugin = {
 	routes: [
 		{ pattern: "v1/ai/actions", module: actions },
 		{ pattern: "v1/ai/actions/[key]", module: action },

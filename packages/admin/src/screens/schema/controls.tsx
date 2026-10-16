@@ -1,12 +1,12 @@
 "use client";
 
-import type { Issue } from "@monti-cms/core/site";
+import type { ConfigIssue } from "@monti-cms/core/site";
 import { useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
-import { FieldDescription, FieldError, FieldLabel, Field as UiField } from "../../ui/field";
+import { FormFieldDescription, FormFieldError, FormFieldLabel, FormField as UiField } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
@@ -20,7 +20,7 @@ import { nameProblem, type Obj } from "./schema-model";
 export interface SchemaEditContext {
 	readonly disabled: boolean;
 	readonly vocabulary: { readonly blocks: readonly string[]; readonly marks: readonly string[] };
-	readonly issues: readonly Issue[];
+	readonly issues: readonly ConfigIssue[];
 	readonly collectionNames: readonly string[];
 	/** Collections defined in code: the preview keeps them next to the file's. */
 	readonly codeCollections: readonly string[];
@@ -40,7 +40,7 @@ export const SchemaEditProvider = Context.Provider;
 export const useSchemaEdit = () => useContext(Context);
 
 /** The problems of the last check at `path` or below it. */
-export function useIssuesUnder(path: string, exclude?: string): readonly Issue[] {
+export function useIssuesUnder(path: string, exclude?: string): readonly ConfigIssue[] {
 	const { issues } = useSchemaEdit();
 	return issues.filter(
 		(issue) =>
@@ -49,7 +49,7 @@ export function useIssuesUnder(path: string, exclude?: string): readonly Issue[]
 	);
 }
 
-export function IssueList({ issues }: { issues: readonly Issue[] }) {
+export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
 		<ul className="flex flex-col gap-0.5 text-cms-destructive text-xs" data-testid="schema-issues">
@@ -147,10 +147,10 @@ export function FlagSwitch({
 	return (
 		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-4", className)}>
 			<div className="flex flex-col gap-0.5">
-				<FieldLabel htmlFor={id} className="font-medium text-sm">
+				<FormFieldLabel htmlFor={id} className="font-medium text-sm">
 					{label}
-				</FieldLabel>
-				{desc && <FieldDescription className={HELP}>{desc}</FieldDescription>}
+				</FormFieldLabel>
+				{desc && <FormFieldDescription className={HELP}>{desc}</FormFieldDescription>}
 			</div>
 			<Switch
 				id={id}
@@ -184,10 +184,10 @@ export function Segmented({
 	const id = useId();
 	return (
 		<UiField className="gap-2">
-			<FieldLabel id={id} className="font-medium text-sm">
+			<FormFieldLabel id={id} className="font-medium text-sm">
 				{label}
-			</FieldLabel>
-			{description && <FieldDescription className={HELP}>{description}</FieldDescription>}
+			</FormFieldLabel>
+			{description && <FormFieldDescription className={HELP}>{description}</FormFieldDescription>}
 			<div
 				role="radiogroup"
 				aria-labelledby={id}
@@ -211,7 +211,7 @@ export function Segmented({
 					</button>
 				))}
 			</div>
-			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
+			{hint && <FormFieldDescription className={HELP}>{hint}</FormFieldDescription>}
 		</UiField>
 	);
 }
@@ -337,7 +337,7 @@ export function NameInput({
 					}
 				}}
 			/>
-			{problem && <FieldError className="text-xs">{t(`name.${problem}`)}</FieldError>}
+			{problem && <FormFieldError className="text-xs">{t(`name.${problem}`)}</FormFieldError>}
 		</Labeled>
 	);
 }

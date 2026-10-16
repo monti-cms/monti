@@ -511,7 +511,7 @@ several sites. `createSite(config)` (`@monti-cms/core/site`) resolves a config i
 | Code of your own | `cms.site` on the server, `useSite()` in client components. A helper that needs a site takes it as a parameter |
 
 **What reaches the browser.** `site.snapshot()` is the config as plain data: the collections, locales, `site`, `admin`, `timeZone`, `media`, `editor` and `codeBlock` settings, every block (the blocks of plugins included) and, for each plugin, `name`, `nav`, `options` and `contributes` as JSON. A function inside a plugin's `options`
-or `contributes`, a text override of `admin.messages` that is a function (strings stay), and a plugin's `server`, `admin`, `render`, `formats` and `validate` do not reach it: the admin layout loads the plugins' admin modules on the server and renders their providers itself. Keep what the browser needs from `options` to JSON values.
+or `contributes`, a text override of `admin.messages` that is a function (strings stay), and a plugin's `server`, `admin`, `render`, `formats` and `checkConfig` do not reach it: the admin layout loads the plugins' admin modules on the server and renders their providers itself. Keep what the browser needs from `options` to JSON values.
 
 **Typing.** The types follow the config you pass, with no registration step. `defineConfig({ … })` (and `createCms({ config })`) returns `Cms<typeof config>`, so `cms.read.listEntries({ collection: "post" })` knows the collection names and the metadata of each (`MetadataFor<"post", typeof config>`, `CollectionName<typeof config>`),
 and a collection that is not in the config is a type error. Where a library type cannot see an instance, give it the config type: `DocumentComponentsFor<typeof config>` or `DocumentComponentsOf<typeof cms>` types the `components` of `<CmsContent>` (block names and the attribute props of each block), and the AI plugin's action names take the config type the same way.
@@ -854,7 +854,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 - **Never throws on content.** An unknown node, mark or block, a block without a component and a node with malformed attributes go through the `fallback` component and are
   listed in `unknown` (and passed to `onUnknown`). An unknown container shows its content, an unknown leaf nothing; in development the default fallback leaves a hidden
   `<span data-cms-unknown>`. `strict: true` throws instead (tests, the preview page). A value that is not a stored document renders an empty body and is logged.
-- **Components** are layered: core defaults, then the block extensions' components (`documentComponents` of a plugin's `render` module: `CmsPlugin.render` returns `{ documentComponents }`, and the old MDX-shaped default export is gone), then the site's `components`. One props type per node
+- **Components** are layered: core defaults, then the block extensions' components (`documentComponents` of a plugin's `render` module: `Plugin.render` returns `{ documentComponents }`, and the old MDX-shaped default export is gone), then the site's `components`. One props type per node
   (`ParagraphProps`, `HeadingProps` with its `id`, `ListProps`, `CodeBlockProps`, `ImageProps` with the resolved `src`, `FileProps`, `TableProps`/`TableRowProps`/`TableCellProps`, `MathProps`,
   `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
   Every component also gets `ctx` (`locale` and the fixed `labels`; plain JSON, so it can cross to a client component), and a block component gets `blockId`, `node` and `items`.
@@ -881,9 +881,9 @@ export const myPlugin = () =>
 		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // an API key the plugin needs ("API key store")
 		validate: ({ collections }) => {}, // called when the site config is built
 		// The server side, in one place: a loader (read only on the server) or an inline object.
-		server: () => import("my-plugin/server"), // CmsServerPlugin: routes, hooks, formats, commands, migrate, keyUses, features
+		server: () => import("my-plugin/server"), // ServerPlugin: routes, hooks, formats, commands, migrate, keyUses, features
 		// server: { hooks: { validate: () => undefined } }, // inline: a plugin that only adds hooks needs no module (and no `options`)
-		admin: () => import("my-plugin/admin"), // CmsAdminPlugin (@monti-cms/admin): screens, providers
+		admin: () => import("my-plugin/admin"), // AdminPlugin (@monti-cms/admin): screens, providers
 		render: () => import("my-plugin/render"), // the public components of the plugin's blocks: `export const documentComponents = (context) => ({ blocks: { name: Component } })` ("Rendering a stored document")
 	});
 ```
@@ -892,7 +892,7 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 
 - The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
 - `server.formats` adds formats (notations the document can be written as and read from, "Formats"): a function that returns a `CmsFormat` or a list of them (`formats: () => myFormat`). It is called when the instance first needs its formats.
-- `validate` receives the collection, locale and block definitions and all plugins (`plugins`) and returns the issues it finds (`{ path, code, message }`, with `IssueList` and `pathOf` from `@monti-cms/core`); `defineSite` reports them with every other problem of the config in one `ConfigError`. Extensions that use roles check field kinds here.
+- `checkConfig` receives the collection, locale and block definitions and all plugins (`plugins`) and returns the issues it finds (`{ path, code, message }`, with `IssueList` and `pathOf` from `@monti-cms/core`); `defineSite` reports them with every other problem of the config in one `ConfigError`. Extensions that use roles check field kinds here.
 - `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
   `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
   An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
@@ -901,10 +901,10 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.
 - **Write hooks** (`transform`, `validate`, `validatePublish`, `afterCommit`) are the same as the server config's, and run after the server config's hooks, in the order of the plugins. See "Hook contract". They are the `hooks` of the plugin's `server`, which is given in one of two forms:
   - **Inline**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. For a plugin that only adds hooks: no module file, and `options` can be left out. An inline server loads with every server start, the CLI, edge and cold starts included, so keep it light (no heavy import). It may use secrets through `cms.secrets` or the environment: `monti.config.ts` is server-only and never reaches the browser.
-  - **As a loader**: `server: () => import("./server")`, whose default export is the `CmsServerPlugin`. Read on the server only, so this is the place for hooks that hold a secret, call out over the network or import something heavy, and for a plugin that has routes, migrations, commands or checks anyway.
+  - **As a loader**: `server: () => import("./server")`, whose default export is the `ServerPlugin`. Read on the server only, so this is the place for hooks that hold a secret, call out over the network or import something heavy, and for a plugin that has routes, migrations, commands or checks anyway.
 - `afterCommit(event, cms)` gets the instance, in a plugin's hooks and in the server config's alike, so a subscriber that needs its storage, the store or the formats keeps no state of its own. It is delivered from the outbox (retried, at least once, "Event delivery"), and `event.once(run)` runs work once per event.
 - `commands` of the server side adds command line commands: `monti <plugin name>:<command> [options]` loads the app like `monti db:migrate` (`--env-file`, `--no-env-file`, `--config`), runs `command.run({ cms, args, log, error })` and exits with the code it returns. The command declares its `options` (`{ name: { type: "string" | "boolean", description } }`); `--help` lists them. `monti git-sync:pull` is one.
-- Custom admin components are a plugin too. Give it an `admin` module whose default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`); the `Provider` (a `"use client"` component) wraps the admin and registers the components with `CmsAdminComponentsProvider`. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
+- Custom admin components are a plugin too. Give it an `admin` module whose default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin/plugins`); the `Provider` (a `"use client"` component) wraps the admin and registers the components with `AdminComponentsProvider`. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
 
   ```ts
   export const wordList = () => definePlugin({ name: "word-list", options: {}, admin: () => import("./admin") });
@@ -957,7 +957,7 @@ await cms.transaction(async (tx) => { /* tx.apiKeys.choose(...) and tx.storage("
 ```
 
 - A plugin keeps the key's **id**, never the value, and calls `read` when it calls the service. Renaming or replacing the value keeps the id, so everything that uses the key follows.
-- `setUses` is how the admin knows what a key is used by. It takes **references** (`ref`, a stable id such as `connection:<id>`), never text. Call it whenever the items change (a connection is saved or deleted). The text the admin shows is worked out when the keys are read, by the plugin's `keyUses(cms, refs)` in `CmsServerPlugin`: it returns the label for each `ref` in the admin language (`cms.site.createTranslator`) with the item's current name, or `null` for an item that does not exist any more, whose use is then dropped. A plugin without `keyUses` is shown by its name.
+- `setUses` is how the admin knows what a key is used by. It takes **references** (`ref`, a stable id such as `connection:<id>`), never text. Call it whenever the items change (a connection is saved or deleted). The text the admin shows is worked out when the keys are read, by the plugin's `keyUses(cms, refs)` in `ServerPlugin`: it returns the label for each `ref` in the admin language (`cms.site.createTranslator`) with the item's current name, or `null` for an item that does not exist any more, whose use is then dropped. A plugin without `keyUses` is shown by its name.
 - **Key slots**: a plugin that needs one fixed key (a spell checker's) declares it in the plugin definition, `definePlugin({ keySlots: [{ id: "key", service: "Bareun", label: (site) => site.createTranslator(messages)("keyLabel") }] })` (`service` is the language-neutral name a key entered for the slot is saved under, `Bareun`, then `Bareun 2` when taken, the same as the migrations use; `label` is display only, a function of the site so it follows the admin language), and reads it with `cms.apiKeys.slot(<plugin name>, "key").read()`. `onChange: (cms) => …` on the slot is called once a key was assigned or the slot cleared (a sync that waited for a token resumes there); it is not called for changes made inside `cms.transaction`. Tools > API keys lists each slot of the installed plugins: assigned (the key's "in use" line names it), or an empty row where a saved key is picked or a new one entered (saved in the same transaction as the assignment), and an assigned slot is cleared from the key's row menu. `PUT /v1/api-keys/slots` with `{ plugin, slot, key }` (`key` as `choose` takes it, `{ use: "none" }` clears) is what the admin calls; a plugin page can call it too. A slot of a plugin that is not installed is not listed and not counted as a use.
 - **Atomic saves**: `cms.transaction(work)` runs `work` in one database transaction (Postgres: one `BEGIN`/`COMMIT` over any plugin's storage and the key store; the database adapter's `transaction` port). Create the key with `tx.apiKeys.choose(...)` and write the item that refers to it with `tx.storage("my-plugin")` in it, so a failed save leaves no key behind. `once` is not available inside it.
 - `cms.apiKeys.remove(id, { expectedVersion, force? })` deletes the key and where it was used in one transaction, and fails with `key_in_use` (`details.uses`) while something uses it unless `force` is set; then what used it finds no key and stops working. The admin API (`DELETE /v1/api-keys/<id>?expectedVersion=&force=true`) just calls it and answers `204`.
@@ -981,7 +981,7 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 
 - A write names the version it expects. A different stored version fails with a `CmsError` coded `conflict` that carries the stored version (0 when there is no item), so two editors cannot overwrite each other unnoticed, and of two concurrent writers one wins. Deleting a missing item is `not_found`.
 - Plugin and collection names are lowercase words (`ai`, `action-overrides`). Values are JSON: they are stored as JSON and come back parsed, so a `Date` becomes its ISO text and `undefined` is rejected (`invalid_input`).
-- The migration hook is `CmsServerPlugin.migrate(storage, cms)`, called by `monti db:migrate` after the core tables. `storage.once(name, step)` runs `step` once (recorded in `cms_migrations` as `plugin:<plugin>:<name>`, also when called concurrently, and not at all if it throws) and returns whether it ran. `step` gets a `PluginMigration`: its collections inside the step's transaction.
+- The migration hook is `ServerPlugin.migrate(storage, cms)`, called by `monti db:migrate` after the core tables. `storage.once(name, step)` runs `step` once (recorded in `cms_migrations` as `plugin:<plugin>:<name>`, also when called concurrently, and not at all if it throws) and returns whether it ran. `step` gets a `PluginMigration`: its collections inside the step's transaction.
 - The Postgres adapter keeps the documents in the core table `plugin_documents` (created by the core migrations). A storage of another adapter behaves the same: `src/plugin/__test__/storage-contract.ts` is the contract, run against Postgres and against `createMemoryPluginStorage()` from `@monti-cms/core/testing`, which `fakeCms` uses by default (`fakeCms({ storage })` replaces it).
 - The plugin API has no database driver types: `PluginDatabase`, `cms.database()` and `withTransaction` are gone, and neither `@monti-cms/core` nor `@monti-cms/core/plugin/server` exports anything from `pg`.
 
@@ -1048,7 +1048,7 @@ Under `next dev` (`NODE_ENV=development`) the visitor is treated as the first ad
 ## Hook contract
 
 Every content write goes through one pipeline in the core services: creating, saving, publishing (one entry or in bulk), duplicating, creating a translation, and a bulk change of metadata or folder.
-Hooks are registered in the server options (`defineConfig({ hooks, … })`) or in a plugin's server side (`CmsServerPlugin.hooks`), with the same shape.
+Hooks are registered in the server options (`defineConfig({ hooks, … })`) or in a plugin's server side (`ServerPlugin.hooks`), with the same shape.
 The types (`WriteHooks`, `WriteHookContext`, `WriteData`, `ValidationHookContext`, `ValidationResult`, `WriteOperation`) are exported from `@monti-cms/core/server`.
 
 ```ts
@@ -1120,9 +1120,9 @@ Contracts (each has a test in `src/services/__test__/write-hooks.test.ts` and `w
 
 ```ts
 // slack/server.ts, the `server` module of a plugin (`definePlugin({ name: "slack", server: () => import("./server") })`)
-import type { CmsServerPlugin } from "@monti-cms/core";
+import type { ServerPlugin } from "@monti-cms/core";
 
-const plugin: CmsServerPlugin = {
+const plugin: ServerPlugin = {
 	hooks: {
 		afterCommit: async (event, cms) => {
 			if (event.kind !== "published") return;

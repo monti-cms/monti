@@ -77,7 +77,7 @@ The recommended length is stored in the field's `inputOptions.limit`. If you nee
 ## Plugin `seo(options?)`
 
 - **Admin UI** (`@monti-cms/seo/admin`): registers the view field `search`, the input pieces `seo-title` and `seo-description` (hint and character count),
-  and `seo-noindex` (switch) through `CmsAdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
+  and `seo-noindex` (switch) through `AdminComponentsProvider`. Without the registration (if the extension is removed) the same fields appear as default inputs.
 - **Config validation**: `seoTitle`, `seoDescription` and `canonical` must be text, `ogImage` must be media, and `noindex` must be a select
   field with a `noindex` option (`checkSeoFields`).
 - **AI features**: with `@monti-cms/ai`, it adds `seoTitle` (search title suggestions, 3 candidates) and `seoDescription` (search description suggestions)

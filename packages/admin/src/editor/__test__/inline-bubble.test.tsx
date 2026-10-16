@@ -6,7 +6,7 @@ import { Editor, type JSONContent } from "@tiptap/core";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
-import { CmsAdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
+import { AdminComponentsProvider, type EditorMarkExtension } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { renderWithSite } from "../../test/site";
 import { para, storedDoc, text } from "../../test/stored-doc";
@@ -30,7 +30,7 @@ const tc = testSite.createTranslator(commonMessages);
 
 /**
  * Text decoration used for testing regardless of site config (the `:note[text]{text="…"}` an extension adds). Adds the mark to the editor directly and
- * registers the bubble button and content via `marks` of `CmsAdminComponentsProvider`.
+ * registers the bubble button and content via `marks` of `AdminComponentsProvider`.
  */
 const noteBlock = defineBlock({
 	name: "note",
@@ -257,9 +257,9 @@ describe("InlineBubble", () => {
 		const editor = createEditor(HTML);
 		const renderWith = () =>
 			renderWithSite(
-				<CmsAdminComponentsProvider components={{ marks: { [noteBlock.name]: extension } }}>
+				<AdminComponentsProvider components={{ marks: { [noteBlock.name]: extension } }}>
 					<InlineBubble editor={editor} />
-				</CmsAdminComponentsProvider>,
+				</AdminComponentsProvider>,
 			);
 
 		// When text is selected, the registered button comes before the link button (`order: -1`).

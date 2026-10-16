@@ -11,8 +11,8 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	ErrorNotice,
-	FieldError,
+	ErrorNoticeView,
+	FormFieldError,
 	isComposingKey,
 	Tabs,
 	TabsList,
@@ -248,9 +248,9 @@ function WriteDialog({
 					</Tabs>
 				)}
 				{state.status === "error" ? (
-					<ErrorNotice notice={state.notice} />
+					<ErrorNoticeView notice={state.notice} />
 				) : (
-					blockProblem && <FieldError>{blockProblem}</FieldError>
+					blockProblem && <FormFieldError>{blockProblem}</FormFieldError>
 				)}
 				<DialogFooter>
 					{!askRequest && (
