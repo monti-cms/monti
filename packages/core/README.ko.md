@@ -914,6 +914,27 @@ export const myPlugin = () =>
 - `cms.plugin("my-plugin")`은 플러그인이 인스턴스 하나에 대해 갖는 것이다. `storage`, `secrets`, `apiKeys`, 그리고 `once(key, factory)`: 값(`cms.site`로 만든 스토어나 클라이언트)을 한 번 만들고, 개발 중 스키마를 다시 불러오면 처음부터 다시 만든다. 그래서 낡은 사이트를 쥐고 있지 않는다. 이런 객체를 인스턴스를 키로 하는 모듈 수준 `WeakMap`에 두지 않는다.
 - 모든 플러그인 패키지가 쓰는 작은 도구 가운데 `pluginLog(이름)`·`pluginError(이름, 메시지)`(플러그인이 남기고 던지는 것의 접두어를 하나로)는 `@monti-cms/core/server`에서, 나머지는 `@monti-cms/core`에서 온다. `emptyServerPlugin`(패키지 `server.browser.ts`의 기본 내보내기), `envValue(env, 이름)`·`WHERE_TO_SET_ENV`(환경 변수를 읽고 어디에 두는지 알려 줌), `resolveTextCheckerLimits`(글 검사기의 한도).
 
+### 플러그인을 패키지로 배포하기
+
+사이트 폴더 안에 있는 플러그인은 더 할 일이 없다. 패키지로 배포하는 플러그인은 파일 하나와 export 조건 하나로 서버 쪽을 브라우저 번들 밖에 둔다.
+플러그인 목록으로 사이트를 만드는 클라이언트 코드는 플러그인 팩토리를 번들에 넣고, 번들러는 브라우저가 부르지 않는 `server: () => import("my-plugin/server")`도
+따라가기 때문이다.
+
+```jsonc
+// package.json
+"exports": {
+	".": "./src/index.ts",
+	"./server": { "browser": "./src/server.browser.ts", "default": "./src/server.ts" }
+}
+```
+
+```ts
+// src/server.browser.ts
+export { emptyServerPlugin as default } from "@monti-cms/core";
+```
+
+코어가 아닌 패키지가 `browser` 조건 없이 `./server`를 내보내면 패키지 빌드(`scripts/build-package.mjs`)가 멈춘다.
+
 ### 비밀 값
 
 비밀 값은 하나, `MONTI_SECRET`(또는 `defineConfig({ secret })`)이다. `AUTH_SECRET`과 `CMS_SECRET`을 대신하며 이 둘은 더 이상 읽지 않는다. 비밀 값 자체는 누구에게도 건네지 않고, HKDF-SHA256으로 만든 파생 키만 쓴다.

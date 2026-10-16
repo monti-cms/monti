@@ -916,6 +916,27 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 - `cms.plugin("my-plugin")` is what a plugin keeps for one instance: `storage`, `secrets`, `apiKeys` and `once(key, factory)`, which makes a value (a store, a client built from `cms.site`) once and starts again after a development schema reload, so nothing keeps a stale site. Do not cache such objects in a module-level `WeakMap` keyed by the instance.
 - Small helpers every plugin package shares: `pluginLog(name)` and `pluginError(name, message)` (one prefix for what a plugin logs and throws) come from `@monti-cms/core/server`, and these come from `@monti-cms/core`: `emptyServerPlugin` (the default export of a package's `server.browser.ts`), `envValue(env, name)` and `WHERE_TO_SET_ENV` (reading an environment value and telling where to set it), and `resolveTextCheckerLimits` (the limits of a text checker).
 
+### Publishing a plugin as a package
+
+A plugin that lives in the site's own folder needs nothing more. A plugin published as a package keeps its server side out of the browser bundle with one file and
+one export condition, because client code that builds a site from the plugin list bundles the plugin factory, and a bundler follows `server: () => import("my-plugin/server")`
+even though the browser never calls it:
+
+```jsonc
+// package.json
+"exports": {
+	".": "./src/index.ts",
+	"./server": { "browser": "./src/server.browser.ts", "default": "./src/server.ts" }
+}
+```
+
+```ts
+// src/server.browser.ts
+export { emptyServerPlugin as default } from "@monti-cms/core";
+```
+
+The package build (`scripts/build-package.mjs`) stops when a package other than core exports `./server` without the `browser` condition.
+
 ### Secrets
 
 There is one secret, `MONTI_SECRET` (or `defineConfig({ secret })`; it replaces `AUTH_SECRET` and `CMS_SECRET`, which are not read any more). Nothing receives the secret itself, only keys derived from it with HKDF-SHA256:
