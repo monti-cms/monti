@@ -103,17 +103,16 @@ export function actionWithEdits(
 	const parsed = aiActionOverrideSchemaOf(site.createTranslator(coreMessages)).safeParse(
 		edited && typeof edited === "object"
 			? Object.fromEntries(
-					EDITABLE_KEYS.filter((name) => name in edited).map((name) => [
-						name,
-						(edited as Record<string, unknown>)[name],
-					]),
+					EDITABLE_KEYS.filter(
+						(name) => name in edited && (name !== "label" || (edited as Record<string, unknown>)[name] !== ""),
+					).map((name) => [name, (edited as Record<string, unknown>)[name]]),
 				)
 			: {},
 	);
 	if (!parsed.success) {
 		const issue = parsed.error.issues[0];
 		const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
-		throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
+		throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`, parsed.error.issues);
 	}
 	const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, snippetKeys) : [];
 	if (unknown.length > 0) {

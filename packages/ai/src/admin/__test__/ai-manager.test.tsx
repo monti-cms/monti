@@ -135,16 +135,16 @@ describe("AI Manager UI", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("translates slot names and check names with descriptive titles", () => {
+	it("translates slot names and check names with concise titles", () => {
 		const labelsKo = labelsOf((key, vars) => translate(labelMessages, "ko", key, vars));
-		expect(labelsKo.slotLabel("selection")).toBe("선택 텍스트 메뉴 (본문 드래그 시)");
-		expect(labelsKo.slotLabel("insert")).toBe("블록 삽입 메뉴 ('/' 입력 시)");
+		expect(labelsKo.slotLabel("selection")).toBe("선택 텍스트 메뉴");
+		expect(labelsKo.slotLabel("insert")).toBe("블록 삽입 메뉴");
 		expect(labelsKo.checkLabel("oneOf")).toBe("허용 값 목록");
 		expect(labelsKo.checkLabel("exists")).toBe("기존에 등록된 값만");
 
 		const labelsEn = labelsOf((key, vars) => translate(labelMessages, "en", key, vars));
-		expect(labelsEn.slotLabel("selection")).toBe("Selected text menu (on highlight)");
-		expect(labelsEn.slotLabel("insert")).toBe("Slash menu (typed '/' in body)");
+		expect(labelsEn.slotLabel("selection")).toBe("Selected text menu");
+		expect(labelsEn.slotLabel("insert")).toBe("Slash menu");
 		expect(labelsEn.checkLabel("oneOf")).toBe("Allowed values list");
 		expect(labelsEn.checkLabel("exists")).toBe("Existing values only");
 	});
