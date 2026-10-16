@@ -48,6 +48,7 @@ export interface RowMenuContext {
 	collection: string;
 	/** Taxonomy field name -> options. Makes an "Add ○○" submenu for each many-relation taxonomy field (tags etc.). */
 	options: TaxonomyOptions;
+	foldersEnabled?: boolean;
 }
 
 /** Action a menu item calls. The target is always the rows chosen by `actionTargets`. */
@@ -150,29 +151,35 @@ export function rowMenuActions(
 			]
 		: [{ kind: "separator" }];
 
+	const folderActions: MenuAction[] =
+		context.foldersEnabled === false
+			? []
+			: [
+					{
+						kind: "sub",
+						label: t("menu.moveToFolder"),
+						icon: FolderInput,
+						items: [
+							{
+								kind: "item",
+								label: t("menu.root"),
+								icon: FolderUp,
+								onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: null }),
+							},
+							...context.folders.map((folder) => ({
+								kind: "item" as const,
+								label: folder.name,
+								icon: FolderIcon,
+								onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: folder.id }),
+							})),
+						],
+					},
+				];
+
 	return [
 		...header,
 		...open,
-		{ kind: "separator" },
-		{
-			kind: "sub",
-			label: t("menu.moveToFolder"),
-			icon: FolderInput,
-			items: [
-				{
-					kind: "item",
-					label: t("menu.root"),
-					icon: FolderUp,
-					onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: null }),
-				},
-				...context.folders.map((folder) => ({
-					kind: "item" as const,
-					label: folder.name,
-					icon: FolderIcon,
-					onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: folder.id }),
-				})),
-			],
-		},
+		...(folderActions.length > 0 ? [{ kind: "separator" as const }, ...folderActions] : []),
 		...contentActions,
 		{
 			kind: "item",

@@ -1,6 +1,8 @@
+import { type CmsConfig, createSite } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../../../core/test/site";
 import { chooseSelectOption } from "../../../test/base-ui";
 import { renderWithSite as render } from "../../../test/site";
 import { BulkBar } from "../bulk-bar";
@@ -147,6 +149,23 @@ describe("bulk actions", () => {
 	it("offers only record-safe actions for record collections", async () => {
 		stubBulkApi();
 		render(<BulkBar collection="tag" selected={selected} folders={[]} onClearSelection={vi.fn()} onDone={vi.fn()} />);
+		expect(screen.getByRole("button", { name: "휴지통으로 이동" })).toBeTruthy();
+		expect(screen.queryByRole("combobox", { name: "일괄 작업 종류" })).toBeNull();
+	});
+
+	it("offers folder move for record collections that have folders enabled", async () => {
+		stubBulkApi();
+		const site = createSite({
+			...testConfig,
+			collections: {
+				...testConfig.collections,
+				tag: { ...testConfig.collections.tag, folders: true },
+			},
+		} as CmsConfig);
+		render(
+			<BulkBar collection="tag" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
+			{ site },
+		);
 		fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
 		const labels = (await screen.findAllByRole("option")).map((option) => option.textContent);
 		expect(labels).toEqual(["폴더로 이동", "휴지통으로 이동"]);

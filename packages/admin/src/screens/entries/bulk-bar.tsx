@@ -260,15 +260,18 @@ export function BulkBar({
 	const t = useTranslator(bulkBarMessages);
 	const tc = useTranslator(commonMessages);
 	const isRecord = site.isItemCollection(collection);
+	const foldersEnabled = site.foldersEnabled(collection);
 	const actions = useMemo(
 		() =>
 			mode === "trash"
 				? trashActions(t, tc)
 				: [
 						...taxonomyActions(site, collection),
-						...listActions(t, tc, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
+						...listActions(t, tc, nounVars(site, collection)).filter(
+							(action) => (!action.content || !isRecord) && (action.value !== "folder.move" || foldersEnabled),
+						),
 					],
-		[isRecord, collection, mode, site, t, tc],
+		[isRecord, foldersEnabled, collection, mode, site, t, tc],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
 	const [checked, setChecked] = useState<string[]>([]);

@@ -281,10 +281,9 @@ export function useEntryList(mode: ListMode) {
 	const isTrash = mode === "trash";
 	const { state, ready, update, columnSettings, savePreferences } = useListState(mode);
 	const collection = state.collection;
-	const def = site.COLLECTION_DEFINITIONS[collection];
 	const isRecord = site.isItemCollection(collection);
 	const isContent = site.isDocumentCollection(collection);
-	const foldersEnabled = def?.folders ?? isContent;
+	const foldersEnabled = site.foldersEnabled(collection);
 	const options = useTaxonomyOptions(collection, !isTrash);
 
 	const data = useEntriesData(state, mode, ready, foldersEnabled);
@@ -426,7 +425,7 @@ export function useEntryList(mode: ListMode) {
 		rowMenuActions(
 			site,
 			actionTargets(item, items, selectedIds),
-			{ mode, isRecord, isContent, folders, collection, options },
+			{ mode, isRecord, isContent, folders, collection, options, foldersEnabled },
 			{
 				openEditor: (target) => router.navigate(editHref(target)),
 				openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),

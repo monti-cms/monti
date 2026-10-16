@@ -41,7 +41,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 function EntryListBody({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
-	const { state, data, mode } = list;
+	const { state, data, mode, foldersEnabled } = list;
 	const isTrash = mode === "trash";
 	const { items } = data;
 	const record = list.recordTarget;
@@ -85,18 +85,23 @@ function EntryListBody({ list }: { list: EntryList }) {
 						isRefreshing={data.isRefreshing}
 						errorMessage={data.errorMessage}
 						mode={mode}
-						folderActions={isTrash ? undefined : list.folderActions}
+						folderActions={isTrash || !foldersEnabled ? undefined : list.folderActions}
 						rowMenu={list.rowMenu}
 						blankMenu={
 							isTrash
 								? undefined
 								: [
-										{
-											kind: "item",
-											label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
-											icon: FolderPlus,
-											onSelect: () => list.folderActions.requestCreate(state.folder === "all" ? null : state.folder),
-										},
+										...(foldersEnabled
+											? [
+													{
+														kind: "item" as const,
+														label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
+														icon: FolderPlus,
+														onSelect: () =>
+															list.folderActions.requestCreate(state.folder === "all" ? null : state.folder),
+													},
+												]
+											: []),
 										{ kind: "item", label: t("list.add", { label: list.label }), icon: Plus, onSelect: list.createNew },
 									]
 						}
