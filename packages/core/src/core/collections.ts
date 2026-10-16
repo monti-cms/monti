@@ -1,6 +1,9 @@
-import type { CollectionKind } from "../schema/collection";
+import { type CollectionKind, kindDefaults } from "../schema/collection";
 import type { SchemaCollection, SiteSchemas, StoredField } from "../schema/derive";
 import type { StorageType } from "../schema/fields";
+
+/** The folder scope of the media library. A reserved collection name (`RESERVED_COLLECTION_NAMES`), so it never collides with a collection. */
+export const MEDIA_FOLDER_SCOPE = "media";
 
 /** A collection name (a key of `collections` in the site config). */
 export type Collection = SchemaCollection;
@@ -21,7 +24,8 @@ export interface CollectionDefinition {
 	readonly kind: CollectionKind;
 	readonly fields: Readonly<Record<string, FieldType>>;
 	readonly relations?: readonly CollectionRelation[];
-	readonly folders?: boolean;
+	/** Whether the collection uses folders: its `folders`, or the default of its kind. */
+	readonly folders: boolean;
 }
 
 /** The collections of one site. */
@@ -47,7 +51,7 @@ export function createCollections(
 					kind: schema.kind,
 					fields: schemas.storageTypes(name),
 					...(relations.length > 0 ? { relations } : {}),
-					...(schema.folders !== undefined ? { folders: schema.folders } : {}),
+					folders: schema.folders ?? kindDefaults(schema.kind).folders,
 				},
 			];
 		}),
@@ -85,11 +89,13 @@ export function createCollections(
 			);
 	}
 
-	/** Whether folders are enabled for this collection. Media always has folders; collections default to true for document and false for item. */
+	/**
+	 * Whether this folder scope uses folders: the media library (`"media"`, a reserved collection name) always does, a collection when its definition says so.
+	 * The one answer to "are there folders here": the store checks every folder write against it, and the admin offers folder actions only where it is true.
+	 */
 	const foldersEnabled = (collection: string): boolean => {
-		if (collection === "media") return true;
-		if (!isCollection(collection)) return false;
-		return COLLECTION_DEFINITIONS[collection]?.folders ?? COLLECTION_DEFINITIONS[collection]?.kind !== "item";
+		if (collection === MEDIA_FOLDER_SCOPE) return true;
+		return isCollection(collection) && COLLECTION_DEFINITIONS[collection].folders;
 	};
 
 	return {

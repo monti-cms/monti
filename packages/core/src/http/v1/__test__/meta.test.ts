@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms";
 import { MAX_DOC_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { routeCaller } from "../../../testing";
@@ -26,7 +27,7 @@ describe("GET /v1/meta features.media", () => {
 			fakeCms({ plugins: [{ name: "ai", features: async () => ({ ready: true }) }] }),
 		);
 		expect(features.ai).toEqual({ ready: true });
-		expect(features.folders).toBe(true);
+		expect(features.folders).toBeDefined();
 		expect(features.ready).toBeUndefined();
 	});
 });
@@ -37,5 +38,41 @@ describe("GET /v1/meta limits", () => {
 		const { limits } = await res.json();
 		expect(limits.textBytes).toBe(MAX_TEXT_BYTES);
 		expect(limits.docBytes).toBe(MAX_DOC_BYTES);
+	});
+});
+
+describe("GET /v1/meta folders and templates", () => {
+	const readMeta = async (cms: unknown) =>
+		(await getMeta(new Request("http://localhost/api/monti/v1/meta"), { cms: cms as never })).json();
+
+	it("reports for every collection whether it uses folders, as a boolean", async () => {
+		const meta = await readMeta(fakeCms({ config: testConfig }));
+		for (const name of meta.collections as string[]) {
+			expect(typeof meta.definitions[name].folders).toBe("boolean");
+		}
+	});
+
+	it("says folders are on exactly when some collection uses them", async () => {
+		const meta = await readMeta(fakeCms({ config: testConfig }));
+		const some = (meta.collections as string[]).some((name) => meta.definitions[name].folders === true);
+		expect(meta.features.folders).toBe(some);
+	});
+
+	it("gives a collection its kind's default unless its schema says otherwise", async () => {
+		const meta = await readMeta(fakeCms({ config: testConfig }));
+		for (const name of meta.collections as string[]) {
+			const explicit = meta.schemas[name].folders;
+			const kind = meta.definitions[name].kind;
+			expect(meta.definitions[name].folders).toBe(explicit ?? kind === "document");
+		}
+	});
+
+	it("turns features.templates off with admin.templates: false, and keeps it on otherwise", async () => {
+		const on = await readMeta(fakeCms({ config: { ...testConfig, admin: { ...testConfig.admin, templates: true } } }));
+		const off = await readMeta(
+			fakeCms({ config: { ...testConfig, admin: { ...testConfig.admin, templates: false } } }),
+		);
+		expect(on.features.templates).toBe(true);
+		expect(off.features.templates).toBe(false);
 	});
 });

@@ -22,10 +22,19 @@ export async function readEditBody(request: Request) {
 	if (!isRecord(body) || !isRecord(body.schema)) {
 		throw new CmsError("The request body needs a `schema` object", "invalid_input");
 	}
-	for (const key of ["transforms", "renames"] as const) {
+	for (const key of ["transforms", "renames", "acknowledged"] as const) {
 		if (body[key] !== undefined && !Array.isArray(body[key])) {
 			throw new CmsError(`\`${key}\` must be a list`, "invalid_input");
 		}
 	}
-	return body as { schema: Record<string, unknown>; transforms?: never[]; renames?: never[]; baseHash?: unknown };
+	if (Array.isArray(body.acknowledged) && !body.acknowledged.every((key) => typeof key === "string")) {
+		throw new CmsError("`acknowledged` must be a list of impact keys", "invalid_input");
+	}
+	return body as {
+		schema: Record<string, unknown>;
+		transforms?: never[];
+		renames?: never[];
+		acknowledged?: string[];
+		baseHash?: unknown;
+	};
 }

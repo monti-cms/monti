@@ -5,6 +5,7 @@ import {
 	addOption,
 	allowedOf,
 	changeCount,
+	collectionNameProblem,
 	collectionsOf,
 	FIELD_KEY_ORDER,
 	fieldProblems,
@@ -217,6 +218,13 @@ describe("schema model", () => {
 		expect(nameProblem("translations", [])).toBe("reserved");
 		expect(nameProblem("title", ["title"])).toBe("taken");
 		expect(nameProblem("ok_name-2", ["title"])).toBeNull();
+	});
+
+	it("checks collection names against the reserved collection names, not the field-key ones", () => {
+		expect(collectionNameProblem("media", [])).toBe("reserved");
+		expect(collectionNameProblem("translations", [])).toBeNull();
+		expect(nameProblem("media", [])).toBeNull();
+		expect(collectionNameProblem("post", ["post"])).toBe("taken");
 	});
 
 	it("tracks renames: a chain is one rename, and renaming back cancels it", () => {

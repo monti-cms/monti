@@ -18,6 +18,7 @@ export * from "./core/api";
 export * from "./core/api-keys";
 export { type BodyTextOptions, documentText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
 export * from "./core/collections";
+export { canTransition, type LifecycleAction } from "./core/domain/lifecycle";
 export * from "./core/file-display";
 export * from "./core/ids";
 export * from "./core/links";

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
+import { prepareSnapshot } from "../../core/snapshot";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
 import { createFormatRegistry } from "../../format/registry";
-import { prepareSnapshot, type ServiceInput } from "../index";
+import type { ServiceInput } from "../index";
 
 /**
  * The part of `content-service.test.ts` that checks values of the reference blog setup (`cms.config.ts`) as they are.

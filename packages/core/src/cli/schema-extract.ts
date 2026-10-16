@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CmsConfig } from "../config/define";
+import { kindDefaults } from "../schema/collection";
 import { parseSchemaFile } from "../schema-file/format";
 import { printSchemaFile } from "../schema-file/print";
 import type { SchemaFile } from "../schema-file/types";
@@ -51,7 +52,7 @@ export function extractSchemaData(config: CmsConfig, options: { readonly locale?
 			// The object form of `body` carries the allowed blocks and marks (and means the collection has a body).
 			if (allowed) return [name, { ...rest, body: allowed }];
 			// The default is left out: documents have a body, items do not.
-			return [name, body === (collection.kind === "document") ? rest : { ...rest, body }];
+			return [name, body === kindDefaults(collection.kind).body ? rest : { ...rest, body }];
 		}),
 	);
 	const lost = functionPaths(config.collections, "collections");

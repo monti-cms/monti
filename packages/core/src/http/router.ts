@@ -55,7 +55,17 @@ const isMethod = (value: string): value is Method => METHODS.includes(value);
 /** A method of a route file: `adminRoute(...)` for an `admin` route, `publicRoute(...)` for a `public-read`, `same-origin-form` or `signed` one, `bearerRoute(...)` for `admin-or-bearer`. The params (`{ id }` etc.) differ per route. */
 type RouteModule = Partial<Record<Method, unknown>>;
 
-const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule; access?: RouteAccess }> = [
+/**
+ * One route: its path pattern and module. `access` says who may call it and which guard the router applies (default `admin`). `enabled` ties the route to a
+ * site feature: when the site has the feature off, the path answers 404 for every method, so turning a feature off in the config closes its API as well as
+ * its screens.
+ */
+type Route = { pattern: string; module: RouteModule; access?: RouteAccess; enabled?: (cms: Cms) => boolean };
+
+/** `admin.templates: false` turns off body templates: the Templates screen, the editor's menu and these routes. */
+const templatesEnabled = (cms: Cms) => cms.site.ADMIN_TEMPLATES;
+
+const ROUTES: readonly Route[] = [
 	// The central API key store: names, masked tails and the places that use each key. A value goes in on save and never comes back.
 	{ pattern: "v1/api-keys", module: rApiKeys },
 	// Named before `[id]`, so `slots` is not read as a key id.
@@ -100,18 +110,17 @@ const ROUTES: ReadonlyArray<{ pattern: string; module: RouteModule; access?: Rou
 	// Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
 	{ pattern: "v1/public/entries", access: "public-read", module: rPublicList },
 	{ pattern: "v1/public/entries/[collection]/[slug]", access: "public-read", module: rPublicItem },
-	{ pattern: "v1/templates", module: rTemplates },
-	{ pattern: "v1/templates/[id]", module: rTemplate },
+	{ pattern: "v1/templates", module: rTemplates, enabled: templatesEnabled },
+	{ pattern: "v1/templates/[id]", module: rTemplate, enabled: templatesEnabled },
 ];
 
-type CompiledRoute = { segments: string[]; module: RouteModule; access: RouteAccess };
-const compile = (
-	routes: ReadonlyArray<{ pattern: string; module: RouteModule; access?: RouteAccess }>,
-): CompiledRoute[] =>
+type CompiledRoute = { segments: string[]; module: RouteModule; access: RouteAccess; enabled?: (cms: Cms) => boolean };
+const compile = (routes: readonly Route[]): CompiledRoute[] =>
 	routes.map((route) => ({
 		segments: route.pattern.split("/"),
 		module: route.module,
 		access: route.access ?? "admin",
+		enabled: route.enabled,
 	}));
 const COMPILED = compile(ROUTES);
 
@@ -119,8 +128,13 @@ const COMPILED = compile(ROUTES);
 export function matchRoute(
 	path: readonly string[],
 	routes: readonly CompiledRoute[] = COMPILED,
-): { module: RouteModule; params: Record<string, string>; access: RouteAccess } | null {
-	for (const { segments, module, access } of routes) {
+): {
+	module: RouteModule;
+	params: Record<string, string>;
+	access: RouteAccess;
+	enabled?: (cms: Cms) => boolean;
+} | null {
+	for (const { segments, module, access, enabled } of routes) {
 		if (segments.length !== path.length) continue;
 		const params: Record<string, string> = {};
 		const matched = segments.every((segment, index) => {
@@ -131,7 +145,7 @@ export function matchRoute(
 			}
 			return segment === part;
 		});
-		if (matched) return { module, params, access };
+		if (matched) return { module, params, access, enabled };
 	}
 	return null;
 }
@@ -204,7 +218,7 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		}
 		// If not a core route, look in the plugin route table.
 		const matched = matchRoute(path) ?? matchRoute(path, await compiledPluginRoutes());
-		if (!matched) return notFound();
+		if (!matched || matched.enabled?.(cms) === false) return notFound();
 		const handler = matched.module[method];
 		if (typeof handler !== "function") {
 			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));

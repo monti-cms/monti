@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { sql } from "kysely";
 import { currentActor } from "../../../core/actor";
-import { assertFolderInCollection } from "../../../core/domain/folders";
 import { normalizeMetadata } from "../../../core/domain/metadata";
 import {
 	assertEditableStatus,
@@ -32,6 +31,7 @@ import type { Db } from "../db/kysely";
 import { type StoreContext, withTrx } from "./context";
 import { mapEntryWriteError } from "./errors";
 import { recordEvents } from "./events";
+import { assertFolderTarget } from "./folders";
 import type { Publishing } from "./publish";
 import {
 	insertReferences,
@@ -52,12 +52,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 	const { qSchema, site } = ctx;
 	const db = ctx.db();
 	const { publishWithinTransaction, lockDraftReferenceTargets } = publishing;
-
-	const assertFolder = async (trx: Db, folderId: string | null | undefined, collection: string) => {
-		if (!folderId) return;
-		const folder = await trx.selectFrom("folders").select("collection").where("id", "=", folderId).executeTakeFirst();
-		assertFolderInCollection(folder?.collection, collection);
-	};
 
 	/**
 	 * Reserves the draft's slug (the rule is `reservationFor`). Releases a previous reservation that was never published.
@@ -116,7 +110,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				async (trx, client) => {
 					const metadata = normalizeMetadata(params.snapshot.metadata);
 					const references = await lockDraftReferenceTargets(client, params.references);
-					await assertFolder(trx, params.folderId, params.snapshot.collection);
+					await assertFolderTarget(trx, site, params.folderId, params.snapshot.collection);
 					const id = randomUUID();
 					const now = new Date();
 					const locale = params.locale ?? site.DEFAULT_LOCALE;
@@ -200,7 +194,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						params.snapshot.metadata,
 					);
 
-					await assertFolder(trx, params.folderId, params.snapshot.collection);
+					await assertFolderTarget(trx, site, params.folderId, params.snapshot.collection);
 
 					const body = await readBody(trx, params.entryId, "working");
 					const currentRefs = await readReferences(trx, params.entryId, "working");
@@ -311,6 +305,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				.select([
 					"e.collection",
 					"e.version",
+					"e.status",
 					"e.working_slug",
 					"e.folder_id",
 					"e.locale",
@@ -328,6 +323,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				doc: readBodyDoc(row.doc),
 				version: row.version,
 				folderId: row.folder_id,
+				status: row.status as WorkingCopy["status"],
 				locale: row.locale,
 				translationGroupId: row.translation_group_id,
 			};

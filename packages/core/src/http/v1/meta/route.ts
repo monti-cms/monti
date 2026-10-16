@@ -18,11 +18,12 @@ export const GET = adminRoute(async ({ cms }) => {
 		blocks: cms.site.BLOCKS,
 		// The formats a body can be read and written in (the `format` option): the built-in ones and those plugins add.
 		formats: (await cms.formats()).info(),
+		// What this site offers, from its config. Which collections use folders is `definitions[name].folders`; `folders` says whether any does.
 		features: {
-			folders: true,
+			folders: cms.site.COLLECTIONS.some((collection) => cms.site.foldersEnabled(collection)),
 			references: true,
 			search: true,
-			templates: true,
+			templates: cms.site.ADMIN_TEMPLATES,
 			media: cms.isMediaConfigured,
 			...plugins,
 		},

@@ -61,16 +61,25 @@ export interface InspectedFile {
 
 /**
  * Inspects an uploaded staging file by its actual bytes: size, type (the client MIME is not trusted), and pixel count.
- * For attachments, checks that the `declared` type matches the actual content. Throws `CmsError` on failure.
+ * For attachments, checks that the `declared` type matches the actual content. When `expectedBytes` is given, the stored size must equal it. Throws `CmsError` on failure.
  */
 export async function inspectUploadedFile(
 	site: Site,
 	mediaStore: MediaStore,
 	stagingKey: string,
 	declared?: string | null,
+	expectedBytes?: number,
 ): Promise<InspectedFile> {
 	const head = await mediaStore.headFile({ key: stagingKey });
 	if (!head) throw new CmsError("File has not been uploaded to storage yet", "upload_incomplete");
+	// The stored object must be the size the upload declared: the declared size is what the limits were checked against.
+	if (expectedBytes !== undefined && head.contentLength !== expectedBytes) {
+		// Bigger than declared went past the checked limit; smaller means the upload did not finish.
+		throw new CmsError(
+			`Uploaded file is ${head.contentLength} bytes but ${expectedBytes} bytes were declared`,
+			head.contentLength > expectedBytes ? "payload_too_large" : "upload_incomplete",
+		);
+	}
 
 	if (declared && !site.api.isImageMime(declared)) {
 		if (!(site.api.ALLOWED_FILE_MIME_TYPES as readonly string[]).includes(declared)) {

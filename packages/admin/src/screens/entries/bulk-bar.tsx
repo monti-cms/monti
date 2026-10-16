@@ -249,7 +249,8 @@ export function BulkBar({
 }: {
 	collection: string;
 	selected: BulkSelection[];
-	folders: Folder[];
+	/** The folders items can move to; `null` where the list shows no folders, which leaves out the folder move. */
+	folders: readonly Folder[] | null;
 	mode?: "list" | "trash";
 	onClearSelection: () => void;
 	/** Action request. The list screen passes a request that updates the list first (optimistic update). */
@@ -260,7 +261,6 @@ export function BulkBar({
 	const t = useTranslator(bulkBarMessages);
 	const tc = useTranslator(commonMessages);
 	const isRecord = site.isItemCollection(collection);
-	const foldersEnabled = site.foldersEnabled(collection);
 	const actions = useMemo(
 		() =>
 			mode === "trash"
@@ -268,10 +268,10 @@ export function BulkBar({
 				: [
 						...taxonomyActions(site, collection),
 						...listActions(t, tc, nounVars(site, collection)).filter(
-							(action) => (!action.content || !isRecord) && (action.value !== "folder.move" || foldersEnabled),
+							(action) => (!action.content || !isRecord) && (action.value !== "folder.move" || folders !== null),
 						),
 					],
-		[isRecord, foldersEnabled, collection, mode, site, t, tc],
+		[isRecord, folders, collection, mode, site, t, tc],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
 	const [checked, setChecked] = useState<string[]>([]);
@@ -335,7 +335,7 @@ export function BulkBar({
 		if (needsMany) return checked.map(titleOf).join(", ");
 		if (relation) return single === "__none__" ? null : titleOf(single);
 		if (action === "folder.move")
-			return single === "__unfiled__" ? null : (folders.find((folder) => folder.id === single)?.name ?? single);
+			return single === "__unfiled__" ? null : (folders?.find((folder) => folder.id === single)?.name ?? single);
 		return null;
 	};
 
@@ -364,7 +364,7 @@ export function BulkBar({
 			]
 		: [
 				{ value: "__unfiled__", label: t("option.root") },
-				...folders.map((folder) => ({ value: folder.id, label: folder.name })),
+				...(folders ?? []).map((folder) => ({ value: folder.id, label: folder.name })),
 			];
 
 	return (

@@ -365,6 +365,28 @@ describe("SchemaScreen", () => {
 		expect(reload.rememberSaved).toHaveBeenCalledWith(expect.stringContaining("3"));
 	});
 
+	it("acknowledges the impacts the dialog showed: the save carries their keys", async () => {
+		const impact = (key: string) => ({
+			key,
+			change: { kind: "field_removed", collection: "post", field: "summary", fieldKind: "text" },
+			entries: 2,
+			sample: [],
+			consequence: "orphaned",
+			checked: true,
+		});
+		const shown = ["field_removed:post:summary", "locale_removed:ko"];
+		previewAnswer = () => previewOf({ impacts: shown.map(impact) });
+		renderScreen();
+		type(await screen.findByLabelText(tCollection("collection.label")), "Article");
+		fireEvent.click(review());
+		await screen.findByTestId("review-summary");
+
+		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
+		await waitFor(() => expect(requests.some((request) => request.method === "PUT")).toBe(true));
+		const sent = requests.find((request) => request.method === "PUT")?.body?.acknowledged as string[];
+		expect([...sent].sort()).toEqual([...shown].sort());
+	});
+
 	it("toggles collection folders on and off", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");

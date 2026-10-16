@@ -5,6 +5,7 @@ import {
 	ok,
 	parseWith,
 	publicRoute,
+	readBodyText,
 	readJsonBody,
 } from "@monti-cms/core/plugin/server";
 import { z } from "zod";
@@ -97,10 +98,16 @@ export const resolve = {
 	),
 };
 
+/**
+ * GitHub documents 25 MB as the largest webhook payload it delivers. The body is read before the signature can be checked (the HMAC covers the raw bytes),
+ * so the cap bounds what an unauthenticated sender can make the server buffer; a little headroom keeps a legitimate maximum payload from being refused.
+ */
+const MAX_WEBHOOK_BYTES = 26 * 1024 * 1024;
+
 /** GitHub's `push` webhook. Access `signed`: the signature is the check, and nothing else about the request is trusted. */
 export const webhook = {
 	POST: publicRoute(async ({ request, cms }) => {
-		const rawBody = await request.text();
+		const rawBody = await readBodyText(request, MAX_WEBHOOK_BYTES);
 		const outcome = await handleWebhook(syncContextFor(cms), {
 			rawBody,
 			signature: request.headers.get("x-hub-signature-256"),

@@ -291,6 +291,90 @@ describe("Media Upload API Endpoints", () => {
 		expect(mockPromoteFile).not.toHaveBeenCalled();
 	});
 
+	it("POST /media/uploads passes the declared size of each file to the upload ticket", async () => {
+		mockPrepareUpload.mockResolvedValue({
+			url: "https://r2/upload",
+			method: "PUT",
+			requiredHeaders: {},
+			expiresAt: new Date(),
+		});
+		mockCreateMediaAsset.mockResolvedValue({});
+		const req = new Request("http://localhost/api/monti/v1/media/uploads", {
+			method: "POST",
+			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+			body: JSON.stringify({
+				filename: "photo.jpg",
+				mimeType: "image/webp",
+				byteSize: 1000,
+				original: { mimeType: "image/jpeg", byteSize: 5000 },
+			}),
+		});
+		expect((await handleUploads(req, { cms })).status).toBe(201);
+		const sizes = mockPrepareUpload.mock.calls.map(([input]) => input.byteSize).sort((a, b) => a - b);
+		expect(sizes).toEqual([1000, 5000]);
+	});
+
+	it.each([
+		["the file", { byteSize: 10, original: undefined }],
+		["the original", { byteSize: 24, original: { stagingKey: "staging/o-original.png", byteSize: 10 } }],
+	])("POST /media/:id/complete fails the upload when the stored object is larger than the declared size of %s", async (_name, row) => {
+		const id = "00000000-0000-4000-8000-000000000011";
+		mockGetMediaAsset.mockResolvedValue({
+			id,
+			status: "pending",
+			stagingKey: "staging/o.png",
+			filename: "pic.png",
+			mimeType: "image/png",
+			...row,
+		});
+		// Every stored object is 24 bytes, whatever was declared.
+		mockHeadFile.mockImplementation(async ({ key }: { key: string }) => ({
+			key,
+			contentType: "image/png",
+			contentLength: 24,
+			etag: "e",
+		}));
+		const png = new Uint8Array(24);
+		png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52], 0);
+		png[18] = 0x01;
+		png[22] = 0x01;
+		mockReadFile.mockResolvedValue(png);
+		const req = new Request(`http://localhost/api/monti/v1/media/${id}/complete`, {
+			method: "POST",
+			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+		});
+		const res = await handleComplete(req, { params: Promise.resolve({ id }), cms });
+		expect(res.status).toBeGreaterThanOrEqual(400);
+		expect(mockFailMediaAsset).toHaveBeenCalledWith(id);
+		expect(mockPromoteFile).not.toHaveBeenCalled();
+	});
+
+	it("POST /media/:id/complete keeps an upload smaller than declared pending, so the client can finish it", async () => {
+		const id = "00000000-0000-4000-8000-000000000012";
+		mockGetMediaAsset.mockResolvedValue({
+			id,
+			status: "pending",
+			stagingKey: "staging/o.png",
+			filename: "pic.png",
+			mimeType: "image/png",
+			byteSize: 100,
+		});
+		mockHeadFile.mockImplementation(async ({ key }: { key: string }) => ({
+			key,
+			contentType: "image/png",
+			contentLength: 24,
+			etag: "e",
+		}));
+		mockFailMediaAsset.mockClear();
+		const req = new Request(`http://localhost/api/monti/v1/media/${id}/complete`, {
+			method: "POST",
+			headers: { origin: "http://localhost", host: "localhost", "content-type": "application/json" },
+		});
+		const res = await handleComplete(req, { params: Promise.resolve({ id }), cms });
+		expect((await res.json()).error.code).toBe("upload_incomplete");
+		expect(mockFailMediaAsset).not.toHaveBeenCalled();
+	});
+
 	it("POST /media/uploads prepares a second upload ticket for the original when optimised", async () => {
 		mockPrepareUpload.mockResolvedValue({
 			url: "https://r2/upload",

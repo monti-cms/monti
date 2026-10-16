@@ -25,10 +25,20 @@ export const STATUS_AFTER: Record<LifecycleAction, EntryStatus> = {
 	restore: "draft",
 };
 
+/** Whether an entry in `status` can take this transition. The admin asks it before sending a bulk change, the store asserts it. */
+export const canTransition = (action: LifecycleAction, status: EntryStatus): boolean =>
+	ALLOWED_FROM[action].includes(status);
+
 export function assertTransitionAllowed(action: LifecycleAction, status: EntryStatus, version: number): void {
-	if (!ALLOWED_FROM[action].includes(status)) {
+	if (!canTransition(action, status)) {
 		throw new CmsError(`Cannot change status from ${status}`, "invalid_status", version);
 	}
+}
+
+/** A trashed entry is restored before it is duplicated, as before it is edited. */
+export function assertDuplicable(status: EntryStatus): void {
+	if (status === "trashed")
+		throw new CmsError("A trashed entry must be restored before it is duplicated", "invalid_status");
 }
 
 /** Record collections (tags, categories, ...) have no archive. */

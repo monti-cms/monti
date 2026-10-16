@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/client";
 import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";
@@ -202,7 +202,7 @@ export function CollectionEditor({
 	const ts = useTranslator(schemaMessages);
 	const { disabled } = useSchemaEdit();
 	const chosenTab = section ?? "basics";
-	const isEditorAvailable = collection.kind !== "item" && hasBody(collection);
+	const isEditorAvailable = kindDefaults(collection.kind as CollectionKind | undefined).body && hasBody(collection);
 	// The editor tab only exists for a document collection with a body.
 	const tab = chosenTab === "editor" && !isEditorAvailable ? "basics" : chosenTab;
 	const issues = useIssuesUnder(`collections.${name}`, ".fields");
@@ -272,9 +272,13 @@ export function CollectionEditor({
 						<div className="flex flex-col gap-6">
 							<FlagSwitch
 								label={t("collection.folders")}
-								checked={typeof collection.folders === "boolean" ? collection.folders : collection.kind !== "item"}
+								checked={
+									typeof collection.folders === "boolean"
+										? collection.folders
+										: kindDefaults(collection.kind as CollectionKind | undefined).folders
+								}
 								onChange={(on) => {
-									const isDefault = on === (collection.kind !== "item");
+									const isDefault = on === kindDefaults(collection.kind as CollectionKind | undefined).folders;
 									set("folders", isDefault ? undefined : on);
 								}}
 							/>

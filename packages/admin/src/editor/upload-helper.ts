@@ -31,6 +31,9 @@ export const DEFAULT_OPTIMIZE_POLICY: OptimizePolicy = {
 	rename: (name) => `${name.replace(/\.[^.]+$/, "") || "image"}.webp`,
 };
 
+/** `accept` value of an image file input: the image types this site allows. */
+export const imageAccept = (site: Site) => site.api.ALLOWED_IMAGE_MIME_TYPES.join(",");
+
 export interface PreparedUpload {
 	/** File to upload for public use. The original as is if not optimized. */
 	file: File;
@@ -76,6 +79,10 @@ export async function prepareUpload(
 	const policy = options.policy ?? DEFAULT_OPTIMIZE_POLICY;
 	if (!policy.formats.includes(file.type)) {
 		return { file, optimized: false, skippedReason: t("upload.keepFormat") };
+	}
+	// Converting to a type the site does not allow would be refused by the server: keep the original instead.
+	if (!site.api.isImageMime(policy.outputType)) {
+		return { file, optimized: false, skippedReason: t("upload.outputNotAllowed") };
 	}
 	if (file.type === "image/webp" && (await isAnimatedWebp(file))) {
 		return { file, optimized: false, skippedReason: t("upload.keepAnimated") };
@@ -163,6 +170,9 @@ export async function uploadImageFile(
 	const t = site.createTranslator(editorMessages);
 	const prepared: PreparedUpload = input instanceof File ? { file: input, optimized: false } : input;
 	const { file, original } = prepared;
+	// Server stays the authority. This only spares the user an upload that would be refused.
+	if (file.size > site.api.MAX_MEDIA_BYTES)
+		throw new Error(t("upload.tooLarge", { mb: site.api.MAX_MEDIA_BYTES / 1024 / 1024 }));
 
 	// A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).
 	if (isSandboxSite(site)) throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
