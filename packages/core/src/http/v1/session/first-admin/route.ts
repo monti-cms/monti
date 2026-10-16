@@ -1,6 +1,5 @@
 import { CmsError } from "../../error-handler";
 import { publicRoute, readFormBody } from "../../handler";
-import { validateSameOrigin } from "../../security";
 
 const field = (form: FormData, name: string): string => {
 	const value = form.get(name);
@@ -10,10 +9,9 @@ const field = (form: FormData, name: string): string => {
 /**
  * `POST /api/monti/v1/session/first-admin`: creates the first admin account of the built-in email and password login, then signs that account in. A plain form post from the
  * login screen, which shows the form only while no account exists. That is not what guards it: once any account exists the login refuses the request itself (`closed`), whatever
- * the browser sent. Needs no login (there is no account to log in with yet), but the same-origin check applies. A refusal sends the browser back to the login screen with `?error=<reason>`.
+ * the browser sent. Access `same-origin-form`: needs no login (there is no account to log in with yet), and the router applies the same-origin check. A refusal sends the browser back to the login screen with `?error=<reason>`.
  */
 export const POST = publicRoute(async ({ request, cms }) => {
-	validateSameOrigin(cms, request, { form: true });
 	const auth = cms.auth();
 	const method = auth.providers.find((provider) => provider.credentials);
 	if (!auth.accounts || !method) throw new CmsError("This site has no email and password login", "not_found");

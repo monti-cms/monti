@@ -104,7 +104,7 @@ export const resolve = {
  */
 const MAX_WEBHOOK_BYTES = 26 * 1024 * 1024;
 
-/** GitHub's `push` webhook. Public: the signature is the check, and nothing else about the request is trusted. */
+/** GitHub's `push` webhook. Access `signed`: the signature is the check, and nothing else about the request is trusted. */
 export const webhook = {
 	POST: publicRoute(async ({ request, cms }) => {
 		const rawBody = await readBodyText(request, MAX_WEBHOOK_BYTES);

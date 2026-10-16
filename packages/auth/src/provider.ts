@@ -81,6 +81,8 @@ export interface LoginProvider {
 	 * provider is an admin; `admins` is not used and no "no admin is set" warning is given for it.
 	 */
 	readonly everyAccountIsAdmin?: boolean;
+	/** Names of request headers that the sign-in hands on to this provider (the browser's request is rebuilt for Auth.js, and only the cookie survives otherwise). */
+	readonly forwardHeaders?: readonly string[];
 	/** Admins of this provider: ids inside the provider (`"123"`) or qualified (`"github:123"`). Unset entries (an unset environment variable) are skipped. */
 	readonly admins?: readonly (string | undefined)[];
 	/**

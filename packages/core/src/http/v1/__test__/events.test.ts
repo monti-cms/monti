@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import type { ContentChange, ContentStore, EventDelivery } from "../../../core/store";
-import { publicRouteCaller, routeCaller } from "../../../testing";
+import { routeCaller } from "../../../testing";
 import { POST as dismissHandler } from "../events/[id]/dismiss/route";
 import { POST as retryOneHandler } from "../events/[id]/retry/route";
 import { POST as retryAllHandler } from "../events/retry/route";
@@ -10,7 +10,7 @@ import { GET as listHandler } from "../events/route";
 
 const dismiss = routeCaller(dismissHandler);
 const retryOne = routeCaller(retryOneHandler);
-const retryAll = publicRouteCaller(retryAllHandler);
+const retryAll = routeCaller(retryAllHandler, "admin-or-bearer");
 const list = routeCaller(listHandler);
 
 const counts = { pending: 0, delivering: 0, delivered: 4, failed: 1, dead: 1, dismissed: 0 };

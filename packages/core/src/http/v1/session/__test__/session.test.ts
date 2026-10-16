@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
-import { publicRouteCaller } from "../../../../testing";
+import { routeCaller } from "../../../../testing";
 import { POST as signInHandler } from "../sign-in/[provider]/route";
 import { POST as signOutHandler } from "../sign-out/route";
 
-const signIn = publicRouteCaller(signInHandler);
-const signOut = publicRouteCaller(signOutHandler);
+const signIn = routeCaller(signInHandler, "same-origin-form");
+const signOut = routeCaller(signOutHandler, "same-origin-form");
 
 const FORM = "application/x-www-form-urlencoded";
 

@@ -1,15 +1,13 @@
 import { CmsError } from "../../../error-handler";
 import { publicRoute, readFormBody } from "../../../handler";
-import { validateSameOrigin } from "../../../security";
 
 /**
  * `POST /api/monti/v1/session/sign-in/<method>`: starts signing in with one of the login methods (`cms.auth().providers`). The login screen submits a plain form here.
- * Needs no login (it is how one signs in), but the same-origin check applies. On success the login connection redirects the browser (to the provider, then to the admin).
+ * Access `same-origin-form`: needs no login (it is how one signs in), and the router applies the same-origin check. On success the login connection redirects the browser (to the provider, then to the admin).
  *
  * It is a route and not a server action because a server action cannot carry the CMS instance: its closed-over values must be serializable.
  */
 export const POST = publicRoute<{ provider: string }>(async ({ request, params, cms }) => {
-	validateSameOrigin(cms, request, { form: true });
 	const { provider = "" } = params;
 	const auth = cms.auth();
 	if (!auth.providers.some((method) => method.id === provider)) {

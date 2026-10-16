@@ -3,6 +3,7 @@ import type { Cms } from "../cms";
 import type { Issue } from "../config/check/issue";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
+import type { RouteAccess } from "../http/v1/handler";
 import type { WriteHooks } from "../services/hooks";
 import type { Site } from "../site";
 import type { PluginStorage } from "./storage";
@@ -106,13 +107,14 @@ type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 /**
  * One plugin API route. `pattern` is the path after `/api/monti/` (e.g. `v1/ai/run`) and `[name]` is a single segment.
- * The core wraps it with the admin login check and a same-origin check. Only routes that must be reachable without login (external runners, webhooks, etc.) set `public: true`
- * to opt out, and then the route verifies the request itself.
+ * The router guards it by its `access` kind, `admin` when left out (a same-origin check, then the admin login). A route that must be reachable without login names the kind
+ * that says why: `public-read` (GET only), `same-origin-form` (a browser form post), `signed` (a webhook: the handler verifies the signature) or `admin-or-bearer`
+ * (a session, or a bearer token the handler verifies).
  */
 export interface PluginRoute {
 	readonly pattern: string;
 	readonly module: Partial<Record<Method, unknown>>;
-	readonly public?: boolean;
+	readonly access?: RouteAccess;
 }
 
 /** A `PluginRoute` tagged with its plugin (the name is used in the error when paths collide). */
