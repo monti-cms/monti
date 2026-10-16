@@ -44,6 +44,7 @@ const mockStore = {
 const mockService = {
 	createDraft: vi.fn().mockImplementation((input) => {
 		return Promise.resolve({
+			warnings: [],
 			id: "new-entry-id",
 			collection: input.collection,
 			version: 1,
@@ -59,6 +60,7 @@ const mockService = {
 			throw new CmsError("Slug conflict", "slug_conflict");
 		}
 		return Promise.resolve({
+			warnings: [],
 			id,
 			collection: input.collection,
 			version: input.expectedVersion + 1,

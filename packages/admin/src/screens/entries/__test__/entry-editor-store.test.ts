@@ -208,7 +208,12 @@ describe("save", () => {
 	it("keeps the warnings of the latest save and publish as state, replaced by the next one", async () => {
 		const { editor, client } = await opened();
 		expect(editor().bodyWarnings).toEqual([]);
-		const warning = { code: "chart_syntax", message: "1줄: 문법 오류", position: { blockId: "chart001" } };
+		const warning = {
+			code: "chart_syntax",
+			message: "1줄: 문법 오류",
+			position: { blockId: "chart001" },
+			text: "1줄: 문법 오류",
+		};
 		// The fake server saves as usual; this one answer also carries a warning.
 		const save = client.update.getMockImplementation() as typeof client.update;
 		client.update.mockImplementationOnce(async (id, input) => ({ ...(await save(id, input)), warnings: [warning] }));
@@ -404,7 +409,7 @@ describe("failures are results", () => {
 
 	it("a refused save (4xx) is a `validation` error with its issues and is not retried on its own", async () => {
 		const { editor, client } = await opened();
-		const issues = [{ code: "too_long", path: "title" }];
+		const issues = [{ code: "too_long", path: "title", text: "제목이 너무 깁니다." }];
 		client.update.mockRejectedValueOnce(invalidError(issues));
 		editor().setForm({ title: "x".repeat(10) });
 		const result = await editor().save();
@@ -578,11 +583,11 @@ describe("publish", () => {
 		const { editor, client } = await opened();
 		client.publish.mockResolvedValueOnce({
 			entry: { ...ENTRY, version: 5, status: "published" },
-			warnings: [{ code: "seo_missing" }],
+			warnings: [{ code: "seo_missing", text: "SEO" }],
 		});
 		const result = await editor().publish({ resetPublishedAt: true });
 		expect(client.publish).toHaveBeenCalledWith("entry-1", { expectedVersion: 4, resetPublishedAt: true });
-		expect(result.ok && result.value.warnings).toEqual([{ code: "seo_missing" }]);
+		expect(result.ok && result.value.warnings).toEqual([{ code: "seo_missing", text: "SEO" }]);
 	});
 
 	it("fills an empty body-filled field from the body, and says which", async () => {
@@ -618,7 +623,7 @@ describe("publish", () => {
 
 	it("a refusal with issues is a validation error and sets publishIssues; the next publish clears them", async () => {
 		const { editor, client } = await opened();
-		const issues = [{ code: "required", path: "categoryId" }];
+		const issues = [{ code: "required", path: "categoryId", text: "카테고리를 입력하세요." }];
 		client.publish.mockRejectedValueOnce(invalidError(issues));
 		const result = await editor().publish();
 		expect(result).toMatchObject({ ok: false, error: { code: "validation", issues } });

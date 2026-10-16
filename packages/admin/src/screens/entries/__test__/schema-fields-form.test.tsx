@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { cmsIssueMessage } from "../../../api/error-message";
+import { issueLine } from "../../../api/error-message";
 import { renderWithSite as render } from "../../../test/site";
 import { TooltipProvider } from "../../../ui/tooltip";
 import { EMPTY_FORM, type EntryForm } from "../entry-form";
@@ -27,12 +27,18 @@ function renderFields(value: Partial<EntryFormValue>, props: Parameters<typeof S
 
 describe("SchemaFields on the form provider", () => {
 	it("shows a publish problem under its field and links it to the input", () => {
-		const issue = { code: "missing_field", path: "summary", message: "요약" };
+		const issue = {
+			code: "missing_field",
+			path: "summary",
+			message: "요약",
+			text: "요약을 입력하세요.",
+			where: "summary",
+		};
 		renderFields({ issues: [issue] }, { include: (group) => group.fields.includes("summary") });
 		const input = screen.getByLabelText(/요약/) as HTMLInputElement;
 		expect(input.getAttribute("aria-invalid")).toBe("true");
 		expect(input.getAttribute("aria-describedby")).toBe("cms-summary-error");
-		expect(document.getElementById("cms-summary-error")?.textContent).toBe(cmsIssueMessage(testSite, issue));
+		expect(document.getElementById("cms-summary-error")?.textContent).toBe(issueLine(issue));
 	});
 
 	it("a change reaches the owner as a patch of that field only", () => {

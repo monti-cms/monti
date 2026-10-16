@@ -9,7 +9,7 @@ import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
 import { cmsEntryClient } from "../../api/entries";
-import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
+import { type CmsIssue, issueLine } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
 import { commonMessages } from "../../lib/common.messages";
@@ -323,7 +323,7 @@ export function EntryEditorShell({
 			/>
 			{titleIssue && (
 				<p id="cms-title-error" className="text-cms-destructive text-sm">
-					{cmsIssueMessage(site, titleIssue)}
+					{issueLine(titleIssue)}
 				</p>
 			)}
 		</>
@@ -361,7 +361,7 @@ export function EntryEditorShell({
 			/>
 			{bodyIssue && (
 				<p id={SOURCE_ERROR_ID} className="mt-2 text-cms-destructive text-sm">
-					{cmsIssueMessage(site, bodyIssue)}
+					{issueLine(bodyIssue)}
 				</p>
 			)}
 		</>

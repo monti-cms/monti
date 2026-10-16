@@ -2,7 +2,7 @@ import { LIST_ARRAY_QUERY_KEYS } from "../../../core/api";
 import { emptyStoredDocument } from "../../../doc/stored-document";
 import { bodyInputOf } from "../../../services/body-input";
 import type { ServiceInput } from "../../../services/types";
-import { adminRoute, ok, parseWith, readJsonBody, readQuery } from "../handler";
+import { adminRoute, ok, parseWith, readJsonBody, readQuery, written } from "../handler";
 
 /** Per-collection list, search, filter, sort, and paging. */
 export const GET = adminRoute(async ({ request, cms }) => {
@@ -46,5 +46,5 @@ export const POST = adminRoute(async ({ request, cms }) => {
 		...bodyInputOf(body, emptyStoredDocument()),
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 	} as ServiceInput;
-	return ok(await cms.contentService().createDraft(input), { status: 201 });
+	return written(cms, await cms.contentService().createDraft(input), { status: 201 });
 });

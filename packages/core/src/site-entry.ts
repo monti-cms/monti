@@ -22,6 +22,14 @@ export * from "./core/collections";
 export { canTransition, type LifecycleAction } from "./core/domain/lifecycle";
 export * from "./core/file-display";
 export * from "./core/ids";
+export {
+	type IssueLike,
+	type IssueText,
+	issueMessages,
+	issueText,
+	type ToldIssue,
+	tellIssues,
+} from "./core/issue-text";
 export * from "./core/links";
 export * from "./core/locales";
 export * from "./core/path-pattern";

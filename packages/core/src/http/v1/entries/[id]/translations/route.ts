@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { adminRoute, ok, parseWith, readJsonBody } from "../../../handler";
+import { adminRoute, ok, parseWith, readJsonBody, written } from "../../../handler";
 
 type IdParams = { id: string };
 
@@ -12,7 +12,7 @@ export const GET = adminRoute<IdParams>(async ({ params, cms }) =>
 export const POST = adminRoute<IdParams>(async ({ request, params, cms }) => {
 	const createTranslationSchema = z.object({ locale: z.enum(cms.site.LOCALES as [string, ...string[]]) }).strict();
 	const body = parseWith(createTranslationSchema, await readJsonBody(request));
-	return ok(await cms.contentService().createTranslation({ sourceId: params.id, locale: body.locale }), {
+	return written(cms, await cms.contentService().createTranslation({ sourceId: params.id, locale: body.locale }), {
 		status: 201,
 	});
 });

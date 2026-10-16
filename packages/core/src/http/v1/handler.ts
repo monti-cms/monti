@@ -3,7 +3,10 @@ import type { AuthContext } from "../../adapters/auth";
 import type { Cms } from "../../cms";
 import { actorOf, withActor } from "../../core/actor";
 import { isUuid } from "../../core/ids";
+import { tellIssues } from "../../core/issue-text";
 import { MAX_FORM_BYTES, MAX_REQUEST_BYTES } from "../../core/limits";
+import type { BulkItemResult } from "../../services/bulk-service";
+import type { WriteResult } from "../../services/content-service";
 import { CmsError, deleted, handleApiError, ok } from "./error-handler";
 import { validateSameOrigin } from "./security";
 
@@ -267,5 +270,23 @@ export function readFormatQuery(request: Request): string | undefined {
 	if (!/^[a-z][a-z0-9-]*$/.test(raw)) throw new CmsError("Invalid format", "invalid_input");
 	return raw;
 }
+
+/** The answer to a write of the content service: the entry, and its warnings with their person's text (`text`, `where`) in the admin language. */
+export const written = (cms: Cms, result: WriteResult, init?: ResponseInit): Response =>
+	ok({ ...result, warnings: tellIssues(cms.site, result.warnings) }, init);
+
+/** The answer to a bulk operation: every item's warnings or issues with their person's text. */
+export const bulkWritten = (cms: Cms, result: { readonly results: readonly BulkItemResult[] }): Response =>
+	ok({
+		results: result.results.map((item) =>
+			item.ok
+				? item.warnings
+					? { ...item, warnings: tellIssues(cms.site, item.warnings) }
+					: item
+				: item.issues
+					? { ...item, issues: tellIssues(cms.site, item.issues) }
+					: item,
+		),
+	});
 
 export { CmsError, deleted, ok };

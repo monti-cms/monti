@@ -1,6 +1,6 @@
 "use client";
 
-import { apiErrorMessages, errorText, useCmsMutation } from "@monti-cms/admin/api";
+import { errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
 	Checkbox,
@@ -39,7 +39,7 @@ import {
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
-import { useSite, useTranslator } from "@monti-cms/core/site";
+import { issueMessages, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";
@@ -410,11 +410,11 @@ export function AiManager() {
 		if (!editing) return;
 		const label = (editing.base ? editing.base.label : (editing.spec.label ?? editing.feature.label)).trim();
 		if (!label) {
-			setFormError(site.createTranslator(apiErrorMessages)("field.missing", { label: t("field.name") }));
+			setFormError(site.createTranslator(issueMessages)("field.missing", { label: t("field.name") }));
 			return;
 		}
 		if (!editing.spec.prompt?.trim()) {
-			setFormError(site.createTranslator(apiErrorMessages)("field.missing", { label: t("field.prompt") }));
+			setFormError(site.createTranslator(issueMessages)("field.missing", { label: t("field.prompt") }));
 			return;
 		}
 		setFormError(null);

@@ -27,7 +27,7 @@ import {
 	isFieldInputParts,
 	useCmsAdminComponents,
 } from "../../admin-components";
-import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
+import { type CmsIssue, issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { type SlotRequest, useSlot } from "../../slots/slots";
 import { Button } from "../../ui/button";
@@ -120,7 +120,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			)}
 			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 			{children}
-			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(site, issue)}</FieldError>}
+			{issue && <FieldError id={`${id}-error`}>{issueLine(issue)}</FieldError>}
 		</UiField>
 	);
 }
@@ -153,7 +153,7 @@ function SlotFieldRow({
 			{help && <FieldDescription className="text-[11px] leading-tight">{help}</FieldDescription>}
 			{children}
 			{panel}
-			{issue && <FieldError id={`${id}-error`}>{cmsIssueMessage(site, issue)}</FieldError>}
+			{issue && <FieldError id={`${id}-error`}>{issueLine(issue)}</FieldError>}
 		</UiField>
 	);
 }

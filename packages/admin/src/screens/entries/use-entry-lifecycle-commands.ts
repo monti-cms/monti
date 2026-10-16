@@ -6,7 +6,7 @@ import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
 import { toast } from "sonner";
-import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
+import { type CmsIssue, issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
@@ -140,7 +140,7 @@ export function useEntryLifecycleCommands({
 				toast.warning(t("publishedWithWarnings", { count: warnings.length }), {
 					description: warnings
 						.slice(0, 5)
-						.map((issue) => cmsIssueMessage(site, issue))
+						.map((issue) => issueLine(issue))
 						.join("\n"),
 					duration: 10000,
 					action: warnings[0]?.position

@@ -1,5 +1,5 @@
 import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
-import { bodyExcerpt, confirmedSourceState, fillFromBodyLength } from "@monti-cms/core/site";
+import { bodyExcerpt, confirmedSourceState, fillFromBodyLength, issueText } from "@monti-cms/core/site";
 import { CmsApiError, isConflict } from "../../api/client";
 import type { CmsIssue } from "../../api/error-message";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";
@@ -384,7 +384,8 @@ export function createEntryEditor(config: EntryEditorConfig): EntryEditorCore {
 			if (formText(state().form, name).trim()) continue;
 			const generated = bodyExcerpt(site, form.doc, fillFromBodyLength(field));
 			if (!generated) {
-				const issue: CmsIssue = { code: "missing_field", message: field.label, path: name };
+				const missing = { code: "missing_field", message: field.label, path: name };
+				const issue: CmsIssue = { ...missing, ...issueText(site, missing) };
 				const error: EditorError = {
 					code: "validation",
 					message: t("fillEmpty", { label: field.label }),

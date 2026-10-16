@@ -3,7 +3,7 @@ import type { StoredDocument } from "../../../../doc/stored-document";
 import { createBodyExporter } from "../../../../services/body-export";
 import { bodyInputOf } from "../../../../services/body-input";
 import type { SaveDraftInput } from "../../../../services/types";
-import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler";
+import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery, written } from "../../handler";
 
 type IdParams = { id: string };
 
@@ -62,7 +62,7 @@ export const PATCH = adminRoute<IdParams>(async ({ request, params, cms }) => {
 		...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
 		...(body.translation !== undefined ? { translation: body.translation } : {}),
 	} as SaveDraftInput;
-	return ok(await cms.contentService().saveDraft(params.id, input));
+	return written(cms, await cms.contentService().saveDraft(params.id, input));
 });
 
 /** Permanently deletes a trashed entry. Moving to trash is `POST /entries/:id/trash`. */

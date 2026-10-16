@@ -997,6 +997,8 @@ throw new CmsError("401 invalid x-api-key", "service_unavailable", {
 
 `issues`는 콘텐츠에서 찾은 문제(거부된 쓰기)이고, `details`는 기계가 읽는 추가 정보(`conflict`일 때 서버가 가진 버전, `key_in_use`일 때 키를 쓰는 곳)입니다. 성공은 `ok(body)`이고, 삭제는 본문 없는 `204`(`deleted()`)로 답합니다.
 
+이슈의 글도 서버가 씁니다. 관리자 라우트에서는 오류의 이슈 하나하나와 쓰기의 경고(`{ entry, warnings }`, 일괄 작업의 각 항목)마다 `text`(무엇이 잘못됐는지, 관리자 언어)와, 자리가 있으면 `where`(본문 글의 줄·칸이나 필드 경로)가 `code`, 그리고 편집기가 문제로 이동할 때 쓰는 위치(`path`, `position.line/column/blockId`)와 함께 갑니다. 관리자 화면은 `text`를 그대로 보여 줍니다. 글은 코드에 따라 `cms.core.issues` 사전에서 오고, 사전에 없는 코드는 이슈의 `message`를 그대로 보여 줍니다. 요청 값이 검사를 통과하지 못하면 라이브러리의 문장 대신 zod 이슈 코드(`invalid_type`, `too_big` 등)로 글을 고르므로, 이 코드 이름들은 이미 쓰이고 있습니다. 브라우저가 스스로 찾은 이슈에는 `@monti-cms/core/site`의 `issueText(site, issue)`가 같은 글을 줍니다.
+
 ## 서버 옵션
 
 서버 옵션은 사이트 옵션과 함께 하나의 `defineConfig({ … })` 호출에 들어간다("CMS 인스턴스" 절). 서버에서만 읽힌다. 옵션을 주지 않으면 어댑터가 관례적인 환경 변수를 읽고, 명시한 옵션이 항상 이긴다.
@@ -1089,7 +1091,7 @@ export const cms = defineConfig({
 - 보관·보관 해제·휴지통·삭제는 내용을 바꾸지 않으므로 2~5단계를 건너뛰고 `afterCommit`만 부른다. 항목(record)을 복원하면 다시 발행되므로 `restore`로 3~5단계를 거친다(`validate`와 `validatePublish`가 돌아서 휴지통에 넣었다 복원하는 식으로 발행 제한을 피할 수 없다. 내용이 그대로이므로 `transform`은 돌지 않는다). 다른 글의 복원은 초안으로 돌려놓을 뿐이라 아무 훅도 돌지 않는다.
 - 훅은 DB 트랜잭션 밖에서 돌고 DB 클라이언트를 받지 않는다. 비동기여도 된다. 저장소 내부 옵션 `beforePublishCommit`(트랜잭션 클라이언트를 받는다)은 이 계약에 들지 않고 그대로다.
 - 발행하는 중에 `transform`이 초안을 바꾸면 그 변경은 발행과 함께 한 트랜잭션으로 저장된다(`afterCommit`에는 그 글의 `saved` 변경 다음에 `published` 변경이 온다. 바뀐 것이 없는 발행은 `published`만 온다). 만들거나 저장하면서 바로 발행하는 경우(항목)도 같게 `created` 또는 `saved`, 그다음 `published`로 알린다.
-- `validate`나 `validatePublish`가 더하는 이슈는 `{ code, path?, message?, params? }`다. `path`는 편집기가 이슈를 보여 줄 필드(`"slug"`, `"title"`)이고, `message`는 사람이 읽는 문구다. 코어에 문구가 없는 `code`는 `message`가 그대로 보이므로 꼭 써 둔다. 거부된 쓰기가 던지는 `ServiceError`는 이를 `issues`로 담고, 자신의 `message`에는 그 내용을 나열한다(`validation_failed: The slug "A" must be lowercase (slug)`).
+- `validate`나 `validatePublish`가 더하는 이슈는 `{ code, path?, message?, params? }`다. `path`는 편집기가 이슈를 보여 줄 필드(`"slug"`, `"title"`)이고, `message`는 사람이 읽는 문구다. 코어(`cms.core.issues`)에 문구가 없는 `code`는 `message`가 그대로 보이므로 꼭 써 두고, zod 이슈 코드(`invalid_type`, `custom` 등)와 같은 이름은 쓰지 않는다. 거부된 쓰기가 던지는 `ServiceError`는 이를 `issues`로 담고, 자신의 `message`에는 그 내용을 나열한다(`validation_failed: The slug "A" must be lowercase (slug)`).
 - 훅이 예외를 던지거나 계약에 맞지 않는 값을 돌려주면 쓰기는 `hook_failed`(HTTP 500)로 실패한다. 오류의 `issues[].params`에 훅 이름과 소유자(`server` 또는 `plugin:<이름>`)가 들어가고, 아무것도 저장되지 않는다. `validate` 실패는 `validation_failed`, `validatePublish` 실패는 `publish_validation_failed`(HTTP 422)이며, 더한 이슈가 초안 자체의 이슈 옆에 붙는다.
 - `afterCommit`은 이벤트를 받는다. id·상태·주소·`version`·`contentHash`·`eventId`, 커밋된 글을 읽는 `read()`(본문 자체는 아니다), `once(run)`이고, 두 번째 인자로 인스턴스도 받는다. 전달은 아웃박스에서 하며 최소 한 번, 글마다 순서대로, 실패하면 다시 시도한다. "이벤트 전달"을 본다.
 - **쓰기가 돌려주는 것.** `cms.contentService()`의 모든 쓰기(`createDraft`·`saveDraft`·`createTranslation`·`duplicate`·`publish`·`restore`)는 `{ entry, warnings }`로 끝난다. 지금의 글과, 쓰기가 찾은 경고(코어, 블록, 훅이 낸 것)다. 경고는 글에 섞이지 않으며, 없으면 빈 목록이다. 관리 API도 같은 모양으로 답하고(`POST /entries`·`PATCH /entries/:id`·`POST /entries/:id/publish`·`/restore`·`/duplicate`·`/translations`), 일괄 결과의 항목은 쓰기에 경고가 있으면 `warnings`를 담는다. 보관·보관 해제·휴지통은 경고를 낼 훅이 없는 저장소 호출이라 글을 돌려준다.

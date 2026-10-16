@@ -3,8 +3,8 @@
 // The banners under the header of the entry editor screen: trash notice, unreadable body, save error, publish problems and "source changed".
 
 import type { FormatIssue } from "@monti-cms/core/format";
-import { useSite, useTranslator } from "@monti-cms/core/site";
-import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
+import { issueText, useSite, useTranslator } from "@monti-cms/core/site";
+import { type CmsIssue, issueLine } from "../../api/error-message";
 import { Button } from "../../ui/button";
 import { FieldError } from "../../ui/field";
 import { nounVars } from "../shared/noun.messages";
@@ -48,7 +48,7 @@ export function EntryEditorBanners({
 			)}
 			{visualUnavailable && (
 				<output className="border-b bg-cms-warning-soft px-4 py-2 text-cms-warning-foreground text-sm">
-					{t("visualUnavailable")} {sourceProblem ? cmsIssueMessage(site, sourceProblem) : ""}
+					{t("visualUnavailable")} {sourceProblem ? issueLine(issueText(site, sourceProblem)) : ""}
 				</output>
 			)}
 			{editor.saveError && ["failed", "session-expired"].includes(saveStatus) && (
@@ -65,7 +65,7 @@ export function EntryEditorBanners({
 								className="h-auto whitespace-normal px-0 text-left"
 								onClick={() => onFocusIssue(issue)}
 							>
-								{cmsIssueMessage(site, issue)}
+								{issueLine(issue)}
 							</Button>
 						</li>
 					))}

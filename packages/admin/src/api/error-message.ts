@@ -16,13 +16,11 @@ export type CmsIssue = {
 	 * (`mdx_error`) has a `line` and `column` in that text instead.
 	 */
 	position?: { line?: number; column?: number; blockId?: string };
+	/** What is wrong, in the admin language: the server writes it (`issueText` of `@monti-cms/core/site` for an issue the screen finds itself). */
+	text: string;
+	/** Where it is, in the admin language (a line and column of a body text, or the field path). */
+	where?: string;
 };
-
-const translatorOf = (site: ApiErrorSite) => site.createTranslator(apiErrorMessages);
-
-/** Whether the code is in the dictionary (unknown codes show the server `message` as is). */
-const hasMessage = (key: string): key is keyof typeof apiErrorMessages.messages.en =>
-	key in apiErrorMessages.messages.en;
 
 export function cmsApiIssues(payload: unknown): CmsIssue[] {
 	if (!payload || typeof payload !== "object") return [];
@@ -32,70 +30,17 @@ export function cmsApiIssues(payload: unknown): CmsIssue[] {
 		: [];
 }
 
-/** Codes where the issue's `message` names the target (property name, slug, parser error). Appended after the guidance text. */
-const DETAILED_CODES = new Set([
-	"untranslated_text",
-	"mdx_error",
-	"missing_block_attribute",
-	"invalid_block_attribute",
-	"unknown_block_attribute",
-	"disallowed_block",
-	"disallowed_mark",
-	"code_annotation_out_of_range",
-	"footnote_definition_missing",
-	"footnote_definition_unused",
-	"footnote_definition_duplicate",
-	"unknown_select_value",
-	"code_ref_broken",
-	"code_anchor_duplicate",
-	"unresolved_internal_link",
-	"unpublished_internal_link",
-	"image_src_not_allowed",
-]);
-
-function fieldIssueText(
-	t: ReturnType<typeof translatorOf>,
-	code: string | undefined,
-	label: string,
-): string | undefined {
-	if (code === "missing_field") return t("field.missing", { label });
-	if (code === "field_too_long") return t("field.tooLong", { label });
-	return undefined;
-}
-
-export function cmsIssueMessage(site: ApiErrorSite, issue: CmsIssue): string {
-	const t = translatorOf(site);
-	// For field problems (required, length), the error code is the same regardless of field and the field label comes in `message`.
-	const field = issue.message ? fieldIssueText(t, issue.code, issue.message) : undefined;
-	const known =
-		field ?? (issue.code && hasMessage(`issue.${issue.code}`) ? t(`issue.${issue.code}` as never) : undefined);
-	const detail = known && issue.code && DETAILED_CODES.has(issue.code) && issue.message ? ` — ${issue.message}` : "";
-	let customMessage = issue.message;
-	if (
-		customMessage &&
-		(customMessage.includes("expected") ||
-			customMessage.includes("Invalid input") ||
-			customMessage.includes("Required") ||
-			customMessage.includes("Too small"))
-	) {
-		customMessage = t("issue.missing_field");
-	} else if (customMessage?.includes("Too big")) {
-		customMessage = t("issue.field_too_long");
-	}
-	const label = known ? `${known}${detail}` : customMessage || issue.code || t("validationFailed");
-	const { line, column } = issue.position ?? {};
-	const location = line !== undefined && column !== undefined ? t("position", { line, column }) : issue.path;
-	return location ? `${label} (${location})` : label;
-}
+/** The issue as one line: its text, and its place after it. */
+export const issueLine = (issue: Pick<CmsIssue, "text" | "where">): string =>
+	issue.where ? `${issue.text} (${issue.where})` : issue.text;
 
 export function cmsApiErrorMessage(site: ApiErrorSite, payload: unknown, fallback: string): string {
-	const t = translatorOf(site);
 	if (!payload || typeof payload !== "object") return fallback;
 	const body = payload as { message?: unknown; code?: unknown };
 	const issues = cmsApiIssues(payload);
 	if (issues.length > 0) {
-		const details = issues.map((issue) => cmsIssueMessage(site, issue));
-		return `${t("validationFailedList")}\n${details.map((detail) => `• ${detail}`).join("\n")}`;
+		const t = site.createTranslator(apiErrorMessages);
+		return `${t("validationFailedList")}\n${issues.map((issue) => `• ${issueLine(issue)}`).join("\n")}`;
 	}
 	// The server writes `message` in the admin language (and `fix` next to it).
 	return typeof body.message === "string" && body.message ? body.message : fallback;

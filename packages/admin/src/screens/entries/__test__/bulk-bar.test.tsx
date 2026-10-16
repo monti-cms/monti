@@ -1,11 +1,13 @@
 import type { Folder } from "@monti-cms/core/site";
-import { type CmsConfig, createSite } from "@monti-cms/core/site";
+import { type CmsConfig, createSite, issueText } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { testConfig } from "../../../../../core/test/site";
+import { testConfig, testSite } from "../../../../../core/test/site";
 import { chooseSelectOption } from "../../../test/base-ui";
 import { renderWithSite as render } from "../../../test/site";
 import { BulkBar } from "../bulk-bar";
+
+const told = (issue: Parameters<typeof issueText>[1]) => ({ ...issue, ...issueText(testSite, issue) });
 
 afterEach(() => {
 	cleanup();
@@ -130,7 +132,7 @@ describe("bulk actions", () => {
 				id: "entry-1",
 				ok: false,
 				error: "publish_validation_failed",
-				issues: [{ code: "missing_field", path: "categoryId", message: "카테고리" }],
+				issues: [told({ code: "missing_field", path: "categoryId", message: "카테고리" })],
 			},
 		]);
 		const onDone = vi.fn();

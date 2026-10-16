@@ -31,7 +31,7 @@ const wrapper =
 describe("useField on any site", () => {
 	it("gives the value, a patch-only change, the error and the ids of the title field", () => {
 		const setForm = vi.fn();
-		const issues = [{ code: "missing_field", path: "title" }];
+		const issues = [{ code: "missing_field", path: "title", text: "제목을 입력하세요." }];
 		const { result } = renderHook(() => useField<string>("title"), {
 			wrapper: wrapper(value({ form: { ...EMPTY_FORM, title: "Hello" }, setForm, issues })),
 		});

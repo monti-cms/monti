@@ -6,7 +6,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import { type BulkItemResult, type BulkParams, type BulkSelection, bulkEntries } from "../../api/entries";
-import { cmsIssueMessage } from "../../api/error-message";
+import { issueLine } from "../../api/error-message";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";
@@ -159,7 +159,7 @@ export function describeBulkFailure(site: Site, failure: Extract<BulkItemResult,
 	return failure.issues?.length
 		? `${base} ${failure.issues
 				.slice(0, 3)
-				.map((issue) => cmsIssueMessage(site, issue))
+				.map((issue) => issueLine(issue))
 				.join(" ")}`
 		: base;
 }
