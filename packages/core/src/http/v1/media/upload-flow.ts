@@ -88,6 +88,7 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 	const presigned = await mediaStore.prepareUpload({
 		stagingKey,
 		contentType: body.mimeType,
+		byteSize: body.byteSize,
 		expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
 	});
 	const original =
@@ -95,6 +96,7 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 			? await mediaStore.prepareUpload({
 					stagingKey: originalStagingKey,
 					contentType: originalFile.mimeType,
+					byteSize: originalFile.byteSize,
 					expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
 				})
 			: null;
@@ -135,9 +137,21 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 	let file: Awaited<ReturnType<typeof inspectUploadedFile>>;
 	let original: Awaited<ReturnType<typeof inspectUploadedFile>> | null = null;
 	try {
-		file = await inspectUploadedFile(cms.site, mediaStore, media.stagingKey, media.mimeType);
+		file = await inspectUploadedFile(
+			cms.site,
+			mediaStore,
+			media.stagingKey,
+			media.mimeType,
+			media.byteSize ?? undefined,
+		);
 		if (media.original?.stagingKey)
-			original = await inspectUploadedFile(cms.site, mediaStore, media.original.stagingKey);
+			original = await inspectUploadedFile(
+				cms.site,
+				mediaStore,
+				media.original.stagingKey,
+				undefined,
+				media.original.byteSize ?? undefined,
+			);
 	} catch (error) {
 		// If the file is not there yet, leave it as is so it can be retried. A file that fails inspection cannot be used.
 		if (!(error instanceof CmsError) || error.code !== "upload_incomplete") await store.failMediaAsset(mediaId);

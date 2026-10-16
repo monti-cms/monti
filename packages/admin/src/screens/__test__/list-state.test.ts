@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../core/test/site";
+import { siteWithFolders } from "../../test/site";
 import { isExplorerMode, listStateToApiQuery, listStateToSearchParams, parseListState } from "../list-state";
 
 describe("admin list state", () => {
@@ -28,6 +29,14 @@ describe("admin list state", () => {
 			...state,
 			explicit: { pageSize: true, sort: true },
 		});
+	});
+
+	it("drops the locale filter when translations are off, since its control is hidden", () => {
+		const url = new URLSearchParams(`locale=${testSite.LOCALES[0]}`);
+		const withTranslations = Object.create(testSite, { ADMIN_TRANSLATIONS: { value: true } });
+		const without = Object.create(testSite, { ADMIN_TRANSLATIONS: { value: false } });
+		expect(parseListState(withTranslations, url).locales).toEqual([testSite.LOCALES[0]]);
+		expect(parseListState(without, url).locales).toEqual([]);
 	});
 
 	it("ignores invalid values instead of sending them to the API", () => {
@@ -99,5 +108,31 @@ describe("admin list state", () => {
 		const trash = listStateToApiQuery(testSite, state, { trash: true });
 		expect(trash.getAll("status")).toEqual(["trashed"]);
 		expect(trash.has("folderId")).toBe(false);
+	});
+});
+
+describe("list state for a collection without folders", () => {
+	const folderId = "6f1c1d6e-0a3b-4c53-9a43-0d6f4a9d2b11";
+	const off = siteWithFolders("post", false);
+	const on = siteWithFolders("post", true);
+	const params = `collection=post&folder=${folderId}`;
+
+	it("ignores ?folder= in the address, but keeps it where the collection has folders", () => {
+		expect(parseListState(off, new URLSearchParams(params)).folder).toBe("all");
+		expect(parseListState(on, new URLSearchParams(params)).folder).toBe(folderId);
+	});
+
+	it("asks for no folder filter, so entries filed before folders were turned off stay listed", () => {
+		const query = (site: typeof on) =>
+			listStateToApiQuery(site, parseListState(site, new URLSearchParams("collection=post")));
+		expect(query(off).has("folderId")).toBe(false);
+		// With folders, browse mode lists only what sits directly at the top level.
+		expect(query(on).get("folderId")).toBe("null");
+	});
+
+	it("sends no folder even when a state still carries one", () => {
+		const state = { ...parseListState(on, new URLSearchParams(params)) };
+		expect(listStateToApiQuery(on, state).get("folderId")).toBe(folderId);
+		expect(listStateToApiQuery(off, state).has("folderId")).toBe(false);
 	});
 });

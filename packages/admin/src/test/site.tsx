@@ -1,8 +1,8 @@
-import { type Site, SiteProvider } from "@monti-cms/core/client";
+import { type CmsConfig, createSite, type Site, SiteProvider } from "@monti-cms/core/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderHookOptions, type RenderOptions, render, renderHook } from "@testing-library/react";
 import { type ComponentType, type ReactElement, type ReactNode, useState } from "react";
-import { testSite } from "../../../core/test/site";
+import { testConfig, testSite } from "../../../core/test/site";
 
 /**
  * Provides the site (`testSite` unless a test passes its own, such as a plugin's) to the element under test: the admin components read it with `useSite()`,
@@ -36,4 +36,13 @@ export function renderHookWithSite<Result, Props>(
 		<SiteWrapper>{Inner ? <Inner>{children}</Inner> : children}</SiteWrapper>
 	);
 	return renderHook(callback, { ...options, wrapper });
+}
+
+/** The test site with folders switched on or off for one collection; everything else stays as configured. */
+export function siteWithFolders(collection: string, enabled: boolean): Site {
+	const collections = testConfig.collections as Record<string, object>;
+	return createSite({
+		...testConfig,
+		collections: { ...collections, [collection]: { ...collections[collection], folders: enabled } },
+	} as CmsConfig);
 }

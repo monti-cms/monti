@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
-import { assertFolderInCollection } from "../../../core/domain/folders";
+import { MEDIA_FOLDER_SCOPE } from "../../../core/collections";
 import { CmsError } from "../../../core/store/errors";
 import type {
 	CompleteMediaAssetInput,
@@ -12,6 +12,7 @@ import type {
 	MediaReferenceItem,
 } from "../../../core/store/types";
 import { type StoreContext, withTrx } from "./context";
+import { assertFolderTarget } from "./folders";
 import { MEDIA_COLUMN_NAMES, mapMediaRow } from "./rows";
 import { likeContainsPattern, likePrefixPattern } from "./sql";
 import { ROW_COLLECTION, titleExpr } from "./title-sql";
@@ -31,14 +32,7 @@ export function createMediaOps(ctx: StoreContext) {
 
 	return {
 		createMediaAsset: async (input: CreateMediaAssetInput): Promise<MediaAssetRecord> => {
-			if (input.folderId) {
-				const folder = await db
-					.selectFrom("folders")
-					.select("collection")
-					.where("id", "=", input.folderId)
-					.executeTakeFirst();
-				assertFolderInCollection(folder?.collection, "media");
-			}
+			await assertFolderTarget(db, site, input.folderId, MEDIA_FOLDER_SCOPE);
 			const now = new Date();
 			const row = await db
 				.insertInto("media_assets")
@@ -118,14 +112,7 @@ export function createMediaOps(ctx: StoreContext) {
 			defaultCaption?: string;
 			folderId?: string | null;
 		}): Promise<MediaAssetRecord> => {
-			if (params.folderId) {
-				const folder = await db
-					.selectFrom("folders")
-					.select("collection")
-					.where("id", "=", params.folderId)
-					.executeTakeFirst();
-				assertFolderInCollection(folder?.collection, "media");
-			}
+			await assertFolderTarget(db, site, params.folderId, MEDIA_FOLDER_SCOPE);
 			const setValues: Record<string, unknown> = {
 				updated_at: sql<Date>`now()`,
 			};

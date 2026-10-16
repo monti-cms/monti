@@ -2,7 +2,7 @@ import { checkPathPattern, patternsOverlap } from "../../core/path-pattern";
 import type { CollectionSchema } from "../../schema/collection";
 import { DEFAULT_TITLE_FIELD, type Field, TITLE_ROLE } from "../../schema/fields";
 import { findTitleField, valueFieldsOf } from "../../schema/walk";
-import { NAME_PATTERN } from "../rules";
+import { NAME_PATTERN, RESERVED_COLLECTION_NAMES } from "../rules";
 import { checkField, checkRole, checkTabName, type FieldEnv } from "./fields";
 import { type IssueList, pathOf } from "./issue";
 
@@ -41,6 +41,8 @@ export function checkCollection(
 			"name",
 			`"${name}" is not a collection name: letters, digits, "_" and "-", starting with a letter or "_"`,
 		);
+	} else if (RESERVED_COLLECTION_NAMES.includes(name)) {
+		list.add(base, "name", `"${name}" is reserved for the media library; give the collection another name`);
 	}
 	const entries = Object.entries(schema.fields);
 	const env: FieldEnv = {

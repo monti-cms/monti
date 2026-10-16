@@ -10,6 +10,12 @@ export const UUID_PATTERN = new RegExp(`^${UUID_SOURCE}$`, "i");
 /** A name for a collection or a field: what stored values, JSON keys and URLs call it. */
 export const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
 
+/**
+ * Names a collection cannot take. `media` is the folder scope of the media library (`MEDIA_FOLDER_SCOPE`): a collection of that name would share its
+ * folders.
+ */
+export const RESERVED_COLLECTION_NAMES: readonly string[] = ["media"];
+
 /** A select option's value: the key stored for the choice. */
 export const OPTION_VALUE_PATTERN = /^[A-Za-z0-9_-]+$/;
 

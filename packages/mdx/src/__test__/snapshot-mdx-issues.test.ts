@@ -1,8 +1,8 @@
 import { createFormatRegistry } from "@monti-cms/core/format";
 import { describe, expect, it, vi } from "vitest";
+import { prepareSnapshot as prepareCore, validateForPublish } from "../../../core/src/core/snapshot";
 import { createContentService } from "../../../core/src/services/content-service";
 import type { Reference, ServiceInput, StorePort } from "../../../core/src/services/index";
-import { prepareSnapshot as prepareCore, validateForPublish } from "../../../core/src/services/index";
 import { testSite } from "../../../core/test/site";
 import { mdxFormat } from "../format";
 

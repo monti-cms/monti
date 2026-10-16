@@ -30,6 +30,12 @@ export function assertTranslationSource(
 	source: TranslationSource | undefined,
 	translation: { readonly collection: string; readonly locale: string },
 ): void {
+	if (!site.ADMIN_TRANSLATIONS) {
+		throw new CmsError(
+			"This site does not use translations. It needs more than one locale, and `admin.translations` not set to false.",
+			"invalid_input",
+		);
+	}
 	if (!source) throw new CmsError("Source entry not found", "not_found");
 	if (source.collection !== translation.collection || site.isItemCollection(translation.collection)) {
 		throw new CmsError("Only content collections have translations", "invalid_input");
@@ -38,6 +44,8 @@ export function assertTranslationSource(
 		throw new CmsError("Translate the source entry, not a translation", "invalid_input");
 	}
 	if (source.status === "trashed") throw new CmsError("A trashed entry cannot be translated", "invalid_status");
+	// An archived group is hidden from the site and the list; a new draft in it would be too.
+	if (source.status === "archived") throw new CmsError("Unarchive the entry before translating it", "invalid_status");
 	if (source.locale === translation.locale) {
 		throw new CmsError("A translation for this locale already exists", "translation_exists");
 	}

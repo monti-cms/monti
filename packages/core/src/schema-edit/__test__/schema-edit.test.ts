@@ -324,7 +324,10 @@ describe("schema settings API", () => {
 		delete edited.collections.post.fields.excerpt;
 		const drop = { op: "dropField", collection: "post", field: "excerpt" };
 
-		const res = await call(cms, "PUT", "schema", { schema: edited, transforms: [drop], baseHash: hash });
+		// Deleting values touches stored entries, so the save needs the impacts the writer saw in the preview.
+		const preview = await (await call(cms, "POST", "schema/preview", { schema: edited, transforms: [drop] })).json();
+		const acknowledged = preview.impacts.map((impact: { key: string }) => impact.key);
+		const res = await call(cms, "PUT", "schema", { schema: edited, transforms: [drop], baseHash: hash, acknowledged });
 		expect(res.status).toBe(200);
 		expect(await metadataOf("one")).toEqual({ title: "one" });
 		expect(onDiskData().migrations.map((item: { op: string }) => item.op)).toEqual(["renameField", "dropField"]);
@@ -417,5 +420,137 @@ describe("schema settings API", () => {
 		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("handmade");
 		expect(report).toHaveBeenCalledWith(expect.stringContaining("the schema was not reloaded"));
 		report.mockRestore();
+	});
+
+	describe("acknowledging changes that touch stored entries", () => {
+		type Edit = { collections: Record<string, { fields: Record<string, unknown> }>; locales: unknown[] };
+		const impactKeys = async (cms: ReturnType<typeof newCms>, body: Record<string, unknown>) =>
+			((await (await call(cms, "POST", "schema/preview", body)).json()) as { impacts: { key: string }[] }).impacts.map(
+				(impact) => impact.key,
+			);
+
+		/** A fresh database and file holding one `post` entry whose `summary` is set. */
+		const withStoredEntry = async () => {
+			vi.stubEnv("NODE_ENV", "development");
+			await freshDatabase();
+			write(schemaOf({ summary: { kind: "text", label: "Summary" } }));
+			const cms = newCms();
+			await cms.migrate({ log: () => {} });
+			await cms.contentService().createDraft({
+				collection: "post",
+				slug: "held",
+				metadata: { title: "held", summary: "kept" },
+				doc: docOfText("Body"),
+			} as never);
+			return cms;
+		};
+		const withoutSummary = (schema: Record<string, unknown>) => {
+			const edited = structuredClone(schema) as unknown as Edit;
+			delete edited.collections.post?.fields.summary;
+			return edited;
+		};
+
+		it("refuses to remove a field that stored entries hold, then saves it when the previewed impact keys are sent", async () => {
+			const cms = await withStoredEntry();
+			const { hash, schema } = await read(cms);
+			const edited = withoutSummary(schema);
+			const before = text();
+
+			const refused = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
+			expect(refused.status).toBe(409);
+			const body = await refused.json();
+			expect(body).toMatchObject({ error: { code: "schema_unacknowledged" } });
+			const required = body.error.details.impacts.map((impact: { key: string }) => impact.key);
+			expect(required.length).toBeGreaterThan(0);
+			expect(text()).toBe(before);
+			expect(await metadataOf("held")).toMatchObject({ summary: "kept" });
+
+			const keys = await impactKeys(cms, { schema: edited });
+			for (const key of required) expect(keys).toContain(key);
+			const saved = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash, acknowledged: keys });
+			expect(saved.status).toBe(200);
+			expect(await saved.json()).toMatchObject({ saved: true });
+			expect(Object.keys(onDiskData().collections.post.fields)).not.toContain("summary");
+		});
+
+		it("refuses to remove a locale that stored entries use, until the previewed impacts are acknowledged", async () => {
+			vi.stubEnv("NODE_ENV", "development");
+			await freshDatabase();
+			write(
+				schemaOf(
+					{},
+					{
+						locales: [
+							{ code: "en", name: "English" },
+							{ code: "ko", name: "Korean" },
+						],
+					},
+				),
+			);
+			const cms = newCms();
+			await cms.migrate({ log: () => {} });
+			const source = (
+				await cms.contentService().createDraft({
+					collection: "post",
+					slug: "bilingual",
+					metadata: { title: "bilingual" },
+					doc: docOfText("Body"),
+				} as never)
+			).entry;
+			await cms.contentService().createTranslation({ sourceId: source.id, locale: "ko" });
+			const { hash, schema } = await read(cms);
+			const edited = structuredClone(schema) as unknown as Edit;
+			edited.locales = edited.locales.filter((locale) => (locale as { code: string }).code !== "ko");
+
+			const refused = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
+			expect(refused.status).toBe(409);
+			expect(await refused.json()).toMatchObject({ error: { code: "schema_unacknowledged" } });
+
+			const keys = await impactKeys(cms, { schema: edited });
+			const saved = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash, acknowledged: keys });
+			expect(saved.status).toBe(200);
+		});
+
+		it("refuses to remove a collection that stored entries belong to, until the previewed impacts are acknowledged", async () => {
+			const cms = await withStoredEntry();
+			const { hash, schema } = await read(cms);
+			const edited = structuredClone(schema) as unknown as Edit;
+			edited.collections.page = { ...(edited.collections.post as object), path: "/pages/:slug" } as never;
+			delete edited.collections.post;
+
+			const refused = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
+			expect(refused.status).toBe(409);
+			expect(await refused.json()).toMatchObject({ error: { code: "schema_unacknowledged" } });
+
+			const keys = await impactKeys(cms, { schema: edited });
+			const saved = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash, acknowledged: keys });
+			expect(saved.status).toBe(200);
+		});
+
+		it("saves a change that touches no entries without any acknowledgement", async () => {
+			vi.stubEnv("NODE_ENV", "development");
+			await freshDatabase();
+			write(schemaOf({}));
+			const cms = newCms();
+			await cms.migrate({ log: () => {} });
+			const { hash, schema } = await read(cms);
+			const edited = structuredClone(schema) as unknown as Edit;
+			edited.collections.post = { ...edited.collections.post, label: "Article" } as never;
+			edited.collections.post.fields.note = { kind: "text", label: "Note" };
+
+			const res = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
+			expect(res.status).toBe(200);
+			expect(await res.json()).toMatchObject({ saved: true });
+		});
+
+		it("answers 400 when acknowledged is not a list of strings", async () => {
+			const cms = await withStoredEntry();
+			const { hash, schema } = await read(cms);
+			for (const acknowledged of ["field_removed:post:summary", [1, 2], [{ key: "x" }]]) {
+				const res = await call(cms, "PUT", "schema", { schema, baseHash: hash, acknowledged });
+				expect(res.status).toBe(400);
+				expect(await res.json()).toMatchObject({ error: { code: "invalid_input" } });
+			}
+		});
 	});
 });

@@ -470,12 +470,32 @@ export async function previewSchemaEdit(cms: Cms, input: SchemaEditInput): Promi
 export interface SchemaSaveInput extends SchemaEditInput {
 	/** The hash of the file the edit started from (`SchemaScreenState.hash`). A different one means the file changed meanwhile. */
 	readonly baseHash: string;
+	/**
+	 * The impacts the writer reviewed (`ChangeImpact.key` of the preview they saw). A change that leaves stored entries worse off
+	 * ({@link needsAcknowledgement}) is saved only when its key is here, so a direct request cannot drop or strand data nobody looked at.
+	 */
+	readonly acknowledged?: readonly string[];
 }
+
+/** Consequences that leave stored entries worse off: values deleted, kept as orphans, invalid, unknown, or entries that can no longer be published. */
+const LOSSY_CONSEQUENCES: ReadonlySet<ChangeImpact["consequence"]> = new Set([
+	"deleted",
+	"orphaned",
+	"invalid_values",
+	"unknown_value",
+	"publish_blocked",
+]);
+
+/** Whether an impact must be acknowledged before the save: it touches stored entries, and not harmlessly. */
+export const needsAcknowledgement = (impact: ChangeImpact): boolean =>
+	impact.entries > 0 && LOSSY_CONSEQUENCES.has(impact.consequence);
 
 export type SchemaSaveResult =
 	| { readonly saved: false; readonly reason: "invalid"; readonly issues: readonly Issue[] }
 	| { readonly saved: false; readonly reason: "problems"; readonly problems: readonly TransformProblem[] }
 	| { readonly saved: false; readonly reason: "conflict" }
+	/** Changes that touch stored entries were not acknowledged (`SchemaSaveInput.acknowledged`). Review them and send their keys. */
+	| { readonly saved: false; readonly reason: "unacknowledged"; readonly impacts: readonly ChangeImpact[] }
 	| { readonly saved: false; readonly reason: "unchanged" }
 	| {
 			readonly saved: true;
@@ -540,6 +560,11 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 	const { preview } = evaluation;
 	if (preview.problems.length > 0) return { saved: false, reason: "problems", problems: preview.problems };
 	if (!preview.changed) return { saved: false, reason: "unchanged" };
+	const acknowledged = new Set(input.acknowledged ?? []);
+	const unacknowledged = preview.impacts.filter(
+		(impact) => needsAcknowledgement(impact) && !acknowledged.has(impact.key),
+	);
+	if (unacknowledged.length > 0) return { saved: false, reason: "unacknowledged", impacts: unacknowledged };
 
 	// What goes into the file: the edit as the writer arranged it (its key order), with the new transforms and the version.
 	const raw = JSON.parse(JSON.stringify(input.schema)) as Record<string, unknown>;

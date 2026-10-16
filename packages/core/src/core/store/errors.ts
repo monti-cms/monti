@@ -1,3 +1,4 @@
+import { brandErrorClass } from "../error-brand";
 import type { ErrorCode } from "../error-codes";
 
 /**
@@ -27,3 +28,4 @@ export class CmsError extends Error {
 		this.name = "CmsError";
 	}
 }
+brandErrorClass(CmsError, "CmsError");

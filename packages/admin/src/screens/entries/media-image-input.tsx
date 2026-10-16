@@ -4,12 +4,14 @@ import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { mediaNotConfiguredMessage } from "../../api/error-message";
 import { getMedia, mediaKeys } from "../../api/media";
 import { ImageInsertDialog } from "../../editor/image-insert-dialog";
 import { uploadAttachment } from "../../editor/upload-helper";
 import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
 import { FieldError } from "../../ui/field";
+import { useAdminFeatures } from "../shared/admin-features";
 import type { FieldInputProps } from "./field-inputs";
 import { entriesMessages } from "./messages";
 
@@ -72,6 +74,8 @@ export function MediaInput(props: FieldInputProps) {
 /** Picks an image from the media library and shows the picked image small. */
 export function MediaImageInput({ field, id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const t = useTranslator(entriesMessages);
+	const site = useSite();
+	const { media } = useAdminFeatures();
 	const [picking, setPicking] = useState(false);
 	const mediaId = typeof value === "string" ? value : "";
 	return (
@@ -84,7 +88,8 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 					size="sm"
 					variant="outline"
 					className="h-7 flex-1 text-xs"
-					disabled={context.disabled}
+					disabled={context.disabled || !media}
+					title={media ? undefined : mediaNotConfiguredMessage(site)}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					onClick={() => setPicking(true)}
@@ -124,6 +129,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: FieldInputProps) {
 	const t = useTranslator(entriesMessages);
 	const site = useSite();
+	const { media } = useAdminFeatures();
 	const mediaId = typeof value === "string" ? value : "";
 	const fileInput = useRef<HTMLInputElement>(null);
 	const [progress, setProgress] = useState<number | null>(null);
@@ -169,7 +175,8 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 					size="sm"
 					variant="outline"
 					className={cn("h-7 text-xs", !mediaId && "flex-1")}
-					disabled={context.disabled || progress !== null}
+					disabled={context.disabled || progress !== null || !media}
+					title={media ? undefined : mediaNotConfiguredMessage(site)}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					onClick={() => fileInput.current?.click()}

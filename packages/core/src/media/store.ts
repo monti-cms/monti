@@ -28,6 +28,8 @@ export interface PrepareUploadInput {
 	stagingKey: string;
 	contentType: AllowedMediaMime;
 	expiresInSeconds: number;
+	/** Declared size. Implementations bind it to the signed upload so a larger body is refused by storage. */
+	byteSize: number;
 	checksumSha256?: string;
 }
 

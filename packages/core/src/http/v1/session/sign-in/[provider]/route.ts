@@ -1,5 +1,5 @@
 import { CmsError } from "../../../error-handler";
-import { publicRoute } from "../../../handler";
+import { publicRoute, readFormBody } from "../../../handler";
 import { validateSameOrigin } from "../../../security";
 
 /**
@@ -19,7 +19,7 @@ export const POST = publicRoute<{ provider: string }>(async ({ request, params, 
 	// An email and password method sends what the form holds along; an OAuth method has no fields.
 	let credentials: Record<string, string> | undefined;
 	if (method?.credentials) {
-		const form = await request.formData();
+		const form = await readFormBody(request);
 		const field = (name: string) => (typeof form.get(name) === "string" ? String(form.get(name)) : "");
 		credentials = { email: field("email"), password: field("password") };
 	}
