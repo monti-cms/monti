@@ -8,7 +8,7 @@ import { CONFIG_SOURCE, type ConfigIssue, IssueList, pathOf, throwIssues } from 
 /** Names the core uses in the admin meta API `features`. Cannot be used as plugin names. */
 export const CORE_FEATURE_KEYS: readonly string[] = ["folders", "references", "search", "templates", "media"];
 
-/** The storage and secrets scope of the login connection (`cms.secrets("auth")`, its plugin storage). */
+/** The storage and secrets scope of the login connection (`AuthCreateContext.secrets`, its plugin storage). */
 export const AUTH_SCOPE = "auth";
 /** The storage and secrets scope of the API key store. */
 export const API_KEYS_SCOPE = "core-keys";

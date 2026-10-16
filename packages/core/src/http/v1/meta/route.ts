@@ -1,3 +1,4 @@
+import { hostOf } from "../../../cms/host";
 import { LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
@@ -9,7 +10,7 @@ import { adminRoute, ok } from "../handler";
  */
 export const GET = adminRoute(async ({ cms }) => {
 	// Plugin feature flags live under the plugin name (`features.ai` etc.). The config rejects plugin names that collide with core names.
-	const plugins = await cms.pluginFeatures();
+	const plugins = await hostOf(cms).pluginFeatures();
 	return ok({
 		version: "v1",
 		collections: cms.site.COLLECTIONS,

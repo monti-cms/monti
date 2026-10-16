@@ -90,3 +90,6 @@ In `monti.config.ts`: `plugins: [postStats()]`.
 - The route is served through `cms.handle(request)` (the Next route handler calls it), so it is at `/api/monti/v1/post-stats/summary`. A request without a session gets `401`.
 - A failed call shows the admin's own error text (`You don't have permission.` for a `403`).
 - To test the route, build a server with `testServer()` from `@monti-cms/core/testing` and call `cms.handle(request)`.
+- Kept in the site's folder, the plugin needs nothing more. Published as a package, its `./server` export needs a `browser` condition that points at a one-line
+  `server.browser.ts` (`export { emptyServerPlugin as default } from "@monti-cms/core";`), so the route code stays out of the browser bundle ("Publishing a plugin as a
+  package" in the [core README](../../packages/core/README.md)).

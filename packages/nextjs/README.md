@@ -103,7 +103,7 @@ export const cms = defineConfig({
 });
 ```
 
-The environment variables, the one secret (`MONTI_SECRET`), host trust and the development bypass (on under `next dev`) are described in the `@monti-cms/auth` README. The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers), and it imports nothing from Next. This package supplies the one thing the login asks of a Next host, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). The route handler, the admin layout and the admin page attach it to the instance automatically (`cms.attachHost(nextHost)`), so the development bypass and sessions work with no config, and the three files below are unchanged. `nextHost` is still exported by `@monti-cms/nextjs/auth`, but sites do not need it.
+The environment variables, the one secret (`MONTI_SECRET`), host trust and the development bypass (on under `next dev`) are described in the `@monti-cms/auth` README. The login itself is `@monti-cms/auth` (Auth.js core on `Request` and `Response`, with the ways to log in as providers), and it imports nothing from Next. This package supplies the one thing the login asks of a Next host, the headers of the current request (read from `next/headers` when asked, so code that only reads content, and command-line tools, never load it). The route handler, the admin layout and the admin page attach it to the instance automatically (`hostOf(cms).attachHost(nextHost)`), so the development bypass and sessions work with no config, and the three files below are unchanged. `nextHost` is still exported by `@monti-cms/nextjs/auth`, but sites do not need it.
 
 ## Files
 

@@ -26,6 +26,7 @@
 		"./internal/schema-change": "./src/schema-change/index.ts",
 		"./internal/schema-edit": "./src/schema-edit/index.ts",
 		"./internal/plugins": "./src/internal-plugins.ts",
+		"./internal/host": "./src/internal-host.ts",
 		"./render.css": "./render.css"
 	},
 	"bin": {
@@ -161,6 +162,10 @@
 			"./internal/plugins": {
 				"types": "./dist/internal-plugins.d.ts",
 				"default": "./dist/internal-plugins.js"
+			},
+			"./internal/host": {
+				"types": "./dist/internal-host.d.ts",
+				"default": "./dist/internal-host.js"
 			},
 			"./render.css": "./render.css"
 		}

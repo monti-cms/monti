@@ -1,5 +1,5 @@
 import { AuthError } from "../../adapters/auth";
-import type { Cms } from "../../cms";
+import type { CmsHost } from "../../cms";
 import { CmsError } from "./error-handler";
 
 /**
@@ -12,7 +12,7 @@ import { CmsError } from "./error-handler";
  */
 export function validateSameOrigin(
 	/** The instance serving the request: whether `X-Forwarded-Host` can be trusted (`cms.isHostTrusted()`), and the site URL (`site.url`) of its config. */
-	cms: Pick<Cms, "isHostTrusted" | "site">,
+	cms: Pick<CmsHost, "isHostTrusted" | "site">,
 	request: Request,
 	options: {
 		/** Also accept a browser form post (`application/x-www-form-urlencoded`), for the sign-in and sign-out forms. */

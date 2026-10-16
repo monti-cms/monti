@@ -71,7 +71,7 @@ export interface DatabaseAdapter {
 		// biome-ignore lint/suspicious/noConfusingVoidType: an adapter's migrate may be an async function that returns nothing
 	}): Promise<MigrationSummary | undefined | void>;
 	/**
-	 * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
+	 * The storage of one plugin (`plugin.storage`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
 	 * An adapter implements it over its own database; plugins never see the database.
 	 */
 	pluginStorage(plugin: string): PluginStorage;
@@ -211,7 +211,7 @@ export interface AuthCreateContext {
 	/** Whether the `Host` header may be trusted to build login callback URLs (see `trustHost` in the server config). */
 	readonly trustHost: boolean;
 	/**
-	 * The secrets API of the login connection (`cms.secrets("auth")`): keys derived from the config's `secret` (`MONTI_SECRET`), never the secret itself.
+	 * The secrets API of the login connection (the reserved scope `auth`): keys derived from the config's `secret` (`MONTI_SECRET`), never the secret itself.
 	 * The login derives its session-signing key from it. `available` is false when no secret is set.
 	 */
 	readonly secrets: PluginSecrets;
@@ -219,7 +219,7 @@ export interface AuthCreateContext {
 	readonly host: RequestHost;
 	/** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */
 	readonly loginPath: string;
-	/** Storage of a plugin (`cms.storage(plugin)`). A login method that keeps its own users (a password login) keeps them here. */
+	/** Storage of a plugin (what the plugin itself reaches as `plugin.storage`). A login method that keeps its own users (a password login) keeps them here. */
 	readonly storage: (plugin: string) => PluginStorage;
 }
 

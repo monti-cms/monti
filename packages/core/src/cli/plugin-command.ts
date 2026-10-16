@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { hostOf } from "../cms/host";
 import type { PluginCommand } from "../plugin/define";
 import { loadApp } from "./app";
 import { APP_OPTIONS, appFlagsOf, type CliContext, optionLines } from "./command";
@@ -38,7 +39,7 @@ export async function runPluginCommand(
 	});
 	const cms = await loadApp({ cwd: context.cwd, log, error, ...app });
 	try {
-		const plugins = await cms.plugins();
+		const plugins = await hostOf(cms).plugins();
 		const plugin = plugins.find((item) => item.name === pluginName);
 		const command: PluginCommand | undefined = plugin?.commands?.[commandName];
 		if (!plugin || !command) {
@@ -72,7 +73,7 @@ export async function runPluginCommand(
 		const args = Object.fromEntries(
 			Object.keys(command.options ?? {}).map((name) => [name, given[name] as string | boolean | undefined]),
 		);
-		const code = await command.run({ cms, args, log, error });
+		const code = await command.run({ cms, plugin: cms.plugin(pluginName), args, log, error });
 		return typeof code === "number" ? code : 0;
 	} finally {
 		await cms.close();

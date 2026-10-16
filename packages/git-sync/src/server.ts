@@ -1,8 +1,8 @@
-import { type Cms, defineServerPlugin } from "@monti-cms/core/server";
+import { defineServerPlugin, type PluginScope } from "@monti-cms/core/server";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
 import { tokenKeyOf } from "./keys";
-import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT } from "./options";
+import { GIT_SYNC_TOKEN_SLOT } from "./options";
 import { resumeAfterToken } from "./outbound";
 import * as routes from "./routes";
 import { syncContextFor } from "./sync";
@@ -19,10 +19,10 @@ export default defineServerPlugin({
 		{ pattern: "v1/git-sync/webhook", module: routes.webhook, access: "signed" },
 	],
 	// Delivered through the event outbox: a failed push is retried, not lost.
-	hooks: { afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event) },
+	hooks: { afterCommit: (event, { cms }) => onContentEvent(syncContextFor(cms), event) },
 	commands,
 	// `features["git-sync"].ready` of the admin meta API: is a token saved?
-	features: async (cms) => ({
+	features: async ({ cms }) => ({
 		ready: await tokenKeyOf(cms).then(
 			(key) => Boolean(key?.readable),
 			() => false,
@@ -31,7 +31,6 @@ export default defineServerPlugin({
 });
 
 /** Called once a key was assigned to the token slot (`onChange` of the slot): what waited for a token goes out now. */
-export const onTokenChanged = async (cms: Cms): Promise<void> => {
-	if (await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read())
-		await resumeAfterToken(syncContextFor(cms));
+export const onTokenChanged = async ({ cms, plugin }: PluginScope): Promise<void> => {
+	if (await plugin.key(GIT_SYNC_TOKEN_SLOT).read()) await resumeAfterToken(syncContextFor(cms));
 };

@@ -1,3 +1,4 @@
+import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { adminApiUrl } from "@monti-cms/core/site";
 import type * as React from "react";
@@ -25,7 +26,7 @@ export default async function AdminLoginPage({
 }) {
 	const { site } = cms;
 	const t = site.createTranslator(loginMessages);
-	if (await cms.authGateway.isDevBypassActive()) {
+	if (await hostOf(cms).authGateway.isDevBypassActive()) {
 		server.redirect(site.adminHref());
 	}
 

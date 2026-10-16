@@ -1,10 +1,10 @@
-import type { Cms } from "../../../cms";
+import type { CmsHost } from "../../../cms";
 import { READ_ONLY_MESSAGE, schemaEditAccess } from "../../../schema-edit";
 import { CmsError } from "../error-handler";
 import { readJsonBody } from "../handler";
 
 /** Throws the 403 of a server that may not write the schema file. */
-export function assertSchemaWritable(cms: Pick<Cms, "schemaFile">): void {
+export function assertSchemaWritable(cms: Pick<CmsHost, "schemaFile">): void {
 	const access = schemaEditAccess(cms);
 	if (!access.writable) {
 		throw new CmsError(READ_ONLY_MESSAGE[access.reason], "schema_read_only", {

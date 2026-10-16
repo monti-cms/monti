@@ -1,4 +1,5 @@
 import type { Cms, HandleOptions } from "../cms";
+import { hostOf } from "../cms/host";
 import { CMS_API_PATH, cmsBasePath } from "../core/base-path";
 import { assertPluginRoutesFree } from "../plugin/collisions";
 import { CMS_AUTH_BASE_PATH } from "../server/define";
@@ -114,13 +115,21 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/templates/[id]", module: rTemplate, enabled: templatesEnabled },
 ];
 
-type CompiledRoute = { segments: string[]; module: RouteModule; access: RouteAccess; enabled?: (cms: Cms) => boolean };
-const compile = (routes: readonly Route[]): CompiledRoute[] =>
+type CompiledRoute = {
+	segments: string[];
+	module: RouteModule;
+	access: RouteAccess;
+	enabled?: (cms: Cms) => boolean;
+	/** The plugin that owns the route; core routes have none. */
+	plugin?: string;
+};
+const compile = (routes: readonly (Route & { readonly plugin?: string })[]): CompiledRoute[] =>
 	routes.map((route) => ({
 		segments: route.pattern.split("/"),
 		module: route.module,
 		access: route.access ?? "admin",
 		enabled: route.enabled,
+		...(route.plugin ? { plugin: route.plugin } : {}),
 	}));
 const COMPILED = compile(ROUTES);
 
@@ -133,8 +142,9 @@ export function matchRoute(
 	params: Record<string, string>;
 	access: RouteAccess;
 	enabled?: (cms: Cms) => boolean;
+	plugin?: string;
 } | null {
-	for (const { segments, module, access, enabled } of routes) {
+	for (const { segments, module, access, enabled, plugin } of routes) {
 		if (segments.length !== path.length) continue;
 		const params: Record<string, string> = {};
 		const matched = segments.every((segment, index) => {
@@ -145,7 +155,7 @@ export function matchRoute(
 			}
 			return segment === part;
 		});
-		if (matched) return { module, params, access, enabled };
+		if (matched) return { module, params, access, enabled, ...(plugin ? { plugin } : {}) };
 	}
 	return null;
 }
@@ -184,7 +194,7 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 	const compiledPluginRoutes = () => {
 		// A plugin route is checked like a core one (an `access` other than `admin` is the plugin's explicit choice), so a missing auth check never becomes an open route.
 		// A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
-		pluginCompiled ??= cms
+		pluginCompiled ??= hostOf(cms)
 			.pluginRoutes()
 			.then((routes) => {
 				assertPluginRoutesFree(
@@ -222,6 +232,13 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		if (typeof handler !== "function") {
 			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
 		}
-		return runRoute(cms, request, matched.params, handler as Parameters<typeof runRoute>[3], matched.access);
+		return runRoute(
+			cms,
+			request,
+			matched.params,
+			handler as Parameters<typeof runRoute>[3],
+			matched.access,
+			matched.plugin ? cms.plugin(matched.plugin) : undefined,
+		);
 	};
 }

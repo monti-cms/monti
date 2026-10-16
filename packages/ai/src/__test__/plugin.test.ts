@@ -34,7 +34,8 @@ vi.mock("../store", () => ({
 describe("AI plugin registration", () => {
 	it("the server side provides the AI API routes, table creation and meta flag", async () => {
 		expect(aiServer.routes?.map((route) => route.pattern)).toContain("v1/ai/run");
-		expect(await aiServer.features?.(fakeCms())).toEqual({ ready: false });
+		const cms = fakeCms();
+		expect(await aiServer.features?.({ cms, plugin: cms.plugin("ai") })).toEqual({ ready: false });
 	});
 
 	it("the core API handler looks up paths missing from core routes in the plugin route table", async () => {

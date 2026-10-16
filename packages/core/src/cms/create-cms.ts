@@ -26,7 +26,7 @@ import { connectionsFor } from "./connections";
 import { createMigrator } from "./migrate-run";
 import type { SchemaMembers } from "./reload";
 import { withSchemaControls } from "./reload";
-import type { BulkService, Cms, ContentService, CreateCmsOptions, LooseContentService } from "./types";
+import type { BulkService, Cms, CmsHost, ContentService, CreateCmsOptions, LooseContentService } from "./types";
 
 /** The request handler of an instance, loading the route code on the first request. */
 export function lazyHandle(cms: () => Cms): Cms["handle"] {
@@ -49,7 +49,7 @@ export function lazyHandle(cms: () => Cms): Cms["handle"] {
  * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
  * connections of the server config.
  */
-export function createCms<const Config extends CmsConfig>(options: CreateCmsOptions<Config>): Cms<Config> {
+export function createCms<const Config extends CmsConfig>(options: CreateCmsOptions<Config>): CmsHost<Config> {
 	const { server, id = "default" } = options;
 	const { secret, previousSecrets, events: eventOptions, ...publicServer } = server;
 	const vault = createSecretsVault({ secret, previousSecrets });
@@ -63,7 +63,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 	};
 
 	/** Everything of an instance that depends on its site (its config): rebuilt when the schema changes. `self` is the instance the parts belong to. */
-	const build = (config: Config, self: () => Cms<Config>): Omit<Cms<Config>, SchemaMembers> => {
+	const build = (config: Config, self: () => CmsHost<Config>): Omit<CmsHost<Config>, SchemaMembers> => {
 		const site = createSite(config);
 		const plugins = createServerPlugins(
 			site.plugins,
@@ -75,7 +75,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 		const keyLabels: ApiKeysOptions["labels"] = async (plugin, refs) => {
 			const owner = (await plugins.load()).find((candidate) => candidate.name === plugin);
 			if (!owner?.keyUses) return Object.fromEntries(refs.map((ref) => [ref, plugin]));
-			return owner.keyUses(self() as unknown as Cms, refs);
+			return owner.keyUses(refs, plugins.scopeOf(plugin));
 		};
 		const declaredSlots = () =>
 			site.plugins.flatMap((plugin) =>
@@ -90,7 +90,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 			const declared = site.plugins
 				.find((entry) => entry.name === plugin)
 				?.keySlots?.find((entry) => entry.id === slot);
-			await declared?.onChange?.(self() as unknown as Cms);
+			await declared?.onChange?.(plugins.scopeOf(plugin));
 		};
 		const inTransaction = <T>(work: (tx: TransactionStorage) => Promise<T>): Promise<T> =>
 			connections.database.transaction(work);
@@ -214,7 +214,6 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 			},
 			isMediaConfigured: Boolean(server.media),
 			mediaStore: getMediaStore,
-			storage: (plugin) => connections.database.pluginStorage(plugin),
 			plugin: (name) => ({
 				name,
 				// Read when asked, so a plugin that needs only one of them does not open a connection for the others.
@@ -224,6 +223,7 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 				get secrets() {
 					return vault.forPlugin(name);
 				},
+				key: (id) => apiKeys.slot(name, id),
 				apiKeys,
 				once: (key, factory) => {
 					const id = `${name}/${key}`;
@@ -231,7 +231,6 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 					return pluginValues.get(id) as ReturnType<typeof factory>;
 				},
 			}),
-			secrets: (plugin) => vault.forPlugin(plugin),
 			apiKeys,
 			transaction: (work) =>
 				inTransaction((tx) =>

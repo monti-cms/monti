@@ -28,7 +28,7 @@ const cmsWith = (secret = "test-secret", previousSecrets: string[] = []) =>
 
 /** The settings store over the instance's own plugin storage and key store, writing through its transactions like the app does. */
 function memoryStore(cms = cmsWith()) {
-	const store = createAiStore(cms.storage(AI_PLUGIN_NAME), {
+	const store = createAiStore(cms.plugin(AI_PLUGIN_NAME).storage, {
 		site: testSite,
 		apiKeys: () => cms.apiKeys,
 		transaction: (work) => cms.transaction((tx) => work(tx.storage(AI_PLUGIN_NAME), tx.apiKeys)),
@@ -88,7 +88,9 @@ describe("AI connection settings", () => {
 		expect(await store.cms.apiKeys.read(key?.id ?? "")).toBe("sk-chat-0000000000001234");
 		expect(key?.uses.map((use) => use.ref)).toEqual([connectionRef(view.providers[0]?.id ?? "")]);
 		// Only the reference is stored, never text in some language.
-		expect(JSON.stringify(await store.cms.storage("core-keys").collection("uses").list())).not.toContain("OpenRouter");
+		expect(JSON.stringify(await store.cms.plugin("core-keys").storage.collection("uses").list())).not.toContain(
+			"OpenRouter",
+		);
 	});
 
 	it("works out the labels without listing keys, since the key store asks for them while it lists keys", async () => {

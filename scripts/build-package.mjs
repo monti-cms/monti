@@ -18,6 +18,21 @@ const copies = args.filter((arg) => !arg.startsWith("--"));
 const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 const pkg = readJson(path.join(root, "package.json"));
 
+// A plugin package's `./server` (the module its `server: () => import("<package>/server")` loads) needs a `browser` condition that maps it to an
+// empty module (`server.browser.ts`, `export { emptyServerPlugin as default } from "@monti-cms/core"`): client code that builds a site from the plugin list
+// bundles the factory, and a bundler follows its `import()` even though it never runs. Only `@monti-cms/core` has a `./server` that is not a plugin's.
+const serverEntry = pkg.exports?.["./server"];
+if (
+	serverEntry !== undefined &&
+	pkg.name !== "@monti-cms/core" &&
+	(typeof serverEntry === "string" || !serverEntry.browser)
+) {
+	console.error(
+		`${pkg.name}: "./server" has no "browser" condition, so the plugin's server code would reach the browser bundle. Add \`"browser": "./src/server.browser.ts"\` (see "Publishing a plugin as a package" in the core README).`,
+	);
+	process.exit(1);
+}
+
 /** Source path (`./src/x.ts`) → release path. */
 const toDist = (target, ext) => target.replace(/^\.\/src\//, "./dist/").replace(/\.tsx?$/, ext);
 const publishTarget = (target) => {

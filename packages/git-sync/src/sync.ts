@@ -85,7 +85,7 @@ export function readOptions(cms: Cms): GitSyncOptions {
 export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 	const options = readOptions(cms);
 	const targets = resolveTargets(options);
-	const state = createState(cms.storage(GIT_SYNC_PLUGIN_NAME));
+	const state = createState(cms.plugin(GIT_SYNC_PLUGIN_NAME).storage);
 	const now = deps.now ?? Date.now;
 	const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
 	const factory: GitHubClientFactory = options.client ?? githubClientFactory;
@@ -106,7 +106,7 @@ export function createSyncContext(cms: Cms, deps: SyncDeps = {}): SyncContext {
 			return found;
 		},
 		client: async (target) => {
-			const token = await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read();
+			const token = await cms.plugin(GIT_SYNC_PLUGIN_NAME).key(GIT_SYNC_TOKEN_SLOT).read();
 			if (!token) {
 				// A key that is there but cannot be read is another problem than a key that was never chosen (or was deleted).
 				const unreadable = (await tokenKeyOf(cms)) !== null;

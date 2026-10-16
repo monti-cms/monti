@@ -1,10 +1,12 @@
 import type { z } from "zod";
 import type { AuthContext } from "../../adapters/auth";
 import type { Cms } from "../../cms";
+import { hostOf } from "../../cms/host";
 import { actorOf, withActor } from "../../core/actor";
 import { isUuid } from "../../core/ids";
 import { tellIssues } from "../../core/issue-text";
 import { MAX_FORM_BYTES, MAX_REQUEST_BYTES } from "../../core/limits";
+import type { PluginContext } from "../../plugin/context";
 import type { BulkItemResult } from "../../services/bulk-service";
 import type { WriteResult } from "../../services/content-service";
 import { CmsError, deleted, handleApiError, ok } from "./error-handler";
@@ -19,12 +21,20 @@ import { validateSameOrigin } from "./security";
  */
 
 type Params = Record<string, string>;
-/** What a request handler of a route module gets: the request, its path params, the CMS instance that serves it, and (admin routes) who is signed in. */
+/**
+ * What a request handler of a route module gets: the request, its path params, the CMS instance that serves it, the plugin that owns the route, and (admin routes)
+ * who is signed in.
+ */
 export interface AdminRequest<P extends Params = Params> {
 	request: Request;
 	params: P;
 	auth: AuthContext;
 	cms: Cms;
+	/**
+	 * The plugin that owns the route (`plugin.storage`, `plugin.secrets`, `plugin.key(id)`, `plugin.once`), so a route never names its own plugin. The core's own
+	 * routes are not a plugin's and never read it.
+	 */
+	plugin: PluginContext;
 }
 /** What a route that needs no login gets: the same without `auth`. */
 export type PublicRequest<P extends Params = Params> = Omit<AdminRequest<P>, "auth">;
@@ -58,8 +68,8 @@ async function guardedAdmin<P extends Params, R>(
 	params: P,
 	run: (auth: AuthContext) => Promise<R>,
 ): Promise<R> {
-	validateSameOrigin(cms, request);
-	const auth = await cms.authGateway.verifyAdmin();
+	validateSameOrigin(hostOf(cms), request);
+	const auth = await hostOf(cms).authGateway.verifyAdmin();
 	// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
 	// would reject it as a malformed value (an internal error), so it is a missing item here.
 	if (typeof params.id === "string" && !isUuid(params.id)) {
@@ -78,9 +88,12 @@ export async function runAdminRoute<P extends Params>(
 	request: Request,
 	params: P,
 	handler: AdminHandler<P>,
+	plugin?: PluginContext,
 ): Promise<Response> {
 	try {
-		return await guardedAdmin(cms, request, params, (auth) => handler({ request, params, auth, cms }));
+		return await guardedAdmin(cms, request, params, (auth) =>
+			handler({ request, params, auth, cms, plugin: plugin as PluginContext }),
+		);
 	} catch (error) {
 		return handleApiError(error, cms.site);
 	}
@@ -96,8 +109,11 @@ export async function runRoute<P extends Params>(
 	params: P,
 	handler: AdminHandler<P> | PublicHandler<P> | BearerHandler<P>,
 	access: RouteAccess = "admin",
+	/** The plugin that owns the route. A core route has none, and its handler never reads `plugin`. */
+	plugin?: PluginContext,
 ): Promise<Response> {
-	if (access === "admin") return runAdminRoute(cms, request, params, handler as AdminHandler<P>);
+	if (access === "admin") return runAdminRoute(cms, request, params, handler as AdminHandler<P>, plugin);
+	const owner = plugin as PluginContext;
 	try {
 		switch (access) {
 			case "public-read": {
@@ -108,19 +124,19 @@ export async function runRoute<P extends Params>(
 				break;
 			}
 			case "same-origin-form":
-				validateSameOrigin(cms, request, { form: true });
+				validateSameOrigin(hostOf(cms), request, { form: true });
 				break;
 			case "admin-or-bearer":
 				if (bearerTokenOf(request) === null) {
 					return await guardedAdmin(cms, request, params, (auth) =>
-						(handler as BearerHandler<P>)({ request, params, auth, cms }),
+						(handler as BearerHandler<P>)({ request, params, auth, cms, plugin: owner }),
 					);
 				}
-				return await (handler as BearerHandler<P>)({ request, params, auth: null, cms });
+				return await (handler as BearerHandler<P>)({ request, params, auth: null, cms, plugin: owner });
 			case "signed":
 				break;
 		}
-		return await (handler as PublicHandler<P>)({ request, params, cms });
+		return await (handler as PublicHandler<P>)({ request, params, cms, plugin: owner });
 	} catch (error) {
 		if (access === "admin-or-bearer") return handleApiError(error, cms.site);
 		let auth: ReturnType<Cms["auth"]> | undefined;
@@ -139,7 +155,7 @@ export async function runRoute<P extends Params>(
  * (`runAdminRoute`), so a handler holds no auth code.
  *
  * ```ts
- * export const GET = adminRoute(async ({ request, params, auth, cms }) => ok(await cms.store().listFolders()));
+ * export const GET = adminRoute(async ({ request, params, auth, cms, plugin }) => ok(await plugin.storage.collection("items").list()));
  * ```
  */
 export const adminRoute = <P extends Params = Params>(handler: AdminHandler<P>): AdminHandler<P> => handler;

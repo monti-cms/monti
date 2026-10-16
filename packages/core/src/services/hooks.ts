@@ -1,6 +1,7 @@
 import type { Cms } from "../cms";
 import type { AfterCommit, ContentEvent } from "../core/store";
 import type { StoredDocument } from "../doc/stored-document";
+import type { PluginContext } from "../plugin/context";
 import type { Collection, Issue, PreparedSnapshot } from "./types";
 
 /**
@@ -24,6 +25,16 @@ import type { Collection, Issue, PreparedSnapshot } from "./types";
  * (it is published again, with its content unchanged): `validate` and `validatePublish` run for it, `transform` does not.
  */
 export type WriteOperation = "create" | "save" | "publish" | "duplicate" | "translate" | "restore";
+
+/** What every hook of the server config gets after its own argument: the instance it runs for. */
+export interface ServerScope {
+	readonly cms: Cms;
+}
+
+/** What every server callback of a plugin gets: the instance, and the plugin's own context (storage, secrets, key slots, cache). */
+export interface PluginScope extends ServerScope {
+	readonly plugin: PluginContext;
+}
 
 /** Read-only context every hook gets. The data is a copy: changing it does not change the write unless a `transform` returns it. */
 export interface WriteHookContext {
@@ -52,7 +63,10 @@ export interface WriteData {
  * Runs before core preparation. Returns the data to prepare, or nothing to keep it as it is. The result still goes through normalization,
  * reference collection and validation, so a transform cannot get anything past core checks.
  */
-export type TransformHook = (context: WriteHookContext) => WriteData | undefined | Promise<WriteData | undefined>;
+export type TransformHook<S extends ServerScope = ServerScope> = (
+	context: WriteHookContext,
+	scope: S,
+) => WriteData | undefined | Promise<WriteData | undefined>;
 
 /** The context of `validate` and `validatePublish`: the data as prepared, and the prepared snapshot (a copy). */
 export interface ValidationHookContext extends WriteHookContext {
@@ -68,31 +82,60 @@ export interface ValidationResult {
 }
 
 /** Runs after core preparation, for every write. */
-export type ValidateHook = (
+export type ValidateHook<S extends ServerScope = ServerScope> = (
 	context: ValidationHookContext,
+	scope: S,
 ) => ValidationResult | undefined | Promise<ValidationResult | undefined>;
 
 /** Runs after core preparation, for a publish (single and bulk) and for restoring a record, which publishes it again. */
-export type ValidatePublishHook = ValidateHook;
+export type ValidatePublishHook<S extends ServerScope = ServerScope> = ValidateHook<S>;
 
 /**
- * The `afterCommit` hook: a notification after a change is committed, with the instance it runs for (so a hook reads its storage, the store or the site
- * without state of its own). The server config and the plugins take the same function.
+ * The `afterCommit` hook: a notification after a change is committed, with the scope it runs in (the instance, and for a plugin its own context), so a hook reads
+ * its storage, the store or the site without state of its own.
  */
-export type AfterCommitHook = (event: ContentEvent, cms: Cms) => ReturnType<AfterCommit>;
+export type AfterCommitHook<S extends ServerScope = ServerScope> = (
+	event: ContentEvent,
+	scope: S,
+) => ReturnType<AfterCommit>;
 
-export interface WriteHooks {
-	readonly transform?: TransformHook;
-	readonly validate?: ValidateHook;
-	readonly validatePublish?: ValidatePublishHook;
+/**
+ * The write hooks of one owner. Every hook gets its own argument, then the scope: `{ cms }` for the server config's hooks, `{ cms, plugin }` for a plugin's
+ * (`WriteHooks<PluginScope>`).
+ */
+export interface WriteHooks<S extends ServerScope = ServerScope> {
+	readonly transform?: TransformHook<S>;
+	readonly validate?: ValidateHook<S>;
+	readonly validatePublish?: ValidatePublishHook<S>;
 	/** After the transaction commits (create, save, publish, archive, trash, restore, delete). The change stands even if it fails. */
-	readonly afterCommit?: AfterCommitHook;
+	readonly afterCommit?: AfterCommitHook<S>;
+}
+
+/** The hooks of one owner with their scope given, as the write pipeline and the event dispatcher call them. */
+export interface BoundHooks {
+	readonly transform?: (context: WriteHookContext) => ReturnType<TransformHook>;
+	readonly validate?: (context: ValidationHookContext) => ReturnType<ValidateHook>;
+	readonly validatePublish?: (context: ValidationHookContext) => ReturnType<ValidateHook>;
+	readonly afterCommit?: (event: ContentEvent) => ReturnType<AfterCommit>;
+}
+
+/** Gives each hook its scope, read when the hook runs (a development schema reload gives the instance new parts). */
+export function bindHooks<S extends ServerScope>(hooks: WriteHooks<S>, scope: () => S): BoundHooks {
+	const { transform, validate, validatePublish, afterCommit } = hooks;
+	return {
+		...(transform ? { transform: (context: WriteHookContext) => transform(context, scope()) } : {}),
+		...(validate ? { validate: (context: ValidationHookContext) => validate(context, scope()) } : {}),
+		...(validatePublish
+			? { validatePublish: (context: ValidationHookContext) => validatePublish(context, scope()) }
+			: {}),
+		...(afterCommit ? { afterCommit: (event: ContentEvent) => afterCommit(event, scope()) } : {}),
+	};
 }
 
 /** Hooks with the owner that registered them: `server` for the server config, `plugin:<name>` for a plugin. */
 export interface HookSource {
 	readonly owner: string;
-	readonly hooks: WriteHooks;
+	readonly hooks: BoundHooks;
 }
 
 /** Hooks in the order they run. May be read on every write, so it should return a cached list. */

@@ -68,7 +68,7 @@ describe("a setup mistake over HTTP", () => {
 
 describe("errors of core", () => {
 	it("MONTI_SECRET missing when a plugin wants to encrypt", () => {
-		const secrets = fakeCms().secrets("demo");
+		const secrets = fakeCms().plugin("demo").secrets;
 		const message = messageOf(() => secrets.encrypt("value"));
 		expect(message).toContain("MONTI_SECRET");
 		expect(message).toMatch(/Where: .*\.env\.local/);

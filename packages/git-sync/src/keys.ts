@@ -35,4 +35,4 @@ export async function keysView(cms: Cms): Promise<KeysView> {
 
 /** The webhook secret, or `null` when none is assigned (or it cannot be read). */
 export const readWebhookSecret = (cms: Cms): Promise<string | null> =>
-	cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_WEBHOOK_SLOT).read();
+	cms.plugin(GIT_SYNC_PLUGIN_NAME).key(GIT_SYNC_WEBHOOK_SLOT).read();

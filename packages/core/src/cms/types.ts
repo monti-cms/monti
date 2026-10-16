@@ -10,7 +10,6 @@ import type { OwnedPluginRoute } from "../plugin/define";
 import type { LoadedServerPlugin } from "../plugin/server";
 import type { PluginStorage } from "../plugin/storage";
 import type { CmsRead } from "../read";
-import type { PluginSecrets } from "../secrets";
 import type { Decision } from "../server/decision";
 import type { CmsAuth, CmsServerConfig, DatabaseState, RequestHost } from "../server/define";
 import type { createBulkService } from "../services/bulk-service";
@@ -116,7 +115,7 @@ export interface Cms<
 	 * Everything that used to be a module-level constant derived from the config is here. `cms.site.config` is the config the instance was created from.
 	 */
 	readonly site: Site<Config>;
-	/** The server config this instance was created from, without the master secrets (`secret`, `previousSecrets`): plugins reach those only through `secrets()`. */
+	/** The server config this instance was created from, without the master secrets (`secret`, `previousSecrets`): plugins reach those only through `plugin.secrets`. */
 	readonly server: PublicServerConfig;
 	/** The content store. Created on first use. */
 	store(): ContentStore;
@@ -133,21 +132,11 @@ export interface Cms<
 	/** The media store. Throws `media_not_configured` if the server config has none. */
 	mediaStore(): MediaStore;
 	/**
-	 * The storage of one plugin: documents in named collections with optimistic versions, and a migration hook (see `PluginStorage`). A plugin asks for its own
-	 * name (`cms.storage("my-plugin")`) and never sees the database behind it.
-	 */
-	storage(plugin: string): PluginStorage;
-	/**
-	 * What one plugin keeps for this instance: its storage, secrets, the key store and a cache that is rebuilt with the site (`PluginContext`). A plugin asks for its
-	 * own name (`cms.plugin("my-plugin")`).
+	 * What one plugin keeps for this instance: its storage, secrets, key slots, the key store and a cache that is rebuilt with the site (`PluginContext`). A plugin's
+	 * own routes, hooks and commands receive it as `plugin`; other code asks for it by name (`cms.plugin("my-plugin")`). Another plugin's values do not decrypt
+	 * with its secrets.
 	 */
 	plugin(name: string): PluginContext;
-	/**
-	 * The secrets API of one plugin: encryption of stored values and key derivation, with a key derived from the server config's `secret` and the plugin's
-	 * name. The master secret itself is never handed out. A plugin asks for its own name (`cms.secrets("ai")`); another plugin's values do not decrypt
-	 * with it. `options.legacy` lets the plugin keep reading values it stored in an older format.
-	 */
-	secrets(plugin: string): PluginSecrets;
 	/**
 	 * The central API key store: named keys kept encrypted, with the places that use each. A plugin keeps a key's id (not its value) and reads the value with
 	 * `cms.apiKeys.read(id)` when it calls a service; see {@link ApiKeys}. The admin's Tools → API keys page manages the same keys.
@@ -159,11 +148,6 @@ export interface Cms<
 	 * `once` is not available on `tx.storage`.
 	 */
 	transaction<T>(work: (tx: CmsTransaction) => Promise<T>): Promise<T>;
-	/**
-	 * Gives the login the request headers of the framework serving this instance (Next.js: `nextHost`). `@monti-cms/nextjs` calls it from the route handler and the admin
-	 * layout and page, so a site never does. An explicit `host` of `auth()` wins over it.
-	 */
-	attachHost(host: RequestHost): void;
 	/** The login connection (`auth` in the server config): session, sign in and out, login methods, route handlers. */
 	auth(): CmsAuth;
 	/**
@@ -171,18 +155,6 @@ export interface Cms<
 	 * `export const { GET, POST } = cms.authHandlers;`. The login connection is created on the first request.
 	 */
 	readonly authHandlers: CmsAuth["handlers"];
-	/** Admin check for requests and screens. Uses `auth()`. */
-	readonly authGateway: AuthGateway;
-	/** Whether `Host` and `X-Forwarded-Host` can be trusted (`trustHost` in the config, `AUTH_TRUST_HOST`, a known proxy platform, else off in production). */
-	isHostTrusted(): boolean;
-	/** The server side of the site config's plugins. Loaded on first use. */
-	plugins(): Promise<readonly LoadedServerPlugin[]>;
-	/** Plugin API route table (in plugin order). */
-	pluginRoutes(): Promise<readonly OwnedPluginRoute[]>;
-	/** Feature flags plugins add to the meta API, under each plugin's name. */
-	pluginFeatures(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
-	/** Write hooks in the order they run: the server config's first, then the plugins'. */
-	writeHooks(): Promise<readonly HookSource[]>;
 	/**
 	 * The formats a body can be read and written in: the built-in ones, then those the plugins add (`Plugin.formats`). Loaded on first use.
 	 * A name provided twice throws.
@@ -207,6 +179,36 @@ export interface Cms<
 	 * Throws on failure. It leaves the connection open; call `close()` when a command-line tool is done.
 	 */
 	migrate(options?: MigrateRunOptions): Promise<void>;
+	/** Closes the database connection (when a command-line tool or a test is done). */
+	close(): Promise<void>;
+}
+
+/**
+ * The host side of an instance: what the framework integration, the admin UI and the command line need and a site or plugin does not (attaching the request host,
+ * the admin check, the loaded plugins and their routes, schema reloads, setup). Every instance `createCms` makes is one; `hostOf(cms)` (`@monti-cms/core/internal/host`)
+ * gives this view of it. Internal to the Monti packages, with no stability promise.
+ */
+export interface CmsHost<
+	// biome-ignore lint/suspicious/noExplicitAny: `CmsHost` alone is an instance of any site config
+	Config extends CmsConfig = any,
+> extends Cms<Config> {
+	/**
+	 * Gives the login the request headers of the framework serving this instance (Next.js: `nextHost`). `@monti-cms/nextjs` calls it from the route handler and the admin
+	 * layout and page, so a site never does. An explicit `host` of `auth()` wins over it.
+	 */
+	attachHost(host: RequestHost): void;
+	/** Admin check for requests and screens. Uses `auth()`. */
+	readonly authGateway: AuthGateway;
+	/** Whether `Host` and `X-Forwarded-Host` can be trusted (`trustHost` in the config, `AUTH_TRUST_HOST`, a known proxy platform, else off in production). */
+	isHostTrusted(): boolean;
+	/** The server side of the site config's plugins. Loaded on first use. */
+	plugins(): Promise<readonly LoadedServerPlugin[]>;
+	/** Plugin API route table (in plugin order). */
+	pluginRoutes(): Promise<readonly OwnedPluginRoute[]>;
+	/** Feature flags plugins add to the meta API, under each plugin's name. */
+	pluginFeatures(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
+	/** Write hooks in the order they run: the server config's first, then the plugins'. */
+	writeHooks(): Promise<readonly HookSource[]>;
 	/** What the database holds of Monti (`undefined` when the adapter cannot say). `monti db:migrate` reads it to tell a database that was never set up. */
 	databaseState(): Promise<DatabaseState | undefined>;
 	/**
@@ -216,8 +218,6 @@ export interface Cms<
 	setup(options?: {
 		readonly log?: (message: string) => void;
 	}): Promise<{ readonly created: boolean; readonly tables: number }>;
-	/** Closes the database connection (when a command-line tool or a test is done). */
-	close(): Promise<void>;
 	/**
 	 * The absolute path of the schema file this instance was made from (and the settings screen edits), or `undefined` when its config has none (it is
 	 * written in code only) or the file cannot be found.
@@ -228,7 +228,7 @@ export interface Cms<
 	 * installed: this instance keeps running the old schema. The settings screen uses it to check a change (diff, impact, a dry run of the transforms)
 	 * before the file is written. Throws what `defineSite` throws when the schema is not valid, and when the config has no schema file.
 	 */
-	forSchema(schema: unknown): Cms<Config>;
+	forSchema(schema: unknown): CmsHost<Config>;
 	/**
 	 * Development only: makes this instance run `schema` (the data of the schema file), in place (the same object, with a new site, store, services and read API).
 	 * The settings screen calls it after it saved the file. A hand edit of the file needs no call: the dev server evaluates `monti.config.ts` again (hot module

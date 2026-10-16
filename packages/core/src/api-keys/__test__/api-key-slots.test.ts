@@ -136,7 +136,8 @@ describe("key slots", () => {
 	});
 
 	it("has no slot, and no use, when the plugin is not installed", async () => {
-		const storage = fakeCms().storage;
+		const shared = fakeCms();
+		const storage = (plugin: string) => shared.plugin(plugin).storage;
 		const installed = cmsWith([speller({ current: "en" })], { storage });
 		const key = await installed.apiKeys.add({ name: "Bareun", value: VALUE });
 		await installed.apiKeys.slot("speller", "key").set(key.id);
@@ -168,7 +169,7 @@ describe("uses are stored as references", () => {
 			name: "ai",
 			server: async () => ({
 				default: {
-					keyUses: async (_cms, refs) =>
+					keyUses: async (refs) =>
 						Object.fromEntries(refs.map((ref) => [ref, names.has(ref) ? `AI: ${names.get(ref)}` : null])),
 				},
 			}),
@@ -180,17 +181,17 @@ describe("uses are stored as references", () => {
 			{ ref: "connection:b", keyId: key.id },
 		]);
 		// The stored row has no text, and a rename shows at the next read.
-		expect(JSON.stringify(await cms.storage("core-keys").collection("assignments").list())).not.toContain("AI:");
+		expect(JSON.stringify(await cms.plugin("core-keys").storage.collection("assignments").list())).not.toContain("AI:");
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label)).toEqual(["AI: Claude"]);
 		names.set("connection:a", "Claude renamed");
 		expect((await cms.apiKeys.get(key.id))?.uses.map((use) => use.label)).toEqual(["AI: Claude renamed"]);
 		// Reading changes nothing: the use of the item that does not exist is dropped when the plugin reports its items again.
-		expect((await cms.storage("core-keys").collection("assignments").list()).map((item) => item.key)).toEqual([
+		expect((await cms.plugin("core-keys").storage.collection("assignments").list()).map((item) => item.key)).toEqual([
 			"ai:connection:a",
 			"ai:connection:b",
 		]);
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
-		expect((await cms.storage("core-keys").collection("assignments").list()).map((item) => item.key)).toEqual([
+		expect((await cms.plugin("core-keys").storage.collection("assignments").list()).map((item) => item.key)).toEqual([
 			"ai:connection:a",
 		]);
 	});
@@ -199,7 +200,7 @@ describe("uses are stored as references", () => {
 describe("cms.transaction", () => {
 	it("keeps a new key and the item that uses it together, or neither", async () => {
 		const cms = fakeCms({ server: { secret: SECRET } });
-		const settings = () => cms.storage("my-plugin").collection<{ keyId: string | null }>("settings");
+		const settings = () => cms.plugin("my-plugin").storage.collection<{ keyId: string | null }>("settings");
 		await expect(
 			cms.transaction(async (tx) => {
 				const keyId = await tx.apiKeys.choose({ use: "new", value: VALUE }, { baseName: "Mine" });

@@ -68,9 +68,9 @@ describe("the GitHub token slot", () => {
 		expect(key).toBeDefined();
 		expect(secretKey).toBeDefined();
 		// The plugin keeps no settings of its own: both secrets are keys of the store.
-		expect(await h.cms.storage("git-sync").collection("settings").list()).toEqual([]);
-		expect(await h.cms.apiKeys.slot("git-sync", "token").read()).toBe(TOKEN);
-		expect(await h.cms.apiKeys.slot("git-sync", "webhook-secret").read()).toBe(WEBHOOK_SECRET);
+		expect(await h.cms.plugin("git-sync").storage.collection("settings").list()).toEqual([]);
+		expect(await h.cms.plugin("git-sync").key("token").read()).toBe(TOKEN);
+		expect(await h.cms.plugin("git-sync").key("webhook-secret").read()).toBe(WEBHOOK_SECRET);
 
 		const text = await (await call("status")).text();
 		expect(JSON.parse(text).keys).toEqual({
@@ -139,7 +139,7 @@ describe("the webhook secret slot", () => {
 		});
 		expect((await assignSecret({ use: "none" })).status).toBe(200);
 		expect((await (await call("status")).json()).keys.webhookSecret).toBeNull();
-		expect(await h.cms.apiKeys.slot("git-sync", "webhook-secret").read()).toBeNull();
+		expect(await h.cms.plugin("git-sync").key("webhook-secret").read()).toBeNull();
 	});
 
 	it("is not reachable from another site: the same-origin check applies to every change", async () => {

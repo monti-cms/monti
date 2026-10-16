@@ -1,3 +1,4 @@
+import { hostOf } from "../../../cms/host";
 import { readSchemaScreen, saveSchemaEdit } from "../../../schema-edit";
 import { CmsError } from "../error-handler";
 import { adminRoute, ok } from "../handler";
@@ -12,7 +13,7 @@ import { assertSchemaWritable, readEditBody } from "./shared";
 export const GET = adminRoute(async ({ cms }) => ok(await readSchemaScreen(cms)));
 
 export const PUT = adminRoute(async ({ request, cms }) => {
-	assertSchemaWritable(cms);
+	assertSchemaWritable(hostOf(cms));
 	const body = await readEditBody(request);
 	if (typeof body.baseHash !== "string") {
 		throw new CmsError("`baseHash` (the hash of the file the edit started from) is required", "invalid_input");

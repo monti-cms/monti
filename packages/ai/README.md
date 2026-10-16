@@ -4,7 +4,7 @@ English | [한국어](README.ko.md)
 
 The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and decide), AI buttons next to fields, AI translation in the
 translation editor, the AI page of the admin Tools group (`<admin path>/tools/ai`, `/admin/tools/ai` by default), the AI API (`/api/monti/v1/ai/*`), and the AI data in the plugin storage
-(`cms.storage("ai")`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
+(`cms.plugin("ai").storage`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
 
 The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `ai()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
 

@@ -13,7 +13,7 @@ import { defineCollection } from "../schema/collection";
 import { fields } from "../schema/fields";
 import type { CmsAuth, CmsServerConfig } from "../server/define";
 import { createEventDispatcher } from "../services/events";
-import { type BulkService, type Cms, type ContentService, createCms, lazyHandle } from "./create-cms";
+import { type BulkService, type Cms, type CmsHost, type ContentService, createCms, lazyHandle } from "./create-cms";
 
 /** What a test supplies to {@link fakeCms}. Whatever it leaves out fails loudly when the code under test touches it. */
 export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
@@ -27,7 +27,7 @@ export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
 	readonly contentService?: Partial<ContentService>;
 	readonly bulkService?: Partial<BulkService>;
 	readonly mediaStore?: Partial<MediaStore>;
-	/** Plugin storage (`cms.storage(name)`). Default: in memory, one per instance, so plugins keep their data between calls of a test. */
+	/** Plugin storage (`cms.plugin(name).storage`). Default: in memory, one per instance, so plugins keep their data between calls of a test. */
 	readonly storage?: (plugin: string) => PluginStorage;
 	/** The admin check. Default: every request is an admin. Make it throw an `AuthError` to test a refused request. */
 	readonly verifyAdmin?: AuthGateway["verifyAdmin"];
@@ -88,7 +88,7 @@ export const fakeAuth = (parts?: Partial<CmsAuth>): CmsServerConfig["auth"] => (
  */
 export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 	parts: FakeCmsParts<Config> = {},
-): Cms<Config> {
+): CmsHost<Config> {
 	const memory = createMemoryPluginStorage();
 	const storageOf = parts.storage ?? memory.storage;
 	const server: CmsServerConfig = {
@@ -118,7 +118,7 @@ export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 		() => server,
 		() => fake as unknown as Cms,
 	);
-	const fake: Cms<Config> = {
+	const fake: CmsHost<Config> = {
 		...cms,
 		plugins: plugins.load,
 		pluginRoutes: plugins.routes,
@@ -132,7 +132,6 @@ export function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(
 			subscribers: plugins.eventSubscribers,
 		}).events,
 		formats: async () => createFormatRegistry(parts.formats ?? []),
-		secrets: cms.secrets,
 		authGateway,
 		attachHost: () => undefined,
 		handle: lazyHandle(() => fake as unknown as Cms),

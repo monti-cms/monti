@@ -119,8 +119,8 @@ describe("the CMS instance does not hand out the master secret", () => {
 			server: { ...server, secret: "older-secret", previousSecrets: undefined },
 		});
 		const after = createCms({ config: testConfig, server });
-		const stored = before.secrets("ai").encrypt("x");
-		expect(after.secrets("ai").decrypt(stored)).toBe("x");
-		expect(after.secrets("seo").decrypt(stored)).toBeNull();
+		const stored = before.plugin("ai").secrets.encrypt("x");
+		expect(after.plugin("ai").secrets.decrypt(stored)).toBe("x");
+		expect(after.plugin("seo").secrets.decrypt(stored)).toBeNull();
 	});
 });

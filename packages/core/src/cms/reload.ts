@@ -7,7 +7,7 @@ import { schemaSourceOf } from "../schema-file/source";
 import type { Decision } from "../server/decision";
 import type { CmsServerConfig } from "../server/define";
 import { coreDecisions } from "./decisions";
-import type { Cms, CreateCmsOptions, SchemaReload } from "./types";
+import type { CmsHost, CreateCmsOptions, SchemaReload } from "./types";
 
 /** The members of an instance that are not rebuilt with the site. */
 export type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema" | "decisions";
@@ -20,8 +20,8 @@ export type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema" | "decis
 export function withSchemaControls<Config extends CmsConfig>(parts: {
 	readonly options: CreateCmsOptions<Config>;
 	readonly server: CmsServerConfig;
-	readonly build: (config: Config, self: () => Cms<Config>) => Omit<Cms<Config>, SchemaMembers>;
-}): Cms<Config> {
+	readonly build: (config: Config, self: () => CmsHost<Config>) => Omit<CmsHost<Config>, SchemaMembers>;
+}): CmsHost<Config> {
 	const { options, server, build } = parts;
 	const source = schemaSourceOf(options.config);
 	/** The schema file of the config, found on first use (creating the instance does no file access). */
@@ -41,11 +41,11 @@ export function withSchemaControls<Config extends CmsConfig>(parts: {
 		return schemaPath ?? undefined;
 	};
 
-	const forSchema = (schema: unknown): Cms<Config> => {
+	const forSchema = (schema: unknown): CmsHost<Config> => {
 		if (!source)
 			throw new Error("cms: this instance's config has no schema file (it is not made with `defineSite({ schema })`)");
 		const next = source.rebuild(schema) as Config;
-		const detached: Cms<Config> = {
+		const detached: CmsHost<Config> = {
 			...build(next, () => detached),
 			schemaFile,
 			forSchema: (other) => cms.forSchema(other),
@@ -95,8 +95,8 @@ export function withSchemaControls<Config extends CmsConfig>(parts: {
 	};
 
 	const { site: _first, ...rest } = current;
-	const cms: Cms<Config> = Object.defineProperties(
-		{ ...rest, schemaFile, forSchema, reloadSchema, decisions } as Cms<Config>,
+	const cms: CmsHost<Config> = Object.defineProperties(
+		{ ...rest, schemaFile, forSchema, reloadSchema, decisions } as CmsHost<Config>,
 		{
 			site: { enumerable: true, get: () => current.site },
 		},

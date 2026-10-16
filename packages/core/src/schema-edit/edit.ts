@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../cms";
+import { hostOf } from "../cms/host";
 import { ConfigError, type ConfigIssue } from "../config/check/issue";
 import type { SchemaChangeStore } from "../core/store/ports";
 import type { SchemaState } from "../core/store/schema-change";
@@ -85,7 +86,10 @@ export interface SiteUrlState {
 function siteUrlOf(cms: Cms): SiteUrlState {
 	const url = cms.site.config.site?.url ?? null;
 	if (!url) return { url: null, from: "none" };
-	const source = cms.decisions().find((decision) => decision.topic === "SITE_URL")?.source ?? "";
+	const source =
+		hostOf(cms)
+			.decisions()
+			.find((decision) => decision.topic === "SITE_URL")?.source ?? "";
 	if (source.startsWith("from env")) return { url, from: "env" };
 	if (source.includes("schema file")) return { url, from: "schema" };
 	return { url, from: "config" };
@@ -103,8 +107,8 @@ async function appliedState(cms: Cms): Promise<SchemaState | null> {
 
 /** What `GET /v1/schema` answers: the file, its hash, and the facts the screen needs (see {@link SchemaScreenState}). */
 export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
-	const access = schemaEditAccess(cms);
-	const file = access.file ?? cms.schemaFile();
+	const access = schemaEditAccess(hostOf(cms));
+	const file = access.file ?? hostOf(cms).schemaFile();
 	let text: string | undefined;
 	if (file) {
 		try {
@@ -268,7 +272,7 @@ interface Checked {
 function checkEdit(cms: Cms, schema: unknown): { issues: ConfigIssue[]; checked?: Checked } {
 	try {
 		const parsed = parseSchemaFile(schema);
-		return { issues: [], checked: { parsed, next: cms.forSchema(parsed) } };
+		return { issues: [], checked: { parsed, next: hostOf(cms).forSchema(parsed) } };
 	} catch (error) {
 		if (error instanceof ConfigError) return { issues: [...error.issues] };
 		return { issues: [{ path: "", code: "error", message: error instanceof Error ? error.message : String(error) }] };
@@ -424,7 +428,7 @@ async function evaluate(
 
 	const current = (() => {
 		try {
-			const literal = parseSchemaLiteral(readFileSync(cms.schemaFile() ?? "", "utf8"));
+			const literal = parseSchemaLiteral(readFileSync(hostOf(cms).schemaFile() ?? "", "utf8"));
 			return literal.ok ? JSON.stringify(literal.value) : undefined;
 		} catch {
 			return undefined;
@@ -552,7 +556,7 @@ function withKey(
  * The caller has checked `schemaEditAccess`.
  */
 export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<SchemaSaveResult> {
-	const access: SchemaEditAccess = schemaEditAccess(cms);
+	const access: SchemaEditAccess = schemaEditAccess(hostOf(cms));
 	if (!access.writable) throw new Error("the schema file is not writable here");
 	const file = access.file;
 	const previousText = readFileSync(file, "utf8");
@@ -585,7 +589,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 
 	// The schema as it will be written, for the apply and the dry run.
 	const written = JSON.parse(JSON.stringify(final)) as unknown;
-	const target = cms.forSchema(written);
+	const target = hostOf(cms).forSchema(written);
 	const migrations = (parseSchemaFile(written).migrations ?? []) as readonly SchemaMigration[];
 	const options = { site: target.site, store: target.store(), migrations, schemaVersion: version };
 	try {
@@ -614,7 +618,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 			applied = await applySchemaChange(options);
 		}
 	} catch (error) {
-		cms.reloadSchema(written);
+		hostOf(cms).reloadSchema(written);
 		return {
 			saved: false,
 			reason: "apply_failed",
@@ -623,7 +627,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 			hash,
 		};
 	}
-	const reload = cms.reloadSchema(written);
+	const reload = hostOf(cms).reloadSchema(written);
 	return {
 		saved: true,
 		file: relativeToCwd(file),

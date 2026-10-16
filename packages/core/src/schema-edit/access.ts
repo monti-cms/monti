@@ -1,6 +1,6 @@
 import { accessSync, constants, readFileSync } from "node:fs";
 import { productionLikeEnvironment } from "../adapters/auth/dev-bypass";
-import type { Cms } from "../cms";
+import type { CmsHost } from "../cms";
 import { parseSchemaLiteral, type SchemaLiteralIssue } from "../schema-file/literal";
 
 /**
@@ -40,7 +40,7 @@ export type SchemaEditAccess =
 export const isDevelopmentServer = (env: Readonly<Record<string, string | undefined>> = process.env): boolean =>
 	env.NODE_ENV === "development" && productionLikeEnvironment(env) === undefined;
 
-export function schemaEditAccess(cms: Pick<Cms, "schemaFile">): SchemaEditAccess {
+export function schemaEditAccess(cms: Pick<CmsHost, "schemaFile">): SchemaEditAccess {
 	const file = cms.schemaFile();
 	if (!isDevelopmentServer()) return { writable: false, reason: "production", ...(file ? { file } : {}) };
 	if (!file) return { writable: false, reason: "no_schema_file" };

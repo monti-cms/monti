@@ -1,12 +1,10 @@
 import type { BlockDefinition } from "../blocks/define";
-import type { Cms } from "../cms";
 import type { ConfigIssue } from "../config/check/issue";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { RouteAccess } from "../http/v1/handler";
-import type { WriteHooks } from "../services/hooks";
+import type { PluginScope, WriteHooks } from "../services/hooks";
 import type { Site } from "../site";
-import type { PluginStorage } from "./storage";
 
 /** A label shown in the admin: plain text, or a function of the site that follows the admin language (`(site) => site.createTranslator(messages)("label")`). */
 export type PluginLabel = string | ((site: Pick<Site, "createTranslator">) => string);
@@ -37,7 +35,7 @@ export interface Plugin<
 	readonly nav?: readonly PluginNavItem[];
 	/**
 	 * The API keys this plugin needs, one slot each. Tools > API keys lists every slot of the installed plugins: assigned (the key's "in use" line names it) or empty
-	 * (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with `cms.apiKeys.slot(<plugin name>, <slot id>).read()`.
+	 * (a row to pick a saved key or enter a new one, and to clear it again). The plugin reads its key with `plugin.key(<slot id>).read()`.
 	 * Uses of a key that are not slots (an item of the plugin that has its own key, like an AI connection) are reported with `cms.apiKeys.setUses` and labelled by `server.keyUses`.
 	 */
 	readonly keySlots?: readonly PluginKeySlot[];
@@ -76,10 +74,10 @@ export interface PluginKeySlot {
 	 */
 	readonly label: PluginLabel;
 	/**
-	 * Called after a key was assigned to the slot or the slot was cleared (in the admin, or by `cms.apiKeys.slot(...).set/assign`), once the change is saved. Use it
-	 * for work that waits for the key (a sync that was held back for lack of a token). Not called for changes made inside `cms.transaction`.
+	 * Called after a key was assigned to the slot or the slot was cleared (in the admin, or by `plugin.key(id).set/assign`), once the change is saved, with the
+	 * plugin's scope. Use it for work that waits for the key (a sync that was held back for lack of a token). Not called for changes made inside `cms.transaction`.
 	 */
-	readonly onChange?: (cms: Cms) => Promise<void> | void;
+	readonly onChange?: (scope: PluginScope) => Promise<void> | void;
 }
 
 export interface PluginNavItem {
@@ -136,27 +134,27 @@ export const defineServerPlugin = (plugin: ServerPlugin): ServerPlugin => plugin
 
 export interface ServerPlugin {
 	/**
-	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
-	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, its storage (`cms.storage(name)`) and its secrets (`cms.secrets(name)`) from `cms` and keeps no global state for them.
+	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by and the plugin's own context
+	 * (`adminRoute(async ({ cms, plugin }) => ...)`), so a plugin reads the stores from `cms`, its storage, secrets and key slots from `plugin`, and keeps no global state for them.
 	 */
 	readonly routes?: readonly PluginRoute[];
 	/**
-	 * Called by `monti db:migrate` after the core tables, with the plugin's own storage (`storage.once(name, step)` runs one-time work, e.g. moving data from an earlier layout).
-	 * Must give the same result when called repeatedly. `cms` is the instance being migrated.
+	 * Called by `monti db:migrate` after the core tables, with the plugin's scope: `plugin.storage.once(name, step)` runs one-time work (e.g. moving data from an
+	 * earlier layout). Must give the same result when called repeatedly. `cms` is the instance being migrated.
 	 */
-	readonly migrate?: (storage: PluginStorage, cms: Cms) => Promise<void>;
+	readonly migrate?: (scope: PluginScope) => Promise<void>;
 	/**
 	 * What the admin shows for each item of this plugin that uses an API key (`cms.apiKeys.setUses(plugin, [{ ref, keyId }])`): the text for each `ref`, in the admin language
 	 * (`cms.site.createTranslator`) and with the item's name as it is now, or `null` when the item does not exist any more (its use is dropped). Called whenever the keys are listed.
 	 */
-	readonly keyUses?: (cms: Cms, refs: readonly string[]) => Promise<Readonly<Record<string, string | null>>>;
+	readonly keyUses?: (refs: readonly string[], scope: PluginScope) => Promise<Readonly<Record<string, string | null>>>;
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
-	readonly features?: (cms: Cms) => Promise<Readonly<Record<string, boolean>>>;
+	readonly features?: (scope: PluginScope) => Promise<Readonly<Record<string, boolean>>>;
 	/**
-	 * Hooks on every content write (same as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit` (which gets the
-	 * instance as its second argument, like the config's). They run after the server config's hooks, in the order of the plugins in the site config.
+	 * Hooks on every content write (same shape as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit`. Each gets its own
+	 * argument and then the plugin's scope `{ cms, plugin }`. They run after the server config's hooks, in the order of the plugins in the site config.
 	 */
-	readonly hooks?: WriteHooks;
+	readonly hooks?: WriteHooks<PluginScope>;
 	/**
 	 * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
 	 * the read and write APIs. Called when the instance first needs its formats; two formats with one name (a plugin's and a built-in one included) fail there.
@@ -176,9 +174,8 @@ export interface PluginCommandOption {
 	readonly description?: string;
 }
 
-/** What a plugin command receives. */
-export interface PluginCommandContext {
-	readonly cms: Cms;
+/** What a plugin command receives: the plugin's scope (`cms`, `plugin`) and the command line. */
+export interface PluginCommandContext extends PluginScope {
 	/** The values of the options the command declared (`undefined` when not given). */
 	readonly args: Readonly<Record<string, string | boolean | undefined>>;
 	readonly log: (message: string) => void;

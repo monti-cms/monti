@@ -9,7 +9,7 @@ The snippet below is a sketch to adapt, not tested code.
 1. **`afterCommit` is a notification after the change is committed.** It never blocks or undoes a write ("Event delivery" in the [core README](../../packages/core/README.md)).
 2. **It is delivered from an outbox**: at least once, in order per entry, retried with a growing delay when it throws. So the handler must be idempotent: the same event can arrive twice.
 3. **`event.once(run)` is the idempotency helper.** It runs `run` one time per event and subscriber: a repeat skips it, and a `run` that throws is not marked, so the retry runs it again. No storage code of your own.
-4. **Every `afterCommit` gets the instance**: `afterCommit(event, cms)`, in the config's `hooks` and in a plugin's alike, so it can read its storage, the site and the entry.
+4. **Every `afterCommit` gets its scope last**: `afterCommit(event, { cms })` in the config's `hooks`, `afterCommit(event, { cms, plugin })` in a plugin's, so it can read the site, the entry and its own storage (`plugin.storage`).
 5. **`event.read()`** returns the committed entry now (`null` if it was deleted): the event itself carries ids, the kind and slugs, never the body.
 6. **A plugin's `server` can be inline or a lazy loader.** This one calls out over the network and has its own settings, so it uses a loader (see "Inline or `server`" below).
 
@@ -27,7 +27,7 @@ export const slackOnPublish = (options: { webhookUrl?: string; collections?: rea
 			default: {
 				hooks: {
 					// A throw is retried later with a growing delay and never undoes the publish.
-					afterCommit: async (event, cms) => {
+					afterCommit: async (event, { cms }) => {
 						if (event.kind !== "published" || !(options.collections ?? ["post"]).includes(event.collection)) return;
 
 						// Delivery is at least once. `once` runs the work for this event one time: a repeat skips it,
@@ -74,7 +74,7 @@ plugins: [slackOnPublish()], // reads SLACK_WEBHOOK_URL, or slackOnPublish({ web
 
 A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`) are the `hooks` of its `server`, which comes in two forms:
 
-- **Inline**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. No module file. An inline server loads with every server start (the CLI, edge and cold starts included), so use this when they are light. They may use secrets through `cms.secrets` or the environment; `monti.config.ts` is server-only and never reaches the browser. The [slug rule](slug-rule.md#as-a-plugin) is the example.
+- **Inline**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. No module file. An inline server loads with every server start (the CLI, edge and cold starts included), so use this when they are light. They may use secrets through `plugin.secrets` or the environment; `monti.config.ts` is server-only and never reaches the browser. The [slug rule](slug-rule.md#as-a-plugin) is the example.
 - **As a loader**: `server: async () => ({ default: { hooks } })`, or `server: () => import("./server")`. Loaded when it is needed, and the place for heavy code (an SDK, a database client) and for a plugin that has routes, migrations or commands. This recipe uses it because it is a network client.
 
 The hooks have one place, `server`; there is no second one.

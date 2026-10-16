@@ -1,7 +1,7 @@
 import type { ServerPlugins } from "../plugin/server";
 import type { Site } from "../site";
 import type { SharedConnections } from "./connections";
-import type { Cms, MigrateRunOptions } from "./types";
+import type { CmsHost, MigrateRunOptions } from "./types";
 
 /**
  * The commands that create or update the tables (`monti db:setup`, `monti db:migrate`): the core tables first (the database adapter's `migrate`), then each
@@ -11,7 +11,7 @@ export function createMigrator(parts: {
 	readonly connections: Pick<SharedConnections, "database">;
 	readonly site: Site;
 	readonly plugins: Pick<ServerPlugins, "formats" | "migrate">;
-}): Pick<Cms, "migrate" | "databaseState" | "setup"> {
+}): Pick<CmsHost, "migrate" | "databaseState" | "setup"> {
 	const { connections, site, plugins } = parts;
 	const { database } = connections;
 
@@ -22,7 +22,7 @@ export function createMigrator(parts: {
 		pluginLog: (message: string) => void = log,
 	) => {
 		const summary = await database.migrate({ site, formats: await plugins.formats() });
-		await plugins.migrate((plugin) => database.pluginStorage(plugin), pluginLog);
+		await plugins.migrate(pluginLog);
 		return { summary };
 	};
 
