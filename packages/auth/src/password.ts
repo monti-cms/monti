@@ -10,13 +10,27 @@ export const MIN_PASSWORD_LENGTH = 10;
 
 /** Failed sign-ins of one email that are tolerated inside {@link FAILURE_WINDOW_MS}; after that the email is refused until the window passes. */
 const MAX_FAILURES = 5;
+/** The same for one client address, when {@link PasswordOptions.clientIpHeader} is set. Higher, because an address can be an office or a school behind one NAT. */
+const MAX_FAILURES_PER_IP = 20;
 const FAILURE_WINDOW_MS = 60_000;
+/** The most counters kept at once. Over it, a counter that does not exist yet is not started (the ones that exist keep counting), so the table cannot grow without bound. */
+const MAX_COUNTERS = 10_000;
+/** Tries to write a counter again when another request changed it first. */
+const WRITE_ATTEMPTS = 4;
 
 const PLUGIN = "auth";
 const ACCOUNTS = "password-accounts";
 /** Written once, by the first admin. It is what makes "the first admin" atomic: the second writer gets a conflict, whatever email it uses. */
 const SETUP = "password-setup";
+/** The failed-attempt counters, in the same storage as the accounts, so every server instance sees the same ones. */
+const ATTEMPTS = "password-attempts";
 const FIRST_ADMIN_KEY = "first-admin";
+
+interface Counter {
+	readonly count: number;
+	/** When the window of this counter started (ms since the epoch). */
+	readonly since: number;
+}
 
 interface StoredAccount {
 	readonly email: string;
@@ -34,27 +48,91 @@ export const normalizeEmail = (value: string): string | null => {
 /** A hash to compare against when no account has the email, so an unknown email takes as long to refuse as a wrong password. */
 let decoy: Promise<string> | undefined;
 
+/** What `password()` takes. */
+export interface PasswordOptions {
+	/**
+	 * The request header in which a trusted reverse proxy puts the address of the client (`"x-forwarded-for"`, `"x-real-ip"`, `"cf-connecting-ip"`, `"x-vercel-forwarded-for"`).
+	 * With it, failed sign-ins are also counted per client address. Leave it out when no proxy you trust sets the header, because a client can send it itself and would
+	 * pick its own address. For a comma separated list (`x-forwarded-for`), the last address is used: it is the one the nearest proxy added.
+	 */
+	readonly clientIpHeader?: string;
+}
+
+/** The address of the client in a header value, or `null` when it is empty. */
+const clientIpOf = (request: Request | undefined, header: string | undefined): string | null => {
+	const value = header ? request?.headers.get(header) : null;
+	const last = value?.split(",").at(-1)?.trim().toLowerCase();
+	return last ? last.slice(0, 64) : null;
+};
+
 /** The accounts of the built-in login, kept in the plugin storage of the instance. */
-export function passwordAccounts(storage: (plugin: string) => PluginStorage): LoginAccounts & {
-	authorize(email: string, password: string): Promise<string | null>;
+export function passwordAccounts(
+	storage: (plugin: string) => PluginStorage,
+	now: () => number = Date.now,
+): LoginAccounts & {
+	authorize(email: string, password: string, clientIp?: string | null): Promise<string | null>;
 } {
 	const store = () => storage(PLUGIN);
 	const accounts = () => store().collection<StoredAccount>(ACCOUNTS);
-	const failures = new Map<string, { count: number; since: number }>();
+	const attempts = () => store().collection<Counter>(ATTEMPTS);
 
-	const blocked = (email: string): boolean => {
-		const entry = failures.get(email);
-		if (!entry) return false;
-		if (Date.now() - entry.since > FAILURE_WINDOW_MS) {
-			failures.delete(email);
-			return false;
+	/** The counters of a sign-in: the email's, and the client's when its address is known. An email that has no account shares one counter, so guessing emails cannot grow the table. */
+	const keysOf = (email: string, known: boolean, clientIp: string | null) => [
+		{ key: `email:${known ? email : "*"}`, max: MAX_FAILURES },
+		...(clientIp ? [{ key: `ip:${clientIp}`, max: MAX_FAILURES_PER_IP }] : []),
+	];
+
+	const live = (counter: Counter | undefined): counter is Counter =>
+		counter !== undefined && now() - counter.since <= FAILURE_WINDOW_MS;
+
+	const blocked = async (keys: ReturnType<typeof keysOf>): Promise<boolean> => {
+		for (const { key, max } of keys) {
+			const counter = (await attempts().get(key))?.value;
+			if (live(counter) && counter.count >= max) return true;
 		}
-		return entry.count >= MAX_FAILURES;
+		return false;
 	};
-	const failed = (email: string) => {
-		const entry = failures.get(email);
-		if (!entry || Date.now() - entry.since > FAILURE_WINDOW_MS) failures.set(email, { count: 1, since: Date.now() });
-		else entry.count += 1;
+
+	/** Removes the counters whose window is over. Returns how many are left. */
+	const prune = async (): Promise<number> => {
+		const items = await attempts().list();
+		const over = items.filter((item) => !live(item.value));
+		await Promise.all(
+			over.map((item) =>
+				attempts()
+					.delete(item.key, { expectedVersion: item.version })
+					.catch(() => undefined),
+			),
+		);
+		return items.length - over.length;
+	};
+
+	const count = async (key: string): Promise<void> => {
+		for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt++) {
+			const stored = await attempts().get(key);
+			if (!stored && (await prune()) >= MAX_COUNTERS) return;
+			const next: Counter = live(stored?.value)
+				? { count: stored.value.count + 1, since: stored.value.since }
+				: { count: 1, since: now() };
+			try {
+				await attempts().set(key, next, { expectedVersion: stored?.version ?? 0 });
+				return;
+			} catch {
+				// Another request changed the counter first: read it again.
+			}
+		}
+	};
+
+	const failed = async (keys: ReturnType<typeof keysOf>) => {
+		for (const { key } of keys) await count(key);
+	};
+
+	const forgive = async (key: string) => {
+		const stored = await attempts().get(key);
+		if (stored)
+			await attempts()
+				.delete(key, { expectedVersion: stored.version })
+				.catch(() => undefined);
 	};
 
 	const invalid = (email: string, password: string): LoginAccountRefusal | null =>
@@ -98,21 +176,27 @@ export function passwordAccounts(storage: (plugin: string) => PluginStorage): Lo
 				{ email: key, hash: await hashPassword(password) },
 				{ expectedVersion: existing.version },
 			);
-			failures.delete(key);
+			await forgive(`email:${key}`);
 			return { ok: true };
 		},
 
-		authorize: async (rawEmail, password) => {
+		authorize: async (rawEmail, password, clientIp = null) => {
 			const email = normalizeEmail(rawEmail);
-			if (email === null || blocked(email)) return null;
+			if (email === null) return null;
 			const account = await accounts().get(email);
+			const keys = keysOf(email, account !== null, clientIp);
+			if (await blocked(keys)) {
+				// A refused attempt still counts against the client address, so a flood from one address keeps it refused.
+				await failed(keys.slice(1));
+				return null;
+			}
 			decoy ??= hashPassword("decoy");
 			const matches = await verifyPassword(password, account?.value.hash ?? (await decoy));
 			if (account && matches) {
-				failures.delete(email);
+				await forgive(`email:${email}`);
 				return email;
 			}
-			failed(email);
+			await failed(keys);
 			return null;
 		},
 	};
@@ -121,14 +205,14 @@ export function passwordAccounts(storage: (plugin: string) => PluginStorage): Lo
 /**
  * Log in with an email and a password. The accounts are kept in Monti's database (the plugin storage of the instance, so `monti db:migrate` is all the setup there is),
  * with the password hashed by scrypt and a salt per account. Every account is an admin. The first admin is created on the admin's own login screen while no account exists
- * (that screen is closed for good afterwards); `monti admin:reset-password` sets a new password. A few failed sign-ins for one email are followed by a minute of refusals.
+ * (that screen is closed for good afterwards); `monti admin:reset-password` sets a new password. A few failed sign-ins for one email (and, with `clientIpHeader`, for one client address) are followed by a minute of refusals; the counters are kept in the database, so every server instance shares them.
  *
  * ```ts
  * auth: auth({ providers: [password()] })
  * ```
  */
-export function password(): LoginProvider {
-	// One set of accounts per login connection, so the failed-attempt counters are shared by the sign-in and the account changes.
+export function password(options: PasswordOptions = {}): LoginProvider {
+	// One set of accounts per login connection, so the sign-in and the account changes use the same counters.
 	const connections = new WeakMap<object, ReturnType<typeof passwordAccounts>>();
 	const accountsOf = (context: LoginProviderContext) => {
 		let accounts = connections.get(context);
@@ -143,6 +227,7 @@ export function password(): LoginProvider {
 		name: "Email and password",
 		label: passwordLabel,
 		everyAccountIsAdmin: true,
+		...(options.clientIpHeader ? { forwardHeaders: [options.clientIpHeader] } : {}),
 		provenance: () => "accounts in the database; the first admin is created on the login screen",
 		accounts: accountsOf,
 		setup: (context) => {
@@ -151,8 +236,12 @@ export function password(): LoginProvider {
 				id: "password",
 				name: "Email and password",
 				credentials: { email: {}, password: {} },
-				authorize: async (credentials) => {
-					const id = await accounts.authorize(String(credentials?.email ?? ""), String(credentials?.password ?? ""));
+				authorize: async (credentials, request) => {
+					const id = await accounts.authorize(
+						String(credentials?.email ?? ""),
+						String(credentials?.password ?? ""),
+						clientIpOf(request, options.clientIpHeader),
+					);
 					return id ? { id, name: id, email: id } : null;
 				},
 			});

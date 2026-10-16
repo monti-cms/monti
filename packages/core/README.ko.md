@@ -894,8 +894,8 @@ export const myPlugin = () =>
 - `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
   `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
   확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
-- 서버 쪽 `routes`는 본체 경로(`/api/monti/v1/*`)에 없는 주소를 받는다. 본체 경로와 같은 표(`{ pattern, module, public? }`)이고, 라우터가 핸들러보다 먼저 같은 출처 검사와 관리자 로그인 확인을 한다.
-  인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로(외부 실행기·웹훅)만 `public: true`(`publicRoute(...)` 핸들러)로 빼고 스스로 확인한다. 핸들러는 `adminRoute(async ({ request, params, auth, cms }) => …)`이고, 그 입력 객체가 핸들러의 유일한 시그니처이고, 테스트는 `@monti-cms/core/testing`의 `callRoute(handler, { request, cms, params })`로 부른다.
+- 서버 쪽 `routes`는 본체 경로(`/api/monti/v1/*`)에 없는 주소를 받는다. 본체 경로와 같은 표(`{ pattern, module, access? }`)이고, 라우터가 핸들러보다 먼저 같은 출처 검사와 관리자 로그인 확인을 한다.
+  인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로만 기본값 `admin` 대신 다른 `access` 종류(GET 전용 `public-read`, 브라우저 폼 `same-origin-form`, 토큰을 쓰는 크론 `admin-or-bearer`, 웹훅 `signed`)를 쓰고, 라우터가 그 종류의 검사를 적용한다. 검사를 핸들러에 맡기는 것은 `signed`뿐이다(`publicRoute(...)` 핸들러). 핸들러는 `adminRoute(async ({ request, params, auth, cms }) => …)`이고, 그 입력 객체가 핸들러의 유일한 시그니처이고, 테스트는 `@monti-cms/core/testing`의 `callRoute(handler, { request, cms, params })`로 부른다.
   `migrate`는 `monti db:migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
 - **쓰기 훅**(`transform`·`validate`·`validatePublish`·`afterCommit`)은 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 훅은 플러그인 `server`의 `hooks`이고, `server`는 두 꼴 중 하나로 준다.

@@ -25,7 +25,7 @@ import * as rEvents from "./v1/events/route";
 import * as rExport from "./v1/export/route";
 import * as rFolder from "./v1/folders/[id]/route";
 import * as rFolders from "./v1/folders/route";
-import { type AdminHandler, type PublicHandler, runAdminRoute, runPublicRoute } from "./v1/handler";
+import { type RouteAccess, runRoute } from "./v1/handler";
 import * as rMediaComplete from "./v1/media/[id]/complete/route";
 import * as rMediaItem from "./v1/media/[id]/route";
 import * as rMediaCleanup from "./v1/media/cleanup/route";
@@ -52,14 +52,15 @@ import * as rTemplates from "./v1/templates/route";
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 const METHODS: readonly string[] = ["GET", "POST", "PATCH", "PUT", "DELETE"];
 const isMethod = (value: string): value is Method => METHODS.includes(value);
-/** A method of a route file: `route(...)` for an admin route, `publicRoute(...)` for one marked `public`. The params (`{ id }` etc.) differ per route. */
+/** A method of a route file: `adminRoute(...)` for an `admin` route, `publicRoute(...)` for a `public-read`, `same-origin-form` or `signed` one, `bearerRoute(...)` for `admin-or-bearer`. The params (`{ id }` etc.) differ per route. */
 type RouteModule = Partial<Record<Method, unknown>>;
 
 /**
- * One route: its path pattern and module. `public` routes need no login. `enabled` ties the route to a site feature: when the site has the feature off, the
- * path answers 404 for every method, so turning a feature off in the config closes its API as well as its screens.
+ * One route: its path pattern and module. `access` says who may call it and which guard the router applies (default `admin`). `enabled` ties the route to a
+ * site feature: when the site has the feature off, the path answers 404 for every method, so turning a feature off in the config closes its API as well as
+ * its screens.
  */
-type Route = { pattern: string; module: RouteModule; public?: boolean; enabled?: (cms: Cms) => boolean };
+type Route = { pattern: string; module: RouteModule; access?: RouteAccess; enabled?: (cms: Cms) => boolean };
 
 /** `admin.templates: false` turns off body templates: the Templates screen, the editor's menu and these routes. */
 const templatesEnabled = (cms: Cms) => cms.site.ADMIN_TEMPLATES;
@@ -85,7 +86,7 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/entries/[id]/unarchive", module: rEntryUnarchive },
 	// The event outbox: failed and dead `afterCommit` deliveries. `v1/events/retry` also takes the retry secret of the server config (for a cron job).
 	{ pattern: "v1/events", module: rEvents },
-	{ pattern: "v1/events/retry", public: true, module: rEventsRetry },
+	{ pattern: "v1/events/retry", access: "admin-or-bearer", module: rEventsRetry },
 	{ pattern: "v1/events/[id]/retry", module: rEventRetry },
 	{ pattern: "v1/events/[id]/dismiss", module: rEventDismiss },
 	{ pattern: "v1/export", module: rExport },
@@ -101,29 +102,24 @@ const ROUTES: readonly Route[] = [
 	// The schema settings screen: reading works everywhere, the write routes answer 403 outside development.
 	{ pattern: "v1/schema", module: rSchema },
 	{ pattern: "v1/schema/preview", module: rSchemaPreview },
-	// Routes marked `public` need no login: sign in and out of the admin (browser form posts from the login screen, which check the same origin themselves),
-	// the events retry (an admin or the retry secret), and the public JSON API. Every other route is checked centrally: same origin, admin, then the handler.
-	{ pattern: "v1/session/first-admin", public: true, module: rSessionFirstAdmin },
-	{ pattern: "v1/session/sign-in/[provider]", public: true, module: rSessionSignIn },
-	{ pattern: "v1/session/sign-out", public: true, module: rSessionSignOut },
+	// Routes with an `access` other than `admin` need no login, and the router applies the guard of the kind: sign in and out of the admin (browser form posts from the login screen,
+	// `same-origin-form`), the events retry (an admin or the retry secret, `admin-or-bearer`), and the public JSON API (`public-read`, GET only). Every other route is `admin`: same origin, admin, then the handler.
+	{ pattern: "v1/session/first-admin", access: "same-origin-form", module: rSessionFirstAdmin },
+	{ pattern: "v1/session/sign-in/[provider]", access: "same-origin-form", module: rSessionSignIn },
+	{ pattern: "v1/session/sign-out", access: "same-origin-form", module: rSessionSignOut },
 	// Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
-	{ pattern: "v1/public/entries", public: true, module: rPublicList },
-	{ pattern: "v1/public/entries/[collection]/[slug]", public: true, module: rPublicItem },
+	{ pattern: "v1/public/entries", access: "public-read", module: rPublicList },
+	{ pattern: "v1/public/entries/[collection]/[slug]", access: "public-read", module: rPublicItem },
 	{ pattern: "v1/templates", module: rTemplates, enabled: templatesEnabled },
 	{ pattern: "v1/templates/[id]", module: rTemplate, enabled: templatesEnabled },
 ];
 
-type CompiledRoute = {
-	segments: string[];
-	module: RouteModule;
-	public: boolean;
-	enabled?: (cms: Cms) => boolean;
-};
+type CompiledRoute = { segments: string[]; module: RouteModule; access: RouteAccess; enabled?: (cms: Cms) => boolean };
 const compile = (routes: readonly Route[]): CompiledRoute[] =>
 	routes.map((route) => ({
 		segments: route.pattern.split("/"),
 		module: route.module,
-		public: route.public === true,
+		access: route.access ?? "admin",
 		enabled: route.enabled,
 	}));
 const COMPILED = compile(ROUTES);
@@ -132,8 +128,13 @@ const COMPILED = compile(ROUTES);
 export function matchRoute(
 	path: readonly string[],
 	routes: readonly CompiledRoute[] = COMPILED,
-): { module: RouteModule; params: Record<string, string>; public: boolean; enabled?: (cms: Cms) => boolean } | null {
-	for (const { segments, module, public: isPublic, enabled } of routes) {
+): {
+	module: RouteModule;
+	params: Record<string, string>;
+	access: RouteAccess;
+	enabled?: (cms: Cms) => boolean;
+} | null {
+	for (const { segments, module, access, enabled } of routes) {
 		if (segments.length !== path.length) continue;
 		const params: Record<string, string> = {};
 		const matched = segments.every((segment, index) => {
@@ -144,7 +145,7 @@ export function matchRoute(
 			}
 			return segment === part;
 		});
-		if (matched) return { module, params, public: isPublic, enabled };
+		if (matched) return { module, params, access, enabled };
 	}
 	return null;
 }
@@ -183,7 +184,7 @@ export function pathFromRequest(request: Request): string[] | null {
 export function createRequestHandler(cms: Cms): (request: Request, options?: HandleOptions) => Promise<Response> {
 	let pluginCompiled: Promise<CompiledRoute[]> | undefined;
 	const compiledPluginRoutes = () => {
-		// A plugin route is checked like a core one (only `public: true` is skipped), so a missing auth check never becomes an open route.
+		// A plugin route is checked like a core one (an `access` other than `admin` is the plugin's explicit choice), so a missing auth check never becomes an open route.
 		// A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
 		pluginCompiled ??= cms
 			.pluginRoutes()
@@ -222,8 +223,6 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		if (typeof handler !== "function") {
 			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
 		}
-		return matched.public
-			? runPublicRoute(cms, request, matched.params, handler as PublicHandler)
-			: runAdminRoute(cms, request, matched.params, handler as AdminHandler);
+		return runRoute(cms, request, matched.params, handler as Parameters<typeof runRoute>[3], matched.access);
 	};
 }

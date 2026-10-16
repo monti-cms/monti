@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { testConfig } from "../../../../test/site";
 import { fakeCms } from "../../../cms/fake-cms";
 import { MAX_FORM_BYTES, MAX_REQUEST_BYTES } from "../../../core/limits";
-import { readBodyText, readFormBody, readJsonBody, runPublicRoute } from "../handler";
+import { readBodyText, readFormBody, readJsonBody, runRoute } from "../handler";
 import { POST as signIn } from "../session/sign-in/[provider]/route";
 
 const post = (body: BodyInit | null, headers: Record<string, string> = {}, init: RequestInit = {}) =>
@@ -69,7 +69,7 @@ describe("public form route", () => {
 			headers: { origin: "http://cms.local", "content-type": "application/x-www-form-urlencoded" },
 			body,
 		});
-		const response = await runPublicRoute(cms, request, { provider: "credentials" }, signIn);
+		const response = await runRoute(cms, request, { provider: "credentials" }, signIn, "same-origin-form");
 		expect(response.status).toBe(413);
 	});
 });
