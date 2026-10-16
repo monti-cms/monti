@@ -55,16 +55,16 @@ const folder = (id: string, name: string, parentId: string | null = null): Folde
 const folderNav = (folders: Folder[], overrides: Partial<FolderNavigation> = {}): FolderNavigation => ({
 	collection: site.DEFAULT_COLLECTION,
 	currentFolder: "all",
-	includeDescendants: false,
 	folders,
 	folderActions: {
 		requestCreate: vi.fn(),
 		requestRename: vi.fn(),
 		requestDelete: vi.fn(),
-		requestMove: vi.fn(),
+		moveFolder: vi.fn(),
+		createFolderDirect: vi.fn().mockResolvedValue(undefined),
+		renameFolderDirect: vi.fn().mockResolvedValue(undefined),
 	} as unknown as FolderNavigation["folderActions"],
 	onSelectFolder: vi.fn(),
-	onIncludeDescendantsChange: vi.fn(),
 	onDropEntries: vi.fn(),
 	onCreateEntry: vi.fn(),
 	...overrides,
@@ -158,18 +158,18 @@ describe("folder tree under a collection", () => {
 	const name = site.COLLECTION_DEFINITIONS[site.DEFAULT_COLLECTION].label;
 	const tree = () => screen.getByRole("list", { name: t("sidebar.folderTree", { label: name }) });
 
-	it("opens under the active collection: All, the folders, nested ones when expanded, then Add folder", () => {
+	it("opens under the active collection: the folders, nested ones when expanded", () => {
 		const folders = [folder("a", "Dev"), folder("b", "Essays"), folder("c", "Next.js", "a")];
 		renderSidebar({ folderNav: folderNav(folders, { currentFolder: "c" }) });
 		const rows = within(tree())
 			.getAllByRole("button")
 			.map((button) => button.textContent?.trim())
 			.filter(Boolean);
-		expect(rows).toEqual([t("sidebar.folderAll"), "Dev", "Next.js", "Essays", tc("addFolder")]);
+		expect(rows).toEqual(["Dev", "Next.js", "Essays"]);
 		// Under the collection entry, before the next collection.
 		const content = menu(t("sidebar.content"));
 		const order = [...content.querySelectorAll("a, ul[aria-label]")].map((node) => node.textContent?.trim() ?? "");
-		expect(order.findIndex((text) => text.startsWith(t("sidebar.folderAll")))).toBeGreaterThan(order.indexOf(name));
+		expect(order.findIndex((text) => text.includes("Dev"))).toBeGreaterThan(order.indexOf(name));
 	});
 
 	it("hides the subfolders of a collapsed folder, and the chevron opens them", () => {
@@ -180,29 +180,27 @@ describe("folder tree under a collection", () => {
 		expect(within(tree()).getByText("Next.js")).toBeTruthy();
 	});
 
-	it("selects All or a folder, and adds a folder from the last row", () => {
+	it("selects a folder, and selects all on collection link", () => {
 		const nav = folderNav([folder("a", "Dev")]);
 		renderSidebar({ folderNav: nav });
 		fireEvent.click(within(tree()).getByRole("button", { name: "Dev" }));
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("a");
-		fireEvent.click(within(tree()).getByRole("button", { name: t("sidebar.folderAll") }));
+		fireEvent.click(screen.getByRole("link", { name }));
 		expect(nav.onSelectFolder).toHaveBeenCalledWith("all");
-		fireEvent.click(within(tree()).getByRole("button", { name: tc("addFolder") }));
-		expect(nav.folderActions.requestCreate).toHaveBeenCalledWith(null);
+		expect(within(tree()).queryByRole("button", { name: tc("addFolder") })).toBeNull();
 	});
 
 	it("marks the open folder", () => {
 		renderSidebar({ folderNav: folderNav([folder("a", "Dev")], { currentFolder: "a" }) });
 		expect(within(tree()).getByRole("button", { name: "Dev" }).getAttribute("aria-current")).toBe("true");
-		expect(
-			within(tree())
-				.getByRole("button", { name: t("sidebar.folderAll") })
-				.getAttribute("aria-current"),
-		).toBeNull();
 	});
 
 	it("shows a chevron only on a collection that has folders", () => {
-		const [first, second] = site.COLLECTIONS;
+		const second =
+			site.COLLECTIONS.find(
+				(c) => site.COLLECTION_DEFINITIONS[c].folders ?? site.COLLECTION_DEFINITIONS[c].kind !== "item",
+			) ?? site.COLLECTIONS[1];
+		const first = site.COLLECTIONS.find((c) => c !== second) ?? site.COLLECTIONS[0];
 		renderSidebar({ activeNav: first as string, folderCounts: { [second as string]: 2 } });
 		const row = (collection: string) =>
 			screen.getByRole("link", { name: site.COLLECTION_DEFINITIONS[collection as typeof first].label });
@@ -216,14 +214,18 @@ describe("folder tree under a collection", () => {
 		expect(link.querySelector("svg.lucide-chevron-down")).not.toBeNull();
 	});
 
-	it("offers only Add folder while the open collection has none, and no chevron", () => {
+	it("does not render tree when the open collection has no folders", () => {
 		renderSidebar({ folderNav: folderNav([]) });
-		expect(
-			within(tree())
-				.getAllByRole("button")
-				.map((button) => button.textContent?.trim()),
-		).toEqual([tc("addFolder")]);
+		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
 		expect(screen.getByRole("link", { name }).querySelector("svg[class*=chevron]")).toBeNull();
+	});
+
+	it("provides context menu with subfolder create, rename, and delete without + Add folder button", () => {
+		const nav = folderNav([folder("a", "Dev")]);
+		renderSidebar({ folderNav: nav });
+		expect(within(tree()).queryByRole("button", { name: tc("addFolder") })).toBeNull();
+		const moreBtn = screen.getByRole("button", { name: t("list.folderActions", { name: "Dev" }) });
+		expect(moreBtn).toBeTruthy();
 	});
 });
 
@@ -238,5 +240,39 @@ describe("view site", () => {
 		expect(header.contains(link)).toBe(true);
 		const footer = container.querySelector('[data-sidebar="footer"]') as HTMLElement;
 		expect(footer.contains(link)).toBe(false);
+	});
+});
+
+describe("media folder tree in sidebar", () => {
+	const mediaTree = () => screen.getByRole("list", { name: t("sidebar.folderTree", { label: t("sidebar.media") }) });
+
+	it("does not offer + Add folder button or includeDescendants toggle", () => {
+		const nav = folderNav([folder("m1", "Images")], { collection: "media" });
+		renderSidebar({ activeNav: "media", folderNav: nav });
+		expect(within(mediaTree()).queryByRole("button", { name: tc("addFolder") })).toBeNull();
+		expect(screen.queryByRole("checkbox")).toBeNull();
+		expect(screen.queryByRole("switch")).toBeNull();
+	});
+
+	it("handles inline rename with Enter and Escape", () => {
+		const f = folder("m1", "Images");
+		const nav = folderNav([f], { collection: "media" });
+		renderSidebar({ activeNav: "media", folderNav: nav });
+		const folderBtn = within(mediaTree()).getByRole("button", { name: "Images" });
+		fireEvent.keyDown(folderBtn, { key: "F2" });
+		const input = within(mediaTree()).getByRole("textbox");
+		expect(input).toBeDefined();
+
+		// Escape cancels rename
+		fireEvent.keyDown(input, { key: "Escape" });
+		expect(within(mediaTree()).queryByRole("textbox")).toBeNull();
+
+		// F2 again and Enter commits rename
+		const folderBtnAgain = within(mediaTree()).getByRole("button", { name: "Images" });
+		fireEvent.keyDown(folderBtnAgain, { key: "F2" });
+		const inputAgain = within(mediaTree()).getByRole("textbox");
+		fireEvent.change(inputAgain, { target: { value: "Photos" } });
+		fireEvent.keyDown(inputAgain, { key: "Enter" });
+		expect(nav.folderActions.renameFolderDirect).toHaveBeenCalledWith(f, "Photos");
 	});
 });

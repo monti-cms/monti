@@ -125,6 +125,8 @@ describe("editor accessibility", () => {
 		requestRename: vi.fn(),
 		requestDelete: vi.fn(),
 		moveFolder: vi.fn(),
+		createFolderDirect: vi.fn(),
+		renameFolderDirect: vi.fn(),
 	});
 
 	it("keeps folder tree controls named and keyboard-operable", async () => {
@@ -144,16 +146,15 @@ describe("editor accessibility", () => {
 		fireEvent.click(expand);
 		expect(screen.getByRole("button", { name: "문서 하위 폴더 접기" }).getAttribute("aria-expanded")).toBe("true");
 		fireEvent.click(await screen.findByRole("button", { name: "하위" }));
-		expect(onSelectFolder).toHaveBeenCalledWith("folder-2");
-		// The tree starts with "All": the collection's top level, not an uncategorized bucket.
-		fireEvent.click(screen.getByRole("button", { name: "전체" }));
+		// Clicking the active collection link resets to the collection's top level ("all").
+		fireEvent.click(screen.getByRole("link", { name: "메모" }));
 		expect(onSelectFolder).toHaveBeenCalledWith("all");
 
 		const folderButton = screen.getByRole("button", { name: "문서" });
-		fireEvent.keyDown(folderButton, { key: "F2" });
-		expect(actions.requestRename).toHaveBeenCalledWith(folders[0]);
 		fireEvent.keyDown(folderButton, { key: "Delete" });
 		expect(actions.requestDelete).toHaveBeenCalledWith(folders[0]);
+		fireEvent.keyDown(folderButton, { key: "F2" });
+		expect(screen.getByDisplayValue("문서")).toBeTruthy();
 
 		// The same items as the right-click menu also open from an always-visible ⋯ button.
 		fireEvent.click(screen.getByRole("button", { name: "'문서' 폴더 작업" }));
@@ -162,7 +163,7 @@ describe("editor accessibility", () => {
 		expect(screen.getByRole("menuitem", { name: /삭제/ })).toBeTruthy();
 	});
 
-	it("shows only the add button under the collection when there are no folders, and no empty message", () => {
+	it("does not show add button or empty message when there are no folders under the collection", () => {
 		render(
 			<SidebarProvider>
 				<AdminSidebar activeNav="memo" folderNav={folderNav([], fakeActions())} />
@@ -170,7 +171,7 @@ describe("editor accessibility", () => {
 		);
 		expect(screen.getByRole("link", { name: "메모" })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "전체" })).toBeNull();
-		expect(screen.getByRole("button", { name: "폴더 추가" })).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "폴더 추가" })).toBeNull();
 		expect(screen.queryByText(/폴더가 없습니다/)).toBeNull();
 	});
 

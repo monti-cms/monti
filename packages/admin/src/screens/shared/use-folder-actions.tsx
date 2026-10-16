@@ -59,7 +59,6 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 			kind: "item",
 			label: tc("rename"),
 			icon: Pencil,
-			shortcut: "F2",
 			onSelect: () => actions.requestRename(folder),
 		},
 		{
@@ -91,7 +90,6 @@ export function folderMenuActions(site: Site, folder: Folder, folders: Folder[],
 			kind: "item",
 			label: tc("delete"),
 			icon: Trash2,
-			shortcut: "Del",
 			destructive: true,
 			onSelect: () => void actions.requestDelete(folder),
 		},
@@ -235,6 +233,34 @@ export function useFolderActions({
 		remove.mutate(deleteDialog);
 	};
 
+	const createDirectMutation = useCmsMutation({
+		fn: ({ name, parentId }: { name: string; parentId: string | null }, { site }) =>
+			createFolder(site, { collection, name: name.trim(), parentId }, t("folder.addFailed")),
+		success: (_result, { name }) => t("folder.added", { name: name.trim() }),
+		failure: t("folder.saveFailed"),
+		onSuccess: () => void onChanged(),
+	});
+
+	const renameDirectMutation = useCmsMutation({
+		fn: ({ folder, name }: { folder: Folder; name: string }, { site }) =>
+			updateFolder(site, folder.id, { name: name.trim(), expectedVersion: folder.version }, t("folder.renameFailed")),
+		success: tc("saved"),
+		failure: t("folder.saveFailed"),
+		onSuccess: () => void onChanged(),
+	});
+
+	const createFolderDirect = async (name: string, parentId: string | null) => {
+		const trimmed = name.trim();
+		if (!trimmed) return;
+		await createDirectMutation.mutateAsync({ name: trimmed, parentId });
+	};
+
+	const renameFolderDirect = async (folder: Folder, newName: string) => {
+		const trimmed = newName.trim();
+		if (!trimmed || trimmed === folder.name) return;
+		await renameDirectMutation.mutateAsync({ folder, name: trimmed });
+	};
+
 	const destination = deleteDialog ? toFolder(deleteDialog.folder.parentId) : "";
 
 	const dialogs = (
@@ -334,10 +360,18 @@ export function useFolderActions({
 		</>
 	);
 
-	return { requestCreate, requestRename, requestDelete, moveFolder, dialogs };
+	return {
+		requestCreate,
+		requestRename,
+		requestDelete,
+		moveFolder,
+		createFolderDirect,
+		renameFolderDirect,
+		dialogs,
+	};
 }
 
 export type FolderActions = Pick<
 	ReturnType<typeof useFolderActions>,
-	"requestCreate" | "requestRename" | "requestDelete" | "moveFolder"
+	"requestCreate" | "requestRename" | "requestDelete" | "moveFolder" | "createFolderDirect" | "renameFolderDirect"
 >;

@@ -6,6 +6,7 @@ import {
 	FileText,
 	Folder as FolderIcon,
 	FolderInput,
+	FolderPlus,
 	FolderUp,
 	Image as ImageIcon,
 	LayoutGrid,
@@ -34,14 +35,7 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper";
 import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
-import {
-	enumParam,
-	pageParam,
-	pageSizeParam,
-	textParam,
-	type UrlParam,
-	useUrlState,
-} from "../../lib/hooks/use-url-state";
+import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state";
 import { cn } from "../../lib/utils/cn";
 import { useAdminRouter } from "../../router";
 import type { TranslatorFor } from "../../translator";
@@ -53,7 +47,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Skeleton } from "../../ui/skeleton";
 import { Switch } from "../../ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group";
-import type { MenuAction } from "../shared/action-menu";
+import { ActionContextMenu, type MenuAction } from "../shared/action-menu";
 import { AdminShell, PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { DateRangePicker } from "../shared/date-range-picker";
@@ -90,11 +84,6 @@ const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 type MediaView = "grid" | "list";
 const VIEW_CODEC = enumCodec<MediaView>(["grid", "list"]);
 
-const descendantsParam: UrlParam<boolean> = {
-	parse: (raw) => raw === "1",
-	serialize: (value) => (value ? "1" : null),
-};
-
 /** The library's filters and page live in the address, so a refresh keeps them and the address can be shared. */
 const LIBRARY_PARAMS = {
 	page: pageParam,
@@ -105,7 +94,6 @@ const LIBRARY_PARAMS = {
 	uploadedFrom: textParam,
 	uploadedTo: textParam,
 	folder: textParam,
-	descendants: descendantsParam,
 };
 
 /**
@@ -117,7 +105,7 @@ export function MediaLibrary() {
 	const t = useTranslator(mediaMessages);
 	const tc = useTranslator(commonMessages);
 	const router = useAdminRouter();
-	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder, descendants }, update] =
+	const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder }, update] =
 		useUrlState(LIBRARY_PARAMS);
 	const queryClient = useQueryClient();
 	const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
@@ -131,21 +119,25 @@ export function MediaLibrary() {
 	const [view, setView] = usePreference("media-view", VIEW_CODEC, "grid");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	const isExplorer =
+		!search.trim() && used === "all" && kind === "all" && !uploadedFrom && !uploadedTo && folder !== "unfiled";
+
 	// Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
 	const query = useMemo(() => {
 		const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
 		if (search.trim()) params.set("search", search.trim());
 		if (kind !== "all") params.set("kind", kind);
-		if (folder !== "all" && folder !== "") {
-			params.set("folderId", folder === "unfiled" ? "null" : folder);
-			if (descendants || search.trim()) params.set("includeDescendants", "true");
+		if (folder && folder !== "all" && folder !== "unfiled") {
+			params.set("folderId", folder);
+		} else if (isExplorer || folder === "unfiled") {
+			params.set("folderId", "null");
 		}
 		const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
 		const to = uploadedTo && site.parseDateTimeInput(`${uploadedTo}T23:59`);
 		if (from) params.set("uploadedFrom", from);
 		if (to) params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
 		return params.toString();
-	}, [page, pageSize, used, search, kind, folder, descendants, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
+	}, [page, pageSize, used, search, kind, folder, isExplorer, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
 	const mediaQuery = useQuery({
 		queryKey: mediaKeys.list(query),
 		queryFn: ({ signal }) => listMedia(site, query, signal),
@@ -389,6 +381,31 @@ export function MediaLibrary() {
 		},
 	];
 
+	const explorer = isExplorer
+		? {
+				folders: folders.filter((f) => (f.parentId ?? null) === (folder === "all" || !folder ? null : folder)),
+				parent: folder && folder !== "all" ? (folders.find((f) => f.id === folder)?.parentId ?? "all") : null,
+			}
+		: null;
+
+	const hasFolders = Boolean(explorer && (explorer.folders.length > 0 || explorer.parent !== null));
+
+	const blankMenu: MenuAction[] = [
+		{
+			kind: "item",
+			label: folder === "all" || folder === "" || folder === "unfiled" ? tc("addFolder") : tc("addSubfolder"),
+			icon: FolderPlus,
+			onSelect: () =>
+				folderActions.requestCreate(folder === "all" || folder === "" || folder === "unfiled" ? null : folder),
+		},
+		{
+			kind: "item",
+			label: t("library.upload"),
+			icon: Upload,
+			onSelect: () => fileInputRef.current?.click(),
+		},
+	];
+
 	const viewProps = {
 		items,
 		selectedId,
@@ -396,6 +413,10 @@ export function MediaLibrary() {
 		onSelect: (media: MediaItem) => void openDetail(media.id),
 		menuFor: mediaMenu,
 		onDeleteKey: (media: MediaItem) => void requestDelete(media),
+		explorer,
+		folders,
+		folderActions,
+		onSelectFolder: (f: string) => update({ folder: f, page: 1 }),
 	};
 
 	const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
@@ -413,11 +434,9 @@ export function MediaLibrary() {
 				folderNav: {
 					collection: "media",
 					currentFolder: folder || "all",
-					includeDescendants: descendants,
 					folders,
 					folderActions,
 					onSelectFolder: (f) => update({ folder: f ?? "all", page: 1 }),
-					onIncludeDescendantsChange: (includeDescendants) => update({ descendants: includeDescendants, page: 1 }),
 					onDropEntries,
 				},
 			}}
@@ -441,6 +460,17 @@ export function MediaLibrary() {
 						{upload
 							? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
 							: t("library.upload")}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onClick={() =>
+							folderActions.requestCreate(folder === "all" || folder === "" || folder === "unfiled" ? null : folder)
+						}
+					>
+						<FolderPlus aria-hidden />
+						{folder === "all" || folder === "" || folder === "unfiled" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
 					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}
@@ -520,11 +550,20 @@ export function MediaLibrary() {
 
 			<div className="relative flex min-h-0 flex-1 overflow-hidden">
 				<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-					<div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 lg:p-6">
-						{loadError && (
-							<LoadErrorAlert message={loadError} onRetry={() => void mediaQuery.refetch()} className="mb-4" />
+					<div
+						className={cn(
+							"flex min-h-0 flex-1 flex-col overflow-y-auto",
+							(items.length === 0 && !hasFolders) || view === "grid" ? "p-4 lg:p-6" : "p-0",
 						)}
-						{items.length === 0 ? (
+					>
+						{loadError && (
+							<LoadErrorAlert
+								message={loadError}
+								onRetry={() => void mediaQuery.refetch()}
+								className={(items.length === 0 && !hasFolders) || view === "grid" ? "mb-4" : "m-4"}
+							/>
+						)}
+						{items.length === 0 && !hasFolders ? (
 							loadError ? null : mediaQuery.isPending ? (
 								<ul aria-hidden className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6">
 									{Array.from({ length: 6 }, (_, index) => (
@@ -558,6 +597,7 @@ export function MediaLibrary() {
 						) : (
 							<MediaTable {...viewProps} />
 						)}
+						<ActionContextMenu actions={blankMenu} trigger={<div className="min-h-16 flex-1" aria-hidden />} />
 					</div>
 					<ListPagination
 						total={total}

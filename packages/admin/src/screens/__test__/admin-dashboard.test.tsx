@@ -323,7 +323,7 @@ describe("list screen — folders", () => {
 		await screen.findByRole("row", { name: /가/ });
 
 		fireEvent.click(screen.getByRole("button", { name: "'뉴스' 폴더 작업" }));
-		fireEvent.click(await screen.findByRole("menuitem", { name: "삭제Del" }));
+		fireEvent.click(await screen.findByRole("menuitem", { name: "삭제" }));
 		const dialog = await screen.findByRole("alertdialog", { name: "'뉴스' 폴더 삭제" });
 		await waitFor(() => expect(within(dialog).getByRole("button", { name: "삭제" })).toHaveProperty("disabled", false));
 		fireEvent.click(within(dialog).getByRole("button", { name: "삭제" }));
