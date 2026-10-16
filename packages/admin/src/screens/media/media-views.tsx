@@ -33,7 +33,7 @@ const FILE_ICONS: Record<FileKind, typeof FileText> = { pdf: FileType, archive: 
 /** Thumbnail for images, a type icon for other files. */
 export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconClassName?: string }) {
 	const site = useSite();
-	if (!site.api.isImageMime(media.mimeType)) {
+	if (!site.api.isImageType(media.mimeType)) {
 		const Icon = FILE_ICONS[fileKindOf(media.mimeType)];
 		return <Icon className={cn("text-cms-muted-foreground", iconClassName)} aria-hidden />;
 	}
@@ -159,7 +159,7 @@ export function MediaGrid({
 						)}
 					>
 						<span className="relative flex aspect-square items-center justify-center bg-cms-muted">
-							{site.api.isImageMime(media.mimeType) ? (
+							{site.api.isImageType(media.mimeType) ? (
 								<MediaThumb media={media} iconClassName="size-10" />
 							) : (
 								<span className="flex flex-col items-center gap-1.5 text-cms-muted-foreground">
@@ -272,7 +272,7 @@ export function MediaTable({
 								</button>
 							</TableCell>
 							<TableCell className="text-cms-muted-foreground">
-								{site.api.isImageMime(media.mimeType)
+								{site.api.isImageType(media.mimeType)
 									? (media.mimeType?.replace("image/", "").toUpperCase() ?? "—")
 									: fileTypeLabel(media.filename, media.mimeType)}
 							</TableCell>

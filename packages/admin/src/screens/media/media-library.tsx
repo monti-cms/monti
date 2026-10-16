@@ -73,7 +73,7 @@ const kindOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 
 const uploadAccept = (site: Site) => `${site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")},${site.api.FILE_ACCEPT}`;
 
-const isImageFile = (site: Site, file: File) => site.api.isImageMime(file.type);
+const isAllowedImageFile = (site: Site, file: File) => site.api.isAllowedImage(file.type);
 
 const usedOptions = (t: TranslatorFor<typeof mediaMessages>) => [
 	{ value: "all", label: t("library.used.all") },
@@ -209,7 +209,7 @@ export function MediaLibrary() {
 			for (const [index, file] of files.entries()) {
 				const onProgress = (percent: number) => setUpload({ current: index + 1, total: files.length, percent });
 				setUpload({ current: index + 1, total: files.length, percent: 0 });
-				if (isImageFile(site, file)) {
+				if (isAllowedImageFile(site, file)) {
 					const prepared = await prepareUpload(site, file, { optimize });
 					await uploadImageFile(site, prepared, onProgress, { folderId: targetFolderId });
 				} else {
@@ -231,7 +231,7 @@ export function MediaLibrary() {
 		if (!files?.length) return;
 		const list: File[] = [];
 		for (const file of Array.from(files)) {
-			if (isImageFile(site, file) || site.api.fileTypeFor(file.name)) list.push(file);
+			if (isAllowedImageFile(site, file) || site.api.fileTypeFor(file.name)) list.push(file);
 			else toast.error(t("library.unsupportedType", { name: file.name }));
 		}
 		if (list.length === 0) {

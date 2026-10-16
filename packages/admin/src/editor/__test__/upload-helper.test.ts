@@ -38,7 +38,7 @@ const siteAllowing = (types: readonly string[]) =>
 		api: {
 			value: Object.create(testSite.api, {
 				ALLOWED_IMAGE_MIME_TYPES: { value: types },
-				isImageMime: { value: (mime: string) => types.includes(mime) },
+				isAllowedImage: { value: (mime: string) => types.includes(mime) },
 			}),
 		},
 	}) as typeof testSite;

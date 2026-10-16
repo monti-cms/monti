@@ -81,7 +81,7 @@ export async function prepareUpload(
 		return { file, optimized: false, skippedReason: t("upload.keepFormat") };
 	}
 	// Converting to a type the site does not allow would be refused by the server: keep the original instead.
-	if (!site.api.isImageMime(policy.outputType)) {
+	if (!site.api.isAllowedImage(policy.outputType)) {
 		return { file, optimized: false, skippedReason: t("upload.outputNotAllowed") };
 	}
 	if (file.type === "image/webp" && (await isAnimatedWebp(file))) {
