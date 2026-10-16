@@ -115,12 +115,6 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 /** Reads a form value as a string. Empty string if missing or an array. */
 export const formText = (form: EntryForm, name: string): string => text(form[name]);
 
-/** Reads a form value as a string array. */
-export const formList = (form: EntryForm, name: string): string[] => {
-	const value = form[name];
-	return Array.isArray(value) ? value : [];
-};
-
 /** Whether this is a translation. A translation handles only per-language values as the form. */
 export const isTranslationEntry = (entry: Pick<EntryData, "id" | "translationGroupId"> | null | undefined) =>
 	Boolean(entry?.translationGroupId && entry.translationGroupId !== entry.id);

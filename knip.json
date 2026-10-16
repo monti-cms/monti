@@ -5,7 +5,8 @@
 			"entry": ["scripts/*.mjs"]
 		},
 		"packages/admin": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"],
+			"ignoreIssues": { "src/ui/**": ["exports", "types"] }
 		},
 		"packages/ai": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}", "src/routes/**/route.ts!"]

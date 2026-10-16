@@ -1,8 +1,6 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { columnBlock, columnsBlock } from "./definition";
 
-export { columnBlock, columnsBlock } from "./definition";
-
 /**
  * Columns block (2 to 4 `:::column` inside `::::columns`). Add it to the site config's `plugins`.
  *

@@ -1,8 +1,6 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { tabBlock, tabsBlock } from "./definition";
 
-export { tabBlock, tabsBlock } from "./definition";
-
 /**
  * Tabs block (2 to 8 `:::tab` inside `::::tabs`). Add it to the site config's `plugins`.
  *

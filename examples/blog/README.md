@@ -48,7 +48,7 @@ A block's look is yours to replace on both sides, with what already exists. This
 On the public page, pass it to `CmsContent` (`components/article-body.tsx`); the props are typed by the block's definition:
 
 ```tsx
-import type { calloutBlock } from "@monti-cms/blocks";
+import type { calloutBlock } from "@monti-cms/blocks/definitions";
 import type { BlockProps } from "@monti-cms/core/render";
 
 const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof calloutBlock>) => (

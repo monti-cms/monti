@@ -12,9 +12,7 @@
 		"./editor": "./src/editor/public.ts",
 		"./blocks": "./src/editor/blocks/public.ts",
 		"./hooks": "./src/hooks/public.ts",
-		"./plugins": "./src/plugins.ts",
 		"./internal/plugins": "./src/internal-plugins.ts",
-		"./media": "./src/media.ts",
 		"./slots": "./src/slots/slots.tsx",
 		"./api": "./src/api/index.ts",
 		"./kit": "./src/kit.ts",
@@ -114,17 +112,9 @@
 				"types": "./dist/hooks/public.d.ts",
 				"default": "./dist/hooks/public.js"
 			},
-			"./plugins": {
-				"types": "./dist/plugins.d.ts",
-				"default": "./dist/plugins.js"
-			},
 			"./internal/plugins": {
 				"types": "./dist/internal-plugins.d.ts",
 				"default": "./dist/internal-plugins.js"
-			},
-			"./media": {
-				"types": "./dist/media.d.ts",
-				"default": "./dist/media.js"
 			},
 			"./slots": {
 				"types": "./dist/slots/slots.d.ts",

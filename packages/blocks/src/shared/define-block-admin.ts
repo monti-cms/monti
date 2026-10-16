@@ -1,4 +1,4 @@
-import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { defineAdminPlugin } from "@monti-cms/admin";
 import type { ComponentType, ReactNode } from "react";
 
 /**

@@ -48,7 +48,7 @@ GitHub 로그인을 쓰려면 OAuth 앱의 콜백 주소를 `http://localhost:30
 공개 페이지에서는 `CmsContent`에 넘긴다(`components/article-body.tsx`). props 타입은 블록 정의에서 나온다.
 
 ```tsx
-import type { calloutBlock } from "@monti-cms/blocks";
+import type { calloutBlock } from "@monti-cms/blocks/definitions";
 import type { BlockProps } from "@monti-cms/core/render";
 
 const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof calloutBlock>) => (

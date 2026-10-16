@@ -58,7 +58,7 @@ The admin side and the screen:
 "use client";
 
 import { adminFetch } from "@monti-cms/admin/api";
-import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { defineAdminPlugin } from "@monti-cms/admin";
 import { adminApiUrl, useSite } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 

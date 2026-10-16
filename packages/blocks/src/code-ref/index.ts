@@ -1,8 +1,6 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin";
 import { codeRefBlock } from "./definition";
 
-export { codeRefBlock } from "./definition";
-
 /**
  * Code ref (`:code-ref[text]{to="c1"}`). Add it to the site config's `plugins`.
  *
