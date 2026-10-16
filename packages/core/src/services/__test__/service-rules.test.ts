@@ -61,6 +61,25 @@ describe("content service rules", () => {
 	}, 30_000);
 
 	it.skipIf(!secondLocale)(
+		"refuses to translate an archived entry, and allows it once unarchived",
+		async () => {
+			const service = serviceFor(testSite);
+			const source = await createPost(service);
+			const archived = await store.archiveEntry({ id: source.id, expectedVersion: source.version });
+			await expect(
+				service.createTranslation({ sourceId: source.id, locale: secondLocale as string }),
+			).rejects.toMatchObject({
+				code: "invalid_status",
+			});
+
+			await store.unarchiveEntry({ id: source.id, expectedVersion: archived.version });
+			const translation = await service.createTranslation({ sourceId: source.id, locale: secondLocale as string });
+			expect(translation.entry.locale).toBe(secondLocale);
+		},
+		30_000,
+	);
+
+	it.skipIf(!secondLocale)(
 		"refuses to create a translation when the site turns translations off",
 		async () => {
 			const source = await createPost(serviceFor(testSite));

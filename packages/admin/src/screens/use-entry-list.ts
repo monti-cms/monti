@@ -1,30 +1,17 @@
 "use client";
 
 import type { CollectionPreferences, PreferencesBody } from "@monti-cms/core/client";
-import { type BulkOp, type Site, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { CmsApiError, errorText } from "../api/client";
-import {
-	type BulkItemResult,
-	type BulkParams,
-	type BulkSelection,
-	bulkEntries,
-	changeEntryStatus,
-	duplicateEntry,
-	type EntriesPage,
-	type EntryWriteResult,
-	entriesKeys,
-	listEntries,
-} from "../api/entries";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { errorText } from "../api/client";
+import { type BulkSelection, duplicateEntry, type EntryWriteResult, entriesKeys, listEntries } from "../api/entries";
 import { foldersKeys, listFolders } from "../api/folders";
 import { getPreferences, preferencesKeys, savePreferences as putPreferences } from "../api/preferences";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { useAdminRouter, useAdminSearchParams } from "../router";
-import { describeBulkFailure } from "./entries/bulk-bar";
 import { copyTitle } from "./entries/entry-form";
 import { actionTargets, rowMenuActions, toSelection } from "./list-row-menu";
 import {
@@ -35,16 +22,14 @@ import {
 	parseListState,
 } from "./list-state";
 import { screensMessages } from "./messages";
-import type { RecordTarget } from "./record-panel";
 import type { MenuAction } from "./shared/action-menu";
 import { useConfirm } from "./shared/confirm-dialog";
 import type { DraggedEntry } from "./shared/entry-drag";
-import { OPEN_ITEM_PARAM } from "./shared/entry-href";
-import { applyOptimistic, type OptimisticOp } from "./shared/list-cache";
 import { nounVars } from "./shared/noun.messages";
 import { useFolderActions } from "./shared/use-folder-actions";
-import { type TaxonomyOptions, useTaxonomyOptions } from "./shared/use-taxonomy";
-import { useUnsavedGuard } from "./shared/use-unsaved-guard";
+import { useTaxonomyOptions } from "./shared/use-taxonomy";
+import { useEntryMutations } from "./use-entry-mutations";
+import { useRecordPanel } from "./use-record-panel";
 
 export type ListMode = "list" | "trash";
 
@@ -159,101 +144,6 @@ function useEntriesData(state: ListState, mode: ListMode, ready: boolean, showsF
 	};
 }
 
-/** Reports bulk results as notifications. Failures list the item name and reason. */
-function announce(site: Site, label: string, results: BulkItemResult[], items: BulkSelection[]) {
-	const t = site.createTranslator(screensMessages);
-	const tc = site.createTranslator(commonMessages);
-	const failures = results.filter((result): result is Extract<BulkItemResult, { ok: false }> => !result.ok);
-	const ok = results.length - failures.length;
-	if (failures.length === 0) {
-		toast.success(t("bulk.success", { count: ok, label }));
-		return;
-	}
-	const titleOf = (id: string) => items.find((item) => item.id === id)?.title || tc("untitled");
-	toast.error(ok > 0 ? t("bulk.partial", { ok, label, failed: failures.length }) : t("bulk.failed", { label }), {
-		description: failures
-			.slice(0, 3)
-			.map((failure) => `${titleOf(failure.id)} — ${describeBulkFailure(site, failure)}`)
-			.join("\n"),
-	});
-}
-
-/**
- * An action that changes the list. Applies the change to the list first, then sends the request. If the request itself fails it is rolled back,
- * and when it ends the list is synced to server values. Per-item results go to `onResults` (used to keep failed items selected).
- */
-function useEntryMutations({
-	listKey,
-	state,
-	options,
-	onResults,
-}: {
-	listKey: ReturnType<typeof entriesKeys.list>;
-	state: ListState;
-	options: TaxonomyOptions;
-	onResults: (results: BulkItemResult[]) => void;
-}) {
-	const site = useSite();
-	const t = useTranslator(screensMessages);
-	const tc = useTranslator(commonMessages);
-	const queryClient = useQueryClient();
-
-	/** Refetches both the list and the trash badge (leaving the currently visible rows as they are). */
-	const invalidateEntries = () => queryClient.invalidateQueries({ queryKey: entriesKeys.all });
-
-	/**
-	 * Applies the change to the list first, then sends the request; a failed request rolls the list back, and the list is synced to server
-	 * values once it ends. Restoring is not in the bulk API, so it requests per item. A failure is thrown to the caller (`inline`).
-	 */
-	const mutation = useCmsMutation<
-		{ op: OptimisticOp; targets: BulkSelection[]; params?: BulkParams },
-		BulkItemResult[],
-		EntriesPage
-	>({
-		fn: async ({ op, targets, params }, { site }) => {
-			if (op !== "restore") return bulkEntries(site, op, targets, params);
-			const out: BulkItemResult[] = [];
-			for (const target of targets) {
-				try {
-					await changeEntryStatus(site, target.id, "restore", { expectedVersion: target.expectedVersion });
-					out.push({ id: target.id, ok: true, version: target.expectedVersion + 1 });
-				} catch (error) {
-					out.push({ id: target.id, ok: false, error: (error instanceof CmsApiError && error.code) || "internal" });
-				}
-			}
-			return out;
-		},
-		failure: ({ op }) => t("bulk.failed", { label: op }),
-		inline: true,
-		optimistic: {
-			queryKey: listKey,
-			update: (page, { op, targets, params }) =>
-				applyOptimistic(page, op, new Set(targets.map((target) => target.id)), { state, params, options }),
-		},
-		invalidate: [entriesKeys.all],
-		onSuccess: onResults,
-	});
-
-	const run = (op: OptimisticOp, targets: BulkSelection[], params?: BulkParams) =>
-		mutation.mutateAsync({ op, targets, params });
-
-	/** Handles the action through the bulk API and reports the result. */
-	const bulk = async (op: BulkOp, label: string, targets: BulkSelection[], params: BulkParams = {}) => {
-		try {
-			announce(site, label, await run(op, targets, params), targets);
-		} catch (error) {
-			toast.error(errorText(site, error, t("bulk.failed", { label })));
-		}
-	};
-
-	/** Trash restore. */
-	const restore = async (targets: BulkSelection[]) => {
-		announce(site, tc("lifecycle.restore"), await run("restore", targets), targets);
-	};
-
-	return { run, bulk, restore, invalidateEntries };
-}
-
 /** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or where the list shows no folders. */
 function explorerOf(state: ListState, folders: readonly Folder[], showsFolders: boolean) {
 	if (!showsFolders || !isExplorerMode(state)) return null;
@@ -292,46 +182,12 @@ export function useEntryList(mode: ListMode) {
 	// Select all targets the current page only. Changing the list clears the selection.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset whenever the visible query changes
 	useEffect(() => setSelectedIds(new Set()), [data.apiQuery]);
-	const [recordTarget, setRecordTarget] = useState<RecordTarget | null>(null);
 	const { confirm, confirmDiscard, dialog: confirmDialog } = useConfirm();
-	/** Whether the taxonomy edit panel has unsaved changes. The panel reports it. */
-	const recordDirtyRef = useRef(false);
-	/** The same, as state, for the guard on links that leave the list (the sidebar, another collection). */
-	const [recordDirty, setRecordDirtyState] = useState(false);
-	const { dialog: guardDialog } = useUnsavedGuard(recordDirty);
-	const setRecordDirty = (dirty: boolean) => {
-		recordDirtyRef.current = dirty;
-		setRecordDirtyState(dirty);
-	};
-	/** Opens the taxonomy edit panel directly (without asking). Used to keep a saved item open as is. */
-	const showRecord = (target: RecordTarget) => {
-		setRecordDirty(false);
-		setRecordTarget(target);
-	};
-	/** Opens the taxonomy edit panel. If there are unsaved changes, asks first whether to discard them. */
-	const openRecord = async (target: RecordTarget) => {
-		if (await confirmDiscard(recordDirtyRef.current)) showRecord(target);
-	};
-	const closeRecord = () => {
-		setRecordDirty(false);
-		setRecordTarget(null);
-	};
-	// The panel belongs to the collection it was opened in: moving to another collection (the guard asked first if it had changes) closes it.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: close only when the collection changes
-	useEffect(() => {
-		if (recordTarget && recordTarget.collection !== state.collection) closeRecord();
-	}, [state.collection]);
-	// The address's `open` (an item opened from, e.g., media usages) opens once into the item slot and is then removed from the address.
-	const searchParams = useAdminSearchParams();
-	const openParam = searchParams.get(OPEN_ITEM_PARAM);
-	// biome-ignore lint/correctness/useExhaustiveDependencies: open only when the address value changes
-	useEffect(() => {
-		if (!openParam || !site.isItemCollection(state.collection) || mode === "trash") return;
-		showRecord({ collection: state.collection, id: openParam });
-		const next = new URLSearchParams(searchParams.toString());
-		next.delete(OPEN_ITEM_PARAM);
-		router.replace(site.adminHref(`?${next.toString()}`), { scroll: false });
-	}, [openParam]);
+	const { recordTarget, openRecord, showRecord, closeRecord, setRecordDirty, guardDialog } = useRecordPanel({
+		collection,
+		mode,
+		confirmDiscard,
+	});
 
 	const mutations = useEntryMutations({
 		listKey: data.listKey,

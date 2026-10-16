@@ -83,13 +83,17 @@ describe("row menu items", () => {
 	it("rows that are all archived offer unarchive", () => {
 		const on = handlers();
 		select(rowMenuActions(testSite, [item("a", "archived")], context, on), "보관 해제");
-		expect(on.bulk).toHaveBeenCalledWith("unarchive", "보관 해제", [{ id: "a", expectedVersion: 2, title: "a" }]);
+		expect(on.bulk).toHaveBeenCalledWith("unarchive", "보관 해제", [
+			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
+		]);
 	});
 
 	it("archive asks for confirmation instead of acting right away", () => {
 		const on = handlers();
 		select(rowMenuActions(testSite, [item("a")], context, on), "보관");
-		expect(on.confirmArchive).toHaveBeenCalledWith([{ id: "a", expectedVersion: 2, title: "a" }]);
+		expect(on.confirmArchive).toHaveBeenCalledWith([
+			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
+		]);
 		expect(on.bulk).not.toHaveBeenCalled();
 	});
 
@@ -108,8 +112,8 @@ describe("row menu items", () => {
 		const on = handlers();
 		const actions = rowMenuActions(testSite, [item("a"), item("b")], context, on);
 		const targets = [
-			{ id: "a", expectedVersion: 2, title: "a" },
-			{ id: "b", expectedVersion: 2, title: "b" },
+			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
+			expect.objectContaining({ id: "b", expectedVersion: 2, title: "b" }),
 		];
 		select(actions, "폴더로 이동", "최상위");
 		select(actions, "폴더로 이동", "뉴스");
@@ -130,6 +134,8 @@ describe("row menu items", () => {
 		expect(list).toContain("영구 삭제");
 		for (const label of ["보관", "폴더로 이동", "태그 추가"]) expect(list).not.toContain(label);
 		select(actions, "영구 삭제");
-		expect(on.confirmPermanentDelete).toHaveBeenCalledWith([{ id: "a", expectedVersion: 2, title: "a" }]);
+		expect(on.confirmPermanentDelete).toHaveBeenCalledWith([
+			expect.objectContaining({ id: "a", expectedVersion: 2, title: "a" }),
+		]);
 	});
 });

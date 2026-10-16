@@ -41,7 +41,6 @@ describe("translation source", () => {
 	it("accepts the source of its group, in the same content collection, in another language", () => {
 		expect(codeOf(() => assertTranslationSource(translationSite, source(), target))).toBeNull();
 		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "draft" }), target))).toBeNull();
-		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "archived" }), target))).toBeNull();
 	});
 
 	it("rejects every translation when the site turns translations off", () => {
@@ -62,6 +61,12 @@ describe("translation source", () => {
 
 	it("rejects a source in the trash", () => {
 		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "trashed" }), target))).toBe(
+			"invalid_status",
+		);
+	});
+
+	it("rejects an archived source: its group is hidden, so a new draft in it would be too", () => {
+		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "archived" }), target))).toBe(
 			"invalid_status",
 		);
 	});

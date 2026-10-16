@@ -10,6 +10,7 @@ import {
 	assertSourceNotTrashed,
 	assertTransitionAllowed,
 	blockingTranslations,
+	canTransition,
 	type GroupMember,
 	type LifecycleAction,
 	membersToArchive,
@@ -50,6 +51,16 @@ describe("lifecycle transitions", () => {
 			}
 		});
 	}
+
+	it("canTransition agrees with assertTransitionAllowed for every action and status", () => {
+		for (const action of Object.keys(STARTS) as LifecycleAction[]) {
+			for (const status of ALL) {
+				expect(canTransition(action, status), `${action} from ${status}`).toBe(
+					codeOf(() => assertTransitionAllowed(action, status, 1)) === null,
+				);
+			}
+		}
+	});
 
 	it("a restore never takes a published entry offline: only a trashed entry can be restored", () => {
 		expect(codeOf(() => assertTransitionAllowed("restore", "published", 1))).toMatchObject({ code: "invalid_status" });

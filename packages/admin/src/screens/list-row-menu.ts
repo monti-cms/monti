@@ -25,6 +25,7 @@ export const toSelection = (item: ListEntriesItem): BulkSelection => ({
 	id: item.id,
 	expectedVersion: item.version,
 	title: item.title,
+	status: item.status,
 });
 
 /**

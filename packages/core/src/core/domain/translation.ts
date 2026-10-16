@@ -44,6 +44,8 @@ export function assertTranslationSource(
 		throw new CmsError("Translate the source entry, not a translation", "invalid_input");
 	}
 	if (source.status === "trashed") throw new CmsError("A trashed entry cannot be translated", "invalid_status");
+	// An archived group is hidden from the site and the list; a new draft in it would be too.
+	if (source.status === "archived") throw new CmsError("Unarchive the entry before translating it", "invalid_status");
 	if (source.locale === translation.locale) {
 		throw new CmsError("A translation for this locale already exists", "translation_exists");
 	}
