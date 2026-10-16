@@ -1,6 +1,6 @@
-import { type PluginConfigView, pluginError } from "@monti-cms/core";
+import type { PluginConfigView } from "@monti-cms/core";
+import { pluginError } from "@monti-cms/core/plugin/server";
 import type { GitHubClientFactory } from "./github/client";
-
 import { GIT_SYNC_PLUGIN_NAME } from "./name";
 
 export { GIT_SYNC_PLUGIN_NAME };

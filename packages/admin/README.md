@@ -240,7 +240,7 @@ The Bareun checker is `@monti-cms/bareun`, a plugin you list in `plugins` of `mo
 
 ```tsx
 "use client";
-import { defineTextChecker } from "@monti-cms/core/site";
+import { defineTextChecker } from "@monti-cms/core";
 import type { CmsAdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
@@ -275,7 +275,7 @@ and returns `{ issues }`. `textCheckRoute` checks the admin login and same origi
 
 ```ts
 // Admin side of a plugin (browser)
-import { remoteTextChecker } from "@monti-cms/core/site";
+import { remoteTextChecker } from "@monti-cms/core";
 const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts (server)

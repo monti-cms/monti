@@ -1,7 +1,8 @@
-import { type CmsConfig, createSite } from "@monti-cms/core/site";
+import type { CmsConfig } from "@monti-cms/core";
+import { createSite } from "@monti-cms/core/site";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../core/test/site";
-import { loadAdminPlugins } from "../plugins";
+import { loadAdminPlugins } from "../internal-plugins";
 
 /** A site of its own per call: the loaded plugins are remembered per site, so no result is shared between tests. */
 const siteWith = (plugins: unknown[]) => createSite({ ...testConfig, plugins } as CmsConfig);

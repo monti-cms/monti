@@ -2,15 +2,14 @@
 
 import type {
 	BacklinkField,
-	Collection,
 	ConditionalField,
-	PanelGroup,
 	RelationField,
 	SlugField,
 	TextField,
 	ValueField,
 	ViewField,
-} from "@monti-cms/core/site";
+} from "@monti-cms/core";
+import type { Collection, PanelGroup } from "@monti-cms/core/site";
 import {
 	bodyExcerpt,
 	fillFromBodyLength,

@@ -1,4 +1,5 @@
-import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/site";
+import type { BlockDefinition } from "@monti-cms/core";
+import { perSite, type Site } from "@monti-cms/core/site";
 
 /**
  * Editor representation of added blocks (block extension plugins and the site config's `blocks`). Blocks with `editor.view: "node"` are edited as

@@ -1,5 +1,10 @@
-import type { SuggestedTransform } from "@monti-cms/core/schema-change";
-import type { RenameInput, SchemaEditPreview, SchemaSaveResult, SchemaScreenState } from "@monti-cms/core/schema-edit";
+import type { SuggestedTransform } from "@monti-cms/core/internal/schema-change";
+import type {
+	RenameInput,
+	SchemaEditPreview,
+	SchemaSaveResult,
+	SchemaScreenState,
+} from "@monti-cms/core/internal/schema-edit";
 import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 import { cmsFetch } from "./client";
 

@@ -1,7 +1,7 @@
 import type { Cms } from "@monti-cms/core/server";
 import { SiteProvider } from "@monti-cms/core/site";
 import type { ReactNode } from "react";
-import { loadAdminPlugins } from "../plugins";
+import { loadAdminPlugins } from "../internal-plugins";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features";
 import { AdminQueryProvider } from "../screens/shared/query-provider";
 import { Toaster } from "../ui/sonner";

@@ -1,4 +1,3 @@
-export type { SchemaMigration } from "../schema-file/types";
 export {
 	type ApplyOptions,
 	applySchemaChange,

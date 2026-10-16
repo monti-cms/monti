@@ -1,6 +1,7 @@
 "use client";
 
-import { type TextChecker, useSite } from "@monti-cms/core/site";
+import type { TextChecker } from "@monti-cms/core";
+import { useSite } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { useState } from "react";
 import type { EditorExtensionContext, EditorExtensionResult } from "../../admin-components";

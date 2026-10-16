@@ -1,4 +1,5 @@
-import { type CmsConfig, createSite } from "@monti-cms/core/site";
+import type { CmsConfig } from "@monti-cms/core";
+import { createSite } from "@monti-cms/core/site";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import { localRecoveryStoreOf } from "../entry-editor-client";

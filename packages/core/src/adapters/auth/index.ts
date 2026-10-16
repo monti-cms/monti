@@ -3,7 +3,7 @@
  * and owned by the CMS instance (`cms.auth()`, `cms.authGateway`). A login method is an `AuthAdapter` (`@monti-cms/core/server`); the one that ships is
  * `auth()` of `@monti-cms/auth` (Auth.js core, with providers such as `github()`), written with the helpers exported here.
  */
-export { withBasePath } from "../../core/base-path";
+
 export {
 	type AuthContext,
 	AuthError,

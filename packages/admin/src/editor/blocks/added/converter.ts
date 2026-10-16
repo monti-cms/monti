@@ -1,5 +1,6 @@
+import type { BlockDefinition } from "@monti-cms/core";
 import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
-import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/site";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { BLOCK_ID_ATTRIBUTE } from "../../block-ids";
 import { fenceBlockConverter } from "../../converters/fence-preview";
 import type { BlockConverter } from "../../converters/types";

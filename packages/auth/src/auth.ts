@@ -1,12 +1,8 @@
 import { Auth, type AuthConfig, skipCSRFCheck } from "@auth/core";
 import { defineMessages, describeNodeEnv, type MessageBundle, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
-import {
-	assertDevBypassSafe,
-	isDevAuthBypassEnabled,
-	productionLikeEnvironment,
-	withBasePath,
-} from "@monti-cms/core/adapters/auth";
+import { assertDevBypassSafe, isDevAuthBypassEnabled, productionLikeEnvironment } from "@monti-cms/core/adapters/auth";
 import { type AuthAdapter, CMS_AUTH_BASE_PATH, type CmsAuth, type Decision } from "@monti-cms/core/server";
+import { withBasePath } from "@monti-cms/core/site";
 import { collectAdmins, ignoredAdminText } from "./admins";
 import { type LoginProvider, type LoginProviderContext, qualifyAccountId, splitAccountId } from "./provider";
 

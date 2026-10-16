@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
 import { ConfigError } from "../../config/check/issue";
 import {
-	assertPluginNamesFree,
 	assertPluginPagesFree,
 	assertPluginRoutesFree,
 	checkPluginNames,
@@ -90,17 +89,16 @@ describe("assertPluginRoutesFree", () => {
 	});
 });
 
-describe("assertPluginNamesFree", () => {
+describe("checkPluginNames", () => {
 	it("rejects a plugin name equal to a core feature", () => {
 		expect(checkPluginNames(["media"])).toEqual([
 			expect.objectContaining({ path: "plugins[0].name", code: "collision" }),
 		]);
-		expect(() => assertPluginNamesFree(["media"])).toThrow(ConfigError);
-		expect(() => assertPluginNamesFree(["ai", "seo"])).not.toThrow();
+		expect(checkPluginNames(["ai", "seo"])).toEqual([]);
 	});
 });
 
-describe("assertPluginNamesFree: core storage scopes", () => {
+describe("checkPluginNames: core storage scopes", () => {
 	it.each(RESERVED_SCOPES)("rejects a plugin named %s, which would read the core's secrets and data", (name) => {
 		expect(checkPluginNames([name])[0]?.message).toContain("core storage scope");
 	});

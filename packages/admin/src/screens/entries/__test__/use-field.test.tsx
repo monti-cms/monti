@@ -8,11 +8,10 @@ import {
 	EntryFormProvider,
 	type EntryFormValue,
 	type FieldState,
-	type SlotSource,
 	useField,
 	useSlotActions,
 } from "../../../hooks/public";
-import { SlotRegistryProvider } from "../../../slots/registry";
+import { SlotRegistryProvider, type SlotSource } from "../../../slots/registry";
 import { docOf } from "../../../test/mdx";
 import { renderWithSite as render, renderHookWithSite as renderHook } from "../../../test/site";
 import { draftSiteOf } from "../../schema/draft-site";

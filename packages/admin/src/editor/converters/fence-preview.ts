@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/site";
+import type { BlockDefinition } from "@monti-cms/core";
 import { codeFenceOf, storedCodeAttrs } from "./code-block";
 import { asString } from "./shared";
 import type { BlockConverter } from "./types";

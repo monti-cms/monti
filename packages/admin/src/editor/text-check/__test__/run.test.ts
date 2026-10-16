@@ -1,5 +1,5 @@
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
-import { defineTextChecker, normalizeIssue, supportsLocale, type TextCheckSegment } from "@monti-cms/core/site";
+import { defineTextChecker, normalizeIssue, supportsLocale, type TextCheckSegment } from "@monti-cms/core";
 import { Editor } from "@tiptap/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";

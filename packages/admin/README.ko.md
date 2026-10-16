@@ -238,7 +238,7 @@ const components = { marks: { note } };
 
 ```tsx
 "use client";
-import { defineTextChecker } from "@monti-cms/core/site";
+import { defineTextChecker } from "@monti-cms/core";
 import type { CmsAdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
@@ -273,7 +273,7 @@ API 키는 브라우저에 두지 않는다. 브라우저는 `remoteTextChecker`
 
 ```ts
 // 플러그인의 관리자 쪽(브라우저)
-import { remoteTextChecker } from "@monti-cms/core/site";
+import { remoteTextChecker } from "@monti-cms/core";
 const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts(서버)

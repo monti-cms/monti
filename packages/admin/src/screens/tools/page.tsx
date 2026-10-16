@@ -1,6 +1,6 @@
 import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "../../host/server";
-import { loadAdminPlugins } from "../../plugins";
+import { loadAdminPlugins } from "../../internal-plugins";
 import { requireAdminPage } from "../require-admin";
 import { ShellPage } from "../shared/admin-shell";
 import { toolsPages } from "./tools-pages";

@@ -1,4 +1,4 @@
-import type { SchemaChange, SuggestedTransform } from "@monti-cms/core/schema-change";
+import type { SchemaChange, SuggestedTransform } from "@monti-cms/core/internal/schema-change";
 import type { TranslatorFor } from "../../translator";
 import type { schemaReviewMessages } from "./review.messages";
 

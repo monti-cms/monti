@@ -1,4 +1,5 @@
-import { type CmsConfig, createSite, type Site, SiteProvider } from "@monti-cms/core/site";
+import type { CmsConfig } from "@monti-cms/core";
+import { createSite, type Site, SiteProvider } from "@monti-cms/core/site";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderHookOptions, type RenderOptions, render, renderHook } from "@testing-library/react";
 import { type ComponentType, type ReactElement, type ReactNode, useState } from "react";

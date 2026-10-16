@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { SchemaScreenState } from "@monti-cms/core/schema-edit";
+import type { SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
 import type { Issue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";

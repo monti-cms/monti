@@ -1,5 +1,6 @@
+import type { CmsConfig } from "@monti-cms/core";
 import type { Folder } from "@monti-cms/core/site";
-import { type CmsConfig, createSite, issueText } from "@monti-cms/core/site";
+import { createSite, issueText } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../../core/test/site";

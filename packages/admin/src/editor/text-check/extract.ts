@@ -1,4 +1,4 @@
-import { PLACEHOLDER, type TextCheckSegment } from "@monti-cms/core/site";
+import { PLACEHOLDER, type TextCheckSegment } from "@monti-cms/core";
 import type { Mark, Node as PmNode } from "@tiptap/pm/model";
 
 export { PLACEHOLDER };

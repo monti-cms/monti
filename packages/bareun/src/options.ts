@@ -1,10 +1,11 @@
 import type { TextCheckerLimits } from "@monti-cms/core";
-import { createActiveTranslator, pluginError, resolveTextCheckerLimits } from "@monti-cms/core";
+import { createActiveTranslator, resolveTextCheckerLimits } from "@monti-cms/core";
 import { bareunMessages } from "./messages";
 
 // `bareun()` is called from the site config file, so the default name is chosen by display language at read time.
 const t = createActiveTranslator(bareunMessages);
 
+import { pluginError } from "@monti-cms/core/plugin/server";
 import { BAREUN_PLUGIN_NAME } from "./name";
 
 export { BAREUN_PLUGIN_NAME };

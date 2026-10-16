@@ -1,7 +1,7 @@
 "use client";
 
-import type { ChangeImpact } from "@monti-cms/core/schema-change";
-import type { SchemaDecision } from "@monti-cms/core/schema-edit";
+import type { ChangeImpact } from "@monti-cms/core/internal/schema-change";
+import type { SchemaDecision } from "@monti-cms/core/internal/schema-edit";
 import type { Issue } from "@monti-cms/core/site";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { CheckCircle2, Info, TriangleAlert } from "lucide-react";

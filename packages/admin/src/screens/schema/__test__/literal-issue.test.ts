@@ -1,4 +1,4 @@
-import type { SchemaLiteralIssueCode } from "@monti-cms/core/schema-edit";
+import type { SchemaLiteralIssueCode } from "@monti-cms/core/internal/schema-edit";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
 import { describeLiteralIssue } from "../literal-issue";

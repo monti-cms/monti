@@ -21,10 +21,11 @@
 		"./ai-contract": "./src/ai-contract.ts",
 		"./adapters/auth": "./src/adapters/auth/index.ts",
 		"./testing": "./src/testing.ts",
-		"./cli": "./src/cli/index.ts",
-		"./import-boundary": "./src/cli/import-boundary.ts",
-		"./schema-change": "./src/schema-change/index.ts",
-		"./schema-edit": "./src/schema-edit/index.ts",
+		"./internal/cli": "./src/cli/index.ts",
+		"./internal/import-boundary": "./src/cli/import-boundary.ts",
+		"./internal/schema-change": "./src/schema-change/index.ts",
+		"./internal/schema-edit": "./src/schema-edit/index.ts",
+		"./internal/plugins": "./src/internal-plugins.ts",
 		"./render.css": "./render.css"
 	},
 	"bin": {
@@ -141,21 +142,25 @@
 				"types": "./dist/testing.d.ts",
 				"default": "./dist/testing.js"
 			},
-			"./cli": {
+			"./internal/cli": {
 				"types": "./dist/cli/index.d.ts",
 				"default": "./dist/cli/index.js"
 			},
-			"./import-boundary": {
+			"./internal/import-boundary": {
 				"types": "./dist/cli/import-boundary.d.ts",
 				"default": "./dist/cli/import-boundary.js"
 			},
-			"./schema-change": {
+			"./internal/schema-change": {
 				"types": "./dist/schema-change/index.d.ts",
 				"default": "./dist/schema-change/index.js"
 			},
-			"./schema-edit": {
+			"./internal/schema-edit": {
 				"types": "./dist/schema-edit/index.d.ts",
 				"default": "./dist/schema-edit/index.js"
+			},
+			"./internal/plugins": {
+				"types": "./dist/internal-plugins.d.ts",
+				"default": "./dist/internal-plugins.js"
 			},
 			"./render.css": "./render.css"
 		}

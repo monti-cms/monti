@@ -1,4 +1,5 @@
-import { type BlockDefinition, file, image, math, type Site } from "@monti-cms/core/site";
+import type { BlockDefinition } from "@monti-cms/core";
+import { file, image, math, type Site } from "@monti-cms/core/site";
 import { addedBlockOfNode } from "./added/shared";
 
 /**

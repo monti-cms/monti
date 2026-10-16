@@ -3,22 +3,19 @@
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
 
+import { type Field, IssueList, type PluginFieldSet, TITLE_ROLE } from "@monti-cms/core";
 import {
 	type CollectionKind,
 	checkField,
 	checkPathPattern,
 	DEFAULT_TITLE_FIELD,
 	defaultCollectionPath,
-	type Field,
 	fieldTraits,
 	freshSetFields,
-	IssueList,
 	kindDefaults,
 	NAME_PATTERN,
-	type PluginFieldSet,
 	RESERVED_COLLECTION_NAMES,
 	RESERVED_METADATA_KEYS,
-	TITLE_ROLE,
 } from "@monti-cms/core/site";
 import { moveWithin } from "../../lib/utils/move-within";
 

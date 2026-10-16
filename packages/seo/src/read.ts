@@ -1,4 +1,5 @@
-import { type CollectionSchema, findTitleField, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
+import { type CollectionSchema, SUMMARY_ROLE } from "@monti-cms/core";
+import { findTitleField, valueWithRole } from "@monti-cms/core/site";
 import { SEO_ROLES } from "./fields";
 
 /** SEO values for the public page. Empty values are `undefined`. */

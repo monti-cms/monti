@@ -1,6 +1,6 @@
+import type { BlockDefinition } from "@monti-cms/core";
 import type { CmsNode } from "@monti-cms/core/document";
-import { computeContentHash } from "@monti-cms/core/server";
-import type { BlockDefinition } from "@monti-cms/core/site";
+import { computeContentHash } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
 import { analyze, serialize, toDocument } from "../format";

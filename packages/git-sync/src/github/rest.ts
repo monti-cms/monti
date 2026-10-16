@@ -1,4 +1,4 @@
-import { pluginError } from "@monti-cms/core";
+import { pluginError } from "@monti-cms/core/plugin/server";
 import { GIT_SYNC_PLUGIN_NAME } from "../name";
 import {
 	type BranchHead,

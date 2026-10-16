@@ -1,5 +1,6 @@
 import "server-only";
-import { type AuthContext, AuthError, type Cms } from "@monti-cms/core/server";
+import { type AuthContext, AuthError } from "@monti-cms/core/adapters/auth";
+import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "../host/server";
 
 /**

@@ -1,4 +1,5 @@
-import { type Issue, IssueList, type PluginConfigView, pathOf, valueFieldsOf } from "@monti-cms/core";
+import { type Issue, IssueList, type PluginConfigView, pathOf } from "@monti-cms/core";
+import { valueFieldsOf } from "@monti-cms/core/site";
 import { SEO_ROLES } from "./fields";
 
 /**

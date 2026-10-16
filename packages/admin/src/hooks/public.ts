@@ -12,7 +12,7 @@ export {
 	type EntrySaveInput,
 	type EntryStatusAction,
 } from "../api/entries";
-export type { CmsIssue } from "../api/error-message";
+
 export {
 	type BlockChild,
 	type BlockChildInit,
@@ -45,7 +45,7 @@ export type {
 	StatusOutcome,
 	TranslationView,
 } from "../screens/entries/entry-editor-types";
-export type { EntryData, EntryForm, EntryFormPatch, FormValue } from "../screens/entries/entry-form";
+export type { EntryFormPatch } from "../screens/entries/entry-form";
 export {
 	EntryEditorProvider,
 	type UseEntryEditorOptions,
@@ -59,15 +59,7 @@ export {
 	type FieldState,
 	useField,
 } from "../screens/entries/use-field";
-export type {
-	SlotAction,
-	SlotApplyMode,
-	SlotCandidate,
-	SlotContext,
-	SlotRequest,
-	SlotResult,
-	SlotSource,
-} from "../slots/registry";
+
 export {
 	type SlotActionsOptions,
 	type SlotActionsState,

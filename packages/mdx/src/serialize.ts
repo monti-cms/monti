@@ -1,16 +1,8 @@
+import type { BlockDefinition } from "@monti-cms/core";
 import { type CodeBlockDocument, fromCodeBlockDocumentToCodeFence } from "@monti-cms/core/code-block";
-import {
-	type CmsJsonValue,
-	type CmsMark,
-	type CmsNode,
-	entryIdOfMark,
-	entryLinkHref,
-	formatTableWidths,
-	hasNonGfmHeaderLayout,
-	tableHasMergedCells,
-	tableWidths,
-} from "@monti-cms/core/document";
-import type { BlockDefinition, Site } from "@monti-cms/core/site";
+import { type CmsJsonValue, type CmsMark, type CmsNode, entryIdOfMark, entryLinkHref } from "@monti-cms/core/document";
+import { formatTableWidths, hasNonGfmHeaderLayout, tableHasMergedCells, tableWidths } from "@monti-cms/core/notation";
+import type { Site } from "@monti-cms/core/site";
 import { serializeFrontmatter } from "./frontmatter";
 import { jsxRegistryOf } from "./registry";
 import type { SerializeContext, SerializeInlinesOptions, SyntaxExtension } from "./syntax/types";

@@ -1,10 +1,9 @@
-import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
+import { emptyStoredDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
 import {
 	parseTranslationState,
 	RECORD_TRANSLATIONS_KEY,
 	type SchemaCollection,
 	type Site,
-	type StoredDocument,
 	type StoredField,
 	type TranslationState,
 } from "@monti-cms/core/site";

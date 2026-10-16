@@ -1,4 +1,4 @@
-import type { BlockAttribute, BlockDefinition } from "@monti-cms/core/site";
+import type { BlockAttribute, BlockDefinition } from "@monti-cms/core";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
 import { compareMdxStructure, readableMdx as readableMdxOf } from "../format";

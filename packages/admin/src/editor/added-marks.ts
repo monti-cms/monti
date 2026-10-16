@@ -1,5 +1,6 @@
+import type { BlockDefinition } from "@monti-cms/core";
 import type { CmsJsonValue } from "@monti-cms/core/document";
-import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/site";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { Mark, mergeAttributes } from "@tiptap/core";
 
 /**

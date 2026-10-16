@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { pluginLog } from "@monti-cms/core";
+import { pluginLog } from "@monti-cms/core/plugin/server";
 import { type Site, slugify } from "@monti-cms/core/site";
 import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
 import { z } from "zod";
