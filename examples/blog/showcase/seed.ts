@@ -169,6 +169,101 @@ const moved = (
 ).entry;
 await service.publish({ id: renamed.id, expectedVersion: moved.version });
 
+// Sample media assets for previewing the media library UI.
+if (cms.isMediaConfigured) {
+	const wallpapersFolder = await cms.store().createFolder({
+		collection: "media",
+		parentId: null,
+		name: "Wallpapers",
+	});
+	const assetsFolder = await cms.store().createFolder({
+		collection: "media",
+		parentId: null,
+		name: "Blog Assets",
+	});
+
+	const sampleMedia = [
+		{
+			filename: "nordic-forest.jpg",
+			mimeType: "image/jpeg" as const,
+			byteSize: 342150,
+			width: 1920,
+			height: 1280,
+			storageKey: "photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80",
+			folderId: wallpapersFolder.id,
+			defaultAlt: "Misty pine forest morning",
+			defaultCaption: "Morning mist over Scandinavian pines",
+		},
+		{
+			filename: "workspace-minimal.jpg",
+			mimeType: "image/jpeg" as const,
+			byteSize: 215400,
+			width: 1920,
+			height: 1280,
+			storageKey: "photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
+			folderId: wallpapersFolder.id,
+			defaultAlt: "Clean workspace with MacBook and coffee",
+			defaultCaption: "Minimal desk setup for writing",
+		},
+		{
+			filename: "architecture-geometric.jpg",
+			mimeType: "image/jpeg" as const,
+			byteSize: 184200,
+			width: 1600,
+			height: 1067,
+			storageKey: "photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1200&q=80",
+			folderId: assetsFolder.id,
+			defaultAlt: "Modern concrete architectural geometry",
+			defaultCaption: "Architectural lines and light",
+		},
+		{
+			filename: "abstract-waves.jpg",
+			mimeType: "image/jpeg" as const,
+			byteSize: 420800,
+			width: 1920,
+			height: 1080,
+			storageKey: "photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1200&q=80",
+			folderId: assetsFolder.id,
+			defaultAlt: "Abstract fluid gradient waves",
+			defaultCaption: "Iridescent color gradient background",
+		},
+		{
+			filename: "cybersecurity-code.jpg",
+			mimeType: "image/jpeg" as const,
+			byteSize: 268400,
+			width: 1920,
+			height: 1080,
+			storageKey: "photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80",
+			folderId: null,
+			defaultAlt: "Code matrix and cybersecurity concept",
+			defaultCaption: "Code on screen visualization",
+		},
+	];
+
+	for (const item of sampleMedia) {
+		const created = await cms.store().createMediaAsset({
+			filename: item.filename,
+			mimeType: item.mimeType,
+			byteSize: item.byteSize,
+			stagingKey: `staging/${item.filename}`,
+			folderId: item.folderId,
+		});
+		await cms.store().completeMediaAsset({
+			id: created.id,
+			storageKey: item.storageKey,
+			mimeType: item.mimeType,
+			byteSize: item.byteSize,
+			width: item.width,
+			height: item.height,
+		});
+		await cms.store().updateMediaMetadata({
+			id: created.id,
+			defaultAlt: item.defaultAlt,
+			defaultCaption: item.defaultCaption,
+		});
+	}
+}
+
 const admin = (id: string) => `${origin}/studio/entries/${id}/edit`;
 console.log("\nPublic pages");
 console.log(`  ${origin}/ko/posts (list)`);
@@ -183,5 +278,8 @@ console.log(`  ${admin(idOf("cms-elements-draft"))} (unpublished draft)`);
 console.log(`  ${admin(idOf("showcase-memo"))} (memo)`);
 console.log(`  ${admin(series.id)} (series)`);
 console.log(`  ${origin}/studio (all content)`);
+if (cms.isMediaConfigured) {
+	console.log(`  ${origin}/studio/media (media library)`);
+}
 
 await cms.close();

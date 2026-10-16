@@ -464,8 +464,8 @@ export default defineSchema({
 		},
 	},
 	locales: [
-		{ code: "ko", name: "한국어", label: "Korean" },
-		{ code: "en", name: "English", label: "English" },
+		{ code: "ko", name: "한국어" },
+		{ code: "en", name: "English", label: "영어" },
 	],
 	defaultLocale: "ko",
 	timeZone: "Asia/Seoul",
@@ -475,7 +475,7 @@ export default defineSchema({
 		previewLocaleParam: false,
 		localePrefix: "always",
 	},
-	admin: { path: "/studio", templates: false, translations: false },
+	admin: { path: "/studio" },
 	seed: {
 		templates: [
 			{
