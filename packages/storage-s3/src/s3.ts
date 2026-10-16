@@ -1,5 +1,5 @@
 import { type EnvSource, envValue, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
-import type { MediaAdapter } from "@monti-cms/core/server";
+import type { MediaAdapter } from "@monti-cms/core/adapters";
 import { createS3MediaStore, type MediaStoreConfig } from "./media-store";
 
 /** Connection settings. Anything left out is read from the `S3_*` environment variables, on first use. */

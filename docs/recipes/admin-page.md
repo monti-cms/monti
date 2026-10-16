@@ -31,10 +31,9 @@ export const postStats = () =>
 The route (`GET /api/monti/v1/post-stats/summary`):
 
 ```ts
-import type { ServerPlugin } from "@monti-cms/core";
-import { adminRoute, json } from "@monti-cms/core/plugin/server";
+import { adminRoute, defineServerPlugin, ok } from "@monti-cms/core/server";
 
-const server: ServerPlugin = {
+export default defineServerPlugin({
 	routes: [
 		{
 			pattern: "v1/post-stats/summary",
@@ -42,14 +41,12 @@ const server: ServerPlugin = {
 				GET: adminRoute(async ({ cms }) => {
 					const count = async (status: "draft" | "published") =>
 						(await cms.store().listEntries({ collection: "post", statuses: [status], pageSize: 25 })).total;
-					return json({ draft: await count("draft"), published: await count("published") });
+					return ok({ draft: await count("draft"), published: await count("published") });
 				}),
 			},
 		},
 	],
-};
-
-export default server;
+});
 ```
 
 The admin side and the screen:

@@ -1,5 +1,5 @@
-import type { PluginStorage } from "@monti-cms/core/plugin/server";
-import type { LoginAccounts } from "@monti-cms/core/server";
+import type { LoginAccounts } from "@monti-cms/core/adapters";
+import type { PluginStorage } from "@monti-cms/core/server";
 
 /*
  * The types below describe what the Auth.js provider objects and sign-in results look like, as small structural types of our own. The published

@@ -1,12 +1,14 @@
 /**
  * Server-only entry point. Never import it from browser code (`@monti-cms/core/site` is the entry point that works in both).
  * It has what `monti.config.ts` needs (`defineConfig`, the `postgres` adapter and the server config types) and what server code
- * needs to work with the CMS instance: the `Cms` type, store ports, services, events, hooks, login types and snapshot helpers. It does not use
+ * needs to work with the CMS instance: the `Cms` type, services, events, hooks and snapshot helpers, and what a plugin's server side needs (`defineServerPlugin`, route scaffolding, errors, storage). It does not use
  * `server-only`, so it can also be loaded outside Next (cron scripts, site tests). The login method (`auth`) comes from `@monti-cms/auth`; the gateway, its errors and the checks routes run are in `@monti-cms/core/adapters/auth`.
  */
 
 // Config file: the instance and its options.
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
+// Plugins: route scaffolding, errors, storage and the plugin helpers.
+export type { ApiKeys } from "../api-keys/api-keys";
 export type {
 	BulkService,
 	Cms,
@@ -30,57 +32,58 @@ export {
 	validateExactRecord,
 	validateForPublish,
 } from "../core/snapshot";
-export type {
-	AfterCommit,
-	AppliedSchemaChange,
-	ApplySchemaChangeParams,
-	BodyCursor,
-	ClaimedDelivery,
-	ContentChange,
-	ContentChangeKind,
-	ContentEvent,
-	ContentStore,
-	DeferredDelivery,
-	EntryStore,
-	EventDelivery,
-	EventDeliveryCounts,
-	EventDeliveryState,
-	EventLogState,
-	EventStore,
-	FolderStore,
-	LifecycleStore,
-	ListStore,
-	MediaMetadataStore,
-	MutableJsonValue,
-	PreferenceStore,
-	PublicReadStore,
-	RewrittenBody,
-	ScannedBody,
-	SchemaChangeStore,
-	SchemaState,
-	TemplateStore,
-	TransferStore,
-} from "../core/store";
+export type { AfterCommit, ContentChange, ContentChangeKind, ContentEvent, DeferredDelivery } from "../core/store";
 // Stores: ports, errors, events, schema-change types and the data shapes (also exported from `@monti-cms/core/site`).
+export { CONTENT_CHANGE_KINDS, DeferDelivery, isDeferred } from "../core/store";
+export { type ExportBodyParams, exportBodyText } from "../format/export-body";
 export {
-	CONTENT_CHANGE_KINDS,
-	DEFAULT_ENTRY_SEARCH_LIMIT,
-	DeferDelivery,
-	eventRowOf,
-	isDeferred,
-	MAX_ENTRY_SEARCH_LIMIT,
-	withEventDispatch,
-} from "../core/store";
+	CmsError,
+	cmsErrorText,
+	ERROR_STATUS,
+	type ErrorCode,
+	type ErrorNotice,
+	errorResponse,
+	handleApiError,
+} from "../http/v1/error-handler";
+export {
+	type AdminHandler,
+	type AdminRequest,
+	adminRoute,
+	assertVersionPresent,
+	type BearerHandler,
+	type BearerRequest,
+	bearerRoute,
+	bearerTokenOf,
+	bulkWritten,
+	deleted,
+	ok,
+	type PublicHandler,
+	type PublicRequest,
+	parseWith,
+	publicRoute,
+	type RouteAccess,
+	readBodyText,
+	readFormatQuery,
+	readFormBody,
+	readJsonBody,
+	readQuery,
+	readVersionedBody,
+	readVersionQuery,
+	written,
+} from "../http/v1/handler";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
+export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "../plugin/content-lookup";
+export type { PluginContext } from "../plugin/context";
+export { defineServerPlugin } from "../plugin/define";
+export { type PluginLog, pluginError, pluginLog } from "../plugin/log";
 export type {
-	MediaStore,
-	PrepareUploadInput,
-	PrepareUploadOutput,
-	PromoteFileInput,
-	StoredFileHead,
-} from "../media/store";
-export { ALLOWED_MEDIA_MIMES } from "../media/store";
-
+	PluginCollection,
+	PluginMigration,
+	PluginStorage,
+	StorageItem,
+	StorageWriteOptions,
+} from "../plugin/storage";
+export type { PluginSecrets } from "../secrets";
 // Services: writes, events and the published read.
 export type { ContentServiceOptions, WriteResult } from "../services/content-service";
 export type {
@@ -102,20 +105,8 @@ export type {
 	WriteHooks,
 	WriteOperation,
 } from "../services/hooks";
+export type { ServerTextCheck, TextCheckRouteOptions } from "../text-check/route";
+export { handleTextCheck, parseTextCheckBody, textCheckRoute } from "../text-check/route";
 export { defineConfig, type MontiServerOptions, SECRET_ENV, SITE_URL_ENV } from "./config";
 export { type Decision, formatDecision } from "./decision";
-export {
-	type AuthAdapter,
-	type AuthCreateContext,
-	type AuthProvider,
-	CMS_AUTH_BASE_PATH,
-	type CmsAuth,
-	type CmsServerConfig,
-	type DatabaseAdapter,
-	type DatabaseState,
-	type LoginAccountRefusal,
-	type LoginAccounts,
-	type MediaAdapter,
-	type MigrationSummary,
-	type RequestHost,
-} from "./define";
+export type { CmsServerConfig } from "./define";

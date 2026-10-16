@@ -1,4 +1,4 @@
-import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/server";
 import { aiModelsQuerySchema } from "../../connection";
 import { isFakeAi, listModels } from "../../provider";
 import { savedProvider } from "../../settings";

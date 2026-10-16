@@ -2,7 +2,7 @@
 
 English | [한국어](README.ko.md)
 
-Media storage for `@monti-cms/core` on the S3 API: **AWS S3**, **Cloudflare R2** and **MinIO** (one function, `s3Storage()`). It depends on `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` itself, so only sites that use media install the SDK. The core keeps only the media adapter interface (`MediaAdapter`, `MediaStore` from `@monti-cms/core/server`); a later store (Vercel Blob, a local disk store) is another package of the same shape.
+Media storage for `@monti-cms/core` on the S3 API: **AWS S3**, **Cloudflare R2** and **MinIO** (one function, `s3Storage()`). It depends on `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` itself, so only sites that use media install the SDK. The core keeps only the media adapter interface (`MediaAdapter`, `MediaStore` from `@monti-cms/core/adapters`); a later store (Vercel Blob, a local disk store) is another package of the same shape.
 
 Uploads go straight from the browser to the bucket through a presigned URL. The server then checks the file, moves it from `staging/` to its final key and serves it from the public URL.
 

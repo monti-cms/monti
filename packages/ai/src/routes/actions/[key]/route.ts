@@ -5,7 +5,7 @@ import {
 	parseWith,
 	readJsonBody,
 	readVersionQuery,
-} from "@monti-cms/core/plugin/server";
+} from "@monti-cms/core/server";
 import { z } from "zod";
 import { deleteCustomAction, updateAction } from "../../../actions";
 import { aiStoreFor } from "../../../store";

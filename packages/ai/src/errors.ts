@@ -1,4 +1,4 @@
-import { CmsError, type ErrorCode } from "@monti-cms/core/plugin/server";
+import { CmsError, type ErrorCode } from "@monti-cms/core/server";
 
 /**
  * The codes an AI run answers with, all of them core codes (the status of each is in the core table):

@@ -102,7 +102,7 @@ The model reads and writes a text format, and MDX is that format. The admin hold
   the candidate. The second argument (`AiValidatorContext`) provides the input, collection, locale (default locale if none), the entry
   being edited, the choices, and the core content lookup `content`.
 - **Core content lookup (`context.content`)**: the run API fills it with the core public API (`createContentLookup` from
-  `@monti-cms/core/plugin/server`). Plugins don't read core tables directly. For now it has
+  `@monti-cms/core/server`). Plugins don't read core tables directly. For now it has
   `slugsInUse({ collection, locale, slugs, excludeEntryId? })` (slugs already used in the same collection and locale).
 - Default code checks: `uniqueSlug` (no duplicates, for slug suggestions; asks via `content.slugsInUse`),
   `regexRuns(input, { name?, scope? })` (runs the regex, for code block regexes; without a rule name or scope it folds the whole

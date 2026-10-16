@@ -14,7 +14,7 @@ import {
 	type PrepareUploadOutput,
 	type PromoteFileInput,
 	type StoredFileHead,
-} from "@monti-cms/core/server";
+} from "@monti-cms/core/adapters";
 
 /** S3 API store connection (R2, S3, MinIO, etc.). */
 export interface MediaStoreConfig {

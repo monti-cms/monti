@@ -1,4 +1,4 @@
-import type { MediaAdapter, MediaStore } from "@monti-cms/core/server";
+import type { MediaAdapter, MediaStore } from "@monti-cms/core/adapters";
 
 const DEMO_PUBLIC_BASE = "https://images.unsplash.com/";
 

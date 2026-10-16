@@ -1,5 +1,6 @@
 import { type CollectionSchema, defineSite } from "@monti-cms/core";
-import { type Cms, type CmsAuth, postgres } from "@monti-cms/core/server";
+import type { CmsAuth } from "@monti-cms/core/adapters";
+import { type Cms, postgres } from "@monti-cms/core/server";
 import { closeGlobalPool, createCms, createIsolatedTestPool, dropIsolatedTestPool } from "@monti-cms/core/testing";
 import { mdx } from "@monti-cms/mdx";
 import { vi } from "vitest";

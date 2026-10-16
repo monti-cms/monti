@@ -15,8 +15,8 @@ vi.mock("../store", () => ({
 	}),
 }));
 
-vi.mock("@monti-cms/core/plugin/server", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@monti-cms/core/plugin/server")>()),
+vi.mock("@monti-cms/core/server", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@monti-cms/core/server")>()),
 	createContentLookup: () => ({ slugsInUse: async () => new Set(["taken"]) }),
 }));
 

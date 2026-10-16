@@ -109,7 +109,7 @@ describe("a change in git reaches the CMS", () => {
 		expect(after.published?.metadata).toMatchObject({ title: "After" });
 		expect(after.working.metadata).toMatchObject({ title: "After" });
 		expect(after.status).toBe("published");
-		const { exportBodyText } = await import("@monti-cms/core/plugin/server");
+		const { exportBodyText } = await import("@monti-cms/core/server");
 		const { text } = await exportBodyText(h.cms, {
 			format: "mdx",
 			doc: after.published?.doc ?? after.working.doc,

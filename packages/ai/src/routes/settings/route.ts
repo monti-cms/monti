@@ -1,4 +1,4 @@
-import { adminRoute, ok } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok } from "@monti-cms/core/server";
 import { getAiSettingsView } from "../../settings";
 import { aiStoreFor } from "../../store";
 

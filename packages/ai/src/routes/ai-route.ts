@@ -1,5 +1,5 @@
-import { createContentLookup } from "@monti-cms/core/plugin/server";
 import type { Cms } from "@monti-cms/core/server";
+import { createContentLookup } from "@monti-cms/core/server";
 import type { Site } from "@monti-cms/core/site";
 import { AiError } from "../errors";
 import type { AiOption, AiRunDeps } from "../run";

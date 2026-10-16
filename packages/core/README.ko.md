@@ -239,7 +239,7 @@ storage: s3Storage(), // AWS S3, Cloudflare R2(S3_ENDPOINT=https://<account>.r2.
 
 변수 이름과 옵션은 패키지 README(`packages/storage-s3`)에 있다.
 
-다른 저장소는 `@monti-cms/core/server`의 `MediaStore` 계약을 구현한 `MediaAdapter`(`{ name, createStore() }`)를 넣는다.
+다른 저장소는 `@monti-cms/core/adapters`의 `MediaStore` 계약을 구현한 `MediaAdapter`(`{ name, createStore() }`)를 넣는다.
 
 ### 4. 환경 변수, `monti db:setup`, `monti db:migrate`
 
@@ -519,7 +519,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 `monti.config.ts`에는 데이터베이스와 로그인 설정이 있으므로 서버만 불러올 수 있다. 관리자도 불러오지 않는다. 관리자 레이아웃(`<CmsAdminLayout cms={cms}>`, 서버 컴포넌트)이 브라우저에 사이트의 JSON 스냅샷(`cms.site.snapshot()`)을 넘기고, 관리자의 클라이언트 컴포넌트는 `useSite()`로 읽는다.
 
 - `defineConfig`는 `window`가 있는 곳에서 실행되면 오류를 던진다. 실수가 설정을 브라우저로 보내기 전에 첫 로드에서 드러난다.
-- `monti doctor`의 `config/boundary` 검사는 빌드 없이 소스를 읽어, `"use client"` 파일이 import를 따라가 `monti.config.ts`에 닿거나 `@monti-cms/core/server`·`@monti-cms/core/plugin/server`·`@monti-cms/auth`·`@monti-cms/nextjs/auth`를 불러오면 실패한다. 타입만 가져오는 import는 세지 않는다. CI에서는 `monti doctor --only config/boundary`를 돌린다(데이터베이스가 필요 없다). `monti check:boundary`는 없어졌다.
+- `monti doctor`의 `config/boundary` 검사는 빌드 없이 소스를 읽어, `"use client"` 파일이 import를 따라가 `monti.config.ts`에 닿거나 `@monti-cms/core/server`·`@monti-cms/auth`·`@monti-cms/nextjs/auth`를 불러오면 실패한다. 타입만 가져오는 import는 세지 않는다. CI에서는 `monti doctor --only config/boundary`를 돌린다(데이터베이스가 필요 없다). `monti check:boundary`는 없어졌다.
 - `withCms`(`next.config.ts`)는 `next dev`를 시작할 때 한 번 같은 검사를 하고 경고한다.
 - 사이트의 값이 필요한 클라이언트 컴포넌트는 `useSite()`를, 타입이 필요하면 `import type`을 쓴다.
 
@@ -530,7 +530,8 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core` | 테스트·도구·스키마 코드 | `defineSite`(사이트 설정만 다루는 쪽, `schema`와 함께. 여기에는 `defineConfig`가 없고 앱은 `/server`의 것을 쓴다)·`defineSchema`·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, `SchemaFile` 타입 |
 | `@monti-cms/core/internal/schema-change` | 설정 화면, 명령줄. Monti 패키지 내부용이며 안정성을 약속하지 않는다 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
 | `@monti-cms/core/internal/schema-edit` | 설정 화면(서버 쪽). Monti 패키지 내부용이며 안정성을 약속하지 않는다 | `schemaEditAccess`(누가 스키마 파일을 쓸 수 있나), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `printSchemaFile`, `parseSchemaLiteral`("관리자에서 스키마 편집하기") |
-| `@monti-cms/core/server` | `monti.config.ts`, 서버 코드(크론 스크립트·사이트 테스트 포함) | `defineConfig`(사이트·서버 옵션을 한꺼번에 받아 인스턴스를 돌려준다)·`postgres`, `Cms` 타입, 저장소·서비스 타입(`ContentStore`·`MediaStore` 등), 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`). 브라우저 코드에서는 절대 불러오지 않는다. 저장소 모듈은 처음 쓸 때 불러온다 |
+| `@monti-cms/core/server` | `monti.config.ts`, 서버 코드(크론 스크립트·사이트 테스트 포함), 플러그인의 서버 쪽 | `defineConfig`(사이트·서버 옵션을 한꺼번에 받아 인스턴스를 돌려준다)·`postgres`, `Cms` 타입, 서비스·이벤트·훅 타입(`ContentService`·`WriteHooks`·`AfterCommitHook`·`DeferDelivery`), 스냅샷 도우미. 플러그인용으로 `defineServerPlugin`, 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다), 오류(`CmsError`), 플러그인 저장소와 로그가 있다. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`). 브라우저 코드에서는 절대 불러오지 않는다. 저장소 모듈은 처음 쓸 때 불러온다 |
+| `@monti-cms/core/adapters` | 데이터베이스·미디어 저장소·로그인 어댑터를 만드는 코드 | 저장소 포트(`ContentStore`와 그것을 이루는 저장소들, 이벤트 outbox)·`DatabaseAdapter`·`MediaAdapter`와 그것이 만드는 `MediaStore`·`AuthAdapter`와 로그인 타입. 사이트 설정은 어댑터를 이름으로 고를 뿐이다(`postgres()`·`storage`·`auth`). 경로가 실행하는 로그인 검사는 `@monti-cms/core/adapters/auth`에 있다 |
 | `@monti-cms/nextjs` | `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
@@ -546,7 +547,6 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
 | `@monti-cms/core/front-matter` | 마크다운 파일을 읽고 쓰는 도구(git-sync) | `parseFile`(YAML 프런트매터와 본문, YAML 오류의 줄 번호 포함)과 `composeFile` |
 | `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미(`formatTableWidths`·`parseTableWidths` 등). 이것들은 여기에만 있고 `@monti-cms/core/document`와 `@monti-cms/core/code-block`은 다시 내보내지 않는다. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
-| `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·오류. `Cms` 타입과 나머지 서비스 타입은 `@monti-cms/core/server`에서 가져온다 |
 | `@monti-cms/core/ai-contract` | AI 기능을 더하는 플러그인 | 타입만 있다. `@monti-cms/ai`가 구현하는 AI 기능·검사·기여(`AiContribution`)의 모양이라, 플러그인이 AI 플러그인에 의존하지 않고 기능을 쓴다 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti doctor`(설정을 점검하고 잘못된 것을 어떻게 고치는지 알려 줌, "문제 해결")·`monti db:migrate`(표 만들기)·`monti admin:reset-password`(이메일·비밀번호 로그인 관리자의 비밀번호 새로 정하기)·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
 | `@monti-cms/core/internal/cli` | 명령줄 도구. Monti 패키지 내부용이며 안정성을 약속하지 않는다 | `runCli(argv, { cwd, log, error })`(모든 `monti` 명령, 종료 코드를 돌려준다)·`runDoctor`·`initProject`·`addComponents`·`migrate`·`runImport`·`loadSchemaFile`·`findSchemaFile`·`extractSchema`(명령 `monti`의 코드) |
@@ -899,7 +899,7 @@ export const myPlugin = () =>
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
 - **쓰기 훅**(`transform`·`validate`·`validatePublish`·`afterCommit`)은 서버 설정의 `hooks`와 같고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 훅은 플러그인 `server`의 `hooks`이고, `server`는 두 꼴 중 하나로 준다.
   - **인라인**: `definePlugin({ name: "audit", server: { hooks: { afterCommit } } })`. 훅만 더하는 플러그인에 쓴다. 모듈 파일이 없고 `options`도 생략할 수 있다. 인라인 서버는 CLI, 엣지, 콜드 스타트를 포함해 서버가 시작할 때마다 불러오므로 가볍게 둔다(무거운 import 없이). `cms.secrets`나 환경 변수로 비밀 값을 쓸 수 있다. `monti.config.ts`는 서버 전용이라 브라우저에 닿지 않는다.
-  - **로더**: `server: () => import("./server")`이고 기본 내보내기가 `ServerPlugin`이다. 서버만 읽으므로, 비밀 값을 쥐거나 네트워크로 호출하거나 무거운 것을 import하는 훅이 있는 곳이다. 어차피 경로, 마이그레이션, 명령, 검사가 있는 플러그인도 여기에 둔다.
+  - **로더**: `server: () => import("./server")`이고 기본 내보내기가 `ServerPlugin`이다(`export default defineServerPlugin({ routes, hooks, ... })`, `@monti-cms/core/server`에서 가져오며 타입만 확인한다). 서버만 읽으므로, 비밀 값을 쥐거나 네트워크로 호출하거나 무거운 것을 import하는 훅이 있는 곳이다. 어차피 경로, 마이그레이션, 명령, 검사가 있는 플러그인도 여기에 둔다.
 - `afterCommit(event, cms)`는 플러그인의 훅이든 서버 설정의 훅이든 인스턴스를 받는다. 그래서 자기 저장소·스토어·형식이 필요한 구독자가 따로 상태를 두지 않아도 된다. 전달은 아웃박스에서 하며(재시도, 최소 한 번, "이벤트 전달") `event.once(run)`은 이벤트마다 일을 한 번만 돌린다.
 - 서버 쪽 `commands`는 명령줄 명령을 더한다. `monti <플러그인 이름>:<명령> [옵션]`이 `monti db:migrate`처럼 앱을 불러오고(`--env-file`, `--no-env-file`, `--config`) `command.run({ cms, args, log, error })`를 돌려 그것이 돌려주는 코드로 끝난다. 명령은 `options`(`{ 이름: { type: "string" | "boolean", description } }`)를 선언하고, `--help`가 그것을 나열한다. `monti git-sync:pull`이 그중 하나다.
 - 직접 만든 관리자 컴포넌트도 플러그인이다. `admin` 모듈을 주고 그 default export를 `defineAdminPlugin({ Provider })`(`@monti-cms/admin`)로 만든다. `Provider`(`"use client"` 컴포넌트)가 관리자를 감싸고 `AdminComponentsProvider`로 컴포넌트를 등록한다. `admin-components.tsx` 파일은 더 이상 없다. `examples/blog/plugins/word-list/`가 예시다:
@@ -909,10 +909,10 @@ export const myPlugin = () =>
   // ./admin.ts: export default defineAdminPlugin({ Provider })
   ```
 
-- `@monti-cms/core/plugin/server`의 `exportBodyText(cms, { format, doc, locale, scope? })`는 저장된 문서를 인스턴스의 형식으로 다시 가져올 수 있게(`purpose: "sync"`, 링크는 대상의 실제 경로) 텍스트로 쓴다. 관리자 내보내기와 같다. 본문을 다른 곳에 두는 플러그인을 위한 것이다.
-- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute`·`publicRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
+- `@monti-cms/core/server`의 `exportBodyText(cms, { format, doc, locale, scope? })`는 저장된 문서를 인스턴스의 형식으로 다시 가져올 수 있게(`purpose: "sync"`, 링크는 대상의 실제 경로) 텍스트로 쓴다. 관리자 내보내기와 같다. 본문을 다른 곳에 두는 플러그인을 위한 것이다.
+- 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute`·`publicRoute` 등 라우트 틀은 `@monti-cms/core/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
 - `cms.plugin("my-plugin")`은 플러그인이 인스턴스 하나에 대해 갖는 것이다. `storage`, `secrets`, `apiKeys`, 그리고 `once(key, factory)`: 값(`cms.site`로 만든 스토어나 클라이언트)을 한 번 만들고, 개발 중 스키마를 다시 불러오면 처음부터 다시 만든다. 그래서 낡은 사이트를 쥐고 있지 않는다. 이런 객체를 인스턴스를 키로 하는 모듈 수준 `WeakMap`에 두지 않는다.
-- 모든 플러그인 패키지가 쓰는 작은 도구 가운데 `pluginLog(이름)`·`pluginError(이름, 메시지)`(플러그인이 남기고 던지는 것의 접두어를 하나로)는 `@monti-cms/core/plugin/server`에서, 나머지는 `@monti-cms/core`에서 온다. `emptyServerPlugin`(패키지 `server.browser.ts`의 기본 내보내기), `envValue(env, 이름)`·`WHERE_TO_SET_ENV`(환경 변수를 읽고 어디에 두는지 알려 줌), `resolveTextCheckerLimits`(글 검사기의 한도).
+- 모든 플러그인 패키지가 쓰는 작은 도구 가운데 `pluginLog(이름)`·`pluginError(이름, 메시지)`(플러그인이 남기고 던지는 것의 접두어를 하나로)는 `@monti-cms/core/server`에서, 나머지는 `@monti-cms/core`에서 온다. `emptyServerPlugin`(패키지 `server.browser.ts`의 기본 내보내기), `envValue(env, 이름)`·`WHERE_TO_SET_ENV`(환경 변수를 읽고 어디에 두는지 알려 줌), `resolveTextCheckerLimits`(글 검사기의 한도).
 
 ### 비밀 값
 
@@ -981,11 +981,11 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 - 플러그인과 컬렉션 이름은 소문자 낱말이다(`ai`, `action-overrides`). 값은 JSON이다. JSON으로 저장되고 파싱되어 돌아오므로 `Date`는 ISO 문자열이 되고 `undefined`는 거절된다(`invalid_input`).
 - 마이그레이션 훅은 `ServerPlugin.migrate(storage, cms)`이고 `monti db:migrate`가 본체 표 다음에 부른다. `storage.once(이름, 단계)`는 `단계`를 한 번만 돌리고(`cms_migrations`에 `plugin:<플러그인>:<이름>`으로 남고, 동시에 불러도 한 번이며, 던지면 남지 않는다) 돌았는지를 돌려준다. `단계`는 `PluginMigration`을 받는다. 단계의 트랜잭션 안에서 쓰는 컬렉션이 들어 있다.
 - Postgres 어댑터는 문서를 본체 표 `plugin_documents`에 둔다(본체 마이그레이션이 만든다). 다른 어댑터의 저장소도 똑같이 동작해야 한다. `src/plugin/__test__/storage-contract.ts`가 그 계약이고, Postgres와 `@monti-cms/core/testing`의 `createMemoryPluginStorage()`로 돌린다. `fakeCms`는 이를 기본으로 쓴다(`fakeCms({ storage })`로 바꾼다).
-- 플러그인 API에는 데이터베이스 드라이버 타입이 없다. `PluginDatabase`·`cms.database()`·`withTransaction`은 없어졌고, `@monti-cms/core`와 `@monti-cms/core/plugin/server`는 `pg`의 어떤 것도 내보내지 않는다.
+- 플러그인 API에는 데이터베이스 드라이버 타입이 없다. `PluginDatabase`·`cms.database()`·`withTransaction`은 없어졌고, `@monti-cms/core`와 `@monti-cms/core/server`는 `pg`의 어떤 것도 내보내지 않는다.
 
 ### 오류와 응답
 
-서버가 돌려주는 모든 오류는 `{ "error": { "code", "message", "fix"?, "detail"?, "issues"?, "details"? } }` 한 모양이고, 상태 코드는 한 표(`ERROR_STATUS`, `ErrorCode` 타입과 함께 `@monti-cms/core/plugin/server`에서 내보냄)에서만 정해집니다. 라우트나 플러그인은 그 표의 코드로 `new CmsError(message, code, options?)`를 던지며, 다른 곳에서 상태를 정하지 않습니다.
+서버가 돌려주는 모든 오류는 `{ "error": { "code", "message", "fix"?, "detail"?, "issues"?, "details"? } }` 한 모양이고, 상태 코드는 한 표(`ERROR_STATUS`, `ErrorCode` 타입과 함께 `@monti-cms/core/server`에서 내보냄)에서만 정해집니다. 라우트나 플러그인은 그 표의 코드로 `new CmsError(message, code, options?)`를 던지며, 다른 곳에서 상태를 정하지 않습니다.
 
 응답은 사람이 읽을 글과 개발자가 읽을 글을 나눕니다. 관리자 라우트에서 `message`(무슨 일인지)와 `fix`(어떻게 하면 되는지)는 관리자 언어로 나갑니다. 둘은 오류의 `notice`(`{ what, fix? }`)에서 오고, 없으면 `cms.core.errors` 사전에 있는 코드의 글에서 옵니다. `CmsError`에 넘긴 `message`는 개발자용 글(영어, ID나 값을 담아도 됨)이고 `detail`로 나가며, 관리자 화면은 이것을 "자세히" 안에서만 보여 줍니다. 그러니 라이브러리나 다른 서비스가 쓴 글은 notice에 넣지 말고, 직접 만든 사전의 글을 넣으세요.
 
@@ -1118,9 +1118,9 @@ export const cms = defineConfig({
 
 ```ts
 // slack/server.ts, 플러그인의 `server` 모듈(`definePlugin({ name: "slack", server: () => import("./server") })`)
-import type { ServerPlugin } from "@monti-cms/core";
+import { defineServerPlugin } from "@monti-cms/core/server";
 
-const plugin: ServerPlugin = {
+export default defineServerPlugin({
 	hooks: {
 		afterCommit: async (event, cms) => {
 			if (event.kind !== "published") return;
@@ -1131,8 +1131,7 @@ const plugin: ServerPlugin = {
 			});
 		},
 	},
-};
-export default plugin;
+});
 ```
 
 ### 워커 없이 다시 시도하기

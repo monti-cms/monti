@@ -1,5 +1,4 @@
-import type { ApiKeys, PluginCollection, PluginStorage } from "@monti-cms/core/plugin/server";
-import type { Cms } from "@monti-cms/core/server";
+import type { ApiKeys, Cms, PluginCollection, PluginStorage } from "@monti-cms/core/server";
 import type { Site } from "@monti-cms/core/site";
 import { AI_COLLECTIONS } from "./collections";
 import { AiError } from "./errors";

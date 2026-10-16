@@ -1,4 +1,4 @@
-import type { AuthCreateContext, CmsAuth } from "@monti-cms/core/server";
+import type { AuthCreateContext, CmsAuth } from "@monti-cms/core/adapters";
 import { createSite } from "@monti-cms/core/site";
 import { createSecretsVault } from "@monti-cms/core/testing";
 import { vi } from "vitest";

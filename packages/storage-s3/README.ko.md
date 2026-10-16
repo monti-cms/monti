@@ -2,7 +2,7 @@
 
 [English](README.md) | 한국어
 
-`@monti-cms/core`의 미디어 저장소로, S3 API를 쓰는 **AWS S3**, **Cloudflare R2**, **MinIO**를 지원한다. `@aws-sdk/client-s3`와 `@aws-sdk/s3-request-presigner`를 직접 의존하므로 미디어를 쓰는 사이트만 SDK를 설치한다. 코어에는 미디어 어댑터 인터페이스(`@monti-cms/core/server`의 `MediaAdapter`, `MediaStore`)만 남는다. 이후의 저장소(Vercel Blob, 로컬 디스크 저장소)도 같은 모양의 다른 패키지로 만든다.
+`@monti-cms/core`의 미디어 저장소로, S3 API를 쓰는 **AWS S3**, **Cloudflare R2**, **MinIO**를 지원한다. `@aws-sdk/client-s3`와 `@aws-sdk/s3-request-presigner`를 직접 의존하므로 미디어를 쓰는 사이트만 SDK를 설치한다. 코어에는 미디어 어댑터 인터페이스(`@monti-cms/core/adapters`의 `MediaAdapter`, `MediaStore`)만 남는다. 이후의 저장소(Vercel Blob, 로컬 디스크 저장소)도 같은 모양의 다른 패키지로 만든다.
 
 업로드는 브라우저가 서명된 주소로 버킷에 바로 올린다. 그다음 서버가 파일을 검사하고 `staging/`에서 최종 키로 옮겨 공개 주소로 서빙한다.
 

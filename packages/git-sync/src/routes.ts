@@ -7,7 +7,7 @@ import {
 	publicRoute,
 	readBodyText,
 	readJsonBody,
-} from "@monti-cms/core/plugin/server";
+} from "@monti-cms/core/server";
 import { z } from "zod";
 import { listConflicts, type Resolution, resolveConflict } from "./conflicts";
 import { GitHubApiError } from "./github/client";

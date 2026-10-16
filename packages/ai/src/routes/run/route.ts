@@ -1,12 +1,4 @@
-import {
-	adminRoute,
-	CmsError,
-	cmsErrorText,
-	ok,
-	parseWith,
-	pluginLog,
-	readJsonBody,
-} from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, cmsErrorText, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/server";
 import type { Site } from "@monti-cms/core/site";
 import { type AiRunBody, aiRunBodySchemaOf, inputSchemaFor, type ResolvedAiAction } from "../../action";
 import { actionWithDraft, getAction } from "../../actions";
