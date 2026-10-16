@@ -282,6 +282,7 @@ export function auth(options: AuthOptions): AuthAdapter {
 				return Auth(normalize(request), config);
 			};
 
+			const forwardHeaders = providers.flatMap((provider) => provider.forwardHeaders ?? []);
 			const headersOf = async (request: Request | undefined) =>
 				request?.headers ?? (await host.requestHeaders?.()) ?? null;
 			/** A request Auth.js answers, built from the headers of the browser's request. */
@@ -294,9 +295,19 @@ export function auth(options: AuthOptions): AuthAdapter {
 				const origin = originOf(headers, config.trustHost === true, requestUrl);
 				if (!origin) return null;
 				const cookie = headers.get("cookie");
+				const forwarded = Object.fromEntries(
+					forwardHeaders.flatMap((name) => {
+						const value = headers.get(name);
+						return value ? [[name, value]] : [];
+					}),
+				);
 				return new Request(`${origin}${config.basePath}${path}`, {
 					...init,
-					headers: { ...(cookie ? { cookie } : {}), ...(init.method === "POST" ? { "content-type": FORM } : {}) },
+					headers: {
+						...forwarded,
+						...(cookie ? { cookie } : {}),
+						...(init.method === "POST" ? { "content-type": FORM } : {}),
+					},
 				});
 			};
 

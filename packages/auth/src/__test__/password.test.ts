@@ -1,7 +1,7 @@
 import { createMemoryPluginStorage } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
 import { auth } from "../auth";
-import { MIN_PASSWORD_LENGTH, normalizeEmail, password } from "../password";
+import { MIN_PASSWORD_LENGTH, normalizeEmail, password, passwordAccounts } from "../password";
 import { hashPassword, verifyPassword } from "../password-hash";
 import { CookieJar, connectWithEnv, ORIGIN, requestWith } from "./harness";
 
@@ -171,4 +171,91 @@ describe("emails", () => {
 
 it("builds with the provider alone and no admin list", () => {
 	expect(() => auth({ providers: [password()] })).not.toThrow();
+});
+
+describe("limiting failed sign-ins", () => {
+	const MINA = "mina@example.com";
+	const make = async (clock = { now: 1_000_000 }) => {
+		const memory = createMemoryPluginStorage();
+		const accounts = passwordAccounts(memory.storage, () => clock.now);
+		await accounts.createFirst({ email: MINA, password: GOOD });
+		return { memory, accounts, clock };
+	};
+	const fail = async (
+		accounts: Awaited<ReturnType<typeof make>>["accounts"],
+		times: number,
+		email = MINA,
+		ip?: string,
+	) => {
+		for (let attempt = 0; attempt < times; attempt++) await accounts.authorize(email, "wrong password", ip);
+	};
+
+	it("is shared by every instance that uses the same storage", async () => {
+		const { memory, accounts, clock } = await make();
+		await fail(accounts, 5);
+		const other = passwordAccounts(memory.storage, () => clock.now);
+		expect(await other.authorize(MINA, GOOD)).toBeNull();
+	});
+
+	it("lets the email in again once the window is over, and a right password clears the count", async () => {
+		const { accounts, clock } = await make();
+		await fail(accounts, 5);
+		expect(await accounts.authorize(MINA, GOOD)).toBeNull();
+		clock.now += 61_000;
+		expect(await accounts.authorize(MINA, GOOD)).toBe(MINA);
+		await fail(accounts, 4);
+		expect(await accounts.authorize(MINA, GOOD)).toBe(MINA);
+		await fail(accounts, 4);
+		expect(await accounts.authorize(MINA, GOOD)).toBe(MINA);
+	});
+
+	it("counts a client address on its own, so many emails from one address are stopped", async () => {
+		const { accounts } = await make();
+		for (let attempt = 0; attempt < 20; attempt++)
+			await accounts.authorize(`guess${attempt}@example.com`, "x", "203.0.113.9");
+		expect(await accounts.authorize(MINA, GOOD, "203.0.113.9")).toBeNull();
+		expect(await accounts.authorize(MINA, GOOD, "203.0.113.10")).toBe(MINA);
+	});
+
+	it("keeps one counter for all the emails that have no account, so guessing emails does not grow the storage", async () => {
+		const { accounts, memory } = await make();
+		for (let attempt = 0; attempt < 30; attempt++) await accounts.authorize(`guess${attempt}@example.com`, "x");
+		const keys = (await memory.storage("auth").collection("password-attempts").list()).map((item) => item.key);
+		expect(keys).toEqual(["email:*"]);
+	});
+
+	it("drops the counters whose window is over when it starts a new one", async () => {
+		const { accounts, memory, clock } = await make();
+		await fail(accounts, 1, MINA, "203.0.113.1");
+		clock.now += 61_000;
+		await fail(accounts, 1, MINA, "203.0.113.2");
+		const keys = (await memory.storage("auth").collection("password-attempts").list()).map((item) => item.key);
+		expect(keys.sort()).toEqual(["email:mina@example.com", "ip:203.0.113.2"]);
+	});
+
+	it("a password reset clears the email's count", async () => {
+		const { accounts } = await make();
+		await fail(accounts, 5);
+		await accounts.resetPassword({ email: MINA, password: "a brand new password" });
+		expect(await accounts.authorize(MINA, "a brand new password")).toBe(MINA);
+	});
+
+	it("password() reads the address from the configured header only", async () => {
+		const memory = createMemoryPluginStorage();
+		const cmsAuth = connectWithEnv(
+			{ providers: [password({ clientIpHeader: "x-forwarded-for" })] },
+			{ storage: memory.storage },
+		);
+		await cmsAuth.accounts?.createFirst({ email: MINA, password: GOOD });
+		await cmsAuth.signIn("password", {
+			redirectTo: "/studio",
+			request: new Request(`${ORIGIN}/api/monti/v1/session/sign-in/password`, {
+				method: "POST",
+				headers: { "x-forwarded-for": "198.51.100.7, 203.0.113.5" },
+			}),
+			credentials: { email: MINA, password: "wrong password" },
+		});
+		const keys = (await memory.storage("auth").collection("password-attempts").list()).map((item) => item.key);
+		expect(keys.sort()).toEqual(["email:mina@example.com", "ip:203.0.113.5"]);
+	});
 });

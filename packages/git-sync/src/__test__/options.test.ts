@@ -164,7 +164,9 @@ describe("the plugin", () => {
 		expect(server?.hooks?.afterCommit).toBeTypeOf("function");
 		expect(Object.keys(server?.commands ?? {}).sort()).toEqual(["flush", "pull", "push"]);
 		const routes = server?.routes ?? [];
-		expect(routes.filter((route) => route.public).map((route) => route.pattern)).toEqual(["v1/git-sync/webhook"]);
+		expect(routes.filter((route) => route.access === "signed").map((route) => route.pattern)).toEqual([
+			"v1/git-sync/webhook",
+		]);
 		expect(routes.map((route) => route.pattern)).toContain("v1/git-sync/conflicts/resolve");
 	});
 

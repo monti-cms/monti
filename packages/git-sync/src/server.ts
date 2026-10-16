@@ -17,7 +17,7 @@ const gitSyncServer: CmsServerPlugin = {
 		{ pattern: "v1/git-sync/conflicts", module: routes.conflicts },
 		{ pattern: "v1/git-sync/conflicts/resolve", module: routes.resolve },
 		// GitHub calls this without a login; the route checks the webhook signature itself.
-		{ pattern: "v1/git-sync/webhook", module: routes.webhook, public: true },
+		{ pattern: "v1/git-sync/webhook", module: routes.webhook, access: "signed" },
 	],
 	// Delivered through the event outbox: a failed push is retried, not lost.
 	hooks: { afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event) },

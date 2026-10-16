@@ -22,15 +22,52 @@ export interface AdminRequest<P extends Params = Params> {
 	auth: AuthContext;
 	cms: Cms;
 }
-/** What a route that needs no login gets: the same without `auth`. Such a route checks the request itself. */
+/** What a route that needs no login gets: the same without `auth`. */
 export type PublicRequest<P extends Params = Params> = Omit<AdminRequest<P>, "auth">;
 
 export type AdminHandler<P extends Params = Params> = (input: AdminRequest<P>) => Promise<Response>;
 export type PublicHandler<P extends Params = Params> = (input: PublicRequest<P>) => Promise<Response>;
 
 /**
+ * How a route is guarded. The router applies the guard of the kind before the handler runs, so a route cannot skip a check by forgetting it:
+ * - `admin` (the default): the same-origin check of a state-changing request, then the admin login. For `AdminHandler`s.
+ * - `public-read`: no login, and nothing but `GET`/`HEAD` (any other method is a 405). For the public JSON API.
+ * - `same-origin-form`: no login, the same-origin check where a browser form post is accepted too. For the sign-in, sign-out and first-admin forms.
+ * - `signed`: no login and no check of the router: the request proves itself (a webhook signature). The handler must verify it, and that is the only kind that leaves a check to the handler.
+ * - `admin-or-bearer`: a request with a `Bearer` token reaches the handler, which verifies the token (a cron job, no cookie, so no same-origin check). A request without one is guarded as `admin`.
+ */
+export type RouteAccess = "admin" | "public-read" | "same-origin-form" | "signed" | "admin-or-bearer";
+
+/** What a handler of an `admin-or-bearer` route gets: the admin guard has run when `auth` is set, and a request without `auth` carries a `Bearer` token that the handler must verify. */
+export interface BearerRequest<P extends Params = Params> extends Omit<AdminRequest<P>, "auth"> {
+	auth: AuthContext | null;
+}
+export type BearerHandler<P extends Params = Params> = (input: BearerRequest<P>) => Promise<Response>;
+
+export const bearerTokenOf = (request: Request): string | null =>
+	/^Bearer\s+(.+)$/i.exec(request.headers.get("authorization") ?? "")?.[1] ?? null;
+
+/** Runs the handler of an admin request: the same-origin check, the admin check, the `[id]` shape, and the actor for the change record. */
+async function guardedAdmin<P extends Params, R>(
+	cms: Cms,
+	request: Request,
+	params: P,
+	run: (auth: AuthContext) => Promise<R>,
+): Promise<R> {
+	validateSameOrigin(cms, request);
+	const auth = await cms.authGateway.verifyAdmin();
+	// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
+	// would reject it as a malformed value (an internal error), so it is a missing item here.
+	if (typeof params.id === "string" && !isUuid(params.id)) {
+		throw new CmsError("Not found", "not_found");
+	}
+	// The store records this admin as the one who made the changes the handler writes (`changedBy`).
+	return withActor(actorOf(auth), () => run(auth));
+}
+
+/**
  * Runs an admin route: the same-origin check of a state-changing request, the admin check, the `[id]` shape, and the actor for the change record. Errors become the
- * one error answer. The router does this for every route that is not `public`, so a handler holds no auth code.
+ * one error answer. The router does this for every route of access `admin`, so a handler holds no auth code.
  */
 export async function runAdminRoute<P extends Params>(
 	cms: Cms,
@@ -39,33 +76,49 @@ export async function runAdminRoute<P extends Params>(
 	handler: AdminHandler<P>,
 ): Promise<Response> {
 	try {
-		validateSameOrigin(cms, request);
-		const auth = await cms.authGateway.verifyAdmin();
-		// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
-		// would reject it as a malformed value (an internal error), so it is a missing item here.
-		if (typeof params.id === "string" && !isUuid(params.id)) {
-			throw new CmsError("Not found", "not_found");
-		}
-		// The store records this admin as the one who made the changes the handler writes (`changedBy`).
-		return await withActor(actorOf(auth), () => handler({ request, params, auth, cms }));
+		return await guardedAdmin(cms, request, params, (auth) => handler({ request, params, auth, cms }));
 	} catch (error) {
 		return handleApiError(error);
 	}
 }
 
 /**
- * Runs a public route: errors become the one error answer. A login connection may redirect by throwing (Next.js does); that signal must reach the host framework,
- * so it is offered to the connection first.
+ * Runs a route of the given access kind (see {@link RouteAccess}): the guard of the kind, then the handler. Errors become the one error answer. A login connection may redirect
+ * by throwing (Next.js does); that signal must reach the host framework, so a route that needs no login offers the error to the connection first.
  */
-export async function runPublicRoute<P extends Params>(
+export async function runRoute<P extends Params>(
 	cms: Cms,
 	request: Request,
 	params: P,
-	handler: PublicHandler<P>,
+	handler: AdminHandler<P> | PublicHandler<P> | BearerHandler<P>,
+	access: RouteAccess = "admin",
 ): Promise<Response> {
+	if (access === "admin") return runAdminRoute(cms, request, params, handler as AdminHandler<P>);
 	try {
-		return await handler({ request, params, cms });
+		switch (access) {
+			case "public-read": {
+				const method = request.method.toUpperCase();
+				if (method !== "GET" && method !== "HEAD") {
+					throw new CmsError(`${method} is not allowed here`, "method_not_allowed");
+				}
+				break;
+			}
+			case "same-origin-form":
+				validateSameOrigin(cms, request, { form: true });
+				break;
+			case "admin-or-bearer":
+				if (bearerTokenOf(request) === null) {
+					return await guardedAdmin(cms, request, params, (auth) =>
+						(handler as BearerHandler<P>)({ request, params, auth, cms }),
+					);
+				}
+				return await (handler as BearerHandler<P>)({ request, params, auth: null, cms });
+			case "signed":
+				break;
+		}
+		return await (handler as PublicHandler<P>)({ request, params, cms });
 	} catch (error) {
+		if (access === "admin-or-bearer") return handleApiError(error);
 		let auth: ReturnType<Cms["auth"]> | undefined;
 		try {
 			auth = cms.auth();
@@ -87,8 +140,11 @@ export async function runPublicRoute<P extends Params>(
  */
 export const adminRoute = <P extends Params = Params>(handler: AdminHandler<P>): AdminHandler<P> => handler;
 
-/** Declares the handler of a `public: true` route. It needs no login and checks the request itself. */
+/** Declares the handler of a route of access `public-read`, `same-origin-form` or `signed`: it gets no login, because the router's guard of the kind has run (a `signed` route verifies the request itself). */
 export const publicRoute = <P extends Params = Params>(handler: PublicHandler<P>): PublicHandler<P> => handler;
+
+/** Declares the handler of an `admin-or-bearer` route. A request with no `auth` carries a bearer token (`bearerTokenOf`) that the handler must verify. */
+export const bearerRoute = <P extends Params = Params>(handler: BearerHandler<P>): BearerHandler<P> => handler;
 
 /** Reads the JSON body. 400 if malformed. A missing body is treated as `{}`. */
 export async function readJsonBody(request: Request): Promise<unknown> {

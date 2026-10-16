@@ -97,7 +97,7 @@ export const resolve = {
 	),
 };
 
-/** GitHub's `push` webhook. Public: the signature is the check, and nothing else about the request is trusted. */
+/** GitHub's `push` webhook. Access `signed`: the signature is the check, and nothing else about the request is trusted. */
 export const webhook = {
 	POST: publicRoute(async ({ request, cms }) => {
 		const rawBody = await request.text();

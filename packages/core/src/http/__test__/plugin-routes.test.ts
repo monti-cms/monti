@@ -21,7 +21,13 @@ const instance = (...extra: { plugin: string; routes: readonly PluginRoute[] }[]
 				name: "example",
 				routes: [
 					{ pattern: "v1/example/private", module: { GET: mocks.privateGet, POST: mocks.privateGet } },
-					{ pattern: "v1/example/hook", module: { POST: mocks.publicPost }, public: true },
+					{ pattern: "v1/example/hook", module: { POST: mocks.publicPost }, access: "signed" },
+					{
+						pattern: "v1/example/feed",
+						module: { GET: mocks.publicPost, POST: mocks.publicPost },
+						access: "public-read",
+					},
+					{ pattern: "v1/example/form", module: { POST: mocks.publicPost }, access: "same-origin-form" },
 				],
 			},
 			...extra.map(({ plugin, routes }) => ({ name: plugin, routes })),
@@ -75,9 +81,25 @@ describe("plugin API route default authentication", () => {
 		expect(mocks.privateGet.mock.calls[1]?.[0].cms).toBe(other);
 	});
 
-	it("a `public: true` route is not wrapped (the route checks for itself)", async () => {
+	it("a `signed` route is not wrapped (the route checks for itself)", async () => {
 		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
 		expect(await (await call(instance(), "POST", "v1/example/hook")).text()).toBe("public");
+		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
+	});
+});
+
+describe("plugin route access kinds", () => {
+	it("`public-read` needs no login, and refuses anything but a read", async () => {
+		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
+		expect((await call(instance(), "GET", "v1/example/feed")).status).toBe(200);
+		expect((await call(instance(), "POST", "v1/example/feed")).status).toBe(405);
+		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
+	});
+
+	it("`same-origin-form` needs no login, but the router rejects a cross-origin post", async () => {
+		mocks.verifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Authentication required"));
+		expect((await call(instance(), "POST", "v1/example/form", { origin: "https://evil.example" })).status).toBe(403);
+		expect((await call(instance(), "POST", "v1/example/form", { origin: ORIGIN })).status).toBe(200);
 		expect(mocks.verifyAdmin).not.toHaveBeenCalled();
 	});
 });
