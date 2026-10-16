@@ -8,18 +8,19 @@ import {
 	ChevronRight,
 	ExternalLink,
 	FileImage,
+	Folder as FolderIcon,
+	FolderPlus,
 	KeyRound,
 	LayoutTemplate,
-	Plus,
+	Pencil,
 	Settings2,
 	Trash2,
 } from "lucide-react";
-import { Fragment, type KeyboardEvent, useEffect, useState } from "react";
+import { Fragment, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
 import { buttonVariants } from "../ui/button";
-import { Label } from "../ui/label";
 import {
 	Sidebar,
 	SidebarContent,
@@ -36,7 +37,6 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from "../ui/sidebar";
-import { Switch } from "../ui/switch";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { screensMessages } from "./messages";
@@ -44,7 +44,7 @@ import { ActionContextMenu, type MenuAction, MoreActionsButton } from "./shared/
 import { useAdminFeatures } from "./shared/admin-features";
 import { CollectionIcon, NamedIcon } from "./shared/collection-icon";
 import { type DraggedEntry, isEntryDrag, readDraggedEntries } from "./shared/entry-drag";
-import { type FolderActions, folderMenuActions } from "./shared/use-folder-actions";
+import type { FolderActions } from "./shared/use-folder-actions";
 import { toolsPages } from "./tools/tools-pages";
 
 /** Value that points to the current screen in the sidebar. Every Settings tab is the one `settings` entry; a plugin page is `tools:<path>`. */
@@ -63,11 +63,11 @@ export interface FolderNavigation {
 	collection: Collection | "media";
 	/** `all` (top level) or a folder ID. */
 	currentFolder: string;
-	includeDescendants: boolean;
+	includeDescendants?: boolean;
 	folders: Folder[];
 	folderActions: FolderActions;
 	onSelectFolder: (folder: string) => void;
-	onIncludeDescendantsChange: (value: boolean) => void;
+	onIncludeDescendantsChange?: (value: boolean) => void;
 	/** When a list row is dragged and dropped onto a folder (or the top level). */
 	onDropEntries: (folderId: string | null, entries: DraggedEntry[]) => void;
 	onCreateEntry?: () => void;
@@ -97,7 +97,7 @@ export function folderKeyHandler(folder: Folder, actions: FolderActions) {
 }
 
 /** Left padding of the first level of the folder tree, so its labels line up under the collection name. */
-const TREE_INDENT = 36;
+const TREE_INDENT = 8;
 const TREE_STEP = 16;
 const subRow =
 	"group/row flex h-7 items-center gap-1 rounded-md pr-1 text-[13px] text-cms-sidebar-foreground/80 hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground data-active:bg-cms-sidebar-accent data-active:font-medium data-active:text-cms-sidebar-accent-foreground";
@@ -109,6 +109,12 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 	const tc = useTranslator(commonMessages);
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 	const [dropTarget, setDropTarget] = useState<string | null>(null);
+	const [creatingUnderId, setCreatingUnderId] = useState<string | null>(null);
+	const [createValue, setCreateValue] = useState("");
+	const [renamingId, setRenamingId] = useState<string | null>(null);
+	const [renameValue, setRenameValue] = useState("");
+	const createInputRef = useRef<HTMLInputElement>(null);
+	const renameInputRef = useRef<HTMLInputElement>(null);
 	const { folders, currentFolder } = nav;
 
 	// Expand the ancestor path of the selected folder.
@@ -125,9 +131,70 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		});
 	}, [currentFolder, folders]);
 
+	useEffect(() => {
+		if (renamingId && renameInputRef.current) {
+			renameInputRef.current.focus();
+			renameInputRef.current.select();
+		}
+	}, [renamingId]);
+
+	useEffect(() => {
+		if (creatingUnderId && createInputRef.current) {
+			createInputRef.current.focus();
+		}
+	}, [creatingUnderId]);
+
 	const select = (folder: string) => {
 		nav.onSelectFolder(folder);
 		closeMobile();
+	};
+
+	const startCreating = (parentId: string) => {
+		setRenamingId(null);
+		setExpandedIds((prev) => new Set(prev).add(parentId));
+		setCreatingUnderId(parentId);
+		setCreateValue("");
+	};
+
+	const cancelCreate = () => {
+		setCreatingUnderId(null);
+		setCreateValue("");
+	};
+
+	const commitCreate = async () => {
+		const trimmed = createValue.trim();
+		const parentId = creatingUnderId;
+		setCreatingUnderId(null);
+		setCreateValue("");
+		if (!trimmed || !parentId) return;
+		try {
+			await nav.folderActions.createFolderDirect(trimmed, parentId);
+		} catch {
+			// Mutation handles error toast
+		}
+	};
+
+	const startRenaming = (folder: Folder) => {
+		setCreatingUnderId(null);
+		setRenamingId(folder.id);
+		setRenameValue(folder.name);
+	};
+
+	const cancelRename = () => {
+		setRenamingId(null);
+		setRenameValue("");
+	};
+
+	const commitRename = async (folder: Folder) => {
+		const trimmed = renameValue.trim();
+		setRenamingId(null);
+		setRenameValue("");
+		if (!trimmed || trimmed === folder.name) return;
+		try {
+			await nav.folderActions.renameFolderDirect(folder, trimmed);
+		} catch {
+			// Mutation handles error toast
+		}
 	};
 
 	const dropProps = (key: string, folderId: string | null) => ({
@@ -149,7 +216,31 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 		const children = folders.filter((f) => f.parentId === folder.id);
 		const isExpanded = expandedIds.has(folder.id);
 		const isActive = currentFolder === folder.id;
-		const actions = folderMenuActions(site, folder, nav.folders, nav.folderActions);
+		const isRenaming = renamingId === folder.id;
+		const isCreatingChild = creatingUnderId === folder.id;
+		const actions: MenuAction[] = [
+			{
+				kind: "item",
+				label: tc("addSubfolder"),
+				icon: FolderPlus,
+				onSelect: () => startCreating(folder.id),
+			},
+			{
+				kind: "item",
+				label: tc("rename"),
+				icon: Pencil,
+				onSelect: () => startRenaming(folder),
+			},
+			{ kind: "separator" },
+			{
+				kind: "item",
+				label: tc("delete"),
+				icon: Trash2,
+				destructive: true,
+				onSelect: () => void nav.folderActions.requestDelete(folder),
+			},
+		];
+
 		return (
 			<li key={folder.id}>
 				<ActionContextMenu
@@ -163,7 +254,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 						/>
 					}
 				>
-					{children.length > 0 ? (
+					{children.length > 0 || isCreatingChild ? (
 						<button
 							type="button"
 							aria-label={t(isExpanded ? "sidebar.folderCollapse" : "sidebar.folderExpand", { name: folder.name })}
@@ -183,92 +274,104 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 					) : (
 						<span aria-hidden className="size-4 shrink-0" />
 					)}
-					<button
-						type="button"
-						aria-current={isActive ? "true" : undefined}
-						onClick={() => select(folder.id)}
-						onKeyDown={folderKeyHandler(folder, nav.folderActions)}
-						className="h-full min-w-0 flex-1 truncate rounded-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring"
-					>
-						{folder.name}
-					</button>
+					<FolderIcon aria-hidden className="size-3.5 shrink-0 text-cms-sidebar-foreground/60" />
+					{isRenaming ? (
+						<input
+							ref={renameInputRef}
+							type="text"
+							value={renameValue}
+							maxLength={100}
+							onChange={(e) => setRenameValue(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") {
+									if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+									e.preventDefault();
+									void commitRename(folder);
+								} else if (e.key === "Escape") {
+									e.preventDefault();
+									cancelRename();
+								}
+							}}
+							onBlur={() => {
+								void commitRename(folder);
+							}}
+							onClick={(e) => e.stopPropagation()}
+							className="h-6 min-w-0 flex-1 rounded bg-cms-background px-1.5 text-[13px] text-cms-foreground outline-hidden ring-1 ring-cms-input focus:ring-2 focus:ring-cms-ring"
+						/>
+					) : (
+						<button
+							type="button"
+							aria-current={isActive ? "true" : undefined}
+							onClick={() => select(folder.id)}
+							onKeyDown={(e) => {
+								if (e.key === "F2") {
+									e.preventDefault();
+									startRenaming(folder);
+								} else if (e.key === "Delete") {
+									e.preventDefault();
+									void nav.folderActions.requestDelete(folder);
+								}
+							}}
+							className="h-full min-w-0 flex-1 truncate rounded-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring"
+						>
+							{folder.name}
+						</button>
+					)}
 					<MoreActionsButton
 						actions={actions}
 						label={t("list.folderActions", { name: folder.name })}
-						className="size-5 shrink-0 text-cms-sidebar-foreground/70 opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100"
+						className="size-5 shrink-0 text-cms-sidebar-foreground/70 opacity-0 focus-visible:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
 					/>
 				</ActionContextMenu>
-				{isExpanded && children.length > 0 && (
-					<ul className="flex flex-col gap-0.5">{children.map((child) => renderFolder(child, depth + 1))}</ul>
+				{isExpanded && (children.length > 0 || isCreatingChild) && (
+					<ul className="flex flex-col gap-0.5">
+						{isCreatingChild && (
+							<li style={{ paddingLeft: TREE_INDENT + (depth + 1) * TREE_STEP }} className={cn(subRow, "pr-2")}>
+								<span aria-hidden className="size-4 shrink-0" />
+								<FolderPlus aria-hidden className="size-3.5 shrink-0 text-cms-sidebar-foreground/60" />
+								<input
+									ref={createInputRef}
+									type="text"
+									value={createValue}
+									placeholder={tc("addSubfolder")}
+									maxLength={100}
+									onChange={(e) => setCreateValue(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+											e.preventDefault();
+											void commitCreate();
+										} else if (e.key === "Escape") {
+											e.preventDefault();
+											cancelCreate();
+										}
+									}}
+									onBlur={() => {
+										void commitCreate();
+									}}
+									className="h-6 min-w-0 flex-1 rounded bg-cms-background px-1.5 text-[13px] text-cms-foreground outline-hidden ring-1 ring-cms-input focus:ring-2 focus:ring-cms-ring"
+								/>
+							</li>
+						)}
+						{children.map((child) => renderFolder(child, depth + 1))}
+					</ul>
 				)}
 			</li>
 		);
 	};
 
+	if (folders.length === 0) return null;
+
 	const label = site.isCollection(nav.collection)
 		? site.COLLECTION_DEFINITIONS[nav.collection].label
 		: t("sidebar.media");
-	const blankActions: MenuAction[] = [
-		{
-			kind: "item",
-			label: tc("addFolder"),
-			icon: Plus,
-			onSelect: () => nav.folderActions.requestCreate(null),
-		},
-		...(nav.onCreateEntry
-			? [{ kind: "item" as const, label: t("list.add", { label }), icon: Plus, onSelect: nav.onCreateEntry }]
-			: []),
-	];
 
 	return (
 		<ul
 			aria-label={t("sidebar.folderTree", { label })}
 			className="mt-0.5 mb-1 flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden"
 		>
-			{folders.length > 0 && (
-				<li>
-					<ActionContextMenu actions={blankActions} trigger={<div />}>
-						<button
-							type="button"
-							{...dropProps("root", null)}
-							data-active={currentFolder === "all" || undefined}
-							aria-current={currentFolder === "all" ? "true" : undefined}
-							onClick={() => select("all")}
-							style={{ paddingLeft: TREE_INDENT }}
-							className={cn(subRow, "w-full text-left", dropTarget === "root" && "ring-2 ring-cms-sidebar-ring")}
-						>
-							{t("sidebar.folderAll")}
-						</button>
-					</ActionContextMenu>
-				</li>
-			)}
 			{folders.filter((f) => !f.parentId).map((folder) => renderFolder(folder, 0))}
-			<li>
-				<button
-					type="button"
-					onClick={() => nav.folderActions.requestCreate(null)}
-					style={{ paddingLeft: TREE_INDENT }}
-					className={cn(subRow, "w-full text-left text-cms-sidebar-foreground/50")}
-				>
-					<Plus aria-hidden className="size-3.5" />
-					{tc("addFolder")}
-				</button>
-			</li>
-			{folders.length > 0 && (
-				<li>
-					<Label
-						className="gap-2 py-1 font-normal text-cms-sidebar-foreground/60 text-xs"
-						style={{ paddingLeft: TREE_INDENT }}
-					>
-						<Switch
-							size="sm"
-							checked={nav.includeDescendants}
-							onCheckedChange={(checked) => nav.onIncludeDescendantsChange(checked === true)}
-						/>
-						{t("sidebar.includeDescendants")}
-					</Label>
-				</li>
-			)}
 		</ul>
 	);
 }
@@ -295,25 +398,38 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		icon?: React.ReactNode,
 		badge?: React.ReactNode,
 		trailing?: React.ReactNode,
-	) => (
-		<SidebarMenuItem key={id}>
-			<SidebarMenuButton
-				isActive={activeNav === id}
-				tooltip={label}
-				render={<Link href={href} onClick={closeMobile} aria-current={activeNav === id ? "page" : undefined} />}
-			>
-				{icon}
-				<span className="flex-1">{label}</span>
-				{trailing}
-			</SidebarMenuButton>
-			{badge}
-		</SidebarMenuItem>
-	);
+	) => {
+		const isRootActive = activeNav === id && (folderNav?.currentFolder === "all" || !folderNav?.currentFolder);
+		return (
+			<SidebarMenuItem key={id}>
+				<SidebarMenuButton
+					isActive={isRootActive}
+					tooltip={label}
+					render={
+						<Link
+							href={href}
+							onClick={() => {
+								if (folderNav && activeNav === id) {
+									folderNav.onSelectFolder("all");
+								}
+								closeMobile();
+							}}
+							aria-current={isRootActive ? "page" : undefined}
+						/>
+					}
+				>
+					{icon}
+					<span className="flex-1">{label}</span>
+					{trailing}
+				</SidebarMenuButton>
+				{badge}
+			</SidebarMenuItem>
+		);
+	};
 
 	const collectionEntry = (collection: Collection) => {
 		const active = activeNav === collection;
-		const def = site.COLLECTION_DEFINITIONS[collection];
-		const foldersEnabled = def?.folders ?? def?.kind !== "item";
+		const foldersEnabled = site.foldersEnabled(collection);
 		const nav = foldersEnabled && active && folderNav?.collection === collection ? folderNav : undefined;
 		const folderCount = foldersEnabled ? (nav ? nav.folders.length : (folderCounts?.[collection] ?? 0)) : 0;
 		const chevron =

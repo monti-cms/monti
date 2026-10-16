@@ -75,9 +75,12 @@ export function cmsIssueMessage(site: ApiErrorSite, issue: CmsIssue): string {
 		customMessage &&
 		(customMessage.includes("expected") ||
 			customMessage.includes("Invalid input") ||
-			customMessage.includes("Required"))
+			customMessage.includes("Required") ||
+			customMessage.includes("Too small"))
 	) {
 		customMessage = t("issue.missing_field");
+	} else if (customMessage?.includes("Too big")) {
+		customMessage = t("issue.field_too_long");
 	}
 	const label = known ? `${known}${detail}` : customMessage || issue.code || t("validationFailed");
 	const { line, column } = issue.position ?? {};

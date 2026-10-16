@@ -175,9 +175,6 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 			</Field>
 			<Field>
 				<FieldLabel htmlFor={ids.place}>{t("field.place")}</FieldLabel>
-				<p className="text-cms-muted-foreground text-xs">
-					{t(`place.hint.${base.surface.slot}` as Parameters<typeof t>[0])}
-				</p>
 				<OptionSelect
 					id={ids.place}
 					value={placeValue(base.surface)}

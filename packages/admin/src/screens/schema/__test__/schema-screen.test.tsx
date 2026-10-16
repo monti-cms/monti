@@ -705,7 +705,6 @@ describe("SchemaScreen", () => {
 	it("ends the basics tab with the remove section, which says what removing does", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		expect(screen.getByText(tCollection("collection.nameHint"))).toBeTruthy();
 		expect(screen.getByText(tCollection("collection.dangerDescription"))).toBeTruthy();
 		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
@@ -973,7 +972,6 @@ describe("SchemaScreen", () => {
 
 		openTab("editor");
 		expect(await screen.findByText(tCollection("allowed.title"))).toBeTruthy();
-		expect(screen.getByText(tCollection("allowed.hint"))).toBeTruthy();
 		// Everything is allowed by default: all 3 sections have "Allow all".
 		expect(screen.getAllByText(tCollection("allowed.all"))).toHaveLength(3);
 		expect(screen.queryByRole("textbox", { name: tCollection("collection.path") })).toBeNull();
@@ -1470,21 +1468,19 @@ describe("SchemaScreen", () => {
 			return screen.findByTestId("locales-content");
 		};
 
-		it("lists the content languages in one card with code, name, default mark and admin name, and has a section for the default language and time zone", async () => {
+		it("lists the content languages in one card with code, name, and default mark, and has a section for the default language and time zone", async () => {
 			const content = await openLocales();
 			const row = within(content).getByTestId("locale-en");
 			expect(within(row).getByText("en")).toBeTruthy();
 			expect(within(row).getByText("English")).toBeTruthy();
 			expect(within(row).getByText(tLocales("locales.defaultBadge"))).toBeTruthy();
-			expect(within(row).getByText(tLocales("locales.adminName", { label: "English" }))).toBeTruthy();
+			expect(within(row).queryByText(/원어|Native/)).toBeNull();
 			expect(within(content).getByText(tLocales("locales.count", { count: 1 }))).toBeTruthy();
 			// Two sections, each with its title and description.
 			expect(within(content).getByRole("heading", { name: tLocales("locales.contentTitle") })).toBeTruthy();
 			const defaults = screen.getByTestId("locales-default");
 			expect(within(defaults).getByRole("heading", { name: tLocales("locales.defaultTitle") })).toBeTruthy();
 			expect(within(defaults).getByLabelText(tLocales("locales.timeZone"))).toBeTruthy();
-			// The default language says what its addresses look like, with an example from the first collection address.
-			expect(within(defaults).getByText(/\/posts\/hello/)).toBeTruthy();
 		});
 
 		it("adds a language from a small dialog, and the code of a saved language cannot be edited", async () => {
@@ -1503,9 +1499,10 @@ describe("SchemaScreen", () => {
 			expect(add.disabled).toBe(false);
 			fireEvent.click(add);
 			const row = await screen.findByTestId("locale-fr");
-			expect(within(row).getByText(tLocales("locales.adminName", { label: "French" }))).toBeTruthy();
+			expect(within(row).getByText("French")).toBeTruthy();
+			expect(within(row).getByText(tLocales("locales.nativeName", { name: "Français" }))).toBeTruthy();
 
-			fireEvent.click(within(row).getByRole("button", { name: tLocales("locales.editNamed", { name: "Français" }) }));
+			fireEvent.click(within(row).getByRole("button", { name: tLocales("locales.editNamed", { name: "French" }) }));
 			const edit = await screen.findByTestId("locale-dialog");
 			expect((within(edit).getByLabelText(tLocales("locales.code")) as HTMLInputElement).disabled).toBe(true);
 			fireEvent.click(within(edit).getByRole("button", { name: tc("cancel") }));
@@ -1625,21 +1622,16 @@ describe("SchemaScreen", () => {
 		expect(file.site).toEqual({ previewLocaleParam: false });
 	});
 
-	it("puts each prefix option's explanation and example in the list, and under the select only the chosen one", async () => {
+	it("puts each prefix option's explanation and example in the option list", async () => {
 		await openSettingsTab("site");
-		const explanation = await screen.findByTestId("locale-prefix-explanations");
 		const text = (mode: "except-default" | "always" | "never") =>
 			tSite(`site.prefix.${mode}.text`, { default: "en", other: "fr" });
-		expect(explanation.textContent).toBe(text("except-default"));
-		expect(explanation.textContent).toContain("/fr/posts/a");
 
-		fireEvent.click(screen.getByRole("combobox", { name: tSite("site.localePrefix") }));
+		fireEvent.click(await screen.findByRole("combobox", { name: tSite("site.localePrefix") }));
 		for (const mode of ["except-default", "always", "never"] as const) {
 			const option = await screen.findByRole("option", { name: new RegExp(`^${tSite(`site.prefix.${mode}`)}`) });
 			expect(option.textContent).toContain(text(mode));
 		}
-		pressOption(await screen.findByRole("option", { name: new RegExp(`^${tSite("site.prefix.never")}`) }));
-		await waitFor(() => expect(screen.getByTestId("locale-prefix-explanations").textContent).toBe(text("never")));
 	});
 
 	it("shows the site URL read-only with where it comes from", async () => {

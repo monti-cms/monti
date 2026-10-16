@@ -10,6 +10,7 @@ import { gitSync } from "@monti-cms/git-sync";
 import { mdx } from "@monti-cms/mdx";
 import { seo } from "@monti-cms/seo";
 import { directiveSyntax } from "@monti-cms/syntax-directive";
+import { dummyStorage } from "./dummy-storage";
 import schema from "./monti.schema";
 import { siteCallout } from "./plugins/site-callout";
 import { wordList } from "./plugins/word-list";
@@ -95,8 +96,8 @@ export const cms = defineConfig({
 	// numeric GitHub id). Under `next dev` you are signed in as the admin without any of them, from this machine only; production never does that.
 	auth: auth({ providers: [github()] }),
 
-	// Media uploads: none here. A storage adapter from any package goes in `storage`.
-	// storage: ...,
+	// Media uploads: mock dummy storage for previewing the media library UI.
+	storage: dummyStorage(),
 
 	// The one secret, MONTI_SECRET, signs the login session and encrypts the stored values (AI service keys, git-sync tokens).
 });

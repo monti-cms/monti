@@ -13,8 +13,8 @@ export type AiErrorCode = Extract<
 export class AiError extends CmsError {
 	declare readonly code: AiErrorCode;
 
-	constructor(code: AiErrorCode, message: string) {
-		super(message, code);
+	constructor(code: AiErrorCode, message: string, issues?: readonly unknown[]) {
+		super(message, code, undefined, undefined, issues);
 		this.name = "AiError";
 	}
 }

@@ -47,7 +47,10 @@ export function ListPane({
 		<div className={cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH, className)}>
 			{header}
 			<ul
-				className={cn("min-h-0 flex-1 divide-y overflow-y-auto", !hasRows && !loading && "flex flex-col")}
+				className={cn(
+					"min-h-0 flex-1 divide-y overflow-y-auto overflow-x-hidden",
+					!hasRows && !loading && "flex flex-col",
+				)}
 				aria-label={label}
 			>
 				{loading

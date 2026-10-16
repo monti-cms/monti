@@ -4,7 +4,7 @@ import type { Issue } from "@monti-cms/core/client";
 import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { ChangeImpact } from "@monti-cms/core/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/schema-edit";
-import { TriangleAlert } from "lucide-react";
+import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";
 import {
@@ -327,11 +327,21 @@ export function ReviewDialog({
 					)}
 					{preview?.valid && (
 						<>
-							<p className="text-sm" data-testid="review-summary">
-								{preview.changed
-									? t("review.summary", { count: dataChanges, from: preview.currentVersion, to: preview.nextVersion })
-									: t("review.unchanged")}
-							</p>
+							<div
+								className="flex items-center gap-2.5 rounded-lg border border-cms-border bg-cms-muted/40 px-3.5 py-2.5 text-sm"
+								data-testid="review-summary"
+							>
+								{dataChanges === 0 ? (
+									<CheckCircle2 className="size-4 shrink-0 text-cms-primary" aria-hidden />
+								) : (
+									<Info className="size-4 shrink-0 text-cms-muted-foreground" aria-hidden />
+								)}
+								<p>
+									{preview.changed
+										? t("review.summary", { count: dataChanges, from: preview.currentVersion, to: preview.nextVersion })
+										: t("review.unchanged")}
+								</p>
+							</div>
 							{preview.baseline === "file" && (
 								<p className="text-cms-muted-foreground text-xs">{t("review.baselineFile")}</p>
 							)}
@@ -356,11 +366,24 @@ export function ReviewDialog({
 									data-testid="review-settings"
 								>
 									<h3 className="font-medium text-sm">{t("review.settings")}</h3>
-									<ul className="flex flex-col gap-1">
+									<ul className="flex flex-col gap-1.5">
 										{settings.map((setting) => (
-											<li key={setting.path} className="text-xs">
-												<code>{setting.path}</code>: {settingText(setting.from, t("review.unset"))} {"->"}{" "}
-												{settingText(setting.to, t("review.unset"))}
+											<li
+												key={setting.path}
+												className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-cms-border bg-cms-muted/20 px-3 py-2 font-mono text-xs"
+											>
+												<div>
+													<code className="font-semibold text-cms-foreground">{setting.path}</code>:{" "}
+												</div>
+												<div className="flex items-center gap-2">
+													<span className="text-cms-muted-foreground line-through decoration-cms-muted-foreground/60">
+														{settingText(setting.from, t("review.unset"))}
+													</span>
+													{" -> "}
+													<span className="rounded bg-cms-primary/10 px-1.5 py-0.5 font-medium text-cms-primary">
+														{settingText(setting.to, t("review.unset"))}
+													</span>
+												</div>
 											</li>
 										))}
 									</ul>

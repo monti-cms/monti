@@ -3,7 +3,7 @@
 import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import type { Folder } from "@monti-cms/core/runtime";
 import { Check, Copy, ExternalLink } from "lucide-react";
-import { type ReactNode, useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";
 import type { MediaItem } from "../../api/media";
 import { formatBytes } from "../../editor/upload-helper";
@@ -169,6 +169,14 @@ export function MediaDetailPanel({
 		apply,
 	});
 
+	const folderItems = useMemo(
+		() => [
+			{ value: "root", label: t("detail.folder.none") },
+			...(folders ?? []).map((f) => ({ value: f.id, label: folderPath(f, folders ?? []) })),
+		],
+		[folders, t],
+	);
+
 	return (
 		<aside
 			aria-label={t("detail.label")}
@@ -306,6 +314,7 @@ export function MediaDetailPanel({
 							<Row label={t("detail.row.folder")}>
 								<Select
 									value={media.folderId ?? "root"}
+									items={folderItems}
 									disabled={movingFolder || !onMoveFolder}
 									onValueChange={(val) => {
 										if (!onMoveFolder) return;
@@ -319,10 +328,9 @@ export function MediaDetailPanel({
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="root">{t("detail.folder.none")}</SelectItem>
-										{folders.map((f) => (
-											<SelectItem key={f.id} value={f.id}>
-												{folderPath(f, folders)}
+										{folderItems.map((item) => (
+											<SelectItem key={item.value} value={item.value}>
+												{item.label}
 											</SelectItem>
 										))}
 									</SelectContent>

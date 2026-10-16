@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { contentCollection } from "../../../../../test/any-site";
+import { contentCollection, recordCollection } from "../../../../../test/any-site";
 import { testConfig } from "../../../../../test/site";
 import { fakeCms } from "../../../../cms";
 import { CmsError } from "../../../../core/store";
 import { routeCaller } from "../../../../testing";
 import { PATCH as patchFolderHandler } from "../[id]/route";
-import { GET as getFoldersHandler } from "../route";
+import { POST as createFolderHandler, GET as getFoldersHandler } from "../route";
 
 const patchFolder = routeCaller(patchFolderHandler);
 const getFolders = routeCaller(getFoldersHandler);
+const createFolder = routeCaller(createFolderHandler);
 
 const mockStore = {
 	listFolders: vi
@@ -38,6 +39,26 @@ describe("Folders HTTP API Contract", () => {
 		expect(res.status).toBe(200);
 		const data = await res.json();
 		expect(data[0].version).toBe(1);
+	});
+
+	it("GET /folders rejects collection without folders enabled with 400", async () => {
+		const req = new Request(`http://localhost/api/monti/v1/folders?collection=${recordCollection}`);
+		const res = await getFolders(req, { cms });
+		expect(res.status).toBe(400);
+		const data = await res.json();
+		expect(data.error.code).toBe("invalid_input");
+	});
+
+	it("POST /folders rejects collection without folders enabled with 400", async () => {
+		const req = new Request("http://localhost/api/monti/v1/folders", {
+			method: "POST",
+			headers: { origin: "http://localhost", "content-type": "application/json" },
+			body: JSON.stringify({ collection: recordCollection, name: "Sub" }),
+		});
+		const res = await createFolder(req, { cms });
+		expect(res.status).toBe(400);
+		const data = await res.json();
+		expect(data.error.code).toBe("invalid_input");
 	});
 
 	it("PATCH /folders/:id rejects without expectedVersion with 428", async () => {

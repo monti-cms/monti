@@ -30,11 +30,10 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 	const path = typeof admin.path === "string" ? admin.path : DEFAULT_ADMIN_PATH;
 	return (
 		<div className="flex flex-col gap-12" data-testid="admin-settings">
-			<Section wide title={t("admin.languageTitle")} description={t("admin.languageDescription")}>
+			<Section wide title={t("admin.languageTitle")}>
 				<div>
 					<Pick
 						label={t("admin.locale")}
-						description={t("admin.localeHint")}
 						value={locale ?? DEFAULT_CHOICE}
 						items={[
 							{ value: DEFAULT_CHOICE, label: t("admin.localeDefault", { code: defaultCode }) },
@@ -44,23 +43,21 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 					/>
 				</div>
 			</Section>
-			<Section wide title={t("admin.featuresTitle")} description={t("admin.featuresDescription")}>
+			<Section wide title={t("admin.featuresTitle")}>
 				<FlagSwitch
 					label={t("admin.templates")}
-					description={t("admin.templatesHint")}
 					checked={admin.templates !== false}
 					onChange={(on) => set("templates", on ? undefined : false)}
 				/>
 				<div className="border-t pt-6">
 					<FlagSwitch
 						label={t("admin.translations")}
-						description={t("admin.translationsHint")}
 						checked={admin.translations !== false}
 						onChange={(on) => set("translations", on ? undefined : false)}
 					/>
 				</div>
 			</Section>
-			<Section wide title={t("admin.addressTitle")} description={t("admin.addressDescription")}>
+			<Section wide title={t("admin.addressTitle")}>
 				<div>
 					<Labeled label={t("admin.path")} description={t("admin.pathNote")}>
 						<code className="w-fit rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="admin-path">

@@ -8,17 +8,23 @@ import {
 	useSite,
 	useTranslator,
 } from "@monti-cms/core/client";
-import { File, FileArchive, FileText, FileType } from "lucide-react";
+import type { Folder } from "@monti-cms/core/runtime";
+import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";
+import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
+import { folderKeyHandler } from "../admin-sidebar";
+import { EntriesTableFolderRows } from "../entries-table-folder-rows";
+import { screensMessages } from "../messages";
 import { ActionContextMenu, type MenuAction, MoreActionsButton } from "../shared/action-menu";
 import { writeDraggedEntries } from "../shared/entry-drag";
 import { formatDateTime } from "../shared/format-date";
 import { OPEN_ITEM } from "../shared/side-panel";
+import { type FolderActions, folderMenuActions } from "../shared/use-folder-actions";
 import { usageLabel } from "./media-item";
 import { mediaMessages } from "./messages";
 
@@ -45,6 +51,10 @@ export interface MediaViewProps {
 	menuFor: (media: MediaItem) => MenuAction[];
 	/** Delete key. Only unused files can be deleted. */
 	onDeleteKey: (media: MediaItem) => void;
+	explorer?: { folders: Folder[]; parent: string | null } | null;
+	folders?: Folder[];
+	folderActions?: FolderActions;
+	onSelectFolder?: (folder: string) => void;
 }
 
 const deleteKey = (media: MediaItem, onDeleteKey: (media: MediaItem) => void) => (event: KeyboardEvent) => {
@@ -55,9 +65,36 @@ const deleteKey = (media: MediaItem, onDeleteKey: (media: MediaItem) => void) =>
 };
 
 /** Grid view. Shows the thumbnail and usage state large. */
-export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDeleteKey }: MediaViewProps) {
+export function MediaGrid({
+	items,
+	selectedId,
+	dimmed,
+	onSelect,
+	menuFor,
+	onDeleteKey,
+	explorer,
+	folders,
+	folderActions,
+	onSelectFolder,
+}: MediaViewProps) {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
+	const tc = useTranslator(commonMessages);
+	const ts = useTranslator(screensMessages);
+
+	const folderRowMenu = (folder: Folder): MenuAction[] =>
+		folderActions
+			? [
+					{
+						kind: "item",
+						label: tc("open"),
+						icon: FolderOpen,
+						onSelect: () => onSelectFolder?.(folder.id),
+					},
+					{ kind: "separator" },
+					...folderMenuActions(site, folder, folders ?? [], folderActions),
+				]
+			: [];
 	return (
 		<ul
 			className={cn(
@@ -65,6 +102,45 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 				dimmed && "opacity-60",
 			)}
 		>
+			{explorer?.parent !== null && explorer?.parent !== undefined && onSelectFolder && (
+				<li className="relative">
+					<Button
+						variant="outline"
+						type="button"
+						onClick={() => onSelectFolder(explorer.parent ?? "all")}
+						className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-cms-card p-0 text-left font-normal hover:border-cms-foreground/30"
+					>
+						<span className="relative flex aspect-square items-center justify-center bg-cms-muted/50 text-cms-muted-foreground hover:text-cms-foreground">
+							<FolderUp className="size-10" aria-hidden />
+						</span>
+						<span className="truncate p-2 font-medium text-cms-muted-foreground text-xs">{ts("list.folderUp")}</span>
+					</Button>
+				</li>
+			)}
+			{explorer?.folders.map((folder) => {
+				const actions = folderRowMenu(folder);
+				return (
+					<ActionContextMenu key={`folder-${folder.id}`} actions={actions} trigger={<li className="relative" />}>
+						<Button
+							variant="outline"
+							type="button"
+							onClick={() => onSelectFolder?.(folder.id)}
+							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
+							className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-cms-card p-0 text-left font-normal hover:border-cms-foreground/30"
+						>
+							<span className="relative flex aspect-square items-center justify-center bg-cms-muted/50 text-cms-muted-foreground">
+								<FolderIcon className="size-10 text-cms-muted-foreground" aria-hidden />
+							</span>
+							<span className="truncate p-2 font-medium text-xs">{folder.name}</span>
+						</Button>
+						<MoreActionsButton
+							actions={actions}
+							label={ts("list.folderActions", { name: folder.name })}
+							className="absolute top-1 right-1 size-7 bg-cms-background/80"
+						/>
+					</ActionContextMenu>
+				);
+			})}
 			{items.map((media) => (
 				<ActionContextMenu key={media.id} actions={menuFor(media)} trigger={<li className="relative" />}>
 					<Button
@@ -109,28 +185,55 @@ export function MediaGrid({ items, selectedId, dimmed, onSelect, menuFor, onDele
 }
 
 /** List view. Shows name, type, size, dimensions, usage state and upload date, one per row. */
-export function MediaTable({ items, selectedId, dimmed, onSelect, menuFor, onDeleteKey }: MediaViewProps) {
+export function MediaTable({
+	items,
+	selectedId,
+	dimmed,
+	onSelect,
+	menuFor,
+	onDeleteKey,
+	explorer,
+	folders,
+	folderActions,
+	onSelectFolder,
+}: MediaViewProps) {
 	const site = useSite();
 	const t = useTranslator(mediaMessages);
 	return (
-		<Table aria-label={t("views.table")} className={cn("text-xs transition-opacity", dimmed && "opacity-60")}>
-			<TableHeader>
+		<Table
+			aria-label={t("views.table")}
+			containerClassName="overflow-visible"
+			className={cn(
+				"table-fixed text-xs transition-opacity [&_td:first-child]:pl-4 lg:[&_td:first-child]:pl-6 [&_td:last-child]:pr-4 lg:[&_td:last-child]:pr-6 [&_th:first-child]:pl-4 lg:[&_th:first-child]:pl-6 [&_th:last-child]:pr-4 lg:[&_th:last-child]:pr-6",
+				dimmed && "opacity-60",
+			)}
+		>
+			<TableHeader className="sticky top-0 z-10 bg-cms-background [&_tr]:border-b">
 				<TableRow>
-					<TableHead className="w-12">
+					<TableHead className="w-14 font-normal text-cms-muted-foreground">
 						<span className="sr-only">{t("views.preview")}</span>
 					</TableHead>
-					<TableHead>{t("views.filename")}</TableHead>
-					<TableHead className="w-28">{t("views.type")}</TableHead>
-					<TableHead className="w-24">{t("views.size")}</TableHead>
-					<TableHead className="w-28">{t("views.dimensions")}</TableHead>
-					<TableHead className="w-20">{t("views.usage")}</TableHead>
-					<TableHead className="w-40">{t("views.uploadedAt")}</TableHead>
-					<TableHead className="w-10">
+					<TableHead className="font-normal text-cms-muted-foreground">{t("views.filename")}</TableHead>
+					<TableHead className="w-28 font-normal text-cms-muted-foreground">{t("views.type")}</TableHead>
+					<TableHead className="w-24 font-normal text-cms-muted-foreground">{t("views.size")}</TableHead>
+					<TableHead className="w-28 font-normal text-cms-muted-foreground">{t("views.dimensions")}</TableHead>
+					<TableHead className="w-20 font-normal text-cms-muted-foreground">{t("views.usage")}</TableHead>
+					<TableHead className="w-40 font-normal text-cms-muted-foreground">{t("views.uploadedAt")}</TableHead>
+					<TableHead className="w-10 font-normal text-cms-muted-foreground">
 						<span className="sr-only">{t("views.actions")}</span>
 					</TableHead>
 				</TableRow>
 			</TableHeader>
 			<TableBody>
+				{explorer && folders && onSelectFolder && (
+					<EntriesTableFolderRows
+						explorer={explorer}
+						folders={folders}
+						folderActions={folderActions}
+						visibleCount={8}
+						onSelectFolder={onSelectFolder}
+					/>
+				)}
 				{items.map((media) => {
 					const isSelected = selectedId === media.id;
 					return (

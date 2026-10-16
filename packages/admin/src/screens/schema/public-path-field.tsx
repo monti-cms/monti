@@ -49,7 +49,6 @@ export function PublicPathField({
 		<div className="flex flex-col gap-4">
 			<FlagSwitch
 				label={t("collection.path")}
-				description={t("collection.pathDescription")}
 				checked={hasPage}
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>
@@ -76,7 +75,6 @@ export function PublicPathField({
 							{segment === "" ? ":slug" : "/:slug"}
 						</span>
 					</div>
-					<p className="text-cms-muted-foreground text-xs">{t("collection.pathHint")}</p>
 					{issue && <FieldError className="text-xs">{t(`path.${issue}`)}</FieldError>}
 				</div>
 			)}

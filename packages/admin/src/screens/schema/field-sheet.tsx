@@ -134,12 +134,7 @@ export function FieldSheet({
 						<IssueList issues={issues} />
 						<TabsContent value="basic" className="flex flex-col gap-8">
 							<section className="flex flex-col gap-6">
-								<TextInput
-									label={t("sheet.label")}
-									description={t("sheet.labelHint")}
-									value={label}
-									onChange={(value) => setBoth("label", value)}
-								/>
+								<TextInput label={t("sheet.label")} value={label} onChange={(value) => setBoth("label", value)} />
 								<TextInput
 									label={t("field.description")}
 									optional
@@ -178,7 +173,6 @@ export function FieldSheet({
 									{LOCALIZED_KINDS.includes(kind) && (
 										<Segmented
 											label={t("field.localized")}
-											description={t("sheet.localizedHint")}
 											value={
 												field.localized === true ? "localized" : field.localized === "inherit" ? "inherit" : "shared"
 											}

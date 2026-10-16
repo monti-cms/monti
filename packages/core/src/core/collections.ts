@@ -85,6 +85,13 @@ export function createCollections(
 			);
 	}
 
+	/** Whether folders are enabled for this collection. Media always has folders; collections default to true for document and false for item. */
+	const foldersEnabled = (collection: string): boolean => {
+		if (collection === "media") return true;
+		if (!isCollection(collection)) return false;
+		return COLLECTION_DEFINITIONS[collection]?.folders ?? COLLECTION_DEFINITIONS[collection]?.kind !== "item";
+	};
+
 	return {
 		COLLECTIONS,
 		COLLECTION_DEFINITIONS,
@@ -94,5 +101,6 @@ export function createCollections(
 		DOCUMENT_COLLECTIONS,
 		DEFAULT_COLLECTION,
 		taxonomyFieldsOf,
+		foldersEnabled,
 	};
 }

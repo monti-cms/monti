@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText, useCmsMutation } from "@monti-cms/admin/api";
+import { apiErrorMessages, errorText, useCmsMutation } from "@monti-cms/admin/api";
 import {
 	Button,
 	Checkbox,
@@ -219,23 +219,22 @@ export function AiManager() {
 	});
 
 	const saveMutation = useCmsMutation({
-		fn: (current: Editing, { site }) =>
-			current.isNew && current.base
-				? createAiAction(
-						site,
-						{ base: { ...current.base, label: current.base.label.trim() }, value: current.spec },
-						tc("saveFailed"),
-					)
+		fn: (current: Editing, { site }) => {
+			const label = (current.base ? current.base.label : (current.spec.label ?? current.feature.label)).trim();
+			const spec = { ...current.spec, label };
+			return current.isNew && current.base
+				? createAiAction(site, { base: { ...current.base, label }, value: spec }, tc("saveFailed"))
 				: updateAiAction(
 						site,
 						current.feature.key,
 						{
 							expectedVersion: current.feature.version,
-							value: current.spec,
-							...(current.base ? { base: { ...current.base, label: current.base.label.trim() } } : {}),
+							value: spec,
+							...(current.base ? { base: { ...current.base, label } } : {}),
 						},
 						tc("saveFailed"),
-					),
+					);
+		},
 		success: tc("saved"),
 		failure: tc("saveFailed"),
 		inline: true,
@@ -367,7 +366,11 @@ export function AiManager() {
 		const { label: _before, ...restBefore } = editing.base ?? base;
 		const { label: _after, ...restAfter } = base;
 		if (JSON.stringify(restBefore) === JSON.stringify(restAfter)) {
-			changeDraft((draft) => ({ ...draft, base }));
+			changeDraft((draft) => ({
+				...draft,
+				base,
+				spec: { ...draft.spec, label: base.label },
+			}));
 			return;
 		}
 		const draft = draftCustomView(site, base);
@@ -381,6 +384,7 @@ export function AiManager() {
 			feature,
 			spec: {
 				...editableOf(feature),
+				label: base.label,
 				enabled: spec.enabled,
 				askInstruction: spec.askInstruction,
 				instant: spec.instant,
@@ -404,8 +408,22 @@ export function AiManager() {
 
 	const save = () => {
 		if (!editing) return;
+		const label = (editing.base ? editing.base.label : (editing.spec.label ?? editing.feature.label)).trim();
+		if (!label) {
+			setFormError(site.createTranslator(apiErrorMessages)("field.missing", { label: t("field.name") }));
+			return;
+		}
+		if (!editing.spec.prompt?.trim()) {
+			setFormError(site.createTranslator(apiErrorMessages)("field.missing", { label: t("field.prompt") }));
+			return;
+		}
 		setFormError(null);
-		saveMutation.mutate(editing);
+		const spec = { ...editing.spec, label };
+		saveMutation.mutate({
+			...editing,
+			spec,
+			...(editing.base ? { base: { ...editing.base, label } } : {}),
+		});
 	};
 
 	const toggleHide = (feature: AiActionView, hidden: boolean) => {
@@ -515,20 +533,15 @@ export function AiManager() {
 											<button
 												type="button"
 												onClick={() => toggleGroup(group)}
-												className="flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors hover:bg-cms-muted"
+												className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left transition-colors hover:bg-cms-muted"
 											>
-												<span className="flex items-center gap-1.5 font-semibold text-cms-foreground text-xs">
-													<ChevronDown
-														className={cn(
-															"size-3.5 text-cms-muted-foreground transition-transform duration-150",
-															isCollapsed && "-rotate-90",
-														)}
-													/>
-													<span>{t(`group.${group}`)}</span>
-												</span>
-												<span className="rounded-full border border-cms-border/60 bg-cms-background px-1.5 py-0.5 font-mono text-[10px] text-cms-muted-foreground">
-													{groupFeatures.length}
-												</span>
+												<ChevronDown
+													className={cn(
+														"size-3.5 text-cms-muted-foreground transition-transform duration-150",
+														isCollapsed && "-rotate-90",
+													)}
+												/>
+												<span className="font-semibold text-cms-foreground text-xs">{t(`group.${group}`)}</span>
 											</button>
 										</li>,
 										...(isCollapsed
@@ -537,7 +550,6 @@ export function AiManager() {
 													<ListRow
 														key={feature.key}
 														title={feature.label}
-														status={!feature.enabled ? t("status.off") : null}
 														detail={`${placeLabel(feature)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
 														current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
 														onClick={() => void openFeature(feature)}
