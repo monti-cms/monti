@@ -55,7 +55,7 @@ describe("site.getPluginOptions", () => {
 
 describe("definePlugin", () => {
 	it("needs only a name for a plugin that adds hooks: options are an empty object, the hooks stay in `server`", () => {
-		const hooks = { validate: () => undefined };
+		const hooks = { validate: [() => undefined] };
 		const plugin = definePlugin({ name: "hook-only", server: { hooks } });
 		expect(plugin.options).toEqual({});
 		expect(plugin.server).toEqual({ hooks });

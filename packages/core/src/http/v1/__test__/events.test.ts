@@ -47,6 +47,8 @@ const storeOf = (overrides: Partial<Record<keyof ContentStore, unknown>> = {}) =
 		dismissDelivery: vi.fn(async () => true),
 		enqueueEvents: vi.fn(async () => 0),
 		claimDeliveries: vi.fn(async () => []),
+		deliverySubscribers: vi.fn(async () => []),
+		renameSubscriber: vi.fn(async () => 0),
 		...overrides,
 	}) as unknown as ContentStore;
 
@@ -99,7 +101,7 @@ describe("POST /v1/events/retry", () => {
 		fakeCms({
 			store,
 			server: { events },
-			plugins: [{ name: "sync", hooks: { afterCommit: () => undefined } }],
+			plugins: [{ name: "sync", hooks: { afterCommit: [{ name: "push", run: () => undefined }] } }],
 		});
 
 	it("takes an admin session and delivers what is due", async () => {
@@ -108,7 +110,7 @@ describe("POST /v1/events/retry", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ delivered: 0, failed: 0, dead: 0, deferred: 0, counts });
 		expect(store.claimDeliveries).toHaveBeenCalledWith(
-			expect.objectContaining({ subscribers: ["plugin:sync"], ignoreBackoff: undefined }),
+			expect.objectContaining({ subscribers: ["plugin:sync:push"], ignoreBackoff: undefined }),
 		);
 	});
 

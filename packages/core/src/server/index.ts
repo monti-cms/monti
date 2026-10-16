@@ -95,6 +95,7 @@ export type {
 } from "../services/events";
 export type {
 	AfterCommitHook,
+	AfterCommitSubscriber,
 	PluginScope,
 	ServerScope,
 	TransformHook,

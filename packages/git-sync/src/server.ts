@@ -19,7 +19,8 @@ export default defineServerPlugin({
 		{ pattern: "v1/git-sync/webhook", module: routes.webhook, access: "signed" },
 	],
 	// Delivered through the event outbox: a failed push is retried, not lost.
-	hooks: { afterCommit: (event, { cms }) => onContentEvent(syncContextFor(cms), event) },
+	// Its deliveries are kept under `plugin:git-sync:sync`; keep the name, or the changes that are still waiting start over.
+	hooks: { afterCommit: [{ name: "sync", run: (event, { cms }) => onContentEvent(syncContextFor(cms), event) }] },
 	commands,
 	// `features["git-sync"].ready` of the admin meta API: is a token saved?
 	features: async ({ cms }) => ({

@@ -320,6 +320,33 @@ export function createEventOps(ctx: StoreContext): EventStore {
 				.execute();
 		},
 
+		deliverySubscribers: async () => {
+			const rows = await db
+				.selectFrom("cms_event_deliveries")
+				.select("subscriber")
+				.distinct()
+				.orderBy("subscriber")
+				.execute();
+			return rows.map((row) => row.subscriber);
+		},
+		renameSubscriber: async ({ from, to }) => {
+			const res = await db
+				.updateTable("cms_event_deliveries as d")
+				.set({ subscriber: to })
+				.where("d.subscriber", "=", from)
+				.where(({ not, exists, selectFrom }) =>
+					not(
+						exists(
+							selectFrom("cms_event_deliveries as t")
+								.select(sql.lit(1).as("one"))
+								.whereRef("t.event_id", "=", "d.event_id")
+								.where("t.subscriber", "=", to),
+						),
+					),
+				)
+				.executeTakeFirst();
+			return Number(res.numUpdatedRows);
+		},
 		pruneEvents: async ({ before }) => {
 			const res = await db
 				.deleteFrom("cms_events as e")

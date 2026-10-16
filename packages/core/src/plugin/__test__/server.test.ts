@@ -95,24 +95,36 @@ describe("load", () => {
 });
 
 describe("writeHooks", () => {
-	it("lists the server config's hooks first, then the plugins' in config order, each with its owner", async () => {
-		const serverHooks = { validate: () => undefined };
-		const aHooks = { transform: () => undefined };
-		const bHooks = { validatePublish: () => undefined };
+	it("lists the checks before the save: the server config's lists first, then the plugins' in config order, each list in its order", async () => {
+		const ran: string[] = [];
+		const check = (name: string) => () => void ran.push(name);
 		const plugins = serverPlugins(
 			[
 				{ name: "plain" },
-				{ name: "alpha", server: async () => ({ default: { hooks: aHooks } }) },
+				{
+					name: "alpha",
+					server: async () => ({ default: { hooks: { transform: [check("alpha-1"), check("alpha-2")] } } }),
+				},
 				{ name: "no-hooks", server: async () => ({ default: {} }) },
-				{ name: "beta", server: async () => ({ default: { hooks: bHooks } }) },
+				{ name: "beta", server: async () => ({ default: { hooks: { validatePublish: [check("beta")] } } }) },
 			],
-			serverHooks,
+			{ validate: [check("server-1"), check("server-2")] },
 		);
-		expect((await plugins.writeHooks()).map((source) => [source.owner, Object.keys(source.hooks)])).toEqual([
+		const sources = await plugins.writeHooks();
+		expect(sources.map((source) => [source.owner, Object.keys(source.hooks)])).toEqual([
 			["server", ["validate"]],
+			["server", ["validate"]],
+			["plugin:alpha", ["transform"]],
 			["plugin:alpha", ["transform"]],
 			["plugin:beta", ["validatePublish"]],
 		]);
+		for (const { hooks } of sources) await (hooks.transform ?? hooks.validate ?? hooks.validatePublish)?.({} as never);
+		expect(ran).toEqual(["server-1", "server-2", "alpha-1", "alpha-2", "beta"]);
+	});
+
+	it("leaves the subscribers after the save out of the checks", async () => {
+		const plugins = serverPlugins([], { afterCommit: [{ name: "notify", run: () => undefined }] });
+		expect(await plugins.writeHooks()).toEqual([]);
 	});
 
 	it("is empty when nothing registers hooks", async () => {
@@ -122,15 +134,13 @@ describe("writeHooks", () => {
 
 describe("inline server", () => {
 	it("runs the hooks of a plugin whose server is given inline, after the server config's and in the plugin order", async () => {
-		const inline = { validate: () => undefined };
-		const lazy = { validate: () => undefined };
-		const serverHooks = { validate: () => undefined };
+		const check = { validate: [() => undefined] };
 		const plugins = serverPlugins(
 			[
-				{ name: "inline", server: { hooks: inline } },
-				{ name: "lazy", server: async () => ({ default: { hooks: lazy } }) },
+				{ name: "inline", server: { hooks: check } },
+				{ name: "lazy", server: async () => ({ default: { hooks: check } }) },
 			],
-			serverHooks,
+			check,
 		);
 		expect((await plugins.writeHooks()).map((source) => source.owner)).toEqual([
 			"server",
@@ -143,7 +153,7 @@ describe("inline server", () => {
 		const plugins = serverPlugins([
 			{
 				name: "both",
-				server: { hooks: { validate: () => undefined }, features: async () => ({ ready: true }) },
+				server: { hooks: { validate: [() => undefined] }, features: async () => ({ ready: true }) },
 			},
 		]);
 		expect(await plugins.features()).toEqual({ both: { ready: true } });
@@ -152,39 +162,70 @@ describe("inline server", () => {
 });
 
 describe("eventSubscribers", () => {
-	it("lists the server config's afterCommit and then each plugin's, named by owner, skipping hooks without one", async () => {
+	it("makes each afterCommit entry its own subscriber, named <owner>:<name>, the server config's first and then the plugins' in order", async () => {
 		const seen: string[] = [];
-		const afterCommit = (name: string) => () => void seen.push(name);
+		const subscriber = (name: string) => ({ name, run: () => void seen.push(name) });
 		const plugins = serverPlugins(
 			[
-				{ name: "a", server: async () => ({ default: { hooks: { afterCommit: afterCommit("a") } } }) },
-				{ name: "no-after-commit", server: async () => ({ default: { hooks: { validate: () => undefined } } }) },
-				{ name: "b", server: { hooks: { afterCommit: afterCommit("b") } } },
+				{
+					name: "a",
+					server: async () => ({ default: { hooks: { afterCommit: [subscriber("index"), subscriber("notify")] } } }),
+				},
+				{ name: "no-after-commit", server: async () => ({ default: { hooks: { validate: [() => undefined] } } }) },
+				{ name: "b", server: { hooks: { afterCommit: [subscriber("sync")] } } },
 			],
-			{ afterCommit: afterCommit("server") },
+			{ afterCommit: [subscriber("revalidate")] },
 		);
 		const subscribers = await plugins.eventSubscribers();
-		expect(subscribers.map((subscriber) => subscriber.name)).toEqual(["server", "plugin:a", "plugin:b"]);
-		for (const subscriber of subscribers) await subscriber.handler({ eventId: "e1" } as never);
-		expect(seen).toEqual(["server", "a", "b"]);
+		expect(subscribers.map((item) => item.name)).toEqual([
+			"server:revalidate",
+			"plugin:a:index",
+			"plugin:a:notify",
+			"plugin:b:sync",
+		]);
+		for (const item of subscribers) await item.handler({ eventId: "e1" } as never);
+		expect(seen).toEqual(["revalidate", "index", "notify", "sync"]);
 	});
 
-	it("hands every afterCommit its scope: the instance, and a plugin's own context for a plugin's hook", async () => {
+	it("hands every afterCommit its scope: the instance, and a plugin's own context for a plugin's subscriber", async () => {
 		const calls: string[] = [];
 		const event = { eventId: "e1" } as never;
-		const hook =
-			(name: string) =>
-			async (incoming: unknown, scope: { readonly cms: unknown; readonly plugin?: { readonly name: string } }) =>
-				void calls.push(`${name}:${incoming === event}:${scope.cms === cms}:${scope.plugin?.name ?? "-"}`);
+		const subscriber = (name: string) => ({
+			name,
+			run: async (incoming: unknown, scope: { readonly cms: unknown; readonly plugin?: { readonly name: string } }) =>
+				void calls.push(`${name}:${incoming === event}:${scope.cms === cms}:${scope.plugin?.name ?? "-"}`),
+		});
 		const plugins = serverPlugins(
 			[
-				{ name: "inline", server: { hooks: { afterCommit: hook("inline") } } },
-				{ name: "lazy", server: async () => ({ default: { hooks: { afterCommit: hook("lazy") } } }) },
+				{ name: "inline", server: { hooks: { afterCommit: [subscriber("inline")] } } },
+				{ name: "lazy", server: async () => ({ default: { hooks: { afterCommit: [subscriber("lazy")] } } }) },
 			],
-			{ afterCommit: hook("server") },
+			{ afterCommit: [subscriber("server")] },
 		);
-		for (const subscriber of await plugins.eventSubscribers()) await subscriber.handler(event);
+		for (const item of await plugins.eventSubscribers()) await item.handler(event);
 		expect(calls).toEqual(["server:true:true:-", "inline:true:true:inline", "lazy:true:true:lazy"]);
+	});
+
+	it("refuses a subscriber name that is not valid or that its owner uses twice", async () => {
+		const run = () => undefined;
+		await expect(serverPlugins([], { afterCommit: [{ name: "Sync Now", run }] }).eventSubscribers()).rejects.toThrow(
+			/afterCommit of server: "Sync Now" is not a valid subscriber name/,
+		);
+		await expect(
+			serverPlugins([
+				{
+					name: "a",
+					server: {
+						hooks: {
+							afterCommit: [
+								{ name: "sync", run },
+								{ name: "sync", run },
+							],
+						},
+					},
+				},
+			]).eventSubscribers(),
+		).rejects.toThrow(/afterCommit of plugin:a: the subscriber name "sync" is used twice/);
 	});
 
 	it("is empty when nothing registers afterCommit", async () => {

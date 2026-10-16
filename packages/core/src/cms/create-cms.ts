@@ -263,7 +263,8 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 				formats: plugins.formats,
 				verifyAdmin: () => authGateway.verifyAdmin(),
 			}),
-			...createMigrator({ connections, site, plugins }),
+			// A store of its own: a command-line run may close the connections between commands, and the cached store would keep the closed one.
+			...createMigrator({ connections, site, plugins, events: () => connections.database.createStore({ site }) }),
 			close: async () => {
 				await connections.database.close?.();
 			},

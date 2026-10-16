@@ -14,7 +14,7 @@ The snippets below are a sketch to adapt, not tested code.
 
 ## A sketch
 
-The rule: `validate` returns an issue for a slug that is not lowercase ASCII. The second hook, `transform`, lowercases the slug first, so only what lowercasing cannot fix is refused.
+Both are **checks before the save**: they run inside the request, in order, and can change or block the write. The rule: a `validate` check returns an issue for a slug that is not lowercase ASCII. A `transform` check lowercases the slug first, so only what lowercasing cannot fix is refused. Each stage takes a list, so the two combine by listing them.
 
 ```ts
 import { definePlugin } from "@monti-cms/core";
@@ -23,24 +23,28 @@ import type { WriteHooks } from "@monti-cms/core/server";
 const LOWERCASE_ASCII_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const slugRule: WriteHooks = {
-	validate: ({ collection, slug }) => {
-		if (collection !== "post" || slug === null || LOWERCASE_ASCII_SLUG.test(slug)) return;
-		return {
-			issues: [
-				{
-					code: "slug_not_lowercase_ascii",
-					path: "slug", // the field the editor shows the message under
-					message: `The slug "${slug}" must use only lowercase a-z, digits and single hyphens (for example "hello-world").`,
-				},
-			],
-		};
-	},
+	validate: [
+		({ collection, slug }) => {
+			if (collection !== "post" || slug === null || LOWERCASE_ASCII_SLUG.test(slug)) return;
+			return {
+				issues: [
+					{
+						code: "slug_not_lowercase_ascii",
+						path: "slug", // the field the editor shows the message under
+						message: `The slug "${slug}" must use only lowercase a-z, digits and single hyphens (for example "hello-world").`,
+					},
+				],
+			};
+		},
+	],
 };
 
 // Fix instead of refusing: `transform` runs first and returns the data to prepare (leave `slug` out to keep it).
 export const lowercaseSlugs: WriteHooks = {
-	transform: ({ collection, slug, metadata, doc }) =>
-		collection === "post" && slug !== null ? { metadata, doc, slug: slug.toLowerCase() } : undefined,
+	transform: [
+		({ collection, slug, metadata, doc }) =>
+			collection === "post" && slug !== null ? { metadata, doc, slug: slug.toLowerCase() } : undefined,
+	],
 };
 ```
 
@@ -49,7 +53,7 @@ Wire it in `monti.config.ts`, one line:
 ```ts
 export const cms = defineConfig({
 	// …
-	hooks: slugRule, // or { ...lowercaseSlugs, ...slugRule } to fix first and refuse the rest
+	hooks: slugRule, // or { ...lowercaseSlugs, ...slugRule } to fix first and refuse the rest (different stages, so the lists do not overlap)
 });
 ```
 
@@ -62,7 +66,7 @@ export const slugRulePlugin = () => definePlugin({ name: "slug-rule", server: { 
 // plugins: [slugRulePlugin()]
 ```
 
-Use an inline `server` when the hooks are light: it loads with every server start, the CLI and cold starts included (`monti.config.ts` is server-only, so secrets through `cms.secrets` or the environment are fine). When they are heavy, or the plugin has routes, migrations or commands, make `server` a loader (`server: () => import("./server")`); the [Slack recipe](slack-on-publish.md#inline-or-server) does that for its network client.
+Use an inline `server` when the hooks are light: it loads with every server start, the CLI and cold starts included (`monti.config.ts` is server-only, so secrets through `plugin.secrets` or the environment are fine). When they are heavy, or the plugin has routes, migrations or commands, make `server` a loader (`server: () => import("./server")`); the [Slack recipe](slack-on-publish.md#inline-or-server) does that for its network client.
 
 ## What it looks like
 
