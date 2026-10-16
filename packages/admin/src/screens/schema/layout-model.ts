@@ -315,12 +315,6 @@ export const tabCanRename = (tree: Tree, index: number): boolean => (tree.tabs[i
 export const tabCanRemove = (tree: Tree, index: number): boolean =>
 	index > 0 && (tree.tabs[index]?.locked.length ?? 0) === 0;
 
-/** Whether a tab can be moved: only user-added tabs after the default tab, and not plugin-only. */
-export const tabCanMove = (tree: Tree, index: number): boolean => index > 0 && !pluginOnly(tree.tabs[index] as Tab);
-
-/** Whether a tab can be removed: not the default one, and not one a plugin puts fields in. */
-export const tabIsEditable = tabCanRemove;
-
 export function renameTab(tree: Tree, index: number, name: string, defaultLabel?: string): Tree {
 	const next = copy(tree);
 	const tab = next.tabs[index];
