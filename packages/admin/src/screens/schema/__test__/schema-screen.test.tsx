@@ -1,4 +1,4 @@
-import { fieldSetsOf, placementsOf } from "@monti-cms/core/client";
+import { fieldSetsOf, placementsOf } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

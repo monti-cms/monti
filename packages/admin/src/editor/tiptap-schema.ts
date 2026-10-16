@@ -1,4 +1,4 @@
-import { perSite, type Site } from "@monti-cms/core/client";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { Node } from "@tiptap/core";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { Subscript } from "@tiptap/extension-subscript";

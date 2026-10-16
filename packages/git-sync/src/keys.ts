@@ -1,5 +1,5 @@
-import type { ApiKeyView } from "@monti-cms/core/client";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
+import type { ApiKeyView } from "@monti-cms/core/site";
 import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT, GIT_SYNC_WEBHOOK_SLOT } from "./options";
 
 /**

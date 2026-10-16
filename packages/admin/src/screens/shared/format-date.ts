@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 
 /** Date/time display of the admin screen. Notation follows the admin screen language (`admin.locale`), time zone follows the site setting (`timeZone`). */
 export const formatDateTime = (site: Site, value: string | number | Date, options: Intl.DateTimeFormatOptions = {}) =>

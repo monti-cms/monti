@@ -1,5 +1,5 @@
 import { type CollectionsConfig, defineCollection, defineSite, fields, valueFieldsOf } from "@monti-cms/core";
-import { createSite, fieldSetsOf, hasFieldSet } from "@monti-cms/core/client";
+import { createSite, fieldSetsOf, hasFieldSet } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { aiRegistryOf } from "../../../ai/src/registry";
 import { testConfig, testSite } from "../../test/site";

@@ -1,9 +1,9 @@
 "use client";
 
-import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { isUnparsedDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

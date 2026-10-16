@@ -1,7 +1,7 @@
 "use client";
 
-import type { Site, SlugField, ValueField } from "@monti-cms/core/client";
-import { type SchemaCollection, useSite } from "@monti-cms/core/client";
+import type { Site, SlugField, ValueField } from "@monti-cms/core/site";
+import { type SchemaCollection, useSite } from "@monti-cms/core/site";
 import { createContext, type ReactNode, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import {

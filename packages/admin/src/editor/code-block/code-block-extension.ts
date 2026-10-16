@@ -1,5 +1,5 @@
-import { perSite, type Site } from "@monti-cms/core/client";
 import { CODE_BLOCK_MARKS } from "@monti-cms/core/code-block";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { CodeBlock } from "@tiptap/extension-code-block";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { createAnchorDedupePlugin } from "./anchor-dedupe";

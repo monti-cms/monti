@@ -1,6 +1,6 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";

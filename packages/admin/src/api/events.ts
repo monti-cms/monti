@@ -1,4 +1,4 @@
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 import { cmsFetch } from "./client";
 
 /** Local shapes of the events API responses (dates arrive as ISO strings). */

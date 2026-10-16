@@ -1,7 +1,7 @@
 "use client";
 
 import { cn, Input, Textarea } from "@monti-cms/admin/kit";
-import { isUuid, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { isUuid, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import type { AiInputKind } from "../action";
 import type { AiActionView } from "../actions";
 import { aiCommonMessages } from "./ai-common.messages";

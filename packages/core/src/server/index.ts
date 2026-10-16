@@ -1,9 +1,13 @@
 /**
- * Server entry point imported by the app's config file (`monti.config.ts`): `defineConfig`, which takes the site options and the server options (database,
- * login, storage, secret) together and makes the CMS instance the rest of the app uses, and the `postgres` adapter. `createCms` stays for code that builds
- * the site config and the server config itself. The login method (`auth`) comes from `@monti-cms/auth`.
+ * Server-only entry point. Never import it from browser code (`@monti-cms/core/site` is the entry point that works in both).
+ * It has what `monti.config.ts` needs (`defineConfig`, `createCms`, the `postgres` adapter and the server config types) and what server code
+ * needs to work with the CMS instance: the `Cms` type, store ports, services, events, hooks, login types and snapshot helpers. It does not use
+ * `server-only`, so it can also be loaded outside Next (cron scripts, site tests). The login method (`auth`) comes from `@monti-cms/auth`.
  */
 
+// Login: the gateway, its errors and the checks routes run.
+export * from "../adapters/auth";
+// Config file: the instance and its options.
 export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
 export {
 	type BulkService,
@@ -14,18 +18,10 @@ export {
 	type HandleOptions,
 	type PublicServerConfig,
 } from "../cms";
-export type {
-	AfterCommit,
-	ContentChange,
-	ContentChangeKind,
-	ContentEvent,
-	DeferredDelivery,
-	EventDelivery,
-	EventDeliveryCounts,
-	EventDeliveryState,
-	EventLogState,
-} from "../core/store";
-export { DeferDelivery } from "../core/store";
+// Snapshot helpers and the public API options.
+export * from "../core/snapshot";
+// Stores: ports, errors, events, schema-change types and the data shapes (also exported from `@monti-cms/core/site`).
+export * from "../core/store";
 export { defaultPublicJson, type PublicApiOptions } from "../http/v1/public/options";
 export type {
 	AllowedMediaMime,
@@ -36,7 +32,10 @@ export type {
 	StoredFileHead,
 } from "../media/store";
 export { ALLOWED_MEDIA_MIMES } from "../media/store";
-export type { WriteResult } from "../services/content-service";
+export type { CmsRead } from "../read";
+
+// Services: writes, events and the published read.
+export * from "../services/content-service";
 export type {
 	CmsEvents,
 	EventDeliveryOptions,

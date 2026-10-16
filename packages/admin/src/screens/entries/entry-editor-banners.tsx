@@ -2,8 +2,8 @@
 
 // The banners under the header of the entry editor screen: trash notice, unreadable body, save error, publish problems and "source changed".
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { FormatIssue } from "@monti-cms/core/format";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
 import { Button } from "../../ui/button";
 import { FieldError } from "../../ui/field";

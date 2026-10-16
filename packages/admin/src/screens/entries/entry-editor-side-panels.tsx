@@ -2,8 +2,8 @@
 
 // The two side panels of the entry editor screen: the translation source pane (left) and the properties inspector (right).
 
-import { useSite } from "@monti-cms/core/client";
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
+import { useSite } from "@monti-cms/core/site";
 import type { Ref } from "react";
 import { cn } from "../../lib/utils/cn";
 import { PanelResizeHandle, type usePanelResize } from "../../ui/panel-resize";

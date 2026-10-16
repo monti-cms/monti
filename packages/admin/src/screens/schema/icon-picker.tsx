@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { cn } from "../../lib/utils";

@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Locale } from "react-day-picker";
 import { enUS, ja, ko, zhCN } from "react-day-picker/locale";
 

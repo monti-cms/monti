@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 
 /** Address value that keeps an item open in the list screen (`?collection=tag&open=<ID>`). Item collections open in a small form in the list instead of an edit screen. */
 export const OPEN_ITEM_PARAM = "open";

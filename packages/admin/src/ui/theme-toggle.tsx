@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ComponentProps } from "react";

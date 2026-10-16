@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { EntryEditorClient, EntryStatusAction } from "../../api/entries";
 import type { CmsIssue } from "../../api/error-message";
 import type { EditorError, EditorResult } from "../../hooks/result";

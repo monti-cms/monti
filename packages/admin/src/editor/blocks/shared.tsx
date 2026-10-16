@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Settings2 } from "lucide-react";
 import { type ComponentProps, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard";

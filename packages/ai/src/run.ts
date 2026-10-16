@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { configuredSyntax, readableMdx } from "@monti-cms/mdx/format";
 import { z } from "zod";
 import {

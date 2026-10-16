@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { ANCHOR, type CodeLineEffect } from "@monti-cms/core/code-block";
+import type { Site } from "@monti-cms/core/site";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { Mapping, type StepMap } from "@tiptap/pm/transform";

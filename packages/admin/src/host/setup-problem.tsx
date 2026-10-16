@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { layoutMessages } from "./messages";
 

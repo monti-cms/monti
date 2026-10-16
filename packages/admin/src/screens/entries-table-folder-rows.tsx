@@ -1,6 +1,7 @@
 // Folder rows shown above the entries in folder browse mode: the move-to-parent row and subfolder rows.
-import { useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+
+import type { Folder } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import { commonMessages } from "../lib/common.messages";
 import { Button } from "../ui/button";

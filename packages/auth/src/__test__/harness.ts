@@ -1,5 +1,5 @@
-import { createSite } from "@monti-cms/core/client";
 import type { AuthCreateContext, CmsAuth } from "@monti-cms/core/server";
+import { createSite } from "@monti-cms/core/site";
 import { createSecretsVault } from "@monti-cms/core/testing";
 import { vi } from "vitest";
 import { testConfig } from "../../../core/test/site";

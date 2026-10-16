@@ -1,6 +1,6 @@
 import { definePlugin } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
 import { renderDocument } from "@monti-cms/core/render";
+import { createSite } from "@monti-cms/core/site";
 import type { Root } from "mdast";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

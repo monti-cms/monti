@@ -1,7 +1,7 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
 import type React from "react";

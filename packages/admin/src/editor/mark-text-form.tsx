@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { X } from "lucide-react";
 import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useState } from "react";

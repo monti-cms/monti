@@ -1,6 +1,6 @@
 "use client";
 
-import { perSite, type Site, useSite, withBasePath } from "@monti-cms/core/client";
+import { perSite, type Site, useSite, withBasePath } from "@monti-cms/core/site";
 import { useEffect, useSyncExternalStore } from "react";
 import { CmsApiError } from "../api/client";
 import { getEntry } from "../api/entries";

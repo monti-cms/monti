@@ -1,7 +1,7 @@
 "use client";
 
-import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { fileTypeLabel, formatFileSize, useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { type ReactNode, useEffect, useId, useMemo, useState } from "react";
 import { errorText } from "../../api/client";

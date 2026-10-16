@@ -1,10 +1,4 @@
-import {
-	DEFAULT_TAB,
-	isPanelField,
-	type NamedPlacement,
-	type PanelSource,
-	panelGroupsOf,
-} from "@monti-cms/core/client";
+import { DEFAULT_TAB, isPanelField, type NamedPlacement, type PanelSource, panelGroupsOf } from "@monti-cms/core/site";
 import { moveWithin } from "../../lib/utils/move-within";
 import { COLLECTION_KEY_ORDER, fieldsOf, type Obj, setProp, withLayout } from "./schema-model";
 

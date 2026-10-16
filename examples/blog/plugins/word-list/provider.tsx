@@ -1,7 +1,7 @@
 "use client";
 
 import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
-import { defineTextChecker, type TextIssue } from "@monti-cms/core/client";
+import { defineTextChecker, type TextIssue } from "@monti-cms/core/site";
 import type { ReactNode } from "react";
 
 /** A small checker that only looks at a banned-word list and runs in the browser (a free checker, so `auto: true` would be fine too). */

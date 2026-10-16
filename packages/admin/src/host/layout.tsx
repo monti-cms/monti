@@ -1,5 +1,5 @@
-import { SiteProvider } from "@monti-cms/core/client";
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
+import { SiteProvider } from "@monti-cms/core/site";
 import type { ReactNode } from "react";
 import { loadAdminPlugins } from "../plugins";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features";

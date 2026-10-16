@@ -2,7 +2,7 @@
 
 import { defineSite } from "@monti-cms/core";
 import { AuthError } from "@monti-cms/core/adapters/auth";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
 import { fakeCms, routeCaller } from "@monti-cms/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../test/site";

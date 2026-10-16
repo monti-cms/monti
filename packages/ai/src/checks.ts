@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { AiCandidate, AiCheck } from "./definition";
 import { runMessages } from "./run.messages";
 

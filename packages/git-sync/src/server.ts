@@ -1,5 +1,5 @@
 import type { CmsServerPlugin } from "@monti-cms/core";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
 import { tokenKeyOf } from "./keys";

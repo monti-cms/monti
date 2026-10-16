@@ -1,5 +1,5 @@
 import { cmsFetch } from "@monti-cms/admin/api";
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 import type { AiActionView } from "../actions";
 import type { AiCheckResult, AiModelInfo, AiSettingsView } from "../connection";
 import type { AiRunResult } from "../definition";

@@ -4,7 +4,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_TAB, useSite, useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, ChevronsDownUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";

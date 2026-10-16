@@ -1,6 +1,6 @@
 "use client";
 
-import { fieldTraits, useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, useTranslator } from "@monti-cms/core/site";
 import { useRef, useState } from "react";
 import { useCmsAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";

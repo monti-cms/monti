@@ -3,7 +3,7 @@
  * posts, and a fixture renderer. Use only in package and site tests.
  */
 
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { renderToStaticMarkup } from "react-dom/server";
 import { analyze } from "./analyze";
 import { bodyDocument, bodyFromMdx } from "./body";

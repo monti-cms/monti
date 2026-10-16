@@ -3,7 +3,7 @@
 import { CmsApiError } from "@monti-cms/admin/api";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useMemo } from "react";

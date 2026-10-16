@@ -9,7 +9,7 @@ The snippets below are a sketch to adapt, not tested code.
 1. **A plugin has three sides**, each a lazy loader: `server` (routes, hooks, commands), `admin` (screens and providers) and `nav` (the Tools page, plain JSON) ("Plugins" in the [core README](../../packages/core/README.md)).
 2. **A route** is `{ pattern, module: { GET, POST, ... } }` under `/api/monti/`. Wrap each handler with `adminRoute(...)`: it checks the login and the same-origin rule, and hands you the instance (`cms`). A route that must be reachable without login names an `access` kind instead of the default `admin`: `public-read` (GET only), `same-origin-form`, `signed` (a webhook that verifies its signature itself) or `admin-or-bearer`.
 3. **A page** is a client component in `defineAdminPlugin({ pages: { "<segment>": Component } })`. The `nav` item's `path` is the same segment: the page shows as an item of the sidebar's Tools group.
-4. **Screen building blocks**: `PageActions` (puts the page's one primary action on the right of the title bar; the admin already draws the sidebar and the title) and the rest of `@monti-cms/admin/kit`; `cmsFetch` (`@monti-cms/admin/api`) for the call, with a readable error; `cmsApiUrl` and `useSite` from `@monti-cms/core/client`.
+4. **Screen building blocks**: `PageActions` (puts the page's one primary action on the right of the title bar; the admin already draws the sidebar and the title) and the rest of `@monti-cms/admin/kit`; `cmsFetch` (`@monti-cms/admin/api`) for the call, with a readable error; `cmsApiUrl` and `useSite` from `@monti-cms/core/site`.
 
 ## A sketch
 
@@ -59,7 +59,7 @@ The admin side and the screen:
 
 import { cmsFetch } from "@monti-cms/admin/api";
 import { defineAdminPlugin } from "@monti-cms/admin/plugins";
-import { cmsApiUrl, useSite } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 
 function StatsPage() {

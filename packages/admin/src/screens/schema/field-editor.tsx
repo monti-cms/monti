@@ -1,6 +1,6 @@
 "use client";
 
-import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/client";
+import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useCmsAdminComponents } from "../../admin-components";

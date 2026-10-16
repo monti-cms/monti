@@ -1,4 +1,4 @@
-import { cmsApiUrl, type PreferencesBody, type Site } from "@monti-cms/core/client";
+import { cmsApiUrl, type PreferencesBody, type Site } from "@monti-cms/core/site";
 import { cmsFetch } from "./client";
 
 export const preferencesKeys = {

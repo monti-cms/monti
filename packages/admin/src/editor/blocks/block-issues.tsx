@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useBlockIssues } from "./block-issues-context";
 import { blocksMessages } from "./messages";
 

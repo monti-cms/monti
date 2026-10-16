@@ -1,5 +1,5 @@
 import { defineMessages } from "@monti-cms/core";
-import { josa } from "@monti-cms/core/client";
+import { josa } from "@monti-cms/core/site";
 import { enSelected, koSelected } from "../shared/noun.messages";
 
 /** English: the generic noun in the right number ("1 selected item" / "3 selected items"). */

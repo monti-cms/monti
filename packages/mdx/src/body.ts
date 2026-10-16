@@ -1,4 +1,3 @@
-import type { Site } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
 	type CmsJsonValue,
@@ -16,6 +15,7 @@ import {
 	withoutBlockIds,
 	workingCodeBlockAttrs,
 } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import { analyze } from "./analyze";
 import { attributeRecord } from "./jsx";
 import { jsxRegistryOf } from "./registry";

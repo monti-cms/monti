@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { RefreshCw, X, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 import { commonMessages } from "../lib/common.messages";

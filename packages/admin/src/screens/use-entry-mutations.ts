@@ -7,7 +7,7 @@ import {
 	type Site,
 	useSite,
 	useTranslator,
-} from "@monti-cms/core/client";
+} from "@monti-cms/core/site";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CmsApiError, errorText } from "../api/client";

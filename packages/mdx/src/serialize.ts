@@ -1,4 +1,3 @@
-import type { BlockDefinition, Site } from "@monti-cms/core/client";
 import { type CodeBlockDocument, fromCodeBlockDocumentToCodeFence } from "@monti-cms/core/code-block";
 import {
 	type CmsJsonValue,
@@ -11,6 +10,7 @@ import {
 	tableHasMergedCells,
 	tableWidths,
 } from "@monti-cms/core/document";
+import type { BlockDefinition, Site } from "@monti-cms/core/site";
 import { serializeFrontmatter } from "./frontmatter";
 import { jsxRegistryOf } from "./registry";
 import type { SerializeContext, SerializeInlinesOptions, SyntaxExtension } from "./syntax/types";

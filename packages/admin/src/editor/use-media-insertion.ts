@@ -3,7 +3,7 @@
  * inserting the chosen image, the file picker, and uploading attachments as file cards.
  */
 
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";

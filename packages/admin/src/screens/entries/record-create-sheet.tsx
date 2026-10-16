@@ -1,6 +1,6 @@
 "use client";
 
-import { type Collection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Collection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useCallback, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet";
 import { RecordPanel } from "../record-panel";

@@ -1,4 +1,4 @@
-import { type BlockDefinition, SiteProvider } from "@monti-cms/core/client";
+import { type BlockDefinition, SiteProvider } from "@monti-cms/core/site";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { NodeViewProps } from "@tiptap/react";
 import { testSite } from "../../../core/test/site";

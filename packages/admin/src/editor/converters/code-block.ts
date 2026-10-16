@@ -1,4 +1,3 @@
-import type { Site } from "@monti-cms/core/client";
 import type { AnnotationAttr, CodeBlockDocument, InlineAnnotation, LineAnnotation } from "@monti-cms/core/code-block";
 import {
 	type CodeLineEffect,
@@ -15,6 +14,7 @@ import {
 } from "@monti-cms/core/code-block";
 import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
 import { storedCodeBlockAttrs, storedCodeBlockFence } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 import { asString } from "./shared";
 import type { BlockConverter, ConverterContext } from "./types";

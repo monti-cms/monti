@@ -1,7 +1,7 @@
 "use client";
 
-import type { Issue } from "@monti-cms/core/client";
-import { useTranslator } from "@monti-cms/core/client";
+import type { Issue } from "@monti-cms/core/site";
+import { useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { createContext, type ReactNode, useContext, useId, useState } from "react";
 import { cn } from "../../lib/utils/cn";

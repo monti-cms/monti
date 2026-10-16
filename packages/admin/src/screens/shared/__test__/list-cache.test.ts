@@ -1,4 +1,4 @@
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { ListEntriesItem } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import type { EntriesPage } from "../../../api/entries";
 import { applyOptimistic, type OptimisticContext } from "../list-cache";

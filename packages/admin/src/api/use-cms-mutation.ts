@@ -1,4 +1,4 @@
-import { type Site, useSite } from "@monti-cms/core/client";
+import { type Site, useSite } from "@monti-cms/core/site";
 import { type QueryKey, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { errorText } from "./client";

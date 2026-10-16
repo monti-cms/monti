@@ -1,9 +1,8 @@
 "use client";
 
-import type { Field, TextChecker } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Field, ListEntriesItem, TextChecker } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/react";
 import type { LucideIcon } from "lucide-react";
 import {

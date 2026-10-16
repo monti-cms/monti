@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { adminRoute, CmsError, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/plugin/server";
+import type { Site } from "@monti-cms/core/site";
 import { type AiRunBody, aiRunBodySchemaOf, inputSchemaFor, type ResolvedAiAction } from "../../action";
 import { actionWithDraft, getAction } from "../../actions";
 import { coreMessages } from "../../core.messages";

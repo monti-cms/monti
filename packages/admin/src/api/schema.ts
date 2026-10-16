@@ -1,6 +1,6 @@
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { SuggestedTransform } from "@monti-cms/core/schema-change";
 import type { RenameInput, SchemaEditPreview, SchemaSaveResult, SchemaScreenState } from "@monti-cms/core/schema-edit";
+import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 import { cmsFetch } from "./client";
 
 /** The calls of the schema settings screen (see the `/v1/schema` routes of the admin API). */

@@ -1,6 +1,6 @@
 import { auth } from "@monti-cms/auth";
 import { github } from "@monti-cms/auth/github";
-import { createSite } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/site";
 import { createSecretsVault } from "@monti-cms/core/testing";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../core/test/site";

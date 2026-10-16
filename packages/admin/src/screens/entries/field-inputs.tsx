@@ -16,8 +16,8 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { BacklinkField, Collection, RelationField, ValueField } from "@monti-cms/core/client";
-import { type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import type { BacklinkField, Collection, RelationField, ValueField } from "@monti-cms/core/site";
+import { type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

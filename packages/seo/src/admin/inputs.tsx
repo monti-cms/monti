@@ -2,7 +2,7 @@
 
 import type { FieldInputParts, FieldInputProps } from "@monti-cms/admin";
 import { cn, Switch } from "@monti-cms/admin/kit";
-import { type Site, SUMMARY_ROLE, useSite } from "@monti-cms/core/client";
+import { type Site, SUMMARY_ROLE, useSite } from "@monti-cms/core/site";
 import { SEO_DEFAULT_LIMITS } from "../fields";
 
 /** Recommended length: field `max` → `inputOptions.limit` → default. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import type { TranslatorFor } from "../translator";

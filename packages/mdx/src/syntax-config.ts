@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { PluggableList } from "unified";
 import { perSite } from "./per-site";
 import { MDX_PLUGIN_NAME, type MdxPluginOptions } from "./plugin";

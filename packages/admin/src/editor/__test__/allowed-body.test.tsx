@@ -1,5 +1,5 @@
-import type { BodyAllowed } from "@monti-cms/core/client";
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
+import type { BodyAllowed } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";

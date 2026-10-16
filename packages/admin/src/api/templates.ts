@@ -1,6 +1,6 @@
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import type { BodyTemplate } from "@monti-cms/core/runtime";
+import type { BodyTemplate } from "@monti-cms/core/site";
+import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 import { cmsFetch } from "./client";
 
 /** Query keys. Everything under `all` is refetched after a template changes. */

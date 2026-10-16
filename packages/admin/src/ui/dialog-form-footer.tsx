@@ -1,4 +1,4 @@
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { commonMessages } from "../lib/common.messages";
 import { Button } from "./button";
 import { DialogFooter } from "./dialog";

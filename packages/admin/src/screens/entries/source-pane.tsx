@@ -1,8 +1,7 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
-
 import type { StoredDocument } from "@monti-cms/core/document";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";

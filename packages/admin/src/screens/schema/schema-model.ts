@@ -19,7 +19,7 @@ import {
 	RESERVED_COLLECTION_NAMES,
 	RESERVED_METADATA_KEYS,
 	TITLE_ROLE,
-} from "@monti-cms/core/client";
+} from "@monti-cms/core/site";
 import { moveWithin } from "../../lib/utils/move-within";
 
 export type Obj = Record<string, unknown>;

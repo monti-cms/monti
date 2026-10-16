@@ -1,6 +1,6 @@
 "use client";
 
-import { type EditorWidthStep as EditorWidthStepConfig, useSite, useTranslator } from "@monti-cms/core/client";
+import { type EditorWidthStep as EditorWidthStepConfig, useSite, useTranslator } from "@monti-cms/core/site";
 import { MoveHorizontal } from "lucide-react";
 import { useMemo } from "react";
 import { stringCodec, usePreference } from "../lib/hooks/use-preference";

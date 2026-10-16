@@ -2,7 +2,7 @@
 
 // The header of the entry editor screen: back link, status, save status, save/preview/publish actions and the properties and "more" menus.
 
-import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import {
 	Archive,
 	CalendarSync,

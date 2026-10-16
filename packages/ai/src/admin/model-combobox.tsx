@@ -10,7 +10,7 @@ import {
 	ComboboxList,
 	cn,
 } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import type { AiModelInfo } from "../connection";

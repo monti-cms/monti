@@ -1,5 +1,5 @@
 import { defineSite } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/site";
 import { category, memo, post, series, tag } from "../../../core/test/cms.config";
 import { allBlocks } from "./all-blocks";
 

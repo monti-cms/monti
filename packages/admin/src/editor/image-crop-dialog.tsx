@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
 import {
 	type CropBox,
 	formatCrop,
@@ -10,6 +9,7 @@ import {
 	type RotateDegree,
 	roundCropBox,
 } from "@monti-cms/core/document";
+import { useTranslator } from "@monti-cms/core/site";
 import { RotateCw } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";

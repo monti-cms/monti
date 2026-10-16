@@ -16,7 +16,6 @@ import { CONFIG_CANDIDATES } from "./locate";
 /** Packages that hold server code. A client file importing one drags the server into the browser bundle. */
 export const SERVER_ONLY_MODULES = [
 	"@monti-cms/core/server",
-	"@monti-cms/core/runtime",
 	"@monti-cms/core/plugin/server",
 	"@monti-cms/auth",
 	"@monti-cms/nextjs/auth",

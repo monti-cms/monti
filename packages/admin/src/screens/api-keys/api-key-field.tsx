@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApiKeyView, useTranslator } from "@monti-cms/core/client";
+import { type ApiKeyView, useTranslator } from "@monti-cms/core/site";
 import { useId } from "react";
 import { useApiKeys } from "../../api/api-keys";
 import { cn } from "../../lib/utils/cn";

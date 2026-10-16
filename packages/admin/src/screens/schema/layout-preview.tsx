@@ -1,6 +1,6 @@
 "use client";
 
-import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/client";
+import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/site";
 import { Component, type ReactNode, useMemo, useRef, useState } from "react";
 import { type EntryForm, type EntryFormPatch, emptyFormOf } from "../entries/entry-form";
 import { InspectorPanel } from "../entries/inspector-panel";

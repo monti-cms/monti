@@ -1,6 +1,6 @@
 "use client";
 
-import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/client";
+import { PAGE_SIZES, type PageSize, useTranslator } from "@monti-cms/core/site";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../../ui/button";

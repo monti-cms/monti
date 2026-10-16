@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { ApiKeyChoiceInput, ApiKeyView, Site } from "@monti-cms/core/client";
 import type { ApiKeys } from "@monti-cms/core/plugin/server";
+import type { ApiKeyChoiceInput, ApiKeyView, Site } from "@monti-cms/core/site";
 import { z } from "zod";
 import type { ResolvedAiAction } from "./action";
 import type { AiProviderInput, AiProviderKind, AiProviderView, AiSettingsView } from "./connection";

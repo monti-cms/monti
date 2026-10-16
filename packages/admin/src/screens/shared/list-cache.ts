@@ -1,5 +1,4 @@
-import type { BulkOp } from "@monti-cms/core/client";
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { BulkOp, ListEntriesItem } from "@monti-cms/core/site";
 import type { EntriesPage } from "../../api/entries";
 import type { ListState } from "../list-state";
 

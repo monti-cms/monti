@@ -1,5 +1,5 @@
 import { BLOCK_NODES } from "@monti-cms/admin/editor";
-import { invalidOptionAttributes } from "@monti-cms/core/client";
+import { invalidOptionAttributes } from "@monti-cms/core/site";
 import { analyze, directivesOf, serialize, toDocument } from "@monti-cms/mdx/format";
 import { renderFixture } from "@monti-cms/mdx/testing";
 import { directiveSyntax } from "@monti-cms/syntax-directive";

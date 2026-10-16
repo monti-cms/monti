@@ -1,6 +1,6 @@
 import { EMPTY_FORM, type EntryForm, TooltipProvider } from "@monti-cms/admin/kit";
 import { type SlotAction, SlotRegistryProvider } from "@monti-cms/admin/slots";
-import { type Collection, SiteProvider } from "@monti-cms/core/client";
+import { type Collection, SiteProvider } from "@monti-cms/core/site";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // The properties panel is read from the admin package source, not the public entry point (tests only).

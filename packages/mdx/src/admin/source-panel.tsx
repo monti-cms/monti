@@ -2,7 +2,6 @@
 
 import { type BrowserFormat, type SourcePanelProps, useFormat } from "@monti-cms/admin";
 import { useLinkPaths } from "@monti-cms/admin/hooks";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import {
 	assignBlockIds,
 	entryLinkIds,
@@ -12,6 +11,7 @@ import {
 	type StoredDocument,
 	unparsedDocument,
 } from "@monti-cms/core/document";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createMdxBrowserFormat } from "./format";
 import { MdxSourceEditor } from "./mdx-source-editor";

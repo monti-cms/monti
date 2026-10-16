@@ -17,7 +17,7 @@ import {
 	TabsTrigger,
 	Textarea,
 } from "@monti-cms/admin/kit";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";

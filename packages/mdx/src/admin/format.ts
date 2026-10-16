@@ -1,6 +1,6 @@
 import type { BrowserFormat } from "@monti-cms/admin";
-import type { Site } from "@monti-cms/core/client";
 import type { FormatContext, FormatExportContext } from "@monti-cms/core/format";
+import type { Site } from "@monti-cms/core/site";
 import { createMdxFormat, type MdxFormatOptions } from "../format";
 import { siteCodeLineEffects, siteSyntaxBlocks } from "../syntax-config";
 

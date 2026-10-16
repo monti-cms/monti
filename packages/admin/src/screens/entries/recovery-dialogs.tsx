@@ -1,8 +1,7 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
-
 import type { StoredDocument } from "@monti-cms/core/document";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";

@@ -1,7 +1,7 @@
 "use client";
 
 import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
-import { type Site, useSite } from "@monti-cms/core/client";
+import { type Site, useSite } from "@monti-cms/core/site";
 import { type ReactNode, useMemo } from "react";
 import { configuredSyntax } from "../syntax-config";
 import { createMdxBrowserFormat } from "./format";

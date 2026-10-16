@@ -2,9 +2,9 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Issue } from "@monti-cms/core/client";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { SchemaScreenState } from "@monti-cms/core/schema-edit";
+import type { Issue } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, Lock, Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";

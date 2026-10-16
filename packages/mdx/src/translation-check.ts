@@ -1,5 +1,5 @@
-import { compareStructure, type Site, type StructureCheck, unreadableFailure } from "@monti-cms/core/client";
 import { type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
+import { compareStructure, type Site, type StructureCheck, unreadableFailure } from "@monti-cms/core/site";
 import { analyze } from "./analyze";
 import { toStoredDocument } from "./body";
 import type { SyntaxExtension } from "./syntax/types";

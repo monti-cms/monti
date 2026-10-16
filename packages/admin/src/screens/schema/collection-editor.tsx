@@ -1,6 +1,6 @@
 "use client";
 
-import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/client";
+import { type CollectionKind, kindDefaults, useSite, useTranslator } from "@monti-cms/core/site";
 import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { editorMessages } from "../../editor/messages";

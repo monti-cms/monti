@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { CellSelection } from "@tiptap/pm/tables";

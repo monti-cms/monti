@@ -1,7 +1,7 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { charEffectByName } from "@monti-cms/core/code-block";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { type Editor, posToDOMRect } from "@tiptap/core";
 import type { Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";

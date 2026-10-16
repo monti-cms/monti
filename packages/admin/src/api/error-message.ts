@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { apiErrorMessages } from "./error-message.messages";
 
 type ApiErrorSite = Pick<Site, "createTranslator">;

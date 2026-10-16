@@ -1,5 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem, Site } from "@monti-cms/core/site";
 import { commonMessages } from "../../lib/common.messages";
 import type { ConfirmRequest } from "../shared/confirm-dialog";
 import { nounVars } from "../shared/noun.messages";

@@ -1,25 +1,13 @@
 /**
  * Server-side entry point for plugins. Used by plugin API routes, stores and migrations (core route scaffolding, errors).
+ * The CMS instance types a plugin works with (`Cms`, `ContentService`, store ports, write hooks, `DeferDelivery`) come from `@monti-cms/core/server`.
  * A plugin route reads the CMS instance it is served by from its handler input (`adminRoute(async ({ cms }) => ...)`): `cms.store()`, `cms.mediaStore()`,
  * `cms.storage(pluginName)`, `cms.secrets(pluginName)`. Do not import from browser code.
  */
 
 export { AuthError } from "./adapters/auth/auth-gateway";
 export type { ApiKeys } from "./api-keys/api-keys";
-export type { BulkService, Cms, CmsTransaction, ContentService } from "./cms";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem";
-export type {
-	AfterCommit,
-	ContentChange,
-	ContentChangeKind,
-	ContentEvent,
-	ContentStore,
-	Entry,
-	EntryBody,
-	EntryStatus,
-	PublishedEntryRecord,
-} from "./core/store";
-export { DeferDelivery, type DeferredDelivery } from "./core/store";
 export { type Issue, ServiceError } from "./core/types";
 export { type ExportBodyParams, exportBodyText } from "./format/export-body";
 export { CmsError, ERROR_STATUS, type ErrorCode, errorResponse, handleApiError } from "./http/v1/error-handler";
@@ -36,18 +24,5 @@ export type {
 	StorageWriteOptions,
 } from "./plugin/storage";
 export type { PluginSecrets } from "./secrets";
-export type { WriteResult } from "./services/content-service";
-export type {
-	AfterCommitHook,
-	TransformHook,
-	ValidateHook,
-	ValidatePublishHook,
-	ValidationHookContext,
-	ValidationResult,
-	WriteData,
-	WriteHookContext,
-	WriteHooks,
-	WriteOperation,
-} from "./services/hooks";
 
 export * from "./text-check/route";

@@ -1,4 +1,4 @@
-import { type CmsConfig, createSite } from "@monti-cms/core/client";
+import { type CmsConfig, createSite } from "@monti-cms/core/site";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import { preferenceKey, readPreference, storageNamespace, writePreference } from "../site-storage";

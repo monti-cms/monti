@@ -1,5 +1,5 @@
-import { type CmsConfig, createSite } from "@monti-cms/core/client";
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
+import { type CmsConfig, createSite } from "@monti-cms/core/site";
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";

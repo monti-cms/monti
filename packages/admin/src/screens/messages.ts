@@ -1,5 +1,5 @@
 import { defineMessages } from "@monti-cms/core";
-import { josa } from "@monti-cms/core/client";
+import { josa } from "@monti-cms/core/site";
 import { enSelected, koSelected } from "./shared/noun.messages";
 
 /** English: noun matching the count ("1 item" / "3 items"). */

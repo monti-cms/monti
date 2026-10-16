@@ -24,7 +24,7 @@ import {
 	TabsTrigger,
 	useConfirm,
 } from "@monti-cms/admin/kit";
-import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/client";
+import { cmsApiUrl, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";

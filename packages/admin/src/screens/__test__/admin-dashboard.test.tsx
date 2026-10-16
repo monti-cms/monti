@@ -1,4 +1,4 @@
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse as json } from "../../test/fetch";

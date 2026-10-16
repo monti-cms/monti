@@ -1,7 +1,7 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import { type CodeLineEffect, type CodeRule, lineAt, lineRange, lineStarts } from "@monti-cms/core/code-block";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { NodeViewContent, type NodeViewProps, NodeViewWrapper, useEditorState } from "@tiptap/react";
 import { Check, ChevronRight, Copy, Info, ListOrdered, Rows3 } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";

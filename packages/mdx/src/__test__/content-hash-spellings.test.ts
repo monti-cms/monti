@@ -1,4 +1,4 @@
-import { computeContentHash } from "@monti-cms/core/runtime";
+import { computeContentHash } from "@monti-cms/core/server";
 import type { Root } from "mdast";
 import { visit } from "unist-util-visit";
 import { describe, expect, it } from "vitest";

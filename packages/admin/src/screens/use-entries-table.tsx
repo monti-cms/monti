@@ -1,7 +1,8 @@
 // Column state of the entries table: order/visibility/sizes persisted to the user's collection preferences,
 // responsive hiding by width, and the TanStack table instance.
-import { type AdminColumnSettings, useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { type AdminColumnSettings, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	type ColumnOrderState,
 	type ColumnSizingState,

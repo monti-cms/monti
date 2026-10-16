@@ -10,7 +10,7 @@ import type {
 	TextField,
 	ValueField,
 	ViewField,
-} from "@monti-cms/core/client";
+} from "@monti-cms/core/site";
 import {
 	bodyExcerpt,
 	fillFromBodyLength,
@@ -18,7 +18,7 @@ import {
 	type SchemaCollection,
 	useSite,
 	useTranslator,
-} from "@monti-cms/core/client";
+} from "@monti-cms/core/site";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, type ReactNode, useMemo, useState } from "react";
 import {

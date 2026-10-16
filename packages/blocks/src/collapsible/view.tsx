@@ -3,7 +3,7 @@
 import { AttributeInput, BlockSettings, ContainerToolbar } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn, FieldLabel, Switch } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { collapsibleMessages } from "./messages";

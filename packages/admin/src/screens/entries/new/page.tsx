@@ -1,5 +1,5 @@
-import { isUuid } from "@monti-cms/core/client";
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
+import { isUuid } from "@monti-cms/core/site";
 import type { AdminServer } from "../../../host/server";
 import { requireAdminPage } from "../../require-admin";
 import { EntryEditorShell } from "../entry-editor-shell";

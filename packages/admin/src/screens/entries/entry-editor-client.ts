@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { EntryForm } from "./entry-form";
 import { deleteLocalBackup, getLocalBackup, type LocalBackupRecord, saveLocalBackup } from "./local-backup";
 

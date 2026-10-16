@@ -1,6 +1,6 @@
 import { defineCollection, defineSite, fields } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
+import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { columnsFor } from "../../list-columns";
 import {

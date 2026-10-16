@@ -1,6 +1,7 @@
 // Cell renderers of the entries table: title, status label, locale badges, dates, slug, folder and field columns.
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/runtime";
+
+import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Folder as FolderIcon } from "lucide-react";
 import { useCmsAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";

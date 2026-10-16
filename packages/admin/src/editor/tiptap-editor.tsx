@@ -1,7 +1,7 @@
 "use client";
 
-import { type BodyAllowed, useSite, useTranslator } from "@monti-cms/core/client";
 import { emptyStoredDocument, type StoredDocument } from "@monti-cms/core/document";
+import { type BodyAllowed, useSite, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";

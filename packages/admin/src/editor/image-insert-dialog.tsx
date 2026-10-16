@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { mediaNotConfiguredMessage } from "../api/error-message";

@@ -1,4 +1,4 @@
-import { apiKeyChoiceSchema } from "@monti-cms/core/client";
+import { apiKeyChoiceSchema } from "@monti-cms/core/site";
 import { z } from "zod";
 
 /**

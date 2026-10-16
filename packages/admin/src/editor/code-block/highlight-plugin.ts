@@ -1,5 +1,5 @@
-import { perSite, type Site } from "@monti-cms/core/client";
 import { type CodeBlockThemes, DEFAULT_CODE_BLOCK_THEMES } from "@monti-cms/core/code-block";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet, type EditorView } from "@tiptap/pm/view";
 import type { BundledTheme, Highlighter } from "shiki";

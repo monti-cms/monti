@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";

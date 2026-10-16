@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, ChevronDown, ListFilter } from "lucide-react";
 import { useEffect, useState } from "react";
 import { commonMessages } from "../lib/common.messages";

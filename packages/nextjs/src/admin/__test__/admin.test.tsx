@@ -1,6 +1,6 @@
 import { useAdminPathname, useAdminRouter, useAdminSearchParams } from "@monti-cms/admin/router";
 import { defineCollection, defineSite, fields } from "@monti-cms/core";
-import { AuthError } from "@monti-cms/core/runtime";
+import { AuthError } from "@monti-cms/core/server";
 import { fakeCms } from "@monti-cms/core/testing";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { isValidElement, type ReactElement } from "react";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Spinner } from "@monti-cms/admin/kit";
-import { type CmsConfig, useTranslator } from "@monti-cms/core/client";
+import { type CmsConfig, useTranslator } from "@monti-cms/core/site";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";

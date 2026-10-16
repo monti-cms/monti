@@ -1,4 +1,4 @@
-import { SiteProvider } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/site";
 import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

@@ -9,7 +9,7 @@ import {
 	type MarkAttrs,
 } from "@monti-cms/admin/editor";
 import { DropdownMenuSeparator } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { ReactNode } from "react";
 import { cleanTextColor, textColorProps } from "./colors";

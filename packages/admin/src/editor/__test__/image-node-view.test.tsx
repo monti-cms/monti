@@ -1,4 +1,4 @@
-import { image } from "@monti-cms/core/client";
+import { image } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";

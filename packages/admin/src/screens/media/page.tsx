@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import { ImageOff } from "lucide-react";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
 import type { AdminServer } from "../../host/server";

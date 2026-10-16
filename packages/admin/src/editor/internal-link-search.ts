@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { entriesKeys, listEntries } from "../api/entries";
 import { commonMessages } from "../lib/common.messages";
 import type { InternalLinkItem } from "./internal-link";

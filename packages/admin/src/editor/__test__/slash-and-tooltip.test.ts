@@ -1,4 +1,4 @@
-import { defineBlock } from "@monti-cms/core/client";
+import { defineBlock } from "@monti-cms/core/site";
 import { Editor } from "@tiptap/core";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";

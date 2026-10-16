@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { apiErrorMessages } from "../api/error-message.messages";
 import { completeUpload, requestUpload, type UploadTicket } from "../api/media";
 import { isSandboxSite } from "../screens/shared/preview-sandbox";

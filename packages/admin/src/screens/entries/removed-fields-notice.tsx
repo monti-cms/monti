@@ -1,4 +1,4 @@
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { entriesMessages } from "./messages";
 
 /**

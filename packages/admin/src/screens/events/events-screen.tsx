@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
 import { errorText } from "../../api/client";

@@ -1,5 +1,5 @@
-import { createSite } from "@monti-cms/core/client";
 import { createFormatRegistry } from "@monti-cms/core/format";
+import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { documentText, EXCERPT_TEXT, SEARCH_TEXT } from "../../../../core/src/core/body-text";
 import { prepareSnapshot as prepareCoreSnapshot, validateForPublish } from "../../../../core/src/core/snapshot";

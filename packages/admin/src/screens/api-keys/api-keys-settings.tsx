@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/client";
+import { type ApiKeyList, type ApiKeySlotView, type ApiKeyView, useSite, useTranslator } from "@monti-cms/core/site";
 import { KeyRound, Pencil, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { apiKeysKeys, createApiKey, deleteApiKey, putApiKeySlot, updateApiKey, useApiKeys } from "../../api/api-keys";

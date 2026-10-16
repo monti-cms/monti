@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import type { CmsNode } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 
 /** Functions the converter uses for recursive and inline conversion. Passed in by `tiptap-content.ts`. */

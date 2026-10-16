@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { ChainedCommands, Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { Unlink } from "lucide-react";

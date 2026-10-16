@@ -84,7 +84,7 @@ describe("import boundary: the config file stays out of client bundles", () => {
 				'"use client";\nimport { postgres } from "@monti-cms/core/server";\nexport const P = postgres;\n',
 			// The client-safe entry of the core package is fine.
 			"components/ok.tsx":
-				'"use client";\nimport { useSite } from "@monti-cms/core/client";\nexport const S = useSite;\n',
+				'"use client";\nimport { useSite } from "@monti-cms/core/site";\nexport const S = useSite;\n',
 		});
 		const violations = findBoundaryViolations(dir);
 		expect(violations.map((violation) => violation.client).sort()).toEqual([

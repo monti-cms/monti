@@ -1,7 +1,7 @@
 "use client";
 
 import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
-import { cmsApiUrl, remoteTextChecker, useSite } from "@monti-cms/core/client";
+import { cmsApiUrl, remoteTextChecker, useSite } from "@monti-cms/core/site";
 import { type ReactNode, useMemo } from "react";
 import { readBareunOptions } from "./config";
 import { BAREUN_CHECKER_ID, BAREUN_ROUTE } from "./options";

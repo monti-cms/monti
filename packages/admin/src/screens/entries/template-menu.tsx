@@ -1,8 +1,8 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { regenerateBlockIds, type StoredDocument } from "@monti-cms/core/document";
-import type { BodyTemplate } from "@monti-cms/core/runtime";
+import type { BodyTemplate } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, LayoutTemplate, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";

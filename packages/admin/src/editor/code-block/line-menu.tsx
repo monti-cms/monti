@@ -1,6 +1,5 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import {
 	COLLAPSE,
 	type CodeLineEffect,
@@ -9,6 +8,7 @@ import {
 	newEffectId,
 	setLineEffect,
 } from "@monti-cms/core/code-block";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Check, ChevronsDownUp, ChevronsUpDown, Code2, Eye, Highlighter } from "lucide-react";
 import { type CSSProperties, useEffect, useRef } from "react";
 import { cn } from "../../lib/utils/cn";

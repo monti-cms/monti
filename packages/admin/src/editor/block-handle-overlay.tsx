@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, Copy, GripVertical, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";

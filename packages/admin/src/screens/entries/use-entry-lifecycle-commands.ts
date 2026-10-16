@@ -2,8 +2,8 @@
 
 // The command handlers of the entry editor screen: save, preview, publish, the lifecycle transitions (with their confirmations) and duplicate.
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
 import { toast } from "sonner";
 import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";

@@ -1,4 +1,4 @@
-import { createSite } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { aiRegistryOf } from "../../../ai/src/registry";
 import blog from "../../test/cms.config";

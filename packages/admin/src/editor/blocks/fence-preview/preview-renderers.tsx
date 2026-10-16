@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Component, type ComponentType, type ErrorInfo, type ReactNode, useEffect, useState } from "react";
 import { useCmsAdminComponents } from "../../../admin-components";
 import { cn } from "../../../lib/utils/cn";

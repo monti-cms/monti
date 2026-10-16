@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { TranslatorFor } from "../../../translator";
 import { blocksMessages } from "../messages";
 import { type FenceEditorMeta, FencePreviewBlockView } from "./fence-preview-node-view";

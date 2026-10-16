@@ -1,6 +1,5 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
 import {
 	CODE_CHAR_EFFECTS,
 	type CodeCharEffectName,
@@ -10,6 +9,7 @@ import {
 	newEffectId,
 	ruleMatches,
 } from "@monti-cms/core/code-block";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Plus, Regex, Trash2 } from "lucide-react";
 import { cn } from "../../lib/utils/cn";
 import { useSlot } from "../../slots/slots";

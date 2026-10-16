@@ -1,5 +1,5 @@
 import type { AiActionDefinition, AiValidator } from "@monti-cms/core/ai-contract";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 
 /** What the actions read from the site: its admin-language translator (the actions are created per site). */
 export type AiTextSite = Pick<Site, "createTranslator">;

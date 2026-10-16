@@ -2,8 +2,8 @@
 import { CmsAdminComponentsProvider, useCmsAdminComponents, useFormat } from "@monti-cms/admin";
 import { CmsApiError } from "@monti-cms/admin/api";
 import { defineSite } from "@monti-cms/core";
-import { createSite, SiteProvider } from "@monti-cms/core/client";
 import { isBlockId, type StoredDocument, unparsedDocument } from "@monti-cms/core/document";
+import { createSite, SiteProvider } from "@monti-cms/core/site";
 import { cleanup, fireEvent, renderHook, render as renderWithoutSite, screen, waitFor } from "@testing-library/react";
 import type { Root } from "mdast";
 import { type ReactElement, type ReactNode, useState } from "react";
