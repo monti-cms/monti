@@ -1403,7 +1403,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `media` | 올릴 수 있는 미디어. `maxImageBytes`(기본 10MB)·`maxPixels`(기본 4천만)·`maxFileBytes`(기본 50MB)와 받을 형식 `imageTypes`(jpeg·png·webp·gif·avif 가운데)·`fileTypes`(pdf·zip·txt·md·csv·json 가운데, 빈 목록이면 첨부 파일을 받지 않음). 업로드 API·관리자 파일 고르기 창·`/v1/meta`가 따른다. |
 | `editor.widths` | 편집기 본문 폭 메뉴의 단계: `{ label, width }`의 목록이고 `width`는 CSS 길이(`"720px"`, `"48rem"`)다. 메뉴는 이 순서대로 보여 주고 편집기는 첫 단계에서 시작한다. "전체"(폭 제한 없음, 이름은 관리자 언어를 따른다)는 항상 맨 끝에 붙는다. 공개 페이지의 본문 폭에 맞추고, 휴대폰 폭(`{ label: "모바일", width: "375px" }`)을 더해 글이 어떻게 접히는지 확인한다. 없으면 메뉴에는 "보통"(`48rem`)과 "전체"만 있다. 이름표는 비어 있지 않고 서로 달라야 하며, CSS 길이가 아닌 폭은 설정을 읽을 때 오류다. 고른 단계는 사이트별로 브라우저가 기억하고, 설정에서 사라진 단계는 첫 단계로 돌아간다. |
 | `admin.locale` | 관리자 화면 언어와 날짜·숫자 표기(BCP 47, 예: `en`·`ko-KR`). 없으면 사이트 기본 언어(`defaultLocale`). 시각은 `timeZone`으로 보인다. |
-| `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.core"`·`"cms.translation"`이다(MDX를 읽을 때의 문구는 `@monti-cms/mdx`의 `"cms.mdx"`). |
+| `admin.messages` | 화면 문구 덮어쓰기: 이름공간 → 키 → 문구. 본체 블록 이름표는 `"cms.blocks"`(`image.label`처럼 `<블록>.label`), 코드 블록 효과는 `"cms.code-block"`, 검사 오류 문구는 `"cms.core"`·`"cms.translation"`, 오류 코드마다의 문구는 `"cms.core.errors"`, 본체가 더 자세히 알리는 오류 문구(확장자를 바꿀 수 없는 파일 이름, 할 수 없는 상태 변경 등)는 `"cms.core.notices"`이다(MDX를 읽을 때의 문구는 `@monti-cms/mdx`의 `"cms.mdx"`). |
 | `admin.templates` | `false`면 관리자에서 본문 템플릿을 감춘다: 편집기의 템플릿 메뉴, 설정 > 템플릿 탭(그 주소는 404). 기본 `true`. 저장된 템플릿은 그대로 남는다. |
 | `admin.translations` | `false`면 관리자에서 번역 UI를 감춘다: 편집기의 언어 탭, 목록의 언어 열·필터, 항목 패널의 언어 탭. 기본 `true`. 언어가 하나인 사이트는 이 값과 상관없이 보이지 않는다. |
 

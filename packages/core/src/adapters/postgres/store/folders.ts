@@ -151,7 +151,9 @@ export function createFolderOps(ctx: StoreContext) {
 				},
 				{
 					mapError: (err) =>
-						isTransactionConflict(err) ? new CmsError("Cycle", "invalid_input") : mapFolderError(err),
+						isTransactionConflict(err)
+							? new CmsError("Cycle", "invalid_input", { notice: { key: "folder.cycle" } })
+							: mapFolderError(err),
 				},
 			),
 

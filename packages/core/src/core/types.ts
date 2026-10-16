@@ -6,7 +6,7 @@ import type { RecordTranslations } from "../schema/derive";
 import type { Collection } from "./collections";
 import { brandErrorClass } from "./error-brand";
 import type { ErrorCode } from "./error-codes";
-import { CmsError } from "./store/errors";
+import { CmsError, type NoticeRef } from "./store/errors";
 import type { EntryStatus } from "./store/types";
 import type { TranslationState } from "./translation/state";
 
@@ -242,8 +242,8 @@ const errorText = (code: string, issues: readonly Issue[] | undefined): string =
 
 /** A request the service refuses; the issues say what is wrong with it. A {@link CmsError}, so the HTTP layer answers it like any other. */
 export class ServiceError extends CmsError {
-	constructor(code: ErrorCode, issues?: readonly Issue[], message?: string) {
-		super(message ?? errorText(code, issues), code, { issues });
+	constructor(code: ErrorCode, issues?: readonly Issue[], message?: string, options?: { readonly notice?: NoticeRef }) {
+		super(message ?? errorText(code, issues), code, { issues, ...(options?.notice ? { notice: options.notice } : {}) });
 		this.name = "ServiceError";
 	}
 	declare readonly issues?: readonly Issue[];

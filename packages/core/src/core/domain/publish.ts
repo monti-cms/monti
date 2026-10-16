@@ -28,9 +28,15 @@ export interface WorkingBodyState {
 
 /** A trashed entry cannot be published, and an archived one must be unarchived first. */
 export function assertPublishableStatus(status: EntryStatus): void {
-	if (status === "trashed") throw new CmsError("A trashed entry cannot be published", "invalid_status");
+	if (status === "trashed") {
+		throw new CmsError("A trashed entry cannot be published", "invalid_status", {
+			notice: { key: "entry.publish.trashed" },
+		});
+	}
 	if (status === "archived") {
-		throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status");
+		throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status", {
+			notice: { key: "entry.publish.archived" },
+		});
 	}
 }
 
@@ -44,7 +50,11 @@ export function assertExpectedVersion(stored: number, expected: number): void {
 
 /** A trashed entry must be restored before it can be edited. */
 export function assertEditableStatus(status: EntryStatus): void {
-	if (status === "trashed") throw new CmsError("A trashed entry must be restored before editing", "invalid_status");
+	if (status === "trashed") {
+		throw new CmsError("A trashed entry must be restored before editing", "invalid_status", {
+			notice: { key: "entry.edit.trashed" },
+		});
+	}
 }
 
 /**

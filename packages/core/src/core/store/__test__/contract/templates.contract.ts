@@ -135,7 +135,7 @@ export const templatesContract: ContractSuite = (factory) => {
 					name: "새 포스트 템플릿",
 					doc: docOf("duplicate name"),
 				}),
-			).rejects.toThrowError(expect.objectContaining({ code: "conflict" }));
+			).rejects.toThrowError(expect.objectContaining({ code: "conflict", notice: { key: "template.name_taken" } }));
 			await store.createTemplate({ name: "CASE TEST", doc: docOf("original") });
 			await expect(store.createTemplate({ name: "case test", doc: docOf("duplicate") })).rejects.toThrowError(
 				expect.objectContaining({ code: "conflict" }),

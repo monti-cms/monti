@@ -53,7 +53,10 @@ describe("content service rules", () => {
 		const service = serviceFor(testSite);
 		const entry = await createPost(service);
 		const trashed = await store.trashEntry({ id: entry.id, expectedVersion: entry.version });
-		await expect(service.duplicate({ id: entry.id })).rejects.toMatchObject({ code: "invalid_status" });
+		await expect(service.duplicate({ id: entry.id })).rejects.toMatchObject({
+			code: "invalid_status",
+			notice: { key: "entry.duplicate.trashed" },
+		});
 
 		await store.restoreEntry({ id: entry.id, expectedVersion: trashed.version });
 		const copy = await service.duplicate({ id: entry.id });

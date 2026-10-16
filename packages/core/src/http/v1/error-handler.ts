@@ -1,12 +1,12 @@
 import { AuthError } from "../../adapters/auth";
 import { ERROR_STATUS, type ErrorCode, HIDDEN_MESSAGE_CODES } from "../../core/error-codes";
-import { codeNotice } from "../../core/error-notice";
+import { noticeText } from "../../core/error-notice";
 import { type IssueLike, issueText } from "../../core/issue-text";
 import { SetupError } from "../../core/problem";
-import { CmsError, type ErrorNotice } from "../../core/store/errors";
+import { CmsError, type ErrorNotice, type NoticeRef } from "../../core/store/errors";
 import type { Site } from "../../site";
 
-export { CmsError, ERROR_STATUS, type ErrorCode, type ErrorNotice };
+export { CmsError, ERROR_STATUS, type ErrorCode, type ErrorNotice, type NoticeRef };
 
 /**
  * The error body of every answer: `{ error: { code, message, fix?, detail?, issues?, details? } }`.
@@ -84,13 +84,13 @@ const toldIssues = (site: Pick<Site, "createTranslator">, issues: readonly unkno
 
 /**
  * The person's text of a {@link CmsError} in the admin language, for an answer that is not an HTTP error (a line of a stream, one failed item of a batch):
- * the error's own `notice`, else the text of its code, with the developer text as `detail`.
+ * the error's own `notice` (read from the core notice dictionary when it is a key), else the text of its code, with the developer text as `detail`.
  */
 export function cmsErrorText(
 	site: Pick<Site, "createTranslator">,
 	error: CmsError,
 ): { readonly message: string; readonly fix?: string; readonly detail?: string } {
-	const text = error.notice ?? codeNotice(site, error.code);
+	const text = noticeText(site, error);
 	const detail = HIDDEN_MESSAGE_CODES.has(error.code) || error.message === text.what ? undefined : error.message;
 	return { message: text.what, ...(text.fix ? { fix: text.fix } : {}), ...(detail ? { detail } : {}) };
 }
@@ -102,12 +102,12 @@ export function cmsErrorText(
 export function handleApiError(error: unknown, site?: Pick<Site, "createTranslator">): Response {
 	const told = (
 		code: ErrorCode,
-		notice: ErrorNotice | undefined,
+		notice: ErrorNotice | NoticeRef | undefined,
 		detail: string | undefined,
 		extra: ErrorExtra = {},
 	) => {
-		if (!site) return errorResponse(code, detail ?? notice?.what ?? code, extra);
-		const text = notice ?? codeNotice(site, code);
+		if (!site) return errorResponse(code, detail ?? (notice && "what" in notice ? notice.what : code), extra);
+		const text = noticeText(site, { code, notice });
 		return errorResponse(code, text.what, { ...extra, issues: toldIssues(site, extra.issues), fix: text.fix, detail });
 	};
 

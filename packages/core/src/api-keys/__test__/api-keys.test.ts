@@ -94,6 +94,7 @@ describe("api key store", () => {
 		await expect(cms.apiKeys.remove(key.id, { expectedVersion: key.version })).rejects.toMatchObject({
 			code: "key_in_use",
 			serverVersion: key.version,
+			notice: { key: "key.in_use", vars: { count: 1 } },
 			details: { uses: [{ plugin: "ai", ref: "connection:a", label: "ai" }] },
 		});
 		expect(await cms.apiKeys.get(key.id)).not.toBeNull();
