@@ -1,6 +1,7 @@
 "use client";
 
 import type { BrowserFormat, EditorExtension, EditorInsertAction, EditorSelectionAction } from "@monti-cms/admin";
+import { errorNotice, type ErrorNotice as Notice } from "@monti-cms/admin/api";
 import { type BlockAction, blockNodeName, DocPreview } from "@monti-cms/admin/editor";
 import {
 	Button,
@@ -10,6 +11,7 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	ErrorNotice,
 	FieldError,
 	isComposingKey,
 	Tabs,
@@ -53,7 +55,7 @@ type RunState =
 	| { status: "idle" }
 	| { status: "running"; text: string }
 	| { status: "done"; text: string }
-	| { status: "error"; text: string; message: string };
+	| { status: "error"; text: string; notice: Notice };
 
 /** MDX of the selection. A paragraph with only part selected contains only that part. */
 function selectionMdx(site: Site, format: BrowserFormat, editor: Editor, from: number, to: number): string {
@@ -139,7 +141,7 @@ function WriteDialog({
 			setState((current) => ({
 				status: "error",
 				text: "text" in current ? current.text : "",
-				message: error instanceof Error && error.message ? error.message : common("runFailed"),
+				notice: errorNotice(site, error, common("runFailed")),
 			}));
 		}
 	};
@@ -245,8 +247,10 @@ function WriteDialog({
 						</output>
 					</Tabs>
 				)}
-				{(state.status === "error" || blockProblem) && (
-					<FieldError>{state.status === "error" ? state.message : blockProblem}</FieldError>
+				{state.status === "error" ? (
+					<ErrorNotice notice={state.notice} />
+				) : (
+					blockProblem && <FieldError>{blockProblem}</FieldError>
 				)}
 				<DialogFooter>
 					{!askRequest && (

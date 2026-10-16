@@ -120,7 +120,7 @@ export function createPublishing(ctx: StoreContext) {
 			const before = firstAddresses.get(addressKey(link.collection, link.locale, link.slug));
 			const after = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
 			if (linkTargetChanged(before && holderOf(before), after && holderOf(after))) {
-				throw new CmsError("Internal link target changed during publish", "conflict", entry.version);
+				throw new CmsError("Internal link target changed during publish", "conflict", { serverVersion: entry.version });
 			}
 		}
 
@@ -371,13 +371,15 @@ export function createPublishing(ctx: StoreContext) {
 			.orderBy("source_id")
 			.execute();
 		if (usage.length > 0) {
-			throw new CmsError("Other entries still reference this entry", "in_use", undefined, {
-				usages: usage.map((row) => ({
-					entryId: row.source_id,
-					title: row.title,
-					collection: row.collection,
-					state: row.state,
-				})),
+			throw new CmsError("Other entries still reference this entry", "in_use", {
+				details: {
+					usages: usage.map((row) => ({
+						entryId: row.source_id,
+						title: row.title,
+						collection: row.collection,
+						state: row.state,
+					})),
+				},
 			});
 		}
 	};

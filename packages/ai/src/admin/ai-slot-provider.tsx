@@ -1,6 +1,6 @@
 "use client";
 
-import { CmsApiError } from "@monti-cms/admin/api";
+import { apiErrorOf, CmsApiError } from "@monti-cms/admin/api";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider, type SlotSource } from "@monti-cms/admin/slots";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
@@ -85,15 +85,7 @@ export async function streamAiAction(
 	const fallback = t("runFailed");
 	const response = await openAiRunStream({ ...requestBody(action, options), input, stream: true }, options.signal);
 	if (!response.ok || !response.body) {
-		const { error } = (await response.json().catch(() => ({}))) as { error?: Record<string, unknown> };
-		const message = typeof error?.message === "string" ? error.message : fallback;
-		throw new CmsApiError(
-			response.status,
-			typeof error?.code === "string" ? error.code : undefined,
-			message,
-			[],
-			error ?? {},
-		);
+		throw apiErrorOf(site, response.status, await response.json().catch(() => ({})), fallback);
 	}
 	const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
 	let buffer = "";
@@ -108,12 +100,12 @@ export async function streamAiAction(
 			const event = JSON.parse(line) as
 				| { type: "delta"; text: string }
 				| { type: "done"; result: AiRunResult }
-				| { type: "error"; code: string; message: string };
+				| { type: "error"; code: string; message: string; fix?: string; detail?: string };
 			if (event.type === "delta") {
 				text += event.text;
 				options.onText(text);
 			} else if (event.type === "done") return event.result;
-			else throw new CmsApiError(502, event.code, event.message || fallback, [], {});
+			else throw apiErrorOf(site, 502, { error: event }, fallback);
 		}
 		if (done) break;
 	}

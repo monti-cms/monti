@@ -129,7 +129,7 @@ describe("the secret", () => {
 			expect(await response.json()).toMatchObject({
 				error: {
 					code: "secret_not_configured",
-					message: expect.stringContaining("MONTI_SECRET"),
+					detail: expect.stringContaining("MONTI_SECRET"),
 				},
 			});
 			const view = await (await bare.cms.handle(new Request("http://localhost/api/monti/v1/git-sync/status"))).json();

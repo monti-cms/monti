@@ -28,7 +28,7 @@ vi.mock("../store", async () => {
 			getAiSettings: async () => state.snippets,
 			saveAiSettings: async ({ expectedVersion, value }: { expectedVersion: number; value: unknown }) => {
 				const version = state.snippets?.version ?? 0;
-				if (version !== expectedVersion) throw new CmsError("Conflict", "conflict", version);
+				if (version !== expectedVersion) throw new CmsError("Conflict", "conflict", { serverVersion: version });
 				state.snippets = { value, version: version + 1 };
 				return version + 1;
 			},

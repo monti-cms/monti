@@ -10,11 +10,32 @@ export type AiErrorCode = Extract<
 	"service_unavailable" | "upstream_failed" | "payload_too_large" | "rate_limited" | "not_found" | "invalid_input"
 >;
 
+export interface AiErrorOptions {
+	/** What to do about it, in the admin language. */
+	readonly fix?: string;
+	/** The raw words underneath (the provider's answer, a parser or schema message). The person sees them only behind "details". */
+	readonly detail?: string;
+	readonly issues?: readonly unknown[];
+}
+
+/**
+ * An AI run that cannot be done. `what` (and `fix`) are the person's text in the admin language, from a dictionary; raw text from the provider, the
+ * MDX parser or a schema goes in `detail`, never into `what`.
+ */
 export class AiError extends CmsError {
 	declare readonly code: AiErrorCode;
 
-	constructor(code: AiErrorCode, message: string, issues?: readonly unknown[]) {
-		super(message, code, undefined, undefined, issues);
+	constructor(code: AiErrorCode, what: string, options: AiErrorOptions = {}) {
+		// The developer message is the raw words when there are any (the answer's `detail`), else the person's text.
+		super(options.detail ?? what, code, {
+			issues: options.issues,
+			notice: { what, ...(options.fix ? { fix: options.fix } : {}) },
+		});
 		this.name = "AiError";
+	}
+
+	/** The raw words underneath, when there are any. */
+	get detail(): string | undefined {
+		return this.message === this.notice?.what ? undefined : this.message;
 	}
 }

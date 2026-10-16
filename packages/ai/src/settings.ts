@@ -104,7 +104,9 @@ export async function keyUseLabels(
 	refs: readonly string[],
 ): Promise<Record<string, string | null>> {
 	const t = site.createTranslator(settingsMessages);
-	const names = new Map((await load(store)).providers.map((provider) => [connectionRef(provider.id), provider.name]));
+	// Only the stored connections, not `load`: the key store calls this while it lists keys, and `load` lists keys, which would call this again without end.
+	const stored = readStored((await store.getAiSettings())?.value);
+	const names = new Map(stored.map((provider) => [connectionRef(provider.id), provider.name]));
 	return Object.fromEntries(
 		refs.map((ref) => [ref, names.has(ref) ? t("keyUse", { name: names.get(ref) ?? "" }) : null]),
 	);

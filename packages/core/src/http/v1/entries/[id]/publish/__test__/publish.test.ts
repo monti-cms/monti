@@ -90,7 +90,7 @@ describe("publish HTTP contract", () => {
 	});
 
 	it("keeps optimistic version conflicts", async () => {
-		publish.mockRejectedValue(new CmsError("Conflict", "conflict", 7));
+		publish.mockRejectedValue(new CmsError("Conflict", "conflict", { serverVersion: 7 }));
 		const response = await POST(request(), context);
 		expect(response.status).toBe(409);
 		expect(await response.json()).toMatchObject({ error: { code: "conflict", details: { serverVersion: 7 } } });

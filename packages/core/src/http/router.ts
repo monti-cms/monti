@@ -153,8 +153,6 @@ export function matchRoute(
 /** Registered admin API paths (for docs and tests). */
 export const CMS_ROUTE_PATTERNS: readonly string[] = ROUTES.map((route) => route.pattern);
 
-const notFound = () => handleApiError(new CmsError("Unknown CMS API path", "not_found"));
-
 /**
  * The path segments after the API prefix (`/api/monti/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/monti/v1/entries/<id>`.
  * The site's `basePath` is skipped when the URL has it. `null` if the URL is not under the API prefix.
@@ -201,18 +199,19 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 			});
 		return pluginCompiled;
 	};
+	const notFound = () => handleApiError(new CmsError("Unknown CMS API path", "not_found"), cms.site);
 	return async (request, options) => {
 		const path = options?.path ?? pathFromRequest(request);
 		if (!path) return notFound();
 		const method = request.method.toUpperCase();
 		if (!isMethod(method)) {
-			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
+			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
 		}
 		if (path[0] === "auth") {
 			const auth = cms.auth();
 			if (auth.basePath !== CMS_AUTH_BASE_PATH) return notFound();
 			if (method !== "GET" && method !== "POST") {
-				return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
+				return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
 			}
 			return auth.handlers[method](request);
 		}
@@ -221,7 +220,7 @@ export function createRequestHandler(cms: Cms): (request: Request, options?: Han
 		if (!matched || matched.enabled?.(cms) === false) return notFound();
 		const handler = matched.module[method];
 		if (typeof handler !== "function") {
-			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
+			return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
 		}
 		return runRoute(cms, request, matched.params, handler as Parameters<typeof runRoute>[3], matched.access);
 	};

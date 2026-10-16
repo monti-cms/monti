@@ -9,6 +9,7 @@ import {
 } from "@monti-cms/core/document";
 import { perSite, type Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
+import { NoticeError } from "../api/client";
 import { addedMarkByEditorName, addedMarkName, addedMarksOf, markAttrsOf } from "./added-marks";
 import { BLOCK_ID_ATTRIBUTE } from "./block-ids";
 import { parentOnlyTypes } from "./blocks/added";
@@ -186,7 +187,7 @@ const conversionsOf = perSite((site: Site) => {
 			}
 			// Unreachable because isMappableInline has filtered. A box cannot sit inline,
 			// so reaching this means the parent block decision was wrong — surface it instead of passing silently.
-			throw new Error(t("tiptapContent.unmappableInline", { type: node.type }));
+			throw new NoticeError(t("tiptapContent.unmappableInline", { type: node.type }));
 		}
 		return out;
 	};

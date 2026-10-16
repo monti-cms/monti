@@ -113,7 +113,7 @@ export function createFolderOps(ctx: StoreContext) {
 					if (!curr) throw new CmsError("Not found", "not_found");
 					assertFoldersEnabled(site, curr.collection);
 					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
-						throw new CmsError("Conflict", "conflict", curr.version);
+						throw new CmsError("Conflict", "conflict", { serverVersion: curr.version });
 					}
 
 					const next = {
@@ -172,7 +172,7 @@ export function createFolderOps(ctx: StoreContext) {
 					if (!curr) throw new CmsError("Not found", "not_found");
 					assertFoldersEnabled(site, curr.collection);
 					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
-						throw new CmsError("Conflict", "conflict", curr.version);
+						throw new CmsError("Conflict", "conflict", { serverVersion: curr.version });
 					}
 
 					await trx

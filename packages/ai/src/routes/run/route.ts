@@ -1,4 +1,12 @@
-import { adminRoute, CmsError, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/plugin/server";
+import {
+	adminRoute,
+	CmsError,
+	cmsErrorText,
+	ok,
+	parseWith,
+	pluginLog,
+	readJsonBody,
+} from "@monti-cms/core/plugin/server";
 import type { Site } from "@monti-cms/core/site";
 import { type AiRunBody, aiRunBodySchemaOf, inputSchemaFor, type ResolvedAiAction } from "../../action";
 import { actionWithDraft, getAction } from "../../actions";
@@ -32,7 +40,7 @@ async function runOne(action: ResolvedAiAction, body: AiRunBody, input: unknown,
 type StreamEvent =
 	| { type: "delta"; text: string }
 	| { type: "done"; result: unknown }
-	| { type: "error"; code: string; message: string };
+	| { type: "error"; code: string; message: string; fix?: string; detail?: string };
 
 function streamResponse(site: Site, run: (send: (event: StreamEvent) => void) => Promise<void>): Response {
 	const t = site.createTranslator(runMessages);
@@ -53,13 +61,12 @@ function streamResponse(site: Site, run: (send: (event: StreamEvent) => void) =>
 			} catch (error) {
 				// If the screen withdrew the request (e.g. closed the dialog), nobody is receiving, so end quietly.
 				if (error instanceof Error && error.name === "AbortError") return close();
-				const known = error instanceof CmsError;
-				if (!known) log.error("stream failed:", error);
-				send({
-					type: "error",
-					code: known ? error.code : "upstream_failed",
-					message: known ? error.message : t("noAnswer"),
-				});
+				if (error instanceof CmsError) {
+					send({ type: "error", code: error.code, ...cmsErrorText(site, error) });
+				} else {
+					log.error("stream failed:", error);
+					send({ type: "error", code: "upstream_failed", message: t("noAnswer") });
+				}
 			}
 			close();
 		},
@@ -127,7 +134,8 @@ export const POST = adminRoute(async ({ request, cms }) => {
 				results[index] = { result: await runOne(action, body, inputs[index], deps) };
 			} catch (error) {
 				// A format error in one input fails only that input.
-				if (error instanceof AiError && error.code === "upstream_failed") results[index] = { error: error.message };
+				if (error instanceof AiError && error.code === "upstream_failed")
+					results[index] = { error: cmsErrorText(deps.site, error).message };
 				else throw error;
 			}
 		}

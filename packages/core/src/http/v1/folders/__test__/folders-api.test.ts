@@ -17,13 +17,13 @@ const mockStore = {
 	createFolder: vi.fn().mockImplementation((p) => Promise.resolve({ id: "f-new", version: 1, ...p })),
 	updateFolder: vi.fn().mockImplementation((p) => {
 		if (p.expectedVersion === 1) {
-			throw new CmsError("Conflict", "conflict", 2);
+			throw new CmsError("Conflict", "conflict", { serverVersion: 2 });
 		}
 		return Promise.resolve({ id: p.id, version: p.expectedVersion + 1, name: p.name });
 	}),
 	deleteFolder: vi.fn().mockImplementation((p) => {
 		if (p.expectedVersion === 1) {
-			throw new CmsError("Conflict", "conflict", 2);
+			throw new CmsError("Conflict", "conflict", { serverVersion: 2 });
 		}
 		return Promise.resolve();
 	}),

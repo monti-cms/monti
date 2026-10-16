@@ -985,7 +985,17 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 
 ### 오류와 응답
 
-서버가 돌려주는 모든 오류는 `{ "error": { "code", "message", "issues"?, "details"? } }` 한 모양이고, 상태 코드는 한 표(`ERROR_STATUS`, `ErrorCode` 타입과 함께 `@monti-cms/core/plugin/server`에서 내보냄)에서만 정해집니다. 라우트나 플러그인은 그 표의 코드로 `new CmsError(message, code)`를 던지며, 다른 곳에서 상태를 정하지 않습니다. `issues`는 콘텐츠에서 찾은 문제(거부된 쓰기)이고, `details`는 기계가 읽는 추가 정보(`conflict`일 때 서버가 가진 버전, `key_in_use`일 때 키를 쓰는 곳)입니다. 성공은 `ok(body)`이고, 삭제는 본문 없는 `204`(`deleted()`)로 답합니다.
+서버가 돌려주는 모든 오류는 `{ "error": { "code", "message", "fix"?, "detail"?, "issues"?, "details"? } }` 한 모양이고, 상태 코드는 한 표(`ERROR_STATUS`, `ErrorCode` 타입과 함께 `@monti-cms/core/plugin/server`에서 내보냄)에서만 정해집니다. 라우트나 플러그인은 그 표의 코드로 `new CmsError(message, code, options?)`를 던지며, 다른 곳에서 상태를 정하지 않습니다.
+
+응답은 사람이 읽을 글과 개발자가 읽을 글을 나눕니다. 관리자 라우트에서 `message`(무슨 일인지)와 `fix`(어떻게 하면 되는지)는 관리자 언어로 나갑니다. 둘은 오류의 `notice`(`{ what, fix? }`)에서 오고, 없으면 `cms.core.errors` 사전에 있는 코드의 글에서 옵니다. `CmsError`에 넘긴 `message`는 개발자용 글(영어, ID나 값을 담아도 됨)이고 `detail`로 나가며, 관리자 화면은 이것을 "자세히" 안에서만 보여 줍니다. 그러니 라이브러리나 다른 서비스가 쓴 글은 notice에 넣지 말고, 직접 만든 사전의 글을 넣으세요.
+
+```ts
+throw new CmsError("401 invalid x-api-key", "service_unavailable", {
+  notice: { what: t("keyRefused"), fix: t("checkKey") },
+});
+```
+
+`issues`는 콘텐츠에서 찾은 문제(거부된 쓰기)이고, `details`는 기계가 읽는 추가 정보(`conflict`일 때 서버가 가진 버전, `key_in_use`일 때 키를 쓰는 곳)입니다. 성공은 `ok(body)`이고, 삭제는 본문 없는 `204`(`deleted()`)로 답합니다.
 
 ## 서버 옵션
 

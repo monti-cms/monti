@@ -1,4 +1,4 @@
-import { CmsApiError, isConflict } from "../api/client";
+import { CmsApiError, isConflict, NoticeError } from "../api/client";
 import type { CmsIssue } from "../api/error-message";
 
 /**
@@ -34,8 +34,10 @@ export type EditorErrorCode =
  */
 export interface EditorError {
 	readonly code: EditorErrorCode;
-	/** Text to show as is. Already localized (same contract as `CmsApiError.message`). Branch on `code`, never on this. */
+	/** Text to show as is: what went wrong, then what to do when known. Already localized. Branch on `code`, never on this. */
 	readonly message: string;
+	/** The developer text underneath (the server's `detail`, or the words of an unexpected error), for a "details" view only. */
+	readonly detail?: string;
 	readonly status?: number;
 	/** Server issues, ready for `cmsIssueMessage`. */
 	readonly issues?: readonly CmsIssue[];
@@ -69,13 +71,22 @@ const isAbortError = (error: unknown) =>
  *   Any other code the server sent passes through; without one it is `failed`. A status below 500 is not retryable, 5xx is.
  * - A fetch `TypeError` is `offline` and retryable. Its own message is the browser's and not localized, so `fallback` is used.
  * - An `AbortError` is `aborted`.
- * - Any other error is `failed` with its message (or `fallback` when empty). It is not marked retryable because the cause is unknown.
+ * - A `NoticeError` is `failed` with its message: the screen wrote it for the person.
+ * - Any other error is `failed` with `fallback`; its own words are only the `detail`. It is not marked retryable because the cause is unknown.
  *
  * @experimental
  */
 export function toEditorError(error: unknown, fallback: string): EditorError {
 	if (error instanceof CmsApiError) {
-		const base = { message: error.message || fallback, status: error.status, issues: error.issues, cause: error };
+		const fix = error.issues.length > 0 ? undefined : error.fix;
+		const message = error.message || fallback;
+		const base = {
+			message: fix ? `${message} ${fix}` : message,
+			detail: error.detail,
+			status: error.status,
+			issues: error.issues,
+			cause: error,
+		};
 		if (error.status === 401) return { ...base, code: "session_expired", retryable: false };
 		if (isConflict(error)) return { ...base, code: "conflict", retryable: false };
 		if (error.status === 404) return { ...base, code: "not_found", retryable: false };
@@ -84,7 +95,11 @@ export function toEditorError(error: unknown, fallback: string): EditorError {
 	}
 	if (isAbortError(error)) return { code: "aborted", message: fallback, retryable: true, cause: error };
 	if (error instanceof TypeError) return { code: "offline", message: fallback, retryable: true, cause: error };
+	if (error instanceof NoticeError) {
+		const message = error.message || fallback;
+		return { code: "failed", message: error.fix ? `${message} ${error.fix}` : message, retryable: false, cause: error };
+	}
 	if (error instanceof Error)
-		return { code: "failed", message: error.message || fallback, retryable: false, cause: error };
+		return { code: "failed", message: fallback, detail: error.message || undefined, retryable: false, cause: error };
 	return { code: "failed", message: fallback, retryable: false, cause: error };
 }

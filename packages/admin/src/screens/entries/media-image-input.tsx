@@ -4,6 +4,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { errorText } from "../../api/client";
 import { mediaNotConfiguredMessage } from "../../api/error-message";
 import { getMedia, mediaKeys } from "../../api/media";
 import { ImageInsertDialog } from "../../editor/image-insert-dialog";
@@ -155,7 +156,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 			});
 			onChange(uploaded.mediaId);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : t("media.uploadFailed"));
+			setError(errorText(site, cause, t("media.uploadFailed")));
 		} finally {
 			setProgress(null);
 		}

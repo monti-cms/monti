@@ -1,7 +1,8 @@
 "use client";
 
+import { errorText } from "@monti-cms/admin/api";
 import { Button, Spinner } from "@monti-cms/admin/kit";
-import { type CmsConfig, useTranslator } from "@monti-cms/core/site";
+import { type CmsConfig, useSite, useTranslator } from "@monti-cms/core/site";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 	children,
 	className,
 }: AiButtonProps<K, Config>) {
+	const site = useSite();
 	const t = useTranslator(aiCommonMessages);
 	const ai = useAiAction<K, Config>(action);
 	const [running, setRunning] = useState(false);
@@ -53,7 +55,7 @@ export function AiButton<K extends AiActionKey<Config>, Config extends CmsConfig
 				try {
 					onResult(await ai.run(input()));
 				} catch (error) {
-					toast.error(error instanceof Error && error.message ? error.message : t("runFailed"));
+					toast.error(errorText(site, error, t("runFailed")));
 				} finally {
 					setRunning(false);
 				}
