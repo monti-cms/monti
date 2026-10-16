@@ -3,7 +3,7 @@
 import type { Site, SlugField, ValueField } from "@monti-cms/core/site";
 import { type SchemaCollection, useSite } from "@monti-cms/core/site";
 import { createContext, type ReactNode, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
-import { type CmsIssue, cmsIssueMessage } from "../../api/error-message";
+import { type CmsIssue, issueLine } from "../../api/error-message";
 import {
 	assignStateSilently,
 	createStateStore,
@@ -250,8 +250,8 @@ export function useField<V extends FormValue = FormValue>(name: string): FieldSt
 				? []
 				: issues
 						.filter((issue) => issue.path === name)
-						.map((issue) => ({ code: issue.code, message: cmsIssueMessage(site, issue), issue })),
-		[issues, name, locked, site],
+						.map((issue) => ({ code: issue.code, message: issueLine(issue), issue })),
+		[issues, name, locked],
 	);
 
 	const slotRequest = useMemo((): SlotRequest | null => {

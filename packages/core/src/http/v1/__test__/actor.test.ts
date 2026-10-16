@@ -29,7 +29,7 @@ async function actorWhileSaving(auth: AuthContext): Promise<string | null> {
 		contentService: {
 			saveDraft: async () => {
 				seen = currentActor();
-				return { id: ID, version: 2 } as never;
+				return { id: ID, version: 2, warnings: [] } as never;
 			},
 		},
 		verifyAdmin: async () => auth,

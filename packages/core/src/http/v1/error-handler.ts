@@ -1,6 +1,7 @@
 import { AuthError } from "../../adapters/auth";
 import { ERROR_STATUS, type ErrorCode, HIDDEN_MESSAGE_CODES } from "../../core/error-codes";
 import { codeNotice } from "../../core/error-notice";
+import { type IssueLike, issueText } from "../../core/issue-text";
 import { SetupError } from "../../core/problem";
 import { CmsError, type ErrorNotice } from "../../core/store/errors";
 import type { Site } from "../../site";
@@ -11,7 +12,9 @@ export { CmsError, ERROR_STATUS, type ErrorCode, type ErrorNotice };
  * The error body of every answer: `{ error: { code, message, fix?, detail?, issues?, details? } }`.
  * - `message` and `fix` are for a person: what went wrong and what to do, in the admin language on an admin route.
  * - `detail` is the developer text (a library's or another service's own words), for a "details" view and bug reports. It is never the only text shown.
- * - `issues` are the problems found in the content; `details` is machine-readable extra data (the places a key is used, the server version of a `conflict`).
+ * - `issues` are the problems found in the content. On an admin route each carries its person's text (`text`, and `where` when it has a place) next to
+ *   its `code` and positions (`path`, `position`), which the editor uses to go to the problem.
+ * - `details` is machine-readable extra data (the places a key is used, the server version of a `conflict`).
  */
 export interface ErrorBody {
 	readonly error: {
@@ -73,6 +76,12 @@ function detailsOf(error: CmsError): unknown {
 	return { ...attached, serverVersion: error.serverVersion };
 }
 
+/** The issues of an error answer with their person's text (an issue that is not an object goes out as it is). */
+const toldIssues = (site: Pick<Site, "createTranslator">, issues: readonly unknown[] | undefined) =>
+	issues?.map((issue) =>
+		issue && typeof issue === "object" ? { ...issue, ...issueText(site, issue as IssueLike) } : issue,
+	);
+
 /**
  * The person's text of a {@link CmsError} in the admin language, for an answer that is not an HTTP error (a line of a stream, one failed item of a batch):
  * the error's own `notice`, else the text of its code, with the developer text as `detail`.
@@ -88,7 +97,7 @@ export function cmsErrorText(
 
 /**
  * The one answer to an error. With the `site` (an admin route), `message` and `fix` are the person's text in the admin language: the error's own `notice`,
- * else the text of its code; the error's `message` goes out as `detail`. Without it (a public or machine route), `message` is the developer text as it is.
+ * else the text of its code; the error's `message` goes out as `detail`, and each issue gets its text ({@link issueText}). Without it (a public or machine route), `message` is the developer text as it is.
  */
 export function handleApiError(error: unknown, site?: Pick<Site, "createTranslator">): Response {
 	const told = (
@@ -99,7 +108,7 @@ export function handleApiError(error: unknown, site?: Pick<Site, "createTranslat
 	) => {
 		if (!site) return errorResponse(code, detail ?? notice?.what ?? code, extra);
 		const text = notice ?? codeNotice(site, code);
-		return errorResponse(code, text.what, { ...extra, fix: text.fix, detail });
+		return errorResponse(code, text.what, { ...extra, issues: toldIssues(site, extra.issues), fix: text.fix, detail });
 	};
 
 	// A setup mistake (a database that is down or not migrated, a missing setting): the server log has the fix; the response does not repeat host names.

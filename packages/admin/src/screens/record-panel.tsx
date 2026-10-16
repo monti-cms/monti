@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";
 import { createEntry, type EntryWriteResult, entriesKeys, getEntry, updateEntry } from "../api/entries";
-import { cmsIssueMessage } from "../api/error-message";
+import { issueLine } from "../api/error-message";
 import { useCmsMutation } from "../api/use-cms-mutation";
 import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
@@ -110,7 +110,7 @@ export function RecordPanel({
 		onError: (err) =>
 			setError(
 				err instanceof CmsApiError && err.issues.length > 0
-					? err.issues.map((issue) => cmsIssueMessage(site, issue)).join("\n")
+					? err.issues.map((issue) => issueLine(issue)).join("\n")
 					: errorText(site, err, tc("saveFailed")),
 			),
 	});

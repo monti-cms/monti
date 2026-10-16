@@ -11,6 +11,7 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 	if (id === "00000000-0000-4000-8000-000000000003")
 		return Promise.reject(new CmsError("Entry not found", "not_found"));
 	return Promise.resolve({
+		warnings: [],
 		id: "new-duplicated-id",
 		collection: "post",
 		version: 1,

@@ -1,5 +1,5 @@
 import { emptyStoredDocument, type StoredDocument, unparsedDocument, withoutBlockIds } from "@monti-cms/core/document";
-import { createSite } from "@monti-cms/core/site";
+import { createSite, issueText } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -189,6 +189,8 @@ beforeEach(() => {
 	serve(() => undefined);
 	vi.stubGlobal("fetch", fetchMock);
 });
+const told = (issue: Parameters<typeof issueText>[1]) => ({ ...issue, ...issueText(testSite, issue) });
+
 afterEach(() => {
 	cleanup();
 	vi.useRealTimers();
@@ -457,8 +459,8 @@ describe("entry editor shell", () => {
 							{
 								code: "publish_validation_failed",
 								issues: [
-									{ code: "missing_field", path: "title", message: "제목" },
-									{ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } },
+									told({ code: "missing_field", path: "title", message: "제목" }),
+									told({ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } }),
 								],
 							},
 							422,
@@ -493,7 +495,7 @@ describe("entry editor shell", () => {
 					? json(
 							{
 								code: "publish_validation_failed",
-								issues: [{ code: "mdx_error", path: "body", position: { blockId } }],
+								issues: [told({ code: "mdx_error", path: "body", position: { blockId } })],
 							},
 							422,
 						)
@@ -651,7 +653,7 @@ describe("entry editor shell", () => {
 						? json(
 								{
 									code: "publish_validation_failed",
-									issues: [{ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } }],
+									issues: [told({ code: "mdx_error", path: "body", position: { blockId: body.content[1]?.id } })],
 								},
 								422,
 							)
@@ -675,7 +677,7 @@ describe("entry editor shell", () => {
 		vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: true }));
 		serve((input) =>
 			input.endsWith("/publish")
-				? json({ error: { issues: [{ code: "missing_field", path: "categoryId", message: "카테고리" }] } }, 422)
+				? json({ error: { issues: [told({ code: "missing_field", path: "categoryId", message: "카테고리" })] } }, 422)
 				: undefined,
 		);
 		renderEdit();

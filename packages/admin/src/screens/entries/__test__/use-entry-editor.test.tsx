@@ -287,7 +287,7 @@ describe("a minimal editor on useEntryEditor and useField", () => {
 		const { client } = renderMinimal();
 		const input = await title();
 		client.publish.mockRejectedValueOnce(
-			invalidError([{ code: "required", path: "title", message: "title is required" }]),
+			invalidError([{ code: "required", path: "title", message: "title is required", text: "title is required" }]),
 		);
 		fireEvent.click(screen.getByText("publish"));
 		await waitFor(() => expect(input.getAttribute("aria-invalid")).toBe("true"));

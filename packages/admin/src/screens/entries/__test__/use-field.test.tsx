@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react
 import { memo, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";
+import { type CmsIssue, issueLine } from "../../../api/error-message";
 import {
 	EntryFormProvider,
 	type EntryFormValue,
@@ -118,8 +119,8 @@ describe("useField", () => {
 
 	it("an issue on the field's path becomes its error, with ids that link the input to it", () => {
 		const issues = [
-			{ code: "missing_field", path: "title", message: "제목" },
-			{ code: "other", path: "summary", message: "x" },
+			{ code: "missing_field", path: "title", message: "제목", text: "제목을 입력하세요." },
+			{ code: "other", path: "summary", message: "x", text: "x" },
 		];
 		const { result } = renderHook(() => ({ title: useField("title"), tag: useField("tagIds") }), {
 			wrapper: providerWith(baseValue({ issues })),
@@ -127,7 +128,7 @@ describe("useField", () => {
 		const { title, tag } = result.current;
 		expect(title.invalid).toBe(true);
 		expect(title.error?.code).toBe("missing_field");
-		expect(title.error?.message).toBeTruthy();
+		expect(title.error?.message).toBe(issueLine(issues[0] as CmsIssue));
 		expect(title.error?.issue).toBe(issues[0]);
 		expect(title.errors).toHaveLength(1);
 		expect(title.inputProps).toEqual({
@@ -157,7 +158,7 @@ describe("useField", () => {
 			values: { ...EMPTY_FORM, title: "Original title", categoryId: "cat-1" },
 			note: "From the original",
 		};
-		const issues = [{ code: "missing_field", path: "categoryId", message: "x" }];
+		const issues = [{ code: "missing_field", path: "categoryId", message: "x", text: "x" }];
 		const { result } = renderHook(() => ({ category: useField("categoryId"), title: useField<string>("title") }), {
 			wrapper: providerWith(
 				baseValue({ form: { ...EMPTY_FORM, title: "Own title", categoryId: "other" }, locked, issues, setForm }),
@@ -290,9 +291,9 @@ describe("subscription of one field", () => {
 		// The same (empty) issue list built again does not wake the field.
 		rerender(<Harness issues={[]} disabled={false} />);
 		expect(renders.title).toBe(1);
-		rerender(<Harness issues={[{ code: "missing_field", path: "title" }]} disabled={false} />);
+		rerender(<Harness issues={[{ code: "missing_field", path: "title", text: "t" }]} disabled={false} />);
 		expect(renders.title).toBe(2);
-		rerender(<Harness issues={[{ code: "missing_field", path: "title" }]} disabled />);
+		rerender(<Harness issues={[{ code: "missing_field", path: "title", text: "t" }]} disabled />);
 		expect(renders.title).toBeGreaterThan(2);
 	});
 
@@ -409,7 +410,7 @@ describe("a custom field UI built only from the hooks", () => {
 				<Owner
 					initial={{ ...EMPTY_FORM, title: "Draft" }}
 					onPatch={(patch) => patches.push(patch)}
-					issues={[{ code: "missing_field", path: "title", message: "제목" }]}
+					issues={[{ code: "missing_field", path: "title", message: "제목", text: "제목을 입력하세요." }]}
 				>
 					<SuggestedTitle />
 				</Owner>

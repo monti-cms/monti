@@ -1,7 +1,7 @@
 import { useSite } from "@monti-cms/core/site";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { cmsEntryClient, type EntryEditorClient } from "../../api/entries";
-import { cmsIssueMessage } from "../../api/error-message";
+
 import { BlockIssuesProvider, type BlockIssueTexts } from "../../editor/blocks/block-issues-context";
 import { useStoreSelector } from "../../hooks/store";
 import { useBeforeUnload } from "../../lib/hooks/use-before-unload";
@@ -137,11 +137,11 @@ export function EntryEditorProvider({
 		for (const issue of editor.bodyWarnings) {
 			const blockId = issue.position?.blockId;
 			if (!blockId) continue;
-			// Without the field path (`body`), which the block already says by where it is shown.
-			byBlock.set(blockId, [...(byBlock.get(blockId) ?? []), cmsIssueMessage(site, { ...issue, path: undefined })]);
+			// Without its place (`where`, the field path `body`), which the block already says by where it is shown.
+			byBlock.set(blockId, [...(byBlock.get(blockId) ?? []), issue.text]);
 		}
 		return byBlock;
-	}, [editor.bodyWarnings, site]);
+	}, [editor.bodyWarnings]);
 	return (
 		<EntryEditorContext.Provider value={core}>
 			<BlockIssuesProvider issues={blockIssues}>

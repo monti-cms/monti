@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../../../test/site";
 import { AuthError } from "../../../../../../adapters/auth";
 import { fakeCms } from "../../../../../../cms";
+import { issueText, tellIssues } from "../../../../../../core/issue-text";
 import { CmsError } from "../../../../../../core/store";
 import { ServiceError } from "../../../../../../services/types";
 import { routeCaller } from "../../../../../../testing";
@@ -40,7 +41,7 @@ describe("publish HTTP contract", () => {
 		});
 	});
 
-	it("returns warnings with a successful committed publish", async () => {
+	it("returns warnings with a successful committed publish, each with its text and place", async () => {
 		const warnings = [{ code: "image_media_not_ready", position: { line: 3, column: 2 } }];
 		publish.mockResolvedValue({
 			entry: { id: "00000000-0000-4000-8000-000000000011", version: 5, status: "published" },
@@ -50,7 +51,7 @@ describe("publish HTTP contract", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toMatchObject({
 			entry: { id: "00000000-0000-4000-8000-000000000011", status: "published" },
-			warnings,
+			warnings: tellIssues(cms.site, warnings),
 		});
 		expect(publish).toHaveBeenCalledWith({ id: "00000000-0000-4000-8000-000000000011", expectedVersion: 4 });
 	});
@@ -67,12 +68,23 @@ describe("publish HTTP contract", () => {
 		expect(publish).not.toHaveBeenCalled();
 	});
 
-	it("does not publish when validation fails", async () => {
-		const issues = [{ code: "missing_field", path: "title", message: "제목" }];
+	it("does not publish when validation fails, and tells each issue with its text next to its position", async () => {
+		const issues = [
+			{ code: "missing_field", path: "title", message: "제목" },
+			{ code: "missing_block_attribute", path: "body", message: "src", position: { blockId: "b1" } },
+		];
 		publish.mockRejectedValue(new ServiceError("publish_validation_failed", issues));
 		const response = await POST(request(), context);
 		expect(response.status).toBe(422);
-		expect(await response.json()).toMatchObject({ error: { code: "publish_validation_failed", issues } });
+		const told = issues.map((issue) => ({ ...issue, ...issueText(cms.site, issue) }));
+		expect(await response.json()).toMatchObject({ error: { code: "publish_validation_failed", issues: told } });
+	});
+
+	it("tells a request value that does not check by its zod code, never in the library's words", async () => {
+		const response = await POST(request({ expectedVersion: "4" }), context);
+		const { error } = (await response.json()) as { error: { issues: { code: string; text: string }[] } };
+		expect(error.issues[0]?.code).toBe("invalid_type");
+		expect(error.issues[0]?.text).toBe(issueText(cms.site, { code: "invalid_type" }).text);
 	});
 
 	it("reports a failing hook with its own code and owner", async () => {

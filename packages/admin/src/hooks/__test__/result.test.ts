@@ -15,9 +15,9 @@ describe("toEditorError", () => {
 		});
 		expect(toEditorError(api(409, "conflict"), "fallback")).toMatchObject({ code: "conflict", retryable: false });
 		expect(toEditorError(api(404), "fallback")).toMatchObject({ code: "not_found", retryable: false });
-		expect(toEditorError(api(422, undefined, [{ message: "bad" }]), "fallback")).toMatchObject({
+		expect(toEditorError(api(422, undefined, [{ message: "bad", text: "bad" }]), "fallback")).toMatchObject({
 			code: "validation",
-			issues: [{ message: "bad" }],
+			issues: [{ message: "bad", text: "bad" }],
 			retryable: false,
 		});
 	});
