@@ -106,7 +106,7 @@ export function MediaDetailPanel({
 	const [saved, setSaved] = useState({ alt: media.defaultAlt, caption: media.defaultCaption });
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
-	const isImage = site.api.isImageMime(media.mimeType);
+	const isImage = site.api.isImageType(media.mimeType);
 	const { draft, update: setDraft, dirty } = useDraftEditor({ saved, empty: saved, saving: isSaving });
 
 	// The file name is edited as its stem; the extension stays. After a rename the draft starts from the new name.

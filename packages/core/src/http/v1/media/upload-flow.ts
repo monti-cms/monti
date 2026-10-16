@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Cms } from "../../../cms";
+import { isImageType } from "../../../core/media-types";
 import { CmsError } from "../error-handler";
 import { parseWith } from "../handler";
 import { attachmentDisposition, extensionFor, inspectUploadedFile, UPLOAD_URL_TTL_SECONDS } from "./media-files";
@@ -45,7 +46,7 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 		);
 	}
 	const body = parseWith(cms.site.api.mediaUploadBodySchema, raw);
-	const isFile = !cms.site.api.isImageMime(body.mimeType);
+	const isFile = !isImageType(body.mimeType);
 	// An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
 	if (isFile && cms.site.api.fileTypeFor(body.filename) !== body.mimeType) {
 		throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type");
@@ -150,9 +151,7 @@ export async function completeMediaUpload(cms: Cms, mediaId: string) {
 		expectedEtag: file.head.etag,
 		contentType: file.detected.mimeType,
 		// Attachments download under their original name. Images display directly in the browser.
-		...(cms.site.api.isImageMime(file.detected.mimeType)
-			? {}
-			: { contentDisposition: attachmentDisposition(media.filename) }),
+		...(isImageType(file.detected.mimeType) ? {} : { contentDisposition: attachmentDisposition(media.filename) }),
 	});
 	let originalKey: string | null = null;
 	if (original && media.original?.stagingKey) {

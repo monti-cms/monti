@@ -1,13 +1,11 @@
 import {
-	type AllowedFileMime,
 	type AllowedImageMimeType as AllowedImageMime,
+	type AllowedMediaMime,
 	SUPPORTED_FILE_MIME_TYPES,
 	SUPPORTED_IMAGE_MIME_TYPES,
 } from "../core/media-types";
 
-export type { AllowedImageMime };
-/** Formats the store accepts: images and attachments. */
-export type AllowedMediaMime = AllowedImageMime | AllowedFileMime;
+export type { AllowedImageMime, AllowedMediaMime };
 
 /**
  * The store accepts every format the core can detect. The formats and sizes narrowed by the site config (`media`) are checked by the upload API.
