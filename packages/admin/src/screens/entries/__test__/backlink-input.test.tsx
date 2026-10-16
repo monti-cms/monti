@@ -1,5 +1,5 @@
+import type { BacklinkField } from "@monti-cms/core";
 import { emptyStoredDocument } from "@monti-cms/core/document";
-import type { BacklinkField } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

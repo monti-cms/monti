@@ -203,7 +203,7 @@ export function tableOfContents(
 	return stored ? tocOf(analyzeDocument(stored), range) : [];
 }
 
-export { collectRefs, type DocumentRefIds, imageResolverFromRefs, type ReadRefs } from "../../doc/document-refs";
+export { imageResolverFromRefs } from "../../doc/document-refs";
 export { readCodeBlock } from "./code";
 export type {
 	BlockItem,

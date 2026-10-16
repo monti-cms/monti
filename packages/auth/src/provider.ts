@@ -1,4 +1,4 @@
-import type { PluginStorage } from "@monti-cms/core";
+import type { PluginStorage } from "@monti-cms/core/plugin/server";
 import type { LoginAccounts } from "@monti-cms/core/server";
 
 /*

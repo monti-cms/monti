@@ -41,4 +41,4 @@ Results are shown in Bareun's smallest fix unit (blocks that merge several fixes
 spacing, standard word, typo, grammar and word errors are shown as "error", and the rest (sentence polishing, foreign words, confusable words, needs confirmation) as "warning".
 
 Other checkers (LanguageTool and so on) are built separately in the same shape: put a server route (`textCheckRoute`, `@monti-cms/core/plugin/server`) and the browser-side
-`remoteTextChecker` (`@monti-cms/core/site`) into the admin extension point `textCheckers`.
+`remoteTextChecker` (`@monti-cms/core`) into the admin extension point `textCheckers`.

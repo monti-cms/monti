@@ -6,8 +6,8 @@ import {
 	definePlugin,
 	fields,
 	SUMMARY_ROLE,
-	valueFieldsOf,
 } from "@monti-cms/core";
+import { valueFieldsOf } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { chart } from "../../../blocks/src/chart";
 import { mermaid } from "../../../blocks/src/mermaid";

@@ -1,7 +1,7 @@
 "use client";
 
-import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
-import { diffSources, type SourceChange, type StoredDocument, useSite, useTranslator } from "@monti-cms/core/site";
+import { STORED_DOCUMENT_VERSION, type StoredDocument } from "@monti-cms/core/document";
+import { diffSources, type SourceChange, useSite, useTranslator } from "@monti-cms/core/site";
 import type { TranslatorFor } from "../../translator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { entriesMessages } from "./messages";

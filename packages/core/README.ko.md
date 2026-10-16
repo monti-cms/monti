@@ -462,7 +462,7 @@ export const cms = defineConfig({
 
 나머지는 모두 이 파일에서 `cms`를 불러다 쓴다. `defineConfig`는 사이트 옵션(`schema`, 또는 `collections`와 `locales`, 그리고 `plugins`·`blocks`·`site`·`admin`·`codeBlock`·`media`·`seed` …)과 서버 옵션("서버 옵션" 절)을 받는다. `database`는 필수이고 나머지는 선택이다.
 
-공개된 `defineConfig`는 `@monti-cms/core/server`의 것 하나뿐이다. `@monti-cms/core`(루트 진입점)는 더 이상 `defineConfig`를 내보내지 않는다. 낮은 수준 API인 `createCms({ config, server })`(`server`는 `CmsServerConfig`)는 `@monti-cms/core`의 `defineSite`로 만든 사이트 설정을 받으며, 테스트와 도구가 이것을 쓴다. `defineServerConfig`는 없어졌다.
+공개된 `defineConfig`는 `@monti-cms/core/server`의 것 하나뿐이다. `@monti-cms/core`(루트 진입점)는 더 이상 `defineConfig`를 내보내지 않는다. 낮은 수준 API인 `@monti-cms/core/testing`의 `createCms({ config, server })`(`server`는 `CmsServerConfig`)는 `@monti-cms/core`의 `defineSite`로 만든 사이트 설정을 받으며, 테스트와 도구가 이것을 쓴다. `defineServerConfig`는 없어졌다.
 
 `site.url`은 관례대로 `SITE_URL` 환경 변수에서 읽는다. 코드의 `site.url`이나 스키마 파일의 `site.url`이 정하면 그쪽이 이긴다.
 
@@ -528,9 +528,9 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | 진입점 | 쓰는 곳 | 내용 |
 | --- | --- | --- |
 | `@monti-cms/core` | 테스트·도구·스키마 코드 | `defineSite`(사이트 설정만 다루는 쪽, `schema`와 함께. 여기에는 `defineConfig`가 없고 앱은 `/server`의 것을 쓴다)·`defineSchema`·`defineCollection`·`fields`·`defineBlock`·`definePlugin`, `parseSchemaFile`, `SchemaFile` 타입 |
-| `@monti-cms/core/schema-change` | 설정 화면, 명령줄 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
-| `@monti-cms/core/schema-edit` | 설정 화면(서버 쪽) | `schemaEditAccess`(누가 스키마 파일을 쓸 수 있나), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `printSchemaFile`, `parseSchemaLiteral`("관리자에서 스키마 편집하기") |
-| `@monti-cms/core/server` | `monti.config.ts`, 서버 코드(크론 스크립트·사이트 테스트 포함) | `defineConfig`(사이트·서버 옵션을 한꺼번에 받아 인스턴스를 돌려준다)·`postgres`·`createCms`(낮은 수준 API), `Cms` 타입, 저장소·서비스 타입(`ContentStore`·`MediaStore` 등), 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`). 브라우저 코드에서는 절대 불러오지 않는다. 저장소 모듈은 처음 쓸 때 불러온다 |
+| `@monti-cms/core/internal/schema-change` | 설정 화면, 명령줄. Monti 패키지 내부용이며 안정성을 약속하지 않는다 | `diffSchema`, `checkSchemaChange`, `suggestTransforms`, `planSchemaChange`, `applySchemaChange`("스키마 바꾸기") |
+| `@monti-cms/core/internal/schema-edit` | 설정 화면(서버 쪽). Monti 패키지 내부용이며 안정성을 약속하지 않는다 | `schemaEditAccess`(누가 스키마 파일을 쓸 수 있나), `readSchemaScreen`, `previewSchemaEdit`, `saveSchemaEdit`, `printSchemaFile`, `parseSchemaLiteral`("관리자에서 스키마 편집하기") |
+| `@monti-cms/core/server` | `monti.config.ts`, 서버 코드(크론 스크립트·사이트 테스트 포함) | `defineConfig`(사이트·서버 옵션을 한꺼번에 받아 인스턴스를 돌려준다)·`postgres`, `Cms` 타입, 저장소·서비스 타입(`ContentStore`·`MediaStore` 등), 로그인 타입, 스냅샷 도우미. `server-only`를 쓰지 않아 Next 밖에서도 불러온다(그냥 `tsx`). 브라우저 코드에서는 절대 불러오지 않는다. 저장소 모듈은 처음 쓸 때 불러온다 |
 | `@monti-cms/nextjs` | `app/api/monti/[...path]/route.ts` | `createRouteHandler(cms)` |
 | `@monti-cms/nextjs/config` | `next.config.ts` | `withCms` |
 | `@monti-cms/nextjs/admin` | 관리자 라우트 파일 | `CmsAdminLayout`·`CmsAdminPage`·`cmsAdminMetadata(cms)`·`NextAdminRouter` |
@@ -545,12 +545,12 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 | `@monti-cms/core/document` | 본문을 고치거나 살피는 화면·플러그인 | `StoredDocument` 타입과, 표기법을 모르고 문서만으로 일하는 도우미: 블록 ID(`assignBlockIds`, `isBlockId`, `withoutBlockIds`), `canonicalDocument`, `readStoredDocument`, `emptyStoredDocument`, `unparsedDocument`, 링크·이미지·표 도우미, 저장 코드 블록 모델. 글 표기를 읽거나 쓰는 것은 없다. 관리자 편집기와 AI가 여기서 불러온다 |
 | `@monti-cms/core/format` | 형식을 더하는 플러그인 | `defineFormat`, `CmsFormat` 인터페이스와 그 맥락·문제 타입, `createFormatRegistry`("형식" 절). 사이트 설정을 읽지 않으므로 플러그인이 어디서든 불러와도 된다 |
 | `@monti-cms/core/front-matter` | 마크다운 파일을 읽고 쓰는 도구(git-sync) | `parseFile`(YAML 프런트매터와 본문, YAML 오류의 줄 번호 포함)과 `composeFile` |
-| `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
+| `@monti-cms/core/notation` | 형식·문법 확장 패키지 | 표기가 기대는 도우미만 담은 가벼운 진입점: 코드 주석 문법(`resolveCommentSyntax`·`formatAnnotationComment`)과 표 도우미(`formatTableWidths`·`parseTableWidths` 등). 이것들은 여기에만 있고 `@monti-cms/core/document`와 `@monti-cms/core/code-block`은 다시 내보내지 않는다. `@monti-cms/mdx`가 문법 확장용으로 다시 내보낸다 |
 | `@monti-cms/core/plugin/server` | 플러그인 서버 쪽 | 라우트 틀(`adminRoute`가 라우트에 `cms` 인스턴스를 넘긴다)·오류. `Cms` 타입과 나머지 서비스 타입은 `@monti-cms/core/server`에서 가져온다 |
 | `@monti-cms/core/ai-contract` | AI 기능을 더하는 플러그인 | 타입만 있다. `@monti-cms/ai`가 구현하는 AI 기능·검사·기여(`AiContribution`)의 모양이라, 플러그인이 AI 플러그인에 의존하지 않고 기능을 쓴다 |
 | `monti`(명령줄, 패키지 `bin`) | 터미널 | `monti init`(파일 만들기)·`monti doctor`(설정을 점검하고 잘못된 것을 어떻게 고치는지 알려 줌, "문제 해결")·`monti db:migrate`(표 만들기)·`monti admin:reset-password`(이메일·비밀번호 로그인 관리자의 비밀번호 새로 정하기)·`monti events:retry`(때가 된 `afterCommit` 이벤트 전달)·`monti <플러그인>:<명령>`(플러그인이 더하는 명령, "플러그인")·`monti schema:extract`(TypeScript 설정을 스키마 파일로 옮기기)·`monti schema:diff`와 `monti schema:apply`(스키마 변경 점검과 적용) |
-| `@monti-cms/core/cli` | 명령줄 도구 | `runCli(argv, { cwd, log, error })`(모든 `monti` 명령, 종료 코드를 돌려준다)·`runDoctor`·`initProject`·`addComponents`·`migrate`·`runImport`·`loadSchemaFile`·`findSchemaFile`·`extractSchema`(명령 `monti`의 코드) |
-| `@monti-cms/core/testing` | 테스트 | `testServer()`(`{ server, drop }`: 자기 스키마 위에 둔 진짜 인스턴스를 위한 `database`와 `auth` 옵션, ["훅과 플러그인 테스트하기"](#훅과-플러그인-테스트하기)), `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터. MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
+| `@monti-cms/core/internal/cli` | 명령줄 도구. Monti 패키지 내부용이며 안정성을 약속하지 않는다 | `runCli(argv, { cwd, log, error })`(모든 `monti` 명령, 종료 코드를 돌려준다)·`runDoctor`·`initProject`·`addComponents`·`migrate`·`runImport`·`loadSchemaFile`·`findSchemaFile`·`extractSchema`(명령 `monti`의 코드) |
+| `@monti-cms/core/testing` | 테스트 | `testServer()`(`{ server, drop }`: 자기 스키마 위에 둔 진짜 인스턴스를 위한 `database`와 `auth` 옵션, ["훅과 플러그인 테스트하기"](#훅과-플러그인-테스트하기)), `fakeCms`(테스트가 준 부품 위의 인스턴스)·격리 스키마 DB·예시 데이터, `createCms`(낮은 수준 API: 사이트 설정과 `CmsServerConfig`를 받아 인스턴스를 돌려준다). MDX 글이 필요한 도우미는 `@monti-cms/mdx/testing`에 있다 |
 
 ## 패키지 빌드
 
@@ -912,7 +912,7 @@ export const myPlugin = () =>
 - `@monti-cms/core/plugin/server`의 `exportBodyText(cms, { format, doc, locale, scope? })`는 저장된 문서를 인스턴스의 형식으로 다시 가져올 수 있게(`purpose: "sync"`, 링크는 대상의 실제 경로) 텍스트로 쓴다. 관리자 내보내기와 같다. 본문을 다른 곳에 두는 플러그인을 위한 것이다.
 - 플러그인 라우트는 자신을 맡은 인스턴스를 받으므로, 플러그인 코드는 자기 저장소(`cms.storage("<플러그인 이름>")`)·저장소(`cms.store()`·`cms.mediaStore()`)·비밀 값(`cms.secrets("<플러그인 이름>")`)을 거기서 읽고 따로 전역 상태를 두지 않는다. `adminRoute`·`publicRoute` 등 라우트 틀은 `@monti-cms/core/plugin/server`에 있고, `features(cms)`와 `migrate(storage, cms)`도 인스턴스를 받는다.
 - `cms.plugin("my-plugin")`은 플러그인이 인스턴스 하나에 대해 갖는 것이다. `storage`, `secrets`, `apiKeys`, 그리고 `once(key, factory)`: 값(`cms.site`로 만든 스토어나 클라이언트)을 한 번 만들고, 개발 중 스키마를 다시 불러오면 처음부터 다시 만든다. 그래서 낡은 사이트를 쥐고 있지 않는다. 이런 객체를 인스턴스를 키로 하는 모듈 수준 `WeakMap`에 두지 않는다.
-- 모든 플러그인 패키지가 쓰는 작은 도구는 `@monti-cms/core`에서 온다. `emptyServerPlugin`(패키지 `server.browser.ts`의 기본 내보내기), `pluginLog(이름)`·`pluginError(이름, 메시지)`(플러그인이 남기고 던지는 것의 접두어를 하나로), `envValue(env, 이름)`·`WHERE_TO_SET_ENV`(환경 변수를 읽고 어디에 두는지 알려 줌), `resolveTextCheckerLimits`(글 검사기의 한도).
+- 모든 플러그인 패키지가 쓰는 작은 도구 가운데 `pluginLog(이름)`·`pluginError(이름, 메시지)`(플러그인이 남기고 던지는 것의 접두어를 하나로)는 `@monti-cms/core/plugin/server`에서, 나머지는 `@monti-cms/core`에서 온다. `emptyServerPlugin`(패키지 `server.browser.ts`의 기본 내보내기), `envValue(env, 이름)`·`WHERE_TO_SET_ENV`(환경 변수를 읽고 어디에 두는지 알려 줌), `resolveTextCheckerLimits`(글 검사기의 한도).
 
 ### 비밀 값
 
@@ -1113,7 +1113,7 @@ export const cms = defineConfig({
 - **전달.** 커밋 뒤에 변경을 만든 프로세스가 같은 호출 안에서 바로 각 구독자에게 보내므로 지연은 이전과 같다. 실패는 기록하고 점점 길어지는 간격(15초에서 시작해 두 배씩, 최대 1시간. `events.backoffMs`로 바꾼다)으로 나중에 다시 시도하며, `events.maxAttempts`번(기본 8) 시도하고도 실패하면 전달이 데드레터(`dead`)가 된다. 쓰기는 되돌리지 않고, 다른 구독자도 막지 않는다.
 - **최소 한 번, 글마다 순서대로.** 이벤트는 두 번 이상 전달될 수 있다(일을 하고 나서 실패한 구독자, 끝나지 못한 시도). 그래서 **구독자는 멱등이어야 한다.** `event.eventId`는 시도마다 같고, "이미 했다"는 표시는 `event.once`(아래)가 대신 남겨 준다. 한 글의 이벤트는 커밋 순서로 전달된다. 같은 글의 앞선 이벤트가 대기 중이거나 전달 중이거나 실패해 아직 죽지 않았다면 뒤의 이벤트는 기다린다. 죽었거나 닫은 전달은 순서를 붙들지 않으므로, 죽은 것을 손으로 다시 보내면 뒤의 이벤트보다 늦게 도착할 수 있다. 글을 내보내는 구독자는 글의 현재 상태를 읽고 `version`을 비교한다. 다른 글의 이벤트는 서로 상관없다.
 - **한 번만 하기.** `await event.once(run)`은 이벤트와 구독자마다 `run`을 한 번만 돌리고 돌았는지를 알려 준다. 앞선 시도가 `run`을 끝냈다면 건너뛰고 `false`를 돌려준다. `run`이 예외를 던지면 표시하지 않으므로 다시 시도할 때 또 돈다. 표시는 `run`이 끝난 뒤에 쓰므로, 둘 사이에서 프로세스가 죽을 때만 일이 반복된다. 메시지를 보내거나 API를 부르는 구독자에게 필요한 멱등 코드는 이것이 전부다. 표시는 이벤트의 전달 행에 있어서 같은 정리로 이벤트와 함께 지워진다(90일 뒤). 반복해도 해가 없는 일에는 `once`가 필요 없다.
-- **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(`Entry`: `working`과, 발행된 뒤에는 `published`가 각각 `{ metadata, doc, … }`로 있고, `publishedSlug`·`workingSlug`·`version`도 있다. `Entry`는 `@monti-cms/core/server`와 `@monti-cms/core/site`에서 내보낸다)를, 삭제됐다면 `null`을 돌려준다. 주소가 든 메시지를 만들 때는 `cms.site.contentPath(collection, slug)`(경로, 컬렉션에 경로가 없으면 `null`)와 `cms.site.config.site?.url`(출처, `SITE_URL`에서 온다)을 쓴다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
+- **커밋된 글 읽기.** `event.read()`는 글의 현재 상태(`Entry`: `working`과, 발행된 뒤에는 `published`가 각각 `{ metadata, doc, … }`로 있고, `publishedSlug`·`workingSlug`·`version`도 있다. `Entry`는 `@monti-cms/core/site`에서 내보낸다)를, 삭제됐다면 `null`을 돌려준다. 주소가 든 메시지를 만들 때는 `cms.site.contentPath(collection, slug)`(경로, 컬렉션에 경로가 없으면 `null`)와 `cms.site.config.site?.url`(출처, `SITE_URL`에서 온다)을 쓴다. `event.version`과 `event.contentHash`가 이 이벤트가 어떤 변경인지 알려 준다. `read().version`이 더 크면 그 글의 뒤 이벤트가 이어서 온다. 형식(format)으로 글을 내보내는 구독자(git-sync)는 글을 읽어 형식을 거치고, 이미 더 새 버전을 썼다면 이벤트를 건너뛴다.
 - **미루기.** 아직 준비되지 않은 구독자(이벤트를 묶는 중이거나, 요청 제한이 언제 풀리는지 아는 경우)는 `{ retryAt: Date }`을 돌려주거나 `new DeferDelivery(retryAt)`을 던진다(`@monti-cms/core/server`). 전달은 `pending`으로 돌아가 `retryAt`에 다시 도래한다. **실패가 아니다.** 로그를 남기지 않고, 이벤트 화면에 나오지 않고, 실패 배지에 들지 않고, 시도 횟수를 쓰지 않으며(`attempts`가 하나 되돌아가므로 몇 번을 미뤄도 그 시도 그대로다) dead letter가 될 수도 없다. 그 글의 뒤 이벤트 순서는 계속 잡고 있다. `cms.events.retry()`는 `deferred`가 몇 개인지 돌려주고, `retry({ all: true })`는 아직 때가 안 된 미뤄진 전달도 시도한다. git-sync가 묶음 창에 이것을 쓴다.
 
 ```ts
@@ -1176,7 +1176,7 @@ it("refuses a bad slug", async () => {
 });
 ```
 
-`cms.handle(new Request(url))`은 관리자와 같은 검사를 거쳐 플러그인의 경로를 실행하고, `cms.events.retry({ all: true })`는 기다리는 `afterCommit` 이벤트를 전달하며, `@monti-cms/core/cli`의 `runCli(["doctor"], { cwd, log, error })`는 폴더에서 `monti doctor`를 실행하고 종료 코드를 돌려준다. 인스턴스가 몇 가지 부품 위에서만 필요한 코드라면 `fakeCms({ store, … })`가 더 가볍다. 플러그인의 화면은 브라우저와 비슷한 환경에서 테스트한다. `createSite(defineSite({ schema, plugins }))`로 사이트를 만들고(`defineConfig`는 서버 전용이라 `window`가 있는 곳에서는 실행을 거부한다) 화면을 `<SiteProvider site={site}>`로 감싼다. 레시피가 이 모두를 끝에서 끝까지 보여 준다.
+`cms.handle(new Request(url))`은 관리자와 같은 검사를 거쳐 플러그인의 경로를 실행하고, `cms.events.retry({ all: true })`는 기다리는 `afterCommit` 이벤트를 전달하며, `@monti-cms/core/internal/cli`의 `runCli(["doctor"], { cwd, log, error })`는 폴더에서 `monti doctor`를 실행하고 종료 코드를 돌려준다. 인스턴스가 몇 가지 부품 위에서만 필요한 코드라면 `fakeCms({ store, … })`가 더 가볍다. 플러그인의 화면은 브라우저와 비슷한 환경에서 테스트한다. `createSite(defineSite({ schema, plugins }))`로 사이트를 만들고(`defineConfig`는 서버 전용이라 `window`가 있는 곳에서는 실행을 거부한다) 화면을 `<SiteProvider site={site}>`로 감싼다. 레시피가 이 모두를 끝에서 끝까지 보여 준다.
 
 ## 스키마 파일
 
@@ -1335,7 +1335,7 @@ Changes (3):
 Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 ```
 
-**API(설정 화면이 부르는 것).** `@monti-cms/core/schema-change`는 인스턴스의 저장소와 사이트 위에서 도는 평범한 함수를 내보낸다.
+**API(설정 화면이 부르는 것).** `@monti-cms/core/internal/schema-change`는 인스턴스의 저장소와 사이트 위에서 도는 평범한 함수를 내보낸다.
 
 | 함수 | 주는 것 |
 | --- | --- |
@@ -1352,7 +1352,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 
 관리자에는 `monti.schema.ts`를 편집하는 스키마 설정(`<관리자 경로>/settings/collections`, 사이드바 맨 아래 설정. 언어·사이트·관리자 탭도 여기에 속한다)이 있다. 위의 API 위에 얇게 얹은 화면이다. diff, 영향 점검, 변환은 같고, 파일을 대신 써 준다.
 
-**누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/monti/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
+**누가 쓸 수 있나.** 개발 모드로 도는 서버(`NODE_ENV=development`, `next dev`가 설정한다)이면서 스키마 파일이 있고, 쓸 수 있으며, 순수 리터럴일 때만이다(아래). 판단은 화면이 아니라 서버가 한다(`@monti-cms/core/internal/schema-edit`의 `schemaEditAccess(cms)`). 운영에서는 `PUT /api/monti/v1/schema`와 `POST /api/monti/v1/schema/preview`가 **403 `schema_read_only`**(`reason`은 `production`, `no_schema_file`, `not_writable`, `has_code`)로 답하고, 화면은 짧은 설명과 함께 스키마를 읽기 전용으로 보여 준다. `GET /api/monti/v1/schema`는 어디서나 된다(운영 서버는 파일을 읽기만 한다). 모든 경로는 관리자 API의 다른 경로처럼 관리자가 필요하고, 쓰는 경로는 같은 출처도 확인한다.
 
 **경로** (`/api/monti/v1/schema`, `cms.handle()`이 처리한다):
 
@@ -1372,7 +1372,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 4. 개발 데이터베이스에 `applySchemaChange`를 돌린다(표가 없으면 먼저 만든다). 스키마를 적용된 것으로 기록하는 것도 이때다.
 5. 돌고 있는 인스턴스가 새 스키마로 돌게 한다(`cms.reloadSchema(schema)`). 그다음 화면이 관리자 페이지를 다시 불러온다.
 
-**프린터.** 파일은 항상 같은 결과를 내는 프린터(`@monti-cms/core/schema-edit`의 `printSchemaFile`)가 쓴다. import 한 줄, `export default defineSchema({ ... });`, 데이터의 키 순서, 탭, 마지막 쉼표, 이름으로 쓸 수 있는 키는 따옴표 없이, 문자열은 큰따옴표다. 짧은 목록과 단순한 값만 든 작은 객체는 한 줄에 두고, 나머지는 항목마다 한 줄이다. **파일의 주석은 저장할 때 사라진다**(파일에 주석이 있으면 화면이 안내를 보여 준다).
+**프린터.** 파일은 항상 같은 결과를 내는 프린터(`@monti-cms/core/internal/schema-edit`의 `printSchemaFile`)가 쓴다. import 한 줄, `export default defineSchema({ ... });`, 데이터의 키 순서, 탭, 마지막 쉼표, 이름으로 쓸 수 있는 키는 따옴표 없이, 문자열은 큰따옴표다. 짧은 목록과 단순한 값만 든 작은 객체는 한 줄에 두고, 나머지는 항목마다 한 줄이다. **파일의 주석은 저장할 때 사라진다**(파일에 주석이 있으면 화면이 안내를 보여 준다).
 
 **화면이 쓸 수 있을 때.** 파일이 순수 리터럴일 때만이다. `defineSchema` import, `export default defineSchema(<객체 리터럴>)`, 그리고 그 밖에는 아무것도 없는 파일이다(다른 import, 식별자, 전개, 함수 호출, 계산된 키, 템플릿 식이 없다). 주석, 작은따옴표, 마지막 쉼표, 손으로 맞춘 모양은 받아들인다(`parseSchemaLiteral`이 그 부분집합을 읽는다). 파일에 코드가 있으면 화면은 이유 `has_code`로 읽기 전용이 되고, "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead" 메시지와 처음 나온 코드의 줄을 보여 주며, 쓰기 경로는 `reason: "has_code"`인 403 `schema_read_only`로 답한다.
 

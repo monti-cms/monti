@@ -75,13 +75,11 @@ const keyName = z.string().trim().min(1).max(API_KEY_NAME_MAX);
 const keyValue = z.string().trim().min(1).max(API_KEY_VALUE_MAX);
 
 export const createApiKeyBodySchema = z.object({ name: keyName, value: keyValue });
-export type CreateApiKeyBody = z.infer<typeof createApiKeyBodySchema>;
 
 /** Rename, replace the value, or both. */
 export const patchApiKeyBodySchema = z
 	.object({ expectedVersion: z.number().int().min(1), name: keyName.optional(), value: keyValue.optional() })
 	.refine((body) => body.name !== undefined || body.value !== undefined, { message: "Give a new name or a new value" });
-export type PatchApiKeyBody = z.infer<typeof patchApiKeyBodySchema>;
 
 /**
  * What a form sends for the key of one place: a key of the store (`saved`), a value to save into the store as a new key named after the place (`new`), or

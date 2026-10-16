@@ -5,18 +5,44 @@
  */
 
 export * from "./blocks/active";
-export * from "./blocks/define";
+export { RESERVED_BLOCK_ATTRIBUTES } from "./blocks/define";
 export * from "./blocks/definitions";
 export * from "./blocks/derive";
 export * from "./config/check/collections";
 export * from "./config/check/fields";
-export { ConfigError, type Issue, IssueList, pathOf } from "./config/check/issue";
-export type { CmsConfig, EditorConfig, EditorWidthStep } from "./config/define";
-export * from "./config/rules";
+export type { Issue } from "./config/check/issue";
+
+export {
+	DEFAULT_ADMIN_PATH,
+	HOST_PATTERN,
+	isAdminPath,
+	isHomeHref,
+	isHttpUrl,
+	isLocalUrl,
+	isTimeZone,
+	LOCALE_CODE,
+	LOCALE_PREFIX_MODES,
+	languageName,
+	NAME_PATTERN,
+	OPTION_VALUE_PATTERN,
+	PREVIEW_PARAM_NAME,
+	RESERVED_COLLECTION_NAMES,
+	UUID_PATTERN,
+	UUID_SOURCE,
+} from "./config/rules";
 export * from "./core/admin-features";
 export * from "./core/admin-paths";
-export * from "./core/api";
-export * from "./core/api-keys";
+export type {
+	AdminColumnSettings,
+	BulkOp,
+	CollectionPreferences,
+	ListSortField,
+	PageSize,
+	PreferencesBody,
+} from "./core/api";
+export { LIST_SORT_FIELDS, PAGE_SIZES } from "./core/api";
+export type { ApiKeyChoiceInput, ApiKeyList, ApiKeySlotView, ApiKeyView } from "./core/api-keys";
+export { apiKeyChoiceSchema } from "./core/api-keys";
 export { type BodyTextOptions, documentText, EXCERPT_TEXT, SEARCH_TEXT } from "./core/body-text";
 export * from "./core/collections";
 export { canTransition, type LifecycleAction } from "./core/domain/lifecycle";
@@ -80,17 +106,54 @@ export * from "./core/translation/hints";
 export * from "./core/translation/skeleton";
 export * from "./core/translation/source-diff";
 export * from "./core/translation/state";
-export * from "./core/types";
-export type { StoredDocument } from "./doc/stored-document";
-export * from "./i18n";
+export type {
+	BodyPosition,
+	Collection,
+	InternalLinkSource,
+	JsonValue,
+	MetadataValue,
+	PreparedSnapshot,
+	Reference,
+	ReferenceKind,
+	ReferenceOccurrence,
+	ResolvedInternalLink,
+	ResolvedTargets,
+	SaveDraftInput,
+	ServiceInput,
+	WorkingCopy,
+} from "./core/types";
+export { readReferenceOccurrence, readReferenceOccurrences, ServiceError } from "./core/types";
+export type { SiteI18n, Translator } from "./i18n";
+export { createI18n, createTranslator, fillVars, josa, languageOf } from "./i18n";
 export * from "./schema/allowed";
-export * from "./schema/collection";
+export type { CollectionKind, PublishedMetadataOf } from "./schema/collection";
+export { kindDefaults, normalizeCollection } from "./schema/collection";
 export * from "./schema/derive";
-export * from "./schema/field-sets";
-export * from "./schema/fields";
-export * from "./schema/layout";
+export type { NamedFieldSet } from "./schema/field-sets";
+export { FIELD_SETS_CONTRIBUTION, fieldSetsOf, freshSetFields, hasFieldSet } from "./schema/field-sets";
+export type { FieldTraits, StorageType, ValueOf } from "./schema/fields";
+export {
+	DEFAULT_TITLE_FIELD,
+	FILL_FROM_BODY_MAX_LENGTH,
+	fieldTraits,
+	fillFromBodyLength,
+	isRequiredField,
+	isStoredField,
+	RECORD_TRANSLATIONS_KEY,
+	RESERVED_METADATA_KEYS,
+	storageTypeOf,
+} from "./schema/fields";
+export type { NamedPlacement, PanelGroup, PanelSource, SitePanel } from "./schema/layout";
+export {
+	checkPlacements,
+	createPanel,
+	DEFAULT_TAB,
+	isPanelField,
+	LAYOUT_CONTRIBUTION,
+	panelGroupsOf,
+	panelTabOf,
+	panelTabsOf,
+	placementsOf,
+} from "./schema/layout";
 export * from "./schema/walk";
 export * from "./site";
-export * from "./text-check/normalize";
-export * from "./text-check/remote";
-export * from "./text-check/types";

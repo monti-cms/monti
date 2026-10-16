@@ -48,5 +48,11 @@ export {
 	UNPARSED_NODE,
 	unparsedDocument,
 } from "./doc/stored-document";
-export * from "./doc/table-layout";
+export {
+	boundedTableSpan,
+	hasGfmHeaderLayout,
+	MAX_TABLE_COLUMN_WIDTH,
+	MAX_TABLE_COLUMNS,
+	tableCellColumns,
+} from "./doc/table-layout";
 export type { CmsJsonValue, CmsMark, CmsNode } from "./doc/types";

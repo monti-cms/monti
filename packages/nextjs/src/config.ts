@@ -1,4 +1,4 @@
-import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/import-boundary";
+import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/internal/import-boundary";
 import type { NextConfig } from "next";
 
 const PACKAGES = ["@monti-cms/core"];

@@ -1,4 +1,5 @@
-import { type CollectionSchema, type StoredField, SUMMARY_ROLE, valueFieldsOf } from "@monti-cms/core";
+import { type CollectionSchema, SUMMARY_ROLE } from "@monti-cms/core";
+import { type StoredField, valueFieldsOf } from "@monti-cms/core/site";
 import { type AiAttach, type AiSiteView, aiAction, aiInput } from "./action";
 import { presetMessages } from "./presets.messages";
 import { regexRuns, sameStructure, uniqueSlug } from "./validators";

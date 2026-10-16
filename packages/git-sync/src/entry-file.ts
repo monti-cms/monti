@@ -1,7 +1,8 @@
 import { isDeepStrictEqual } from "node:util";
 import { composeFile, parseFile } from "@monti-cms/core/front-matter";
 import { exportBodyText } from "@monti-cms/core/plugin/server";
-import type { Cms, Entry, EntryBody } from "@monti-cms/core/server";
+import type { Cms } from "@monti-cms/core/server";
+import type { Entry, EntryBody } from "@monti-cms/core/site";
 import { isUuid } from "@monti-cms/core/site";
 import { blobSha } from "./github/blob-sha";
 import { RESERVED_FRONT_MATTER_KEYS, type ResolvedTarget } from "./options";

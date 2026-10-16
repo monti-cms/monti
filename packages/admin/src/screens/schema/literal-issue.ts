@@ -1,4 +1,4 @@
-import type { SchemaLiteralIssue } from "@monti-cms/core/schema-edit";
+import type { SchemaLiteralIssue } from "@monti-cms/core/internal/schema-edit";
 import type { TranslatorFor } from "../../translator";
 import type { schemaMessages } from "./messages";
 

@@ -18,12 +18,7 @@ export {
 } from "./doctor";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env";
 export { type EventsRetryOptions, eventsRetry } from "./events";
-export {
-	type BoundaryViolation,
-	findBoundaryViolations,
-	formatBoundaryViolations,
-	SERVER_ONLY_MODULES,
-} from "./import-boundary";
+
 export { initProject } from "./init";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect";
 export { collectAnswers, type InitAnswerFlags } from "./init-prompts";

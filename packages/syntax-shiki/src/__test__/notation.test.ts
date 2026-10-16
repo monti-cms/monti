@@ -1,4 +1,4 @@
-import { DEFAULT_CODE_LINE_EFFECTS } from "@monti-cms/core";
+import { DEFAULT_CODE_LINE_EFFECTS } from "@monti-cms/core/code-block";
 import { describe, expect, it } from "vitest";
 import { convertShikiNotation, type NotationSettings, readableCommentSyntaxes } from "../notation";
 

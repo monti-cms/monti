@@ -1,4 +1,5 @@
-import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/site";
+import type { BlockDefinition } from "@monti-cms/core";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { BlockNodeView } from "../block-node-view";

@@ -4,7 +4,7 @@ import {
 	type TextChecker,
 	type TextCheckerLimits,
 	type TextCheckSegment,
-} from "@monti-cms/core/site";
+} from "@monti-cms/core";
 import { type DocSegment, segmentRangeToDoc } from "./extract";
 
 export type { CachedIssue };

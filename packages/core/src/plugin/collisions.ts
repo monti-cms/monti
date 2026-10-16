@@ -36,10 +36,6 @@ export function checkPluginNames(names: readonly string[]): Issue[] {
 	return list.issues;
 }
 
-/** Throws a {@link ConfigError} if a plugin name collides. */
-export const assertPluginNamesFree = (names: readonly string[]): void =>
-	throwIssues(CONFIG_SOURCE, checkPluginNames(names));
-
 /**
  * The plugin Tools pages (`path` in `nav`, or a key of an admin plugin's `pages`) that are empty or equal another plugin's.
  * Pages live under `<admin path>/tools/`, so they cannot collide with a core screen. The same path within one plugin counts as one page.

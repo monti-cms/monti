@@ -104,7 +104,6 @@ export const patchEntryBodySchema = z
 		translation: z.unknown().optional(),
 	})
 	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
-export type PatchEntryBody = z.infer<typeof patchEntryBodySchema>;
 
 /** State transitions that take only a version (archive, unarchive, trash, restore). */
 export const versionBodySchema = z.object({ expectedVersion: expectedVersionSchema });
@@ -136,7 +135,6 @@ export const bulkBodySchema = z.object({
 	id: z.uuid().nullable().optional(),
 	folderId: z.uuid().nullable().optional(),
 });
-export type BulkBody = z.infer<typeof bulkBodySchema>;
 
 /** Upper limit on the number of list columns. Column names are decided by the admin screen (system columns and field names). */
 const MAX_LIST_COLUMNS = 60;
@@ -177,7 +175,6 @@ export const exportScopeSchema = z.object({
 	/** Also write every body as a text file in this format (`working.<ext>`, `published.<ext>`). Without it the archive holds the documents only. */
 	format: formatNameSchema.optional(),
 });
-export type ExportScopeInput = z.infer<typeof exportScopeSchema>;
 
 /** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
 export const createTemplateBodySchema = z
@@ -188,7 +185,6 @@ export const createTemplateBodySchema = z
 		format: formatNameSchema.optional(),
 	})
 	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
-export type CreateTemplateBody = z.infer<typeof createTemplateBodySchema>;
 
 export const patchTemplateBodySchema = z
 	.object({
@@ -199,7 +195,6 @@ export const patchTemplateBodySchema = z
 		format: formatNameSchema.optional(),
 	})
 	.refine(bodyIsDocOrText, BODY_IS_DOC_OR_TEXT);
-export type PatchTemplateBody = z.infer<typeof patchTemplateBodySchema>;
 
 const folderNameSchema = z.string().trim().min(1).max(100);
 
@@ -395,7 +390,4 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiParts) {
 	};
 }
 
-export type ListEntriesQuery = z.infer<SiteApi["listEntriesQuerySchema"]>;
-export type CreateEntryBody = z.infer<SiteApi["createEntryBodySchema"]>;
 export type PreferencesBody = z.infer<SiteApi["preferencesBodySchema"]>;
-export type MediaUploadBody = z.infer<SiteApi["mediaUploadBodySchema"]>;

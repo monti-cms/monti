@@ -2,16 +2,9 @@ import { act, cleanup, fireEvent, renderHook, screen, waitFor } from "@testing-l
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NoticeError } from "../../api/client";
-import {
-	type EditorResult,
-	type SlotAction,
-	type SlotActionsOptions,
-	type SlotResult,
-	type SlotSource,
-	useSlotActions,
-} from "../../hooks/public";
+import { type EditorResult, type SlotActionsOptions, useSlotActions } from "../../hooks/public";
 import { renderWithSite, SiteWrapper } from "../../test/site";
-import { SlotRegistryProvider } from "../registry";
+import { type SlotAction, SlotRegistryProvider, type SlotResult, type SlotSource } from "../registry";
 
 afterEach(cleanup);
 

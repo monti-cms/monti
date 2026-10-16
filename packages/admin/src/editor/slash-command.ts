@@ -1,4 +1,4 @@
-import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/site";
+import { perSite, type Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 import {
 	Heading2,
@@ -39,6 +39,8 @@ const keywordList = (
 		.map((word) => word.trim());
 
 export { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./block-inserts";
+
+import type { BlockDefinition } from "@monti-cms/core";
 
 export interface SlashCommandItem {
 	/** Name of the block insertion item (nodeView for core blocks, block name for added blocks). Absent for basic formatting items. */

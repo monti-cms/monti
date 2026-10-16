@@ -1,4 +1,5 @@
-import { josa, type MessageVars, type Site } from "@monti-cms/core/site";
+import type { MessageVars } from "@monti-cms/core";
+import { josa, type Site } from "@monti-cms/core/site";
 
 /**
  * How admin messages name the entries of a collection. They take the collection's own label ("Post", "Memo", "게시글"), so a memo screen says "memo" and not "post".

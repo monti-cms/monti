@@ -1,8 +1,9 @@
 import { STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import { createContentLookup } from "@monti-cms/core/plugin/server";
-import { type ContentStore, createContentService } from "@monti-cms/core/server";
+import type { ContentStore } from "@monti-cms/core/server";
 import {
 	closeGlobalPool,
+	createContentService,
 	createContentStore,
 	createIsolatedTestPool,
 	dropIsolatedTestPool,

@@ -1,6 +1,7 @@
 "use client";
 
-import type { BlockDefinition, Site } from "@monti-cms/core/site";
+import type { BlockDefinition } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/site";
 import { useSite } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { Fragment, type NodeType, type Node as PmNode } from "@tiptap/pm/model";

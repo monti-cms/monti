@@ -14,6 +14,9 @@ import type { AuthContext } from "../adapters/auth/auth-gateway";
 import type { CmsConfig } from "../config/define";
 import type { ContentStore, EntryMetadata, PublishedEntryRecord, PublishedSort } from "../core/store";
 import type { CollectionName, PublishedMetadataFor } from "../core/types";
+
+export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types";
+
 import { collectRefs, EMPTY_REFS, type ReadLink, type ReadRefs } from "../doc/document-refs";
 import { type PublicMediaDeps, resolvePublicMedia, resolvePublicMediaUrl } from "../doc/public-media";
 import type { StoredDocument } from "../doc/stored-document";
@@ -24,8 +27,6 @@ import { unknownFormatError } from "../format/unknown";
 import type { MediaStore } from "../media/store";
 import { RECORD_TRANSLATIONS_KEY } from "../schema/fields";
 import type { Site } from "../site";
-
-export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types";
 
 /** A published item a relation field points to. */
 export interface ReadRelation {
@@ -584,7 +585,5 @@ export function createExportRefs(
 	};
 }
 
-export type { PublishedSort } from "../core/store";
 export type { DocumentRefIds, ReadLink, ReadRefs } from "../doc/document-refs";
 export { collectRefs } from "../doc/document-refs";
-export type { StoredDocument } from "../doc/stored-document";

@@ -1,15 +1,12 @@
 import type { CmsJsonValue } from "@monti-cms/core/document";
 import {
 	boundedTableSpan,
-	formatTableWidths,
 	hasGfmHeaderLayout,
 	MAX_TABLE_COLUMN_WIDTH,
 	MAX_TABLE_COLUMNS,
-	parseTableWidths,
 	tableCellColumns,
-	tableHasMergedCells,
-	tableWidths,
 } from "@monti-cms/core/document";
+import { formatTableWidths, parseTableWidths, tableHasMergedCells, tableWidths } from "@monti-cms/core/notation";
 import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { lineBreakNode } from "./shared";
 import type { BlockConverter } from "./types";

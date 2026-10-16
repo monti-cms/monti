@@ -1,6 +1,7 @@
 "use client";
 
-import { type CmsConfig, useSite } from "@monti-cms/core/site";
+import type { CmsConfig } from "@monti-cms/core";
+import { useSite } from "@monti-cms/core/site";
 import { useCallback, useMemo } from "react";
 import type { AiActionView } from "../actions";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry";

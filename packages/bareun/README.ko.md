@@ -41,4 +41,4 @@ bareun({
 띄어쓰기·표준어·오타·문법·낱말 오류는 "오류", 나머지(문장 다듬기·외래어·헷갈리는 말·확인 필요)는 "주의"다.
 
 다른 검사기(LanguageTool 등)는 같은 모양으로 따로 만든다: 서버 경로(`textCheckRoute`, `@monti-cms/core/plugin/server`)와 브라우저 쪽
-`remoteTextChecker`(`@monti-cms/core/site`)를 관리자 확장점 `textCheckers`에 넣는다.
+`remoteTextChecker`(`@monti-cms/core`)를 관리자 확장점 `textCheckers`에 넣는다.

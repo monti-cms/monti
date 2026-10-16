@@ -1,5 +1,5 @@
 import Credentials from "@auth/core/providers/credentials";
-import type { PluginStorage } from "@monti-cms/core";
+import type { PluginStorage } from "@monti-cms/core/plugin/server";
 import type { LoginAccountRefusal, LoginAccounts } from "@monti-cms/core/server";
 import { passwordLabel } from "./messages";
 import { hashPassword, verifyPassword } from "./password-hash";

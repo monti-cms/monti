@@ -1,6 +1,6 @@
 import { CmsEditor } from "@monti-cms/admin/editor";
+import { defineTextChecker, type TextChecker, type TextCheckSegment } from "@monti-cms/core";
 import type { StoredDocument } from "@monti-cms/core/document";
-import { defineTextChecker, type TextChecker, type TextCheckSegment } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import type { PluginKey } from "@tiptap/pm/state";

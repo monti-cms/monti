@@ -5,14 +5,6 @@
  * What a config needs to know about a site (`createSite`, `SiteProvider`) is in `@monti-cms/core/site`.
  */
 
-export {
-	type CodeBlockConfig,
-	type CodeBlockFeatures,
-	type CodeBlockThemes,
-	type CodeLineEffectDefinition,
-	type CodeLineEffectEditor,
-	DEFAULT_CODE_LINE_EFFECTS,
-} from "./annotation/code-block/line-effects";
 export type {
 	BlockAttribute,
 	BlockChildren,
@@ -53,16 +45,6 @@ export {
 	translate,
 } from "./i18n/define";
 export {
-	assertPluginNamesFree,
-	assertPluginPagesFree,
-	assertPluginRoutesFree,
-	CORE_FEATURE_KEYS,
-	checkPluginNames,
-	checkPluginPages,
-	checkPluginRoutes,
-	RESERVED_SCOPES,
-} from "./plugin/collisions";
-export {
 	type CmsPlugin,
 	type CmsServerPlugin,
 	definePlugin,
@@ -78,14 +60,7 @@ export {
 	type PluginRoute,
 	type PluginServer,
 } from "./plugin/define";
-export { type PluginLog, pluginError, pluginLog } from "./plugin/log";
-export type {
-	PluginCollection,
-	PluginMigration,
-	PluginStorage,
-	StorageItem,
-	StorageWriteOptions,
-} from "./plugin/storage";
+
 export {
 	type CollectionSchema,
 	defineCollection,
@@ -112,16 +87,7 @@ export {
 	type ViewField,
 } from "./schema/fields";
 export type { PluginPlacement } from "./schema/layout";
-export {
-	fieldWithRole,
-	findTitleField,
-	type StoredField,
-	type TitleField,
-	titleFieldOf,
-	titleValue,
-	valueFieldsOf,
-	valueWithRole,
-} from "./schema/walk";
+
 export { defineSchema } from "./schema-file/define";
 export { parseSchemaFile } from "./schema-file/format";
 export type {

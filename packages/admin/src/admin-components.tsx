@@ -2,7 +2,7 @@
 
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import type { Field, ListEntriesItem, TextChecker } from "@monti-cms/core/site";
+import type { ListEntriesItem } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -156,6 +156,8 @@ export interface SourcePanelProps {
 }
 
 export { SOURCE_ERROR_ID } from "./source-error-id";
+
+import type { Field, TextChecker } from "@monti-cms/core";
 
 /** A source panel a plugin registers (`CmsAdminComponents.sourcePanels`). */
 export interface SourcePanelRegistration {

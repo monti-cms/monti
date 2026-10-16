@@ -7,9 +7,8 @@ import {
 	hasGfmHeaderLayout,
 	linkMarkAttrs,
 	MAX_TABLE_COLUMNS,
-	parseTableWidths,
-	tableHasMergedCells,
 } from "@monti-cms/core/document";
+import { parseTableWidths, tableHasMergedCells } from "@monti-cms/core/notation";
 import type { Site } from "@monti-cms/core/site";
 import type { Code } from "mdast";
 import { splitFrontmatter } from "./frontmatter";
