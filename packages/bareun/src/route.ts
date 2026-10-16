@@ -16,7 +16,9 @@ export function bareunRoute() {
 		const apiKey = (await cms.apiKeys.slot(BAREUN_PLUGIN_NAME, BAREUN_KEY_SLOT).read())?.trim();
 		if (!apiKey) {
 			const t = cms.site.createTranslator(bareunMessages);
-			throw new CmsError(t("error.keyMissing"), "service_unavailable");
+			throw new CmsError("No Bareun API key in the key slot", "service_unavailable", {
+				notice: { what: t("error.keyMissing") },
+			});
 		}
 		return ok(
 			await handleTextCheck(

@@ -20,13 +20,15 @@ import { handleWebhook } from "./webhook";
 
 /**
  * The plugin's API (the routes under `v1/git-sync/`, served below the CMS API path). Everything is admin only except the webhook, which GitHub calls and which checks its own signature.
- * Errors a person can fix (no token, a branch that does not exist) are 409 with their message; GitHub failing is 502.
+ * Errors a person can fix (no token, a branch that does not exist) are 409 and tell their message; GitHub failing is 502, with GitHub's words as the detail.
  */
 
 /** Turns what the sync code throws into the response the admin screen shows. */
 const toCmsError = (error: unknown): unknown => {
 	if (error instanceof GitHubApiError) return new CmsError(error.message, "upstream_failed");
-	if (error instanceof GitSyncError) return new CmsError(error.message, "precondition_failed");
+	if (error instanceof GitSyncError) {
+		return new CmsError(error.message, "precondition_failed", { notice: { what: error.message } });
+	}
 	return error;
 };
 

@@ -7,8 +7,8 @@ import { readJsonBody } from "../handler";
 export function assertSchemaWritable(cms: Pick<Cms, "schemaFile">): void {
 	const access = schemaEditAccess(cms);
 	if (!access.writable) {
-		throw new CmsError(READ_ONLY_MESSAGE[access.reason], "schema_read_only", undefined, {
-			reason: access.reason,
+		throw new CmsError(READ_ONLY_MESSAGE[access.reason], "schema_read_only", {
+			details: { reason: access.reason },
 		});
 	}
 }

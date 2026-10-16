@@ -3,6 +3,7 @@
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useId, useState } from "react";
+import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import { listMedia, type MediaItem, mediaKeys } from "../api/media";
 import { commonMessages } from "../lib/common.messages";
@@ -178,7 +179,7 @@ export function ImageInsertDialog({
 				publicUrl: uploaded.publicUrl,
 			});
 		} catch (err) {
-			setError(err instanceof Error ? err.message : t("imageDialog.uploadFailed"));
+			setError(errorText(site, err, t("imageDialog.uploadFailed")));
 		} finally {
 			setProgress(null);
 		}

@@ -7,6 +7,7 @@ import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorText } from "../api/client";
 import { mediaNotConfiguredMessage } from "../api/error-message";
 import type { TranslatorFor } from "../translator";
 import type { EditorAllowance } from "./allowed";
@@ -115,7 +116,8 @@ export function useMediaInsertion({
 				} catch (error) {
 					toast.error(t("toolbar.uploadFailed", { name: file.name }), {
 						id: toastId,
-						description: error instanceof Error ? error.message : undefined,
+						// The reason, when there is one the person can read (the title already says it failed).
+						description: errorText(site, error, "") || undefined,
 					});
 				}
 			}

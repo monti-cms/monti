@@ -5,7 +5,7 @@ type ApiErrorSite = Pick<Site, "createTranslator">;
 
 /** Text shown where the server answers that media storage is not configured. */
 export const mediaNotConfiguredMessage = (site: ApiErrorSite): string =>
-	site.createTranslator(apiErrorMessages)("error.media_not_configured");
+	site.createTranslator(apiErrorMessages)("mediaNotConfigured");
 
 export type CmsIssue = {
 	code?: string;
@@ -97,6 +97,6 @@ export function cmsApiErrorMessage(site: ApiErrorSite, payload: unknown, fallbac
 		const details = issues.map((issue) => cmsIssueMessage(site, issue));
 		return `${t("validationFailedList")}\n${details.map((detail) => `• ${detail}`).join("\n")}`;
 	}
-	if (typeof body.code === "string" && hasMessage(`error.${body.code}`)) return t(`error.${body.code}` as never);
+	// The server writes `message` in the admin language (and `fix` next to it).
 	return typeof body.message === "string" && body.message ? body.message : fallback;
 }

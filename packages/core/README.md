@@ -987,7 +987,17 @@ await settings.delete("default", { expectedVersion: saved.version + 1 });
 
 ### Errors and responses
 
-Every error the server answers with has one shape, `{ "error": { "code", "message", "issues"?, "details"? } }`, and its status comes from one table (`ERROR_STATUS`, exported with the `ErrorCode` type from `@monti-cms/core/plugin/server`). A route or a plugin throws `new CmsError(message, code)` with a code of that table; nothing else decides a status. `issues` are the problems found in the content (a refused write), and `details` is machine-readable extra data (the version the server holds for a `conflict`, the places that use a key for `key_in_use`). A success is `ok(body)`; a delete answers `204` with no body (`deleted()`).
+Every error the server answers with has one shape, `{ "error": { "code", "message", "fix"?, "detail"?, "issues"?, "details"? } }`, and its status comes from one table (`ERROR_STATUS`, exported with the `ErrorCode` type from `@monti-cms/core/plugin/server`). A route or a plugin throws `new CmsError(message, code, options?)` with a code of that table; nothing else decides a status.
+
+The answer keeps what a person reads apart from what a developer reads. On an admin route, `message` (what went wrong) and `fix` (what to do) are in the admin language. They come from the error's `notice` (`{ what, fix? }`), or else from the text of its code in the `cms.core.errors` dictionary. The `message` you passed to `CmsError` is developer text (English, it may name ids and values) and goes out as `detail`, which the admin shows only under "Details". So never put a library's or another service's words in the notice; put text from your own dictionary there:
+
+```ts
+throw new CmsError("401 invalid x-api-key", "service_unavailable", {
+  notice: { what: t("keyRefused"), fix: t("checkKey") },
+});
+```
+
+`issues` are the problems found in the content (a refused write), and `details` is machine-readable extra data (the version the server holds for a `conflict`, the places that use a key for `key_in_use`). A success is `ok(body)`; a delete answers `204` with no body (`deleted()`).
 
 ## Server options
 

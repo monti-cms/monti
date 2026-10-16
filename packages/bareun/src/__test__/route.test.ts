@@ -92,7 +92,7 @@ describe("Bareun check route", () => {
 		vi.stubGlobal("fetch", fetchMock);
 		const res = await post({ segments });
 		expect(res.status).toBe(503);
-		expect(await res.json()).toEqual({
+		expect(await res.json()).toMatchObject({
 			error: {
 				code: "service_unavailable",
 				message: testSite.createTranslator(bareunMessages)("error.keyMissing"),
@@ -145,7 +145,7 @@ describe("Bareun check route", () => {
 		const res = await post({ segments }, cms);
 		expect(res.status).toBe(502);
 		const text = await res.text();
-		expect(JSON.parse(text)).toEqual({ error: { code: "upstream_failed", message: "Text check failed" } });
+		expect(JSON.parse(text)).toMatchObject({ error: { code: "upstream_failed", detail: "Text check failed" } });
 		expect(text).not.toContain(FAKE_KEY);
 	});
 

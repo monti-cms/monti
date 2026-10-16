@@ -243,7 +243,7 @@ const errorText = (code: string, issues: readonly Issue[] | undefined): string =
 /** A request the service refuses; the issues say what is wrong with it. A {@link CmsError}, so the HTTP layer answers it like any other. */
 export class ServiceError extends CmsError {
 	constructor(code: ErrorCode, issues?: readonly Issue[], message?: string) {
-		super(message ?? errorText(code, issues), code, undefined, undefined, issues);
+		super(message ?? errorText(code, issues), code, { issues });
 		this.name = "ServiceError";
 	}
 	declare readonly issues?: readonly Issue[];

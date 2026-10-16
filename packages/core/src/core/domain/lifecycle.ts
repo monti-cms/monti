@@ -31,7 +31,7 @@ export const canTransition = (action: LifecycleAction, status: EntryStatus): boo
 
 export function assertTransitionAllowed(action: LifecycleAction, status: EntryStatus, version: number): void {
 	if (!canTransition(action, status)) {
-		throw new CmsError(`Cannot change status from ${status}`, "invalid_status", version);
+		throw new CmsError(`Cannot change status from ${status}`, "invalid_status", { serverVersion: version });
 	}
 }
 
@@ -44,7 +44,7 @@ export function assertDuplicable(status: EntryStatus): void {
 /** Record collections (tags, categories, ...) have no archive. */
 export function assertArchivable(site: Site, collection: string, version: number): void {
 	if (site.isItemCollection(collection)) {
-		throw new CmsError("Record collections cannot be archived", "invalid_status", version);
+		throw new CmsError("Record collections cannot be archived", "invalid_status", { serverVersion: version });
 	}
 }
 
@@ -56,7 +56,8 @@ export const restorePublishesAgain = (site: Site, collection: string): boolean =
 
 /** Restoring a translation while its source is in the trash would leave it out of the list (one row per source) without shared values. */
 export function assertSourceNotTrashed(sourceStatus: EntryStatus | undefined, version: number): void {
-	if (sourceStatus === "trashed") throw new CmsError("Restore the source first", "source_trashed", version);
+	if (sourceStatus === "trashed")
+		throw new CmsError("Restore the source first", "source_trashed", { serverVersion: version });
 }
 
 /** A record's prepared draft is required to publish it again on restore. */
@@ -67,7 +68,7 @@ export function assertRestoreSnapshot(snapshot: unknown): void {
 /** Only a trashed entry can be deleted for good. */
 export function assertDeletable(status: EntryStatus, version: number): void {
 	if (status !== "trashed") {
-		throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", version);
+		throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", { serverVersion: version });
 	}
 }
 

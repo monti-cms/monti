@@ -10,7 +10,15 @@ export type { ApiKeys } from "./api-keys/api-keys";
 export { type Problem, problemError, problemText, SetupError } from "./core/problem";
 export { type Issue, ServiceError } from "./core/types";
 export { type ExportBodyParams, exportBodyText } from "./format/export-body";
-export { CmsError, ERROR_STATUS, type ErrorCode, errorResponse, handleApiError } from "./http/v1/error-handler";
+export {
+	CmsError,
+	cmsErrorText,
+	ERROR_STATUS,
+	type ErrorCode,
+	type ErrorNotice,
+	errorResponse,
+	handleApiError,
+} from "./http/v1/error-handler";
 export * from "./http/v1/handler";
 export { type ContentLookup, createContentLookup, type SlugsInUseParams } from "./plugin/content-lookup";
 export type { PluginContext } from "./plugin/context";

@@ -106,7 +106,7 @@ export async function planSchemaChange(options: PlanOptions): Promise<SchemaPlan
 export class SchemaChangeError extends CmsError {
 	readonly problems: readonly TransformProblem[];
 	constructor(message: string, problems: readonly TransformProblem[] = []) {
-		super(message, "invalid_transforms", undefined, undefined, problems);
+		super(message, "invalid_transforms", { issues: problems });
 		this.name = "SchemaChangeError";
 		this.problems = problems;
 	}

@@ -6,6 +6,7 @@ import { resolveAction } from "../action";
 import type { AiProviderInput } from "../connection";
 import { AI_PLUGIN_NAME } from "../name";
 import { createDecider, createGenerator } from "../provider";
+import { providerMessages } from "../provider.messages";
 import { aiRegistryOf } from "../registry";
 import {
 	addAiProvider,
@@ -88,6 +89,16 @@ describe("AI connection settings", () => {
 		expect(key?.uses.map((use) => use.ref)).toEqual([connectionRef(view.providers[0]?.id ?? "")]);
 		// Only the reference is stored, never text in some language.
 		expect(JSON.stringify(await store.cms.storage("core-keys").collection("uses").list())).not.toContain("OpenRouter");
+	});
+
+	it("works out the labels without listing keys, since the key store asks for them while it lists keys", async () => {
+		const store = memoryStore();
+		const view = await addAiProvider(testSite, store, 0, chat());
+		const ref = connectionRef(view.providers[0]?.id ?? "");
+		// The key store calls the labels from its `list`; reading keys here again went round without end.
+		const keys = vi.spyOn(store, "apiKeys");
+		expect(Object.keys(await keyUseLabels(testSite, store, [ref]))).toEqual([ref]);
+		expect(keys).not.toHaveBeenCalled();
 	});
 
 	it("works out each connection's label when asked: its current name in the admin language, and none once the connection is deleted", async () => {
@@ -300,7 +311,12 @@ describe("decide model call", () => {
 			"fetch",
 			vi.fn(async () => new Response("nope", { status: 402 })),
 		);
-		await expect(decider.decide(request)).rejects.toMatchObject({ message: "AI 서비스 크레딧이 부족합니다. — nope" });
+		// The person reads the dictionary text; the service's own words stay in the developer message (the answer's `detail`).
+		const tp = testSite.createTranslator(providerMessages);
+		await expect(decider.decide(request)).rejects.toMatchObject({
+			notice: { what: tp("service.credit"), fix: tp("service.credit.fix") },
+			message: expect.stringContaining("nope"),
+		});
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => Response.json({ result: "?" })),
@@ -391,8 +407,10 @@ describe("generation model call", () => {
 			),
 		);
 		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
+		const tp = testSite.createTranslator(providerMessages);
 		await expect(generator.generate(request)).rejects.toMatchObject({
-			message: "AI 서비스 주소나 모델 이름을 확인하세요. — No endpoints found matching your data policy",
+			notice: { what: tp("service.address"), fix: tp("service.address.fix") },
+			message: expect.stringContaining("No endpoints found matching your data policy"),
 		});
 	});
 
@@ -402,8 +420,10 @@ describe("generation model call", () => {
 		);
 		vi.stubGlobal("fetch", fetchMock);
 		const generator = createGenerator(testSite, { baseUrl: "https://example.test/v1", apiKey: "key", model: "m" });
+		const tp = testSite.createTranslator(providerMessages);
 		await expect(generator.generate(request)).rejects.toMatchObject({
-			message: "AI 서비스에 문제가 있습니다. — Provider returned error",
+			notice: { what: tp("service.problem") },
+			message: expect.stringContaining("Provider returned error"),
 		});
 	});
 

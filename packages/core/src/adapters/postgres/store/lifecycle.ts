@@ -234,8 +234,9 @@ export function createLifecycleOps(ctx: StoreContext, publishing: Publishing) {
 						.where("id", "=", sql<string>`any(${alive}::uuid[])`)
 						.orderBy("locale")
 						.execute();
-					throw new CmsError("Delete the translations first", "has_translations", locked.version, {
-						translations,
+					throw new CmsError("Delete the translations first", "has_translations", {
+						serverVersion: locked.version,
+						details: { translations },
 					});
 				}
 				for (const member of members) {

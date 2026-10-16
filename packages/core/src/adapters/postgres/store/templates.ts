@@ -92,7 +92,8 @@ export function createTemplateOps(ctx: StoreContext) {
 						.forUpdate()
 						.executeTakeFirst();
 					if (!cur) throw new CmsError("Template not found", "not_found");
-					if (cur.version !== params.expectedVersion) throw new CmsError("Conflict", "conflict", cur.version);
+					if (cur.version !== params.expectedVersion)
+						throw new CmsError("Conflict", "conflict", { serverVersion: cur.version });
 					const name = params.name !== undefined ? params.name.trim() : cur.name;
 					if (!name) throw new CmsError("Template name cannot be empty", "invalid_input");
 
@@ -121,7 +122,8 @@ export function createTemplateOps(ctx: StoreContext) {
 					.forUpdate()
 					.executeTakeFirst();
 				if (!cur) throw new CmsError("Template not found", "not_found");
-				if (cur.version !== params.expectedVersion) throw new CmsError("Conflict", "conflict", cur.version);
+				if (cur.version !== params.expectedVersion)
+					throw new CmsError("Conflict", "conflict", { serverVersion: cur.version });
 				await trx.deleteFrom("body_templates").where("id", "=", params.id).execute();
 			}),
 	};

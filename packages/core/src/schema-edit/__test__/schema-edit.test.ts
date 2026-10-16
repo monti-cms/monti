@@ -396,7 +396,7 @@ describe("schema settings API", () => {
 			error: {
 				code: "schema_read_only",
 				details: { reason: "has_code" },
-				message: "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead",
+				detail: "monti.schema.ts contains code, so the admin cannot rewrite it; edit the file instead",
 			},
 		});
 		expect((await call(cms, "POST", "schema/preview", { schema: state.schema })).status).toBe(403);

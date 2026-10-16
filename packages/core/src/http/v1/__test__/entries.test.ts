@@ -53,7 +53,7 @@ const mockService = {
 	}),
 	saveDraft: vi.fn().mockImplementation((id, input) => {
 		if (input.expectedVersion === 1) {
-			throw new CmsError("Conflict", "conflict", 2);
+			throw new CmsError("Conflict", "conflict", { serverVersion: 2 });
 		}
 		if (input.slug === "existing-slug") {
 			throw new CmsError("Slug conflict", "slug_conflict");

@@ -354,8 +354,7 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 				throw new CmsError(
 					`${found.length} place${found.length === 1 ? "" : "s"} use this key and would stop working`,
 					"key_in_use",
-					current.version,
-					{ uses: found },
+					{ serverVersion: current.version, details: { uses: found } },
 				);
 			}
 			await keys().delete(id, { expectedVersion });

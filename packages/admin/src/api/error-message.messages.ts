@@ -1,7 +1,10 @@
 import { defineMessages } from "@monti-cms/core";
 import { josa } from "@monti-cms/core/site";
 
-/** Guidance text for API errors and publish-check issues. `issue.*` and `error.*` keys are the codes the server sends. */
+/**
+ * Guidance text for publish-check issues (`issue.*` keys are the codes the server sends) and the errors the screen tells itself (offline, a preview).
+ * The text of an error code comes from the server (`cms.core.errors`).
+ */
 export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 	en: {
 		"issue.null_slug": "Enter an address (slug).",
@@ -44,22 +47,7 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 			"This block isn't allowed in this body. What is already saved is kept as it is, but new ones can't be added.",
 		"issue.disallowed_mark":
 			"This text style isn't allowed in this body. What is already saved is kept as it is, but it can't be added to more text.",
-		"error.conflict": "It was changed elsewhere first. Check the latest version and try again.",
-		"error.slug_conflict": "This address (slug) is already in use.",
-		"error.translation_exists": "A translation in this language already exists (including the trash).",
-		"error.has_translations": "Translations remain outside the trash. Move them to the trash too, then delete.",
-		"error.source_trashed": "The source is in the trash. Restore it first.",
-		"error.in_use": "Other content is using this, so it can't be done. Remove those uses first.",
-		"error.invalid_status": "This can't be done in the current state.",
-		"error.folder_name_conflict": "A folder with the same name is already here. Rename it and try again.",
-		"error.version_required": "Version information is missing. Refresh the page.",
-		"error.unauthorized": "Your sign-in expired. Sign in again.",
-		"error.forbidden": "You don't have permission.",
-		"error.unsupported_media_type": "This file type isn't allowed.",
-		"error.payload_too_large": "The file is too large.",
-		"error.too_many_pixels": "The image resolution is too high.",
-		"error.unavailable": "The storage is temporarily unavailable. Try again shortly.",
-		"error.media_not_configured": "Media storage isn't configured.",
+		mediaNotConfigured: "Media storage isn't configured.",
 		"field.missing": "Fill in {label}.",
 		"field.tooLong": "{label} is too long.",
 		validationFailed: "Validation failed",
@@ -108,22 +96,7 @@ export const apiErrorMessages = defineMessages("cms-admin.api-errors", {
 			"이 본문에서 허용하지 않는 블록입니다. 이미 저장된 내용은 그대로 남지만 새로 추가할 수는 없습니다.",
 		"issue.disallowed_mark":
 			"이 본문에서 허용하지 않는 텍스트 스타일입니다. 이미 저장된 내용은 그대로 남지만 더 많은 글에 적용할 수는 없습니다.",
-		"error.conflict": "다른 곳에서 먼저 바뀌었습니다. 최신 내용을 확인한 뒤 다시 시도하세요.",
-		"error.slug_conflict": "이미 쓰이고 있는 주소(slug)입니다.",
-		"error.translation_exists": "이 언어의 번역본이 이미 있습니다(휴지통 포함).",
-		"error.has_translations": "휴지통 밖에 번역본이 남아 있습니다. 번역본도 휴지통으로 옮긴 뒤 지우세요.",
-		"error.source_trashed": "원문이 휴지통에 있습니다. 원문을 먼저 복원하세요.",
-		"error.in_use": "다른 콘텐츠가 사용 중이라 진행할 수 없습니다. 사용처를 먼저 정리하세요.",
-		"error.invalid_status": "현재 상태에서는 할 수 없는 작업입니다.",
-		"error.folder_name_conflict": "같은 위치에 같은 이름의 폴더가 있습니다. 이름을 바꾼 뒤 다시 시도하세요.",
-		"error.version_required": "버전 정보가 없습니다. 화면을 새로고침하세요.",
-		"error.unauthorized": "로그인이 만료되었습니다. 다시 로그인하세요.",
-		"error.forbidden": "권한이 없습니다.",
-		"error.unsupported_media_type": "허용되지 않는 파일 형식입니다.",
-		"error.payload_too_large": "파일이 너무 큽니다.",
-		"error.too_many_pixels": "이미지 해상도가 너무 큽니다.",
-		"error.unavailable": "저장소에 일시적으로 연결할 수 없습니다. 잠시 후 다시 시도하세요.",
-		"error.media_not_configured": "미디어 저장소가 설정되지 않았습니다.",
+		mediaNotConfigured: "미디어 저장소가 설정되지 않았습니다.",
 		"field.missing": ({ label }) => `${josa(String(label), "을", "를")} 입력하세요.`,
 		"field.tooLong": ({ label }) => `${josa(String(label), "이", "가")} 너무 깁니다.`,
 		validationFailed: "검증 실패",

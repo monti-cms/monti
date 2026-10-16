@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CmsApiError } from "../../api/client";
+import { CmsApiError, NoticeError } from "../../api/client";
 import { toEditorError } from "../result";
 
 const api = (status: number, code?: string, issues: CmsApiError["issues"] = []) =>
@@ -48,10 +48,16 @@ describe("toEditorError", () => {
 		expect(toEditorError(abort, "fallback")).toMatchObject({ code: "aborted", message: "fallback" });
 	});
 
-	it("maps a plain Error to failed with its message, and anything else to failed with the fallback", () => {
+	it("shows the text of a NoticeError, keeps the words of any other error as the detail only", () => {
+		expect(toEditorError(new NoticeError("Too large.", "Pick a smaller file."), "fallback")).toMatchObject({
+			code: "failed",
+			message: "Too large. Pick a smaller file.",
+			retryable: false,
+		});
 		expect(toEditorError(new Error("boom"), "fallback")).toMatchObject({
 			code: "failed",
-			message: "boom",
+			message: "fallback",
+			detail: "boom",
 			retryable: false,
 		});
 		expect(toEditorError(new Error(""), "fallback").message).toBe("fallback");

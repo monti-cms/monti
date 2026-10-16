@@ -46,6 +46,7 @@ export * from "./ui/dialog";
 export * from "./ui/dialog-form-footer";
 export * from "./ui/dropdown-menu";
 export * from "./ui/empty";
+export * from "./ui/error-notice";
 export * from "./ui/field";
 export * from "./ui/icon-button";
 export * from "./ui/input";

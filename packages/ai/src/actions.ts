@@ -111,8 +111,10 @@ export function actionWithEdits(
 	);
 	if (!parsed.success) {
 		const issue = parsed.error.issues[0];
-		const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
-		throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`, parsed.error.issues);
+		throw new AiError("invalid_input", issue?.message ?? t("invalidValue"), {
+			detail: issue?.path.length ? issue.path.join(".") : undefined,
+			issues: parsed.error.issues,
+		});
 	}
 	const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, snippetKeys) : [];
 	if (unknown.length > 0) {

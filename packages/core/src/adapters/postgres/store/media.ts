@@ -251,10 +251,8 @@ export function createMediaOps(ctx: StoreContext) {
 				const bodyMentions = Number(mentions.rows[0]?.count ?? 0);
 				const templateMentions = Number(mentions.rows[0]?.templates ?? 0);
 				if (referenceCount > 0 || bodyMentions > 0 || templateMentions > 0) {
-					throw new CmsError("Media asset is in use", "in_use", undefined, {
-						references: referenceCount,
-						bodies: bodyMentions,
-						templates: templateMentions,
+					throw new CmsError("Media asset is in use", "in_use", {
+						details: { references: referenceCount, bodies: bodyMentions, templates: templateMentions },
 					});
 				}
 

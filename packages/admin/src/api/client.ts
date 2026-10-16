@@ -3,19 +3,64 @@ import { isSandboxSite, isWrite } from "../screens/shared/preview-sandbox";
 import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./error-message";
 import { apiErrorMessages } from "./error-message.messages";
 
-/** Admin API error. The screen shows `message` as is and branches on `status` and `code`. */
+/**
+ * Admin API error. The screen shows `message` (and `fix`) as they are, and branches on `status` and `code`. Both are already in the admin language:
+ * the server writes them. `detail` is the developer text underneath, for a "details" view only.
+ */
 export class CmsApiError extends Error {
 	constructor(
 		readonly status: number,
 		readonly code: string | undefined,
 		message: string,
 		readonly issues: CmsIssue[],
-		/** The `error` object of the answer: `code`, `message`, and `issues` / `details` when there are any. */
+		/** The `error` object of the answer: `code`, `message`, and `fix` / `detail` / `issues` / `details` when there are any. */
 		readonly body: Record<string, unknown>,
 	) {
 		super(message);
 		this.name = "CmsApiError";
 	}
+
+	/** What to do about it, when the server said. */
+	get fix(): string | undefined {
+		return typeof this.body.fix === "string" && this.body.fix ? this.body.fix : undefined;
+	}
+
+	/** The developer text underneath (a library's or another service's own words). Never the only text shown. */
+	get detail(): string | undefined {
+		return typeof this.body.detail === "string" && this.body.detail ? this.body.detail : undefined;
+	}
+}
+
+/**
+ * An error the screen code throws with text already written for the person (a file that is too large, a preview that cannot save).
+ * Throw this, not a plain `Error`, when the text should be shown: the words of any other error are only kept as `detail`.
+ */
+export class NoticeError extends Error {
+	constructor(
+		message: string,
+		readonly fix?: string,
+	) {
+		super(message);
+		this.name = "NoticeError";
+	}
+}
+
+/** The error of a failed answer, from its status and JSON body (`{ error: { code, message, fix?, detail?, issues? } }`). */
+export function apiErrorOf(
+	site: Pick<Site, "createTranslator">,
+	status: number,
+	payload: unknown,
+	fallback: string,
+): CmsApiError {
+	const body = (payload ?? {}) as { error?: unknown };
+	const error = (typeof body.error === "object" && body.error !== null ? body.error : {}) as Record<string, unknown>;
+	return new CmsApiError(
+		status,
+		typeof error.code === "string" ? error.code : undefined,
+		cmsApiErrorMessage(site, error, fallback),
+		cmsApiIssues(error),
+		error,
+	);
 }
 
 /**
@@ -39,17 +84,7 @@ export async function cmsFetch<T = unknown>(
 	});
 	if (response.status === 204) return undefined as T;
 	const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-	if (!response.ok) {
-		// Every error answer is `{ error: { code, message, issues?, details? } }`.
-		const error = (typeof body.error === "object" && body.error !== null ? body.error : {}) as Record<string, unknown>;
-		throw new CmsApiError(
-			response.status,
-			typeof error.code === "string" ? error.code : undefined,
-			cmsApiErrorMessage(site, error, fallback),
-			cmsApiIssues(error),
-			error,
-		);
-	}
+	if (!response.ok) throw apiErrorOf(site, response.status, body, fallback);
 	return body as T;
 }
 
@@ -57,13 +92,33 @@ export async function cmsFetch<T = unknown>(
 export const isConflict = (error: unknown): boolean =>
 	error instanceof CmsApiError && error.status === 409 && error.code === "conflict";
 
+/** What a person is told about an error: what went wrong, what to do (when known), and the developer text behind "details". */
+export interface ErrorNotice {
+	readonly message: string;
+	readonly fix?: string;
+	readonly detail?: string;
+}
+
 /**
- * The one place an error becomes text for the user. An API error shows its own message (which already lists the `issues` the server found),
- * a network error shows the offline text, and anything else shows `fallback`.
+ * The one place an error becomes what the user is told. An API error tells what the server wrote (its `message` already lists the `issues` it found),
+ * a network error tells the offline text, and anything else tells `fallback`: the words of a thrown `Error` are never shown, only kept as `detail`.
  */
-export const errorText = (site: Pick<Site, "createTranslator">, error: unknown, fallback: string): string =>
-	error instanceof CmsApiError
-		? error.message || fallback
-		: error instanceof TypeError
-			? site.createTranslator(apiErrorMessages)("network")
-			: fallback;
+export function errorNotice(site: Pick<Site, "createTranslator">, error: unknown, fallback: string): ErrorNotice {
+	if (error instanceof CmsApiError) {
+		// With issues, the message lists them; a fix of the code alone would not fit each.
+		return {
+			message: error.message || fallback,
+			fix: error.issues.length > 0 ? undefined : error.fix,
+			detail: error.detail,
+		};
+	}
+	if (error instanceof NoticeError) return { message: error.message || fallback, fix: error.fix };
+	if (error instanceof TypeError) return { message: site.createTranslator(apiErrorMessages)("network") };
+	return { message: fallback, detail: error instanceof Error && error.message ? error.message : undefined };
+}
+
+/** {@link errorNotice} as one line of text, for a toast or a short field error: what went wrong, then what to do. */
+export const errorText = (site: Pick<Site, "createTranslator">, error: unknown, fallback: string): string => {
+	const { message, fix } = errorNotice(site, error, fallback);
+	return fix ? `${message} ${fix}` : message;
+};

@@ -43,11 +43,11 @@ const store = {
 		return Promise.resolve(working(3));
 	}),
 	saveWorkingWithReferences: vi.fn().mockImplementation(({ entryId, expectedVersion }) => {
-		if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", 9);
+		if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", { serverVersion: 9 });
 		return Promise.resolve({ version: 4, id: entryId });
 	}),
 	archiveEntry: vi.fn().mockImplementation(({ id, expectedVersion }: { id: string; expectedVersion: number }) => {
-		if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", 9);
+		if (expectedVersion !== 3) throw new CmsError("Conflict", "conflict", { serverVersion: 9 });
 		return Promise.resolve({ version: 4, id });
 	}),
 	unarchiveEntry: vi.fn().mockImplementation(({ id }: { id: string }) => {

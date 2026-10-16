@@ -55,7 +55,7 @@ const cms = fakeCms({
 			});
 		}),
 		updateTemplate: vi.fn().mockImplementation((params) => {
-			if (params.expectedVersion !== 1) throw new CmsError("Conflict", "conflict", 2);
+			if (params.expectedVersion !== 1) throw new CmsError("Conflict", "conflict", { serverVersion: 2 });
 			return Promise.resolve({
 				id: params.id,
 				name: params.name || "updated",
@@ -67,7 +67,7 @@ const cms = fakeCms({
 		}),
 		deleteTemplate: vi.fn().mockImplementation((params) => {
 			if (params.expectedVersion !== undefined && params.expectedVersion !== 1) {
-				throw new CmsError("Conflict", "conflict", 2);
+				throw new CmsError("Conflict", "conflict", { serverVersion: 2 });
 			}
 			return Promise.resolve();
 		}),

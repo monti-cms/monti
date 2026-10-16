@@ -39,7 +39,7 @@ export function assertSameCollection(stored: string, given: string): void {
 }
 
 export function assertExpectedVersion(stored: number, expected: number): void {
-	if (stored !== expected) throw new CmsError("Conflict", "conflict", stored);
+	if (stored !== expected) throw new CmsError("Conflict", "conflict", { serverVersion: stored });
 }
 
 /** A trashed entry must be restored before it can be edited. */

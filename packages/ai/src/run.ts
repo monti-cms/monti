@@ -338,9 +338,10 @@ async function runGenerate(
 	}
 	if (action.result === "mdx") {
 		const mdx = String(output.mdx ?? "").trim();
-		if (!mdx) throw new AiError("upstream_failed", t("emptyResult"));
+		if (!mdx) throw new AiError("upstream_failed", t("emptyResult"), { fix: t("retry.fix") });
 		const verdict = readableMdx(deps.site, mdx, configuredSyntax(deps.site));
-		if (!verdict.ok) throw new AiError("upstream_failed", verdict.reason);
+		if (!verdict.ok)
+			throw new AiError("upstream_failed", t("unreadableMdx"), { fix: t("retry.fix"), detail: verdict.reason });
 		await runValidatorsWhole(action, call, deps, mdx);
 		return { kind: "mdx", text: mdx };
 	}
@@ -406,7 +407,7 @@ export async function streamAiAction(
 		onDelta(piece);
 	}
 	const text = unfence(received);
-	if (!text) throw new AiError("upstream_failed", t("emptyResult"));
+	if (!text) throw new AiError("upstream_failed", t("emptyResult"), { fix: t("retry.fix") });
 	if (action.result === "text") {
 		const problem = checkText(deps.site, activeChecks(action), text);
 		if (problem) throw new AiError("upstream_failed", t("failedChecks", { reason: problem }));
@@ -414,7 +415,8 @@ export async function streamAiAction(
 		return { kind: "text", text };
 	}
 	const verdict = readableMdx(deps.site, text, configuredSyntax(deps.site));
-	if (!verdict.ok) throw new AiError("upstream_failed", verdict.reason);
+	if (!verdict.ok)
+		throw new AiError("upstream_failed", t("unreadableMdx"), { fix: t("retry.fix"), detail: verdict.reason });
 	await runValidatorsWhole(action, call, deps, text);
 	return { kind: "mdx", text };
 }

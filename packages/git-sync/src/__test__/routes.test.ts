@@ -210,7 +210,8 @@ describe("status, pull now and the queue", () => {
 		const down = await call("pull", "POST", { target: "site" });
 		expect(down.status).toBe(502);
 		expect(await down.json()).toMatchObject({
-			error: { code: "upstream_failed", message: expect.stringContaining("503") },
+			// The person reads the text of the code; GitHub's words are the detail.
+			error: { code: "upstream_failed", detail: expect.stringContaining("503") },
 		});
 	});
 

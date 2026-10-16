@@ -1,4 +1,5 @@
 import type { Site } from "@monti-cms/core/site";
+import { NoticeError } from "../api/client";
 import { apiErrorMessages } from "../api/error-message.messages";
 import { completeUpload, requestUpload, type UploadTicket } from "../api/media";
 import { isSandboxSite } from "../screens/shared/preview-sandbox";
@@ -147,7 +148,7 @@ async function uploadCall<T>(site: Site, call: () => Promise<T>): Promise<T> {
 	try {
 		return await call();
 	} catch (error) {
-		if (error instanceof TypeError) throw new Error(site.createTranslator(editorMessages)("upload.networkError"));
+		if (error instanceof TypeError) throw new NoticeError(site.createTranslator(editorMessages)("upload.networkError"));
 		throw error;
 	}
 }
@@ -172,10 +173,10 @@ export async function uploadImageFile(
 	const { file, original } = prepared;
 	// Server stays the authority. This only spares the user an upload that would be refused.
 	if (file.size > site.api.MAX_MEDIA_BYTES)
-		throw new Error(t("upload.tooLarge", { mb: site.api.MAX_MEDIA_BYTES / 1024 / 1024 }));
+		throw new NoticeError(t("upload.tooLarge", { mb: site.api.MAX_MEDIA_BYTES / 1024 / 1024 }));
 
 	// A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).
-	if (isSandboxSite(site)) throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
+	if (isSandboxSite(site)) throw new NoticeError(site.createTranslator(apiErrorMessages)("previewNoWrite"));
 	const ticket = await uploadCall(site, () =>
 		requestUpload(
 			site,
@@ -233,11 +234,11 @@ export async function uploadAttachment(
 ): Promise<{ mediaId: string }> {
 	const t = site.createTranslator(editorMessages);
 	// A preview of a screen runs on a draft site: nothing is uploaded from it.
-	if (isSandboxSite(site)) throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
+	if (isSandboxSite(site)) throw new NoticeError(site.createTranslator(apiErrorMessages)("previewNoWrite"));
 	const mimeType = site.api.fileTypeFor(file.name);
-	if (!mimeType) throw new Error(t("upload.unsupportedType"));
+	if (!mimeType) throw new NoticeError(t("upload.unsupportedType"));
 	if (file.size > site.api.MAX_FILE_BYTES)
-		throw new Error(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
+		throw new NoticeError(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
 	const typed = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
 	const uploaded = await uploadImageFile(site, typed, onProgress, options);
 	return { mediaId: uploaded.mediaId };

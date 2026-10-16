@@ -79,7 +79,7 @@ export async function runAdminRoute<P extends Params>(
 	try {
 		return await guardedAdmin(cms, request, params, (auth) => handler({ request, params, auth, cms }));
 	} catch (error) {
-		return handleApiError(error);
+		return handleApiError(error, cms.site);
 	}
 }
 
@@ -119,7 +119,7 @@ export async function runRoute<P extends Params>(
 		}
 		return await (handler as PublicHandler<P>)({ request, params, cms });
 	} catch (error) {
-		if (access === "admin-or-bearer") return handleApiError(error);
+		if (access === "admin-or-bearer") return handleApiError(error, cms.site);
 		let auth: ReturnType<Cms["auth"]> | undefined;
 		try {
 			auth = cms.auth();
@@ -228,7 +228,7 @@ export function parseWith<S extends z.ZodType>(
 	message = "Invalid request body",
 ): z.output<S> {
 	const parsed = schema.safeParse(value);
-	if (!parsed.success) throw new CmsError(message, "invalid_input", undefined, undefined, parsed.error.issues);
+	if (!parsed.success) throw new CmsError(message, "invalid_input", { issues: parsed.error.issues });
 	return parsed.data;
 }
 

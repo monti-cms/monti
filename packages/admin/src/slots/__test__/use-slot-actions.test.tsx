@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, renderHook, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { NoticeError } from "../../api/client";
 import {
 	type EditorResult,
 	type SlotAction,
@@ -196,7 +197,7 @@ describe("useSlotActions", () => {
 		let attempts = 0;
 		const run = vi.fn<SlotAction["run"]>(async () => {
 			attempts += 1;
-			if (attempts === 1) throw new Error("The AI service is down.");
+			if (attempts === 1) throw new NoticeError("The AI service is down.");
 			return candidates("ok");
 		});
 		const { result } = renderHook(() => useSlotActions(options()), { wrapper: wrap([() => [action({ run })]]) });
