@@ -103,7 +103,7 @@ export const cms = defineConfig({
 });
 ```
 
-환경 변수, 하나뿐인 비밀 값(`MONTI_SECRET`), 호스트 신뢰, 개발용 우회(`next dev`에서 켜짐)는 `@monti-cms/auth` README에 있다. 로그인 자체는 `@monti-cms/auth`(`Request`·`Response` 위의 Auth.js core. 로그인 방법을 프로바이더로 받는다)이고 Next에서 아무것도 가져오지 않는다. 이 패키지는 로그인이 Next 호스트에 요구하는 한 가지, 지금 요청의 헤더를 채운다(요청할 때 `next/headers`에서 읽으므로 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다). 라우트 핸들러·관리자 레이아웃·관리자 페이지가 이것을 인스턴스에 자동으로 붙이므로(`cms.attachHost(nextHost)`) 설정 없이 개발용 우회와 세션이 동작하고, 아래 세 파일도 그대로다. `nextHost`는 `@monti-cms/nextjs/auth`에서 여전히 내보내지만 사이트가 쓸 필요는 없다.
+환경 변수, 하나뿐인 비밀 값(`MONTI_SECRET`), 호스트 신뢰, 개발용 우회(`next dev`에서 켜짐)는 `@monti-cms/auth` README에 있다. 로그인 자체는 `@monti-cms/auth`(`Request`·`Response` 위의 Auth.js core. 로그인 방법을 프로바이더로 받는다)이고 Next에서 아무것도 가져오지 않는다. 이 패키지는 로그인이 Next 호스트에 요구하는 한 가지, 지금 요청의 헤더를 채운다(요청할 때 `next/headers`에서 읽으므로 콘텐츠만 읽는 코드와 명령줄 도구는 불러오지 않는다). 라우트 핸들러·관리자 레이아웃·관리자 페이지가 이것을 인스턴스에 자동으로 붙이므로(`hostOf(cms).attachHost(nextHost)`) 설정 없이 개발용 우회와 세션이 동작하고, 아래 세 파일도 그대로다. `nextHost`는 `@monti-cms/nextjs/auth`에서 여전히 내보내지만 사이트가 쓸 필요는 없다.
 
 ## 파일
 

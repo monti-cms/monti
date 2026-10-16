@@ -20,6 +20,7 @@
  * `cms` is the instance the app's server file exports. The layout hands its site to the admin UI as data (collections, locales, blocks, addresses and admin language;
  * see `Site.snapshot()`), so the browser never loads the config file. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  */
+
 import {
 	AdminLayout,
 	type AdminLayoutProps,
@@ -27,6 +28,8 @@ import {
 	type AdminPageProps,
 	adminMetadata,
 } from "@monti-cms/admin/host";
+import type { CmsHost } from "@monti-cms/core/internal/host";
+import { hostOf } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
@@ -39,7 +42,7 @@ import { NextAdminRouter } from "./router";
 export { NextAdminRouter };
 
 /** Admin UI metadata of an instance. Use it in the app's admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);`. */
-export const cmsAdminMetadata = (cms: Pick<Cms, "site"> & Partial<Pick<Cms, "attachHost">>): Metadata => {
+export const cmsAdminMetadata = (cms: Pick<Cms, "site"> & Partial<Pick<CmsHost, "attachHost">>): Metadata => {
 	assertCms(cms, "cmsAdminMetadata(cms)");
 	cms.attachHost?.(nextHost);
 	return adminMetadata(cms);
@@ -68,7 +71,7 @@ export function CmsAdminLayout(props: CmsAdminLayoutProps) {
 async function AdminShell(props: CmsAdminLayoutProps): Promise<ReactNode> {
 	await connection();
 	// The login reads the headers of the request through Next, so the site's config needs no `host`.
-	props.cms.attachHost?.(nextHost);
+	hostOf(props.cms).attachHost?.(nextHost);
 	return (
 		<NextAdminRouter>
 			<AdminLayout {...props} />
@@ -89,6 +92,6 @@ export type CmsAdminPageProps = Pick<AdminPageProps, "params" | "searchParams">;
  */
 export function CmsAdminPage({ cms, ...props }: CmsAdminPageProps & { cms: Cms }) {
 	assertCms(cms, "<CmsAdminPage cms={cms}>");
-	cms.attachHost?.(nextHost);
+	hostOf(cms).attachHost?.(nextHost);
 	return <AdminPage {...props} cms={cms} server={{ redirect: (href) => redirect(href as Route), notFound }} />;
 }

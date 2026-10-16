@@ -6,10 +6,11 @@ import { defineSite } from "../../config/define";
 import { defineSchema } from "../../schema-file/define";
 import { printSchemaFile } from "../../schema-file/print";
 import { defineConfig } from "../../server/config";
-import type { Decision } from "../../server/decision";
 import type { AuthAdapter, DatabaseAdapter } from "../../server/define";
 import { createCms } from "../create-cms";
 import { fakeAuth, fakeCms } from "../fake-cms";
+import { hostOf } from "../host";
+import type { Cms } from "../types";
 
 const schema = defineSchema({
 	schemaVersion: 1,
@@ -151,8 +152,7 @@ describe("SITE_URL source through defineConfig", () => {
 		locales: [{ code: "en", name: "English" }],
 		defaultLocale: "en",
 	};
-	const siteUrl = (cms: { decisions(env: Record<string, string>): readonly Decision[] }) =>
-		find(cms.decisions({ NODE_ENV: "production" }), "SITE_URL");
+	const siteUrl = (cms: Cms) => find(hostOf(cms).decisions({ NODE_ENV: "production" }), "SITE_URL");
 
 	it("comes from site.url in the config first", () => {
 		vi.stubEnv("SITE_URL", "https://env.test");

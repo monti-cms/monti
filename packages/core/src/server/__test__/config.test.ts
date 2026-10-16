@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../test/site";
 import { AuthError } from "../../adapters/auth";
 import { fakeCms } from "../../cms";
+import { hostOf } from "../../cms/host";
 import type { ConfigError } from "../../config/check/issue";
 import { createSecretsVault } from "../../secrets";
 import { defineConfig } from "../config";
@@ -61,17 +62,23 @@ describe("defineConfig: one config, one instance", () => {
 
 	it("boots without `auth`: the dev bypass lets this machine in, and production refuses everyone", async () => {
 		const cms = defineConfig({ ...site, database });
-		cms.attachHost({ requestHeaders: async () => new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" }) });
+		hostOf(cms).attachHost({
+			requestHeaders: async () => new Headers({ host: "localhost:3000", "x-forwarded-for": "::1" }),
+		});
 		expect(cms.auth().providers).toEqual([]);
-		expect(cms.decisions({ NODE_ENV: "production" }).find((entry) => entry.topic === "Login")?.value).toBe("none");
+		expect(
+			hostOf(cms)
+				.decisions({ NODE_ENV: "production" })
+				.find((entry) => entry.topic === "Login")?.value,
+		).toBe("none");
 
 		vi.stubEnv("NODE_ENV", "development");
-		expect(await cms.authGateway.isDevBypassActive()).toBe(true);
-		expect(await cms.authGateway.verifyAdmin()).toMatchObject({ isAdmin: true });
+		expect(await hostOf(cms).authGateway.isDevBypassActive()).toBe(true);
+		expect(await hostOf(cms).authGateway.verifyAdmin()).toMatchObject({ isAdmin: true });
 
 		vi.stubEnv("NODE_ENV", "production");
-		expect(await cms.authGateway.isDevBypassActive()).toBe(false);
-		await expect(cms.authGateway.verifyAdmin()).rejects.toThrow(AuthError);
+		expect(await hostOf(cms).authGateway.isDevBypassActive()).toBe(false);
+		await expect(hostOf(cms).authGateway.verifyAdmin()).rejects.toThrow(AuthError);
 		const handled = await cms.authHandlers.GET(new Request("http://localhost:3000/api/monti/auth/session"));
 		expect(handled.status).toBe(404);
 	});
@@ -92,12 +99,12 @@ describe("one secret, MONTI_SECRET", () => {
 	it("is read from the environment, and an explicit `secret` wins", () => {
 		vi.stubEnv("MONTI_SECRET", "from-env");
 		const stored = defineConfig({ ...site, database, auth })
-			.secrets("ai")
-			.encrypt("sk-1");
+			.plugin("ai")
+			.secrets.encrypt("sk-1");
 		expect(createSecretsVault({ secret: "from-env" }).forPlugin("ai").decrypt(stored)).toBe("sk-1");
 		const explicit = defineConfig({ ...site, database, auth, secret: "explicit" })
-			.secrets("ai")
-			.encrypt("sk-2");
+			.plugin("ai")
+			.secrets.encrypt("sk-2");
 		expect(createSecretsVault({ secret: "explicit" }).forPlugin("ai").decrypt(explicit)).toBe("sk-2");
 		expect(createSecretsVault({ secret: "from-env" }).forPlugin("ai").decrypt(explicit)).toBeNull();
 	});
@@ -106,22 +113,22 @@ describe("one secret, MONTI_SECRET", () => {
 		vi.stubEnv("CMS_SECRET", "old-cms-secret");
 		vi.stubEnv("AUTH_SECRET", "old-auth-secret");
 		const cms = defineConfig({ ...site, database, auth });
-		expect(cms.secrets("ai").available).toBe(false);
-		expect(cms.secrets("auth").available).toBe(false);
+		expect(cms.plugin("ai").secrets.available).toBe(false);
+		expect(cms.plugin("auth").secrets.available).toBe(false);
 	});
 
 	it("derives the session key and every plugin's key from it, all different from each other", () => {
 		const cms = defineConfig({ ...site, database, auth, secret: "master" });
-		const session = cms.secrets("auth").deriveKey("session");
+		const session = cms.plugin("auth").secrets.deriveKey("session");
 		expect(session).toHaveLength(32);
-		expect(session.equals(cms.secrets("ai").deriveKey("session"))).toBe(false);
-		expect(session.equals(cms.secrets("auth").deriveKey("other"))).toBe(false);
+		expect(session.equals(cms.plugin("ai").secrets.deriveKey("session"))).toBe(false);
+		expect(session.equals(cms.plugin("auth").secrets.deriveKey("other"))).toBe(false);
 		expect(session.equals(Buffer.from("master"))).toBe(false);
 		expect(
 			session.equals(
 				defineConfig({ ...site, database, auth, secret: "master" })
-					.secrets("auth")
-					.deriveKey("session"),
+					.plugin("auth")
+					.secrets.deriveKey("session"),
 			),
 		).toBe(true);
 	});
@@ -134,28 +141,30 @@ describe("one secret, MONTI_SECRET", () => {
 			vi.stubEnv("MONTI_SECRET", OLD);
 			expect(
 				defineConfig({ ...site, database, auth })
-					.secrets("ai")
-					.decrypt(stored),
+					.plugin("ai")
+					.secrets.decrypt(stored),
 			).toBe("sk-live-1234");
 		});
 
 		it("decrypts when the old value is listed as a previous secret, and is current again after the next save", () => {
 			vi.stubEnv("MONTI_SECRET", "the-new-monti-secret");
-			const secrets = defineConfig({ ...site, database, auth, previousSecrets: [OLD] }).secrets("ai");
+			const secrets = defineConfig({ ...site, database, auth, previousSecrets: [OLD] }).plugin("ai").secrets;
 			expect(secrets.decrypt(stored)).toBe("sk-live-1234");
 			expect(secrets.isCurrent(stored)).toBe(false);
 			const renewed = secrets.encrypt(secrets.decrypt(stored) ?? "");
 			expect(secrets.isCurrent(renewed)).toBe(true);
 			expect(
 				defineConfig({ ...site, database, auth })
-					.secrets("ai")
-					.decrypt(renewed),
+					.plugin("ai")
+					.secrets.decrypt(renewed),
 			).toBe("sk-live-1234");
 		});
 
 		it("accepts an unset environment variable in the list (`previousSecrets: [process.env.CMS_SECRET]`)", () => {
 			vi.stubEnv("MONTI_SECRET", "the-new-monti-secret");
-			expect(() => defineConfig({ ...site, database, auth, previousSecrets: [undefined] }).secrets("ai")).not.toThrow();
+			expect(
+				() => defineConfig({ ...site, database, auth, previousSecrets: [undefined] }).plugin("ai").secrets,
+			).not.toThrow();
 		});
 
 		it("does not decrypt when the old secret is neither the new one nor listed", () => {
@@ -164,8 +173,8 @@ describe("one secret, MONTI_SECRET", () => {
 			vi.stubEnv("CMS_SECRET", OLD);
 			expect(
 				defineConfig({ ...site, database, auth })
-					.secrets("ai")
-					.decrypt(stored),
+					.plugin("ai")
+					.secrets.decrypt(stored),
 			).toBeNull();
 		});
 	});
@@ -173,7 +182,7 @@ describe("one secret, MONTI_SECRET", () => {
 
 describe("trust host", () => {
 	const trusted = (options: { trustHost?: boolean } = {}) =>
-		defineConfig({ ...site, database, auth, ...options }).isHostTrusted();
+		hostOf(defineConfig({ ...site, database, auth, ...options })).isHostTrusted();
 
 	it("is detected on a known proxy platform in production", () => {
 		vi.stubEnv("NODE_ENV", "production");
@@ -256,14 +265,17 @@ describe("the host framework attaches itself to the instance", () => {
 		cms.auth();
 		const host = seen.host;
 		expect(await host?.requestHeaders?.()).toBeNull();
-		cms.attachHost({ requestHeaders: async () => new Headers({ host: "localhost:3000" }), rethrow: () => undefined });
+		hostOf(cms).attachHost({
+			requestHeaders: async () => new Headers({ host: "localhost:3000" }),
+			rethrow: () => undefined,
+		});
 		expect((await host?.requestHeaders?.())?.get("host")).toBe("localhost:3000");
 	});
 
 	it("lets the framework's signals through", () => {
 		const cms = defineConfig({ ...site, database, auth: capturing });
 		cms.auth();
-		cms.attachHost({
+		hostOf(cms).attachHost({
 			rethrow: (error) => {
 				throw error;
 			},

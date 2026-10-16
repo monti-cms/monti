@@ -1,3 +1,4 @@
+import type { CmsHost } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { nextHost } from "./auth/host";
 
@@ -13,9 +14,9 @@ import { nextHost } from "./auth/host";
  * ```
  */
 export function previewEntry(
-	cms: Pick<Cms, "read" | "attachHost">,
+	cms: Pick<Cms, "read"> & Partial<Pick<CmsHost, "attachHost">>,
 	params: Parameters<Cms["read"]["getPreview"]>[0],
 ): ReturnType<Cms["read"]["getPreview"]> {
-	cms.attachHost(nextHost);
+	cms.attachHost?.(nextHost);
 	return cms.read.getPreview(params);
 }

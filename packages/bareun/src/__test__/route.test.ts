@@ -33,10 +33,9 @@ const request = (method: string, body?: unknown) =>
 		body: body === undefined ? undefined : JSON.stringify(body),
 	});
 
-const postRoute = routeCaller(bareunRoute().POST);
+const postRoute = routeCaller(bareunRoute().POST, { plugin: "text-check-bareun" });
 const post = (body: unknown, cms: Cms = cmsWith()) => postRoute(request("POST", body), { cms });
-const assignKey = (cms: Cms, value: string) =>
-	cms.apiKeys.slot("text-check-bareun", "key").assign({ use: "new", value });
+const assignKey = (cms: Cms, value: string) => cms.plugin("text-check-bareun").key("key").assign({ use: "new", value });
 
 describe("Bareun check route", () => {
 	beforeEach(() => {
@@ -106,7 +105,7 @@ describe("Bareun check route", () => {
 		const cms = cmsWith();
 		await assignKey(cms, FAKE_KEY);
 		expect((await post({ segments }, cms)).status).toBe(200);
-		await cms.apiKeys.slot("text-check-bareun", "key").set(null);
+		await cms.plugin("text-check-bareun").key("key").set(null);
 
 		const fetchMock = vi.fn();
 		vi.stubGlobal("fetch", fetchMock);

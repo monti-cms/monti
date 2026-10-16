@@ -27,7 +27,7 @@ describe("api key store", () => {
 		expect(JSON.stringify(view)).not.toContain(VALUE);
 		expect(view.tail).toBe("3f9a");
 
-		const stored = await cms.storage("core-keys").collection<{ secret: string }>("keys").get(view.id);
+		const stored = await cms.plugin("core-keys").storage.collection<{ secret: string }>("keys").get(view.id);
 		expect(stored?.value.secret).not.toContain(VALUE);
 		expect(JSON.stringify(await cms.apiKeys.list())).not.toContain(VALUE);
 		expect(await cms.apiKeys.read(view.id)).toBe(VALUE);
@@ -147,11 +147,12 @@ describe("api key store", () => {
 		await cms.apiKeys.setUses("ai", [{ ref: "connection:a", keyId: key.id }]);
 		await cms.apiKeys.remove(key.id, { expectedVersion: key.version, force: true });
 		expect(await cms.apiKeys.read(key.id)).toBeNull();
-		expect(await cms.storage("core-keys").collection("assignments").list()).toEqual([]);
+		expect(await cms.plugin("core-keys").storage.collection("assignments").list()).toEqual([]);
 	});
 
 	it("reports a value that cannot be decrypted any more as unreadable", async () => {
-		const storage = fakeCms().storage;
+		const shared = fakeCms();
+		const storage = (plugin: string) => shared.plugin(plugin).storage;
 		const first = fakeCms({ server: { secret: "first-secret-first-secret" }, storage });
 		const key = await first.apiKeys.add({ name: "Anthropic", value: VALUE });
 		const rotated = fakeCms({ server: { secret: "other-secret-other-secret" }, storage });

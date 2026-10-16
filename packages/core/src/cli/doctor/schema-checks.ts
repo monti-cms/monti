@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { hostOf } from "../../cms/host";
 import { parseSchemaLiteral } from "../../schema-file/literal";
 import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate";
 import { fail, ok, warn } from "./outcome";
@@ -10,7 +11,7 @@ import { type CoreCheck, type DoctorState, messageOf } from "./types";
 const posix = (file: string) => file.split(path.sep).join("/");
 
 const schemaFileOf = (state: DoctorState): string | undefined => {
-	const fromCms = state.cms?.schemaFile();
+	const fromCms = state.cms ? hostOf(state.cms).schemaFile() : undefined;
 	if (fromCms) return posix(path.relative(state.cwd, fromCms));
 	try {
 		return findSchemaFile(state.cwd);

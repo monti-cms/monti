@@ -1,3 +1,4 @@
+import { hostOf } from "@monti-cms/core/internal/host";
 import "server-only";
 import { type AuthContext, AuthError } from "@monti-cms/core/adapters/auth";
 import type { Cms } from "@monti-cms/core/server";
@@ -9,7 +10,7 @@ import type { AdminServer } from "../host/server";
  */
 export async function requireAdminPage(cms: Cms, server: AdminServer): Promise<AuthContext> {
 	try {
-		return await cms.authGateway.verifyAdmin();
+		return await hostOf(cms).authGateway.verifyAdmin();
 	} catch (error) {
 		if (error instanceof AuthError) server.redirect(cms.site.adminHref("/login"));
 		throw error;

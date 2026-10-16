@@ -100,10 +100,10 @@ describe("createCms: an instance owns its server resources", () => {
 		// Each reads its own database, secret, trust setting and media storage.
 		expect((cmsA.store() as unknown as { tag: string }).tag).toBe("a");
 		expect((cmsB.store() as unknown as { tag: string }).tag).toBe("b");
-		expect(cmsA.storage("ai").plugin).toBe("a:ai");
-		expect(cmsB.storage("ai").plugin).toBe("b:ai");
-		expect(cmsA.secrets("ai").decrypt(cmsA.secrets("ai").encrypt("x"))).toBe("x");
-		expect(cmsB.secrets("ai").decrypt(cmsA.secrets("ai").encrypt("x"))).toBeNull();
+		expect(cmsA.plugin("ai").storage.plugin).toBe("a:ai");
+		expect(cmsB.plugin("ai").storage.plugin).toBe("b:ai");
+		expect(cmsA.plugin("ai").secrets.decrypt(cmsA.plugin("ai").secrets.encrypt("x"))).toBe("x");
+		expect(cmsB.plugin("ai").secrets.decrypt(cmsA.plugin("ai").secrets.encrypt("x"))).toBeNull();
 		expect([cmsA.isHostTrusted(), cmsB.isHostTrusted()]).toEqual([true, false]);
 		expect([cmsA.isMediaConfigured, cmsB.isMediaConfigured]).toEqual([false, true]);
 		expect(() => cmsA.mediaStore()).toThrow(/not configured/);
@@ -145,10 +145,9 @@ describe("createCms: an instance owns its server resources", () => {
 		storeA.claims.push(claim("server"));
 		await cmsA.events.retry();
 		expect(a.afterCommit).toHaveBeenCalledTimes(1);
-		expect(a.afterCommit).toHaveBeenCalledWith(
-			expect.objectContaining({ eventId: "ev1", kind: "saved", attempt: 1 }),
-			cmsA,
-		);
+		expect(a.afterCommit).toHaveBeenCalledWith(expect.objectContaining({ eventId: "ev1", kind: "saved", attempt: 1 }), {
+			cms: cmsA,
+		});
 		expect(b.afterCommit).not.toHaveBeenCalled();
 		// Each instance claims for its own subscribers, on its own store.
 		expect(storeA.claimDeliveries).toHaveBeenCalledWith(expect.objectContaining({ subscribers: ["server"] }));
@@ -198,7 +197,7 @@ describe("createCms: a development reload does not leak connections", () => {
 		expect(store.tag).toBe("first");
 		expect(first.database.createStore).toHaveBeenCalledTimes(2);
 		expect(reloaded.database.createStore).not.toHaveBeenCalled();
-		expect(after.storage("ai").plugin).toBe("first:ai");
+		expect(after.plugin("ai").storage.plugin).toBe("first:ai");
 	});
 
 	it("rebuilds everything else from the new server config, so edits to hooks and options take effect", async () => {
@@ -207,8 +206,8 @@ describe("createCms: a development reload does not leak connections", () => {
 		const reloaded = serverFor("reloaded");
 		createCms({ config: testConfig, server: first.server });
 		const after = createCms({ config: testConfig, server: reloaded.server });
-		const sealed = createCms({ config: testConfig, server: reloaded.server }).secrets("ai").encrypt("x");
-		expect(after.secrets("ai").decrypt(sealed)).toBe("x");
+		const sealed = createCms({ config: testConfig, server: reloaded.server }).plugin("ai").secrets.encrypt("x");
+		expect(after.plugin("ai").secrets.decrypt(sealed)).toBe("x");
 		(after.store() as unknown as { claims: ClaimedDelivery[] }).claims.push({
 			change: { eventId: "ev", kind: "saved", entryId: "e" } as ContentChange,
 			subscriber: "server",

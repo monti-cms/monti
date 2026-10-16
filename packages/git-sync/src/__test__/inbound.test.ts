@@ -305,6 +305,7 @@ describe("a change in git reaches the CMS", () => {
 		]);
 		const code = await commands.pull?.run({
 			cms: h.cms,
+			plugin: h.cms.plugin("git-sync"),
 			args: {},
 			log: (line) => lines.push(line),
 			error: () => undefined,

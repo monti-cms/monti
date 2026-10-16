@@ -300,7 +300,12 @@ describe("the first sync", () => {
 		const { commands } = await import("../commands");
 		const lines: string[] = [];
 		const errors: string[] = [];
-		const io = { cms: h.cms, log: (line: string) => lines.push(line), error: (line: string) => errors.push(line) };
+		const io = {
+			cms: h.cms,
+			plugin: h.cms.plugin("git-sync"),
+			log: (line: string) => lines.push(line),
+			error: (line: string) => errors.push(line),
+		};
 		expect(await commands.push?.run({ ...io, args: {} })).toBe(1);
 		expect(errors.join("\n")).toMatch(/needs --all/);
 		await publishMemo("by-push-all", "By push all");

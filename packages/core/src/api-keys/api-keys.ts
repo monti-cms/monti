@@ -13,7 +13,7 @@ import type { PluginSecrets } from "../secrets";
 
 /**
  * The central API key store of one CMS instance (`cms.apiKeys`). Named keys are kept in the core's own storage, encrypted with the core's own key
- * (`cms.secrets("core-keys")`, derived from the server config's `secret`). A plugin that needs a key keeps the key's id, not its value, and reads the value
+ * (the reserved scope `core-keys`, derived from the server config's `secret`). A plugin that needs a key keeps the key's id, not its value, and reads the value
  * on the server when it calls the service.
  *
  * Where a key is used is one list of assignments, each an item of a plugin (`<plugin>:<ref>`) that points at a key:

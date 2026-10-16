@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeCms } from "../../cms";
 import { defineFormat } from "../../format/types";
-import type { WriteHooks } from "../../services/hooks";
+import type { PluginScope, WriteHooks } from "../../services/hooks";
 import type { Plugin } from "../define";
 import { createServerPlugins } from "../server";
 
@@ -36,7 +36,9 @@ describe("features", () => {
 		const plugin = {
 			name: "echo",
 			server: async () => ({
-				default: { features: async (c: typeof first) => ({ [`trusted-${c.isHostTrusted()}`]: true }) },
+				default: {
+					features: async ({ cms: c }: { cms: typeof first }) => ({ [`trusted-${c.isHostTrusted()}`]: true }),
+				},
 			}),
 		};
 		const plugins = [plugin] as unknown as readonly Plugin[];
@@ -106,10 +108,10 @@ describe("writeHooks", () => {
 			],
 			serverHooks,
 		);
-		expect(await plugins.writeHooks()).toEqual([
-			{ owner: "server", hooks: serverHooks },
-			{ owner: "plugin:alpha", hooks: aHooks },
-			{ owner: "plugin:beta", hooks: bHooks },
+		expect((await plugins.writeHooks()).map((source) => [source.owner, Object.keys(source.hooks)])).toEqual([
+			["server", ["validate"]],
+			["plugin:alpha", ["transform"]],
+			["plugin:beta", ["validatePublish"]],
 		]);
 	});
 
@@ -130,10 +132,10 @@ describe("inline server", () => {
 			],
 			serverHooks,
 		);
-		expect(await plugins.writeHooks()).toEqual([
-			{ owner: "server", hooks: serverHooks },
-			{ owner: "plugin:inline", hooks: inline },
-			{ owner: "plugin:lazy", hooks: lazy },
+		expect((await plugins.writeHooks()).map((source) => source.owner)).toEqual([
+			"server",
+			"plugin:inline",
+			"plugin:lazy",
 		]);
 	});
 
@@ -167,11 +169,13 @@ describe("eventSubscribers", () => {
 		expect(seen).toEqual(["server", "a", "b"]);
 	});
 
-	it("hands the instance to every afterCommit: the server config's, an inline plugin's and a server module's", async () => {
+	it("hands every afterCommit its scope: the instance, and a plugin's own context for a plugin's hook", async () => {
 		const calls: string[] = [];
 		const event = { eventId: "e1" } as never;
-		const hook = (name: string) => async (incoming: unknown, instance: unknown) =>
-			void calls.push(`${name}:${incoming === event}:${instance === cms}`);
+		const hook =
+			(name: string) =>
+			async (incoming: unknown, scope: { readonly cms: unknown; readonly plugin?: { readonly name: string } }) =>
+				void calls.push(`${name}:${incoming === event}:${scope.cms === cms}:${scope.plugin?.name ?? "-"}`);
 		const plugins = serverPlugins(
 			[
 				{ name: "inline", server: { hooks: { afterCommit: hook("inline") } } },
@@ -180,7 +184,7 @@ describe("eventSubscribers", () => {
 			{ afterCommit: hook("server") },
 		);
 		for (const subscriber of await plugins.eventSubscribers()) await subscriber.handler(event);
-		expect(calls).toEqual(["server:true:true", "inline:true:true", "lazy:true:true"]);
+		expect(calls).toEqual(["server:true:true:-", "inline:true:true:inline", "lazy:true:true:lazy"]);
 	});
 
 	it("is empty when nothing registers afterCommit", async () => {
@@ -189,23 +193,21 @@ describe("eventSubscribers", () => {
 });
 
 describe("migrate", () => {
-	it("migrates each plugin that has migrations, in order, with its own storage and the instance", async () => {
+	it("migrates each plugin that has migrations, in order, with its own context and the instance", async () => {
 		const order: string[] = [];
-		const storageOf = (plugin: string) => ({ plugin }) as never;
 		const plugins = serverPlugins([
 			{
 				name: "one",
 				server: async () => ({
 					default: {
-						migrate: async (storage: { plugin: string }, c: unknown) =>
-							void order.push(`one:${storage.plugin}:${c === cms}`),
+						migrate: async ({ cms: c, plugin }: PluginScope) => void order.push(`one:${plugin.name}:${c === cms}`),
 					},
 				}),
 			},
 			{ name: "none", server: async () => ({ default: {} }) },
 			{ name: "two", server: async () => ({ default: { migrate: async () => void order.push("two") } }) },
 		]);
-		await plugins.migrate(storageOf, () => undefined);
+		await plugins.migrate(() => undefined);
 		expect(order).toEqual(["one:one:true", "two"]);
 	});
 });

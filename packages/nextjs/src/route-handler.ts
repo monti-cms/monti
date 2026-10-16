@@ -1,3 +1,4 @@
+import type { CmsHost } from "@monti-cms/core/internal/host";
 import type { Cms } from "@monti-cms/core/server";
 import { assertCms } from "./assert-cms";
 import { nextHost } from "./auth/host";
@@ -21,7 +22,7 @@ export type CmsRouteHandler = (request: Request, context: { params: Promise<{ pa
  * ```
  */
 export function createRouteHandler(
-	cms: Pick<Cms, "handle"> & Partial<Pick<Cms, "attachHost">>,
+	cms: Pick<Cms, "handle"> & Partial<Pick<CmsHost, "attachHost">>,
 ): Record<Method, CmsRouteHandler> {
 	assertCms(cms, "createRouteHandler(cms)");
 	cms.attachHost?.(nextHost);
