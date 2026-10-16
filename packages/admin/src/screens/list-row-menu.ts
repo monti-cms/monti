@@ -44,11 +44,11 @@ export interface RowMenuContext {
 	isRecord: boolean;
 	/** Collections that can be archived (documents). */
 	isContent: boolean;
-	folders: readonly Folder[];
+	/** The folders rows can move to; `null` where the list shows no folders (a collection without folders, the trash), which leaves out "Move to folder". */
+	folders: readonly Folder[] | null;
 	collection: string;
 	/** Taxonomy field name -> options. Makes an "Add ○○" submenu for each many-relation taxonomy field (tags etc.). */
 	options: TaxonomyOptions;
-	foldersEnabled?: boolean;
 }
 
 /** Action a menu item calls. The target is always the rows chosen by `actionTargets`. */
@@ -152,7 +152,7 @@ export function rowMenuActions(
 		: [{ kind: "separator" }];
 
 	const folderActions: MenuAction[] =
-		context.foldersEnabled === false
+		context.folders === null
 			? []
 			: [
 					{

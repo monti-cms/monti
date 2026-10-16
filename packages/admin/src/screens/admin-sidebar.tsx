@@ -427,11 +427,14 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		);
 	};
 
-	const collectionEntry = (collection: Collection) => {
-		const active = activeNav === collection;
-		const foldersEnabled = site.foldersEnabled(collection);
-		const nav = foldersEnabled && active && folderNav?.collection === collection ? folderNav : undefined;
-		const folderCount = foldersEnabled ? (nav ? nav.folders.length : (folderCounts?.[collection] ?? 0)) : 0;
+	/**
+	 * A nav link with its folder tree. The tree shows under the open screen when that screen passes `folderNav`, which it does only where it shows
+	 * folders; the chevron counts the folders the shell fetched, which it does only for scopes that use them (`site.foldersEnabled`).
+	 */
+	const entryWithFolders = (scope: string, href: string, label: string, icon: React.ReactNode) => {
+		const active = activeNav === scope;
+		const nav = active && folderNav?.collection === scope ? folderNav : undefined;
+		const folderCount = nav ? nav.folders.length : (folderCounts?.[scope] ?? 0);
 		const chevron =
 			folderCount > 0 ? (
 				active ? (
@@ -447,15 +450,8 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				)
 			) : null;
 		return (
-			<Fragment key={collection}>
-				{navLink(
-					site.adminHref(`?collection=${collection}`),
-					collection,
-					site.COLLECTION_DEFINITIONS[collection].label,
-					<CollectionIcon collection={collection} />,
-					undefined,
-					chevron,
-				)}
+			<Fragment key={scope}>
+				{navLink(href, scope, label, icon, undefined, chevron)}
 				{nav && (
 					<SidebarMenuItem>
 						<FolderTree nav={nav} closeMobile={closeMobile} />
@@ -465,35 +461,15 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		);
 	};
 
-	const mediaEntry = () => {
-		const active = activeNav === "media";
-		const nav = active && folderNav?.collection === "media" ? folderNav : undefined;
-		const folderCount = nav ? nav.folders.length : (folderCounts?.media ?? 0);
-		const chevron =
-			folderCount > 0 ? (
-				active ? (
-					<ChevronDown
-						aria-hidden
-						className="size-3! text-cms-sidebar-foreground/60 group-data-[collapsible=icon]:hidden"
-					/>
-				) : (
-					<ChevronRight
-						aria-hidden
-						className="size-3! text-cms-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
-					/>
-				)
-			) : null;
-		return (
-			<Fragment key="media">
-				{navLink(site.adminHref("/media"), "media", t("sidebar.media"), <FileImage />, undefined, chevron)}
-				{nav && (
-					<SidebarMenuItem>
-						<FolderTree nav={nav} closeMobile={closeMobile} />
-					</SidebarMenuItem>
-				)}
-			</Fragment>
+	const collectionEntry = (collection: Collection) =>
+		entryWithFolders(
+			collection,
+			site.adminHref(`?collection=${collection}`),
+			site.COLLECTION_DEFINITIONS[collection].label,
+			<CollectionIcon collection={collection} />,
 		);
-	};
+
+	const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), <FileImage />);
 
 	return (
 		<Sidebar collapsible="icon">

@@ -30,6 +30,12 @@ export function assertTranslationSource(
 	source: TranslationSource | undefined,
 	translation: { readonly collection: string; readonly locale: string },
 ): void {
+	if (!site.ADMIN_TRANSLATIONS) {
+		throw new CmsError(
+			"This site does not use translations. It needs more than one locale, and `admin.translations` not set to false.",
+			"invalid_input",
+		);
+	}
 	if (!source) throw new CmsError("Source entry not found", "not_found");
 	if (source.collection !== translation.collection || site.isItemCollection(translation.collection)) {
 		throw new CmsError("Only content collections have translations", "invalid_input");

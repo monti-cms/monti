@@ -1,3 +1,4 @@
+import { assertDuplicable } from "../core/domain/lifecycle";
 import type { MediaUrlResolver } from "../core/import-normalize";
 import {
 	type ImageWarningResolvers,
@@ -20,9 +21,6 @@ import {
 	type StorePort,
 } from "./types";
 import { createWritePipeline, linkResolverOf, type WritePipeline } from "./write-pipeline";
-
-// Snapshot rules live in the domain layer (`core/snapshot`). Re-exported to keep the existing import path.
-export { imageWarningsForSnapshot, prepareSnapshot, validateForPublish } from "../core/snapshot";
 
 const assertInputKeys = (input: unknown, baseKeys: readonly string[]) => {
 	if (!input || typeof input !== "object" || Array.isArray(input)) throw new ServiceError("invalid_input");
@@ -186,6 +184,7 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 		 */
 		duplicate: async (params: { id: string; title?: string }): Promise<WriteResult> => {
 			const source = await storePort.getWorking({ entryId: params.id });
+			assertDuplicable(source.status);
 			if (site.isItemCollection(source.collection)) throw new ServiceError("invalid_input");
 			if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
 				throw new ServiceError("invalid_input");

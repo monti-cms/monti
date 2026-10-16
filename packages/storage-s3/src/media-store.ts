@@ -53,6 +53,8 @@ export function createS3MediaStore(config: MediaStoreConfig): MediaStore {
 				Bucket: config.bucket,
 				Key: input.stagingKey,
 				ContentType: input.contentType,
+				// Signed into the URL: storage refuses a body whose length differs from the declared size.
+				ContentLength: input.byteSize,
 			});
 
 			const expiresIn = Math.min(Math.max(input.expiresInSeconds, 60), 900); // 1~15 mins, default 10m

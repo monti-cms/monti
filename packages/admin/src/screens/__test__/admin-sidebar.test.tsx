@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";
 import { commonMessages } from "../../lib/common.messages";
 import { renderInRouter } from "../../test/router";
-import { withSite } from "../../test/site";
+import { siteWithFolders, withSite } from "../../test/site";
 import { SidebarProvider } from "../../ui/sidebar";
 import { AdminSidebar, type AdminSidebarProps, type FolderNavigation } from "../admin-sidebar";
 import { screensMessages } from "../messages";
@@ -218,6 +218,18 @@ describe("folder tree under a collection", () => {
 		renderSidebar({ folderNav: folderNav([]) });
 		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label: name }) })).toBeNull();
 		expect(screen.getByRole("link", { name }).querySelector("svg[class*=chevron]")).toBeNull();
+	});
+
+	it("draws no tree and no chevron for an open collection whose folders are off, even with a stale count", () => {
+		const off = siteWithFolders(site.DEFAULT_COLLECTION, false);
+		const label = off.COLLECTION_DEFINITIONS[off.DEFAULT_COLLECTION].label;
+		renderSidebar({ activeNav: off.DEFAULT_COLLECTION }, off);
+		expect(screen.queryByRole("list", { name: t("sidebar.folderTree", { label }) })).toBeNull();
+		expect(screen.getByRole("link", { name: label }).querySelector("svg[class*=chevron]")).toBeNull();
+		cleanup();
+		const on = siteWithFolders(site.DEFAULT_COLLECTION, true);
+		renderSidebar({ activeNav: on.DEFAULT_COLLECTION, folderNav: folderNav([folder("a", "Dev")]) }, on);
+		expect(screen.getByRole("list", { name: t("sidebar.folderTree", { label }) })).toBeTruthy();
 	});
 
 	it("provides context menu with subfolder create, rename, and delete without + Add folder button", () => {

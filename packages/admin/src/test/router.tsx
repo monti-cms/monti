@@ -1,4 +1,4 @@
-import { SiteProvider } from "@monti-cms/core/client";
+import { type Site, SiteProvider } from "@monti-cms/core/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderOptions, render as renderInto } from "@testing-library/react";
 import { type ReactElement, type ReactNode, useSyncExternalStore } from "react";
@@ -10,7 +10,15 @@ import { type AdminLinkProps, type AdminRouter, AdminRouterProvider } from "../r
  * A router for tests: links are plain anchors, `navigate` only records the call, and `replace` records it and also applies its query to
  * `useSearchParams()` (what a real router does), so a screen that keeps state in the address can be driven without a framework.
  */
-export function createTestRouter({ pathname = "/admin", search = "" }: { pathname?: string; search?: string } = {}) {
+export function createTestRouter({
+	pathname = "/admin",
+	search = "",
+	site = testSite,
+}: {
+	pathname?: string;
+	search?: string;
+	site?: Site;
+} = {}) {
 	const listeners = new Set<() => void>();
 	const state = { pathname, search: new URLSearchParams(search) };
 	const subscribe = (listener: () => void) => {
@@ -49,7 +57,7 @@ export function createTestRouter({ pathname = "/admin", search = "" }: { pathnam
 
 	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 	const Wrapper = ({ children }: { children: ReactNode }) => (
-		<SiteProvider site={testSite}>
+		<SiteProvider site={site}>
 			<QueryClientProvider client={client}>
 				<AdminRouterProvider router={router}>{children}</AdminRouterProvider>
 			</QueryClientProvider>

@@ -118,7 +118,7 @@ function useListState(mode: ListMode) {
  * One page of the list plus folders. Draws from cache right away and refetches in the background. Keeps the previous rows while conditions change
  * (`keepPreviousData`) so a placeholder does not flicker. A placeholder shows only when there is no cache at all.
  */
-function useEntriesData(state: ListState, mode: ListMode, ready: boolean, foldersEnabled = true) {
+function useEntriesData(state: ListState, mode: ListMode, ready: boolean, showsFolders: boolean) {
 	const site = useSite();
 	const t = useTranslator(screensMessages);
 	const isTrash = mode === "trash";
@@ -127,12 +127,9 @@ function useEntriesData(state: ListState, mode: ListMode, ready: boolean, folder
 	const foldersQuery = useQuery({
 		queryKey: foldersKeys.list(collection),
 		queryFn: ({ signal }) => listFolders(site, collection, signal),
-		enabled: !isTrash && foldersEnabled,
+		enabled: showsFolders,
 	});
-	const folders = useMemo(
-		() => (!foldersEnabled || isTrash ? [] : (foldersQuery.data ?? [])),
-		[foldersEnabled, isTrash, foldersQuery.data],
-	);
+	const folders = useMemo(() => (showsFolders ? (foldersQuery.data ?? []) : []), [showsFolders, foldersQuery.data]);
 
 	const apiQuery = listStateToApiQuery(site, state, { trash: isTrash }).toString();
 	const listKey = entriesKeys.list(apiQuery);
@@ -257,9 +254,9 @@ function useEntryMutations({
 	return { run, bulk, restore, invalidateEntries };
 }
 
-/** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or in trash. */
-function explorerOf(state: ListState, folders: readonly Folder[], mode: ListMode, foldersEnabled = true) {
-	if (!foldersEnabled || mode === "trash" || !isExplorerMode(state)) return null;
+/** Subfolders directly inside the current folder, and one level up. None while searching or filtering, or where the list shows no folders. */
+function explorerOf(state: ListState, folders: readonly Folder[], showsFolders: boolean) {
+	if (!showsFolders || !isExplorerMode(state)) return null;
 	const current = state.folder === "all" ? null : state.folder;
 	const currentFolder = current ? folders.find((folder) => folder.id === current) : undefined;
 	return {
@@ -283,10 +280,12 @@ export function useEntryList(mode: ListMode) {
 	const collection = state.collection;
 	const isRecord = site.isItemCollection(collection);
 	const isContent = site.isDocumentCollection(collection);
-	const foldersEnabled = site.foldersEnabled(collection);
+	// The one answer to "does this list show folders": the collection uses them (the rule the server checks every folder write against) and this is
+	// not the trash. Folder menus, dialogs, drop targets and the bulk move all hang off `folders` below, which is `null` where this is false.
+	const showsFolders = site.foldersEnabled(collection) && !isTrash;
 	const options = useTaxonomyOptions(collection, !isTrash);
 
-	const data = useEntriesData(state, mode, ready, foldersEnabled);
+	const data = useEntriesData(state, mode, ready, showsFolders);
 	const { items, folders } = data;
 
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -425,7 +424,7 @@ export function useEntryList(mode: ListMode) {
 		rowMenuActions(
 			site,
 			actionTargets(item, items, selectedIds),
-			{ mode, isRecord, isContent, folders, collection, options, foldersEnabled },
+			{ mode, isRecord, isContent, folders: showsFolders ? folders : null, collection, options },
 			{
 				openEditor: (target) => router.navigate(editHref(target)),
 				openInNewTab: (target) => window.open(withBasePath(editHref(target)), "_blank", "noopener"),
@@ -455,12 +454,18 @@ export function useEntryList(mode: ListMode) {
 		columnSettings,
 		savePreferences,
 		data,
-		foldersEnabled,
-		explorer: explorerOf(state, folders, mode, foldersEnabled),
+		/**
+		 * The folders of this list and what can be done with them; `null` where the list shows no folders (a collection without folders, the trash).
+		 * Every folder entry point (the sidebar tree, folder rows, the blank-area and row menus, the bulk move, dropping rows on a folder) reads this,
+		 * so none of them can offer folders the server would refuse.
+		 */
+		folders: showsFolders ? { list: folders, actions: folderActions, moveEntries } : null,
+		/** The folder dialogs (create, rename, delete). Render once per screen; they open only through `folders.actions`. */
+		folderDialogs: folderActions.dialogs,
+		explorer: explorerOf(state, folders, showsFolders),
 		selectedIds,
 		setSelectedIds,
 		mutations,
-		folderActions,
 		recordTarget,
 		openRecord,
 		showRecord,
@@ -472,7 +477,6 @@ export function useEntryList(mode: ListMode) {
 		guardDialog,
 		reloadTaxonomies: () => void queryClient.invalidateQueries({ queryKey: entriesKeys.taxonomy() }),
 		invalidateEntries,
-		moveEntries,
 		createNew,
 		rowMenu,
 		onDeleteKey,

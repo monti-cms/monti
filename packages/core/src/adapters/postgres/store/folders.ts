@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { assertNoFolderCycle, assertParentInCollection } from "../../../core/domain/folders";
+import {
+	assertFolderInCollection,
+	assertFoldersEnabled,
+	assertNoFolderCycle,
+	assertParentInCollection,
+	type FolderSite,
+} from "../../../core/domain/folders";
 import { CmsError } from "../../../core/store/errors";
 import type { Folder } from "../../../core/store/types";
 import type { Db } from "../db/kysely";
@@ -17,9 +23,34 @@ const mapFolderError = (err: unknown) => {
 	return err;
 };
 
+/**
+ * Checks that something of `collection` (an entry, or a media file with `"media"`) can be put in `folderId`: the collection uses folders and the folder
+ * belongs to it. No folder (`null`, the top level) is always allowed.
+ */
+export async function assertFolderTarget(
+	db: Db,
+	site: FolderSite,
+	folderId: string | null | undefined,
+	collection: string,
+): Promise<void> {
+	if (!folderId) return;
+	assertFoldersEnabled(site, collection);
+	const folder = await db.selectFrom("folders").select("collection").where("id", "=", folderId).executeTakeFirst();
+	assertFolderInCollection(folder?.collection, collection);
+}
+
 /** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export function createFolderOps(ctx: StoreContext) {
+	const { site } = ctx;
 	const db = ctx.db();
+
+	/** The collection of an existing folder, checked to use folders. */
+	const collectionOf = async (trx: Db, id: string): Promise<string> => {
+		const folder = await trx.selectFrom("folders").select("collection").where("id", "=", id).executeTakeFirst();
+		if (!folder) throw new CmsError("Not found", "not_found");
+		assertFoldersEnabled(site, folder.collection);
+		return folder.collection;
+	};
 
 	const assertParent = async (trx: Db, parentId: string, collection: string) => {
 		const parent = await trx.selectFrom("folders").select("collection").where("id", "=", parentId).executeTakeFirst();
@@ -36,6 +67,7 @@ export function createFolderOps(ctx: StoreContext) {
 			withTrx(
 				ctx,
 				async (trx) => {
+					assertFoldersEnabled(site, params.collection);
 					if (params.parentId) await assertParent(trx, params.parentId, params.collection);
 					const folder: Folder = {
 						id: randomUUID(),
@@ -79,6 +111,7 @@ export function createFolderOps(ctx: StoreContext) {
 						.forUpdate()
 						.executeTakeFirst();
 					if (!curr) throw new CmsError("Not found", "not_found");
+					assertFoldersEnabled(site, curr.collection);
 					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
 						throw new CmsError("Conflict", "conflict", curr.version);
 					}
@@ -132,11 +165,12 @@ export function createFolderOps(ctx: StoreContext) {
 				async (trx) => {
 					const curr = await trx
 						.selectFrom("folders")
-						.select(["parent_id", "version"])
+						.select(["collection", "parent_id", "version"])
 						.where("id", "=", params.id)
 						.forUpdate()
 						.executeTakeFirst();
 					if (!curr) throw new CmsError("Not found", "not_found");
+					assertFoldersEnabled(site, curr.collection);
 					if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
 						throw new CmsError("Conflict", "conflict", curr.version);
 					}
@@ -163,6 +197,7 @@ export function createFolderOps(ctx: StoreContext) {
 
 		/** Preview before folder deletion: the number of direct entries and child folders. */
 		getFolderContents: async (params: { id: string }): Promise<{ entryCount: number; childFolders: Folder[] }> => {
+			await collectionOf(db, params.id);
 			const [entries, media, children] = await Promise.all([
 				db
 					.selectFrom("entries")
@@ -189,6 +224,7 @@ export function createFolderOps(ctx: StoreContext) {
 		},
 
 		listFolders: async (params: { collection: string }): Promise<Folder[]> => {
+			assertFoldersEnabled(site, params.collection);
 			const rows = await db
 				.selectFrom("folders")
 				.select(COLUMNS)

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../../test/site";
 import { fakeCms } from "../../cms";
 import { CMS_ROUTE_PATTERNS, matchRoute, pathFromRequest } from "../router";
 
@@ -81,5 +82,32 @@ describe("admin API route table", () => {
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1//meta/"))).toEqual(["v1", "meta"]);
 		expect(pathFromRequest(new Request("http://localhost/api/monti"))).toBeNull();
 		expect(pathFromRequest(new Request("http://localhost/api/monti/v1/%E0%A4%A"))).toBeNull();
+	});
+
+	describe("routes tied to a site feature", () => {
+		const templateStore = { listTemplates: async () => [], getTemplate: async () => ({}) } as never;
+		const call = (instance: { handle: (request: Request) => Promise<Response> }, path: string) =>
+			instance.handle(new Request(`http://localhost/api/monti/${path}`, { headers: { origin: "http://localhost" } }));
+		const withTemplates = (templates: boolean) =>
+			fakeCms({
+				config: { ...testConfig, admin: { ...testConfig.admin, templates } },
+				store: templateStore,
+			});
+
+		it("answers 404 on the template routes when admin.templates is false", async () => {
+			const off = withTemplates(false);
+			expect((await call(off, "v1/templates")).status).toBe(404);
+			expect((await call(off, "v1/templates/00000000-0000-4000-8000-000000000001")).status).toBe(404);
+		});
+
+		it("serves the template routes when admin.templates is on", async () => {
+			const on = withTemplates(true);
+			expect((await call(on, "v1/templates")).status).toBe(200);
+			expect((await call(on, "v1/templates/00000000-0000-4000-8000-000000000001")).status).not.toBe(404);
+		});
+
+		it("leaves other routes alone when templates are off", async () => {
+			expect((await call(withTemplates(false), "v1/preferences")).status).not.toBe(404);
+		});
 	});
 });

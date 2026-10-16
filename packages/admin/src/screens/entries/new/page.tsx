@@ -14,13 +14,15 @@ export default async function NewEntryPage({ cms, server, searchParams }: PagePr
 	const { site } = cms;
 	const auth = await requireAdminPage(cms, server);
 	const { collection, folder } = await searchParams;
+	const target = site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION;
 
 	return (
 		<EntryEditorShell
 			mode="new"
-			collection={site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION}
+			collection={target}
 			adminId={auth.userId}
-			folderId={isUuid(folder) ? folder : null}
+			// A folder from the address only where the collection uses folders; the server would refuse the create otherwise.
+			folderId={site.foldersEnabled(target) && isUuid(folder) ? folder : null}
 		/>
 	);
 }

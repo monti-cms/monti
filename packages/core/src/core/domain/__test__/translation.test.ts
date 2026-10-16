@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { contentCollection, recordCollection, secondLocale } from "../../../../test/any-site";
-import { testSite } from "../../../../test/site";
+import { contentCollection, recordCollection } from "../../../../test/any-site";
+import { testConfig, testSite } from "../../../../test/site";
+import { createSite } from "../../../site";
 import { CmsError } from "../../store/errors";
 import {
 	assertKnownLocale,
@@ -19,51 +20,67 @@ const codeOf = (run: () => unknown) => {
 	return null;
 };
 
+/** A site whose translations are on: the config under test, with a second language when it has only one. */
+const translationSite = testSite.ADMIN_TRANSLATIONS
+	? testSite
+	: createSite({ ...testConfig, locales: [...testConfig.locales, { code: "xx", name: "Other" }] });
+
 const source = (patch: Partial<TranslationSource> = {}): TranslationSource => ({
 	collection: contentCollection,
 	status: "published",
-	locale: testSite.DEFAULT_LOCALE,
+	locale: translationSite.DEFAULT_LOCALE,
 	translationGroupId: null,
 	...patch,
 });
-const target = { collection: contentCollection, locale: secondLocale ?? "xx" };
+const target = {
+	collection: contentCollection,
+	locale: translationSite.LOCALES.find((code) => code !== translationSite.DEFAULT_LOCALE) ?? "xx",
+};
 
 describe("translation source", () => {
 	it("accepts the source of its group, in the same content collection, in another language", () => {
-		expect(codeOf(() => assertTranslationSource(testSite, source(), target))).toBeNull();
-		expect(codeOf(() => assertTranslationSource(testSite, source({ status: "draft" }), target))).toBeNull();
-		expect(codeOf(() => assertTranslationSource(testSite, source({ status: "archived" }), target))).toBeNull();
+		expect(codeOf(() => assertTranslationSource(translationSite, source(), target))).toBeNull();
+		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "draft" }), target))).toBeNull();
+		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "archived" }), target))).toBeNull();
+	});
+
+	it("rejects every translation when the site turns translations off", () => {
+		const off = createSite({ ...testConfig, admin: { ...testConfig.admin, translations: false } } as typeof testConfig);
+		expect(off.ADMIN_TRANSLATIONS).toBe(false);
+		expect(codeOf(() => assertTranslationSource(off, source(), target))).toBe("invalid_input");
 	});
 
 	it("rejects a source that does not exist", () => {
-		expect(codeOf(() => assertTranslationSource(testSite, undefined, target))).toBe("not_found");
+		expect(codeOf(() => assertTranslationSource(translationSite, undefined, target))).toBe("not_found");
 	});
 
 	it("rejects a translation of a translation", () => {
-		expect(codeOf(() => assertTranslationSource(testSite, source({ translationGroupId: "some-source" }), target))).toBe(
-			"invalid_input",
-		);
+		expect(
+			codeOf(() => assertTranslationSource(translationSite, source({ translationGroupId: "some-source" }), target)),
+		).toBe("invalid_input");
 	});
 
 	it("rejects a source in the trash", () => {
-		expect(codeOf(() => assertTranslationSource(testSite, source({ status: "trashed" }), target))).toBe(
+		expect(codeOf(() => assertTranslationSource(translationSite, source({ status: "trashed" }), target))).toBe(
 			"invalid_status",
 		);
 	});
 
 	it("rejects a translation in the language of the source", () => {
 		expect(
-			codeOf(() => assertTranslationSource(testSite, source(), { ...target, locale: testSite.DEFAULT_LOCALE })),
+			codeOf(() =>
+				assertTranslationSource(translationSite, source(), { ...target, locale: translationSite.DEFAULT_LOCALE }),
+			),
 		).toBe("translation_exists");
 	});
 
 	it("rejects a collection other than the source's, and record collections, which have no translations", () => {
-		expect(codeOf(() => assertTranslationSource(testSite, source({ collection: recordCollection }), target))).toBe(
-			"invalid_input",
-		);
+		expect(
+			codeOf(() => assertTranslationSource(translationSite, source({ collection: recordCollection }), target)),
+		).toBe("invalid_input");
 		expect(
 			codeOf(() =>
-				assertTranslationSource(testSite, source({ collection: recordCollection }), {
+				assertTranslationSource(translationSite, source({ collection: recordCollection }), {
 					...target,
 					collection: recordCollection,
 				}),

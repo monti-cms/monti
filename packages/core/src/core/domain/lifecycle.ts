@@ -31,6 +31,12 @@ export function assertTransitionAllowed(action: LifecycleAction, status: EntrySt
 	}
 }
 
+/** A trashed entry is restored before it is duplicated, as before it is edited. */
+export function assertDuplicable(status: EntryStatus): void {
+	if (status === "trashed")
+		throw new CmsError("A trashed entry must be restored before it is duplicated", "invalid_status");
+}
+
 /** Record collections (tags, categories, ...) have no archive. */
 export function assertArchivable(site: Site, collection: string, version: number): void {
 	if (site.isItemCollection(collection)) {

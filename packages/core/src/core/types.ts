@@ -4,8 +4,10 @@ import type { CmsImageSource } from "../doc/types";
 import type { MetadataOf, PublishedMetadataOf } from "../schema/collection";
 import type { RecordTranslations } from "../schema/derive";
 import type { Collection } from "./collections";
+import { brandErrorClass } from "./error-brand";
 import type { ErrorCode } from "./error-codes";
 import { CmsError } from "./store/errors";
+import type { EntryStatus } from "./store/types";
 import type { TranslationState } from "./translation/state";
 
 /**
@@ -216,6 +218,8 @@ export type WorkingCopy = {
 	readonly doc: StoredDocument;
 	readonly version: number;
 	readonly folderId: string | null;
+	/** Lifecycle status of the entry (`draft`, `published`, `archived`, `trashed`). */
+	readonly status: EntryStatus;
 	/** Content locale and translation group ID. For a source, the group ID is its own ID. */
 	readonly locale?: string;
 	readonly translationGroupId?: string;
@@ -244,3 +248,4 @@ export class ServiceError extends CmsError {
 	}
 	declare readonly issues?: readonly Issue[];
 }
+brandErrorClass(ServiceError, "ServiceError");

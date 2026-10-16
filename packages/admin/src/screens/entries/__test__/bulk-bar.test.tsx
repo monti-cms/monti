@@ -148,7 +148,7 @@ describe("bulk actions", () => {
 
 	it("offers only record-safe actions for record collections", async () => {
 		stubBulkApi();
-		render(<BulkBar collection="tag" selected={selected} folders={[]} onClearSelection={vi.fn()} onDone={vi.fn()} />);
+		render(<BulkBar collection="tag" selected={selected} folders={null} onClearSelection={vi.fn()} onDone={vi.fn()} />);
 		expect(screen.getByRole("button", { name: "휴지통으로 이동" })).toBeTruthy();
 		expect(screen.queryByRole("combobox", { name: "일괄 작업 종류" })).toBeNull();
 	});
@@ -169,6 +169,27 @@ describe("bulk actions", () => {
 		fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
 		const labels = (await screen.findAllByRole("option")).map((option) => option.textContent);
 		expect(labels).toEqual(["폴더로 이동", "휴지통으로 이동"]);
+	});
+
+	it("offers the folder move only when the list shows folders", async () => {
+		stubBulkApi();
+		const optionLabels = async (folderList: Folder[] | null) => {
+			render(
+				<BulkBar
+					collection="post"
+					selected={selected}
+					folders={folderList}
+					onClearSelection={vi.fn()}
+					onDone={vi.fn()}
+				/>,
+			);
+			fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
+			const found = (await screen.findAllByRole("option")).map((option) => option.textContent);
+			cleanup();
+			return found;
+		};
+		expect(await optionLabels(folders)).toContain("폴더로 이동");
+		expect(await optionLabels(null)).not.toContain("폴더로 이동");
 	});
 
 	it("permanently deletes in bulk on the trash screen and names what still uses a blocked item", async () => {

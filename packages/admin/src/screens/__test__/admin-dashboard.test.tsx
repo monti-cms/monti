@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse as json } from "../../test/fetch";
 import { createTestRouter } from "../../test/router";
+import { siteWithFolders } from "../../test/site";
 import { AdminClientDashboard, AdminTrashDashboard } from "../admin-dashboard";
 import { AdminQueryProvider } from "../shared/query-provider";
 
@@ -330,6 +331,79 @@ describe("list screen — folders", () => {
 
 		await waitFor(() => expect(nav.search.get("folder")).toBeNull());
 		expect(calls("DELETE", "/api/monti/v1/folders/f1")).toHaveLength(1);
+	});
+});
+
+describe("list screen — a collection without folders", () => {
+	/** The same list screen under a site where `post` has folders turned off. */
+	const offNav = createTestRouter({ site: siteWithFolders("post", false) });
+	const blankArea = () => document.querySelector<HTMLElement>(".min-h-12.flex-1");
+	/** The sidebar counts folders of the other collections that use them; only this collection's folders are in question. */
+	const folderRequests = () =>
+		fetchMock.mock.calls.filter(([input]) => {
+			const url = new URL(String(input), "http://localhost");
+			return url.pathname.endsWith("/v1/folders") && url.searchParams.get("collection") === "post";
+		});
+	const openBlankMenu = async () => {
+		await act(async () => {
+			fireEvent.contextMenu(blankArea() as HTMLElement);
+		});
+		return menuLabels(await screen.findAllByRole("menuitem"));
+	};
+	const renderOff = () => {
+		offNav.setSearch("collection=post");
+		return offNav.render(
+			<AdminQueryProvider>
+				<AdminClientDashboard />
+			</AdminQueryProvider>,
+		);
+	};
+
+	it("offers no Add folder in the blank-area menu, where a collection with folders does", async () => {
+		server.folders = [folder];
+		renderList();
+		await screen.findByRole("row", { name: /가/ });
+		expect(await openBlankMenu()).toContain("폴더 추가");
+		cleanup();
+
+		renderOff();
+		await screen.findByRole("row", { name: /가/ });
+		const labels = await openBlankMenu();
+		expect(labels.length).toBeGreaterThan(0);
+		expect(labels).not.toContain("폴더 추가");
+	});
+
+	it("offers no Move to folder in a row menu, where a collection with folders does", async () => {
+		server.folders = [folder];
+		renderList();
+		await screen.findByRole("row", { name: /가/ });
+		expect(menuLabels(await openRowMenu("가"))).toContain("폴더로 이동");
+		cleanup();
+
+		renderOff();
+		await screen.findByRole("row", { name: /가/ });
+		expect(menuLabels(await openRowMenu("가"))).not.toContain("폴더로 이동");
+	});
+
+	it("never requests folders, and ignores a ?folder= left in the address", async () => {
+		offNav.setSearch("collection=post&folder=f1");
+		offNav.render(
+			<AdminQueryProvider>
+				<AdminClientDashboard />
+			</AdminQueryProvider>,
+		);
+		await screen.findByRole("row", { name: /가/ });
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(folderRequests()).toHaveLength(0);
+		expect(entryRequests().length).toBeGreaterThan(0);
+		expect(entryRequests().every((url) => !url.searchParams.has("folderId"))).toBe(true);
+	});
+
+	it("requests folders for a collection with folders", async () => {
+		renderList();
+		await screen.findByRole("row", { name: /가/ });
+		await waitFor(() => expect(folderRequests().length).toBeGreaterThan(0));
 	});
 });
 

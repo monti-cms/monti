@@ -1,3 +1,4 @@
+import { brandErrorClass } from "../core/error-brand";
 import { prepareSnapshot } from "../core/snapshot";
 import { CmsError } from "../core/store/errors";
 import type { SchemaChangeStore } from "../core/store/ports";
@@ -110,6 +111,7 @@ export class SchemaChangeError extends CmsError {
 		this.problems = problems;
 	}
 }
+brandErrorClass(SchemaChangeError, "SchemaChangeError");
 
 export interface ApplyOptions extends Omit<PlanOptions, "store"> {
 	readonly store: Pick<SchemaChangeStore, "readSchemaState" | "appliedSchemaTransforms" | "applySchemaChange">;

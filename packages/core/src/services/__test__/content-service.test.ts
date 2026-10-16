@@ -10,6 +10,11 @@ import {
 import { testSite } from "../../../test/site";
 import { docOf } from "../../../test/stored-content";
 import type { Collection } from "../../core/collections";
+import {
+	imageWarningsForSnapshot,
+	prepareSnapshot as prepareCoreSnapshot,
+	validateForPublish,
+} from "../../core/snapshot";
 import { isBlockId } from "../../doc/block-ids";
 import { STORED_DOCUMENT_VERSION, type StoredDocument } from "../../doc/stored-document";
 import { paragraphsFormat } from "../../format/__test__/paragraphs-format";
@@ -18,13 +23,7 @@ import type { StoredField } from "../../schema/derive";
 import { isRequiredField } from "../../schema/fields";
 import type { ContentServiceOptions } from "../content-service";
 import type { PreparedSnapshot, Reference, ResolvedTargets, SaveDraftInput, ServiceInput, StorePort } from "../index";
-import {
-	createContentService as createCoreContentService,
-	imageWarningsForSnapshot,
-	prepareSnapshot as prepareCoreSnapshot,
-	ServiceError,
-	validateForPublish,
-} from "../index";
+import { createContentService as createCoreContentService, ServiceError } from "../index";
 
 /** Bodies given as text are read by the plain test format (core has no text format of its own). */
 const formats = async () => createFormatRegistry([paragraphsFormat]);

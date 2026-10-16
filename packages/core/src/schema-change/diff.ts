@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { type CollectionKind, kindDefaults } from "../schema/collection";
 import type { Field } from "../schema/fields";
 import { type StoredField, valueFieldsOf } from "../schema/walk";
 import type { SchemaMigration } from "../schema-file/types";
@@ -55,7 +56,12 @@ function fieldShape(stored: StoredField): FieldShape {
 function bodyShape(collection: Record<string, unknown>): { enabled: boolean; allowed: AllowedShape } {
 	const { body } = collection;
 	const written = isRecord(body) ? body : isRecord(collection.allowed) ? collection.allowed : undefined;
-	const enabled = typeof body === "boolean" ? body : written !== undefined ? true : collection.kind === "document";
+	const enabled =
+		typeof body === "boolean"
+			? body
+			: written !== undefined
+				? true
+				: kindDefaults(collection.kind as CollectionKind | undefined).body;
 	const blocks = stringList(written?.blocks);
 	const marks = stringList(written?.marks);
 	const headings = Array.isArray(written?.headings)

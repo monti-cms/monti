@@ -2,6 +2,7 @@ import type { ListEntriesItem } from "@monti-cms/core/runtime";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { actionTargets, type RowMenuContext, type RowMenuHandlers, rowMenuActions } from "../list-row-menu";
+import { screensMessages } from "../messages";
 import type { MenuAction } from "../shared/action-menu";
 
 const item = (id: string, status: ListEntriesItem["status"] = "draft") =>
@@ -53,6 +54,16 @@ describe("row menu target", () => {
 });
 
 describe("row menu items", () => {
+	it("offers moving to a folder only where the list has folders", () => {
+		const move = testSite.createTranslator(screensMessages)("menu.moveToFolder");
+		const withFolders = labels(rowMenuActions(testSite, [item("a")], context, handlers()));
+		const without = labels(rowMenuActions(testSite, [item("a")], { ...context, folders: null }, handlers()));
+		expect(withFolders).toContain(move);
+		expect(without).not.toContain(move);
+		// An empty folder list is still a list with folders: the move offers the top level.
+		expect(labels(rowMenuActions(testSite, [item("a")], { ...context, folders: [] }, handlers()))).toContain(move);
+	});
+
 	it("a single post row offers open and duplicate plus folder, tag, archive and trash", () => {
 		const list = labels(rowMenuActions(testSite, [item("a")], context, handlers()));
 		for (const label of ["열기", "복제", "폴더로 이동", "태그 추가", "보관", "휴지통으로 이동"]) {

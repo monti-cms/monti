@@ -41,7 +41,7 @@ function EntryListHeaderActions({ list }: { list: EntryList }) {
 function EntryListBody({ list }: { list: EntryList }) {
 	const t = useTranslator(screensMessages);
 	const tc = useTranslator(commonMessages);
-	const { state, data, mode, foldersEnabled } = list;
+	const { state, data, mode, folders } = list;
 	const isTrash = mode === "trash";
 	const { items } = data;
 	const record = list.recordTarget;
@@ -54,7 +54,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 						collection={state.collection}
 						mode={mode}
 						selected={items.filter((item) => list.selectedIds.has(item.id)).map(toSelection)}
-						folders={data.folders}
+						folders={folders?.list ?? null}
 						onClearSelection={() => list.setSelectedIds(new Set())}
 						onRun={(op, targets, params) => list.mutations.run(op, targets, params)}
 					/>
@@ -85,20 +85,19 @@ function EntryListBody({ list }: { list: EntryList }) {
 						isRefreshing={data.isRefreshing}
 						errorMessage={data.errorMessage}
 						mode={mode}
-						folderActions={isTrash || !foldersEnabled ? undefined : list.folderActions}
+						folderActions={folders?.actions}
 						rowMenu={list.rowMenu}
 						blankMenu={
 							isTrash
 								? undefined
 								: [
-										...(foldersEnabled
+										...(folders
 											? [
 													{
 														kind: "item" as const,
 														label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
 														icon: FolderPlus,
-														onSelect: () =>
-															list.folderActions.requestCreate(state.folder === "all" ? null : state.folder),
+														onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
 													},
 												]
 											: []),
@@ -138,7 +137,7 @@ function EntryListBody({ list }: { list: EntryList }) {
 					</DockedPanel>
 				)}
 			</div>
-			{list.folderActions.dialogs}
+			{list.folderDialogs}
 			{list.confirmDialog}
 			{list.guardDialog}
 		</>
@@ -240,11 +239,10 @@ function TrashPage() {
 
 function ListPage() {
 	const list = useEntryList("list");
-	const { state, update, foldersEnabled } = list;
-	const { folders } = list.data;
+	const { state, update, folders } = list;
 	const folderLabel =
-		foldersEnabled && state.folder !== "all"
-			? ` · ${folders.find((folder) => folder.id === state.folder)?.name ?? ""}`
+		folders && state.folder !== "all"
+			? ` · ${folders.list.find((folder) => folder.id === state.folder)?.name ?? ""}`
 			: "";
 	return (
 		<AdminShell
@@ -252,16 +250,16 @@ function ListPage() {
 			count={list.data.total}
 			sidebar={{
 				activeNav: state.collection,
-				folderNav: foldersEnabled
+				folderNav: folders
 					? {
 							collection: state.collection,
 							currentFolder: state.folder,
 							includeDescendants: state.includeDescendants,
-							folders,
-							folderActions: list.folderActions,
+							folders: folders.list,
+							folderActions: folders.actions,
 							onSelectFolder: (folder) => update({ folder }),
 							onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
-							onDropEntries: list.moveEntries,
+							onDropEntries: folders.moveEntries,
 							onCreateEntry: list.createNew,
 						}
 					: undefined,
