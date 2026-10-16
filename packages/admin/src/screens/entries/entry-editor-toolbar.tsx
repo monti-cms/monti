@@ -2,7 +2,7 @@
 
 // Small header pieces of the entry editor: icon actions, toggles and the save status indicator.
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "../../lib/utils/cn";
 import type { TranslatorFor } from "../../translator";

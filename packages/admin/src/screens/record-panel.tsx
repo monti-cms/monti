@@ -1,5 +1,6 @@
 "use client";
 
+import { emptyStoredDocument } from "@monti-cms/core/document";
 import {
 	type Collection,
 	type Locale,
@@ -7,8 +8,7 @@ import {
 	type Site,
 	useSite,
 	useTranslator,
-} from "@monti-cms/core/client";
-import { emptyStoredDocument } from "@monti-cms/core/document";
+} from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client";

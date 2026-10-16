@@ -1,4 +1,5 @@
-import { CmsError, type ContentEvent, type Entry } from "@monti-cms/core/plugin/server";
+import { CmsError } from "@monti-cms/core/plugin/server";
+import type { ContentEvent, Entry } from "@monti-cms/core/server";
 import { exportEntry, isSyncable } from "./entry-file";
 import type { BranchHead, FileChange, GitHubClient } from "./github/client";
 import { log } from "./log";

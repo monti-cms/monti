@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 
 /** A plugin's page in the Tools group of the sidebar (`nav` item of the plugin definition). */
 export interface ToolsPage {

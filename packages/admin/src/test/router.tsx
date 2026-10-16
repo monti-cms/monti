@@ -1,4 +1,4 @@
-import { type Site, SiteProvider } from "@monti-cms/core/client";
+import { type Site, SiteProvider } from "@monti-cms/core/site";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderOptions, render as renderInto } from "@testing-library/react";
 import { type ReactElement, type ReactNode, useSyncExternalStore } from "react";

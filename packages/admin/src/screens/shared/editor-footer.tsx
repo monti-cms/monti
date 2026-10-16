@@ -1,4 +1,4 @@
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import type { ReactNode } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";

@@ -1,5 +1,5 @@
 import { assertPluginPagesFree } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
 
 /**

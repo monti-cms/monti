@@ -1,5 +1,5 @@
 import type { PluginCommand } from "@monti-cms/core";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
 import { pullTarget } from "./inbound";
 import type { ResolvedTarget } from "./options";
 import { flushTarget, pushAll } from "./outbound";

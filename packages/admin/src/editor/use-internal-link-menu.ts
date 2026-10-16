@@ -3,7 +3,7 @@
  * and inserting the chosen target.
  */
 
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { Editor, Range } from "@tiptap/core";
 import { type MutableRefObject, useRef, useState } from "react";

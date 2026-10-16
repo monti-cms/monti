@@ -1,3 +1,4 @@
+import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
 import {
 	parseTranslationState,
 	RECORD_TRANSLATIONS_KEY,
@@ -6,8 +7,7 @@ import {
 	type StoredDocument,
 	type StoredField,
 	type TranslationState,
-} from "@monti-cms/core/client";
-import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
+} from "@monti-cms/core/site";
 import { documentKey } from "../../editor/document-key";
 import { commonMessages } from "../../lib/common.messages";
 import { entriesMessages } from "./messages";

@@ -1,7 +1,7 @@
 "use client";
 
-import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/client";
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
+import { DEFAULT_TAB, type PanelGroup, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useEffect, useMemo, useState } from "react";
 import { StatusIndicator } from "../../ui/status-indicator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";

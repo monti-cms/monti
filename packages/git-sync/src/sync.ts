@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CmsFormat } from "@monti-cms/core/format";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
 import type { GitHubClient, GitHubClientFactory } from "./github/client";
 import { githubClientFactory } from "./github/rest";
 import { tokenKeyOf } from "./keys";

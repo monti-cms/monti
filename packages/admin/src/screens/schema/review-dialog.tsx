@@ -1,9 +1,9 @@
 "use client";
 
-import type { Issue } from "@monti-cms/core/client";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import type { ChangeImpact } from "@monti-cms/core/schema-change";
 import type { SchemaDecision } from "@monti-cms/core/schema-edit";
+import type { Issue } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { CheckCircle2, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../../api/client";

@@ -1,5 +1,5 @@
-import { createSite, type Site, SiteProvider } from "@monti-cms/core/client";
 import type { CodeLineEffect, CodeRule } from "@monti-cms/core/code-block";
+import { createSite, type Site, SiteProvider } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";

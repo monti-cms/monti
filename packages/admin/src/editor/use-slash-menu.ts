@@ -3,7 +3,7 @@
  * text-style extension actions) and its keyboard handling.
  */
 
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 import { type MutableRefObject, useMemo, useRef, useState } from "react";
 import type { EditorInsertAction } from "../admin-components";

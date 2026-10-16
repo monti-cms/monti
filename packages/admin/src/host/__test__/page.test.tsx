@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { AdminPage } from "../page";

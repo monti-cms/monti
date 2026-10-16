@@ -1,4 +1,4 @@
-import { SiteProvider } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/site";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";

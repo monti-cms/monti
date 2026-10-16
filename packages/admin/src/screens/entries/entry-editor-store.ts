@@ -1,5 +1,5 @@
-import { bodyExcerpt, confirmedSourceState, fillFromBodyLength } from "@monti-cms/core/client";
 import { type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
+import { bodyExcerpt, confirmedSourceState, fillFromBodyLength } from "@monti-cms/core/site";
 import { CmsApiError, isConflict } from "../../api/client";
 import type { CmsIssue } from "../../api/error-message";
 import { type EditorError, type EditorResult, editorFailure, toEditorError } from "../../hooks/result";

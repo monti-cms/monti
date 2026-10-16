@@ -1,6 +1,5 @@
-import type { Collection } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Collection, ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

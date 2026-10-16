@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { sharedMessages } from "./messages";
 
 export type EntryStatus = "draft" | "published" | "archived" | "trashed";

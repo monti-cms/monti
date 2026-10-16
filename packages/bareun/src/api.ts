@@ -1,5 +1,5 @@
 import type { TextCheckSegment, TextIssue } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type BareunResponse, bareunIssues, joinSegments } from "./mapping";
 import type { ResolvedBareunOptions } from "./options";
 

@@ -1,4 +1,5 @@
-import { CmsError, type Entry, type Issue, ServiceError } from "@monti-cms/core/plugin/server";
+import { CmsError, type Issue, ServiceError } from "@monti-cms/core/plugin/server";
+import type { Entry } from "@monti-cms/core/server";
 import { type ParsedEntryFile, RelationImportError, resolveRelations } from "./entry-file";
 import type { ResolvedTarget } from "./options";
 import { serverMessages } from "./server.messages";

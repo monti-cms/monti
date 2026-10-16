@@ -1,7 +1,7 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";

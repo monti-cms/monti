@@ -1,6 +1,6 @@
 "use client";
 
-import { supportsLocale, type TextChecker, useTranslator } from "@monti-cms/core/client";
+import { supportsLocale, type TextChecker, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { PluginKey, type Transaction } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";

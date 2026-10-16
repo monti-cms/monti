@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import { assertCms } from "./assert-cms";
 import { nextHost } from "./auth/host";
 

@@ -1,4 +1,4 @@
-import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/client";
+import { type BlockDefinition, perSite, type Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 import {
 	Heading2,

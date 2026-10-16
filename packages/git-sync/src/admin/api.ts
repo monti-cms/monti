@@ -1,5 +1,5 @@
 import { cmsFetch } from "@monti-cms/admin/api";
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
+import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 
 /** The shapes of the plugin's API responses, as the screen reads them (dates arrive as ISO strings). */
 export interface PullSummaryView {

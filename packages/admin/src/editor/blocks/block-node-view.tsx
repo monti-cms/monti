@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { useCmsAdminComponents } from "../../admin-components";
 import { FileBlockView } from "../file-node-view";

@@ -2,7 +2,7 @@
 
 // The loading and load-error states of the entry editor screen.
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { AdminLink as Link } from "../../router";
 import { Alert, AlertDescription } from "../../ui/alert";
 import { buttonVariants } from "../../ui/button";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";

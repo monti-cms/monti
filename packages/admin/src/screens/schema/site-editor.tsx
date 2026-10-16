@@ -1,7 +1,7 @@
 "use client";
 
-import { HOST_PATTERN, useTranslator } from "@monti-cms/core/client";
 import type { SiteUrlState } from "@monti-cms/core/schema-edit";
+import { HOST_PATTERN, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";

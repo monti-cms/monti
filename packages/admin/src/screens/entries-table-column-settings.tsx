@@ -1,5 +1,5 @@
 // "Column settings" popover of the entries table: show/hide and reorder columns.
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, Columns3 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";

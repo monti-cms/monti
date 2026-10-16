@@ -3,7 +3,7 @@
  * and the order in which the toolbar places its entries.
  */
 
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import {
 	AlignCenter,

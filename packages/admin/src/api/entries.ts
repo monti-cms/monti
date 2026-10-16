@@ -1,6 +1,6 @@
-import { type BulkOp, cmsApiUrl, type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import type { EntryStatus, IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { EntryStatus, IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/site";
+import { type BulkOp, cmsApiUrl, type Site } from "@monti-cms/core/site";
 import { commonMessages } from "../lib/common.messages";
 import { bulkBarMessages } from "../screens/entries/bulk-bar.messages";
 import type { EntryData } from "../screens/entries/entry-form";

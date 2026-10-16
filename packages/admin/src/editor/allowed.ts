@@ -6,7 +6,7 @@ import {
 	CORE_BODY_MARKS,
 	HEADING_LEVELS,
 	type Site,
-} from "@monti-cms/core/client";
+} from "@monti-cms/core/site";
 import { addedMarkByEditorName } from "./added-marks";
 import { addedBlockOfNode } from "./blocks/added/shared";
 

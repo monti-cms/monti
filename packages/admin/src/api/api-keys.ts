@@ -1,4 +1,4 @@
-import { type ApiKeyList, cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type ApiKeyList, cmsApiUrl, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { apiKeysMessages } from "../screens/api-keys/messages";
 import { cmsFetch } from "./client";

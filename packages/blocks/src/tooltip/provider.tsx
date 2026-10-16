@@ -13,7 +13,7 @@ import {
 	MarkTextPopover,
 	removeInlineMark,
 } from "@monti-cms/admin/editor";
-import { type Translator, useTranslator } from "@monti-cms/core/client";
+import { type Translator, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { MessageSquareMore, Pencil, X } from "lucide-react";
 import { type ReactNode, useMemo } from "react";

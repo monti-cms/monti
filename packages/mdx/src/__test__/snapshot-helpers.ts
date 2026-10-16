@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { createFormatRegistry } from "@monti-cms/core/format";
+import type { Site } from "@monti-cms/core/site";
 import { prepareSnapshot as prepareCore } from "../../../core/src/core/snapshot";
 import { testSite } from "../../../core/test/site";
 import { mdxFormat } from "../format";

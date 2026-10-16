@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "../../host/server";
 import { requireAdminPage } from "../require-admin";
 import { SettingsScreen } from "./settings-screen";

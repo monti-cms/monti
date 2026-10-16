@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import ApiKeysPage from "../screens/api-keys/page";
 import EditEntryPage from "../screens/entries/[id]/edit/page";
 import NewEntryPage from "../screens/entries/new/page";

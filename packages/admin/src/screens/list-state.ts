@@ -5,7 +5,7 @@ import {
 	type Locale,
 	type PageSize,
 	type Site,
-} from "@monti-cms/core/client";
+} from "@monti-cms/core/site";
 import { pageParam, pageSizeParam } from "../lib/hooks/use-url-state";
 import type { EntryStatus } from "./shared/entry-status";
 

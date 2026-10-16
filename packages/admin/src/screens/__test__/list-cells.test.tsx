@@ -1,6 +1,6 @@
 import { defineCollection, defineSite, fields } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { ListEntriesItem } from "@monti-cms/core/site";
+import { createSite } from "@monti-cms/core/site";
 import { cleanup, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";

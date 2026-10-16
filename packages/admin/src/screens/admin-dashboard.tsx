@@ -1,7 +1,7 @@
 "use client";
 
-import type { AdminColumnSettings } from "@monti-cms/core/client";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import type { AdminColumnSettings } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

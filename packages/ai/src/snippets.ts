@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { z } from "zod";
 import { AiError } from "./errors";
 import { aiRegistryOf } from "./registry";

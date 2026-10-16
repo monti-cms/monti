@@ -1,8 +1,7 @@
 "use client";
 
-import type { BulkOp, Site } from "@monti-cms/core/client";
-import { useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { BulkOp, Folder, Site } from "@monti-cms/core/site";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client";

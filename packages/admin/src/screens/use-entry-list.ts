@@ -1,8 +1,7 @@
 "use client";
 
-import type { CollectionPreferences, PreferencesBody } from "@monti-cms/core/client";
-import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { CollectionPreferences, Folder, ListEntriesItem, PreferencesBody } from "@monti-cms/core/site";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { errorText } from "../api/client";

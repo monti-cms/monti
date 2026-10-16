@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	type FileKind,
-	fileKindOf,
-	fileTypeLabel,
-	formatFileSize,
-	useSite,
-	useTranslator,
-} from "@monti-cms/core/client";
+import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { FileArchive, FileText, FileType } from "lucide-react";
 import { getMedia, mediaKeys } from "../api/media";

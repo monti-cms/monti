@@ -1,5 +1,5 @@
-import { createSite } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
+import { createSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../core/test/site";

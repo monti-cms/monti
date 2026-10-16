@@ -27,7 +27,7 @@ import {
 	type AdminPageProps,
 	adminMetadata,
 } from "@monti-cms/admin/host";
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";

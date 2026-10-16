@@ -1,4 +1,4 @@
-import { DEFAULT_TAB, type Site } from "@monti-cms/core/client";
+import { DEFAULT_TAB, type Site } from "@monti-cms/core/site";
 import { entriesMessages } from "./messages";
 
 /**

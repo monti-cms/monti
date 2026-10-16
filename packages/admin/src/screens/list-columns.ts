@@ -1,5 +1,5 @@
-import type { ListSortField, Site } from "@monti-cms/core/client";
-import { type StoredField, valueFieldsOf } from "@monti-cms/core/client";
+import type { ListSortField, Site } from "@monti-cms/core/site";
+import { type StoredField, valueFieldsOf } from "@monti-cms/core/site";
 import type { ListState } from "./list-state";
 import { screensMessages } from "./messages";
 

@@ -1,4 +1,5 @@
-import { CmsError, type Entry } from "@monti-cms/core/plugin/server";
+import { CmsError } from "@monti-cms/core/plugin/server";
+import type { Entry } from "@monti-cms/core/server";
 import { applyFile, describeError, recordOf } from "./apply";
 import { exportEntry, isSyncable, parseEntryFile } from "./entry-file";
 import { pushEntries } from "./outbound";

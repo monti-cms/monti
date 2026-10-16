@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { computeContentHash } from "@monti-cms/core/testing";
 import type { SyntaxExtension } from "@monti-cms/mdx";
 import { docOfMdx } from "@monti-cms/mdx/testing";

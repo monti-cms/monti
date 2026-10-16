@@ -147,7 +147,7 @@ export const CMS_AUTH_BASE_PATH = "/api/monti/auth";
 export interface CmsAuth {
 	/**
 	 * Login API path (e.g. `/api/monti/auth`). If it is `CMS_AUTH_BASE_PATH`, the admin API catch-all hands requests to `handlers`.
-	 * For another path, the app puts a route file at that path and exports `handlers` from `@monti-cms/core/runtime`.
+	 * For another path, the app puts a route file at that path and exports these `handlers`.
 	 */
 	readonly basePath?: string;
 	/** Login API route handlers (requests under `basePath`). */

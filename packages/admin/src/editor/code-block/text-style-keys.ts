@@ -1,4 +1,4 @@
-import { perSite, type Site } from "@monti-cms/core/client";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { type Editor, Extension } from "@tiptap/core";
 
 /** Keyboard shortcuts of the Tiptap text style extensions, by mark. */

@@ -1,5 +1,4 @@
-import type { BulkOp, Site } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
 import {
 	Archive,
 	ArchiveRestore,

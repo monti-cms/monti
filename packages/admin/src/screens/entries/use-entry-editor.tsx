@@ -1,4 +1,4 @@
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { cmsEntryClient, type EntryEditorClient } from "../../api/entries";
 import { cmsIssueMessage } from "../../api/error-message";

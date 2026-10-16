@@ -1,4 +1,3 @@
-import type { Site } from "@monti-cms/core/client";
 import { fromCodeFenceToCodeBlockDocument } from "@monti-cms/core/code-block";
 import {
 	boundedTableSpan,
@@ -11,6 +10,7 @@ import {
 	parseTableWidths,
 	tableHasMergedCells,
 } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { Code } from "mdast";
 import { splitFrontmatter } from "./frontmatter";
 import { attributeRecord, readJsxAttributes } from "./jsx";

@@ -9,7 +9,7 @@ import type {
 	AiInputs,
 	AiValidator,
 } from "@monti-cms/core/ai-contract";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { z } from "zod";
 import {
 	type AiApply,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useId, useState } from "react";
 import { FieldError } from "../../ui/field";
 import { Input } from "../../ui/input";

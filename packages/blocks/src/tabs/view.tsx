@@ -3,7 +3,7 @@
 import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import { cn } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { PencilLine, Plus, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";

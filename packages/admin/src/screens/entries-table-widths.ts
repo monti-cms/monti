@@ -1,5 +1,5 @@
 // Column width rules of the entries table: default/min/max sizes and which columns are hidden first when width runs short.
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type AdminListColumn, columnConfig, fieldColumnOf } from "./list-columns";
 
 /**

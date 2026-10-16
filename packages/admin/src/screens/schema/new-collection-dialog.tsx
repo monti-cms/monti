@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useId, useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../ui/dialog";

@@ -1,5 +1,5 @@
 import { defineCollection, defineSite, fields } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { hideOrderWhenNarrow } from "../entries-table-widths";
 import { columnsFor } from "../list-columns";

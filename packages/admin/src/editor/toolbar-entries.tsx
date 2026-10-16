@@ -3,7 +3,7 @@
  * their hide priority, how each renders in the bar and in the "More" menu, and the final placement order.
  */
 
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { AlignLeft, ImageIcon, Link2, List, type LucideIcon, Paperclip, Superscript, Upload } from "lucide-react";
 import type { commonMessages } from "../lib/common.messages";

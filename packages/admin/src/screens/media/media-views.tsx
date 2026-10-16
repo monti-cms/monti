@@ -1,14 +1,7 @@
 "use client";
 
-import {
-	type FileKind,
-	fileKindOf,
-	fileTypeLabel,
-	formatFileSize,
-	useSite,
-	useTranslator,
-} from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { type FileKind, fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { File, FileArchive, FileText, FileType, Folder as FolderIcon, FolderOpen, FolderUp } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import type { MediaItem } from "../../api/media";

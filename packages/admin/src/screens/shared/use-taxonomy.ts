@@ -1,6 +1,6 @@
 "use client";
 
-import { type Site, useSite } from "@monti-cms/core/client";
+import { type Site, useSite } from "@monti-cms/core/site";
 import { useQueries } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { entriesKeys, listEntries } from "../../api/entries";

@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { errorText } from "../../api/client";
 import { type EditorError, type EditorResult, toEditorError } from "../../hooks/result";
 import type { EntryData } from "./entry-form";

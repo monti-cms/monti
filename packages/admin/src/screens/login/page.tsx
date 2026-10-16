@@ -1,5 +1,5 @@
-import { cmsApiUrl } from "@monti-cms/core/client";
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
+import { cmsApiUrl } from "@monti-cms/core/site";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";

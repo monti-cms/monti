@@ -1,4 +1,4 @@
-import { createSite } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/site";
 import { describe, expect, it, vi } from "vitest";
 import { testConfig } from "../../../../../core/test/site";
 import { getShikiHighlighter, highlighterOptions, loadExtraLanguages, tokensWithThemes } from "../highlight-plugin";

@@ -1,6 +1,6 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { Puzzle } from "lucide-react";
 import { useMemo } from "react";

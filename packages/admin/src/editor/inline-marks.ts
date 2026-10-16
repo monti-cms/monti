@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { type CodeRule, ruleMatches } from "@monti-cms/core/code-block";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { Mark, Node as PmNode, ResolvedPos } from "@tiptap/pm/model";
 import { type EditorState, NodeSelection, TextSelection } from "@tiptap/pm/state";

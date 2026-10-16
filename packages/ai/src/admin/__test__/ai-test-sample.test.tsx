@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { SiteProvider } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/site";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../test/site";

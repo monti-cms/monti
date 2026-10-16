@@ -1,4 +1,3 @@
-import { perSite, type Site } from "@monti-cms/core/client";
 import type { CmsJsonValue, CmsMark, CmsNode, StoredDocument } from "@monti-cms/core/document";
 import {
 	TEXT_ALIGN_VALUES as ALIGN_VALUES,
@@ -8,6 +7,7 @@ import {
 	STORED_DOCUMENT_VERSION,
 	UNPARSED_NODE,
 } from "@monti-cms/core/document";
+import { perSite, type Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 import { addedMarkByEditorName, addedMarkName, addedMarksOf, markAttrsOf } from "./added-marks";
 import { BLOCK_ID_ATTRIBUTE } from "./block-ids";

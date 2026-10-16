@@ -1,4 +1,4 @@
-import { math } from "@monti-cms/core/client";
+import { math } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { NodeViewProps } from "@tiptap/react";
 import type { ComponentProps, ReactNode } from "react";

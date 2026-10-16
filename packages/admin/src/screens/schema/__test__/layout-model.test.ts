@@ -1,4 +1,4 @@
-import { DEFAULT_TAB, type NamedPlacement, type PanelSource, panelGroupsOf } from "@monti-cms/core/client";
+import { DEFAULT_TAB, type NamedPlacement, type PanelSource, panelGroupsOf } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import {
 	addGroup,

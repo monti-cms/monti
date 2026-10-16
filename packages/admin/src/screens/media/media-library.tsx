@@ -1,6 +1,6 @@
 "use client";
 
-import { type Site, useSite, useTranslator } from "@monti-cms/core/client";
+import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	FileText,

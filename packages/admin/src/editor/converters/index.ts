@@ -1,5 +1,5 @@
-import { perSite, type Site } from "@monti-cms/core/client";
 import type { CmsNode } from "@monti-cms/core/document";
+import { perSite, type Site } from "@monti-cms/core/site";
 import { addedBlockConvertersOf } from "../blocks/added";
 import { codeBlockConverter } from "./code-block";
 import { mathConverter } from "./fence-preview";

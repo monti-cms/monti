@@ -1,4 +1,4 @@
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { ListEntriesItem } from "@monti-cms/core/site";
 import { describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../core/test/site";
 import { actionTargets, type RowMenuContext, type RowMenuHandlers, rowMenuActions } from "../list-row-menu";

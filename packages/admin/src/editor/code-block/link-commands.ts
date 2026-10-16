@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { ANCHOR, type CodeLineEffect, newEffectId } from "@monti-cms/core/code-block";
+import type { Site } from "@monti-cms/core/site";
 import type { MarkType, Node as PmNode } from "@tiptap/pm/model";
 import { TextSelection, type Transaction } from "@tiptap/pm/state";
 import type { EditorView } from "@tiptap/pm/view";

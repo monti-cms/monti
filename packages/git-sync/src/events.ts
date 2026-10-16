@@ -1,4 +1,4 @@
-import type { ContentEvent, DeferredDelivery } from "@monti-cms/core/plugin/server";
+import type { ContentEvent, DeferredDelivery } from "@monti-cms/core/server";
 import { onPublishedEvent } from "./outbound";
 import type { SyncContext } from "./sync";
 

@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { perSite } from "./per-site";
 
 /**
@@ -55,4 +55,4 @@ export const directivesOf = perSite((site: Pick<Site, "directiveBlocks">): Direc
 	};
 });
 
-export { TEXT_ALIGN_VALUES } from "@monti-cms/core/client";
+export { TEXT_ALIGN_VALUES } from "@monti-cms/core/site";

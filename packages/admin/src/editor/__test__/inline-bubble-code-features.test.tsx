@@ -1,4 +1,4 @@
-import { createSite, SiteProvider } from "@monti-cms/core/client";
+import { createSite, SiteProvider } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Editor } from "@tiptap/core";
 import React from "react";

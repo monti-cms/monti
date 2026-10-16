@@ -1,6 +1,6 @@
 "use client";
 
-import { PAGE_SIZES, type PageSize } from "@monti-cms/core/client";
+import { PAGE_SIZES, type PageSize } from "@monti-cms/core/site";
 import { useCallback, useMemo } from "react";
 import { useAdminRouter } from "../../router";
 

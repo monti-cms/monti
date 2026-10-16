@@ -17,7 +17,7 @@ The snippets below are a sketch to adapt, not tested code. A real Markdown parse
 A reduced version: paragraphs and headings both ways, bold only, and a one-way text export.
 
 ```ts
-import { documentText } from "@monti-cms/core/client";
+import { documentText } from "@monti-cms/core/site";
 import type { CmsNode } from "@monti-cms/core/document";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { defineFormat } from "@monti-cms/core/format";

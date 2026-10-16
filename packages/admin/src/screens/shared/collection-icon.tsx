@@ -1,6 +1,6 @@
 "use client";
 
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 
 import {
 	Archive,

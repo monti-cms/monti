@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import StarterKit from "@tiptap/starter-kit";
 import { addedMarksOf, createAddedMark, type EditorMarkSpec } from "./added-marks";
 import { type EditorAllowance, OPEN_ALLOWANCE } from "./allowed";

@@ -1,7 +1,7 @@
 "use client";
 
-import type { Site } from "@monti-cms/core/client";
-import { useSite } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
+import { useSite } from "@monti-cms/core/site";
 
 import type { ComponentType } from "react";
 import type { CmsAdminComponents, ListCellProps } from "../admin-components";

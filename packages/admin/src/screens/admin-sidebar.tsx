@@ -1,7 +1,7 @@
 "use client";
 
-import { type Collection, useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { type Collection, useSite, useTranslator } from "@monti-cms/core/site";
 import {
 	Activity,
 	ChevronDown,

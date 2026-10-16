@@ -1,4 +1,4 @@
-import type { Collection } from "@monti-cms/core/client";
+import type { Collection } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../../core/test/site";

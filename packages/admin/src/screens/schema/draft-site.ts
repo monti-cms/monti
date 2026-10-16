@@ -1,5 +1,5 @@
 import { defineCollection, parseSchemaFile } from "@monti-cms/core";
-import { createSite, type Site } from "@monti-cms/core/client";
+import { createSite, type Site } from "@monti-cms/core/site";
 import { markSandboxSite } from "../shared/preview-sandbox";
 import type { Obj } from "./schema-model";
 

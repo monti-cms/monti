@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { readStoredDocument } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { RecoveryRecord } from "./entry-editor-client";
 import { failureOf, wait } from "./entry-editor-results";
 import type { EditorContext } from "./entry-editor-types";

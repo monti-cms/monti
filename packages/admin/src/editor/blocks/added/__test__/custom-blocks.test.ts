@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core/site";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../../../../core/test/site";
 import { docOf } from "../../../../test/mdx";

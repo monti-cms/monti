@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { perSite } from "./per-site";
 
 /** The JSX names of a site's body: which elements the body may hold, which of them are blocks, and which are text decorations (marks). */

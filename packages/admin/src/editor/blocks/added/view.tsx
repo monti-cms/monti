@@ -1,6 +1,6 @@
 "use client";
 
-import { type BlockDefinition, useTranslator } from "@monti-cms/core/client";
+import { type BlockDefinition, useTranslator } from "@monti-cms/core/site";
 import { cn } from "../../../lib/utils/cn";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select";
 import { Switch } from "../../../ui/switch";

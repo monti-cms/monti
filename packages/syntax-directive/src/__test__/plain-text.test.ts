@@ -1,4 +1,4 @@
-import { toPlainText } from "@monti-cms/core/client";
+import { toPlainText } from "@monti-cms/core/site";
 import { documentText, SEARCH_TEXT } from "@monti-cms/core/testing";
 import { docOfMdx } from "@monti-cms/mdx/testing";
 import { describe, expect, it } from "vitest";

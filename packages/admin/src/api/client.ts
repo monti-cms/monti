@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { isSandboxSite, isWrite } from "../screens/shared/preview-sandbox";
 import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./error-message";
 import { apiErrorMessages } from "./error-message.messages";

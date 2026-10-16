@@ -1,5 +1,5 @@
 import { useCmsAdminComponents } from "@monti-cms/admin";
-import { SiteProvider } from "@monti-cms/core/client";
+import { SiteProvider } from "@monti-cms/core/site";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../test/site";

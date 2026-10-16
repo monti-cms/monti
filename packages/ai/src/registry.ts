@@ -1,5 +1,5 @@
 import type { CmsPlugin, CollectionsConfig, PluginNamed } from "@monti-cms/core";
-import type { CmsConfig, Site } from "@monti-cms/core/client";
+import type { CmsConfig, Site } from "@monti-cms/core/site";
 import type {
 	AiActionDefinition,
 	AiActionInput,

@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Root, RootContent } from "mdast";
 import {
 	estreeToJson,

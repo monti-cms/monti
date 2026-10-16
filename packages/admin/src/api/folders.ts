@@ -1,5 +1,5 @@
-import { cmsApiUrl, type Site } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { cmsApiUrl, type Site } from "@monti-cms/core/site";
 import { cmsFetch } from "./client";
 
 /** What deleting a folder moves up to its parent: the entries and child folders directly inside. */

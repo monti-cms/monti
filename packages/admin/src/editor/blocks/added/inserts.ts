@@ -1,4 +1,4 @@
-import type { BlockDefinition, BlockInsert, Site } from "@monti-cms/core/client";
+import type { BlockDefinition, BlockInsert, Site } from "@monti-cms/core/site";
 import type { Editor, JSONContent, Range } from "@tiptap/core";
 import { formatMeta } from "../../code-block/meta";
 import { addedNodeBlocks, blockNodeName, childBlocksOf, defaultValues, isContainer, isFence } from "./shared";

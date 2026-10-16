@@ -1,6 +1,6 @@
 import { definePlugin } from "@monti-cms/core";
-import { type CmsConfig, createSite } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { type CmsConfig, createSite } from "@monti-cms/core/site";
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../../core/test/site";

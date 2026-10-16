@@ -1,7 +1,7 @@
 "use client";
 
-import type { TextChecker, TextIssueSeverity } from "@monti-cms/core/client";
-import { useTranslator } from "@monti-cms/core/client";
+import type { TextChecker, TextIssueSeverity } from "@monti-cms/core/site";
+import { useTranslator } from "@monti-cms/core/site";
 import { posToDOMRect } from "@tiptap/core";
 import { CircleAlert, EyeOff, Info, Loader2, type LucideIcon, SpellCheck, TriangleAlert } from "lucide-react";
 import { useMemo, useRef } from "react";

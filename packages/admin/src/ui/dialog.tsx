@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
 import { commonMessages } from "../lib/common.messages";

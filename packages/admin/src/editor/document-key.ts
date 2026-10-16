@@ -1,5 +1,5 @@
-import { perSite, type Site } from "@monti-cms/core/client";
 import { canonicalDocument, type StoredDocument, withoutBlockIds } from "@monti-cms/core/document";
+import { perSite, type Site } from "@monti-cms/core/site";
 
 /** `JSON.stringify` with the keys of every object sorted, so the same value is the same text wherever it was built (Postgres `jsonb` reorders keys). */
 const stableStringify = (value: unknown): string => {

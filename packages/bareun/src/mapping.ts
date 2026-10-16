@@ -1,5 +1,5 @@
 import { PLACEHOLDER, type TextIssue, type TextIssueCategory, type TextIssueSeverity } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { bareunMessages } from "./messages";
 
 /**

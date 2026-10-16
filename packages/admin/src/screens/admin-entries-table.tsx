@@ -1,7 +1,7 @@
 "use client";
 
-import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { type AdminColumnSettings, type PageSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { Inbox, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment, type KeyboardEvent } from "react";
 import { commonMessages } from "../lib/common.messages";

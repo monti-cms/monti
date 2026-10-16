@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/client";
+import { DEFAULT_ADMIN_PATH, languageName, useTranslator } from "@monti-cms/core/site";
 import { Labeled } from "../shared/labeled";
 import { Section } from "../shared/section";
 import { schemaAdminMessages } from "./admin.messages";

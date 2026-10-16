@@ -1,4 +1,4 @@
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { ListEntriesItem } from "@monti-cms/core/site";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";

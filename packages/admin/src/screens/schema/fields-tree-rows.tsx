@@ -5,7 +5,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { ArrowDown, ArrowUp, GripVertical, MoveRight, Trash2 } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import { cn } from "../../lib/utils/cn";

@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 
 /**
  * Browser storage of the admin, kept apart per site. `localStorage` and IndexedDB belong to an origin, so two sites served from one origin (two apps on
