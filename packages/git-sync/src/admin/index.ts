@@ -1,4 +1,4 @@
-import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { defineAdminPlugin } from "@monti-cms/admin";
 import { GitSyncPage } from "./git-sync-page";
 import { GitSyncAdminProvider } from "./provider";
 

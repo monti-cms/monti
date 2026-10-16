@@ -8,19 +8,14 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./definitions": "./src/definitions.ts",
-		"./callout": "./src/callout/index.ts",
 		"./callout/admin": "./src/callout/admin.ts",
 		"./callout/render": "./src/callout/render.tsx",
-		"./code-explorer": "./src/code-explorer/index.ts",
 		"./code-explorer/admin": "./src/code-explorer/admin.ts",
 		"./code-explorer/render": "./src/code-explorer/render.tsx",
-		"./collapsible": "./src/collapsible/index.ts",
 		"./collapsible/admin": "./src/collapsible/admin.ts",
 		"./collapsible/render": "./src/collapsible/render.tsx",
-		"./tabs": "./src/tabs/index.ts",
 		"./tabs/admin": "./src/tabs/admin.ts",
 		"./tabs/render": "./src/tabs/render.tsx",
-		"./columns": "./src/columns/index.ts",
 		"./columns/admin": "./src/columns/admin.ts",
 		"./columns/render": "./src/columns/render.tsx",
 		"./mermaid": "./src/mermaid/index.ts",
@@ -31,13 +26,10 @@
 		"./chart/admin": "./src/chart/admin.ts",
 		"./chart/render": "./src/chart/render.tsx",
 		"./chart/ai": "./src/chart/ai.ts",
-		"./tooltip": "./src/tooltip/index.ts",
 		"./tooltip/admin": "./src/tooltip/admin.ts",
 		"./tooltip/render": "./src/tooltip/render.tsx",
-		"./code-ref": "./src/code-ref/index.ts",
 		"./code-ref/admin": "./src/code-ref/admin.ts",
 		"./code-ref/render": "./src/code-ref/render.tsx",
-		"./color": "./src/color/index.ts",
 		"./color/admin": "./src/color/admin.ts",
 		"./color/render": "./src/color/render.tsx",
 		"./styles.css": "./dist/styles.css",
@@ -117,10 +109,6 @@
 				"types": "./dist/definitions.d.ts",
 				"default": "./dist/definitions.js"
 			},
-			"./callout": {
-				"types": "./dist/callout/index.d.ts",
-				"default": "./dist/callout/index.js"
-			},
 			"./callout/admin": {
 				"types": "./dist/callout/admin.d.ts",
 				"default": "./dist/callout/admin.js"
@@ -128,10 +116,6 @@
 			"./callout/render": {
 				"types": "./dist/callout/render.d.ts",
 				"default": "./dist/callout/render.js"
-			},
-			"./code-explorer": {
-				"types": "./dist/code-explorer/index.d.ts",
-				"default": "./dist/code-explorer/index.js"
 			},
 			"./code-explorer/admin": {
 				"types": "./dist/code-explorer/admin.d.ts",
@@ -141,10 +125,6 @@
 				"types": "./dist/code-explorer/render.d.ts",
 				"default": "./dist/code-explorer/render.js"
 			},
-			"./collapsible": {
-				"types": "./dist/collapsible/index.d.ts",
-				"default": "./dist/collapsible/index.js"
-			},
 			"./collapsible/admin": {
 				"types": "./dist/collapsible/admin.d.ts",
 				"default": "./dist/collapsible/admin.js"
@@ -153,10 +133,6 @@
 				"types": "./dist/collapsible/render.d.ts",
 				"default": "./dist/collapsible/render.js"
 			},
-			"./tabs": {
-				"types": "./dist/tabs/index.d.ts",
-				"default": "./dist/tabs/index.js"
-			},
 			"./tabs/admin": {
 				"types": "./dist/tabs/admin.d.ts",
 				"default": "./dist/tabs/admin.js"
@@ -164,10 +140,6 @@
 			"./tabs/render": {
 				"types": "./dist/tabs/render.d.ts",
 				"default": "./dist/tabs/render.js"
-			},
-			"./columns": {
-				"types": "./dist/columns/index.d.ts",
-				"default": "./dist/columns/index.js"
 			},
 			"./columns/admin": {
 				"types": "./dist/columns/admin.d.ts",
@@ -209,10 +181,6 @@
 				"types": "./dist/chart/ai.d.ts",
 				"default": "./dist/chart/ai.js"
 			},
-			"./tooltip": {
-				"types": "./dist/tooltip/index.d.ts",
-				"default": "./dist/tooltip/index.js"
-			},
 			"./tooltip/admin": {
 				"types": "./dist/tooltip/admin.d.ts",
 				"default": "./dist/tooltip/admin.js"
@@ -221,10 +189,6 @@
 				"types": "./dist/tooltip/render.d.ts",
 				"default": "./dist/tooltip/render.js"
 			},
-			"./code-ref": {
-				"types": "./dist/code-ref/index.d.ts",
-				"default": "./dist/code-ref/index.js"
-			},
 			"./code-ref/admin": {
 				"types": "./dist/code-ref/admin.d.ts",
 				"default": "./dist/code-ref/admin.js"
@@ -232,10 +196,6 @@
 			"./code-ref/render": {
 				"types": "./dist/code-ref/render.d.ts",
 				"default": "./dist/code-ref/render.js"
-			},
-			"./color": {
-				"types": "./dist/color/index.d.ts",
-				"default": "./dist/color/index.js"
 			},
 			"./color/admin": {
 				"types": "./dist/color/admin.d.ts",

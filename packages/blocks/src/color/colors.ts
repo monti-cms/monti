@@ -127,17 +127,6 @@ export function textColorProps(attrs: TextColorAttrs): {
 	};
 }
 
-/** The preset if the color matches one. Used to mark the current color in the picker list. */
-export function paletteOf(
-	kind: "fg" | "bg",
-	attrs: TextColorAttrs,
-	palette: readonly PaletteColor[],
-): PaletteColor | undefined {
-	const light = attrs[kind];
-	if (!light) return undefined;
-	return palette.find((color) => color[kind].light.toLowerCase() === light.toLowerCase());
-}
-
 /** The problems of the picker list (`color({ palette })`): hex values and unique `id`s. */
 export function checkTextPalette(palette: readonly PaletteColor[] | undefined): ConfigIssue[] {
 	const list = new IssueList();

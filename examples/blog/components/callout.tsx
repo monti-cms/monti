@@ -1,4 +1,4 @@
-import type { calloutBlock } from "@monti-cms/blocks";
+import type { calloutBlock } from "@monti-cms/blocks/definitions";
 import type { BlockProps } from "@monti-cms/core/render";
 import type { CSSProperties, ReactNode } from "react";
 

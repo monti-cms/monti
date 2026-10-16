@@ -22,4 +22,5 @@ export {
 	useAdminComponents,
 	useFormat,
 } from "./admin-components";
+export { type AdminPlugin, defineAdminPlugin } from "./plugins";
 export type { FieldContext, FieldInputProps } from "./screens/entries/field-inputs";

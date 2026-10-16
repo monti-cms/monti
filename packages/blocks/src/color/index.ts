@@ -3,7 +3,6 @@ import { checkTextPalette, type PaletteColor } from "./colors";
 import { colorBlock } from "./definition";
 
 export * from "./colors";
-export { colorBlock } from "./definition";
 
 export interface ColorOptions {
 	/** Editor text/background color picker list. Defaults to the 8 default colors (`defaultTextPalette`). The body stores hex values. */

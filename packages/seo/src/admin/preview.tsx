@@ -2,8 +2,7 @@
 
 import type { FieldViewProps } from "@monti-cms/admin";
 import type { EntryData, EntryForm } from "@monti-cms/admin/kit";
-import { cn, commonMessages, Panel } from "@monti-cms/admin/kit";
-import { MediaThumbnail } from "@monti-cms/admin/media";
+import { cn, commonMessages, MediaThumbnail, Panel } from "@monti-cms/admin/kit";
 import { type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { SEO_ROLES } from "../fields";
 import { seoMessages } from "../messages";

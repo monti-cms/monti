@@ -31,7 +31,7 @@ import { definePlugin } from "@monti-cms/core";
 export const siteAdmin = () => definePlugin({ name: "site-admin", options: {}, admin: () => import("./admin") });
 
 // plugins/site-admin/admin.ts: the default export is the admin side
-import { defineAdminPlugin } from "@monti-cms/admin/plugins";
+import { defineAdminPlugin } from "@monti-cms/admin";
 import { SiteAdminComponents } from "./provider";
 
 export default defineAdminPlugin({ Provider: SiteAdminComponents });
@@ -135,7 +135,7 @@ const components = {
 Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
 (`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `AdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/site` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
-uses `MediaThumbnail` and `useMediaUrl` from `@monti-cms/admin/media` (the search preview in the SEO extension `@monti-cms/seo` is an example).
+uses `MediaThumbnail` from `@monti-cms/admin/kit` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
 label (e.g. "Choose a post"). An entry of an item collection (`kind: "item"`) opens in a small form in the list. Places that point to several
 collections, such as media usage, open that entry's cell with `<admin path>?collection=<collection>&open=<ID>`, and opening `<admin path>/entries/<ID>/edit` also
@@ -306,7 +306,7 @@ The underline styles are included in `@monti-cms/admin/styles.css`.
 
 ## Plugin screens
 
-The module that a plugin definition's `admin` loads provides `defineAdminPlugin()` (`@monti-cms/admin/plugins`) as its default export.
+The module that a plugin definition's `admin` loads provides `defineAdminPlugin()` (`@monti-cms/admin`) as its default export.
 
 ```ts
 export default defineAdminPlugin({
@@ -336,23 +336,21 @@ Edit screen extensions (`editorExtensions`) are hooks that add an element at the
 attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`) and a page in the admin frame (`ShellPage`),
-the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`, `DialogFormFooter`), the status pieces (`StatusIndicator`, `Badge`,
-`Alert`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `usePreference`, icon lookup (`useIconByName`), `useDebounced` and the entry form value types
-(`EntryForm`, `EntryData`). Colors come from the `--cms-success`, `--cms-warning` and `--cms-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
+`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`),
+the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Badge`,
+`Alert`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
+(`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--cms-success`, `--cms-warning` and `--cms-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
 Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | Adding site components (`AdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types |
+| `@monti-cms/admin` | Adding site components (`AdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types, and `defineAdminPlugin` |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
 | `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
 | `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`, `useEntryEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
-| `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
-| `/media` | Media picker and preview |
 | `/api` | Calling the admin API (`adminFetch`, `CmsApiError`, `errorText`, `isConflict`) and writing with it (`useCmsMutation`) |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |

@@ -1,4 +1,3 @@
-import { defineAdminPlugin } from "@monti-cms/admin/plugins";
 import { AiManager } from "./ai-manager";
 import { AiAdminProvider } from "./provider";
 
@@ -11,3 +10,5 @@ export default defineAdminPlugin({ pages: { ai: AiManager }, Provider: AiAdminPr
 export { AiButton, type AiButtonProps } from "./ai-button";
 export { type AiClient, aiClient } from "./ai-client";
 export { type UseAiAction, useAiAction } from "./use-ai-action";
+
+import { defineAdminPlugin } from "@monti-cms/admin";

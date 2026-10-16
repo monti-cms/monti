@@ -3,67 +3,53 @@
  * that look like the admin UI. Internal admin file paths (`ui/*`, `screens/*`) are not public.
  */
 
-export { apiKeysKeys, useApiKeys } from "./api/api-keys";
+export { apiKeysKeys } from "./api/api-keys";
 export { commonMessages } from "./lib/common.messages";
 export { useHydratedQuery } from "./lib/hooks/use-hydrated-query";
-export { enumCodec, stringCodec, usePreference } from "./lib/hooks/use-preference";
-export { useSaveShortcut } from "./lib/hooks/use-save-shortcut";
 export { isComposingKey } from "./lib/keyboard";
 export { cn } from "./lib/utils/cn";
-export { moveWithin } from "./lib/utils/move-within";
 export { type ApiKeyChoice, ApiKeyField, choiceReady } from "./screens/api-keys/api-key-field";
-export type { EntryData, EntryForm, FormValue } from "./screens/entries/entry-form";
-export { EMPTY_FORM, formList, formText, metadataFromForm } from "./screens/entries/entry-form";
-export type { MenuAction } from "./screens/shared/action-menu";
-export { ActionContextMenu, MoreActionsButton } from "./screens/shared/action-menu";
-export { PageActions, ShellPage, useAdminNav } from "./screens/shared/admin-shell";
-export { NamedIcon, useIconByName } from "./screens/shared/collection-icon";
-export type { ConfirmRequest } from "./screens/shared/confirm-dialog";
-export { ConfirmDialog, discardConfirm, useConfirm } from "./screens/shared/confirm-dialog";
+export type { EntryData, EntryForm } from "./screens/entries/entry-form";
+export { EMPTY_FORM } from "./screens/entries/entry-form";
+export { MediaThumbnail } from "./screens/entries/media-image-input";
+export { PageActions } from "./screens/shared/admin-shell";
+export { useConfirm } from "./screens/shared/confirm-dialog";
 export { EditorFooter } from "./screens/shared/editor-footer";
 export { EmptyState } from "./screens/shared/empty-state";
-export { DETAIL_PANE_FRAME, LIST_PANE_WIDTH, PAGE_MAX_WIDTH } from "./screens/shared/layout";
+export { DETAIL_PANE_FRAME } from "./screens/shared/layout";
 export { LoadErrorAlert } from "./screens/shared/load-error-alert";
 export { ListPane, ListRow, MasterDetail } from "./screens/shared/master-detail";
-export { PageBody } from "./screens/shared/page-body";
-export { OPEN_ITEM } from "./screens/shared/side-panel";
 export { useDebounced } from "./screens/shared/use-debounced";
-export type { DraftEditor, DraftEditorOptions } from "./screens/shared/use-draft-editor";
 export { useDraftEditor } from "./screens/shared/use-draft-editor";
 export { useUnsavedGuard } from "./screens/shared/use-unsaved-guard";
-export * from "./ui/alert";
-export * from "./ui/alert-dialog";
-export * from "./ui/badge";
-export * from "./ui/button";
-export * from "./ui/calendar";
-export * from "./ui/card";
-export * from "./ui/checkbox";
-export * from "./ui/collapsible";
-export * from "./ui/combobox";
-export * from "./ui/command";
-export * from "./ui/context-menu";
-export * from "./ui/dialog";
-export * from "./ui/dialog-form-footer";
-export * from "./ui/dropdown-menu";
-export * from "./ui/empty";
-export * from "./ui/error-notice";
-export * from "./ui/field";
-export * from "./ui/icon-button";
-export * from "./ui/input";
-export * from "./ui/input-group";
-export * from "./ui/label";
-export * from "./ui/pagination";
-export * from "./ui/popover";
-export * from "./ui/select";
-export * from "./ui/separator";
-export * from "./ui/sheet";
-export * from "./ui/skeleton";
-export * from "./ui/spinner";
-export * from "./ui/status-indicator";
-export * from "./ui/switch";
-export * from "./ui/table";
-export * from "./ui/tabs";
-export * from "./ui/textarea";
-export * from "./ui/toggle";
-export * from "./ui/toggle-group";
-export * from "./ui/tooltip";
+export { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+export { Badge } from "./ui/badge";
+export { Button } from "./ui/button";
+export { Panel } from "./ui/card";
+export { Checkbox } from "./ui/checkbox";
+export { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "./ui/combobox";
+export { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "./ui/dialog";
+export {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+export { ErrorNoticeView } from "./ui/error-notice";
+export { FormField, FormFieldError, FormFieldGroup, FormFieldLabel, FormFieldTitle } from "./ui/field";
+export { IconButton } from "./ui/icon-button";
+export { Input } from "./ui/input";
+export { Label } from "./ui/label";
+export { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+export { Skeleton } from "./ui/skeleton";
+export { Spinner } from "./ui/spinner";
+export { Switch } from "./ui/switch";
+export { PageTabs, Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+export { Textarea } from "./ui/textarea";
+export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";

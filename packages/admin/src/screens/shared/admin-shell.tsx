@@ -61,10 +61,6 @@ export function ShellPage({
 	);
 }
 
-/** Recomputes the sidebar trash badge (call after moving to trash, restoring or permanent delete). */
-export const useAdminNav = (): AdminNavContextValue =>
-	useContext(AdminNavContext) ?? { trashCount: null, refreshTrashCount: () => {}, eventsCount: null, folderCounts: {} };
-
 async function countTrash(site: Site): Promise<number> {
 	const totals = await Promise.all(
 		site.COLLECTIONS.map(async (collection) => {
