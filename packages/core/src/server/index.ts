@@ -12,6 +12,8 @@ export { type PostgresOptions, postgres } from "../adapters/postgres/adapter";
 export {
 	type BulkService,
 	type Cms,
+	// What `cms.transaction` hands its work: plugin storage and the API key store inside one transaction.
+	type CmsTransaction,
 	type ContentService,
 	type CreateCmsOptions,
 	createCms,
