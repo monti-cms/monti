@@ -1,4 +1,4 @@
-import { adminRoute, CmsError, handleTextCheck, ok, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, handleTextCheck, ok, readJsonBody } from "@monti-cms/core/server";
 import { checkWithBareun } from "./api";
 import { readBareunOptions } from "./config";
 import { bareunMessages } from "./messages";

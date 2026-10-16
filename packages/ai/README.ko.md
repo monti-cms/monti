@@ -87,7 +87,7 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
   부른다. `undefined`·`true`면 통과, `false`나 글자면 버리고(글·MDX는 실패, 글자는 그 이유), `{ detail }`이면 통과하면서
   후보 옆에 설명을 붙인다. 두 번째 인자(`AiValidatorContext`)로 입력·컬렉션·언어(없으면 기본 언어)·고치는 항목·선택지와
   본체 콘텐츠 조회 `content`를 받는다.
-- **본체 콘텐츠 조회(`context.content`)**: 실행 API가 본체 공개 API(`@monti-cms/core/plugin/server`의 `createContentLookup`)로
+- **본체 콘텐츠 조회(`context.content`)**: 실행 API가 본체 공개 API(`@monti-cms/core/server`의 `createContentLookup`)로
   채운다. 플러그인은 본체 표를 직접 읽지 않는다. 지금은
   `slugsInUse({ collection, locale, slugs, excludeEntryId? })`(같은 컬렉션·언어에서 이미 쓰는 주소)가 있다.
 - 기본 코드 검사: `uniqueSlug`(중복 없음, 주소 추천. `content.slugsInUse`로 묻는다), `regexRuns(입력, { name?, scope? })`

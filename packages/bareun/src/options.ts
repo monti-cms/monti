@@ -5,7 +5,7 @@ import { bareunMessages } from "./messages";
 // `bareun()` is called from the site config file, so the default name is chosen by display language at read time.
 const t = createActiveTranslator(bareunMessages);
 
-import { pluginError } from "@monti-cms/core/plugin/server";
+import { pluginError } from "@monti-cms/core/server";
 import { BAREUN_PLUGIN_NAME } from "./name";
 
 export { BAREUN_PLUGIN_NAME };

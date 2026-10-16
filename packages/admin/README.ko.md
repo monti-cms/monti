@@ -277,7 +277,7 @@ import { remoteTextChecker } from "@monti-cms/core";
 const checker = remoteTextChecker({ id: "bareun", label: "바른", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts(서버)
-import { textCheckRoute } from "@monti-cms/core/plugin/server";
+import { textCheckRoute } from "@monti-cms/core/server";
 import { cms } from "@/monti.config";
 export const POST = textCheckRoute({
 	cms, // 앱의 라우트 파일은 관리자 확인에 쓸 인스턴스를 적는다

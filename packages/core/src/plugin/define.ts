@@ -128,6 +128,12 @@ export interface OwnedPluginRoute extends PluginRoute {
  */
 export const emptyServerPlugin: ServerPlugin = {};
 
+/**
+ * Types the server side of a plugin: `export default defineServerPlugin({ routes, hooks, ... })` in the module that the plugin's `server` loads
+ * (`@monti-cms/core/server`). It returns what it is given.
+ */
+export const defineServerPlugin = (plugin: ServerPlugin): ServerPlugin => plugin;
+
 export interface ServerPlugin {
 	/**
 	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context

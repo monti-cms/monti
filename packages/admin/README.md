@@ -279,7 +279,7 @@ import { remoteTextChecker } from "@monti-cms/core";
 const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts (server)
-import { textCheckRoute } from "@monti-cms/core/plugin/server";
+import { textCheckRoute } from "@monti-cms/core/server";
 import { cms } from "@/monti.config";
 export const POST = textCheckRoute({
 	cms, // a route file of the app names its instance for the admin check

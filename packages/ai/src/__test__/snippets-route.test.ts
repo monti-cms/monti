@@ -22,7 +22,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("../store", async () => {
-	const { CmsError } = await import("@monti-cms/core/plugin/server");
+	const { CmsError } = await import("@monti-cms/core/server");
 	return {
 		aiStoreFor: () => ({
 			getAiSettings: async () => state.snippets,

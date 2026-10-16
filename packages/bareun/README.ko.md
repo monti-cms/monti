@@ -40,5 +40,5 @@ bareun({
 결과는 바른의 가장 작은 고침 단위로 보인다(여러 고침을 합친 블록은 낱낱으로 펼친다). 분류는 띄어쓰기·표준어·오타·문법 등이고,
 띄어쓰기·표준어·오타·문법·낱말 오류는 "오류", 나머지(문장 다듬기·외래어·헷갈리는 말·확인 필요)는 "주의"다.
 
-다른 검사기(LanguageTool 등)는 같은 모양으로 따로 만든다: 서버 경로(`textCheckRoute`, `@monti-cms/core/plugin/server`)와 브라우저 쪽
+다른 검사기(LanguageTool 등)는 같은 모양으로 따로 만든다: 서버 경로(`textCheckRoute`, `@monti-cms/core/server`)와 브라우저 쪽
 `remoteTextChecker`(`@monti-cms/core`)를 관리자 확장점 `textCheckers`에 넣는다.

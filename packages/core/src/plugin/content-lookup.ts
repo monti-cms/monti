@@ -2,7 +2,7 @@ import type { ContentStore } from "../core/store/ports";
 
 /**
  * Core content lookup for plugins (read-only). Plugins do not read core tables directly; they ask through this function.
- * Exported from `@monti-cms/core/plugin/server`.
+ * Exported from `@monti-cms/core/server`.
  *
  * ```ts
  * const lookup = createContentLookup(cms);

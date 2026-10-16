@@ -1,4 +1,4 @@
-import type { PluginCollection, PluginStorage, StorageItem } from "@monti-cms/core/plugin/server";
+import type { PluginCollection, PluginStorage, StorageItem } from "@monti-cms/core/server";
 
 /**
  * What the plugin remembers, in its own plugin storage (`cms.storage("git-sync")`): per entry the file it was last synced to, the queue of publishes waiting for
