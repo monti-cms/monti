@@ -17,7 +17,11 @@ export interface TranslationSource {
 }
 
 export function assertKnownLocale(site: Site, locale: string): void {
-	if (!site.isLocale(locale)) throw new CmsError("Unknown locale", "invalid_input");
+	if (!site.isLocale(locale)) {
+		throw new CmsError("Unknown locale", "invalid_input", {
+			notice: { key: "translation.locale_unknown", vars: { locale } },
+		});
+	}
 }
 
 /**
@@ -34,20 +38,35 @@ export function assertTranslationSource(
 		throw new CmsError(
 			"This site does not use translations. It needs more than one locale, and `admin.translations` not set to false.",
 			"invalid_input",
+			{ notice: { key: "translation.disabled" } },
 		);
 	}
 	if (!source) throw new CmsError("Source entry not found", "not_found");
 	if (source.collection !== translation.collection || site.isItemCollection(translation.collection)) {
-		throw new CmsError("Only content collections have translations", "invalid_input");
+		throw new CmsError("Only content collections have translations", "invalid_input", {
+			notice: { key: "translation.not_translatable" },
+		});
 	}
 	if (source.translationGroupId !== null) {
-		throw new CmsError("Translate the source entry, not a translation", "invalid_input");
+		throw new CmsError("Translate the source entry, not a translation", "invalid_input", {
+			notice: { key: "translation.of_translation" },
+		});
 	}
-	if (source.status === "trashed") throw new CmsError("A trashed entry cannot be translated", "invalid_status");
+	if (source.status === "trashed") {
+		throw new CmsError("A trashed entry cannot be translated", "invalid_status", {
+			notice: { key: "translation.source_trashed" },
+		});
+	}
 	// An archived group is hidden from the site and the list; a new draft in it would be too.
-	if (source.status === "archived") throw new CmsError("Unarchive the entry before translating it", "invalid_status");
+	if (source.status === "archived") {
+		throw new CmsError("Unarchive the entry before translating it", "invalid_status", {
+			notice: { key: "translation.source_archived" },
+		});
+	}
 	if (source.locale === translation.locale) {
-		throw new CmsError("A translation for this locale already exists", "translation_exists");
+		throw new CmsError("A translation for this locale already exists", "translation_exists", {
+			notice: { key: "translation.same_locale", vars: { locale: translation.locale } },
+		});
 	}
 }
 
@@ -61,7 +80,9 @@ export function assertTranslationMetadata(
 	if (!isTranslation || !site.isCollection(collection)) return;
 	const common = site.commonFieldKeys(collection, metadata);
 	if (common.length > 0) {
-		throw new CmsError(`Common fields belong to the source: ${common.join(", ")}`, "invalid_input");
+		throw new CmsError(`Common fields belong to the source: ${common.join(", ")}`, "invalid_input", {
+			notice: { key: "translation.common_fields", vars: { fields: common.join(", ") } },
+		});
 	}
 }
 

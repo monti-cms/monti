@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testSite } from "../../../../test/site";
-import { errorMessages } from "../../../core/error-notice";
+import { errorMessages, noticeMessages } from "../../../core/error-notice";
 import { problemError } from "../../../core/problem";
 import { CmsError, cmsErrorText, type ErrorBody, handleApiError } from "../error-handler";
 
@@ -47,6 +47,22 @@ describe("what an admin route tells the person", () => {
 			handleApiError(new CmsError("401 invalid x-api-key", "service_unavailable", { notice }), testSite),
 		);
 		expect(error).toMatchObject({ message: notice.what, fix: notice.fix, detail: "401 invalid x-api-key" });
+	});
+
+	it("reads a notice from the core dictionary in the admin language, with its values", async () => {
+		const n = testSite.createTranslator(noticeMessages);
+		const vars = { extension: ".png" };
+		const error = await bodyOf(
+			handleApiError(
+				new CmsError("Invalid file name", "invalid_input", { notice: { key: "media.rename.extension", vars } }),
+				testSite,
+			),
+		);
+		expect(error).toMatchObject({
+			message: n("media.rename.extension", vars),
+			fix: n("media.rename.extension.fix", vars),
+			detail: "Invalid file name",
+		});
 	});
 
 	it("keeps an unknown error and a setup mistake out of the answer", async () => {

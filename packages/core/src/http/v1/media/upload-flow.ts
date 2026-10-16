@@ -3,7 +3,15 @@ import type { Cms } from "../../../cms";
 import { isImageType } from "../../../core/media-types";
 import { CmsError } from "../error-handler";
 import { parseWith } from "../handler";
-import { attachmentDisposition, extensionFor, inspectUploadedFile, UPLOAD_URL_TTL_SECONDS } from "./media-files";
+import {
+	attachmentDisposition,
+	extensionFor,
+	extensionOf,
+	inspectUploadedFile,
+	sizeNotice,
+	typeNames,
+	UPLOAD_URL_TTL_SECONDS,
+} from "./media-files";
 
 /**
  * The two steps of a media upload, shared by the upload routes: `prepareMediaUpload` registers the
@@ -33,7 +41,9 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 		...cms.site.api.ALLOWED_FILE_MIME_TYPES,
 	] as readonly unknown[];
 	if (input?.mimeType !== undefined && !allowed.includes(input.mimeType)) {
-		throw new CmsError(`Allowed types: ${allowed.join(", ")}`, "unsupported_media_type");
+		throw new CmsError(`Allowed types: ${allowed.join(", ")}`, "unsupported_media_type", {
+			notice: { key: "media.upload.type", vars: { types: typeNames(allowed as readonly string[]) } },
+		});
 	}
 	const originalMime = input?.original?.mimeType;
 	if (
@@ -43,13 +53,22 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 		throw new CmsError(
 			`Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`,
 			"unsupported_media_type",
+			{
+				notice: {
+					key: "media.upload.original_type",
+					vars: { types: typeNames(cms.site.api.ALLOWED_IMAGE_MIME_TYPES) },
+				},
+			},
 		);
 	}
 	const body = parseWith(cms.site.api.mediaUploadBodySchema, raw);
 	const isFile = !isImageType(body.mimeType);
 	// An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
 	if (isFile && cms.site.api.fileTypeFor(body.filename) !== body.mimeType) {
-		throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type");
+		const extension = extensionOf(body.filename);
+		throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type", {
+			notice: extension ? { key: "media.upload.extension", vars: { extension } } : { key: "media.upload.no_extension" },
+		});
 	}
 	const originalFile = "original" in body ? body.original : undefined;
 	const limit = isFile ? cms.site.api.MAX_FILE_BYTES : cms.site.api.MAX_MEDIA_BYTES;
@@ -58,6 +77,7 @@ export async function prepareMediaUpload(cms: Cms, raw: unknown): Promise<Prepar
 			throw new CmsError(
 				`File size exceeds the ${limit / 1024 / 1024}MiB limit (${file.byteSize} bytes)`,
 				"payload_too_large",
+				{ notice: sizeNotice(limit) },
 			);
 		}
 	}

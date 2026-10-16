@@ -250,7 +250,9 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 
 	const assertKeyExists = async (id: string) => {
 		if (!(await keys().get(id))) {
-			throw new CmsError("The chosen key does not exist (it may have been deleted); pick another", "invalid_input");
+			throw new CmsError("The chosen key does not exist (it may have been deleted); pick another", "invalid_input", {
+				notice: { key: "key.missing" },
+			});
 		}
 	};
 
@@ -354,7 +356,11 @@ function keysOn(options: ApiKeysOptions, storage: () => PluginStorage): ApiKeys 
 				throw new CmsError(
 					`${found.length} place${found.length === 1 ? "" : "s"} use this key and would stop working`,
 					"key_in_use",
-					{ serverVersion: current.version, details: { uses: found } },
+					{
+						serverVersion: current.version,
+						details: { uses: found },
+						notice: { key: "key.in_use", vars: { count: found.length } },
+					},
 				);
 			}
 			await keys().delete(id, { expectedVersion });

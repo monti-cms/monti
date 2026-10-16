@@ -35,5 +35,7 @@ export function assertParentInCollection(parentCollection: string | undefined, c
 
 /** Moving a folder under one of its own descendants (or under itself) would make a loop. `ancestorIds` are the new parent and its ancestors. */
 export function assertNoFolderCycle(folderId: string, ancestorIds: readonly string[]): void {
-	if (ancestorIds.includes(folderId)) throw new CmsError("Cycle", "invalid_input");
+	if (ancestorIds.includes(folderId)) {
+		throw new CmsError("Cycle", "invalid_input", { notice: { key: "folder.cycle" } });
+	}
 }

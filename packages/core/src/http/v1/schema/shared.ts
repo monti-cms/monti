@@ -9,6 +9,7 @@ export function assertSchemaWritable(cms: Pick<Cms, "schemaFile">): void {
 	if (!access.writable) {
 		throw new CmsError(READ_ONLY_MESSAGE[access.reason], "schema_read_only", {
 			details: { reason: access.reason },
+			notice: { key: `schema.read_only.${access.reason}` },
 		});
 	}
 }
