@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeCms } from "../../cms";
 import { defineFormat } from "../../format/types";
 import type { WriteHooks } from "../../services/hooks";
-import type { CmsPlugin } from "../define";
+import type { Plugin } from "../define";
 import { createServerPlugins } from "../server";
 
 const cms = fakeCms();
@@ -10,7 +10,7 @@ const cms = fakeCms();
 /** The server side of the plugins of one site, with the server config's hooks. Each call is its own instance (nothing is shared between them). */
 const serverPlugins = (plugins: readonly unknown[], hooks?: WriteHooks) =>
 	createServerPlugins(
-		plugins as readonly CmsPlugin[],
+		plugins as readonly Plugin[],
 		() => ({ hooks }),
 		() => cms,
 	);
@@ -39,7 +39,7 @@ describe("features", () => {
 				default: { features: async (c: typeof first) => ({ [`trusted-${c.isHostTrusted()}`]: true }) },
 			}),
 		};
-		const plugins = [plugin] as unknown as readonly CmsPlugin[];
+		const plugins = [plugin] as unknown as readonly Plugin[];
 		expect(
 			await createServerPlugins(
 				plugins,

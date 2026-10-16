@@ -8,7 +8,7 @@ import { isComposingKey } from "../lib/keyboard";
 import { cn } from "../lib/utils/cn";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { ErrorNotice } from "../ui/error-notice";
+import { ErrorNoticeView } from "../ui/error-notice";
 import { IconButton } from "../ui/icon-button";
 import { Spinner } from "../ui/spinner";
 import { Textarea } from "../ui/textarea";
@@ -154,7 +154,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 						</Button>
 					</form>
 				)}
-				{state.status === "error" && <ErrorNotice notice={state.error} />}
+				{state.status === "error" && <ErrorNoticeView notice={state.error} />}
 				{state.status === "done" && <SlotResult state={state} onApply={apply} />}
 			</div>
 		);

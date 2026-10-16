@@ -1,4 +1,4 @@
-import { type Issue, IssueList, type PluginConfigView, pathOf } from "@monti-cms/core";
+import { type ConfigIssue, IssueList, type PluginConfigView, pathOf } from "@monti-cms/core";
 import { valueFieldsOf } from "@monti-cms/core/site";
 import { SEO_ROLES } from "./fields";
 
@@ -6,7 +6,7 @@ import { SEO_ROLES } from "./fields";
  * Checks that SEO roles are attached to fields of the right kind (`validate` of `seo()`). Title, description and canonical URL must be text, the share image media,
  * and hiding a select field that has a `noindex` option.
  */
-export function checkSeoFields({ collections }: Pick<PluginConfigView, "collections">): Issue[] {
+export function checkSeoFields({ collections }: Pick<PluginConfigView, "collections">): ConfigIssue[] {
 	const list = new IssueList();
 	for (const [collection, schema] of Object.entries(collections)) {
 		for (const { name, field, when } of valueFieldsOf(schema)) {

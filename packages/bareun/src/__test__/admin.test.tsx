@@ -1,4 +1,4 @@
-import { useCmsAdminComponents } from "@monti-cms/admin";
+import { useAdminComponents } from "@monti-cms/admin";
 import { SiteProvider } from "@monti-cms/core/site";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -9,7 +9,7 @@ import { bareun } from "../index";
 afterEach(cleanup);
 
 function Checkers() {
-	const { textCheckers = [] } = useCmsAdminComponents();
+	const { textCheckers = [] } = useAdminComponents();
 	return <p>{textCheckers.map((checker) => checker.id).join(",")}</p>;
 }
 

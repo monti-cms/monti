@@ -51,14 +51,14 @@ describe("mdx()", () => {
 			expect(checkMdxOptions({ syntax: [braces, { ...other, name: braces.name }] })).toEqual([
 				expect.objectContaining({ code: "duplicate" }),
 			]);
-			expect(mdx({ syntax: [braces, braces] }).validate?.({} as never)).toEqual([
+			expect(mdx({ syntax: [braces, braces] }).checkConfig?.({} as never)).toEqual([
 				expect.objectContaining({ code: "duplicate" }),
 			]);
 		});
 
 		it("is run again by the validate hook of the plugin", () => {
 			const plugin = mdx({ syntax: [braces] });
-			expect(() => plugin.validate?.({} as never)).not.toThrow();
+			expect(() => plugin.checkConfig?.({} as never)).not.toThrow();
 		});
 	});
 

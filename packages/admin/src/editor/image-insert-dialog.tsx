@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { DialogFormFooter } from "../ui/dialog-form-footer";
-import { FieldError } from "../ui/field";
+import { FormFieldError } from "../ui/field";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Skeleton } from "../ui/skeleton";
@@ -329,7 +329,7 @@ export function ImageInsertDialog({
 							onBlur={() => setAltTouched(true)}
 							className="min-h-0"
 						/>
-						{showAltError && <FieldError id={altErrorId}>{altRequiredMessage(t)}</FieldError>}
+						{showAltError && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 						<Label htmlFor={decorativeId} className="font-normal">
 							<Switch
 								id={decorativeId}
@@ -355,7 +355,7 @@ export function ImageInsertDialog({
 							<Spinner /> {t("imageDialog.uploading", { percent: progress ?? 0 })}
 						</output>
 					)}
-					{error && <FieldError className="text-sm">{error}</FieldError>}
+					{error && <FormFieldError className="text-sm">{error}</FormFieldError>}
 
 					<DialogFormFooter
 						onCancel={() => !isUploading && onClose()}

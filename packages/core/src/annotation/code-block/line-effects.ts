@@ -1,4 +1,4 @@
-import { checkKnownKeys, type Issue, IssueList, pathOf } from "../../config/check/issue";
+import { type ConfigIssue, checkKnownKeys, IssueList, pathOf } from "../../config/check/issue";
 import { createActiveTranslator } from "../../i18n/active";
 import { codeBlockMessages } from "./messages";
 
@@ -155,7 +155,7 @@ const FEATURES = new Set(["rules", "fold", "tooltip", "textStyles"]);
 const LANGUAGE = /^[a-z0-9][a-z0-9+#.-]*$/i;
 
 /** Checks the `codeBlock` settings of the site config. */
-export function checkCodeBlockConfig(config: CodeBlockConfig | undefined): Issue[] {
+export function checkCodeBlockConfig(config: CodeBlockConfig | undefined): ConfigIssue[] {
 	if (!config) return [];
 	const list = new IssueList();
 	checkKnownKeys(list, "codeBlock", config, ["lineEffects", "omitLineEffects", "features", "themes", "languages"]);

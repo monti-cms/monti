@@ -10,10 +10,10 @@ import {
 	DETAIL_PANE_FRAME,
 	EditorFooter,
 	EmptyState,
-	Field,
-	FieldError,
-	FieldGroup,
-	FieldLabel,
+	FormField,
+	FormFieldError,
+	FormFieldGroup,
+	FormFieldLabel,
 	Input,
 	ListPane,
 	ListRow,
@@ -304,9 +304,9 @@ function ProviderEditor({
 				</p>
 			</div>
 
-			<FieldGroup className="gap-5">
-				<Field>
-					<FieldLabel htmlFor={ids.name}>{t("field.name")}</FieldLabel>
+			<FormFieldGroup className="gap-5">
+				<FormField>
+					<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
 					<Input
 						id={ids.name}
 						value={draft.name}
@@ -314,9 +314,9 @@ function ProviderEditor({
 						onChange={(event) => set({ name: event.target.value })}
 						className="h-8 text-xs md:text-xs"
 					/>
-				</Field>
-				<Field>
-					<FieldLabel htmlFor={ids.kind}>{t("field.kind")}</FieldLabel>
+				</FormField>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.kind}>{t("field.kind")}</FormFieldLabel>
 					<OptionSelect
 						id={ids.kind}
 						value={draft.kind}
@@ -324,9 +324,9 @@ function ProviderEditor({
 						options={AI_PROVIDER_KINDS.map((kind) => ({ value: kind, label: providerKindLabel(kind) }))}
 						onChange={(kind) => set({ kind: kind as AiProviderKind })}
 					/>
-				</Field>
-				<Field>
-					<FieldLabel htmlFor={ids.url}>{t("field.url")}</FieldLabel>
+				</FormField>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.url}>{t("field.url")}</FormFieldLabel>
 					<Input
 						id={ids.url}
 						value={draft.url}
@@ -334,15 +334,15 @@ function ProviderEditor({
 						onChange={(event) => set({ url: event.target.value.trim() })}
 						className="h-8 font-mono text-xs md:text-xs"
 					/>
-				</Field>
+				</FormField>
 				<ApiKeyField
 					label={t("field.key")}
 					baseName={draft.name.trim() || "API"}
 					value={draft.key}
 					onChange={(key) => set({ key })}
 				/>
-				<Field>
-					<FieldLabel htmlFor={ids.model}>{t("field.model")}</FieldLabel>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.model}>{t("field.model")}</FormFieldLabel>
 					<ModelCombobox
 						id={ids.model}
 						value={draft.defaultModel}
@@ -352,8 +352,8 @@ function ProviderEditor({
 						placeholder={example.model}
 						onChange={(defaultModel) => set({ defaultModel })}
 					/>
-				</Field>
-			</FieldGroup>
+				</FormField>
+			</FormFieldGroup>
 
 			<EditorFooter
 				dirty={dirty}
@@ -383,7 +383,7 @@ function ProviderEditor({
 						{t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) })}
 					</p>
 				) : (
-					<FieldError>{check.message}</FieldError>
+					<FormFieldError>{check.message}</FormFieldError>
 				))}
 			{dialog}
 		</div>

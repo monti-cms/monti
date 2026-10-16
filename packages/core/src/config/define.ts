@@ -6,7 +6,7 @@ import { checkMediaConfig, type MediaConfig } from "../core/media-types";
 import type { StoredDocument } from "../doc/stored-document";
 import type { MessageValue } from "../i18n/define";
 import { checkPluginNames, checkPluginPages } from "../plugin/collisions";
-import type { CmsPlugin } from "../plugin/define";
+import type { Plugin } from "../plugin/define";
 import { checkBodyAllowed } from "../schema/allowed";
 import { type CollectionSchema, normalizeCollection } from "../schema/collection";
 import { checkPlacements } from "../schema/layout";
@@ -15,7 +15,7 @@ import { type ConfigDefaults, isRecord, layerSite, resolveSchemaConfig } from ".
 import { SCHEMA_SOURCE } from "../schema-file/source";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
 import { checkCollections } from "./check/collections";
-import { CONFIG_SOURCE, type Issue, IssueList, throwIssues } from "./check/issue";
+import { CONFIG_SOURCE, type ConfigIssue, IssueList, throwIssues } from "./check/issue";
 import { checkSite } from "./check/site";
 import type { LocalePrefixMode } from "./rules";
 
@@ -142,7 +142,7 @@ export interface SeedConfig {
 export interface CmsConfig<
 	Collections extends CollectionsConfig = CollectionsConfig,
 	Locale extends string = string,
-	Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[],
+	Plugins extends readonly Plugin[] = readonly Plugin[],
 	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 > {
 	/** Collection name -> definition. The name is a stored value (`entries.collection`), so do not change it in production. */
@@ -187,9 +187,9 @@ export interface CmsConfig<
  * (`check/`), then the parts other modules own: the body lists, blocks, code blocks, media and what the plugins say about the config.
  */
 function checkConfig(
-	config: CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>,
+	config: CmsConfig<CollectionsConfig, string, readonly Plugin[], readonly BlockDefinition[]>,
 	alsoKnown: readonly string[] = [],
-): Issue[] {
+): ConfigIssue[] {
 	const shape = configShapeIssues(config);
 	if (shape.length > 0) return shape;
 	const list = new IssueList();
@@ -219,7 +219,7 @@ function checkConfig(
 	const blocks = blockDefinitions.map((block) => block.name);
 	for (const plugin of plugins) {
 		list.addAll(
-			plugin.validate?.({
+			plugin.checkConfig?.({
 				collections: config.collections,
 				locales: config.locales,
 				defaultLocale: config.defaultLocale,
@@ -239,7 +239,7 @@ function checkConfig(
 export interface SchemaCmsConfig<
 	Schema extends SchemaTypes = SchemaTypes,
 	Collections extends CollectionsConfig = CollectionsConfig,
-	Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[],
+	Plugins extends readonly Plugin[] = readonly Plugin[],
 	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 > extends Omit<CmsConfig<Collections, string, Plugins, Blocks>, "collections" | "locales" | "defaultLocale"> {
 	/**
@@ -267,7 +267,7 @@ export interface SchemaCmsConfig<
 export function defineSite<
 	const Schema extends SchemaTypes,
 	const Collections extends CollectionsConfig = Record<never, never>,
-	const Plugins extends readonly CmsPlugin[] = readonly [],
+	const Plugins extends readonly Plugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
 >(
 	config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>,
@@ -275,12 +275,12 @@ export function defineSite<
 export function defineSite<
 	const Collections extends CollectionsConfig,
 	const Locale extends string,
-	const Plugins extends readonly CmsPlugin[] = readonly [],
+	const Plugins extends readonly Plugin[] = readonly [],
 	const Blocks extends readonly BlockDefinition[] = readonly [],
 >(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;
 export function defineSite(
 	input:
-		| CmsConfig<CollectionsConfig, string, readonly CmsPlugin[], readonly BlockDefinition[]>
+		| CmsConfig<CollectionsConfig, string, readonly Plugin[], readonly BlockDefinition[]>
 		| (SchemaCmsConfig & { readonly schema: unknown }),
 ): CmsConfig {
 	return buildSite(input);

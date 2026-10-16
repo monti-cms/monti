@@ -2,8 +2,8 @@
 
 import {
 	cn,
-	Field,
-	FieldLabel,
+	FormField,
+	FormFieldLabel,
 	Input,
 	Select,
 	SelectContent,
@@ -163,8 +163,8 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 		base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
 	return (
 		<div className="grid gap-5 sm:grid-cols-2">
-			<Field className="sm:col-span-2">
-				<FieldLabel htmlFor={ids.label}>{t("field.name")}</FieldLabel>
+			<FormField className="sm:col-span-2">
+				<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 				<Input
 					id={ids.label}
 					value={base.label}
@@ -172,9 +172,9 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 					onChange={(event) => onChange({ ...base, label: event.target.value })}
 					className="h-8 text-xs md:text-xs"
 				/>
-			</Field>
-			<Field>
-				<FieldLabel htmlFor={ids.place}>{t("field.place")}</FieldLabel>
+			</FormField>
+			<FormField>
+				<FormFieldLabel htmlFor={ids.place}>{t("field.place")}</FormFieldLabel>
 				<OptionSelect
 					id={ids.place}
 					value={placeValue(base.surface)}
@@ -184,10 +184,10 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 						if (option) setSurface(option.surface ?? firstField(site));
 					}}
 				/>
-			</Field>
+			</FormField>
 			{base.surface.slot === "field" ? (
-				<Field>
-					<FieldLabel htmlFor={ids.field}>{t("field.field")}</FieldLabel>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.field}>{t("field.field")}</FormFieldLabel>
 					<OptionSelect
 						id={ids.field}
 						value={fieldValue}
@@ -197,22 +197,22 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 							if (collection && field) setSurface({ slot: "field", field, collections: [collection] });
 						}}
 					/>
-				</Field>
+				</FormField>
 			) : (
 				<div />
 			)}
-			<Field>
-				<FieldLabel htmlFor={ids.result}>{t("field.result")}</FieldLabel>
+			<FormField>
+				<FormFieldLabel htmlFor={ids.result}>{t("field.result")}</FormFieldLabel>
 				<OptionSelect
 					id={ids.result}
 					value={base.result}
 					options={customResults(site, base.surface).map((result) => ({ value: result, label: resultLabel(result) }))}
 					onChange={(result) => onChange({ ...base, result: result as CustomBase["result"] })}
 				/>
-			</Field>
+			</FormField>
 			{engines.length > 1 && (
-				<Field>
-					<FieldLabel htmlFor={ids.engine}>{t("field.engine")}</FieldLabel>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.engine}>{t("field.engine")}</FormFieldLabel>
 					<OptionSelect
 						id={ids.engine}
 						value={base.engine ?? "generate"}
@@ -222,7 +222,7 @@ export function CustomBaseFields({ base, onChange }: { base: CustomBase; onChang
 							onChange({ ...base, engine: engine === "decide" ? engine : undefined });
 						}}
 					/>
-				</Field>
+				</FormField>
 			)}
 		</div>
 	);

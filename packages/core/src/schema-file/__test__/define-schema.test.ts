@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, defineCollection, definePlugin, defineSite, fields, type Issue } from "../..";
+import { ConfigError, type ConfigIssue, defineCollection, definePlugin, defineSite, fields } from "../..";
 import type { Cms } from "../../cms";
 import { fakeCms } from "../../cms/fake-cms";
 import type { SchemaTypes } from "../types";
 import { blogSchema, cloneSchema, type EditableSchema } from "./fixture";
 
 /** The issues a config is rejected with. */
-const issuesOf = (run: () => unknown): Issue[] => {
+const issuesOf = (run: () => unknown): ConfigIssue[] => {
 	try {
 		run();
 	} catch (error) {
@@ -190,7 +190,7 @@ describe("defineSite with a schema file", () => {
 		const strict = definePlugin({
 			name: "strict",
 			options: {},
-			validate: ({ collections }) => {
+			checkConfig: ({ collections }) => {
 				if (!("post" in collections)) throw new Error("needs post");
 				if (Object.hasOwn(collections, "series")) throw new Error("no series allowed");
 			},

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Cms } from "../cms";
-import { ConfigError, type Issue } from "../config/check/issue";
+import { ConfigError, type ConfigIssue } from "../config/check/issue";
 import type { SchemaChangeStore } from "../core/store/ports";
 import type { SchemaState } from "../core/store/schema-change";
 import { type BodyVocabulary, bodyVocabulary } from "../schema/allowed";
@@ -60,7 +60,7 @@ export interface SchemaScreenState {
 	/** The file has comments; saving writes it again without them. */
 	readonly comments: boolean;
 	/** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
-	readonly issues: readonly Issue[];
+	readonly issues: readonly ConfigIssue[];
 	/** The version the instance runs. */
 	readonly schemaVersion: number;
 	/** The schema last applied to the dev database, or `null` when none was (or the store has no schema record yet). */
@@ -114,7 +114,7 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 		}
 	}
 	let schema: unknown;
-	let issues: Issue[] = [];
+	let issues: ConfigIssue[] = [];
 	let comments = false;
 	// A file with code is not read as data (the instance runs it; the screen shows what the instance runs and is read-only).
 	const literal = text === undefined ? undefined : parseSchemaLiteral(text);
@@ -214,7 +214,7 @@ export interface SchemaDecision {
 export interface SchemaEditPreview {
 	/** The edit checks. When it does not, `issues` says what is wrong, with JSON paths, and the rest is empty. */
 	readonly valid: boolean;
-	readonly issues: readonly Issue[];
+	readonly issues: readonly ConfigIssue[];
 	/** Something would be written or applied: the content differs from the file, or a change or transform is pending. */
 	readonly changed: boolean;
 	/** The schema changes the stored data cares about (collections, fields, options, locales, allowed blocks), each with the entries it touches. */
@@ -265,7 +265,7 @@ interface Checked {
 }
 
 /** Checks the edited content as the instance would: the file format, then every rule `defineSite` applies (between collections, plugins and blocks included). */
-function checkEdit(cms: Cms, schema: unknown): { issues: Issue[]; checked?: Checked } {
+function checkEdit(cms: Cms, schema: unknown): { issues: ConfigIssue[]; checked?: Checked } {
 	try {
 		const parsed = parseSchemaFile(schema);
 		return { issues: [], checked: { parsed, next: cms.forSchema(parsed) } };
@@ -310,7 +310,10 @@ interface Evaluation {
 }
 
 /** Everything the preview and the save agree on: the diff against what is applied (or the running schema), the decisions, and the transforms in effect. */
-async function evaluate(cms: Cms, input: SchemaEditInput): Promise<Evaluation | { readonly issues: readonly Issue[] }> {
+async function evaluate(
+	cms: Cms,
+	input: SchemaEditInput,
+): Promise<Evaluation | { readonly issues: readonly ConfigIssue[] }> {
 	const { issues, checked } = checkEdit(cms, input.schema);
 	if (!checked) return { issues };
 	const { parsed, next } = checked;
@@ -444,7 +447,7 @@ async function evaluate(cms: Cms, input: SchemaEditInput): Promise<Evaluation | 
 	return { checked, store, applied, pending, preview };
 }
 
-const invalid = (issues: readonly Issue[]): SchemaEditPreview => ({
+const invalid = (issues: readonly ConfigIssue[]): SchemaEditPreview => ({
 	valid: false,
 	issues,
 	changed: false,
@@ -491,7 +494,7 @@ export const needsAcknowledgement = (impact: ChangeImpact): boolean =>
 	impact.entries > 0 && LOSSY_CONSEQUENCES.has(impact.consequence);
 
 export type SchemaSaveResult =
-	| { readonly saved: false; readonly reason: "invalid"; readonly issues: readonly Issue[] }
+	| { readonly saved: false; readonly reason: "invalid"; readonly issues: readonly ConfigIssue[] }
 	| { readonly saved: false; readonly reason: "problems"; readonly problems: readonly TransformProblem[] }
 	| { readonly saved: false; readonly reason: "conflict" }
 	/** Changes that touch stored entries were not acknowledged (`SchemaSaveInput.acknowledged`). Review them and send their keys. */
@@ -634,4 +637,4 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 }
 
 export { SchemaChangeError };
-export type { Issue };
+export type { ConfigIssue };

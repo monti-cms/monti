@@ -19,7 +19,7 @@ export function ai<const Config extends AiConfig>(config: Config = {} as Config)
 		name: AI_PLUGIN_NAME,
 		options: config,
 		nav: [{ path: "ai", label: "AI", icon: "sparkles" }],
-		validate: ({ collections, blocks, blockDefinitions, locales, plugins }) =>
+		checkConfig: ({ collections, blocks, blockDefinitions, locales, plugins }) =>
 			checkAiConfig(
 				resolveAiConfig(
 					config,

@@ -4,7 +4,7 @@ import type { Site } from "@monti-cms/core/site";
 import { useSite } from "@monti-cms/core/site";
 
 import type { ComponentType } from "react";
-import type { CmsAdminComponents, ListCellProps } from "../admin-components";
+import type { AdminComponents, ListCellProps } from "../admin-components";
 import { fieldColumnOf } from "./list-columns";
 import { FittingTags } from "./shared/fitting-tags";
 
@@ -16,7 +16,7 @@ const EMPTY = <span className="text-cms-muted-foreground">—</span>;
  */
 export function customListCell(
 	site: Site,
-	listCells: CmsAdminComponents["listCells"],
+	listCells: AdminComponents["listCells"],
 	collection: string,
 	column: string,
 ): ComponentType<ListCellProps> | undefined {

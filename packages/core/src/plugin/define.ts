@@ -1,6 +1,6 @@
 import type { BlockDefinition } from "../blocks/define";
 import type { Cms } from "../cms";
-import type { Issue } from "../config/check/issue";
+import type { ConfigIssue } from "../config/check/issue";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { RouteAccess } from "../http/v1/handler";
@@ -12,19 +12,19 @@ import type { PluginStorage } from "./storage";
 export type PluginLabel = string | ((site: Pick<Site, "createTranslator">) => string);
 
 /** The server side of a plugin: given inline, or as a loader of a module whose default export it is (read only when used). */
-export type PluginServer = CmsServerPlugin | (() => Promise<{ readonly default: CmsServerPlugin }>);
+export type ServerPluginSource = ServerPlugin | (() => Promise<{ readonly default: ServerPlugin }>);
 
 /**
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`). Its parts are grouped by who reads them:
  *
- * - **Both sides** read `options`, `blocks`, `nav`, `keySlots`, `validate` and `contributes`. Apart from functions, only JSON values go here.
+ * - **Both sides** read `options`, `blocks`, `nav`, `keySlots`, `checkConfig` and `contributes`. Apart from functions, only JSON values go here.
  * - **The server** reads `server`: routes, hooks, formats, commands, migrations, feature flags and the labels of key uses, inline or as a loader (`() => import("my-plugin/server")`).
  *   A loader is read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`) so server code stays out of the browser bundle.
  * - **The admin UI** reads `admin` (a loader), and **the public page** reads `render` (a loader).
  *
  * Every concept has one place: hooks only in `server`, API key slots only in `keySlots`.
  */
-export interface CmsPlugin<
+export interface Plugin<
 	Name extends string = string,
 	Options = unknown,
 	Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
@@ -43,10 +43,10 @@ export interface CmsPlugin<
 	readonly keySlots?: readonly PluginKeySlot[];
 	/** Validation called when the site config is created. Returns the issues it finds (a path into the config and a message each); `defineSite` reports them with every other problem. */
 	// biome-ignore lint/suspicious/noConfusingVoidType: a plugin with nothing to report returns nothing
-	readonly validate?: (config: PluginConfigView) => readonly Issue[] | void;
+	readonly checkConfig?: (config: PluginConfigView) => readonly ConfigIssue[] | void;
 	/** Server side. Inline for a plugin that only needs hooks (it loads with every server start, so keep it light), or a loader for routes, commands and heavy code. */
-	readonly server?: PluginServer;
-	/** Admin UI side (pages, providers). The default export is the admin package's `CmsAdminPlugin`. */
+	readonly server?: ServerPluginSource;
+	/** Admin UI side (pages, providers). The default export is the admin package's `AdminPlugin`. */
 	readonly admin?: () => Promise<{ readonly default: unknown }>;
 	/**
 	 * Public UI side (public components for body blocks). The module's named export `documentComponents` is `(context) => component table` of the document renderer
@@ -100,7 +100,7 @@ export interface PluginConfigView {
 	/** Definitions of those blocks (same order as `blocks`). */
 	readonly blockDefinitions: readonly BlockDefinition[];
 	/** All plugins in the site config (including itself). Used to read what other plugins add (`contributes`). */
-	readonly plugins: readonly CmsPlugin[];
+	readonly plugins: readonly Plugin[];
 }
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -126,9 +126,9 @@ export interface OwnedPluginRoute extends PluginRoute {
  * The server side of a plugin, empty. A plugin package's `server.browser.ts` (the `browser` condition of its `exports`) re-exports this as the default, so the
  * browser bundle that reads the site config gets no server code: `export { emptyServerPlugin as default } from "@monti-cms/core";`.
  */
-export const emptyServerPlugin: CmsServerPlugin = {};
+export const emptyServerPlugin: ServerPlugin = {};
 
-export interface CmsServerPlugin {
+export interface ServerPlugin {
 	/**
 	 * Looks up paths missing from the core routes in this route table. A route handler gets the instance it is served by in its context
 	 * (`adminRoute(async ({ cms }) => ...)`), so a plugin reads the stores, its storage (`cms.storage(name)`) and its secrets (`cms.secrets(name)`) from `cms` and keeps no global state for them.
@@ -200,17 +200,17 @@ export function definePlugin<
 	const Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
 	const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>,
 >(
-	plugin: Omit<CmsPlugin<Name, Options, Blocks>, "options"> & {
+	plugin: Omit<Plugin<Name, Options, Blocks>, "options"> & {
 		/** Config values both sides read. Optional: a plugin without any (a hook-only plugin) has `{}`. */
 		readonly options?: Options;
 		readonly contributes?: Contributes;
 	},
-): CmsPlugin<Name, Options, Blocks> & { readonly contributes?: Contributes } {
+): Plugin<Name, Options, Blocks> & { readonly contributes?: Contributes } {
 	if (!/^[a-z][a-z0-9-]*$/.test(plugin.name)) throw new Error(`cms plugin: invalid name "${plugin.name}"`);
 	return { ...plugin, options: plugin.options ?? ({} as Options) };
 }
 
 /** The type of a plugin picked by name from the site config's plugin list. */
 export type PluginNamed<Plugins, Name extends string> = Plugins extends readonly (infer P)[]
-	? Extract<P, CmsPlugin<Name, unknown>>
+	? Extract<P, Plugin<Name, unknown>>
 	: never;

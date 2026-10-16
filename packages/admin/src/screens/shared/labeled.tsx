@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils/cn";
-import { FieldDescription, FieldLabel, Field as UiField } from "../../ui/field";
+import { FormFieldDescription, FormFieldLabel, FormField as UiField } from "../../ui/field";
 
 /** How wide the control of a field is: short values and choices stay narrow, text takes more, a list or a row of controls takes the whole width. */
 export const CONTROL_WIDTH = { narrow: "max-w-sm", normal: "max-w-xl", wide: "max-w-2xl", full: "" } as const;
@@ -28,12 +28,12 @@ export function Labeled({
 }) {
 	return (
 		<UiField className={cn("gap-2", className)}>
-			<FieldLabel htmlFor={htmlFor} className="font-medium text-sm">
+			<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
 				{label}
-			</FieldLabel>
-			{description && <FieldDescription className={HELP}>{description}</FieldDescription>}
+			</FormFieldLabel>
+			{description && <FormFieldDescription className={HELP}>{description}</FormFieldDescription>}
 			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
-			{hint && <FieldDescription className={HELP}>{hint}</FieldDescription>}
+			{hint && <FormFieldDescription className={HELP}>{hint}</FormFieldDescription>}
 		</UiField>
 	);
 }

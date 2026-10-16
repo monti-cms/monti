@@ -1,4 +1,4 @@
-import { CmsAdminComponentsProvider, useCmsAdminComponents } from "@monti-cms/admin";
+import { AdminComponentsProvider, useAdminComponents } from "@monti-cms/admin";
 import { defineCollection, defineSite, fields, translate } from "@monti-cms/core";
 import { render, screen, waitFor } from "@testing-library/react";
 import { type ComponentType, type ReactNode, useEffect, useState } from "react";
@@ -82,7 +82,7 @@ describe("one plugin per block", () => {
 
 /** Loads the registered fence preview and shows its name (component name). */
 function LoadedPreview({ lang }: { lang: string }) {
-	const load = useCmsAdminComponents().fencePreviews?.[lang];
+	const load = useAdminComponents().fencePreviews?.[lang];
 	const [component, setComponent] = useState<ComponentType<{ source: string }> | null>(null);
 	useEffect(() => {
 		void load?.().then((loaded) => setComponent(() => loaded));
@@ -109,9 +109,9 @@ describe("editor preview", () => {
 
 	it("a preview the site registers under the same name (inner provider) wins", async () => {
 		const Site = ({ children }: { children: ReactNode }) => (
-			<CmsAdminComponentsProvider components={{ fencePreviews: { chart: async () => SitePreview } }}>
+			<AdminComponentsProvider components={{ fencePreviews: { chart: async () => SitePreview } }}>
 				{children}
-			</CmsAdminComponentsProvider>
+			</AdminComponentsProvider>
 		);
 		render(
 			<ChartProvider>

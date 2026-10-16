@@ -1,6 +1,6 @@
 "use client";
 
-import { type BrowserFormat, type SourcePanelProps, useFormat } from "@monti-cms/admin";
+import { type BrowserFormat, SOURCE_ERROR_ID, type SourcePanelProps, useFormat } from "@monti-cms/admin";
 import { useLinkPaths } from "@monti-cms/admin/hooks";
 import {
 	assignBlockIds,
@@ -16,9 +16,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createMdxBrowserFormat } from "./format";
 import { MdxSourceEditor } from "./mdx-source-editor";
 import { mdxSourceMessages } from "./messages";
-
-/** Id of the element a screen puts the findings about the text in. The panel's input refers to it as its description. */
-export const SOURCE_ERROR_ID = "cms-source-error";
 
 /** The 1-based line of the text where a top-level block of `doc` starts, or `null` when no block has this id (the text is that of `doc`). */
 export function lineOfBlock(doc: StoredDocument, blockId: string, format: BrowserFormat): number | null {

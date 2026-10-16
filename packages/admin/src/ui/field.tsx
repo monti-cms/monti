@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 import { Label } from "./label";
 import { Separator } from "./separator";
 
-function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
+function FormFieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 	return (
 		<fieldset
 			data-slot="field-set"
@@ -19,7 +19,7 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 	);
 }
 
-function FieldLegend({
+function FormFieldLegend({
 	className,
 	variant = "legend",
 	...props
@@ -34,7 +34,7 @@ function FieldLegend({
 	);
 }
 
-function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
+function FormFieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="field-group"
@@ -62,7 +62,7 @@ const fieldVariants = cva("group/field flex w-full gap-3 data-[invalid=true]:tex
 	},
 });
 
-function Field({
+function FormField({
 	className,
 	orientation = "vertical",
 	...props
@@ -78,7 +78,7 @@ function Field({
 	);
 }
 
-function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
+function FormFieldContent({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="field-content"
@@ -88,7 +88,7 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
+function FormFieldLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
 	return (
 		<Label
 			data-slot="field-label"
@@ -102,7 +102,7 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
 	);
 }
 
-function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
+function FormFieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="field-label"
@@ -115,7 +115,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
+function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">) {
 	return (
 		<p
 			data-slot="field-description"
@@ -130,7 +130,7 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
 	);
 }
 
-function FieldSeparator({
+function FormFieldSeparator({
 	children,
 	className,
 	...props
@@ -157,7 +157,7 @@ function FieldSeparator({
 	);
 }
 
-function FieldError({
+function FormFieldError({
 	className,
 	children,
 	errors,
@@ -204,14 +204,14 @@ function FieldError({
 }
 
 export {
-	Field,
-	FieldLabel,
-	FieldDescription,
-	FieldError,
-	FieldGroup,
-	FieldLegend,
-	FieldSeparator,
-	FieldSet,
-	FieldContent,
-	FieldTitle,
+	FormField,
+	FormFieldLabel,
+	FormFieldDescription,
+	FormFieldError,
+	FormFieldGroup,
+	FormFieldLegend,
+	FormFieldSeparator,
+	FormFieldSet,
+	FormFieldContent,
+	FormFieldTitle,
 };

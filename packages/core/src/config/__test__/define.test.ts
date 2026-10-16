@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, defineCollection, definePlugin, defineSite, fields, type Issue } from "../..";
+import { ConfigError, type ConfigIssue, defineCollection, definePlugin, defineSite, fields } from "../..";
 import { createSite } from "../../site";
 
 const title = fields.text({ label: "Title" });
@@ -8,7 +8,7 @@ const topic = defineCollection({ label: "Topic", kind: "item", fields: { title, 
 const locales = [{ code: "en", name: "English" }];
 
 /** The issues a config is rejected with (none when it is accepted). */
-const issuesOf = (run: () => unknown): Issue[] => {
+const issuesOf = (run: () => unknown): ConfigIssue[] => {
 	try {
 		run();
 	} catch (error) {
@@ -603,7 +603,7 @@ describe("defineSite", () => {
 		const watcher = definePlugin({
 			name: "watcher",
 			options: {},
-			validate: (view) => {
+			checkConfig: (view) => {
 				seen.push(
 					view.defaultLocale,
 					view.plugins.map((plugin) => plugin.name),

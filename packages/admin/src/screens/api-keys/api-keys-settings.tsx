@@ -13,7 +13,7 @@ import { Panel } from "../../ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import { type MenuAction, MoreActionsButton } from "../shared/action-menu";
@@ -291,7 +291,7 @@ function SlotDialog({ slot, onClose }: { slot: ApiKeySlotView; onClose: () => vo
 						<DialogDescription>{t("slot.dialog.description")}</DialogDescription>
 					</DialogHeader>
 					<ApiKeyField value={current} onChange={setChoice} baseName={slot.service} />
-					{error && <FieldError>{error}</FieldError>}
+					{error && <FormFieldError>{error}</FormFieldError>}
 					<DialogFormFooter
 						onCancel={onClose}
 						busy={saving}
@@ -392,7 +392,7 @@ function KeyDialog({
 								aria-invalid={nameTaken ? true : undefined}
 								onChange={(event) => setName(event.target.value)}
 							/>
-							{nameTaken && <FieldError className="text-xs">{t("field.nameTaken")}</FieldError>}
+							{nameTaken && <FormFieldError className="text-xs">{t("field.nameTaken")}</FormFieldError>}
 						</Labeled>
 					)}
 					{needsValue && (
@@ -408,7 +408,7 @@ function KeyDialog({
 							/>
 						</Labeled>
 					)}
-					{error && <FieldError>{error}</FieldError>}
+					{error && <FormFieldError>{error}</FormFieldError>}
 					<DialogFormFooter
 						onCancel={onClose}
 						busy={saving}

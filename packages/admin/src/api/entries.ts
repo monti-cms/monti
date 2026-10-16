@@ -1,11 +1,11 @@
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { EntryStatus, IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/site";
-import { type BulkOp, cmsApiUrl, type Site } from "@monti-cms/core/site";
+import { adminApiUrl, type BulkOp, type Site } from "@monti-cms/core/site";
 import { commonMessages } from "../lib/common.messages";
 import { bulkBarMessages } from "../screens/entries/bulk-bar.messages";
 import type { EntryData } from "../screens/entries/entry-form";
 import { entriesMessages } from "../screens/entries/messages";
-import { cmsFetch } from "./client";
+import { adminFetch } from "./client";
 import type { CmsIssue } from "./error-message";
 
 /** One page of the list API response. */
@@ -52,10 +52,10 @@ export interface EntryWriteResult {
 	readonly warnings: readonly CmsIssue[];
 }
 
-const entryUrl = (id: string) => cmsApiUrl(`/v1/entries/${encodeURIComponent(id)}`);
+const entryUrl = (id: string) => adminApiUrl(`/v1/entries/${encodeURIComponent(id)}`);
 
 export const getEntry = <T = EntryData>(site: Site, id: string, signal?: AbortSignal, fallback?: string) =>
-	cmsFetch<T>(site, entryUrl(id), { signal, fallback });
+	adminFetch<T>(site, entryUrl(id), { signal, fallback });
 
 /** `GET /v1/entries?<query>` (the list screen, taxonomy options, counts, the editor's internal-link search). */
 export const listEntries = <T = EntriesPage>(
@@ -63,11 +63,11 @@ export const listEntries = <T = EntriesPage>(
 	query: string | URLSearchParams,
 	signal?: AbortSignal,
 	fallback?: string,
-) => cmsFetch<T>(site, cmsApiUrl(`/v1/entries?${query.toString()}`), { signal, fallback });
+) => adminFetch<T>(site, adminApiUrl(`/v1/entries?${query.toString()}`), { signal, fallback });
 
 /** `GET /v1/entries/search?<query>` (relation pickers: title search, or lookup by `id`). */
 export const searchEntries = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
-	cmsFetch<EntrySearchResponse>(site, cmsApiUrl(`/v1/entries/search?${query.toString()}`), { signal });
+	adminFetch<EntrySearchResponse>(site, adminApiUrl(`/v1/entries/search?${query.toString()}`), { signal });
 
 /** `POST /v1/entries` */
 export const createEntry = <T = EntryWriteResult>(
@@ -81,7 +81,7 @@ export const createEntry = <T = EntryWriteResult>(
 		translation?: unknown;
 	},
 	fallback?: string,
-) => cmsFetch<T>(site, cmsApiUrl("/v1/entries"), { method: "POST", json: input, fallback });
+) => adminFetch<T>(site, adminApiUrl("/v1/entries"), { method: "POST", json: input, fallback });
 
 /** `PATCH /v1/entries/:id` */
 export const updateEntry = <T = EntryWriteResult>(
@@ -95,7 +95,7 @@ export const updateEntry = <T = EntryWriteResult>(
 		translation?: unknown;
 	},
 	fallback?: string,
-) => cmsFetch<T>(site, entryUrl(id), { method: "PATCH", json: input, fallback });
+) => adminFetch<T>(site, entryUrl(id), { method: "PATCH", json: input, fallback });
 
 /** `POST /v1/entries/:id/publish` */
 export const publishEntry = (
@@ -103,7 +103,7 @@ export const publishEntry = (
 	id: string,
 	input: { expectedVersion: number; resetPublishedAt?: boolean },
 	fallback?: string,
-) => cmsFetch<EntryWriteResult>(site, `${entryUrl(id)}/publish`, { method: "POST", json: input, fallback });
+) => adminFetch<EntryWriteResult>(site, `${entryUrl(id)}/publish`, { method: "POST", json: input, fallback });
 
 /** `POST /v1/entries/:id/{archive,unarchive,trash,restore}` */
 export const changeEntryStatus = async (
@@ -113,12 +113,12 @@ export const changeEntryStatus = async (
 	input: { expectedVersion: number },
 	fallback?: string,
 ): Promise<void> => {
-	await cmsFetch(site, `${entryUrl(id)}/${action}`, { method: "POST", json: input, fallback });
+	await adminFetch(site, `${entryUrl(id)}/${action}`, { method: "POST", json: input, fallback });
 };
 
 /** `POST /v1/entries/:id/duplicate` */
 export const duplicateEntry = (site: Site, id: string, input: { title: string }, fallback?: string) =>
-	cmsFetch<EntryWriteResult>(site, `${entryUrl(id)}/duplicate`, { method: "POST", json: input, fallback });
+	adminFetch<EntryWriteResult>(site, `${entryUrl(id)}/duplicate`, { method: "POST", json: input, fallback });
 
 /** `DELETE /v1/entries/:id?expectedVersion=n` (permanent). */
 export const removeEntry = async (
@@ -127,7 +127,7 @@ export const removeEntry = async (
 	input: { expectedVersion: number },
 	fallback?: string,
 ): Promise<void> => {
-	await cmsFetch(site, `${entryUrl(id)}?${new URLSearchParams({ expectedVersion: String(input.expectedVersion) })}`, {
+	await adminFetch(site, `${entryUrl(id)}?${new URLSearchParams({ expectedVersion: String(input.expectedVersion) })}`, {
 		method: "DELETE",
 		fallback,
 	});
@@ -138,11 +138,11 @@ export const getEntryRelations = <T = { incomingReferences: IncomingReferenceIte
 	site: Site,
 	id: string,
 	signal?: AbortSignal,
-) => cmsFetch<T>(site, `${entryUrl(id)}/relations`, { signal });
+) => adminFetch<T>(site, `${entryUrl(id)}/relations`, { signal });
 
 /** `POST /v1/entries/:id/translations` (a draft translation of the entry in `locale`). */
 export const createEntryTranslation = (site: Site, id: string, locale: string, fallback?: string) =>
-	cmsFetch<{ entry: { id: string } }>(site, `${entryUrl(id)}/translations`, {
+	adminFetch<{ entry: { id: string } }>(site, `${entryUrl(id)}/translations`, {
 		method: "POST",
 		json: { locale },
 		fallback,
@@ -166,7 +166,7 @@ export async function bulkEntries(
 	items: BulkSelection[],
 	params: BulkParams = {},
 ): Promise<BulkItemResult[]> {
-	const data = await cmsFetch<{ results: BulkItemResult[] }>(site, cmsApiUrl("/v1/bulk"), {
+	const data = await adminFetch<{ results: BulkItemResult[] }>(site, adminApiUrl("/v1/bulk"), {
 		method: "POST",
 		json: { op, items: items.map(({ id, expectedVersion }) => ({ id, expectedVersion })), ...params },
 		fallback: site.createTranslator(bulkBarMessages)("requestFailed"),
@@ -175,7 +175,7 @@ export async function bulkEntries(
 }
 
 /**
- * The server calls the entry editor makes. The default is {@link cmsEntryClient} (the admin API). A test or another transport passes its own to
+ * The server calls the entry editor makes. The default is {@link adminEntryClient} (the admin API). A test or another transport passes its own to
  * `useEntryEditor({ client })`. Methods reject with `CmsApiError` for an error response and with a `TypeError` when the network is down;
  * the editor turns both into an `EditorError`.
  *
@@ -198,7 +198,7 @@ export interface EntryEditorClient {
  *
  * @experimental
  */
-export const cmsEntryClient = (site: Site): EntryEditorClient => {
+export const adminEntryClient = (site: Site): EntryEditorClient => {
 	const t = site.createTranslator(entriesMessages);
 	const saveFailed = site.createTranslator(commonMessages)("saveFailed");
 	return {

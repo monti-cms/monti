@@ -4,7 +4,7 @@ import type { StoredDocument } from "../doc/stored-document";
 import type { Collection, Issue, PreparedSnapshot } from "./types";
 
 /**
- * Write hooks. The server config (`hooks` of `cms.server.ts`) and plugins (`CmsServerPlugin.hooks`) register them with the same shape.
+ * Write hooks. The server config (`hooks` of `cms.server.ts`) and plugins (`ServerPlugin.hooks`) register them with the same shape.
  * Every content write runs the same stages (`write-pipeline.ts`):
  *
  * 1. build the input (from the request, or from the stored draft)

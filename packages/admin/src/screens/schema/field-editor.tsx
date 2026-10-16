@@ -3,7 +3,7 @@
 import { fieldTraits, OPTION_VALUE_PATTERN, useTranslator } from "@monti-cms/core/site";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { useCmsAdminComponents } from "../../admin-components";
+import { useAdminComponents } from "../../admin-components";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { Badge } from "../../ui/badge";
@@ -426,7 +426,7 @@ export function FieldEditor({
 	const isTitle = !place.branch && titleFieldName(editing.collection) === name;
 	const isSlug = !place.branch && (kind === "slug" || name === "slug");
 	const isFixed = isTitle || isSlug;
-	const { fieldInputs } = useCmsAdminComponents();
+	const { fieldInputs } = useAdminComponents();
 	const hasPluginInputs = Object.keys(fieldInputs ?? {}).length > 0;
 	const hasCustomInput = typeof field.input === "string" && field.input.length > 0;
 	const blocked = removeBlock(editing.collection, place, name);

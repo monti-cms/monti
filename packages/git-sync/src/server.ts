@@ -1,4 +1,4 @@
-import type { CmsServerPlugin } from "@monti-cms/core";
+import type { ServerPlugin } from "@monti-cms/core";
 import type { Cms } from "@monti-cms/core/server";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
@@ -9,7 +9,7 @@ import * as routes from "./routes";
 import { syncContextFor } from "./sync";
 
 /** Server side of the git-sync plugin. Loaded by the core API handler, the event outbox and the `monti` commands. Not included in the browser bundle. */
-const gitSyncServer: CmsServerPlugin = {
+const gitSyncServer: ServerPlugin = {
 	routes: [
 		{ pattern: "v1/git-sync/status", module: routes.status },
 		{ pattern: "v1/git-sync/pull", module: routes.pull },

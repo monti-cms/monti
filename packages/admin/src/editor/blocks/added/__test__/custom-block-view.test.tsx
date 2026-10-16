@@ -5,7 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../../core/test/site";
-import { CmsAdminComponentsProvider } from "../../../../admin-components";
+import { AdminComponentsProvider } from "../../../../admin-components";
 import { chooseSelectOption } from "../../../../test/base-ui";
 import { renderWithSite } from "../../../../test/site";
 import { para, storedDoc } from "../../../../test/stored-doc";
@@ -83,9 +83,7 @@ describe("custom block NodeView", () => {
 
 	it("renders with the edit view registered by the site in blockViews", async () => {
 		const editor = await mount(NOTICE, (node) => (
-			<CmsAdminComponentsProvider components={{ blockViews: { notice: NoticeView } }}>
-				{node}
-			</CmsAdminComponentsProvider>
+			<AdminComponentsProvider components={{ blockViews: { notice: NoticeView } }}>{node}</AdminComponentsProvider>
 		));
 		fireEvent.click(screen.getByRole("button", { name: "단계: info" }));
 		await waitFor(() => expect(savedNotice(editor)).toMatchObject({ type: "notice", attrs: { level: "warn" } }));

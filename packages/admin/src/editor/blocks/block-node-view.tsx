@@ -2,7 +2,7 @@
 
 import { useSite } from "@monti-cms/core/site";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { useCmsAdminComponents } from "../../admin-components";
+import { useAdminComponents } from "../../admin-components";
 import { FileBlockView } from "../file-node-view";
 import { ImageBlockView } from "../image-node-view";
 import { DefaultBlockView, FenceBlockView } from "./added/view";
@@ -11,7 +11,7 @@ import { blockOfNode } from "./node-block";
 import { BlockEditorProvider, type BlockView } from "./use-block-editor";
 
 /**
- * Default edit views of the core blocks, keyed by block name. They sit under the site's `blockViews` (`CmsAdminComponents`), so registering
+ * Default edit views of the core blocks, keyed by block name. They sit under the site's `blockViews` (`AdminComponents`), so registering
  * a view with one of these names replaces it. Exported so a replacement can render the default view inside its own frame.
  */
 export const DEFAULT_BLOCK_VIEWS: Readonly<Record<string, BlockView>> = {
@@ -28,7 +28,7 @@ export const DEFAULT_BLOCK_VIEWS: Readonly<Record<string, BlockView>> = {
 export function BlockNodeView(props: NodeViewProps) {
 	const site = useSite();
 	const definition = blockOfNode(site, props.node.type.name);
-	const { blockViews } = useCmsAdminComponents();
+	const { blockViews } = useAdminComponents();
 	if (!definition) return <NodeViewWrapper />;
 	const View =
 		blockViews?.[definition.name] ??

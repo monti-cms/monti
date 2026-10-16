@@ -7,7 +7,6 @@
 
 export type { ApiKeys } from "./api-keys/api-keys";
 
-export type { Issue } from "./core/types";
 export { type ExportBodyParams, exportBodyText } from "./format/export-body";
 export {
 	CmsError,

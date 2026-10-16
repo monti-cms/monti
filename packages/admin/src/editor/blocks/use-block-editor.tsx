@@ -176,7 +176,7 @@ export interface BlockEditor<V extends BlockValues = BlockValues> {
 }
 
 /**
- * The edit view of a block. Registered by block name in `blockViews` (`CmsAdminComponents`) for every block, including the core image, file
+ * The edit view of a block. Registered by block name in `blockViews` (`AdminComponents`) for every block, including the core image, file
  * and math blocks. It takes no props: it reads its block with {@link useBlockEditor} and draws the nested body with {@link Content}.
  *
  * @experimental

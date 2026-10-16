@@ -13,7 +13,7 @@ import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -448,7 +448,7 @@ export function BulkBar({
 				)}
 			</div>
 
-			{error && <FieldError className="pt-2">{error}</FieldError>}
+			{error && <FormFieldError className="pt-2">{error}</FormFieldError>}
 			{failures.length > 0 && (
 				<ul className="flex flex-col gap-1 pt-2 text-cms-destructive text-xs">
 					{failures.map((failure) => (

@@ -1,12 +1,12 @@
 import { CmsError } from "../store/errors";
-import type { EntryMetadata, JsonObject, JsonValue } from "../store/types";
+import type { EntryMetadata, JsonObject, MutableJsonValue } from "../store/types";
 
 /**
  * Metadata as a store keeps it: plain JSON with object keys in sorted order, so equal values compare equal and hash the same.
  * Anything JSON cannot hold (`NaN`, class instances, functions) is rejected with `invalid_input`.
  */
 
-function normalizeJsonValue(val: unknown): JsonValue {
+function normalizeJsonValue(val: unknown): MutableJsonValue {
 	if (val === null) return null;
 	if (typeof val === "string" || typeof val === "boolean") return val;
 	if (typeof val === "number") {

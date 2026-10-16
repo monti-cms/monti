@@ -4,7 +4,7 @@
  */
 
 /** One problem in a config, with the path of the value. */
-export interface Issue {
+export interface ConfigIssue {
 	/** Path from the root, e.g. `collections.post.fields.title.role` or `locales[1].code`. Empty for the root. */
 	readonly path: string;
 	/** What is wrong with the value at `path`, and the way forward when there is one. Starts lower-case and has no final period. */
@@ -15,10 +15,10 @@ export interface Issue {
 
 /** A config that is not valid. `message` lists every problem with its path. */
 export class ConfigError extends Error {
-	readonly issues: readonly Issue[];
+	readonly issues: readonly ConfigIssue[];
 	/** What the issues are about, as the message names it (`monti.config.ts`, `monti.schema.ts`). */
 	readonly source: string;
-	constructor(source: string, issues: readonly Issue[]) {
+	constructor(source: string, issues: readonly ConfigIssue[]) {
 		super(
 			`${source} is not valid:\n${issues.map((issue) => `  ${issue.path || "(root)"}: ${issue.message}`).join("\n")}\nFix: correct the lines above; \`monti doctor\` checks the files again.`,
 		);
@@ -38,7 +38,7 @@ export const configError = (path: string, code: string, message: string): Config
 	new ConfigError(CONFIG_SOURCE, [{ path, code, message }]);
 
 /** Throws a {@link ConfigError} when there are issues. */
-export function throwIssues(source: string, issues: readonly Issue[]): void {
+export function throwIssues(source: string, issues: readonly ConfigIssue[]): void {
 	if (issues.length > 0) throw new ConfigError(source, issues);
 }
 
@@ -56,13 +56,13 @@ export function pathOf(base: string, ...segments: readonly (string | number | sy
 
 /** Collects issues while a check walks a value. */
 export class IssueList {
-	readonly issues: Issue[] = [];
+	readonly issues: ConfigIssue[] = [];
 	add(path: string, code: string, message: string): void {
 		this.issues.push({ path, code, message });
 	}
 	/** Adds issues another check found (they keep their paths). */
 	// biome-ignore lint/suspicious/noConfusingVoidType: takes what a check hook returns, and a hook may return nothing
-	addAll(issues: readonly Issue[] | void): void {
+	addAll(issues: readonly ConfigIssue[] | void): void {
 		if (issues) this.issues.push(...issues);
 	}
 }

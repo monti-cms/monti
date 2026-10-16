@@ -1,8 +1,8 @@
 "use client";
 
-import { type CmsAdminComponents, CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
 import { remoteTextChecker } from "@monti-cms/core";
-import { cmsApiUrl, useSite } from "@monti-cms/core/site";
+import { adminApiUrl, useSite } from "@monti-cms/core/site";
 import { type ReactNode, useMemo } from "react";
 import { readBareunOptions } from "./config";
 import { BAREUN_CHECKER_ID, BAREUN_ROUTE } from "./options";
@@ -13,14 +13,14 @@ import { BAREUN_CHECKER_ID, BAREUN_ROUTE } from "./options";
  */
 export function BareunProvider({ children }: { children: ReactNode }) {
 	const site = useSite();
-	const components = useMemo<CmsAdminComponents>(() => {
+	const components = useMemo<AdminComponents>(() => {
 		const options = readBareunOptions(site);
 		return {
 			textCheckers: [
 				remoteTextChecker({
 					id: BAREUN_CHECKER_ID,
 					label: options.label,
-					url: cmsApiUrl(`/${BAREUN_ROUTE}`),
+					url: adminApiUrl(`/${BAREUN_ROUTE}`),
 					locales: ["ko"],
 					auto: options.auto,
 					limits: options.limits,
@@ -28,5 +28,5 @@ export function BareunProvider({ children }: { children: ReactNode }) {
 			],
 		};
 	}, [site]);
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
+	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
 }

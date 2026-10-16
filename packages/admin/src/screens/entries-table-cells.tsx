@@ -3,7 +3,7 @@
 import type { Folder, ListEntriesItem, ListTranslationMember } from "@monti-cms/core/site";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { Folder as FolderIcon } from "lucide-react";
-import { useCmsAdminComponents } from "../admin-components";
+import { useAdminComponents } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
 import { cn } from "../lib/utils/cn";
 import { AdminLink as Link } from "../router";
@@ -209,7 +209,7 @@ function DefaultEntryCell({
 /** One cell of the entries table. Cells registered by admin extensions (`listCells`) take precedence over default cells. */
 export function EntryCell(props: EntryCellProps) {
 	const site = useSite();
-	const { listCells } = useCmsAdminComponents();
+	const { listCells } = useAdminComponents();
 	const { collection, column, item } = props;
 	const Custom = customListCell(site, listCells, collection, column);
 	if (!Custom) return <DefaultEntryCell {...props} />;

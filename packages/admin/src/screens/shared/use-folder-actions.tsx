@@ -21,7 +21,7 @@ import {
 import { Button } from "../../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
-import { Field, FieldError, FieldLabel } from "../../ui/field";
+import { FormField, FormFieldError, FormFieldLabel } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { Skeleton } from "../../ui/skeleton";
 import type { MenuAction } from "./action-menu";
@@ -288,10 +288,10 @@ export function useFolderActions({
 						}}
 						className="space-y-4"
 					>
-						<Field data-invalid={Boolean(shownError) || undefined}>
-							<FieldLabel htmlFor="folder-name" className="sr-only">
+						<FormField data-invalid={Boolean(shownError) || undefined}>
+							<FormFieldLabel htmlFor="folder-name" className="sr-only">
 								{t("folder.nameLabel")}
-							</FieldLabel>
+							</FormFieldLabel>
 							<Input
 								id="folder-name"
 								autoFocus
@@ -306,8 +306,8 @@ export function useFolderActions({
 									}
 								}}
 							/>
-							{shownError && <FieldError>{shownError}</FieldError>}
-						</Field>
+							{shownError && <FormFieldError>{shownError}</FormFieldError>}
+						</FormField>
 						<DialogFormFooter
 							onCancel={() => setNameDialog(null)}
 							cancelLabel={tc("cancel")}
@@ -343,7 +343,7 @@ export function useFolderActions({
 							</div>
 						)
 					)}
-					{shownError && <FieldError>{shownError}</FieldError>}
+					{shownError && <FormFieldError>{shownError}</FormFieldError>}
 					<AlertDialogFooter>
 						<AlertDialogCancel type="button">{tc("cancel")}</AlertDialogCancel>
 						<Button

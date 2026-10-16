@@ -8,6 +8,6 @@ import { MdxAdminProvider } from "./provider";
 export { type EditorMode, EditorToggle } from "./editor-toggle";
 export { createMdxBrowserFormat } from "./format";
 export { MdxAdminProvider } from "./provider";
-export { lineOfBlock, MdxSourcePanel, mdxSourceLabel, SOURCE_ERROR_ID } from "./source-panel";
+export { lineOfBlock, MdxSourcePanel, mdxSourceLabel } from "./source-panel";
 
 export default defineAdminPlugin({ Provider: MdxAdminProvider });

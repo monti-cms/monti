@@ -1,4 +1,4 @@
-import type { CmsConfig, CmsPlugin, CollectionsConfig, PluginNamed } from "@monti-cms/core";
+import type { CmsConfig, CollectionsConfig, Plugin, PluginNamed } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
 import type {
 	AiActionDefinition,
@@ -20,7 +20,7 @@ import { resolveAiActions } from "./resolve";
  */
 
 type AiPluginOptions<Config extends CmsConfig> = Config extends { readonly plugins?: infer P }
-	? PluginNamed<P, typeof AI_PLUGIN_NAME> extends CmsPlugin<string, infer O>
+	? PluginNamed<P, typeof AI_PLUGIN_NAME> extends Plugin<string, infer O>
 		? O
 		: never
 	: never;

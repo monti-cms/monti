@@ -4,16 +4,16 @@ import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
 import type { EventSubscriber } from "../services/events";
 import type { HookSource } from "../services/hooks";
-import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define";
+import type { OwnedPluginRoute, Plugin, ServerPlugin } from "./define";
 import type { PluginStorage } from "./storage";
 
 /** The server side of one plugin: its inline object, or the default export of its loader. `undefined` for a plugin without one. */
-export async function serverSideOf(plugin: Pick<CmsPlugin, "server">): Promise<CmsServerPlugin | undefined> {
+export async function serverSideOf(plugin: Pick<Plugin, "server">): Promise<ServerPlugin | undefined> {
 	return typeof plugin.server === "function" ? (await plugin.server()).default : plugin.server;
 }
 
 /** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
-export type LoadedServerPlugin = CmsServerPlugin & { readonly name: string };
+export type LoadedServerPlugin = ServerPlugin & { readonly name: string };
 
 /**
  * The server side of one site's plugins, owned by one CMS instance (`createCms`): the loaded server modules, the route table, feature flags,
@@ -53,14 +53,14 @@ export interface ServerPlugins {
 
 /** `cms` is the instance that owns these plugins. It is passed to the plugin's `migrate` and `features`. */
 export function createServerPlugins(
-	plugins: readonly CmsPlugin[],
+	plugins: readonly Plugin[],
 	serverConfig: () => Pick<CmsServerConfig, "hooks">,
 	cms: () => Cms,
 ): ServerPlugins {
 	let loaded: Promise<readonly LoadedServerPlugin[]> | undefined;
 
 	/** The server side of one plugin: its inline object, or the default export of its loader. */
-	const loadOne = async (plugin: CmsPlugin): Promise<LoadedServerPlugin> => {
+	const loadOne = async (plugin: Plugin): Promise<LoadedServerPlugin> => {
 		return { name: plugin.name, ...(await serverSideOf(plugin)) };
 	};
 

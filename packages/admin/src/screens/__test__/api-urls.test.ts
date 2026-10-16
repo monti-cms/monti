@@ -22,7 +22,7 @@ const sources = (dir: string): string[] =>
 	});
 
 describe("admin API address (basePath)", () => {
-	it("admin and extension screen code builds addresses with cmsApiUrl() instead of using /api/monti directly", () => {
+	it("admin and extension screen code builds addresses with adminApiUrl() instead of using /api/monti directly", () => {
 		const offenders = readdirSync(PACKAGES)
 			.flatMap((name) => sources(path.join(PACKAGES, name, "src")))
 			.filter((file) => !ALLOWED.some((pattern) => pattern.test(file)))

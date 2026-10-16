@@ -1,4 +1,4 @@
-import { definePlugin, type Issue, IssueList, pathOf } from "@monti-cms/core";
+import { type ConfigIssue, definePlugin, IssueList, pathOf } from "@monti-cms/core";
 import { MDX_PLUGIN_NAME } from "./name";
 import type { SyntaxExtension } from "./syntax/types";
 
@@ -15,7 +15,7 @@ export interface MdxPluginOptions {
 }
 
 /** The problems of the options: every extension has a name, and no name is listed twice. */
-export const checkMdxOptions = (options: MdxPluginOptions | undefined): Issue[] => {
+export const checkMdxOptions = (options: MdxPluginOptions | undefined): ConfigIssue[] => {
 	const list = new IssueList();
 	const names = (options?.syntax ?? []).map((extension) => extension.name);
 	for (const [index, name] of names.entries()) {
@@ -40,7 +40,7 @@ export const mdx = (options: MdxPluginOptions = {}) => {
 	return definePlugin({
 		name: MDX_PLUGIN_NAME,
 		options,
-		validate: () => checkMdxOptions(options),
+		checkConfig: () => checkMdxOptions(options),
 		// The format is read on the server only: the parser stays out of the browser bundle (`@monti-cms/mdx/server` is empty there).
 		server: {
 			formats: async () => (await import("@monti-cms/mdx/server")).createServerMdxFormat(options),

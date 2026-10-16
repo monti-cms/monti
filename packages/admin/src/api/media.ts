@@ -1,5 +1,5 @@
-import { cmsApiUrl, type Site } from "@monti-cms/core/site";
-import { cmsFetch } from "./client";
+import { adminApiUrl, type Site } from "@monti-cms/core/site";
+import { adminFetch } from "./client";
 
 /** One item of the media list API. */
 export interface MediaItem {
@@ -74,15 +74,15 @@ export const mediaKeys = {
 	detail: (id: string) => [...mediaKeys.all, "detail", id] as const,
 };
 
-const mediaUrl = (id: string) => cmsApiUrl(`/v1/media/${encodeURIComponent(id)}`);
+const mediaUrl = (id: string) => adminApiUrl(`/v1/media/${encodeURIComponent(id)}`);
 
 /** `GET /v1/media/:id` */
 export const getMedia = (site: Site, id: string, signal?: AbortSignal) =>
-	cmsFetch<MediaInfo>(site, mediaUrl(id), { signal });
+	adminFetch<MediaInfo>(site, mediaUrl(id), { signal });
 
 /** `GET /v1/media?<query>` */
 export const listMedia = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
-	cmsFetch<MediaPage>(site, cmsApiUrl(`/v1/media?${query.toString()}`), { signal });
+	adminFetch<MediaPage>(site, adminApiUrl(`/v1/media?${query.toString()}`), { signal });
 
 /** `PATCH /v1/media/:id`: renames the file, sets default description, or moves to a folder. */
 export const updateMedia = (
@@ -90,23 +90,26 @@ export const updateMedia = (
 	id: string,
 	patch: { filename?: string; defaultAlt?: string; defaultCaption?: string; folderId?: string | null },
 	fallback?: string,
-) => cmsFetch<void>(site, mediaUrl(id), { method: "PATCH", json: patch, fallback });
+) => adminFetch<void>(site, mediaUrl(id), { method: "PATCH", json: patch, fallback });
 
 /** `DELETE /v1/media/:id` */
 export const deleteMedia = (site: Site, id: string, fallback?: string) =>
-	cmsFetch<void>(site, mediaUrl(id), { method: "DELETE", fallback });
+	adminFetch<void>(site, mediaUrl(id), { method: "DELETE", fallback });
 
 /** `POST /v1/media/cleanup`: removes the files that are stuck deleting. */
 export const cleanupMedia = (site: Site) =>
-	cmsFetch<{ removed: number; failed: string[] }>(site, cmsApiUrl("/v1/media/cleanup"), { method: "POST", json: {} });
+	adminFetch<{ removed: number; failed: string[] }>(site, adminApiUrl("/v1/media/cleanup"), {
+		method: "POST",
+		json: {},
+	});
 
 /** `POST /v1/media/uploads`: asks the server to prepare an upload. */
 export const requestUpload = (site: Site, body: UploadRequest, fallback: string) =>
-	cmsFetch<UploadPlan>(site, cmsApiUrl("/v1/media/uploads"), { method: "POST", json: body, fallback });
+	adminFetch<UploadPlan>(site, adminApiUrl("/v1/media/uploads"), { method: "POST", json: body, fallback });
 
 /** `POST /v1/media/:id/complete`: the bytes are in storage, the server inspects them and marks the media ready. */
 export const completeUpload = (site: Site, id: string, fallback: string) =>
-	cmsFetch<UploadCompletion>(site, cmsApiUrl(`/v1/media/${encodeURIComponent(id)}/complete`), {
+	adminFetch<UploadCompletion>(site, adminApiUrl(`/v1/media/${encodeURIComponent(id)}/complete`), {
 		method: "POST",
 		json: {},
 		fallback,

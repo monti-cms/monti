@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { testConfig, testSite } from "../../../test/site";
 import {
+	adminApiUrl,
 	adminHrefWith,
-	cmsApiUrl,
 	cmsBasePath,
 	DEFAULT_ADMIN_PATH,
 	normalizeBasePath,
@@ -35,14 +35,14 @@ describe("sub-path (Next basePath)", () => {
 	it("addresses are unchanged without basePath", () => {
 		vi.stubEnv("NEXT_PUBLIC_CMS_BASE_PATH", "");
 		expect(cmsBasePath()).toBe("");
-		expect(cmsApiUrl("/v1/entries?page=2")).toBe("/api/monti/v1/entries?page=2");
+		expect(adminApiUrl("/v1/entries?page=2")).toBe("/api/monti/v1/entries?page=2");
 		expect(withBasePath("/x")).toBe("/x");
 		expect(testSite.adminUrl("/login")).toBe(testSite.adminHref("/login"));
 	});
 
 	it("basePath prefixes API and browser addresses, while testSite.adminHref for Link is unchanged", () => {
 		vi.stubEnv("NEXT_PUBLIC_CMS_BASE_PATH", "/blog");
-		expect(cmsApiUrl("/v1/entries/e1")).toBe("/blog/api/monti/v1/entries/e1");
+		expect(adminApiUrl("/v1/entries/e1")).toBe("/blog/api/monti/v1/entries/e1");
 		expect(withBasePath("/preview/post/a")).toBe("/blog/preview/post/a");
 		expect(testSite.adminUrl()).toBe(`/blog${testSite.ADMIN_PATH}`);
 		expect(testSite.adminUrl("/login")).toBe(`/blog${testSite.ADMIN_PATH}/login`);
@@ -58,7 +58,7 @@ describe("sub-path (Next basePath)", () => {
 	});
 
 	it("API paths must start with /", () => {
-		expect(() => cmsApiUrl("v1/entries")).toThrow(/must start with/);
+		expect(() => adminApiUrl("v1/entries")).toThrow(/must start with/);
 	});
 });
 

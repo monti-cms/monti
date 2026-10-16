@@ -11,7 +11,7 @@ import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { type SlotRequest, SlotScope } from "../../slots/slots";
 import { Button, buttonVariants } from "../../ui/button";
-import { Field, FieldError, FieldLabel } from "../../ui/field";
+import { FormField, FormFieldError, FormFieldLabel } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import { Input } from "../../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
@@ -250,9 +250,9 @@ export function MediaDetailPanel({
 										void saveName();
 									}}
 								>
-									<Field data-invalid={problem && nameDirty ? true : undefined}>
+									<FormField data-invalid={problem && nameDirty ? true : undefined}>
 										<div className="flex items-center justify-between gap-2">
-											<FieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FieldLabel>
+											<FormFieldLabel htmlFor={nameFieldId}>{t("detail.row.filename")}</FormFieldLabel>
 											{isImage && trigger}
 										</div>
 										<div className="flex items-center gap-1.5">
@@ -284,12 +284,12 @@ export function MediaDetailPanel({
 											</IconButton>
 										</div>
 										{(renameError || (problem && nameDirty)) && (
-											<FieldError id={nameErrorId}>
+											<FormFieldError id={nameErrorId}>
 												{renameError ??
 													(problem === "empty" ? t("detail.filename.empty") : t("detail.filename.invalid"))}
-											</FieldError>
+											</FormFieldError>
 										)}
-									</Field>
+									</FormField>
 									{panel}
 								</form>
 							)}
@@ -356,9 +356,9 @@ export function MediaDetailPanel({
 						>
 							<SlotScope key={`alt-${media.id}`} request={slot("defaultAlt", (alt) => setDraft({ alt }))}>
 								{({ trigger, panel }) => (
-									<Field>
+									<FormField>
 										<div className="flex items-center justify-between gap-2">
-											<FieldLabel htmlFor={altId}>{t("detail.defaultAlt")}</FieldLabel>
+											<FormFieldLabel htmlFor={altId}>{t("detail.defaultAlt")}</FormFieldLabel>
 											{trigger}
 										</div>
 										<Textarea
@@ -370,7 +370,7 @@ export function MediaDetailPanel({
 											className="min-h-14 text-xs md:text-xs"
 										/>
 										{panel}
-									</Field>
+									</FormField>
 								)}
 							</SlotScope>
 							<SlotScope
@@ -378,9 +378,9 @@ export function MediaDetailPanel({
 								request={slot("defaultCaption", (caption) => setDraft({ caption }))}
 							>
 								{({ trigger, panel }) => (
-									<Field>
+									<FormField>
 										<div className="flex items-center justify-between gap-2">
-											<FieldLabel htmlFor={captionId}>{t("detail.defaultCaption")}</FieldLabel>
+											<FormFieldLabel htmlFor={captionId}>{t("detail.defaultCaption")}</FormFieldLabel>
 											{trigger}
 										</div>
 										<Textarea
@@ -392,7 +392,7 @@ export function MediaDetailPanel({
 											className="min-h-14 text-xs md:text-xs"
 										/>
 										{panel}
-									</Field>
+									</FormField>
 								)}
 							</SlotScope>
 							<EditorFooter

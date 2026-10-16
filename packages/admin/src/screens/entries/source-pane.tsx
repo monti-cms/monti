@@ -5,7 +5,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { X } from "lucide-react";
 import { type Ref, useMemo, useState } from "react";
-import { useCmsAdminComponents, useSourceFormat } from "../../admin-components";
+import { useAdminComponents, useSourceFormat } from "../../admin-components";
 import { documentKey } from "../../editor/document-key";
 import { buildEditorExtensions } from "../../editor/extensions";
 import { boxPreviewOf, storedToTiptap } from "../../editor/tiptap-content";
@@ -25,7 +25,7 @@ const PROSE =
 function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
 	const site = useSite();
 	// Render text-decoration extensions (text color etc.) the same as in the editor.
-	const { marks } = useCmsAdminComponents();
+	const { marks } = useAdminComponents();
 	const boxPreview = boxPreviewOf(useSourceFormat());
 	const [extensions] = useState(() => buildEditorExtensions(site, marks));
 	const editor = useEditor({

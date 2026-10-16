@@ -1,4 +1,4 @@
-import { type BlockDefinition, type CmsPlugin, definePlugin } from "@monti-cms/core";
+import { type BlockDefinition, definePlugin, type Plugin } from "@monti-cms/core";
 
 /** What every block plugin gives: its blocks, the admin side that edits them and the render side that draws them. */
 export interface BlockPluginInput<
@@ -12,10 +12,10 @@ export interface BlockPluginInput<
 	readonly options?: Options;
 	readonly blocks: Blocks;
 	/** The admin module (`defineBlockAdmin(...)` as its default export). */
-	readonly admin: NonNullable<CmsPlugin["admin"]>;
+	readonly admin: NonNullable<Plugin["admin"]>;
 	/** The public components of the blocks (`documentComponents`). */
-	readonly render: NonNullable<CmsPlugin["render"]>;
-	readonly validate?: CmsPlugin["validate"];
+	readonly render: NonNullable<Plugin["render"]>;
+	readonly checkConfig?: Plugin["checkConfig"];
 	/** What the block adds to other plugins (the AI actions of a diagram block). */
 	readonly contributes?: Contributes;
 }

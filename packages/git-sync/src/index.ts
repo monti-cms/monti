@@ -34,7 +34,7 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 	definePlugin({
 		name: GIT_SYNC_PLUGIN_NAME,
 		options,
-		validate: (config) => validateGitSyncConfig(options, config),
+		checkConfig: (config) => validateGitSyncConfig(options, config),
 		// With `enabled: false` the plugin registers nothing: no screen, hooks or routes.
 		...(options.enabled === false
 			? {}

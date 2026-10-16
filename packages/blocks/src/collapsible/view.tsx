@@ -2,7 +2,7 @@
 
 import { AttributeInput, BlockSettings, ContainerToolbar } from "@monti-cms/admin/blocks";
 import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
-import { cn, FieldLabel, Switch } from "@monti-cms/admin/kit";
+import { cn, FormFieldLabel, Switch } from "@monti-cms/admin/kit";
 import { useTranslator } from "@monti-cms/core/site";
 import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -83,7 +83,7 @@ export function CollapsibleNodeView() {
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")}>
 					<BlockSettings>
-						<FieldLabel htmlFor={defaultOpenId} className="w-full items-center justify-between font-normal">
+						<FormFieldLabel htmlFor={defaultOpenId} className="w-full items-center justify-between font-normal">
 							<span className="text-cms-muted-foreground">{t("defaultOpen.label")}</span>
 							<Switch
 								id={defaultOpenId}
@@ -91,7 +91,7 @@ export function CollapsibleNodeView() {
 								checked={defaultOpen}
 								onCheckedChange={(checked) => setValue("defaultOpen", checked)}
 							/>
-						</FieldLabel>
+						</FormFieldLabel>
 					</BlockSettings>
 				</ContainerToolbar>
 			) : null}

@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { BacklinkField, RelationField, ValueField } from "@monti-cms/core";
 import type { Collection } from "@monti-cms/core/site";
-import { type SchemaCollection, type Site, useSite, useTranslator } from "@monti-cms/core/site";
+import { type SchemaCollectionName, type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,7 +28,7 @@ import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { moveWithin } from "../../lib/utils/move-within";
 import type { TranslatorFor } from "../../translator";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { IconButton } from "../../ui/icon-button";
 import type { EntryForm, FormValue } from "./entry-form";
 import { entriesMessages } from "./messages";
@@ -102,7 +102,7 @@ function relationOptions(
 /** The failure of a search, under the input like the other relation inputs. */
 function SearchError({ failed }: { failed: boolean }) {
 	const t = useTranslator(entriesMessages);
-	return failed ? <FieldError>{t("entry.loadFailed")}</FieldError> : null;
+	return failed ? <FormFieldError>{t("entry.loadFailed")}</FormFieldError> : null;
 }
 
 /** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
@@ -317,9 +317,9 @@ export type IncomingReference = {
  */
 function useRecordKind(field: BacklinkField, options: readonly { id: string }[]) {
 	const site = useSite();
-	const requirement = site.storedField(field.from as SchemaCollection, field.via)?.when;
+	const requirement = site.storedField(field.from as SchemaCollectionName, field.via)?.when;
 	const discriminant = requirement
-		? site.storedField(field.from as SchemaCollection, requirement.field)?.field
+		? site.storedField(field.from as SchemaCollectionName, requirement.field)?.field
 		: undefined;
 	const defaultValue = discriminant?.kind === "select" ? discriminant.defaultValue : undefined;
 	// Each record's kind is read once (a record that cannot be read counts as the default kind).
@@ -370,7 +370,7 @@ export function BacklinkInput({
 	const tc = useTranslator(commonMessages);
 	// The records come from a server search (published ones, like the old list). A conditional list keeps only the records of one kind, which is
 	// known per record, so it asks for more hits to leave enough after that filter.
-	const conditional = Boolean(site.storedField(field.from as SchemaCollection, field.via)?.when);
+	const conditional = Boolean(site.storedField(field.from as SchemaCollectionName, field.via)?.when);
 	const records = useRelationSearch({
 		collection: field.from,
 		publishedOnly: true,
@@ -552,7 +552,7 @@ export function BacklinkInput({
 						: undefined
 				}
 			/>
-			{(error ?? loadError) && <FieldError>{error ?? loadError}</FieldError>}
+			{(error ?? loadError) && <FormFieldError>{error ?? loadError}</FormFieldError>}
 			<SearchError failed={records.error} />
 			{creator.sheet}
 		</>

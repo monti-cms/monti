@@ -1,4 +1,4 @@
-import { type Issue, IssueList, pathOf } from "@monti-cms/core";
+import { type ConfigIssue, IssueList, pathOf } from "@monti-cms/core";
 /**
  * Text color and text background color (`:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}`).
  * The body stores colors as hex values, not names. Light and dark theme values are paired, and when there is no dark value
@@ -139,7 +139,7 @@ export function paletteOf(
 }
 
 /** The problems of the picker list (`color({ palette })`): hex values and unique `id`s. */
-export function checkTextPalette(palette: readonly PaletteColor[] | undefined): Issue[] {
+export function checkTextPalette(palette: readonly PaletteColor[] | undefined): ConfigIssue[] {
 	const list = new IssueList();
 	const ids = new Set<string>();
 	for (const [index, color] of (palette ?? []).entries()) {

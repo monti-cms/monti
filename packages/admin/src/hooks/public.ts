@@ -6,7 +6,7 @@
  */
 
 export {
-	cmsEntryClient,
+	adminEntryClient,
 	type EntryBodyPayload,
 	type EntryEditorClient,
 	type EntrySaveInput,

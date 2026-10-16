@@ -279,7 +279,7 @@ describe("AI actions contributed by other plugins (`contributes.ai.actions`)", (
 		expect(() => resolveAiActions({}, blogSite([]), [clash])).toThrow(/plugins\.clash.*adds AI action "summary"/);
 		const plugin = ai();
 		expect(() =>
-			plugin.validate?.({
+			plugin.checkConfig?.({
 				collections,
 				locales: testSite.config.locales,
 				defaultLocale: testSite.config.defaultLocale,

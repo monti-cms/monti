@@ -5,7 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useState } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { testSite } from "../../../../../core/test/site";
-import { CmsAdminComponentsProvider } from "../../../admin-components";
+import { AdminComponentsProvider } from "../../../admin-components";
 // A custom block view imports only from the public hooks entry point: no Tiptap, no ProseMirror, no admin internals.
 import { BlockFrame, type BlockView, Content, type EditorResult, useBlockEditor } from "../../../hooks/public";
 import { renderWithSite } from "../../../test/site";
@@ -55,7 +55,7 @@ const mount = async (
 ) => {
 	let editor: Editor | null = null;
 	renderWithSite(
-		<CmsAdminComponentsProvider components={{ blockViews: views }}>
+		<AdminComponentsProvider components={{ blockViews: views }}>
 			<Harness
 				doc={doc}
 				allowance={allowance}
@@ -63,7 +63,7 @@ const mount = async (
 					editor = next;
 				}}
 			/>
-		</CmsAdminComponentsProvider>,
+		</AdminComponentsProvider>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	await waitFor(() => expect(document.querySelector(ready)).not.toBeNull());

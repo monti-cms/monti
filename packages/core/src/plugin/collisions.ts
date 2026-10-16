@@ -1,4 +1,4 @@
-import { CONFIG_SOURCE, type Issue, IssueList, pathOf, throwIssues } from "../config/check/issue";
+import { CONFIG_SOURCE, type ConfigIssue, IssueList, pathOf, throwIssues } from "../config/check/issue";
 
 /**
  * Blocks, at startup, a config where a plugin uses the same path or name as the core or another plugin. Ensures one side is never silently shadowed.
@@ -23,7 +23,7 @@ const trimSlashes = (path: string) => path.replace(/^\/+|\/+$/g, "");
 const showPage = (path: string) => `/${path}`;
 
 /** The plugin names that collide with a core `features` name or a core storage and secrets scope, or with each other. */
-export function checkPluginNames(names: readonly string[]): Issue[] {
+export function checkPluginNames(names: readonly string[]): ConfigIssue[] {
 	const list = new IssueList();
 	for (const [index, name] of names.entries()) {
 		const at = pathOf("plugins", index, "name");
@@ -40,7 +40,7 @@ export function checkPluginNames(names: readonly string[]): Issue[] {
  * The plugin Tools pages (`path` in `nav`, or a key of an admin plugin's `pages`) that are empty or equal another plugin's.
  * Pages live under `<admin path>/tools/`, so they cannot collide with a core screen. The same path within one plugin counts as one page.
  */
-export function checkPluginPages(pages: readonly { readonly plugin: string; readonly path: string }[]): Issue[] {
+export function checkPluginPages(pages: readonly { readonly plugin: string; readonly path: string }[]): ConfigIssue[] {
 	const list = new IssueList();
 	const owners = new Map<string, string>();
 	for (const { plugin, path } of pages) {
@@ -81,7 +81,7 @@ const shape = (pattern: string) =>
 export function checkPluginRoutes(
 	corePatterns: readonly string[],
 	routes: readonly { readonly plugin: string; readonly pattern: string }[],
-): Issue[] {
+): ConfigIssue[] {
 	const list = new IssueList();
 	const core = new Map(corePatterns.map((pattern) => [shape(pattern), pattern]));
 	const owners = new Map<string, { plugin: string; pattern: string }>();

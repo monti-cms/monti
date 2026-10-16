@@ -1,12 +1,12 @@
 import { type CollectionKind, kindDefaults } from "../schema/collection";
-import type { SchemaCollection, SiteSchemas, StoredField } from "../schema/derive";
+import type { SchemaCollectionName, SiteSchemas, StoredField } from "../schema/derive";
 import type { StorageType } from "../schema/fields";
 
 /** The folder scope of the media library. A reserved collection name (`RESERVED_COLLECTION_NAMES`), so it never collides with a collection. */
 export const MEDIA_FOLDER_SCOPE = "media";
 
 /** A collection name (a key of `collections` in the site config). */
-export type Collection = SchemaCollection;
+export type Collection = SchemaCollectionName;
 
 export type { CollectionKind } from "../schema/collection";
 

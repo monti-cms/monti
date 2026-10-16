@@ -7,10 +7,10 @@ import {
 	DETAIL_PANE_FRAME,
 	EditorFooter,
 	EmptyState,
-	Field,
-	FieldGroup,
-	FieldLabel,
-	FieldTitle,
+	FormField,
+	FormFieldGroup,
+	FormFieldLabel,
+	FormFieldTitle,
 	IconButton,
 	Input,
 	ListPane,
@@ -277,9 +277,9 @@ function SnippetEditor({
 				)}
 			</div>
 
-			<FieldGroup className="gap-5">
-				<Field>
-					<FieldLabel htmlFor={ids.label}>{t("field.name")}</FieldLabel>
+			<FormFieldGroup className="gap-5">
+				<FormField>
+					<FormFieldLabel htmlFor={ids.label}>{t("field.name")}</FormFieldLabel>
 					<Input
 						id={ids.label}
 						value={draft.label}
@@ -288,15 +288,15 @@ function SnippetEditor({
 						onChange={(event) => set({ label: event.target.value })}
 						className="h-8 text-xs md:text-xs"
 					/>
-				</Field>
+				</FormField>
 				{item ? (
-					<Field role="group" aria-labelledby={ids.keyTitle}>
-						<FieldTitle id={ids.keyTitle}>{t("field.key")}</FieldTitle>
+					<FormField role="group" aria-labelledby={ids.keyTitle}>
+						<FormFieldTitle id={ids.keyTitle}>{t("field.key")}</FormFieldTitle>
 						<PlaceholderChip shareKey={item.key} />
-					</Field>
+					</FormField>
 				) : (
-					<Field>
-						<FieldLabel htmlFor={ids.key}>{t("field.key")}</FieldLabel>
+					<FormField>
+						<FormFieldLabel htmlFor={ids.key}>{t("field.key")}</FormFieldLabel>
 						<Input
 							id={ids.key}
 							value={draft.key}
@@ -306,10 +306,10 @@ function SnippetEditor({
 							onChange={(event) => set({ key: event.target.value.trim() })}
 							className="h-8 font-mono text-xs md:text-xs"
 						/>
-					</Field>
+					</FormField>
 				)}
-				<Field>
-					<FieldLabel htmlFor={ids.text}>{t("field.content")}</FieldLabel>
+				<FormField>
+					<FormFieldLabel htmlFor={ids.text}>{t("field.content")}</FormFieldLabel>
 					<Textarea
 						id={ids.text}
 						rows={PROMPT_ROWS}
@@ -317,8 +317,8 @@ function SnippetEditor({
 						onChange={(event) => set({ text: event.target.value })}
 						className={PROMPT_TEXTAREA}
 					/>
-				</Field>
-			</FieldGroup>
+				</FormField>
+			</FormFieldGroup>
 
 			<EditorFooter
 				dirty={dirty}

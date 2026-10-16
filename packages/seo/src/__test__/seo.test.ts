@@ -57,7 +57,7 @@ describe("seoFields", () => {
 	});
 });
 
-describe("config validation (`seo().validate`)", () => {
+describe("config validation (`seo().checkConfig`)", () => {
 	const title = fields.text({ label: "Title" });
 	const check = (extra: Parameters<typeof defineCollection>[0]["fields"]) =>
 		checkSeoFields({
@@ -81,7 +81,7 @@ describe("config validation (`seo().validate`)", () => {
 		expect(
 			check({ robots: fields.select({ label: "R", role: "noindex", options: { a: "A" }, defaultValue: "a" }) }),
 		).toEqual([expect.objectContaining({ path: "collections.page.fields.robots.role", code: "role-kind" })]);
-		expect(seo().validate).toBe(checkSeoFields);
+		expect(seo().checkConfig).toBe(checkSeoFields);
 	});
 });
 

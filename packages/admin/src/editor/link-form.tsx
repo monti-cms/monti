@@ -8,7 +8,7 @@ import { type FormEvent, type KeyboardEvent, type ReactNode, useId, useState } f
 import { commonMessages } from "../lib/common.messages";
 import { isComposingKey } from "../lib/keyboard";
 import { Button } from "../ui/button";
-import { FieldError } from "../ui/field";
+import { FormFieldError } from "../ui/field";
 import { Input } from "../ui/input";
 import { LinkTargetSummary } from "./link-target-view";
 import { editorMessages } from "./messages";
@@ -114,7 +114,7 @@ export function PopoverFormFooter({
 
 /** One-line red error of a popover input form. */
 export function PopoverFormError({ id, children }: { id: string; children: ReactNode }) {
-	return <FieldError id={id}>{children}</FieldError>;
+	return <FormFieldError id={id}>{children}</FormFieldError>;
 }
 
 interface LinkFormProps {

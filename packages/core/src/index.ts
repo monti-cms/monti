@@ -9,7 +9,7 @@ export type {
 	BlockAttribute,
 	BlockChildren,
 	BlockDefinition,
-	BlockEditor,
+	BlockEditing,
 	BlockInsert,
 	BlockIssue,
 	BlockNode,
@@ -18,7 +18,7 @@ export type {
 	BlockValidateContext,
 } from "./blocks/define";
 export { defineBlock } from "./blocks/define";
-export { ConfigError, configError, type Issue, IssueList, pathOf } from "./config/check/issue";
+export { ConfigError, type ConfigIssue, configError, IssueList, pathOf } from "./config/check/issue";
 export {
 	type AdminConfig,
 	type CmsConfig,
@@ -45,10 +45,9 @@ export {
 	translate,
 } from "./i18n/define";
 export {
-	type CmsPlugin,
-	type CmsServerPlugin,
 	definePlugin,
 	emptyServerPlugin,
+	type Plugin,
 	type PluginCommand,
 	type PluginCommandContext,
 	type PluginCommandOption,
@@ -58,7 +57,8 @@ export {
 	type PluginNamed,
 	type PluginNavItem,
 	type PluginRoute,
-	type PluginServer,
+	type ServerPlugin,
+	type ServerPluginSource,
 } from "./plugin/define";
 
 export {

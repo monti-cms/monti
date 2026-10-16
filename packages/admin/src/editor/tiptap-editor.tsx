@@ -9,7 +9,7 @@ import { type CSSProperties, type ReactNode, useEffect, useMemo, useReducer, use
 import {
 	type EditorInsertAction,
 	type EditorSelectionAction,
-	useCmsAdminComponents,
+	useAdminComponents,
 	useSourceFormat,
 } from "../admin-components";
 import { commonMessages } from "../lib/common.messages";
@@ -106,7 +106,7 @@ export function CmsEditor({
 	const allowance = useMemo(() => editorAllowance(site, allowed), [site, allowed]);
 	const isSourceMode = sourceView != null && sourceView !== false;
 	// Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
-	const { marks: markSpecs = {} } = useCmsAdminComponents();
+	const { marks: markSpecs = {} } = useAdminComponents();
 	const allMarkExtensions = useMarkExtensions().filter(({ name }) => allowance.allowsEditorMark(name));
 	// While source is being edited, the visual editor is paused. Toolbar tools are locked too.
 	const canEdit = editable && !isSourceMode;

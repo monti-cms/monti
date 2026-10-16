@@ -7,8 +7,8 @@ import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components";
-import { cmsEntryClient } from "../../api/entries";
+import { useAdminComponents, useEditorExtensions } from "../../admin-components";
+import { adminEntryClient } from "../../api/entries";
 import { type CmsIssue, issueLine } from "../../api/error-message";
 import { findBlock } from "../../editor/block-ids";
 import { CmsEditor } from "../../editor/tiptap-editor";
@@ -17,7 +17,7 @@ import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
-import { FieldLabel } from "../../ui/field";
+import { FormFieldLabel } from "../../ui/field";
 import { Input } from "../../ui/input";
 import { usePanelResize } from "../../ui/panel-resize";
 import { entryHref } from "../shared/entry-href";
@@ -121,7 +121,7 @@ export function EntryEditorShell({
 	const visualEditorRef = useRef<Editor | null>(null);
 
 	// The source toggle exists only when a source panel is registered (`sourcePanels`). With several, the first registered is used.
-	const sourcePanel = useCmsAdminComponents().sourcePanels?.[0];
+	const sourcePanel = useAdminComponents().sourcePanels?.[0];
 	// A body that could not be read (one `unparsed` node) is not opened in visual mode. Opening it would show it as a box the user cannot edit, and
 	// it can be fixed in source mode or saved as is.
 	const canUseVisual = !isUnparsedDocument(form.doc);
@@ -193,7 +193,7 @@ export function EntryEditorShell({
 		async (targetId: string) => {
 			setIncoming((current) => ({ ...current, loading: true, error: null }));
 			try {
-				const data = await cmsEntryClient(site).relations(targetId);
+				const data = await adminEntryClient(site).relations(targetId);
 				setIncoming({ items: data.incomingReferences ?? [], loading: false, error: null });
 			} catch {
 				setIncoming({ items: [], loading: false, error: t("usagesFailed") });
@@ -308,9 +308,9 @@ export function EntryEditorShell({
 		(site.isCollection(collection) ? site.titleField(collection).field.label : undefined) ?? t("title");
 	const titleInput = (
 		<>
-			<FieldLabel htmlFor="cms-title-canvas" className="sr-only">
+			<FormFieldLabel htmlFor="cms-title-canvas" className="sr-only">
 				{titleLabel}
-			</FieldLabel>
+			</FormFieldLabel>
 			<Input
 				id="cms-title-canvas"
 				value={titleKey ? formText(form, titleKey) : ""}

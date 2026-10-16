@@ -24,7 +24,7 @@ import {
 	type EditorBubbleProps,
 	type EditorMarkExtension,
 	type EditorSelectionAction,
-	useCmsAdminComponents,
+	useAdminComponents,
 } from "../admin-components";
 import { isComposingKey } from "../lib/keyboard";
 import { cn } from "../lib/utils/cn";
@@ -74,7 +74,7 @@ type Panel =
  * of blocks the site does not use are ignored).
  */
 export function useMarkExtensions(editor?: Editor | null): { name: string; extension: EditorMarkExtension }[] {
-	const { marks = {} } = useCmsAdminComponents();
+	const { marks = {} } = useAdminComponents();
 	return Object.entries(marks).flatMap(([block, extension]) => {
 		const name = addedMarkName(block);
 		return !editor || editor.schema.marks[name] ? [{ name, extension }] : [];
@@ -131,7 +131,7 @@ function anchorRange(target: InlineBubbleTarget, ranged: readonly string[]): { f
  * - When text is selected by dragging: tools to apply effects like bold and italic, and tooltip and link, right away.
  * - When the cursor is inside an effect: the spanning effects and a remove button, the link URL / tooltip text and an edit button.
  * Link and tooltip editing expands into an input form inside the bubble (no need to go to the top formatting tools).
- * For an extension's text styles (`CmsAdminComponents.marks`), it renders the buttons and content that extension provides.
+ * For an extension's text styles (`AdminComponents.marks`), it renders the buttons and content that extension provides.
  */
 export function InlineBubble({
 	editor,

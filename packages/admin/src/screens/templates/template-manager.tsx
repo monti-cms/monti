@@ -22,7 +22,7 @@ import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
 import { isComposingKey } from "../../lib/keyboard";
 import type { TranslatorFor } from "../../translator";
 import { Button } from "../../ui/button";
-import { FieldError } from "../../ui/field";
+import { FormFieldError } from "../../ui/field";
 import { Input } from "../../ui/input";
 import type { MenuAction } from "../shared/action-menu";
 import { PageActions } from "../shared/admin-shell";
@@ -134,7 +134,7 @@ function TemplateEditPanel({
 				/>
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</div>
-			{saveError && <FieldError className="border-b bg-cms-destructive-soft px-6 py-2">{saveError}</FieldError>}
+			{saveError && <FormFieldError className="border-b bg-cms-destructive-soft px-6 py-2">{saveError}</FormFieldError>}
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
 			</div>

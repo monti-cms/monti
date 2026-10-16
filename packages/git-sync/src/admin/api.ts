@@ -1,5 +1,5 @@
-import { cmsFetch } from "@monti-cms/admin/api";
-import { cmsApiUrl, type Site } from "@monti-cms/core/site";
+import { adminFetch } from "@monti-cms/admin/api";
+import { adminApiUrl, type Site } from "@monti-cms/core/site";
 
 /** The shapes of the plugin's API responses, as the screen reads them (dates arrive as ISO strings). */
 export interface PullSummaryView {
@@ -75,15 +75,15 @@ export interface GitSyncRequestOptions {
 
 /** `GET /v1/git-sync/status` */
 export const getGitSyncStatus = (site: Site, options: GitSyncRequestOptions = {}) =>
-	cmsFetch<StatusView>(site, cmsApiUrl("/v1/git-sync/status"), options);
+	adminFetch<StatusView>(site, adminApiUrl("/v1/git-sync/status"), options);
 
 /** `GET /v1/git-sync/conflicts` */
 export const listGitSyncConflicts = (site: Site, options: GitSyncRequestOptions = {}) =>
-	cmsFetch<{ items: ConflictView[] }>(site, cmsApiUrl("/v1/git-sync/conflicts"), options);
+	adminFetch<{ items: ConflictView[] }>(site, adminApiUrl("/v1/git-sync/conflicts"), options);
 
 /** `POST /v1/git-sync/pull` */
 export const pullGitSync = (site: Site, target: string, fallback?: string) =>
-	cmsFetch<{ results: { target: string; summary: PullSummaryView }[] }>(site, cmsApiUrl("/v1/git-sync/pull"), {
+	adminFetch<{ results: { target: string; summary: PullSummaryView }[] }>(site, adminApiUrl("/v1/git-sync/pull"), {
 		method: "POST",
 		json: { target },
 		fallback,
@@ -91,7 +91,7 @@ export const pullGitSync = (site: Site, target: string, fallback?: string) =>
 
 /** `POST /v1/git-sync/flush` */
 export const flushGitSync = (site: Site, target: string, fallback?: string) =>
-	cmsFetch<{ results: { written: number; removed: number }[] }>(site, cmsApiUrl("/v1/git-sync/flush"), {
+	adminFetch<{ results: { written: number; removed: number }[] }>(site, adminApiUrl("/v1/git-sync/flush"), {
 		method: "POST",
 		json: { target },
 		fallback,
@@ -104,7 +104,7 @@ export const resolveGitSyncConflict = (
 	resolution: ResolveChoice,
 	fallback?: string,
 ) =>
-	cmsFetch(site, cmsApiUrl("/v1/git-sync/conflicts/resolve"), {
+	adminFetch(site, adminApiUrl("/v1/git-sync/conflicts/resolve"), {
 		method: "POST",
 		json: { target: conflict.target, entryId: conflict.entryId, resolution, gitSha: conflict.gitSha },
 		fallback,
@@ -112,7 +112,7 @@ export const resolveGitSyncConflict = (
 
 /** `PUT /v1/api-keys/slots`: assigns an API key to one of the plugin's slots. */
 export const assignGitSyncKey = (site: Site, values: { slot: KeySlot; key: unknown }, fallback?: string) =>
-	cmsFetch(site, cmsApiUrl("/v1/api-keys/slots"), {
+	adminFetch(site, adminApiUrl("/v1/api-keys/slots"), {
 		method: "PUT",
 		json: { plugin: "git-sync", ...values },
 		fallback,

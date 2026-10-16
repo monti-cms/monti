@@ -5,7 +5,7 @@ import { Mark, mergeAttributes } from "@tiptap/core";
 
 /**
  * Editor display of added text styles (blocks from extensions or a site config's `syntax.kind: "text"` blocks). The core editor does not know style names and builds
- * Tiptap marks from block definitions. The look (classes, styles) and tools (formatting tools, bubble, slash menu) are provided by extensions through `CmsAdminComponentsProvider`'s
+ * Tiptap marks from block definitions. The look (classes, styles) and tools (formatting tools, bubble, slash menu) are provided by extensions through `AdminComponentsProvider`'s
  * `marks` (block name → `EditorMarkExtension`).
  *
  * - A mark name is `cms` + the Pascal-case block name (`tooltip` → `cmsTooltip`, `code-ref` → `cmsCodeRef`).

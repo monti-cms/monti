@@ -4,7 +4,7 @@ import { emptyStoredDocument } from "@monti-cms/core/document";
 import {
 	type Collection,
 	type Locale,
-	type SchemaCollection,
+	type SchemaCollectionName,
 	type Site,
 	useSite,
 	useTranslator,
@@ -41,7 +41,7 @@ import { useDraftEditor } from "./shared/use-draft-editor";
 export type RecordTarget = { collection: Collection; id: string | null };
 
 /** Whether that locale tab has any per-locale value (`localized: true` text field). The default locale is the field's own value. */
-function hasLocaleValues(site: Site, collection: SchemaCollection, form: EntryForm, locale: Locale): boolean {
+function hasLocaleValues(site: Site, collection: SchemaCollectionName, form: EntryForm, locale: Locale): boolean {
 	return site.recordLocalizedFields(collection).some((field) => {
 		const value = locale === site.DEFAULT_LOCALE ? form[field] : form[recordTranslationKey(field, locale)];
 		return typeof value === "string" && value.trim() !== "";
