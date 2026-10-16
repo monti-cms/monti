@@ -157,4 +157,4 @@ export function readFormatQuery(request: Request): string | undefined {
 	return raw;
 }
 
-export { deleted, ok };
+export { CmsError, deleted, ok };
