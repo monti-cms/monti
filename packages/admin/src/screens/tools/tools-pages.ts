@@ -2,6 +2,8 @@ import type { Site } from "@monti-cms/core/site";
 
 /** A plugin's page in the Tools group of the sidebar (`nav` item of the plugin definition). */
 export interface ToolsPage {
+	/** The plugin whose `nav` item this is, and whose admin side draws the page (`pages[path]`). */
+	readonly plugin: string;
 	/** Single-segment address: `<admin path>/tools/<path>`. */
 	readonly path: string;
 	readonly href: string;
@@ -15,6 +17,7 @@ export function toolsPages(site: Pick<Site, "adminHref" | "plugins" | "createTra
 	return site.plugins.flatMap((entry) =>
 		(entry.nav ?? []).map(
 			(item): ToolsPage => ({
+				plugin: entry.name,
 				path: item.path.replace(/^\/+|\/+$/g, ""),
 				href: site.adminHref(`/tools/${item.path.replace(/^\/+|\/+$/g, "")}`),
 				label: typeof item.label === "function" ? item.label(site) : item.label,

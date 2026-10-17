@@ -21,7 +21,7 @@ import {
 } from "./entry-editor-fakes";
 
 /**
- * A minimal editor built only from what `@monti-cms/admin/hooks` exports: `useEntryEditor`, `EntryEditorProvider`, `useEntryEditorContext` and
+ * A minimal editor built only from what `@monti-cms/admin` exports: `useEntryEditor`, `EntryEditorProvider`, `useEntryEditorContext` and
  * `useField`. It is the proof that a site can draw its own editor UI: no default shell, no ui/* component, no next/*, no `fetch`.
  */
 

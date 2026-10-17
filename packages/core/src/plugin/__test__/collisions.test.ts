@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineCollection, definePlugin, defineSite, fields } from "../..";
-import { ConfigError } from "../../config/check/issue";
 import {
-	assertPluginPagesFree,
 	assertPluginRoutesFree,
 	checkPluginNames,
 	checkPluginPages,
@@ -10,26 +8,25 @@ import {
 	RESERVED_SCOPES,
 } from "../collisions";
 
-describe("assertPluginPagesFree", () => {
+describe("checkPluginPages", () => {
 	it("accepts distinct pages", () => {
-		expect(() =>
-			assertPluginPagesFree([
+		expect(
+			checkPluginPages([
 				{ plugin: "ai", path: "ai" },
 				{ plugin: "seo", path: "/seo/" },
 			]),
-		).not.toThrow();
+		).toEqual([]);
 	});
 
 	it("rejects a page without a path", () => {
 		for (const path of ["", "/", "//"]) {
 			expect(checkPluginPages([{ plugin: "evil", path }])).toEqual([expect.objectContaining({ code: "empty" })]);
-			expect(() => assertPluginPagesFree([{ plugin: "evil", path }])).toThrow(ConfigError);
 		}
 	});
 
 	it("lets a plugin page share a name with a core screen: pages live under tools/", () => {
 		for (const path of ["templates", "events", "settings", "trash", "media"]) {
-			expect(() => assertPluginPagesFree([{ plugin: "ok", path }])).not.toThrow();
+			expect(checkPluginPages([{ plugin: "ok", path }])).toEqual([]);
 		}
 	});
 
@@ -42,13 +39,13 @@ describe("assertPluginPagesFree", () => {
 		).toEqual([expect.objectContaining({ path: 'plugins.b.nav["/tools"]', code: "collision" })]);
 	});
 
-	it("lets one plugin name the same page twice (nav and pages)", () => {
-		expect(() =>
-			assertPluginPagesFree([
+	it("lets one plugin name the same page twice", () => {
+		expect(
+			checkPluginPages([
 				{ plugin: "a", path: "tools" },
 				{ plugin: "a", path: "tools" },
 			]),
-		).not.toThrow();
+		).toEqual([]);
 	});
 });
 

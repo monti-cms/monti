@@ -11,7 +11,7 @@ export interface BlockPluginInput<
 	/** Config values both sides read. Most blocks have none. */
 	readonly options?: Options;
 	readonly blocks: Blocks;
-	/** The admin module (`defineBlockAdmin(...)` as its default export). */
+	/** The admin module (`defineAdminPlugin({ components })` as its default export). */
 	readonly admin: NonNullable<Plugin["admin"]>;
 	/** The public components of the blocks (`documentComponents`). */
 	readonly render: NonNullable<Plugin["render"]>;

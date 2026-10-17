@@ -62,9 +62,17 @@ describe("tools page", () => {
 		expect(link.getAttribute("href")).toBe(site.adminHref("/tools/stats"));
 	});
 
-	it("is a 404 for a path no plugin declared, and for a nav item without a page", async () => {
-		for (const path of ["nope", "quiet", "events", "settings"]) {
+	it("is a 404 for a path no plugin's nav item has", async () => {
+		for (const path of ["nope", "events", "settings"]) {
 			await expect(ToolsPage({ cms, server: server(), path })).rejects.toThrow("not-found");
 		}
+	});
+
+	it("says what is missing for a nav item whose plugin has no page for it", async () => {
+		const element = await ToolsPage({ cms, server: server(), path: "quiet" });
+		renderInRouter(withSite(<AdminQueryProvider>{element}</AdminQueryProvider>, site));
+		expect(screen.getByRole("heading", { level: 1, name: "Quiet" })).toBeTruthy();
+		// The text follows the admin language; it names the plugin and the page that is missing.
+		expect(screen.getByText((text) => text.includes('"quiet"') && text.includes("defineAdminPlugin"))).toBeTruthy();
 	});
 });

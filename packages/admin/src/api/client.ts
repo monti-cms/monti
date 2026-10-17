@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/site";
+import { adminApiUrl, type Site } from "@monti-cms/core/site";
 import { isSandboxSite, isWrite } from "../screens/shared/preview-sandbox";
 import { type CmsIssue, cmsApiErrorMessage, cmsApiIssues } from "./error-message";
 import { apiErrorMessages } from "./error-message.messages";
@@ -63,21 +63,25 @@ export function apiErrorOf(
 	);
 }
 
+/** What `adminFetch` takes besides the path: `fetch`'s options, `json` for a JSON body, and the `fallback` message of a failure the server does not explain. */
+export type AdminFetchInit = Omit<RequestInit, "body"> & { json?: unknown; fallback?: string };
+
 /**
- * Calls the admin API (the URL is built with `adminApiUrl()`). Passing `json` sends a JSON body. A failed response is thrown as {@link CmsApiError}.
- * A network error rethrows the original `TypeError` so callers can tell it apart from being offline.
+ * Calls the admin API at `path`, the part after `/api/monti` (`"/v1/entries?page=2"`; the site's `basePath` is added). Passing `json` sends a JSON body.
+ * A failed response is thrown as {@link CmsApiError}, with its message in the admin language of `site`. A site that is a preview's refuses to write.
+ * A network error rethrows the original `TypeError` so callers can tell it apart from being offline. In a component, `useAdminFetch()` gives the site.
  */
 export async function adminFetch<T = unknown>(
 	site: Pick<Site, "createTranslator">,
-	url: string,
-	init: Omit<RequestInit, "body"> & { json?: unknown; fallback?: string } = {},
+	path: string,
+	init: AdminFetchInit = {},
 ): Promise<T> {
 	const { json, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
 	// A preview runs on a draft site and must not write.
 	if (isSandboxSite(site) && isWrite(rest.method)) {
 		throw new CmsApiError(0, "preview", site.createTranslator(apiErrorMessages)("previewNoWrite"), [], {});
 	}
-	const response = await fetch(url, {
+	const response = await fetch(adminApiUrl(path), {
 		...rest,
 		headers: json === undefined ? headers : { "Content-Type": "application/json", ...headers },
 		body: json === undefined ? undefined : JSON.stringify(json),

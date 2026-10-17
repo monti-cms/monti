@@ -1,5 +1,5 @@
+import type { BlockChild } from "@monti-cms/admin";
 import { parseMeta } from "@monti-cms/admin/blocks";
-import type { BlockChild } from "@monti-cms/admin/hooks";
 
 /** One code block of a code explorer as the editor sees it: its position among the children and its path (the `title` meta). */
 export interface EditorFile {

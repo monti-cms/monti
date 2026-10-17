@@ -19,7 +19,7 @@ export type AdminSearchParams = Omit<URLSearchParams, "append" | "delete" | "set
 
 /**
  * What the admin needs from the framework it runs in. A host package supplies it once through {@link AdminRouterProvider}
- * (`@monti-cms/nextjs` does it for the Next.js App Router), so the screens and `@monti-cms/admin/hooks` never import a framework.
+ * (`@monti-cms/nextjs` does it for the Next.js App Router), so the screens and `@monti-cms/admin` never import a framework.
  * Addresses are in-site paths; the host's own router adds what it adds (for example the app's `basePath`).
  */
 export interface AdminRouter {

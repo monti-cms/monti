@@ -77,7 +77,7 @@ seoFields({
 ## 플러그인 `seo(options?)`
 
 - **관리자 화면**(`@monti-cms/seo/admin`): 보기 필드 `search`, 입력 조각 `seo-title`·`seo-description`(안내 문구·글자 수),
-  `seo-noindex`(스위치)를 `AdminComponentsProvider`로 등록한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
+  `seo-noindex`(스위치)를 관리자 쪽 `components`에 선언한다. 등록이 없으면(확장을 빼면) 같은 필드가 기본 입력으로 보인다.
 - **설정 검사**: `seoTitle`·`seoDescription`·`canonical`은 텍스트, `ogImage`는 미디어, `noindex`는 `noindex` 선택지가 있는 선택
   필드여야 한다(`checkSeoFields`).
 - **AI 기능**: `@monti-cms/ai`가 있으면 `seoTitle`(검색 제목 추천, 후보 3개)·`seoDescription`(검색 설명 추천)을 더한다

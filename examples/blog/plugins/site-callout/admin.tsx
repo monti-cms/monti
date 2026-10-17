@@ -1,9 +1,7 @@
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
+import { BlockFrame, Content, defineAdminPlugin, useBlockEditor } from "@monti-cms/admin";
 import { AttributeInput, ContainerToolbar } from "@monti-cms/admin/blocks";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
-import type { ReactNode } from "react";
 import { SiteCallout } from "../../components/callout";
 
 const VARIANTS = ["note", "tip", "info", "warning", "danger"] as const;
@@ -51,9 +49,5 @@ function SiteCalloutView() {
 	);
 }
 
-const components: AdminComponents = { blockViews: { callout: SiteCalloutView } };
-
-/** Registers the view in the admin UI. Later providers win over the `callout()` plugin's own view. */
-export function SiteCalloutProvider({ children }: { children: ReactNode }) {
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+/** The admin side of the site-callout plugin: its view of the `callout` block. A later plugin's view of a block wins, so this one replaces `callout()`'s own. */
+export default defineAdminPlugin({ components: { blockViews: { callout: SiteCalloutView } } });

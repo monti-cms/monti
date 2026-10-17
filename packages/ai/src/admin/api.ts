@@ -1,4 +1,4 @@
-import { adminFetch } from "@monti-cms/admin/api";
+import { adminFetch } from "@monti-cms/admin";
 import { adminApiUrl, type Site } from "@monti-cms/core/site";
 import type { AiActionView } from "../actions";
 import type { AiCheckResult, AiModelInfo, AiSettingsView } from "../connection";
@@ -34,49 +34,49 @@ const segment = (value: string) => encodeURIComponent(value);
 
 /** `GET /v1/ai/actions` */
 export const listAiActions = (site: Site, options: AiRequestOptions = {}) =>
-	adminFetch<AiActionsResponse>(site, adminApiUrl("/v1/ai/actions"), options);
+	adminFetch<AiActionsResponse>(site, "/v1/ai/actions", options);
 
 /** `POST /v1/ai/actions` (creates a screen action). */
 export const createAiAction = (site: Site, json: unknown, fallback?: string) =>
-	adminFetch<AiActionView>(site, adminApiUrl("/v1/ai/actions"), { method: "POST", json, fallback });
+	adminFetch<AiActionView>(site, "/v1/ai/actions", { method: "POST", json, fallback });
 
 /** `PATCH /v1/ai/actions/:key` */
 export const updateAiAction = (site: Site, key: string, json: unknown, fallback?: string) =>
-	adminFetch<AiActionView>(site, adminApiUrl(`/v1/ai/actions/${segment(key)}`), { method: "PATCH", json, fallback });
+	adminFetch<AiActionView>(site, `/v1/ai/actions/${segment(key)}`, { method: "PATCH", json, fallback });
 
 /** `DELETE /v1/ai/actions/:key` */
 export const deleteAiAction = (site: Site, key: string, expectedVersion: number, fallback?: string) =>
-	adminFetch(site, adminApiUrl(`/v1/ai/actions/${segment(key)}?expectedVersion=${expectedVersion}`), {
+	adminFetch(site, `/v1/ai/actions/${segment(key)}?expectedVersion=${expectedVersion}`, {
 		method: "DELETE",
 		fallback,
 	});
 
 /** `GET /v1/ai/settings` */
 export const getAiSettings = (site: Site, options: AiRequestOptions = {}) =>
-	adminFetch<AiSettingsView>(site, adminApiUrl("/v1/ai/settings"), options);
+	adminFetch<AiSettingsView>(site, "/v1/ai/settings", options);
 
 /** `POST /v1/ai/providers` */
 export const createAiProvider = (site: Site, json: unknown, fallback?: string) =>
-	adminFetch<AiSettingsView>(site, adminApiUrl("/v1/ai/providers"), { method: "POST", json, fallback });
+	adminFetch<AiSettingsView>(site, "/v1/ai/providers", { method: "POST", json, fallback });
 
 /** `PATCH /v1/ai/providers/:id` */
 export const updateAiProvider = (site: Site, id: string, json: unknown, fallback?: string) =>
-	adminFetch<AiSettingsView>(site, adminApiUrl(`/v1/ai/providers/${segment(id)}`), { method: "PATCH", json, fallback });
+	adminFetch<AiSettingsView>(site, `/v1/ai/providers/${segment(id)}`, { method: "PATCH", json, fallback });
 
 /** `DELETE /v1/ai/providers/:id` */
 export const deleteAiProvider = (site: Site, id: string, expectedVersion: number, fallback?: string) =>
-	adminFetch<AiSettingsView>(site, adminApiUrl(`/v1/ai/providers/${segment(id)}?expectedVersion=${expectedVersion}`), {
+	adminFetch<AiSettingsView>(site, `/v1/ai/providers/${segment(id)}?expectedVersion=${expectedVersion}`, {
 		method: "DELETE",
 		fallback,
 	});
 
 /** `POST /v1/ai/providers/check` */
 export const checkAiProvider = (site: Site, json: unknown, fallback?: string) =>
-	adminFetch<AiCheckResult>(site, adminApiUrl("/v1/ai/providers/check"), { method: "POST", json, fallback });
+	adminFetch<AiCheckResult>(site, "/v1/ai/providers/check", { method: "POST", json, fallback });
 
 /** `POST /v1/ai/models` */
 export const listAiModels = (site: Site, source: ModelSource, options: AiRequestOptions = {}) =>
-	adminFetch<{ items: AiModelInfo[] }>(site, adminApiUrl("/v1/ai/models"), {
+	adminFetch<{ items: AiModelInfo[] }>(site, "/v1/ai/models", {
 		method: "POST",
 		json: source,
 		...options,
@@ -84,34 +84,30 @@ export const listAiModels = (site: Site, source: ModelSource, options: AiRequest
 
 /** `GET /v1/ai/snippets` */
 export const getAiSnippets = (site: Site, options: AiRequestOptions = {}) =>
-	adminFetch<AiSnippetView>(site, adminApiUrl("/v1/ai/snippets"), options);
+	adminFetch<AiSnippetView>(site, "/v1/ai/snippets", options);
 
 /** `POST /v1/ai/snippets` */
 export const createAiSnippet = (site: Site, json: unknown, fallback?: string) =>
-	adminFetch<AiSnippetView>(site, adminApiUrl("/v1/ai/snippets"), { method: "POST", json, fallback });
+	adminFetch<AiSnippetView>(site, "/v1/ai/snippets", { method: "POST", json, fallback });
 
 /** `PATCH /v1/ai/snippets` */
 export const updateAiSnippet = (site: Site, json: unknown, fallback?: string) =>
-	adminFetch<AiSnippetView>(site, adminApiUrl("/v1/ai/snippets"), { method: "PATCH", json, fallback });
+	adminFetch<AiSnippetView>(site, "/v1/ai/snippets", { method: "PATCH", json, fallback });
 
 /** `DELETE /v1/ai/snippets?key=&expectedVersion=` */
 export const deleteAiSnippet = (site: Site, key: string, expectedVersion: number, fallback?: string) =>
-	adminFetch<AiSnippetView>(
-		site,
-		adminApiUrl(`/v1/ai/snippets?key=${segment(key)}&expectedVersion=${expectedVersion}`),
-		{
-			method: "DELETE",
-			fallback,
-		},
-	);
+	adminFetch<AiSnippetView>(site, `/v1/ai/snippets?key=${segment(key)}&expectedVersion=${expectedVersion}`, {
+		method: "DELETE",
+		fallback,
+	});
 
 /** `POST /v1/ai/run` with one input. */
 export const runAiOnce = (site: Pick<Site, "createTranslator">, json: unknown, options: AiRequestOptions) =>
-	adminFetch<{ result: AiRunResult }>(site, adminApiUrl("/v1/ai/run"), { method: "POST", json, ...options });
+	adminFetch<{ result: AiRunResult }>(site, "/v1/ai/run", { method: "POST", json, ...options });
 
 /** `POST /v1/ai/run` with several inputs. */
 export const runAiMany = (site: Pick<Site, "createTranslator">, json: unknown, options: AiRequestOptions) =>
-	adminFetch<{ results: AiRunManyResult[] }>(site, adminApiUrl("/v1/ai/run"), { method: "POST", json, ...options });
+	adminFetch<{ results: AiRunManyResult[] }>(site, "/v1/ai/run", { method: "POST", json, ...options });
 
 /** `POST /v1/ai/run` as a stream: the raw response, which the caller reads line by line. */
 export const openAiRunStream = (json: unknown, signal?: AbortSignal) =>

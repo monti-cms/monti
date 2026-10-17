@@ -46,7 +46,7 @@ The sections below are the full documentation: what `monti init` does step by st
 Next.js (App Router) is the only supported host for now. The code is layered so that this is a property of one package, not of the core or the admin:
 
 - `@monti-cms/core` speaks the standard `Request` and `Response` (`cms.handle(request)`) and imports nothing from Next.js. What a host has to supply (the headers of the current request, a redirect after login) comes in through the login connection (`CmsAuth.requestHeaders` and `CmsAuth.rethrow`).
-- `@monti-cms/admin` (the screens and `@monti-cms/admin/hooks`) imports nothing from Next.js either. It reaches the router only through an adapter it is given, `{ Link, navigate, replace, usePathname, useSearchParams }` (`AdminRouterProvider` of `@monti-cms/admin/router`), and the two things its server screens need, a redirect and a 404, through `AdminServer` (`@monti-cms/admin/host`).
+- `@monti-cms/admin` (the screens and the hooks) imports nothing from Next.js either. It reaches the router only through an adapter it is given, `{ Link, navigate, replace, usePathname, useSearchParams }` (`AdminRouterProvider` of `@monti-cms/admin/router`), and the two things its server screens need, a redirect and a 404, through `AdminServer` (`@monti-cms/admin/host`).
 - `@monti-cms/nextjs` holds all the Next glue: the route handler, `withCms` for `next.config.ts`, the admin page and layout with the App Router adapter, and the host hookup: it attaches the Next request headers to the instance, so `monti.config.ts` needs no `host` option.
 - `@monti-cms/auth` is the admin login, and it is framework-neutral too: it implements `CmsAuth` on `Request` and `Response` over Auth.js core, with the ways to log in as pluggable providers (GitHub ships with it).
 
@@ -541,7 +541,7 @@ What you read is typed for a published entry: a `required` field is not optional
 | `@monti-cms/nextjs/auth` | `monti.config.ts` | `nextHost` (the Next side of the login; a site does not need it, the Next integration attaches it) |
 | `@monti-cms/auth` | `monti.config.ts` | `auth({ providers, devBypass?, basePath?, host? })`, the `LoginProvider` type |
 | `@monti-cms/auth/github` | `monti.config.ts` | `github({ clientId?, clientSecret?, admins? })` (reads `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` when not given) |
-| `@monti-cms/admin` | the admin module of a plugin | `defineAdminPlugin({ Provider })` ("Plugins") |
+| `@monti-cms/admin` | the admin module of a plugin | `defineAdminPlugin({ pages, components, slots })` ("Plugins") |
 | `@monti-cms/core/render` | public pages (server components) | `CmsContent` (`<CmsContent cms={cms} entry={entry} />`), `renderDocument(doc, { site, … })` → `{ content, toc, unknown }`, `DocumentComponentsFor<typeof config>` and `DocumentComponentsOf<typeof cms>`, `tableOfContents(doc)`, the component prop types ("Rendering a stored document"). MDX text is drawn by `renderMdx` of `@monti-cms/mdx/render`. In the site CSS: `@import "@monti-cms/core/render.css";` |
 | `@monti-cms/core/read` | public pages (types) | `ReadEntry`, `MetadataFor` and the other types of `cms.read`, which reads published content (`getEntry`, `listEntries`, `getTranslations`, `getPreview`: relations, URLs, old-URL redirects, source fallback) |
 | `@monti-cms/core/site` | browser and server (UI code, screens, public pages) | the data shapes the stores return (`Entry`, `Folder`, `ListEntriesItem`, ...), `createSite`, `Site`, `SiteProvider`, `useSite`, `useTranslator`, API shapes and the pure collection, locale, URL, block and schema helpers (the ones that depend on a config are members of the `Site`), and the text of a document: `toPlainText(site, doc)` (the prose a reader sees) and `documentText(site, doc, { code, media, hidden })` (also code, image text and hidden text, for search or a plain-text export) |
@@ -905,11 +905,11 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
   - **As a loader**: `server: () => import("./server")`, whose default export is the `ServerPlugin` (`export default defineServerPlugin({ routes, hooks, ... })`, from `@monti-cms/core/server`, which only checks the types). Read on the server only, so this is the place for hooks that hold a secret, call out over the network or import something heavy, and for a plugin that has routes, migrations, commands or checks anyway.
 - An `afterCommit` subscriber's `run(event, { cms, plugin })` gets the instance and the plugin's context, so a subscriber that needs its storage, the store or the formats keeps no state of its own. It is delivered from the outbox (retried, at least once, "Event delivery"), and `event.once(run)` runs work once per event.
 - `commands` of the server side adds command line commands: `monti <plugin name>:<command> [options]` loads the app like `monti db:migrate` (`--env-file`, `--no-env-file`, `--config`), runs `command.run({ cms, plugin, args, log, error })` and exits with the code it returns. The command declares its `options` (`{ name: { type: "string" | "boolean", description } }`); `--help` lists them. `monti git-sync:pull` is one.
-- Custom admin components are a plugin too. Give it an `admin` module whose default export is `defineAdminPlugin({ Provider })` (`@monti-cms/admin`); the `Provider` (a `"use client"` component) wraps the admin and registers the components with `AdminComponentsProvider`. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
+- Custom admin components are a plugin too. Give it an `admin` module whose default export declares them, `defineAdminPlugin({ components })` (`@monti-cms/admin`); the admin applies the declaration. There is no `admin-components.tsx` file any more. `examples/blog/plugins/word-list/` is an example:
 
   ```ts
-  export const wordList = () => definePlugin({ name: "word-list", options: {}, admin: () => import("./admin") });
-  // ./admin.ts: export default defineAdminPlugin({ Provider })
+  export const wordList = () => definePlugin({ name: "word-list", admin: () => import("./admin") });
+  // ./admin.tsx ("use client"): export default defineAdminPlugin({ components: { textCheckers: [wordListChecker] } })
   ```
 
 - `exportBodyText(cms, { format, doc, locale, scope? })` of `@monti-cms/core/server` writes a stored document as text in a format of the instance for importing again (`purpose: "sync"`, links as the real path of their target), as the admin export does. For a plugin that keeps bodies somewhere else.

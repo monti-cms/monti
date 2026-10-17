@@ -28,7 +28,7 @@ describe("loadAdminPlugins", () => {
 			},
 		]);
 		await expect(loadAdminPlugins(site)).rejects.toThrow("import failed");
-		expect((await loadAdminPlugins(site))[0]).toMatchObject({ name: "flaky", pages: { tools: Page } });
+		expect((await loadAdminPlugins(site))[0]).toMatchObject({ name: "flaky", plugin: { pages: { tools: Page } } });
 		// After a success it is not read again.
 		await loadAdminPlugins(site);
 		expect(attempts).toBe(2);
@@ -39,12 +39,12 @@ describe("loadAdminPlugins", () => {
 		expect((await loadAdminPlugins(site)).map((plugin) => plugin.name)).toEqual(["events-plus"]);
 	});
 
-	it("throws when two plugins use the same page", async () => {
-		const site = siteWith([
-			{ name: "a", admin: admin({ tools: Page }) },
-			{ name: "b", admin: admin({ tools: Page }) },
-		]);
-		await expect(loadAdminPlugins(site)).rejects.toThrow(/of plugin "b" collides with plugin "a"/);
+	it("hands each plugin's declaration on as the module exported it, without reading it", async () => {
+		const declaration = { pages: { one: Page } };
+		const site = siteWith([{ name: "a", admin: async () => ({ default: declaration }) }, { name: "plain" }]);
+		const loaded = await loadAdminPlugins(site);
+		expect(loaded[0]?.plugin).toBe(declaration);
+		expect(loaded[1]).toEqual({ name: "plain", plugin: undefined });
 	});
 
 	it("loads plugins with distinct pages", async () => {

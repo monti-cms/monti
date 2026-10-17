@@ -1,4 +1,4 @@
-import { adminApiUrl, type Site } from "@monti-cms/core/site";
+import type { Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** One item of the media list API. */
@@ -74,7 +74,7 @@ export const mediaKeys = {
 	detail: (id: string) => [...mediaKeys.all, "detail", id] as const,
 };
 
-const mediaUrl = (id: string) => adminApiUrl(`/v1/media/${encodeURIComponent(id)}`);
+const mediaUrl = (id: string) => `/v1/media/${encodeURIComponent(id)}`;
 
 /** `GET /v1/media/:id` */
 export const getMedia = (site: Site, id: string, signal?: AbortSignal) =>
@@ -82,7 +82,7 @@ export const getMedia = (site: Site, id: string, signal?: AbortSignal) =>
 
 /** `GET /v1/media?<query>` */
 export const listMedia = (site: Site, query: string | URLSearchParams, signal?: AbortSignal) =>
-	adminFetch<MediaPage>(site, adminApiUrl(`/v1/media?${query.toString()}`), { signal });
+	adminFetch<MediaPage>(site, `/v1/media?${query.toString()}`, { signal });
 
 /** `PATCH /v1/media/:id`: renames the file, sets default description, or moves to a folder. */
 export const updateMedia = (
@@ -98,18 +98,18 @@ export const deleteMedia = (site: Site, id: string, fallback?: string) =>
 
 /** `POST /v1/media/cleanup`: removes the files that are stuck deleting. */
 export const cleanupMedia = (site: Site) =>
-	adminFetch<{ removed: number; failed: string[] }>(site, adminApiUrl("/v1/media/cleanup"), {
+	adminFetch<{ removed: number; failed: string[] }>(site, "/v1/media/cleanup", {
 		method: "POST",
 		json: {},
 	});
 
 /** `POST /v1/media/uploads`: asks the server to prepare an upload. */
 export const requestUpload = (site: Site, body: UploadRequest, fallback: string) =>
-	adminFetch<UploadPlan>(site, adminApiUrl("/v1/media/uploads"), { method: "POST", json: body, fallback });
+	adminFetch<UploadPlan>(site, "/v1/media/uploads", { method: "POST", json: body, fallback });
 
 /** `POST /v1/media/:id/complete`: the bytes are in storage, the server inspects them and marks the media ready. */
 export const completeUpload = (site: Site, id: string, fallback: string) =>
-	adminFetch<UploadCompletion>(site, adminApiUrl(`/v1/media/${encodeURIComponent(id)}/complete`), {
+	adminFetch<UploadCompletion>(site, `/v1/media/${encodeURIComponent(id)}/complete`, {
 		method: "POST",
 		json: {},
 		fallback,

@@ -1,14 +1,15 @@
+import { AdminComponentsProvider } from "@monti-cms/admin";
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { CalloutProvider } from "../callout/provider";
-import { CodeExplorerProvider } from "../code-explorer/provider";
-import { CollapsibleProvider } from "../collapsible/provider";
-import { ColumnsProvider } from "../columns/provider";
-import { TabsProvider } from "../tabs/provider";
+import { calloutComponents } from "../callout/provider";
+import { codeExplorerComponents } from "../code-explorer/provider";
+import { collapsibleComponents } from "../collapsible/provider";
+import { columnsComponents } from "../columns/provider";
+import { tabsComponents } from "../tabs/provider";
 import { mdxToTiptap, tiptapToMdx } from "../test/editor-text";
 import { renderSite as site } from "../test/render-config";
 import { WithSite } from "../test/site";
@@ -41,15 +42,15 @@ function Harness({ source, onReady }: { source: string; onReady: (editor: Editor
 /** Registers the editing views of the five block extensions, like the admin UI does. */
 const BlockViews = ({ children }: { children: ReactNode }) => (
 	<WithSite>
-		<CalloutProvider>
-			<CollapsibleProvider>
-				<TabsProvider>
-					<ColumnsProvider>
-						<CodeExplorerProvider>{children}</CodeExplorerProvider>
-					</ColumnsProvider>
-				</TabsProvider>
-			</CollapsibleProvider>
-		</CalloutProvider>
+		<AdminComponentsProvider components={calloutComponents}>
+			<AdminComponentsProvider components={collapsibleComponents}>
+				<AdminComponentsProvider components={tabsComponents}>
+					<AdminComponentsProvider components={columnsComponents}>
+						<AdminComponentsProvider components={codeExplorerComponents}>{children}</AdminComponentsProvider>
+					</AdminComponentsProvider>
+				</AdminComponentsProvider>
+			</AdminComponentsProvider>
+		</AdminComponentsProvider>
 	</WithSite>
 );
 

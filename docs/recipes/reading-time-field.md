@@ -7,20 +7,19 @@ The snippets below are a sketch to adapt, not tested code.
 ## What you need to know
 
 1. **A view field** (`{ kind: "view", view: "reading-time" }`) stores no value. It draws, in its place in the properties panel, the screen registered under that name.
-2. **Admin components are registered by a plugin's admin side**: `definePlugin({ admin: () => import("./admin") })`, whose default export is `defineAdminPlugin({ Provider })`. The `Provider` is a `"use client"` component that wraps the admin and calls `AdminComponentsProvider` with `fieldViews` ("Adding site components" in the [admin README](../../packages/admin/README.md)).
+2. **Admin components are declared by a plugin's admin side**: `definePlugin({ admin: () => import("./admin") })`, whose default export is `defineAdminPlugin({ components: { fieldViews: { … } } })`. The admin applies the declaration; there is no provider to write ("Adding site components" in the [admin README](../../packages/admin/README.md)).
 3. **The screen receives `{ collection, form, entry }`.** `form` is the entry as it is being edited, and its `form.doc` is the live body (a stored document), so the number follows the typing. `entry` is what the server last saved.
 4. **`useSite()`** gives the site (`site.DEFAULT_LOCALE`, ...) and **`toPlainText(site, doc)`** (`@monti-cms/core/site`) gives the readable text of a document in any notation.
 
 ## A sketch
 
-The screen and its provider. `Intl.Segmenter` finds words in any language, so Korean and Japanese work too:
+The admin module, a `"use client"` module with the screen and its declaration. `Intl.Segmenter` finds words in any language, so Korean and Japanese work too:
 
 ```tsx
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider, type FieldViewProps } from "@monti-cms/admin";
+import { defineAdminPlugin, type FieldViewProps } from "@monti-cms/admin";
 import { toPlainText, useSite } from "@monti-cms/core/site";
-import type { ReactNode } from "react";
 
 const WORDS_PER_MINUTE = 200;
 
@@ -36,17 +35,17 @@ function ReadingTimeView({ form, entry }: FieldViewProps) {
 	return <p>{minutes} min read</p>;
 }
 
-const components: AdminComponents = { fieldViews: { "reading-time": ReadingTimeView } }; // by the `view` name of the field
-
-export function ReadingTimeProvider({ children }: { children: ReactNode }) {
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+export default defineAdminPlugin({
+	components: { fieldViews: { "reading-time": ReadingTimeView } }, // by the `view` name of the field
+});
 ```
 
-The admin module (default export `defineAdminPlugin({ Provider: ReadingTimeProvider })`) and the plugin:
+The plugin:
 
 ```ts
-export const readingTime = () => definePlugin({ name: "reading-time", options: {}, admin: () => import("./admin") });
+import { definePlugin } from "@monti-cms/core";
+
+export const readingTime = () => definePlugin({ name: "reading-time", admin: () => import("./admin") });
 ```
 
 Then add the field to the collection and the plugin to the config:

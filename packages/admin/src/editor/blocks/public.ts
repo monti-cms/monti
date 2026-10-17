@@ -1,6 +1,6 @@
 /**
  * UI for building block editing views (`@monti-cms/admin/blocks`): the toolbar, the settings popover and the attribute input.
- * A block view reads and writes its block with `useBlockEditor` and draws its nested body with `Content` (`@monti-cms/admin/hooks`);
+ * A block view reads and writes its block with `useBlockEditor` and draws its nested body with `Content` (`@monti-cms/admin`);
  * register the view by block name in `blockViews`.
  */
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
-import type { ReactNode } from "react";
+import type { AdminComponents } from "@monti-cms/admin";
 import { SEO_INPUTS, SEO_PREVIEW_VIEW } from "../fields";
 import { seoDescriptionInput, seoNoindexInput, seoTitleInput } from "./inputs";
 import { SeoPreviewView } from "./preview";
@@ -15,7 +14,3 @@ export const SEO_ADMIN_COMPONENTS: AdminComponents = {
 		[SEO_INPUTS.noindex]: seoNoindexInput,
 	},
 };
-
-export function SeoAdminProvider({ children }: { readonly children: ReactNode }) {
-	return <AdminComponentsProvider components={SEO_ADMIN_COMPONENTS}>{children}</AdminComponentsProvider>;
-}

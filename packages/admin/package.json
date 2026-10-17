@@ -11,10 +11,8 @@
 		"./router": "./src/router/index.tsx",
 		"./editor": "./src/editor/public.ts",
 		"./blocks": "./src/editor/blocks/public.ts",
-		"./hooks": "./src/hooks/public.ts",
 		"./internal/plugins": "./src/internal-plugins.ts",
 		"./slots": "./src/slots/slots.tsx",
-		"./api": "./src/api/index.ts",
 		"./kit": "./src/kit.ts",
 		"./styles.css": "./dist/styles.css"
 	},
@@ -108,10 +106,6 @@
 				"types": "./dist/editor/blocks/public.d.ts",
 				"default": "./dist/editor/blocks/public.js"
 			},
-			"./hooks": {
-				"types": "./dist/hooks/public.d.ts",
-				"default": "./dist/hooks/public.js"
-			},
 			"./internal/plugins": {
 				"types": "./dist/internal-plugins.d.ts",
 				"default": "./dist/internal-plugins.js"
@@ -119,10 +113,6 @@
 			"./slots": {
 				"types": "./dist/slots/slots.d.ts",
 				"default": "./dist/slots/slots.js"
-			},
-			"./api": {
-				"types": "./dist/api/index.d.ts",
-				"default": "./dist/api/index.js"
 			},
 			"./kit": {
 				"types": "./dist/kit.d.ts",

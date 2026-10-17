@@ -9,7 +9,7 @@ The snippets below are a sketch to adapt, not tested code.
 1. **A block is data first**: `defineBlock({ name, syntax, attributes, editor })`. The name, the stored notation (`container` here: `<Notice level="warn">…</Notice>` in MDX, `:::notice{level="warn"}` with the directive notation), the attributes and how the editor offers it all come from this one definition ("Body blocks" in the [core README](../../packages/core/README.md)).
 2. **A plugin carries the block** and its two sides as lazy loaders: `blocks` (the definition), `admin` (the editor view, loaded only by the admin) and `render` (the public component, loaded only on the server). Neither reaches the other's bundle.
 3. **`validate(node, ctx)`** on the definition runs on the server in the write pipeline for every use of the block. Its findings are warnings: shown under the block, returned as `warnings`, never blocking.
-4. **The editor view** is a component registered in `blockViews` by block name. It takes no props: it reads and writes its block with `useBlockEditor()`, draws the editable body with `<Content />`, and wraps itself in `<BlockFrame>` (`@monti-cms/admin/hooks`).
+4. **The editor view** is a component registered in `blockViews` by block name. It takes no props: it reads and writes its block with `useBlockEditor()`, draws the editable body with `<Content />`, and wraps itself in `<BlockFrame>` (`@monti-cms/admin`).
 5. **The public component** is `documentComponents`, exported by the `render` module: the components by block name, with the attributes as flat props typed from the definition (`BlockProps<typeof noticeBlock>`).
 
 ## A sketch
@@ -46,21 +46,18 @@ import { definePlugin } from "@monti-cms/core";
 export const notice = () =>
 	definePlugin({
 		name: "notice",
-		options: {},
 		blocks: [noticeBlock],
 		admin: () => import("./admin"),
 		render: () => import("./render"),
 	});
 ```
 
-The editor view, registered by block name in a provider (the `admin` module's default export is `defineAdminPlugin({ Provider: NoticeProvider })`):
+The admin module, a `"use client"` module with the editor view and its declaration (by block name):
 
 ```tsx
 "use client";
 
-import { type AdminComponents, AdminComponentsProvider } from "@monti-cms/admin";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
-import type { ReactNode } from "react";
+import { BlockFrame, Content, defineAdminPlugin, useBlockEditor } from "@monti-cms/admin";
 
 function NoticeView() {
 	const block = useBlockEditor<{ level: string; title: string }>();
@@ -78,11 +75,7 @@ function NoticeView() {
 	);
 }
 
-const components: AdminComponents = { blockViews: { notice: NoticeView } }; // by block name
-
-export function NoticeProvider({ children }: { children: ReactNode }) {
-	return <AdminComponentsProvider components={components}>{children}</AdminComponentsProvider>;
-}
+export default defineAdminPlugin({ components: { blockViews: { notice: NoticeView } } }); // by block name
 ```
 
 The public component, exported by the `render` module:

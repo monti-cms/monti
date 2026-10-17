@@ -1,3 +1,5 @@
+"use client";
+
 import { useSite } from "@monti-cms/core/site";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { adminEntryClient, type EntryEditorClient } from "../../api/entries";

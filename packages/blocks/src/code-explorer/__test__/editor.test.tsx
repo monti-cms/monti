@@ -1,3 +1,4 @@
+import { AdminComponentsProvider } from "@monti-cms/admin";
 import { buildEditorExtensions } from "@monti-cms/admin/editor";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
@@ -9,7 +10,7 @@ import { mdxToTiptap, tiptapToMdx } from "../../test/editor-text";
 import { renderSite as site } from "../../test/render-config";
 import { WithSite } from "../../test/site";
 import { filesOf, uniquePath } from "../editor-files";
-import { CodeExplorerProvider } from "../provider";
+import { codeExplorerComponents } from "../provider";
 
 afterEach(cleanup);
 
@@ -58,14 +59,14 @@ const mount = async (source: string, expectBlock = true) => {
 	let editor: Editor | null = null;
 	render(
 		<WithSite>
-			<CodeExplorerProvider>
+			<AdminComponentsProvider components={codeExplorerComponents}>
 				<Harness
 					source={source}
 					onReady={(ready) => {
 						editor = ready;
 					}}
 				/>
-			</CodeExplorerProvider>
+			</AdminComponentsProvider>
 		</WithSite>,
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
@@ -226,14 +227,14 @@ describe("code explorer editing view", () => {
 		let editor: Editor | null = null;
 		render(
 			<WithSite>
-				<CodeExplorerProvider>
+				<AdminComponentsProvider components={codeExplorerComponents}>
 					<Harness
 						source={SOURCE}
 						onReady={(ready) => {
 							editor = ready;
 						}}
 					/>
-				</CodeExplorerProvider>
+				</AdminComponentsProvider>
 			</WithSite>,
 		);
 		await waitFor(() => expect(editor).not.toBeNull());

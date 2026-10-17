@@ -136,14 +136,14 @@ export const bannerBlock = defineBlock({ name: "banner", syntax: { kind: "contai
 
 // 플러그인: 블록과 관리자 화면 쪽(선택)
 export const banner = () =>
-	definePlugin({ name: "banner", options: {}, blocks: [bannerBlock], admin: () => import("./banner/admin") });
+	definePlugin({ name: "banner", blocks: [bannerBlock], admin: () => import("./banner/admin") });
 
-// banner/admin.ts: 편집 화면(useBlockEditor와 Content로 만든 blockViews)을 넣는 공급자
-export default defineAdminPlugin({ Provider: BannerProvider });
+// banner/admin.tsx("use client"): 편집 화면(useBlockEditor와 Content로 만든 blockViews)과 메뉴 아이콘을 선언한다
+export default defineAdminPlugin({ components: { blockViews: { banner: BannerView }, icons: { flag: Flag } } });
 ```
 
 편집 화면이 없으면 관리자 화면의 기본 상자로 편집한다. 메뉴 아이콘(`editor.icon`)이 관리자 패키지의 기본 아이콘에 없으면
-공급자에서 `icons`로 등록한다(이 패키지의 블록은 모두 그렇게 한다). 번역할 속성(제목·탭 이름)에는 `translatable: true`를 단다. 자세한 것은 `@monti-cms/core` README의 "본문 블록"과
+같은 `components`의 `icons`에 선언한다(이 패키지의 블록은 모두 그렇게 한다). 번역할 속성(제목·탭 이름)에는 `translatable: true`를 단다. 자세한 것은 `@monti-cms/core` README의 "본문 블록"과
 `@monti-cms/admin` README의 "블록 편집 화면".
 
 ## 개발

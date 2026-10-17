@@ -101,7 +101,7 @@ interface FieldRowProps {
  * All inputs in the properties panel use this row.
  */
 export function FieldRow({ id, label, required, issue, help, slot, aside, children }: FieldRowProps) {
-	const site = useSite();
+	const _site = useSite();
 	if (slot) {
 		return (
 			<SlotFieldRow id={id} label={label} required={required} issue={issue} help={help} slot={slot} aside={aside}>
@@ -141,7 +141,7 @@ function SlotFieldRow({
 	aside,
 	children,
 }: FieldRowProps & { slot: SlotRequest }) {
-	const site = useSite();
+	const _site = useSite();
 	const { trigger, panel } = useSlot(slot);
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">

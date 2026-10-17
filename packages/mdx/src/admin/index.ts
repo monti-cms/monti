@@ -3,13 +3,13 @@
  * between the visual editor and the text, and the browser side of the `mdx` format. The default export registers the format and the panel in the admin.
  */
 
-import { MdxAdminProvider } from "./provider";
+import { mdxComponents } from "./provider";
 
 export { type EditorMode, EditorToggle } from "./editor-toggle";
 export { createMdxBrowserFormat } from "./format";
-export { MdxAdminProvider } from "./provider";
+export { mdxComponents } from "./provider";
 export { lineOfBlock, MdxSourcePanel, mdxSourceLabel } from "./source-panel";
 
 import { defineAdminPlugin } from "@monti-cms/admin";
 
-export default defineAdminPlugin({ Provider: MdxAdminProvider });
+export default defineAdminPlugin({ components: mdxComponents });

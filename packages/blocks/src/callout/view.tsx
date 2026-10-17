@@ -1,7 +1,7 @@
 "use client";
 
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
 import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
 import {
 	cn,
 	DropdownMenu,

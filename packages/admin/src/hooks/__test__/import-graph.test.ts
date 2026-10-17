@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Hard rule of `@monti-cms/admin/hooks`: hooks return state and results only. A file in the hooks graph may not import `next/*`, `sonner`,
+ * Hard rule of `@monti-cms/admin`: hooks return state and results only. A file in the hooks graph may not import `next/*`, `sonner`,
  * `lucide-react`, `ui/*`, a confirm dialog, the router (`router/*`) or the host layout (`host/*`), so a site can use the hooks without the default UI, and the hooks work in any framework
  * (the whole admin is also checked for `next/*` by `src/__test__/no-framework-imports.test.ts`).
  * The graph is every file under `src/hooks/` plus every file they import (relatively, transitively), which covers the files `public.ts`

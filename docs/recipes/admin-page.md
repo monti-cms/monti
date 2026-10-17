@@ -7,9 +7,9 @@ The snippets below are a sketch to adapt, not tested code.
 ## What you need to know
 
 1. **A plugin has three sides**, each a lazy loader: `server` (routes, hooks, commands), `admin` (screens and providers) and `nav` (the Tools page, plain JSON) ("Plugins" in the [core README](../../packages/core/README.md)).
-2. **A route** is `{ pattern, module: { GET, POST, ... } }` under `/api/monti/`. Wrap each handler with `adminRoute(...)`: it checks the login and the same-origin rule, and hands you the instance (`cms`). A route that must be reachable without login names an `access` kind instead of the default `admin`: `public-read` (GET only), `same-origin-form`, `signed` (a webhook that verifies its signature itself) or `admin-or-bearer`.
+2. **A route** is `{ pattern, module: { GET, POST, ... } }` under `/api/monti/`. Wrap each handler with `adminRoute(...)`: it checks the login and the same-origin rule, and hands you the instance (`cms`) and the plugin's own context (`plugin`). A route that must be reachable without login names an `access` kind instead of the default `admin`: `public-read` (GET only), `same-origin-form`, `signed` (a webhook that verifies its signature itself) or `admin-or-bearer`.
 3. **A page** is a client component in `defineAdminPlugin({ pages: { "<segment>": Component } })`. The `nav` item's `path` is the same segment: the page shows as an item of the sidebar's Tools group.
-4. **Screen building blocks**: `PageActions` (puts the page's one primary action on the right of the title bar; the admin already draws the sidebar and the title) and the rest of `@monti-cms/admin/kit`; `adminFetch` (`@monti-cms/admin/api`) for the call, with a readable error; `adminApiUrl` and `useSite` from `@monti-cms/core/site`.
+4. **Screen building blocks**: `PageActions` (puts the page's one primary action on the right of the title bar; the admin already draws the sidebar and the title) and the rest of `@monti-cms/admin/kit`; `useAdminFetch()` (`@monti-cms/admin`) for the call: it takes the path after `/api/monti` and throws a readable error.
 
 ## A sketch
 
@@ -21,7 +21,6 @@ import { definePlugin } from "@monti-cms/core";
 export const postStats = () =>
 	definePlugin({
 		name: "post-stats",
-		options: {},
 		nav: [{ path: "post-stats", label: "Post stats", icon: "bar-chart-3" }],
 		server: () => import("./server"),
 		admin: () => import("./admin"),
@@ -49,22 +48,19 @@ export default defineServerPlugin({
 });
 ```
 
-The admin side and the screen:
+The admin module, a `"use client"` module with the screen and its declaration:
 
 ```tsx
 "use client";
 
-import { adminFetch } from "@monti-cms/admin/api";
-import { defineAdminPlugin } from "@monti-cms/admin";
-import { adminApiUrl, useSite } from "@monti-cms/core/site";
+import { defineAdminPlugin, useAdminFetch } from "@monti-cms/admin";
 import { useQuery } from "@tanstack/react-query";
 
 function StatsPage() {
-	const site = useSite();
+	const adminFetch = useAdminFetch();
 	const stats = useQuery({
 		queryKey: ["cms", "post-stats"],
-		queryFn: ({ signal }) =>
-			adminFetch<{ draft: number; published: number }>(site, adminApiUrl("/v1/post-stats/summary"), { signal }),
+		queryFn: ({ signal }) => adminFetch<{ draft: number; published: number }>("/v1/post-stats/summary", { signal }),
 	});
 	return (
 		<div>
@@ -79,7 +75,6 @@ function StatsPage() {
 	);
 }
 
-// the admin module (default export of `./admin`)
 export default defineAdminPlugin({ pages: { "post-stats": StatsPage } });
 ```
 

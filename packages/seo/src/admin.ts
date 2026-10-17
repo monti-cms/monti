@@ -1,5 +1,5 @@
 import { defineAdminPlugin } from "@monti-cms/admin";
-import { SeoAdminProvider } from "./admin/provider";
+import { SEO_ADMIN_COMPONENTS } from "./admin/provider";
 
 /** Admin UI side of the SEO extension. Registers the search preview, character count and hide switch. */
-export default defineAdminPlugin({ Provider: SeoAdminProvider });
+export default defineAdminPlugin({ components: SEO_ADMIN_COMPONENTS });

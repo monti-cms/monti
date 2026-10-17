@@ -1,4 +1,4 @@
-import { useAdminComponents } from "@monti-cms/admin";
+import { AdminComponentsProvider, useAdminComponents } from "@monti-cms/admin";
 import { SiteProvider } from "@monti-cms/core/site";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -14,15 +14,15 @@ function Checkers() {
 }
 
 describe("Bareun checker admin side", () => {
-	it("the provider registers Bareun as the admin text checker, using the site config values", () => {
-		const Provider = bareunAdmin.Provider;
-		expect(Provider).toBeDefined();
-		if (!Provider) return;
+	it("declares Bareun as the admin text checker, made from the site config values", () => {
+		const { components } = bareunAdmin;
+		expect(typeof components).toBe("function");
+		if (typeof components !== "function") return;
 		render(
 			<SiteProvider site={testSite}>
-				<Provider>
+				<AdminComponentsProvider components={components(testSite)}>
 					<Checkers />
-				</Provider>
+				</AdminComponentsProvider>
 			</SiteProvider>,
 		);
 		expect(screen.getByText("bareun")).toBeTruthy();

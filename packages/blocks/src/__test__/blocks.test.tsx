@@ -5,10 +5,10 @@ import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { describe, expect, it } from "vitest";
 import { callout, codeExplorer, codeRef, collapsible, color, columns, defaultTextPalette, tabs, tooltip } from "..";
 import { chart } from "../chart";
-import { ChartProvider } from "../chart/provider";
+import { chartComponents } from "../chart/provider";
 import { colorMessages } from "../color/messages";
 import { mermaid } from "../mermaid";
-import { MermaidProvider } from "../mermaid/provider";
+import { mermaidComponents } from "../mermaid/provider";
 
 const names = (plugins: readonly { name: string }[]) => plugins.map((plugin) => plugin.name);
 
@@ -95,12 +95,12 @@ describe("editor preview", () => {
 
 	it("the Mermaid and chart extensions register default previews and load the renderer when a preview opens", async () => {
 		render(
-			<MermaidProvider>
-				<ChartProvider>
+			<AdminComponentsProvider components={mermaidComponents}>
+				<AdminComponentsProvider components={chartComponents}>
 					<LoadedPreview lang="mermaid" />
 					<LoadedPreview lang="chart" />
-				</ChartProvider>
-			</MermaidProvider>,
+				</AdminComponentsProvider>
+			</AdminComponentsProvider>,
 		);
 		// The first load of the renderer module is slow, so extend the wait.
 		await waitFor(() => expect(screen.getByText("mermaid: MermaidPreview")).toBeTruthy(), { timeout: 15_000 });
@@ -114,11 +114,11 @@ describe("editor preview", () => {
 			</AdminComponentsProvider>
 		);
 		render(
-			<ChartProvider>
+			<AdminComponentsProvider components={chartComponents}>
 				<Site>
 					<LoadedPreview lang="chart" />
 				</Site>
-			</ChartProvider>,
+			</AdminComponentsProvider>,
 		);
 		await waitFor(() => expect(screen.getByText("chart: SitePreview")).toBeTruthy());
 	});

@@ -1,3 +1,4 @@
+import { AdminComponentsProvider } from "@monti-cms/admin";
 import { EMPTY_FORM, type EntryForm, TooltipProvider } from "@monti-cms/admin/kit";
 import { type SlotAction, SlotRegistryProvider } from "@monti-cms/admin/slots";
 import { type Collection, SiteProvider } from "@monti-cms/core/site";
@@ -9,7 +10,7 @@ import { EntryFormProvider } from "../../../admin/src/screens/entries/use-field"
 import { SiteWrapper } from "../../../admin/src/test/site";
 import { testSite } from "../../test/site";
 import { SEO_ROLES } from "..";
-import { SeoAdminProvider } from "../admin/provider";
+import { SEO_ADMIN_COMPONENTS } from "../admin/provider";
 import { seoMessages } from "../messages";
 
 // UI text follows the admin language from the config, so the same wording is picked from the dictionary.
@@ -44,7 +45,7 @@ function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] 
 	render(
 		<SiteWrapper site={testSite}>
 			<TooltipProvider>
-				<SeoAdminProvider>
+				<AdminComponentsProvider components={SEO_ADMIN_COMPONENTS}>
 					<SlotRegistryProvider
 						sources={[(request) => (request.target === field(SEO_ROLES.title).name ? sources : [])]}
 					>
@@ -59,7 +60,7 @@ function renderPanel(form: EntryForm, onChange = vi.fn(), sources: SlotAction[] 
 							/>
 						</EntryFormProvider>
 					</SlotRegistryProvider>
-				</SeoAdminProvider>
+				</AdminComponentsProvider>
 			</TooltipProvider>
 		</SiteWrapper>,
 	);
@@ -126,7 +127,7 @@ describe("SEO extension admin UI", () => {
 		render(
 			<SiteProvider site={testSite}>
 				<TooltipProvider>
-					<SeoAdminProvider>
+					<AdminComponentsProvider components={SEO_ADMIN_COMPONENTS}>
 						<EntryFormProvider value={{ collection: plain, form: { ...EMPTY_FORM, title: "Plain" }, setForm: vi.fn() }}>
 							<InspectorPanel
 								incomingReferences={[]}
@@ -137,7 +138,7 @@ describe("SEO extension admin UI", () => {
 								onClose={vi.fn()}
 							/>
 						</EntryFormProvider>
-					</SeoAdminProvider>
+					</AdminComponentsProvider>
 				</TooltipProvider>
 			</SiteProvider>,
 		);

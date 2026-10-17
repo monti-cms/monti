@@ -1,7 +1,6 @@
 "use client";
 
-import { type BrowserFormat, SOURCE_ERROR_ID, type SourcePanelProps, useFormat } from "@monti-cms/admin";
-import { useLinkPaths } from "@monti-cms/admin/hooks";
+import { type BrowserFormat, SOURCE_ERROR_ID, type SourcePanelProps, useFormat, useLinkPaths } from "@monti-cms/admin";
 import {
 	assignBlockIds,
 	entryLinkIds,

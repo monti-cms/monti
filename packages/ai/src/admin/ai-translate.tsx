@@ -1,7 +1,7 @@
 "use client";
 
 import type { EditorExtension } from "@monti-cms/admin";
-import { errorText } from "@monti-cms/admin/api";
+import { errorText } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
 import { Button, isComposingKey, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";

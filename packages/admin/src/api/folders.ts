@@ -1,5 +1,4 @@
-import type { Folder } from "@monti-cms/core/site";
-import { adminApiUrl, type Site } from "@monti-cms/core/site";
+import type { Folder, Site } from "@monti-cms/core/site";
 import { adminFetch } from "./client";
 
 /** What deleting a folder moves up to its parent: the entries and child folders directly inside. */
@@ -17,17 +16,17 @@ export const foldersKeys = {
 
 /** The folders of a collection (the list screen and the sidebar share this query). */
 export const listFolders = (site: Site, collection: string, signal?: AbortSignal) =>
-	adminFetch<Folder[]>(site, adminApiUrl(`/v1/folders?${new URLSearchParams({ collection })}`), { signal });
+	adminFetch<Folder[]>(site, `/v1/folders?${new URLSearchParams({ collection })}`, { signal });
 
 /** What deleting `id` would move to the parent folder. */
 export const getFolderContents = (site: Site, id: string, signal?: AbortSignal) =>
-	adminFetch<FolderContents>(site, adminApiUrl(`/v1/folders/${encodeURIComponent(id)}`), { signal });
+	adminFetch<FolderContents>(site, `/v1/folders/${encodeURIComponent(id)}`, { signal });
 
 export const createFolder = (
 	site: Site,
 	input: { collection: string; name: string; parentId: string | null },
 	fallback?: string,
-) => adminFetch(site, adminApiUrl("/v1/folders"), { method: "POST", json: input, fallback });
+) => adminFetch(site, "/v1/folders", { method: "POST", json: input, fallback });
 
 /** Renames a folder (`name`) or moves it (`parentId`, `null` for the top level). */
 export const updateFolder = (
@@ -35,14 +34,12 @@ export const updateFolder = (
 	id: string,
 	input: { name: string; expectedVersion: number } | { parentId: string | null; expectedVersion: number },
 	fallback?: string,
-) => adminFetch(site, adminApiUrl(`/v1/folders/${encodeURIComponent(id)}`), { method: "PATCH", json: input, fallback });
+) => adminFetch(site, `/v1/folders/${encodeURIComponent(id)}`, { method: "PATCH", json: input, fallback });
 
 export const deleteFolder = (site: Site, id: string, expectedVersion: number, fallback?: string) =>
 	adminFetch(
 		site,
-		adminApiUrl(
-			`/v1/folders/${encodeURIComponent(id)}?${new URLSearchParams({ expectedVersion: String(expectedVersion) })}`,
-		),
+		`/v1/folders/${encodeURIComponent(id)}?${new URLSearchParams({ expectedVersion: String(expectedVersion) })}`,
 		{
 			method: "DELETE",
 			fallback,

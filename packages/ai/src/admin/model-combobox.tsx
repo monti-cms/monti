@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText } from "@monti-cms/admin/api";
+import { errorText } from "@monti-cms/admin";
 import {
 	Combobox,
 	ComboboxContent,
