@@ -79,7 +79,7 @@ describe("renderDocument: the result", () => {
 				null,
 				{},
 				{ type: "doc", version: 99, content: [] },
-				{ type: "doc", version: 2, content: [1] },
+				{ type: "doc", version: 3, content: [1] },
 			]) {
 				const rendered = await renderDocument(value as never, { site: testSite });
 				expect(rendered).toEqual({ content: null, toc: [], unknown: [] });
@@ -88,15 +88,6 @@ describe("renderDocument: the result", () => {
 		} finally {
 			error.mockRestore();
 		}
-	});
-
-	it("lifts an older document version before it renders", async () => {
-		const old = {
-			type: "doc",
-			version: 1,
-			content: [{ type: "codeBlock", attrs: { language: "ts", meta: "", value: "const a = 1;" } }],
-		};
-		expect(await html(old as never)).toContain('class="shiki');
 	});
 
 	it("renders without compiling MDX: it is a pure function of the stored document", async () => {

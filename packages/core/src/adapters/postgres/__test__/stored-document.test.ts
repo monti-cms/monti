@@ -120,7 +120,7 @@ describe("stored documents", () => {
 	/** The rule every row follows. */
 	const expectConsistent = async (entryId: string, state: "working" | "published") => {
 		const row = await stored(entryId, state);
-		const doc = readStoredDocument(row.doc, testSite);
+		const doc = readStoredDocument(row.doc);
 		expect(doc).not.toBeNull();
 		// The hash and the search text are the document's.
 		expect(row.content_hash).toBe(computeContentHash(row.metadata, doc as never));
@@ -286,7 +286,7 @@ describe("stored documents", () => {
 			});
 			if (lookup.status !== "current") throw new Error("expected the published entry");
 			// The document that was stored, not one parsed again from the text.
-			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc, testSite));
+			expect(lookup.entry.doc).toEqual(readStoredDocument(row.doc));
 			expect(lookup.entry.doc).not.toBeNull();
 
 			const withBody = await store.listPublishedEntries({ collections: [contentCollection], includeBody: true });
@@ -307,7 +307,7 @@ describe("stored documents", () => {
 			const row = await expectConsistent(translation.id, "working");
 			expect(row.doc).not.toBeNull();
 			expect(translation.working.translation?.baseDoc).toEqual(
-				readStoredDocument((await stored(source.id, "working")).doc, testSite),
+				readStoredDocument((await stored(source.id, "working")).doc),
 			);
 		});
 	});

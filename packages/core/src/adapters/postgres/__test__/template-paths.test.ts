@@ -37,7 +37,7 @@ describe("templates through migration", () => {
 			const templates = await store.listTemplates();
 			expect(templates.length).toBeGreaterThanOrEqual(SEEDED.length);
 			for (const template of templates) {
-				expect(readStoredDocument(template.doc, testSite)).toBeDefined();
+				expect(readStoredDocument(template.doc)).toBeDefined();
 			}
 
 			// Running everything again changes nothing.

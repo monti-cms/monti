@@ -19,7 +19,7 @@ export async function seedTemplateDocument(
 	const fail = (code: string, message: string) =>
 		configError(`seed.templates["${template.id}"]`, code, `template "${template.name}" ${message}`);
 	if ("doc" in template && template.doc !== undefined) {
-		const doc = readStoredDocument(template.doc, site);
+		const doc = readStoredDocument(template.doc);
 		if (!doc) throw fail("template-doc", "is not a stored document");
 		const canonical = canonicalDocument(site, doc);
 		return { ...canonical, content: assignBlockIds(canonical.content, []) };

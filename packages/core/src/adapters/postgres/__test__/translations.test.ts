@@ -1,8 +1,7 @@
 import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contentCollection, secondLocale } from "../../../../test/any-site";
+import { secondLocale } from "../../../../test/any-site";
 import { testSite } from "../../../../test/site";
-import { docOf } from "../../../../test/stored-content";
 import type { ContentStore } from "../../../core/store";
 import { second, translationHelpers } from "../../../core/store/__test__/contract/translation-fixtures";
 import type { createContentService } from "../../../services/content-service";
@@ -41,39 +40,6 @@ describe("translation groups (postgres storage)", () => {
 	});
 
 	describe.skipIf(!secondLocale)("translations (two or more languages)", () => {
-		it("reads a version 2 translation status as version 4 with a document holding the text of its source, and writes version 4", async () => {
-			const source = await createPost("legacy-state-source");
-			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
-			await pool.query(`UPDATE "${schemaName}".entry_bodies SET translation = $1::jsonb WHERE entry_id = $2`, [
-				JSON.stringify({ version: 2, baseSource: "예전 기준" }),
-				translation.id,
-			]);
-			const legacy = await store.getEntry(translation.id);
-			expect(legacy.working.translation?.version).toBe(4);
-			expect(legacy.working.translation).not.toHaveProperty("baseSource");
-			// Core reads no text format: the text of the old status is kept as the unparsed document it is until the MDX package upgrades it.
-			expect(legacy.working.translation?.baseDoc.content[0]).toMatchObject({ type: "unparsed" });
-			expect(JSON.stringify(legacy.working.translation?.baseDoc)).toContain("예전 기준");
-
-			const resent = (
-				await service.saveDraft(translation.id, {
-					collection: contentCollection,
-					slug: "legacy-state-source",
-					metadata: { title: "Only the title" },
-					doc: docOf(""),
-					translation: { version: 2, baseSource: "예전 기준" } as never,
-					expectedVersion: legacy.version,
-				})
-			).entry;
-			expect(resent.working.translation?.version).toBe(4);
-			const stored = await pool.query<{ translation: { version: number; baseDoc: unknown } }>(
-				`SELECT translation FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = 'working'`,
-				[translation.id],
-			);
-			expect(stored.rows[0]?.translation.version).toBe(4);
-			expect(JSON.stringify(stored.rows[0]?.translation.baseDoc)).toContain("예전 기준");
-		});
-
 		const statusOf = async (id: string) =>
 			(await pool.query<{ status: string }>(`SELECT status FROM "${schemaName}".entries WHERE id = $1`, [id])).rows[0]
 				?.status;

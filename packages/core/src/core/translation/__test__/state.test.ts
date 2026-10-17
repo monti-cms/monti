@@ -26,20 +26,6 @@ describe("translation state", () => {
 		);
 	});
 
-	it("lifts a version 1 document to the current version, a code block to its code and annotations", () => {
-		const fence = { language: "ts", meta: "", value: "// @line plus\nconst a = 1;" };
-		const old = { version: 1, type: "doc", content: [{ type: "codeBlock", attrs: fence, id: "aaaaaaaa" }] };
-		const state = parseTranslationState({ version: 4, baseDoc: old });
-		expect(state?.baseDoc.version).toBe(STORED_DOCUMENT_VERSION);
-		expect(state?.baseDoc.content[0]?.attrs).toEqual({
-			annotations: { lines: [{ end: 1, name: "plus", start: 0 }] },
-			code: "const a = 1;",
-			language: "ts",
-			meta: "",
-		});
-		expect(state?.baseDoc.content[0]?.id).toBe("aaaaaaaa");
-	});
-
 	it("rejects a state with an invalid document", () => {
 		for (const baseDoc of [
 			{ type: "doc" },
@@ -73,7 +59,7 @@ describe("translation state", () => {
 	it("limits the size of the whole state", () => {
 		const big = {
 			type: "doc",
-			version: 2,
+			version: 3,
 			content: [{ type: "paragraph", attrs: { v: "a".repeat(MAX_TRANSLATION_BYTES) } }],
 		};
 		expect(parseTranslationState({ version: 4, baseDoc: big })).toBeUndefined();

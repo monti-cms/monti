@@ -1,10 +1,4 @@
-import {
-	type CmsNode,
-	readStoredDocument,
-	type StoredDocument,
-	storedCodeBlockFence,
-	withoutBlockIds,
-} from "@monti-cms/core/document";
+import { type CmsNode, type StoredDocument, storedCodeBlockFence } from "@monti-cms/core/document";
 import { describe, expect, it } from "vitest";
 import { testSite } from "../../../core/test/site";
 import { bodyFromMdx, fromStoredDocument } from "../body";
@@ -87,29 +81,5 @@ describe("a stored code block", () => {
 		const again = bodyFromMdx(testSite, body.mdx, undefined, { previous: body.doc });
 		expect(again.doc).toEqual(body.doc);
 		expect(storedCodeBlockFence(testSite, block.attrs ?? {})).toBe("abc\n// @char strong {0-4}\nconst item = 1;");
-	});
-
-	it("lifts a version 1 document, whose code block held the fence text, to the current form", () => {
-		const current = bodyFromMdx(testSite, FENCE).doc as StoredDocument;
-		const block = codeBlockOf(current);
-		const version1 = {
-			type: "doc",
-			version: 1,
-			content: [
-				{
-					type: "codeBlock",
-					id: block.id,
-					attrs: {
-						language: "ts",
-						meta: 'title="a.ts"',
-						title: "a.ts",
-						value: FENCE.split("\n").slice(1, -2).join("\n"),
-					},
-				},
-			],
-		};
-		const lifted = readStoredDocument(version1, testSite);
-		expect(lifted?.version).toBe(current.version);
-		expect(withoutBlockIds(lifted?.content ?? [])).toEqual(withoutBlockIds(current.content));
 	});
 });

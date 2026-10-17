@@ -88,7 +88,7 @@ export async function importText(
 		return { doc: unparsedDocument(text, options.previous, name), issues: result.issues.map(issueOf), warnings: [] };
 	}
 	// What a plugin returns is checked like a document from the API: its shape, its version, and the canonical form every body is stored in.
-	const read = readStoredDocument(result.doc, site);
+	const read = readStoredDocument(result.doc);
 	if (!read) {
 		console.error(`[cms] format "${name}" returned something that is not a stored document`);
 		throw new ServiceError("format_import_failed", [

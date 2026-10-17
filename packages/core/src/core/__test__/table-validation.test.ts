@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contentCollection } from "../../../test/any-site";
 import { testSite } from "../../../test/site";
+import { STORED_DOCUMENT_VERSION } from "../../doc/stored-document";
 import { MAX_TABLE_COLUMNS } from "../../doc/table-layout";
 import type { CmsNode } from "../../doc/types";
 import { prepareSnapshot } from "../snapshot";
@@ -10,7 +11,7 @@ describe("table cell merge pre-publish validation of a document", () => {
 	describe("a document given directly", () => {
 		const docWith = (cells: Record<string, unknown>[][]) => ({
 			type: "doc",
-			version: 2,
+			version: STORED_DOCUMENT_VERSION,
 			content: [
 				{
 					type: "table",

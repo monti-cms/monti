@@ -156,7 +156,7 @@ describe("entry API with a stored document", () => {
 		const doc = sampleDoc();
 		const invalid: unknown[] = [
 			{ ...(doc as object), version: 999 },
-			{ type: "doc", version: 1, content: "not a list" },
+			{ type: "doc", version: 3, content: "not a list" },
 			{ type: "paragraph" },
 			"text",
 			42,
@@ -250,7 +250,7 @@ describe("entry API with a stored document", () => {
 		const entry = await created({ format: "paragraphs", body: "First" });
 		const doc = sampleDoc();
 
-		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 1 }, "text", null]) {
+		for (const value of [{ ...(doc as object), version: 999 }, { type: "doc", version: 3 }, "text", null]) {
 			const res = await patch(entry.id, { expectedVersion: entry.version, doc: value });
 			expect(res.status, JSON.stringify(value)).toBe(400);
 			expect((await res.json()).error.code).toBe("invalid_input");
@@ -263,7 +263,7 @@ describe("entry API with a stored document", () => {
 	it("rejects a document larger than the limit with 413", async () => {
 		const doc = {
 			type: "doc",
-			version: 1,
+			version: 3,
 			content: [{ type: "paragraph", content: [{ type: "text", text: "x".repeat(MAX_DOC_BYTES) }] }],
 		};
 		const res = await post({ doc });
@@ -275,7 +275,7 @@ describe("entry API with a stored document", () => {
 		// Above the text limit as JSON but within the document limit.
 		// Few long paragraphs keep the test fast: the JSON overhead per paragraph is what pushes it over the text limit.
 		const paragraph = { type: "paragraph", content: [{ type: "text", text: "word ".repeat(72).trim() }] };
-		const doc = { type: "doc", version: 1, content: Array.from({ length: 5_200 }, () => paragraph) };
+		const doc = { type: "doc", version: 3, content: Array.from({ length: 5_200 }, () => paragraph) };
 		expect(Buffer.byteLength(JSON.stringify(doc))).toBeGreaterThan(MAX_TEXT_BYTES);
 		expect(Buffer.byteLength(JSON.stringify(doc))).toBeLessThan(MAX_DOC_BYTES);
 

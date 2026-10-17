@@ -1,13 +1,11 @@
-import { createAnnotationConfig } from "../annotation/code-block/constants";
 import type { Site } from "../site";
 import { assignBlockIds, forEachBlock } from "./block-ids";
 import { normalizedLinkMark } from "./entry-links";
-import { type CodeBlockSite, storedCodeBlockAttrs } from "./stored-code-block";
 import type { CmsJsonValue, CmsMark, CmsNode } from "./types";
 
 /**
- * Format version of a stored document. Raise it when a node or attribute changes its name or meaning, and add the step
- * from the previous version to `STORED_DOCUMENT_MIGRATIONS`. A new kind of block does not raise it.
+ * Format version of a stored document. Raise it when a node or attribute changes its name or meaning; only the current version is read. A new kind of
+ * block does not raise it.
  */
 export const STORED_DOCUMENT_VERSION = 3;
 
@@ -101,32 +99,6 @@ export const storedMark = (given: CmsMark): CmsMark => {
 
 export const isBlankParagraph = (block: CmsNode) => block.type === "paragraph" && (block.content ?? []).length === 0;
 
-/** Applies `change` to every node of a stored document, children first. */
-const mapNodes = (nodes: readonly CmsNode[], change: (node: CmsNode) => CmsNode): CmsNode[] =>
-	nodes.map((item) => change(item.content ? { ...item, content: mapNodes(item.content, change) } : item));
-
-/** Steps that lift a stored document from version `n` to `n + 1`, by `n`. */
-const STORED_DOCUMENT_MIGRATIONS: Readonly<
-	Record<number, (doc: StoredDocument, site: CodeBlockSite) => StoredDocument>
-> = {
-	/** 1 → 2: a code block holds its code and annotations as data instead of the fence text with annotation comments. */
-	1: (doc, site) => ({
-		content: mapNodes(doc.content, (item) =>
-			item.type === "codeBlock"
-				? { ...item, attrs: sortJson(storedCodeBlockAttrs(site, item.attrs ?? {})) as Record<string, CmsJsonValue> }
-				: item,
-		),
-		type: "doc",
-		version: 2,
-	}),
-	/**
-	 * 2 → 3: an internal link is `{ entryId }` (the id of the entry's translation group) instead of the `href` of its address. Nothing in a version 2
-	 * document has to change to be read as version 3: its links are all `href` links, which stay valid. The store migration `0018_link_entry_ids` rewrites the
-	 * internal ones, and a write converts the ones that still match an internal address.
-	 */
-	2: (doc) => ({ content: doc.content, type: "doc", version: 3 }),
-};
-
 const NODE_KEYS = new Set(["type", "id", "attrs", "content", "marks", "text"]);
 
 const isJsonValue = (value: unknown): value is CmsJsonValue => {
@@ -154,33 +126,22 @@ const isNode = (value: unknown): value is CmsNode =>
 	(value.text === undefined || typeof value.text === "string") &&
 	(value.id === undefined || typeof value.id === "string");
 
-/** What lifting a version 1 document uses when the caller gives no site: the core's default line effects. */
-const DEFAULT_CODE_SITE: CodeBlockSite = { annotationConfig: createAnnotationConfig() };
-
 /**
- * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and lifts an
- * older version to the current one. Returns `undefined` for anything that is not a stored document of a known version.
+ * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and its version. Returns `undefined`
+ * for anything that is not a stored document of the current version.
  */
-export const readStoredDocument = (value: unknown, site?: CodeBlockSite): StoredDocument | undefined => {
+export const readStoredDocument = (value: unknown): StoredDocument | undefined => {
 	if (!isRecord(value) || value.type !== "doc") return undefined;
 	if (Object.keys(value).some((key) => key !== "type" && key !== "version" && key !== "content")) return undefined;
 	const version = value.version;
-	if (typeof version !== "number" || !Number.isInteger(version) || version < 1 || version > STORED_DOCUMENT_VERSION) {
-		return undefined;
-	}
+	if (version !== STORED_DOCUMENT_VERSION) return undefined;
 	if (!Array.isArray(value.content) || !value.content.every(isNode)) return undefined;
 	// Keys are sorted again: a document read from `jsonb` comes back in Postgres' key order.
-	let doc: StoredDocument = {
+	return {
 		content: value.content.map((item) => sortJson(item as unknown as CmsJsonValue) as unknown as CmsNode),
 		type: "doc",
 		version,
 	};
-	while (doc.version < STORED_DOCUMENT_VERSION) {
-		const step = STORED_DOCUMENT_MIGRATIONS[doc.version];
-		if (!step) return undefined;
-		doc = step(doc, site ?? DEFAULT_CODE_SITE);
-	}
-	return doc;
 };
 
 /** Text runs of one parent as a reader of the text would see them: empty text dropped, neighbours with the same marks joined, marks in their stored order. */

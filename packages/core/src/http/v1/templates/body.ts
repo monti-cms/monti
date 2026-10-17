@@ -24,7 +24,7 @@ export async function templateBodyOf(
 ): Promise<unknown> {
 	if (input.body === undefined || input.format === undefined) {
 		if (input.doc === undefined) return undefined;
-		const read = readStoredDocument(input.doc, cms.site);
+		const read = readStoredDocument(input.doc);
 		// What is not a stored document is rejected by the store (`invalid_input`).
 		return read ? normalize(cms, read) : input.doc;
 	}

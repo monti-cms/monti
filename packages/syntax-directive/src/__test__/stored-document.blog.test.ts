@@ -15,7 +15,7 @@ describe("stored documents of real directive posts", () => {
 			expect(body.doc, name).not.toBeNull();
 			const doc = body.doc as StoredDocument;
 			expect(bodyFromMdx(testSite, body.mdx, directives).mdx, name).toBe(body.mdx);
-			expect(readStoredDocument(JSON.parse(JSON.stringify(doc)), testSite), name).toEqual(doc);
+			expect(readStoredDocument(JSON.parse(JSON.stringify(doc))), name).toEqual(doc);
 		}
 	});
 });

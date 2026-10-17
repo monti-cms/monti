@@ -10,7 +10,7 @@ import { checkDocument, isEmptyDocument } from "../body-check";
 import { prepareSnapshot } from "../snapshot";
 
 /** The checks of a stored document, on documents given directly (the cases a text cannot spell). */
-const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: 2, content });
+const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: 3, content });
 const paragraph = (id: string, ...content: CmsNode[]): CmsNode => ({ id, type: "paragraph", content });
 const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
 	type: "text",
@@ -94,7 +94,7 @@ describe("a document and its text are one body", () => {
 	it("puts a document built by hand in the form the text reads as: split text joined, trailing blank paragraphs dropped", async () => {
 		const byHand = {
 			type: "doc",
-			version: 2,
+			version: 3,
 			content: [
 				{
 					type: "paragraph",
@@ -117,7 +117,7 @@ describe("a document and its text are one body", () => {
 		const first = await prepare({ format: "paragraphs", body: "One\n\nTwo" });
 		const sent = {
 			type: "doc",
-			version: 2,
+			version: 3,
 			content: [
 				{ id: first.doc.content[1]?.id, type: "paragraph", content: [{ type: "text", text: "Two" }] },
 				{ type: "paragraph", content: [{ type: "text", text: "One" }] },

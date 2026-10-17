@@ -403,7 +403,7 @@ describe("ContentService Contract", () => {
 			["a media id that is not text", { type: "image", attrs: { mediaId: 5, alt: "a" } }, "invalid_reference_id"],
 			["a file with no media id", { type: "file", attrs: { label: "x" } }, "missing_media_id"],
 		])("flags a document that holds %s", async (_name, block, expectedIssue) => {
-			const doc = { type: "doc", version: 2, content: [block] };
+			const doc = { type: "doc", version: 3, content: [block] };
 			const snap = await prepareSnapshot({ collection: content, slug: "a", metadata: {}, doc });
 			expect(snap.issues).toContainEqual(
 				expect.objectContaining({ code: expectedIssue, position: { blockId: snap.doc.content[0]?.id } }),
@@ -478,7 +478,7 @@ describe("ContentService Contract", () => {
 		});
 
 		it("retains trusted previous refs marked stale when the body holds a reference problem", async () => {
-			const doc = { type: "doc", version: 2, content: [{ type: "image", attrs: { alt: "a" } }] };
+			const doc = { type: "doc", version: 3, content: [{ type: "image", attrs: { alt: "a" } }] };
 			const previousReferences: Reference[] = [
 				{
 					kind: "media",
@@ -1483,7 +1483,7 @@ describe("ContentService Contract", () => {
 			const { body: _text, format: _format, ...fields } = await draftInput("");
 			const snap = await prepareSnapshot({
 				...fields,
-				doc: { type: "doc", version: 2, content: [{ type: "image", attrs: { alt: "a" } }] },
+				doc: { type: "doc", version: 3, content: [{ type: "image", attrs: { alt: "a" } }] },
 			} as never);
 
 			expect(snap.issues).toContainEqual(expect.objectContaining({ code: "missing_media_id" }));

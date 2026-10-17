@@ -52,7 +52,7 @@ export const translationsContract: ContractSuite = (factory) => {
 				expect(translation.status).toBe("draft");
 				expect(translation.workingSlug).toBe("copy-source");
 				expect(contentOf(translation.working.doc)).toEqual(
-					contentOf(withTranslationHints(testSite, readStoredDocument(source.working.doc, testSite) as StoredDocument)),
+					contentOf(withTranslationHints(testSite, readStoredDocument(source.working.doc) as StoredDocument)),
 				);
 				expect(JSON.stringify(contentOf(translation.working.doc))).toContain("한국어 본문");
 				expect(translation.working.metadata).toEqual({});

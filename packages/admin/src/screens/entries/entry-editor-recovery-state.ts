@@ -18,7 +18,7 @@ const RECOVERY_WAIT_MS = 1500;
  * editor makes it. A copy without a readable body is not offered.
  */
 function checkedRecovery(site: Site, record: RecoveryRecord): RecoveryRecord | null {
-	const doc = readStoredDocument((record.snapshot as { doc?: unknown }).doc, site);
+	const doc = readStoredDocument((record.snapshot as { doc?: unknown }).doc);
 	if (!doc) return null;
 	const snapshot = { ...record.snapshot, doc } as EntryForm;
 	return { ...record, snapshot, localFingerprint: formFingerprint(site, snapshot) };

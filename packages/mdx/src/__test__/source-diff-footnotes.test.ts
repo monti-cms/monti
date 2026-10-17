@@ -10,7 +10,7 @@ const docOf = (mdx: string) => docOfMdx(testSite, mdx);
 const text = (unit: TranslationUnit) =>
 	unit.kind === "header"
 		? unit.source
-		: documentToMdx(testSite, { type: "doc", version: 2, content: [unit.node] } as never).trimEnd();
+		: documentToMdx(testSite, { type: "doc", version: 3, content: [unit.node] } as never).trimEnd();
 
 const diffText = (before: string, after: string) => diffSources(testSite, docOf(before), docOf(after));
 
