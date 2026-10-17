@@ -6,9 +6,9 @@ import type { EventSubscriber } from "../services/events";
 import { afterCommitSubscribers, checkSources, type HookSource, type PluginScope } from "../services/hooks";
 import type { OwnedPluginRoute, Plugin, ServerPlugin } from "./define";
 
-/** The server side of one plugin: its inline object, or the default export of its loader. `undefined` for a plugin without one. */
+/** The server side of one plugin: the default export of its loader. `undefined` for a plugin without one. */
 export async function serverSideOf(plugin: Pick<Plugin, "server">): Promise<ServerPlugin | undefined> {
-	return typeof plugin.server === "function" ? (await plugin.server()).default : plugin.server;
+	return plugin.server ? (await plugin.server()).default : undefined;
 }
 
 /** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
@@ -60,7 +60,7 @@ export function createServerPlugins(
 ): ServerPlugins {
 	let loaded: Promise<readonly LoadedServerPlugin[]> | undefined;
 
-	/** The server side of one plugin: its inline object, or the default export of its loader. */
+	/** The server side of one plugin: the default export of its loader. */
 	const loadOne = async (plugin: Plugin): Promise<LoadedServerPlugin> => {
 		return { name: plugin.name, ...(await serverSideOf(plugin)) };
 	};
@@ -80,7 +80,7 @@ export function createServerPlugins(
 			.then((servers) =>
 				Promise.all(
 					servers.map(async (server) => {
-						const provided = await server.formats?.();
+						const provided = await server.formats?.(scopeOf(server.name));
 						return provided === undefined ? [] : Array.isArray(provided) ? provided : [provided as CmsFormat];
 					}),
 				),

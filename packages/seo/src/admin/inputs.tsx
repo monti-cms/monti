@@ -1,9 +1,8 @@
 "use client";
 
-import type { FieldInputParts, FieldInputProps } from "@monti-cms/admin";
+import { type FieldInputParts, type FieldInputProps, type Site, useSite } from "@monti-cms/admin";
 import { cn, Switch } from "@monti-cms/admin/kit";
 import { SUMMARY_ROLE } from "@monti-cms/core";
-import { type Site, useSite } from "@monti-cms/core/site";
 import { SEO_DEFAULT_LIMITS } from "../fields";
 
 /** Recommended length: field `max` → `inputOptions.limit` → default. */

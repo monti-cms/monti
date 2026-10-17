@@ -10,7 +10,6 @@
 		"./host": "./src/host/index.tsx",
 		"./router": "./src/router/index.tsx",
 		"./editor": "./src/editor/public.ts",
-		"./blocks": "./src/editor/blocks/public.ts",
 		"./internal/plugins": "./src/internal-plugins.ts",
 		"./slots": "./src/slots/slots.tsx",
 		"./kit": "./src/kit.ts",
@@ -101,10 +100,6 @@
 			"./editor": {
 				"types": "./dist/editor/public.d.ts",
 				"default": "./dist/editor/public.js"
-			},
-			"./blocks": {
-				"types": "./dist/editor/blocks/public.d.ts",
-				"default": "./dist/editor/blocks/public.js"
 			},
 			"./internal/plugins": {
 				"types": "./dist/internal-plugins.d.ts",

@@ -6,7 +6,9 @@
 		},
 		"packages/admin": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"],
-			"ignoreIssues": { "src/ui/**": ["exports", "types"] }
+			"ignoreIssues": {
+				"src/ui/**": ["exports", "types"]
+			}
 		},
 		"packages/ai": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}", "src/routes/**/route.ts!"]
@@ -48,6 +50,9 @@
 		},
 		"packages/syntax-shiki": {
 			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+		},
+		"docs/recipes": {
+			"entry": ["src/**/*.{ts,tsx}"]
 		}
 	},
 	"ignoreExportsUsedInFile": true,

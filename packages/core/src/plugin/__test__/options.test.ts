@@ -59,11 +59,11 @@ describe("site.pluginOptions", () => {
 });
 
 describe("definePlugin", () => {
-	it("needs only a name for a plugin that adds hooks: options are an empty object, the hooks stay in `server`", () => {
+	it("needs only a name for a plugin that adds hooks: options are an empty object, the hooks stay in its server module", async () => {
 		const hooks = { validate: [() => undefined] };
-		const plugin = definePlugin({ name: "hook-only", server: { hooks } });
+		const plugin = definePlugin({ name: "hook-only", server: async () => ({ default: { hooks } }) });
 		expect(plugin.options).toEqual({});
-		expect(plugin.server).toEqual({ hooks });
+		expect((await plugin.server?.())?.default).toEqual({ hooks });
 	});
 
 	it("keeps the options it is given", () => {

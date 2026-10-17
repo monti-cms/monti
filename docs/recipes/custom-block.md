@@ -2,7 +2,7 @@
 
 Goal: a `notice` block (an info or warning box with a title and a body) that editors insert from the slash menu, edit with a view of your own, and readers see through your own component. A check warns when a warning notice has no title.
 
-The snippets below are a sketch to adapt, not tested code.
+The code below is the recipe's own files in [`src/notice/`](src/notice/), type checked in CI.
 
 ## What you need to know
 
@@ -12,10 +12,11 @@ The snippets below are a sketch to adapt, not tested code.
 4. **The editor view** is a component registered in `blockViews` by block name. It takes no props: it reads and writes its block with `useBlockEditor()`, draws the editable body with `<Content />`, and wraps itself in `<BlockFrame>` (`@monti-cms/admin`).
 5. **The public component** goes in `defineRender({ blocks })`, the default export of the `render` module: the components by block name, with the attributes as flat props typed from the definition (`BlockProps<typeof noticeBlock>`) and `ctx` (the page's `locale`). Pass a render module to `admin`, or an admin module to `render`, and type checking stops it.
 
-## A sketch
+## The code
 
 The definition, with its `validate`:
 
+<!-- src/notice/block.ts -->
 ```ts
 import { defineBlock } from "@monti-cms/core";
 
@@ -29,7 +30,12 @@ export const noticeBlock = defineBlock({
 		title: { type: "string", label: "Title", translatable: true },
 	},
 	translateInside: true,
-	editor: { view: "node", insertable: true, icon: "message-square", insert: { values: { level: "info" }, text: "Content" } },
+	editor: {
+		view: "node",
+		insertable: true,
+		icon: "message-square",
+		insert: { values: { level: "info" }, text: "Content" },
+	},
 	// Findings are warnings: they show under the block and come back as `warnings`, but never block the save.
 	validate: (node) =>
 		node.attributes.level === "warn" && !String(node.attributes.title ?? "").trim()
@@ -40,8 +46,10 @@ export const noticeBlock = defineBlock({
 
 The plugin:
 
+<!-- src/notice/index.ts -->
 ```ts
 import { definePlugin } from "@monti-cms/core";
+import { noticeBlock } from "./block";
 
 export const notice = () =>
 	definePlugin({
@@ -54,6 +62,7 @@ export const notice = () =>
 
 The admin module, a `"use client"` module with the editor view and its declaration (by block name):
 
+<!-- src/notice/admin.tsx -->
 ```tsx
 "use client";
 
@@ -68,7 +77,11 @@ function NoticeView() {
 				<button type="button" onClick={() => block.setValue("level", level === "warn" ? "info" : "warn")}>
 					{level}
 				</button>
-				<input aria-label="Title" value={block.values.title ?? ""} onChange={(e) => block.setValue("title", e.target.value)} />
+				<input
+					aria-label="Title"
+					value={block.values.title ?? ""}
+					onChange={(e) => block.setValue("title", e.target.value)}
+				/>
 			</div>
 			<Content />
 		</BlockFrame>
@@ -80,8 +93,10 @@ export default defineAdminPlugin({ components: { blockViews: { notice: NoticeVie
 
 The public component, in the `render` module's default export:
 
+<!-- src/notice/render.tsx -->
 ```tsx
 import { type BlockProps, defineRender } from "@monti-cms/core/render";
+import type { noticeBlock } from "./block";
 
 function Notice({ level, title, children }: BlockProps<typeof noticeBlock>) {
 	return (

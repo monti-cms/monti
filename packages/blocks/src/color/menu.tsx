@@ -1,5 +1,6 @@
 "use client";
 
+import { useSite, useTranslator } from "@monti-cms/admin";
 import { addedMarkName } from "@monti-cms/admin/editor";
 import {
 	cn,
@@ -14,7 +15,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { Baseline, Check } from "lucide-react";
 import {

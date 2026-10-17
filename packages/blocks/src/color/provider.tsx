@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminComponents } from "@monti-cms/admin";
+import { type AdminComponents, useTranslator } from "@monti-cms/admin";
 import {
 	allowsMark,
 	BubbleButton,
@@ -9,7 +9,6 @@ import {
 	type MarkAttrs,
 } from "@monti-cms/admin/editor";
 import { DropdownMenuSeparator } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { cleanTextColor, textColorProps } from "./colors";
 import { colorBlock } from "./definition";

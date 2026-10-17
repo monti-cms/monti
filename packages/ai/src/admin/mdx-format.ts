@@ -1,7 +1,6 @@
-import { type BrowserFormat, useFormat } from "@monti-cms/admin";
+import { type BrowserFormat, type Site, useFormat } from "@monti-cms/admin";
 import { storedToTiptap, tiptapToStored } from "@monti-cms/admin/editor";
 import { unparsedDocument } from "@monti-cms/core/document";
-import type { Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 
 /**

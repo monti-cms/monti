@@ -623,7 +623,7 @@ export default defineFormat({
 });
 ```
 
-플러그인은 `server`로 형식을 준다. `definePlugin({ name: "hugo", server: { formats: async () => (await import("./formats")).hugo } })`이고, 형식 하나 또는 그 목록을 돌려주는 함수다. 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/monti/v1/meta`가 이를 `formats`로 알려 준다.
+플러그인은 서버 모듈로 형식을 준다. `defineServerPlugin({ formats: ({ cms, plugin }) => hugo })`이고, 플러그인 문맥을 받아 형식 하나 또는 그 목록을 돌려주는 함수다(플러그인 옵션에 따라 달라지는 형식은 `cms.site.pluginOptions(...)`로 옵션을 읽는다). 같은 이름이 두 번 나오면 인스턴스가 플러그인을 불러올 때 실패한다. `cms.formats()`가 한 인스턴스의 목록이고, `GET /api/monti/v1/meta`가 이를 `formats`로 알려 준다.
 
 **문서 모델.** 노드는 `paragraph`, `heading`(`attrs.level`), `bulletList`와 `orderedList`(각각 블록을 담은 `listItem` 노드를 가진다), `blockquote`, `codeBlock`, `image`, `table`, `horizontalRule`, `hardBreak`, `text`다. 텍스트 노드에는 `marks`(`bold`, `italic`, `code`, `attrs.href`가 있는 `link` 등)가 붙는다. 플러그인의 블록은 블록 이름을 딴 노드이고, 블록의 속성은 `attrs`에 들어간다(`{ type: "notice", attrs: { level: "warn" }, content: [...] }`). `emptyStoredDocument()`(`@monti-cms/core/document`)가 `content`를 채워 넣을 문서이고, 그 텍스트는 `toPlainText(site, doc)`나 `documentText(site, doc, options)`(`@monti-cms/core/site`)가 준다. 양방향을 모두 갖춘 형식은 [커스텀 형식 레시피](../../docs/recipes/custom-format.md)에 있다.
 
@@ -878,9 +878,8 @@ export const myPlugin = () =>
 		nav: [{ path: "my", label: "내 화면", icon: "plug" }], // 관리자 사이드바 도구 묶음의 페이지: <관리자 경로>/tools/my (`label`은 `(site) => 글`이어도 되며 관리자 언어를 따른다)
 		keySlots: [{ id: "key", service: "Acme", label: (site) => site.createTranslator(messages)("keyLabel") }], // 플러그인에 필요한 API 키("API 키 저장소")
 		checkConfig: ({ collections }) => {}, // 사이트 설정을 만들 때 부른다
-		// 서버 쪽은 한곳에: 로더(서버에서만 읽는다) 또는 인라인 객체.
-		server: () => import("my-plugin/server"), // ServerPlugin: 경로·훅·형식·명령·migrate·keyUses·features
-		// server: { hooks: { validate: [() => undefined] } }, // 인라인: 훅만 더하는 플러그인은 모듈이 필요 없다(`options`도 생략할 수 있다)
+		// 서버 쪽은 한곳에: 서버에서만 읽는 자기 모듈. 기본 내보내기가 `defineServerPlugin({ ... })`이다.
+		server: () => import("my-plugin/server"), // 경로·훅·형식·명령·migrate·keyUses·features
 		admin: () => import("my-plugin/admin"), // `export default defineAdminPlugin({ pages, components, slots, Provider })`(@monti-cms/admin): 화면·블록 뷰·공급자
 		render: () => import("my-plugin/render"), // `export default defineRender({ blocks: { name: Component } })`(@monti-cms/core/render): 플러그인 블록의 공개 컴포넌트("저장된 문서 그리기")
 	});
@@ -902,9 +901,7 @@ export const myPlugin = () =>
   인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로만 기본값 `admin` 대신 다른 `access` 종류(GET 전용 `public-read`, 브라우저 폼 `same-origin-form`, 토큰을 쓰는 크론 `admin-or-bearer`, 웹훅 `signed`)를 쓰고, 라우터가 그 종류의 검사를 적용한다. 검사를 핸들러에 맡기는 것은 `signed`뿐이다(`publicRoute(...)` 핸들러). 핸들러는 `adminRoute(async ({ request, params, auth, cms }) => …)`이고, 그 입력 객체가 핸들러의 유일한 시그니처이고, 테스트는 `@monti-cms/core/testing`의 `callRoute(handler, { request, cms, params })`로 부른다.
   `migrate`는 `monti db:migrate`가 본체 표 다음에 부른다.
 - 같은 출처 검사는 `Host`·`site.url`의 호스트를 받고, `X-Forwarded-Host`의 첫 값은 호스트를 신뢰할 때만 받는다("호스트 신뢰"). `Host`를 바꾸는 프록시 뒤라면 `site.url`을 적거나 호스트를 신뢰한다.
-- **쓰기 훅**(저장 전 검사 `transform`·`validate`·`validatePublish`와 저장 뒤 구독 `afterCommit`)은 서버 설정의 `hooks`와 모양이 같아 단계마다 목록이고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 훅은 플러그인 `server`의 `hooks`이고, `server`는 두 꼴 중 하나로 준다.
-  - **인라인**: `definePlugin({ name: "audit", server: { hooks: { afterCommit: [{ name: "log", run }] } } })`. 훅만 더하는 플러그인에 쓴다. 모듈 파일이 없고 `options`도 생략할 수 있다. 인라인 서버는 CLI, 엣지, 콜드 스타트를 포함해 서버가 시작할 때마다 불러오므로 가볍게 둔다(무거운 import 없이). `plugin.secrets`나 환경 변수로 비밀 값을 쓸 수 있다. `monti.config.ts`는 서버 전용이라 브라우저에 닿지 않는다.
-  - **로더**: `server: () => import("./server")`이고 기본 내보내기가 `ServerPlugin`이다(`export default defineServerPlugin({ routes, hooks, ... })`, `@monti-cms/core/server`에서 가져오며 타입만 확인한다). 서버만 읽으므로, 비밀 값을 쥐거나 네트워크로 호출하거나 무거운 것을 import하는 훅이 있는 곳이다. 어차피 경로, 마이그레이션, 명령, 검사가 있는 플러그인도 여기에 둔다.
+- **쓰기 훅**(저장 전 검사 `transform`·`validate`·`validatePublish`와 저장 뒤 구독 `afterCommit`)은 서버 설정의 `hooks`와 모양이 같아 단계마다 목록이고, 서버 설정의 훅 다음에 플러그인 순서대로 돈다. "훅 계약"을 본다. 훅은 플러그인 서버 모듈의 `hooks`이고, 서버 모듈은 한 가지로만 쓴다. `server: () => import("./server")`이고 기본 내보내기가 `ServerPlugin`이다(`export default defineServerPlugin({ routes, hooks, ... })`, `@monti-cms/core/server`에서 가져오며 타입만 확인한다). 처음 필요할 때 서버에서만 읽는다. 훅이 둘뿐이어도 인라인 꼴은 없다. 플러그인 팩토리는 사이트 설정이 import하는 모듈에 있고, 플러그인 목록으로 사이트를 만드는 클라이언트 코드는 그 모듈을 번들에 넣으므로, 거기 쓴 것은 브라우저에 닿을 수 있다. 훅만 더하는 플러그인도 `options`는 필요 없다: `definePlugin({ name: "audit", server: () => import("./server") })`.
 - `afterCommit` 구독자의 `run(event, { cms, plugin })`은 인스턴스와 플러그인 문맥을 받는다. 그래서 자기 저장소·스토어·형식이 필요한 구독자가 따로 상태를 두지 않아도 된다. 전달은 아웃박스에서 하며(재시도, 최소 한 번, "이벤트 전달") `event.once(run)`은 이벤트마다 일을 한 번만 돌린다.
 - 서버 쪽 `commands`는 명령줄 명령을 더한다. `monti <플러그인 이름>:<명령> [옵션]`이 `monti db:migrate`처럼 앱을 불러오고(`--env-file`, `--no-env-file`, `--config`) `command.run({ cms, plugin, args, log, error })`를 돌려 그것이 돌려주는 코드로 끝난다. 명령은 `options`(`{ 이름: { type: "string" | "boolean", description } }`)를 선언하고, `--help`가 그것을 나열한다. `monti git-sync:pull`이 그중 하나다.
 - 직접 만든 관리자 컴포넌트도 플러그인이다. `admin` 모듈을 주고 그 default export에서 `defineAdminPlugin({ components })`(`@monti-cms/admin`)로 컴포넌트를 선언하면 관리자가 그것을 적용한다. `admin-components.tsx` 파일은 더 이상 없다. `examples/blog/plugins/word-list/`가 예시다:
@@ -1523,7 +1520,7 @@ layout: [
 
 ## 레시피
 
-확장 지점마다 작은 예시 스케치가 있는 짧은 페이지가 [`docs/recipes`](../../docs/recipes/README.md)에 있다(테스트된 코드는 아니다). 발행할 때 Slack 메시지 보내기, 나만의 블록(정의, 편집기 뷰, 공개 컴포넌트, 검사), 관리자 필드 화면 직접 만들기, 저장 전 슬러그 규칙, 나만의 형식, 공개 사이트의 타입 있는 읽기, 플러그인의 관리자 페이지, 엄격한 404/308 프록시다. 페이지마다 필요한 개념과 스케치가 나온다.
+확장 지점마다 코드(CI가 타입 검사를 한다)가 있는 짧은 페이지가 [`docs/recipes`](../../docs/recipes/README.md)에 있다. 발행할 때 Slack 메시지 보내기, 나만의 블록(정의, 편집기 뷰, 공개 컴포넌트, 검사), 관리자 필드 화면 직접 만들기, 저장 전 슬러그 규칙, 나만의 형식, 공개 사이트의 타입 있는 읽기, 플러그인의 관리자 페이지, 엄격한 404/308 프록시다. 페이지마다 필요한 개념과 코드가 나온다.
 
 ## 아직 남은 일
 

@@ -58,7 +58,7 @@ import "@monti-cms/admin/styles.css";
 | `@monti-cms/mdx/format` | 서버 코드, 테스트 | `mdxFormat`, `createMdxFormat({ syntax })`, 그리고 해석·쓰기 API: `analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`bodyDocument`·`documentToMdx`·`toStoredDocument`·`fromStoredDocument`·`parseMdxAst`·`readableMdx`·`compareMdxStructure`·`configuredSyntax`·`remarkFenceBlocksToMdx` 등 |
 | `@monti-cms/mdx/render` | 공개 화면(서버 컴포넌트) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | 관리자(플러그인이 불러온다) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, 그리고 이를 등록하는 관리자 공급자 |
-| `@monti-cms/mdx/server` | 플러그인 | `createServerMdxFormat`: 서버가 등록하는 `mdx` 형식 |
+| `@monti-cms/mdx/server` | 플러그인 | `mdx()`의 서버 쪽(기본 내보내기가 `mdx` 형식을 등록한다) |
 | `@monti-cms/mdx/testing` | 테스트 | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)`, 파이프라인 함수의 재내보내기 |
 
 ## `mdx` 형식

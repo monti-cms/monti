@@ -2,7 +2,7 @@
 
 Goal: when a post is published, post one message to a Slack channel (or any endpoint that takes `{ "text": "…" }`) with its title and address. If Slack is down the publish still works, and the message arrives later, once.
 
-The snippet below is a sketch to adapt, not tested code.
+The code below is the recipe's own files in [`src/slack-on-publish/`](src/slack-on-publish/), type checked in CI.
 
 ## What you need to know
 
@@ -11,75 +11,89 @@ The snippet below is a sketch to adapt, not tested code.
 3. **`event.once(run)` is the idempotency helper.** It runs `run` one time per event and subscriber: a repeat skips it, and a `run` that throws is not marked, so the retry runs it again. No storage code of your own.
 4. **`run` gets its scope last**: `run(event, { cms })` in the config's `hooks`, `run(event, { cms, plugin })` in a plugin's, so it can read the site, the entry and its own storage (`plugin.storage`).
 5. **`event.read()`** returns the committed entry now (`null` if it was deleted): the event itself carries ids, the kind and slugs, never the body.
-6. **A plugin's `server` can be inline or a lazy loader.** This one calls out over the network and has its own settings, so it uses a loader (see "Inline or `server`" below).
+6. **A plugin's server side is a module of its own**, loaded on the server only: `server: () => import("./server")`, whose default export is `defineServerPlugin({ hooks })`. The factory module is what the site config imports, and that can reach the browser bundle, so server code never sits in it (see "Why a module of its own" below).
+7. **Options are JSON the browser may read.** The server side reads them typed through the plugin's id (`cms.site.pluginOptions(SLACK_ON_PUBLISH)`). A secret never goes in them: the webhook URL comes from the environment (or from a key slot, `plugin.key(id)`, as the Bareun plugin does).
 
-## A sketch
+## The code
 
+The plugin, with its options and its id:
+
+<!-- src/slack-on-publish/index.ts -->
 ```ts
-import { definePlugin } from "@monti-cms/core";
+import { definePlugin, type PluginId } from "@monti-cms/core";
 
-export const slackOnPublish = (options: { webhookUrl?: string; collections?: readonly string[] } = {}) =>
+export interface SlackOnPublishOptions {
+	/** The collections whose publishes are announced. Default: `["post"]`. */
+	readonly collections?: readonly string[];
+}
+
+/** The plugin with the type of its options, so the server side reads them typed (`cms.site.pluginOptions(SLACK_ON_PUBLISH)`). */
+export const SLACK_ON_PUBLISH: PluginId<"slack-on-publish", SlackOnPublishOptions> = { name: "slack-on-publish" };
+
+export const slackOnPublish = (options: SlackOnPublishOptions = {}) =>
 	definePlugin({
-		name: "slack-on-publish",
-		// Only JSON that the browser may read goes in `options`: the webhook URL is a secret and stays in this closure.
-		options: {},
-		server: async () => ({
-			default: {
-				hooks: {
-					afterCommit: [
-						{
-							// Its deliveries are kept under `plugin:slack-on-publish:post`. A throw is retried later and never undoes the publish.
-							name: "post",
-							run: async (event, { cms }) => {
-								if (event.kind !== "published" || !(options.collections ?? ["post"]).includes(event.collection)) return;
-
-								// Delivery is at least once. `once` runs the work for this event one time: a repeat skips it,
-								// and a throw inside leaves it unmarked, so the retry sends the message.
-								await event.once(async () => {
-									const entry = await event.read();
-									if (!entry?.published) return; // deleted or unpublished again since
-
-									const webhookUrl = options.webhookUrl ?? process.env.SLACK_WEBHOOK_URL;
-									if (!webhookUrl) throw new Error("slack-on-publish: set SLACK_WEBHOOK_URL");
-
-									const path = cms.site.contentPath(event.collection, event.publishedSlug);
-									const base = cms.site.config.site?.url?.replace(/\/$/, "") ?? "";
-									const title = String(entry.published.metadata.title ?? event.publishedSlug);
-									const response = await fetch(webhookUrl, {
-										method: "POST",
-										headers: { "content-type": "application/json" },
-										body: JSON.stringify({ text: `Published: ${title}${path ? ` ${base}${path}` : ""}` }),
-									});
-									if (!response.ok) throw new Error(`slack-on-publish: Slack answered ${response.status}`);
-								});
-							},
-						},
-					],
-				},
-			},
-		}),
+		name: SLACK_ON_PUBLISH.name,
+		// Only JSON the browser may read goes in `options`: the webhook URL is a secret, so the server side reads it from the environment.
+		options,
+		server: () => import("./server"),
 	});
 ```
 
-In `monti.config.ts`:
+Its server side, the subscriber:
 
+<!-- src/slack-on-publish/server.ts -->
 ```ts
-plugins: [slackOnPublish()], // reads SLACK_WEBHOOK_URL, or slackOnPublish({ webhookUrl })
+import { defineServerPlugin } from "@monti-cms/core/server";
+import { SLACK_ON_PUBLISH } from "./index";
+
+export default defineServerPlugin({
+	hooks: {
+		afterCommit: [
+			{
+				// Its deliveries are kept under `plugin:slack-on-publish:post`. A throw is retried later and never undoes the publish.
+				name: "post",
+				run: async (event, { cms }) => {
+					const collections = cms.site.pluginOptions(SLACK_ON_PUBLISH)?.collections ?? ["post"];
+					if (event.kind !== "published" || !collections.includes(event.collection)) return;
+
+					// Delivery is at least once. `once` runs the work for this event one time: a repeat skips it,
+					// and a throw inside leaves it unmarked, so the retry sends the message.
+					await event.once(async () => {
+						const entry = await event.read();
+						if (!entry?.published) return; // deleted or unpublished again since
+
+						const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+						if (!webhookUrl) throw new Error("slack-on-publish: set SLACK_WEBHOOK_URL");
+
+						const path = cms.site.contentPath(event.collection, event.publishedSlug);
+						const base = cms.site.config.site?.url?.replace(/\/$/, "") ?? "";
+						const title = String(entry.published.metadata.title ?? event.publishedSlug);
+						const response = await fetch(webhookUrl, {
+							method: "POST",
+							headers: { "content-type": "application/json" },
+							body: JSON.stringify({ text: `Published: ${title}${path ? ` ${base}${path}` : ""}` }),
+						});
+						if (!response.ok) throw new Error(`slack-on-publish: Slack answered ${response.status}`);
+					});
+				},
+			},
+		],
+	},
+});
 ```
+
+In `monti.config.ts`: `plugins: [slackOnPublish()]` (it reads `SLACK_WEBHOOK_URL`), or `slackOnPublish({ collections: ["post", "memo"] })`.
 
 ## How it behaves
 
 - `kind` is `published` for a publish (a draft save is `saved`), so a draft announces nothing.
 - The message is sent inside `event.once`, and the event is marked done when the function returns. If Slack answers `500` the function throws, nothing is marked, the publish stays, and the delivery is retried (`monti events:retry`, the next write in the process, or a cron call to `/api/monti/v1/events/retry`).
 - `once` is "at most once unless the process dies between the end of the function and the mark". A crash in that gap sends the message twice, which is what at-least-once delivery means. The marks are kept as long as the events are (90 days).
-- The webhook URL is a secret, so it stays in the plugin's closure and never goes in `options` (the browser reads `options`).
+- The webhook URL is a secret, so it is read from the environment on the server and never goes in `options` (the browser reads `options`).
 - To test it, build a server with `testServer()` from `@monti-cms/core/testing`, publish a post and give the plugin a fake `fetch`.
 
-## Inline or `server`
+## Why a module of its own
 
-A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`) are the `hooks` of its `server`, which comes in two forms:
+A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`), routes, formats, commands and migrations are all the default export of its server module, and that module is only ever loaded through `server: () => import("./server")`. There is no inline form: the factory (`slackOnPublish()`) lives in a module that the site config imports, and client code that builds a site from a plugin list bundles that module, so anything written in it can reach the browser. Behind the loader, the hooks are read on the server only.
 
-- **Inline**: `definePlugin({ name: "audit", server: { hooks: { afterCommit: [{ name: "log", run }] } } })`. No module file. An inline server loads with every server start (the CLI, edge and cold starts included), so use this when they are light. They may use secrets through `plugin.secrets` or the environment; `monti.config.ts` is server-only and never reaches the browser. The [slug rule](slug-rule.md#as-a-plugin) is the example.
-- **As a loader**: `server: async () => ({ default: { hooks } })`, or `server: () => import("./server")`. Loaded when it is needed, and the place for heavy code (an SDK, a database client) and for a plugin that has routes, migrations or commands. This recipe uses it because it is a network client.
-
-The hooks have one place, `server`; there is no second one.
+A plugin published as a package also gives its `./server` export a `browser` condition that points at an empty module ("Publishing a plugin as a package" in the [core README](../../packages/core/README.md)), because a bundler follows the `import()` even though the browser never calls it. A plugin in the site's own folder needs nothing more.

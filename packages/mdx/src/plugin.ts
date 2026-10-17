@@ -45,9 +45,7 @@ export const mdx = (options: MdxPluginOptions = {}) => {
 		options,
 		checkConfig: () => checkMdxOptions(options),
 		// The format is read on the server only: the parser stays out of the browser bundle (`@monti-cms/mdx/server` is empty there).
-		server: {
-			formats: async () => (await import("@monti-cms/mdx/server")).createServerMdxFormat(options),
-		},
+		server: () => import("@monti-cms/mdx/server"),
 		admin: () => import("@monti-cms/mdx/admin"),
 	});
 };

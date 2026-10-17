@@ -28,6 +28,7 @@ jobs:
       - run: pnpm lint
       # Korean strings in package runtime code live only in the message dictionaries (messages.ts).
       - run: pnpm check:korean
+      - run: pnpm check:recipes
       - run: pnpm typecheck
       # Files and exports of the packages that nothing uses, and exports only tests use (a test seam is tagged @internal).
       - run: pnpm knip

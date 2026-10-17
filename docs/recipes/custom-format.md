@@ -2,7 +2,7 @@
 
 Goal: plain Markdown as a format, so `format: "markdown"` works on the read and write APIs (`cms.read.getEntry`, `createDraft`, the HTTP API, export), plus a one-way `text` format. The same shape fits a JSON feed or a Hugo export.
 
-The snippets below are a sketch to adapt, not tested code. A real Markdown parser is longer than shown.
+The code below is the recipe's own files in [`src/markdown/`](src/markdown/), type checked in CI. It is a reduced version: a real Markdown parser is longer.
 
 ## What you need to know
 
@@ -10,17 +10,18 @@ The snippets below are a sketch to adapt, not tested code. A real Markdown parse
 2. **Core does the rest**: it resolves links and media before `export`, then validates, normalises and stores whatever `import` returns, so a format cannot get past a core rule. A text the format rejects (`ok: false`) is kept in a draft as an `unparsed` document with your issues.
 3. **The document model**: nodes `paragraph`, `heading` (`attrs.level`), `bulletList` / `orderedList` > `listItem` > blocks, `text` with `marks` (`bold`, `italic`, `code`, `link` with `attrs.href`), `hardBreak`. A block of a plugin is a node named after the block.
 4. **`ctx.link(entryId)`** is the address of the entry a link points to (`null` when it is gone or unpublished); `ctx.purpose` is `"read"` (for readers) or `"sync"` (it will be imported again, keep the ids); `ctx.report(issue)` says what the text could not keep.
-5. **A plugin provides formats** through its `server`, a function that returns a format or a list: `definePlugin({ server: { formats: async () => (await import("./formats")).default } })`.
+5. **A plugin provides formats** through its server module: `formats` of `defineServerPlugin`, a function of the plugin's scope that returns a format or a list (a format that depends on the plugin's options reads them with `cms.site.pluginOptions(...)`).
 
-## A sketch
+## The code
 
-A reduced version: paragraphs and headings both ways, bold only, and a one-way text export.
+Paragraphs and headings both ways, bold only, and a one-way text export:
 
+<!-- src/markdown/formats.ts -->
 ```ts
-import { documentText } from "@monti-cms/core/site";
 import type { CmsNode } from "@monti-cms/core/document";
 import { emptyStoredDocument } from "@monti-cms/core/document";
 import { defineFormat } from "@monti-cms/core/format";
+import { documentText } from "@monti-cms/core/site";
 
 const inlineText = (nodes: readonly CmsNode[] | undefined): string =>
 	(nodes ?? [])
@@ -42,7 +43,11 @@ export const markdownFormat = defineFormat({
 				if (node.type === "paragraph") return inlineText(node.content);
 				if (node.type === "heading") return `${"#".repeat(Number(node.attrs?.level ?? 2))} ${inlineText(node.content)}`;
 				// Say what the text could not keep. The API returns it as a warning of the export.
-				ctx.report({ code: "markdown_block_dropped", message: `A "${node.type}" block was left out.`, params: { block: node.type } });
+				ctx.report({
+					code: "markdown_block_dropped",
+					message: `A "${node.type}" block was left out.`,
+					params: { block: node.type },
+				});
 				return "";
 			})
 			.filter(Boolean)
@@ -54,7 +59,11 @@ export const markdownFormat = defineFormat({
 			.map((part): CmsNode => {
 				const heading = /^(#{1,6}) (.*)$/.exec(part.trim());
 				return heading
-					? { type: "heading", attrs: { level: (heading[1] as string).length }, content: [{ type: "text", text: heading[2] as string }] }
+					? {
+							type: "heading",
+							attrs: { level: (heading[1] as string).length },
+							content: [{ type: "text", text: heading[2] as string }],
+						}
 					: { type: "paragraph", content: [{ type: "text", text: part.trim() }] };
 			});
 		return { ok: true, doc: { ...emptyStoredDocument(), content } };
@@ -69,20 +78,24 @@ export const textFormat = defineFormat({
 	extension: "txt",
 	export: (doc, ctx) => documentText(ctx.site, doc, { code: true, media: false, hidden: false }),
 });
-
-// The module of the plugin's `formats` loader: its default export is a format or a list of them.
-export default [markdownFormat, textFormat];
 ```
 
-The plugin, and the line in `monti.config.ts` (`plugins: [markdown()]`):
+The server module and the plugin (`plugins: [markdown()]` in `monti.config.ts`):
 
+<!-- src/markdown/server.ts -->
 ```ts
-export const markdown = () =>
-	definePlugin({
-		name: "markdown",
-		options: {},
-		server: { formats: async () => (await import("./formats")).default },
-	});
+import { defineServerPlugin } from "@monti-cms/core/server";
+import { markdownFormat, textFormat } from "./formats";
+
+// `formats` returns a format or a list of them. It is called once, when the instance first needs its formats.
+export default defineServerPlugin({ formats: () => [markdownFormat, textFormat] });
+```
+
+<!-- src/markdown/index.ts -->
+```ts
+import { definePlugin } from "@monti-cms/core";
+
+export const markdown = () => definePlugin({ name: "markdown", server: () => import("./server") });
 ```
 
 ## How it behaves

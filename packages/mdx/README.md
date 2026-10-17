@@ -58,7 +58,7 @@ A site without `mdx()` accepts documents (`doc`) only: a text write fails with `
 | `@monti-cms/mdx/format` | server code, tests | `mdxFormat`, `createMdxFormat({ syntax })`, and the parse and write API: `analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `bodyDocument`, `documentToMdx`, `toStoredDocument`, `fromStoredDocument`, `parseMdxAst`, `readableMdx`, `compareMdxStructure`, `configuredSyntax`, `remarkFenceBlocksToMdx`, ... |
 | `@monti-cms/mdx/render` | public pages (server components) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, and the admin provider that registers them |
-| `@monti-cms/mdx/server` | the plugin | `createServerMdxFormat`: the `mdx` format as the server registers it |
+| `@monti-cms/mdx/server` | the plugin | the server side of `mdx()` (its default export registers the `mdx` format) |
 | `@monti-cms/mdx/testing` | tests | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)` and re-exports of the pipeline functions |
 
 ## The `mdx` format

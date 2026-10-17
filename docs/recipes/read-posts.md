@@ -2,7 +2,7 @@
 
 Goal: a post list (with a tag filter and paging), a single post, and the tags of a post, on the public pages, with results whose types come from the config, so `post.metadata.title` is a `string` and a collection that does not exist is a compile error.
 
-The snippets below are a sketch to adapt, not tested code.
+The code below is the recipe's own files in [`src/site/`](src/site/), a small site with posts and tags, type checked in CI.
 
 ## What you need to know
 
@@ -12,19 +12,26 @@ The snippets below are a sketch to adapt, not tested code.
 4. **Relations** arrive in `entry.relations.<field>` (published targets only, in order). To filter a list by a relation, pass the target's `id` in `where: { tagIds: tag.id }`.
 5. **Required fields are not optional** in what you read (`PublishedMetadataFor`), because publishing needs them. The optional ones are `T | undefined`.
 
-## A sketch
+## The code
 
-The instance (in an app this is `monti.config.ts`), and its type:
+The instance (`monti.config.ts`), and its type:
 
+<!-- src/site/monti.config.ts -->
 ```ts
-export const cms = defineConfig({ schema, plugins: [mdx()], database: postgres() /* ... */ });
+import { defineConfig, postgres } from "@monti-cms/core/server";
+import { mdx } from "@monti-cms/mdx";
+import schema from "./schema";
+
+export const cms = defineConfig({ schema, plugins: [mdx()], database: postgres() });
 export type BlogCms = typeof cms;
 ```
 
 The reads, as functions the pages call:
 
+<!-- src/site/posts.ts -->
 ```ts
 import type { ReadEntry, ReadRelation } from "@monti-cms/core/read";
+import type { BlogCms } from "./monti.config";
 
 interface PostSummary {
 	slug: string;
@@ -73,14 +80,19 @@ export async function getPost(cms: BlogCms, slug: string, locale?: string) {
 }
 ```
 
-A page then reads like this (Next.js, App Router):
+A page then reads like this (Next.js, App Router). `getPost` returns one object of two shapes, so the page narrows on `redirectTo` itself:
 
+<!-- src/site/app/posts/[slug]/page.tsx -->
 ```tsx
-// app/posts/[slug]/page.tsx
+import { CmsContent } from "@monti-cms/core/render";
+import { notFound, permanentRedirect } from "next/navigation";
+import { cms } from "../../../monti.config";
+import { getPost } from "../../../posts";
+
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
 	const found = await getPost(cms, (await params).slug);
 	if (!found) notFound();
-	if ("redirectTo" in found) permanentRedirect(found.redirectTo);
+	if (found.redirectTo !== undefined) permanentRedirect(found.redirectTo);
 	return <CmsContent cms={cms} entry={found.entry} />;
 }
 ```
@@ -89,9 +101,15 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
 
 The compiler checks the collection name and the metadata:
 
+<!-- src/site/types.ts -->
 ```ts
-const { items } = await cms.read.listEntries({ collection: "post" });
-const title: string = items[0].metadata.title;
-// @ts-expect-error "nope" is not a collection of this site
-await cms.read.listEntries({ collection: "nope" });
+import { cms } from "./monti.config";
+
+export async function checkTypes() {
+	const { items } = await cms.read.listEntries({ collection: "post" });
+	const title: string | undefined = items[0]?.metadata.title;
+	// @ts-expect-error "nope" is not a collection of this site
+	await cms.read.listEntries({ collection: "nope" });
+	return title;
+}
 ```

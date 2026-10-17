@@ -14,11 +14,8 @@ describe("@monti-cms/mdx/server in the browser bundle", () => {
 		expect(manifest.publishConfig.exports["./server"]).toMatchObject({ browser: "./dist/server.browser.js" });
 	});
 
-	it("exports the same names as the server entry, so imports resolve either way", () => {
-		expect(Object.keys(browserEntry).sort()).toEqual(Object.keys(serverEntry).sort());
-	});
-
-	it("does not carry the MDX parser: its functions refuse to run", () => {
-		expect(() => browserEntry.createServerMdxFormat()).toThrow(/server only/);
+	it("is the empty server side, so the MDX parser is not in it", () => {
+		expect(browserEntry.default).toEqual({});
+		expect(serverEntry.default.formats).toBeTypeOf("function");
 	});
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText, useCmsMutation } from "@monti-cms/admin";
+import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Button,
 	Checkbox,
@@ -39,7 +39,6 @@ import {
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
-import { issueMessages, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Eye, EyeOff, Plug, Plus, Quote, RotateCcw, Save, Sparkles, Trash2, X } from "lucide-react";
 import { useCallback, useId, useState } from "react";

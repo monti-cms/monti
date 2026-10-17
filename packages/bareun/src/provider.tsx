@@ -1,8 +1,7 @@
 "use client";
 
-import type { AdminComponents } from "@monti-cms/admin";
+import { type AdminComponents, adminApiUrl, type Site } from "@monti-cms/admin";
 import { remoteTextChecker } from "@monti-cms/core";
-import { adminApiUrl, type Site } from "@monti-cms/core/site";
 import { readBareunOptions } from "./config";
 import { BAREUN_CHECKER_ID, BAREUN_ROUTE } from "./options";
 

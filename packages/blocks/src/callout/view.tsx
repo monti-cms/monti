@@ -1,7 +1,14 @@
 "use client";
 
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
-import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
+import {
+	AttributeInput,
+	BlockFrame,
+	ContainerToolbar,
+	Content,
+	ToolbarButton,
+	useBlockEditor,
+	useTranslator,
+} from "@monti-cms/admin";
 import {
 	cn,
 	DropdownMenu,
@@ -10,7 +17,6 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/site";
 import { calloutMessages } from "./messages";
 import { CALLOUT_BOX_CLASS, CALLOUT_ICON_BY_VARIANT, type CalloutVariant, getDefaultCalloutTitle } from "./style";
 

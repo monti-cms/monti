@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText, useCmsMutation } from "@monti-cms/admin";
+import { adminApiUrl, errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Alert,
 	AlertDescription,
@@ -24,7 +24,6 @@ import {
 	TabsTrigger,
 	useConfirm,
 } from "@monti-cms/admin/kit";
-import { adminApiUrl, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitPullRequest, KeyRound, RefreshCw, TriangleAlert } from "lucide-react";
 import { useMemo, useState } from "react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText, useCmsMutation } from "@monti-cms/admin";
+import { errorText, type Translator, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Button,
 	commonMessages,
@@ -21,7 +21,6 @@ import {
 	useConfirm,
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
-import { type Translator, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Plus, Quote, RotateCcw, Save } from "lucide-react";
 import { useId, useState } from "react";

@@ -1,7 +1,6 @@
 "use client";
 
-import type { AdminComponents } from "@monti-cms/admin";
-import type { Site } from "@monti-cms/core/site";
+import type { AdminComponents, Site } from "@monti-cms/admin";
 import { configuredSyntax } from "../syntax-config";
 import { createMdxBrowserFormat } from "./format";
 import { MdxSourcePanel, mdxSourceLabel } from "./source-panel";

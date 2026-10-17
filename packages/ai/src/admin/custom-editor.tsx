@@ -1,5 +1,6 @@
 "use client";
 
+import { type Site, type Translator, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	cn,
 	FormField,
@@ -11,7 +12,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@monti-cms/admin/kit";
-import { type Site, type Translator, useSite, useTranslator } from "@monti-cms/core/site";
 import { useId } from "react";
 import { type CustomBase, type CustomSurface, customBlocksOf, customEngines, customResults } from "../custom";
 import { customMessages } from "./custom-editor.messages";
