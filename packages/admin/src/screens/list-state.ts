@@ -21,7 +21,6 @@ export interface ListState {
 	collection: Collection;
 	/**
 	 * `all` is the top level (root of the folders); anything else is a folder ID. In browse mode the top level shows only top-level folders and items outside folders.
-	 * `unfiled` in old addresses is read as the top level.
 	 */
 	folder: string;
 	includeDescendants: boolean;
@@ -118,7 +117,7 @@ export function parseListState(
 		...DEFAULT_LIST_STATE,
 		collection: listed,
 		// A collection without folders has no folder to be in, so a `?folder=` left in the URL is ignored.
-		folder: !site.foldersEnabled(listed) || !folder || folder === "unfiled" ? "all" : folder,
+		folder: !site.foldersEnabled(listed) || !folder ? "all" : folder,
 		includeDescendants: params.get("descendants") === "1",
 		search: params.get("search") ?? "",
 		includeBody: params.get("body") === "1",

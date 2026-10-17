@@ -8,7 +8,7 @@ import { checkDocument } from "../body-check";
 /** Checks that need the reference blog's addresses and blocks (`/posts/:slug`, `code-ref`). */
 const site = createSite(config);
 
-const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: 2, content });
+const doc = (...content: CmsNode[]): StoredDocument => ({ type: "doc", version: 3, content });
 const paragraph = (id: string, ...content: CmsNode[]): CmsNode => ({ id, type: "paragraph", content });
 const text = (value: string, ...marks: CmsNode["marks"] & object): CmsNode => ({
 	type: "text",

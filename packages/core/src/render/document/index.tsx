@@ -101,7 +101,7 @@ export async function renderDocument(input: StoredDocument, given: RenderDocumen
 		imageResolver: given.imageResolver ?? (given.refs ? imageResolverFromRefs(given.refs) : undefined),
 	};
 	const { site } = given;
-	const doc = readStoredDocument(input, site);
+	const doc = readStoredDocument(input);
 	if (!doc) {
 		console.error("renderDocument: the value is not a stored document of a known version; rendering an empty body");
 		return EMPTY;

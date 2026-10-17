@@ -201,7 +201,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 			let doc = data.doc;
 			if (result.doc !== undefined) {
 				// What a hook returns as the body must be a stored document.
-				const read = readStoredDocument(result.doc, site);
+				const read = readStoredDocument(result.doc);
 				if (!read) throw hookFailed(source, "transform");
 				doc = read;
 			}

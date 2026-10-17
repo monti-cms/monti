@@ -85,7 +85,7 @@ function stubServer(tag: string) {
 		name: `stub-${tag}`,
 		createStore: vi.fn((options: { site: Site }) => {
 			sites.push(options.site);
-			return { tag, deliverySubscribers: async () => [], renameSubscriber: async () => 0 } as unknown as ContentStore;
+			return { tag } as unknown as ContentStore;
 		}),
 		migrate: vi.fn(async (options: { site: Site }) => {
 			sites.push(options.site);
@@ -151,8 +151,7 @@ describe("two instances with different site configs", () => {
 		cmsBlog.store();
 		cmsOther.store();
 		await cmsBlog.migrate({ log: () => undefined });
-		// The store, and the one the migration reads the outbox's subscriber keys with.
-		expect(realBlog.database.createStore).toHaveBeenCalledTimes(2);
+		expect(realBlog.database.createStore).toHaveBeenCalledTimes(1);
 		expect(realOther.database.createStore).toHaveBeenCalledTimes(1);
 		expect(realBlog.database.migrate).toHaveBeenCalledTimes(1);
 		expect(realOther.database.migrate).not.toHaveBeenCalled();

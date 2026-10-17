@@ -1739,7 +1739,7 @@ const createBlockIdsContract: ContractSuite = (factory) => {
 		const publish = (entry: Entry) => publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
 
 		const docOf = (value: unknown): StoredDocument => {
-			const doc = readStoredDocument(value, testSite);
+			const doc = readStoredDocument(value);
 			if (!doc) throw new Error("expected a stored document");
 			return doc;
 		};

@@ -268,13 +268,6 @@ export interface EventStore {
 	 * (committed since `since`). It is idempotent, and returns the number of rows made.
 	 */
 	enqueueEvents(params: { subscribers: readonly string[]; entryId?: string; since?: Date; now: Date }): Promise<number>;
-	/** The subscriber keys that have delivery rows, in key order. `monti db:migrate` reads it to move the deliveries of a renamed subscriber. */
-	deliverySubscribers(): Promise<readonly string[]>;
-	/**
-	 * Moves every delivery row of the subscriber `from` to `to` (a subscriber that was renamed), whatever its state, so its pending deliveries are
-	 * delivered under the new name and its `once` marks still count. A row whose event already has a row for `to` stays. Returns how many moved.
-	 */
-	renameSubscriber(params: { from: string; to: string }): Promise<number>;
 	/**
 	 * Claims the deliveries that are due: `pending`, `failed` with `nextAttemptAt` reached (any `failed` with `ignoreBackoff`), and `delivering` whose lease ran out.
 	 * A delivery is claimed only when no earlier event of the same entry is waiting for the same subscriber (`pending`, `delivering` or `failed`), which is the

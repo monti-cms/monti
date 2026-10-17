@@ -138,7 +138,7 @@ export const documentInputBody = (
 		throw new ServiceError("invalid_input");
 	}
 	if (size > MAX_DOC_BYTES) throw new ServiceError("body_too_large");
-	const read = readStoredDocument(input.doc, site);
+	const read = readStoredDocument(input.doc);
 	if (!read) throw new ServiceError("invalid_input");
 	const doc = canonicalDocument(site, read);
 	return {

@@ -5,7 +5,7 @@ English | [한국어](README.ko.md)
 Two-way sync of **published entries** with files in a GitHub repo: a separate content repo, or the `content` folder of a site repo (Astro, Hugo, ...). Publishing commits the entry's file (or opens a pull request); a change pushed to the repo comes back to the CMS. If an entry changed on both sides, nothing is merged: the admin lists the conflict with a diff and a person picks a side.
 
 - Talks to GitHub through the API with a token and a webhook, so it works on serverless hosting. No checkout, no `git` binary.
-- Delivered through the core's event outbox (an `afterCommit` subscriber named `sync`, kept as `plugin:git-sync:sync`): a failed push is retried, not lost. Upgrading from a version before the named subscribers? `monti db:migrate` moves its waiting deliveries over.
+- Delivered through the core's event outbox (an `afterCommit` subscriber named `sync`, kept as `plugin:git-sync:sync`): a failed push is retried, not lost.
 - The text of a file comes from a format plugin (`mdx` by default) with `purpose: "sync"`, so what is written can be read back.
 - The GitHub token is a key of the core's API key store assigned to the plugin's `token` key slot (listed under Tools > API keys, and set on the plugin's own screen too: pick a saved key or type one, which is saved as a new key). The webhook secret is a key of the same store, assigned to the plugin's `webhook-secret` slot (service "GitHub webhook"); the Settings tab can generate it, show it, copy it and save it. Neither is ever in config, and a saved value is never sent back to the browser.
 

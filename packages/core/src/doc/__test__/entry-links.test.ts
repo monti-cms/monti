@@ -2,12 +2,7 @@ import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
 import { collectRefs } from "../document-refs";
 import { entryIdOfHref, entryLinkIds } from "../entry-links";
-import {
-	canonicalDocument,
-	readStoredDocument,
-	STORED_DOCUMENT_VERSION,
-	type StoredDocument,
-} from "../stored-document";
+import { canonicalDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "../stored-document";
 import type { CmsMark, CmsNode } from "../types";
 
 const ID = "123e4567-e89b-42d3-a456-426614174000";
@@ -62,25 +57,6 @@ describe("links in a stored document", () => {
 		]);
 		expect(STORED_DOCUMENT_VERSION).toBeGreaterThanOrEqual(3);
 		expect(stored.version).toBe(STORED_DOCUMENT_VERSION);
-	});
-
-	it("a version 2 document reads as the current version with its content untouched", () => {
-		const v2 = {
-			type: "doc",
-			version: 2,
-			content: [
-				{
-					type: "paragraph",
-					content: [{ type: "text", text: "x", marks: [{ type: "link", attrs: { href: "/posts/a" } }] }],
-				},
-			],
-		};
-
-		const read = readStoredDocument(v2);
-
-		expect(read?.version).toBe(STORED_DOCUMENT_VERSION);
-		expect(read?.content).toEqual(v2.content);
-		expect(readStoredDocument({ ...v2, version: STORED_DOCUMENT_VERSION + 1 })).toBeUndefined();
 	});
 
 	it("collectRefs lists the entries a document links to, each once, in order, wherever the link sits", () => {

@@ -43,7 +43,6 @@ import {
 	changeCount,
 	collectionsOf,
 	isObj,
-	localesOf,
 	moveCollection,
 	type Obj,
 	type Rename,
@@ -444,13 +443,7 @@ function SchemaEditor({
 										</div>
 									</div>
 								)}
-								{tab === "locales" && (
-									<LocalesEditor
-										file={draft}
-										savedCodes={localesOf(base).map((locale) => locale.code)}
-										update={updateFile}
-									/>
-								)}
+								{tab === "locales" && <LocalesEditor file={draft} update={updateFile} />}
 								{tab === "site" && <SiteEditor file={draft} siteUrl={state.siteUrl} update={updateFile} />}
 								{tab === "admin" && (
 									<div className="flex flex-col gap-12">

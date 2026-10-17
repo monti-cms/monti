@@ -206,7 +206,7 @@ export function formFromEntry(site: Site, entry: EntryData): EntryForm {
 	Object.assign(form, recordTranslationsToForm(site, entry.collection, metadata));
 	// A translation also handles translation state as the form, so autosave, recovery and conflict comparison see it along with the body.
 	if (isTranslationEntry(entry)) {
-		// If it is not a valid state, use an empty source so "source changed" is shown. A state of an older version is read as version 4.
+		// If it is not a valid state, use an empty source so "source changed" is shown.
 		form[TRANSLATION_FORM_KEY] = stringifyTranslation(
 			parseTranslationState(entry.working.translation) ?? UNCONFIRMED_TRANSLATION,
 		);

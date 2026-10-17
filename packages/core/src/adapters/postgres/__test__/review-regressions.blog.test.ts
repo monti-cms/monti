@@ -54,7 +54,7 @@ describe("review regressions (blog blocks)", () => {
 	it("blocks publishing a document whose text decoration lacks its required attribute, at the block", async () => {
 		const doc = {
 			type: "doc",
-			version: 2,
+			version: STORED_DOCUMENT_VERSION,
 			content: [
 				{
 					type: "paragraph",

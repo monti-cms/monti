@@ -318,24 +318,6 @@ export const eventsContract: ContractSuite = (factory) => {
 			expect(results.flat()).toHaveLength(1);
 		});
 
-		it("moves the deliveries of a renamed subscriber, pending and delivered alike, and lists the subscribers that have rows", async () => {
-			const oldName = subscriberName();
-			const newName = `${oldName}:renamed`;
-			const entry = await create("event-rename");
-			await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
-			await enqueue(oldName, entry.id);
-			const [first] = await claim(oldName, entry.id);
-			await store.completeDelivery({ eventId: first?.change.eventId ?? "", subscriber: oldName, now: base });
-			expect(await store.deliverySubscribers()).toContain(oldName);
-
-			expect(await store.renameSubscriber({ from: oldName, to: newName })).toBe(2);
-			expect(await store.deliverySubscribers()).not.toContain(oldName);
-			expect(await store.deliverySubscribers()).toContain(newName);
-			// The one that was still pending is delivered under the new name; the delivered one stays delivered.
-			expect((await deliverAll(newName, entry.id)).map((change) => change.kind)).toEqual(["published"]);
-			expect(await store.renameSubscriber({ from: oldName, to: newName })).toBe(0);
-		});
-
 		it("removes events that are finished, and keeps those still waiting", async () => {
 			const done = await create("event-prune-done");
 			const waiting = await create("event-prune-waiting");

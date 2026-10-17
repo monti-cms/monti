@@ -70,18 +70,6 @@ describe("prompt snippets", () => {
 		expect(store.saved).toEqual({ texts: {}, added: [] });
 	});
 
-	it("reads the old shape (key to edited content) and converts to the new shape on save", async () => {
-		const store = memoryStore({ value: { styleGuide: "짧게 쓴다." }, version: 4 });
-		const view = await getSnippetView(testSite, store);
-		expect(view).toMatchObject({ version: 4, items: [{ key: "styleGuide", text: "짧게 쓴다.", overridden: true }] });
-
-		await addSnippet(testSite, store, 4, { key: "tone", label: "말투", text: "친근하게" });
-		expect(store.saved).toEqual({
-			texts: { styleGuide: "짧게 쓴다." },
-			added: [{ key: "tone", label: "말투", text: "친근하게" }],
-		});
-	});
-
 	it("adds, edits and deletes texts; added texts are included in runs", async () => {
 		const store = memoryStore();
 		const added = await addSnippet(testSite, store, 0, { key: "tone", label: " 말투 ", text: "친근하게" });

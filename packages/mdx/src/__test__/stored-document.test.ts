@@ -72,18 +72,14 @@ describe("stored document", () => {
 
 	it("reads only stored documents of a known version", () => {
 		const doc = stored("Hi\n");
-		expect(readStoredDocument(JSON.parse(JSON.stringify(doc)), testSite)).toEqual(doc);
-		expect(readStoredDocument({ ...doc, version: STORED_DOCUMENT_VERSION + 1 }, testSite)).toBeUndefined();
-		expect(readStoredDocument({ ...doc, version: 0 }, testSite)).toBeUndefined();
-		expect(readStoredDocument({ ...doc, extra: 1 }, testSite)).toBeUndefined();
-		expect(readStoredDocument({ type: "doc", version: 1, content: [{ type: "" }] }, testSite)).toBeUndefined();
-		expect(
-			readStoredDocument({ type: "doc", version: 1, content: [{ type: "text", text: 1 }] }, testSite),
-		).toBeUndefined();
-		expect(
-			readStoredDocument({ type: "doc", version: 1, content: [{ type: "text", other: 1 }] }, testSite),
-		).toBeUndefined();
-		expect(readStoredDocument("Hi", testSite)).toBeUndefined();
+		expect(readStoredDocument(JSON.parse(JSON.stringify(doc)))).toEqual(doc);
+		expect(readStoredDocument({ ...doc, version: STORED_DOCUMENT_VERSION + 1 })).toBeUndefined();
+		expect(readStoredDocument({ ...doc, version: 0 })).toBeUndefined();
+		expect(readStoredDocument({ ...doc, extra: 1 })).toBeUndefined();
+		expect(readStoredDocument({ type: "doc", version: 3, content: [{ type: "" }] })).toBeUndefined();
+		expect(readStoredDocument({ type: "doc", version: 3, content: [{ type: "text", text: 1 }] })).toBeUndefined();
+		expect(readStoredDocument({ type: "doc", version: 3, content: [{ type: "text", other: 1 }] })).toBeUndefined();
+		expect(readStoredDocument("Hi")).toBeUndefined();
 	});
 
 	it("round-trips every sample post: MDX → document → MDX → document, whatever the key order", () => {

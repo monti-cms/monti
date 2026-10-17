@@ -90,8 +90,6 @@ describe("admin list state", () => {
 		expect(q("collection=memo&folder=f1").get("includeDescendants")).toBeNull();
 		// Search inside a folder: everything under that folder.
 		expect(q("collection=memo&folder=f1&search=a").get("includeDescendants")).toBe("true");
-		// An old address's unfiled is read as the top level.
-		expect(parseListState(testSite, new URLSearchParams("collection=memo&folder=unfiled")).folder).toBe("all");
 	});
 
 	it("sends header filters and asks for trashed items only on the trash screen", () => {

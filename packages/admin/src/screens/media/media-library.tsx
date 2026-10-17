@@ -119,17 +119,16 @@ export function MediaLibrary() {
 	const [view, setView] = usePreference("media-view", VIEW_CODEC, "grid");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
-	const isExplorer =
-		!search.trim() && used === "all" && kind === "all" && !uploadedFrom && !uploadedTo && folder !== "unfiled";
+	const isExplorer = !search.trim() && used === "all" && kind === "all" && !uploadedFrom && !uploadedTo;
 
 	// Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
 	const query = useMemo(() => {
 		const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
 		if (search.trim()) params.set("search", search.trim());
 		if (kind !== "all") params.set("kind", kind);
-		if (folder && folder !== "all" && folder !== "unfiled") {
+		if (folder && folder !== "all") {
 			params.set("folderId", folder);
-		} else if (isExplorer || folder === "unfiled") {
+		} else if (isExplorer) {
 			params.set("folderId", "null");
 		}
 		const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
@@ -205,7 +204,7 @@ export function MediaLibrary() {
 
 	const uploadMutation = useCmsMutation({
 		fn: async ({ files, optimize }: { files: File[]; optimize: boolean }) => {
-			const targetFolderId = folder !== "all" && folder !== "" && folder !== "unfiled" ? folder : null;
+			const targetFolderId = folder !== "all" && folder !== "" ? folder : null;
 			for (const [index, file] of files.entries()) {
 				const onProgress = (percent: number) => setUpload({ current: index + 1, total: files.length, percent });
 				setUpload({ current: index + 1, total: files.length, percent: 0 });
@@ -393,10 +392,9 @@ export function MediaLibrary() {
 	const blankMenu: MenuAction[] = [
 		{
 			kind: "item",
-			label: folder === "all" || folder === "" || folder === "unfiled" ? tc("addFolder") : tc("addSubfolder"),
+			label: folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder"),
 			icon: FolderPlus,
-			onSelect: () =>
-				folderActions.requestCreate(folder === "all" || folder === "" || folder === "unfiled" ? null : folder),
+			onSelect: () => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder),
 		},
 		{
 			kind: "item",
@@ -465,12 +463,10 @@ export function MediaLibrary() {
 						type="button"
 						size="sm"
 						variant="outline"
-						onClick={() =>
-							folderActions.requestCreate(folder === "all" || folder === "" || folder === "unfiled" ? null : folder)
-						}
+						onClick={() => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder)}
 					>
 						<FolderPlus aria-hidden />
-						{folder === "all" || folder === "" || folder === "unfiled" ? tc("addFolder") : tc("addSubfolder")}
+						{folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")}
 					</Button>
 					<Button type="button" size="sm" variant="outline" onClick={() => cleanupMutation.mutate()}>
 						{t("library.cleanup")}

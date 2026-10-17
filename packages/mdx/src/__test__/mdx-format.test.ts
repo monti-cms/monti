@@ -17,7 +17,7 @@ const docOf = (mdx: string) => docOfMdx(testSite, mdx);
 
 /** The blocks of a stored document without their ids, for comparing what a body says. */
 const contentOf = (doc: unknown) => {
-	const read = readStoredDocument(doc, testSite);
+	const read = readStoredDocument(doc);
 	return read ? withoutBlockIds(read.content) : null;
 };
 

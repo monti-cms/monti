@@ -29,9 +29,9 @@ describe("stored document", () => {
 		expect(readStoredDocument({ ...doc, version: STORED_DOCUMENT_VERSION + 1 })).toBeUndefined();
 		expect(readStoredDocument({ ...doc, version: 0 })).toBeUndefined();
 		expect(readStoredDocument({ ...doc, extra: 1 })).toBeUndefined();
-		expect(readStoredDocument({ type: "doc", version: 1, content: [{ type: "" }] })).toBeUndefined();
-		expect(readStoredDocument({ type: "doc", version: 1, content: [{ type: "text", text: 1 }] })).toBeUndefined();
-		expect(readStoredDocument({ type: "doc", version: 1, content: [{ type: "text", other: 1 }] })).toBeUndefined();
+		expect(readStoredDocument({ type: "doc", version: 3, content: [{ type: "" }] })).toBeUndefined();
+		expect(readStoredDocument({ type: "doc", version: 3, content: [{ type: "text", text: 1 }] })).toBeUndefined();
+		expect(readStoredDocument({ type: "doc", version: 3, content: [{ type: "text", other: 1 }] })).toBeUndefined();
 		expect(readStoredDocument("Hi")).toBeUndefined();
 	});
 

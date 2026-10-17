@@ -41,7 +41,7 @@ const snapshot = (collection: string, patch: object = {}) =>
 		collection,
 		slug: "a",
 		metadata: { title: "T" },
-		doc: { type: "doc", version: 2, content: [] },
+		doc: { type: "doc", version: 3, content: [] },
 		schemaVersion: 1,
 		contentHash: "h",
 		references: [],

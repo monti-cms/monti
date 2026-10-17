@@ -35,7 +35,7 @@ const storedTemplateDoc = (site: Site, value: unknown, previous?: StoredDocument
 	if (size > MAX_DOC_BYTES) {
 		throw new CmsError("Template body is too large", "invalid_input", { notice: { key: "template.too_large" } });
 	}
-	const read = readStoredDocument(value, site);
+	const read = readStoredDocument(value);
 	if (!read) throw new CmsError("Template body is not a stored document", "invalid_input");
 	const doc = canonicalDocument(site, read);
 	return JSON.stringify({ ...doc, content: assignBlockIds(doc.content, [previous?.content]) });
