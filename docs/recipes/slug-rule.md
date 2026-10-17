@@ -6,46 +6,39 @@ The code below is the recipe's own files in [`src/slug-rule/`](src/slug-rule/), 
 
 ## What you need to know
 
-1. **Every content write goes through one pipeline** (create, save, publish, bulk, import, the AI plugin). Your rule lives there once, so nothing can write around it ("Hook contract" in the [core README](../../packages/core/README.md)).
-2. **Write hooks** are `transform`, `validate`, `validatePublish` and `afterCommit`, set as `hooks` in `defineConfig`, or in a plugin (the `hooks` of its server module).
-3. **`validate` can only add failures.** Core has already prepared the data; your issues join the core ones, and any of them blocks the write with `validation_failed`.
+1. **Every content write goes through one pipeline** (create, save, publish, bulk, import, the AI plugin). Your rule lives there once, so nothing can write around it ("Events (`on`)" in the [core README](../../packages/core/README.md)).
+2. **Before a write, three events** (`entry.beforeValidate`, `entry.beforeSave`, `entry.beforePublish`) may change or block it, set as `on` in `defineConfig`, or in a plugin (the `on` of its server module). `beforeValidate` may change the data; `beforeSave` and `beforePublish` may block the write.
+3. **`beforeSave` can only add failures.** Core has already prepared the data; your issues join the core ones, and any of them blocks the write with `validation_failed`.
 4. **An issue** is `{ code, path, message }`. `path` is the field the editor shows the message under, and `message` is the text the person reads (a code that core does not know is shown as its `message`).
-5. **`transform`** runs before core prepares the data. It returns the data to prepare (`metadata`, `doc`, and now `slug`), and what it returns still goes through core, so it cannot get a bad value past a core check.
+5. **`beforeValidate`** runs before core prepares the data. It returns the data to prepare (`metadata`, `doc`, and now `slug`), and what it returns still goes through core, so it cannot get a bad value past a core check.
 
 ## The code
 
-Both are **checks before the save**: they run inside the request, in order, and can change or block the write. The rule: a `validate` check returns an issue for a slug that is not lowercase ASCII. A `transform` check lowercases the slug first, so only what lowercasing cannot fix is refused. Each stage takes a list, so the two combine by listing them.
+Both are **`before…` events**: they run inside the request, in order, before the save, and can change or block the write. The rule: a `beforeSave` subscriber returns an issue for a slug that is not lowercase ASCII. A `beforeValidate` subscriber lowercases the slug first, so only what lowercasing cannot fix is refused. Each stage takes a list, so the two combine by listing them.
 
-<!-- src/slug-rule/hooks.ts -->
+<!-- src/slug-rule/rules.ts -->
 ```ts
-import type { WriteHooks } from "@monti-cms/core/server";
+import type { BeforeSave, BeforeValidate } from "@monti-cms/core/server";
 
 const LOWERCASE_ASCII_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export const slugRule: WriteHooks = {
-	validate: [
-		({ collection, slug }) => {
-			if (collection !== "post" || slug === null || LOWERCASE_ASCII_SLUG.test(slug)) return;
-			return {
-				issues: [
-					{
-						code: "slug_not_lowercase_ascii",
-						path: "slug", // the field the editor shows the message under
-						message: `The slug "${slug}" must use only lowercase a-z, digits and single hyphens (for example "hello-world").`,
-					},
-				],
-			};
-		},
-	],
+/** `entry.beforeSave` may block the write: it adds a failure for a slug that is not lowercase ASCII. */
+export const refuseBadSlug: BeforeSave = ({ collection, slug }) => {
+	if (collection !== "post" || slug === null || LOWERCASE_ASCII_SLUG.test(slug)) return;
+	return {
+		issues: [
+			{
+				code: "slug_not_lowercase_ascii",
+				path: "slug", // the field the editor shows the message under
+				message: `The slug "${slug}" must use only lowercase a-z, digits and single hyphens (for example "hello-world").`,
+			},
+		],
+	};
 };
 
-// Fix instead of refusing: `transform` runs first and returns the data to prepare (leave `slug` out to keep it).
-export const lowercaseSlugs: WriteHooks = {
-	transform: [
-		({ collection, slug, metadata, doc }) =>
-			collection === "post" && slug !== null ? { metadata, doc, slug: slug.toLowerCase() } : undefined,
-	],
-};
+/** `entry.beforeValidate` may change the data: it lowercases the slug first, so only what lowercasing cannot fix is refused. Leave `slug` out of the result to keep it. */
+export const lowercaseSlug: BeforeValidate = ({ collection, slug, metadata, doc }) =>
+	collection === "post" && slug !== null ? { metadata, doc, slug: slug.toLowerCase() } : undefined;
 ```
 
 Wire them in `monti.config.ts`:
@@ -54,19 +47,19 @@ Wire them in `monti.config.ts`:
 ```ts
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import schema from "../site/schema";
-import { lowercaseSlugs, slugRule } from "./hooks";
+import { lowercaseSlug, refuseBadSlug } from "./rules";
 
 export const cms = defineConfig({
 	schema,
 	database: postgres(),
-	// Fix first, then refuse the rest. Different stages, so the lists do not overlap.
-	hooks: { ...lowercaseSlugs, ...slugRule },
+	// Fix first, then refuse the rest: `beforeValidate` runs before core prepares the data, `beforeSave` after.
+	on: { entry: { beforeValidate: [lowercaseSlug], beforeSave: [refuseBadSlug] } },
 });
 ```
 
 ## As a plugin
 
-The same hooks are how a package ships a rule: the `hooks` of the plugin's server module.
+The same subscribers are how a package ships a rule: the `on` of the plugin's server module.
 
 <!-- src/slug-rule/index.ts -->
 ```ts
@@ -78,12 +71,14 @@ export const slugRulePlugin = () => definePlugin({ name: "slug-rule", server: ()
 <!-- src/slug-rule/server.ts -->
 ```ts
 import { defineServerPlugin } from "@monti-cms/core/server";
-import { lowercaseSlugs, slugRule } from "./hooks";
+import { lowercaseSlug, refuseBadSlug } from "./rules";
 
-export default defineServerPlugin({ hooks: { ...lowercaseSlugs, ...slugRule } });
+export default defineServerPlugin({
+	on: { entry: { beforeValidate: [lowercaseSlug], beforeSave: [refuseBadSlug] } },
+});
 ```
 
-Then `plugins: [slugRulePlugin()]`. The server side is always a module of its own, loaded on the server only, even for two small hooks (see "Why a module of its own" in the [Slack recipe](slack-on-publish.md#why-a-module-of-its-own)).
+Then `plugins: [slugRulePlugin()]`. The server side is always a module of its own, loaded on the server only, even for two small subscribers (see "Why a module of its own" in the [Slack recipe](slack-on-publish.md#why-a-module-of-its-own)).
 
 ## What it looks like
 
@@ -101,10 +96,10 @@ import { defineConfig } from "@monti-cms/core/server";
 import { testServer } from "@monti-cms/core/testing";
 import { afterAll, beforeAll } from "vitest";
 import schema from "../site/schema";
-import { slugRule } from "./hooks";
+import { refuseBadSlug } from "./rules";
 
 const test = testServer();
-export const cms = defineConfig({ schema, hooks: slugRule, ...test.server });
+export const cms = defineConfig({ schema, on: { entry: { beforeSave: [refuseBadSlug] } }, ...test.server });
 beforeAll(() => cms.migrate());
 afterAll(async () => {
 	await cms.close();

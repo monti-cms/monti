@@ -7,7 +7,7 @@ import type { RouteAccess } from "../http/v1/handler";
 import type { RenderPlugin } from "../render/plugin-render";
 import type { PluginFieldSet } from "../schema/field-sets";
 import type { PluginPlacement } from "../schema/layout";
-import type { PluginScope, WriteHooks } from "../services/hooks";
+import type { PluginEvents, PluginScope } from "../services/reactions";
 import type { Site } from "../site";
 
 /** A label shown in the admin: plain text, or a function of the site that follows the admin language (`(site) => site.createTranslator(messages)("label")`). */
@@ -17,12 +17,12 @@ export type PluginLabel = string | ((site: Pick<Site, "createTranslator">) => st
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`). Its parts are grouped by who reads them:
  *
  * - **Both sides** read `options`, `blocks`, `nav`, `keySlots`, `checkConfig` and `contributes`. Apart from functions, only JSON values go here.
- * - **The server** reads `server`: routes, hooks, formats, commands, migrations, feature flags and the labels of key uses, always as a loader of a module of their own
+ * - **The server** reads `server`: routes, reactions (`on`), formats, commands, migrations, feature flags and the labels of key uses, always as a loader of a module of their own
  *   (`server: () => import("./server")`). The factory module can reach the browser bundle, so server code never sits in it: only the module behind the loader holds it,
  *   and a plugin package gives that module an empty browser entry point (the `browser` condition of `exports`).
  * - **The admin UI** reads `admin` (a loader), and **the public page** reads `render` (a loader).
  *
- * Every concept has one place: hooks only in `server`, API key slots only in `keySlots`.
+ * Every concept has one place: reactions only in `on` of `server`, API key slots only in `keySlots`.
  */
 export interface Plugin<
 	Name extends string = string,
@@ -45,7 +45,7 @@ export interface Plugin<
 	// biome-ignore lint/suspicious/noConfusingVoidType: a plugin with nothing to report returns nothing
 	readonly checkConfig?: (config: PluginConfigView) => readonly ConfigIssue[] | void;
 	/**
-	 * Server side: a loader of a module whose default export is `defineServerPlugin({ routes, hooks, formats, ... })` (`@monti-cms/core/server`), written
+	 * Server side: a loader of a module whose default export is `defineServerPlugin({ routes, on, formats, ... })` (`@monti-cms/core/server`), written
 	 * `server: () => import("./server")`. Read on the server only, when first needed. There is no inline form: whatever the factory module holds can end up in the browser.
 	 */
 	readonly server?: () => Promise<{ readonly default: ServerPlugin }>;
@@ -111,11 +111,6 @@ export interface PluginKeySlot {
 	 * the core calls it with the site of the instance each time the slots are listed. A plain string is shown as it is.
 	 */
 	readonly label: PluginLabel;
-	/**
-	 * Called after a key was assigned to the slot or the slot was cleared (in the admin, or by `plugin.key(id).set/assign`), once the change is saved, with the
-	 * plugin's scope. Use it for work that waits for the key (a sync that was held back for lack of a token). Not called for changes made inside `cms.transaction`.
-	 */
-	readonly onChange?: (scope: PluginScope) => Promise<void> | void;
 }
 
 export interface PluginNavItem {
@@ -165,7 +160,7 @@ export interface OwnedPluginRoute extends PluginRoute {
 export const emptyServerPlugin: ServerPlugin = {};
 
 /**
- * Types the server side of a plugin: `export default defineServerPlugin({ routes, hooks, ... })` in the module that the plugin's `server` loads
+ * Types the server side of a plugin: `export default defineServerPlugin({ routes, on, ... })` in the module that the plugin's `server` loads
  * (`@monti-cms/core/server`). It returns what it is given.
  */
 export const defineServerPlugin = (plugin: ServerPlugin): ServerPlugin => plugin;
@@ -189,10 +184,11 @@ export interface ServerPlugin {
 	/** Value to put in `features.<plugin name>` of the admin meta API (`/v1/meta`). Does not mix with other plugins or core names. `cms` is the instance serving the request. */
 	readonly features?: (scope: PluginScope) => Promise<Readonly<Record<string, boolean>>>;
 	/**
-	 * Hooks on every content write (same shape as the server config `hooks`): `transform`, `validate`, `validatePublish` and `afterCommit`. Each gets its own
-	 * argument and then the plugin's scope `{ cms, plugin }`. They run after the server config's hooks, in the order of the plugins in the site config.
+	 * What the plugin reacts to, by target and event (see `PluginEvents`): `entry.beforeValidate`, `entry.beforeSave` and `entry.beforePublish` (before a write, may
+	 * change or block it), the durable `entry` events after a commit (`published`, `changed`, ... each `{ name, run }`), and `keySlot.changed`. Each gets its own
+	 * argument and then the plugin's scope `{ cms, plugin }`. They run after the server config's `on`, in the order of the plugins in the site config.
 	 */
-	readonly hooks?: WriteHooks<PluginScope>;
+	readonly on?: PluginEvents;
 	/**
 	 * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
 	 * the read and write APIs. Called with the plugin's scope when the instance first needs its formats (a format that depends on the plugin's options reads them with

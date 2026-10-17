@@ -58,7 +58,7 @@ function serverFor(tag: string, extra: Partial<CmsServerConfig> = {}) {
 		database,
 		auth: { name: tag, create: () => fakeAuth(tag) },
 		secret: `secret-${tag}`,
-		hooks: { afterCommit: [{ name: "notify", run: afterCommit }] },
+		on: { entry: { changed: [{ name: "notify", run: afterCommit }] } },
 		...extra,
 	};
 	return { server, database, afterCommit };

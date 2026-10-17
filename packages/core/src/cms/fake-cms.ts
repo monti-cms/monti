@@ -33,7 +33,7 @@ export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
 	readonly verifyAdmin?: AuthGateway["verifyAdmin"];
 	/** Pieces of the login connection (`cms.auth()`): session, providers, handlers and so on. */
 	readonly auth?: Partial<CmsAuth>;
-	/** Other server config values (`hooks`, `publicApi`, `secret`, `trustHost`, ...). */
+	/** Other server config values (`on`, `publicApi`, `secret`, `trustHost`, ...). */
 	readonly server?: Partial<CmsServerConfig>;
 	/** The server side of the site's plugins (routes, features, hooks, migrations), as if the site config listed them. Default: none. */
 	readonly plugins?: readonly LoadedServerPlugin[];

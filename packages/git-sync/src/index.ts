@@ -46,8 +46,6 @@ export const gitSync = (options: GitSyncOptions = {}) =>
 							service: "GitHub",
 							// Worked out with the site of the instance each time, so it follows the admin language.
 							label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
-							// A token was chosen: what waited for one goes out now. In the browser bundle `./server` is an empty entry point.
-							onChange: async (scope) => (await import("@monti-cms/git-sync/server")).onTokenChanged(scope),
 						},
 						{
 							id: GIT_SYNC_WEBHOOK_SLOT,

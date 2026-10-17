@@ -53,5 +53,5 @@ Then add the field to the collection (`"readingTime": { "kind": "view", "view": 
 
 ## Notes
 
-- For the value on the server instead (a list column, a feed), compute it when you read, or in a `transform` hook that stores it in a real field.
+- For the value on the server instead (a list column, a feed), compute it when you read, or in an `entry.beforeValidate` subscriber that stores it in a real field.
 - The default entry editor and its fields are not a public component, so to test the screen render it yourself inside a `SiteProvider`, the way the admin does around it.

@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeCms } from "../../cms";
 import { defineFormat } from "../../format/types";
-import type { PluginScope, WriteHooks } from "../../services/hooks";
+import type { PluginScope, ServerEvents } from "../../services/reactions";
 import type { Plugin } from "../define";
 import { createServerPlugins } from "../server";
 
 const cms = fakeCms();
 
 /** The server side of the plugins of one site, with the server config's hooks. Each call is its own instance (nothing is shared between them). */
-const serverPlugins = (plugins: readonly unknown[], hooks?: WriteHooks) =>
+const serverPlugins = (plugins: readonly unknown[], hooks?: ServerEvents) =>
 	createServerPlugins(
 		plugins as readonly Plugin[],
-		() => ({ hooks }),
+		() => ({ on: hooks }),
 		() => cms,
 	);
 
@@ -103,27 +103,30 @@ describe("writeHooks", () => {
 				{ name: "plain" },
 				{
 					name: "alpha",
-					server: async () => ({ default: { hooks: { transform: [check("alpha-1"), check("alpha-2")] } } }),
+					server: async () => ({
+						default: { on: { entry: { beforeValidate: [check("alpha-1"), check("alpha-2")] } } },
+					}),
 				},
 				{ name: "no-hooks", server: async () => ({ default: {} }) },
-				{ name: "beta", server: async () => ({ default: { hooks: { validatePublish: [check("beta")] } } }) },
+				{ name: "beta", server: async () => ({ default: { on: { entry: { beforePublish: [check("beta")] } } } }) },
 			],
-			{ validate: [check("server-1"), check("server-2")] },
+			{ entry: { beforeSave: [check("server-1"), check("server-2")] } },
 		);
 		const sources = await plugins.writeHooks();
 		expect(sources.map((source) => [source.owner, Object.keys(source.hooks)])).toEqual([
-			["server", ["validate"]],
-			["server", ["validate"]],
-			["plugin:alpha", ["transform"]],
-			["plugin:alpha", ["transform"]],
-			["plugin:beta", ["validatePublish"]],
+			["server", ["beforeSave"]],
+			["server", ["beforeSave"]],
+			["plugin:alpha", ["beforeValidate"]],
+			["plugin:alpha", ["beforeValidate"]],
+			["plugin:beta", ["beforePublish"]],
 		]);
-		for (const { hooks } of sources) await (hooks.transform ?? hooks.validate ?? hooks.validatePublish)?.({} as never);
+		for (const { hooks } of sources)
+			await (hooks.beforeValidate ?? hooks.beforeSave ?? hooks.beforePublish)?.({} as never);
 		expect(ran).toEqual(["server-1", "server-2", "alpha-1", "alpha-2", "beta"]);
 	});
 
 	it("leaves the subscribers after the save out of the checks", async () => {
-		const plugins = serverPlugins([], { afterCommit: [{ name: "notify", run: () => undefined }] });
+		const plugins = serverPlugins([], { entry: { changed: [{ name: "notify", run: () => undefined }] } });
 		expect(await plugins.writeHooks()).toEqual([]);
 	});
 
@@ -132,29 +135,29 @@ describe("writeHooks", () => {
 	});
 });
 
-describe("inline server", () => {
-	it("runs the hooks of a plugin whose server is given inline, after the server config's and in the plugin order", async () => {
-		const check = { validate: [() => undefined] };
+describe("plugin order", () => {
+	it("runs the subscribers of each plugin after the server config's, in the plugin order", async () => {
+		const check = { beforeSave: [() => undefined] };
 		const plugins = serverPlugins(
 			[
-				{ name: "inline", server: async () => ({ default: { hooks: check } }) },
-				{ name: "lazy", server: async () => ({ default: { hooks: check } }) },
+				{ name: "first", server: async () => ({ default: { on: { entry: check } } }) },
+				{ name: "second", server: async () => ({ default: { on: { entry: check } } }) },
 			],
-			check,
+			{ entry: check },
 		);
 		expect((await plugins.writeHooks()).map((source) => source.owner)).toEqual([
 			"server",
-			"plugin:inline",
-			"plugin:lazy",
+			"plugin:first",
+			"plugin:second",
 		]);
 	});
 
-	it("keeps every part of an inline server, not only its hooks", async () => {
+	it("keeps every part of a server module, not only its subscribers", async () => {
 		const plugins = serverPlugins([
 			{
 				name: "both",
 				server: async () => ({
-					default: { hooks: { validate: [() => undefined] }, features: async () => ({ ready: true }) },
+					default: { on: { entry: { beforeSave: [() => undefined] } }, features: async () => ({ ready: true }) },
 				}),
 			},
 		]);
@@ -171,12 +174,17 @@ describe("eventSubscribers", () => {
 			[
 				{
 					name: "a",
-					server: async () => ({ default: { hooks: { afterCommit: [subscriber("index"), subscriber("notify")] } } }),
+					server: async () => ({
+						default: { on: { entry: { changed: [subscriber("index"), subscriber("notify")] } } },
+					}),
 				},
-				{ name: "no-after-commit", server: async () => ({ default: { hooks: { validate: [() => undefined] } } }) },
-				{ name: "b", server: async () => ({ default: { hooks: { afterCommit: [subscriber("sync")] } } }) },
+				{
+					name: "no-after-commit",
+					server: async () => ({ default: { on: { entry: { beforeSave: [() => undefined] } } } }),
+				},
+				{ name: "b", server: async () => ({ default: { on: { entry: { changed: [subscriber("sync")] } } } }) },
 			],
-			{ afterCommit: [subscriber("revalidate")] },
+			{ entry: { changed: [subscriber("revalidate")] } },
 		);
 		const subscribers = await plugins.eventSubscribers();
 		expect(subscribers.map((item) => item.name)).toEqual([
@@ -199,10 +207,10 @@ describe("eventSubscribers", () => {
 		});
 		const plugins = serverPlugins(
 			[
-				{ name: "inline", server: async () => ({ default: { hooks: { afterCommit: [subscriber("inline")] } } }) },
-				{ name: "lazy", server: async () => ({ default: { hooks: { afterCommit: [subscriber("lazy")] } } }) },
+				{ name: "inline", server: async () => ({ default: { on: { entry: { changed: [subscriber("inline")] } } } }) },
+				{ name: "lazy", server: async () => ({ default: { on: { entry: { changed: [subscriber("lazy")] } } } }) },
 			],
-			{ afterCommit: [subscriber("server")] },
+			{ entry: { changed: [subscriber("server")] } },
 		);
 		for (const item of await plugins.eventSubscribers()) await item.handler(event);
 		expect(calls).toEqual(["server:true:true:-", "inline:true:true:inline", "lazy:true:true:lazy"]);
@@ -210,30 +218,93 @@ describe("eventSubscribers", () => {
 
 	it("refuses a subscriber name that is not valid or that its owner uses twice", async () => {
 		const run = () => undefined;
-		await expect(serverPlugins([], { afterCommit: [{ name: "Sync Now", run }] }).eventSubscribers()).rejects.toThrow(
-			/afterCommit of server: "Sync Now" is not a valid subscriber name/,
-		);
+		await expect(
+			serverPlugins([], { entry: { changed: [{ name: "Sync Now", run }] } }).eventSubscribers(),
+		).rejects.toThrow(/on\.entry\.changed of server: "Sync Now" is not a valid subscriber name/);
 		await expect(
 			serverPlugins([
 				{
 					name: "a",
 					server: async () => ({
 						default: {
-							hooks: {
-								afterCommit: [
-									{ name: "sync", run },
-									{ name: "sync", run },
-								],
+							on: {
+								entry: {
+									changed: [
+										{ name: "sync", run },
+										{ name: "sync", run },
+									],
+								},
 							},
 						},
 					}),
 				},
 			]).eventSubscribers(),
-		).rejects.toThrow(/afterCommit of plugin:a: the subscriber name "sync" is used twice/);
+		).rejects.toThrow(/on\.entry of plugin:a: the subscriber name "sync" is used twice/);
 	});
 
 	it("is empty when nothing registers afterCommit", async () => {
 		expect(await serverPlugins([{ name: "plain" }]).eventSubscribers()).toEqual([]);
+	});
+});
+
+describe("events by kind", () => {
+	const run = () => undefined;
+
+	it("delivers a subscriber only the kind it is listed under, and a `changed` one every kind", async () => {
+		const plugins = serverPlugins([], {
+			entry: {
+				published: [{ name: "slack", run }],
+				changed: [{ name: "log", run }],
+				deleted: [{ name: "purge", run }],
+			},
+		});
+		const kinds = Object.fromEntries((await plugins.eventSubscribers()).map((item) => [item.name, item.kinds]));
+		expect(kinds["server:slack"]).toEqual(["published"]);
+		expect(kinds["server:purge"]).toEqual(["deleted"]);
+		expect(kinds["server:log"]).toEqual([
+			"created",
+			"saved",
+			"published",
+			"archived",
+			"unarchived",
+			"trashed",
+			"restored",
+			"deleted",
+		]);
+	});
+
+	it("refuses one name under two kinds: a subscriber is one outbox key", async () => {
+		await expect(
+			serverPlugins([], {
+				entry: { saved: [{ name: "sync", run }], published: [{ name: "sync", run }] },
+			}).eventSubscribers(),
+		).rejects.toThrow(/the subscriber name "sync" is used twice/);
+	});
+
+	it("tells a plugin's keySlot.changed subscribers which slot changed, with the plugin's scope", async () => {
+		const calls: string[] = [];
+		const plugins = serverPlugins([
+			{
+				name: "sync",
+				server: async () => ({
+					default: {
+						on: {
+							keySlot: {
+								changed: [
+									async ({ slot }: { slot: string }, { plugin }: PluginScope) =>
+										void calls.push(`${plugin.name}:${slot}`),
+								],
+							},
+						},
+					},
+				}),
+			},
+			{ name: "other", server: async () => ({ default: {} }) },
+		]);
+		await plugins.keySlotChanged("sync", "token");
+		await plugins.keySlotChanged("other", "token");
+		await plugins.keySlotChanged("missing", "token");
+		expect(calls).toEqual(["sync:token"]);
 	});
 });
 

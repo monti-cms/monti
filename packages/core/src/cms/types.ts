@@ -15,9 +15,9 @@ import type { CmsAuth, CmsServerConfig, DatabaseState, RequestHost } from "../se
 import type { createBulkService } from "../services/bulk-service";
 import type { createContentService } from "../services/content-service";
 import type { CmsEvents } from "../services/events";
-import type { HookSource } from "../services/hooks";
 import type { MediaService } from "../services/media-service";
 import type { PreferencesService } from "../services/preferences-service";
+import type { HookSource } from "../services/reactions";
 import type { Site } from "../site";
 
 /** The content service of any site: input is checked at run time only. */
@@ -64,7 +64,7 @@ export interface CreateCmsOptions<Config extends CmsConfig = CmsConfig> {
 	 * site's collection names and the shape of their metadata.
 	 */
 	readonly config: Config;
-	/** The server config: database, auth, media, secret, hooks, public API. */
+	/** The server config: database, auth, media, secret, `on`, public API. */
 	readonly server: CmsServerConfig;
 	/**
 	 * Name of this instance, only used to find it again when a development server reloads modules (see {@link createCms}). Default `"default"`.
@@ -119,9 +119,9 @@ export interface Cms<
 	readonly server: PublicServerConfig;
 	/** The content store. Created on first use. */
 	store(): ContentStore;
-	/** Content write operations (drafts, publishing, duplicates, translations). Runs the write hooks. */
+	/** Content write operations (drafts, publishing, duplicates, translations). Runs the `before…` subscribers. */
 	contentService(): ContentService<Config>;
-	/** Bulk write operations. Runs the write hooks. */
+	/** Bulk write operations. Runs the `before…` subscribers. */
 	bulkService(): BulkService;
 	/** Deleting media files and cleaning up uploads that never completed. */
 	mediaService(): MediaService;
@@ -161,7 +161,7 @@ export interface Cms<
 	 */
 	formats(): Promise<FormatRegistry>;
 	/**
-	 * The delivery side of the event outbox: the committed changes the server config's and the plugins' `hooks.afterCommit` receive, retried when they fail.
+	 * The delivery side of the event outbox: the committed changes the server config's and the plugins' durable `on.entry` subscribers receive, retried when they fail.
 	 * `cms.events.retry()` delivers what is due (call it from a cron job, or use `monti events:retry`), `list`, `counts`, `retryDelivery` and `dismiss` are what the
 	 * admin's events screen uses.
 	 */
@@ -207,7 +207,7 @@ export interface CmsHost<
 	pluginRoutes(): Promise<readonly OwnedPluginRoute[]>;
 	/** Feature flags plugins add to the meta API, under each plugin's name. */
 	pluginFeatures(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
-	/** Write hooks in the order they run: the server config's first, then the plugins'. */
+	/** The `before…` subscribers in the order they run: the server config's first, then the plugins'. */
 	writeHooks(): Promise<readonly HookSource[]>;
 	/** What the database holds of Monti (`undefined` when the adapter cannot say). `monti db:migrate` reads it to tell a database that was never set up. */
 	databaseState(): Promise<DatabaseState | undefined>;

@@ -85,7 +85,7 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/entries/[id]/translations", module: rEntryTranslations },
 	{ pattern: "v1/entries/[id]/trash", module: rEntryTrash },
 	{ pattern: "v1/entries/[id]/unarchive", module: rEntryUnarchive },
-	// The event outbox: failed and dead `afterCommit` deliveries. `v1/events/retry` also takes the retry secret of the server config (for a cron job).
+	// The event outbox: failed and dead durable entry event deliveries. `v1/events/retry` also takes the retry secret of the server config (for a cron job).
 	{ pattern: "v1/events", module: rEvents },
 	{ pattern: "v1/events/retry", access: "admin-or-bearer", module: rEventsRetry },
 	{ pattern: "v1/events/[id]/retry", module: rEventRetry },

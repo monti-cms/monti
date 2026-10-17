@@ -1,4 +1,4 @@
-import { defineServerPlugin, type PluginScope } from "@monti-cms/core/server";
+import { defineServerPlugin, type KeySlotChange, type PluginScope } from "@monti-cms/core/server";
 import { commands } from "./commands";
 import { onContentEvent } from "./events";
 import { tokenKeyOf } from "./keys";
@@ -20,7 +20,11 @@ export default defineServerPlugin({
 	],
 	// Delivered through the event outbox: a failed push is retried, not lost.
 	// Its deliveries are kept under `plugin:git-sync:sync`; keep the name, or the changes that are still waiting start over.
-	hooks: { afterCommit: [{ name: "sync", run: (event, { cms }) => onContentEvent(syncContextFor(cms), event) }] },
+	on: {
+		entry: { changed: [{ name: "sync", run: (event, { cms }) => onContentEvent(syncContextFor(cms), event) }] },
+		// A token was chosen: what waited for one goes out now.
+		keySlot: { changed: [onTokenChanged] },
+	},
 	commands,
 	// `features["git-sync"].ready` of the admin meta API: is a token saved?
 	features: async ({ cms }) => ({
@@ -31,7 +35,8 @@ export default defineServerPlugin({
 	}),
 });
 
-/** Called once a key was assigned to the token slot (`onChange` of the slot): what waited for a token goes out now. */
-export const onTokenChanged = async ({ cms, plugin }: PluginScope): Promise<void> => {
+/** `keySlot.changed`: once a key was assigned to the token slot, what waited for a token goes out now. */
+async function onTokenChanged({ slot }: KeySlotChange, { cms, plugin }: PluginScope): Promise<void> {
+	if (slot !== GIT_SYNC_TOKEN_SLOT) return;
 	if (await plugin.key(GIT_SYNC_TOKEN_SLOT).read()) await resumeAfterToken(syncContextFor(cms));
-};
+}

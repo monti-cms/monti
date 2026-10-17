@@ -3,7 +3,7 @@ import { onPublishedEvent } from "./outbound";
 import type { SyncContext } from "./sync";
 
 /**
- * The `afterCommit` subscriber: one delivery per change, handled by the published files (a commit, or a pull request).
+ * The `entry.changed` subscriber: one delivery per change, handled by the published files (a commit, or a pull request).
  *
  * The first failure is thrown after everything was tried, so the outbox retries the delivery; deferring is not a failure, the outbox calls again when
  * the latest of the moments the parts asked for has come.

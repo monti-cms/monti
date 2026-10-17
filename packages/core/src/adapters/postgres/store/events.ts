@@ -98,11 +98,14 @@ export function createEventOps(ctx: StoreContext): EventStore {
 		enqueueEvents: async ({ subscribers, entryId, since, now }) => {
 			if (subscribers.length === 0) return 0;
 			// `sql`: the builder cannot name the columns of `unnest(...) AS s(name)`, and the insert reads from the table it skips rows of.
+			// Each subscriber takes the kinds it is listed under, as a comma separated text (the kinds hold no comma).
 			const res = await sql`
 				INSERT INTO ${sql.id(qSchema, "cms_event_deliveries")} (event_id, subscriber, state, next_attempt_at)
 				SELECT e.id, s.name, 'pending', ${now}
-				FROM ${sql.id(qSchema, "cms_events")} e CROSS JOIN unnest(${[...subscribers]}::text[]) AS s(name)
-				WHERE NOT EXISTS (SELECT 1 FROM ${sql.id(qSchema, "cms_event_deliveries")} d WHERE d.event_id = e.id)
+				FROM ${sql.id(qSchema, "cms_events")} e
+				CROSS JOIN unnest(${subscribers.map((subscriber) => subscriber.name)}::text[], ${subscribers.map((subscriber) => subscriber.kinds.join(","))}::text[]) AS s(name, kinds)
+				WHERE e.kind = ANY(string_to_array(s.kinds, ','))
+				  AND NOT EXISTS (SELECT 1 FROM ${sql.id(qSchema, "cms_event_deliveries")} d WHERE d.event_id = e.id)
 				  AND (${entryId ?? null}::uuid IS NULL OR e.entry_id = ${entryId ?? null}::uuid)
 				  AND (${since ?? null}::timestamptz IS NULL OR e.occurred_at >= ${since ?? null}::timestamptz)
 				ON CONFLICT DO NOTHING`.execute(db);

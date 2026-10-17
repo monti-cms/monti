@@ -86,18 +86,13 @@ export function createCms<const Config extends CmsConfig>(options: CreateCmsOpti
 					label: typeof slot.label === "function" ? slot.label(site) : slot.label,
 				})),
 			);
-		const slotChanged = async (plugin: string, slot: string) => {
-			const declared = site.plugins
-				.find((entry) => entry.name === plugin)
-				?.keySlots?.find((entry) => entry.id === slot);
-			await declared?.onChange?.(plugins.scopeOf(plugin));
-		};
+		const slotChanged = (plugin: string, slot: string) => plugins.keySlotChanged(plugin, slot);
 		const inTransaction = <T>(work: (tx: TransactionStorage) => Promise<T>): Promise<T> =>
 			connections.database.transaction(work);
 		const keysOn = (
 			storage: () => PluginStorage,
 			transact?: ApiKeysOptions["transact"],
-			/** A slot's `onChange` is called for changes made outside a transaction only: inside one, the change is not saved yet. */
+			/** `keySlot.changed` is told of changes made outside a transaction only: inside one, the change is not saved yet. */
 			notify = true,
 		): ApiKeys =>
 			createApiKeys({
