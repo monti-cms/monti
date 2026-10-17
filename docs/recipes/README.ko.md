@@ -9,7 +9,7 @@ Monti를 확장하는 방법을 다루는 짧은 페이지 모음이다. 각 페
 | 레시피 | 얻는 것 | 쓰는 지점 |
 | --- | --- | --- |
 | [글을 발행하면 Slack 메시지 보내기](slack-on-publish.md) | 발행마다 메시지 하나, Slack이 멈추면 재시도 | `afterCommit`(`cms`를 받는다), `event.once`, 이벤트 아웃박스, 플러그인의 지연 `server` 훅 |
-| [나만의 블록 더하기](custom-block.md) | `notice` 블록: 정의, 검사, 편집기 뷰, 공개 컴포넌트 | `defineBlock`(`validate`), `blockViews`, `documentComponents` |
+| [나만의 블록 더하기](custom-block.md) | `notice` 블록: 정의, 검사, 편집기 뷰, 공개 컴포넌트 | `defineBlock`(`validate`), `blockViews`, `defineRender` |
 | [관리자 필드 화면 직접 만들기](reading-time-field.md) | 본문을 입력하는 대로 계산하는 "3분 읽기" | 보기 필드, `fieldViews`, `@monti-cms/admin` 공급자 |
 | [저장 전에 슬러그 규칙 지키기](slug-rule.md) | 소문자 ASCII 슬러그, 거부하거나 고치고 분명한 오류를 낸다 | 쓰기 훅 `validate`와 `transform`, 플러그인의 인라인 `hooks` |
 | [나만의 형식 만들기](custom-format.md) | Markdown 읽기와 쓰기, 한쪽으로만 내보내는 텍스트 | `defineFormat`, 플러그인의 `formats` |

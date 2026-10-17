@@ -1,4 +1,4 @@
-import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
+import { type BlockProps, defineRender } from "@monti-cms/core/render";
 import type { PropsWithChildren } from "react";
 import { type BlockLabels, blockLabels } from "../shared/labels";
 import type { collapsibleBlock } from "./definition";
@@ -19,15 +19,12 @@ export function Collapsible({
 }
 
 /** Public components for the collapsible in the JSON renderer (`renderDocument`). */
-export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
-	const labels = blockLabels(locale);
-	return {
-		blocks: {
-			collapsible: ({ title, defaultOpen, children }: BlockProps<typeof collapsibleBlock>) => (
-				<Collapsible title={title} defaultOpen={defaultOpen} labels={labels}>
-					{children}
-				</Collapsible>
-			),
-		},
-	};
-};
+export default defineRender({
+	blocks: {
+		collapsible: ({ title, defaultOpen, children, ctx }: BlockProps<typeof collapsibleBlock>) => (
+			<Collapsible title={title} defaultOpen={defaultOpen} labels={blockLabels(ctx.locale)}>
+				{children}
+			</Collapsible>
+		),
+	},
+});

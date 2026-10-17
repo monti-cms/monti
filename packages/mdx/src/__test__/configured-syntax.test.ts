@@ -9,7 +9,7 @@ import { configuredSyntax, NO_SYNTAX } from "../syntax-config";
 /** A site of the test config with exactly the given plugins. */
 const siteWith = (plugins: ReturnType<typeof mdx>[]) => createSite({ ...testConfig, plugins });
 
-// The options the site gave to its `mdx()` plugin are read from the site config's plugins (`site.getPluginOptions`).
+// The options the site gave to its `mdx()` plugin are read from the site config's plugins (`site.pluginOptions(MDX_PLUGIN)`).
 describe("configuredSyntax", () => {
 	it("is the list the site gave to mdx({ syntax }), in the same order", () => {
 		const first: SyntaxExtension = { name: "first" };

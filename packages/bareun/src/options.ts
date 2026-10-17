@@ -1,4 +1,4 @@
-import type { TextCheckerLimits } from "@monti-cms/core";
+import type { PluginId, TextCheckerLimits } from "@monti-cms/core";
 import { createActiveTranslator, resolveTextCheckerLimits } from "@monti-cms/core";
 import { bareunMessages } from "./messages";
 
@@ -44,6 +44,9 @@ export interface ResolvedBareunOptions {
 const DEFAULT_LIMITS = { maxSegments: 100, maxChars: 10_000 };
 
 /** Fills in defaults and rejects invalid values. */
+/** The plugin with the type of its options, as `bareun()` resolved them (`site.pluginOptions(BAREUN_PLUGIN)`). */
+export const BAREUN_PLUGIN: PluginId<typeof BAREUN_PLUGIN_NAME, ResolvedBareunOptions> = { name: BAREUN_PLUGIN_NAME };
+
 export function resolveBareunOptions(options: BareunOptions = {}): ResolvedBareunOptions {
 	const baseUrl = (options.baseUrl ?? "https://api.bareun.ai").replace(/\/+$/, "");
 	if (!/^https?:\/\//.test(baseUrl)) throw pluginError(BAREUN_PLUGIN_NAME, `baseUrl must be an http(s) URL`);

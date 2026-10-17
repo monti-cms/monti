@@ -87,13 +87,13 @@ import "@monti-cms/blocks/styles.css";
 - The text color picker list is `color({ palette })` (the default 8 colors `defaultTextPalette(t)` if omitted). The body stores hex values, so changing the list leaves
   already written text as it is. Public pages render with `cleanTextColor` and `textColorProps` from `@monti-cms/blocks`, and the color is
   chosen to match the theme by `.cms-color` in `render.css` (the editor has the same rule in `styles.css`).
-- Public pages: each extension provides default public components (the plugin `render`, which returns `{ documentComponents }`; `renderDocument` and `CmsContent` of `@monti-cms/core/render` use it automatically).
+- Public pages: each extension provides default public components (the plugin's `render` module, whose default export is a `defineRender` table; `renderDocument` and `CmsContent` of `@monti-cms/core/render` use it automatically).
   Only the parts that run in the browser (tab switching, tooltip, code link, Mermaid, chart) are split into `"use client"` files. Mermaid and chart render only when the app installs the optional dependencies
   `mermaid` and `recharts` (on the server and before loading, the source text is shown), and the callout default title, collapsible
   default title and chart error messages follow the site language (`locale`). The look is the `cms-block-*` classes in `render.css` (no Tailwind needed). Code fence blocks (`mermaid`, `chart`) get their code as `source`. Column widths are read with `parseColumnWidths` and `columnsGridTemplate` from `@monti-cms/blocks/columns`,
   and chart syntax and size with `parseChartDsl`, `normalizeChartDsl` and `resolvePieGeometry` from `@monti-cms/blocks/chart`.
-- Each extension's render module exports only `documentComponents(context)` (the MDX-shaped default export and the MDX component tables are gone), the table `renderDocument` merges in (`blocks` by block name with the attributes as
-  flat props, `marks` for `tooltip`, `code-ref` and `color`, and the `Tooltip` code tag). Tabs and the code explorer read their children from the stored nodes (`items`), not from the props of child elements.
+- Each extension's render module has `defineRender({ ... })` as its default export, the table `renderDocument` merges in (`blocks` by block name with the attributes as
+  flat props, `marks` for `tooltip`, `code-ref` and `color`, and the `Tooltip` code tag). Tabs and the code explorer read their children from the stored nodes (`items`), not from the props of child elements, and the texts in the site language come from the `ctx.locale` every component gets.
   A site overrides one with `renderDocument(doc, { components: { blocks: { callout: … } } })` (or the same `components` option of `CmsContent` and `renderMdx`); the props are typed from the block definitions of the site config.
 - Changing the look: the app sets the variables on `:root` (`--cms-callout-note`, `-tip`, `-info`, `-warning`, `-danger`, `--chart-1` to `5`); the defaults in `render.css` and `styles.css` are wrapped in `:where()`, so the app's values win.
 - If you remove the plugin of a block that is already used, that block drops out of the stored syntax and turns into plain text the next time it is saved.

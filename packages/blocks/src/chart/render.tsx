@@ -1,4 +1,4 @@
-import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
+import { type BlockProps, defineRender } from "@monti-cms/core/render";
 import { type BlockLabels, blockLabels } from "../shared/labels";
 import type { chartBlock } from "./definition";
 import { normalizeChartDsl, parseChartDsl } from "./dsl";
@@ -32,9 +32,10 @@ export function Chart({ source, labels = blockLabels() }: { source?: string; lab
 }
 
 /** Public components for the chart in the JSON renderer (`renderDocument`): the block `chart`. The code of the fence arrives as `source`. */
-export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
-	const labels = blockLabels(locale);
-	return {
-		blocks: { chart: ({ source }: BlockProps<typeof chartBlock>) => <Chart source={source} labels={labels} /> },
-	};
-};
+export default defineRender({
+	blocks: {
+		chart: ({ source, ctx }: BlockProps<typeof chartBlock>) => (
+			<Chart source={source} labels={blockLabels(ctx.locale)} />
+		),
+	},
+});

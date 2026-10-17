@@ -1,4 +1,4 @@
-import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
+import { type BlockProps, defineRender } from "@monti-cms/core/render";
 import type { mermaidBlock } from "./definition";
 import { MermaidView } from "./render.client";
 
@@ -8,6 +8,6 @@ export function Mermaid({ source }: { source?: string }) {
 }
 
 /** Public components for Mermaid in the JSON renderer (`renderDocument`): the block `mermaid`. The code of the fence arrives as `source`. */
-export const documentComponents = (_context: DocumentComponentsContext): LooseDocumentComponents => ({
+export default defineRender({
 	blocks: { mermaid: ({ source }: BlockProps<typeof mermaidBlock>) => <Mermaid source={source} /> },
 });

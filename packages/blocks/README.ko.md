@@ -87,13 +87,13 @@ import "@monti-cms/blocks/styles.css";
 - 글자색 고르기 목록은 `color({ palette })`(없으면 기본 8색 `defaultTextPalette(t)`). 본문에는 헥스 값이 저장되므로 목록을 바꿔도
   이미 쓴 글은 그대로다. 공개 화면은 `@monti-cms/blocks`의 `cleanTextColor`·`textColorProps`로 그리고, 색은
   `render.css`의 `.cms-color`가 테마에 맞춰 고른다(편집기는 `styles.css`에 같은 규칙이 있다).
-- 공개 화면: 각 확장이 기본 공개 컴포넌트를 준다(플러그인 `render`가 `{ documentComponents }`를 돌려주며, `@monti-cms/core/render`의 `renderDocument`와 `CmsContent`가 자동으로 쓴다).
+- 공개 화면: 각 확장이 기본 공개 컴포넌트를 준다(플러그인의 `render` 모듈이며 기본 내보내기가 `defineRender` 표다. `@monti-cms/core/render`의 `renderDocument`와 `CmsContent`가 자동으로 쓴다).
   탭 전환·툴팁·코드 연결·Mermaid·차트는 브라우저에서 움직이는 부분만 `"use client"` 파일로 나뉜다. Mermaid·차트는 선택 의존성
   `mermaid`·`recharts`를 앱이 설치해야 그려지고(서버·불러오기 전에는 원문), 사이트 언어(`locale`)에 맞춰 콜아웃 기본 제목·접기
   기본 제목·차트 오류 문구가 나온다. 모양은 `render.css`의 `cms-block-*` 클래스(Tailwind 없이)이다. 코드 펜스 블록(`mermaid`·`chart`)은 코드를 `source`로 받는다. 단 너비는 `@monti-cms/blocks/columns`의 `parseColumnWidths`·`columnsGridTemplate`로,
   차트 문법·크기는 `@monti-cms/blocks/chart`의 `parseChartDsl`·`normalizeChartDsl`·`resolvePieGeometry`로 읽는다.
-- 각 확장의 render 모듈은 `documentComponents(context)`만 내보낸다(MDX 모양의 기본 내보내기와 MDX 컴포넌트 표는 없어졌다). `renderDocument`가 합치는 표이며(블록 이름별 `blocks`와 평평한 속성 props, `tooltip`·`code-ref`·`color`용 `marks`,
-  코드 태그 `Tooltip`), 탭과 코드 탐색기는 자식 요소의 props가 아니라 저장된 노드(`items`)에서 자식을 읽는다.
+- 각 확장의 render 모듈은 `defineRender({ ... })`를 기본으로 내보낸다. `renderDocument`가 합치는 표이며(블록 이름별 `blocks`와 평평한 속성 props, `tooltip`·`code-ref`·`color`용 `marks`,
+  코드 태그 `Tooltip`), 탭과 코드 탐색기는 자식 요소의 props가 아니라 저장된 노드(`items`)에서 자식을 읽고, 사이트 언어 문구는 모든 컴포넌트가 받는 `ctx.locale`로 정한다.
   사이트는 `renderDocument(doc, { components: { blocks: { callout: … } } })`(`CmsContent`와 `renderMdx`의 같은 `components` 옵션도 된다)로 바꿀 수 있고, props 타입은 사이트 설정의 블록 정의에서 나온다.
 - 모양 바꾸기: 앱이 `:root`에 변수(`--cms-callout-note`·`-tip`·`-info`·`-warning`·`-danger`, `--chart-1`~`5`)를 정한다. `render.css`와 `styles.css`의 기본값은 `:where()`로 감싸 있어 앱의 값이 이긴다.
 - 이미 쓴 블록의 플러그인을 빼면 그 블록은 저장 문법에서 빠져 다시 저장할 때 일반 글로 바뀐다.

@@ -28,6 +28,7 @@ import {
 } from "./colors";
 import { colorBlock } from "./definition";
 import { colorMessages } from "./messages";
+import { COLOR_PLUGIN } from "./options";
 
 /** Editor mark name (`cmsColor`). */
 export const COLOR_MARK_NAME = addedMarkName(colorBlock.name);
@@ -36,7 +37,7 @@ export const COLOR_MARK_NAME = addedMarkName(colorBlock.name);
 function usePalette(): readonly PaletteColor[] {
 	const site = useSite();
 	const t = useTranslator(colorMessages);
-	return site.getPluginOptions<{ palette?: readonly PaletteColor[] }>("color")?.palette ?? defaultTextPalette(t);
+	return site.pluginOptions(COLOR_PLUGIN)?.palette ?? defaultTextPalette(t);
 }
 
 type ColorKind = "fg" | "bg";

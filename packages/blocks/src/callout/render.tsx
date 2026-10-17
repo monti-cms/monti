@@ -1,4 +1,4 @@
-import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
+import { type BlockProps, defineRender } from "@monti-cms/core/render";
 import { Children, type PropsWithChildren } from "react";
 import { type BlockLabels, blockLabels } from "../shared/labels";
 import type { calloutBlock } from "./definition";
@@ -33,15 +33,12 @@ export function Callout({
 }
 
 /** Public components for the callout in the JSON renderer (`renderDocument`): the block `callout`, with its attributes as props. */
-export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
-	const labels = blockLabels(locale);
-	return {
-		blocks: {
-			callout: ({ variant, title, children }: BlockProps<typeof calloutBlock>) => (
-				<Callout variant={variant} title={title} labels={labels}>
-					{children}
-				</Callout>
-			),
-		},
-	};
-};
+export default defineRender({
+	blocks: {
+		callout: ({ variant, title, children, ctx }: BlockProps<typeof calloutBlock>) => (
+			<Callout variant={variant} title={title} labels={blockLabels(ctx.locale)}>
+				{children}
+			</Callout>
+		),
+	},
+});

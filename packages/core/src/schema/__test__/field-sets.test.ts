@@ -11,7 +11,8 @@ const seo = {
 describe("field sets of plugins", () => {
 	it("reads the sets from the plugins' contributions and skips malformed ones", () => {
 		const sets = fieldSetsOf([
-			{ name: "seo", contributes: { fieldSets: [seo, { id: 1 }, "x"] } },
+			// Malformed on purpose: a config written without types (or a snapshot) can hold anything.
+			{ name: "seo", contributes: { fieldSets: [seo, { id: 1 }, "x"] as never } },
 			{ name: "other", contributes: { layout: [] } },
 			{ name: "none" },
 		]);

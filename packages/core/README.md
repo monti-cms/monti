@@ -500,7 +500,7 @@ Changing the database connection itself needs a restart. In production and in te
 
 The instance takes the site config as a value (`defineConfig` builds it from the site options, `createCms({ config })` takes one you made) and holds it. There is no config alias and no module-level constant derived from the config, so nothing assumes the config is known when a module is imported, and one process can hold
 several sites. `createSite(config)` (`@monti-cms/core/site`) resolves a config into a `Site`: `LOCALES`, `DEFAULT_LOCALE`, `COLLECTIONS`, `schemaOf(name)`, `storedFields(name)`, `contentPath(…)`, `parseInternalLink(…)`, `adminHref(…)`, `BLOCKS`,
-`CODE_LINE_EFFECTS`, `getPluginOptions(name)`, `createTranslator(messages)` and the rest of what used to be exported as constants and functions that read the config. The instance carries its `Site` as `cms.site`
+`CODE_LINE_EFFECTS`, `pluginOptions(id)`, `createTranslator(messages)` and the rest of what used to be exported as constants and functions that read the config. The instance carries its `Site` as `cms.site`
 (`cms.site.config` is the config object itself), and everything that needed the config receives it from the instance:
 
 | Part | Gets the site from |
@@ -742,7 +742,7 @@ defineBlock({
 - A container that holds body content starts with an empty paragraph when inserted from the slash menu. `editor.insert.codeBlocks` (`[{ language, title?, code? }]`) starts it with those code blocks instead, `title` being the code fence's `title` meta (the code explorer uses it to start with one `src/index.ts` file).
 - The admin package builds editor nodes from the definition. Change the editing look with the admin package's `blockViews` (the whole view of any block,
   built on `useBlockEditor` and `Content`), and supply previews of code fence blocks with `fencePreviews`.
-- Code fence blocks on public pages are drawn from the document by `renderDocument`/`CmsContent` with the component registered for the block (`documentComponents` of a plugin's `render` module, or the site's `components`). Nothing has to be added to a render chain.
+- Code fence blocks on public pages are drawn from the document by `renderDocument`/`CmsContent` with the component registered for the block (the `defineRender` table of a plugin's `render` module, or the site's `components`). Nothing has to be added to a render chain.
 - The translation structure check (`compareStructure`) only accepts changes in translation for `translatable` attributes and for `childValue` attributes that point at their values (e.g. the tab to open first).
   Put `translatable: true` on human-readable attributes (title, description, etc.).
 - If `editor.icon` is a name that is not among the admin package's default icons, register the icon in the admin UI (`@monti-cms/admin` README).
@@ -855,7 +855,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 - **Never throws on content.** An unknown node, mark or block, a block without a component and a node with malformed attributes go through the `fallback` component and are
   listed in `unknown` (and passed to `onUnknown`). An unknown container shows its content, an unknown leaf nothing; in development the default fallback leaves a hidden
   `<span data-cms-unknown>`. `strict: true` throws instead (tests, the preview page). A value that is not a stored document renders an empty body and is logged.
-- **Components** are layered: core defaults, then the block extensions' components (`documentComponents` of a plugin's `render` module: `Plugin.render` returns `{ documentComponents }`, and the old MDX-shaped default export is gone), then the site's `components`. One props type per node
+- **Components** are layered: core defaults, then the block extensions' components (the default export of a plugin's `render` module, `defineRender({ blocks, marks, codeTags })` from `@monti-cms/core/render`), then the site's `components`. One props type per node
   (`ParagraphProps`, `HeadingProps` with its `id`, `ListProps`, `CodeBlockProps`, `ImageProps` with the resolved `src`, `FileProps`, `TableProps`/`TableRowProps`/`TableCellProps`, `MathProps`,
   `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
   Every component also gets `ctx` (`locale` and the fixed `labels`; plain JSON, so it can cross to a client component), and a block component gets `blockId`, `node` and `items`.
@@ -884,8 +884,8 @@ export const myPlugin = () =>
 		// The server side, in one place: a loader (read only on the server) or an inline object.
 		server: () => import("my-plugin/server"), // ServerPlugin: routes, hooks, formats, commands, migrate, keyUses, features
 		// server: { hooks: { validate: [() => undefined] } }, // inline: a plugin that only adds hooks needs no module (and no `options`)
-		admin: () => import("my-plugin/admin"), // AdminPlugin (@monti-cms/admin): screens, providers
-		render: () => import("my-plugin/render"), // the public components of the plugin's blocks: `export const documentComponents = (context) => ({ blocks: { name: Component } })` ("Rendering a stored document")
+		admin: () => import("my-plugin/admin"), // `export default defineAdminPlugin({ pages, components, slots, Provider })` (@monti-cms/admin): screens, block views, providers
+		render: () => import("my-plugin/render"), // `export default defineRender({ blocks: { name: Component } })` (@monti-cms/core/render): the public components of the plugin's blocks ("Rendering a stored document")
 	});
 ```
 
@@ -894,9 +894,14 @@ The parts are grouped by who reads them: both sides read `options`, `blocks`, `n
 - The server side (`server`) must not end up in the browser bundle, so give an empty entry point through the `browser` condition of the package `exports`.
 - `server.formats` adds formats (notations the document can be written as and read from, "Formats"): a function that returns a `CmsFormat` or a list of them (`formats: () => myFormat`). It is called when the instance first needs its formats.
 - `checkConfig` receives the collection, locale and block definitions and all plugins (`plugins`) and returns the issues it finds (`{ path, code, message }`, with `IssueList` and `pathOf` from `@monti-cms/core`); `defineSite` reports them with every other problem of the config in one `ConfigError`. Extensions that use roles check field kinds here.
-- `contributes` is what you add to other plugins. The key and shape are decided by the receiving plugin, and the core does not read them. For example,
-  `contributes: { ai: { actions: { … } } }` adds that feature if the AI plugin (`@monti-cms/ai`) is present and is unused otherwise.
-  An extension can add features without knowing the receiving plugin (diagram creation in the blocks extension, search title suggestions in the SEO extension).
+- `admin` and `render` are typed by what their module exports by default: a module of the other kind (or one with a named export only) fails type checking.
+- `contributes` is what you add to other plugins, typed by `PluginContributions`: `ai` (actions for the AI plugin `@monti-cms/ai`), `layout` (the tabs of the
+  properties panel the plugin places its fields in) and `fieldSets` (field sets the schema screen offers). `contributes: { ai: { actions: { … } } }` adds those
+  actions if the AI plugin is present and is unused otherwise, so an extension adds features without knowing the receiving plugin (diagram creation in the blocks extension,
+  search title suggestions in the SEO extension). A plugin that receives something of its own adds its key with module augmentation
+  (`declare module "@monti-cms/core" { interface PluginContributions { search?: SearchContribution } }`), and the plugins that give it are checked against it.
+- A plugin reads its own `options` from a site with a typed id: `export const MY_PLUGIN: PluginId<"my-plugin", MyOptions> = { name: "my-plugin" }` once, then
+  `site.pluginOptions(MY_PLUGIN)` is `MyOptions | undefined`.
 - The server-side `routes` receive addresses that are not in the core routes (`/api/monti/v1/*`). They are a table like the core's own, `{ pattern, module, access? }`, and the router checks each one before its handler runs: the same-origin check, then the admin login. Forgetting authentication does not leave an open route. Only routes that must be reachable without login take another `access` kind (`public-read` for GET only, `same-origin-form` for a browser form post, `admin-or-bearer` for a cron job with a token, `signed` for a webhook), and the router applies the guard of that kind. Only `signed` leaves the check to the handler (`publicRoute(...)` handlers). The handlers are `adminRoute(async ({ request, params, auth, cms }) => …)`, and that input object is their only signature. Tests call them with `callRoute(handler, { request, cms, params })` from `@monti-cms/core/testing`.
   `migrate` is called by `monti db:migrate` after the core tables.
 - The same-origin check accepts the host of `Host` and `site.url`, and the first value of `X-Forwarded-Host` only when the host is trusted ("Host trust"). Behind a proxy that rewrites `Host`, set `site.url` or trust the host.

@@ -1,13 +1,10 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin";
-import { checkTextPalette, type PaletteColor } from "./colors";
+import { checkTextPalette } from "./colors";
 import { colorBlock } from "./definition";
+import { COLOR_PLUGIN, type ColorOptions } from "./options";
 
 export * from "./colors";
-
-export interface ColorOptions {
-	/** Editor text/background color picker list. Defaults to the 8 default colors (`defaultTextPalette`). The body stores hex values. */
-	readonly palette?: readonly PaletteColor[];
-}
+export type { ColorOptions } from "./options";
 
 /**
  * Text color and text background color (`:color[text]{fg bg …}`). Add it to the site config's `plugins`.
@@ -21,7 +18,7 @@ export interface ColorOptions {
  */
 export const color = (options: ColorOptions = {}) =>
 	defineBlockPlugin({
-		name: "color",
+		name: COLOR_PLUGIN.name,
 		options,
 		blocks: [colorBlock],
 		checkConfig: () => checkTextPalette(options.palette),

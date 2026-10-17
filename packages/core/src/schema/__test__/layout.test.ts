@@ -110,7 +110,8 @@ describe("what plugins place is checked with the config", () => {
 		const bad = definePlugin({
 			name: "bad",
 			options: {},
-			contributes: { layout: [{ tab: "", roles: "seoTitle" }, { views: ["x"] }] },
+			// Malformed on purpose: a config written without types can hold anything.
+			contributes: { layout: [{ tab: "", roles: "seoTitle" }, { views: ["x"] }] as never },
 		});
 		try {
 			defineSite({

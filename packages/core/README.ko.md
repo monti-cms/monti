@@ -497,7 +497,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 
 인스턴스는 사이트 설정을 값으로 받아 가진다(`defineConfig`가 사이트 옵션으로 만들고, 직접 만든 설정은 `createCms({ config })`로 넘긴다). 설정 별칭도, 설정에서 뽑아 만든 모듈 수준 상수도 없으므로 모듈을 불러올 때 설정을 알고 있다고 가정하는 곳이 없고, 한 프로세스가
 사이트를 여럿 가질 수 있다. `createSite(config)`(`@monti-cms/core/site`)는 설정을 `Site`로 푼다: `LOCALES`·`DEFAULT_LOCALE`·`COLLECTIONS`·`schemaOf(이름)`·`storedFields(이름)`·`contentPath(…)`·`parseInternalLink(…)`·`adminHref(…)`·`BLOCKS`·
-`CODE_LINE_EFFECTS`·`getPluginOptions(이름)`·`createTranslator(messages)`와, 전에는 설정을 읽어 상수와 함수로 내보내던 나머지다. 인스턴스는 `Site`를 `cms.site`로 가진다
+`CODE_LINE_EFFECTS`·`pluginOptions(id)`·`createTranslator(messages)`와, 전에는 설정을 읽어 상수와 함수로 내보내던 나머지다. 인스턴스는 `Site`를 `cms.site`로 가진다
 (`cms.site.config`는 설정 객체 그대로다). 설정이 필요하던 모든 곳은 인스턴스에서 받는다:
 
 | 곳 | 사이트를 받는 데 |
@@ -739,7 +739,7 @@ defineBlock({
 - 본문을 담는 컨테이너는 슬래시 메뉴로 넣으면 빈 문단으로 시작한다. `editor.insert.codeBlocks`(`[{ language, title?, code? }]`)를 주면 그 코드 블록들로 시작하며, `title`은 코드 펜스의 `title` 메타다(코드 탐색기가 `src/index.ts` 파일 하나로 시작하는 데 쓴다).
 - 편집기 노드는 관리자 패키지가 정의에서 만든다. 편집 모양은 관리자 패키지의 `blockViews`(모든 블록의 화면 전체,
   `useBlockEditor`와 `Content`로 만든다)로 바꾸고, 코드 펜스 블록의 미리보기는 `fencePreviews`로 넣는다.
-- 공개 화면의 코드 펜스 블록은 `renderDocument`/`CmsContent`가 문서에서 바로 그린다. 블록에 등록된 컴포넌트(플러그인 `render` 모듈의 `documentComponents`나 사이트의 `components`)를 쓰므로 렌더 체인에 따로 넣을 것이 없다.
+- 공개 화면의 코드 펜스 블록은 `renderDocument`/`CmsContent`가 문서에서 바로 그린다. 블록에 등록된 컴포넌트(플러그인 `render` 모듈의 `defineRender` 표나 사이트의 `components`)를 쓰므로 렌더 체인에 따로 넣을 것이 없다.
 - 번역 구조 검사(`compareStructure`)는 `translatable` 속성과, 그 값을 가리키는 `childValue` 속성(예: 처음 열 탭)만 번역에서
   바뀌어도 된다고 본다. 사람이 읽는 속성(제목·설명 등)에는 `translatable: true`를 단다.
 - `editor.icon`이 관리자 패키지의 기본 아이콘에 없는 이름이면 관리자 화면에 아이콘을 등록한다(`@monti-cms/admin` README).
@@ -852,7 +852,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 - **내용 때문에 던지지 않는다.** 모르는 노드·마크·블록, 컴포넌트가 없는 블록, 속성이 잘못된 노드는 `fallback` 컴포넌트로 그려지고 `unknown`에 담긴다(`onUnknown`도 부른다).
   모르는 컨테이너는 안의 내용을 보이고 모르는 리프는 아무것도 그리지 않는다. 개발 중에는 기본 fallback이 숨겨진 `<span data-cms-unknown>`을 남긴다. `strict: true`면 대신 던진다(테스트, 미리보기 화면).
   저장된 문서가 아닌 값은 빈 본문으로 그리고 로그를 남긴다.
-- **컴포넌트**는 층층이 합쳐진다: 코어 기본값, 블록 확장의 컴포넌트(플러그인 `render` 모듈의 `documentComponents`. `Plugin.render`는 `{ documentComponents }`를 돌려주며, MDX 모양의 옛 기본 내보내기는 없어졌다), 사이트의 `components` 순이다. 노드마다 속성 타입이 하나씩 있고
+- **컴포넌트**는 층층이 합쳐진다: 코어 기본값, 블록 확장의 컴포넌트(플러그인 `render` 모듈의 기본 내보내기. `@monti-cms/core/render`의 `defineRender({ blocks, marks, codeTags })`), 사이트의 `components` 순이다. 노드마다 속성 타입이 하나씩 있고
   (`ParagraphProps`, `id`가 있는 `HeadingProps`, `ListProps`, `CodeBlockProps`, 해석된 `src`가 있는 `ImageProps`, `FileProps`, `TableProps`·`TableRowProps`·`TableCellProps`, `MathProps`,
   `FootnoteRefProps`·`FootnotesProps`, `HardBreakProps`), 코어 마크(`link`, `bold`, `italic` …)마다 하나, 코드 블록 안 요소용 `codeTags`(`fold`, `collapse`, `Tooltip`)가 있다.
   모든 컴포넌트는 `ctx`(`locale`과 고정 문구 `labels`; 순수 JSON이라 클라이언트 컴포넌트로 넘길 수 있다)도 받고, 블록 컴포넌트는 `blockId`, `node`, `items`도 받는다.
@@ -881,8 +881,8 @@ export const myPlugin = () =>
 		// 서버 쪽은 한곳에: 로더(서버에서만 읽는다) 또는 인라인 객체.
 		server: () => import("my-plugin/server"), // ServerPlugin: 경로·훅·형식·명령·migrate·keyUses·features
 		// server: { hooks: { validate: [() => undefined] } }, // 인라인: 훅만 더하는 플러그인은 모듈이 필요 없다(`options`도 생략할 수 있다)
-		admin: () => import("my-plugin/admin"), // AdminPlugin(@monti-cms/admin): 화면·공급자
-		render: () => import("my-plugin/render"), // 플러그인 블록의 공개 컴포넌트: `export const documentComponents = (context) => ({ blocks: { name: Component } })`("저장된 문서 그리기")
+		admin: () => import("my-plugin/admin"), // `export default defineAdminPlugin({ pages, components, slots, Provider })`(@monti-cms/admin): 화면·블록 뷰·공급자
+		render: () => import("my-plugin/render"), // `export default defineRender({ blocks: { name: Component } })`(@monti-cms/core/render): 플러그인 블록의 공개 컴포넌트("저장된 문서 그리기")
 	});
 ```
 
@@ -891,9 +891,13 @@ export const myPlugin = () =>
 - 서버 쪽(`server`)은 브라우저 묶음에 들어가지 않게 패키지 `exports`의 `browser` 조건으로 빈 진입점을 준다.
 - `server.formats`는 형식(문서를 써 내고 읽어 올 수 있는 표기, "형식" 절)을 더한다. `CmsFormat` 하나 또는 그 목록을 돌려주는 함수(`formats: () => myFormat`)이고, 인스턴스가 형식이 처음 필요할 때 부른다.
 - `checkConfig`는 컬렉션·언어·블록 정의와 모든 플러그인(`plugins`)을 받아 찾은 문제(`{ path, code, message }`, `@monti-cms/core`의 `IssueList`·`pathOf`)를 돌려준다. `defineSite`가 설정의 다른 문제와 함께 하나의 `ConfigError`로 알린다. 역할을 쓰는 확장은 여기서 필드 종류를 확인한다.
-- `contributes`는 다른 플러그인에 더하는 것이다. 키와 모양은 받는 플러그인이 정하고 본체는 읽지 않는다. 예를 들어
-  `contributes: { ai: { actions: { … } } }`는 AI 플러그인(`@monti-cms/ai`)이 있으면 그 기능을 더하고, 없으면 쓰이지 않는다.
-  확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천).
+- `admin`과 `render`는 모듈의 기본 내보내기로 타입이 정해진다. 다른 종류의 모듈(또는 이름 붙은 내보내기만 있는 모듈)을 넘기면 타입 검사에서 걸린다.
+- `contributes`는 다른 플러그인에 더하는 것이고, 타입은 `PluginContributions`다: `ai`(AI 플러그인 `@monti-cms/ai`의 기능), `layout`(플러그인이 자기 필드를 놓는
+  속성 패널 탭), `fieldSets`(스키마 화면이 내놓는 필드 묶음). `contributes: { ai: { actions: { … } } }`는 AI 플러그인이 있으면 그 기능을 더하고 없으면 쓰이지 않으므로,
+  확장은 받는 플러그인을 몰라도 기능을 더할 수 있다(블록 확장의 다이어그램 만들기, SEO 확장의 검색 제목 추천). 자기만의 것을 받는 플러그인은 모듈 보강으로 키를 더하고
+  (`declare module "@monti-cms/core" { interface PluginContributions { search?: SearchContribution } }`), 그것을 주는 플러그인은 그 타입으로 검사된다.
+- 플러그인은 자기 `options`를 타입 있는 id로 사이트에서 읽는다: `export const MY_PLUGIN: PluginId<"my-plugin", MyOptions> = { name: "my-plugin" }`를 한 번 두면
+  `site.pluginOptions(MY_PLUGIN)`이 `MyOptions | undefined`다.
 - 서버 쪽 `routes`는 본체 경로(`/api/monti/v1/*`)에 없는 주소를 받는다. 본체 경로와 같은 표(`{ pattern, module, access? }`)이고, 라우터가 핸들러보다 먼저 같은 출처 검사와 관리자 로그인 확인을 한다.
   인증을 빠뜨려도 열린 경로가 되지 않는다. 로그인 없이 받아야 하는 경로만 기본값 `admin` 대신 다른 `access` 종류(GET 전용 `public-read`, 브라우저 폼 `same-origin-form`, 토큰을 쓰는 크론 `admin-or-bearer`, 웹훅 `signed`)를 쓰고, 라우터가 그 종류의 검사를 적용한다. 검사를 핸들러에 맡기는 것은 `signed`뿐이다(`publicRoute(...)` 핸들러). 핸들러는 `adminRoute(async ({ request, params, auth, cms }) => …)`이고, 그 입력 객체가 핸들러의 유일한 시그니처이고, 테스트는 `@monti-cms/core/testing`의 `callRoute(handler, { request, cms, params })`로 부른다.
   `migrate`는 `monti db:migrate`가 본체 표 다음에 부른다.
