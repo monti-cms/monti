@@ -3,31 +3,34 @@
 /*
  * CMS admin UI tokens. The host's own tokens are left untouched.
  * Popups and menus are portaled to body, so these apply to the whole document (html) that contains the admin container.
+ * `color-scheme` sits in the same blocks: it makes scrollbars and default form controls follow the theme, and lets a site write both modes in one line with `light-dark()`.
+ * Tokens that only follow another one (`-foreground` of the page text, the `-soft` tints, `secondary`, `sidebar-ring`) are derived, so overriding the base updates them.
  * The defaults have zero specificity (`:where()`), so a site's own `:root { --monti-primary: ... }` or `.dark { ... }` wins whatever order the stylesheets load in.
  */
 :where(html:has(.monti-admin)) {
+	color-scheme: light;
 	--monti-background: #ffffff;
 	--monti-foreground: #18181b;
 	--monti-card: #ffffff;
-	--monti-card-foreground: #18181b;
+	--monti-card-foreground: var(--monti-foreground);
 	--monti-popover: #ffffff;
-	--monti-popover-foreground: #18181b;
+	--monti-popover-foreground: var(--monti-foreground);
 	--monti-primary: #4f46e5;
 	--monti-primary-foreground: #ffffff;
-	--monti-secondary: #f4f4f5;
-	--monti-secondary-foreground: #18181b;
+	--monti-secondary: var(--monti-muted);
+	--monti-secondary-foreground: var(--monti-foreground);
 	--monti-muted: #f4f4f5;
 	--monti-muted-foreground: #71717a;
 	--monti-accent: #f0f0f2;
-	--monti-accent-foreground: #18181b;
+	--monti-accent-foreground: var(--monti-foreground);
 	--monti-destructive: #dc2626;
-	--monti-destructive-soft: #dc262612;
+	--monti-destructive-soft: color-mix(in srgb, var(--monti-destructive) 7%, transparent);
 	--monti-destructive-foreground: #b91c1c;
 	--monti-warning: #d97706;
-	--monti-warning-soft: #d9770614;
+	--monti-warning-soft: color-mix(in srgb, var(--monti-warning) 8%, transparent);
 	--monti-warning-foreground: #b45309;
 	--monti-success: #059669;
-	--monti-success-soft: #05966914;
+	--monti-success-soft: color-mix(in srgb, var(--monti-success) 8%, transparent);
 	--monti-success-foreground: #047857;
 	--monti-border: #ececef;
 	--monti-input: #e4e4e7;
@@ -37,36 +40,37 @@
 	--monti-sidebar-primary: #18181b;
 	--monti-sidebar-primary-foreground: #fafafa;
 	--monti-sidebar-accent: #ececee;
-	--monti-sidebar-accent-foreground: #18181b;
+	--monti-sidebar-accent-foreground: var(--monti-foreground);
 	--monti-sidebar-border: #e7e7ea;
-	--monti-sidebar-ring: #6366f1;
+	--monti-sidebar-ring: var(--monti-ring);
 	/* Base corner radius. The `rounded-*` utilities of the admin bundle are computed from it (see `theme.css`); the host's `--radius*` is not touched. */
 	--monti-radius: 0.5rem;
 }
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {
+	color-scheme: dark;
 	--monti-background: #0c0c0e;
 	--monti-foreground: #f4f4f5;
 	--monti-card: #111113;
-	--monti-card-foreground: #f4f4f5;
+	--monti-card-foreground: var(--monti-foreground);
 	--monti-popover: #151518;
-	--monti-popover-foreground: #f4f4f5;
+	--monti-popover-foreground: var(--monti-foreground);
 	--monti-primary: #6366f1;
 	--monti-primary-foreground: #ffffff;
-	--monti-secondary: #1c1c20;
-	--monti-secondary-foreground: #f4f4f5;
+	--monti-secondary: var(--monti-muted);
+	--monti-secondary-foreground: var(--monti-foreground);
 	--monti-muted: #1c1c20;
 	--monti-muted-foreground: #a1a1aa;
 	--monti-accent: #1f1f24;
-	--monti-accent-foreground: #f4f4f5;
+	--monti-accent-foreground: var(--monti-foreground);
 	--monti-destructive: #f87171;
-	--monti-destructive-soft: #f8717126;
+	--monti-destructive-soft: color-mix(in srgb, var(--monti-destructive) 15%, transparent);
 	--monti-destructive-foreground: #fca5a5;
 	--monti-warning: #fbbf24;
-	--monti-warning-soft: #fbbf2420;
+	--monti-warning-soft: color-mix(in srgb, var(--monti-warning) 12.5%, transparent);
 	--monti-warning-foreground: #fbbf24;
 	--monti-success: #34d399;
-	--monti-success-soft: #34d39920;
+	--monti-success-soft: color-mix(in srgb, var(--monti-success) 12.5%, transparent);
 	--monti-success-foreground: #34d399;
 	--monti-border: #232328;
 	--monti-input: #2a2a30;
@@ -76,18 +80,11 @@
 	--monti-sidebar-primary: #f4f4f5;
 	--monti-sidebar-primary-foreground: #0c0c0e;
 	--monti-sidebar-accent: #1f1f24;
-	--monti-sidebar-accent-foreground: #f4f4f5;
+	--monti-sidebar-accent-foreground: var(--monti-foreground);
 	--monti-sidebar-border: #1f1f24;
-	--monti-sidebar-ring: #818cf8;
+	--monti-sidebar-ring: var(--monti-ring);
 }
 
-/* Makes scrollbars and default form controls follow the theme (fixes the light default scrollbar looking like a white line in dark mode). */
-html:has(.monti-admin) {
-	color-scheme: light;
-}
-html:is(.dark, [data-theme="dark"]):has(.monti-admin) {
-	color-scheme: dark;
-}
 /* Keeps the app's body background from showing through at the admin edges. */
 html:has(.monti-admin) body {
 	background-color: var(--monti-background);

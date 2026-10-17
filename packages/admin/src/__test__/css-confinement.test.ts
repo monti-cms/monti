@@ -98,6 +98,43 @@ describe("admin CSS confinement", () => {
 		for (const selector of holders) expect(selector).toMatch(/^:where\((?:[^()]|\([^()]*\))*\)$/);
 	});
 
+	it("each token block sets color-scheme, so light-dark() works in a site's override", () => {
+		const schemes = new Map<string, string>();
+		postcss.parse(adminCss).walkRules((rule) => {
+			if (!rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-background")) return;
+			const scheme = rule.nodes.find((node) => node.type === "decl" && node.prop === "color-scheme");
+			schemes.set(rule.selector.includes(".dark") ? "dark" : "light", scheme?.type === "decl" ? scheme.value : "");
+		});
+		expect(Object.fromEntries(schemes)).toEqual({ light: "light", dark: "dark" });
+	});
+
+	it("tokens that only follow another one are derived from it, in both modes", () => {
+		const derived = {
+			"card-foreground": "var(--monti-foreground)",
+			"popover-foreground": "var(--monti-foreground)",
+			"accent-foreground": "var(--monti-foreground)",
+			"secondary-foreground": "var(--monti-foreground)",
+			"sidebar-accent-foreground": "var(--monti-foreground)",
+			secondary: "var(--monti-muted)",
+			"sidebar-ring": "var(--monti-ring)",
+			"destructive-soft": expect.stringMatching(
+				/^color-mix\(in srgb, var\(--monti-destructive\) [\d.]+%, transparent\)$/,
+			),
+			"warning-soft": expect.stringMatching(/^color-mix\(in srgb, var\(--monti-warning\) [\d.]+%, transparent\)$/),
+			"success-soft": expect.stringMatching(/^color-mix\(in srgb, var\(--monti-success\) [\d.]+%, transparent\)$/),
+		};
+		let blocks = 0;
+		postcss.parse(adminCss).walkRules((rule) => {
+			if (!rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-background")) return;
+			blocks++;
+			for (const [name, value] of Object.entries(derived)) {
+				const decl = rule.nodes.find((node) => node.type === "decl" && node.prop === `--monti-${name}`);
+				expect(decl?.type === "decl" ? decl.value : undefined).toEqual(value);
+			}
+		});
+		expect(blocks).toBe(2);
+	});
+
 	it("the theme keeps the admin's own names only", () => {
 		// Tailwind's `--radius*` is not defined by the hand-written rules.
 		expect(adminCss).not.toMatch(/^\s*--radius/m);
@@ -218,9 +255,10 @@ describe("admin CSS confinement", () => {
 			const selectors = selectorsOf(postcss.parse(css));
 			// Tailwind's preflight is there, but only under the scope (the check above rejects a bare `*`, `body` or `button`).
 			expect(selectors).toContain(":where(html:has(.monti-admin)) button");
-			expect(css).toContain(":where(html:has(.monti-admin)){--monti-background:");
-			expect(css).toMatch(/html:is\(\.dark,\[data-theme=dark\]\):has\(\.monti-admin\)\{[^}]*color-scheme:dark/);
-			expect(css).toMatch(/:where\(html:is\(\.dark,\[data-theme=dark\]\):has\(\.monti-admin\)\)\{--monti-background:/);
+			expect(css).toContain(":where(html:has(.monti-admin)){color-scheme:light;--monti-background:");
+			expect(css).toContain(
+				":where(html:is(.dark,[data-theme=dark]):has(.monti-admin)){color-scheme:dark;--monti-background:",
+			);
 			expect(css).toContain(".katex");
 			expect(css).toContain("KaTeX_Main");
 			// The host's Tailwind names are not redefined: no `--radius*`, `--color-*`, `--spacing`, `--font-*` declaration.

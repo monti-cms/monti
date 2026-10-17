@@ -483,48 +483,92 @@ import "@monti-cms/admin/styles.css";
 사이트는 CSS 사용자 정의 속성을 덮어써서 관리자 화면의 테마를 바꾼다. 아래 토큰이 공개 계약이다. 이름과 뜻을 안정적으로 유지하고, 관리자 컴포넌트는 `--monti-*` 이름만 읽으므로
 사이트 자신의 변수(`--primary`, `--background` 등)가 섞여 들어오지 않고 다른 곳은 건드릴 필요가 없다. 정하지 않은 토큰은 기본값을 쓴다.
 
-기본값은 우선순위가 0이다(`:where(...)`). 그래서 사이트의 평범한 `:root { ... }` 규칙이 스타일시트를 어떤 순서로 불러오든 이긴다. 어두운 테마는 `html`의 `.dark` 또는
-`[data-theme="dark"]` 아래에 같은 토큰을 쓴다. 관리자가 이미 이 두 방식을 모두 알아본다.
+기본값은 우선순위가 0이다(`:where(...)`). 그래서 사이트의 평범한 `:root { ... }` 규칙이 스타일시트를 어떤 순서로 불러오든 이긴다. 관리자는 `color-scheme`도 정한다(`light`, 그리고 `html`의
+`.dark` 또는 `[data-theme="dark"]` 아래에서는 `dark`. 관리자가 어두운 테마를 알아보는 두 방식이다). 그래서 `light-dark()`가 모드마다 알맞은 값을 고르고, 두 모드를 한 줄에 쓸 수 있다.
 
 ```css
 /* app/globals.css: 사이트의 아무 스타일시트나 된다. @monti-cms/admin/styles.css 앞뒤 어느 쪽이든 괜찮다 */
 :root {
-	--monti-primary: #0d9488;
-	--monti-primary-foreground: #ffffff;
-	--monti-ring: #14b8a6;
-	--monti-sidebar-primary: #0f766e;
+	--monti-primary: light-dark(#0d9488, #2dd4bf);
+	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
+	--monti-ring: light-dark(#14b8a6, #5eead4);
 	--monti-radius: 0.75rem;
-}
-
-.dark,
-[data-theme="dark"] {
-	--monti-primary: #2dd4bf;
-	--monti-primary-foreground: #042f2e;
-	--monti-ring: #5eead4;
-	--monti-sidebar-primary: #2dd4bf;
 }
 ```
 
-면을 칠하는 색 토큰에는 그 위의 글자 색인 `-foreground`가 짝으로 있다. 값은 어떤 CSS 색이든 된다. 역할별 토큰은 다음과 같다.
+**평범한 값은 두 모드에 모두 적용된다.** 기본값은 밝은 모드와 어두운 모드 모두 우선순위가 0이라, `:root { --monti-background: #fff; }`는 어두운 기본값도 덮어쓴다. 위처럼 `light-dark()`로 쓰거나,
+어두운 테마용으로 같은 토큰을 한 번 더 정한다.
+
+```css
+:root {
+	--monti-primary: #0d9488;
+}
+.dark,
+[data-theme="dark"] {
+	--monti-primary: #2dd4bf;
+}
+```
+
+면을 칠하는 색 토큰에는 그 위의 글자 색인 `-foreground`가 짝으로 있다. 값은 어떤 CSS 색이든 된다. 다른 토큰을 그대로 따르기만 하는 토큰은 파생되므로, 기준 토큰을 정하면 함께 바뀐다. 따로 정하는 것은
+달라지고 싶을 때뿐이다. 역할별 토큰은 다음과 같다.
 
 | 역할 | 토큰 | 칠하는 곳 |
 | --- | --- | --- |
 | 바탕 | `--monti-background`, `--monti-foreground` | 관리자 뒤쪽 바탕과 기본 글자 |
-| | `--monti-card`, `--monti-card-foreground` | 패널과 카드 |
-| | `--monti-popover`, `--monti-popover-foreground` | 메뉴, 대화상자, 툴팁 같은 팝업 |
+| | `--monti-card`, `--monti-card-foreground` | 패널과 카드(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
+| | `--monti-popover`, `--monti-popover-foreground` | 메뉴, 대화상자, 툴팁 같은 팝업(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
 | 글자 | `--monti-muted-foreground` | 보조 글자: 안내, 라벨, 자리 표시 문구 |
 | 주색 | `--monti-primary`, `--monti-primary-foreground` | 주 버튼, 체크된 컨트롤, 선택 영역 |
-| 보조색 | `--monti-secondary`, `--monti-secondary-foreground` | 보조 버튼과 칩 |
-| 흐린 면과 강조 | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | 조용한 배경(코드, 비활성 영역)과 행·메뉴 항목의 호버·강조 배경 |
-| 상태 | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | 오류와 삭제 동작. `-soft`는 옅게 물든 배경 |
-| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | 경고 |
-| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | 성공과 발행된 상태 |
+| 보조색 | `--monti-secondary`, `--monti-secondary-foreground` | 보조 버튼과 칩(`--monti-secondary`는 정하지 않으면 `--monti-muted`를, `-foreground`는 `--monti-foreground`를 따른다) |
+| 흐린 면과 강조 | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | 조용한 배경(코드, 비활성 영역)과 행·메뉴 항목의 호버·강조 배경(`--monti-accent-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
+| 상태 | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | 오류와 삭제 동작. `-soft`는 옅게 물든 배경(정하지 않으면 `--monti-destructive`를 따른다) |
+| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | 경고(`-soft`는 정하지 않으면 `--monti-warning`을 따른다) |
+| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | 성공과 발행된 상태(`-soft`는 정하지 않으면 `--monti-success`를 따른다) |
 | 선 | `--monti-border`, `--monti-input`, `--monti-ring` | 구분선, 입력 컨트롤 테두리, 포커스 링 |
 | 사이드바 | `--monti-sidebar`, `--monti-sidebar-foreground` | 내비게이션 사이드바와 그 글자 |
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | 사이드바에서 활성이거나 강조된 항목 |
-| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경 |
-| | `--monti-sidebar-border`, `--monti-sidebar-ring` | 사이드바의 구분선과 포커스 링 |
+| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
+| | `--monti-sidebar-border`, `--monti-sidebar-ring` | 사이드바의 구분선과 포커스 링(`--monti-sidebar-ring`은 정하지 않으면 `--monti-ring`을 따른다) |
 | 모서리 | `--monti-radius` | 기본 모서리 반경(기본값 `0.5rem`). 관리자의 모든 `rounded-*`가 이 값에서 계산된다. `:root`에 한 번만 정하며 어두운 값은 없다 |
+
+### shadcn 테마 재사용
+
+토큰 이름은 shadcn의 이름을 그대로 따른다. 그래서 이미 shadcn 테마가 있는 사이트는 관리자가 그 값을 가리키게 할 수 있다. shadcn은 `.dark` 아래에서 자기 변수를 바꾸므로, 두 번째 블록 없이도
+관리자가 사이트의 어두운 모드를 따라간다.
+
+```css
+:root {
+	--monti-background: var(--background);
+	--monti-foreground: var(--foreground);
+	--monti-card: var(--card);
+	--monti-card-foreground: var(--card-foreground);
+	--monti-popover: var(--popover);
+	--monti-popover-foreground: var(--popover-foreground);
+	--monti-primary: var(--primary);
+	--monti-primary-foreground: var(--primary-foreground);
+	--monti-secondary: var(--secondary);
+	--monti-secondary-foreground: var(--secondary-foreground);
+	--monti-muted: var(--muted);
+	--monti-muted-foreground: var(--muted-foreground);
+	--monti-accent: var(--accent);
+	--monti-accent-foreground: var(--accent-foreground);
+	--monti-destructive: var(--destructive);
+	--monti-border: var(--border);
+	--monti-input: var(--input);
+	--monti-ring: var(--ring);
+	--monti-sidebar: var(--sidebar);
+	--monti-sidebar-foreground: var(--sidebar-foreground);
+	--monti-sidebar-primary: var(--sidebar-primary);
+	--monti-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--monti-sidebar-accent: var(--sidebar-accent);
+	--monti-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--monti-sidebar-border: var(--sidebar-border);
+	--monti-sidebar-ring: var(--sidebar-ring);
+	--monti-radius: var(--radius);
+}
+```
+
+shadcn에는 경고·성공 색이 없으므로 그 토큰은 관리자 기본값을 쓴다. 사이트의 변수가 색 채널만 담은 값이라면(`--primary: 222 47% 11%` 같은 이전 방식) `hsl(var(--primary))`로 감싼다.
 
 블록은 `--monti-callout-*`과 `--monti-chart-1`~`--monti-chart-5`를 더한다(`@monti-cms/blocks` 참고). 테마는 관리자를 밝은 모드와 어두운 모드로 열어 확인한다. 나머지
 (어두운 변형, 옅은 색, 호버 상태)는 이 토큰에서 파생된다. 설정 옵션은 없다. 위 CSS가 인터페이스의 전부다.

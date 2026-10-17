@@ -498,48 +498,91 @@ The cost is that the admin file carries the classes of first-party plugins an ap
 A site themes the admin by overriding CSS custom properties. The tokens below are the public contract: their names and meaning are kept stable, and the admin's components read only `--monti-*` names, so
 the site's own variables (`--primary`, `--background`, ...) never leak in and nothing else needs to be touched. A token you do not set keeps its default.
 
-The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The dark theme is the same tokens under
-`.dark` or `[data-theme="dark"]` on `html`, the two ways the admin already detects it:
+The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The admin also sets `color-scheme` (`light`, and `dark` under
+`.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line:
 
 ```css
 /* app/globals.css: any stylesheet of the site, loaded before or after @monti-cms/admin/styles.css */
 :root {
-	--monti-primary: #0d9488;
-	--monti-primary-foreground: #ffffff;
-	--monti-ring: #14b8a6;
-	--monti-sidebar-primary: #0f766e;
+	--monti-primary: light-dark(#0d9488, #2dd4bf);
+	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
+	--monti-ring: light-dark(#14b8a6, #5eead4);
 	--monti-radius: 0.75rem;
-}
-
-.dark,
-[data-theme="dark"] {
-	--monti-primary: #2dd4bf;
-	--monti-primary-foreground: #042f2e;
-	--monti-ring: #5eead4;
-	--monti-sidebar-primary: #2dd4bf;
 }
 ```
 
-Every color token that colors a surface has a `-foreground` partner for the text on it. Colors are any CSS color. Tokens by role:
+**A plain value applies to both modes.** A default has zero specificity in light *and* dark, so `:root { --monti-background: #fff; }` also replaces the dark default. Either write the value with `light-dark()`
+as above, or set the token again for the dark theme:
+
+```css
+:root {
+	--monti-primary: #0d9488;
+}
+.dark,
+[data-theme="dark"] {
+	--monti-primary: #2dd4bf;
+}
+```
+
+Every color token that colors a surface has a `-foreground` partner for the text on it. Colors are any CSS color. Tokens that only follow another one are derived, so setting the base updates them; set
+one only to break away. Tokens by role:
 
 | Role | Tokens | What they color |
 | --- | --- | --- |
 | Surface | `--monti-background`, `--monti-foreground` | The page behind the admin and its default text |
-| | `--monti-card`, `--monti-card-foreground` | Panels and cards |
-| | `--monti-popover`, `--monti-popover-foreground` | Menus, dialogs, tooltips and other popups |
+| | `--monti-card`, `--monti-card-foreground` | Panels and cards (`-foreground` follows `--monti-foreground` unless set) |
+| | `--monti-popover`, `--monti-popover-foreground` | Menus, dialogs, tooltips and other popups (`-foreground` follows `--monti-foreground` unless set) |
 | Text | `--monti-muted-foreground` | Secondary text: hints, labels, placeholders |
 | Primary | `--monti-primary`, `--monti-primary-foreground` | Main buttons, checked controls, selection |
-| Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips |
-| Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items |
-| Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill |
-| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings |
-| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states |
+| Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips (`--monti-secondary` follows `--monti-muted` unless set, its `-foreground` follows `--monti-foreground`) |
+| Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items (`--monti-accent-foreground` follows `--monti-foreground` unless set) |
+| Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill (follows `--monti-destructive` unless set) |
+| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings (`-soft` follows `--monti-warning` unless set) |
+| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states (`-soft` follows `--monti-success` unless set) |
 | Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring |
 | Sidebar | `--monti-sidebar`, `--monti-sidebar-foreground` | The navigation sidebar and its text |
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
-| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar |
-| | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring |
+| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
+| | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
 | Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+
+### Reusing a shadcn theme
+
+The token names mirror shadcn's, so a site that already has a shadcn theme can point the admin at it. shadcn swaps its variables under `.dark`, so the admin follows the site's dark mode with no second block:
+
+```css
+:root {
+	--monti-background: var(--background);
+	--monti-foreground: var(--foreground);
+	--monti-card: var(--card);
+	--monti-card-foreground: var(--card-foreground);
+	--monti-popover: var(--popover);
+	--monti-popover-foreground: var(--popover-foreground);
+	--monti-primary: var(--primary);
+	--monti-primary-foreground: var(--primary-foreground);
+	--monti-secondary: var(--secondary);
+	--monti-secondary-foreground: var(--secondary-foreground);
+	--monti-muted: var(--muted);
+	--monti-muted-foreground: var(--muted-foreground);
+	--monti-accent: var(--accent);
+	--monti-accent-foreground: var(--accent-foreground);
+	--monti-destructive: var(--destructive);
+	--monti-border: var(--border);
+	--monti-input: var(--input);
+	--monti-ring: var(--ring);
+	--monti-sidebar: var(--sidebar);
+	--monti-sidebar-foreground: var(--sidebar-foreground);
+	--monti-sidebar-primary: var(--sidebar-primary);
+	--monti-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--monti-sidebar-accent: var(--sidebar-accent);
+	--monti-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--monti-sidebar-border: var(--sidebar-border);
+	--monti-sidebar-ring: var(--sidebar-ring);
+	--monti-radius: var(--radius);
+}
+```
+
+shadcn has no warning or success colors, so those keep the admin's defaults. If the site's variables hold bare channels (the older `--primary: 222 47% 11%` style), wrap them: `hsl(var(--primary))`.
 
 Blocks add `--monti-callout-*` and `--monti-chart-1` to `--monti-chart-5` (see `@monti-cms/blocks`). To check a theme, open the admin in light and dark; the rest of the admin
 (dark variants, tints, hover states) is derived from these tokens. There is no config option: the CSS above is the whole interface.
