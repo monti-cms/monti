@@ -88,7 +88,7 @@ function LimitList<T extends string | number>({
 						disabled={disabled}
 						onCheckedChange={(on) => onChange(on === true ? undefined : [])}
 					/>
-					<Label htmlFor={allId} className="cursor-pointer font-normal text-cms-muted-foreground text-sm">
+					<Label htmlFor={allId} className="cursor-pointer font-normal text-monti-muted-foreground text-sm">
 						{t("allowed.all")}
 					</Label>
 				</div>
@@ -221,9 +221,9 @@ export function CollectionEditor({
 					<div className="min-w-0">
 						<div className="flex items-baseline gap-2">
 							<h3 className="font-semibold text-lg">{label}</h3>
-							<code className="text-cms-muted-foreground text-xs">{name}</code>
+							<code className="text-monti-muted-foreground text-xs">{name}</code>
 						</div>
-						<p className="mt-1 text-cms-muted-foreground text-sm">
+						<p className="mt-1 text-monti-muted-foreground text-sm">
 							{path ? t("collection.summary", { kind: kindLabel, path }) : kindLabel}
 						</p>
 					</div>
@@ -300,7 +300,7 @@ export function CollectionEditor({
 								variant="outline"
 								size="sm"
 								disabled={disabled}
-								className="border-cms-destructive/50 text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
+								className="border-monti-destructive/50 text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive"
 								onClick={onRemove}
 							>
 								<Trash2 aria-hidden />

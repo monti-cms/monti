@@ -78,11 +78,11 @@ const HardBreak = (_: HardBreakProps) => <br />;
 const CodeBlock = ({ title, code, notes, children, ctx }: CodeBlockProps) => {
 	const path = title?.trim().split("/").filter(Boolean) ?? [];
 	return (
-		<div className="cms-code">
+		<div className="monti-code">
 			{path.length > 0 ? (
-				<div className="cms-code-title" data-title={title}>
+				<div className="monti-code-title" data-title={title}>
 					{path.map((part, index) => (
-						<span key={`${index}-${part}`} className={index === path.length - 1 ? "cms-code-title-file" : undefined}>
+						<span key={`${index}-${part}`} className={index === path.length - 1 ? "monti-code-title-file" : undefined}>
 							{part}
 							{index < path.length - 1 ? " / " : ""}
 						</span>
@@ -92,11 +92,11 @@ const CodeBlock = ({ title, code, notes, children, ctx }: CodeBlockProps) => {
 			{children}
 			{code ? <CmsCopyButton text={code} label={ctx.labels.copyCode} copiedLabel={ctx.labels.copied} /> : null}
 			{notes.length > 0 ? (
-				<ol className="cms-code-notes" aria-label={ctx.labels.codeNotes}>
+				<ol className="monti-code-notes" aria-label={ctx.labels.codeNotes}>
 					{notes.map((note, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: the annotation number is the order
 						<li key={index}>
-							<span className="cms-code-note-number">{index + 1}</span>
+							<span className="monti-code-note-number">{index + 1}</span>
 							<span>{note}</span>
 						</li>
 					))}
@@ -178,8 +178,11 @@ const Table = ({ columns, widths, hasHead, head, body }: TableProps) => {
 				: { minWidth: total };
 	// No border or background is set separately. It takes the same prose table style as a default (GFM) table.
 	return (
-		<div className="cms-table-scroll">
-			<table className={["cms-table", style?.width ? null : "cms-table-full"].filter(Boolean).join(" ")} style={style}>
+		<div className="monti-table-scroll">
+			<table
+				className={["monti-table", style?.width ? null : "monti-table-full"].filter(Boolean).join(" ")}
+				style={style}
+			>
 				{widths.length > 0 && columns > 0 ? (
 					<colgroup>
 						{known.map((width, index) => (
@@ -209,12 +212,12 @@ const TableCell = ({
 	children,
 }: TableCellProps) => {
 	const classes = [
-		"cms-table-cell",
-		inHead && "cms-table-cell-head",
-		firstColumn && "cms-table-cell-first",
-		lastColumn && "cms-table-cell-last",
-		Tag === "th" && "cms-table-cell-header",
-		align ? `cms-align-${align}` : null,
+		"monti-table-cell",
+		inHead && "monti-table-cell-head",
+		firstColumn && "monti-table-cell-first",
+		lastColumn && "monti-table-cell-last",
+		Tag === "th" && "monti-table-cell-header",
+		align ? `monti-align-${align}` : null,
 	]
 		.filter(Boolean)
 		.join(" ");
@@ -231,7 +234,7 @@ const TableCell = ({
 };
 
 // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output (`katex.renderToString`) is the only HTML the renderer injects
-const MathBlock = ({ html }: MathProps) => <div className="cms-math" dangerouslySetInnerHTML={{ __html: html }} />;
+const MathBlock = ({ html }: MathProps) => <div className="monti-math" dangerouslySetInnerHTML={{ __html: html }} />;
 
 const FootnoteRef = ({ index, refId, targetId }: FootnoteRefProps) => (
 	<sup>
@@ -278,7 +281,7 @@ const Untranslated = (_: MarkProps) => null;
 /** What an unknown node renders to: its content (a container) or nothing (a leaf). In development it leaves a hidden marker. */
 const Fallback = ({ node, children }: UnknownProps) => (
 	<>
-		{process.env.NODE_ENV !== "production" ? <span data-cms-unknown={node.type} hidden /> : null}
+		{process.env.NODE_ENV !== "production" ? <span data-monti-unknown={node.type} hidden /> : null}
 		{children ?? null}
 	</>
 );

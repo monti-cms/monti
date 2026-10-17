@@ -24,7 +24,7 @@ const line = (text: string, anchor?: string) =>
 	`<span class="line"${anchor ? ` data-anchor="${anchor}"` : ""}>${text}</span>\n`;
 
 const block = (lines: string, title?: string) =>
-	`<div class="cms-code">${title ? `<div class="cms-code-title" data-title="${title}">${title}</div>` : ""}<pre><code>${lines}</code></pre></div>`;
+	`<div class="monti-code">${title ? `<div class="monti-code-title" data-title="${title}">${title}</div>` : ""}<pre><code>${lines}</code></pre></div>`;
 
 function mount(code: string, texts: readonly string[] = ["the text"]) {
 	document.body.innerHTML = `${code}<div id="root"></div>`;
@@ -154,7 +154,7 @@ describe("CodeRef hover preview", () => {
 		const tip = screen.getByRole("tooltip");
 		expect(ref.getAttribute("aria-describedby")).toBe(tip.id);
 		expect(tip.textContent).toBe("src/add.tsconst a = 1;return a;");
-		expect(tip.querySelectorAll(".cms-block-code-ref-preview-line")).toHaveLength(2);
+		expect(tip.querySelectorAll(".monti-block-code-ref-preview-line")).toHaveLength(2);
 
 		fireEvent.pointerLeave(ref, { pointerType: "mouse" });
 		expect(screen.queryByRole("tooltip")).toBeNull();
@@ -168,7 +168,7 @@ describe("CodeRef hover preview", () => {
 		const ref = screen.getByRole("button", { name: "the text" });
 
 		fireEvent.focus(ref);
-		const lines = screen.getByRole("tooltip").querySelectorAll(".cms-block-code-ref-preview-line");
+		const lines = screen.getByRole("tooltip").querySelectorAll(".monti-block-code-ref-preview-line");
 		expect(Array.from(lines, (item) => item.textContent)).toEqual([
 			"l0",
 			"l1",

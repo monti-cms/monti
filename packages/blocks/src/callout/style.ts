@@ -23,10 +23,10 @@ const TITLE_BY_VARIANT: Record<CalloutVariant, string> = {
 
 /**
  * Look of the callout box in the editor. The color mixes the per-variant (`data-variant`) accent color into the theme background and border (this package's `styles.css`
- * `.cms-callout`, accent color variable `--cms-callout-<variant>`). The public callout is drawn by the site.
+ * `.monti-callout`, accent color variable `--monti-callout-<variant>`). The public callout is drawn by the site.
  */
 export const CALLOUT_BOX_CLASS = [
-	"cms-callout relative block w-full rounded-lg border px-4 py-3 text-sm",
+	"monti-callout relative block w-full rounded-lg border px-4 py-3 text-sm",
 	"[&>svg]:size-4 [&>svg]:translate-y-0.5",
 ].join(" ");
 

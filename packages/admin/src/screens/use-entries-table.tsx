@@ -175,7 +175,7 @@ export function useEntriesTable({
 									type="button"
 									variant="ghost"
 									size="xs"
-									className="text-cms-destructive"
+									className="text-monti-destructive"
 									onClick={() => onPermanentDelete?.(row.original)}
 								>
 									{tc("lifecycle.deletePermanently")}

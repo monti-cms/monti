@@ -95,7 +95,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 		class: "code-focus",
 		editor: {
 			background: "bg-sky-400/10",
-			marker: { text: "›", className: "text-sky-600 cms-dark:text-sky-400" },
+			marker: { text: "›", className: "text-sky-600 monti-dark:text-sky-400" },
 		},
 	},
 	{
@@ -108,7 +108,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 			"inline-block w-full anno-mark-base anno-mark:content-['+'] anno-mark:text-gray-400 bg-green-400/10 shadow-[inset_2px_0_0_0_rgba(74,222,128,1)]",
 		editor: {
 			background: "bg-green-400/10 shadow-[inset_2px_0_0_0_rgba(74,222,128,1)]",
-			marker: { text: "+", className: "text-green-600 cms-dark:text-green-400" },
+			marker: { text: "+", className: "text-green-600 monti-dark:text-green-400" },
 		},
 	},
 	{
@@ -121,7 +121,7 @@ export const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinition[] = [
 			"inline-block w-full anno-mark-base anno-mark:content-['-'] anno-mark:text-gray-400 bg-red-400/10 shadow-[inset_2px_0_0_0_rgba(239,68,68,1)]",
 		editor: {
 			background: "bg-red-400/10 shadow-[inset_2px_0_0_0_rgba(239,68,68,1)]",
-			marker: { text: "−", className: "text-red-600 cms-dark:text-red-400" },
+			marker: { text: "−", className: "text-red-600 monti-dark:text-red-400" },
 		},
 	},
 	{

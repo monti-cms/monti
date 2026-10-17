@@ -72,7 +72,7 @@ export function MdxSourceEditor({
 		<div className={["grid font-mono text-sm leading-6", className].filter(Boolean).join(" ")}>
 			<pre
 				aria-hidden
-				className="pointer-events-none col-start-1 row-start-1 m-0 min-w-0 whitespace-pre-wrap break-words bg-transparent p-0 font-[inherit] text-cms-foreground cms-dark:[&_span[style]]:text-(--shiki-dark)!"
+				className="pointer-events-none col-start-1 row-start-1 m-0 min-w-0 whitespace-pre-wrap break-words bg-transparent p-0 font-[inherit] text-monti-foreground monti-dark:[&_span[style]]:text-(--shiki-dark)!"
 			>
 				{lines.map((line, index) => {
 					const cached = highlighted[index];
@@ -96,7 +96,7 @@ export function MdxSourceEditor({
 				{...props}
 				value={value}
 				spellCheck={false}
-				className="col-start-1 row-start-1 m-0 min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap break-words border-0 bg-transparent p-0 font-[inherit] text-transparent caret-cms-foreground outline-none selection:bg-cms-primary/20 selection:text-transparent placeholder:text-cms-muted-foreground"
+				className="col-start-1 row-start-1 m-0 min-h-0 w-full resize-none overflow-hidden whitespace-pre-wrap break-words border-0 bg-transparent p-0 font-[inherit] text-transparent caret-monti-foreground outline-none selection:bg-monti-primary/20 selection:text-transparent placeholder:text-monti-muted-foreground"
 			/>
 		</div>
 	);

@@ -15,7 +15,7 @@ const explorer = (blocks: readonly string[], open?: string) =>
 const panels = (markup: string) =>
 	Array.from(
 		markup.matchAll(
-			/<div class="cms-block-code-explorer-panel" data-code-explorer-panel="(\d+)"( hidden="")?>(.*?)<\/div><\/div>/g,
+			/<div class="monti-block-code-explorer-panel" data-code-explorer-panel="(\d+)"( hidden="")?>(.*?)<\/div><\/div>/g,
 		),
 		(match) => ({ index: Number(match[1]), hidden: match[2] !== undefined, body: match[3] ?? "" }),
 	);
@@ -31,7 +31,7 @@ describe("code explorer public component", () => {
 		expect(shown).toHaveLength(1);
 		expect(shown[0]?.body).toContain('data-title="src/a.ts"');
 		// The original code block keeps its title row, highlighting and copy button.
-		expect(shown[0]?.body).toContain("cms-code-copy");
+		expect(shown[0]?.body).toContain("monti-code-copy");
 	});
 
 	it("shows the file named by `open`, ignoring a leading ./ and falling back to the first file for an unknown path", async () => {
@@ -53,7 +53,7 @@ describe("code explorer public component", () => {
 		);
 		expect(markup).toContain('role="tree"');
 		expect(markup).toContain('aria-label="Files"');
-		const names = Array.from(markup.matchAll(/cms-block-code-explorer-label">([^<]+)</g), (match) => match[1]);
+		const names = Array.from(markup.matchAll(/monti-block-code-explorer-label">([^<]+)</g), (match) => match[1]);
 		expect(names).toEqual(["src", "app", "page.tsx", "lib", "db.ts", "package.json"]);
 		expect(markup).toMatch(/data-path="src" data-kind="folder"[^>]*aria-expanded="true"/);
 		expect(markup).toMatch(/data-path="package.json"[^>]*aria-selected="true" tabindex="0"/);
@@ -73,8 +73,8 @@ describe("code explorer public component", () => {
 	it("renders only the tree when no file has code", async () => {
 		const markup = await html(explorer([fence("a.ts"), fence("src/")]));
 		expect(markup).toContain('role="tree"');
-		expect(markup).not.toContain("cms-block-code-explorer-panel");
-		expect(markup).not.toContain("cms-block-code-explorer-toggle");
+		expect(markup).not.toContain("monti-block-code-explorer-panel");
+		expect(markup).not.toContain("monti-block-code-explorer-toggle");
 	});
 
 	it("keeps children that are not titled code blocks after the explorer", async () => {
@@ -86,13 +86,13 @@ describe("code explorer public component", () => {
 		const after = markup.slice(explorerEnd);
 		expect(after).toContain("Intro text");
 		expect(after).toContain("untitled");
-		expect(after).toContain("cms-block-callout");
+		expect(after).toContain("monti-block-callout");
 		expect(markup.slice(0, explorerEnd)).not.toContain("untitled");
 	});
 
 	it("renders the children as they are when no code block has a path", async () => {
 		const markup = await html(explorer(["Just text", "```ts\ncode();\n```"]));
-		expect(markup).not.toContain("cms-block-code-explorer");
+		expect(markup).not.toContain("monti-block-code-explorer");
 		expect(markup).toContain("<p>Just text</p>");
 		expect(markup).toContain("code");
 	});

@@ -223,7 +223,7 @@ const RULE_CLASS: Record<string, string> = {
 	del: "line-through",
 	u: "underline underline-offset-4",
 	Tooltip: "underline decoration-dotted underline-offset-4",
-	fold: "rounded-sm outline-1 outline-cms-muted-foreground/50 outline-dashed -outline-offset-1",
+	fold: "rounded-sm outline-1 outline-monti-muted-foreground/50 outline-dashed -outline-offset-1",
 };
 
 function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegion) {
@@ -235,7 +235,7 @@ function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegi
 			button.contentEditable = "false";
 			button.dataset.codeFoldToggle = region.kind;
 			button.className =
-				"mx-0.5 inline-flex h-5 items-center rounded bg-cms-muted px-1 align-middle font-sans text-cms-muted-foreground text-xs leading-none hover:bg-cms-accent hover:text-cms-foreground";
+				"mx-0.5 inline-flex h-5 items-center rounded bg-monti-muted px-1 align-middle font-sans text-monti-muted-foreground text-xs leading-none hover:bg-monti-accent hover:text-monti-foreground";
 			button.textContent = region.kind === "collapse" ? `⋯ ${t("fold.lines", { count: region.hiddenLines })}` : "…";
 			button.title =
 				region.kind === "collapse" ? t("fold.expandLines", { count: region.hiddenLines }) : t("fold.expandText");
@@ -447,7 +447,7 @@ export function createCodeEffectsPlugin(site: Site): Plugin<CodeEffectsState> {
 					if (ref && anchor && !anchors.has(String(ref.attrs[anchor.attribute])))
 						decorations.push(
 							Decoration.inline(pos, pos + node.nodeSize, {
-								class: "decoration-wavy decoration-cms-destructive",
+								class: "decoration-wavy decoration-monti-destructive",
 								title: t("anchor.missing"),
 							}),
 						);
@@ -456,7 +456,7 @@ export function createCodeEffectsPlugin(site: Site): Plugin<CodeEffectsState> {
 				// While linking (body text picked first), paint the picked text.
 				if (plugin?.linking?.kind === "text")
 					decorations.push(
-						Decoration.inline(plugin.linking.from, plugin.linking.to, { class: "rounded-sm bg-cms-primary/15" }),
+						Decoration.inline(plugin.linking.from, plugin.linking.to, { class: "rounded-sm bg-monti-primary/15" }),
 					);
 				return decorations.length ? DecorationSet.create(state.doc, decorations) : DecorationSet.empty;
 			},

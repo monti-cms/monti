@@ -15,7 +15,7 @@ export function CmsCodeCollapse({ children, open }: { children: ReactNode; open?
 	const lines = nodes.slice(first);
 	const rest = dropLeadingNewline(lines.slice(1));
 	return (
-		<details className="cms-code-collapse" open={open}>
+		<details className="monti-code-collapse" open={open}>
 			<summary>{lines[0] ?? null}</summary>
 			{rest.length > 0 ? <div>{rest}</div> : null}
 		</details>
@@ -34,12 +34,12 @@ export function CmsCodeFold({
 }) {
 	const id = useId();
 	return (
-		<span className="cms-code-fold">
+		<span className="monti-code-fold">
 			<input id={id} type="checkbox" aria-label={label} defaultChecked={open} />
-			<label htmlFor={id} className="cms-code-fold-closed">
+			<label htmlFor={id} className="monti-code-fold-closed">
 				...
 			</label>
-			<label htmlFor={id} className="cms-code-fold-open">
+			<label htmlFor={id} className="monti-code-fold-open">
 				{children}
 			</label>
 		</span>

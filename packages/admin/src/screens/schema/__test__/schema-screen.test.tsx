@@ -731,7 +731,7 @@ describe("SchemaScreen", () => {
 		const sections = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
 		expect(sections.at(-1)).toBe(tCollection("collection.dangerTitle"));
 		const button = screen.getByRole("button", { name: t("collection.remove") });
-		expect(button.closest("section")?.querySelector(".bg-cms-card")).toBeNull();
+		expect(button.closest("section")?.querySelector(".bg-monti-card")).toBeNull();
 	});
 
 	it("labels the allowed blocks and styles by name, and keeps the id as a hint", async () => {

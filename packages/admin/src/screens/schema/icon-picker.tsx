@@ -58,11 +58,11 @@ export function IconPicker({
 						/>
 					}
 				>
-					<span className="flex size-5 items-center justify-center text-cms-muted-foreground">
+					<span className="flex size-5 items-center justify-center text-monti-muted-foreground">
 						<CurrentIcon className="size-4" />
 					</span>
 					<span className="truncate">{value || t("collection.iconDefault")}</span>
-					<ChevronDown aria-hidden className="ml-auto size-4 shrink-0 text-cms-muted-foreground" />
+					<ChevronDown aria-hidden className="ml-auto size-4 shrink-0 text-monti-muted-foreground" />
 				</PopoverTrigger>
 				<PopoverContent align="start" className="w-72 p-3">
 					<div className="flex flex-col gap-2.5">
@@ -78,7 +78,7 @@ export function IconPicker({
 								type="button"
 								variant="ghost"
 								size="xs"
-								className="justify-start text-cms-muted-foreground text-xs hover:text-cms-foreground"
+								className="justify-start text-monti-muted-foreground text-xs hover:text-monti-foreground"
 								onClick={() => {
 									onChange(undefined);
 									setOpen(false);
@@ -105,8 +105,8 @@ export function IconPicker({
 											setOpen(false);
 										}}
 										className={cn(
-											"flex size-9 items-center justify-center rounded-md transition-colors hover:bg-cms-accent",
-											isSelected && "bg-cms-primary/10 text-cms-primary ring-1 ring-cms-primary",
+											"flex size-9 items-center justify-center rounded-md transition-colors hover:bg-monti-accent",
+											isSelected && "bg-monti-primary/10 text-monti-primary ring-1 ring-monti-primary",
 										)}
 									>
 										<Icon className="size-4" />
@@ -115,7 +115,7 @@ export function IconPicker({
 							})}
 						</div>
 						{filtered.length === 0 && (
-							<p className="py-4 text-center text-cms-muted-foreground text-xs">{t("collection.iconNone")}</p>
+							<p className="py-4 text-center text-monti-muted-foreground text-xs">{t("collection.iconNone")}</p>
 						)}
 					</div>
 				</PopoverContent>

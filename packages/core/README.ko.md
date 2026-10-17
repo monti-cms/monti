@@ -758,7 +758,7 @@ codeBlock: {
 			label: "정보", // 줄 효과 메뉴 이름
 			icon: "star", // 메뉴 아이콘(lucide 이름, 관리자 화면에 등록된 이름)
 			class: "bg-primary/10", // 공개 화면이 그 줄에 붙이는 클래스(사이트 Tailwind가 읽는 곳에 둔다)
-			editor: { background: "bg-cms-primary/10" }, // 편집기 표시(관리자 색은 `cms-*`, 어두운 테마는 `cms-dark:`): background·wavy(물결 밑줄 색)·marker({ text, className })
+			editor: { background: "bg-monti-primary/10" }, // 편집기 표시(관리자 색은 `monti-*`, 어두운 테마는 `monti-dark:`): background·wavy(물결 밑줄 색)·marker({ text, className })
 		},
 	],
 },
@@ -850,7 +850,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
 - **두 단계.** 비동기 선처리가 문서를 한 번 훑고(제목 앵커와 목차, 각주 번호, 모든 코드 블록의 Shiki 강조, 모든 수식의 KaTeX 출력), 그다음 동기 순수 렌더가 노드를 요소로 바꾼다.
   결과는 서버 컴포넌트와 `renderToStaticMarkup` 테스트에서 그대로 쓰는 평범한 React 트리다.
 - **내용 때문에 던지지 않는다.** 모르는 노드·마크·블록, 컴포넌트가 없는 블록, 속성이 잘못된 노드는 `fallback` 컴포넌트로 그려지고 `unknown`에 담긴다(`onUnknown`도 부른다).
-  모르는 컨테이너는 안의 내용을 보이고 모르는 리프는 아무것도 그리지 않는다. 개발 중에는 기본 fallback이 숨겨진 `<span data-cms-unknown>`을 남긴다. `strict: true`면 대신 던진다(테스트, 미리보기 화면).
+  모르는 컨테이너는 안의 내용을 보이고 모르는 리프는 아무것도 그리지 않는다. 개발 중에는 기본 fallback이 숨겨진 `<span data-monti-unknown>`을 남긴다. `strict: true`면 대신 던진다(테스트, 미리보기 화면).
   저장된 문서가 아닌 값은 빈 본문으로 그리고 로그를 남긴다.
 - **컴포넌트**는 층층이 합쳐진다: 코어 기본값, 블록 확장의 컴포넌트(플러그인 `render` 모듈의 기본 내보내기. `@monti-cms/core/render`의 `defineRender({ blocks, marks, codeTags })`), 사이트의 `components` 순이다. 노드마다 속성 타입이 하나씩 있고
   (`ParagraphProps`, `id`가 있는 `HeadingProps`, `ListProps`, `CodeBlockProps`, 해석된 `src`가 있는 `ImageProps`, `FileProps`, `TableProps`·`TableRowProps`·`TableCellProps`, `MathProps`,
@@ -861,7 +861,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
   (`defineBlock`이 속성을 리터럴로 보존하므로 `variant`는 `"note" | "tip" | …`이다). 불리언 속성은 늘 불리언이고, 기본값이 있는 값과 필수 문자열은 늘 있으며,
   선택지에 없는 값은 기본값으로 바뀐다. 코드 펜스 블록(`mermaid`, `chart`)은 코드를 `source`로 받는다.
 - **렌더러는 하나.** 제목 앵커는 `github-slugger`를 따르고, 각주는 처음 참조한 순서로 번호가 붙고, 같은 Shiki 흐름이 코드(줄 효과, 글자 효과, 줄 이름표)를 그리며,
-  블록 수식은 KaTeX `htmlAndMathml`이다. 표는 표 컴포넌트가 그리고(스크롤 래퍼와 `cms-table-*` 클래스), 블록 KaTeX 출력은 `<div class="cms-math">` 안에 들어가며, 이미지는 `refs`를 거친다.
+  블록 수식은 KaTeX `htmlAndMathml`이다. 표는 표 컴포넌트가 그리고(스크롤 래퍼와 `monti-table-*` 클래스), 블록 KaTeX 출력은 `<div class="monti-math">` 안에 들어가며, 이미지는 `refs`를 거친다.
 
 ## 플러그인
 

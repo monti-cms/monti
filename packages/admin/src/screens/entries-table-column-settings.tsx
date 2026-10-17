@@ -26,14 +26,19 @@ export function ColumnSettingsPopover({
 	const t = useTranslator(screensMessages);
 	return (
 		<Popover>
-			<PopoverTrigger render={<Button type="button" variant="ghost" size="xs" className="text-cms-muted-foreground" />}>
+			<PopoverTrigger
+				render={<Button type="button" variant="ghost" size="xs" className="text-monti-muted-foreground" />}
+			>
 				<Columns3 aria-hidden />
 				{t("list.columnSettings")}
 			</PopoverTrigger>
 			<PopoverContent align="end" className="w-64 p-3">
 				<ul className="space-y-1">
 					{order.map((column, index) => (
-						<li key={column} className="flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-cms-accent">
+						<li
+							key={column}
+							className="flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-monti-accent"
+						>
 							<Label className="font-normal">
 								<Checkbox
 									checked={visibility[column] ?? false}

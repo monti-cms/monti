@@ -105,7 +105,7 @@ export function ModelCombobox({
 						<ComboboxItem
 							key={item.value}
 							value={item}
-							className={cn("font-mono text-xs", item.custom && "text-cms-primary")}
+							className={cn("font-mono text-xs", item.custom && "text-monti-primary")}
 						>
 							<span className="truncate">{item.custom ? t("modelUse", { label: item.label }) : item.label}</span>
 						</ComboboxItem>

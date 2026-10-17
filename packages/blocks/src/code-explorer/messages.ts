@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /** Labels, descriptions, and editing view text of the code explorer block. */
-export const codeExplorerMessages = defineMessages("cms-blocks.code-explorer", {
+export const codeExplorerMessages = defineMessages("monti-blocks.code-explorer", {
 	en: {
 		label: "Code explorer",
 		description: "A file tree with the code of the picked file",

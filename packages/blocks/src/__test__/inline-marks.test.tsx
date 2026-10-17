@@ -92,9 +92,9 @@ describe("inline mark saved text", () => {
 			),
 		});
 		const html = editor.getHTML();
-		expect(html).toMatch(/<span data-cms-mark="tooltip" data-mark-content="설명" class="underline decoration-dotted/);
-		expect(html).toMatch(/data-cms-mark="code-ref" data-mark-to="c1" data-code-ref="c1"/);
-		expect(html).toMatch(/class="cms-color" style="--cms-fg: #dc2626; --cms-fg-dark: #f87171;?"/);
+		expect(html).toMatch(/<span data-monti-mark="tooltip" data-mark-content="설명" class="underline decoration-dotted/);
+		expect(html).toMatch(/data-monti-mark="code-ref" data-mark-to="c1" data-code-ref="c1"/);
+		expect(html).toMatch(/class="monti-color" style="--monti-fg: #dc2626; --monti-fg-dark: #f87171;?"/);
 		expect(html).toContain('data-fg=""');
 		editor.destroy();
 	});

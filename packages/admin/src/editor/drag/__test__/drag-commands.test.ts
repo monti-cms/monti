@@ -40,7 +40,7 @@ describe("Pure block drag-and-drop commands", () => {
 
 	it("atom nodes (images, raw-source boxes, etc.) can also be moved as blocks", () => {
 		const editor = createTestEditor(
-			'<p>앞 단락</p><div data-cms-opaque="true" data-raw-source="<Callout>\n내용\n</Callout>" data-line-start="1"></div><p>뒤 단락</p>',
+			'<p>앞 단락</p><div data-monti-opaque="true" data-raw-source="<Callout>\n내용\n</Callout>" data-line-start="1"></div><p>뒤 단락</p>',
 		);
 		const state = editor.state;
 

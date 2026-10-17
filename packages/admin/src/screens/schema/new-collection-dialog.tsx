@@ -104,7 +104,7 @@ function NewCollectionForm({
 				{kinds.map((item) => (
 					<label
 						key={item.value}
-						className="flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 has-checked:border-cms-primary has-checked:bg-cms-accent/40"
+						className="flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 has-checked:border-monti-primary has-checked:bg-monti-accent/40"
 					>
 						<input
 							type="radio"
@@ -116,7 +116,7 @@ function NewCollectionForm({
 						/>
 						<span className="flex flex-col gap-0.5">
 							<span className="font-medium text-sm">{item.label}</span>
-							<span className="text-cms-muted-foreground text-xs">{item.explain}</span>
+							<span className="text-monti-muted-foreground text-xs">{item.explain}</span>
 						</span>
 					</label>
 				))}

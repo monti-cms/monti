@@ -39,8 +39,8 @@ export function Section({
 		>
 			<div>
 				<h3 className="font-semibold text-base">{title}</h3>
-				{description && <p className="mt-1.5 text-cms-muted-foreground text-sm leading-relaxed">{description}</p>}
-				{note && <p className="mt-2.5 text-cms-muted-foreground text-xs leading-relaxed">{note}</p>}
+				{description && <p className="mt-1.5 text-monti-muted-foreground text-sm leading-relaxed">{description}</p>}
+				{note && <p className="mt-2.5 text-monti-muted-foreground text-xs leading-relaxed">{note}</p>}
 			</div>
 			{card ? (
 				<Panel className="flex min-w-0 flex-col gap-6 p-5">{children}</Panel>

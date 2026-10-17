@@ -34,7 +34,7 @@ describe("directive syntax configured in the site config", () => {
 
 	it("is read by the public render, which defaults to the configured syntax", async () => {
 		const markup = renderToStaticMarkup((await renderMdx(DIRECTIVES, { site: testSite })).content);
-		expect(markup).toContain('class="cms-align-center"');
+		expect(markup).toContain('class="monti-align-center"');
 		expect(markup).toContain("<u>밑줄</u>");
 	});
 });

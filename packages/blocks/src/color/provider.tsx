@@ -15,7 +15,7 @@ import { colorBlock } from "./definition";
 import { COLOR_MARK_NAME, TextColorIcon, TextColorMenu, TextColorMenuItems, TextColorPanel } from "./menu";
 import { colorMessages } from "./messages";
 
-/** Text color display in the editor. The same `.cms-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
+/** Text color display in the editor. The same `.monti-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
 export function colorMarkAttributes(attrs: MarkAttrs): Record<string, string> {
 	const { className, style, ...data } = textColorProps(cleanTextColor(attrs));
 	return {

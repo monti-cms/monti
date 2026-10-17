@@ -68,7 +68,7 @@ const mount = async (source: string) => {
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Wait until the NodeView (React portal) has rendered.
-	await waitFor(() => expect(document.querySelector("[data-cms-container-node]")).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-monti-container-node]")).not.toBeNull());
 	return editor as unknown as Editor;
 };
 
@@ -157,7 +157,7 @@ describe("container NodeView (public look + in-place editing)", () => {
 		const toggle = screen.getByRole("button", { name: "펼치기" });
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
 		expect(
-			document.querySelector(".node-cmsCollapsible [data-node-view-content]")?.hasAttribute("data-cms-collapsed"),
+			document.querySelector(".node-cmsCollapsible [data-node-view-content]")?.hasAttribute("data-monti-collapsed"),
 		).toBe(true);
 		act(() => {
 			fireEvent.click(toggle);

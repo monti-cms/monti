@@ -44,7 +44,7 @@ function ContextMenuContent({
 				<ContextMenuPrimitive.Popup
 					data-slot="context-menu-content"
 					className={cn(
-						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-36 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-md bg-cms-popover p-1 text-cms-popover-foreground shadow-cms-pop outline-none ring-1 ring-cms-foreground/10 duration-100 data-closed:animate-out data-open:animate-in",
+						"data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 z-50 max-h-(--available-height) w-max min-w-36 max-w-[min(20rem,var(--available-width))] origin-(--transform-origin) overflow-y-auto overflow-x-hidden rounded-md bg-monti-popover p-1 text-monti-popover-foreground shadow-monti-pop outline-none ring-1 ring-monti-foreground/10 duration-100 data-closed:animate-out data-open:animate-in",
 						className,
 					)}
 					{...props}
@@ -69,7 +69,7 @@ function ContextMenuLabel({
 		<ContextMenuPrimitive.GroupLabel
 			data-slot="context-menu-label"
 			data-inset={inset}
-			className={cn("px-2 py-1.5 font-medium text-cms-muted-foreground text-xs data-inset:pl-8", className)}
+			className={cn("px-2 py-1.5 font-medium text-monti-muted-foreground text-xs data-inset:pl-8", className)}
 			{...props}
 		/>
 	);
@@ -90,7 +90,7 @@ function ContextMenuItem({
 			data-inset={inset}
 			data-variant={variant}
 			className={cn(
-				"group/context-menu-item relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-cms-accent focus:text-cms-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-[variant=destructive]:text-cms-destructive data-disabled:opacity-50 cms-dark:data-[variant=destructive]:focus:bg-cms-destructive/20 data-[variant=destructive]:focus:bg-cms-destructive/10 data-[variant=destructive]:focus:text-cms-destructive [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 focus:*:[svg]:text-cms-accent-foreground data-[variant=destructive]:*:[svg]:text-cms-destructive",
+				"group/context-menu-item relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-[variant=destructive]:text-monti-destructive data-disabled:opacity-50 data-[variant=destructive]:focus:bg-monti-destructive/10 monti-dark:data-[variant=destructive]:focus:bg-monti-destructive/20 data-[variant=destructive]:focus:text-monti-destructive [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 focus:*:[svg]:text-monti-accent-foreground data-[variant=destructive]:*:[svg]:text-monti-destructive",
 				className,
 			)}
 			{...props}
@@ -115,7 +115,7 @@ function ContextMenuSubTrigger({
 			data-slot="context-menu-sub-trigger"
 			data-inset={inset}
 			className={cn(
-				"flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-cms-accent focus:text-cms-accent-foreground data-open:bg-cms-accent data-inset:pl-8 data-open:text-cms-accent-foreground [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground data-open:bg-monti-accent data-inset:pl-8 data-open:text-monti-accent-foreground [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -127,7 +127,9 @@ function ContextMenuSubTrigger({
 }
 
 function ContextMenuSubContent({ ...props }: React.ComponentProps<typeof ContextMenuContent>) {
-	return <ContextMenuContent data-slot="context-menu-sub-content" className="shadow-cms-pop" side="right" {...props} />;
+	return (
+		<ContextMenuContent data-slot="context-menu-sub-content" className="shadow-monti-pop" side="right" {...props} />
+	);
 }
 
 function ContextMenuCheckboxItem({
@@ -144,7 +146,7 @@ function ContextMenuCheckboxItem({
 			data-slot="context-menu-checkbox-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-cms-accent focus:text-cms-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			checked={checked}
@@ -177,7 +179,7 @@ function ContextMenuRadioItem({
 			data-slot="context-menu-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-cms-accent focus:text-cms-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+				"relative flex cursor-default select-none items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden focus:bg-monti-accent focus:text-monti-accent-foreground data-disabled:pointer-events-none data-inset:pl-8 data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
@@ -196,7 +198,7 @@ function ContextMenuSeparator({ className, ...props }: ContextMenuPrimitive.Sepa
 	return (
 		<ContextMenuPrimitive.Separator
 			data-slot="context-menu-separator"
-			className={cn("-mx-1 my-1 h-px bg-cms-border", className)}
+			className={cn("-mx-1 my-1 h-px bg-monti-border", className)}
 			{...props}
 		/>
 	);
@@ -207,7 +209,7 @@ function ContextMenuShortcut({ className, ...props }: React.ComponentProps<"span
 		<span
 			data-slot="context-menu-shortcut"
 			className={cn(
-				"ml-auto text-cms-muted-foreground text-xs tracking-widest group-focus/context-menu-item:text-cms-accent-foreground",
+				"ml-auto text-monti-muted-foreground text-xs tracking-widest group-focus/context-menu-item:text-monti-accent-foreground",
 				className,
 			)}
 			{...props}

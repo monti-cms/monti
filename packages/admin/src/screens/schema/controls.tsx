@@ -52,10 +52,10 @@ export function useIssuesUnder(path: string, exclude?: string): readonly ConfigI
 export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 	if (issues.length === 0) return null;
 	return (
-		<ul className="flex flex-col gap-0.5 text-cms-destructive text-xs" data-testid="schema-issues">
+		<ul className="flex flex-col gap-0.5 text-monti-destructive text-xs" data-testid="schema-issues">
 			{issues.map((issue) => (
 				<li key={`${issue.path}:${issue.message}`}>
-					<code className="rounded bg-cms-destructive/10 px-1">{issue.path || "(root)"}</code> {issue.message}
+					<code className="rounded bg-monti-destructive/10 px-1">{issue.path || "(root)"}</code> {issue.message}
 				</li>
 			))}
 		</ul>
@@ -95,7 +95,7 @@ export function TextInput({
 			label={
 				optional ? (
 					<>
-						{label} <span className="font-normal text-cms-muted-foreground">{t("sheet.optional")}</span>
+						{label} <span className="font-normal text-monti-muted-foreground">{t("sheet.optional")}</span>
 					</>
 				) : (
 					label
@@ -191,7 +191,7 @@ export function Segmented({
 			<div
 				role="radiogroup"
 				aria-labelledby={id}
-				className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-cms-muted p-[3px] text-sm"
+				className="flex w-fit max-w-full flex-wrap gap-0.5 rounded-md bg-monti-muted p-[3px] text-sm"
 			>
 				{items.map((item) => (
 					// biome-ignore lint/a11y/useSemanticElements: a segmented control draws radio buttons as buttons; a native radio cannot be styled as one strip
@@ -203,8 +203,8 @@ export function Segmented({
 						disabled={disabled}
 						onClick={() => onChange(item.value)}
 						className={cn(
-							"h-7 rounded-[3px] border border-transparent px-3 text-cms-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:opacity-50",
-							item.value === value && "border-cms-border bg-cms-background font-medium text-cms-foreground",
+							"h-7 rounded-[3px] border border-transparent px-3 text-monti-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:opacity-50",
+							item.value === value && "border-monti-border bg-monti-background font-medium text-monti-foreground",
 						)}
 					>
 						{item.label}
@@ -266,7 +266,7 @@ export function Pick({
 							{item.description ? (
 								<span className="flex flex-col gap-0.5">
 									<span>{item.label}</span>
-									<span className="whitespace-normal text-cms-muted-foreground text-xs">{item.description}</span>
+									<span className="whitespace-normal text-monti-muted-foreground text-xs">{item.description}</span>
 								</span>
 							) : (
 								item.label
@@ -391,7 +391,7 @@ export function RowActions({
 							disabled
 							aria-label={t("row.remove", { name })}
 							aria-description={removeBlocked}
-							className="pointer-events-none text-cms-destructive"
+							className="pointer-events-none text-monti-destructive"
 						>
 							<X aria-hidden />
 						</Button>

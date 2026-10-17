@@ -24,7 +24,7 @@ describe("CmsLink href handling", () => {
 		const markup = render("https://example.com/a");
 		expect(markup).toContain('href="https://example.com/a"');
 		expect(markup).toContain('target="_blank"');
-		expect(markup).toContain('class="cms-link-external"');
+		expect(markup).toContain('class="monti-link-external"');
 	});
 
 	it("does not add a target to mailto and tel links", () => {

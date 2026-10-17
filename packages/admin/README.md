@@ -231,7 +231,7 @@ const components = { marks: { note } };
 - Bubble buttons and content receive `{ editor, inCode, openPanel, closePanel, act }`. `openPanel({ label, size, content })` expands an
   input panel inside the bubble. To get the same look, use `BubbleButton`, `MarkTextForm`, `MarkTextPopover`,
   `removeInlineMark` and `allowsMark` from `@monti-cms/admin/editor`.
-- In HTML it is `span[data-cms-mark="name"]` with `data-mark-<attribute>` for each attribute. The mark name in the stored document (CmsNode) is the block name,
+- In HTML it is `span[data-monti-mark="name"]` with `data-mark-<attribute>` for each attribute. The mark name in the stored document (CmsNode) is the block name,
   and only the attributes in the definition are kept (`markAttrsOf`).
 - A mark whose attribute has `codeAnchor: true` points to a code block line label (`CODE_ANCHOR_REF`). The code block's line menu "Link to text",
   the linking hint row, the hovered-line highlight (`data-code-ref`) and the broken-link indicator use this mark, and they are hidden when no such mark exists. The
@@ -350,7 +350,7 @@ To build screens that look like the admin UI, use the extension kit `@monti-cms/
 `cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`),
 the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Badge`,
 `Alert`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
-(`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--cms-success`, `--cms-warning` and `--cms-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
+(`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--monti-success`, `--monti-warning` and `--monti-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
 Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
@@ -405,7 +405,7 @@ are managed with `addChild`, `removeChild`, `moveChild` and `setChildValue`; the
 code `limit` when a bound would be broken (`read_only` while the editor is locked). `transact(tx => ...)` groups several edits, which read the live document, into one document change
 and so one undo step, for example renaming a tab and the default tab that points at it. `raw` (`{ editor, node, getPos }`) is the one escape hatch and the only place Tiptap and
 ProseMirror types appear; it is not stable. `<Content />` renders the editable nested body (with `visibleChild` to show one child, such as the open tab) and `<BlockFrame />`
-is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-cms-block-content]`.
+is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-monti-block-content]`.
 
 `useEntryEditor(options)` is the entry editor without its screen: load, a local recovery copy, explicit server save, publish, status changes
 (archive, trash, restore), and recovery and conflict state. **It is not a server autosave.** While editing, only a recovery copy is kept in the browser
@@ -456,26 +456,26 @@ An app that uses Tailwind 4 for its own public pages keeps doing so; the two do 
 
 How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm build`; the sources are in `styles/`):
 
-- **Scoped.** Every selector sits under `:where(html:has(.cms-admin))`, a document that contains the admin UI (zero specificity, so a class keeps the strength it has in Tailwind). Popups are
-  portaled to `body`, so the scope is the document, not the `.cms-admin` element. Public pages of the app, which never contain `.cms-admin`, are not affected.
+- **Scoped.** Every selector sits under `:where(html:has(.monti-admin))`, a document that contains the admin UI (zero specificity, so a class keeps the strength it has in Tailwind). Popups are
+  portaled to `body`, so the scope is the document, not the `.monti-admin` element. Public pages of the app, which never contain `.monti-admin`, are not affected.
 - **Reset.** Tailwind's preflight is part of the bundle, but only under that scope, so it does not restyle the app's pages.
-- **Names.** Every custom property the bundle declares starts with `--cms-` (Tailwind's own `--tw-*` became `--cms-tw-*`, and its theme is inlined), keyframes are `cms-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
+- **Names.** Every custom property the bundle declares starts with `--monti-` (Tailwind's own `--tw-*` became `--monti-tw-*`, and its theme is inlined), keyframes are `monti-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
 - **Math.** The KaTeX styles and fonts for the math preview are included (the fonts are copied to `dist/fonts` and linked relatively), so sites do not import KaTeX CSS for the admin.
 - **Font.** Like Tailwind's preflight, the bundle falls back to the system sans-serif stack on `html` of an admin document. A font the app sets on `body` wins.
 
-What the bundle provides (everything carries the `cms` prefix, so nothing collides with the app's names):
+What the bundle provides (everything carries the `monti` prefix, so nothing collides with the app's names):
 
-- **Color names.** `cms-*` colors such as `bg-cms-background`, `text-cms-muted-foreground` and `border-cms-border` (values come from `--cms-*` variables). The app's shadcn
-  names (`bg-background`, etc.) and variables (`--background`, etc.) are left untouched. `--cms-*` apply only to documents that contain the admin UI.
-- **Variants.** `cms-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `cms-horizontal:` and `cms-vertical:` apply for Base UI's
+- **Color names.** `monti-*` colors such as `bg-monti-background`, `text-monti-muted-foreground` and `border-monti-border` (values come from `--monti-*` variables). The app's shadcn
+  names (`bg-background`, etc.) and variables (`--background`, etc.) are left untouched. `--monti-*` apply only to documents that contain the admin UI.
+- **Variants.** `monti-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `monti-horizontal:` and `monti-vertical:` apply for Base UI's
   `data-orientation`. They are independent of the app's `dark` and `data-horizontal` definitions. Whatever theme mechanism the app uses (class or `data-theme`), the admin UI's
   dark theme follows it.
-- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--cms-radius`; the `rounded-*` utilities of the bundle are computed from it).
+- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--monti-radius`; the `rounded-*` utilities of the bundle are computed from it).
 
 Plugins that add admin UI: the admin bundle also compiles the sources of the first-party plugins (`@monti-cms/ai`, `@monti-cms/blocks`, `@monti-cms/mdx`, `@monti-cms/seo`; see the `@source` lines of `styles/index.css`),
 so the shared utilities, `prose`, the theme and the reset are defined in **one** file. That is the point: a second file that defined `.prose` again would load later and reset what the admin's dark variant had set.
 `ai`, `mdx` and `seo` therefore ship no CSS. `@monti-cms/blocks/styles.css` holds only what utilities cannot say (the callout look, the text color rule, default variables) and is imported after the admin file.
-A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `cms-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
+A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `monti-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
 The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
 `CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
@@ -492,6 +492,100 @@ The cost is that the admin file carries the classes of first-party plugins an ap
   `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`, and the theme toggle in the admin changes the site's theme.
 - `themeStorageKey` (default `monti-admin-theme`): the `localStorage` key for the admin's theme, used only with `themeProvider`.
 - `toaster` (default `true`): the admin UI adds `sonner`'s `Toaster`. When off, admin notifications appear in the site's `Toaster` (when using the same `sonner`).
+
+## Admin theme
+
+A site themes the admin by overriding CSS custom properties. The tokens below are the public contract: their names and meaning are kept stable, and the admin's components read only `--monti-*` names, so
+the site's own variables (`--primary`, `--background`, ...) never leak in and nothing else needs to be touched. A token you do not set keeps its default.
+
+The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The admin also sets `color-scheme` (`light`, and `dark` under
+`.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line:
+
+```css
+/* app/globals.css: any stylesheet of the site, loaded before or after @monti-cms/admin/styles.css */
+:root {
+	--monti-primary: light-dark(#0d9488, #2dd4bf);
+	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
+	--monti-ring: light-dark(#14b8a6, #5eead4);
+	--monti-radius: 0.75rem;
+}
+```
+
+**A plain value applies to both modes.** A default has zero specificity in light *and* dark, so `:root { --monti-background: #fff; }` also replaces the dark default. Either write the value with `light-dark()`
+as above, or set the token again for the dark theme:
+
+```css
+:root {
+	--monti-primary: #0d9488;
+}
+.dark,
+[data-theme="dark"] {
+	--monti-primary: #2dd4bf;
+}
+```
+
+Every color token that colors a surface has a `-foreground` partner for the text on it. Colors are any CSS color. Tokens that only follow another one are derived, so setting the base updates them; set
+one only to break away. Tokens by role:
+
+| Role | Tokens | What they color |
+| --- | --- | --- |
+| Surface | `--monti-background`, `--monti-foreground` | The page behind the admin and its default text |
+| | `--monti-card`, `--monti-card-foreground` | Panels and cards (`-foreground` follows `--monti-foreground` unless set) |
+| | `--monti-popover`, `--monti-popover-foreground` | Menus, dialogs, tooltips and other popups (`-foreground` follows `--monti-foreground` unless set) |
+| Text | `--monti-muted-foreground` | Secondary text: hints, labels, placeholders |
+| Primary | `--monti-primary`, `--monti-primary-foreground` | Main buttons, checked controls, selection |
+| Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips (`--monti-secondary` follows `--monti-muted` unless set, its `-foreground` follows `--monti-foreground`) |
+| Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items (`--monti-accent-foreground` follows `--monti-foreground` unless set) |
+| Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill (follows `--monti-destructive` unless set) |
+| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings (`-soft` follows `--monti-warning` unless set) |
+| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states (`-soft` follows `--monti-success` unless set) |
+| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring |
+| Sidebar | `--monti-sidebar`, `--monti-sidebar-foreground` | The navigation sidebar and its text |
+| | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
+| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
+| | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
+| Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+
+### Reusing a shadcn theme
+
+The token names mirror shadcn's, so a site that already has a shadcn theme can point the admin at it. shadcn swaps its variables under `.dark`, so the admin follows the site's dark mode with no second block:
+
+```css
+:root {
+	--monti-background: var(--background);
+	--monti-foreground: var(--foreground);
+	--monti-card: var(--card);
+	--monti-card-foreground: var(--card-foreground);
+	--monti-popover: var(--popover);
+	--monti-popover-foreground: var(--popover-foreground);
+	--monti-primary: var(--primary);
+	--monti-primary-foreground: var(--primary-foreground);
+	--monti-secondary: var(--secondary);
+	--monti-secondary-foreground: var(--secondary-foreground);
+	--monti-muted: var(--muted);
+	--monti-muted-foreground: var(--muted-foreground);
+	--monti-accent: var(--accent);
+	--monti-accent-foreground: var(--accent-foreground);
+	--monti-destructive: var(--destructive);
+	--monti-border: var(--border);
+	--monti-input: var(--input);
+	--monti-ring: var(--ring);
+	--monti-sidebar: var(--sidebar);
+	--monti-sidebar-foreground: var(--sidebar-foreground);
+	--monti-sidebar-primary: var(--sidebar-primary);
+	--monti-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--monti-sidebar-accent: var(--sidebar-accent);
+	--monti-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--monti-sidebar-border: var(--sidebar-border);
+	--monti-sidebar-ring: var(--sidebar-ring);
+	--monti-radius: var(--radius);
+}
+```
+
+shadcn has no warning or success colors, so those keep the admin's defaults. If the site's variables hold bare channels (the older `--primary: 222 47% 11%` style), wrap them: `hsl(var(--primary))`.
+
+Blocks add `--monti-callout-*` and `--monti-chart-1` to `--monti-chart-5` (see `@monti-cms/blocks`). To check a theme, open the admin in light and dark; the rest of the admin
+(dark variants, tints, hover states) is derived from these tokens. There is no config option: the CSS above is the whole interface.
 
 ## Development
 

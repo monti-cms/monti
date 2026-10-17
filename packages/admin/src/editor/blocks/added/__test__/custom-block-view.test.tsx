@@ -41,7 +41,7 @@ const mount = async (doc: StoredDocument, wrap: (node: React.ReactElement) => Re
 		),
 	);
 	await waitFor(() => expect(editor).not.toBeNull());
-	await waitFor(() => expect(document.querySelector("[data-cms-custom-block]")).not.toBeNull());
+	await waitFor(() => expect(document.querySelector("[data-monti-custom-block]")).not.toBeNull());
 	return editor as unknown as Editor;
 };
 
@@ -54,7 +54,7 @@ const savedNotice = (editor: Editor) => tiptapToStored(testSite, editor.getJSON(
 function NoticeView() {
 	const block = useBlockEditor();
 	return (
-		<BlockFrame data-cms-custom-block="notice">
+		<BlockFrame data-monti-custom-block="notice">
 			<button type="button" contentEditable={false} onClick={() => block.setValue("level", "warn")}>
 				단계: {String(block.values.level)}
 			</button>
@@ -104,7 +104,7 @@ describe("custom block NodeView", () => {
 				{node}
 			</BlockIssuesProvider>
 		));
-		const frame = document.querySelector("[data-cms-custom-block]") as HTMLElement;
+		const frame = document.querySelector("[data-monti-custom-block]") as HTMLElement;
 		const list = await within(frame).findByRole("list", { name: "이 블록의 경고" });
 		expect(list.textContent).toBe("1줄: 문법 오류");
 		expect(screen.queryByText("다른 블록의 경고")).toBeNull();

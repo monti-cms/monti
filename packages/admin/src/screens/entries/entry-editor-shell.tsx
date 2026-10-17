@@ -217,7 +217,7 @@ export function EntryEditorShell({
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
 					<Link
 						href={site.adminEntryEditHref(entry.source.id)}
-						className="text-cms-primary underline-offset-2 hover:underline"
+						className="text-monti-primary underline-offset-2 hover:underline"
 					>
 						{te("inspector.sourceLink")}
 					</Link>
@@ -319,10 +319,10 @@ export function EntryEditorShell({
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
 				onChange={(event) => titleKey && editor.setForm({ [titleKey]: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
-				className="h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-cms-muted-foreground/40 focus-visible:ring-0 md:text-[34px]"
+				className="h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-monti-muted-foreground/40 focus-visible:ring-0 md:text-[34px]"
 			/>
 			{titleIssue && (
-				<p id="cms-title-error" className="text-cms-destructive text-sm">
+				<p id="cms-title-error" className="text-monti-destructive text-sm">
 					{issueLine(titleIssue)}
 				</p>
 			)}
@@ -360,7 +360,7 @@ export function EntryEditorShell({
 				onComposing={editor.setComposing}
 			/>
 			{bodyIssue && (
-				<p id={SOURCE_ERROR_ID} className="mt-2 text-cms-destructive text-sm">
+				<p id={SOURCE_ERROR_ID} className="mt-2 text-monti-destructive text-sm">
 					{issueLine(bodyIssue)}
 				</p>
 			)}
@@ -369,7 +369,7 @@ export function EntryEditorShell({
 
 	return (
 		<EntryEditorProvider editor={editor} lockedNote={lockedNote}>
-			<div className="flex h-screen w-full flex-col overflow-hidden bg-cms-background text-cms-foreground">
+			<div className="flex h-screen w-full flex-col overflow-hidden bg-monti-background text-monti-foreground">
 				<EntryEditorHeader
 					editor={editor}
 					commands={commands}

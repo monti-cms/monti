@@ -106,7 +106,7 @@ export function ApiKeysSettings() {
 			<Section wide card={false} title={t("title")} description={t("description")} note={t("note")}>
 				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-						<span className="text-cms-muted-foreground text-sm">
+						<span className="text-monti-muted-foreground text-sm">
 							{list
 								? [
 										t("count.keys", { count: list.items.length }),
@@ -207,7 +207,7 @@ function KeyRows({
 								</Badge>
 							)}
 						</div>
-						<p className="mt-0.5 truncate text-cms-muted-foreground text-xs">
+						<p className="mt-0.5 truncate text-monti-muted-foreground text-xs">
 							{!key.readable
 								? t("row.unreadableHint")
 								: key.uses.length > 0
@@ -216,7 +216,7 @@ function KeyRows({
 						</p>
 					</div>
 					<span
-						className="shrink-0 font-mono text-cms-muted-foreground text-xs"
+						className="shrink-0 font-mono text-monti-muted-foreground text-xs"
 						title={key.tail ? t("row.mask", { tail: key.tail }) : t("row.maskShort")}
 					>
 						{"••••"}
@@ -234,7 +234,7 @@ function KeyRows({
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-2">
 							<span className="truncate font-medium text-sm">{slot.label}</span>
-							<span className="text-cms-muted-foreground text-xs">{t("slot.empty")}</span>
+							<span className="text-monti-muted-foreground text-xs">{t("slot.empty")}</span>
 						</div>
 					</div>
 					<Button

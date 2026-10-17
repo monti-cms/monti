@@ -12,9 +12,9 @@ export function BlockIssueNotice({ blockId }: { blockId: string | null }) {
 	return (
 		<ul
 			contentEditable={false}
-			data-cms-block-issues=""
+			data-monti-block-issues=""
 			aria-label={t("issues.label")}
-			className="not-prose m-0 list-none space-y-1 border-cms-warning/30 border-t bg-cms-warning-soft px-3 py-2 text-cms-warning-foreground text-xs"
+			className="not-prose m-0 list-none space-y-1 border-monti-warning/30 border-t bg-monti-warning-soft px-3 py-2 text-monti-warning-foreground text-xs"
 		>
 			{texts.map((text) => (
 				<li key={text} className="flex items-start gap-1.5">

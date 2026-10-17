@@ -2,7 +2,7 @@ import { cva } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "../lib/utils";
 
-/** What a status means; the color follows from it (`--cms-success`, `--cms-warning`, `--cms-destructive`, muted). */
+/** What a status means; the color follows from it (`--monti-success`, `--monti-warning`, `--monti-destructive`, muted). */
 export type StatusTone = "success" | "warning" | "destructive" | "neutral";
 
 /** The marker's form. The meaning never rests on color alone: pair the shape with a `label`, or give the marker a name some other way. */
@@ -11,10 +11,10 @@ export type StatusShape = "dot" | "ring" | "dashed" | "half" | "minus";
 const toneClass = cva("shrink-0", {
 	variants: {
 		tone: {
-			success: "text-cms-success",
-			warning: "text-cms-warning",
-			destructive: "text-cms-destructive",
-			neutral: "text-cms-muted-foreground",
+			success: "text-monti-success",
+			warning: "text-monti-warning",
+			destructive: "text-monti-destructive",
+			neutral: "text-monti-muted-foreground",
 		},
 		size: {
 			/** A bare dot beside a name (language tabs). */
@@ -83,7 +83,7 @@ export function StatusIndicator({
 			data-tone={tone}
 			className={cn(
 				"inline-flex items-center gap-1.5 whitespace-nowrap",
-				label && "text-[13px] text-cms-foreground/80",
+				label && "text-[13px] text-monti-foreground/80",
 				className,
 			)}
 			{...props}

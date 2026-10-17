@@ -174,7 +174,7 @@ function SyncTab({
 					<div className="flex flex-wrap items-center gap-2">
 						<h2 className="min-w-0 flex-1 truncate font-medium text-sm">
 							{target.repo}
-							<span className="text-cms-muted-foreground">@{target.branch}</span>
+							<span className="text-monti-muted-foreground">@{target.branch}</span>
 						</h2>
 						<Badge variant="secondary">
 							{target.mode === "pr" ? <GitPullRequest aria-hidden /> : <GitBranch aria-hidden />}
@@ -203,15 +203,15 @@ function SyncTab({
 						)}
 					</div>
 					<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-						<dt className="text-cms-muted-foreground">{t("target.folder")}</dt>
+						<dt className="text-monti-muted-foreground">{t("target.folder")}</dt>
 						<dd className="font-mono">{target.folder || t("target.wholeRepo")}</dd>
-						<dt className="text-cms-muted-foreground">{t("target.path")}</dt>
+						<dt className="text-monti-muted-foreground">{t("target.path")}</dt>
 						<dd className="font-mono">{target.path}</dd>
-						<dt className="text-cms-muted-foreground">{t("target.format")}</dt>
+						<dt className="text-monti-muted-foreground">{t("target.format")}</dt>
 						<dd className="font-mono">{target.format}</dd>
-						<dt className="text-cms-muted-foreground">{t("target.collections")}</dt>
+						<dt className="text-monti-muted-foreground">{t("target.collections")}</dt>
 						<dd>{target.collections.join(", ")}</dd>
-						<dt className="text-cms-muted-foreground">{t("target.lastPull")}</dt>
+						<dt className="text-monti-muted-foreground">{t("target.lastPull")}</dt>
 						<dd>
 							{target.lastPull
 								? t("target.pull", {
@@ -222,7 +222,7 @@ function SyncTab({
 									})
 								: t("target.never")}
 						</dd>
-						<dt className="text-cms-muted-foreground">{t("target.lastFlush")}</dt>
+						<dt className="text-monti-muted-foreground">{t("target.lastFlush")}</dt>
 						<dd>
 							{target.lastFlush ? (
 								<>
@@ -240,7 +240,7 @@ function SyncTab({
 										</>
 									)}
 									{target.lastFlush.note && (
-										<span className="block text-cms-muted-foreground">{target.lastFlush.note}</span>
+										<span className="block text-monti-muted-foreground">{target.lastFlush.note}</span>
 									)}
 								</>
 							) : (
@@ -260,7 +260,7 @@ function SyncTab({
 							<h3 className="font-medium">{t("summary.errors")}</h3>
 							<ul className="space-y-0.5">
 								{target.lastPull.errors.map((item) => (
-									<li key={item.path} className="text-cms-destructive-foreground">
+									<li key={item.path} className="text-monti-destructive-foreground">
 										<span className="font-mono">{item.path}</span>: {item.message}
 									</li>
 								))}
@@ -270,7 +270,7 @@ function SyncTab({
 					{target.lastPull && target.lastPull.skipped.length > 0 && (
 						<div className="space-y-1 text-xs">
 							<h3 className="font-medium">{t("summary.skipped")}</h3>
-							<ul className="space-y-0.5 text-cms-muted-foreground">
+							<ul className="space-y-0.5 text-monti-muted-foreground">
 								{target.lastPull.skipped.map((item) => (
 									<li key={item.path}>
 										<span className="font-mono">{item.path}</span>: {item.reason}
@@ -289,9 +289,9 @@ function SyncTab({
 // Conflicts tab
 
 const LINE_STYLE: Record<DiffLine["type"], string> = {
-	same: "text-cms-muted-foreground",
-	remove: "bg-cms-destructive-soft text-cms-destructive-foreground",
-	add: "bg-cms-primary/10 text-cms-foreground",
+	same: "text-monti-muted-foreground",
+	remove: "bg-monti-destructive-soft text-monti-destructive-foreground",
+	add: "bg-monti-primary/10 text-monti-foreground",
 };
 const LINE_MARK: Record<DiffLine["type"], string> = { same: " ", remove: "-", add: "+" };
 
@@ -302,7 +302,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 	const identical = serverText !== null && lines.every((line) => line.type === "same");
 	return (
 		<div className="space-y-1">
-			<div className="flex gap-4 text-cms-muted-foreground text-xs">
+			<div className="flex gap-4 text-monti-muted-foreground text-xs">
 				<span>
 					- {t("conflicts.server")}
 					{serverText === null && ` ${t("conflicts.serverRemoved")}`}
@@ -310,10 +310,10 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 				<span>+ {t("conflicts.git")}</span>
 			</div>
 			{identical ? (
-				<p className="text-cms-muted-foreground text-xs">{t("conflicts.same")}</p>
+				<p className="text-monti-muted-foreground text-xs">{t("conflicts.same")}</p>
 			) : (
 				<fieldset
-					className="m-0 max-h-[50vh] min-w-0 overflow-auto rounded-md border border-cms-border p-0 font-mono text-xs leading-relaxed"
+					className="m-0 max-h-[50vh] min-w-0 overflow-auto rounded-md border border-monti-border p-0 font-mono text-xs leading-relaxed"
 					aria-label={`${t("conflicts.server")} / ${t("conflicts.git")}`}
 				>
 					{lines.map((line, index) => (
@@ -328,7 +328,7 @@ export function ConflictDiff({ serverText, gitText }: { serverText: string | nul
 					))}
 				</fieldset>
 			)}
-			<p className="text-cms-muted-foreground text-xs">{t("conflicts.legend")}</p>
+			<p className="text-monti-muted-foreground text-xs">{t("conflicts.legend")}</p>
 		</div>
 	);
 }
@@ -374,7 +374,7 @@ function ConflictsTab({
 				<Panel key={conflict.id} role="region" aria-label={conflict.label} className="space-y-3 p-4">
 					<div className="space-y-1">
 						<h2 className="font-medium text-sm">{conflict.label}</h2>
-						<p className="text-cms-muted-foreground text-xs">
+						<p className="text-monti-muted-foreground text-xs">
 							<span className="font-mono">{conflict.path}</span> · {conflict.repo}
 						</p>
 						<p className="text-xs">{t(`conflicts.reason.${conflict.reason}`)}</p>
@@ -469,7 +469,7 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 				}}
 			>
 				<p className="font-medium text-sm">{t("settings.token")}</p>
-				<p className="text-cms-muted-foreground text-xs">{t("settings.token.help")}</p>
+				<p className="text-monti-muted-foreground text-xs">{t("settings.token.help")}</p>
 				<p className="text-xs">
 					{t(`settings.token.state.${keyState(tokenKey)}`, { hint: tokenKey ? keyHint(tokenKey) : "" })}
 				</p>
@@ -510,12 +510,12 @@ function SettingsTab({ status }: { status: StatusView | undefined }) {
 					{t(`settings.webhook.state.${keyState(secretKey)}`, { hint: secretKey ? keyHint(secretKey) : "" })}
 				</p>
 				<FormField className="gap-1">
-					<FormFieldLabel htmlFor="git-sync-url" className="text-cms-muted-foreground text-xs">
+					<FormFieldLabel htmlFor="git-sync-url" className="text-monti-muted-foreground text-xs">
 						{t("settings.webhook.url")}
 					</FormFieldLabel>
 					<Input id="git-sync-url" readOnly value={webhookUrl} className="font-mono text-xs" />
 				</FormField>
-				<p className="text-cms-muted-foreground text-xs">{t("settings.webhook.help")}</p>
+				<p className="text-monti-muted-foreground text-xs">{t("settings.webhook.help")}</p>
 				<div className="flex flex-wrap gap-2">
 					<Input
 						id="git-sync-secret"

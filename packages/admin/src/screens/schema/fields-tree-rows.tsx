@@ -30,17 +30,17 @@ import {
 
 /** The colour of a kind token in the tree: one family per meaning, light and dark. */
 export const TONE: Record<KindTone, string> = {
-	text: "text-cms-muted-foreground",
-	slug: "text-[#0F766E] cms-dark:text-[#5EEAD4]",
-	relation: "text-[#2563EB] cms-dark:text-[#93C5FD]",
-	backlink: "text-[#0F766E] cms-dark:text-[#5EEAD4]",
-	select: "text-[#7C3AED] cms-dark:text-[#C4B5FD]",
-	conditional: "text-[#9A3412] cms-dark:text-[#FDBA74]",
-	media: "text-[#15803D] cms-dark:text-[#86EFAC]",
-	view: "text-cms-muted-foreground/70",
+	text: "text-monti-muted-foreground",
+	slug: "text-[#0F766E] monti-dark:text-[#5EEAD4]",
+	relation: "text-[#2563EB] monti-dark:text-[#93C5FD]",
+	backlink: "text-[#0F766E] monti-dark:text-[#5EEAD4]",
+	select: "text-[#7C3AED] monti-dark:text-[#C4B5FD]",
+	conditional: "text-[#9A3412] monti-dark:text-[#FDBA74]",
+	media: "text-[#15803D] monti-dark:text-[#86EFAC]",
+	view: "text-monti-muted-foreground/70",
 };
-export const REQUIRED = "text-[#B45309] cms-dark:text-[#FCD34D]";
-export const OPTION = "text-[#9A3412] cms-dark:text-[#FDBA74]";
+export const REQUIRED = "text-[#B45309] monti-dark:text-[#FCD34D]";
+export const OPTION = "text-[#9A3412] monti-dark:text-[#FDBA74]";
 const COLUMNS = "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-4";
 /** Two columns only, for when the preview takes the room beside the tree. */
 const COLUMNS_COMPACT = "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-4";
@@ -76,7 +76,7 @@ export interface RowButton {
 
 export function RowButtons({ buttons }: { buttons: RowButton[] }) {
 	return (
-		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-cms-card/95 opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
+		<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5 rounded-md bg-monti-card/95 opacity-0 focus-within:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100">
 			{buttons.map((button) => (
 				<IconButton
 					key={button.label}
@@ -227,7 +227,7 @@ export function Row({
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("relative", isDragging && "z-10 bg-cms-card opacity-80")}
+			className={cn("relative", isDragging && "z-10 bg-monti-card opacity-80")}
 			data-testid={`field-${name}`}
 		>
 			<div className="group/row relative">
@@ -240,30 +240,33 @@ export function Row({
 					onKeyDown={onKeyDown}
 					className={cn(
 						columnsOf(ctx.compact),
-						"min-h-[30px] cursor-pointer pr-5 pl-9 outline-none hover:bg-cms-muted/60 focus-visible:bg-cms-muted/60 focus-visible:ring-2 focus-visible:ring-cms-ring/50 focus-visible:ring-inset",
-						nested && "bg-cms-muted/20",
+						"min-h-[30px] cursor-pointer pr-5 pl-9 outline-none hover:bg-monti-muted/60 focus-visible:bg-monti-muted/60 focus-visible:ring-2 focus-visible:ring-monti-ring/50 focus-visible:ring-inset",
+						nested && "bg-monti-muted/20",
 					)}
 				>
 					<div className="flex min-w-0 items-center">
-						<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
+						<span aria-hidden className="whitespace-pre font-mono text-[13px] text-monti-muted-foreground/40">
 							{prefix}
 						</span>
 						<span className="max-w-[70%] shrink-0 truncate font-mono text-[13px]" title={name}>
 							{name}
 						</span>
 						{label && (
-							<span className="ml-2 min-w-0 truncate text-cms-muted-foreground text-xs" title={label}>
+							<span className="ml-2 min-w-0 truncate text-monti-muted-foreground text-xs" title={label}>
 								{label}
 							</span>
 						)}
 						{locked?.kind === "panel" && (
-							<span className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs" title={t("layout.notInPanel.title")}>
+							<span
+								className="ml-2 shrink-0 text-monti-muted-foreground/80 text-xs"
+								title={t("layout.notInPanel.title")}
+							>
 								{t("layout.notInPanel")}
 							</span>
 						)}
 						{locked?.kind === "plugin" && (
 							<span
-								className="ml-2 shrink-0 text-cms-muted-foreground/80 text-xs"
+								className="ml-2 shrink-0 text-monti-muted-foreground/80 text-xs"
 								title={t("layout.pluginPlaced.title", { tab: locked.tab })}
 							>
 								{t("layout.pluginPlaced")}
@@ -273,7 +276,7 @@ export function Row({
 							<span
 								role="img"
 								aria-label={t("field.problems", { count: issues.length })}
-								className="ml-2 size-1.5 shrink-0 rounded-full bg-cms-destructive"
+								className="ml-2 size-1.5 shrink-0 rounded-full bg-monti-destructive"
 							/>
 						)}
 					</div>
@@ -288,7 +291,7 @@ export function Row({
 					</div>
 					<div
 						className={cn(
-							"hidden min-w-0 truncate pr-8 font-mono text-cms-muted-foreground text-xs",
+							"hidden min-w-0 truncate pr-8 font-mono text-monti-muted-foreground text-xs",
 							!ctx.compact && "block",
 						)}
 					>
@@ -308,7 +311,7 @@ export function Row({
 					{...listeners}
 					aria-label={t("fields.drag", { name })}
 					disabled={noDrag}
-					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+					className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:hidden group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-4" />
 				</button>
@@ -328,7 +331,7 @@ export function Row({
 					<div key={option}>
 						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] pr-5 pl-9")}>
 							<div className="flex min-w-0 items-center">
-								<span aria-hidden className="whitespace-pre font-mono text-[13px] text-cms-muted-foreground/40">
+								<span aria-hidden className="whitespace-pre font-mono text-[13px] text-monti-muted-foreground/40">
 									{childLead}
 									{last ? "└ " : "├ "}
 								</span>
@@ -336,7 +339,7 @@ export function Row({
 							</div>
 							<div />
 							<div
-								className={cn("hidden truncate font-mono text-cms-muted-foreground text-xs", !ctx.compact && "block")}
+								className={cn("hidden truncate font-mono text-monti-muted-foreground text-xs", !ctx.compact && "block")}
 							>
 								{Object.keys(children).length === 0 ? t("fields.noExtra") : ""}
 							</div>

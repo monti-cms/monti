@@ -15,12 +15,12 @@ import { IconButton } from "../../ui/icon-button";
 import { entriesMessages } from "./messages";
 
 const PROSE =
-	"prose cms-dark:prose-invert max-w-none text-base text-cms-foreground leading-relaxed focus:outline-none " +
+	"prose monti-dark:prose-invert max-w-none text-base text-monti-foreground leading-relaxed focus:outline-none " +
 	// Read-only: hide the code block tool row and keep collapsible boxes always open.
-	"[&_[data-code-ui]]:hidden [&_[data-cms-collapsed]]:block " +
+	"[&_[data-code-ui]]:hidden [&_[data-monti-collapsed]]:block " +
 	// The source block matching the block under the cursor in the translation editor (source-sync).
 	// Let only a faint background spread around the block, with no bar (a shadow spread, so it does not shift layout and also wraps list bullets).
-	"[&_.cms-source-active]:rounded-sm [&_.cms-source-active]:bg-cms-primary/8 [&_.cms-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-cms-primary)_8%,transparent)] [&_.cms-source-active]:transition-[background-color,box-shadow]";
+	"[&_.monti-source-active]:rounded-sm [&_.monti-source-active]:bg-monti-primary/8 [&_.monti-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-monti-primary)_8%,transparent)] [&_.monti-source-active]:transition-[background-color,box-shadow]";
 
 function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
 	const site = useSite();
@@ -71,11 +71,11 @@ export function SourcePane({
 		<aside
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
-			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-cms-background", className)}
+			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-background", className)}
 		>
 			<div
 				data-source-header
-				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-cms-background/95 px-4 backdrop-blur"
+				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-monti-background/95 px-4 backdrop-blur"
 			>
 				<h2 className="flex-1 font-medium text-sm">{t("sourcePane.heading", { locale: locale.toUpperCase() })}</h2>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
@@ -85,7 +85,7 @@ export function SourcePane({
 			<h1
 				className={cn(
 					"px-6 pt-12 pb-5 font-semibold text-[34px] leading-tight tracking-tight",
-					!title && "text-cms-muted-foreground/40",
+					!title && "text-monti-muted-foreground/40",
 				)}
 			>
 				{title || tc("untitled")}

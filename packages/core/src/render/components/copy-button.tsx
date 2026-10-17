@@ -8,7 +8,7 @@ export function CmsCopyButton({ text, label, copiedLabel }: { text: string; labe
 	return (
 		<button
 			type="button"
-			className="cms-code-copy"
+			className="monti-code-copy"
 			aria-label={label}
 			onClick={async () => {
 				if (copied) return;

@@ -44,9 +44,9 @@ export function FileBlockView() {
 		<BlockFrame
 			framed={false}
 			data-file-block
-			className="not-prose my-6 flex items-center gap-3 rounded-lg border bg-cms-card px-4 py-3"
+			className="not-prose my-6 flex items-center gap-3 rounded-lg border bg-monti-card px-4 py-3"
 		>
-			<Icon aria-hidden className="size-8 shrink-0 text-cms-muted-foreground" strokeWidth={1.5} />
+			<Icon aria-hidden className="size-8 shrink-0 text-monti-muted-foreground" strokeWidth={1.5} />
 			<div className="min-w-0 flex-1">
 				<input
 					aria-label={t("fileNode.displayName")}
@@ -56,9 +56,9 @@ export function FileBlockView() {
 					// Keep typed characters from leaking into the editor document.
 					onKeyDown={(event) => event.stopPropagation()}
 					onChange={(event) => block.setValues({ label: event.target.value || null })}
-					className="w-full truncate bg-transparent font-medium text-sm outline-none placeholder:text-cms-foreground"
+					className="w-full truncate bg-transparent font-medium text-sm outline-none placeholder:text-monti-foreground"
 				/>
-				<p className={cn("text-cms-muted-foreground text-xs", media === "failed" && "text-cms-destructive")}>
+				<p className={cn("text-monti-muted-foreground text-xs", media === "failed" && "text-monti-destructive")}>
 					{details}
 				</p>
 			</div>

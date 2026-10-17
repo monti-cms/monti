@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /** Label and editing view text of the code link inline mark, and the public page back-link label (`back`). */
-export const codeRefMessages = defineMessages("cms-blocks.code-ref", {
+export const codeRefMessages = defineMessages("monti-blocks.code-ref", {
 	en: {
 		label: "Code link",
 		"to.label": "Code line to link",

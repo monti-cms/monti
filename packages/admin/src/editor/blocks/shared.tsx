@@ -185,7 +185,7 @@ export function BlockSettingsField({
 	return (
 		<div className="flex flex-col gap-1">
 			<div className="flex min-h-6 items-center justify-between gap-2">
-				<label htmlFor={htmlFor} className="text-cms-muted-foreground text-xs">
+				<label htmlFor={htmlFor} className="text-monti-muted-foreground text-xs">
 					{label}
 				</label>
 				{action}

@@ -85,7 +85,7 @@ function TimeZonePick({
 						{(zone: string) => (
 							<ComboboxItem key={zone} value={zone}>
 								<span className="truncate">{zone}</span>
-								<span className="ml-auto text-cms-muted-foreground text-xs">{offsetOf(zone)}</span>
+								<span className="ml-auto text-monti-muted-foreground text-xs">{offsetOf(zone)}</span>
 							</ComboboxItem>
 						)}
 					</ComboboxList>
@@ -231,8 +231,8 @@ function LocaleDialog({
 												autoFocus
 												className={cn(
 													"w-full justify-between font-normal",
-													!code && "text-cms-muted-foreground",
-													code !== "" && !codeOk && "border-cms-destructive text-cms-destructive",
+													!code && "text-monti-muted-foreground",
+													code !== "" && !codeOk && "border-monti-destructive text-monti-destructive",
 												)}
 											/>
 										}
@@ -241,7 +241,7 @@ function LocaleDialog({
 											<span className="flex items-center gap-2 truncate">
 												<span className="font-mono font-semibold text-xs">{code}</span>
 												{nativeNameOf(code) && (
-													<span className="text-cms-muted-foreground text-xs">{nativeNameOf(code)}</span>
+													<span className="text-monti-muted-foreground text-xs">{nativeNameOf(code)}</span>
 												)}
 											</span>
 										) : (
@@ -274,7 +274,7 @@ function LocaleDialog({
 																}}
 															>
 																<span className="font-mono font-semibold text-xs">{known}</span>
-																{native && <span className="ml-1 text-cms-muted-foreground text-xs">{native}</span>}
+																{native && <span className="ml-1 text-monti-muted-foreground text-xs">{native}</span>}
 															</CommandItem>
 														);
 													})}
@@ -288,7 +288,7 @@ function LocaleDialog({
 																setOpen(false);
 															}}
 														>
-															<Plus className="size-4 shrink-0 text-cms-muted-foreground" />
+															<Plus className="size-4 shrink-0 text-monti-muted-foreground" />
 															<span>{t("locales.codeCustom", { code: trimmedSearch })}</span>
 														</CommandItem>
 													</CommandGroup>
@@ -353,7 +353,7 @@ function LocaleRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative flex min-h-14 items-center gap-3.5 bg-cms-card py-2 pr-4 pl-9",
+				"group/row relative flex min-h-14 items-center gap-3.5 bg-monti-card py-2 pr-4 pl-9",
 				isDragging && "z-10 opacity-80 shadow-md",
 			)}
 			data-testid={`locale-${locale.code}`}
@@ -365,24 +365,24 @@ function LocaleRow({
 				{...listeners}
 				aria-label={t("locales.drag", { name: displayName })}
 				disabled={dragDisabled}
-				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 disabled:hidden group-hover/row:opacity-100"
+				className="absolute top-1/2 left-2.5 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:hidden group-hover/row:opacity-100"
 			>
 				<GripVertical aria-hidden className="size-4" />
 			</button>
-			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-cms-muted px-1.5 font-mono text-xs">
+			<span className="flex h-6 min-w-9 items-center justify-center rounded-sm bg-monti-muted px-1.5 font-mono text-xs">
 				{locale.code}
 			</span>
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-2">
 					<span className="truncate font-medium text-sm">{displayName}</span>
 					{isDefault && (
-						<span className="rounded-sm bg-cms-primary/10 px-1.5 py-px text-cms-primary text-xs">
+						<span className="rounded-sm bg-monti-primary/10 px-1.5 py-px text-monti-primary text-xs">
 							{t("locales.defaultBadge")}
 						</span>
 					)}
 				</div>
 				{hasDistinctNative && (
-					<div className="truncate text-cms-muted-foreground text-xs">
+					<div className="truncate text-monti-muted-foreground text-xs">
 						{t("locales.nativeName", { name: locale.name })}
 					</div>
 				)}
@@ -440,7 +440,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 			<Section wide card={false} title={t("locales.contentTitle")} testId="locales-content">
 				<Panel className="overflow-hidden">
 					<div className="flex items-center justify-between gap-4 border-b px-4 py-3">
-						<span className="text-cms-muted-foreground text-sm">{t("locales.count", { count: locales.length })}</span>
+						<span className="text-monti-muted-foreground text-sm">{t("locales.count", { count: locales.length })}</span>
 						<Button
 							type="button"
 							variant="outline"

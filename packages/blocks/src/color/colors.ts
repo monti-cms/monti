@@ -105,7 +105,7 @@ export function cleanTextColor(attrs: Readonly<Record<string, unknown>> | null |
 export const hasTextColor = (attrs: TextColorAttrs): boolean => Boolean(attrs.fg || attrs.bg);
 
 /**
- * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
+ * Display attributes shared by the public page and the editor. CSS (`.monti-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
  * Color is applied only when `data-fg` or `data-bg` is present.
  */
 export function textColorProps(attrs: TextColorAttrs): {
@@ -115,12 +115,12 @@ export function textColorProps(attrs: TextColorAttrs): {
 	style: Record<string, string>;
 } {
 	const style: Record<string, string> = {};
-	if (attrs.fg) style["--cms-fg"] = attrs.fg;
-	if (attrs.fgDark) style["--cms-fg-dark"] = attrs.fgDark;
-	if (attrs.bg) style["--cms-bg"] = attrs.bg;
-	if (attrs.bgDark) style["--cms-bg-dark"] = attrs.bgDark;
+	if (attrs.fg) style["--monti-fg"] = attrs.fg;
+	if (attrs.fgDark) style["--monti-fg-dark"] = attrs.fgDark;
+	if (attrs.bg) style["--monti-bg"] = attrs.bg;
+	if (attrs.bgDark) style["--monti-bg-dark"] = attrs.bgDark;
 	return {
-		className: "cms-color",
+		className: "monti-color",
 		...(attrs.fg ? { "data-fg": "" as const } : {}),
 		...(attrs.bg ? { "data-bg": "" as const } : {}),
 		style,

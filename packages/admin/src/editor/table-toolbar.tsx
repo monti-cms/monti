@@ -97,13 +97,13 @@ const TABLE_TOOL_GROUPS = (t: TranslatorFor<typeof editorMessages>): ToolbarItem
 		{
 			label: t("tableToolbar.deleteRow"),
 			icon: Rows3,
-			className: "text-cms-destructive",
+			className: "text-monti-destructive",
 			run: (e) => chain(e).deleteRow().run(),
 		},
 		{
 			label: t("tableToolbar.deleteColumn"),
 			icon: Columns3,
-			className: "text-cms-destructive",
+			className: "text-monti-destructive",
 			run: (e) => chain(e).deleteColumn().run(),
 		},
 	],
@@ -185,7 +185,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
 		const width = toolbar?.offsetWidth ?? 0;
 		// So it is not hidden by the top formatting toolbar (sticky), when the table scrolls up it sticks right below the formatting toolbar.
 		const formatBar = editor.view.dom
-			.closest("[data-cms-editor-shell]")
+			.closest("[data-monti-editor-shell]")
 			?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);
 		const minTop = (formatBar?.getBoundingClientRect().bottom ?? 0) + TOOLBAR_GAP;
 		const top = Math.min(Math.max(rect.top - height - TOOLBAR_GAP, minTop), rect.bottom - height);

@@ -8,7 +8,7 @@ import { targetBlockAt } from "../block-resolve";
 import { canDropBlockNode } from "../drag-commands";
 
 const create = (content: string) => new Editor({ extensions: buildEditorExtensions(testSite), content });
-const OPAQUE = '<div data-cms-opaque="true" data-raw-source=":::callout\n내용\n:::" data-line-start="1"></div>';
+const OPAQUE = '<div data-monti-opaque="true" data-raw-source=":::callout\n내용\n:::" data-line-start="1"></div>';
 const texts = (editor: Editor) => editor.state.doc.content.content.map((n) => `${n.type.name}:${n.textContent}`);
 
 describe("review fixes", () => {

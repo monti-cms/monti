@@ -67,7 +67,7 @@ describe("directive render (core default components)", () => {
 		for (const html of [unresolved, rejected, noCaption]) {
 			expect(html).not.toContain("<img");
 			// Do not substitute the internal failure reason or the alt text. width and align are not applied either.
-			expect(html).toContain("cms-image-unavailable");
+			expect(html).toContain("monti-image-unavailable");
 			expect(html).not.toContain("대체텍스트");
 			expect(html).not.toContain("width:");
 		}
@@ -83,6 +83,6 @@ describe("directive render (core default components)", () => {
 		expect(inline).toContain("gpt-oss-120b:free를");
 		// The container is stored as raw source (nothing is lost on save), and the public page does not draw raw source.
 		expect(container).not.toContain("안쪽");
-		expect(container).toContain("data-cms-unknown");
+		expect(container).toContain("data-monti-unknown");
 	});
 });

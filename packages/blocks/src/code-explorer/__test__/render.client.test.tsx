@@ -24,8 +24,8 @@ interface File {
 
 /** What the core code block renders, reduced to what the explorer and code links touch. */
 const codeBlock = ({ path, code, anchor }: File) => (
-	<div className="cms-code">
-		<div className="cms-code-title" data-title={path}>
+	<div className="monti-code">
+		<div className="monti-code-title" data-title={path}>
 			{path}
 		</div>
 		<pre>
@@ -196,7 +196,7 @@ describe("code explorer view", () => {
 	it("shows the current path on the narrow screen button, which opens the list and closes it when a file is picked", () => {
 		mount(FILES);
 		const toggle = screen.getByRole("button", { name: "src/app/page.tsx" });
-		const root = toggle.closest(".cms-block-code-explorer") as HTMLElement;
+		const root = toggle.closest(".monti-block-code-explorer") as HTMLElement;
 		expect(toggle.getAttribute("aria-expanded")).toBe("false");
 		expect(toggle.getAttribute("aria-controls")).toBe(screen.getByRole("tree").id);
 		expect(root.hasAttribute("data-nav-open")).toBe(false);

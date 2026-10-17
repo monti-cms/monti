@@ -103,13 +103,13 @@ export function CodeRef({
 	if (broken) return <>{children}</>;
 
 	return (
-		<span className="cms-block-code-ref-wrap">
+		<span className="monti-block-code-ref-wrap">
 			{/* biome-ignore lint/a11y/useSemanticElements: inline text within a sentence, so the role goes on a span instead of a button */}
 			<span
 				ref={textRef}
 				role="button"
 				tabIndex={0}
-				className="cms-block-code-ref"
+				className="monti-block-code-ref"
 				data-code-ref={to}
 				aria-describedby={preview ? previewId : undefined}
 				onPointerEnter={(event) => event.pointerType === "mouse" && focus(false)}
@@ -126,15 +126,15 @@ export function CodeRef({
 				{children}
 			</span>
 			{preview ? (
-				<span id={previewId} role="tooltip" className="cms-block-code-ref-preview">
-					{preview.title ? <span className="cms-block-code-ref-preview-title">{preview.title}</span> : null}
+				<span id={previewId} role="tooltip" className="monti-block-code-ref-preview">
+					{preview.title ? <span className="monti-block-code-ref-preview-title">{preview.title}</span> : null}
 					{preview.lines.map((line, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: the line number is the identity
-						<span key={index} className="cms-block-code-ref-preview-line">
+						<span key={index} className="monti-block-code-ref-preview-line">
 							{line || " "}
 						</span>
 					))}
-					{preview.truncated ? <span className="cms-block-code-ref-preview-line">…</span> : null}
+					{preview.truncated ? <span className="monti-block-code-ref-preview-line">…</span> : null}
 				</span>
 			) : null}
 		</span>

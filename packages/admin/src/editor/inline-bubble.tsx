@@ -257,7 +257,7 @@ export function InlineBubble({
 		const width = bubble?.offsetWidth ?? 0;
 		// Keep it from being covered by the top (sticky) formatting tools. If there is no room above, float it below the text.
 		const formatBar = editor.view.dom
-			.closest("[data-cms-editor-shell]")
+			.closest("[data-monti-editor-shell]")
 			?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);
 		const minTop = (formatBar?.getBoundingClientRect().bottom ?? 0) + GAP;
 		if (rect.bottom < minTop || rect.top > window.innerHeight) {
@@ -316,7 +316,7 @@ export function InlineBubble({
 			const href = entryId ? "" : String(mark.attrs.href ?? "");
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
-					<Link2 aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
+					<Link2 aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
 					{entryId ? (
 						<LinkTargetAnchor entryId={entryId} />
 					) : (
@@ -327,7 +327,7 @@ export function InlineBubble({
 							title={href}
 							// If focus is taken from the editor on press, the bubble disappears first and the link does not open.
 							onMouseDown={(event) => event.preventDefault()}
-							className="max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2"
+							className="max-w-56 truncate px-1 text-monti-primary text-xs underline underline-offset-2"
 						>
 							{href}
 						</a>
@@ -348,8 +348,8 @@ export function InlineBubble({
 			const content = String(mark.attrs.content ?? "");
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
-					<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
-					<span className="max-w-48 truncate px-1 text-cms-muted-foreground text-xs" title={content}>
+					<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
+					<span className="max-w-48 truncate px-1 text-monti-muted-foreground text-xs" title={content}>
 						{content}
 					</span>
 					<BubbleButton label={t("inlineBubble.tooltipEdit")} onClick={() => openCodeTooltip(mark)}>
@@ -383,8 +383,8 @@ export function InlineBubble({
 			const type = editor.schema.marks.codeFold;
 			return (
 				<div key={mark.name} className="flex items-center gap-0.5">
-					<ChevronsLeftRightEllipsis aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
-					<span className="px-1 text-cms-muted-foreground text-xs">{t("inlineBubble.fold")}</span>
+					<ChevronsLeftRightEllipsis aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
+					<span className="px-1 text-monti-muted-foreground text-xs">{t("inlineBubble.fold")}</span>
 					<BubbleButton
 						label={open ? t("inlineBubble.collapse") : t("inlineBubble.expand")}
 						onClick={act(() => setFoldOpen(editor.view, { ...region, open }, !open))}
@@ -425,7 +425,7 @@ export function InlineBubble({
 				className="gap-0.5"
 			>
 				<tool.icon aria-hidden className="size-4" />
-				<X aria-hidden className="size-3 text-cms-muted-foreground" />
+				<X aria-hidden className="size-3 text-monti-muted-foreground" />
 			</BubbleButton>
 		);
 	};
@@ -437,9 +437,9 @@ export function InlineBubble({
 		const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
 		return (
 			<div key={rule.id} className="flex items-center gap-0.5">
-				<Regex aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
+				<Regex aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
 				<span
-					className="max-w-48 truncate px-1 text-cms-muted-foreground text-xs"
+					className="max-w-48 truncate px-1 text-monti-muted-foreground text-xs"
 					title={`/${rule.pattern}/${rule.flags}`}
 				>
 					{t("inlineBubble.ruleSummary", { label, count })}
@@ -488,13 +488,13 @@ export function InlineBubble({
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
 		<div className="flex items-center gap-1">
-			<span className="flex size-5 shrink-0 items-center justify-center rounded bg-cms-accent font-medium text-cms-accent-foreground text-xs leading-none">
+			<span className="flex size-5 shrink-0 items-center justify-center rounded bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
 				{target.badge}
 			</span>
 			<button
 				type="button"
 				onClick={() => setPanel({ kind: "footnote", target })}
-				className="max-w-48 truncate px-1 text-left text-cms-muted-foreground text-xs hover:text-cms-foreground"
+				className="max-w-48 truncate px-1 text-left text-monti-muted-foreground text-xs hover:text-monti-foreground"
 				title={target.defText || t("inlineBubble.footnoteEmpty")}
 			>
 				{target.defText || t("inlineBubble.footnoteEmpty")}
@@ -576,7 +576,7 @@ export function InlineBubble({
 	);
 
 	const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 } as const;
-	const surface = "rounded-md border bg-cms-popover/95 text-cms-popover-foreground shadow-sm backdrop-blur";
+	const surface = "rounded-md border bg-monti-popover/95 text-monti-popover-foreground shadow-sm backdrop-blur";
 
 	return createPortal(
 		panel ? (
@@ -592,7 +592,7 @@ export function InlineBubble({
 								? t("inlineBubble.footnotePanel")
 								: panel.panel.label
 				}
-				data-cms-inline-bubble
+				data-monti-inline-bubble
 				style={style}
 				className={cn(
 					surface,
@@ -636,7 +636,7 @@ export function InlineBubble({
 							? t("inlineBubble.footnoteTitle")
 							: t("inlineBubble.effectLabel")
 				}
-				data-cms-inline-bubble
+				data-monti-inline-bubble
 				style={style}
 				className={BLOCK_TOOLBAR}
 			>

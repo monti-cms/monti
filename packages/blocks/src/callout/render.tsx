@@ -24,10 +24,10 @@ export function Callout({
 }: PropsWithChildren<{ variant?: string; title?: string; labels?: BlockLabels }>) {
 	const kind = VARIANTS.find((item) => item === variant) ?? "note";
 	return (
-		<div className="cms-block-callout" data-variant={kind} role="note">
-			<div className="cms-block-callout-title">{title?.trim() || titleOf(kind, labels)}</div>
+		<div className="monti-block-callout" data-variant={kind} role="note">
+			<div className="monti-block-callout-title">{title?.trim() || titleOf(kind, labels)}</div>
 			{/* A callout with only a title does not render an empty body slot. */}
-			{Children.count(children) > 0 ? <div className="cms-block-callout-body">{children}</div> : null}
+			{Children.count(children) > 0 ? <div className="monti-block-callout-body">{children}</div> : null}
 		</div>
 	);
 }

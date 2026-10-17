@@ -70,10 +70,10 @@ export function CodeExplorerNodeView() {
 	];
 
 	return (
-		<BlockFrame className="my-6 rounded-md border bg-cms-background">
-			<div contentEditable={false} className="not-prose flex flex-col gap-2 rounded-t-md bg-cms-muted px-3 py-2">
-				<div className="flex items-center gap-2 font-medium text-cms-foreground text-sm">
-					<FolderTree aria-hidden className="size-4 shrink-0 text-cms-muted-foreground" />
+		<BlockFrame className="my-6 rounded-md border bg-monti-background">
+			<div contentEditable={false} className="not-prose flex flex-col gap-2 rounded-t-md bg-monti-muted px-3 py-2">
+				<div className="flex items-center gap-2 font-medium text-monti-foreground text-sm">
+					<FolderTree aria-hidden className="size-4 shrink-0 text-monti-muted-foreground" />
 					{t("label")}
 				</div>
 				{files.length > 0 ? (
@@ -88,8 +88,8 @@ export function CodeExplorerNodeView() {
 										aria-current={current ? "true" : undefined}
 										onClick={() => block.focus({ child: file.index })}
 										className={cn(
-											"inline-flex max-w-full items-center gap-1 rounded border border-transparent px-1.5 py-0.5 font-mono text-cms-muted-foreground text-xs hover:bg-cms-accent hover:text-cms-foreground",
-											current && "border-cms-border bg-cms-background text-cms-foreground shadow-xs",
+											"inline-flex max-w-full items-center gap-1 rounded border border-transparent px-1.5 py-0.5 font-mono text-monti-muted-foreground text-xs hover:bg-monti-accent hover:text-monti-foreground",
+											current && "border-monti-border bg-monti-background text-monti-foreground shadow-xs",
 										)}
 									>
 										<Icon aria-hidden className="size-3 shrink-0" />
@@ -103,7 +103,7 @@ export function CodeExplorerNodeView() {
 			</div>
 			<Content
 				className={cn(
-					"px-3 pt-2 pb-3 text-cms-foreground",
+					"px-3 pt-2 pb-3 text-monti-foreground",
 					// Set the first and last inner block prose margins to 0 so they do not add to the box padding (for nested custom blocks, the wrapper inside react-renderer holds the margin).
 					"[&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0",
 					"[&>*>:first-child>[data-node-view-wrapper]]:mt-0 [&>*>:last-child>[data-node-view-wrapper]]:mb-0",
@@ -142,10 +142,10 @@ export function CodeExplorerNodeView() {
 									value={open}
 									placeholder={t("open.first")}
 									onCommit={(next) => block.setValue("open", next)}
-									className="h-7 w-full rounded-md border border-cms-input cms-dark:bg-cms-input/30 px-2 text-xs shadow-xs placeholder:text-cms-muted-foreground placeholder:opacity-100 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50"
+									className="h-7 w-full rounded-md border border-monti-input monti-dark:bg-monti-input/30 px-2 text-xs shadow-xs placeholder:text-monti-muted-foreground placeholder:opacity-100 focus-visible:border-monti-ring focus-visible:ring-3 focus-visible:ring-monti-ring/50"
 								/>
 							)}
-							<p className="text-cms-muted-foreground text-xs">{t("open.hint")}</p>
+							<p className="text-monti-muted-foreground text-xs">{t("open.hint")}</p>
 						</BlockSettingsField>
 					</BlockSettings>
 					<ToolbarButton label={t("delete")} destructive onClick={removeBlock}>

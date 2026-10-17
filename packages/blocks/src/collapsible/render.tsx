@@ -11,9 +11,9 @@ export function Collapsible({
 	children,
 }: PropsWithChildren<{ title?: string; defaultOpen?: boolean; labels?: BlockLabels }>) {
 	return (
-		<details className="cms-block-collapsible" open={defaultOpen || undefined}>
-			<summary className="cms-block-collapsible-summary">{title?.trim() || labels.collapsibleFallback}</summary>
-			<div className="cms-block-collapsible-body">{children}</div>
+		<details className="monti-block-collapsible" open={defaultOpen || undefined}>
+			<summary className="monti-block-collapsible-summary">{title?.trim() || labels.collapsibleFallback}</summary>
+			<div className="monti-block-collapsible-body">{children}</div>
 		</details>
 	);
 }

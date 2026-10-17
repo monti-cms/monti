@@ -36,7 +36,7 @@ function LocaleBadges({ translations }: { translations: readonly ListTranslation
 				const member = translations.find((candidate) => candidate.locale === locale);
 				if (!member) {
 					return (
-						<Badge key={locale} variant="outline" className="border-dashed text-cms-muted-foreground/70">
+						<Badge key={locale} variant="outline" className="border-dashed text-monti-muted-foreground/70">
 							<span aria-hidden="true">{locale.toUpperCase()}</span>
 							<span className="sr-only">{t("locale.hasNot", { name })}</span>
 						</Badge>
@@ -73,7 +73,7 @@ function RecordLocaleBadges({ locales }: { locales: readonly string[] }) {
 					<Badge
 						key={locale}
 						variant={named ? "success" : "outline"}
-						className={cn(!named && "border-dashed text-cms-muted-foreground/70")}
+						className={cn(!named && "border-dashed text-monti-muted-foreground/70")}
 					>
 						<span aria-hidden="true">{locale.toUpperCase()}</span>
 						<span className="sr-only">
@@ -141,7 +141,7 @@ function DefaultEntryCell({
 	const tc = useTranslator(commonMessages);
 	switch (column) {
 		case "title": {
-			const title = item.title || <span className="text-cms-muted-foreground italic">{tc("untitled")}</span>;
+			const title = item.title || <span className="text-monti-muted-foreground italic">{tc("untitled")}</span>;
 			if (isTrash) return <span className="font-medium">{title}</span>;
 			return isRecord ? (
 				<Button
@@ -149,7 +149,7 @@ function DefaultEntryCell({
 					variant="link"
 					size="sm"
 					onClick={() => onOpenRecord(item)}
-					className="h-auto p-0 font-medium text-cms-foreground hover:text-cms-primary"
+					className="h-auto p-0 font-medium text-monti-foreground hover:text-monti-primary"
 				>
 					{title}
 				</Button>
@@ -157,12 +157,12 @@ function DefaultEntryCell({
 				<span className="flex min-w-0 items-center gap-2">
 					<Link
 						href={site.adminEntryEditHref(item.id)}
-						className="truncate font-medium text-cms-foreground hover:text-cms-primary"
+						className="truncate font-medium text-monti-foreground hover:text-monti-primary"
 					>
 						{title}
 					</Link>
 					{showFolderBesideTitle && item.folderId && (
-						<span className="flex min-w-0 shrink items-center gap-1 text-cms-muted-foreground text-xs">
+						<span className="flex min-w-0 shrink items-center gap-1 text-monti-muted-foreground text-xs">
 							<FolderIcon aria-hidden className="size-3 shrink-0" />
 							<span className="truncate">
 								<span className="sr-only">{t("list.folderSr")}</span>
@@ -181,7 +181,7 @@ function DefaultEntryCell({
 			if (item.translations) return <LocaleBadges translations={item.translations} />;
 			// Also mark that a translation is not the original.
 			return (
-				<span className="text-cms-muted-foreground text-xs">
+				<span className="text-monti-muted-foreground text-xs">
 					<abbr title={site.localeLabel(item.locale)} className="font-medium no-underline">
 						{item.locale.toUpperCase()}
 					</abbr>
@@ -192,14 +192,14 @@ function DefaultEntryCell({
 		case "createdAt":
 		case "publishedAt":
 			return (
-				<span className="tabular whitespace-nowrap text-cms-muted-foreground text-xs">
+				<span className="tabular whitespace-nowrap text-monti-muted-foreground text-xs">
 					{formatDate(site, item[column])}
 				</span>
 			);
 		case "slug":
-			return <span className="font-mono text-cms-muted-foreground text-xs">{item.slug || "—"}</span>;
+			return <span className="font-mono text-monti-muted-foreground text-xs">{item.slug || "—"}</span>;
 		case "folder":
-			return <span className="text-cms-muted-foreground text-xs">{folderName(folders, item.folderId)}</span>;
+			return <span className="text-monti-muted-foreground text-xs">{folderName(folders, item.folderId)}</span>;
 		default:
 			// Field columns: default cells for relations (including taxonomy fields), select and text.
 			return <DefaultFieldCell collection={collection} column={column} entry={item} />;

@@ -92,7 +92,9 @@ export function AddFieldDialog({
 					<Labeled
 						label={t("field.newName")}
 						hint={
-							name !== "" && problem ? <span className="text-cms-destructive">{ts(`name.${problem}`)}</span> : undefined
+							name !== "" && problem ? (
+								<span className="text-monti-destructive">{ts(`name.${problem}`)}</span>
+							) : undefined
 						}
 					>
 						<Input

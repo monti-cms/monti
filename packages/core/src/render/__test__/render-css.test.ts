@@ -12,9 +12,9 @@ const block = (selector: string) => {
 };
 
 describe("render.css", () => {
-	it("makes alignment beat prose and .cms-table-cell with a doubled class", () => {
+	it("makes alignment beat prose and .monti-table-cell with a doubled class", () => {
 		for (const side of ["left", "center", "right"]) {
-			expect(block(`.cms-align-${side}.cms-align-${side}`)).toContain(`text-align: ${side}`);
+			expect(block(`.monti-align-${side}.monti-align-${side}`)).toContain(`text-align: ${side}`);
 		}
 	});
 
