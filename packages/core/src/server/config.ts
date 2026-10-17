@@ -7,7 +7,7 @@ import type { PublicApiOptions } from "../http/v1/public/options";
 import type { Plugin } from "../plugin/define";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types";
 import type { EventDeliveryOptions } from "../services/events";
-import type { WriteHooks } from "../services/hooks";
+import type { ServerEvents } from "../services/reactions";
 import type { AuthAdapter, CmsServerConfig, DatabaseAdapter, MediaAdapter } from "./define";
 
 /** The environment variable the public site URL is read from when neither `site.url` nor the schema file sets it. */
@@ -53,9 +53,9 @@ export interface MontiServerOptions {
 	 * `X-Forwarded-Host`: with it on, a client could otherwise choose the host a login callback is built from.
 	 */
 	readonly trustHost?: boolean;
-	/** Hooks on every content write; see "Hook contract" in the core README. They run before the plugins' hooks of the same name. */
-	readonly hooks?: WriteHooks;
-	/** How `afterCommit` deliveries are retried and kept, and the secret of the retry route. */
+	/** What the server reacts to, by target and event (`on: { entry: { beforeSave: [...], published: [{ name, run }] } }`). Runs before the plugins' subscribers of the same event. */
+	readonly on?: ServerEvents;
+	/** How the durable entry events (`on.entry.published`, ...) are retried and kept, and the secret of the retry route. */
 	readonly events?: EventDeliveryOptions;
 	/** Public JSON API (`/api/monti/v1/public/*`). Off if unset (404). */
 	readonly publicApi?: PublicApiOptions;
@@ -68,7 +68,7 @@ const SERVER_KEYS = [
 	"secret",
 	"previousSecrets",
 	"trustHost",
-	"hooks",
+	"on",
 	"events",
 	"publicApi",
 ] as const satisfies readonly (keyof MontiServerOptions)[];
@@ -148,7 +148,7 @@ export function defineConfig(input: MontiServerOptions): Cms {
 			? { previousSecrets: input.previousSecrets.filter((secret): secret is string => Boolean(secret)) }
 			: {}),
 		...(input.trustHost !== undefined ? { trustHost: input.trustHost } : {}),
-		...(input.hooks ? { hooks: input.hooks } : {}),
+		...(input.on ? { on: input.on } : {}),
 		...(input.events ? { events: input.events } : {}),
 		...(input.publicApi ? { publicApi: input.publicApi } : {}),
 	};

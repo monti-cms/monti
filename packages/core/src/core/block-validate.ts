@@ -1,7 +1,7 @@
 import type { BlockDefinition, BlockNode } from "../blocks/define";
 import type { StoredDocument } from "../doc/stored-document";
 import type { CmsJsonValue, CmsMark, CmsNode } from "../doc/types";
-import type { WriteOperation } from "../services/hooks";
+import type { WriteOperation } from "../services/reactions";
 import type { Site } from "../site";
 import type { Issue } from "./types";
 

@@ -1,4 +1,4 @@
-import type { WriteOperation } from "../services/hooks";
+import type { WriteOperation } from "../services/reactions";
 import type { Site } from "../site";
 
 /**

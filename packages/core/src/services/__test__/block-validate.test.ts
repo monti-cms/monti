@@ -6,7 +6,7 @@ import type { StoredDocument } from "../../doc/stored-document";
 import type { CmsNode } from "../../doc/types";
 import { defineCollection, defineSite, fields } from "../../index";
 import { createSite } from "../../site";
-import type { WriteOperation } from "../hooks";
+import type { WriteOperation } from "../reactions";
 import { createWritePipeline } from "../write-pipeline";
 
 /**

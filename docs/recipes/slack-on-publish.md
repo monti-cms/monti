@@ -6,12 +6,12 @@ The code below is the recipe's own files in [`src/slack-on-publish/`](src/slack-
 
 ## What you need to know
 
-1. **`afterCommit` is a subscriber after the save, not a check before it.** It is notified once the change is committed and never blocks or undoes a write. The checks before the save (`transform`, `validate`, `validatePublish`) are the other kind ("Hook contract" and "Event delivery" in the [core README](../../packages/core/README.md)).
-2. **Each subscriber is an entry `{ name, run }` of the `afterCommit` list**, delivered from an outbox on its own: at least once, in order per entry, retried with a growing delay when it throws. Its deliveries are kept under `<owner>:<name>` (`plugin:slack-on-publish:post` here), so keep the name. `run` must be idempotent: the same event can arrive twice.
+1. **`entry.published` is a notification after the save, not a check before it.** It is notified once the change is committed and never blocks or undoes a write. The `before…` events (`entry.beforeValidate`, `beforeSave`, `beforePublish`) are the other kind: they run before the save and may change or block it ("Events (`on`)" and "Event delivery" in the [core README](../../packages/core/README.md)). There is one durable event per kind of change (`created`, `saved`, `published`, `archived`, `unarchived`, `trashed`, `restored`, `deleted`) and `entry.changed` for all of them, so this recipe needs no `if (event.kind !== "published")`.
+2. **Each subscriber is an entry `{ name, run }` of the `entry.published` list**, delivered from an outbox on its own: at least once, in order per entry, retried with a growing delay when it throws. Its deliveries are kept under `<owner>:<name>` (`plugin:slack-on-publish:post` here), so keep the name. `run` must be idempotent: the same event can arrive twice.
 3. **`event.once(run)` is the idempotency helper.** It runs `run` one time per event and subscriber: a repeat skips it, and a `run` that throws is not marked, so the retry runs it again. No storage code of your own.
-4. **`run` gets its scope last**: `run(event, { cms })` in the config's `hooks`, `run(event, { cms, plugin })` in a plugin's, so it can read the site, the entry and its own storage (`plugin.storage`).
+4. **`run` gets its scope last**: `run(event, { cms })` in the config's `on`, `run(event, { cms, plugin })` in a plugin's, so it can read the site, the entry and its own storage (`plugin.storage`).
 5. **`event.read()`** returns the committed entry now (`null` if it was deleted): the event itself carries ids, the kind and slugs, never the body.
-6. **A plugin's server side is a module of its own**, loaded on the server only: `server: () => import("./server")`, whose default export is `defineServerPlugin({ hooks })`. The factory module is what the site config imports, and that can reach the browser bundle, so server code never sits in it (see "Why a module of its own" below).
+6. **A plugin's server side is a module of its own**, loaded on the server only: `server: () => import("./server")`, whose default export is `defineServerPlugin({ on })`. The factory module is what the site config imports, and that can reach the browser bundle, so server code never sits in it (see "Why a module of its own" below).
 7. **Options are JSON the browser may read.** The server side reads them typed through the plugin's id (`cms.site.pluginOptions(SLACK_ON_PUBLISH)`). A secret never goes in them: the webhook URL comes from the environment (or from a key slot, `plugin.key(id)`, as the Bareun plugin does).
 
 ## The code
@@ -47,37 +47,39 @@ import { defineServerPlugin } from "@monti-cms/core/server";
 import { SLACK_ON_PUBLISH } from "./index";
 
 export default defineServerPlugin({
-	hooks: {
-		afterCommit: [
-			{
-				// Its deliveries are kept under `plugin:slack-on-publish:post`. A throw is retried later and never undoes the publish.
-				name: "post",
-				run: async (event, { cms }) => {
-					const collections = cms.site.pluginOptions(SLACK_ON_PUBLISH)?.collections ?? ["post"];
-					if (event.kind !== "published" || !collections.includes(event.collection)) return;
+	on: {
+		entry: {
+			// Delivered from the outbox on its own: at least once, retried when it throws, and kept under `plugin:slack-on-publish:post`.
+			published: [
+				{
+					name: "post",
+					run: async (event, { cms }) => {
+						const collections = cms.site.pluginOptions(SLACK_ON_PUBLISH)?.collections ?? ["post"];
+						if (!collections.includes(event.collection)) return;
 
-					// Delivery is at least once. `once` runs the work for this event one time: a repeat skips it,
-					// and a throw inside leaves it unmarked, so the retry sends the message.
-					await event.once(async () => {
-						const entry = await event.read();
-						if (!entry?.published) return; // deleted or unpublished again since
+						// Delivery is at least once. `once` runs the work for this event one time: a repeat skips it,
+						// and a throw inside leaves it unmarked, so the retry sends the message.
+						await event.once(async () => {
+							const entry = await event.read();
+							if (!entry?.published) return; // deleted or unpublished again since
 
-						const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-						if (!webhookUrl) throw new Error("slack-on-publish: set SLACK_WEBHOOK_URL");
+							const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+							if (!webhookUrl) throw new Error("slack-on-publish: set SLACK_WEBHOOK_URL");
 
-						const path = cms.site.contentPath(event.collection, event.publishedSlug);
-						const base = cms.site.config.site?.url?.replace(/\/$/, "") ?? "";
-						const title = String(entry.published.metadata.title ?? event.publishedSlug);
-						const response = await fetch(webhookUrl, {
-							method: "POST",
-							headers: { "content-type": "application/json" },
-							body: JSON.stringify({ text: `Published: ${title}${path ? ` ${base}${path}` : ""}` }),
+							const path = cms.site.contentPath(event.collection, event.publishedSlug);
+							const base = cms.site.config.site?.url?.replace(/\/$/, "") ?? "";
+							const title = String(entry.published.metadata.title ?? event.publishedSlug);
+							const response = await fetch(webhookUrl, {
+								method: "POST",
+								headers: { "content-type": "application/json" },
+								body: JSON.stringify({ text: `Published: ${title}${path ? ` ${base}${path}` : ""}` }),
+							});
+							if (!response.ok) throw new Error(`slack-on-publish: Slack answered ${response.status}`);
 						});
-						if (!response.ok) throw new Error(`slack-on-publish: Slack answered ${response.status}`);
-					});
+					},
 				},
-			},
-		],
+			],
+		},
 	},
 });
 ```
@@ -94,6 +96,6 @@ In `monti.config.ts`: `plugins: [slackOnPublish()]` (it reads `SLACK_WEBHOOK_URL
 
 ## Why a module of its own
 
-A plugin's write hooks (`transform`, `validate`, `validatePublish`, `afterCommit`), routes, formats, commands and migrations are all the default export of its server module, and that module is only ever loaded through `server: () => import("./server")`. There is no inline form: the factory (`slackOnPublish()`) lives in a module that the site config imports, and client code that builds a site from a plugin list bundles that module, so anything written in it can reach the browser. Behind the loader, the hooks are read on the server only.
+A plugin's reactions (`on`), routes, formats, commands and migrations are all the default export of its server module, and that module is only ever loaded through `server: () => import("./server")`. There is no inline form: the factory (`slackOnPublish()`) lives in a module that the site config imports, and client code that builds a site from a plugin list bundles that module, so anything written in it can reach the browser. Behind the loader, the subscribers are read on the server only.
 
 A plugin published as a package also gives its `./server` export a `browser` condition that points at an empty module ("Publishing a plugin as a package" in the [core README](../../packages/core/README.md)), because a bundler follows the `import()` even though the browser never calls it. A plugin in the site's own folder needs nothing more.

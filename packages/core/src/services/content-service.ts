@@ -11,7 +11,7 @@ import { withTranslationHints } from "../core/translation/hints";
 import { confirmedSourceState } from "../core/translation/state";
 import type { FormatRegistry } from "../format/registry";
 import type { Site } from "../site";
-import type { HookProvider } from "./hooks";
+import type { HookProvider } from "./reactions";
 import {
 	type Issue,
 	type RestorePort,
@@ -55,7 +55,7 @@ export interface ContentServiceOptions {
 
 /**
  * What every write of the content service returns (create, save, translate, duplicate, publish, restore): the entry as it is now, and the warnings the
- * write found (core's, the blocks' and the hooks'). The warnings never block and are never part of the entry; the list is empty when there are none.
+ * write found (core's, the blocks' and the `before…` subscribers'). The warnings never block and are never part of the entry; the list is empty when there are none.
  */
 export interface WriteResult {
 	readonly entry: Entry;
@@ -277,7 +277,7 @@ export const createContentService = (storePort: StorePort & Partial<RestorePort>
 
 		/**
 		 * Trash to restore. A record is published again, so its draft goes through the write pipeline first as a `restore`: `validate` and
-		 * `validatePublish` hooks run (a restriction on publishing cannot be bypassed by trash and restore), `transform` hooks do not (the content
+		 * `beforePublish` subscribers run (a restriction on publishing cannot be bypassed by trash and restore), `beforeValidate` ones do not (the content
 		 * is unchanged). Other collections return to draft and are not published, so nothing runs for them.
 		 */
 		restore: async (params: { id: string; expectedVersion: number }): Promise<WriteResult> => {

@@ -1,10 +1,10 @@
 import { defineConfig, postgres } from "@monti-cms/core/server";
 import schema from "../site/schema";
-import { lowercaseSlugs, slugRule } from "./hooks";
+import { lowercaseSlug, refuseBadSlug } from "./rules";
 
 export const cms = defineConfig({
 	schema,
 	database: postgres(),
-	// Fix first, then refuse the rest. Different stages, so the lists do not overlap.
-	hooks: { ...lowercaseSlugs, ...slugRule },
+	// Fix first, then refuse the rest: `beforeValidate` runs before core prepares the data, `beforeSave` after.
+	on: { entry: { beforeValidate: [lowercaseSlug], beforeSave: [refuseBadSlug] } },
 });

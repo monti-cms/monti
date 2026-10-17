@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentCollection, fillRequiredMetadata } from "../../../../../test/any-site";
 import { testSite } from "../../../../../test/site";
-import type { ClaimedDelivery, ContentChange, ContentStore } from "../..";
+import { type ClaimedDelivery, CONTENT_CHANGE_KINDS, type ContentChange, type ContentStore } from "../..";
 import { publishDraft, restoreDraft, seedEntry, seedSave } from "../seed";
 import type { ContractSuite, StoreSession } from "./harness";
 
@@ -31,8 +31,9 @@ export const eventsContract: ContractSuite = (factory) => {
 		const create = (slug: string) =>
 			seedEntry(store, { collection: contentCollection, slug, metadata: { title: slug }, text: "본문" });
 		const subscriberName = () => `test-${randomUUID()}`;
+		const takes = (name: string) => ({ name, kinds: CONTENT_CHANGE_KINDS });
 		const enqueue = (subscriber: string, entryId: string) =>
-			store.enqueueEvents({ subscribers: [subscriber], entryId, now: base });
+			store.enqueueEvents({ subscribers: [takes(subscriber)], entryId, now: base });
 		const claim = (subscriber: string, entryId: string, at = base, limit = 10): Promise<ClaimedDelivery[]> =>
 			store.claimDeliveries({ subscribers: [subscriber], entryIds: [entryId], now: at, leaseMs: 60_000, limit });
 
@@ -134,8 +135,8 @@ export const eventsContract: ContractSuite = (factory) => {
 		it("makes one delivery row per subscriber, once", async () => {
 			const entry = await create("event-enqueue");
 			const [a, b] = [subscriberName(), subscriberName()];
-			expect(await store.enqueueEvents({ subscribers: [a, b], entryId: entry.id, now: base })).toBe(2);
-			expect(await store.enqueueEvents({ subscribers: [a, b], entryId: entry.id, now: base })).toBe(0);
+			expect(await store.enqueueEvents({ subscribers: [takes(a), takes(b)], entryId: entry.id, now: base })).toBe(2);
+			expect(await store.enqueueEvents({ subscribers: [takes(a), takes(b)], entryId: entry.id, now: base })).toBe(0);
 			expect((await claim(a, entry.id)).map((claimed) => claimed.change.kind)).toEqual(["created"]);
 			expect((await claim(b, entry.id)).map((claimed) => claimed.change.kind)).toEqual(["created"]);
 			expect(await store.enqueueEvents({ subscribers: [], entryId: entry.id, now: base })).toBe(0);
@@ -146,8 +147,8 @@ export const eventsContract: ContractSuite = (factory) => {
 			const other = await create("event-order-b");
 			await seedSave(store, first.id, { expectedVersion: first.version, metadata: { title: "x" }, text: "둘" });
 			const subscriber = subscriberName();
-			await store.enqueueEvents({ subscribers: [subscriber], entryId: first.id, now: base });
-			await store.enqueueEvents({ subscribers: [subscriber], entryId: other.id, now: base });
+			await store.enqueueEvents({ subscribers: [takes(subscriber)], entryId: first.id, now: base });
+			await store.enqueueEvents({ subscribers: [takes(subscriber)], entryId: other.id, now: base });
 
 			const claimed = await claim(subscriber, first.id);
 			expect(claimed.map((item) => item.change.kind)).toEqual(["created"]);
@@ -316,6 +317,26 @@ export const eventsContract: ContractSuite = (factory) => {
 				claim(subscriber, entry.id),
 			]);
 			expect(results.flat()).toHaveLength(1);
+		});
+
+		it("makes delivery rows only for the kinds a subscriber takes", async () => {
+			const entry = await create("event-kinds");
+			await publishDraft(testSite, store, { id: entry.id, expectedVersion: entry.version });
+			const [onlyPublished, onlyDeleted, all] = [subscriberName(), subscriberName(), subscriberName()];
+			expect(
+				await store.enqueueEvents({
+					subscribers: [
+						{ name: onlyPublished, kinds: ["published"] },
+						{ name: onlyDeleted, kinds: ["deleted"] },
+						takes(all),
+					],
+					entryId: entry.id,
+					now: base,
+				}),
+			).toBe(3);
+			expect((await claim(onlyPublished, entry.id)).map((claimed) => claimed.change.kind)).toEqual(["published"]);
+			expect(await claim(onlyDeleted, entry.id)).toEqual([]);
+			expect((await claim(all, entry.id)).map((claimed) => claimed.change.kind)).toEqual(["created"]);
 		});
 
 		it("removes events that are finished, and keeps those still waiting", async () => {

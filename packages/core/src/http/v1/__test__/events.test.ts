@@ -99,7 +99,7 @@ describe("POST /v1/events/retry", () => {
 		fakeCms({
 			store,
 			server: { events },
-			plugins: [{ name: "sync", hooks: { afterCommit: [{ name: "push", run: () => undefined }] } }],
+			plugins: [{ name: "sync", on: { entry: { changed: [{ name: "push", run: () => undefined }] } } }],
 		});
 
 	it("takes an admin session and delivers what is due", async () => {

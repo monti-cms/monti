@@ -1,5 +1,5 @@
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types";
-import type { ClaimedDelivery, EventDelivery, EventDeliveryCounts, EventLogState } from "./events";
+import type { ClaimedDelivery, ContentChangeKind, EventDelivery, EventDeliveryCounts, EventLogState } from "./events";
 import type {
 	AppliedSchemaChange,
 	ApplySchemaChangeParams,
@@ -264,10 +264,15 @@ export interface SchemaChangeStore {
  */
 export interface EventStore {
 	/**
-	 * Makes the delivery rows (one per subscriber, `pending`, due now) of the events that have none: those of one entry, or the recent ones of any entry
+	 * Makes the delivery rows (one per subscriber, `pending`, due now) of the events that have none, for the subscribers that take the event's kind: those of one entry, or the recent ones of any entry
 	 * (committed since `since`). It is idempotent, and returns the number of rows made.
 	 */
-	enqueueEvents(params: { subscribers: readonly string[]; entryId?: string; since?: Date; now: Date }): Promise<number>;
+	enqueueEvents(params: {
+		subscribers: readonly { readonly name: string; readonly kinds: readonly ContentChangeKind[] }[];
+		entryId?: string;
+		since?: Date;
+		now: Date;
+	}): Promise<number>;
 	/**
 	 * Claims the deliveries that are due: `pending`, `failed` with `nextAttemptAt` reached (any `failed` with `ignoreBackoff`), and `delivering` whose lease ran out.
 	 * A delivery is claimed only when no earlier event of the same entry is waiting for the same subscriber (`pending`, `delivering` or `failed`), which is the

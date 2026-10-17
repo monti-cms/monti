@@ -5,7 +5,7 @@ English | [한국어](README.ko.md)
 Two-way sync of **published entries** with files in a GitHub repo: a separate content repo, or the `content` folder of a site repo (Astro, Hugo, ...). Publishing commits the entry's file (or opens a pull request); a change pushed to the repo comes back to the CMS. If an entry changed on both sides, nothing is merged: the admin lists the conflict with a diff and a person picks a side.
 
 - Talks to GitHub through the API with a token and a webhook, so it works on serverless hosting. No checkout, no `git` binary.
-- Delivered through the core's event outbox (an `afterCommit` subscriber named `sync`, kept as `plugin:git-sync:sync`): a failed push is retried, not lost.
+- Delivered through the core's event outbox (an `entry.changed` subscriber named `sync`, kept as `plugin:git-sync:sync`): a failed push is retried, not lost.
 - The text of a file comes from a format plugin (`mdx` by default) with `purpose: "sync"`, so what is written can be read back.
 - The GitHub token is a key of the core's API key store assigned to the plugin's `token` key slot (listed under Tools > API keys, and set on the plugin's own screen too: pick a saved key or type one, which is saved as a new key). The webhook secret is a key of the same store, assigned to the plugin's `webhook-secret` slot (service "GitHub webhook"); the Settings tab can generate it, show it, copy it and save it. Neither is ever in config, and a saved value is never sent back to the browser.
 
@@ -46,7 +46,7 @@ Then run `monti migrate` (it creates the plugin's storage), open `/<admin path>/
 | Option | Meaning |
 | --- | --- |
 | `targets` | Where entries are synced to (below). Each target is synced on its own |
-| `enabled` | `false` registers nothing (no screen, hooks or routes), so a config can carry the plugin switched off. Default `true` |
+| `enabled` | `false` registers nothing (no screen, subscribers or routes), so a config can carry the plugin switched off. Default `true` |
 | `debounceMs` | Publishes that arrive within this many milliseconds of the last commit wait in a queue and go out together in one commit. A publish after a quiet period is committed at once. `0` commits every publish at once. Default `2000` |
 | `client` | Makes the GitHub client. For tests and hosts that reach GitHub another way (`@monti-cms/git-sync/testing` has a fake). Server only |
 
@@ -118,7 +118,7 @@ The path follows the slug (it is what `path` says). To rename an entry in git, c
 
 ## Out: CMS to repo
 
-An `afterCommit` event of a synced collection puts the entry in a queue (saved in the plugin's storage, one item per entry and target), and the queue is committed with the git data API (blob, tree, commit, update ref). The entry is read **as it is now**, not as the event saw it, so a repeated or late event does no harm.
+A change event of a synced collection puts the entry in a queue (saved in the plugin's storage, one item per entry and target), and the queue is committed with the git data API (blob, tree, commit, update ref). The entry is read **as it is now**, not as the event saw it, so a repeated or late event does no harm.
 
 | Change | Result |
 | --- | --- |
@@ -138,7 +138,7 @@ An `afterCommit` event of a synced collection puts the entry in a queue (saved i
 A push to a target's branch (the webhook), "Pull now" and `monti git-sync:pull` run the same pull: the files of the folder at the head of the branch are compared with the records. A file whose blob is the one git-sync wrote or read is skipped. For a changed or new file:
 
 1. The file is read through the format into an entry (fields from the front matter, the body from the format). The entry is the one synced from that path, else the one `monti.id` names, else the published entry at the same address; with none, one is created (a translation from its source, `monti.translationOf`).
-2. It is written with **the same pipeline as an edit in the admin** (`cms.contentService()`: hooks, validation, references, link and media normalisation) and **published**. A file that fails is listed in the pull's `errors` (the code and the issues the pipeline found) and does not stop the others.
+2. It is written with **the same pipeline as an edit in the admin** (`cms.contentService()`: the `before…` subscribers, validation, references, link and media normalisation) and **published**. A file that fails is listed in the pull's `errors` (the code and the issues the pipeline found) and does not stop the others.
 3. The publish this causes is not committed back: the file is already what the entry says.
 
 A file deleted in git does not unpublish the entry (unpublish it in the CMS); its next publish writes the file again.

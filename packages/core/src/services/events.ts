@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import {
 	type AfterCommit,
 	CmsError,
+	type ContentChangeKind,
 	type ContentEvent,
 	DeferDelivery,
 	type EventDelivery,
@@ -13,7 +14,7 @@ import {
 import type { Entry } from "../core/store/types";
 
 /**
- * Delivery of the committed changes (the outbox, `core/store/events.ts`) to the subscribers: `hooks.afterCommit` of the server config and of the plugins.
+ * Delivery of the committed changes (the outbox, `core/store/events.ts`) to the subscribers: the durable `on.entry` subscribers of the server config and of the plugins.
  *
  * - The store wrote the events in the transaction of the change. After the commit the dispatcher makes one delivery per subscriber and tries it right away,
  *   in the same process, so latency is what it was before the outbox.
@@ -29,6 +30,8 @@ import type { Entry } from "../core/store/types";
 export interface EventSubscriber {
 	/** `server` for the server config, `plugin:<name>` for a plugin. */
 	readonly name: string;
+	/** The kinds of change it is delivered; the outbox makes delivery rows for no others. */
+	readonly kinds: readonly ContentChangeKind[];
 	readonly handler: AfterCommit;
 }
 
@@ -176,7 +179,7 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 				});
 			result[state] += 1;
 			console.error(
-				`[cms] afterCommit of ${subscriber} failed (${change.kind} ${change.entryId}, event ${change.eventId}, try ${attempts}${state === "dead" ? ", dead-lettered" : ""})`,
+				`[cms] event subscriber ${subscriber} failed (${change.kind} ${change.entryId}, event ${change.eventId}, try ${attempts}${state === "dead" ? ", dead-lettered" : ""})`,
 				error,
 			);
 		}
@@ -232,7 +235,7 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 		const subscribers = await options.subscribers();
 		if (subscribers.length > 0) {
 			await store().enqueueEvents({
-				subscribers: subscribers.map((subscriber) => subscriber.name),
+				subscribers: subscribers.map(({ name, kinds }) => ({ name, kinds })),
 				since: new Date(now().getTime() - ORPHAN_WINDOW_MS),
 				now: now(),
 			});
@@ -278,7 +281,7 @@ export function createEventDispatcher(options: EventDispatcherOptions): EventDis
 			const subscribers = await options.subscribers();
 			if (subscribers.length > 0) {
 				await store().enqueueEvents({
-					subscribers: subscribers.map((subscriber) => subscriber.name),
+					subscribers: subscribers.map(({ name, kinds }) => ({ name, kinds })),
 					entryId,
 					now: now(),
 				});

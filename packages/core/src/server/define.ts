@@ -5,12 +5,12 @@ import type { MediaStore } from "../media/store";
 import type { PluginStorage } from "../plugin/storage";
 import type { PluginSecrets } from "../secrets";
 import type { EventDeliveryOptions } from "../services/events";
-import type { WriteHooks } from "../services/hooks";
+import type { ServerEvents } from "../services/reactions";
 import type { Site } from "../site";
 import type { Decision } from "./decision";
 
 /**
- * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, hooks and the public API. Read on the server only.
+ * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, `on` and the public API. Read on the server only.
  * Unlike the site data (`monti.schema.ts`), it may hold secrets, and usually reads them from environment variables.
  * An app writes these options in `defineConfig({ database, auth, storage, ... })` of `@monti-cms/core/server`, which hands them to `createCms` as this shape.
  *
@@ -58,7 +58,7 @@ export interface DatabaseAdapter {
 	readonly name: string;
 	/**
 	 * Creates the store. `site` is the instance's site (its collections, locales, blocks, links). The store writes the events of every change (the outbox,
-	 * `EventStore`) in the transaction of the change; the core delivers them (`afterCommit` of the server config and plugins) after the commit.
+	 * `EventStore`) in the transaction of the change; the core delivers them (the durable `on.entry` events of the server config and plugins) after the commit.
 	 */
 	createStore(options: { readonly site: Site }): ContentStore;
 	/**
@@ -248,12 +248,12 @@ export interface CmsServerConfig {
 	 */
 	readonly previousSecrets?: readonly string[];
 	/**
-	 * Hooks on every content write: `transform` (change the data before it is prepared), `validate` and `validatePublish` (add failures and warnings), and
-	 * `afterCommit` (notification after the change is committed: cache refresh, webhooks, search indexing; the change stands even if it fails, and a failed
-	 * delivery is retried, so it must be idempotent). They run before the plugins' hooks of the same name. See "Hook contract" in the core README.
+	 * What the server reacts to, by target and event: `on.entry.beforeValidate` (change the data before it is prepared), `beforeSave` and `beforePublish` (add failures
+	 * and warnings), and the durable events after a commit (`published`, `saved`, `changed`, ...: cache refresh, webhooks, search indexing; the change stands even if
+	 * one fails, and a failed delivery is retried, so it must be idempotent). They run before the plugins' subscribers of the same event. See "Events" in the core README.
 	 */
-	readonly hooks?: WriteHooks;
-	/** How `afterCommit` deliveries are retried and kept, and the secret of the retry route. See "Event delivery" in the core README. */
+	readonly on?: ServerEvents;
+	/** How the durable entry events are retried and kept, and the secret of the retry route. See "Event delivery" in the core README. */
 	readonly events?: EventDeliveryOptions;
 	/**
 	 * Whether the server sits behind a proxy or platform (Vercel, nginx, a load balancer) that sets `Host` and `X-Forwarded-Host`.

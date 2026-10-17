@@ -5,6 +5,7 @@ import { testSite } from "../../../test/site";
 import { withActor } from "../../core/actor";
 import {
 	type AfterCommit,
+	CONTENT_CHANGE_KINDS,
 	type ContentEvent,
 	type ContentStore,
 	DeferDelivery,
@@ -64,6 +65,7 @@ describe("afterCommit delivery", () => {
 		const prefix = `s${++counter}`;
 		const subscribers: EventSubscriber[] = Object.entries(handlers).map(([name, handler]) => ({
 			name: `${prefix}-${name}`,
+			kinds: CONTENT_CHANGE_KINDS,
 			handler,
 		}));
 		const dispatcher = createEventDispatcher({
@@ -422,6 +424,7 @@ describe("afterCommit delivery", () => {
 			const subscribers: EventSubscriber[] = [
 				{
 					name,
+					kinds: CONTENT_CHANGE_KINDS,
 					handler: onlyFor(`once-${name}`, async (event) => {
 						await event.once(() => undefined);
 					}),
@@ -592,7 +595,7 @@ describe("afterCommit delivery", () => {
 		});
 
 		it("removes old finished and recorded events but keeps the ones a retry can still deliver", async () => {
-			const subscribe = (handler: Handler) => [{ name: `keep${++counter}`, handler }];
+			const subscribe = (handler: Handler) => [{ name: `keep${++counter}`, kinds: CONTENT_CHANGE_KINDS, handler }];
 			let subscribers: EventSubscriber[] = [];
 			const make = (now: () => Date) =>
 				createEventDispatcher({ store: () => raw, subscribers: async () => subscribers, now, backoffMs: () => 60_000 });

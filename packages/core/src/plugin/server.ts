@@ -3,7 +3,7 @@ import { createFormatRegistry, type FormatRegistry } from "../format/registry";
 import type { CmsFormat } from "../format/types";
 import type { CmsServerConfig } from "../server/define";
 import type { EventSubscriber } from "../services/events";
-import { afterCommitSubscribers, checkSources, type HookSource, type PluginScope } from "../services/hooks";
+import { beforeSources, entrySubscribers, type HookSource, type PluginScope } from "../services/reactions";
 import type { OwnedPluginRoute, Plugin, ServerPlugin } from "./define";
 
 /** The server side of one plugin: the default export of its loader. `undefined` for a plugin without one. */
@@ -16,7 +16,7 @@ export type LoadedServerPlugin = ServerPlugin & { readonly name: string };
 
 /**
  * The server side of one site's plugins, owned by one CMS instance (`createCms`): the loaded server modules, the route table, feature flags,
- * migrations, and the write hooks that run in order (server config first, then plugins).
+ * migrations, and the `before…` subscribers that run in order (server config first, then plugins).
  */
 export interface ServerPlugins {
 	/**
@@ -40,13 +40,15 @@ export interface ServerPlugins {
 	migrate(log?: (message: string) => void): Promise<void>;
 	/** What a server callback of the named plugin gets: the instance and the plugin's own context. */
 	scopeOf(name: string): PluginScope;
+	/** Tells the plugin's `on.keySlot.changed` subscribers that a slot of the plugin was assigned or cleared. */
+	keySlotChanged(plugin: string, slot: string): Promise<void>;
 	/**
 	 * The checks before the save, one per hook in the order they run: the server config's lists first, then the plugins' in the site config's order.
 	 * Each is tagged with its owner (`server`, `plugin:<name>`), which a failing hook is reported with.
 	 */
 	writeHooks(): Promise<readonly HookSource[]>;
 	/**
-	 * The subscribers of the committed changes, in the order they are delivered to: the server config's `hooks.afterCommit` entries, then each plugin's.
+	 * The subscribers of the committed changes, in the order they are delivered to: the server config's `on.entry` durable subscribers, then each plugin's.
 	 * The name is `<owner>:<name>` (`server:revalidate`, `plugin:git-sync:sync`) and keys the delivery state of the outbox.
 	 */
 	eventSubscribers(): Promise<readonly EventSubscriber[]>;
@@ -55,7 +57,7 @@ export interface ServerPlugins {
 /** `cms` is the instance that owns these plugins. The plugins' callbacks get it with their own context (`{ cms, plugin }`). */
 export function createServerPlugins(
 	plugins: readonly Plugin[],
-	serverConfig: () => Pick<CmsServerConfig, "hooks">,
+	serverConfig: () => Pick<CmsServerConfig, "on">,
 	cms: () => Cms,
 ): ServerPlugins {
 	let loaded: Promise<readonly LoadedServerPlugin[]> | undefined;
@@ -101,12 +103,12 @@ export function createServerPlugins(
 	};
 
 	const writeHooks = async (): Promise<readonly HookSource[]> => {
-		const { hooks } = serverConfig();
-		const sources: HookSource[] = hooks ? checkSources("server", hooks, () => ({ cms: cms() })) : [];
+		const { on } = serverConfig();
+		const sources: HookSource[] = on ? beforeSources("server", on, () => ({ cms: cms() })) : [];
 		for (const plugin of await load()) {
-			if (plugin.hooks) {
+			if (plugin.on) {
 				const name = plugin.name;
-				sources.push(...checkSources(`plugin:${name}`, plugin.hooks, () => scopeOf(name)));
+				sources.push(...beforeSources(`plugin:${name}`, plugin.on, () => scopeOf(name)));
 			}
 		}
 		return sources;
@@ -139,15 +141,17 @@ export function createServerPlugins(
 			}
 		},
 		scopeOf,
+		keySlotChanged: async (plugin, slot) => {
+			const found = (await load()).find((entry) => entry.name === plugin);
+			for (const handler of found?.on?.keySlot?.changed ?? []) await handler({ slot }, scopeOf(plugin));
+		},
 		eventSubscribers: async () => {
-			const { hooks } = serverConfig();
-			const subscribers: EventSubscriber[] = hooks
-				? afterCommitSubscribers("server", hooks, () => ({ cms: cms() }))
-				: [];
+			const { on } = serverConfig();
+			const subscribers: EventSubscriber[] = on ? entrySubscribers("server", on, () => ({ cms: cms() })) : [];
 			for (const plugin of await load()) {
-				if (plugin.hooks) {
+				if (plugin.on) {
 					const name = plugin.name;
-					subscribers.push(...afterCommitSubscribers(`plugin:${name}`, plugin.hooks, () => scopeOf(name)));
+					subscribers.push(...entrySubscribers(`plugin:${name}`, plugin.on, () => scopeOf(name)));
 				}
 			}
 			return subscribers;

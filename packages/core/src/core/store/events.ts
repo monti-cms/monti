@@ -2,7 +2,7 @@ import type { Entry, EntryStatus } from "./types";
 
 /**
  * The event outbox and the event log. Every committed change of an entry leaves an event row in the same transaction as the write, so an event exists exactly when its
- * change does, whether or not anything subscribes to it (the row is the log; the deliveries are per subscriber). Delivering the event to the subscribers (the server config's and the plugins' `hooks.afterCommit`) happens after the commit and is retried;
+ * change does, whether or not anything subscribes to it (the row is the log; the deliveries are per subscriber). Delivering the event to the subscribers (the server config's and the plugins' durable `on.entry` subscribers) happens after the commit and is retried;
  * the delivery state of each subscriber is kept per event.
  */
 
@@ -57,7 +57,7 @@ export interface ContentChange {
 	readonly occurredAt: Date;
 }
 
-/** What a subscriber's `afterCommit` receives: the change, how many times this delivery was tried, and a way to read the committed entry. */
+/** What a durable entry subscriber (`on.entry.published`, `changed`, ...) receives: the change, how many times this delivery was tried, and a way to read the committed entry. */
 export interface ContentEvent extends ContentChange {
 	/** 1 for the first try, 2 for the first retry, and so on. */
 	readonly attempt: number;

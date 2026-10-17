@@ -6,16 +6,23 @@ import { documentInputBody, prepareSnapshot, readInputBody } from "../core/snaps
 import { readStoredDocument } from "../doc/stored-document";
 import { type FormatRegistry, NO_FORMATS } from "../format/registry";
 import type { Site } from "../site";
-import type { HookProvider, HookSource, ValidationResult, WriteData, WriteHookContext, WriteOperation } from "./hooks";
+import type {
+	HookProvider,
+	HookSource,
+	ValidationResult,
+	WriteData,
+	WriteHookContext,
+	WriteOperation,
+} from "./reactions";
 import { type Issue, type PreparedSnapshot, ServiceError, type ServiceInput, type StorePort } from "./types";
 
 /**
  * The one place content is prepared for a write. Create, save, publish (single and bulk), duplicate, translation and bulk metadata or folder
  * changes all build their input and call `run`, so a rule or hook added here applies to every one of them. The store never prepares content.
  *
- * Stages: `transform` hooks, core preparation (`prepareSnapshot`, always on the transformed data), the `validate` of each block
- * (warnings only), `validate` hooks, and for a publish
- * `validatePublish` hooks. The store commit and `afterCommit` come after, in the caller and the store.
+ * Stages: `entry.beforeValidate`, core preparation (`prepareSnapshot`, always on the changed data), the `validate` of each block
+ * (warnings only), `entry.beforeSave`, and for a publish
+ * `entry.beforePublish`. The store commit and the durable entry events come after, in the caller and the store.
  */
 
 type PrepareOptions = Omit<NonNullable<Parameters<typeof prepareSnapshot>[2]>, "import" | "imported">;
@@ -33,7 +40,7 @@ export interface WriteRequest {
 	/** What the write replaces: references, document (block ids carry over) and metadata (kept keys the schema no longer has) of the current draft. */
 	readonly prepare?: PrepareOptions;
 	/**
-	 * Do not run `transform` hooks. For a change that publishes a draft without changing it (restoring a record): validation still runs,
+	 * Do not run `beforeValidate`. For a change that publishes a draft without changing it (restoring a record): validation still runs,
 	 * so a restriction on publishing cannot be bypassed.
 	 */
 	readonly skipTransform?: boolean;
@@ -42,9 +49,9 @@ export interface WriteRequest {
 export interface WriteResult {
 	/** Core preparation of the (transformed) input. */
 	readonly snapshot: PreparedSnapshot;
-	/** Warnings: a text body that could not be read (it is kept as an `unparsed` body), the blocks' own `validate`, and the `validate` and `validatePublish` hooks. */
+	/** Warnings: a text body that could not be read (it is kept as an `unparsed` body), the blocks' own `validate`, and `beforeSave` and `beforePublish`. */
 	readonly warnings: readonly Issue[];
-	/** Whether a `transform` hook changed the data. */
+	/** Whether a `beforeValidate` subscriber changed the data. */
 	readonly transformed: boolean;
 }
 
@@ -158,7 +165,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 	};
 
 	/**
-	 * Runs the transforms in order, each on the previous one's result. The input is kept when nothing changed, and only what a hook changed is replaced.
+	 * Runs the `beforeValidate` subscribers in order, each on the previous one's result. The input is kept when nothing changed, and only what a hook changed is replaced.
 	 * Input that core preparation will reject is left alone for it to reject.
 	 */
 	const transform = async (
@@ -167,7 +174,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 		given: ServiceInput,
 	): Promise<{ input: ServiceInput; transformed: boolean }> => {
 		const unchanged = { input: given, transformed: false };
-		const hooks = sources.filter((source) => source.hooks.transform);
+		const hooks = sources.filter((source) => source.hooks.beforeValidate);
 		const input = given;
 		if (hooks.length === 0 || !isRecord(input) || !isRecord(input.metadata) || !site.isCollection(input.collection))
 			return unchanged;
@@ -184,7 +191,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 
 		let data: WriteData = original;
 		for (const source of hooks) {
-			const hook = source.hooks.transform;
+			const hook = source.hooks.beforeValidate;
 			const context = copyOf<WriteHookContext>({
 				operation: request.operation,
 				collection: input.collection,
@@ -195,18 +202,18 @@ export function createWritePipeline(options: WritePipelineOptions) {
 				doc: data.doc,
 			});
 			if (!hook || !context) continue;
-			const result = await callHook(source, "transform", () => hook(context));
+			const result = await callHook(source, "beforeValidate", () => hook(context));
 			if (result === undefined || result === null) continue;
-			if (!isRecord(result) || !isRecord(result.metadata)) throw hookFailed(source, "transform");
+			if (!isRecord(result) || !isRecord(result.metadata)) throw hookFailed(source, "beforeValidate");
 			let doc = data.doc;
 			if (result.doc !== undefined) {
 				// What a hook returns as the body must be a stored document.
 				const read = readStoredDocument(result.doc);
-				if (!read) throw hookFailed(source, "transform");
+				if (!read) throw hookFailed(source, "beforeValidate");
 				doc = read;
 			}
 			if (result.slug !== undefined && result.slug !== null && typeof result.slug !== "string")
-				throw hookFailed(source, "transform");
+				throw hookFailed(source, "beforeValidate");
 			data = { metadata: result.metadata, doc, slug: result.slug === undefined ? data.slug : result.slug };
 		}
 
@@ -249,7 +256,7 @@ export function createWritePipeline(options: WritePipelineOptions) {
 
 	const validate = async (
 		sources: readonly HookSource[],
-		hook: "validate" | "validatePublish",
+		hook: "beforeSave" | "beforePublish",
 		request: WriteRequest,
 		snapshot: PreparedSnapshot,
 	): Promise<Required<ValidationResult>> => {
@@ -305,12 +312,12 @@ export function createWritePipeline(options: WritePipelineOptions) {
 			];
 			if (sources.length === 0) return { snapshot, warnings, transformed };
 
-			const added = await validate(sources, "validate", request, snapshot);
+			const added = await validate(sources, "beforeSave", request, snapshot);
 			if (added.issues.length > 0) throw new ServiceError("validation_failed", added.issues);
 			warnings.push(...added.warnings);
 
 			if (request.operation === "publish" || request.operation === "restore") {
-				const publish = await validate(sources, "validatePublish", request, snapshot);
+				const publish = await validate(sources, "beforePublish", request, snapshot);
 				// The issues core preparation found are blockers of a publish too, and are shown with the added ones.
 				if (publish.issues.length > 0) {
 					throw new ServiceError("publish_validation_failed", [...snapshot.issues, ...publish.issues]);

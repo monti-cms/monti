@@ -19,7 +19,7 @@ import {
 import { type BulkItemResult, createBulkService } from "../bulk-service";
 import { createContentService } from "../content-service";
 import { createEventDispatcher } from "../events";
-import type { HookSource, WriteOperation } from "../hooks";
+import { ENTRY_CHANGE_KINDS as ALL_KINDS, type HookSource, type WriteOperation } from "../reactions";
 import type { ServiceInput } from "../types";
 
 /**
@@ -54,6 +54,7 @@ describe("write hook contract", () => {
 			subscribers: async () => [
 				{
 					name: "test",
+					kinds: ALL_KINDS,
 					handler: (change) => {
 						if (afterCommitFails) throw new Error("afterCommit is down");
 						changes.push(change);
@@ -152,7 +153,7 @@ describe("write hook contract", () => {
 	describe("transformed data still goes through core", () => {
 		it("stores what the transform returns", async () => {
 			sources = server({
-				transform: ({ metadata, doc }) => ({
+				beforeValidate: ({ metadata, doc }) => ({
 					metadata: { ...metadata, title: String(metadata.title).toUpperCase() },
 					doc,
 				}),
@@ -165,11 +166,11 @@ describe("write hook contract", () => {
 		it("gets the address of the entry, and may change it", async () => {
 			const seen: (string | null)[] = [];
 			sources = server({
-				transform: ({ slug, metadata, doc }) => {
+				beforeValidate: ({ slug, metadata, doc }) => {
 					seen.push(slug);
 					return { metadata, doc, slug: slug?.toUpperCase() };
 				},
-				validate: ({ slug }) => {
+				beforeSave: ({ slug }) => {
 					seen.push(slug);
 				},
 			});
@@ -181,7 +182,7 @@ describe("write hook contract", () => {
 		});
 
 		it("validates it: a key the schema does not have is rejected and nothing is stored", async () => {
-			sources = server({ transform: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }) });
+			sources = server({ beforeValidate: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }) });
 			const before = await entryCount();
 			await expect(service.createDraft(await postInput("Bad"))).rejects.toMatchObject({ code: "invalid_metadata_key" });
 			expect(await entryCount()).toBe(before);
@@ -200,7 +201,7 @@ describe("write hook contract", () => {
 				version: STORED_DOCUMENT_VERSION,
 				content: [{ type: "image", attrs: { mediaId, alt: "added by a hook" } }],
 			} as StoredDocument;
-			sources = server({ transform: ({ metadata }) => ({ metadata, doc }) });
+			sources = server({ beforeValidate: ({ metadata }) => ({ metadata, doc }) });
 			const created = (await service.createDraft(await postInput("With image"))).entry;
 			const references = await store.getWorkingReferences({ entryId: created.id });
 			expect(references).toContainEqual(expect.objectContaining({ kind: "media", targetId: mediaId }));
@@ -210,7 +211,7 @@ describe("write hook contract", () => {
 		it("applies at publish: the transformed draft is saved and published together, in one transaction", async () => {
 			const draft = await newPost("quiet");
 			sources = server({
-				transform: ({ metadata, doc }) => ({
+				beforeValidate: ({ metadata, doc }) => ({
 					metadata: { ...metadata, title: String(metadata.title).toUpperCase() },
 					doc,
 				}),
@@ -224,7 +225,7 @@ describe("write hook contract", () => {
 		it("reports what happened to afterCommit: a saved change then a published one, and only a published one for a plain publish", async () => {
 			const changed = await newPost("quiet");
 			sources = server({
-				transform: ({ metadata, doc }) => ({
+				beforeValidate: ({ metadata, doc }) => ({
 					metadata: { ...metadata, title: String(metadata.title).toUpperCase() },
 					doc,
 				}),
@@ -245,7 +246,7 @@ describe("write hook contract", () => {
 		it("leaves the draft and the publish as they were when it fails at publish", async () => {
 			const draft = await newPost("quiet");
 			sources = server({
-				transform: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }),
+				beforeValidate: ({ metadata, doc }) => ({ metadata: { ...metadata, notAField: "x" }, doc }),
 			});
 			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 				code: "invalid_metadata_key",
@@ -259,7 +260,7 @@ describe("write hook contract", () => {
 	describe("extra validation can only add failures", () => {
 		it("blocks a save with the failures it adds, and stores nothing", async () => {
 			const draft = await newPost();
-			sources = server({ validate: () => ({ issues: [{ code: "no_way", path: "title" }] }) });
+			sources = server({ beforeSave: () => ({ issues: [{ code: "no_way", path: "title" }] }) });
 			const error = await service
 				.saveDraft(draft.id, saveInput(draft, { ...draft.working.metadata, title: "Changed" }))
 				.catch((e) => e);
@@ -271,7 +272,7 @@ describe("write hook contract", () => {
 		});
 
 		it("passes warnings through with the result and does not block", async () => {
-			sources = server({ validate: () => ({ warnings: [{ code: "consider_this" }] }) });
+			sources = server({ beforeSave: () => ({ warnings: [{ code: "consider_this" }] }) });
 			const created = await service.createDraft(await postInput("Warned"));
 			expect(created.warnings).toEqual([{ code: "consider_this" }]);
 			expect(created.entry).not.toHaveProperty("warnings");
@@ -284,8 +285,8 @@ describe("write hook contract", () => {
 			// A body that does not parse can be saved as a draft (as an unparsed body), and core publish validation blocks it.
 			const draft = await newPost("Broken", "<<<Unclosed");
 			sources = server({
-				validate: () => ({ issues: [], warnings: [{ code: "all_fine" }] }),
-				validatePublish: ({ snapshot }) => {
+				beforeSave: () => ({ issues: [], warnings: [{ code: "all_fine" }] }),
+				beforePublish: ({ snapshot }) => {
 					(snapshot.issues as unknown as unknown[]).length = 0;
 					return { issues: [] };
 				},
@@ -299,7 +300,7 @@ describe("write hook contract", () => {
 
 		it("blocks a publish with the failures validatePublish adds, and a save of the same draft still works", async () => {
 			const draft = await newPost();
-			sources = server({ validatePublish: () => ({ issues: [{ code: "not_ready", path: "title" }] }) });
+			sources = server({ beforePublish: () => ({ issues: [{ code: "not_ready", path: "title" }] }) });
 			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 				code: "publish_validation_failed",
 				issues: expect.arrayContaining([expect.objectContaining({ code: "not_ready" })]),
@@ -313,7 +314,7 @@ describe("write hook contract", () => {
 		it("calls validatePublish for a publish and for no other write", async () => {
 			const seen: WriteOperation[] = [];
 			sources = server({
-				validatePublish: ({ operation }) => {
+				beforePublish: ({ operation }) => {
 					seen.push(operation);
 				},
 			});
@@ -327,22 +328,22 @@ describe("write hook contract", () => {
 
 	describe("a failure before the commit blocks the write", () => {
 		const failing: Record<string, HookSource["hooks"]> = {
-			transform: {
-				transform: () => {
+			beforeValidate: {
+				beforeValidate: () => {
 					throw new Error("transform broke");
 				},
 			},
-			validate: { validate: async () => Promise.reject(new Error("validate broke")) },
-			validatePublish: {
-				validatePublish: () => {
+			beforeSave: { beforeSave: async () => Promise.reject(new Error("validate broke")) },
+			beforePublish: {
+				beforePublish: () => {
 					throw new Error("validatePublish broke");
 				},
 			},
 		};
 
 		it.each([
-			"transform",
-			"validate",
+			"beforeValidate",
+			"beforeSave",
 		])("fails a create with hook_failed when %s throws: nothing is stored, nothing is sent", async (hook) => {
 			sources = [{ owner: "plugin:seo", hooks: failing[hook] }];
 			const before = await entryCount();
@@ -357,7 +358,7 @@ describe("write hook contract", () => {
 
 		it("fails a save the same way and keeps the draft as it was", async () => {
 			const draft = await newPost();
-			sources = [{ owner: "server", hooks: failing.transform }];
+			sources = [{ owner: "server", hooks: failing.beforeValidate }];
 			await expect(
 				service.saveDraft(draft.id, saveInput(draft, { ...draft.working.metadata, title: "Changed" })),
 			).rejects.toMatchObject({ code: "hook_failed" });
@@ -369,10 +370,10 @@ describe("write hook contract", () => {
 
 		it("fails a publish the same way and keeps the entry a draft", async () => {
 			const draft = await newPost();
-			sources = [{ owner: "server", hooks: failing.validatePublish }];
+			sources = [{ owner: "server", hooks: failing.beforePublish }];
 			await expect(service.publish({ id: draft.id, expectedVersion: draft.version })).rejects.toMatchObject({
 				code: "hook_failed",
-				issues: [{ params: { hook: "validatePublish", owner: "server" } }],
+				issues: [{ params: { hook: "beforePublish", owner: "server" } }],
 			});
 			const after = await store.getEntry(draft.id);
 			expect(after.status).toBe("draft");
@@ -400,7 +401,7 @@ describe("write hook contract", () => {
 		it("reports a committed publish once, and a blocked one never", async () => {
 			const draft = await newPost();
 			changes = [];
-			sources = server({ validatePublish: () => ({ issues: [{ code: "no" }] }) });
+			sources = server({ beforePublish: () => ({ issues: [{ code: "no" }] }) });
 			await service.publish({ id: draft.id, expectedVersion: draft.version }).catch(() => undefined);
 			expect(changes).toEqual([]);
 			sources = [];
@@ -507,15 +508,15 @@ describe("write hook contract", () => {
 			if (runner.skip) return;
 			const seen: string[] = [];
 			sources = server({
-				transform: ({ operation, collection, metadata, doc }) => {
+				beforeValidate: ({ operation, collection, metadata, doc }) => {
 					seen.push(`transform:${operation}`);
 					expect(collection).toBeTypeOf("string");
 					return { metadata, doc };
 				},
-				validate: ({ operation }) => {
+				beforeSave: ({ operation }) => {
 					seen.push(`validate:${operation}`);
 				},
-				validatePublish: ({ operation }) => {
+				beforePublish: ({ operation }) => {
 					seen.push(`validatePublish:${operation}`);
 				},
 			});
@@ -529,7 +530,7 @@ describe("write hook contract", () => {
 			const runner = await runners()[name]();
 			if (runner.skip) return;
 			sources = server({
-				validate: ({ operation }) => ({ issues: operation === runner.operation ? [{ code: "rule_broken" }] : [] }),
+				beforeSave: ({ operation }) => ({ issues: operation === runner.operation ? [{ code: "rule_broken" }] : [] }),
 			});
 			const error = await runner.run().then(
 				() => undefined,
@@ -543,7 +544,7 @@ describe("write hook contract", () => {
 		it.each(names)("%s: without a failing hook it is committed and reported", async (name) => {
 			const runner = await runners()[name]();
 			if (runner.skip) return;
-			sources = server({ validate: () => ({ issues: [] }) });
+			sources = server({ beforeSave: () => ({ issues: [] }) });
 			await runner.run();
 			expect(changes.length).toBeGreaterThan(0);
 		});
@@ -554,11 +555,11 @@ describe("write hook contract", () => {
 			const drafts = [await newPost("one"), await newPost("two"), await newPost("three")];
 			const seen: (string | undefined)[] = [];
 			sources = server({
-				transform: ({ entryId, metadata, doc }) => {
+				beforeValidate: ({ entryId, metadata, doc }) => {
 					seen.push(entryId);
 					return { metadata, doc };
 				},
-				validatePublish: ({ entryId }) => ({ issues: entryId === drafts[1].id ? [{ code: "held_back" }] : [] }),
+				beforePublish: ({ entryId }) => ({ issues: entryId === drafts[1].id ? [{ code: "held_back" }] : [] }),
 			});
 			const { results } = await bulk.run({
 				op: "publish",
@@ -584,7 +585,7 @@ describe("write hook contract", () => {
 				{
 					owner: "plugin:seo",
 					hooks: {
-						transform: ({ entryId, metadata, doc }) => {
+						beforeValidate: ({ entryId, metadata, doc }) => {
 							if (entryId === drafts[0].id) throw new Error("only the first");
 							return { metadata, doc };
 						},
@@ -600,7 +601,7 @@ describe("write hook contract", () => {
 				id: drafts[0].id,
 				ok: false,
 				error: "hook_failed",
-				issues: [{ params: { hook: "transform", owner: "plugin:seo" } }],
+				issues: [{ params: { hook: "beforeValidate", owner: "plugin:seo" } }],
 			});
 			expect(results[1]).toMatchObject({ id: drafts[1].id, ok: true });
 		});
@@ -608,7 +609,7 @@ describe("write hook contract", () => {
 		it("does not run hooks for a status change that is not a content change", async () => {
 			const draft = await newPost();
 			const hook = vi.fn();
-			sources = server({ transform: hook, validate: hook, validatePublish: hook });
+			sources = server({ beforeValidate: hook, beforeSave: hook, beforePublish: hook });
 			const { results } = await bulk.run({
 				op: "archive",
 				items: [{ id: draft.id, expectedVersion: draft.version }],
@@ -625,7 +626,7 @@ describe("write hook contract", () => {
 			const tag = (owner: string): HookSource => ({
 				owner,
 				hooks: {
-					transform: ({ metadata, doc }) => {
+					beforeValidate: ({ metadata, doc }) => {
 						order.push(owner);
 						return { metadata, doc };
 					},
@@ -664,11 +665,11 @@ describe("write hook contract", () => {
 			const seen: string[] = [];
 			const transform = vi.fn();
 			sources = server({
-				transform,
-				validate: ({ operation }) => {
+				beforeValidate: transform,
+				beforeSave: ({ operation }) => {
 					seen.push(`validate:${operation}`);
 				},
-				validatePublish: ({ operation }) => {
+				beforePublish: ({ operation }) => {
 					seen.push(`validatePublish:${operation}`);
 				},
 			});
@@ -680,7 +681,7 @@ describe("write hook contract", () => {
 
 		it("is blocked by a publish restriction: the record stays in the trash and nothing is sent", async () => {
 			const record = await trashedRecord();
-			sources = server({ validatePublish: () => ({ issues: [{ code: "publishing_closed" }] }) });
+			sources = server({ beforePublish: () => ({ issues: [{ code: "publishing_closed" }] }) });
 			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
 				code: "publish_validation_failed",
 				issues: expect.arrayContaining([expect.objectContaining({ code: "publishing_closed" })]),
@@ -693,12 +694,12 @@ describe("write hook contract", () => {
 
 		it("is blocked by a validate failure too, and by a hook that throws", async () => {
 			const record = await trashedRecord();
-			sources = server({ validate: () => ({ issues: [{ code: "no_restore" }] }) });
+			sources = server({ beforeSave: () => ({ issues: [{ code: "no_restore" }] }) });
 			await expect(service.restore({ id: record.id, expectedVersion: record.version })).rejects.toMatchObject({
 				code: "validation_failed",
 			});
 			sources = server({
-				validatePublish: () => {
+				beforePublish: () => {
 					throw new Error("down");
 				},
 			});
@@ -719,7 +720,7 @@ describe("write hook contract", () => {
 		});
 		const seen: unknown[] = [];
 		sources = server({
-			transform: ({ metadata, doc }) => {
+			beforeValidate: ({ metadata, doc }) => {
 				seen.push(metadata.title);
 				return { metadata, doc };
 			},
