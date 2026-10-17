@@ -20,6 +20,7 @@ import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 plugins: [
 	ai({
 		siteDescription: "A personal tech blog", // Goes at the very top of every action's instruction. Defaults to "website"
+		autoImageText: true, // Fill in the alt text and caption of an image as it goes into the body. Off by default
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // Replace (same name)
 			draft: false, // Turn off
@@ -28,6 +29,11 @@ plugins: [
 	}),
 ],
 ```
+
+`autoImageText: true` subscribes the AI plugin to the editor's `editor.imageInserted` event ("Admin events" in the [admin README](../admin/README.md)): when an
+image goes into the body, it runs `imageAlt` and `imageCaption` on it and writes the first candidate of each into the field while that field is still empty. The
+image is in at once and shows that its text is being written; what you type first is kept, and an action that is off or has no ready connection is skipped. With it
+on, the image dialog lets the alt text be left empty.
 
 ### Built-in actions
 

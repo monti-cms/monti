@@ -1,5 +1,6 @@
 import { AiManager } from "./ai-manager";
 import { AiSlotProvider } from "./ai-slot-provider";
+import { aiAdminEvents } from "./auto-image-text";
 import { aiComponents } from "./provider";
 
 /**
@@ -7,7 +8,12 @@ import { aiComponents } from "./provider";
  * In custom screens, call an action with `useAiAction("name")` or `<AiButton action="name" />`; `aiClient<typeof config>()` gives both typed by the site config.
  */
 // The slot actions come from a query the AI screens share, so they need the plugin's own provider.
-export default defineAdminPlugin({ pages: { ai: AiManager }, components: aiComponents, Provider: AiSlotProvider });
+export default defineAdminPlugin({
+	pages: { ai: AiManager },
+	components: aiComponents,
+	Provider: AiSlotProvider,
+	on: aiAdminEvents,
+});
 
 export { AiButton, type AiButtonProps } from "./ai-button";
 export { type AiClient, aiClient } from "./ai-client";

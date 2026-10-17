@@ -16,3 +16,4 @@ Monti를 확장하는 방법을 다루는 짧은 페이지 모음이다. 각 페
 | [공개 사이트에서 글을 타입 있게 읽기](read-posts.md) | 목록, 글 하나, 태그, 리디렉션. 타입은 설정에서 온다 | `cms.read`, `Cms<typeof config>` |
 | [플러그인에 관리자 페이지 더하기](admin-page.md) | 자체 API 경로가 있는 "Post stats" 도구 페이지 | `nav`, `server.routes`, `defineAdminPlugin({ pages })` |
 | [Cache Components에서 엄격한 404와 308](strict-status.md) | 필요할 때 작은 `proxy.ts`로 진짜 404와 308 | `cms.read.getEntry`, Next `proxy.ts` |
+| [이미지를 넣을 때 대체 텍스트 채우기](image-alt.md) | 이미지를 넣는 대로 파일 이름으로 대체 텍스트를 채우고, 입력한 글은 덮지 않는다 | `on.editor.imageInserted`, `fill`, `defineAdminPlugin({ on })` |

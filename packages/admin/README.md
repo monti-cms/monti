@@ -192,6 +192,22 @@ function NoticeView() {
 }
 ```
 
+## Admin events
+
+A plugin's admin side reacts to what happens in the admin with `on`, written by target and event like `on` on the server:
+`defineAdminPlugin({ on: { editor: { imageInserted: [fillAltText] } } })` (the types are `AdminEvents`, `ImageInserted` and `ImageInsertedEvent`). Admin events are
+past tense: they come after the fact and never block it. Each takes a list of independent subscribers, in plugin order, and a subscriber that fails shows a short
+notice without touching the action or the others. A subscriber is a client function, so it goes in the plugin's `"use client"` admin module.
+
+| Event | When | What the subscriber gets |
+|---|---|---|
+| `editor.imageInserted` | An image went into the body. Drop, paste, the slash menu and the toolbar all insert through the image dialog, so it fires for each | `{ image: { mediaId?, src?, alt, caption, decorative }, around, site, signal, fill }` |
+
+The image is in at once and shows "Writing the image text…" while any subscriber runs. `fill({ alt?, caption? })` writes a field only while it is still empty
+and the person has not typed in it since the insert (and no alt text into a decorative image), and writes nothing once the image was removed, when `signal` is
+aborted too. It returns whether it wrote anything. While a plugin subscribes, the image dialog lets the alt text be left empty. `ai({ autoImageText: true })` of
+`@monti-cms/ai` is one subscriber, and the [image alt recipe](../../docs/recipes/image-alt.md) is a small one of your own.
+
 ## Text marks
 
 A block extension's text mark (`syntax.kind: "text"`, `editor.view: "mark"`, e.g. tooltip, code link and text color in `@monti-cms/blocks`) makes the admin
