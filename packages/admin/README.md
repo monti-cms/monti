@@ -79,6 +79,7 @@ involved in loading it into the editor or saving it from there.
 - The edit screen's form holds the body as `form.doc` (the draft, the browser recovery copy and the conflict comparison all see the document, compared by what it says:
   block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are kept as an `unparsed` document, and the source panel of the `mdx()` plugin (`@monti-cms/mdx`) reads them again when it is open.
 - `DocPreview` (`@monti-cms/admin/editor`) is the read-only view of a document the translation screen shows the source in, and AI shows results in.
+  On the translation screen the source column follows the block being written: the source block paired with the block under the cursor (by its source link, see core's "Source links") sits at the same height and both are marked; while you only scroll, the source follows the middle of the translation. Inside a callout, collapsible or quote it goes down to the inner block, and a collapsed box in the translation collapses its source box.
 
 ### Source panels
 

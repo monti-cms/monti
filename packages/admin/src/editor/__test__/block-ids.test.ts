@@ -1,4 +1,4 @@
-import { type CmsNode, forEachBlock, isBlockId, type StoredDocument } from "@monti-cms/core/document";
+import { assignBlockIds, type CmsNode, forEachBlock, isBlockId, type StoredDocument } from "@monti-cms/core/document";
 import { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { afterEach, describe, expect, it } from "vitest";
@@ -134,5 +134,63 @@ describe("block ids in the editor", () => {
 		editor.state.doc.descendants((node) => {
 			if (node.isInline) expect(node.attrs).not.toHaveProperty(BLOCK_ID_ATTRIBUTE);
 		});
+	});
+});
+
+describe("source links in the editor", () => {
+	/** A translation of `mdx` as it is stored: every block, nested ones too, linked to the source block it was made from. */
+	const translationOf = (mdx: string) => {
+		const source = stored(mdx);
+		const link = (nodes: readonly CmsNode[]): CmsNode[] =>
+			nodes.map(({ id, content, ...node }) => {
+				if (node.text !== undefined) return { ...node, ...(content ? { content } : {}) };
+				return { ...node, ...(content ? { content: link(content) } : {}), sourceId: id as string };
+			});
+		const doc: StoredDocument = { ...source, content: assignBlockIds(link(source.content)) };
+		return { source, doc };
+	};
+	const linkOf = (doc: StoredDocument | null, text: string, type = "paragraph") => {
+		let found: string | undefined;
+		const textOf = (node: CmsNode): string => (node.text ?? "") + (node.content ?? []).map(textOf).join("");
+		if (doc)
+			forEachBlock(doc.content, (node) => {
+				if (found === undefined && node.type === type && textOf(node) === text) found = node.sourceId ?? "none";
+			});
+		return found;
+	};
+
+	it("load with a stored document and come back unchanged, nested blocks included", () => {
+		const { source, doc } = translationOf(BODY);
+		const back = saved(open(doc));
+		expect(linkOf(back, "First paragraph")).toBe(idOf(source, "First paragraph"));
+		expect(linkOf(back, "Quoted")).toBe(idOf(source, "Quoted"));
+		expect(linkOf(back, "one")).toBe(idOf(source, "one"));
+	});
+
+	it("come back unchanged on the items of a task list", () => {
+		const { source, doc } = translationOf("- [ ] Open task\n- [x] Done task\n");
+		const back = saved(open(doc));
+		expect(linkOf(back, "Open task", "listItem")).toBe(idOf(source, "Open task", "listItem"));
+		expect(linkOf(back, "Done task", "listItem")).toBe(idOf(source, "Done task", "listItem"));
+	});
+
+	it("stay on the first part when a paragraph is split: the new part has none", () => {
+		const { source, doc } = translationOf(BODY);
+		const editor = open(doc);
+		cursorAtEndOf(editor, "First paragraph");
+		editor.commands.splitBlock();
+		editor.commands.insertContent("New paragraph");
+		const after = saved(editor);
+		expect(linkOf(after, "First paragraph")).toBe(idOf(source, "First paragraph"));
+		expect(linkOf(after, "New paragraph")).toBe("none");
+	});
+
+	it("are not given to a duplicated block", () => {
+		const { source, doc } = translationOf("Only paragraph\n");
+		const editor = open(doc);
+		duplicateBlock(editor, findBlock(editor.state.doc, idOf(doc, "Only paragraph") as string) as number);
+		const links: (string | undefined)[] = [];
+		forEachBlock(saved(editor).content, (node) => links.push(node.sourceId));
+		expect(links).toEqual([idOf(source, "Only paragraph"), undefined]);
 	});
 });

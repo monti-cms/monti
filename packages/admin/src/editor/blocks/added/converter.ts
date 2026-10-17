@@ -1,7 +1,7 @@
 import type { BlockDefinition } from "@monti-cms/core";
 import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
 import { perSite, type Site } from "@monti-cms/core/site";
-import { BLOCK_ID_ATTRIBUTE } from "../../block-ids";
+import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "../../block-ids";
 import { fenceBlockConverter } from "../../converters/fence-preview";
 import type { BlockConverter } from "../../converters/types";
 import { addedNodeBlocks, blockNodeName, childBlocksOf, isContainer, isFence } from "./shared";
@@ -66,11 +66,13 @@ function blockConverter(
 				content: content.map((child) => {
 					const converter = childConverter(child);
 					if (!converter) return ctx.blockToTiptap(child);
-					// A child with its own converter (a tab, a column) keeps the id it has, like any other block.
+					// A child with its own converter (a tab, a column) keeps the id and source link it has, like any other block.
 					const converted = converter.toTiptap(child, ctx);
-					return child.id === undefined || converted.attrs?.[BLOCK_ID_ATTRIBUTE] != null
-						? converted
-						: { ...converted, attrs: { ...(converted.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: child.id } };
+					const attrs = { ...(converted.attrs ?? {}) };
+					if (child.id !== undefined && attrs[BLOCK_ID_ATTRIBUTE] == null) attrs[BLOCK_ID_ATTRIBUTE] = child.id;
+					if (child.sourceId !== undefined && attrs[SOURCE_BLOCK_ID_ATTRIBUTE] == null)
+						attrs[SOURCE_BLOCK_ID_ATTRIBUTE] = child.sourceId;
+					return Object.keys(attrs).length > 0 ? { ...converted, attrs } : converted;
 				}),
 			};
 		},

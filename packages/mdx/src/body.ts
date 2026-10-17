@@ -67,20 +67,20 @@ const toStoredNode = (site: Site, working: CmsNode): CmsNode => {
 			content,
 			marks,
 			working.text,
-			working.id,
+			working,
 		);
 	}
 	if (working.type !== "mdxJsx" && jsxRegistryOf(site).BLOCK_JSX_NAMES.has(working.type)) {
 		const block = definitionOf(site, working);
-		if (block) return storedNode(block.name, valuesOf(working.attrs), content, marks, working.text, working.id);
+		if (block) return storedNode(block.name, valuesOf(working.attrs), content, marks, working.text, working);
 		// No plain definition (spread attributes, `Math`, a table row outside a table): keep it as raw JSX.
-		return storedNode("mdxJsx", rawJsxAttrs(working.attrs, working.type), content, marks, working.text, working.id);
+		return storedNode("mdxJsx", rawJsxAttrs(working.attrs, working.type), content, marks, working.text, working);
 	}
 	if (working.type === "mdxJsx") {
 		const name = typeof working.attrs?.name === "string" ? working.attrs.name : "";
-		return storedNode("mdxJsx", rawJsxAttrs(working.attrs, name), content, marks, working.text, working.id);
+		return storedNode("mdxJsx", rawJsxAttrs(working.attrs, name), content, marks, working.text, working);
 	}
-	return storedNode(working.type, working.attrs, content, marks, working.text, working.id);
+	return storedNode(working.type, working.attrs, content, marks, working.text, working);
 };
 
 const isBlankParagraph = (block: CmsNode) => block.type === "paragraph" && (block.content ?? []).length === 0;
@@ -125,6 +125,7 @@ const toWorkingNode = (site: Site, stored: CmsNode): CmsNode => {
 	if (stored.marks) out.marks = stored.marks.map((mark: CmsMark) => ({ ...mark }));
 	if (stored.text !== undefined) out.text = stored.text;
 	if (stored.id !== undefined) out.id = stored.id;
+	if (stored.sourceId !== undefined) out.sourceId = stored.sourceId;
 	return out;
 };
 

@@ -11,7 +11,7 @@ import { perSite, type Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 import { NoticeError } from "../api/client";
 import { addedMarkByEditorName, addedMarkName, addedMarksOf, markAttrsOf } from "./added-marks";
-import { BLOCK_ID_ATTRIBUTE } from "./block-ids";
+import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "./block-ids";
 import { parentOnlyTypes } from "./blocks/added";
 import { type ConverterContext, converterForCms, converterForTiptap } from "./converters";
 import { asNumber, asString, lineBreakNode } from "./converters/shared";
@@ -200,13 +200,17 @@ const conversionsOf = perSite((site: Site) => {
 	};
 
 	/**
-	 * A block with its id (`CmsNode.id` → the editor's `blockId`). A block that already has one keeps it: an alignment box becomes its paragraph,
-	 * and the paragraph's own id is the one the editor keeps (the box's id is paired up again by the server).
+	 * A block with its id (`CmsNode.id` → the editor's `blockId`) and source link (`CmsNode.sourceId` → `sourceBlockId`). A block that already has
+	 * an id keeps it: an alignment box becomes its paragraph, and the paragraph's own id is the one the editor keeps (the box's id is paired up
+	 * again by the server).
 	 */
 	const blockToTiptap = (node: CmsNode): JSONContent => {
 		const converted = convertBlockToTiptap(node);
 		if (node.id !== undefined && converted.attrs?.[BLOCK_ID_ATTRIBUTE] == null) {
 			converted.attrs = { ...(converted.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: node.id };
+		}
+		if (node.sourceId !== undefined && converted.attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE] == null) {
+			converted.attrs = { ...(converted.attrs ?? {}), [SOURCE_BLOCK_ID_ATTRIBUTE]: node.sourceId };
 		}
 		return converted;
 	};
@@ -230,7 +234,11 @@ const conversionsOf = perSite((site: Site) => {
 						type: "taskList",
 						content: (node.content ?? []).map((item) => ({
 							type: "taskItem",
-							attrs: { checked: item.attrs?.checked === true },
+							attrs: {
+								checked: item.attrs?.checked === true,
+								...(item.id === undefined ? {} : { [BLOCK_ID_ATTRIBUTE]: item.id }),
+								...(item.sourceId === undefined ? {} : { [SOURCE_BLOCK_ID_ATTRIBUTE]: item.sourceId }),
+							},
 							content: (item.content ?? []).map(blockToTiptap),
 						})),
 					};
@@ -345,14 +353,16 @@ const conversionsOf = perSite((site: Site) => {
 		}
 	};
 
-	/** A block back with its id (the editor's `blockId` → `CmsNode.id`) on the first node it becomes. */
+	/** A block back with its id and source link (the editor's `blockId`, `sourceBlockId` → `CmsNode.id`, `sourceId`) on the first node it becomes. */
 	const tiptapBlockToStored = (node: JSONContent): CmsNode[] => {
 		const converted = convertTiptapBlock(node);
 		const id = node?.attrs?.[BLOCK_ID_ATTRIBUTE];
+		const sourceId = node?.attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE];
 		const first = converted[0];
 		// A box holds its node with the id it had when loaded; the editor's id is the current one (a copy of the box gets a new one).
 		if (first && isBlockId(id) && (first.id === undefined || node.type === OPAQUE_BLOCK_NAME)) {
-			converted[0] = { ...first, id };
+			const { sourceId: _loaded, ...rest } = first;
+			converted[0] = isBlockId(sourceId) ? { ...rest, id, sourceId } : { ...rest, id };
 		}
 		return converted;
 	};
@@ -407,11 +417,17 @@ const conversionsOf = perSite((site: Site) => {
 				return [
 					{
 						type: "bulletList",
-						content: (node.content ?? []).map((item) => ({
-							type: "listItem",
-							attrs: { checked: item.attrs?.checked === true },
-							content: (item.content ?? []).flatMap(tiptapBlockToStored),
-						})),
+						content: (node.content ?? []).map((item) => {
+							const id = item.attrs?.[BLOCK_ID_ATTRIBUTE];
+							const sourceId = item.attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE];
+							return {
+								type: "listItem",
+								attrs: { checked: item.attrs?.checked === true },
+								content: (item.content ?? []).flatMap(tiptapBlockToStored),
+								...(isBlockId(id) ? { id } : {}),
+								...(isBlockId(sourceId) ? { sourceId } : {}),
+							};
+						}),
 					},
 				];
 			case "horizontalRule":
@@ -465,6 +481,7 @@ const conversionsOf = perSite((site: Site) => {
 				return attrs ? { attrs: attrs as Record<string, CmsJsonValue>, type: mark.type } : { type: mark.type };
 			});
 		}
+		if (node.sourceId !== undefined) out.sourceId = node.sourceId;
 		if (node.text !== undefined) out.text = node.text;
 		out.type = node.type;
 		return out;

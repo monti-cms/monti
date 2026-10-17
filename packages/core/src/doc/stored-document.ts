@@ -71,20 +71,21 @@ export const sortJson = (value: CmsJsonValue): CmsJsonValue => {
 export const sortedAttrs = (attrs: Record<string, CmsJsonValue>): Record<string, CmsJsonValue> | undefined =>
 	Object.keys(attrs).length > 0 ? (sortJson(attrs) as Record<string, CmsJsonValue>) : undefined;
 
-/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `text`, `type`). */
+/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `sourceId`, `text`, `type`). */
 export const storedNode = (
 	type: string,
 	attrs: Record<string, CmsJsonValue> | undefined,
 	content: CmsNode[] | undefined,
 	marks: CmsMark[] | undefined,
 	text: string | undefined,
-	id?: string,
+	ids: Pick<CmsNode, "id" | "sourceId"> = {},
 ): CmsNode => {
 	const out: CmsNode = {} as CmsNode;
 	if (attrs && Object.keys(attrs).length > 0) out.attrs = sortJson(attrs) as Record<string, CmsJsonValue>;
 	if (content) out.content = content;
-	if (id !== undefined) out.id = id;
+	if (ids.id !== undefined) out.id = ids.id;
 	if (marks && marks.length > 0) out.marks = marks;
+	if (ids.sourceId !== undefined) out.sourceId = ids.sourceId;
 	if (text !== undefined) out.text = text;
 	out.type = type;
 	return out;
@@ -99,7 +100,7 @@ export const storedMark = (given: CmsMark): CmsMark => {
 
 export const isBlankParagraph = (block: CmsNode) => block.type === "paragraph" && (block.content ?? []).length === 0;
 
-const NODE_KEYS = new Set(["type", "id", "attrs", "content", "marks", "text"]);
+const NODE_KEYS = new Set(["type", "id", "sourceId", "attrs", "content", "marks", "text"]);
 
 const isJsonValue = (value: unknown): value is CmsJsonValue => {
 	if (value === null || typeof value === "string" || typeof value === "boolean") return true;
@@ -124,7 +125,8 @@ const isNode = (value: unknown): value is CmsNode =>
 	(value.content === undefined || (Array.isArray(value.content) && value.content.every(isNode))) &&
 	(value.marks === undefined || (Array.isArray(value.marks) && value.marks.every(isMark))) &&
 	(value.text === undefined || typeof value.text === "string") &&
-	(value.id === undefined || typeof value.id === "string");
+	(value.id === undefined || typeof value.id === "string") &&
+	(value.sourceId === undefined || typeof value.sourceId === "string");
 
 /**
  * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and its version. Returns `undefined`

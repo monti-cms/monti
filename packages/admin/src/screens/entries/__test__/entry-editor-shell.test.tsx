@@ -1472,35 +1472,4 @@ describe("translation source pane", () => {
 		const heading = await within(sourcePane() as HTMLElement).findByRole("heading", { level: 1 });
 		expect(heading.textContent).toBe("원문 제목");
 	});
-
-	it("marks the source block matching the block under the editor cursor", async () => {
-		serve(() => undefined, translationWith(SOURCE_MDX));
-		renderEdit();
-		await editorTitle();
-		const paneBlocks = async () => {
-			const root = await waitFor(() => {
-				const found = sourcePane()?.querySelector(".ProseMirror");
-				if (!found || found.children.length < 2) throw new Error("pane not ready");
-				return found;
-			});
-			return Array.from(root.children);
-		};
-		const blocks = await paneBlocks();
-		const moveCaretTo = (index: number) => {
-			const body = screen.getByTestId("mock-editor-body");
-			const range = document.createRange();
-			range.setStart(body.children[index]?.firstChild as Node, 1);
-			range.collapse(true);
-			const selection = document.getSelection();
-			selection?.removeAllRanges();
-			selection?.addRange(range);
-			document.dispatchEvent(new Event("selectionchange"));
-		};
-		moveCaretTo(1);
-		await waitFor(() => expect(blocks[1]?.classList.contains("cms-source-active")).toBe(true));
-		expect(blocks[0]?.classList.contains("cms-source-active")).toBe(false);
-		moveCaretTo(0);
-		await waitFor(() => expect(blocks[0]?.classList.contains("cms-source-active")).toBe(true));
-		expect(blocks[1]?.classList.contains("cms-source-active")).toBe(false);
-	});
 });

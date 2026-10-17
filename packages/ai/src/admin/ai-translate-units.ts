@@ -1,5 +1,10 @@
 import type { BrowserFormat, Site } from "@monti-cms/admin";
-import { BLOCK_ID_ATTRIBUTE, findBlock as findBlockById, UNTRANSLATED_MARK_NAME } from "@monti-cms/admin/editor";
+import {
+	BLOCK_ID_ATTRIBUTE,
+	findBlock as findBlockById,
+	SOURCE_BLOCK_ID_ATTRIBUTE,
+	UNTRANSLATED_MARK_NAME,
+} from "@monti-cms/admin/editor";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { Fragment, type Node as PmNode } from "@tiptap/pm/model";
 import { contentOfText, textOfContent } from "./mdx-format";
@@ -130,11 +135,15 @@ export function applyTranslation(
 		if (content.length !== 1 || list?.type !== unit.wrap || list.content?.length !== 1) return "invalid";
 		content = list.content;
 	}
-	// The translated block is the same block: it keeps the original's id (blocks it was split into get new ones).
+	// The translated block is the same block: it keeps the original's id and source link (blocks it was split into get new ids and no link).
 	const id = blockIdOf(unit.original);
+	const sourceId = (JSON.parse(unit.original) as JSONContent).attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE];
 	const [first] = content;
-	if (id !== undefined && first)
-		content = [{ ...first, attrs: { ...(first.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: id } }, ...content.slice(1)];
+	if (id !== undefined && first) {
+		const attrs: Record<string, unknown> = { ...(first.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: id };
+		if (typeof sourceId === "string") attrs[SOURCE_BLOCK_ID_ATTRIBUTE] = sourceId;
+		content = [{ ...first, attrs }, ...content.slice(1)];
+	}
 	let nodes: PmNode[];
 	try {
 		nodes = content.map((json) => state.schema.nodeFromJSON(json));

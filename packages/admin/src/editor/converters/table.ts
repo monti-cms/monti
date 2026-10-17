@@ -7,17 +7,29 @@ import {
 	tableCellColumns,
 } from "@monti-cms/core/document";
 import { formatTableWidths, parseTableWidths, tableHasMergedCells, tableWidths } from "@monti-cms/core/notation";
-import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
+import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { lineBreakNode } from "./shared";
 import type { BlockConverter } from "./types";
 
-/** The id a stored row has, as the editor's `blockId` attribute, so it survives the editor (the cell does the same in its attributes). */
-const idAttrs = (node: { id?: string }) => (node.id === undefined ? {} : { attrs: { [BLOCK_ID_ATTRIBUTE]: node.id } });
+/** The id and source link a stored row or cell has, as the editor's `blockId` and `sourceBlockId` attributes, so they survive the editor. */
+const idEditorAttrs = (node: { id?: string; sourceId?: string }) => ({
+	...(node.id === undefined ? {} : { [BLOCK_ID_ATTRIBUTE]: node.id }),
+	...(node.sourceId === undefined ? {} : { [SOURCE_BLOCK_ID_ATTRIBUTE]: node.sourceId }),
+});
 
-/** The id the editor holds for a row or cell, as the stored node's `id`. */
+const idAttrs = (node: { id?: string; sourceId?: string }) => {
+	const attrs = idEditorAttrs(node);
+	return Object.keys(attrs).length > 0 ? { attrs } : {};
+};
+
+/** The id and source link the editor holds for a row or cell, as the stored node's `id` and `sourceId`. */
 const idOf = (node: { attrs?: Record<string, unknown> }) => {
 	const id = node.attrs?.[BLOCK_ID_ATTRIBUTE];
-	return typeof id === "string" ? { id } : {};
+	const sourceId = node.attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE];
+	return {
+		...(typeof id === "string" ? { id } : {}),
+		...(typeof sourceId === "string" ? { sourceId } : {}),
+	};
 };
 
 const tableAttrs = (align: unknown, widths: Array<number | null>) => {
@@ -57,7 +69,7 @@ export const tableConverter: BlockConverter = {
 					const colspan = boundedTableSpan(cell.attrs?.colspan, MAX_TABLE_COLUMNS);
 					const rowspan = boundedTableSpan(cell.attrs?.rowspan, rows.length - rowIndex);
 					const attrs: Record<string, unknown> = {
-						...(cell.id === undefined ? {} : { [BLOCK_ID_ATTRIBUTE]: cell.id }),
+						...idEditorAttrs(cell),
 					};
 					if (colspan > 1) attrs.colspan = colspan;
 					if (rowspan > 1) attrs.rowspan = rowspan;

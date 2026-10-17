@@ -8,6 +8,10 @@ import type { CmsNode } from "./types";
  *
  * A body read from MDX (the source panel, an import, AI output, an old client) has no ids, so they are inherited from the previous
  * version of the body by pairing its blocks with the new ones (`assignBlockIds`); a block with no partner gets a new id.
+ *
+ * A block of a translation may also carry `sourceId`, the id of the source block it was made from (`linkedToSource`). It is kept and dropped
+ * with `id`: not written to MDX, not hashed, inherited along with the id, and it names a block of another document, so it is never checked
+ * against this one. When the source block's id changes, the link simply stops matching.
  */
 
 /** 8 characters of base36. Unique within one document; documents never share an id space. */
@@ -41,12 +45,12 @@ export const forEachBlock = (
 };
 
 const withoutIdsNode = (node: CmsNode): CmsNode => {
-	const { id: _id, content, ...rest } = node;
+	const { id: _id, sourceId: _sourceId, content, ...rest } = node;
 	// Keys stay in the stored order, so a document without ids reads (and hashes) as it did before ids existed.
 	return sortedNode(content ? { ...rest, content: content.map(withoutIdsNode) } : rest);
 };
 
-/** The same nodes with every block id removed (what the content hash and document comparisons see). */
+/** The same nodes with every block id and source link removed (what the content hash and document comparisons see). */
 export const withoutBlockIds = (nodes: readonly CmsNode[]): CmsNode[] => nodes.map(withoutIdsNode);
 
 /**
@@ -173,30 +177,42 @@ const pairBlocks = (next: readonly Slot[], previous: readonly Slot[]): Map<CmsNo
 	return paired;
 };
 
-const copyWithIds = (nodes: readonly CmsNode[], idOf: Map<CmsNode, string>): CmsNode[] =>
+/** What a block is given: its id and, when it has one, the source block it links to. */
+interface Ids {
+	readonly id: string;
+	readonly sourceId?: string;
+}
+
+const copyWithIds = (nodes: readonly CmsNode[], idsOf: Map<CmsNode, Ids>): CmsNode[] =>
 	nodes.map((node) => {
-		const id = idOf.get(node);
-		const content = node.content && !TEXTBLOCKS.has(node.type) ? copyWithIds(node.content, idOf) : node.content;
-		const { id: _old, ...rest } = node;
+		const ids = idsOf.get(node);
+		const content = node.content && !TEXTBLOCKS.has(node.type) ? copyWithIds(node.content, idsOf) : node.content;
+		const { id: _id, sourceId: _sourceId, ...rest } = node;
 		const out: CmsNode = { ...rest };
 		if (content) out.content = content;
-		if (id) out.id = id;
+		if (ids) {
+			out.id = ids.id;
+			if (ids.sourceId !== undefined) out.sourceId = ids.sourceId;
+		}
 		return sortedNode(out);
 	});
 
-/** Node keys in the stored order (`attrs`, `content`, `id`, `marks`, `text`, `type`). */
+/** Node keys in the stored order (`attrs`, `content`, `id`, `marks`, `sourceId`, `text`, `type`). */
 const sortedNode = (node: CmsNode): CmsNode => {
 	const out = {} as CmsNode;
-	for (const key of ["attrs", "content", "id", "marks", "text", "type"] as const) {
+	for (const key of ["attrs", "content", "id", "marks", "sourceId", "text", "type"] as const) {
 		if (node[key] !== undefined) (out as Record<string, unknown>)[key] = node[key];
 	}
 	return out;
 };
 
+const linkOf = (node: CmsNode | undefined): string | undefined =>
+	isBlockId(node?.sourceId) ? node.sourceId : undefined;
+
 /**
- * Gives every block of `nodes` an id, returning new nodes. A block keeps a valid id it already has (the first block with a given id
- * keeps it, a later copy, such as a pasted block, gets a new one). A block without one inherits the id of its partner in the first of
- * `sources` that pairs it (see `pairBlocks`), as long as no other block holds that id; otherwise it gets a new id.
+ * Gives every block of `nodes` an id, returning new nodes. A block keeps a valid id it already has, with its source link (the first block with a
+ * given id keeps it, a later copy, such as a pasted block, gets a new one and no link). A block without one inherits the id and the source link of
+ * its partner in the first of `sources` that pairs it (see `pairBlocks`), as long as no other block holds that id; otherwise it gets a new id.
  */
 export const assignBlockIds = (
 	nodes: readonly CmsNode[],
@@ -204,33 +220,33 @@ export const assignBlockIds = (
 ): CmsNode[] => {
 	const slots = slotsOf(nodes);
 	const used = new Set<string>();
-	const idOf = new Map<CmsNode, string>();
+	const idsOf = new Map<CmsNode, Ids>();
+	const give = (node: CmsNode, id: string, from: CmsNode) => {
+		used.add(id);
+		const sourceId = linkOf(node) ?? linkOf(from);
+		idsOf.set(node, sourceId === undefined ? { id } : { id, sourceId });
+	};
 	for (const { node } of slots) {
-		if (isBlockId(node.id) && !used.has(node.id)) {
-			used.add(node.id);
-			idOf.set(node, node.id);
-		}
+		if (isBlockId(node.id) && !used.has(node.id)) give(node, node.id, node);
 	}
 	for (const source of sources) {
-		if (!source || idOf.size === slots.length) continue;
-		const waiting = slots.filter(({ node }) => !idOf.has(node));
+		if (!source || idsOf.size === slots.length) continue;
+		const waiting = slots.filter(({ node }) => !idsOf.has(node));
 		const paired = pairBlocks(waiting, slotsOf(source));
 		for (const { node } of waiting) {
-			const id = paired.get(node)?.id;
-			if (isBlockId(id) && !used.has(id)) {
-				used.add(id);
-				idOf.set(node, id);
-			}
+			const partner = paired.get(node);
+			if (partner && isBlockId(partner.id) && !used.has(partner.id)) give(node, partner.id, partner);
 		}
 	}
 	for (const { node } of slots) {
-		if (idOf.has(node)) continue;
+		if (idsOf.has(node)) continue;
 		let id = newBlockId();
 		while (used.has(id)) id = newBlockId();
 		used.add(id);
-		idOf.set(node, id);
+		// A copy of a block that holds the id already is a new block: it does not link to the original's source.
+		idsOf.set(node, isBlockId(node.id) ? { id } : { id, ...(linkOf(node) ? { sourceId: linkOf(node) } : {}) });
 	}
-	return copyWithIds(nodes, idOf);
+	return copyWithIds(nodes, idsOf);
 };
 
 /**
@@ -239,13 +255,29 @@ export const assignBlockIds = (
  */
 export const regenerateBlockIds = (nodes: readonly CmsNode[]): CmsNode[] => assignBlockIds(withoutBlockIds(nodes));
 
-/** Copies the block ids of `from` onto `to`, which has the same tree (the same document read back). */
+/** Copies the block ids and source links of `from` onto `to`, which has the same tree (the same document read back). */
 export const copyBlockIds = (to: readonly CmsNode[], from: readonly CmsNode[]): CmsNode[] => {
 	const source = slotsOf(from);
-	const idOf = new Map<CmsNode, string>();
+	const idsOf = new Map<CmsNode, Ids>();
 	slotsOf(to).forEach(({ node }, index) => {
-		const id = source[index]?.node.id;
-		if (id) idOf.set(node, id);
+		const partner = source[index]?.node;
+		if (partner?.id)
+			idsOf.set(node, partner.sourceId ? { id: partner.id, sourceId: partner.sourceId } : { id: partner.id });
 	});
-	return copyWithIds(to, idOf);
+	return copyWithIds(to, idsOf);
 };
+
+const linkedNode = (node: CmsNode): CmsNode => {
+	if (node.text !== undefined) return node;
+	const { id, sourceId: _sourceId, content, ...rest } = node;
+	const out: CmsNode = { ...rest };
+	if (content) out.content = TEXTBLOCKS.has(node.type) ? content : content.map(linkedNode);
+	if (isBlockId(id)) out.sourceId = id;
+	return sortedNode(out);
+};
+
+/**
+ * The blocks of a translation made from `nodes`, a source body: every block links to the source block it is a copy of (`sourceId` is that block's id)
+ * and has no id of its own (the translation's blocks are its own; they get ids when it is stored).
+ */
+export const linkedToSource = (nodes: readonly CmsNode[]): CmsNode[] => nodes.map(linkedNode);
