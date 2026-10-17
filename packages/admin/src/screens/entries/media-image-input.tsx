@@ -57,7 +57,7 @@ export function MediaThumbnail({ mediaId, className }: { mediaId: string; classN
 	return url ? (
 		<img src={url} alt="" className={cn("object-cover", className)} />
 	) : (
-		<div className={cn("flex items-center justify-center bg-cms-muted text-cms-muted-foreground", className)}>
+		<div className={cn("flex items-center justify-center bg-monti-muted text-monti-muted-foreground", className)}>
 			<ImageIcon aria-hidden className="size-4" />
 		</div>
 	);
@@ -166,7 +166,7 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }: 
 			<div className="flex items-center gap-1.5">
 				{mediaId && (
 					<span className="flex min-w-0 flex-1 items-center gap-1 text-xs">
-						<FileIcon aria-hidden className="size-3.5 shrink-0 text-cms-muted-foreground" />
+						<FileIcon aria-hidden className="size-3.5 shrink-0 text-monti-muted-foreground" />
 						<span className="truncate">{filename ?? mediaId}</span>
 					</span>
 				)}

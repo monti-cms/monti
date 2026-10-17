@@ -34,7 +34,7 @@ export function ColumnsNodeView() {
 	const selectedIndex = block.focusedChild ?? -1;
 
 	/** The element that directly holds the column blocks: the first element inside the content (`Content`'s DOM contract). */
-	const holder = () => wrapperRef.current?.querySelector<HTMLElement>(":scope > [data-cms-block-content] > *");
+	const holder = () => wrapperRef.current?.querySelector<HTMLElement>(":scope > [data-monti-block-content] > *");
 
 	// Measures the column boundary positions. On narrow screens (stacked vertically) no boundary handles are placed.
 	useLayoutEffect(() => {
@@ -131,12 +131,12 @@ export function ColumnsNodeView() {
 	return (
 		<BlockFrame ref={wrapperRef} className="my-6 rounded-md">
 			<Content
-				style={{ "--cms-columns": columnsGridTemplate(widths, count) } as CSSProperties}
+				style={{ "--monti-columns": columnsGridTemplate(widths, count) } as CSSProperties}
 				// The top padding keeps the toolbar (-top-3.5) from covering the first line of text.
 				// Write the classes out literally instead of assembling them so Tailwind can find them.
 				className={cn(
 					"pt-3 [&>*]:flex [&>*]:flex-col [&>*]:gap-4",
-					"md:[&>*]:grid md:[&>*]:items-start md:[&>*]:gap-6 md:[&>*]:[grid-template-columns:var(--cms-columns)]",
+					"md:[&>*]:grid md:[&>*]:items-start md:[&>*]:gap-6 md:[&>*]:[grid-template-columns:var(--monti-columns)]",
 					"[&>*>*]:min-w-0",
 				)}
 			/>
@@ -153,7 +153,7 @@ export function ColumnsNodeView() {
 							<span
 								aria-hidden
 								className={cn(
-									"absolute top-3 bottom-0 left-0 w-0.5 -translate-x-1/2 rounded-full bg-cms-primary opacity-0 transition-opacity group-hover/container:opacity-30",
+									"absolute top-3 bottom-0 left-0 w-0.5 -translate-x-1/2 rounded-full bg-monti-primary opacity-0 transition-opacity group-hover/container:opacity-30",
 									draft && "opacity-100 group-hover/container:opacity-100",
 								)}
 							/>
@@ -167,19 +167,19 @@ export function ColumnsNodeView() {
 									nudge(boundary.index, event.key === "ArrowLeft" ? -5 : 5);
 								}}
 								className={cn(
-									"pointer-events-auto absolute top-0 left-0 flex h-3 w-6 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center rounded-sm border bg-cms-popover opacity-0 shadow-cms-pop transition-opacity",
-									"focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-cms-ring group-hover/container:opacity-100",
+									"pointer-events-auto absolute top-0 left-0 flex h-3 w-6 -translate-x-1/2 cursor-col-resize touch-none items-center justify-center rounded-sm border bg-monti-popover opacity-0 shadow-monti-pop transition-opacity",
+									"focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-monti-ring group-hover/container:opacity-100",
 									draft && "opacity-100",
 								)}
 							>
-								<GripVertical aria-hidden className="size-2.5 rotate-90 text-cms-muted-foreground" />
+								<GripVertical aria-hidden className="size-2.5 rotate-90 text-monti-muted-foreground" />
 							</button>
 						</div>
 					))
 				: null}
 			{editable ? (
 				<ContainerToolbar label={t("toolbar")} visible={!!draft}>
-					<span className="px-1.5 text-cms-muted-foreground text-xs tabular-nums">
+					<span className="px-1.5 text-monti-muted-foreground text-xs tabular-nums">
 						{widths ? widths.join(" : ") : t("count", { count })}
 					</span>
 					<ToolbarButton label={t("equalize")} disabled={!saved} onClick={() => setColumns(null)}>
@@ -208,7 +208,7 @@ export function ColumnNodeView() {
 		<BlockFrame
 			framed={false}
 			selectedRing={false}
-			className="h-full rounded-md outline-dashed outline-1 outline-transparent transition-colors focus-within:outline-cms-ring/60 group-hover/container:outline-cms-border"
+			className="h-full rounded-md outline-dashed outline-1 outline-transparent transition-colors focus-within:outline-monti-ring/60 group-hover/container:outline-monti-border"
 		>
 			<Content className="min-h-8 px-2 py-1 [&>*>:first-child]:mt-0 [&>*>:last-child]:mb-0" />
 		</BlockFrame>

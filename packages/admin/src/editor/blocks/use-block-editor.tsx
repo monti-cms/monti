@@ -613,8 +613,8 @@ export interface ContentProps extends Omit<ComponentProps<"div">, "ref" | "child
  * The editable nested body of a container block: the place where the block's children are edited in the document. It replaces the Tiptap
  * node view content. A block without a body (image, math) renders nothing.
  *
- * DOM contract: the element has `data-cms-block-content`, and the child blocks are inside its first child element
- * (`[data-cms-block-content] > *` holds them), so a view can lay them out with `[&>*]:grid` or `[&>*>:first-child]:mt-0`.
+ * DOM contract: the element has `data-monti-block-content`, and the child blocks are inside its first child element
+ * (`[data-monti-block-content] > *` holds them), so a view can lay them out with `[&>*]:grid` or `[&>*>:first-child]:mt-0`.
  *
  * @experimental
  */
@@ -631,14 +631,14 @@ export function Content({ className, style, as, visibleChild, ...rest }: Content
 		as,
 		className: cn(className),
 		style,
-		"data-cms-block-content": "",
-		...(visibleChild === undefined ? {} : { "data-cms-content": scope }),
+		"data-monti-block-content": "",
+		...(visibleChild === undefined ? {} : { "data-monti-content": scope }),
 	};
 	return (
 		<>
 			{visibleChild === undefined ? null : (
 				// The children are ProseMirror nodes, so the index is applied with a selector: show child `visibleChild`, hide the rest.
-				<style>{`[data-cms-content="${scope}"] > * > :not(:nth-child(${Math.max(0, Math.trunc(visibleChild)) + 1})) { display: none; }`}</style>
+				<style>{`[data-monti-content="${scope}"] > * > :not(:nth-child(${Math.max(0, Math.trunc(visibleChild)) + 1})) { display: none; }`}</style>
 			)}
 			<AnyElementContent {...host} />
 		</>
@@ -681,9 +681,9 @@ export function BlockFrame({
 			{...rest}
 			as={as}
 			ref={ref}
-			data-cms-block-frame=""
-			data-cms-framed={framed ? "" : undefined}
-			data-cms-container-node={isContainer ? block.raw.node.type.name : undefined}
+			data-monti-block-frame=""
+			data-monti-framed={framed ? "" : undefined}
+			data-monti-container-node={isContainer ? block.raw.node.type.name : undefined}
 			className={cn(framed && "group/container relative", selectedRing && block.selected && SELECTED_RING, className)}
 		>
 			{children}

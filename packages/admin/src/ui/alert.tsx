@@ -21,11 +21,11 @@ export const alertVariants = cva(
 				inline: "flex items-center justify-between gap-3",
 			},
 			variant: {
-				default: "border-cms-border bg-cms-card text-cms-card-foreground",
+				default: "border-monti-border bg-monti-card text-monti-card-foreground",
 				destructive:
-					"border-cms-destructive/30 bg-cms-destructive-soft text-cms-destructive-foreground [&>svg]:text-current",
-				warning: "border-cms-warning/30 bg-cms-warning-soft text-cms-warning-foreground [&>svg]:text-current",
-				success: "border-cms-success/30 bg-cms-success-soft text-cms-success-foreground [&>svg]:text-current",
+					"border-monti-destructive/30 bg-monti-destructive-soft text-monti-destructive-foreground [&>svg]:text-current",
+				warning: "border-monti-warning/30 bg-monti-warning-soft text-monti-warning-foreground [&>svg]:text-current",
+				success: "border-monti-success/30 bg-monti-success-soft text-monti-success-foreground [&>svg]:text-current",
 			},
 		},
 		defaultVariants: {
@@ -61,7 +61,7 @@ function AlertDescription({ className, ...props }: React.ComponentProps<"div">) 
 		<div
 			data-slot="alert-description"
 			className={cn(
-				"col-start-2 grid justify-items-start gap-1 text-cms-muted-foreground text-sm [&_p]:leading-relaxed",
+				"col-start-2 grid justify-items-start gap-1 text-monti-muted-foreground text-sm [&_p]:leading-relaxed",
 				className,
 			)}
 			{...props}

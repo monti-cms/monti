@@ -60,9 +60,12 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 		: null;
 	return (
 		<>
-			<Code2 aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
+			<Code2 aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
 			<span
-				className={cn("max-w-56 truncate px-1 text-xs", where ? "text-cms-muted-foreground" : "text-cms-destructive")}
+				className={cn(
+					"max-w-56 truncate px-1 text-xs",
+					where ? "text-monti-muted-foreground" : "text-monti-destructive",
+				)}
 			>
 				{where ? t("where", { where }) : t("none")}
 			</span>
@@ -82,7 +85,7 @@ function CodeRefDetail({ editor, mark, act }: EditorMarkDetailProps) {
 
 /** Editor registration of the code-ref mark. Shown with an underline in the theme accent color. */
 export const codeRefMarkExtension: EditorMarkExtension = {
-	render: () => ({ class: "underline decoration-cms-primary/60 decoration-solid underline-offset-4" }),
+	render: () => ({ class: "underline decoration-monti-primary/60 decoration-solid underline-offset-4" }),
 	bubble: { group: "link", order: 1, Button: CodeRefBubbleButton },
 	detail: CodeRefDetail,
 };

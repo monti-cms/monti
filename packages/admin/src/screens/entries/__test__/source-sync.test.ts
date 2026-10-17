@@ -182,7 +182,7 @@ describe("collapsible boxes in the source", () => {
 		root.className = "react-renderer";
 		const body = document.createElement("div");
 		body.setAttribute("data-node-view-content", "");
-		if (collapsed) body.setAttribute("data-cms-collapsed", "");
+		if (collapsed) body.setAttribute("data-monti-collapsed", "");
 		if (nested) body.append(nested);
 		root.append(body);
 		return { root, body };

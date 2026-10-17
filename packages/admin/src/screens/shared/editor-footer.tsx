@@ -64,7 +64,7 @@ export function EditorFooter({
 						variant="ghost"
 						disabled={busy}
 						className={cn(
-							"text-cms-destructive hover:bg-cms-destructive-soft hover:text-cms-destructive",
+							"text-monti-destructive hover:bg-monti-destructive-soft hover:text-monti-destructive",
 							align === "start" && "ml-auto",
 						)}
 						onClick={onDelete}

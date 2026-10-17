@@ -151,7 +151,7 @@ export function AdminEntriesTable({
 					style={tableWidth ? { width: tableWidth } : undefined}
 					className="table-fixed [&_td:first-child]:pl-5 [&_td:last-child]:pr-4 [&_th:first-child]:pl-5 [&_th:last-child]:pr-4"
 				>
-					<TableHeader className="sticky top-0 z-10 bg-cms-background [&_tr]:border-b">
+					<TableHeader className="sticky top-0 z-10 bg-monti-background [&_tr]:border-b">
 						{table.getHeaderGroups().map((group) => (
 							<TableRow key={group.id}>
 								{group.headers
@@ -165,7 +165,7 @@ export function AdminEntriesTable({
 												<TableHead
 													style={{ width: header.getSize() }}
 													className={cn(
-														"group/th relative h-9 font-normal text-cms-muted-foreground text-xs",
+														"group/th relative h-9 font-normal text-monti-muted-foreground text-xs",
 														header.column.id === "select" && "w-10",
 													)}
 													aria-sort={active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined}
@@ -236,7 +236,7 @@ export function AdminEntriesTable({
 											trigger={
 												<TableRow
 													className={cn(
-														"h-11 data-[state=selected]:bg-cms-primary/5",
+														"h-11 data-[state=selected]:bg-monti-primary/5",
 														row.original.id === openRecordId && OPEN_ITEM,
 													)}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}

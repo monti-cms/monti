@@ -34,7 +34,12 @@ describe("rendering of block extensions", () => {
 		for (const locale of [undefined, "ko", "en"]) {
 			const rendered = await expectRenders(source, `showcase ${locale}`, { locale });
 			// It holds every block of the extension, so a block the renderer skipped would be missing here.
-			for (const marker of ["cms-block-callout", "cms-block-collapsible", "cms-block-columns", 'role="tablist"']) {
+			for (const marker of [
+				"monti-block-callout",
+				"monti-block-collapsible",
+				"monti-block-columns",
+				'role="tablist"',
+			]) {
 				expect(rendered.html).toContain(marker);
 			}
 		}

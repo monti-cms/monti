@@ -7,7 +7,7 @@ type TabElement = ReactElement<PropsWithChildren<{ label: string }>>;
 
 /** One tab. `Tabs` reads its name and body, so when used on its own only the body is rendered. */
 export function Tab({ children }: PropsWithChildren<{ label?: string }>) {
-	return <div className="cms-block-tabs-panel">{children}</div>;
+	return <div className="monti-block-tabs-panel">{children}</div>;
 }
 
 /**

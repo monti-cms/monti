@@ -4,11 +4,11 @@
 // Reads `styles/index.css` (Tailwind 4 input), compiles it with the package's sources, and writes `dist/styles.css`, which the host imports
 // as `@monti-cms/<package>/styles.css`. The host needs no Tailwind, typography or tw-animate setup. To keep the file from touching the host:
 //
-// - Every selector is scoped to a document that contains the admin (`:where(html:has(.cms-admin))`, zero specificity). Popups are portaled
-//   to `body`, so the scope is the document, not the `.cms-admin` element. Preflight (Tailwind's reset) is scoped the same way.
-// - Custom properties the bundle declares all start with `--cms-` (Tailwind's `--tw-*` become `--cms-tw-*`; its theme is inlined). Variables set
+// - Every selector is scoped to a document that contains the admin (`:where(html:has(.monti-admin))`, zero specificity). Popups are portaled
+//   to `body`, so the scope is the document, not the `.monti-admin` element. Preflight (Tailwind's reset) is scoped the same way.
+// - Custom properties the bundle declares all start with `--monti-` (Tailwind's `--tw-*` become `--monti-tw-*`; its theme is inlined). Variables set
 //   at runtime by other libraries (Base UI's `--anchor-width` and so on) are only read, so they keep their names.
-// - Keyframes are renamed with a `cms-` prefix.
+// - Keyframes are renamed with a `monti-` prefix.
 // - No `@layer` is left (Tailwind's layers are flattened after it has sorted its output): unlayered rules beat the host's layered ones, whatever order
 //   the stylesheets load in, so a host's `.hidden`, `.prose` or reset in its own `utilities` or `base` layer cannot override the admin.
 // - KaTeX fonts are copied next to the CSS and linked relatively.
@@ -20,7 +20,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 /** What every selector in the bundle sits under. `:where()` keeps the specificity of the unscoped rule. */
-export const SCOPE = ":where(html:has(.cms-admin))";
+export const SCOPE = ":where(html:has(.monti-admin))";
 
 /** Splits a selector list at its top-level commas (commas inside `()`, `[]` and strings stay). */
 function splitSelectors(selector) {
@@ -48,7 +48,7 @@ function splitSelectors(selector) {
 /** Puts one selector under the scope. Returns `null` for selectors that cannot apply to a page (`:host`). */
 export function scopeSelector(selector) {
 	// Already confined to a document that contains the admin (the hand-written rules).
-	if (/^(?::where\()?html\b.*?:has\(\.cms-admin\)/.test(selector)) return selector;
+	if (/^(?::where\()?html\b.*?:has\(\.monti-admin\)/.test(selector)) return selector;
 	if (/^:host\b/.test(selector)) return null;
 	const root = /^(?::root|html)(?![\w-])/.exec(selector);
 	if (root) return `${SCOPE}${selector.slice(root[0].length)}`;
@@ -64,7 +64,7 @@ const isPlainContainer = (node) =>
 export const confine = () => ({
 	postcssPlugin: "monti-confine",
 	OnceExit(root) {
-		// 1. Custom properties the bundle declares → `--cms-*`.
+		// 1. Custom properties the bundle declares → `--monti-*`.
 		const declared = new Set();
 		root.walkDecls((decl) => {
 			if (decl.prop.startsWith("--")) declared.add(decl.prop);
@@ -74,14 +74,14 @@ export const confine = () => ({
 		});
 		root.walkAtRules("property", (rule) => declared.add(rule.params.trim()));
 		const rename = new Map(
-			[...declared].filter((name) => !name.startsWith("--cms-")).map((name) => [name, `--cms-${name.slice(2)}`]),
+			[...declared].filter((name) => !name.startsWith("--monti-")).map((name) => [name, `--monti-${name.slice(2)}`]),
 		);
 		const renameValue = (value) => value.replace(/--[\w-]+/g, (name) => rename.get(name) ?? name);
 
-		// 2. Keyframes → `cms-*`.
+		// 2. Keyframes → `monti-*`.
 		const keyframes = new Map();
 		root.walkAtRules(/keyframes$/, (rule) => {
-			if (!rule.params.startsWith("cms-")) keyframes.set(rule.params, `cms-${rule.params}`);
+			if (!rule.params.startsWith("monti-")) keyframes.set(rule.params, `monti-${rule.params}`);
 		});
 
 		root.walkDecls((decl) => {

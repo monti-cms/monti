@@ -215,13 +215,13 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 
 	return (
 		<NodeViewWrapper
-			className="not-prose group/code relative my-4 flex w-full flex-col rounded-md border bg-cms-muted/30 text-sm"
+			className="not-prose group/code relative my-4 flex w-full flex-col rounded-md border bg-monti-muted/30 text-sm"
 			data-code-block-wrapper=""
 		>
 			<div
 				data-code-ui=""
 				contentEditable={false}
-				className="flex flex-wrap items-center justify-between gap-2 rounded-t-md border-b bg-cms-muted/60 px-2 py-1 text-cms-muted-foreground text-xs"
+				className="flex flex-wrap items-center justify-between gap-2 rounded-t-md border-b bg-monti-muted/60 px-2 py-1 text-monti-muted-foreground text-xs"
 			>
 				{editable ? (
 					<div className="flex flex-wrap items-center gap-1.5">
@@ -326,7 +326,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						onClick={handleCopy}
 					>
 						{copied ? (
-							<Check aria-hidden className="size-3.5 text-cms-primary" />
+							<Check aria-hidden className="size-3.5 text-monti-primary" />
 						) : (
 							<Copy aria-hidden className="size-3.5" />
 						)}
@@ -339,7 +339,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 					data-code-ui=""
 					data-code-gutter=""
 					contentEditable={false}
-					className="shrink-0 select-none rounded-bl-md border-r bg-cms-muted/40 py-3 font-mono text-cms-muted-foreground text-xs"
+					className="shrink-0 select-none rounded-bl-md border-r bg-monti-muted/40 py-3 font-mono text-monti-muted-foreground text-xs"
 				>
 					{rows.map((line) => {
 						const effects = effectsOnLine(lineEffects, line);
@@ -360,11 +360,11 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 								onMouseEnter={() => extendLineDrag(line)}
 								onContextMenu={(event) => openLineMenuAt(line, event)}
 								className={cn(
-									"flex h-6 cursor-pointer items-center gap-0.5 pr-1.5 pl-0.5 hover:bg-cms-accent/60",
-									selected && "bg-cms-primary/10 text-cms-foreground",
-									whole && "bg-cms-primary/20",
+									"flex h-6 cursor-pointer items-center gap-0.5 pr-1.5 pl-0.5 hover:bg-monti-accent/60",
+									selected && "bg-monti-primary/10 text-monti-foreground",
+									whole && "bg-monti-primary/20",
 									// A line linked to the body gets a line drawn on the left of the line number gutter.
-									anchored && "shadow-[inset_2px_0_0_0_var(--cms-primary)]",
+									anchored && "shadow-[inset_2px_0_0_0_var(--monti-primary)]",
 								)}
 							>
 								<span className="flex w-4 justify-center">
@@ -379,7 +379,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 												event.stopPropagation();
 												setFoldOpen(editor.view, collapse, !collapse.open);
 											}}
-											className="size-4 rounded p-0 hover:bg-cms-accent"
+											className="size-4 rounded p-0 hover:bg-monti-accent"
 										>
 											<ChevronRight
 												aria-hidden
@@ -419,7 +419,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 										className={cn(
 											"h-6",
 											...effects.map((effect) => editorLookOf(site, effect)?.background ?? ""),
-											(whole || pending || hovered) && "bg-cms-primary/15",
+											(whole || pending || hovered) && "bg-monti-primary/15",
 										)}
 									>
 										{/* Draw the wavy underline once across the whole line so it is not broken per text fragment (syntax color). Overlay the same text transparently to match the length. */}
@@ -439,9 +439,9 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 						</div>
 						<pre
 							className={cn(
-								"relative m-0 whitespace-pre bg-transparent px-4 py-3 font-mono text-cms-foreground text-sm leading-6",
+								"relative m-0 whitespace-pre bg-transparent px-4 py-3 font-mono text-monti-foreground text-sm leading-6",
 								// Syntax colors are inlined as light theme colors. In the dark theme they switch to --shiki-dark.
-								"cms-dark:[&_.shiki-token]:text-(--shiki-dark)!",
+								"monti-dark:[&_.shiki-token]:text-(--shiki-dark)!",
 								// Hide the cursor while lines are picked by line number (picked lines are shown by the line background).
 								picked && "caret-transparent",
 							)}

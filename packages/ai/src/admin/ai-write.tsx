@@ -248,7 +248,7 @@ function WriteDialog({
 							{view === "preview" ? (
 								<ResultPreview job={job} format={format} text={result} done={state.status === "done"} />
 							) : (
-								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-cms-muted/40 p-3 font-mono text-xs leading-relaxed">
+								<pre className="max-h-[50vh] min-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-monti-muted/40 p-3 font-mono text-xs leading-relaxed">
 									{diff ? <DiffText parts={diff} /> : result || t("running")}
 								</pre>
 							)}
@@ -299,19 +299,19 @@ function DiffText({ parts }: { parts: ReturnType<typeof diffWords> }) {
 			<span key={index}>{part.text}</span>
 		) : part.type === "del" ? (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<del key={index} className="bg-cms-destructive-soft text-cms-destructive-foreground line-through">
+			<del key={index} className="bg-monti-destructive-soft text-monti-destructive-foreground line-through">
 				{part.text}
 			</del>
 		) : (
 			// biome-ignore lint/suspicious/noArrayIndexKey: the changes list is rebuilt for each result
-			<ins key={index} className="bg-cms-success-soft text-cms-success-foreground no-underline">
+			<ins key={index} className="bg-monti-success-soft text-monti-success-foreground no-underline">
 				{part.text}
 			</ins>
 		),
 	);
 }
 
-const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-cms-muted/40 p-3";
+const PANEL = "max-h-[50vh] min-h-48 overflow-y-auto rounded-md bg-monti-muted/40 p-3";
 
 /** A text as the rendered post. A text the format cannot read is shown as it is. */
 function TextPreview({ format, text, label }: { format: BrowserFormat; text: string; label: string }) {
@@ -319,7 +319,7 @@ function TextPreview({ format, text, label }: { format: BrowserFormat; text: str
 	return doc ? (
 		<DocPreview doc={doc} label={label} />
 	) : (
-		<pre className="whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs">{text}</pre>
+		<pre className="whitespace-pre-wrap font-mono text-monti-muted-foreground text-xs">{text}</pre>
 	);
 }
 
@@ -332,19 +332,19 @@ function ResultPreview({ job, format, text, done }: { job: Job; format: BrowserF
 	const after = done ? (
 		<TextPreview format={format} text={text} label={t("after")} />
 	) : (
-		<pre className="whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs">{text || t("running")}</pre>
+		<pre className="whitespace-pre-wrap font-mono text-monti-muted-foreground text-xs">{text || t("running")}</pre>
 	);
 	if (job.mode === "insert") return <div className={PANEL}>{after}</div>;
 	return (
 		<div className="grid min-w-0 gap-3 sm:grid-cols-2">
 			<section className="min-w-0 space-y-1.5">
-				<h3 className="font-medium text-cms-muted-foreground text-xs">{t("now")}</h3>
+				<h3 className="font-medium text-monti-muted-foreground text-xs">{t("now")}</h3>
 				<div className={PANEL}>
 					<TextPreview format={format} text={job.source} label={t("now")} />
 				</div>
 			</section>
 			<section className="min-w-0 space-y-1.5">
-				<h3 className="font-medium text-cms-muted-foreground text-xs">{t("after")}</h3>
+				<h3 className="font-medium text-monti-muted-foreground text-xs">{t("after")}</h3>
 				<div className={PANEL}>{after}</div>
 			</section>
 		</div>
@@ -465,7 +465,7 @@ export const useAiWriteExtension: EditorExtension = ({ getEntry }) => {
 						type="button"
 						variant="ghost"
 						size="sm"
-						className="gap-1.5 text-cms-muted-foreground"
+						className="gap-1.5 text-monti-muted-foreground"
 						onClick={() => {
 							const { from, to } = editor.state.selection;
 							setJob({ mode: "insert", action: firstInsert, editor, from, to });

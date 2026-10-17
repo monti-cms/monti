@@ -30,7 +30,7 @@ describe("drop position indicator", () => {
 		const valid = dragEvent("dragover");
 		editor.view.dom.dispatchEvent(valid);
 		expect(valid.dataTransfer?.dropEffect).toBe("move");
-		expect(document.querySelectorAll("[data-cms-drop-indicator]")).toHaveLength(1);
+		expect(document.querySelectorAll("[data-monti-drop-indicator]")).toHaveLength(1);
 		expect(later).not.toHaveBeenCalled();
 
 		// Inside itself: cannot be dropped, so clear the indicator.
@@ -38,7 +38,7 @@ describe("drop position indicator", () => {
 		const invalid = dragEvent("dragover");
 		editor.view.dom.dispatchEvent(invalid);
 		expect(invalid.dataTransfer?.dropEffect).toBe("none");
-		expect(document.querySelector("[data-cms-drop-indicator]")).toBeNull();
+		expect(document.querySelector("[data-monti-drop-indicator]")).toBeNull();
 		expect(editor.state.doc.textContent).toBe("가나다");
 
 		// Dropping again at a valid position moves it and clears the indicator.
@@ -46,7 +46,7 @@ describe("drop position indicator", () => {
 		editor.view.dom.dispatchEvent(dragEvent("dragover"));
 		editor.view.dom.dispatchEvent(dragEvent("drop"));
 		expect(editor.state.doc.textContent).toBe("나다가");
-		expect(document.querySelector("[data-cms-drop-indicator]")).toBeNull();
+		expect(document.querySelector("[data-monti-drop-indicator]")).toBeNull();
 		editor.destroy();
 		host.remove();
 	});

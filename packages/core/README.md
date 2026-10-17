@@ -762,7 +762,7 @@ codeBlock: {
 			label: "Info", // line effect menu name
 			icon: "star", // menu icon (lucide name, a name registered in the admin UI)
 			class: "bg-primary/10", // class the public page adds to that line (put it where the site's Tailwind reads)
-			editor: { background: "bg-cms-primary/10" }, // editor display (admin colors are `cms-*`, dark theme is `cms-dark:`): background, wavy (wavy underline color), marker({ text, className })
+			editor: { background: "bg-monti-primary/10" }, // editor display (admin colors are `monti-*`, dark theme is `monti-dark:`): background, wavy (wavy underline color), marker({ text, className })
 		},
 	],
 },
@@ -855,7 +855,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
   of every formula), then a synchronous, pure render turns nodes into elements. The result is a plain React tree for server components and `renderToStaticMarkup` tests.
 - **Never throws on content.** An unknown node, mark or block, a block without a component and a node with malformed attributes go through the `fallback` component and are
   listed in `unknown` (and passed to `onUnknown`). An unknown container shows its content, an unknown leaf nothing; in development the default fallback leaves a hidden
-  `<span data-cms-unknown>`. `strict: true` throws instead (tests, the preview page). A value that is not a stored document renders an empty body and is logged.
+  `<span data-monti-unknown>`. `strict: true` throws instead (tests, the preview page). A value that is not a stored document renders an empty body and is logged.
 - **Components** are layered: core defaults, then the block extensions' components (the default export of a plugin's `render` module, `defineRender({ blocks, marks, codeTags })` from `@monti-cms/core/render`), then the site's `components`. One props type per node
   (`ParagraphProps`, `HeadingProps` with its `id`, `ListProps`, `CodeBlockProps`, `ImageProps` with the resolved `src`, `FileProps`, `TableProps`/`TableRowProps`/`TableCellProps`, `MathProps`,
   `FootnoteRefProps`/`FootnotesProps`, `HardBreakProps`), one per core mark (`link`, `bold`, `italic`, ...), plus `codeTags` for the elements inside code blocks (`fold`, `collapse`, `Tooltip`).
@@ -865,7 +865,7 @@ const { content, toc, unknown } = await renderDocument(doc, { site: cms.site, lo
   (`defineBlock` keeps the attributes as literals, so `variant` is `"note" | "tip" | …`). A boolean attribute is always a boolean, a value with a default or a required string is always there,
   and a choice that is not one of the options is replaced by the default. A code fence block (`mermaid`, `chart`) gets the code as `source`.
 - **One renderer.** Heading anchors follow `github-slugger`, footnotes number by first reference, the same Shiki pipeline draws code (line effects, text effects, line labels),
-  and block formulas are KaTeX `htmlAndMathml`. A table is drawn by the table component (a scroll wrapper and `cms-table-*` classes), block KaTeX output sits in `<div class="cms-math">`, and an image goes through `refs`.
+  and block formulas are KaTeX `htmlAndMathml`. A table is drawn by the table component (a scroll wrapper and `monti-table-*` classes), block KaTeX output sits in `<div class="monti-math">`, and an image goes through `refs`.
 
 ## Plugins
 

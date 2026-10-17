@@ -85,7 +85,7 @@ export interface CodePreview {
 }
 
 /** Elements inside a code line that are not code text (in-code tooltip contents and numbers, the back-link button). */
-const NON_CODE = '[role="tooltip"], .cms-block-tooltip-note, [data-code-ref-back]';
+const NON_CODE = '[role="tooltip"], .monti-block-tooltip-note, [data-code-ref-back]';
 
 /** Text of one code line without the elements that are not code (they are added to the line by tooltips and back links). */
 function lineText(line: HTMLElement): string {
@@ -101,9 +101,13 @@ function dedent(lines: readonly string[]): string[] {
 	return lines.map((line) => line.slice(Math.min(shared, line.length)));
 }
 
-/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.cms-code-title`). */
+/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.monti-code-title`). */
 export function previewLines(lines: readonly HTMLElement[], max: number): CodePreview {
-	const title = lines[0]?.closest(".cms-code")?.querySelector(".cms-code-title")?.getAttribute("data-title")?.trim();
+	const title = lines[0]
+		?.closest(".monti-code")
+		?.querySelector(".monti-code-title")
+		?.getAttribute("data-title")
+		?.trim();
 	return {
 		...(title ? { title } : {}),
 		lines: dedent(lines.slice(0, max).map(lineText)),
@@ -120,7 +124,7 @@ export function addBackLink(lines: readonly HTMLElement[], onClick: () => void, 
 	if (!first || Array.from(first.children).some((child) => child.hasAttribute("data-code-ref-back"))) return () => {};
 	const button = first.ownerDocument.createElement("button");
 	button.type = "button";
-	button.className = "cms-block-code-ref-back";
+	button.className = "monti-block-code-ref-back";
 	button.setAttribute("data-code-ref-back", "");
 	button.setAttribute("aria-label", label);
 	button.title = label;

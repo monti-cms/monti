@@ -66,7 +66,7 @@ export function ApiKeyField({
 					className={cn(
 						"flex items-start gap-2.5 rounded-md px-3 py-2.5",
 						keys.length === 0 ? "opacity-60" : "cursor-pointer",
-						saved && "bg-cms-accent/50 ring-1 ring-cms-border",
+						saved && "bg-monti-accent/50 ring-1 ring-monti-border",
 					)}
 				>
 					<input
@@ -80,7 +80,7 @@ export function ApiKeyField({
 					<span className="flex min-w-0 flex-1 flex-col gap-1.5">
 						<span className={cn("text-sm", saved && "font-medium")}>{t("field.useSaved")}</span>
 						{keys.length === 0 ? (
-							<span className="text-cms-muted-foreground text-xs">
+							<span className="text-monti-muted-foreground text-xs">
 								{query.error ? t("field.loadFailed") : t("field.useSavedNone")}
 							</span>
 						) : saved ? (
@@ -97,7 +97,7 @@ export function ApiKeyField({
 										{keys.map((key) => (
 											<SelectItem key={key.id} value={key.id}>
 												<span>{key.name}</span>
-												<span className="ml-2 font-mono text-cms-muted-foreground text-xs">
+												<span className="ml-2 font-mono text-monti-muted-foreground text-xs">
 													{key.readable ? mask(key) : t("field.unreadable")}
 												</span>
 											</SelectItem>
@@ -105,7 +105,7 @@ export function ApiKeyField({
 									</SelectContent>
 								</Select>
 								{chosen && chosen.uses.length > 0 && (
-									<span className="text-cms-muted-foreground text-xs">
+									<span className="text-monti-muted-foreground text-xs">
 										{t("field.savedUsedBy", { uses: chosen.uses.map((use) => use.label).join(", ") })}
 									</span>
 								)}
@@ -117,7 +117,7 @@ export function ApiKeyField({
 					className={cn(
 						"flex items-start gap-2.5 rounded-md px-3 py-2.5",
 						canSave ? "cursor-pointer" : "opacity-60",
-						value.use === "new" && "bg-cms-accent/50 ring-1 ring-cms-border",
+						value.use === "new" && "bg-monti-accent/50 ring-1 ring-monti-border",
 					)}
 				>
 					<input
@@ -140,12 +140,12 @@ export function ApiKeyField({
 									value={value.value}
 									onChange={(event) => onChange({ use: "new", value: event.target.value })}
 								/>
-								<span className="text-cms-muted-foreground text-xs">
+								<span className="text-monti-muted-foreground text-xs">
 									{t("field.newHelp", { name: freeName(baseName, keys) })}
 								</span>
 							</>
 						)}
-						{!canSave && <span className="text-cms-muted-foreground text-xs">{t("field.secretMissing")}</span>}
+						{!canSave && <span className="text-monti-muted-foreground text-xs">{t("field.secretMissing")}</span>}
 					</span>
 				</label>
 			</div>

@@ -167,8 +167,8 @@ function SortableEntryRow({
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"flex items-center gap-1 rounded-md border bg-cms-background px-1 py-1 text-xs",
-				isDragging && "relative z-10 shadow-cms-pop",
+				"flex items-center gap-1 rounded-md border bg-monti-background px-1 py-1 text-xs",
+				isDragging && "relative z-10 shadow-monti-pop",
 			)}
 		>
 			<IconButton
@@ -176,7 +176,7 @@ function SortableEntryRow({
 				size="icon-xs"
 				label={t("entry.drag", { title })}
 				disabled={disabled}
-				className="cursor-grab touch-none text-cms-muted-foreground active:cursor-grabbing"
+				className="cursor-grab touch-none text-monti-muted-foreground active:cursor-grabbing"
 				{...attributes}
 				{...listeners}
 			>
@@ -186,7 +186,7 @@ function SortableEntryRow({
 				{index + 1}. {title}
 				{/* Unpublished posts are missing from the collection's public list. */}
 				{option && option.status !== "published" && option.status !== "missing" && (
-					<span className="ml-1 text-cms-warning-foreground">{t("entry.unpublished")}</span>
+					<span className="ml-1 text-monti-warning-foreground">{t("entry.unpublished")}</span>
 				)}
 			</span>
 			<IconButton
@@ -271,7 +271,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }: FieldI
 			/>
 			<SearchError failed={search.error} />
 			{ids.length === 0 ? (
-				<p className="text-cms-muted-foreground text-xs">{t("entry.empty", { target })}</p>
+				<p className="text-monti-muted-foreground text-xs">{t("entry.empty", { target })}</p>
 			) : (
 				<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
 					<SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
@@ -487,7 +487,7 @@ export function BacklinkInput({
 	};
 
 	if (!targetId) {
-		return <p className="text-cms-muted-foreground text-xs">{t("backlink.saveDraft", { label: field.label })}</p>;
+		return <p className="text-monti-muted-foreground text-xs">{t("backlink.saveDraft", { label: field.label })}</p>;
 	}
 
 	const shown = optimistic ?? serverIds;

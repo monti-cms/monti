@@ -142,7 +142,7 @@ export function FieldSheet({
 									onChange={(value) => setBoth("description", orUndefined(value))}
 								/>
 								<Labeled label={t("sheet.name")} description={t("sheet.nameHint")}>
-									<div className="flex h-9 items-center rounded-md bg-cms-muted px-3 text-sm">
+									<div className="flex h-9 items-center rounded-md bg-monti-muted px-3 text-sm">
 										<code>{name}</code>
 									</div>
 								</Labeled>
@@ -226,7 +226,7 @@ export function FieldSheet({
 						size="sm"
 						disabled={disabled || blocked !== null}
 						title={blocked ? t(`field.removeBlocked.${blocked}`) : undefined}
-						className="-ml-2.5 text-cms-destructive hover:text-cms-destructive"
+						className="-ml-2.5 text-monti-destructive hover:text-monti-destructive"
 						onClick={remove}
 					>
 						{t("sheet.delete")}

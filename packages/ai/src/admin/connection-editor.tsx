@@ -132,7 +132,7 @@ export function ConnectionManager({
 						skeletonRows={2}
 						header={
 							settings?.fake && (
-								<p className="border-b px-3 py-2 text-cms-muted-foreground text-xs">{t("badge.fake")}</p>
+								<p className="border-b px-3 py-2 text-monti-muted-foreground text-xs">{t("badge.fake")}</p>
 							)
 						}
 						empty={settings?.providers.length === 0 ? <EmptyState compact title={t("list.empty")} /> : null}
@@ -298,7 +298,7 @@ function ProviderEditor({
 				<h2 className="truncate font-medium text-base">
 					{(provider ? provider.name : draft.name.trim()) || t("new.title")}
 				</h2>
-				<p className="truncate text-cms-muted-foreground text-xs">
+				<p className="truncate text-monti-muted-foreground text-xs">
 					{providerKindLabel(draft.kind)} · {provider?.defaultModel || draft.defaultModel || t("model.none")}
 				</p>
 			</div>
@@ -378,7 +378,7 @@ function ProviderEditor({
 			</EditorFooter>
 			{check &&
 				(check.ok ? (
-					<p className="text-cms-muted-foreground text-xs">
+					<p className="text-monti-muted-foreground text-xs">
 						{t("check.ok", { model: check.model, seconds: (check.ms / 1000).toFixed(1) })}
 					</p>
 				) : (

@@ -47,8 +47,8 @@ describe("renderMdx", () => {
 	});
 
 	it("<TextAlign> turns only validated alignments into classes", async () => {
-		expect(await html('<TextAlign align="center">\n\n가운데\n\n</TextAlign>')).toContain('class="cms-align-center"');
-		expect(await html('<TextAlign align="justify">\n\n무시\n\n</TextAlign>')).not.toContain("cms-align-justify");
+		expect(await html('<TextAlign align="center">\n\n가운데\n\n</TextAlign>')).toContain('class="monti-align-center"');
+		expect(await html('<TextAlign align="justify">\n\n무시\n\n</TextAlign>')).not.toContain("monti-align-justify");
 	});
 
 	it("<Image> renders the address, alt text, caption and width, and if unresolved only an empty slot and the caption remain", async () => {
@@ -78,7 +78,7 @@ describe("renderMdx", () => {
 		);
 		expect(markup).toContain('src="https://cdn.example/m1.png"');
 		expect(markup).toContain('href="/en/a"');
-		expect(markup).toContain('class="cms-link-external"');
+		expect(markup).toContain('class="monti-link-external"');
 		expect(markup).not.toContain("javascript:");
 	});
 

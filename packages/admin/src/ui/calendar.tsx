@@ -29,7 +29,7 @@ function Calendar({
 		<DayPicker
 			showOutsideDays={showOutsideDays}
 			className={cn(
-				"group/calendar bg-cms-background in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-3 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(8)]",
+				"group/calendar bg-monti-background in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent p-3 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(8)]",
 				String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
 				String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
 				className,
@@ -64,23 +64,23 @@ function Calendar({
 					defaultClassNames.dropdowns,
 				),
 				dropdown_root: cn("relative rounded-(--cell-radius)", defaultClassNames.dropdown_root),
-				dropdown: cn("absolute inset-0 bg-cms-popover opacity-0", defaultClassNames.dropdown),
+				dropdown: cn("absolute inset-0 bg-monti-popover opacity-0", defaultClassNames.dropdown),
 				caption_label: cn(
 					"font-medium select-none",
 					captionLayout === "label"
 						? "text-sm"
-						: "flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-cms-muted-foreground",
+						: "flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-monti-muted-foreground",
 					defaultClassNames.caption_label,
 				),
 				month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
 				weekdays: cn("flex", defaultClassNames.weekdays),
 				weekday: cn(
-					"flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-cms-muted-foreground select-none",
+					"flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-monti-muted-foreground select-none",
 					defaultClassNames.weekday,
 				),
 				week: cn("mt-2 flex w-full", defaultClassNames.week),
 				week_number_header: cn("w-(--cell-size) select-none", defaultClassNames.week_number_header),
-				week_number: cn("text-[0.8rem] text-cms-muted-foreground select-none", defaultClassNames.week_number),
+				week_number: cn("text-[0.8rem] text-monti-muted-foreground select-none", defaultClassNames.week_number),
 				day: cn(
 					"group/day relative aspect-square h-full w-full rounded-(--cell-radius) p-0 text-center select-none [&:last-child[data-selected=true]_button]:rounded-r-(--cell-radius)",
 					props.showWeekNumber
@@ -89,20 +89,20 @@ function Calendar({
 					defaultClassNames.day,
 				),
 				range_start: cn(
-					"relative isolate z-0 rounded-l-(--cell-radius) bg-cms-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-cms-muted",
+					"relative isolate z-0 rounded-l-(--cell-radius) bg-monti-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-monti-muted",
 					defaultClassNames.range_start,
 				),
 				range_middle: cn("rounded-none", defaultClassNames.range_middle),
 				range_end: cn(
-					"relative isolate z-0 rounded-r-(--cell-radius) bg-cms-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-cms-muted",
+					"relative isolate z-0 rounded-r-(--cell-radius) bg-monti-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-monti-muted",
 					defaultClassNames.range_end,
 				),
 				today: cn(
-					"rounded-(--cell-radius) bg-cms-muted text-cms-foreground data-[selected=true]:rounded-none",
+					"rounded-(--cell-radius) bg-monti-muted text-monti-foreground data-[selected=true]:rounded-none",
 					defaultClassNames.today,
 				),
-				outside: cn("text-cms-muted-foreground aria-selected:text-cms-muted-foreground", defaultClassNames.outside),
-				disabled: cn("text-cms-muted-foreground opacity-50", defaultClassNames.disabled),
+				outside: cn("text-monti-muted-foreground aria-selected:text-monti-muted-foreground", defaultClassNames.outside),
+				disabled: cn("text-monti-muted-foreground opacity-50", defaultClassNames.disabled),
 				hidden: cn("invisible", defaultClassNames.hidden),
 				...classNames,
 			}}
@@ -162,7 +162,7 @@ function CalendarDayButton({
 			data-range-end={modifiers.range_end}
 			data-range-middle={modifiers.range_middle}
 			className={cn(
-				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 font-normal leading-none cms-dark:hover:text-cms-foreground data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-cms-primary data-[range-middle=true]:bg-cms-muted data-[range-start=true]:bg-cms-primary data-[selected-single=true]:bg-cms-primary data-[range-end=true]:text-cms-primary-foreground data-[range-middle=true]:text-cms-foreground data-[range-start=true]:text-cms-primary-foreground data-[selected-single=true]:text-cms-primary-foreground group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-cms-ring group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-cms-ring/50 [&>span]:text-xs [&>span]:opacity-70",
+				"relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 font-normal leading-none monti-dark:hover:text-monti-foreground data-[range-end=true]:rounded-(--cell-radius) data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-end=true]:bg-monti-primary data-[range-middle=true]:bg-monti-muted data-[range-start=true]:bg-monti-primary data-[selected-single=true]:bg-monti-primary data-[range-end=true]:text-monti-primary-foreground data-[range-middle=true]:text-monti-foreground data-[range-start=true]:text-monti-primary-foreground data-[selected-single=true]:text-monti-primary-foreground group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-monti-ring group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-monti-ring/50 [&>span]:text-xs [&>span]:opacity-70",
 				defaultClassNames.day,
 				className,
 			)}

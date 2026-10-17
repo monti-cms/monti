@@ -39,7 +39,7 @@ export class PreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBou
 				return this.props.fallback(this.state.error);
 			}
 			return (
-				<div className="rounded-md border border-cms-destructive/40 bg-cms-destructive/10 p-3 font-mono text-cms-destructive text-xs">
+				<div className="rounded-md border border-monti-destructive/40 bg-monti-destructive/10 p-3 font-mono text-monti-destructive text-xs">
 					{this.state.error.message}
 				</div>
 			);
@@ -87,29 +87,33 @@ export function LazyFencePreview({
 	const trimmed = value.trim();
 	if (!load) {
 		return (
-			<pre className={cn("overflow-x-auto whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs", className)}>
+			<pre
+				className={cn("overflow-x-auto whitespace-pre-wrap font-mono text-monti-muted-foreground text-xs", className)}
+			>
 				{trimmed || emptyText}
 			</pre>
 		);
 	}
 	if (loadError) {
 		return (
-			<div className="rounded-md border border-cms-destructive/40 bg-cms-destructive/10 p-3 font-mono text-cms-destructive text-xs">
+			<div className="rounded-md border border-monti-destructive/40 bg-monti-destructive/10 p-3 font-mono text-monti-destructive text-xs">
 				{t("preview.loadFailed", { label, error: loadError })}
 			</div>
 		);
 	}
 	if (!Renderer) {
-		return <div className="py-2 text-center text-cms-muted-foreground text-xs">{t("preview.loading", { label })}</div>;
+		return (
+			<div className="py-2 text-center text-monti-muted-foreground text-xs">{t("preview.loading", { label })}</div>
+		);
 	}
 	if (!trimmed) {
-		return <div className="py-2 text-center text-cms-muted-foreground text-xs italic">{emptyText}</div>;
+		return <div className="py-2 text-center text-monti-muted-foreground text-xs italic">{emptyText}</div>;
 	}
 	return (
 		<PreviewErrorBoundary resetKey={trimmed}>
 			<div
 				className={cn(
-					"w-full min-w-0 overflow-x-auto [&_[data-error=true]]:text-cms-destructive [&_[data-error=true]_span]:text-cms-destructive",
+					"w-full min-w-0 overflow-x-auto [&_[data-error=true]]:text-monti-destructive [&_[data-error=true]_span]:text-monti-destructive",
 					className,
 				)}
 			>
@@ -163,14 +167,14 @@ export function MathPreview({ value, className }: { value: string; className?: s
 
 	if (error) {
 		return (
-			<div className="rounded-md border border-cms-destructive/40 bg-cms-destructive/10 p-3 font-mono text-cms-destructive text-xs">
+			<div className="rounded-md border border-monti-destructive/40 bg-monti-destructive/10 p-3 font-mono text-monti-destructive text-xs">
 				{error}
 			</div>
 		);
 	}
 
 	if (!value.trim()) {
-		return <div className="py-2 text-center text-cms-muted-foreground text-xs italic">{t("math.placeholder")}</div>;
+		return <div className="py-2 text-center text-monti-muted-foreground text-xs italic">{t("math.placeholder")}</div>;
 	}
 
 	return (

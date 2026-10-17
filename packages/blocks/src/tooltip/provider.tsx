@@ -92,8 +92,8 @@ function TooltipDetail(props: EditorMarkDetailProps) {
 	const content = String(mark.attrs.content ?? "");
 	return (
 		<>
-			<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-cms-muted-foreground" />
-			<span className="max-w-48 truncate px-1 text-cms-muted-foreground text-xs" title={content}>
+			<MessageSquareMore aria-hidden className="mx-1 size-4 shrink-0 text-monti-muted-foreground" />
+			<span className="max-w-48 truncate px-1 text-monti-muted-foreground text-xs" title={content}>
 				{content}
 			</span>
 			<BubbleButton

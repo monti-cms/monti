@@ -72,7 +72,7 @@ const mount = async (source: string, expectBlock = true) => {
 	await waitFor(() => expect(editor).not.toBeNull());
 	// Wait until the NodeView (React portal) has rendered.
 	if (expectBlock)
-		await waitFor(() => expect(document.querySelector('[data-cms-container-node="cmsCodeExplorer"]')).not.toBeNull());
+		await waitFor(() => expect(document.querySelector('[data-monti-container-node="cmsCodeExplorer"]')).not.toBeNull());
 	return editor as unknown as Editor;
 };
 
@@ -104,7 +104,7 @@ describe("code explorer editing view", () => {
 		// Every file is an ordinary code block below the list (the same node view as everywhere else).
 		expect(
 			document.querySelectorAll(
-				'[data-cms-container-node="cmsCodeExplorer"] pre, [data-cms-container-node="cmsCodeExplorer"] [data-code-ui]',
+				'[data-monti-container-node="cmsCodeExplorer"] pre, [data-monti-container-node="cmsCodeExplorer"] [data-code-ui]',
 			).length,
 		).toBeGreaterThan(0);
 		expect(editor.state.doc.firstChild?.childCount).toBe(3);

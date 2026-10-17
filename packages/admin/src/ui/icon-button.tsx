@@ -37,8 +37,8 @@ export function IconButton({
 			aria-label={label}
 			aria-pressed={pressed}
 			className={cn(
-				"aria-pressed:bg-cms-accent aria-pressed:text-cms-accent-foreground",
-				destructive && "text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive",
+				"aria-pressed:bg-monti-accent aria-pressed:text-monti-accent-foreground",
+				destructive && "text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive",
 				className,
 			)}
 			{...props}

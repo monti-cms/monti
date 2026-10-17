@@ -91,7 +91,7 @@ export function LanguageTabs({
 							variant="ghost"
 							disabled={createDisabled}
 							aria-label={t("lang.add", { lang: site.localeLabel(target) })}
-							className="h-7 gap-1 border border-dashed px-2 text-cms-muted-foreground text-xs"
+							className="h-7 gap-1 border border-dashed px-2 text-monti-muted-foreground text-xs"
 							onClick={() => void create(target)}
 						>
 							<Plus aria-hidden className="size-3" />
@@ -113,7 +113,7 @@ export function LanguageTabs({
 							})}
 							className={cn(
 								"h-7 gap-1.5 px-2 text-xs",
-								current ? "bg-cms-muted text-cms-foreground" : "text-cms-muted-foreground",
+								current ? "bg-monti-muted text-monti-foreground" : "text-monti-muted-foreground",
 							)}
 							onClick={() => {
 								if (!current) router.navigate(site.adminEntryEditHref(member.id));
@@ -124,7 +124,7 @@ export function LanguageTabs({
 								{target.toUpperCase()}
 							</span>
 							{member.isSource && (
-								<span aria-hidden className="font-normal text-cms-muted-foreground">
+								<span aria-hidden className="font-normal text-monti-muted-foreground">
 									{t("source")}
 								</span>
 							)}
@@ -133,7 +133,7 @@ export function LanguageTabs({
 							<DropdownMenu>
 								<IconButton
 									label={t("lang.menu")}
-									className="size-7 text-cms-muted-foreground"
+									className="size-7 text-monti-muted-foreground"
 									trigger={(button) => <DropdownMenuTrigger render={button} />}
 								>
 									<MoreHorizontal aria-hidden className="size-3.5" />

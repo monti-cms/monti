@@ -85,7 +85,7 @@ function FileRest({ file }: { file: Obj }) {
 		<>
 			{rest.map(([title, value]) => (
 				<Section wide key={title} title={title} note={t("file.hint")}>
-					<pre className="max-h-64 overflow-auto rounded-md bg-cms-muted/60 p-3 text-xs">
+					<pre className="max-h-64 overflow-auto rounded-md bg-monti-muted/60 p-3 text-xs">
 						{JSON.stringify(value, null, 2)}
 					</pre>
 				</Section>
@@ -96,7 +96,7 @@ function FileRest({ file }: { file: Obj }) {
 						{migrations.map((migration) => (
 							<li key={String(migration.id)} className="flex items-center gap-2 py-2">
 								<code className="text-xs">{String(migration.id)}</code>{" "}
-								<span className="text-cms-muted-foreground text-xs">{String(migration.op)}</span>
+								<span className="text-monti-muted-foreground text-xs">{String(migration.op)}</span>
 							</li>
 						))}
 					</ul>
@@ -110,7 +110,7 @@ function FileRest({ file }: { file: Obj }) {
 function FileLine({ state, reason }: { state: SchemaScreenState; reason: keyof typeof READ_ONLY_KEY | null }) {
 	const t = useTranslator(schemaMessages);
 	return (
-		<span className="inline-flex items-center gap-1.5 rounded-full border border-cms-border bg-cms-muted/40 px-2.5 py-0.5 font-mono text-cms-muted-foreground text-xs">
+		<span className="inline-flex items-center gap-1.5 rounded-full border border-monti-border bg-monti-muted/40 px-2.5 py-0.5 font-mono text-monti-muted-foreground text-xs">
 			{state.file ?? t("status.noFile")} · {t("status.version", { version: state.schemaVersion })}
 			{reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`}
 		</span>
@@ -174,7 +174,7 @@ function CollectionNavItem({
 					{...attributes}
 					{...listeners}
 					aria-label={t("collection.drag", { name: label })}
-					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-cms-muted-foreground opacity-0 outline-none hover:text-cms-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cms-ring/50 group-hover/row:opacity-100"
+					className="absolute top-1/2 left-1 z-10 flex size-5 -translate-y-1/2 cursor-grab touch-none items-center justify-center rounded-sm text-monti-muted-foreground opacity-0 outline-none hover:text-monti-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-monti-ring/50 group-hover/row:opacity-100"
 				>
 					<GripVertical aria-hidden className="size-3.5" />
 				</button>
@@ -183,16 +183,16 @@ function CollectionNavItem({
 				type="button"
 				aria-current={active ? "true" : undefined}
 				className={cn(
-					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-cms-muted focus-visible:ring-2 focus-visible:ring-cms-ring/50",
+					"flex h-8 w-full shrink-0 items-center gap-2 rounded-md border border-transparent px-2.5 text-left text-sm outline-none transition-colors hover:bg-monti-muted focus-visible:ring-2 focus-visible:ring-monti-ring/50",
 					writable &&
 						"group-focus-within/row:pr-14 group-focus-within/row:pl-7 group-hover/row:pr-14 group-hover/row:pl-7",
-					active && "border-cms-border bg-cms-card font-medium hover:bg-cms-card",
+					active && "border-monti-border bg-monti-card font-medium hover:bg-monti-card",
 				)}
 				onClick={onSelect}
 			>
 				<span className="flex-1 truncate">{label}</span>
 				{isNew && <Badge variant="outline">{t("collection.new")}</Badge>}
-				<span className="font-normal text-cms-muted-foreground text-xs">
+				<span className="font-normal text-monti-muted-foreground text-xs">
 					{t(collection?.kind === "item" ? "collection.kindItem" : "collection.kindDocument")}
 				</span>
 			</button>
@@ -285,7 +285,7 @@ function SchemaEditor({
 					<Button type="button" variant="ghost" size="sm" onClick={() => void discard()}>
 						{t("actions.discard")}
 					</Button>
-					<span className="hidden text-cms-muted-foreground text-xs sm:inline">
+					<span className="hidden text-monti-muted-foreground text-xs sm:inline">
 						{t("header.pending", { count: pending })}
 					</span>
 				</>
@@ -314,7 +314,7 @@ function SchemaEditor({
 						? createPortal(actions, actionsSlot)
 						: null
 					: actions && (
-							<div className="flex items-center justify-end gap-2.5 border-b bg-cms-background px-4 py-2 lg:px-10">
+							<div className="flex items-center justify-end gap-2.5 border-b bg-monti-background px-4 py-2 lg:px-10">
 								{actions}
 							</div>
 						)}
@@ -373,7 +373,7 @@ function SchemaEditor({
 									<div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
 										<div className="flex shrink-0 flex-col gap-0.5 lg:w-56">
 											<div className="flex items-center justify-between pb-2 pl-2.5">
-												<span className="font-medium text-cms-muted-foreground text-xs">
+												<span className="font-medium text-monti-muted-foreground text-xs">
 													{t("collection.railTitle")} {names.length}
 												</span>
 												{writable && (
@@ -438,7 +438,7 @@ function SchemaEditor({
 													}}
 												/>
 											) : (
-												<p className="text-cms-muted-foreground text-sm">{t("collection.none")}</p>
+												<p className="text-monti-muted-foreground text-sm">{t("collection.none")}</p>
 											)}
 										</div>
 									</div>

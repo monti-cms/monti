@@ -140,7 +140,7 @@ describe("underline decoration and editing", () => {
 		const current = open("이것은 틀린말 입니다\n");
 		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
 		expect(issue && current.state.doc.textBetween(issue.from, issue.to)).toBe("틀린말");
-		const mark = current.view.dom.querySelector(".cms-text-issue");
+		const mark = current.view.dom.querySelector(".monti-text-issue");
 		expect(mark?.textContent).toBe("틀린말");
 		expect(mark?.getAttribute("data-severity")).toBe("error");
 	});
@@ -159,7 +159,7 @@ describe("underline decoration and editing", () => {
 		if (!issue) throw new Error("no issue");
 		current.commands.insertContentAt(issue.from + 1, "ㅋ");
 		expect(textCheckIssues(current.state)).toHaveLength(0);
-		expect(current.view.dom.querySelector(".cms-text-issue")).toBeNull();
+		expect(current.view.dom.querySelector(".monti-text-issue")).toBeNull();
 	});
 
 	it("keeps results when only marks such as bold change", async () => {
@@ -189,7 +189,7 @@ describe("underline decoration and editing", () => {
 		current.registerPlugin(plugin);
 		const [issue] = await checkDoc(current, wordChecker("틀린말", "맞는 말"));
 		if (!issue) throw new Error("no issue");
-		const target = current.view.dom.querySelector(".cms-text-issue");
+		const target = current.view.dom.querySelector(".monti-text-issue");
 		const click = plugin.props.handleClick;
 		click?.call(plugin, current.view, issue.from + 1, { button: 0, target } as unknown as MouseEvent);
 		expect(onIssueClick).toHaveBeenCalledWith(expect.objectContaining({ key: issue.key }), current.view);

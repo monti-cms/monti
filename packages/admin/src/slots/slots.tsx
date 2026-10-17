@@ -39,7 +39,7 @@ export {
 const defaultIcon = <Zap aria-hidden />;
 
 /** Shape of one result candidate. The AI screen's test results use the same shape. */
-export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-sm border bg-cms-background px-2 py-0.5";
+export const SLOT_CHIP = "inline-flex max-w-full items-center gap-1 rounded-sm border bg-monti-background px-2 py-0.5";
 
 /**
  * The button (`trigger`) and result panel (`panel`) of one slot. The button goes next to the label and the result below the input.
@@ -70,7 +70,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 				side="bottom"
 				disabled={disabled}
 				onClick={() => first && start(first.id)}
-				className="text-cms-muted-foreground hover:text-cms-foreground"
+				className="text-monti-muted-foreground hover:text-monti-foreground"
 			>
 				{triggerIcon}
 			</IconButton>
@@ -81,7 +81,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 					size="icon-xs"
 					side="bottom"
 					disabled={disabled}
-					className="text-cms-muted-foreground hover:text-cms-foreground"
+					className="text-monti-muted-foreground hover:text-monti-foreground"
 					trigger={(button) => <DropdownMenuTrigger render={button} />}
 				>
 					{triggerIcon}
@@ -100,8 +100,8 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 	// While generating, it is shown by the button's spinning icon. The result panel opens only when a result or error appears or a request is taken.
 	const panel =
 		state.status === "idle" || (state.status === "running" && !state.action.askInstruction) ? null : (
-			<div className="flex flex-col gap-1.5 rounded-md border bg-cms-muted/30 p-2 text-xs" aria-live="polite">
-				<div className="flex items-center gap-1 text-cms-muted-foreground">
+			<div className="flex flex-col gap-1.5 rounded-md border bg-monti-muted/30 p-2 text-xs" aria-live="polite">
+				<div className="flex items-center gap-1 text-monti-muted-foreground">
 					<span className="inline-flex shrink-0 items-center [&_svg]:size-3">{state.action.icon ?? defaultIcon}</span>
 					<span className="truncate">{state.action.label}</span>
 					<span className="ml-auto flex items-center">
@@ -140,7 +140,7 @@ export function useSlot(request: SlotRequest): { trigger: ReactNode; panel: Reac
 									if (state.status !== "running") void run(state.action.id);
 								}
 							}}
-							className="min-h-14 resize-y bg-cms-background text-xs md:text-xs"
+							className="min-h-14 resize-y bg-monti-background text-xs md:text-xs"
 						/>
 						<Button
 							type="submit"
@@ -172,7 +172,7 @@ function SlotResult({
 	const t = useTranslator(slotsMessages);
 	const { result, action } = state;
 	if (result.kind === "candidates") {
-		if (result.items.length === 0) return <p className="text-cms-muted-foreground">{t("noResults")}</p>;
+		if (result.items.length === 0) return <p className="text-monti-muted-foreground">{t("noResults")}</p>;
 		return (
 			<ul className="flex flex-wrap gap-1">
 				{result.items.map((item) => (
@@ -181,10 +181,10 @@ function SlotResult({
 							type="button"
 							onClick={() => onApply(item.value)}
 							title={item.label}
-							className={cn(SLOT_CHIP, "text-left hover:bg-cms-accent")}
+							className={cn(SLOT_CHIP, "text-left hover:bg-monti-accent")}
 						>
 							<span className="truncate">{item.label}</span>
-							{item.detail && <span className="shrink-0 text-cms-muted-foreground">{item.detail}</span>}
+							{item.detail && <span className="shrink-0 text-monti-muted-foreground">{item.detail}</span>}
 						</button>
 					</li>
 				))}
@@ -193,7 +193,7 @@ function SlotResult({
 	}
 	return (
 		<div className="flex flex-col gap-1.5">
-			<p className="whitespace-pre-wrap rounded border bg-cms-background p-2">{result.text}</p>
+			<p className="whitespace-pre-wrap rounded border bg-monti-background p-2">{result.text}</p>
 			{result.kind === "text" && action.apply !== "none" && (
 				<Button type="button" size="xs" variant="outline" className="self-start" onClick={() => onApply(result.text)}>
 					{action.apply === "append" ? t("insert") : t("replace")}

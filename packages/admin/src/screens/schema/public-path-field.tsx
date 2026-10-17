@@ -53,9 +53,9 @@ export function PublicPathField({
 				onChange={(on) => onChange(on ? suggested || "/:slug" : "")}
 			/>
 			{hasPage && (
-				<div className="ml-2 flex flex-col gap-1.5 border-cms-border/70 border-l-2 pt-0.5 pl-4">
+				<div className="ml-2 flex flex-col gap-1.5 border-monti-border/70 border-l-2 pt-0.5 pl-4">
 					<div className="flex items-center gap-1 font-mono text-sm">
-						<span className="text-cms-muted-foreground" aria-hidden="true">
+						<span className="text-monti-muted-foreground" aria-hidden="true">
 							/
 						</span>
 						<Input
@@ -71,7 +71,7 @@ export function PublicPathField({
 								onChange(pathOfSegment(event.target.value));
 							}}
 						/>
-						<span className="text-cms-muted-foreground" aria-hidden="true">
+						<span className="text-monti-muted-foreground" aria-hidden="true">
 							{segment === "" ? ":slug" : "/:slug"}
 						</span>
 					</div>

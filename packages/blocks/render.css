@@ -1,7 +1,7 @@
 /*
  * @monti-cms/blocks/render.css: styles of the public page for the block components (`@monti-cms/blocks/<block>/render`).
  * Import it in the site's CSS. It needs no Tailwind, and the admin screen does not use it (the admin's block styles are in `@monti-cms/blocks/styles.css`).
- * The `cms-block-*` section styles the default public components. Sites that override the components do not need that part.
+ * The `monti-block-*` section styles the default public components. Sites that override the components do not need that part.
  * The dark theme is `.dark` or `[data-theme="dark"]`.
  *
  * Callout accent colors use the app's `--muted-foreground`, `--warning` and `--destructive`, falling back to default colors.
@@ -10,11 +10,11 @@
 
 /* Defaults: accent colors per callout variant and chart series colors (`chart-1` to `chart-5`). */
 :where(:root) {
-	--cms-callout-note: var(--cms-muted-foreground, var(--muted-foreground));
-	--cms-callout-tip: oklch(0.6 0.15 155);
-	--cms-callout-info: oklch(0.6 0.14 240);
-	--cms-callout-warning: var(--cms-warning, var(--warning, oklch(0.7 0.16 70)));
-	--cms-callout-danger: var(--cms-destructive, var(--destructive, oklch(0.58 0.22 27)));
+	--monti-callout-note: var(--monti-muted-foreground, var(--muted-foreground));
+	--monti-callout-tip: oklch(0.6 0.15 155);
+	--monti-callout-info: oklch(0.6 0.14 240);
+	--monti-callout-warning: var(--monti-warning, var(--warning, oklch(0.7 0.16 70)));
+	--monti-callout-danger: var(--monti-destructive, var(--destructive, oklch(0.58 0.22 27)));
 	--chart-1: oklch(0.65 0.17 265);
 	--chart-2: oklch(0.7 0.14 160);
 	--chart-3: oklch(0.75 0.15 70);
@@ -40,100 +40,100 @@
 }
 
 /* Text and background colors (`:color`, the text color extension). Values come as a light/dark theme pair, and the light value is used when there is no dark value. */
-.cms-color[data-fg] {
-	color: var(--cms-fg);
+.monti-color[data-fg] {
+	color: var(--monti-fg);
 }
-.cms-color[data-bg] {
-	background-color: var(--cms-bg);
+.monti-color[data-bg] {
+	background-color: var(--monti-bg);
 	border-radius: 0.25em;
 	padding: 0.05em 0.2em;
 	box-decoration-break: clone;
 	-webkit-box-decoration-break: clone;
 }
-:where(.dark, [data-theme="dark"]) .cms-color[data-fg] {
-	color: var(--cms-fg-dark, var(--cms-fg));
+:where(.dark, [data-theme="dark"]) .monti-color[data-fg] {
+	color: var(--monti-fg-dark, var(--monti-fg));
 }
-:where(.dark, [data-theme="dark"]) .cms-color[data-bg] {
-	background-color: var(--cms-bg-dark, var(--cms-bg));
+:where(.dark, [data-theme="dark"]) .monti-color[data-bg] {
+	background-color: var(--monti-bg-dark, var(--monti-bg));
 }
 @media (prefers-color-scheme: dark) {
-	.cms-color[data-fg]:not(:where(.light, [data-theme="light"]) *) {
-		color: var(--cms-fg-dark, var(--cms-fg));
+	.monti-color[data-fg]:not(:where(.light, [data-theme="light"]) *) {
+		color: var(--monti-fg-dark, var(--monti-fg));
 	}
-	.cms-color[data-bg]:not(:where(.light, [data-theme="light"]) *) {
-		background-color: var(--cms-bg-dark, var(--cms-bg));
+	.monti-color[data-bg]:not(:where(.light, [data-theme="light"]) *) {
+		background-color: var(--monti-bg-dark, var(--monti-bg));
 	}
 }
 
 /* ------------------------------------------------------------------------------------------------
- * Default public components (`cms-block-*`)
+ * Default public components (`monti-block-*`)
  * ---------------------------------------------------------------------------------------------- */
 
 :where(:root) {
-	--cms-block-border: color-mix(in srgb, currentColor 18%, transparent);
-	--cms-block-muted: color-mix(in srgb, currentColor 6%, transparent);
-	--cms-block-accent: oklch(0.6 0.14 250);
-	--cms-block-tooltip-bg: oklch(0.21 0.03 265);
-	--cms-block-tooltip-fg: oklch(0.98 0.005 265);
+	--monti-block-border: color-mix(in srgb, currentColor 18%, transparent);
+	--monti-block-muted: color-mix(in srgb, currentColor 6%, transparent);
+	--monti-block-accent: oklch(0.6 0.14 250);
+	--monti-block-tooltip-bg: oklch(0.21 0.03 265);
+	--monti-block-tooltip-fg: oklch(0.98 0.005 265);
 }
 :where(.dark, [data-theme="dark"]) {
-	--cms-block-tooltip-bg: oklch(0.96 0.005 265);
-	--cms-block-tooltip-fg: oklch(0.21 0.03 265);
-	--cms-block-accent: oklch(0.75 0.12 250);
+	--monti-block-tooltip-bg: oklch(0.96 0.005 265);
+	--monti-block-tooltip-fg: oklch(0.21 0.03 265);
+	--monti-block-accent: oklch(0.75 0.12 250);
 }
 @media (prefers-color-scheme: dark) {
 	:where(:root:not(.light, [data-theme="light"])) {
-		--cms-block-tooltip-bg: oklch(0.96 0.005 265);
-		--cms-block-tooltip-fg: oklch(0.21 0.03 265);
-		--cms-block-accent: oklch(0.75 0.12 250);
+		--monti-block-tooltip-bg: oklch(0.96 0.005 265);
+		--monti-block-tooltip-fg: oklch(0.21 0.03 265);
+		--monti-block-accent: oklch(0.75 0.12 250);
 	}
 }
 
 /* Callout */
-.cms-block-callout {
-	--cms-block-callout-accent: var(--cms-callout-note, oklch(0.55 0.02 265));
+.monti-block-callout {
+	--monti-block-callout-accent: var(--monti-callout-note, oklch(0.55 0.02 265));
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
-	border: 1px solid color-mix(in oklab, var(--cms-block-callout-accent) 40%, transparent);
+	border: 1px solid color-mix(in oklab, var(--monti-block-callout-accent) 40%, transparent);
 	border-left-width: 4px;
 	border-radius: 0.5rem;
-	background-color: color-mix(in oklab, var(--cms-block-callout-accent) 10%, transparent);
+	background-color: color-mix(in oklab, var(--monti-block-callout-accent) 10%, transparent);
 	font-size: 0.875rem;
 }
-.cms-block-callout[data-variant="tip"] {
-	--cms-block-callout-accent: var(--cms-callout-tip, oklch(0.6 0.15 155));
+.monti-block-callout[data-variant="tip"] {
+	--monti-block-callout-accent: var(--monti-callout-tip, oklch(0.6 0.15 155));
 }
-.cms-block-callout[data-variant="info"] {
-	--cms-block-callout-accent: var(--cms-callout-info, oklch(0.6 0.14 240));
+.monti-block-callout[data-variant="info"] {
+	--monti-block-callout-accent: var(--monti-callout-info, oklch(0.6 0.14 240));
 }
-.cms-block-callout[data-variant="warning"] {
-	--cms-block-callout-accent: var(--cms-callout-warning, oklch(0.7 0.16 70));
+.monti-block-callout[data-variant="warning"] {
+	--monti-block-callout-accent: var(--monti-callout-warning, oklch(0.7 0.16 70));
 }
-.cms-block-callout[data-variant="danger"] {
-	--cms-block-callout-accent: var(--cms-callout-danger, oklch(0.58 0.22 27));
+.monti-block-callout[data-variant="danger"] {
+	--monti-block-callout-accent: var(--monti-callout-danger, oklch(0.58 0.22 27));
 }
-.cms-block-callout-title {
+.monti-block-callout-title {
 	font-weight: 600;
 	letter-spacing: -0.01em;
-	color: var(--cms-block-callout-accent);
+	color: var(--monti-block-callout-accent);
 }
-.cms-block-callout-body {
+.monti-block-callout-body {
 	margin-top: 0.5rem;
 }
-.cms-block-callout-body > :first-child {
+.monti-block-callout-body > :first-child {
 	margin-top: 0;
 }
-.cms-block-callout-body > :last-child {
+.monti-block-callout-body > :last-child {
 	margin-bottom: 0;
 }
 
 /* Collapsible */
-.cms-block-collapsible {
+.monti-block-collapsible {
 	margin: 1.5rem 0;
-	border: 1px solid var(--cms-block-border);
+	border: 1px solid var(--monti-block-border);
 	border-radius: 0.375rem;
 }
-.cms-block-collapsible-summary {
+.monti-block-collapsible-summary {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -144,10 +144,10 @@
 	cursor: pointer;
 	list-style: none;
 }
-.cms-block-collapsible-summary::-webkit-details-marker {
+.monti-block-collapsible-summary::-webkit-details-marker {
 	display: none;
 }
-.cms-block-collapsible-summary::before {
+.monti-block-collapsible-summary::before {
 	content: "";
 	flex-shrink: 0;
 	width: 0.45em;
@@ -158,45 +158,45 @@
 	transform: rotate(45deg);
 	transition: transform 150ms ease;
 }
-.cms-block-collapsible[open] > .cms-block-collapsible-summary {
-	background-color: var(--cms-block-muted);
+.monti-block-collapsible[open] > .monti-block-collapsible-summary {
+	background-color: var(--monti-block-muted);
 }
-.cms-block-collapsible[open] > .cms-block-collapsible-summary::before {
+.monti-block-collapsible[open] > .monti-block-collapsible-summary::before {
 	transform: rotate(135deg);
 }
-.cms-block-collapsible-summary:hover {
-	background-color: var(--cms-block-muted);
+.monti-block-collapsible-summary:hover {
+	background-color: var(--monti-block-muted);
 }
-.cms-block-collapsible-summary:focus-visible {
-	outline: 2px solid var(--cms-block-accent);
+.monti-block-collapsible-summary:focus-visible {
+	outline: 2px solid var(--monti-block-accent);
 	outline-offset: -2px;
 }
-.cms-block-collapsible-body {
+.monti-block-collapsible-body {
 	padding: 0.5rem 0.75rem 0.75rem;
 }
-.cms-block-collapsible-body > :first-child {
+.monti-block-collapsible-body > :first-child {
 	margin-top: 0;
 }
-.cms-block-collapsible-body > :last-child {
+.monti-block-collapsible-body > :last-child {
 	margin-bottom: 0;
 }
 @media (prefers-reduced-motion: reduce) {
-	.cms-block-collapsible-summary::before {
+	.monti-block-collapsible-summary::before {
 		transition: none;
 	}
 }
 
 /* Tabs */
-.cms-block-tabs {
+.monti-block-tabs {
 	margin: 1.5rem 0;
 }
-.cms-block-tabs-list {
+.monti-block-tabs-list {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.25rem;
-	border-bottom: 1px solid var(--cms-block-border);
+	border-bottom: 1px solid var(--monti-block-border);
 }
-.cms-block-tabs-tab {
+.monti-block-tabs-tab {
 	margin-bottom: -1px;
 	padding: 0.5rem 0.875rem;
 	border: 1px solid transparent;
@@ -210,79 +210,79 @@
 	opacity: 0.65;
 	cursor: pointer;
 }
-.cms-block-tabs-tab:hover {
+.monti-block-tabs-tab:hover {
 	opacity: 1;
 }
-.cms-block-tabs-tab[aria-selected="true"] {
-	border-color: var(--cms-block-border);
-	background-color: var(--cms-block-muted);
+.monti-block-tabs-tab[aria-selected="true"] {
+	border-color: var(--monti-block-border);
+	background-color: var(--monti-block-muted);
 	opacity: 1;
 }
-.cms-block-tabs-tab:focus-visible,
-.cms-block-tabs-panel:focus-visible {
-	outline: 2px solid var(--cms-block-accent);
+.monti-block-tabs-tab:focus-visible,
+.monti-block-tabs-panel:focus-visible {
+	outline: 2px solid var(--monti-block-accent);
 	outline-offset: -2px;
 }
-.cms-block-tabs-panel {
+.monti-block-tabs-panel {
 	padding: 0.75rem 1rem;
-	border: 1px solid var(--cms-block-border);
+	border: 1px solid var(--monti-block-border);
 	border-top: 0;
 	border-radius: 0 0 0.5rem 0.5rem;
-	background-color: var(--cms-block-muted);
+	background-color: var(--monti-block-muted);
 }
-.cms-block-tabs-panel[hidden] {
+.monti-block-tabs-panel[hidden] {
 	display: none;
 }
-.cms-block-tabs-panel > :first-child {
+.monti-block-tabs-panel > :first-child {
 	margin-top: 0;
 }
-.cms-block-tabs-panel > :last-child {
+.monti-block-tabs-panel > :last-child {
 	margin-bottom: 0;
 }
 
 /* Code explorer: the file tree on the left and the code of the picked file on the right; when the block is narrow, the tree sits above the code behind a button showing the current path */
-.cms-block-code-explorer {
+.monti-block-code-explorer {
 	container-type: inline-size;
 	margin: 1.5rem 0;
-	border: 1px solid var(--cms-block-border);
+	border: 1px solid var(--monti-block-border);
 	border-radius: 0.5rem;
 	overflow: hidden;
 }
-.cms-block-code-explorer-layout {
+.monti-block-code-explorer-layout {
 	display: grid;
 	grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
 }
-.cms-block-code-explorer[data-tree-only] > .cms-block-code-explorer-layout {
+.monti-block-code-explorer[data-tree-only] > .monti-block-code-explorer-layout {
 	grid-template-columns: minmax(0, 1fr);
 }
-.cms-block-code-explorer-nav {
+.monti-block-code-explorer-nav {
 	min-width: 0;
 	padding: 0.5rem;
-	border-right: 1px solid var(--cms-block-border);
-	background-color: var(--cms-block-muted);
+	border-right: 1px solid var(--monti-block-border);
+	background-color: var(--monti-block-muted);
 	font-size: 0.875rem;
 }
-.cms-block-code-explorer[data-tree-only] .cms-block-code-explorer-nav {
+.monti-block-code-explorer[data-tree-only] .monti-block-code-explorer-nav {
 	border-right: 0;
 }
-.cms-block-code-explorer-toggle {
+.monti-block-code-explorer-toggle {
 	display: none;
 }
-.cms-block-code-explorer-tree,
-.cms-block-code-explorer-group {
+.monti-block-code-explorer-tree,
+.monti-block-code-explorer-group {
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
-.cms-block-code-explorer-group {
+.monti-block-code-explorer-group {
 	padding-left: 0.875rem;
 }
-.cms-block-code-explorer-item {
+.monti-block-code-explorer-item {
 	margin: 0;
 	padding: 0;
 	outline: none;
 }
-.cms-block-code-explorer-label {
+.monti-block-code-explorer-label {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -291,62 +291,62 @@
 	overflow-wrap: anywhere;
 	cursor: pointer;
 }
-.cms-block-code-explorer-label::before {
+.monti-block-code-explorer-label::before {
 	content: "";
 	flex-shrink: 0;
 	width: 0.4em;
 	height: 0.4em;
 }
-.cms-block-code-explorer-item[data-kind="folder"] > .cms-block-code-explorer-label::before {
+.monti-block-code-explorer-item[data-kind="folder"] > .monti-block-code-explorer-label::before {
 	border-top: 2px solid currentColor;
 	border-right: 2px solid currentColor;
 	opacity: 0.6;
 	transform: rotate(45deg);
 	transition: transform 150ms ease;
 }
-.cms-block-code-explorer-item[aria-expanded="true"] > .cms-block-code-explorer-label::before {
+.monti-block-code-explorer-item[aria-expanded="true"] > .monti-block-code-explorer-label::before {
 	transform: rotate(135deg);
 }
-.cms-block-code-explorer-item > .cms-block-code-explorer-label:hover {
-	background-color: var(--cms-block-border);
+.monti-block-code-explorer-item > .monti-block-code-explorer-label:hover {
+	background-color: var(--monti-block-border);
 }
-.cms-block-code-explorer-item[aria-selected="true"] > .cms-block-code-explorer-label {
-	background-color: color-mix(in srgb, var(--cms-block-accent) 20%, transparent);
+.monti-block-code-explorer-item[aria-selected="true"] > .monti-block-code-explorer-label {
+	background-color: color-mix(in srgb, var(--monti-block-accent) 20%, transparent);
 	font-weight: 600;
 }
-.cms-block-code-explorer-item[aria-disabled="true"] > .cms-block-code-explorer-label {
+.monti-block-code-explorer-item[aria-disabled="true"] > .monti-block-code-explorer-label {
 	opacity: 0.55;
 	cursor: default;
 }
-.cms-block-code-explorer-item[aria-disabled="true"] > .cms-block-code-explorer-label:hover {
+.monti-block-code-explorer-item[aria-disabled="true"] > .monti-block-code-explorer-label:hover {
 	background: none;
 }
-.cms-block-code-explorer-item:focus-visible > .cms-block-code-explorer-label,
-.cms-block-code-explorer-toggle:focus-visible {
-	outline: 2px solid var(--cms-block-accent);
+.monti-block-code-explorer-item:focus-visible > .monti-block-code-explorer-label,
+.monti-block-code-explorer-toggle:focus-visible {
+	outline: 2px solid var(--monti-block-accent);
 	outline-offset: -2px;
 }
-.cms-block-code-explorer-code {
+.monti-block-code-explorer-code {
 	min-width: 0;
 }
-.cms-block-code-explorer-panel[hidden] {
+.monti-block-code-explorer-panel[hidden] {
 	display: none;
 }
-.cms-block-code-explorer-panel > .cms-code {
+.monti-block-code-explorer-panel > .monti-code {
 	margin: 0;
 	border: 0;
 	border-radius: 0;
 }
 @container (max-width: 40rem) {
-	.cms-block-code-explorer-layout {
+	.monti-block-code-explorer-layout {
 		grid-template-columns: minmax(0, 1fr);
 	}
-	.cms-block-code-explorer-nav {
+	.monti-block-code-explorer-nav {
 		padding: 0;
 		border-right: 0;
-		border-bottom: 1px solid var(--cms-block-border);
+		border-bottom: 1px solid var(--monti-block-border);
 	}
-	.cms-block-code-explorer-toggle {
+	.monti-block-code-explorer-toggle {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -361,7 +361,7 @@
 		overflow-wrap: anywhere;
 		cursor: pointer;
 	}
-	.cms-block-code-explorer-toggle::before {
+	.monti-block-code-explorer-toggle::before {
 		content: "";
 		flex-shrink: 0;
 		width: 0.45em;
@@ -372,70 +372,70 @@
 		transform: rotate(45deg);
 		transition: transform 150ms ease;
 	}
-	.cms-block-code-explorer[data-nav-open] .cms-block-code-explorer-toggle::before {
+	.monti-block-code-explorer[data-nav-open] .monti-block-code-explorer-toggle::before {
 		transform: rotate(135deg);
 	}
-	.cms-block-code-explorer:not([data-tree-only]) .cms-block-code-explorer-tree {
+	.monti-block-code-explorer:not([data-tree-only]) .monti-block-code-explorer-tree {
 		display: none;
 	}
-	.cms-block-code-explorer[data-nav-open] .cms-block-code-explorer-tree {
+	.monti-block-code-explorer[data-nav-open] .monti-block-code-explorer-tree {
 		display: block;
 		padding: 0 0.5rem 0.5rem;
 	}
 }
 @media (prefers-reduced-motion: reduce) {
-	.cms-block-code-explorer-label::before,
-	.cms-block-code-explorer-toggle::before {
+	.monti-block-code-explorer-label::before,
+	.monti-block-code-explorer-toggle::before {
 		transition: none;
 	}
 }
 
-/* Columns: stacked on narrow screens, side by side with `--cms-columns` (column widths) on wide screens */
-.cms-block-columns {
+/* Columns: stacked on narrow screens, side by side with `--monti-columns` (column widths) on wide screens */
+.monti-block-columns {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 	margin: 1.5rem 0;
 }
-.cms-block-columns > * {
+.monti-block-columns > * {
 	min-width: 0;
 }
 @media (min-width: 48rem) {
-	.cms-block-columns {
+	.monti-block-columns {
 		display: grid;
-		grid-template-columns: var(--cms-columns);
+		grid-template-columns: var(--monti-columns);
 		align-items: start;
 		gap: 1.5rem;
 	}
 }
-.cms-block-column {
+.monti-block-column {
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
 }
-.cms-block-column > * {
+.monti-block-column > * {
 	margin: 0;
 }
-.cms-block-column img {
+.monti-block-column img {
 	max-width: 100%;
 }
 
 /* Tooltip */
-.cms-block-tooltip {
+.monti-block-tooltip {
 	position: relative;
 }
-.cms-block-tooltip-trigger {
+.monti-block-tooltip-trigger {
 	text-decoration: underline dotted;
 	text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
 	text-underline-offset: 0.2em;
 	cursor: help;
 	border-radius: 0.125rem;
 }
-.cms-block-tooltip-trigger:focus-visible {
-	outline: 2px solid var(--cms-block-accent);
+.monti-block-tooltip-trigger:focus-visible {
+	outline: 2px solid var(--monti-block-accent);
 	outline-offset: 2px;
 }
-.cms-block-tooltip-content {
+.monti-block-tooltip-content {
 	position: absolute;
 	bottom: calc(100% + 0.375rem);
 	left: 50%;
@@ -444,8 +444,8 @@
 	max-width: min(20rem, calc(100vw - 2rem));
 	padding: 0.375rem 0.625rem;
 	border-radius: 0.375rem;
-	background-color: var(--cms-block-tooltip-bg);
-	color: var(--cms-block-tooltip-fg);
+	background-color: var(--monti-block-tooltip-bg);
+	color: var(--monti-block-tooltip-fg);
 	font-size: 0.875rem;
 	font-weight: 400;
 	line-height: 1.5;
@@ -457,53 +457,53 @@
 	pointer-events: none;
 	transition: opacity 120ms ease;
 }
-.cms-block-tooltip[data-open] > .cms-block-tooltip-content {
+.monti-block-tooltip[data-open] > .monti-block-tooltip-content {
 	visibility: visible;
 	opacity: 1;
 }
-.cms-block-tooltip-note {
+.monti-block-tooltip-note {
 	display: none;
 	margin-left: 0.125rem;
 	font-size: 0.7em;
 	font-weight: 600;
-	color: var(--cms-block-accent);
+	color: var(--monti-block-accent);
 }
 @media (hover: none), (pointer: coarse) {
-	.cms-block-tooltip-note {
+	.monti-block-tooltip-note {
 		display: inline;
 	}
 }
 @media (prefers-reduced-motion: reduce) {
-	.cms-block-tooltip-content {
+	.monti-block-tooltip-content {
 		transition: none;
 	}
 }
 
 /* Code link: hovering the text highlights the linked code line (the line effect is in `@monti-cms/core/render.css`) */
-.cms-block-code-ref {
+.monti-block-code-ref {
 	cursor: pointer;
 	border-radius: 0.125rem;
 	text-decoration: underline;
-	text-decoration-color: color-mix(in oklab, var(--cms-block-accent) 55%, transparent);
+	text-decoration-color: color-mix(in oklab, var(--monti-block-accent) 55%, transparent);
 	text-underline-offset: 0.25em;
 }
-.cms-block-code-ref:hover {
-	text-decoration-color: var(--cms-block-accent);
+.monti-block-code-ref:hover {
+	text-decoration-color: var(--monti-block-accent);
 }
-.cms-block-code-ref:focus-visible {
-	outline: 2px solid var(--cms-block-accent);
+.monti-block-code-ref:focus-visible {
+	outline: 2px solid var(--monti-block-accent);
 	outline-offset: 2px;
 }
 /* Highlight of the text after a back-link press (code to text) */
-.cms-block-code-ref[data-focused] {
-	background-color: color-mix(in oklab, var(--cms-block-accent) 22%, transparent);
-	text-decoration-color: var(--cms-block-accent);
+.monti-block-code-ref[data-focused] {
+	background-color: color-mix(in oklab, var(--monti-block-accent) 22%, transparent);
+	text-decoration-color: var(--monti-block-accent);
 }
 /* Hover preview of linked code lines that are off screen (not interactive) */
-.cms-block-code-ref-wrap {
+.monti-block-code-ref-wrap {
 	position: relative;
 }
-.cms-block-code-ref-preview {
+.monti-block-code-ref-preview {
 	position: absolute;
 	top: calc(100% + 0.375rem);
 	left: 0;
@@ -514,8 +514,8 @@
 	overflow: hidden;
 	padding: 0.375rem 0.625rem;
 	border-radius: 0.375rem;
-	background-color: var(--cms-block-tooltip-bg);
-	color: var(--cms-block-tooltip-fg);
+	background-color: var(--monti-block-tooltip-bg);
+	color: var(--monti-block-tooltip-fg);
 	font-size: 0.8125rem;
 	font-weight: 400;
 	line-height: 1.5;
@@ -523,14 +523,14 @@
 	text-decoration: none;
 	pointer-events: none;
 }
-.cms-block-code-ref-preview-title {
+.monti-block-code-ref-preview-title {
 	display: block;
 	margin-bottom: 0.25rem;
 	font-family: inherit;
 	font-weight: 600;
 	opacity: 0.75;
 }
-.cms-block-code-ref-preview-line {
+.monti-block-code-ref-preview-line {
 	display: block;
 	overflow: hidden;
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -538,7 +538,7 @@
 	white-space: pre;
 }
 /* Back-link button at the end of the first linked code line (code to text) */
-.cms-block-code-ref-back {
+.monti-block-code-ref-back {
 	margin-left: 0.75rem;
 	padding: 0 0.25rem;
 	border: 0;
@@ -551,17 +551,17 @@
 	opacity: 0.5;
 	user-select: none;
 }
-.cms-block-code-ref-back:hover,
-.cms-block-code-ref-back:focus-visible {
+.monti-block-code-ref-back:hover,
+.monti-block-code-ref-back:focus-visible {
 	opacity: 1;
 }
-.cms-block-code-ref-back:focus-visible {
-	outline: 2px solid var(--cms-block-accent);
+.monti-block-code-ref-back:focus-visible {
+	outline: 2px solid var(--monti-block-accent);
 	outline-offset: 1px;
 }
 
 /* Mermaid */
-.cms-block-mermaid {
+.monti-block-mermaid {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -569,97 +569,97 @@
 	padding: 1rem;
 	overflow-x: auto;
 }
-.cms-block-mermaid-diagram {
+.monti-block-mermaid-diagram {
 	display: flex;
 	justify-content: center;
 	width: 100%;
 }
-.cms-block-mermaid-diagram svg {
+.monti-block-mermaid-diagram svg {
 	height: auto;
 	max-width: 100%;
 }
-.cms-block-mermaid-source,
-.cms-block-chart-source {
+.monti-block-mermaid-source,
+.monti-block-chart-source {
 	width: 100%;
 	margin: 0;
 	padding: 0.75rem 1rem;
 	overflow-x: auto;
-	border: 1px solid var(--cms-block-border);
+	border: 1px solid var(--monti-block-border);
 	border-radius: 0.375rem;
-	background-color: var(--cms-block-muted);
+	background-color: var(--monti-block-muted);
 	font-size: 0.8125rem;
 	line-height: 1.5;
 }
-.cms-block-mermaid-error {
+.monti-block-mermaid-error {
 	margin-top: 0.5rem;
 	font-size: 0.875rem;
-	color: var(--cms-callout-danger, oklch(0.58 0.22 27));
+	color: var(--monti-callout-danger, oklch(0.58 0.22 27));
 }
 
 /* Chart */
-.cms-block-chart {
+.monti-block-chart {
 	margin: 1.5rem 0;
 	width: 100%;
 	min-width: 0;
 }
-.cms-block-chart-frame {
+.monti-block-chart-frame {
 	display: flex;
 	justify-content: center;
 	aspect-ratio: 16 / 9;
 	font-size: 0.75rem;
 }
-.cms-block-chart-frame .recharts-cartesian-axis-tick text {
+.monti-block-chart-frame .recharts-cartesian-axis-tick text {
 	fill: color-mix(in srgb, currentColor 65%, transparent);
 }
-.cms-block-chart-frame .recharts-cartesian-grid line {
+.monti-block-chart-frame .recharts-cartesian-grid line {
 	stroke: color-mix(in srgb, currentColor 14%, transparent);
 }
-.cms-block-chart-frame .recharts-layer,
-.cms-block-chart-frame .recharts-sector,
-.cms-block-chart-frame .recharts-surface {
+.monti-block-chart-frame .recharts-layer,
+.monti-block-chart-frame .recharts-sector,
+.monti-block-chart-frame .recharts-surface {
 	outline: none;
 }
-.cms-block-chart-value {
+.monti-block-chart-value {
 	fill: currentColor;
 	font-size: 11px;
 	font-weight: 500;
 }
-.cms-block-chart-tooltip {
+.monti-block-chart-tooltip {
 	display: grid;
 	gap: 0.375rem;
 	min-width: 8rem;
 	padding: 0.375rem 0.625rem;
-	border: 1px solid var(--cms-block-border);
+	border: 1px solid var(--monti-block-border);
 	border-radius: 0.5rem;
 	background-color: Canvas;
 	color: CanvasText;
 	font-size: 0.75rem;
 	box-shadow: 0 8px 24px color-mix(in srgb, black 18%, transparent);
 }
-.cms-block-chart-tooltip-label {
+.monti-block-chart-tooltip-label {
 	font-weight: 500;
 }
-.cms-block-chart-tooltip-row {
+.monti-block-chart-tooltip-row {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
 }
-.cms-block-chart-tooltip-name {
+.monti-block-chart-tooltip-name {
 	flex: 1;
 	opacity: 0.7;
 }
-.cms-block-chart-tooltip-value {
+.monti-block-chart-tooltip-value {
 	font-family: ui-monospace, monospace;
 	font-weight: 500;
 	font-variant-numeric: tabular-nums;
 }
-.cms-block-chart-swatch {
+.monti-block-chart-swatch {
 	flex-shrink: 0;
 	width: 0.5rem;
 	height: 0.5rem;
 	border-radius: 2px;
 }
-.cms-block-chart-legend {
+.monti-block-chart-legend {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -668,29 +668,29 @@
 	padding-top: 0.75rem;
 	font-size: 0.75rem;
 }
-.cms-block-chart-legend-item {
+.monti-block-chart-legend-item {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.375rem;
 }
-.cms-block-chart-error {
+.monti-block-chart-error {
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
-	border: 1px solid color-mix(in oklab, var(--cms-callout-danger, oklch(0.58 0.22 27)) 40%, transparent);
+	border: 1px solid color-mix(in oklab, var(--monti-callout-danger, oklch(0.58 0.22 27)) 40%, transparent);
 	border-radius: 0.5rem;
-	background-color: color-mix(in oklab, var(--cms-callout-danger, oklch(0.58 0.22 27)) 10%, transparent);
+	background-color: color-mix(in oklab, var(--monti-callout-danger, oklch(0.58 0.22 27)) 10%, transparent);
 	font-size: 0.875rem;
 }
-.cms-block-chart-error ul {
+.monti-block-chart-error ul {
 	margin: 0.5rem 0 0;
 	padding-left: 1.25rem;
 }
-:where(.dark, [data-theme="dark"]) .cms-block-chart-tooltip {
+:where(.dark, [data-theme="dark"]) .monti-block-chart-tooltip {
 	background-color: oklch(0.24 0.02 265);
 	color: oklch(0.96 0.005 265);
 }
 @media (prefers-color-scheme: dark) {
-	.cms-block-chart-tooltip:not(:where(.light, [data-theme="light"]) *) {
+	.monti-block-chart-tooltip:not(:where(.light, [data-theme="light"]) *) {
 		background-color: oklch(0.24 0.02 265);
 		color: oklch(0.96 0.005 265);
 	}

@@ -10,7 +10,7 @@ import { Mark, mergeAttributes } from "@tiptap/core";
  *
  * - A mark name is `cms` + the Pascal-case block name (`tooltip` → `cmsTooltip`, `code-ref` → `cmsCodeRef`).
  * - Attributes are the definition's attributes. In the stored document (CmsNode), the mark name is the block name and the attributes are the same.
- * - In HTML it is drawn as `span[data-cms-mark="block name"]` with `data-mark-<attribute>` for each attribute (paste reads this shape too).
+ * - In HTML it is drawn as `span[data-monti-mark="block name"]` with `data-mark-<attribute>` for each attribute (paste reads this shape too).
  */
 
 export type MarkAttrs = Readonly<Record<string, unknown>>;
@@ -91,7 +91,7 @@ export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {
 			);
 		},
 		parseHTML() {
-			return [{ tag: `span[data-cms-mark="${block.name}"]` }];
+			return [{ tag: `span[data-monti-mark="${block.name}"]` }];
 		},
 		renderHTML({ mark, HTMLAttributes }) {
 			const attrs = mark.attrs as MarkAttrs;
@@ -106,7 +106,7 @@ export function createAddedMark(block: BlockDefinition, spec: EditorMarkSpec = {
 				"span",
 				mergeAttributes(
 					HTMLAttributes,
-					{ "data-cms-mark": block.name, ...data },
+					{ "data-monti-mark": block.name, ...data },
 					// When pointing at a code line label, the editor code block highlights the line the mouse is over (`data-code-ref`).
 					typeof anchorValue === "string" && anchorValue ? { "data-code-ref": anchorValue } : {},
 					spec.render?.(attrs) ?? {},

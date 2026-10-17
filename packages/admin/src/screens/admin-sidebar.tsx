@@ -100,7 +100,7 @@ export function folderKeyHandler(folder: Folder, actions: FolderActions) {
 const TREE_INDENT = 8;
 const TREE_STEP = 16;
 const subRow =
-	"group/row flex h-7 items-center gap-1 rounded-md pr-1 text-[13px] text-cms-sidebar-foreground/80 hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground data-active:bg-cms-sidebar-accent data-active:font-medium data-active:text-cms-sidebar-accent-foreground";
+	"group/row flex h-7 items-center gap-1 rounded-md pr-1 text-[13px] text-monti-sidebar-foreground/80 hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground data-active:bg-monti-sidebar-accent data-active:font-medium data-active:text-monti-sidebar-accent-foreground";
 
 /** The folders of the open collection, drawn under its entry: All, the folders (nested), then Add folder. */
 function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: () => void }) {
@@ -250,7 +250,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 							{...dropProps(folder.id, folder.id)}
 							data-active={isActive || undefined}
 							style={{ paddingLeft: TREE_INDENT + depth * TREE_STEP }}
-							className={cn(subRow, dropTarget === folder.id && "ring-2 ring-cms-sidebar-ring")}
+							className={cn(subRow, dropTarget === folder.id && "ring-2 ring-monti-sidebar-ring")}
 						/>
 					}
 				>
@@ -267,14 +267,14 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									return next;
 								})
 							}
-							className="flex size-4 shrink-0 items-center justify-center rounded-sm text-cms-sidebar-foreground/60 outline-hidden hover:text-cms-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring"
+							className="flex size-4 shrink-0 items-center justify-center rounded-sm text-monti-sidebar-foreground/60 outline-hidden hover:text-monti-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-monti-sidebar-ring"
 						>
 							<ChevronRight aria-hidden className={cn("size-3.5 transition-transform", isExpanded && "rotate-90")} />
 						</button>
 					) : (
 						<span aria-hidden className="size-4 shrink-0" />
 					)}
-					<FolderIcon aria-hidden className="size-3.5 shrink-0 text-cms-sidebar-foreground/60" />
+					<FolderIcon aria-hidden className="size-3.5 shrink-0 text-monti-sidebar-foreground/60" />
 					{isRenaming ? (
 						<input
 							ref={renameInputRef}
@@ -296,7 +296,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 								void commitRename(folder);
 							}}
 							onClick={(e) => e.stopPropagation()}
-							className="h-6 min-w-0 flex-1 rounded bg-cms-background px-1.5 text-[13px] text-cms-foreground outline-hidden ring-1 ring-cms-input focus:ring-2 focus:ring-cms-ring"
+							className="h-6 min-w-0 flex-1 rounded bg-monti-background px-1.5 text-[13px] text-monti-foreground outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
 						/>
 					) : (
 						<button
@@ -312,7 +312,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									void nav.folderActions.requestDelete(folder);
 								}
 							}}
-							className="h-full min-w-0 flex-1 truncate rounded-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-cms-sidebar-ring"
+							className="h-full min-w-0 flex-1 truncate rounded-sm text-left outline-hidden focus-visible:ring-2 focus-visible:ring-monti-sidebar-ring"
 						>
 							{folder.name}
 						</button>
@@ -320,7 +320,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 					<MoreActionsButton
 						actions={actions}
 						label={t("list.folderActions", { name: folder.name })}
-						className="size-5 shrink-0 text-cms-sidebar-foreground/70 opacity-0 focus-visible:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
+						className="size-5 shrink-0 text-monti-sidebar-foreground/70 opacity-0 focus-visible:opacity-100 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
 					/>
 				</ActionContextMenu>
 				{isExpanded && (children.length > 0 || isCreatingChild) && (
@@ -328,7 +328,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 						{isCreatingChild && (
 							<li style={{ paddingLeft: TREE_INDENT + (depth + 1) * TREE_STEP }} className={cn(subRow, "pr-2")}>
 								<span aria-hidden className="size-4 shrink-0" />
-								<FolderPlus aria-hidden className="size-3.5 shrink-0 text-cms-sidebar-foreground/60" />
+								<FolderPlus aria-hidden className="size-3.5 shrink-0 text-monti-sidebar-foreground/60" />
 								<input
 									ref={createInputRef}
 									type="text"
@@ -349,7 +349,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									onBlur={() => {
 										void commitCreate();
 									}}
-									className="h-6 min-w-0 flex-1 rounded bg-cms-background px-1.5 text-[13px] text-cms-foreground outline-hidden ring-1 ring-cms-input focus:ring-2 focus:ring-cms-ring"
+									className="h-6 min-w-0 flex-1 rounded bg-monti-background px-1.5 text-[13px] text-monti-foreground outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
 								/>
 							</li>
 						)}
@@ -440,12 +440,12 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				active ? (
 					<ChevronDown
 						aria-hidden
-						className="size-3! text-cms-sidebar-foreground/60 group-data-[collapsible=icon]:hidden"
+						className="size-3! text-monti-sidebar-foreground/60 group-data-[collapsible=icon]:hidden"
 					/>
 				) : (
 					<ChevronRight
 						aria-hidden
-						className="size-3! text-cms-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
+						className="size-3! text-monti-sidebar-foreground/50 group-data-[collapsible=icon]:hidden"
 					/>
 				)
 			) : null;
@@ -481,11 +481,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				>
 					<span
 						aria-hidden
-						className="flex size-6 shrink-0 items-center justify-center rounded-md bg-cms-sidebar-primary font-semibold text-cms-sidebar-primary-foreground text-xs"
+						className="flex size-6 shrink-0 items-center justify-center rounded-md bg-monti-sidebar-primary font-semibold text-monti-sidebar-primary-foreground text-xs"
 					>
 						{(site.SITE_NAME || "CMS").slice(0, 1)}
 					</span>
-					<span className="truncate font-semibold text-[13px] text-cms-sidebar-accent-foreground">
+					<span className="truncate font-semibold text-[13px] text-monti-sidebar-accent-foreground">
 						{site.SITE_NAME || "CMS"}
 					</span>
 				</Link>
@@ -500,7 +500,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 								aria-label={t("sidebar.viewSite")}
 								className={cn(
 									buttonVariants({ variant: "ghost", size: "icon-sm" }),
-									"size-8 shrink-0 text-cms-sidebar-foreground/70",
+									"size-8 shrink-0 text-monti-sidebar-foreground/70",
 								)}
 							/>
 						}
@@ -512,7 +512,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 				<Tooltip>
 					<TooltipTrigger
 						render={
-							<SidebarTrigger aria-label={toggleLabel} className="size-8 shrink-0 text-cms-sidebar-foreground/70" />
+							<SidebarTrigger aria-label={toggleLabel} className="size-8 shrink-0 text-monti-sidebar-foreground/70" />
 						}
 					/>
 					<TooltipContent side="right">{toggleLabel}</TooltipContent>
@@ -546,7 +546,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 								eventsCount ? (
 									<SidebarMenuBadge
 										aria-label={t("sidebar.eventsBadge", { count: eventsCount })}
-										className="text-cms-destructive"
+										className="text-monti-destructive"
 									>
 										{eventsCount}
 									</SidebarMenuBadge>
@@ -574,11 +574,11 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					</SidebarGroupContent>
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter className="flex-row items-center gap-1 border-cms-sidebar-border border-t px-2 py-2 group-data-[collapsible=icon]:flex-col">
+			<SidebarFooter className="flex-row items-center gap-1 border-monti-sidebar-border border-t px-2 py-2 group-data-[collapsible=icon]:flex-col">
 				<SidebarMenu aria-label={t("sidebar.settings")} className="min-w-0 flex-1">
 					{navLink(site.adminHref("/settings"), "settings", t("sidebar.settings"), <Settings2 />)}
 				</SidebarMenu>
-				<ThemeToggle className="size-8 shrink-0 text-cms-muted-foreground" />
+				<ThemeToggle className="size-8 shrink-0 text-monti-muted-foreground" />
 			</SidebarFooter>
 		</Sidebar>
 	);

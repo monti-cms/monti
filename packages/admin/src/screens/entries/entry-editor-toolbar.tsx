@@ -28,7 +28,7 @@ export function ToolbarAction({
 	onClick?: () => void;
 	disabled?: boolean;
 }) {
-	const className = "size-8 shrink-0 text-cms-muted-foreground";
+	const className = "size-8 shrink-0 text-monti-muted-foreground";
 	const icon = <Icon aria-hidden className="size-4" />;
 	if (!href || disabled) {
 		return (
@@ -85,7 +85,7 @@ export function ToolbarToggle({
 						pressed={pressed}
 						disabled={disabled}
 						onPressedChange={onPressedChange}
-						className="gap-1.5 text-cms-muted-foreground aria-pressed:text-cms-foreground"
+						className="gap-1.5 text-monti-muted-foreground aria-pressed:text-monti-foreground"
 					/>
 				}
 			>
@@ -130,7 +130,7 @@ export function SaveStatusIndicator({ status, backupAvailable }: { status: SaveS
 		<output
 			aria-live="polite"
 			aria-label={label}
-			className="mr-1 flex items-center gap-1.5 text-cms-muted-foreground text-xs"
+			className="mr-1 flex items-center gap-1.5 text-monti-muted-foreground text-xs"
 		>
 			<StatusIndicator size="sm" tone={SAVE_STATUS_TONE[status]} pulse={status === "saving"} />
 			<span className="hidden lg:inline">{label}</span>

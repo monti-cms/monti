@@ -778,7 +778,7 @@ describe("unknown content: a fallback, never an error", () => {
 	it("marks an unknown node in development only, with a hidden element", async () => {
 		try {
 			vi.stubEnv("NODE_ENV", "development");
-			expect(await html(doc({ type: "mystery" }))).toContain('<span data-cms-unknown="mystery" hidden=""></span>');
+			expect(await html(doc({ type: "mystery" }))).toContain('<span data-monti-unknown="mystery" hidden=""></span>');
 			vi.stubEnv("NODE_ENV", "production");
 			expect(await html(doc({ type: "mystery" }))).toBe("");
 		} finally {

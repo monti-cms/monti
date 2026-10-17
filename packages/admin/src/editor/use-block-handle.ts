@@ -22,7 +22,7 @@ const handleAnchor = (block: HTMLElement, rect: DOMRect): Coords => {
 	const isListItem = block.tagName === "LI" || block.getAttribute("data-type") === "taskItem";
 	const list = isListItem ? block.parentElement : null;
 	let left = list ? list.getBoundingClientRect().left : rect.left;
-	const framed = block.parentElement?.closest<HTMLElement>("[data-cms-framed]");
+	const framed = block.parentElement?.closest<HTMLElement>("[data-monti-framed]");
 	if (framed) {
 		const edge = framed.getBoundingClientRect().left;
 		const handleLeft = left - HANDLE_OFFSET;

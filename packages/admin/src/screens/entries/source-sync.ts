@@ -37,20 +37,20 @@ export interface SyncBlock {
 }
 
 /** Marker class of the paired blocks the sync anchors on, in both columns. */
-export const ACTIVE_BLOCK_CLASS = "cms-source-active";
+export const ACTIVE_BLOCK_CLASS = "monti-source-active";
 
 /**
  * How a column shows its marked block: only a faint background spread around it, with no bar (a shadow spread, so it does not shift layout and
  * also wraps list bullets).
  */
 export const ACTIVE_BLOCK_STYLE =
-	"[&_.cms-source-active]:rounded-sm [&_.cms-source-active]:bg-cms-primary/8 [&_.cms-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-cms-primary)_8%,transparent)] [&_.cms-source-active]:transition-[background-color,box-shadow]";
+	"[&_.monti-source-active]:rounded-sm [&_.monti-source-active]:bg-monti-primary/8 [&_.monti-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-monti-primary)_8%,transparent)] [&_.monti-source-active]:transition-[background-color,box-shadow]";
 
 /** Attribute the sync puts on the body of a source box whose paired translation box is collapsed. */
 export const SOURCE_COLLAPSED_ATTRIBUTE = "data-source-collapsed";
 
 /** Attribute a box view puts on its body while it is collapsed (the collapsible). */
-const COLLAPSED_ATTRIBUTE = "data-cms-collapsed";
+const COLLAPSED_ATTRIBUTE = "data-monti-collapsed";
 
 /** A box whose body is blocks, paired and anchored inside. Not a list or a table, which are anchored as a whole. */
 const isFlowBox = (node: PmNode): boolean =>

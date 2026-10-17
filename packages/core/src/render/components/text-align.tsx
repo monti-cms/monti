@@ -10,5 +10,5 @@ const isAlign = (value: string | undefined): value is Align => TEXT_ALIGN_VALUES
  * Disallowed values fall back to the default alignment.
  */
 export function CmsTextAlign({ align, children }: { align?: string; children?: ReactNode }) {
-	return <div className={isAlign(align) ? `cms-align-${align}` : undefined}>{children}</div>;
+	return <div className={isAlign(align) ? `monti-align-${align}` : undefined}>{children}</div>;
 }

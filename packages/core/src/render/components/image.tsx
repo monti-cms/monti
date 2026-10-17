@@ -48,19 +48,19 @@ export function CmsImage({
 	const ok = resolved && "url" in resolved ? resolved : null;
 	const captionText = caption?.trim();
 	const alignName = align && ALIGNS.has(align) ? align : "center";
-	if (decorative && !ok) return captionText ? <p className="cms-image-caption">{captionText}</p> : null;
+	if (decorative && !ok) return captionText ? <p className="monti-image-caption">{captionText}</p> : null;
 	if (!ok) {
 		return (
-			<figure className="cms-image cms-image-align-center">
-				<div role="img" aria-label={unavailableLabel} className="cms-image-unavailable">
+			<figure className="monti-image monti-image-align-center">
+				<div role="img" aria-label={unavailableLabel} className="monti-image-unavailable">
 					{unavailableLabel}
 				</div>
-				{captionText ? <figcaption className="cms-image-caption">{captionText}</figcaption> : null}
+				{captionText ? <figcaption className="monti-image-caption">{captionText}</figcaption> : null}
 			</figure>
 		);
 	}
 	return (
-		<figure className={`cms-image cms-image-align-${alignName}`}>
+		<figure className={`monti-image monti-image-align-${alignName}`}>
 			<CmsImageView
 				src={ok.url}
 				alt={alt ?? ""}
@@ -72,7 +72,7 @@ export function CmsImage({
 				intrinsicSize={ok.width && ok.height ? { width: ok.width, height: ok.height } : undefined}
 				unavailableLabel={unavailableLabel}
 			/>
-			{captionText ? <figcaption className="cms-image-caption">{captionText}</figcaption> : null}
+			{captionText ? <figcaption className="monti-image-caption">{captionText}</figcaption> : null}
 		</figure>
 	);
 }

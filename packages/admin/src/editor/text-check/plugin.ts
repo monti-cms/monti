@@ -36,7 +36,7 @@ function decorate(doc: EditorState["doc"], issues: readonly DocTextIssue[]): Dec
 			Decoration.inline(
 				issue.from,
 				issue.to,
-				{ class: "cms-text-issue", "data-severity": issue.severity, "data-text-issue": issue.key },
+				{ class: "monti-text-issue", "data-severity": issue.severity, "data-text-issue": issue.key },
 				{ key: issue.key },
 			),
 		),

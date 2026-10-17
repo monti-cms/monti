@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /** Label, default color names, and editing view text of the text color mark. */
-export const colorMessages = defineMessages("cms-blocks.color", {
+export const colorMessages = defineMessages("monti-blocks.color", {
 	en: {
 		label: "Text color",
 		"fg.label": "Text color",

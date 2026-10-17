@@ -89,14 +89,14 @@ export function LayoutPreview({
 	const lastGood = useRef<ReturnType<typeof draftSiteOf>>(null);
 	if (made) lastGood.current = made;
 	const draft = made ?? lastGood.current;
-	const problem = <p className="px-4 py-4 text-cms-muted-foreground text-xs">{t("layout.previewUnavailable")}</p>;
+	const problem = <p className="px-4 py-4 text-monti-muted-foreground text-xs">{t("layout.previewUnavailable")}</p>;
 
 	return (
 		<div
-			className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-cms-background"
+			className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-monti-background"
 			data-testid="layout-preview"
 		>
-			<p className="shrink-0 border-b bg-cms-muted/50 px-4 py-1.5 text-cms-muted-foreground text-xs">
+			<p className="shrink-0 border-b bg-monti-muted/50 px-4 py-1.5 text-monti-muted-foreground text-xs">
 				{t("layout.previewLabel")}
 			</p>
 			{draft?.isCollection(collection) ? (

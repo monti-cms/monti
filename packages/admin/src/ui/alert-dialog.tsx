@@ -44,7 +44,7 @@ function AlertDialogContent({
 				data-slot="alert-dialog-content"
 				data-size={size}
 				className={cn(
-					"group/alert-dialog-content data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-dialog bg-cms-popover p-6 text-cms-popover-foreground outline-none ring-1 ring-cms-foreground/10 duration-100 data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-closed:animate-out data-open:animate-in data-[size=default]:sm:max-w-lg",
+					"group/alert-dialog-content data-open:fade-in-0 data-open:zoom-in-95 data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-6 rounded-dialog bg-monti-popover p-6 text-monti-popover-foreground outline-none ring-1 ring-monti-foreground/10 duration-100 data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-closed:animate-out data-open:animate-in data-[size=default]:sm:max-w-lg",
 					className,
 				)}
 				{...props}
@@ -84,7 +84,7 @@ function AlertDialogMedia({ className, ...props }: React.ComponentProps<"div">) 
 		<div
 			data-slot="alert-dialog-media"
 			className={cn(
-				"mb-2 inline-flex size-16 items-center justify-center rounded-md bg-cms-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
+				"mb-2 inline-flex size-16 items-center justify-center rounded-md bg-monti-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
 				className,
 			)}
 			{...props}
@@ -113,7 +113,7 @@ function AlertDialogDescription({
 		<AlertDialogPrimitive.Description
 			data-slot="alert-dialog-description"
 			className={cn(
-				"text-balance text-cms-muted-foreground text-sm md:text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-cms-foreground",
+				"text-balance text-monti-muted-foreground text-sm md:text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-monti-foreground",
 				className,
 			)}
 			{...props}

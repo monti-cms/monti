@@ -43,7 +43,7 @@ const renderEditor = async (editorConfig?: { widths: typeof widths }) => {
 };
 /** Body width applied to the editor frame. The title, body and source all use this value. */
 const editorWidth = () =>
-	(document.querySelector("[data-cms-editor-shell]") as HTMLElement).style.getPropertyValue("--editor-width");
+	(document.querySelector("[data-monti-editor-shell]") as HTMLElement).style.getPropertyValue("--editor-width");
 const openMenu = async () => {
 	fireEvent.click(screen.getByRole("button", { name: t("editorWidth.label") }));
 	return screen.findAllByRole("menuitemradio");

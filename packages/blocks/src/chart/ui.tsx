@@ -69,7 +69,7 @@ export const ChartContainer = ({
 				data-chart={chartId}
 				style={chartVars}
 				className={cn(
-					"flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-cms-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-cms-border/60 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-cms-border [&_.recharts-layer]:outline-hidden [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-cms-muted/60 [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
+					"flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-monti-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-monti-border/60 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-monti-border [&_.recharts-layer]:outline-hidden [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-monti-muted/60 [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
 					className,
 				)}
 			>
@@ -124,7 +124,7 @@ export const ChartTooltipContent = ({
 	return (
 		<div
 			className={cn(
-				"grid min-w-[8rem] gap-1.5 rounded-lg border border-cms-border/50 bg-cms-background px-2.5 py-1.5 text-xs shadow-xl",
+				"grid min-w-[8rem] gap-1.5 rounded-lg border border-monti-border/50 bg-monti-background px-2.5 py-1.5 text-xs shadow-xl",
 				className,
 			)}
 		>
@@ -144,8 +144,8 @@ export const ChartTooltipContent = ({
 									style={{ backgroundColor: item.color ?? item.payload?.fill }}
 								/>
 								<div className="flex flex-1 items-center justify-between gap-3">
-									<span className="text-cms-muted-foreground">{itemConfig?.label ?? key}</span>
-									<span className="font-medium font-mono text-cms-foreground tabular-nums">
+									<span className="text-monti-muted-foreground">{itemConfig?.label ?? key}</span>
+									<span className="font-medium font-mono text-monti-foreground tabular-nums">
 										{typeof item.value === "number" ? item.value.toLocaleString() : String(item.value)}
 									</span>
 								</div>

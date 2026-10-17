@@ -42,7 +42,7 @@ describe("public page client components", () => {
 
 	it("tooltip opens on focus and closes with Esc", () => {
 		render(<Tooltip content="뜻풀이">용어</Tooltip>);
-		const wrapper = screen.getByText("용어").closest(".cms-block-tooltip") as HTMLElement;
+		const wrapper = screen.getByText("용어").closest(".monti-block-tooltip") as HTMLElement;
 		const trigger = screen.getByText("용어");
 		expect(wrapper.hasAttribute("data-open")).toBe(false);
 		fireEvent.focus(trigger);

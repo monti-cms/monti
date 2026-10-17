@@ -16,9 +16,9 @@ import { entriesMessages } from "./messages";
 import { ACTIVE_BLOCK_STYLE } from "./source-sync";
 
 const PROSE =
-	"prose cms-dark:prose-invert max-w-none text-base text-cms-foreground leading-relaxed focus:outline-none " +
+	"prose monti-dark:prose-invert max-w-none text-base text-monti-foreground leading-relaxed focus:outline-none " +
 	// Read-only: hide the code block tool row. A collapsible box is open unless the translation box it is paired with is collapsed (source-sync).
-	`[&_[data-code-ui]]:hidden [&_[data-cms-collapsed]]:block [&_[data-source-collapsed]]:hidden! ${ACTIVE_BLOCK_STYLE}`;
+	`[&_[data-code-ui]]:hidden [&_[data-monti-collapsed]]:block [&_[data-source-collapsed]]:hidden! ${ACTIVE_BLOCK_STYLE}`;
 
 function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
 	const site = useSite();
@@ -69,11 +69,11 @@ export function SourcePane({
 		<aside
 			ref={ref}
 			aria-label={t("sourcePane.aria")}
-			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-cms-background", className)}
+			className={cn("flex h-full min-w-0 flex-col overflow-y-auto border-r bg-monti-background", className)}
 		>
 			<div
 				data-source-header
-				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-cms-background/95 px-4 backdrop-blur"
+				className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-monti-background/95 px-4 backdrop-blur"
 			>
 				<h2 className="flex-1 font-medium text-sm">{t("sourcePane.heading", { locale: locale.toUpperCase() })}</h2>
 				<IconButton label={tc("close")} side="bottom" onClick={onClose}>
@@ -83,7 +83,7 @@ export function SourcePane({
 			<h1
 				className={cn(
 					"px-6 pt-12 pb-5 font-semibold text-[34px] leading-tight tracking-tight",
-					!title && "text-cms-muted-foreground/40",
+					!title && "text-monti-muted-foreground/40",
 				)}
 			>
 				{title || tc("untitled")}

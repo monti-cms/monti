@@ -57,7 +57,7 @@ function Branch({ nodes, level, current, collapsed, tabStop }: BranchProps) {
 			<div
 				key={node.path}
 				role="treeitem"
-				className="cms-block-code-explorer-item"
+				className="monti-block-code-explorer-item"
 				data-path={node.path}
 				data-kind={node.kind}
 				// A folder's own name, not the names of everything inside it.
@@ -70,10 +70,10 @@ function Branch({ nodes, level, current, collapsed, tabStop }: BranchProps) {
 				aria-disabled={node.kind === "file" && !node.selectable ? true : undefined}
 				tabIndex={node.path === tabStop ? 0 : -1}
 			>
-				<span className="cms-block-code-explorer-label">{node.name}</span>
+				<span className="monti-block-code-explorer-label">{node.name}</span>
 				{folder && open && node.children.length > 0 ? (
 					// biome-ignore lint/a11y/useSemanticElements: the WAI-ARIA tree pattern needs `role="group"` for the children of an item, and a fieldset is not one
-					<div role="group" className="cms-block-code-explorer-group">
+					<div role="group" className="monti-block-code-explorer-group">
 						<Branch nodes={node.children} level={level + 1} current={current} collapsed={collapsed} tabStop={tabStop} />
 					</div>
 				) : null}
@@ -219,16 +219,16 @@ export function CodeExplorerView({
 	return (
 		<div
 			ref={root}
-			className="cms-block-code-explorer"
+			className="monti-block-code-explorer"
 			data-nav-open={navOpen || undefined}
 			data-tree-only={currentFile ? undefined : ""}
 		>
-			<div className="cms-block-code-explorer-layout">
-				<div className="cms-block-code-explorer-nav">
+			<div className="monti-block-code-explorer-layout">
+				<div className="monti-block-code-explorer-nav">
 					{currentFile ? (
 						<button
 							type="button"
-							className="cms-block-code-explorer-toggle"
+							className="monti-block-code-explorer-toggle"
 							title={labels.toggle}
 							aria-expanded={navOpen}
 							aria-controls={treeId}
@@ -241,7 +241,7 @@ export function CodeExplorerView({
 					<div
 						id={treeId}
 						role="tree"
-						className="cms-block-code-explorer-tree"
+						className="monti-block-code-explorer-tree"
 						aria-label={labels.files}
 						onClick={onClick}
 						onKeyDown={onKeyDown}
@@ -250,12 +250,12 @@ export function CodeExplorerView({
 					</div>
 				</div>
 				{currentFile ? (
-					<div className="cms-block-code-explorer-code">
+					<div className="monti-block-code-explorer-code">
 						{files.map((file) =>
 							file.selectable ? (
 								<div
 									key={file.path}
-									className="cms-block-code-explorer-panel"
+									className="monti-block-code-explorer-panel"
 									data-code-explorer-panel={file.index}
 									hidden={file.index !== current}
 								>

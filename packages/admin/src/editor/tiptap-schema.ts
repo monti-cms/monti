@@ -54,7 +54,7 @@ export const cmsOpaqueBlock = perSite((site: Pick<Site, "createTranslator">) => 
 		parseHTML() {
 			return [
 				{
-					tag: "div[data-cms-opaque]",
+					tag: "div[data-monti-opaque]",
 					getAttrs: (element) => ({
 						node: element.getAttribute("data-node") ?? "",
 						label: element.getAttribute("data-label") ?? t("opaqueBlock.label"),
@@ -69,15 +69,15 @@ export const cmsOpaqueBlock = perSite((site: Pick<Site, "createTranslator">) => 
 			return [
 				"div",
 				{
-					"data-cms-opaque": "",
+					"data-monti-opaque": "",
 					"data-node": held,
 					"data-label": label,
 					class:
-						"my-4 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-3 cms-dark:border-neutral-700 cms-dark:bg-neutral-900",
+						"my-4 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-3 monti-dark:border-neutral-700 monti-dark:bg-neutral-900",
 				},
 				[
 					"div",
-					{ class: "text-xs font-medium text-neutral-500 cms-dark:text-neutral-400" },
+					{ class: "text-xs font-medium text-neutral-500 monti-dark:text-neutral-400" },
 					t("opaqueBlock.editInSource", { label }),
 				],
 				["pre", { class: "mt-2 overflow-x-auto whitespace-pre-wrap text-xs" }, written || previewOf(held)],

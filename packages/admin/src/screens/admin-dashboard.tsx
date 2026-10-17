@@ -215,7 +215,7 @@ function TrashPage() {
 				<EntryListHeaderActions list={list} />
 				<nav
 					aria-label={t("dashboard.trashCollections")}
-					className="flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]"
+					className="flex items-center gap-1 rounded-lg bg-monti-muted p-[3px]"
 				>
 					{site.COLLECTIONS.map((item) => (
 						<Link
@@ -224,7 +224,7 @@ function TrashPage() {
 							aria-current={state.collection === item ? "page" : undefined}
 							className={cn(
 								buttonVariants({ variant: "ghost", size: "xs" }),
-								"text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground",
+								"text-monti-muted-foreground aria-[current=page]:bg-monti-background aria-[current=page]:text-monti-foreground",
 							)}
 						>
 							{site.COLLECTION_DEFINITIONS[item].label}

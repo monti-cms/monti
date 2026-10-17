@@ -158,9 +158,9 @@ function PlaceholderChip({ shareKey }: { shareKey: string }) {
 	};
 	return (
 		<div className="flex items-center gap-1">
-			<code className="rounded-md border bg-cms-muted px-2 py-1 font-mono text-xs">{text}</code>
+			<code className="rounded-md border bg-monti-muted px-2 py-1 font-mono text-xs">{text}</code>
 			<IconButton label={copied ? t("copy.done") : t("copy.label")} size="icon-xs" onClick={() => void copy()}>
-				{copied ? <Check aria-hidden className="text-cms-primary" /> : <Copy aria-hidden />}
+				{copied ? <Check aria-hidden className="text-monti-primary" /> : <Copy aria-hidden />}
 			</IconButton>
 		</div>
 	);
@@ -270,7 +270,7 @@ function SnippetEditor({
 			<div className="min-w-0">
 				<h2 className="truncate font-medium text-base">{(item ? item.label : draft.label.trim()) || t("new.title")}</h2>
 				{(shownKey || item?.source === "added") && (
-					<p className="truncate text-cms-muted-foreground text-xs">
+					<p className="truncate text-monti-muted-foreground text-xs">
 						{item ? detailOf(t, item) : `${placeholderOf(shownKey)} · ${t("detail.added")}`}
 					</p>
 				)}

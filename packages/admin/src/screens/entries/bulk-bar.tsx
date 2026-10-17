@@ -200,13 +200,13 @@ function ManyPicker({
 						aria-label={t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") })}
 						className={cn(
 							"max-w-56 justify-between gap-1.5 font-normal",
-							names.length === 0 && "text-cms-muted-foreground",
+							names.length === 0 && "text-monti-muted-foreground",
 						)}
 					/>
 				}
 			>
 				<span className="truncate">{summary}</span>
-				<ChevronDownIcon aria-hidden className="size-4 text-cms-muted-foreground" />
+				<ChevronDownIcon aria-hidden className="size-4 text-monti-muted-foreground" />
 			</PopoverTrigger>
 			<PopoverContent align="start" className="w-64 p-0">
 				<Command>
@@ -367,9 +367,9 @@ export function BulkBar({
 			];
 
 	return (
-		<section aria-label={t("bar")} className="border-b bg-cms-primary/5 px-5 py-2">
+		<section aria-label={t("bar")} className="border-b bg-monti-primary/5 px-5 py-2">
 			<div className="flex min-h-7 flex-wrap items-center gap-2 text-sm">
-				<span className="font-medium text-cms-primary">{t("count", { count: selected.length })}</span>
+				<span className="font-medium text-monti-primary">{t("count", { count: selected.length })}</span>
 				<Button type="button" variant="ghost" size="xs" onClick={onClearSelection}>
 					{t("clear")}
 				</Button>
@@ -432,7 +432,7 @@ export function BulkBar({
 				</Button>
 
 				{results && (
-					<output className="text-cms-muted-foreground text-xs">
+					<output className="text-monti-muted-foreground text-xs">
 						{t("result", { success: successes, failed: failures.length })}
 					</output>
 				)}
@@ -450,7 +450,7 @@ export function BulkBar({
 
 			{error && <FormFieldError className="pt-2">{error}</FormFieldError>}
 			{failures.length > 0 && (
-				<ul className="flex flex-col gap-1 pt-2 text-cms-destructive text-xs">
+				<ul className="flex flex-col gap-1 pt-2 text-monti-destructive text-xs">
 					{failures.map((failure) => (
 						<li key={failure.id}>
 							<span className="font-medium">{titleOf(failure.id)}</span> — {describeBulkFailure(site, failure)}

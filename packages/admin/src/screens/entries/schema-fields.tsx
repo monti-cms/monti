@@ -110,8 +110,8 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		);
 	}
 	const labelNode = (
-		<FormFieldLabel htmlFor={id} className="font-semibold text-cms-muted-foreground text-xs">
-			{label} {required && <span className="text-cms-destructive">*</span>}
+		<FormFieldLabel htmlFor={id} className="font-semibold text-monti-muted-foreground text-xs">
+			{label} {required && <span className="text-monti-destructive">*</span>}
 		</FormFieldLabel>
 	);
 	return (
@@ -146,8 +146,8 @@ function SlotFieldRow({
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
 			<div className="flex min-h-6 items-center justify-between gap-2">
-				<FormFieldLabel htmlFor={id} className="font-semibold text-cms-muted-foreground text-xs">
-					{label} {required && <span className="text-cms-destructive">*</span>}
+				<FormFieldLabel htmlFor={id} className="font-semibold text-monti-muted-foreground text-xs">
+					{label} {required && <span className="text-monti-destructive">*</span>}
 				</FormFieldLabel>
 				{aside || trigger ? (
 					<span className="flex items-center gap-1">
@@ -381,7 +381,7 @@ function ValueRowView({
 				const excerpt = bodyExcerpt(site, currentDoc, length);
 				field.setValue(excerpt);
 			}}
-			className="text-cms-muted-foreground hover:text-cms-foreground"
+			className="text-monti-muted-foreground hover:text-monti-foreground"
 		>
 			<RefreshCw aria-hidden className="size-3" />
 		</IconButton>
@@ -620,7 +620,7 @@ export function SchemaFields({
 					}
 					return (
 						<section key={key} aria-label={group.group} className="space-y-4 border-t pt-4">
-							<h3 className="font-medium text-[11px] text-cms-muted-foreground uppercase tracking-wide">
+							<h3 className="font-medium text-[11px] text-monti-muted-foreground uppercase tracking-wide">
 								{group.group}
 							</h3>
 							{visible.map(renderField)}
@@ -673,7 +673,7 @@ function LayoutSection({
 								type="button"
 								variant="ghost"
 								size="xs"
-								className="-ml-2 font-semibold text-cms-muted-foreground text-xs"
+								className="-ml-2 font-semibold text-monti-muted-foreground text-xs"
 							/>
 						}
 					>

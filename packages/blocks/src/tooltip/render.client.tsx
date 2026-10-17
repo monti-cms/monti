@@ -15,14 +15,14 @@ export function Tooltip({ content, note, children }: PropsWithChildren<{ content
 
 	return (
 		<span
-			className="cms-block-tooltip"
+			className="monti-block-tooltip"
 			data-open={open ? "" : undefined}
 			onPointerEnter={(event) => event.pointerType === "mouse" && setOpen(true)}
 			onPointerLeave={(event) => event.pointerType === "mouse" && setOpen(false)}
 		>
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: inline text within a sentence, so a span receives mouse, touch, and focus instead of a button */}
 			<span
-				className="cms-block-tooltip-trigger"
+				className="monti-block-tooltip-trigger"
 				// biome-ignore lint/a11y/noNoninteractiveTabindex: takes focus so the description can also be opened with the keyboard
 				tabIndex={0}
 				aria-describedby={id}
@@ -47,12 +47,12 @@ export function Tooltip({ content, note, children }: PropsWithChildren<{ content
 			>
 				{children}
 				{note ? (
-					<sup aria-hidden className="cms-block-tooltip-note">
+					<sup aria-hidden className="monti-block-tooltip-note">
 						{note}
 					</sup>
 				) : null}
 			</span>
-			<span id={id} role="tooltip" className="cms-block-tooltip-content">
+			<span id={id} role="tooltip" className="monti-block-tooltip-content">
 				{content}
 			</span>
 		</span>

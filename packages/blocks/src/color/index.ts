@@ -14,7 +14,7 @@ export type { ColorOptions } from "./options";
  * ```
  *
  * The editor gets a `Text color` item in the format toolbar and text bubble. The public page is drawn by this extension's default `Color` component (`textColorProps`),
- * and the color is picked for the theme by this package's `render.css` and `styles.css` (`.cms-color`).
+ * and the color is picked for the theme by this package's `render.css` and `styles.css` (`.monti-color`).
  */
 export const color = (options: ColorOptions = {}) =>
 	defineBlockPlugin({

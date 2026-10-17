@@ -155,7 +155,7 @@ export function RelationCombobox({
 			</ComboboxEmpty>
 			<ComboboxList>
 				{(item: Item) => (
-					<ComboboxItem key={item.value} value={item} className={cn(item.create && "text-cms-primary")}>
+					<ComboboxItem key={item.value} value={item} className={cn(item.create && "text-monti-primary")}>
 						{item.create ? (
 							<>
 								<Plus aria-hidden />

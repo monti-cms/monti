@@ -40,8 +40,8 @@ export function TabsView({
 	};
 
 	return (
-		<div className="cms-block-tabs">
-			<div className="cms-block-tabs-list" role="tablist" aria-orientation="horizontal">
+		<div className="monti-block-tabs">
+			<div className="monti-block-tabs-list" role="tablist" aria-orientation="horizontal">
 				{labels.map((label, index) => (
 					<button
 						// biome-ignore lint/suspicious/noArrayIndexKey: tabs can share a name, so they are told apart by position
@@ -52,7 +52,7 @@ export function TabsView({
 						type="button"
 						role="tab"
 						id={`${id}-tab-${index}`}
-						className="cms-block-tabs-tab"
+						className="monti-block-tabs-tab"
 						aria-selected={index === active}
 						aria-controls={`${id}-panel-${index}`}
 						tabIndex={index === active ? 0 : -1}
@@ -69,7 +69,7 @@ export function TabsView({
 					key={index}
 					role="tabpanel"
 					id={`${id}-panel-${index}`}
-					className="cms-block-tabs-panel"
+					className="monti-block-tabs-panel"
 					aria-labelledby={`${id}-tab-${index}`}
 					hidden={index !== active}
 				>
