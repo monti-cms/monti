@@ -1,8 +1,7 @@
-import { type ReactNode } from "react";
+import type { AdminComponents, Site } from "@monti-cms/admin";
+/** What the MDX package registers in the admin of a site: the `mdx` format (with the syntax extensions of `mdx({ syntax })`) and its source panel. */
+export declare const mdxComponents: (site: Site) => AdminComponents;
 /**
- * Registers the MDX format and its source panel in the admin (`useCmsAdminComponents().sourcePanels`, `useFormat("mdx")`). The admin renders it for the
+ * Registers the MDX format and its source panel in the admin (`useAdminComponents().sourcePanels`, `useFormat("mdx")`). The admin renders it for the
  * `mdx()` plugin; without the plugin there is no source toggle and no `mdx` format in the browser.
  */
-export declare function MdxAdminProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;

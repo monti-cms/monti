@@ -1,6 +1,6 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { pluginLog } from "@monti-cms/core";
-import { slugify } from "@monti-cms/core/client";
+import { pluginLog } from "@monti-cms/core/server";
+import { slugify } from "@monti-cms/core/site";
 import { APICallError, generateText, NoObjectGeneratedError, Output, RetryError, streamText } from "ai";
 import { z } from "zod";
 import { AiError } from "./errors.js";
@@ -22,21 +22,25 @@ function serviceMessage(detail) {
     }
     return message.replace(/\s+/g, " ").trim().slice(0, 200);
 }
-/** Turns a service error into an AI error to show on screen. Appends the service's explanation and also logs it. */
-function providerError(site, status, detail) {
+/**
+ * Turns a service error into an AI error to show on screen. The person reads what happened and what to do; the service's own explanation
+ * (and its status) is the `detail`, behind "details", and goes to the log.
+ */
+function providerError(site, status, body) {
     const t = site.createTranslator(providerMessages);
-    const message = serviceMessage(detail);
+    const message = serviceMessage(body);
     log.error("provider error:", status, message);
-    const withDetail = (text) => (message ? `${text} — ${message}` : text);
+    const detail = [status, message].filter(Boolean).join(" ") || undefined;
+    const told = (code, key) => new AiError(code, t(key), { fix: t(`${key}.fix`), detail });
     if (status === 401 || status === 403)
-        return new AiError("service_unavailable", withDetail(t("service.key")));
+        return told("service_unavailable", "service.key");
     if (status === 402)
-        return new AiError("service_unavailable", withDetail(t("service.credit")));
+        return told("service_unavailable", "service.credit");
     if (status === 404)
-        return new AiError("upstream_failed", withDetail(t("service.address")));
+        return told("upstream_failed", "service.address");
     if (status === 429)
-        return new AiError("rate_limited", withDetail(t("service.rateLimited")));
-    return new AiError("upstream_failed", withDetail(t("service.problem")));
+        return told("rate_limited", "service.rateLimited");
+    return told("upstream_failed", "service.problem");
 }
 const isAbort = (error) => error instanceof Error && error.name === "AbortError";
 /**
@@ -142,10 +146,13 @@ export function createGenerator(site, config) {
                     if (APICallError.isInstance(error)) {
                         throw providerError(site, error.statusCode, error.responseBody ?? error.message);
                     }
-                    throw new AiError("upstream_failed", t("streamCut"));
+                    throw new AiError("upstream_failed", t("streamCut"), {
+                        fix: t("service.problem.fix"),
+                        detail: failureNote(error),
+                    });
                 }
                 else if (part.type === "finish" && part.finishReason === "length") {
-                    throw new AiError("upstream_failed", t("tooLong"));
+                    throw new AiError("upstream_failed", t("tooLong"), { fix: t("tooLong.fix") });
                 }
             }
         },
@@ -169,9 +176,12 @@ export function createGenerator(site, config) {
                 throw providerError(site, lastError.statusCode, lastError.responseBody ?? lastError.message);
             }
             if (isTruncated(lastError)) {
-                throw new AiError("upstream_failed", t("tooLongModel"));
+                throw new AiError("upstream_failed", t("tooLong"), { fix: t("tooLong.fix") });
             }
-            throw new AiError("upstream_failed", t("unreadable"));
+            throw new AiError("upstream_failed", t("unreadable"), {
+                fix: t("unreadable.fix"),
+                detail: lastError === undefined ? undefined : failureNote(lastError),
+            });
         },
     };
 }

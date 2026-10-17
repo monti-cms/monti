@@ -1,4 +1,4 @@
-import { type BodyAllowed, type BodyRules, type Site } from "@monti-cms/core/client";
+import { type BodyAllowed, type BodyRules, type Site } from "@monti-cms/core/site";
 /**
  * What the editor offers for a body, from the allowed list of the collection (`body` in the schema, read the same way by validation). The editor knows
  * Tiptap node and mark names, the list knows the names stored documents use, so this is the one place that maps one to the other.

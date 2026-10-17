@@ -28,5 +28,5 @@ export function setupProblemOf(cms) {
  */
 export function SetupProblemScreen({ cms }) {
     const t = cms.site.createTranslator(layoutMessages);
-    return (_jsx("div", { className: "cms-admin flex min-h-screen items-center justify-center bg-cms-background p-4 text-cms-foreground", children: _jsxs(Alert, { variant: "destructive", layout: "stack", className: "max-w-md", children: [_jsx(AlertTitle, { children: t("setupTitle") }), _jsx(AlertDescription, { className: "mt-1", children: t("setupBody") })] }) }));
+    return (_jsx("div", { className: "monti-admin flex min-h-screen items-center justify-center bg-monti-background p-4 text-monti-foreground", children: _jsxs(Alert, { variant: "destructive", layout: "stack", className: "max-w-md", children: [_jsx(AlertTitle, { children: t("setupTitle") }), _jsx(AlertDescription, { className: "mt-1", children: t("setupBody") })] }) }));
 }

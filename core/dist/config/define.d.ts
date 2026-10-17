@@ -3,7 +3,7 @@ import type { BlockDefinition } from "../blocks/define.js";
 import { type MediaConfig } from "../core/media-types.js";
 import type { StoredDocument } from "../doc/stored-document.js";
 import type { MessageValue } from "../i18n/define.js";
-import type { CmsPlugin } from "../plugin/define.js";
+import type { Plugin } from "../plugin/define.js";
 import { type CollectionSchema } from "../schema/collection.js";
 import { type ConfigDefaults } from "../schema-file/merge.js";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types.js";
@@ -123,7 +123,7 @@ export interface SeedConfig {
      */
     readonly templates?: readonly SeedTemplate[];
 }
-export interface CmsConfig<Collections extends CollectionsConfig = CollectionsConfig, Locale extends string = string, Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[], Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> {
+export interface CmsConfig<Collections extends CollectionsConfig = CollectionsConfig, Locale extends string = string, Plugins extends readonly Plugin[] = readonly Plugin[], Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> {
     /** Collection name -> definition. The name is a stored value (`entries.collection`), so do not change it in production. */
     readonly collections: Collections;
     /** Content locales. The declaration order is the order shown in the UI. */
@@ -164,7 +164,7 @@ export interface CmsConfig<Collections extends CollectionsConfig = CollectionsCo
  * The config of a site that keeps its plain data in a schema file (`monti.schema.ts`): the same options as {@link CmsConfig}, plus `schema`, and without the
  * collections' and locales' own place (they come from the file; `collections` here adds collections written in code).
  */
-export interface SchemaCmsConfig<Schema extends SchemaTypes = SchemaTypes, Collections extends CollectionsConfig = CollectionsConfig, Plugins extends readonly CmsPlugin[] = readonly CmsPlugin[], Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> extends Omit<CmsConfig<Collections, string, Plugins, Blocks>, "collections" | "locales" | "defaultLocale"> {
+export interface SchemaCmsConfig<Schema extends SchemaTypes = SchemaTypes, Collections extends CollectionsConfig = CollectionsConfig, Plugins extends readonly Plugin[] = readonly Plugin[], Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[]> extends Omit<CmsConfig<Collections, string, Plugins, Blocks>, "collections" | "locales" | "defaultLocale"> {
     /**
      * The schema file's default export (`import schema from "./monti.schema"`, made with `defineSchema`).
      * Collections, fields, layouts, locales, the default locale, the time zone, site and admin settings and seed templates come from it. The code config adds
@@ -186,8 +186,8 @@ export interface SchemaCmsConfig<Schema extends SchemaTypes = SchemaTypes, Colle
  * With a `schema` (the plain-data part of the config in `monti.schema.ts`, made with `defineSchema`), the config is the file merged with what is written here; see
  * {@link SchemaCmsConfig}. The collection and locale names and the metadata types come from the types of the schema.
  */
-export declare function defineSite<const Schema extends SchemaTypes, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>): CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>;
-export declare function defineSite<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;
+export declare function defineSite<const Schema extends SchemaTypes, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly Plugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks>): CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>;
+export declare function defineSite<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly Plugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks>): CmsConfig<Collections, Locale, Plugins, Blocks>;
 /**
  * `defineSite` with a lowest layer under the config: `defaults.site` is what the file's and the code's `site` settings are laid over (the server's `defineConfig` passes
  * the `SITE_URL` variable this way, so the environment is the weakest source of the site URL).

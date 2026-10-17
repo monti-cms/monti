@@ -1,4 +1,4 @@
-import { type Collection, type ListSortField, type Locale, type PageSize, type Site } from "@monti-cms/core/client";
+import { type Collection, type ListSortField, type Locale, type PageSize, type Site } from "@monti-cms/core/site";
 import type { EntryStatus } from "./shared/entry-status.js";
 /** Statuses that can be filtered in the list. Trash is seen only in its dedicated screen. */
 export type ListStatus = Exclude<EntryStatus, "trashed">;
@@ -11,7 +11,6 @@ export interface ListState {
     collection: Collection;
     /**
      * `all` is the top level (root of the folders); anything else is a folder ID. In browse mode the top level shows only top-level folders and items outside folders.
-     * `unfiled` in old addresses is read as the top level.
      */
     folder: string;
     includeDescendants: boolean;

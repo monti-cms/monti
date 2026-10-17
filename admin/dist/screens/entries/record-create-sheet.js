@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useCallback, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "../../ui/sheet.js";
 import { RecordPanel } from "../record-panel.js";

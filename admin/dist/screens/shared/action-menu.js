@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { MoreHorizontal } from "lucide-react";
 import { cloneElement } from "react";
 import { useHydrated } from "../../lib/hooks/use-hydrated.js";

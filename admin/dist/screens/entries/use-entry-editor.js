@@ -1,8 +1,8 @@
+"use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { cmsEntryClient } from "../../api/entries.js";
-import { cmsIssueMessage } from "../../api/error-message.js";
+import { adminEntryClient } from "../../api/entries.js";
 import { BlockIssuesProvider } from "../../editor/blocks/block-issues-context.js";
 import { useStoreSelector } from "../../hooks/store.js";
 import { useBeforeUnload } from "../../lib/hooks/use-before-unload.js";
@@ -36,7 +36,7 @@ export function useEntryEditor(options) {
         site,
         adminId: options.adminId,
         target: options.target,
-        client: options.client ?? cmsEntryClient(site),
+        client: options.client ?? adminEntryClient(site),
         recoveryStore: options.recoveryStore ?? localRecoveryStoreOf(site),
         callbacks: () => callbacksRef.current,
     }));
@@ -95,11 +95,11 @@ export function EntryEditorProvider({ editor, lockedNote, children, }) {
             const blockId = issue.position?.blockId;
             if (!blockId)
                 continue;
-            // Without the field path (`body`), which the block already says by where it is shown.
-            byBlock.set(blockId, [...(byBlock.get(blockId) ?? []), cmsIssueMessage(site, { ...issue, path: undefined })]);
+            // Without its place (`where`, the field path `body`), which the block already says by where it is shown.
+            byBlock.set(blockId, [...(byBlock.get(blockId) ?? []), issue.text]);
         }
         return byBlock;
-    }, [editor.bodyWarnings, site]);
+    }, [editor.bodyWarnings]);
     return (_jsx(EntryEditorContext.Provider, { value: core, children: _jsx(BlockIssuesProvider, { issues: blockIssues, children: site.isCollection(collection) ? (_jsx(EntryFormProvider, { value: {
                     collection,
                     form: editor.form,

@@ -10,7 +10,7 @@ import { importText } from "../../../format/convert.js";
 export async function seedTemplateDocument(site, template, formats) {
     const fail = (code, message) => configError(`seed.templates["${template.id}"]`, code, `template "${template.name}" ${message}`);
     if ("doc" in template && template.doc !== undefined) {
-        const doc = readStoredDocument(template.doc, site);
+        const doc = readStoredDocument(template.doc);
         if (!doc)
             throw fail("template-doc", "is not a stored document");
         const canonical = canonicalDocument(site, doc);

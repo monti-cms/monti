@@ -1,6 +1,6 @@
 import type { CmsConfig } from "../config/define.js";
 export type * from "./types.js";
-import type { Cms, CreateCmsOptions } from "./types.js";
+import type { Cms, CmsHost, CreateCmsOptions } from "./types.js";
 /** The request handler of an instance, loading the route code on the first request. */
 export declare function lazyHandle(cms: () => Cms): Cms["handle"];
 /**
@@ -15,4 +15,4 @@ export declare function lazyHandle(cms: () => Cms): Cms["handle"];
  * Any number of instances live in one process, each with its own config and server config: nothing is read from a module or the environment except the
  * connections of the server config.
  */
-export declare function createCms<const Config extends CmsConfig>(options: CreateCmsOptions<Config>): Cms<Config>;
+export declare function createCms<const Config extends CmsConfig>(options: CreateCmsOptions<Config>): CmsHost<Config>;

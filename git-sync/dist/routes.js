@@ -1,4 +1,4 @@
-import { adminRoute, CmsError, ok, parseWith, publicRoute, readJsonBody, } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, ok, parseWith, publicRoute, readBodyText, readJsonBody, } from "@monti-cms/core/server";
 import { z } from "zod";
 import { listConflicts, resolveConflict } from "./conflicts.js";
 import { GitHubApiError } from "./github/client.js";
@@ -10,14 +10,15 @@ import { GitSyncError, syncContextFor } from "./sync.js";
 import { handleWebhook } from "./webhook.js";
 /**
  * The plugin's API (the routes under `v1/git-sync/`, served below the CMS API path). Everything is admin only except the webhook, which GitHub calls and which checks its own signature.
- * Errors a person can fix (no token, a branch that does not exist) are 409 with their message; GitHub failing is 502.
+ * Errors a person can fix (no token, a branch that does not exist) are 409 and tell their message; GitHub failing is 502, with GitHub's words as the detail.
  */
 /** Turns what the sync code throws into the response the admin screen shows. */
 const toCmsError = (error) => {
     if (error instanceof GitHubApiError)
         return new CmsError(error.message, "upstream_failed");
-    if (error instanceof GitSyncError)
-        return new CmsError(error.message, "precondition_failed");
+    if (error instanceof GitSyncError) {
+        return new CmsError(error.message, "precondition_failed", { notice: { what: error.message } });
+    }
     return error;
 };
 /** Runs a route and turns the errors the sync code throws into the response the admin screen shows. */
@@ -70,10 +71,15 @@ export const resolve = {
         return ok(await resolveConflict(syncContextFor(cms), { ...body, resolution: body.resolution }));
     })),
 };
-/** GitHub's `push` webhook. Public: the signature is the check, and nothing else about the request is trusted. */
+/**
+ * GitHub documents 25 MB as the largest webhook payload it delivers. The body is read before the signature can be checked (the HMAC covers the raw bytes),
+ * so the cap bounds what an unauthenticated sender can make the server buffer; a little headroom keeps a legitimate maximum payload from being refused.
+ */
+const MAX_WEBHOOK_BYTES = 26 * 1024 * 1024;
+/** GitHub's `push` webhook. Access `signed`: the signature is the check, and nothing else about the request is trusted. */
 export const webhook = {
     POST: publicRoute(async ({ request, cms }) => {
-        const rawBody = await request.text();
+        const rawBody = await readBodyText(request, MAX_WEBHOOK_BYTES);
         const outcome = await handleWebhook(syncContextFor(cms), {
             rawBody,
             signature: request.headers.get("x-hub-signature-256"),

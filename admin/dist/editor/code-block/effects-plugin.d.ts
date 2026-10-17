@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { type CodeLineEffect, type CodeRule } from "@monti-cms/core/code-block";
+import type { Site } from "@monti-cms/core/site";
 import type { Node as PmNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { type EditorView } from "@tiptap/pm/view";

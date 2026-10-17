@@ -3,12 +3,12 @@ import type { ListSortField } from "../api.js";
 import type { TranslationState } from "../translation/state.js";
 import type { ReferenceKind, ReferenceOccurrence } from "../types.js";
 export type JsonPrimitive = string | number | boolean | null;
-export interface JsonArray extends Array<JsonValue> {
+export interface JsonArray extends Array<MutableJsonValue> {
 }
 export interface JsonObject {
-    [key: string]: JsonValue;
+    [key: string]: MutableJsonValue;
 }
-export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+export type MutableJsonValue = JsonPrimitive | JsonObject | JsonArray;
 export type EntryMetadata = JsonObject;
 export type EntryStatus = "draft" | "published" | "archived" | "trashed";
 /** Entry for public reads only. Drafts, archived, and trashed entries cannot be represented by this type. */

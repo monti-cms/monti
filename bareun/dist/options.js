@@ -1,7 +1,8 @@
-import { createActiveTranslator, pluginError, resolveTextCheckerLimits } from "@monti-cms/core";
+import { createActiveTranslator, resolveTextCheckerLimits } from "@monti-cms/core";
 import { bareunMessages } from "./messages.js";
 // `bareun()` is called from the site config file, so the default name is chosen by display language at read time.
 const t = createActiveTranslator(bareunMessages);
+import { pluginError } from "@monti-cms/core/server";
 import { BAREUN_PLUGIN_NAME } from "./name.js";
 export { BAREUN_PLUGIN_NAME };
 /** Id of the plugin's one API key slot. */
@@ -13,6 +14,8 @@ export const BAREUN_ROUTE = "v1/text-check/bareun";
 /** Bareun takes fewer characters per request than the route default. */
 const DEFAULT_LIMITS = { maxSegments: 100, maxChars: 10_000 };
 /** Fills in defaults and rejects invalid values. */
+/** The plugin with the type of its options, as `bareun()` resolved them (`site.pluginOptions(BAREUN_PLUGIN)`). */
+export const BAREUN_PLUGIN = { name: BAREUN_PLUGIN_NAME };
 export function resolveBareunOptions(options = {}) {
     const baseUrl = (options.baseUrl ?? "https://api.bareun.ai").replace(/\/+$/, "");
     if (!/^https?:\/\//.test(baseUrl))

@@ -26,6 +26,8 @@ export declare const ERROR_STATUS: {
     readonly has_translations: 409;
     readonly source_trashed: 409;
     readonly schema_conflict: 409;
+    /** A schema save would leave stored entries worse off and the request did not acknowledge those changes. */
+    readonly schema_unacknowledged: 409;
     readonly upload_incomplete: 409;
     /** A plugin cannot do what was asked yet (a missing token, a branch that does not exist); its message says how to fix it. */
     readonly precondition_failed: 409;

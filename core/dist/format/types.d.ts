@@ -9,7 +9,7 @@ import type { Site } from "../site/index.js";
  * Both directions are pure functions of their arguments: they never read the database, the network or a global config (the site comes with the context),
  * so a format can run on the server and in the browser alike.
  *
- * Plugins add formats through `CmsPlugin.formats`; a site picks one with the `format` option of the read and write APIs.
+ * Plugins add formats through `Plugin.formats`; a site picks one with the `format` option of the read and write APIs.
  */
 /** A finding about a text, in the shape of a core `Issue`, so the admin shows it with the same messages. */
 export interface FormatIssue {

@@ -1,4 +1,3 @@
-export { calloutBlock } from "./definition.js";
 /**
  * Callout block (`:::callout`). A box that highlights content such as notes and warnings. Add it to the site config's `plugins`.
  *
@@ -8,7 +7,7 @@ export { calloutBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const callout: () => import("@monti-cms/core").CmsPlugin<"callout", Record<string, never>, readonly [{
+export declare const callout: () => import("@monti-cms/core").Plugin<"callout", Record<string, never>, readonly [{
     readonly name: "callout";
     readonly label: string;
     readonly description: string;
@@ -53,5 +52,5 @@ export declare const callout: () => import("@monti-cms/core").CmsPlugin<"callout
         };
     };
 }]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

@@ -1,5 +1,5 @@
-import type { ApiKeyChoiceInput, Site } from "@monti-cms/core/client";
-import type { ApiKeys } from "@monti-cms/core/plugin/server";
+import type { ApiKeys } from "@monti-cms/core/server";
+import type { ApiKeyChoiceInput, Site } from "@monti-cms/core/site";
 import { z } from "zod";
 import type { ResolvedAiAction } from "./action.js";
 import type { AiProviderInput, AiProviderKind, AiSettingsView } from "./connection.js";

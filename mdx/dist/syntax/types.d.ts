@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
 import type { CmsMark, CmsNode } from "@monti-cms/core/document";
 import type { BlockCatalog } from "@monti-cms/core/format";
 import type { PluggableList } from "unified";

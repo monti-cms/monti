@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { z } from "zod";
 import { type AiActionDefinition, type AiChoices } from "./action.js";
 import type { AiEngine, AiResult } from "./definition.js";

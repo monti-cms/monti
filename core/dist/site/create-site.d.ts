@@ -9,7 +9,7 @@ import { type SiteLinks } from "../core/links.js";
 import { type SiteLocales } from "../core/locales.js";
 import { type SiteTime } from "../core/time.js";
 import { type SiteI18n } from "../i18n/index.js";
-import type { CmsPlugin, PluginNavItem } from "../plugin/define.js";
+import type { Plugin, PluginContributions, PluginId, PluginNavItem } from "../plugin/define.js";
 import { type SiteSchemas } from "../schema/derive.js";
 import { type SitePanel } from "../schema/layout.js";
 /** What a plugin keeps in the browser's snapshot: its `name`, `nav`, `options` and `contributes` as JSON. */
@@ -17,7 +17,7 @@ export interface PluginSnapshot {
     readonly name: string;
     readonly options: unknown;
     readonly nav?: readonly PluginNavItem[];
-    readonly contributes?: Readonly<Record<string, unknown>>;
+    readonly contributes?: PluginContributions;
 }
 /**
  * The config a site's browser code works from: the site config with nothing that cannot cross from the server to the browser as data. It is what `site.snapshot()`
@@ -35,12 +35,12 @@ export type Site<Config extends CmsConfig = CmsConfig> = SiteI18n & SiteLocales 
     /** The config the site was created from. */
     readonly config: Config;
     /** The plugins of the config (an empty list if it has none). */
-    readonly plugins: readonly CmsPlugin[];
+    readonly plugins: readonly Plugin[];
     /**
-     * The `options` of a plugin picked by name from `plugins` in the site config. This is the official way for an extension to read its own config. `undefined`
-     * if that plugin is not in the config.
+     * The `options` of a plugin in `plugins` of the site config, typed by its id (`site.pluginOptions(GIT_SYNC_PLUGIN)`, see {@link PluginId}). This is how an
+     * extension reads its own config. `undefined` if that plugin is not in the config.
      */
-    getPluginOptions<Options = unknown>(name: string): Options | undefined;
+    pluginOptions<Options>(plugin: PluginId<string, Options>): Options | undefined;
     /** The request schemas and upload rules that depend on the site's collections, locales and `media`. */
     readonly api: SiteApi;
     /** The config as data, for the browser (see {@link SiteSnapshot}). The same object every call. */

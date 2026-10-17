@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
+import { isUuid, useSite, useTranslator } from "@monti-cms/admin";
 import { cn, Input, Textarea } from "@monti-cms/admin/kit";
-import { isUuid, useSite, useTranslator } from "@monti-cms/core/client";
 import { aiCommonMessages } from "./ai-common.messages.js";
 import { OptionSelect } from "./custom-editor.js";
 /** Fields shown in the test: inputs to send (including required ones) and language inputs (which go into the instructions). The judge mode does not read images. */
@@ -71,12 +71,12 @@ export function SampleInputs({ fields, values, defaults, onChange, }) {
         };
         switch (field.kind) {
             case "locale":
-                return (_jsx(OptionSelect, { "aria-label": field.label, value: value, options: localeOptions, onChange: (next) => onChange(field.name, next), className: "w-auto self-start bg-cms-background" }, field.name));
+                return (_jsx(OptionSelect, { "aria-label": field.label, value: value, options: localeOptions, onChange: (next) => onChange(field.name, next), className: "w-auto self-start bg-monti-background" }, field.name));
             case "image":
             case "value":
-                return (_jsx(Input, { ...common, onChange: (event) => onChange(field.name, event.target.value), className: cn("h-8 bg-cms-background text-xs md:text-xs", field.kind === "image" && "font-mono") }, field.name));
+                return (_jsx(Input, { ...common, onChange: (event) => onChange(field.name, event.target.value), className: cn("h-8 bg-monti-background text-xs md:text-xs", field.kind === "image" && "font-mono") }, field.name));
             default:
-                return (_jsx(Textarea, { ...common, rows: field.kind === "text" ? 2 : 4, onChange: (event) => onChange(field.name, event.target.value), className: cn("bg-cms-background text-xs md:text-xs", field.kind !== "text" && "font-mono") }, field.name));
+                return (_jsx(Textarea, { ...common, rows: field.kind === "text" ? 2 : 4, onChange: (event) => onChange(field.name, event.target.value), className: cn("bg-monti-background text-xs md:text-xs", field.kind !== "text" && "font-mono") }, field.name));
         }
     });
 }

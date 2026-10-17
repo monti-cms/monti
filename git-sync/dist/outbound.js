@@ -1,4 +1,4 @@
-import { CmsError } from "@monti-cms/core/plugin/server";
+import { CmsError } from "@monti-cms/core/server";
 import { exportEntry, isSyncable } from "./entry-file.js";
 import { log } from "./log.js";
 import { serverMessages } from "./server.messages.js";
@@ -7,7 +7,7 @@ import { APPLYING_WINDOW_MS, GitSyncError, GitSyncNotConfigured, NOT_CONFIGURED_
 /**
  * Outbound: from the CMS to the repo.
  *
- * An `afterCommit` event for a published entry, an unpublished one or a deleted one puts the entry in a queue (the plugin's storage, one item per entry and
+ * An `entry.changed` event for a published entry, an unpublished one or a deleted one puts the entry in a queue (the plugin's storage, one item per entry and
  * target). The queue is flushed into one commit: the first publish after a quiet period goes out at once, publishes that follow within `debounceMs` wait for the
  * batch. A flush looks at each queued entry as it is now (not as the event saw it), so a stale or repeated event does no harm, and writes, renames or deletes
  * its file. Nothing here swallows an error: a failure throws, and the event outbox retries it with the queue intact.
@@ -372,7 +372,7 @@ async function settle(ctx, target, entryId, queuedAt) {
     return undefined;
 }
 /**
- * The part of the `afterCommit` subscriber for published files. For each target that syncs the entry's collection it queues the entry and commits the queue.
+ * The part of the `entry.changed` subscriber for published files. For each target that syncs the entry's collection it queues the entry and commits the queue.
  * The event only says that something happened; what goes to the repo is the entry as it is now (its published version, or none).
  */
 export async function onPublishedEvent(ctx, event) {

@@ -1,4 +1,4 @@
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
 import { type AdminListColumn } from "./list-columns.js";
 interface EntryCellProps {
     collection: string;

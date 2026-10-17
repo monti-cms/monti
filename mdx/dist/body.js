@@ -35,20 +35,20 @@ const toStoredNode = (site, working) => {
     const content = working.content?.map((child) => toStoredNode(site, child));
     const marks = working.marks?.map(storedMark);
     if (working.type === "codeBlock") {
-        return storedNode("codeBlock", storedCodeBlockAttrs(site, working.attrs ?? {}), content, marks, working.text, working.id);
+        return storedNode("codeBlock", storedCodeBlockAttrs(site, working.attrs ?? {}), content, marks, working.text, working);
     }
     if (working.type !== "mdxJsx" && jsxRegistryOf(site).BLOCK_JSX_NAMES.has(working.type)) {
         const block = definitionOf(site, working);
         if (block)
-            return storedNode(block.name, valuesOf(working.attrs), content, marks, working.text, working.id);
+            return storedNode(block.name, valuesOf(working.attrs), content, marks, working.text, working);
         // No plain definition (spread attributes, `Math`, a table row outside a table): keep it as raw JSX.
-        return storedNode("mdxJsx", rawJsxAttrs(working.attrs, working.type), content, marks, working.text, working.id);
+        return storedNode("mdxJsx", rawJsxAttrs(working.attrs, working.type), content, marks, working.text, working);
     }
     if (working.type === "mdxJsx") {
         const name = typeof working.attrs?.name === "string" ? working.attrs.name : "";
-        return storedNode("mdxJsx", rawJsxAttrs(working.attrs, name), content, marks, working.text, working.id);
+        return storedNode("mdxJsx", rawJsxAttrs(working.attrs, name), content, marks, working.text, working);
     }
-    return storedNode(working.type, working.attrs, content, marks, working.text, working.id);
+    return storedNode(working.type, working.attrs, content, marks, working.text, working);
 };
 const isBlankParagraph = (block) => block.type === "paragraph" && (block.content ?? []).length === 0;
 /** The stored form of a working document, or `null` when the body cannot be stored as a document (it has front matter). */
@@ -100,6 +100,8 @@ const toWorkingNode = (site, stored) => {
         out.text = stored.text;
     if (stored.id !== undefined)
         out.id = stored.id;
+    if (stored.sourceId !== undefined)
+        out.sourceId = stored.sourceId;
     return out;
 };
 /** The working document (the shape `toDocument` makes and `serialize` reads) of a stored document. */

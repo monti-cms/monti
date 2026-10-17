@@ -1,4 +1,4 @@
-import { DEFAULT_TAB } from "@monti-cms/core/client";
+import { DEFAULT_TAB } from "@monti-cms/core/site";
 import { entriesMessages } from "./messages.js";
 /**
  * What the screens add to the panel's groups, which core works out (`site.panelGroupsOf`, `site.panelTabsOf`, `site.panelTabOf`): the words of the default tab. A tab

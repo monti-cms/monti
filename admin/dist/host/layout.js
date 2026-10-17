@@ -1,12 +1,13 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { SiteProvider } from "@monti-cms/core/client";
-import { loadAdminPlugins } from "../plugins.js";
+import { SiteProvider } from "@monti-cms/core/site";
+import { loadAdminPlugins } from "../internal-plugins.js";
 import { AdminFeaturesProvider } from "../screens/shared/admin-features.js";
 import { AdminQueryProvider } from "../screens/shared/query-provider.js";
 import { Toaster } from "../ui/sonner.js";
 import { TooltipProvider } from "../ui/tooltip.js";
 import { AdminThemeProvider } from "./admin-theme-provider.js";
 import { layoutMessages } from "./messages.js";
+import { AdminPluginScope } from "./plugin-scope.js";
 import { SetupProblemScreen, setupProblemOf } from "./setup-problem.js";
 /**
  * Metadata of the admin pages of an instance (title, no indexing), in the shape the framework's metadata export expects (Next's `Metadata` accepts it as is).
@@ -21,7 +22,7 @@ export function adminMetadata(cms) {
     };
 }
 /**
- * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
+ * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `monti-*` colors) come from the app's global CSS.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
  * If the site already has them, turn them off with `<AdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */
@@ -30,8 +31,8 @@ export async function AdminLayout({ cms, children, themeProvider = true, themeSt
     if (setupProblemOf(cms) !== undefined)
         return _jsx(SetupProblemScreen, { cms: cms });
     const plugins = await loadAdminPlugins(cms.site);
-    // Plugin providers wrap from the outside in registration order, inside the server data cache.
-    const content = plugins.reduceRight((inner, { name, Provider }) => (Provider ? _jsx(Provider, { children: inner }, name) : inner), _jsxs(TooltipProvider, { children: [_jsx("div", { className: "cms-admin min-h-screen bg-cms-background text-cms-foreground", children: children }), toaster ? _jsx(Toaster, { richColors: true, closeButton: true, position: "bottom-right" }) : null] }));
+    // The plugins' declarations (components, slots, providers) are applied in the browser, from the outside in registration order.
+    const content = (_jsx(AdminPluginScope, { plugins: plugins, children: _jsxs(TooltipProvider, { children: [_jsx("div", { className: "monti-admin min-h-screen bg-monti-background text-monti-foreground", children: children }), toaster ? _jsx(Toaster, { richColors: true, closeButton: true, position: "bottom-right" }) : null] }) }));
     // The browser gets the site as data (collections, locales, blocks, addresses, admin language), never a config file.
     const app = (_jsx(SiteProvider, { config: cms.site.snapshot(), children: _jsx(AdminQueryProvider, { children: _jsx(AdminFeaturesProvider, { features: { media: cms.isMediaConfigured }, children: content }) }) }));
     return themeProvider ? _jsx(AdminThemeProvider, { storageKey: themeStorageKey, children: app }) : app;

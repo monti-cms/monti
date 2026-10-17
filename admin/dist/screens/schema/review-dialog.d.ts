@@ -1,4 +1,4 @@
-import type { Issue } from "@monti-cms/core/client";
+import type { ConfigIssue } from "@monti-cms/core/site";
 import { type SavedSchema } from "../../api/schema.js";
 import type { Rename, SettingChange } from "./schema-model.js";
 export interface ReviewDialogProps {
@@ -10,7 +10,7 @@ export interface ReviewDialogProps {
     settings?: readonly SettingChange[];
     baseHash: string;
     /** The problems of the last check, for the screen to mark. */
-    onIssues: (issues: readonly Issue[]) => void;
+    onIssues: (issues: readonly ConfigIssue[]) => void;
     /** The file was saved (and applied). The screen reloads so everything shows the new schema. */
     onSaved: (saved: SavedSchema) => void;
     /** The file was saved but applying it to the database failed. */

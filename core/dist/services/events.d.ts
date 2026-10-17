@@ -1,7 +1,7 @@
-import { type AfterCommit, type EventDelivery, type EventDeliveryCounts, type EventLogState, type EventStore } from "../core/store/index.js";
+import { type AfterCommit, type ContentChangeKind, type EventDelivery, type EventDeliveryCounts, type EventLogState, type EventStore } from "../core/store/index.js";
 import type { Entry } from "../core/store/types.js";
 /**
- * Delivery of the committed changes (the outbox, `core/store/events.ts`) to the subscribers: `hooks.afterCommit` of the server config and of the plugins.
+ * Delivery of the committed changes (the outbox, `core/store/events.ts`) to the subscribers: the durable `on.entry` subscribers of the server config and of the plugins.
  *
  * - The store wrote the events in the transaction of the change. After the commit the dispatcher makes one delivery per subscriber and tries it right away,
  *   in the same process, so latency is what it was before the outbox.
@@ -16,6 +16,8 @@ import type { Entry } from "../core/store/types.js";
 export interface EventSubscriber {
     /** `server` for the server config, `plugin:<name>` for a plugin. */
     readonly name: string;
+    /** The kinds of change it is delivered; the outbox makes delivery rows for no others. */
+    readonly kinds: readonly ContentChangeKind[];
     readonly handler: AfterCommit;
 }
 /** Server config `events`: how failed deliveries are retried and kept. */

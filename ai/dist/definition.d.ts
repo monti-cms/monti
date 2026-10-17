@@ -1,5 +1,5 @@
 import { type MessageBundle } from "@monti-cms/core";
-import type { Translator } from "@monti-cms/core/client";
+import type { Translator } from "@monti-cms/core/site";
 import { z } from "zod";
 import { coreMessages } from "./core.messages.js";
 /** Translator of the validation messages (`coreMessages`) the schemas report. */

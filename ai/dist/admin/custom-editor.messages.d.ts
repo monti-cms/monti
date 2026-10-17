@@ -1,2 +1,2 @@
 /** Texts of the basic-info inputs of a screen action (name, attach target, result, mode). */
-export declare const customMessages: import("@monti-cms/core").MessageBundle<"field.engine" | "field.field" | "field.name" | "field.place" | "field.result" | "place.field" | "place.hint.block" | "place.hint.field" | "place.hint.image" | "place.hint.insert" | "place.hint.media" | "place.hint.selection" | "place.media">;
+export declare const customMessages: import("@monti-cms/core").MessageBundle<"field.engine" | "field.field" | "field.name" | "field.place" | "field.result" | "place.field" | "place.media">;

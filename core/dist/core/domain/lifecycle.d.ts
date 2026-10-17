@@ -8,7 +8,11 @@ import type { EntryStatus } from "../store/types.js";
 export type LifecycleAction = "archive" | "unarchive" | "trash" | "restore";
 /** Status after the transition. A restored publish-collection entry returns to draft. */
 export declare const STATUS_AFTER: Record<LifecycleAction, EntryStatus>;
+/** Whether an entry in `status` can take this transition. The admin asks it before sending a bulk change, the store asserts it. */
+export declare const canTransition: (action: LifecycleAction, status: EntryStatus) => boolean;
 export declare function assertTransitionAllowed(action: LifecycleAction, status: EntryStatus, version: number): void;
+/** A trashed entry is restored before it is duplicated, as before it is edited. */
+export declare function assertDuplicable(status: EntryStatus): void;
 /** Record collections (tags, categories, ...) have no archive. */
 export declare function assertArchivable(site: Site, collection: string, version: number): void;
 /** A record in use must have its references released before it goes to the trash. */

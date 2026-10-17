@@ -1,4 +1,4 @@
-import { adminRoute, CmsError, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, cmsErrorText, ok, parseWith, pluginLog, readJsonBody } from "@monti-cms/core/server";
 import { aiRunBodySchemaOf, inputSchemaFor } from "../../action.js";
 import { actionWithDraft, getAction } from "../../actions.js";
 import { coreMessages } from "../../core.messages.js";
@@ -41,14 +41,13 @@ function streamResponse(site, run) {
                 // If the screen withdrew the request (e.g. closed the dialog), nobody is receiving, so end quietly.
                 if (error instanceof Error && error.name === "AbortError")
                     return close();
-                const known = error instanceof CmsError;
-                if (!known)
+                if (error instanceof CmsError) {
+                    send({ type: "error", code: error.code, ...cmsErrorText(site, error) });
+                }
+                else {
                     log.error("stream failed:", error);
-                send({
-                    type: "error",
-                    code: known ? error.code : "upstream_failed",
-                    message: known ? error.message : t("noAnswer"),
-                });
+                    send({ type: "error", code: "upstream_failed", message: t("noAnswer") });
+                }
             }
             close();
         },
@@ -111,7 +110,7 @@ export const POST = adminRoute(async ({ request, cms }) => {
             catch (error) {
                 // A format error in one input fails only that input.
                 if (error instanceof AiError && error.code === "upstream_failed")
-                    results[index] = { error: error.message };
+                    results[index] = { error: cmsErrorText(deps.site, error).message };
                 else
                     throw error;
             }

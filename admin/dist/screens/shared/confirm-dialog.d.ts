@@ -1,4 +1,4 @@
-import { type Translator } from "@monti-cms/core/client";
+import { type Translator } from "@monti-cms/core/site";
 import { type ReactNode } from "react";
 export interface ConfirmRequest {
     title: string;

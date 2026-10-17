@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { blocksMessages } from "../messages.js";
 import { FencePreviewBlockView } from "./fence-preview-node-view.js";
 import { MathPreview } from "./preview-renderers.js";

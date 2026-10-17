@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import type { Obj } from "./schema-model.js";
 /**
  * A site made from the schema being edited (the draft), for a preview that runs the real components: `schemaOf`, the layout, conditional fields, tabs, options

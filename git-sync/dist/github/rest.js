@@ -1,4 +1,4 @@
-import { pluginError } from "@monti-cms/core";
+import { pluginError } from "@monti-cms/core/server";
 import { GIT_SYNC_PLUGIN_NAME } from "../name.js";
 import { GitHubApiError, } from "./client.js";
 const DEFAULT_API_URL = "https://api.github.com";

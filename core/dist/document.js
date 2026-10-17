@@ -10,4 +10,4 @@ export * from "./doc/image-src.js";
 export * from "./doc/image-transform.js";
 export { outOfRangeAnnotationNames, storedCodeBlockAttrs, storedCodeBlockFence, workingCodeBlockAttrs, } from "./doc/stored-code-block.js";
 export { CORE_NODE_TYPES, canonicalDocument, emptyStoredDocument, isUnparsedDocument, readStoredDocument, STORED_DOCUMENT_VERSION, sortJson, storedMark, storedNode, UNPARSED_NODE, unparsedDocument, } from "./doc/stored-document.js";
-export * from "./doc/table-layout.js";
+export { boundedTableSpan, hasGfmHeaderLayout, MAX_TABLE_COLUMN_WIDTH, MAX_TABLE_COLUMNS, tableCellColumns, } from "./doc/table-layout.js";

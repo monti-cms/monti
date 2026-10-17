@@ -10,7 +10,7 @@ export function createMigrator(parts) {
     /** Where the line per plugin goes. First-time setup leaves it out: the plugin tables are in the count of created tables. */
     pluginLog = log) => {
         const summary = await database.migrate({ site, formats: await plugins.formats() });
-        await plugins.migrate((plugin) => database.pluginStorage(plugin), pluginLog);
+        await plugins.migrate(pluginLog);
         return { summary };
     };
     return {

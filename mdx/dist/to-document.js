@@ -1,5 +1,6 @@
 import { fromCodeFenceToCodeBlockDocument } from "@monti-cms/core/code-block";
-import { boundedTableSpan, hasGfmHeaderLayout, linkMarkAttrs, MAX_TABLE_COLUMNS, parseTableWidths, tableHasMergedCells, } from "@monti-cms/core/document";
+import { boundedTableSpan, hasGfmHeaderLayout, linkMarkAttrs, MAX_TABLE_COLUMNS, } from "@monti-cms/core/document";
+import { parseTableWidths, tableHasMergedCells } from "@monti-cms/core/notation";
 import { splitFrontmatter } from "./frontmatter.js";
 import { attributeRecord, readJsxAttributes } from "./jsx.js";
 import { jsxRegistryOf } from "./registry.js";

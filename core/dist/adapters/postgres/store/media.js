@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
-import { assertFolderInCollection } from "../../../core/domain/folders.js";
+import { MEDIA_FOLDER_SCOPE } from "../../../core/collections.js";
 import { CmsError } from "../../../core/store/errors.js";
 import { withTrx } from "./context.js";
+import { assertFolderTarget } from "./folders.js";
 import { MEDIA_COLUMN_NAMES, mapMediaRow } from "./rows.js";
 import { likeContainsPattern, likePrefixPattern } from "./sql.js";
 import { ROW_COLLECTION, titleExpr } from "./title-sql.js";
@@ -18,14 +19,7 @@ export function createMediaOps(ctx) {
     };
     return {
         createMediaAsset: async (input) => {
-            if (input.folderId) {
-                const folder = await db
-                    .selectFrom("folders")
-                    .select("collection")
-                    .where("id", "=", input.folderId)
-                    .executeTakeFirst();
-                assertFolderInCollection(folder?.collection, "media");
-            }
+            await assertFolderTarget(db, site, input.folderId, MEDIA_FOLDER_SCOPE);
             const now = new Date();
             const row = await db
                 .insertInto("media_assets")
@@ -94,14 +88,7 @@ export function createMediaOps(ctx) {
         },
         /** The library's default alt and caption. They are copied only on insert, so bodies already written do not change. */
         updateMediaMetadata: async (params) => {
-            if (params.folderId) {
-                const folder = await db
-                    .selectFrom("folders")
-                    .select("collection")
-                    .where("id", "=", params.folderId)
-                    .executeTakeFirst();
-                assertFolderInCollection(folder?.collection, "media");
-            }
+            await assertFolderTarget(db, site, params.folderId, MEDIA_FOLDER_SCOPE);
             const setValues = {
                 updated_at: sql `now()`,
             };
@@ -231,10 +218,8 @@ export function createMediaOps(ctx) {
             const bodyMentions = Number(mentions.rows[0]?.count ?? 0);
             const templateMentions = Number(mentions.rows[0]?.templates ?? 0);
             if (referenceCount > 0 || bodyMentions > 0 || templateMentions > 0) {
-                throw new CmsError("Media asset is in use", "in_use", undefined, {
-                    references: referenceCount,
-                    bodies: bodyMentions,
-                    templates: templateMentions,
+                throw new CmsError("Media asset is in use", "in_use", {
+                    details: { references: referenceCount, bodies: bodyMentions, templates: templateMentions },
                 });
             }
             const updated = await trx

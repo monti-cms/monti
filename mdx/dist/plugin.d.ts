@@ -1,4 +1,4 @@
-import { type Issue } from "@monti-cms/core";
+import { type ConfigIssue, type PluginId } from "@monti-cms/core";
 import { MDX_PLUGIN_NAME } from "./name.js";
 import type { SyntaxExtension } from "./syntax/types.js";
 export { MDX_PLUGIN_NAME };
@@ -11,8 +11,10 @@ export interface MdxPluginOptions {
      */
     readonly syntax?: readonly SyntaxExtension[];
 }
+/** The MDX plugin with the type of its options (`site.pluginOptions(MDX_PLUGIN)`). */
+export declare const MDX_PLUGIN: PluginId<typeof MDX_PLUGIN_NAME, MdxPluginOptions>;
 /** The problems of the options: every extension has a name, and no name is listed twice. */
-export declare const checkMdxOptions: (options: MdxPluginOptions | undefined) => Issue[];
+export declare const checkMdxOptions: (options: MdxPluginOptions | undefined) => ConfigIssue[];
 /**
  * MDX as a format of the CMS (`@monti-cms/mdx`). Add it to the site config `plugins`.
  *
@@ -23,6 +25,6 @@ export declare const checkMdxOptions: (options: MdxPluginOptions | undefined) =>
  * plugins: [mdx({ syntax: [directiveSyntax()] })]
  * ```
  */
-export declare const mdx: (options?: MdxPluginOptions) => import("@monti-cms/core").CmsPlugin<"mdx", MdxPluginOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+export declare const mdx: (options?: MdxPluginOptions) => import("@monti-cms/core").Plugin<"mdx", MdxPluginOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

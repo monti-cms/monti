@@ -1,10 +1,8 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { useTranslator } from "@monti-cms/admin";
 import { addedMarkName, allowsMark, BubbleButton, MarkTextForm, MarkTextPopover, removeInlineMark, } from "@monti-cms/admin/editor";
-import { useTranslator } from "@monti-cms/core/client";
 import { MessageSquareMore, Pencil, X } from "lucide-react";
-import { useMemo } from "react";
 import { keywordList } from "../shared/text.js";
 import { tooltipBlock } from "./definition.js";
 import { tooltipMessages } from "./messages.js";
@@ -40,7 +38,7 @@ function TooltipDetail(props) {
     const t = useTranslator(tooltipMessages);
     const { editor, mark, act } = props;
     const content = String(mark.attrs.content ?? "");
-    return (_jsxs(_Fragment, { children: [_jsx(MessageSquareMore, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), _jsx("span", { className: "max-w-48 truncate px-1 text-cms-muted-foreground text-xs", title: content, children: content }), _jsx(BubbleButton, { label: t("edit"), onClick: () => openForm(t, props, { active: true, initial: content, range: mark }), children: _jsx(Pencil, { "aria-hidden": true, className: ICON_CLASS }) }), _jsx(BubbleButton, { label: t("remove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(X, { "aria-hidden": true, className: ICON_CLASS }) })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(MessageSquareMore, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-monti-muted-foreground" }), _jsx("span", { className: "max-w-48 truncate px-1 text-monti-muted-foreground text-xs", title: content, children: content }), _jsx(BubbleButton, { label: t("edit"), onClick: () => openForm(t, props, { active: true, initial: content, range: mark }), children: _jsx(Pencil, { "aria-hidden": true, className: ICON_CLASS }) }), _jsx(BubbleButton, { label: t("remove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(X, { "aria-hidden": true, className: ICON_CLASS }) })] }));
 }
 /**
  * Editor registration of the tooltip mark in the admin language `t` picks (the slash menu item is text, not a component). Shown with a dotted underline,
@@ -70,9 +68,7 @@ export const tooltipMarkExtension = (t) => ({
         },
     ],
 });
-/** Registers the tooltip mark's editor display, format tool, bubble, and slash menu in the admin UI. */
-export function TooltipProvider({ children }) {
-    const t = useTranslator(tooltipMessages);
-    const components = useMemo(() => ({ marks: { [tooltipBlock.name]: tooltipMarkExtension(t) } }), [t]);
-    return _jsx(CmsAdminComponentsProvider, { components: components, children: children });
-}
+/** The tooltip mark's editor display, format tool, bubble and slash menu, in the admin language of the site. */
+export const tooltipComponents = (site) => ({
+    marks: { [tooltipBlock.name]: tooltipMarkExtension(site.createTranslator(tooltipMessages)) },
+});

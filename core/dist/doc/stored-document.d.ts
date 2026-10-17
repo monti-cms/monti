@@ -1,9 +1,8 @@
 import type { Site } from "../site/index.js";
-import { type CodeBlockSite } from "./stored-code-block.js";
 import type { CmsJsonValue, CmsMark, CmsNode } from "./types.js";
 /**
- * Format version of a stored document. Raise it when a node or attribute changes its name or meaning, and add the step
- * from the previous version to `STORED_DOCUMENT_MIGRATIONS`. A new kind of block does not raise it.
+ * Format version of a stored document. Raise it when a node or attribute changes its name or meaning; only the current version is read. A new kind of
+ * block does not raise it.
  */
 export declare const STORED_DOCUMENT_VERSION = 3;
 /**
@@ -27,16 +26,16 @@ export declare const CORE_NODE_TYPES: ReadonlySet<string>;
 /** The value with its object keys sorted at every depth. */
 export declare const sortJson: (value: CmsJsonValue) => CmsJsonValue;
 export declare const sortedAttrs: (attrs: Record<string, CmsJsonValue>) => Record<string, CmsJsonValue> | undefined;
-/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `text`, `type`). */
-export declare const storedNode: (type: string, attrs: Record<string, CmsJsonValue> | undefined, content: CmsNode[] | undefined, marks: CmsMark[] | undefined, text: string | undefined, id?: string) => CmsNode;
+/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `sourceId`, `text`, `type`). */
+export declare const storedNode: (type: string, attrs: Record<string, CmsJsonValue> | undefined, content: CmsNode[] | undefined, marks: CmsMark[] | undefined, text: string | undefined, ids?: Pick<CmsNode, "id" | "sourceId">) => CmsNode;
 /** A mark in its stored form: keys sorted, an internal link normalised. */
 export declare const storedMark: (given: CmsMark) => CmsMark;
 export declare const isBlankParagraph: (block: CmsNode) => boolean;
 /**
- * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and lifts an
- * older version to the current one. Returns `undefined` for anything that is not a stored document of a known version.
+ * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and its version. Returns `undefined`
+ * for anything that is not a stored document of the current version.
  */
-export declare const readStoredDocument: (value: unknown, site?: CodeBlockSite) => StoredDocument | undefined;
+export declare const readStoredDocument: (value: unknown) => StoredDocument | undefined;
 /**
  * The form a document is stored in whichever way it was made (a client, an API request, a hook, a format): trailing blank paragraphs dropped, text runs
  * normalised (see `canonicalInline`). A document read from a format is already in it, so the same body hashes the same from either source.

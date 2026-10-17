@@ -1,5 +1,5 @@
-import type { SlugField, ValueField } from "@monti-cms/core/client";
-import { type SchemaCollection } from "@monti-cms/core/client";
+import type { SlugField, ValueField } from "@monti-cms/core";
+import { type SchemaCollectionName } from "@monti-cms/core/site";
 import { type ReactNode } from "react";
 import { type CmsIssue } from "../../api/error-message.js";
 import { type StateStore } from "../../hooks/store.js";
@@ -69,7 +69,7 @@ export interface FieldState<V extends FormValue = FormValue> {
  * @experimental
  */
 export interface EntryFormValue {
-    readonly collection: SchemaCollection;
+    readonly collection: SchemaCollectionName;
     readonly form: EntryForm;
     /** Applies a partial change: only the given keys change. Keys the form does not edit (values of removed fields) are left alone. */
     readonly setForm: (patch: EntryFormPatch) => void;
@@ -91,7 +91,7 @@ export interface EntryFormValue {
 }
 /** What the fields read. A store, so a field subscribes to its own slice. */
 interface EntryFormState {
-    collection: SchemaCollection;
+    collection: SchemaCollectionName;
     form: EntryForm;
     setForm: (patch: EntryFormPatch) => void;
     issues: readonly CmsIssue[];

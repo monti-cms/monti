@@ -12,9 +12,5 @@ export interface TranslationState {
 export declare const MAX_TRANSLATION_BYTES: number;
 /** The state that confirms a source: its document. */
 export declare function confirmedSourceState(doc: StoredDocument): TranslationState;
-/**
- * Validates an incoming value as a translation state. A wrong shape is treated as an error (returns `undefined`).
- * Older states are lifted to version 4, which is always the result: version 3 held the source's MDX (`baseSource`) and, when it had one, its document
- * (`baseDoc`); version 2 only the MDX. A source that has no document is kept as an `unparsed` body holding its MDX (the `mdx` format can read it again).
- */
+/** Validates an incoming value as a translation state. A wrong shape is treated as an error (returns `undefined`). */
 export declare function parseTranslationState(value: unknown): TranslationState | null | undefined;

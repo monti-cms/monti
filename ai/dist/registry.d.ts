@@ -1,8 +1,8 @@
-import type { CmsPlugin, PluginNamed } from "@monti-cms/core";
-import type { CmsConfig, Site } from "@monti-cms/core/client";
+import type { CmsConfig, Plugin, PluginNamed } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/site";
 import type { AiActionDefinition, AiActionInput, AiActionResult, AiAttach, AiSiteView, AiSnippet } from "./action.js";
 import type { AiSlot } from "./definition.js";
-import { AI_PLUGIN_NAME } from "./name.js";
+import { type AI_PLUGIN_NAME } from "./name.js";
 import type { DEFAULT_AI_ACTIONS } from "./presets.js";
 /**
  * AI actions of one site (`ai({ actions })`). The names (keys) and the input/result types are read from the config type; the actions to run are resolved from a
@@ -10,7 +10,7 @@ import type { DEFAULT_AI_ACTIONS } from "./presets.js";
  */
 type AiPluginOptions<Config extends CmsConfig> = Config extends {
     readonly plugins?: infer P;
-} ? PluginNamed<P, typeof AI_PLUGIN_NAME> extends CmsPlugin<string, infer O> ? O : never : never;
+} ? PluginNamed<P, typeof AI_PLUGIN_NAME> extends Plugin<string, infer O> ? O : never : never;
 type ConfigActions<Config extends CmsConfig> = [AiPluginOptions<Config>] extends [{
     readonly actions: infer X;
 }] ? X : Record<never, never>;
@@ -27,7 +27,7 @@ type ContributedActions<Config extends CmsConfig> = UnionToIntersection<ConfigPl
             readonly actions?: infer A;
         };
     };
-} ? unknown extends A ? never : A : never : never>;
+} ? unknown extends A ? never : string extends keyof A ? never : A : never : never>;
 /** Name -> definition (excludes default and added actions that the config changed or turned off). */
 type Unconfigured<T, Config extends CmsConfig> = {
     [K in keyof T as K extends keyof ConfigActions<Config> ? never : K]: Built<T[K]>;

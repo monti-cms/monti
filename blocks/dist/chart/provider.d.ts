@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
+import type { AdminComponents } from "@monti-cms/admin";
 /** Adds the chart block's menu icon and editor preview to the admin UI. */
-export declare function ChartProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;
+export declare const chartComponents: AdminComponents;

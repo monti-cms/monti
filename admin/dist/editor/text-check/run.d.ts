@@ -1,4 +1,4 @@
-import { type CachedIssue, type TextChecker, type TextCheckerLimits, type TextCheckSegment } from "@monti-cms/core/client";
+import { type CachedIssue, type TextChecker, type TextCheckerLimits, type TextCheckSegment } from "@monti-cms/core";
 import { type DocSegment } from "./extract.js";
 export type { CachedIssue };
 /** Result drawn in the editor. `from` and `to` are current document positions. */

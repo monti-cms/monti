@@ -1,6 +1,5 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { codeExplorerBlock } from "./definition.js";
-export { codeExplorerBlock } from "./definition.js";
 /**
  * Code explorer block (`:::code-explorer`). A file tree with the code of the picked file. Add it to the site config's `plugins`.
  *

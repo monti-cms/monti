@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/blocks",
-  "version": "0.2.0-next.11",
+  "version": "0.2.0-next.12",
   "private": true,
   "description": "Block extensions for @monti-cms/core: callout, collapsible, tabs, columns, code explorer, Mermaid, chart, and inline marks (tooltip, code link, text color)",
   "license": "MIT",
@@ -14,10 +14,6 @@
       "types": "./dist/definitions.d.ts",
       "default": "./dist/definitions.js"
     },
-    "./callout": {
-      "types": "./dist/callout/index.d.ts",
-      "default": "./dist/callout/index.js"
-    },
     "./callout/admin": {
       "types": "./dist/callout/admin.d.ts",
       "default": "./dist/callout/admin.js"
@@ -25,10 +21,6 @@
     "./callout/render": {
       "types": "./dist/callout/render.d.ts",
       "default": "./dist/callout/render.js"
-    },
-    "./code-explorer": {
-      "types": "./dist/code-explorer/index.d.ts",
-      "default": "./dist/code-explorer/index.js"
     },
     "./code-explorer/admin": {
       "types": "./dist/code-explorer/admin.d.ts",
@@ -38,10 +30,6 @@
       "types": "./dist/code-explorer/render.d.ts",
       "default": "./dist/code-explorer/render.js"
     },
-    "./collapsible": {
-      "types": "./dist/collapsible/index.d.ts",
-      "default": "./dist/collapsible/index.js"
-    },
     "./collapsible/admin": {
       "types": "./dist/collapsible/admin.d.ts",
       "default": "./dist/collapsible/admin.js"
@@ -50,10 +38,6 @@
       "types": "./dist/collapsible/render.d.ts",
       "default": "./dist/collapsible/render.js"
     },
-    "./tabs": {
-      "types": "./dist/tabs/index.d.ts",
-      "default": "./dist/tabs/index.js"
-    },
     "./tabs/admin": {
       "types": "./dist/tabs/admin.d.ts",
       "default": "./dist/tabs/admin.js"
@@ -61,10 +45,6 @@
     "./tabs/render": {
       "types": "./dist/tabs/render.d.ts",
       "default": "./dist/tabs/render.js"
-    },
-    "./columns": {
-      "types": "./dist/columns/index.d.ts",
-      "default": "./dist/columns/index.js"
     },
     "./columns/admin": {
       "types": "./dist/columns/admin.d.ts",
@@ -106,10 +86,6 @@
       "types": "./dist/chart/ai.d.ts",
       "default": "./dist/chart/ai.js"
     },
-    "./tooltip": {
-      "types": "./dist/tooltip/index.d.ts",
-      "default": "./dist/tooltip/index.js"
-    },
     "./tooltip/admin": {
       "types": "./dist/tooltip/admin.d.ts",
       "default": "./dist/tooltip/admin.js"
@@ -118,10 +94,6 @@
       "types": "./dist/tooltip/render.d.ts",
       "default": "./dist/tooltip/render.js"
     },
-    "./code-ref": {
-      "types": "./dist/code-ref/index.d.ts",
-      "default": "./dist/code-ref/index.js"
-    },
     "./code-ref/admin": {
       "types": "./dist/code-ref/admin.d.ts",
       "default": "./dist/code-ref/admin.js"
@@ -129,10 +101,6 @@
     "./code-ref/render": {
       "types": "./dist/code-ref/render.d.ts",
       "default": "./dist/code-ref/render.js"
-    },
-    "./color": {
-      "types": "./dist/color/index.d.ts",
-      "default": "./dist/color/index.js"
     },
     "./color/admin": {
       "types": "./dist/color/admin.d.ts",
@@ -153,9 +121,9 @@
     "mermaid": ">=11",
     "recharts": ">=3",
     "lucide-react": ">=0.562.0",
-    "@monti-cms/core": "^0.2.0-next.11",
-    "@monti-cms/ai": "^0.2.0-next.11",
-    "@monti-cms/admin": "^0.2.0-next.11"
+    "@monti-cms/core": "^0.2.0-next.12",
+    "@monti-cms/admin": "^0.2.0-next.12",
+    "@monti-cms/ai": "^0.2.0-next.12"
   },
   "peerDependenciesMeta": {
     "@monti-cms/ai": {
@@ -192,11 +160,11 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/ai": "0.2.0-next.11",
-    "@monti-cms/core": "0.2.0-next.11",
-    "@monti-cms/mdx": "0.2.0-next.11",
-    "@monti-cms/syntax-directive": "0.2.0-next.11",
-    "@monti-cms/admin": "0.2.0-next.11"
+    "@monti-cms/admin": "0.2.0-next.12",
+    "@monti-cms/ai": "0.2.0-next.12",
+    "@monti-cms/core": "0.2.0-next.12",
+    "@monti-cms/syntax-directive": "0.2.0-next.12",
+    "@monti-cms/mdx": "0.2.0-next.12"
   },
   "files": [
     "dist",

@@ -1,5 +1,5 @@
-import { BAREUN_PLUGIN_NAME, resolveBareunOptions } from "./options.js";
+import { BAREUN_PLUGIN, resolveBareunOptions } from "./options.js";
 /** Settings of the Bareun checker registered in the site config. Read by both the server route and the admin UI. */
 export function readBareunOptions(site) {
-    return site.getPluginOptions(BAREUN_PLUGIN_NAME) ?? resolveBareunOptions();
+    return site.pluginOptions(BAREUN_PLUGIN) ?? resolveBareunOptions();
 }

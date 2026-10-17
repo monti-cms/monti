@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { InternalLinkItem } from "./internal-link.js";
 /** Query key of the `[[` link search for typed text. */
 export declare const linkSearchKey: (query: string) => readonly ["cms", "entries", "link-search", string];

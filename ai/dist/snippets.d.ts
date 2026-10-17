@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /**
  * Prompt snippets. Fill `{{snippet.key}}` in the instructions of every action. There are two kinds.
  *
@@ -7,7 +7,6 @@ import type { Site } from "@monti-cms/core/client";
  * - **Added text**: text added in the admin screen by entering key, name and content. The key cannot be changed after creation; delete it if no action uses it.
  *
  * Both are kept in one `shared` row (the stored row name is kept) of the AI settings table as `{ texts: { key: edited content }, added: [{ key, label, text }] }`.
- * The old shape (config text key -> edited content) is also read, and saving changes it to the new shape.
  */
 export interface AiSnippetStore {
     getAiSettings(id: "shared"): Promise<{

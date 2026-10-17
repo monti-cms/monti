@@ -1,0 +1,7 @@
+/**
+ * The text a person reads for each issue code (a problem found in content), in the admin language. A key is an issue code; `field.*` are the
+ * required-value and length texts that name the field, `invalid_value` is the text of a request value that does not check, `unknown` the text of a
+ * code with neither a text here nor a message of its own, and `position` the place in a body text.
+ * Sites override the text with `admin.messages["cms.core.issues"]` in the config.
+ */
+export declare const issueMessages: import("..").MessageBundle<"code_anchor_duplicate" | "code_annotation_out_of_range" | "code_ref_broken" | "disallowed_block" | "disallowed_mark" | "empty_body" | "field.missing" | "field.tooLong" | "field_too_long" | "footnote_definition_duplicate" | "footnote_definition_missing" | "footnote_definition_unused" | "frontmatter_present" | "image_media_missing_in_storage" | "image_media_not_ready" | "image_media_unresolved" | "image_src_not_allowed" | "invalid_block_attribute" | "invalid_reference_collection" | "invalid_reference_id" | "invalid_value" | "mdx_error" | "missing_block_attribute" | "missing_field" | "missing_image_alt" | "missing_media_id" | "null_slug" | "orphaned_metadata_key" | "position" | "source_not_published" | "unknown" | "unknown_block_attribute" | "unknown_select_value" | "unparsed_body" | "unpublished_internal_link" | "unpublished_reference" | "unresolved_internal_link" | "unresolved_media" | "unresolved_reference" | "untranslated_text">;

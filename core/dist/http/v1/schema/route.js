@@ -1,3 +1,4 @@
+import { hostOf } from "../../../cms/host.js";
 import { readSchemaScreen, saveSchemaEdit } from "../../../schema-edit/index.js";
 import { CmsError } from "../error-handler.js";
 import { adminRoute, ok } from "../handler.js";
@@ -9,7 +10,7 @@ import { assertSchemaWritable, readEditBody } from "./shared.js";
  */
 export const GET = adminRoute(async ({ cms }) => ok(await readSchemaScreen(cms)));
 export const PUT = adminRoute(async ({ request, cms }) => {
-    assertSchemaWritable(cms);
+    assertSchemaWritable(hostOf(cms));
     const body = await readEditBody(request);
     if (typeof body.baseHash !== "string") {
         throw new CmsError("`baseHash` (the hash of the file the edit started from) is required", "invalid_input");
@@ -20,12 +21,16 @@ export const PUT = adminRoute(async ({ request, cms }) => {
     switch (result.reason) {
         case "conflict":
             throw new CmsError("The schema file changed since you opened it; reload it and edit again", "schema_conflict");
+        case "unacknowledged":
+            throw new CmsError("The edit changes stored entries in ways that were not reviewed. Check it with `POST /v1/schema/preview` and send the keys of its impacts as `acknowledged`.", "schema_unacknowledged", { details: { impacts: result.impacts } });
         case "invalid":
-            throw new CmsError("The schema does not check", "invalid_schema", undefined, undefined, result.issues);
+            throw new CmsError("The schema does not check", "invalid_schema", { issues: result.issues });
         case "problems":
-            throw new CmsError("A data transform does not fit the new schema", "invalid_transforms", undefined, undefined, result.problems);
+            throw new CmsError("A data transform does not fit the new schema", "invalid_transforms", {
+                issues: result.problems,
+            });
         case "apply_failed":
-            throw new CmsError(`The file was saved, but applying it to the database failed: ${result.message}`, "schema_apply_failed", undefined, { fileWritten: true, hash: result.hash });
+            throw new CmsError(`The file was saved, but applying it to the database failed: ${result.message}`, "schema_apply_failed", { details: { fileWritten: true, hash: result.hash } });
         case "unchanged":
             return ok(result);
     }

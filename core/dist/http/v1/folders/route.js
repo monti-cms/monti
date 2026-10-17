@@ -1,5 +1,5 @@
 import { adminRoute, ok, parseWith, readJsonBody } from "../handler.js";
-/** Folder tree per collection. */
+/** Folder tree per collection. The store rejects a collection that does not use folders (`assertFoldersEnabled`). */
 export const GET = adminRoute(async ({ request, cms }) => {
     const collection = parseWith(cms.site.api.folderCollectionSchema, new URL(request.url).searchParams.get("collection"), "collection is required");
     return ok(await cms.store().listFolders({ collection }));

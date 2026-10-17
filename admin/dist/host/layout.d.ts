@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import type { ReactNode } from "react";
 /**
  * Metadata of the admin pages of an instance (title, no indexing), in the shape the framework's metadata export expects (Next's `Metadata` accepts it as is).
@@ -32,7 +32,7 @@ export type AdminLayoutProps = {
     toaster?: boolean;
 };
 /**
- * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
+ * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `monti-*` colors) come from the app's global CSS.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
  * If the site already has them, turn them off with `<AdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */

@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 export interface InternalLinkItem {
     /** The id of the source entry (its translation group id). */

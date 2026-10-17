@@ -1,5 +1,5 @@
 import type { CmsFormat } from "@monti-cms/core/format";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
 import type { GitHubClient } from "./github/client.js";
 import { type GitSyncOptions, type ResolvedTarget } from "./options.js";
 import { type PathPattern } from "./path-pattern.js";

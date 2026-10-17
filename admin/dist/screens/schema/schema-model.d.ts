@@ -2,7 +2,7 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
-import { type PluginFieldSet } from "@monti-cms/core/client";
+import { type PluginFieldSet } from "@monti-cms/core";
 export type Obj = Record<string, unknown>;
 export declare const isObj: (value: unknown) => value is Obj;
 export declare const FIELD_KINDS: readonly ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
@@ -39,8 +39,11 @@ export declare function moveKey<T>(record: Record<string, T>, key: string, delta
 export declare function moveItem<T>(list: readonly T[], index: number, delta: number): T[];
 /** Whether two JSON values are the same, key order included. */
 export declare function sameJson(a: unknown, b: unknown): boolean;
-/** Why `name` cannot be used among `taken` names, or `null`. */
-export declare function nameProblem(name: string, taken: readonly string[]): "empty" | "pattern" | "reserved" | "taken" | null;
+type NameProblem = "empty" | "pattern" | "reserved" | "taken" | null;
+/** Why `name` cannot be used as a field key (or option / block name) among `taken` names, or `null`. */
+export declare function nameProblem(name: string, taken: readonly string[]): NameProblem;
+/** Why `name` cannot be used as a collection name among `taken` names, or `null`. Collections have their own reserved names, not the field-key ones. */
+export declare function collectionNameProblem(name: string, taken: readonly string[]): NameProblem;
 export declare const collectionsOf: (file: Obj) => Record<string, Obj>;
 export declare const fieldsOf: (collection: Obj) => Record<string, Obj>;
 export declare function setCollection(file: Obj, name: string, update: (collection: Obj) => Obj): Obj;
@@ -151,3 +154,4 @@ export declare function fieldProblems(field: Obj, collection: Obj, collectionNam
  * Only top-level fields: the file does not take either of them inside a conditional field.
  */
 export declare function removeBlock(collection: Obj, place: FieldPlace, name: string): "title" | "slug" | null;
+export {};

@@ -1,8 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-// Cell renderers of the entries table: title, status label, locale badges, dates, slug, folder and field columns.
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Folder as FolderIcon } from "lucide-react";
-import { useCmsAdminComponents } from "../admin-components.js";
+import { useAdminComponents } from "../admin-components.js";
 import { commonMessages } from "../lib/common.messages.js";
 import { cn } from "../lib/utils/cn.js";
 import { AdminLink as Link } from "../router/index.js";
@@ -31,7 +30,7 @@ function LocaleBadges({ translations }) {
             const name = site.localeLabel(locale);
             const member = translations.find((candidate) => candidate.locale === locale);
             if (!member) {
-                return (_jsxs(Badge, { variant: "outline", className: "border-dashed text-cms-muted-foreground/70", children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t("locale.hasNot", { name }) })] }, locale));
+                return (_jsxs(Badge, { variant: "outline", className: "border-dashed text-monti-muted-foreground/70", children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t("locale.hasNot", { name }) })] }, locale));
             }
             const variant = member.status === "published" && !member.hasUnpublishedChanges
                 ? "success"
@@ -47,7 +46,7 @@ function RecordLocaleBadges({ locales }) {
     const t = useTranslator(screensMessages);
     return (_jsx("span", { className: "flex items-center gap-1", children: site.LOCALES.map((locale) => {
             const named = locales.includes(locale);
-            return (_jsxs(Badge, { variant: named ? "success" : "outline", className: cn(!named && "border-dashed text-cms-muted-foreground/70"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) }) })] }, locale));
+            return (_jsxs(Badge, { variant: named ? "success" : "outline", className: cn(!named && "border-dashed text-monti-muted-foreground/70"), children: [_jsx("span", { "aria-hidden": "true", children: locale.toUpperCase() }), _jsx("span", { className: "sr-only", children: t(named ? "locale.has" : "locale.hasNot", { name: site.localeLabel(locale) }) })] }, locale));
         }) }));
 }
 /** Shows status with both icon shape and text (not conveyed by color alone). */
@@ -76,10 +75,10 @@ function DefaultEntryCell({ collection, column, item, folders, isTrash, isRecord
     const tc = useTranslator(commonMessages);
     switch (column) {
         case "title": {
-            const title = item.title || _jsx("span", { className: "text-cms-muted-foreground italic", children: tc("untitled") });
+            const title = item.title || _jsx("span", { className: "text-monti-muted-foreground italic", children: tc("untitled") });
             if (isTrash)
                 return _jsx("span", { className: "font-medium", children: title });
-            return isRecord ? (_jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onOpenRecord(item), className: "h-auto p-0 font-medium text-cms-foreground hover:text-cms-primary", children: title })) : (_jsxs("span", { className: "flex min-w-0 items-center gap-2", children: [_jsx(Link, { href: site.adminEntryEditHref(item.id), className: "truncate font-medium text-cms-foreground hover:text-cms-primary", children: title }), showFolderBesideTitle && item.folderId && (_jsxs("span", { className: "flex min-w-0 shrink items-center gap-1 text-cms-muted-foreground text-xs", children: [_jsx(FolderIcon, { "aria-hidden": true, className: "size-3 shrink-0" }), _jsxs("span", { className: "truncate", children: [_jsx("span", { className: "sr-only", children: t("list.folderSr") }), folderName(folders, item.folderId)] })] }))] }));
+            return isRecord ? (_jsx(Button, { type: "button", variant: "link", size: "sm", onClick: () => onOpenRecord(item), className: "h-auto p-0 font-medium text-monti-foreground hover:text-monti-primary", children: title })) : (_jsxs("span", { className: "flex min-w-0 items-center gap-2", children: [_jsx(Link, { href: site.adminEntryEditHref(item.id), className: "truncate font-medium text-monti-foreground hover:text-monti-primary", children: title }), showFolderBesideTitle && item.folderId && (_jsxs("span", { className: "flex min-w-0 shrink items-center gap-1 text-monti-muted-foreground text-xs", children: [_jsx(FolderIcon, { "aria-hidden": true, className: "size-3 shrink-0" }), _jsxs("span", { className: "truncate", children: [_jsx("span", { className: "sr-only", children: t("list.folderSr") }), folderName(folders, item.folderId)] })] }))] }));
         }
         case "status":
             // Do not convey status by color alone.
@@ -90,15 +89,15 @@ function DefaultEntryCell({ collection, column, item, folders, isTrash, isRecord
             if (item.translations)
                 return _jsx(LocaleBadges, { translations: item.translations });
             // Also mark that a translation is not the original.
-            return (_jsxs("span", { className: "text-cms-muted-foreground text-xs", children: [_jsx("abbr", { title: site.localeLabel(item.locale), className: "font-medium no-underline", children: item.locale.toUpperCase() }), item.translationGroupId !== item.id && _jsx("span", { className: "ml-1", children: t("list.translation") })] }));
+            return (_jsxs("span", { className: "text-monti-muted-foreground text-xs", children: [_jsx("abbr", { title: site.localeLabel(item.locale), className: "font-medium no-underline", children: item.locale.toUpperCase() }), item.translationGroupId !== item.id && _jsx("span", { className: "ml-1", children: t("list.translation") })] }));
         case "updatedAt":
         case "createdAt":
         case "publishedAt":
-            return (_jsx("span", { className: "tabular whitespace-nowrap text-cms-muted-foreground text-xs", children: formatDate(site, item[column]) }));
+            return (_jsx("span", { className: "tabular whitespace-nowrap text-monti-muted-foreground text-xs", children: formatDate(site, item[column]) }));
         case "slug":
-            return _jsx("span", { className: "font-mono text-cms-muted-foreground text-xs", children: item.slug || "—" });
+            return _jsx("span", { className: "font-mono text-monti-muted-foreground text-xs", children: item.slug || "—" });
         case "folder":
-            return _jsx("span", { className: "text-cms-muted-foreground text-xs", children: folderName(folders, item.folderId) });
+            return _jsx("span", { className: "text-monti-muted-foreground text-xs", children: folderName(folders, item.folderId) });
         default:
             // Field columns: default cells for relations (including taxonomy fields), select and text.
             return _jsx(DefaultFieldCell, { collection: collection, column: column, entry: item });
@@ -107,7 +106,7 @@ function DefaultEntryCell({ collection, column, item, folders, isTrash, isRecord
 /** One cell of the entries table. Cells registered by admin extensions (`listCells`) take precedence over default cells. */
 export function EntryCell(props) {
     const site = useSite();
-    const { listCells } = useCmsAdminComponents();
+    const { listCells } = useAdminComponents();
     const { collection, column, item } = props;
     const Custom = customListCell(site, listCells, collection, column);
     if (!Custom)

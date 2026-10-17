@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Check, MoreHorizontal } from "lucide-react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, } from "../ui/dropdown-menu.js";
@@ -13,7 +13,7 @@ const GAP = 4;
 const OVERFLOW_WIDTH = 32;
 const END_KEY = "end";
 export function ToolbarDivider() {
-    return _jsx("span", { "aria-hidden": true, className: "mx-1 h-5 w-px shrink-0 self-center bg-cms-border" });
+    return _jsx("span", { "aria-hidden": true, className: "mx-1 h-5 w-px shrink-0 self-center bg-monti-border" });
 }
 /** One tool row in a dropdown or the "More" menu. */
 export function ToolbarMenuItem({ editor, item }) {

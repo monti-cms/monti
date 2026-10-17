@@ -6,7 +6,7 @@ const EMPTY = { issues: [], decorations: DecorationSet.empty };
 function decorate(doc, issues) {
     if (issues.length === 0)
         return DecorationSet.empty;
-    return DecorationSet.create(doc, issues.map((issue) => Decoration.inline(issue.from, issue.to, { class: "cms-text-issue", "data-severity": issue.severity, "data-text-issue": issue.key }, { key: issue.key })));
+    return DecorationSet.create(doc, issues.map((issue) => Decoration.inline(issue.from, issue.to, { class: "monti-text-issue", "data-severity": issue.severity, "data-text-issue": issue.key }, { key: issue.key })));
 }
 /** Moves result positions along with document changes. Results that overlap or touch the changed range are dropped. */
 export function mapIssues(issues, tr) {

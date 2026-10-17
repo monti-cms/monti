@@ -31,12 +31,12 @@ export function cmsBasePath() {
  */
 export const withBasePath = (path) => `${cmsBasePath()}${path}`;
 /**
- * Admin API address. `cmsApiUrl("/v1/entries?page=2")` is `/api/monti/v1/entries?page=2` (prefixed with `basePath` if set).
+ * Admin API address. `adminApiUrl("/v1/entries?page=2")` is `/api/monti/v1/entries?page=2` (prefixed with `basePath` if set).
  * Every API call from the admin screen and extensions builds its address with this function.
  */
-export function cmsApiUrl(path) {
+export function adminApiUrl(path) {
     if (!path.startsWith("/"))
-        throw new Error(`cmsApiUrl: "${path}" must start with "/"`);
+        throw new Error(`adminApiUrl: "${path}" must start with "/"`);
     return withBasePath(`${CMS_API_PATH}${path}`);
 }
 /** Admin address rules that do not read the config. `path` is an empty string, `/…` or `?…`. */

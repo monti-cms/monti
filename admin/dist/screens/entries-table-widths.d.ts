@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type AdminListColumn } from "./list-columns.js";
 export declare const DEFAULT_TITLE_SIZE = 320;
 export declare function defaultColumnSize(site: Site, collection: string, column: AdminListColumn): number;

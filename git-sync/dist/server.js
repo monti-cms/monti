@@ -1,12 +1,13 @@
+import { defineServerPlugin } from "@monti-cms/core/server";
 import { commands } from "./commands.js";
 import { onContentEvent } from "./events.js";
 import { tokenKeyOf } from "./keys.js";
-import { GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT } from "./options.js";
+import { GIT_SYNC_TOKEN_SLOT } from "./options.js";
 import { resumeAfterToken } from "./outbound.js";
 import * as routes from "./routes.js";
 import { syncContextFor } from "./sync.js";
 /** Server side of the git-sync plugin. Loaded by the core API handler, the event outbox and the `monti` commands. Not included in the browser bundle. */
-const gitSyncServer = {
+export default defineServerPlugin({
     routes: [
         { pattern: "v1/git-sync/status", module: routes.status },
         { pattern: "v1/git-sync/pull", module: routes.pull },
@@ -14,19 +15,25 @@ const gitSyncServer = {
         { pattern: "v1/git-sync/conflicts", module: routes.conflicts },
         { pattern: "v1/git-sync/conflicts/resolve", module: routes.resolve },
         // GitHub calls this without a login; the route checks the webhook signature itself.
-        { pattern: "v1/git-sync/webhook", module: routes.webhook, public: true },
+        { pattern: "v1/git-sync/webhook", module: routes.webhook, access: "signed" },
     ],
     // Delivered through the event outbox: a failed push is retried, not lost.
-    hooks: { afterCommit: (event, cms) => onContentEvent(syncContextFor(cms), event) },
+    // Its deliveries are kept under `plugin:git-sync:sync`; keep the name, or the changes that are still waiting start over.
+    on: {
+        entry: { changed: [{ name: "sync", run: (event, { cms }) => onContentEvent(syncContextFor(cms), event) }] },
+        // A token was chosen: what waited for one goes out now.
+        keySlot: { changed: [onTokenChanged] },
+    },
     commands,
     // `features["git-sync"].ready` of the admin meta API: is a token saved?
-    features: async (cms) => ({
+    features: async ({ cms }) => ({
         ready: await tokenKeyOf(cms).then((key) => Boolean(key?.readable), () => false),
     }),
-};
-/** Called once a key was assigned to the token slot (`onChange` of the slot): what waited for a token goes out now. */
-export const onTokenChanged = async (cms) => {
-    if (await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read())
+});
+/** `keySlot.changed`: once a key was assigned to the token slot, what waited for a token goes out now. */
+async function onTokenChanged({ slot }, { cms, plugin }) {
+    if (slot !== GIT_SYNC_TOKEN_SLOT)
+        return;
+    if (await plugin.key(GIT_SYNC_TOKEN_SLOT).read())
         await resumeAfterToken(syncContextFor(cms));
-};
-export default gitSyncServer;
+}

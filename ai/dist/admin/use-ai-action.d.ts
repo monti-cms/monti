@@ -1,4 +1,4 @@
-import { type CmsConfig } from "@monti-cms/core/client";
+import type { CmsConfig } from "@monti-cms/core";
 import type { AiActionView } from "../actions.js";
 import type { AiActionInputOf, AiActionKey, AiActionResultOf } from "../registry.js";
 import { type AiRunOptions } from "./ai-slot-provider.js";

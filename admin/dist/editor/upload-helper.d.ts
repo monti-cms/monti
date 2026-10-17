@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /**
  * Browser image upload. Shared by the editor and the media library.
  *
@@ -17,6 +17,8 @@ export interface OptimizePolicy {
 }
 /** Default optimization policy. Can be changed in code. */
 export declare const DEFAULT_OPTIMIZE_POLICY: OptimizePolicy;
+/** `accept` value of an image file input: the image types this site allows. */
+export declare const imageAccept: (site: Site) => string;
 export interface PreparedUpload {
     /** File to upload for public use. The original as is if not optimized. */
     file: File;

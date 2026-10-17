@@ -1,4 +1,4 @@
-import { type Entry } from "@monti-cms/core/plugin/server";
+import type { Entry } from "@monti-cms/core/site";
 import { type ParsedEntryFile } from "./entry-file.js";
 import type { ResolvedTarget } from "./options.js";
 import type { SyncRecord } from "./state.js";

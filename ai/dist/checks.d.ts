@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { AiCandidate, AiCheck } from "./definition.js";
 /**
  * Fixed result checks (pure functions). Applies the enabled checks from the action's check list in order, and discards candidates that fail.

@@ -11,9 +11,9 @@ export type { StoredField } from "./walk.js";
  * The functions that look a collection up by name belong to one site's collections: `createSchemas(config.collections)` returns them, and a `Site` carries them.
  */
 /** Collection names (keys of `collections` in the site config). Follows declaration order. */
-export type SchemaCollection = string;
+export type SchemaCollectionName = string;
 /** Target collection of a relation. `to` and `from` in the definition are strings, and `defineSite` has checked they are real collections. */
-export type RelationTarget = SchemaCollection;
+export type RelationTarget = SchemaCollectionName;
 /**
  * Validates the meaning of values that passed the storage format check. If there is a problem, returns the legacy API's error code.
  */
@@ -41,51 +41,51 @@ export type RecordTranslations = {
 export type SiteSchemas = ReturnType<typeof createSchemas>;
 /** The rules of the collections of one site config (`config.collections`). */
 export declare function createSchemas(collections: CollectionsConfig): {
-    schemaOf: (collection: SchemaCollection) => CollectionSchema;
-    storedFields: (collection: SchemaCollection) => readonly StoredField[];
-    storedField: (collection: SchemaCollection, name: string) => StoredField | undefined;
-    slugFieldOf: (collection: SchemaCollection) => SlugField | undefined;
-    roleField: (collection: SchemaCollection, role: FieldRole) => StoredField | undefined;
-    roleValue: (collection: SchemaCollection, role: FieldRole, values: {
+    schemaOf: (collection: SchemaCollectionName) => CollectionSchema;
+    storedFields: (collection: SchemaCollectionName) => readonly StoredField[];
+    storedField: (collection: SchemaCollectionName, name: string) => StoredField | undefined;
+    slugFieldOf: (collection: SchemaCollectionName) => SlugField | undefined;
+    roleField: (collection: SchemaCollectionName, role: FieldRole) => StoredField | undefined;
+    roleValue: (collection: SchemaCollectionName, role: FieldRole, values: {
         readonly [key: string]: unknown;
     }) => string;
-    titleField: (collection: SchemaCollection) => TitleField;
-    titleOfValues: (collection: SchemaCollection, values: {
+    titleField: (collection: SchemaCollectionName) => TitleField;
+    titleOfValues: (collection: SchemaCollectionName, values: {
         readonly [key: string]: unknown;
     }) => string | null;
-    fillFromBodyFields: (collection: SchemaCollection) => (StoredField & {
+    fillFromBodyFields: (collection: SchemaCollectionName) => (StoredField & {
         readonly field: TextField;
     })[];
-    slugFromValues: (collection: SchemaCollection, values: {
+    slugFromValues: (collection: SchemaCollectionName, values: {
         readonly [key: string]: unknown;
     }) => string;
-    storageTypes: (collection: SchemaCollection) => Record<string, StorageType>;
-    relationsOf: (collection: SchemaCollection) => {
+    storageTypes: (collection: SchemaCollectionName) => Record<string, StorageType>;
+    relationsOf: (collection: SchemaCollectionName) => {
         field: string;
         kind: "entry";
         to: RelationTarget;
     }[];
-    isOrphanedMetadataKey: (collection: SchemaCollection, key: string) => boolean;
-    orphanedMetadataKeys: (collection: SchemaCollection, metadata: {
+    isOrphanedMetadataKey: (collection: SchemaCollectionName, key: string) => boolean;
+    orphanedMetadataKeys: (collection: SchemaCollectionName, metadata: {
         readonly [key: string]: unknown;
     }) => string[];
-    unknownSelectValues: (collection: SchemaCollection, metadata: {
+    unknownSelectValues: (collection: SchemaCollectionName, metadata: {
         readonly [key: string]: unknown;
     }) => {
         path: string;
         values: string[];
     }[];
-    schemaMetadata: <T>(collection: SchemaCollection, metadata: {
+    schemaMetadata: <T>(collection: SchemaCollectionName, metadata: {
         readonly [key: string]: T;
     }) => Record<string, T>;
-    metadataReferences: (collection: SchemaCollection, metadata: {
+    metadataReferences: (collection: SchemaCollectionName, metadata: {
         readonly [key: string]: unknown;
     }) => MetadataReference[];
-    relationRule: (collection: SchemaCollection, path: string) => {
+    relationRule: (collection: SchemaCollectionName, path: string) => {
         to: RelationTarget;
         allowUnpublished: boolean;
     } | undefined;
-    missingRequiredIssues: (collection: SchemaCollection, snapshot: {
+    missingRequiredIssues: (collection: SchemaCollectionName, snapshot: {
         slug: string | null;
         metadata: {
             readonly [key: string]: unknown;
@@ -97,24 +97,24 @@ export declare function createSchemas(collections: CollectionsConfig): {
         path: string;
         message?: string;
     }[];
-    localizedFieldNames: (collection: SchemaCollection) => {
+    localizedFieldNames: (collection: SchemaCollectionName) => {
         own: string[];
         inherit: string[];
     };
-    localizedSet: (collection: SchemaCollection) => ReadonlySet<string>;
-    commonFieldKeys: (collection: SchemaCollection, metadata: {
+    localizedSet: (collection: SchemaCollectionName) => ReadonlySet<string>;
+    commonFieldKeys: (collection: SchemaCollectionName, metadata: {
         readonly [key: string]: unknown;
     }) => string[];
-    pickLocalizedMetadata: <T>(collection: SchemaCollection, metadata: {
+    pickLocalizedMetadata: <T>(collection: SchemaCollectionName, metadata: {
         readonly [key: string]: T;
     }) => Record<string, T>;
-    mergeTranslationMetadata: <T>(collection: SchemaCollection, source: {
+    mergeTranslationMetadata: <T>(collection: SchemaCollectionName, source: {
         readonly [key: string]: T;
     }, translation: {
         readonly [key: string]: T;
     }) => Record<string, T>;
-    recordLocalizedFields: (collection: SchemaCollection) => string[];
-    normalizeRecordTranslations: (collection: SchemaCollection, value: unknown, locales: readonly string[]) => {
+    recordLocalizedFields: (collection: SchemaCollectionName) => string[];
+    normalizeRecordTranslations: (collection: SchemaCollectionName, value: unknown, locales: readonly string[]) => {
         value: RecordTranslations;
     } | {
         error: ErrorCode;

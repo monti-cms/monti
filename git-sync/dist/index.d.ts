@@ -21,8 +21,8 @@ import { type GitSyncOptions } from "./options.js";
  * ]
  * ```
  */
-export declare const gitSync: (options?: GitSyncOptions) => import("@monti-cms/core").CmsPlugin<"git-sync", GitSyncOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+export declare const gitSync: (options?: GitSyncOptions) => import("@monti-cms/core").Plugin<"git-sync", GitSyncOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };
 export type { GitHubClient, GitHubClientFactory, GitHubClientOptions } from "./github/client.js";
 export { DEFAULT_BRANCH, DEFAULT_FORMAT, DEFAULT_PATH_PATTERN, DEFAULT_PR_BRANCH, GIT_SYNC_PLUGIN_NAME, type GitSyncMode, type GitSyncOptions, type GitSyncTarget, type ResolvedTarget, resolveTargets, validateGitSyncConfig, } from "./options.js";

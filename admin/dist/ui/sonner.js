@@ -12,9 +12,9 @@ const Toaster = ({ ...props }) => {
             error: _jsx(OctagonXIcon, { className: "size-4" }),
             loading: _jsx(Loader2Icon, { className: "size-4 animate-spin" }),
         }, style: {
-            "--normal-bg": "var(--cms-popover)",
-            "--normal-text": "var(--cms-popover-foreground)",
-            "--normal-border": "var(--cms-border)",
+            "--normal-bg": "var(--monti-popover)",
+            "--normal-text": "var(--monti-popover-foreground)",
+            "--normal-border": "var(--monti-border)",
             "--border-radius": "var(--radius)",
         }, toastOptions: {
             classNames: {

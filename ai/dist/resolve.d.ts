@@ -1,3 +1,4 @@
+import { type PluginContributions } from "@monti-cms/core";
 import type { AiActionDefinition, AiConfig, AiSiteView, ResolvedAiConfig } from "./action.js";
 /**
  * Resolves the AI config (`ai(config)`) into the list of actions to run. Server (running), browser (slots) and config validation (`validate`) use the same result.
@@ -12,7 +13,7 @@ import type { AiActionDefinition, AiConfig, AiSiteView, ResolvedAiConfig } from 
 /** An AI action contribution of a plugin. */
 interface PluginLike {
     readonly name: string;
-    readonly contributes?: Readonly<Record<string, unknown>>;
+    readonly contributes?: PluginContributions;
 }
 export declare function resolveAiActions(config: AiConfig, site: Omit<AiSiteView, "snippetKeys">, plugins?: readonly PluginLike[]): Record<string, AiActionDefinition>;
 /** Resolves the AI config and returns it together with the prompt snippets. */

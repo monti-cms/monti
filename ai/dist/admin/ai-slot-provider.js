@@ -1,9 +1,8 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { CmsApiError } from "@monti-cms/admin/api";
+import { apiErrorOf, CmsApiError, useSite, useTranslator } from "@monti-cms/admin";
 import { useAdminPathname } from "@monti-cms/admin/router";
 import { SlotRegistryProvider } from "@monti-cms/admin/slots";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { useMemo } from "react";
@@ -43,9 +42,7 @@ export async function streamAiAction(site, action, input, options) {
     const fallback = t("runFailed");
     const response = await openAiRunStream({ ...requestBody(action, options), input, stream: true }, options.signal);
     if (!response.ok || !response.body) {
-        const { error } = (await response.json().catch(() => ({})));
-        const message = typeof error?.message === "string" ? error.message : fallback;
-        throw new CmsApiError(response.status, typeof error?.code === "string" ? error.code : undefined, message, [], error ?? {});
+        throw apiErrorOf(site, response.status, await response.json().catch(() => ({})), fallback);
     }
     const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
     let buffer = "";
@@ -67,7 +64,7 @@ export async function streamAiAction(site, action, input, options) {
             else if (event.type === "done")
                 return event.result;
             else
-                throw new CmsApiError(502, event.code, event.message || fallback, [], {});
+                throw apiErrorOf(site, 502, { error: event }, fallback);
         }
         if (done)
             break;

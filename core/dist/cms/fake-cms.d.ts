@@ -6,7 +6,7 @@ import type { MediaStore } from "../media/store.js";
 import { type LoadedServerPlugin } from "../plugin/server.js";
 import type { PluginStorage } from "../plugin/storage.js";
 import type { CmsAuth, CmsServerConfig } from "../server/define.js";
-import { type BulkService, type Cms, type ContentService } from "./create-cms.js";
+import { type BulkService, type CmsHost, type ContentService } from "./create-cms.js";
 /** What a test supplies to {@link fakeCms}. Whatever it leaves out fails loudly when the code under test touches it. */
 export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
     /**
@@ -19,13 +19,13 @@ export interface FakeCmsParts<Config extends CmsConfig = CmsConfig> {
     readonly contentService?: Partial<ContentService>;
     readonly bulkService?: Partial<BulkService>;
     readonly mediaStore?: Partial<MediaStore>;
-    /** Plugin storage (`cms.storage(name)`). Default: in memory, one per instance, so plugins keep their data between calls of a test. */
+    /** Plugin storage (`cms.plugin(name).storage`). Default: in memory, one per instance, so plugins keep their data between calls of a test. */
     readonly storage?: (plugin: string) => PluginStorage;
     /** The admin check. Default: every request is an admin. Make it throw an `AuthError` to test a refused request. */
     readonly verifyAdmin?: AuthGateway["verifyAdmin"];
     /** Pieces of the login connection (`cms.auth()`): session, providers, handlers and so on. */
     readonly auth?: Partial<CmsAuth>;
-    /** Other server config values (`hooks`, `publicApi`, `secret`, `trustHost`, ...). */
+    /** Other server config values (`on`, `publicApi`, `secret`, `trustHost`, ...). */
     readonly server?: Partial<CmsServerConfig>;
     /** The server side of the site's plugins (routes, features, hooks, migrations), as if the site config listed them. Default: none. */
     readonly plugins?: readonly LoadedServerPlugin[];
@@ -56,5 +56,5 @@ export declare const fakeAuth: (parts?: Partial<CmsAuth>) => CmsServerConfig["au
  * whose database, media store and login are the parts the test provides, so the code under test goes through `cms` exactly as in the app.
  * Several fake instances can live in one test file, each with its own parts.
  */
-export declare function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(parts?: FakeCmsParts<Config>): Cms<Config>;
+export declare function fakeCms<const Config extends CmsConfig = typeof DEFAULT_CONFIG>(parts?: FakeCmsParts<Config>): CmsHost<Config>;
 export {};

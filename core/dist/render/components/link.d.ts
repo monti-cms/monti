@@ -6,6 +6,6 @@ import type { ComponentPropsWithRef } from "react";
 export declare function resolveSitePath(value: string): string | null;
 /**
  * Body link. `#`, site-relative paths, http(s), `mailto:`, `tel:` and relative paths become links (`javascript:`, `data:` and `//host` stay as text),
- * and outside links open in a new window (`cms-link-external`).
+ * and outside links open in a new window (`monti-link-external`).
  */
 export declare function CmsLink({ children, href, className, ...props }: ComponentPropsWithRef<"a">): import("react").JSX.Element;

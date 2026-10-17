@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 /**
  * CMS code block. Allows text effect marks on the code text (`CODE_BLOCK_MARKS`); line effects and regex rules live in attributes (model.ts).
  * `source`/`sourceKey` are the loaded source and the model fingerprint at that time. If unchanged, the source is saved as is.

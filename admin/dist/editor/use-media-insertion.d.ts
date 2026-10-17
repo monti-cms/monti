@@ -2,7 +2,7 @@
  * Image and file insertion of the visual editor: the image dialog state (opened from the slash menu, the toolbar, paste and drop),
  * inserting the chosen image, the file picker, and uploading attachments as file cards.
  */
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type ClipboardEvent, type DragEvent } from "react";
 import type { TranslatorFor } from "../translator.js";
@@ -25,6 +25,8 @@ export declare function useMediaInsertion({ editor, site, t, media, allowance, c
     imageDialog: {
         file: File | null;
     } | null;
+    /** Whether something fills in the image text after the insert, so the dialog can leave alt text empty. */
+    fillsImageText: boolean;
     openImageDialog: () => void;
     closeImageDialog: () => void;
     insertImage: (image: ImageInsertion) => void;

@@ -2,12 +2,18 @@
  * Image and file insertion of the visual editor: the image dialog state (opened from the slash menu, the toolbar, paste and drop),
  * inserting the chosen image, the file picker, and uploading attachments as file cards.
  */
+import { newBlockId } from "@monti-cms/core/document";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { errorText } from "../api/client.js";
 import { mediaNotConfiguredMessage } from "../api/error-message.js";
+import { useAdminEvents } from "../events.js";
+import { BLOCK_ID_ATTRIBUTE } from "./block-ids.js";
 import { FILE_NODE_NAME } from "./file-node.js";
+import { runImageInserted } from "./image-inserted.js";
 import { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./slash-command.js";
 import { uploadAttachment } from "./upload-helper.js";
+const NO_SUBSCRIBERS = [];
 /** The first image file in a clipboard or drop payload. */
 export const imageFileFrom = (source) => {
     if (!source)
@@ -24,19 +30,26 @@ export const imageFileFrom = (source) => {
 export const attachmentsFrom = (list) => Array.from(list ?? []).filter((file) => !file.type.startsWith("image/"));
 export function useMediaInsertion({ editor, site, t, media, allowance, canEdit, }) {
     const [imageDialog, setImageDialog] = useState(null);
+    /** The `editor.imageInserted` subscribers of the plugins. Drop, paste, the slash menu and the toolbar all insert through the image dialog, so one place runs them. */
+    const imageInserted = useAdminEvents().editor?.imageInserted ?? NO_SUBSCRIBERS;
     useEffect(() => {
         const open = () => setImageDialog({ file: null });
         window.addEventListener(OPEN_IMAGE_DIALOG_EVENT, open);
         return () => window.removeEventListener(OPEN_IMAGE_DIALOG_EVENT, open);
     }, []);
     const insertImage = useCallback((image) => {
+        if (!editor)
+            return;
+        // The block id is given here so the subscribers find the image again after the insert, wherever it moves.
+        const blockId = newBlockId();
         editor
-            ?.chain()
+            .chain()
             .focus()
             .insertContent({
             type: "image",
             // A registered media item stores only `mediaId`. The renderer resolves the public URL.
             attrs: {
+                [BLOCK_ID_ATTRIBUTE]: blockId,
                 mediaId: image.mediaId,
                 alt: image.alt,
                 decorative: image.decorative || null,
@@ -47,7 +60,15 @@ export function useMediaInsertion({ editor, site, t, media, allowance, canEdit, 
         })
             .run();
         setImageDialog(null);
-    }, [editor]);
+        runImageInserted({
+            editor,
+            blockId,
+            subscribers: imageInserted,
+            site,
+            marker: t("imageNode.marker"),
+            failed: t("imageNode.generateFailed"),
+        });
+    }, [editor, imageInserted, site, t]);
     const fileInputRef = useRef(null);
     // Slash menu "File": open the file picker. If there is no media storage, report that uploading is not possible.
     useEffect(() => {
@@ -85,7 +106,8 @@ export function useMediaInsertion({ editor, site, t, media, allowance, canEdit, 
             catch (error) {
                 toast.error(t("toolbar.uploadFailed", { name: file.name }), {
                     id: toastId,
-                    description: error instanceof Error ? error.message : undefined,
+                    // The reason, when there is one the person can read (the title already says it failed).
+                    description: errorText(site, error, "") || undefined,
                 });
             }
         }
@@ -117,6 +139,8 @@ export function useMediaInsertion({ editor, site, t, media, allowance, canEdit, 
     };
     return {
         imageDialog,
+        /** Whether something fills in the image text after the insert, so the dialog can leave alt text empty. */
+        fillsImageText: imageInserted.length > 0,
         openImageDialog: () => setImageDialog({ file: null }),
         closeImageDialog: () => setImageDialog(null),
         insertImage,

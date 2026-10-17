@@ -1,6 +1,6 @@
-import { type Site } from "@monti-cms/core/client";
-import type { SuggestedTransform } from "@monti-cms/core/schema-change";
-import type { RenameInput, SchemaEditPreview, SchemaSaveResult, SchemaScreenState } from "@monti-cms/core/schema-edit";
+import type { SuggestedTransform } from "@monti-cms/core/internal/schema-change";
+import type { RenameInput, SchemaEditPreview, SchemaSaveResult, SchemaScreenState } from "@monti-cms/core/internal/schema-edit";
+import type { Site } from "@monti-cms/core/site";
 /** The calls of the schema settings screen (see the `/v1/schema` routes of the admin API). */
 /** Query keys. */
 export declare const schemaKeys: {
@@ -20,8 +20,13 @@ export interface EditRequest {
     readonly renames: readonly RenameInput[];
 }
 export declare const previewSchema: (site: Site, request: EditRequest, signal?: AbortSignal) => Promise<SchemaEditPreview>;
+/**
+ * Saves an edit. `acknowledged` names the impacts of the preview the writer saw: the server refuses a save whose changes leave stored entries worse off
+ * unless their keys are here (`schema_unacknowledged`).
+ */
 export declare const saveSchema: (site: Site, request: EditRequest & {
     readonly baseHash: string;
+    readonly acknowledged: readonly string[];
 }) => Promise<{
     readonly saved: true;
     readonly file: string;

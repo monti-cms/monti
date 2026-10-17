@@ -2,10 +2,10 @@ import type { BlockDefinition } from "../blocks/define.js";
 import { type Cms } from "../cms/index.js";
 import { type CmsConfig, type CollectionsConfig, type SchemaCmsConfig } from "../config/define.js";
 import type { PublicApiOptions } from "../http/v1/public/options.js";
-import type { CmsPlugin } from "../plugin/define.js";
+import type { Plugin } from "../plugin/define.js";
 import type { SchemaCollectionsOf, SchemaLocalesOf, SchemaTypes } from "../schema-file/types.js";
 import type { EventDeliveryOptions } from "../services/events.js";
-import type { WriteHooks } from "../services/hooks.js";
+import type { ServerEvents } from "../services/reactions.js";
 import type { AuthAdapter, DatabaseAdapter, MediaAdapter } from "./define.js";
 /** The environment variable the public site URL is read from when neither `site.url` nor the schema file sets it. */
 export declare const SITE_URL_ENV = "SITE_URL";
@@ -48,9 +48,9 @@ export interface MontiServerOptions {
      * `X-Forwarded-Host`: with it on, a client could otherwise choose the host a login callback is built from.
      */
     readonly trustHost?: boolean;
-    /** Hooks on every content write; see "Hook contract" in the core README. They run before the plugins' hooks of the same name. */
-    readonly hooks?: WriteHooks;
-    /** How `afterCommit` deliveries are retried and kept, and the secret of the retry route. */
+    /** What the server reacts to, by target and event (`on: { entry: { beforeSave: [...], published: [{ name, run }] } }`). Runs before the plugins' subscribers of the same event. */
+    readonly on?: ServerEvents;
+    /** How the durable entry events (`on.entry.published`, ...) are retried and kept, and the secret of the retry route. */
     readonly events?: EventDeliveryOptions;
     /** Public JSON API (`/api/monti/v1/public/*`). Off if unset (404). */
     readonly publicApi?: PublicApiOptions;
@@ -72,5 +72,5 @@ export interface MontiServerOptions {
  * server options ({@link MontiServerOptions}). Connections are created on first use, so importing this file where the environment is absent (a build) does not fail.
  * The file is server-only: the admin gets a JSON snapshot of the site, never the file, and importing it into a client bundle throws.
  */
-export declare function defineConfig<const Schema extends SchemaTypes, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>>;
-export declare function defineConfig<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly CmsPlugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<Collections, Locale, Plugins, Blocks>>;
+export declare function defineConfig<const Schema extends SchemaTypes, const Collections extends CollectionsConfig = Record<never, never>, const Plugins extends readonly Plugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: SchemaCmsConfig<Schema, Collections, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<SchemaCollectionsOf<Schema> & Collections, SchemaLocalesOf<Schema>, Plugins, Blocks>>;
+export declare function defineConfig<const Collections extends CollectionsConfig, const Locale extends string, const Plugins extends readonly Plugin[] = readonly [], const Blocks extends readonly BlockDefinition[] = readonly []>(config: CmsConfig<Collections, Locale, Plugins, Blocks> & MontiServerOptions): Cms<CmsConfig<Collections, Locale, Plugins, Blocks>>;

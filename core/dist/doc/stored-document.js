@@ -1,10 +1,8 @@
-import { createAnnotationConfig } from "../annotation/code-block/constants.js";
 import { assignBlockIds, forEachBlock } from "./block-ids.js";
 import { normalizedLinkMark } from "./entry-links.js";
-import { storedCodeBlockAttrs } from "./stored-code-block.js";
 /**
- * Format version of a stored document. Raise it when a node or attribute changes its name or meaning, and add the step
- * from the previous version to `STORED_DOCUMENT_MIGRATIONS`. A new kind of block does not raise it.
+ * Format version of a stored document. Raise it when a node or attribute changes its name or meaning; only the current version is read. A new kind of
+ * block does not raise it.
  */
 export const STORED_DOCUMENT_VERSION = 3;
 /** Node types of the document model itself. A block definition with one of these names is stored as `mdxJsx` so the two never mix. */
@@ -49,17 +47,19 @@ export const sortJson = (value) => {
     return out;
 };
 export const sortedAttrs = (attrs) => Object.keys(attrs).length > 0 ? sortJson(attrs) : undefined;
-/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `text`, `type`). */
-export const storedNode = (type, attrs, content, marks, text, id) => {
+/** Builds a node with its keys in sorted order (`attrs`, `content`, `id`, `marks`, `sourceId`, `text`, `type`). */
+export const storedNode = (type, attrs, content, marks, text, ids = {}) => {
     const out = {};
     if (attrs && Object.keys(attrs).length > 0)
         out.attrs = sortJson(attrs);
     if (content)
         out.content = content;
-    if (id !== undefined)
-        out.id = id;
+    if (ids.id !== undefined)
+        out.id = ids.id;
     if (marks && marks.length > 0)
         out.marks = marks;
+    if (ids.sourceId !== undefined)
+        out.sourceId = ids.sourceId;
     if (text !== undefined)
         out.text = text;
     out.type = type;
@@ -72,26 +72,7 @@ export const storedMark = (given) => {
     return attrs ? { attrs, type: mark.type } : { type: mark.type };
 };
 export const isBlankParagraph = (block) => block.type === "paragraph" && (block.content ?? []).length === 0;
-/** Applies `change` to every node of a stored document, children first. */
-const mapNodes = (nodes, change) => nodes.map((item) => change(item.content ? { ...item, content: mapNodes(item.content, change) } : item));
-/** Steps that lift a stored document from version `n` to `n + 1`, by `n`. */
-const STORED_DOCUMENT_MIGRATIONS = {
-    /** 1 → 2: a code block holds its code and annotations as data instead of the fence text with annotation comments. */
-    1: (doc, site) => ({
-        content: mapNodes(doc.content, (item) => item.type === "codeBlock"
-            ? { ...item, attrs: sortJson(storedCodeBlockAttrs(site, item.attrs ?? {})) }
-            : item),
-        type: "doc",
-        version: 2,
-    }),
-    /**
-     * 2 → 3: an internal link is `{ entryId }` (the id of the entry's translation group) instead of the `href` of its address. Nothing in a version 2
-     * document has to change to be read as version 3: its links are all `href` links, which stay valid. The store migration `0018_link_entry_ids` rewrites the
-     * internal ones, and a write converts the ones that still match an internal address.
-     */
-    2: (doc) => ({ content: doc.content, type: "doc", version: 3 }),
-};
-const NODE_KEYS = new Set(["type", "id", "attrs", "content", "marks", "text"]);
+const NODE_KEYS = new Set(["type", "id", "sourceId", "attrs", "content", "marks", "text"]);
 const isJsonValue = (value) => {
     if (value === null || typeof value === "string" || typeof value === "boolean")
         return true;
@@ -114,37 +95,28 @@ const isNode = (value) => isRecord(value) &&
     (value.content === undefined || (Array.isArray(value.content) && value.content.every(isNode))) &&
     (value.marks === undefined || (Array.isArray(value.marks) && value.marks.every(isMark))) &&
     (value.text === undefined || typeof value.text === "string") &&
-    (value.id === undefined || typeof value.id === "string");
-/** What lifting a version 1 document uses when the caller gives no site: the core's default line effects. */
-const DEFAULT_CODE_SITE = { annotationConfig: createAnnotationConfig() };
+    (value.id === undefined || typeof value.id === "string") &&
+    (value.sourceId === undefined || typeof value.sourceId === "string");
 /**
- * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and lifts an
- * older version to the current one. Returns `undefined` for anything that is not a stored document of a known version.
+ * Reads a stored document from JSON (a database column, an API request, an export file): checks its shape and its version. Returns `undefined`
+ * for anything that is not a stored document of the current version.
  */
-export const readStoredDocument = (value, site) => {
+export const readStoredDocument = (value) => {
     if (!isRecord(value) || value.type !== "doc")
         return undefined;
     if (Object.keys(value).some((key) => key !== "type" && key !== "version" && key !== "content"))
         return undefined;
     const version = value.version;
-    if (typeof version !== "number" || !Number.isInteger(version) || version < 1 || version > STORED_DOCUMENT_VERSION) {
+    if (version !== STORED_DOCUMENT_VERSION)
         return undefined;
-    }
     if (!Array.isArray(value.content) || !value.content.every(isNode))
         return undefined;
     // Keys are sorted again: a document read from `jsonb` comes back in Postgres' key order.
-    let doc = {
+    return {
         content: value.content.map((item) => sortJson(item)),
         type: "doc",
         version,
     };
-    while (doc.version < STORED_DOCUMENT_VERSION) {
-        const step = STORED_DOCUMENT_MIGRATIONS[doc.version];
-        if (!step)
-            return undefined;
-        doc = step(doc, site ?? DEFAULT_CODE_SITE);
-    }
-    return doc;
 };
 /** Text runs of one parent as a reader of the text would see them: empty text dropped, neighbours with the same marks joined, marks in their stored order. */
 const canonicalInline = (site, content) => {

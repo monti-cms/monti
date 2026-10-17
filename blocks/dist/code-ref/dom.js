@@ -74,7 +74,7 @@ export function revealLines(lines) {
     first.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 /** Elements inside a code line that are not code text (in-code tooltip contents and numbers, the back-link button). */
-const NON_CODE = '[role="tooltip"], .cms-block-tooltip-note, [data-code-ref-back]';
+const NON_CODE = '[role="tooltip"], .monti-block-tooltip-note, [data-code-ref-back]';
 /** Text of one code line without the elements that are not code (they are added to the line by tooltips and back links). */
 function lineText(line) {
     const copy = line.cloneNode(true);
@@ -88,9 +88,13 @@ function dedent(lines) {
     const shared = indents.length ? Math.min(...indents) : 0;
     return lines.map((line) => line.slice(Math.min(shared, line.length)));
 }
-/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.cms-code-title`). */
+/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.monti-code-title`). */
 export function previewLines(lines, max) {
-    const title = lines[0]?.closest(".cms-code")?.querySelector(".cms-code-title")?.getAttribute("data-title")?.trim();
+    const title = lines[0]
+        ?.closest(".monti-code")
+        ?.querySelector(".monti-code-title")
+        ?.getAttribute("data-title")
+        ?.trim();
     return {
         ...(title ? { title } : {}),
         lines: dedent(lines.slice(0, max).map(lineText)),
@@ -107,7 +111,7 @@ export function addBackLink(lines, onClick, label) {
         return () => { };
     const button = first.ownerDocument.createElement("button");
     button.type = "button";
-    button.className = "cms-block-code-ref-back";
+    button.className = "monti-block-code-ref-back";
     button.setAttribute("data-code-ref-back", "");
     button.setAttribute("aria-label", label);
     button.title = label;

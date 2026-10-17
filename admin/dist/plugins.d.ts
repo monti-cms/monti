@@ -1,32 +1,40 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
+import type { AdminComponents } from "./admin-components.js";
+import type { AdminEvents } from "./events.js";
+import type { SlotSource } from "./slots/registry.js";
 /**
- * The admin UI side of a plugin. Loads the module that the plugin definition's (`definePlugin`) `admin` provides as its default export.
- * This module also ends up in the browser bundle, so do not put server-only code (DB, secrets) in it.
+ * The admin side of a plugin: the default export of the module the plugin definition's `admin` loads (`definePlugin({ admin: () => import("./admin") })`).
+ * Everything is declared; the admin applies it. The module ends up in the browser bundle, so it holds no server-only code (DB, secrets). It may be a
+ * `"use client"` module itself, with its components in it, or a plain module whose components come from `"use client"` modules: the admin hands the
+ * declaration to the browser as it is, and a function the browser cannot receive (one written in a plain module) fails there.
  */
-export interface CmsAdminPlugin {
+export interface AdminPlugin {
     /**
-     * A `<path>` screen under the admin path (default `/admin/<path>`, a client component). The sidebar item is the plugin definition's `nav`.
-     * The admin login check happens before the admin UI renders.
+     * The plugin's pages in the Tools group of the sidebar, by the `path` of a `nav` item of the plugin definition (`<admin path>/tools/<path>`): client
+     * components, framed by the admin (sidebar, title). The admin login check happens before the admin UI renders.
      */
     readonly pages?: Readonly<Record<string, ComponentType>>;
     /**
-     * A provider that wraps the whole admin UI (client component). Inside it, use `CmsAdminComponentsProvider` to add field inputs and edit screen extensions,
-     * or attach behavior to slots (`SlotRegistryProvider`).
+     * What the plugin adds to the admin: field inputs and views, list cells, block views, marks, editor extensions, code fence previews, text checkers, source
+     * panels, formats and icons (`AdminComponents`). Give a function of the site when they depend on the site config (its options, its language).
+     */
+    readonly components?: AdminComponents | ((site: Site) => AdminComponents);
+    /** Actions attached to the screen slots (the button next to a field, a menu in the editor), as `SlotSource`s. */
+    readonly slots?: readonly SlotSource[];
+    /**
+     * A provider around the admin, for a plugin that needs a React context of its own (state shared between its parts, a query it keeps). Most plugins
+     * declare `components` and `slots` and need none.
      */
     readonly Provider?: ComponentType<{
         readonly children: ReactNode;
     }>;
+    /**
+     * What the plugin reacts to in the admin, by target and event: `on: { editor: { imageInserted: [fillAltText] } }` (see `AdminEvents`). The same shape
+     * as `on` of the server side. Give a function of the site when the subscribers depend on the site config (an option that turns them on). The
+     * subscribers, and that function, are client functions, so give them from a `"use client"` module.
+     */
+    readonly on?: AdminEvents | ((site: Site) => AdminEvents);
 }
-/** Creates an admin plugin (only type-checks). */
-export declare const defineAdminPlugin: (plugin: CmsAdminPlugin) => CmsAdminPlugin;
-type LoadedAdminPlugins = Promise<readonly (CmsAdminPlugin & {
-    readonly name: string;
-})[]>;
-/**
- * Loads the admin side of a site's plugins (`site.plugins`, the instance's real site, not the browser's snapshot: the loaders are server code). On success it is
- * read once per site and reused. If loading fails or a screen path collides with the core or another plugin, nothing is remembered so the next call retries,
- * and the error is thrown as is.
- */
-export declare function loadAdminPlugins(site: Pick<Site, "plugins">): LoadedAdminPlugins;
-export {};
+/** Declares the admin side of a plugin. It returns what it is given, typed. */
+export declare const defineAdminPlugin: (plugin: AdminPlugin) => AdminPlugin;

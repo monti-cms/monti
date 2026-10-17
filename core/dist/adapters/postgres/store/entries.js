@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { sql } from "kysely";
 import { currentActor } from "../../../core/actor.js";
-import { assertFolderInCollection } from "../../../core/domain/folders.js";
 import { normalizeMetadata } from "../../../core/domain/metadata.js";
 import { assertEditableStatus, assertExpectedVersion, assertSameCollection, isSameWorkingBody, } from "../../../core/domain/publish.js";
 import { isReferencesEqual } from "../../../core/domain/references.js";
@@ -13,6 +12,7 @@ import { readReferenceOccurrences, } from "../../../core/types.js";
 import { withTrx } from "./context.js";
 import { mapEntryWriteError } from "./errors.js";
 import { recordEvents } from "./events.js";
+import { assertFolderTarget } from "./folders.js";
 import { insertReferences, loadEntry, lockEntryForUpdate, readBody, readBodyDoc, readReferences, writeBody, } from "./rows.js";
 import { ROW_COLLECTION, titleExpr } from "./title-sql.js";
 /** The group an entry belongs to: its source, or itself for a source. */
@@ -21,12 +21,6 @@ export function createEntryOps(ctx, publishing) {
     const { qSchema, site } = ctx;
     const db = ctx.db();
     const { publishWithinTransaction, lockDraftReferenceTargets } = publishing;
-    const assertFolder = async (trx, folderId, collection) => {
-        if (!folderId)
-            return;
-        const folder = await trx.selectFrom("folders").select("collection").where("id", "=", folderId).executeTakeFirst();
-        assertFolderInCollection(folder?.collection, collection);
-    };
     /**
      * Reserves the draft's slug (the rule is `reservationFor`). Releases a previous reservation that was never published.
      */
@@ -68,7 +62,7 @@ export function createEntryOps(ctx, publishing) {
         createEntryWithReferences: async (params) => withTrx(ctx, async (trx, client) => {
             const metadata = normalizeMetadata(params.snapshot.metadata);
             const references = await lockDraftReferenceTargets(client, params.references);
-            await assertFolder(trx, params.folderId, params.snapshot.collection);
+            await assertFolderTarget(trx, site, params.folderId, params.snapshot.collection);
             const id = randomUUID();
             const now = new Date();
             const locale = params.locale ?? site.DEFAULT_LOCALE;
@@ -125,7 +119,7 @@ export function createEntryOps(ctx, publishing) {
             assertExpectedVersion(locked.version, params.expectedVersion);
             assertEditableStatus(locked.status);
             assertTranslationMetadata(site, locked.collection, locked.translation_group_id !== params.entryId, params.snapshot.metadata);
-            await assertFolder(trx, params.folderId, params.snapshot.collection);
+            await assertFolderTarget(trx, site, params.folderId, params.snapshot.collection);
             const body = await readBody(trx, params.entryId, "working");
             const currentRefs = await readReferences(trx, params.entryId, "working");
             const nextSlug = params.snapshot.slug;
@@ -222,6 +216,7 @@ export function createEntryOps(ctx, publishing) {
                 .select([
                 "e.collection",
                 "e.version",
+                "e.status",
                 "e.working_slug",
                 "e.folder_id",
                 "e.locale",
@@ -240,6 +235,7 @@ export function createEntryOps(ctx, publishing) {
                 doc: readBodyDoc(row.doc),
                 version: row.version,
                 folderId: row.folder_id,
+                status: row.status,
                 locale: row.locale,
                 translationGroupId: row.translation_group_id,
             };

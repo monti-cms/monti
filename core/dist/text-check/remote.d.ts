@@ -7,6 +7,6 @@ export interface RemoteTextCheckerOptions extends Omit<TextCheckerOptions, "chec
 }
 /**
  * A checker that goes through the site's server route. APIs that need a key (Bareun, LanguageTool etc.) are called from the server route,
- * and the browser sends only paragraphs through this checker. The server route is built with `textCheckRoute` from `@monti-cms/core/plugin/server`.
+ * and the browser sends only paragraphs through this checker. The server route is built with `textCheckRoute` from `@monti-cms/core/server`.
  */
 export declare function remoteTextChecker({ url, headers, ...options }: RemoteTextCheckerOptions): TextChecker;

@@ -2,7 +2,7 @@
  * Definitions of the formatting tools in the toolbar (block shapes, text styles, alignment, lists, block inserts)
  * and the order in which the toolbar places its entries.
  */
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { TranslatorFor } from "../translator.js";
 import { type EditorAllowance } from "./allowed.js";

@@ -5,9 +5,9 @@ import type { Node as PmNode } from "@tiptap/pm/model";
  * Kept free of `ui/*` and icon imports, so `useBlockEditor` (which the hooks entry point exports) can use them.
  */
 /** Selected block border. All blocks use the same look. */
-export declare const SELECTED_RING = "ring-2 ring-cms-ring ring-offset-2 ring-offset-cms-background";
+export declare const SELECTED_RING = "ring-2 ring-monti-ring ring-offset-2 ring-offset-monti-background";
 /** Look of the control toolbar floating over a block (shared by the block toolbar, images, and tables). */
-export declare const BLOCK_TOOLBAR = "z-10 flex items-center gap-0.5 rounded-md border bg-cms-popover/95 p-0.5 text-cms-popover-foreground shadow-sm backdrop-blur";
+export declare const BLOCK_TOOLBAR = "z-10 flex items-center gap-0.5 rounded-md border bg-monti-popover/95 p-0.5 text-monti-popover-foreground shadow-sm backdrop-blur";
 export type ContainerValues = Record<string, string | boolean>;
 /** The directive attribute values of an added block (the `values` attribute of its node). */
 export declare const valuesOf: (node: PmNode) => ContainerValues;

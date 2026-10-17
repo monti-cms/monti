@@ -1,5 +1,5 @@
 import type { BlockDefinition } from "../blocks/define.js";
-import { type Issue } from "../config/check/issue.js";
+import { type ConfigIssue } from "../config/check/issue.js";
 import type { StoredDocument } from "../doc/stored-document.js";
 import type { CmsNode } from "../doc/types.js";
 /**
@@ -49,7 +49,7 @@ export declare function bodyVocabulary(site: BodyRulesSite): BodyVocabulary;
  * Checks the body list of a collection against what the site can name. A name that is not a block or mark of the site is an error, so a typo does not
  * silently leave a block allowed (or disallowed).
  */
-export declare function checkBodyAllowed(collection: string, allowed: BodyAllowed | undefined, site: BodyRulesSite): Issue[];
+export declare function checkBodyAllowed(collection: string, allowed: BodyAllowed | undefined, site: BodyRulesSite): ConfigIssue[];
 /** What a body allows, as questions. Built by {@link bodyRules}. */
 export interface BodyRules {
     /** Whether the body has any list. A body without one allows everything. */

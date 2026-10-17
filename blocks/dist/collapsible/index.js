@@ -1,6 +1,5 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { collapsibleBlock } from "./definition.js";
-export { collapsibleBlock } from "./definition.js";
 /**
  * Collapsible block (`:::collapsible`). An area that expands when its title is clicked. Add it to the site config's `plugins`.
  *

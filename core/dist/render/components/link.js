@@ -29,7 +29,7 @@ function isSafeOtherHref(value) {
 }
 /**
  * Body link. `#`, site-relative paths, http(s), `mailto:`, `tel:` and relative paths become links (`javascript:`, `data:` and `//host` stay as text),
- * and outside links open in a new window (`cms-link-external`).
+ * and outside links open in a new window (`monti-link-external`).
  */
 export function CmsLink({ children, href, className, ...props }) {
     const h = typeof href === "string" ? href : "";
@@ -44,5 +44,5 @@ export function CmsLink({ children, href, className, ...props }) {
     if (siteHref) {
         return (_jsx("a", { href: siteHref, ...props, className: className, children: children }));
     }
-    return (_jsx("a", { href: h, ...props, className: ["cms-link-external", className].filter(Boolean).join(" "), target: props.target ?? "_blank", rel: props.rel ?? "noreferrer noopener", children: children }));
+    return (_jsx("a", { href: h, ...props, className: ["monti-link-external", className].filter(Boolean).join(" "), target: props.target ?? "_blank", rel: props.rel ?? "noreferrer noopener", children: children }));
 }

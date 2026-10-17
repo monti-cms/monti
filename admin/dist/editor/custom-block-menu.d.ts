@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 /** The components the body's allowed list lets a writer insert (all of them when it has no list). */
 export declare const offeredBlocks: (site: Site, editor: Editor) => import("./slash-command.js").SlashCommandItem[];

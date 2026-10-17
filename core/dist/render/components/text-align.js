@@ -6,5 +6,5 @@ const isAlign = (value) => TEXT_ALIGN_VALUES.some((allowed) => allowed === value
  * Disallowed values fall back to the default alignment.
  */
 export function CmsTextAlign({ align, children }) {
-    return _jsx("div", { className: isAlign(align) ? `cms-align-${align}` : undefined, children: children });
+    return _jsx("div", { className: isAlign(align) ? `monti-align-${align}` : undefined, children: children });
 }

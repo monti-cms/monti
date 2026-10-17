@@ -1,5 +1,4 @@
-import type { BulkOp, Site } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { BulkOp, Folder, Site } from "@monti-cms/core/site";
 import { type BulkItemResult, type BulkParams, type BulkSelection } from "../../api/entries.js";
 type RunBulkArgs = [op: BulkOp, items: BulkSelection[], params?: BulkParams];
 type RelationOp = Extract<BulkOp, `relation.${string}`>;
@@ -42,7 +41,8 @@ export declare function describeBulkFailure(site: Site, failure: Extract<BulkIte
 export declare function BulkBar({ collection, selected, folders, mode, onClearSelection, onRun, onDone, }: {
     collection: string;
     selected: BulkSelection[];
-    folders: Folder[];
+    /** The folders items can move to; `null` where the list shows no folders, which leaves out the folder move. */
+    folders: readonly Folder[] | null;
     mode?: "list" | "trash";
     onClearSelection: () => void;
     /** Action request. The list screen passes a request that updates the list first (optimistic update). */

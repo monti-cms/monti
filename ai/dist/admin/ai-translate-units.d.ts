@@ -1,5 +1,4 @@
-import type { BrowserFormat } from "@monti-cms/admin";
-import type { Site } from "@monti-cms/core/client";
+import type { BrowserFormat, Site } from "@monti-cms/admin";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { type Node as PmNode } from "@tiptap/pm/model";
 export interface TranslateUnit {

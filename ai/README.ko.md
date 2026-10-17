@@ -3,7 +3,7 @@
 [English](README.md) | 한국어
 
 `@monti-cms/core`의 AI 플러그인. 이름으로 부르는 AI 기능(생성·판단), 필드 옆 AI 버튼, 번역본 편집기의 AI 번역,
-관리자 도구의 AI 페이지(`<관리자 경로>/tools/ai`, 기본 `/admin/tools/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.storage("ai")`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
+관리자 도구의 AI 페이지(`<관리자 경로>/tools/ai`, 기본 `/admin/tools/ai`)과 AI API(`/api/monti/v1/ai/*`), 플러그인 저장소의 AI 데이터(`cms.plugin("ai").storage`: 컬렉션 `action-overrides`·`custom-actions`·`settings`)를 더한다.
 등록하지 않으면 이것들이 모두 없다.
 
 이 플러그인은 `@monti-cms/mdx`를 피어로 둔다. AI 플러그인을 설치하면 MDX 패키지도 설치하고 `plugins`에 `ai()`과 함께 `mdx()`를 넣어야 한다. 모델이 `mdx` 형식으로 MDX를 읽고 쓰기 때문이다("모델은 MDX를 읽고 쓴다").
@@ -19,6 +19,7 @@ import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 plugins: [
 	ai({
 		siteDescription: "개인 기술 블로그", // 모든 기능의 맨 앞 지시에 들어간다. 없으면 "웹사이트"
+		autoImageText: true, // 이미지를 본문에 넣을 때 대체 텍스트와 캡션을 채운다. 기본은 끔
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // 바꾸기(같은 이름)
 			draft: false, // 끄기
@@ -27,6 +28,10 @@ plugins: [
 	}),
 ],
 ```
+
+`autoImageText: true`는 AI 플러그인을 편집기의 `editor.imageInserted` 이벤트에 구독시킨다([관리자 README](../admin/README.ko.md)의 "관리자 이벤트"). 이미지가 본문에
+들어가면 그 이미지에 `imageAlt`와 `imageCaption`을 돌려, 칸이 아직 비어 있으면 각각 첫 후보를 넣는다. 이미지는 바로 들어가고 글을 쓰는 중임을 보인다. 먼저
+입력한 글은 그대로 두고, 꺼졌거나 연결이 준비되지 않은 기능은 건너뛴다. 켜 두면 이미지 대화상자에서 대체 텍스트를 비워 둘 수 있다.
 
 ### 기본 기능
 
@@ -87,7 +92,7 @@ AI 플러그인이 없으면 쓰이지 않으므로 확장은 AI 플러그인을
   부른다. `undefined`·`true`면 통과, `false`나 글자면 버리고(글·MDX는 실패, 글자는 그 이유), `{ detail }`이면 통과하면서
   후보 옆에 설명을 붙인다. 두 번째 인자(`AiValidatorContext`)로 입력·컬렉션·언어(없으면 기본 언어)·고치는 항목·선택지와
   본체 콘텐츠 조회 `content`를 받는다.
-- **본체 콘텐츠 조회(`context.content`)**: 실행 API가 본체 공개 API(`@monti-cms/core/plugin/server`의 `createContentLookup`)로
+- **본체 콘텐츠 조회(`context.content`)**: 실행 API가 본체 공개 API(`@monti-cms/core/server`의 `createContentLookup`)로
   채운다. 플러그인은 본체 표를 직접 읽지 않는다. 지금은
   `slugsInUse({ collection, locale, slugs, excludeEntryId? })`(같은 컬렉션·언어에서 이미 쓰는 주소)가 있다.
 - 기본 코드 검사: `uniqueSlug`(중복 없음, 주소 추천. `content.slugsInUse`로 묻는다), `regexRuns(입력, { name?, scope? })`

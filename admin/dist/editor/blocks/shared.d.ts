@@ -1,6 +1,6 @@
 import { type ComponentProps, type ReactNode } from "react";
 import { IconButton } from "../../ui/icon-button.js";
-export { BLOCK_TOOLBAR, SELECTED_RING, useEditorEditable } from "./block-model.js";
+export { BLOCK_TOOLBAR, useEditorEditable } from "./block-model.js";
 /**
  * Input field for attributes (title, tab name). During Korean composition it does not write to the document, and writes when composition ends.
  * Enter returns to the body and Escape returns to the editor.

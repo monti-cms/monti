@@ -1,4 +1,4 @@
-import { type Collection } from "@monti-cms/core/client";
+import { type Collection } from "@monti-cms/core/site";
 import { type EntryData, type EntryFormPatch } from "./entries/entry-form.js";
 export type RecordTarget = {
     collection: Collection;

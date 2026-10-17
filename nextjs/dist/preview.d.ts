@@ -1,4 +1,5 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { CmsHost } from "@monti-cms/core/internal/host";
+import type { Cms } from "@monti-cms/core/server";
 /**
  * Reads the draft of an entry for the site's preview page (`site.previewPath`), as the signed-in admin: `null` for anyone else. It is `cms.read.getPreview` with
  * the Next request headers attached to the instance first (`cms.attachHost(nextHost)`), so the session (or the dev bypass) can be read even when this is the
@@ -10,4 +11,4 @@ import type { Cms } from "@monti-cms/core/runtime";
  * if (!entry) notFound();
  * ```
  */
-export declare function previewEntry(cms: Pick<Cms, "read" | "attachHost">, params: Parameters<Cms["read"]["getPreview"]>[0]): ReturnType<Cms["read"]["getPreview"]>;
+export declare function previewEntry(cms: Pick<Cms, "read"> & Partial<Pick<CmsHost, "attachHost">>, params: Parameters<Cms["read"]["getPreview"]>[0]): ReturnType<Cms["read"]["getPreview"]>;

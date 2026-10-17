@@ -12,7 +12,7 @@ export declare const RECORD_PANEL_RESIZE: PanelResizeConfig;
 export declare const MEDIA_PANEL_RESIZE: PanelResizeConfig;
 export declare const INSPECTOR_PANEL_RESIZE: PanelResizeConfig;
 /** Background of the item currently open in the list (open in the right slot or edit slot). */
-export declare const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";
+export declare const OPEN_ITEM = "bg-monti-accent text-monti-accent-foreground";
 /** Right slot header. A title and a close button (the name is always "Close"). */
 export declare function SidePanelHeader({ title, onClose, className, children, }: {
     title?: ReactNode;

@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { Fragment } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { NodeViewContent, NodeViewWrapper, useEditorState } from "@tiptap/react";
@@ -8,7 +8,7 @@ import { createContext, useContext, useId, useMemo, useRef, } from "react";
 import { editorFailure } from "../../hooks/result.js";
 import { cn } from "../../lib/utils/cn.js";
 import { allowanceOfState } from "../allowed-extension.js";
-import { BLOCK_ID_ATTRIBUTE } from "../block-ids.js";
+import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "../block-ids.js";
 import { blockNodeName } from "./added/shared.js";
 import { BlockIssueNotice } from "./block-issues.js";
 import { childPos, SELECTED_RING, useEditorEditable, valuesOf, withValue } from "./block-model.js";
@@ -38,8 +38,8 @@ const abort = (code, message) => new BlockAbort({ code, message, retryable: fals
 /** Whether the block's attributes live in one `values` map (added blocks) or are flat node attributes (image, file, math). */
 const hasValuesMap = (node) => node.attrs != null && "values" in node.attrs;
 const typeHasValuesMap = (type) => Boolean(type.spec.attrs && "values" in type.spec.attrs);
-/** Attributes that are not block values: the stored id and the source text of code blocks. */
-const INTERNAL_ATTRIBUTES = new Set([BLOCK_ID_ATTRIBUTE, "value"]);
+/** Attributes that are not block values: the stored id, the source link and the source text of code blocks. */
+const INTERNAL_ATTRIBUTES = new Set([BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE, "value"]);
 const readValues = (node) => {
     if (hasValuesMap(node))
         return valuesOf(node);
@@ -399,8 +399,8 @@ const AnyElementContent = NodeViewContent;
  * The editable nested body of a container block: the place where the block's children are edited in the document. It replaces the Tiptap
  * node view content. A block without a body (image, math) renders nothing.
  *
- * DOM contract: the element has `data-cms-block-content`, and the child blocks are inside its first child element
- * (`[data-cms-block-content] > *` holds them), so a view can lay them out with `[&>*]:grid` or `[&>*>:first-child]:mt-0`.
+ * DOM contract: the element has `data-monti-block-content`, and the child blocks are inside its first child element
+ * (`[data-monti-block-content] > *` holds them), so a view can lay them out with `[&>*]:grid` or `[&>*>:first-child]:mt-0`.
  *
  * @experimental
  */
@@ -417,10 +417,10 @@ export function Content({ className, style, as, visibleChild, ...rest }) {
         as,
         className: cn(className),
         style,
-        "data-cms-block-content": "",
-        ...(visibleChild === undefined ? {} : { "data-cms-content": scope }),
+        "data-monti-block-content": "",
+        ...(visibleChild === undefined ? {} : { "data-monti-content": scope }),
     };
-    return (_jsxs(_Fragment, { children: [visibleChild === undefined ? null : (_jsx("style", { children: `[data-cms-content="${scope}"] > * > :not(:nth-child(${Math.max(0, Math.trunc(visibleChild)) + 1})) { display: none; }` })), _jsx(AnyElementContent, { ...host })] }));
+    return (_jsxs(_Fragment, { children: [visibleChild === undefined ? null : (_jsx("style", { children: `[data-monti-content="${scope}"] > * > :not(:nth-child(${Math.max(0, Math.trunc(visibleChild)) + 1})) { display: none; }` })), _jsx(AnyElementContent, { ...host })] }));
 }
 /**
  * The outer element of a block view: the editor's node view wrapper plus the standard frame (selected ring, hover scope, the attributes
@@ -431,5 +431,5 @@ export function Content({ className, style, as, visibleChild, ...rest }) {
 export function BlockFrame({ as, ref, framed = true, selectedRing = true, className, children, ...rest }) {
     const block = useBlockEditor();
     const isContainer = block.raw.node.type ? !block.raw.node.type.isLeaf : false;
-    return (_jsxs(NodeViewWrapper, { ...rest, as: as, ref: ref, "data-cms-block-frame": "", "data-cms-framed": framed ? "" : undefined, "data-cms-container-node": isContainer ? block.raw.node.type.name : undefined, className: cn(framed && "group/container relative", selectedRing && block.selected && SELECTED_RING, className), children: [children, _jsx(BlockIssueNotice, { blockId: block.id })] }));
+    return (_jsxs(NodeViewWrapper, { ...rest, as: as, ref: ref, "data-monti-block-frame": "", "data-monti-framed": framed ? "" : undefined, "data-monti-container-node": isContainer ? block.raw.node.type.name : undefined, className: cn(framed && "group/container relative", selectedRing && block.selected && SELECTED_RING, className), children: [children, _jsx(BlockIssueNotice, { blockId: block.id })] }));
 }

@@ -1,5 +1,5 @@
-import type { PanelGroup } from "@monti-cms/core/client";
-import { type Locale, type SchemaCollection } from "@monti-cms/core/client";
+import type { PanelGroup } from "@monti-cms/core/site";
+import { type Locale, type SchemaCollectionName } from "@monti-cms/core/site";
 import { type ReactNode } from "react";
 import { type CmsIssue } from "../../api/error-message.js";
 import { type SlotRequest } from "../../slots/slots.js";
@@ -50,7 +50,7 @@ export declare function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlace
  * If left empty, that language's page also uses the default language value. Reads the form from the nearest `EntryFormProvider`.
  */
 export declare function RecordLocaleFields({ collection, locale }: {
-    collection: SchemaCollection;
+    collection: SchemaCollectionName;
     locale: Locale;
 }): import("react").JSX.Element;
 export {};

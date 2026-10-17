@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/admin";
 import type { AiActionView } from "../actions.js";
 import type { AiCheckResult, AiModelInfo, AiSettingsView } from "../connection.js";
 import type { AiRunResult } from "../definition.js";

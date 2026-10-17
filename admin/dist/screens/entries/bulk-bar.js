@@ -1,17 +1,17 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/client.js";
 import { bulkEntries } from "../../api/entries.js";
-import { cmsIssueMessage } from "../../api/error-message.js";
+import { issueLine } from "../../api/error-message.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Button } from "../../ui/button.js";
 import { Checkbox } from "../../ui/checkbox.js";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../ui/command.js";
-import { FieldError } from "../../ui/field.js";
+import { FormFieldError } from "../../ui/field.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
@@ -110,7 +110,7 @@ export function describeBulkFailure(site, failure) {
     return failure.issues?.length
         ? `${base} ${failure.issues
             .slice(0, 3)
-            .map((issue) => cmsIssueMessage(site, issue))
+            .map((issue) => issueLine(issue))
             .join(" ")}`
         : base;
 }
@@ -127,7 +127,7 @@ function ManyPicker({ label, options, value, onValueChange, }) {
             ? names[0]
             : t("picker.more", { first: names[0] ?? "", more: names.length - 1 });
     const toggle = (id) => onValueChange(value.includes(id) ? value.filter((item) => item !== id) : [...value, id]);
-    return (_jsxs(Popover, { children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "outline", size: "sm", "aria-label": t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") }), className: cn("max-w-56 justify-between gap-1.5 font-normal", names.length === 0 && "text-cms-muted-foreground") }), children: [_jsx("span", { className: "truncate", children: summary }), _jsx(ChevronDownIcon, { "aria-hidden": true, className: "size-4 text-cms-muted-foreground" })] }), _jsx(PopoverContent, { align: "start", className: "w-64 p-0", children: _jsxs(Command, { children: [_jsx(CommandInput, { placeholder: t("picker.search", { label }), "aria-label": t("picker.search", { label }) }), _jsxs(CommandList, { className: "max-h-64", children: [_jsx(CommandEmpty, { children: t("picker.empty", { label }) }), _jsx(CommandGroup, { children: options.map((option) => (_jsxs(CommandItem, { value: `${option.title} ${option.id}`, onSelect: () => toggle(option.id), children: [_jsx(Checkbox, { checked: value.includes(option.id), tabIndex: -1, "aria-hidden": true, className: "pointer-events-none" }), option.title] }, option.id))) })] })] }) })] }));
+    return (_jsxs(Popover, { children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", variant: "outline", size: "sm", "aria-label": t("picker.aria", { label, names: names.length === 0 ? t("picker.none") : names.join(", ") }), className: cn("max-w-56 justify-between gap-1.5 font-normal", names.length === 0 && "text-monti-muted-foreground") }), children: [_jsx("span", { className: "truncate", children: summary }), _jsx(ChevronDownIcon, { "aria-hidden": true, className: "size-4 text-monti-muted-foreground" })] }), _jsx(PopoverContent, { align: "start", className: "w-64 p-0", children: _jsxs(Command, { children: [_jsx(CommandInput, { placeholder: t("picker.search", { label }), "aria-label": t("picker.search", { label }) }), _jsxs(CommandList, { className: "max-h-64", children: [_jsx(CommandEmpty, { children: t("picker.empty", { label }) }), _jsx(CommandGroup, { children: options.map((option) => (_jsxs(CommandItem, { value: `${option.title} ${option.id}`, onSelect: () => toggle(option.id), children: [_jsx(Checkbox, { checked: value.includes(option.id), tabIndex: -1, "aria-hidden": true, className: "pointer-events-none" }), option.title] }, option.id))) })] })] }) })] }));
 }
 /**
  * Bulk actions. Apply only to items picked on the current page and show a result per item.
@@ -142,8 +142,8 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
         ? trashActions(t, tc)
         : [
             ...taxonomyActions(site, collection),
-            ...listActions(t, tc, nounVars(site, collection)).filter((action) => !action.content || !isRecord),
-        ], [isRecord, collection, mode, site, t, tc]);
+            ...listActions(t, tc, nounVars(site, collection)).filter((action) => (!action.content || !isRecord) && (action.value !== "folder.move" || folders !== null)),
+        ], [isRecord, folders, collection, mode, site, t, tc]);
     const [action, setAction] = useState(actions[0]?.value ?? "trash");
     const [checked, setChecked] = useState([]);
     const [single, setSingle] = useState("");
@@ -201,7 +201,7 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
         if (relation)
             return single === "__none__" ? null : titleOf(single);
         if (action === "folder.move")
-            return single === "__unfiled__" ? null : (folders.find((folder) => folder.id === single)?.name ?? single);
+            return single === "__unfiled__" ? null : (folders?.find((folder) => folder.id === single)?.name ?? single);
         return null;
     };
     // Actions that change many items at once always ask.
@@ -229,7 +229,7 @@ export function BulkBar({ collection, selected, folders, mode = "list", onClearS
         ]
         : [
             { value: "__unfiled__", label: t("option.root") },
-            ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
+            ...(folders ?? []).map((folder) => ({ value: folder.id, label: folder.name })),
         ];
-    return (_jsxs("section", { "aria-label": t("bar"), className: "border-b bg-cms-primary/5 px-5 py-2", children: [_jsxs("div", { className: "flex min-h-7 flex-wrap items-center gap-2 text-sm", children: [_jsx("span", { className: "font-medium text-cms-primary", children: t("count", { count: selected.length }) }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: onClearSelection, children: t("clear") }), actions.length > 1 ? (_jsxs(Select, { value: action, items: actions.map((candidate) => ({ value: candidate.value, label: candidate.label })), onValueChange: (value) => value && setAction(value), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("kind"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: actions.map((candidate) => (_jsx(SelectItem, { value: candidate.value, children: candidate.label }, candidate.value))) })] })) : null, needsMany && (_jsx(ManyPicker, { label: relation.label, options: relationOptions, value: checked, onValueChange: setChecked })), needsSingle && (_jsxs(Select, { value: single || null, items: singleItems, onValueChange: (value) => setSingle(typeof value === "string" ? value : ""), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": relation ? t("target.aria", { label: relation.label }) : t("folder.aria"), children: _jsx(SelectValue, { placeholder: relation ? t("picker.select", { label: relation.label }) : t("folder.select") }) }), _jsx(SelectContent, { children: singleItems.map((item) => (_jsx(SelectItem, { value: item.value, children: item.label }, item.value))) })] })), _jsx(Button, { type: "button", size: "sm", variant: activeAction?.destructive ? "destructive" : "default", disabled: !canRun, onClick: start, children: isRunning ? t("running") : (activeAction?.label ?? t("run")) }), results && (_jsx("output", { className: "text-cms-muted-foreground text-xs", children: t("result", { success: successes, failed: failures.length }) })), failures.length > 0 && (_jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id))), children: t("retry") }))] }), error && _jsx(FieldError, { className: "pt-2", children: error }), failures.length > 0 && (_jsx("ul", { className: "flex flex-col gap-1 pt-2 text-cms-destructive text-xs", children: failures.map((failure) => (_jsxs("li", { children: [_jsx("span", { className: "font-medium", children: titleOf(failure.id) }), " \u2014 ", describeBulkFailure(site, failure)] }, failure.id))) })), dialog] }));
+    return (_jsxs("section", { "aria-label": t("bar"), className: "border-b bg-monti-primary/5 px-5 py-2", children: [_jsxs("div", { className: "flex min-h-7 flex-wrap items-center gap-2 text-sm", children: [_jsx("span", { className: "font-medium text-monti-primary", children: t("count", { count: selected.length }) }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: onClearSelection, children: t("clear") }), actions.length > 1 ? (_jsxs(Select, { value: action, items: actions.map((candidate) => ({ value: candidate.value, label: candidate.label })), onValueChange: (value) => value && setAction(value), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("kind"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: actions.map((candidate) => (_jsx(SelectItem, { value: candidate.value, children: candidate.label }, candidate.value))) })] })) : null, needsMany && (_jsx(ManyPicker, { label: relation.label, options: relationOptions, value: checked, onValueChange: setChecked })), needsSingle && (_jsxs(Select, { value: single || null, items: singleItems, onValueChange: (value) => setSingle(typeof value === "string" ? value : ""), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": relation ? t("target.aria", { label: relation.label }) : t("folder.aria"), children: _jsx(SelectValue, { placeholder: relation ? t("picker.select", { label: relation.label }) : t("folder.select") }) }), _jsx(SelectContent, { children: singleItems.map((item) => (_jsx(SelectItem, { value: item.value, children: item.label }, item.value))) })] })), _jsx(Button, { type: "button", size: "sm", variant: activeAction?.destructive ? "destructive" : "default", disabled: !canRun, onClick: start, children: isRunning ? t("running") : (activeAction?.label ?? t("run")) }), results && (_jsx("output", { className: "text-monti-muted-foreground text-xs", children: t("result", { success: successes, failed: failures.length }) })), failures.length > 0 && (_jsx(Button, { type: "button", variant: "outline", size: "xs", onClick: () => void run(ranItems.filter((item) => failures.some((failure) => failure.id === item.id))), children: t("retry") }))] }), error && _jsx(FormFieldError, { className: "pt-2", children: error }), failures.length > 0 && (_jsx("ul", { className: "flex flex-col gap-1 pt-2 text-monti-destructive text-xs", children: failures.map((failure) => (_jsxs("li", { children: [_jsx("span", { className: "font-medium", children: titleOf(failure.id) }), " \u2014 ", describeBulkFailure(site, failure)] }, failure.id))) })), dialog] }));
 }

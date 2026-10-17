@@ -12,7 +12,7 @@ export interface ApiKeyUse {
     /** What the admin shows, worked out when the keys are read, in the admin's language and with the item's current name: `AI connection "Claude"`. */
     readonly label: string;
 }
-/** A key a plugin says it needs (`CmsPlugin.keySlots`), with the key assigned to it. */
+/** A key a plugin says it needs (`Plugin.keySlots`), with the key assigned to it. */
 export interface ApiKeySlotView {
     readonly plugin: string;
     readonly slot: string;
@@ -71,14 +71,12 @@ export declare const createApiKeyBodySchema: z.ZodObject<{
     name: z.ZodString;
     value: z.ZodString;
 }, z.core.$strip>;
-export type CreateApiKeyBody = z.infer<typeof createApiKeyBodySchema>;
 /** Rename, replace the value, or both. */
 export declare const patchApiKeyBodySchema: z.ZodObject<{
     expectedVersion: z.ZodNumber;
     name: z.ZodOptional<z.ZodString>;
     value: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-export type PatchApiKeyBody = z.infer<typeof patchApiKeyBodySchema>;
 /**
  * What a form sends for the key of one place: a key of the store (`saved`), a value to save into the store as a new key named after the place (`new`), or
  * no key (`none`). The plugin's route passes it to `cms.apiKeys.choose`.

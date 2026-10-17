@@ -1,6 +1,6 @@
-import { type Issue } from "@monti-cms/core";
+import { type ConfigIssue } from "@monti-cms/core";
 import type { AiActionDefinition, AiActionSource, AiAttach, AiChoices, AiInputs, AiValidator } from "@monti-cms/core/ai-contract";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { z } from "zod";
 import { type AiApply, type AiCandidate, type AiCheck, type AiEngine, type AiPick, type AiResult, type AiSlot, type CoreText } from "./definition.js";
 /**
@@ -126,6 +126,11 @@ export interface AiConfig {
      * Giving a definition (or `aiPresets.name(options)`) under the same name replaces it, `false` removes it, and a new name adds it.
      */
     readonly actions?: Readonly<Record<string, AiActionSource | false>>;
+    /**
+     * Fill in the alt text and caption of an image as it goes into the body: the editor runs the `imageAlt` and `imageCaption` actions on it and writes the
+     * first candidate of each into the field while it is still empty (the person may leave alt text empty in the image dialog). Off unless `true`.
+     */
+    readonly autoImageText?: boolean;
 }
 /** The resolved list of actions (name -> definition). Read by the runner, the UI and the checks. */
 export interface ResolvedAiConfig {
@@ -355,4 +360,4 @@ interface CollectionsView {
     };
 }
 /** Checks that the AI config matches the collection definitions, slots and result shapes. */
-export declare function checkAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): Issue[];
+export declare function checkAiConfig(ai: ResolvedAiConfig, collections: CollectionsView, blocks?: readonly string[]): ConfigIssue[];

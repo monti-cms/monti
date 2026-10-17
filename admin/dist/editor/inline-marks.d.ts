@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { type CodeRule } from "@monti-cms/core/code-block";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type EditorState } from "@tiptap/pm/state";
 import type { ToolbarItem } from "./toolbar-button.js";

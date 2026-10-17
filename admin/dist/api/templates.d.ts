@@ -1,6 +1,5 @@
-import { type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import type { BodyTemplate } from "@monti-cms/core/runtime";
+import type { BodyTemplate, Site } from "@monti-cms/core/site";
 /** Query keys. Everything under `all` is refetched after a template changes. */
 export declare const templatesKeys: {
     all: readonly ["cms", "templates"];

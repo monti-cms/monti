@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { assignBlockIds, emptyStoredDocument, STORED_DOCUMENT_VERSION, } from "@monti-cms/core/document";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LayoutTemplate, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -14,7 +14,7 @@ import { commonMessages } from "../../lib/common.messages.js";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut.js";
 import { isComposingKey } from "../../lib/keyboard.js";
 import { Button } from "../../ui/button.js";
-import { FieldError } from "../../ui/field.js";
+import { FormFieldError } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
 import { PageActions } from "../shared/admin-shell.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
@@ -90,7 +90,7 @@ function TemplateEditPanel({ template, onSaved, onCancel, onDirtyChange, }) {
                                 return;
                             event.preventDefault();
                             handleSave();
-                        }, placeholder: t("edit.nameLabel"), className: "h-8 min-w-0 max-w-2xl flex-1" }), _jsx(EditorFooter, { dirty: dirty || isNew, saving: save.isPending, onSave: handleSave, onCancel: onCancel })] }), saveError && _jsx(FieldError, { className: "border-b bg-cms-destructive-soft px-6 py-2", children: saveError }), _jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto", children: _jsx(CmsEditor, { doc: draft.doc, onChange: (doc) => update({ doc }) }) })] }));
+                        }, placeholder: t("edit.nameLabel"), className: "h-8 min-w-0 max-w-2xl flex-1" }), _jsx(EditorFooter, { dirty: dirty || isNew, saving: save.isPending, onSave: handleSave, onCancel: onCancel })] }), saveError && (_jsx(FormFieldError, { className: "border-b bg-monti-destructive-soft px-6 py-2", children: saveError })), _jsx("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto", children: _jsx(CmsEditor, { doc: draft.doc, onChange: (doc) => update({ doc }) }) })] }));
 }
 export function TemplateManager() {
     const site = useSite();

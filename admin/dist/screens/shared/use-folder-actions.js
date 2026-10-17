@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescript
 import { Button } from "../../ui/button.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog.js";
 import { DialogFormFooter } from "../../ui/dialog-form-footer.js";
-import { Field, FieldError, FieldLabel } from "../../ui/field.js";
+import { FormField, FormFieldError, FormFieldLabel } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
 import { Skeleton } from "../../ui/skeleton.js";
 import { sharedMessages } from "./messages.js";
@@ -45,7 +45,6 @@ export function folderMenuActions(site, folder, folders, actions) {
             kind: "item",
             label: tc("rename"),
             icon: Pencil,
-            shortcut: "F2",
             onSelect: () => actions.requestRename(folder),
         },
         {
@@ -77,7 +76,6 @@ export function folderMenuActions(site, folder, folders, actions) {
             kind: "item",
             label: tc("delete"),
             icon: Trash2,
-            shortcut: "Del",
             destructive: true,
             onSelect: () => void actions.requestDelete(folder),
         },
@@ -192,6 +190,30 @@ export function useFolderActions({ collection, folders, onChanged, }) {
         setError(null);
         remove.mutate(deleteDialog);
     };
+    const createDirectMutation = useCmsMutation({
+        fn: ({ name, parentId }, { site }) => createFolder(site, { collection, name: name.trim(), parentId }, t("folder.addFailed")),
+        success: (_result, { name }) => t("folder.added", { name: name.trim() }),
+        failure: t("folder.saveFailed"),
+        onSuccess: () => void onChanged(),
+    });
+    const renameDirectMutation = useCmsMutation({
+        fn: ({ folder, name }, { site }) => updateFolder(site, folder.id, { name: name.trim(), expectedVersion: folder.version }, t("folder.renameFailed")),
+        success: tc("saved"),
+        failure: t("folder.saveFailed"),
+        onSuccess: () => void onChanged(),
+    });
+    const createFolderDirect = async (name, parentId) => {
+        const trimmed = name.trim();
+        if (!trimmed)
+            return;
+        await createDirectMutation.mutateAsync({ name: trimmed, parentId });
+    };
+    const renameFolderDirect = async (folder, newName) => {
+        const trimmed = newName.trim();
+        if (!trimmed || trimmed === folder.name)
+            return;
+        await renameDirectMutation.mutateAsync({ folder, name: trimmed });
+    };
     const destination = deleteDialog ? toFolder(deleteDialog.folder.parentId) : "";
     const dialogs = (_jsxs(_Fragment, { children: [_jsx(Dialog, { open: nameDialog !== null, onOpenChange: (open) => !open && setNameDialog(null), children: _jsxs(DialogContent, { className: "max-w-sm", finalFocus: restoreFocus, children: [_jsxs(DialogHeader, { children: [_jsx(DialogTitle, { children: nameDialog?.mode === "rename"
                                         ? t("folder.renameTitle")
@@ -202,12 +224,20 @@ export function useFolderActions({ collection, folders, onChanged, }) {
                                         : t("folder.uniqueName") })] }), _jsxs("form", { onSubmit: (event) => {
                                 event.preventDefault();
                                 void submitName();
-                            }, className: "space-y-4", children: [_jsxs(Field, { "data-invalid": Boolean(shownError) || undefined, children: [_jsx(FieldLabel, { htmlFor: "folder-name", className: "sr-only", children: t("folder.nameLabel") }), _jsx(Input, { id: "folder-name", autoFocus: true, value: name, maxLength: 100, "aria-invalid": Boolean(shownError) || undefined, onChange: (e) => setName(e.target.value), onKeyDown: (event) => {
+                            }, className: "space-y-4", children: [_jsxs(FormField, { "data-invalid": Boolean(shownError) || undefined, children: [_jsx(FormFieldLabel, { htmlFor: "folder-name", className: "sr-only", children: t("folder.nameLabel") }), _jsx(Input, { id: "folder-name", autoFocus: true, value: name, maxLength: 100, "aria-invalid": Boolean(shownError) || undefined, onChange: (e) => setName(e.target.value), onKeyDown: (event) => {
                                                 // While composing Hangul, Enter is the key that finishes the character. Do not submit the form.
                                                 if (event.key === "Enter" && (event.nativeEvent.isComposing || event.keyCode === 229)) {
                                                     event.preventDefault();
                                                 }
-                                            } }), shownError && _jsx(FieldError, { children: shownError })] }), _jsx(DialogFormFooter, { onCancel: () => setNameDialog(null), cancelLabel: tc("cancel"), submitLabel: tc("save"), busyLabel: tc("saving"), busy: isBusy, disabled: !name.trim() })] })] }) }), _jsx(AlertDialog, { open: deleteDialog !== null, onOpenChange: (open) => !open && setDeleteDialog(null), children: _jsxs(AlertDialogContent, { finalFocus: restoreFocus, children: [_jsxs(AlertDialogHeader, { children: [_jsx(AlertDialogTitle, { children: t("folder.deleteTitle", { name: deleteDialog?.folder.name ?? "" }) }), _jsx(AlertDialogDescription, { children: t("folder.deleteAsk", { itemLabel, destination }) })] }), contents ? (_jsxs("ul", { className: "list-disc space-y-1 pl-5 text-sm", children: [_jsx("li", { children: t("folder.entryCount", { itemLabel, count: contents.entryCount }) }), _jsxs("li", { children: [t("folder.childCount", { count: contents.childFolders.length }), contents.childFolders.length > 0 &&
-                                            `: ${contents.childFolders.map((folder) => folder.name).join(", ")}`] })] })) : (!shownError && (_jsxs("div", { "aria-hidden": true, className: "space-y-2", children: [_jsx(Skeleton, { className: "h-4 w-40" }), _jsx(Skeleton, { className: "h-4 w-56" })] }))), shownError && _jsx(FieldError, { children: shownError }), _jsxs(AlertDialogFooter, { children: [_jsx(AlertDialogCancel, { type: "button", children: tc("cancel") }), _jsx(Button, { type: "button", variant: "destructive", disabled: !contents || isBusy, onClick: () => void confirmDelete(), children: isBusy ? tc("deleting") : tc("delete") })] })] }) })] }));
-    return { requestCreate, requestRename, requestDelete, moveFolder, dialogs };
+                                            } }), shownError && _jsx(FormFieldError, { children: shownError })] }), _jsx(DialogFormFooter, { onCancel: () => setNameDialog(null), cancelLabel: tc("cancel"), submitLabel: tc("save"), busyLabel: tc("saving"), busy: isBusy, disabled: !name.trim() })] })] }) }), _jsx(AlertDialog, { open: deleteDialog !== null, onOpenChange: (open) => !open && setDeleteDialog(null), children: _jsxs(AlertDialogContent, { finalFocus: restoreFocus, children: [_jsxs(AlertDialogHeader, { children: [_jsx(AlertDialogTitle, { children: t("folder.deleteTitle", { name: deleteDialog?.folder.name ?? "" }) }), _jsx(AlertDialogDescription, { children: t("folder.deleteAsk", { itemLabel, destination }) })] }), contents ? (_jsxs("ul", { className: "list-disc space-y-1 pl-5 text-sm", children: [_jsx("li", { children: t("folder.entryCount", { itemLabel, count: contents.entryCount }) }), _jsxs("li", { children: [t("folder.childCount", { count: contents.childFolders.length }), contents.childFolders.length > 0 &&
+                                            `: ${contents.childFolders.map((folder) => folder.name).join(", ")}`] })] })) : (!shownError && (_jsxs("div", { "aria-hidden": true, className: "space-y-2", children: [_jsx(Skeleton, { className: "h-4 w-40" }), _jsx(Skeleton, { className: "h-4 w-56" })] }))), shownError && _jsx(FormFieldError, { children: shownError }), _jsxs(AlertDialogFooter, { children: [_jsx(AlertDialogCancel, { type: "button", children: tc("cancel") }), _jsx(Button, { type: "button", variant: "destructive", disabled: !contents || isBusy, onClick: () => void confirmDelete(), children: isBusy ? tc("deleting") : tc("delete") })] })] }) })] }));
+    return {
+        requestCreate,
+        requestRename,
+        requestDelete,
+        moveFolder,
+        createFolderDirect,
+        renameFolderDirect,
+        dialogs,
+    };
 }

@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 /** Labels, descriptions, and editing view text of the columns block. */
-export const columnsMessages = defineMessages("cms-blocks.columns", {
+export const columnsMessages = defineMessages("monti-blocks.columns", {
     en: {
         label: "Columns",
         description: "Place content side by side in 2 to 4 columns",

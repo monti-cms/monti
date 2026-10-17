@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/core",
-  "version": "0.2.0-next.11",
+  "version": "0.2.0-next.12",
   "private": true,
   "description": "DB-backed CMS core: config, schema, stores, the stored document, its renderer and plugins",
   "license": "MIT",
@@ -14,13 +14,9 @@
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
     },
-    "./client": {
-      "types": "./dist/client.d.ts",
-      "default": "./dist/client.js"
-    },
-    "./runtime": {
-      "types": "./dist/runtime.d.ts",
-      "default": "./dist/runtime.js"
+    "./site": {
+      "types": "./dist/site-entry.d.ts",
+      "default": "./dist/site-entry.js"
     },
     "./read": {
       "types": "./dist/read/index.d.ts",
@@ -54,13 +50,13 @@
       "types": "./dist/render/index.d.ts",
       "default": "./dist/render/index.js"
     },
-    "./plugin/server": {
-      "types": "./dist/plugin-server.d.ts",
-      "default": "./dist/plugin-server.js"
-    },
     "./ai-contract": {
       "types": "./dist/ai-contract.d.ts",
       "default": "./dist/ai-contract.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters.d.ts",
+      "default": "./dist/adapters.js"
     },
     "./adapters/auth": {
       "types": "./dist/adapters/auth/index.d.ts",
@@ -70,21 +66,25 @@
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
     },
-    "./cli": {
+    "./internal/cli": {
       "types": "./dist/cli/index.d.ts",
       "default": "./dist/cli/index.js"
     },
-    "./import-boundary": {
+    "./internal/import-boundary": {
       "types": "./dist/cli/import-boundary.d.ts",
       "default": "./dist/cli/import-boundary.js"
     },
-    "./schema-change": {
+    "./internal/schema-change": {
       "types": "./dist/schema-change/index.d.ts",
       "default": "./dist/schema-change/index.js"
     },
-    "./schema-edit": {
+    "./internal/schema-edit": {
       "types": "./dist/schema-edit/index.d.ts",
       "default": "./dist/schema-edit/index.js"
+    },
+    "./internal/host": {
+      "types": "./dist/internal-host.d.ts",
+      "default": "./dist/internal-host.js"
     },
     "./render.css": "./render.css"
   },

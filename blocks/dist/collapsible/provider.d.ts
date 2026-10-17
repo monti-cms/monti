@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-/** Registers the collapsible block's editing view and menu icon in the admin UI. */
-export declare function CollapsibleProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;
+import type { AdminComponents } from "@monti-cms/admin";
+/** The collapsible block's editing view and menu icon. */
+export declare const collapsibleComponents: AdminComponents;

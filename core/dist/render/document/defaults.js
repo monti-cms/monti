@@ -27,7 +27,7 @@ const HorizontalRule = (_) => _jsx("hr", {});
 const HardBreak = (_) => _jsx("br", {});
 const CodeBlock = ({ title, code, notes, children, ctx }) => {
     const path = title?.trim().split("/").filter(Boolean) ?? [];
-    return (_jsxs("div", { className: "cms-code", children: [path.length > 0 ? (_jsx("div", { className: "cms-code-title", "data-title": title, children: path.map((part, index) => (_jsxs("span", { className: index === path.length - 1 ? "cms-code-title-file" : undefined, children: [part, index < path.length - 1 ? " / " : ""] }, `${index}-${part}`))) })) : null, children, code ? _jsx(CmsCopyButton, { text: code, label: ctx.labels.copyCode, copiedLabel: ctx.labels.copied }) : null, notes.length > 0 ? (_jsx("ol", { className: "cms-code-notes", "aria-label": ctx.labels.codeNotes, children: notes.map((note, index) => (_jsxs("li", { children: [_jsx("span", { className: "cms-code-note-number", children: index + 1 }), _jsx("span", { children: note })] }, index))) })) : null] }));
+    return (_jsxs("div", { className: "monti-code", children: [path.length > 0 ? (_jsx("div", { className: "monti-code-title", "data-title": title, children: path.map((part, index) => (_jsxs("span", { className: index === path.length - 1 ? "monti-code-title-file" : undefined, children: [part, index < path.length - 1 ? " / " : ""] }, `${index}-${part}`))) })) : null, children, code ? _jsx(CmsCopyButton, { text: code, label: ctx.labels.copyCode, copiedLabel: ctx.labels.copied }) : null, notes.length > 0 ? (_jsx("ol", { className: "monti-code-notes", "aria-label": ctx.labels.codeNotes, children: notes.map((note, index) => (_jsxs("li", { children: [_jsx("span", { className: "monti-code-note-number", children: index + 1 }), _jsx("span", { children: note })] }, index))) })) : null] }));
 };
 const Image = ({ src, alt, title, caption, decorative, align, width, crop, rotate, intrinsic, failure, plain, inline, node, ctx, }) => {
     if (plain && src) {
@@ -57,24 +57,24 @@ const Table = ({ columns, widths, hasHead, head, body }) => {
             ? { width: total, maxWidth: "none" }
             : { minWidth: total };
     // No border or background is set separately. It takes the same prose table style as a default (GFM) table.
-    return (_jsx("div", { className: "cms-table-scroll", children: _jsxs("table", { className: ["cms-table", style?.width ? null : "cms-table-full"].filter(Boolean).join(" "), style: style, children: [widths.length > 0 && columns > 0 ? (_jsx("colgroup", { children: known.map((width, index) => (_jsx("col", { style: width ? { width } : undefined }, index))) })) : null, hasHead ? _jsx("thead", { children: head }) : null, _jsx("tbody", { children: body })] }) }));
+    return (_jsx("div", { className: "monti-table-scroll", children: _jsxs("table", { className: ["monti-table", style?.width ? null : "monti-table-full"].filter(Boolean).join(" "), style: style, children: [widths.length > 0 && columns > 0 ? (_jsx("colgroup", { children: known.map((width, index) => (_jsx("col", { style: width ? { width } : undefined }, index))) })) : null, hasHead ? _jsx("thead", { children: head }) : null, _jsx("tbody", { children: body })] }) }));
 };
 const TableRow = ({ children }) => _jsx("tr", { children: children });
 const TableCell = ({ as: Tag, scope, colSpan, rowSpan, align, firstColumn, lastColumn, inHead, children, }) => {
     const classes = [
-        "cms-table-cell",
-        inHead && "cms-table-cell-head",
-        firstColumn && "cms-table-cell-first",
-        lastColumn && "cms-table-cell-last",
-        Tag === "th" && "cms-table-cell-header",
-        align ? `cms-align-${align}` : null,
+        "monti-table-cell",
+        inHead && "monti-table-cell-head",
+        firstColumn && "monti-table-cell-first",
+        lastColumn && "monti-table-cell-last",
+        Tag === "th" && "monti-table-cell-header",
+        align ? `monti-align-${align}` : null,
     ]
         .filter(Boolean)
         .join(" ");
     return (_jsx(Tag, { colSpan: colSpan > 1 ? colSpan : undefined, rowSpan: rowSpan > 1 ? rowSpan : undefined, scope: Tag === "th" ? scope : undefined, className: classes, children: children }));
 };
 // biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output (`katex.renderToString`) is the only HTML the renderer injects
-const MathBlock = ({ html }) => _jsx("div", { className: "cms-math", dangerouslySetInnerHTML: { __html: html } });
+const MathBlock = ({ html }) => _jsx("div", { className: "monti-math", dangerouslySetInnerHTML: { __html: html } });
 const FootnoteRef = ({ index, refId, targetId }) => (_jsx("sup", { children: _jsx("a", { href: `#${targetId}`, id: refId, "data-footnote-ref": "true", "aria-describedby": "footnote-label", children: index }) }));
 const Footnotes = ({ items, ctx }) => (_jsxs("section", { "data-footnotes": "true", className: "footnotes", children: [_jsx("h2", { className: "sr-only", id: "footnote-label", children: ctx.labels.footnotes }), _jsx("ol", { children: items.map((item) => (_jsx("li", { id: item.id, children: item.children }, item.id))) })] }));
 const Link = ({ href, title, entryId, children }) => 
@@ -88,7 +88,7 @@ const mark = (Tag) => {
 /** Translation note text is not shown on the public page (the pre-publish check blocks publishing while it remains). */
 const Untranslated = (_) => null;
 /** What an unknown node renders to: its content (a container) or nothing (a leaf). In development it leaves a hidden marker. */
-const Fallback = ({ node, children }) => (_jsxs(_Fragment, { children: [process.env.NODE_ENV !== "production" ? _jsx("span", { "data-cms-unknown": node.type, hidden: true }) : null, children ?? null] }));
+const Fallback = ({ node, children }) => (_jsxs(_Fragment, { children: [process.env.NODE_ENV !== "production" ? _jsx("span", { "data-monti-unknown": node.type, hidden: true }) : null, children ?? null] }));
 const marks = {
     link: Link,
     bold: mark("strong"),

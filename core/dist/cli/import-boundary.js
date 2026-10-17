@@ -12,13 +12,7 @@ import { CONFIG_CANDIDATES } from "./locate.js";
  * dev server start from `withCms`.
  */
 /** Packages that hold server code. A client file importing one drags the server into the browser bundle. */
-export const SERVER_ONLY_MODULES = [
-    "@monti-cms/core/server",
-    "@monti-cms/core/runtime",
-    "@monti-cms/core/plugin/server",
-    "@monti-cms/auth",
-    "@monti-cms/nextjs/auth",
-];
+export const SERVER_ONLY_MODULES = ["@monti-cms/core/server", "@monti-cms/auth", "@monti-cms/nextjs/auth"];
 const SOURCE = /\.(?:[cm]?[jt]sx?)$/;
 const SKIP_DIRS = new Set(["node_modules", ".next", ".git", "dist", "vendor", "out", "build", "coverage", ".turbo"]);
 const RESOLVE_SUFFIXES = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs", ".cts"];

@@ -1,5 +1,4 @@
-import { cmsApiUrl } from "@monti-cms/core/client";
-import { cmsFetch } from "./client.js";
+import { adminFetch } from "./client.js";
 export const EVENTS_FILTERS = ["all", "failed", "pending", "delivered"];
 const FILTER_STATES = {
     all: ["pending", "delivering", "delivered", "failed", "dead", "dismissed", "recorded"],
@@ -23,21 +22,21 @@ export const eventsKeys = {
     count: () => [...eventsKeys.all, "count"],
 };
 /** One page of deliveries for a filter (`GET /v1/events`). */
-export const listEvents = (site, filter, page, pageSize, signal, fallback) => cmsFetch(site, cmsApiUrl(`/v1/events?${eventsQuery(filter, page, pageSize)}`), { signal, fallback });
-export const retryEvent = (site, key, fallback) => cmsFetch(site, cmsApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/retry`), {
+export const listEvents = (site, filter, page, pageSize, signal, fallback) => adminFetch(site, `/v1/events?${eventsQuery(filter, page, pageSize)}`, { signal, fallback });
+export const retryEvent = (site, key, fallback) => adminFetch(site, `/v1/events/${encodeURIComponent(key.eventId)}/retry`, {
     method: "POST",
     json: { subscriber: key.subscriber },
     fallback,
 });
-export const dismissEvent = (site, key, fallback) => cmsFetch(site, cmsApiUrl(`/v1/events/${encodeURIComponent(key.eventId)}/dismiss`), {
+export const dismissEvent = (site, key, fallback) => adminFetch(site, `/v1/events/${encodeURIComponent(key.eventId)}/dismiss`, {
     method: "POST",
     json: { subscriber: key.subscriber },
     fallback,
 });
 /** Sends the deliveries that are due: pending ones and failed ones whose next attempt has come. */
-export const retryAllEvents = (site, fallback) => cmsFetch(site, cmsApiUrl("/v1/events/retry"), { method: "POST", json: {}, fallback });
+export const retryAllEvents = (site, fallback) => adminFetch(site, "/v1/events/retry", { method: "POST", json: {}, fallback });
 /** Number of failed and dead deliveries, for the sidebar badge. */
 export async function countFailedEvents(site, signal) {
-    const data = await cmsFetch(site, cmsApiUrl("/v1/events?limit=1"), { signal });
+    const data = await adminFetch(site, "/v1/events?limit=1", { signal });
     return data.counts.failed + data.counts.dead;
 }

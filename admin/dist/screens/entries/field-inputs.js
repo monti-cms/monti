@@ -3,7 +3,7 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, GripVertical, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -12,7 +12,7 @@ import { entriesKeys, getEntry, getEntryRelations, updateEntry } from "../../api
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { moveWithin } from "../../lib/utils/move-within.js";
-import { FieldError } from "../../ui/field.js";
+import { FormFieldError } from "../../ui/field.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { entriesMessages } from "./messages.js";
 import { optionOf, useRecordCreator } from "./record-create-sheet.js";
@@ -39,7 +39,7 @@ function relationOptions(t, search, selfId) {
 /** The failure of a search, under the input like the other relation inputs. */
 function SearchError({ failed }) {
     const t = useTranslator(entriesMessages);
-    return failed ? _jsx(FieldError, { children: t("entry.loadFailed") }) : null;
+    return failed ? _jsx(FormFieldError, { children: t("entry.loadFailed") }) : null;
 }
 /** Single relation. Typing searches the target entries on the server (best title matches first); pressing shows the first ones. */
 export function EntryPicker({ field, id, value, invalid, describedBy, context, onChange }) {
@@ -61,7 +61,7 @@ function SortableEntryRow({ sortableId, index, count, option, disabled, onMove, 
         disabled,
     });
     const title = option?.title ?? tc("loading");
-    return (_jsxs("li", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("flex items-center gap-1 rounded-md border bg-cms-background px-1 py-1 text-xs", isDragging && "relative z-10 shadow-cms-pop"), children: [_jsx(IconButton, { ref: setActivatorNodeRef, size: "icon-xs", label: t("entry.drag", { title }), disabled: disabled, className: "cursor-grab touch-none text-cms-muted-foreground active:cursor-grabbing", ...attributes, ...listeners, children: _jsx(GripVertical, {}) }), _jsxs("span", { className: "min-w-0 flex-1 truncate", children: [index + 1, ". ", title, option && option.status !== "published" && option.status !== "missing" && (_jsx("span", { className: "ml-1 text-cms-warning-foreground", children: t("entry.unpublished") }))] }), _jsx(IconButton, { size: "icon-xs", label: t("entry.up", { title }), disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.down", { title }), disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.remove", { title }), disabled: disabled, onClick: onRemove, children: _jsx(X, {}) })] }));
+    return (_jsxs("li", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("flex items-center gap-1 rounded-md border bg-monti-background px-1 py-1 text-xs", isDragging && "relative z-10 shadow-monti-pop"), children: [_jsx(IconButton, { ref: setActivatorNodeRef, size: "icon-xs", label: t("entry.drag", { title }), disabled: disabled, className: "cursor-grab touch-none text-monti-muted-foreground active:cursor-grabbing", ...attributes, ...listeners, children: _jsx(GripVertical, {}) }), _jsxs("span", { className: "min-w-0 flex-1 truncate", children: [index + 1, ". ", title, option && option.status !== "published" && option.status !== "missing" && (_jsx("span", { className: "ml-1 text-monti-warning-foreground", children: t("entry.unpublished") }))] }), _jsx(IconButton, { size: "icon-xs", label: t("entry.up", { title }), disabled: disabled || index === 0, onClick: () => onMove(-1), children: _jsx(ArrowUp, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.down", { title }), disabled: disabled || index === count - 1, onClick: () => onMove(1), children: _jsx(ArrowDown, {}) }), _jsx(IconButton, { size: "icon-xs", label: t("entry.remove", { title }), disabled: disabled, onClick: onRemove, children: _jsx(X, {}) })] }));
 }
 /**
  * Ordered multi relation (post targets). Used by collection items.
@@ -101,7 +101,7 @@ export function OrderedEntryList({ field, id, value, context, onChange }) {
         (search.isMissing(itemId)
             ? { id: itemId, title: t("entry.missing", { target }), slug: null, status: "missing" }
             : undefined);
-    return (_jsxs("div", { className: "space-y-2", children: [_jsx(RelationCombobox, { id: id, "aria-label": t("entry.editList", { target }), placeholder: waiting ? tc("loading") : (relation.placeholder ?? t("entry.editList", { target })), disabled: context.disabled || waiting, multiple: true, showChips: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: ids, onValueChange: applySelection }), _jsx(SearchError, { failed: search.error }), ids.length === 0 ? (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("entry.empty", { target }) })) : (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: onDragEnd, children: _jsx(SortableContext, { items: sortableIds, strategy: verticalListSortingStrategy, children: _jsx("ol", { "aria-label": t("entry.listAria", { target }), className: "space-y-1", children: ids.map((itemId, index) => (_jsx(SortableEntryRow, { sortableId: sortableIds[index], index: index, count: ids.length, option: rowOf(itemId), disabled: context.disabled, onMove: (direction) => move(index, direction), onRemove: () => onChange(ids.filter((_, i) => i !== index)) }, sortableIds[index]))) }) }) }))] }));
+    return (_jsxs("div", { className: "space-y-2", children: [_jsx(RelationCombobox, { id: id, "aria-label": t("entry.editList", { target }), placeholder: waiting ? tc("loading") : (relation.placeholder ?? t("entry.editList", { target })), disabled: context.disabled || waiting, multiple: true, showChips: false, ...relationOptions(t, search, context.entryId), onSearch: search.search, loading: search.loading, value: ids, onValueChange: applySelection }), _jsx(SearchError, { failed: search.error }), ids.length === 0 ? (_jsx("p", { className: "text-monti-muted-foreground text-xs", children: t("entry.empty", { target }) })) : (_jsx(DndContext, { sensors: sensors, collisionDetection: closestCenter, onDragEnd: onDragEnd, children: _jsx(SortableContext, { items: sortableIds, strategy: verticalListSortingStrategy, children: _jsx("ol", { "aria-label": t("entry.listAria", { target }), className: "space-y-1", children: ids.map((itemId, index) => (_jsx(SortableEntryRow, { sortableId: sortableIds[index], index: index, count: ids.length, option: rowOf(itemId), disabled: context.disabled, onMove: (direction) => move(index, direction), onRemove: () => onChange(ids.filter((_, i) => i !== index)) }, sortableIds[index]))) }) }) }))] }));
 }
 /**
  * If an inverse relation is a conditional list on the other record (a field that exists only for one value of a select field),
@@ -255,7 +255,7 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
         });
     };
     if (!targetId) {
-        return _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("backlink.saveDraft", { label: field.label }) });
+        return _jsx("p", { className: "text-monti-muted-foreground text-xs", children: t("backlink.saveDraft", { label: field.label }) });
     }
     const shown = optimistic ?? serverIds;
     const options = (records.options ?? [])
@@ -293,5 +293,5 @@ export function BacklinkInput({ field, targetId, disabled, shared, }) {
                         void load();
                         return saved.id;
                     }
-                    : undefined }), (error ?? loadError) && _jsx(FieldError, { children: error ?? loadError }), _jsx(SearchError, { failed: records.error }), creator.sheet] }));
+                    : undefined }), (error ?? loadError) && _jsx(FormFieldError, { children: error ?? loadError }), _jsx(SearchError, { failed: records.error }), creator.sheet] }));
 }

@@ -7,6 +7,11 @@ export declare const UUID_SOURCE = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 export declare const UUID_PATTERN: RegExp;
 /** A name for a collection or a field: what stored values, JSON keys and URLs call it. */
 export declare const NAME_PATTERN: RegExp;
+/**
+ * Names a collection cannot take. `media` is the folder scope of the media library (`MEDIA_FOLDER_SCOPE`): a collection of that name would share its
+ * folders.
+ */
+export declare const RESERVED_COLLECTION_NAMES: readonly string[];
 /** A select option's value: the key stored for the choice. */
 export declare const OPTION_VALUE_PATTERN: RegExp;
 /** A host name with an optional port (`www.example.com`, `localhost:3000`), as `site.aliases` lists them. */

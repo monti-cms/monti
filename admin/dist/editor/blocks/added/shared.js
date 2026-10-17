@@ -1,4 +1,4 @@
-import { perSite } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/site";
 /**
  * Editor representation of added blocks (block extension plugins and the site config's `blocks`). Blocks with `editor.view: "node"` are edited as
  * Tiptap nodes built from the definition; the rest stay as source-preserving boxes.
@@ -12,7 +12,7 @@ export const blockNodeName = (block) => `cms${block.name.replace(/(^|-)([a-z0-9]
 export const CONTAINER_GROUP = "cmsContainer";
 export const BODY_CONTAINER_GROUP = "cmsBodyContainer";
 /** Class on the node view of a block used only inside a parent block (a single tab or column), so the pointer logic can tell such a frame from the DOM. */
-export const PARENT_ONLY_VIEW_CLASS = "cms-parent-only-block";
+export const PARENT_ONLY_VIEW_CLASS = "monti-parent-only-block";
 /** Names the editor already uses. An added block's node name must not collide with them. */
 const TAKEN_NODE_NAMES = new Set(["cmsOpaqueBlock", "cmsMath", "cmsBlockKeymap", "cmsBlockDrag", "cmsUntranslated"]);
 const tablesOf = perSite((site) => {

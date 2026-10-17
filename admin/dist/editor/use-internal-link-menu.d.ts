@@ -2,7 +2,7 @@
  * State of the `[[` internal link menu: when it opens, the debounced search of link targets, selection by keyboard,
  * and inserting the chosen target.
  */
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type MutableRefObject } from "react";
 import type { TranslatorFor } from "../translator.js";

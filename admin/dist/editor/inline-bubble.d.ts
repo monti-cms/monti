@@ -23,7 +23,7 @@ export declare function BubbleButton({ label, onClick, pressed, destructive, cla
  * - When text is selected by dragging: tools to apply effects like bold and italic, and tooltip and link, right away.
  * - When the cursor is inside an effect: the spanning effects and a remove button, the link URL / tooltip text and an edit button.
  * Link and tooltip editing expands into an input form inside the bubble (no need to go to the top formatting tools).
- * For an extension's text styles (`CmsAdminComponents.marks`), it renders the buttons and content that extension provides.
+ * For an extension's text styles (`AdminComponents.marks`), it renders the buttons and content that extension provides.
  */
 export declare function InlineBubble({ editor, actions, }: {
     editor: Editor;

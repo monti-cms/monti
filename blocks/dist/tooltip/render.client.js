@@ -11,7 +11,7 @@ export function Tooltip({ content, note, children }) {
     const [open, setOpen] = useState(false);
     // Whether a touch press is in progress. A touch also moves focus, so toggle only once per press to avoid opening and immediately closing.
     const touching = useRef(false);
-    return (_jsxs("span", { className: "cms-block-tooltip", "data-open": open ? "" : undefined, onPointerEnter: (event) => event.pointerType === "mouse" && setOpen(true), onPointerLeave: (event) => event.pointerType === "mouse" && setOpen(false), children: [_jsxs("span", { className: "cms-block-tooltip-trigger", 
+    return (_jsxs("span", { className: "monti-block-tooltip", "data-open": open ? "" : undefined, onPointerEnter: (event) => event.pointerType === "mouse" && setOpen(true), onPointerLeave: (event) => event.pointerType === "mouse" && setOpen(false), children: [_jsxs("span", { className: "monti-block-tooltip-trigger", 
                 // biome-ignore lint/a11y/noNoninteractiveTabindex: takes focus so the description can also be opened with the keyboard
                 tabIndex: 0, "aria-describedby": id, onPointerDown: (event) => {
                     touching.current = event.pointerType !== "mouse";
@@ -29,5 +29,5 @@ export function Tooltip({ content, note, children }) {
                 }, onKeyDown: (event) => {
                     if (event.key === "Escape")
                         setOpen(false);
-                }, children: [children, note ? (_jsx("sup", { "aria-hidden": true, className: "cms-block-tooltip-note", children: note })) : null] }), _jsx("span", { id: id, role: "tooltip", className: "cms-block-tooltip-content", children: content })] }));
+                }, children: [children, note ? (_jsx("sup", { "aria-hidden": true, className: "monti-block-tooltip-note", children: note })) : null] }), _jsx("span", { id: id, role: "tooltip", className: "monti-block-tooltip-content", children: content })] }));
 }

@@ -5,6 +5,7 @@ export const toSelection = (item) => ({
     id: item.id,
     expectedVersion: item.version,
     title: item.title,
+    status: item.status,
 });
 /**
  * Target of right-click / Delete key. If the pressed row is one of the selected rows and two or more are selected, all selected rows; otherwise just that row.
@@ -90,29 +91,33 @@ export function rowMenuActions(site, group, context, handlers) {
                 },
         ]
         : [{ kind: "separator" }];
+    const folderActions = context.folders === null
+        ? []
+        : [
+            {
+                kind: "sub",
+                label: t("menu.moveToFolder"),
+                icon: FolderInput,
+                items: [
+                    {
+                        kind: "item",
+                        label: t("menu.root"),
+                        icon: FolderUp,
+                        onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: null }),
+                    },
+                    ...context.folders.map((folder) => ({
+                        kind: "item",
+                        label: folder.name,
+                        icon: FolderIcon,
+                        onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: folder.id }),
+                    })),
+                ],
+            },
+        ];
     return [
         ...header,
         ...open,
-        { kind: "separator" },
-        {
-            kind: "sub",
-            label: t("menu.moveToFolder"),
-            icon: FolderInput,
-            items: [
-                {
-                    kind: "item",
-                    label: t("menu.root"),
-                    icon: FolderUp,
-                    onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: null }),
-                },
-                ...context.folders.map((folder) => ({
-                    kind: "item",
-                    label: folder.name,
-                    icon: FolderIcon,
-                    onSelect: () => handlers.bulk("folder.move", t("bulk.move"), targets, { folderId: folder.id }),
-                })),
-            ],
-        },
+        ...(folderActions.length > 0 ? [{ kind: "separator" }, ...folderActions] : []),
         ...contentActions,
         {
             kind: "item",

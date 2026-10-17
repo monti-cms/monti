@@ -1,4 +1,4 @@
-import { parseMeta } from "@monti-cms/admin/blocks";
+import { parseMeta } from "@monti-cms/admin";
 /** The code blocks among the children of a code explorer, in document order. Other children (a paragraph below the explorer's files) are not files. */
 export function filesOf(children) {
     return children.flatMap((child) => {

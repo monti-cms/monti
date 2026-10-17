@@ -1,4 +1,4 @@
-import { adminRoute, ok } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok } from "@monti-cms/core/server";
 import { getAiSettingsView } from "../../settings.js";
 import { aiStoreFor } from "../../store.js";
 /** List of saved AI connections. Keys are returned as only the last four characters. */

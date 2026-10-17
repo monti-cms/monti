@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-/** Registers the code explorer block's editing view and menu icon in the admin UI. */
-export declare function CodeExplorerProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;
+import type { AdminComponents } from "@monti-cms/admin";
+/** The code explorer block's editing view and menu icon. */
+export declare const codeExplorerComponents: AdminComponents;

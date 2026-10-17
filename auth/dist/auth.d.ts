@@ -1,4 +1,4 @@
-import { type AuthAdapter } from "@monti-cms/core/server";
+import { type AuthAdapter } from "@monti-cms/core/adapters";
 import { type LoginProvider } from "./provider.js";
 /**
  * What the host framework supplies, so this package stays free of any framework. The core cannot know the current request on its own,

@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { CalendarRange } from "lucide-react";
 import { Button } from "../../ui/button.js";
 import { Calendar } from "../../ui/calendar.js";

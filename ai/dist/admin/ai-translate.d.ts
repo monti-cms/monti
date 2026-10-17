@@ -1,4 +1,4 @@
-import type { EditorExtension } from "@monti-cms/admin";
+import { type EditorExtension } from "@monti-cms/admin";
 import type { BlockAction } from "@monti-cms/admin/editor";
 import type { Editor } from "@tiptap/react";
 /**

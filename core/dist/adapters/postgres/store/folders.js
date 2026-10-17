@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { assertNoFolderCycle, assertParentInCollection } from "../../../core/domain/folders.js";
+import { assertFolderInCollection, assertFoldersEnabled, assertNoFolderCycle, assertParentInCollection, } from "../../../core/domain/folders.js";
 import { CmsError } from "../../../core/store/errors.js";
 import { withTrx } from "./context.js";
 import { isTransactionConflict, isUniqueViolation } from "./errors.js";
@@ -12,15 +12,36 @@ const mapFolderError = (err) => {
     }
     return err;
 };
+/**
+ * Checks that something of `collection` (an entry, or a media file with `"media"`) can be put in `folderId`: the collection uses folders and the folder
+ * belongs to it. No folder (`null`, the top level) is always allowed.
+ */
+export async function assertFolderTarget(db, site, folderId, collection) {
+    if (!folderId)
+        return;
+    assertFoldersEnabled(site, collection);
+    const folder = await db.selectFrom("folders").select("collection").where("id", "=", folderId).executeTakeFirst();
+    assertFolderInCollection(folder?.collection, collection);
+}
 /** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export function createFolderOps(ctx) {
+    const { site } = ctx;
     const db = ctx.db();
+    /** The collection of an existing folder, checked to use folders. */
+    const collectionOf = async (trx, id) => {
+        const folder = await trx.selectFrom("folders").select("collection").where("id", "=", id).executeTakeFirst();
+        if (!folder)
+            throw new CmsError("Not found", "not_found");
+        assertFoldersEnabled(site, folder.collection);
+        return folder.collection;
+    };
     const assertParent = async (trx, parentId, collection) => {
         const parent = await trx.selectFrom("folders").select("collection").where("id", "=", parentId).executeTakeFirst();
         assertParentInCollection(parent?.collection, collection);
     };
     return {
         createFolder: async (params) => withTrx(ctx, async (trx) => {
+            assertFoldersEnabled(site, params.collection);
             if (params.parentId)
                 await assertParent(trx, params.parentId, params.collection);
             const folder = {
@@ -54,8 +75,9 @@ export function createFolderOps(ctx) {
                 .executeTakeFirst();
             if (!curr)
                 throw new CmsError("Not found", "not_found");
+            assertFoldersEnabled(site, curr.collection);
             if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
-                throw new CmsError("Conflict", "conflict", curr.version);
+                throw new CmsError("Conflict", "conflict", { serverVersion: curr.version });
             }
             const next = {
                 ...curr,
@@ -89,7 +111,9 @@ export function createFolderOps(ctx) {
                 .execute();
             return mapFolderRow(next);
         }, {
-            mapError: (err) => isTransactionConflict(err) ? new CmsError("Cycle", "invalid_input") : mapFolderError(err),
+            mapError: (err) => isTransactionConflict(err)
+                ? new CmsError("Cycle", "invalid_input", { notice: { key: "folder.cycle" } })
+                : mapFolderError(err),
         }),
         /**
          * Deletes a folder. Moves its direct entries and child folders up to the parent. Entries are not deleted.
@@ -98,14 +122,15 @@ export function createFolderOps(ctx) {
         deleteFolder: async (params) => withTrx(ctx, async (trx) => {
             const curr = await trx
                 .selectFrom("folders")
-                .select(["parent_id", "version"])
+                .select(["collection", "parent_id", "version"])
                 .where("id", "=", params.id)
                 .forUpdate()
                 .executeTakeFirst();
             if (!curr)
                 throw new CmsError("Not found", "not_found");
+            assertFoldersEnabled(site, curr.collection);
             if (params.expectedVersion !== undefined && curr.version !== params.expectedVersion) {
-                throw new CmsError("Conflict", "conflict", curr.version);
+                throw new CmsError("Conflict", "conflict", { serverVersion: curr.version });
             }
             await trx
                 .updateTable("folders")
@@ -126,6 +151,7 @@ export function createFolderOps(ctx) {
         }, { mapError: mapFolderError }),
         /** Preview before folder deletion: the number of direct entries and child folders. */
         getFolderContents: async (params) => {
+            await collectionOf(db, params.id);
             const [entries, media, children] = await Promise.all([
                 db
                     .selectFrom("entries")
@@ -151,6 +177,7 @@ export function createFolderOps(ctx) {
             };
         },
         listFolders: async (params) => {
+            assertFoldersEnabled(site, params.collection);
             const rows = await db
                 .selectFrom("folders")
                 .select(COLUMNS)

@@ -59,7 +59,7 @@ export function createCms(options) {
             const owner = (await plugins.load()).find((candidate) => candidate.name === plugin);
             if (!owner?.keyUses)
                 return Object.fromEntries(refs.map((ref) => [ref, plugin]));
-            return owner.keyUses(self(), refs);
+            return owner.keyUses(refs, plugins.scopeOf(plugin));
         };
         const declaredSlots = () => site.plugins.flatMap((plugin) => (plugin.keySlots ?? []).map((slot) => ({
             plugin: plugin.name,
@@ -67,15 +67,10 @@ export function createCms(options) {
             service: slot.service,
             label: typeof slot.label === "function" ? slot.label(site) : slot.label,
         })));
-        const slotChanged = async (plugin, slot) => {
-            const declared = site.plugins
-                .find((entry) => entry.name === plugin)
-                ?.keySlots?.find((entry) => entry.id === slot);
-            await declared?.onChange?.(self());
-        };
+        const slotChanged = (plugin, slot) => plugins.keySlotChanged(plugin, slot);
         const inTransaction = (work) => connections.database.transaction(work);
         const keysOn = (storage, transact, 
-        /** A slot's `onChange` is called for changes made outside a transaction only: inside one, the change is not saved yet. */
+        /** `keySlot.changed` is told of changes made outside a transaction only: inside one, the change is not saved yet. */
         notify = true) => createApiKeys({
             storage,
             secrets: vault.forPlugin(API_KEYS_SCOPE),
@@ -182,7 +177,6 @@ export function createCms(options) {
             },
             isMediaConfigured: Boolean(server.media),
             mediaStore: getMediaStore,
-            storage: (plugin) => connections.database.pluginStorage(plugin),
             plugin: (name) => ({
                 name,
                 // Read when asked, so a plugin that needs only one of them does not open a connection for the others.
@@ -192,6 +186,7 @@ export function createCms(options) {
                 get secrets() {
                     return vault.forPlugin(name);
                 },
+                key: (id) => apiKeys.slot(name, id),
                 apiKeys,
                 once: (key, factory) => {
                     const id = `${name}/${key}`;
@@ -200,7 +195,6 @@ export function createCms(options) {
                     return pluginValues.get(id);
                 },
             }),
-            secrets: (plugin) => vault.forPlugin(plugin),
             apiKeys,
             transaction: (work) => inTransaction((tx) => work({
                 storage: (plugin) => tx.pluginStorage(plugin),

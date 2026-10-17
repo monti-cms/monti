@@ -1,7 +1,6 @@
-import type { Field, TextChecker } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
-import type { ListEntriesItem } from "@monti-cms/core/runtime";
+import type { ListEntriesItem } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/react";
 import type { LucideIcon } from "lucide-react";
 import { type ComponentType, type ReactNode } from "react";
@@ -143,7 +142,8 @@ export interface SourcePanelProps {
     readonly onComposing?: (composing: boolean) => void;
 }
 export { SOURCE_ERROR_ID } from "./source-error-id.js";
-/** A source panel a plugin registers (`CmsAdminComponents.sourcePanels`). */
+import type { Field, TextChecker } from "@monti-cms/core";
+/** A source panel a plugin registers (`AdminComponents.sourcePanels`). */
 export interface SourcePanelRegistration {
     /** The format the panel edits (`mdx`). */
     readonly format: string;
@@ -152,11 +152,11 @@ export interface SourcePanelRegistration {
     readonly Panel: ComponentType<SourcePanelProps>;
 }
 /**
- * Components a site or plugin puts in the admin UI. Provided inside the admin layout with `CmsAdminComponentsProvider`.
+ * Components a site or plugin puts in the admin UI. Provided inside the admin layout with `AdminComponentsProvider`.
  * A server layout cannot pass functions to the browser, so a client component renders this provider.
  * Nested providers add inner values to outer ones (inner wins on the same name).
  */
-export interface CmsAdminComponents {
+export interface AdminComponents {
     /**
      * Editor preview of a code fence block (e.g. `mermaid`, `chart`). The key is the fence language, and the value is a function that loads
      * a component that renders the source (`source`) (a heavy renderer is loaded only when the preview opens). If absent, the source is shown as is.
@@ -177,7 +177,7 @@ export interface CmsAdminComponents {
      * A view registered here replaces the default view of that block.
      *
      * A view takes no props. It reads and writes its block with `useBlockEditor`, draws the nested body of a container with `Content`, and
-     * wraps itself in `BlockFrame` (all from `@monti-cms/admin/hooks`). Without a registered view, a core block uses its default view and any
+     * wraps itself in `BlockFrame` (all from `@monti-cms/admin`). Without a registered view, a core block uses its default view and any
      * other added block the default box holding the block name, attribute inputs and body.
      *
      * @experimental
@@ -251,11 +251,11 @@ export interface FieldViewProps {
     readonly form: EntryForm;
     readonly entry: EntryData | null;
 }
-export declare function CmsAdminComponentsProvider({ components, children, }: {
-    components: CmsAdminComponents;
+export declare function AdminComponentsProvider({ components, children, }: {
+    components: AdminComponents;
     children: ReactNode;
 }): import("react").JSX.Element;
-export declare const useCmsAdminComponents: () => CmsAdminComponents;
+export declare const useAdminComponents: () => AdminComponents;
 /**
  * The browser side of a format by name (`mdx`), or `undefined` when no plugin registered it. The format is a plugin's: code that needs a notation (AI, the
  * source panel) asks for it here instead of importing a parser.

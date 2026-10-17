@@ -1,5 +1,5 @@
-import { perSite } from "@monti-cms/core/client";
 import { DEFAULT_CODE_BLOCK_THEMES } from "@monti-cms/core/code-block";
+import { perSite } from "@monti-cms/core/site";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 export const codeBlockHighlightPluginKey = new PluginKey("cmsCodeBlockHighlight");

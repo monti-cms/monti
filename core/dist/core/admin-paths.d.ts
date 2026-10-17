@@ -1,7 +1,7 @@
 import type { CmsConfig } from "../config/define.js";
 import { DEFAULT_ADMIN_PATH } from "../config/rules.js";
 export { DEFAULT_ADMIN_PATH };
-export { adminHrefWith, CMS_API_PATH, cmsApiUrl, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path.js";
+export { adminApiUrl, adminHrefWith, CMS_API_PATH, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path.js";
 /** The admin addresses of one site. */
 export type SiteAdminPaths = ReturnType<typeof createAdminPaths>;
 /** The admin address rules of a site config (`admin.path` and `site.home`). */

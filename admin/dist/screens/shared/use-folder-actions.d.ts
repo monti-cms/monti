@@ -1,5 +1,5 @@
-import { type Site } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
+import { type Site } from "@monti-cms/core/site";
 import type { MenuAction } from "./action-menu.js";
 /** Parent candidates to move to, excluding `folder` and its descendants. The server also rejects cycles. */
 export declare function moveTargetsFor(folder: Folder, folders: Folder[]): Folder[];
@@ -21,6 +21,8 @@ export declare function useFolderActions({ collection, folders, onChanged, }: {
     requestRename: (folder: Folder) => void;
     requestDelete: (folder: Folder) => void;
     moveFolder: (folder: Folder, parentId: string | null) => void;
+    createFolderDirect: (name: string, parentId: string | null) => Promise<void>;
+    renameFolderDirect: (folder: Folder, newName: string) => Promise<void>;
     dialogs: import("react").JSX.Element;
 };
-export type FolderActions = Pick<ReturnType<typeof useFolderActions>, "requestCreate" | "requestRename" | "requestDelete" | "moveFolder">;
+export type FolderActions = Pick<ReturnType<typeof useFolderActions>, "requestCreate" | "requestRename" | "requestDelete" | "moveFolder" | "createFolderDirect" | "renameFolderDirect">;

@@ -1,5 +1,5 @@
 import type { StoredDocument } from "../doc/stored-document.js";
-import type { WriteOperation } from "../services/hooks.js";
+import type { WriteOperation } from "../services/reactions.js";
 import type { Site } from "../site/index.js";
 import type { Issue } from "./types.js";
 /**

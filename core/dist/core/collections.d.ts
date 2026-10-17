@@ -1,8 +1,10 @@
-import type { CollectionKind } from "../schema/collection.js";
-import type { SchemaCollection, SiteSchemas, StoredField } from "../schema/derive.js";
+import { type CollectionKind } from "../schema/collection.js";
+import type { SchemaCollectionName, SiteSchemas, StoredField } from "../schema/derive.js";
 import type { StorageType } from "../schema/fields.js";
+/** The folder scope of the media library. A reserved collection name (`RESERVED_COLLECTION_NAMES`), so it never collides with a collection. */
+export declare const MEDIA_FOLDER_SCOPE = "media";
 /** A collection name (a key of `collections` in the site config). */
-export type Collection = SchemaCollection;
+export type Collection = SchemaCollectionName;
 export type { CollectionKind } from "../schema/collection.js";
 export type FieldType = StorageType;
 export interface CollectionRelation {
@@ -16,7 +18,8 @@ export interface CollectionDefinition {
     readonly kind: CollectionKind;
     readonly fields: Readonly<Record<string, FieldType>>;
     readonly relations?: readonly CollectionRelation[];
-    readonly folders?: boolean;
+    /** Whether the collection uses folders: its `folders`, or the default of its kind. */
+    readonly folders: boolean;
 }
 /** The collections of one site. */
 export type SiteCollections = ReturnType<typeof createCollections>;
@@ -32,4 +35,5 @@ export declare function createCollections(collections: Readonly<Record<string, u
     taxonomyFieldsOf: (collection: string) => Array<StoredField & {
         readonly to: Collection;
     }>;
+    foldersEnabled: (collection: string) => boolean;
 };

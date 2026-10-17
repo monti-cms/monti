@@ -18,7 +18,7 @@ const modelText = {
 /**
  * Labels, descriptions, and AI feature text of the Mermaid block. AI instructions are text given to the model, so they are the same English text in every language, and the result language follows the body.
  */
-export const mermaidMessages = defineMessages("cms-blocks.mermaid", {
+export const mermaidMessages = defineMessages("monti-blocks.mermaid", {
     en: {
         label: "Diagram",
         description: "Mermaid diagram or flowchart",

@@ -61,7 +61,7 @@ It needs no other service and no environment variable besides the ones every sit
 - **Every account is an admin** (`LoginProvider.everyAccountIsAdmin`): the account id is `password:<email>`, and a session is only made by a successful sign-in. No admin list is needed, and the "no admin is set" warning is not given for this provider.
 - **The first admin** is created on the admin's login screen while no account exists: email, password, confirmation, then it signs you in. It is guarded on the server, not only in the UI: `POST /api/monti/v1/session/first-admin` calls `cms.auth().accounts.createFirst`, which refuses with `closed` as soon as any account exists, and one marker row written with `expectedVersion: 0` makes two simultaneous attempts safe (only one wins). There is no setup code. Right after deploying, open the admin and create it; or create it beforehand by running the app in production mode on your machine against the production database (under `next dev` you are the admin without signing in, so the screen does not show).
 - **Sessions** are the same signed JWT cookie as for any provider (8 hours, rolling, key derived from `MONTI_SECRET`); Auth.js's `Credentials` provider needs the JWT strategy, which this package already uses.
-- **Failed attempts are slowed down simply:** 5 failures for one email within a minute are followed by refusals for the rest of that minute (counted in the memory of the server process, so it is per instance, not shared between servers). It is a brake, not a full defence; use a long password.
+- **Failed attempts are slowed down simply:** 5 failures for one email within a minute are followed by refusals for the rest of that minute (counted in the database, in the plugin storage next to the accounts, so every server instance shares the count; the table is bounded and expired counters are dropped). With `password({ clientIpHeader: "x-forwarded-for" })`, naming the header in which your trusted reverse proxy puts the client address, 20 failures from one address are refused as well (the last address of the header is used; leave the option out unless a proxy you trust sets it, because a client can send the header itself). Emails that have no account share one counter. It is a brake, not a full defence; use a long password.
 - **A forgotten password** is replaced with `monti admin:reset-password [--email <email>]` (core). There is no mail. Sessions already signed in stay valid until they expire.
 - `monti doctor` warns while no admin account exists (`auth/admin-accounts`).
 
@@ -81,11 +81,11 @@ There is no `secret` option: the session key comes from `MONTI_SECRET` (see "Sec
 
 ## Secret
 
-The one secret, `MONTI_SECRET` (`defineConfig`), is the only secret to set. The session cookie key is derived from it with HKDF (`cms.secrets("auth").deriveKey("session")`), and so is each plugin's encryption key (AI service keys, the git-sync token). Neither `AUTH_SECRET` nor `CMS_SECRET` is read any more, and `auth()` has no `secret` option. If it is missing, the login fails with an error that names `MONTI_SECRET`. Changing it signs everyone out; list the replaced value in `previousSecrets` of `defineConfig` to keep values stored under it readable.
+The one secret, `MONTI_SECRET` (`defineConfig`), is the only secret to set. The session cookie key is derived from it with HKDF (`deriveKey("session")` of the reserved scope `auth`), and so is each plugin's encryption key (AI service keys, the git-sync token). Neither `AUTH_SECRET` nor `CMS_SECRET` is read any more, and `auth()` has no `secret` option. If it is missing, the login fails with an error that names `MONTI_SECRET`. Changing it signs everyone out; list the replaced value in `previousSecrets` of `defineConfig` to keep values stored under it readable.
 
 `monti doctor` checks the login setup (`auth/*`): for the email and password login, that an admin account exists yet; for GitHub, the GitHub client id and secret, that an admin is listed (and calls out an entry that is a GitHub login, not a numeric id), `SITE_URL`, the result of host trust and why, and prints the callback URL to register in the OAuth app, derived from `SITE_URL`. A provider sets `usesCallbackUrl` when it needs a callback URL. When a person signs in with GitHub for the first time the server log says where GitHub will send the browser back, and a person who signs in but is not an admin is logged with the id to add.
 
-A login connection that builds its own session key gets the same helper: `AuthCreateContext` has `secrets: PluginSecrets` (`cms.secrets("auth")`).
+A login connection that builds its own session key gets the same helper: `AuthCreateContext` has `secrets: PluginSecrets` (the reserved scope `auth`).
 
 ## Host trust
 
@@ -130,7 +130,7 @@ interface LoginProvider {
 }
 ```
 
-`setup` gets the plugin storage of the instance (`cms.storage(plugin)`), so a provider that keeps its own users has a place for them. `account` takes the id from `account.providerAccountId` (Auth.js replaces `user.id` with a random value when there is no database adapter).
+`setup` gets the plugin storage of the instance (`context.storage(plugin)`, the same storage a plugin reaches as `plugin.storage`), so a provider that keeps its own users has a place for them. `account` takes the id from `account.providerAccountId` (Auth.js replaces `user.id` with a random value when there is no database adapter).
 
 ### Adding an OAuth provider (GitLab, Google, ...)
 

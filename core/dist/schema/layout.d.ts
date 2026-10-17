@@ -1,4 +1,5 @@
-import { type Issue } from "../config/check/issue.js";
+import { type ConfigIssue } from "../config/check/issue.js";
+import type { PluginContributions } from "../plugin/define.js";
 import type { CollectionSchema, LayoutGroup } from "./collection.js";
 /**
  * The properties panel of a collection: which fields it draws, in which groups, in which tabs. One pure algorithm that everything reads: the edit screen's panel, the record
@@ -51,13 +52,13 @@ export interface PanelGroup {
 /** What the plugins place, read from their `contributes` (a plugin of the browser's snapshot has it as data). */
 export declare function placementsOf(plugins: readonly {
     readonly name: string;
-    readonly contributes?: Readonly<Record<string, unknown>>;
+    readonly contributes?: PluginContributions;
 }[]): NamedPlacement[];
 /** The problems of what plugins place: a tab name the panel can show, and role and view names that are text. */
 export declare function checkPlacements(plugins: readonly {
     readonly name: string;
-    readonly contributes?: Readonly<Record<string, unknown>>;
-}[]): Issue[];
+    readonly contributes?: PluginContributions;
+}[]): ConfigIssue[];
 /**
  * Whether the panel draws a field. The title of a document is the heading of the edit screen, not a property, so the panel leaves it out; every other field is drawn,
  * and so is the title of an item (the record panel has no other place for it).
@@ -77,7 +78,7 @@ export declare function createPanel(schemas: {
     schemaOf(collection: string): CollectionSchema;
 }, plugins: readonly {
     readonly name: string;
-    readonly contributes?: Readonly<Record<string, unknown>>;
+    readonly contributes?: PluginContributions;
 }[]): {
     /** The groups of a collection's panel, tab by tab (see {@link panelGroupsOf}). */
     panelGroupsOf: (collection: string) => PanelGroup[];

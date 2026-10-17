@@ -1,4 +1,5 @@
 import { detectProxyPlatform, explainTrustHost } from "../../adapters/auth/trust-host.js";
+import { hostOf } from "../../cms/host.js";
 import { WHERE_TO_SET_ENV } from "../../core/env.js";
 import { CMS_AUTH_BASE_PATH } from "../../server/define.js";
 import { githubLoginHowTo } from "../templates.js";
@@ -209,7 +210,7 @@ const trustHost = {
     needsCms: true,
     run: (state) => {
         const { env } = state;
-        const trusted = state.cms?.isHostTrusted() ?? false;
+        const trusted = state.cms ? hostOf(state.cms).isHostTrusted() : false;
         const { source } = explainTrustHost(state.cms?.server.trustHost, env);
         if (trusted) {
             return ok(`on (${source}): login callback URLs are built from the request's host${isProduction(env)

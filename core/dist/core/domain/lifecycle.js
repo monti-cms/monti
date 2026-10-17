@@ -12,15 +12,30 @@ export const STATUS_AFTER = {
     trash: "trashed",
     restore: "draft",
 };
+/** Whether an entry in `status` can take this transition. The admin asks it before sending a bulk change, the store asserts it. */
+export const canTransition = (action, status) => ALLOWED_FROM[action].includes(status);
 export function assertTransitionAllowed(action, status, version) {
-    if (!ALLOWED_FROM[action].includes(status)) {
-        throw new CmsError(`Cannot change status from ${status}`, "invalid_status", version);
+    if (!canTransition(action, status)) {
+        throw new CmsError(`Cannot change status from ${status}`, "invalid_status", {
+            serverVersion: version,
+            notice: { key: `entry.${action}.status` },
+        });
     }
+}
+/** A trashed entry is restored before it is duplicated, as before it is edited. */
+export function assertDuplicable(status) {
+    if (status === "trashed")
+        throw new CmsError("A trashed entry must be restored before it is duplicated", "invalid_status", {
+            notice: { key: "entry.duplicate.trashed" },
+        });
 }
 /** Record collections (tags, categories, ...) have no archive. */
 export function assertArchivable(site, collection, version) {
     if (site.isItemCollection(collection)) {
-        throw new CmsError("Record collections cannot be archived", "invalid_status", version);
+        throw new CmsError("Record collections cannot be archived", "invalid_status", {
+            serverVersion: version,
+            notice: { key: "entry.archive.record" },
+        });
     }
 }
 /** A record in use must have its references released before it goes to the trash. */
@@ -30,7 +45,7 @@ export const restorePublishesAgain = (site, collection) => site.isItemCollection
 /** Restoring a translation while its source is in the trash would leave it out of the list (one row per source) without shared values. */
 export function assertSourceNotTrashed(sourceStatus, version) {
     if (sourceStatus === "trashed")
-        throw new CmsError("Restore the source first", "source_trashed", version);
+        throw new CmsError("Restore the source first", "source_trashed", { serverVersion: version });
 }
 /** A record's prepared draft is required to publish it again on restore. */
 export function assertRestoreSnapshot(snapshot) {
@@ -40,7 +55,10 @@ export function assertRestoreSnapshot(snapshot) {
 /** Only a trashed entry can be deleted for good. */
 export function assertDeletable(status, version) {
     if (status !== "trashed") {
-        throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", version);
+        throw new CmsError("Only trashed entries can be permanently deleted", "invalid_status", {
+            serverVersion: version,
+            notice: { key: "entry.delete.not_trashed" },
+        });
     }
 }
 const idsOf = (members) => members.map((member) => member.id);

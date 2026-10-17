@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { toast } from "sonner";
 import { useSourceFormat } from "../../admin-components.js";
 import { commonMessages } from "../../lib/common.messages.js";

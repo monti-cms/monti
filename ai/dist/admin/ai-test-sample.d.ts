@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/admin";
 import type { AiInputKind } from "../action.js";
 import type { AiActionView } from "../actions.js";
 import type { AiRunEnv } from "./ai-slot-provider.js";

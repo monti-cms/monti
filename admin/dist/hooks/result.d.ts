@@ -28,8 +28,10 @@ export type EditorErrorCode =
  */
 export interface EditorError {
     readonly code: EditorErrorCode;
-    /** Text to show as is. Already localized (same contract as `CmsApiError.message`). Branch on `code`, never on this. */
+    /** Text to show as is: what went wrong, then what to do when known. Already localized. Branch on `code`, never on this. */
     readonly message: string;
+    /** The developer text underneath (the server's `detail`, or the words of an unexpected error), for a "details" view only. */
+    readonly detail?: string;
     readonly status?: number;
     /** Server issues, ready for `cmsIssueMessage`. */
     readonly issues?: readonly CmsIssue[];
@@ -59,7 +61,8 @@ export declare function editorFailure(code: EditorErrorCode, message: string, re
  *   Any other code the server sent passes through; without one it is `failed`. A status below 500 is not retryable, 5xx is.
  * - A fetch `TypeError` is `offline` and retryable. Its own message is the browser's and not localized, so `fallback` is used.
  * - An `AbortError` is `aborted`.
- * - Any other error is `failed` with its message (or `fallback` when empty). It is not marked retryable because the cause is unknown.
+ * - A `NoticeError` is `failed` with its message: the screen wrote it for the person.
+ * - Any other error is `failed` with `fallback`; its own words are only the `detail`. It is not marked retryable because the cause is unknown.
  *
  * @experimental
  */

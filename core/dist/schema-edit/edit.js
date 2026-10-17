@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { hostOf } from "../cms/host.js";
 import { ConfigError } from "../config/check/issue.js";
 import { bodyVocabulary } from "../schema/allowed.js";
 import { applySchemaChange, checkSchemaChange, checkTransforms, diffSchema, SchemaChangeError, snapshotSchema, suggestTransforms, } from "../schema-change/index.js";
@@ -23,7 +24,9 @@ function siteUrlOf(cms) {
     const url = cms.site.config.site?.url ?? null;
     if (!url)
         return { url: null, from: "none" };
-    const source = cms.decisions().find((decision) => decision.topic === "SITE_URL")?.source ?? "";
+    const source = hostOf(cms)
+        .decisions()
+        .find((decision) => decision.topic === "SITE_URL")?.source ?? "";
     if (source.startsWith("from env"))
         return { url, from: "env" };
     if (source.includes("schema file"))
@@ -41,8 +44,8 @@ async function appliedState(cms) {
 }
 /** What `GET /v1/schema` answers: the file, its hash, and the facts the screen needs (see {@link SchemaScreenState}). */
 export async function readSchemaScreen(cms) {
-    const access = schemaEditAccess(cms);
-    const file = access.file ?? cms.schemaFile();
+    const access = schemaEditAccess(hostOf(cms));
+    const file = access.file ?? hostOf(cms).schemaFile();
     let text;
     if (file) {
         try {
@@ -141,7 +144,7 @@ function defaultPick(suggestions, entries) {
 function checkEdit(cms, schema) {
     try {
         const parsed = parseSchemaFile(schema);
-        return { issues: [], checked: { parsed, next: cms.forSchema(parsed) } };
+        return { issues: [], checked: { parsed, next: hostOf(cms).forSchema(parsed) } };
     }
     catch (error) {
         if (error instanceof ConfigError)
@@ -274,7 +277,7 @@ async function evaluate(cms, input) {
     }));
     const current = (() => {
         try {
-            const literal = parseSchemaLiteral(readFileSync(cms.schemaFile() ?? "", "utf8"));
+            const literal = parseSchemaLiteral(readFileSync(hostOf(cms).schemaFile() ?? "", "utf8"));
             return literal.ok ? JSON.stringify(literal.value) : undefined;
         }
         catch {
@@ -318,6 +321,16 @@ export async function previewSchemaEdit(cms, input) {
     const evaluation = await evaluate(cms, input);
     return "issues" in evaluation ? invalid(evaluation.issues) : evaluation.preview;
 }
+/** Consequences that leave stored entries worse off: values deleted, kept as orphans, invalid, unknown, or entries that can no longer be published. */
+const LOSSY_CONSEQUENCES = new Set([
+    "deleted",
+    "orphaned",
+    "invalid_values",
+    "unknown_value",
+    "publish_blocked",
+]);
+/** Whether an impact must be acknowledged before the save: it touches stored entries, and not harmlessly. */
+export const needsAcknowledgement = (impact) => impact.entries > 0 && LOSSY_CONSEQUENCES.has(impact.consequence);
 /** `next` with `key` set: in place when the key is there, else right after the first of `after` that is. */
 function withKey(content, key, value, after) {
     if (key in content)
@@ -342,7 +355,7 @@ function withKey(content, key, value, after) {
  * The caller has checked `schemaEditAccess`.
  */
 export async function saveSchemaEdit(cms, input) {
-    const access = schemaEditAccess(cms);
+    const access = schemaEditAccess(hostOf(cms));
     if (!access.writable)
         throw new Error("the schema file is not writable here");
     const file = access.file;
@@ -357,6 +370,10 @@ export async function saveSchemaEdit(cms, input) {
         return { saved: false, reason: "problems", problems: preview.problems };
     if (!preview.changed)
         return { saved: false, reason: "unchanged" };
+    const acknowledged = new Set(input.acknowledged ?? []);
+    const unacknowledged = preview.impacts.filter((impact) => needsAcknowledgement(impact) && !acknowledged.has(impact.key));
+    if (unacknowledged.length > 0)
+        return { saved: false, reason: "unacknowledged", impacts: unacknowledged };
     // What goes into the file: the edit as the writer arranged it (its key order), with the new transforms and the version.
     const raw = JSON.parse(JSON.stringify(input.schema));
     let content = raw;
@@ -372,7 +389,7 @@ export async function saveSchemaEdit(cms, input) {
     const text = printSchemaFile(final);
     // The schema as it will be written, for the apply and the dry run.
     const written = JSON.parse(JSON.stringify(final));
-    const target = cms.forSchema(written);
+    const target = hostOf(cms).forSchema(written);
     const migrations = (parseSchemaFile(written).migrations ?? []);
     const options = { site: target.site, store: target.store(), migrations, schemaVersion: version };
     try {
@@ -404,7 +421,7 @@ export async function saveSchemaEdit(cms, input) {
         }
     }
     catch (error) {
-        cms.reloadSchema(written);
+        hostOf(cms).reloadSchema(written);
         return {
             saved: false,
             reason: "apply_failed",
@@ -413,7 +430,7 @@ export async function saveSchemaEdit(cms, input) {
             hash,
         };
     }
-    const reload = cms.reloadSchema(written);
+    const reload = hostOf(cms).reloadSchema(written);
     return {
         saved: true,
         file: relativeToCwd(file),

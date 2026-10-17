@@ -1,4 +1,3 @@
-export { tabBlock, tabsBlock } from "./definition.js";
 /**
  * Tabs block (2 to 8 `:::tab` inside `::::tabs`). Add it to the site config's `plugins`.
  *
@@ -8,7 +7,7 @@ export { tabBlock, tabsBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const tabs: () => import("@monti-cms/core").CmsPlugin<"tabs", Record<string, never>, readonly [{
+export declare const tabs: () => import("@monti-cms/core").Plugin<"tabs", Record<string, never>, readonly [{
     readonly name: "tabs";
     readonly label: string;
     readonly description: string;
@@ -67,5 +66,5 @@ export declare const tabs: () => import("@monti-cms/core").CmsPlugin<"tabs", Rec
         readonly view: "node";
     };
 }]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

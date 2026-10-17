@@ -40,7 +40,7 @@ function checkConfig(config, alsoKnown = []) {
     list.addAll(checkPlacements(plugins));
     const blocks = blockDefinitions.map((block) => block.name);
     for (const plugin of plugins) {
-        list.addAll(plugin.validate?.({
+        list.addAll(plugin.checkConfig?.({
             collections: config.collections,
             locales: config.locales,
             defaultLocale: config.defaultLocale,

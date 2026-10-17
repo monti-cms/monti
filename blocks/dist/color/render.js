@@ -1,4 +1,5 @@
 import { jsx as _jsx } from "react/jsx-runtime";
+import { defineRender } from "@monti-cms/core/render";
 import { cleanTextColor, textColorProps } from "./colors.js";
 /** Text color and text background color (`:color[text]{fg bg …}`). Non-hex values are dropped, and with no color only the text is rendered. */
 export function Color({ children, ...attrs }) {
@@ -6,7 +7,7 @@ export function Color({ children, ...attrs }) {
     return (_jsx("span", { className: className, style: style, ...data, children: children }));
 }
 /** Public components for text color in the JSON renderer (`renderDocument`): the mark `color`. */
-export const documentComponents = (_context) => ({
+export default defineRender({
     marks: {
         color: ({ children, ctx: _ctx, ...attrs }) => (_jsx(Color, { ...attrs, children: children })),
     },

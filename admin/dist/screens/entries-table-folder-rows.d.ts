@@ -1,4 +1,4 @@
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
 import { type FolderActions } from "./shared/use-folder-actions.js";
 export declare function EntriesTableFolderRows({ explorer, folders, folderActions, visibleCount, onSelectFolder, }: {
     explorer: {

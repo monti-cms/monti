@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { X } from "lucide-react";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
@@ -12,7 +12,7 @@ export const SIDE_PANEL_WIDTH = "w-[22rem] max-w-full sm:w-[var(--panel-width)]"
  * Place of the right slot opened beside the list (taxonomy edit, media detail). On narrow screens it covers the list,
  * on wide screens it sits beside the list at the width chosen with the drag handle on its left edge.
  */
-const SIDE_PANEL_DOCK = "absolute inset-y-0 right-0 z-20 w-full shadow-cms-pop sm:w-[var(--panel-width)] lg:relative lg:shrink-0 lg:shadow-none";
+const SIDE_PANEL_DOCK = "absolute inset-y-0 right-0 z-20 w-full shadow-monti-pop sm:w-[var(--panel-width)] lg:relative lg:shrink-0 lg:shadow-none";
 /** The right slot beside a list, with a drag handle on its left edge. The panel inside fills it. */
 export function DockedPanel({ resize, children }) {
     const panel = usePanelResize(resize);
@@ -23,7 +23,7 @@ export const RECORD_PANEL_RESIZE = { name: "record", defaultWidth: 448, minWidth
 export const MEDIA_PANEL_RESIZE = { name: "media-detail", defaultWidth: 384, minWidth: 352 };
 export const INSPECTOR_PANEL_RESIZE = { name: "inspector", defaultWidth: 384, minWidth: 352 };
 /** Background of the item currently open in the list (open in the right slot or edit slot). */
-export const OPEN_ITEM = "bg-cms-accent text-cms-accent-foreground";
+export const OPEN_ITEM = "bg-monti-accent text-monti-accent-foreground";
 /** Right slot header. A title and a close button (the name is always "Close"). */
 export function SidePanelHeader({ title, onClose, className, children, }) {
     const t = useTranslator(commonMessages);

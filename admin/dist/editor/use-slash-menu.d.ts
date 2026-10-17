@@ -2,7 +2,7 @@
  * State of the `/` slash menu: when it opens (start of an empty paragraph), the commands it offers (defaults plus plugin and
  * text-style extension actions) and its keyboard handling.
  */
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 import { type MutableRefObject } from "react";
 import type { EditorInsertAction } from "../admin-components.js";

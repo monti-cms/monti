@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type AiActionDefinition, type ResolvedAiAction } from "./action.js";
 import { type AiActionView } from "./action-view.js";
 import { type AiSnippetStore } from "./snippets.js";

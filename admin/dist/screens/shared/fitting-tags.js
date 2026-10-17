@@ -1,10 +1,10 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useLayoutEffect, useRef, useState } from "react";
 import { sharedMessages } from "./messages.js";
 const GAP = 4;
-const CHIP = "shrink-0 rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foreground text-xs";
+const CHIP = "shrink-0 rounded bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs";
 /**
  * Shows as many tags as fit the cell width and shortens the rest to `+N`. Remeasures when the column width changes.
  * Draws all tags and the longest `+N` in an invisible measuring row and measures the width. If none fit, the first tag is truncated with an ellipsis.
@@ -50,5 +50,5 @@ export function FittingTags({ tags }) {
         return () => observer.disconnect();
     }, [key]);
     const hidden = tags.length - shown;
-    return (_jsxs("span", { ref: boxRef, className: "relative flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap", title: tags.map((tag) => tag.title).join(", "), children: [tags.slice(0, shown).map((tag, index) => (_jsx("span", { className: index === 0 && hidden > 0 ? `${CHIP} min-w-0 shrink truncate` : CHIP, children: tag.title }, tag.id))), hidden > 0 && (_jsxs("span", { className: "shrink-0 text-cms-muted-foreground text-xs", children: [_jsxs("span", { "aria-hidden": true, children: ["+", hidden] }), _jsx("span", { className: "sr-only", children: t("tags.more", { count: hidden }) })] })), _jsxs("span", { ref: measureRef, "aria-hidden": true, className: "pointer-events-none invisible absolute top-0 left-0 flex gap-1", children: [tags.map((tag) => (_jsx("span", { className: CHIP, children: tag.title }, tag.id))), _jsxs("span", { className: "text-xs", children: ["+", tags.length] })] })] }));
+    return (_jsxs("span", { ref: boxRef, className: "relative flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap", title: tags.map((tag) => tag.title).join(", "), children: [tags.slice(0, shown).map((tag, index) => (_jsx("span", { className: index === 0 && hidden > 0 ? `${CHIP} min-w-0 shrink truncate` : CHIP, children: tag.title }, tag.id))), hidden > 0 && (_jsxs("span", { className: "shrink-0 text-monti-muted-foreground text-xs", children: [_jsxs("span", { "aria-hidden": true, children: ["+", hidden] }), _jsx("span", { className: "sr-only", children: t("tags.more", { count: hidden }) })] })), _jsxs("span", { ref: measureRef, "aria-hidden": true, className: "pointer-events-none invisible absolute top-0 left-0 flex gap-1", children: [tags.map((tag) => (_jsx("span", { className: CHIP, children: tag.title }, tag.id))), _jsxs("span", { className: "text-xs", children: ["+", tags.length] })] })] }));
 }

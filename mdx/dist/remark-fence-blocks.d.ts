@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Root } from "mdast";
 /**
  * Remark plugin that turns an added code fence block (e.g. ` ```mermaid `) into that block's public renderer (`component`).

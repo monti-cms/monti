@@ -1,4 +1,4 @@
-import { type PreferencesBody, type Site } from "@monti-cms/core/client";
+import type { PreferencesBody, Site } from "@monti-cms/core/site";
 export declare const preferencesKeys: {
     all: readonly ["cms", "preferences"];
 };

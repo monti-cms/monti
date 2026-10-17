@@ -1,15 +1,15 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { bodyExcerpt, fillFromBodyLength, useSite, useTranslator, } from "@monti-cms/core/client";
+import { bodyExcerpt, fillFromBodyLength, useSite, useTranslator, } from "@monti-cms/core/site";
 import { ChevronRight, RefreshCw } from "lucide-react";
 import { memo, useMemo, useState } from "react";
-import { isFieldInputParts, useCmsAdminComponents, } from "../../admin-components.js";
-import { cmsIssueMessage } from "../../api/error-message.js";
+import { isFieldInputParts, useAdminComponents, } from "../../admin-components.js";
+import { issueLine } from "../../api/error-message.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { useSlot } from "../../slots/slots.js";
 import { Button } from "../../ui/button.js";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../ui/collapsible.js";
-import { FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet, Field as UiField } from "../../ui/field.js";
+import { FormFieldDescription, FormFieldError, FormFieldLabel, FormFieldLegend, FormFieldSet, FormField as UiField, } from "../../ui/field.js";
 import { IconButton } from "../../ui/icon-button.js";
 import { Input } from "../../ui/input.js";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "../../ui/input-group.js";
@@ -30,17 +30,17 @@ import { useRelationSearch } from "./use-relation-search.js";
  * All inputs in the properties panel use this row.
  */
 export function FieldRow({ id, label, required, issue, help, slot, aside, children }) {
-    const site = useSite();
+    const _site = useSite();
     if (slot) {
         return (_jsx(SlotFieldRow, { id: id, label: label, required: required, issue: issue, help: help, slot: slot, aside: aside, children: children }));
     }
-    const labelNode = (_jsxs(FieldLabel, { htmlFor: id, className: "font-semibold text-cms-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-cms-destructive", children: "*" })] }));
-    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [aside ? (_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [labelNode, aside] })) : (labelNode), help && _jsx(FieldDescription, { className: "text-[11px] leading-tight", children: help }), children, issue && _jsx(FieldError, { id: `${id}-error`, children: cmsIssueMessage(site, issue) })] }));
+    const labelNode = (_jsxs(FormFieldLabel, { htmlFor: id, className: "font-semibold text-monti-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-monti-destructive", children: "*" })] }));
+    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [aside ? (_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [labelNode, aside] })) : (labelNode), help && _jsx(FormFieldDescription, { className: "text-[11px] leading-tight", children: help }), children, issue && _jsx(FormFieldError, { id: `${id}-error`, children: issueLine(issue) })] }));
 }
 function SlotFieldRow({ id, label, required, issue, help, slot, aside, children, }) {
-    const site = useSite();
+    const _site = useSite();
     const { trigger, panel } = useSlot(slot);
-    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [_jsxs(FieldLabel, { htmlFor: id, className: "font-semibold text-cms-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-cms-destructive", children: "*" })] }), aside || trigger ? (_jsxs("span", { className: "flex items-center gap-1", children: [aside, trigger] })) : null] }), help && _jsx(FieldDescription, { className: "text-[11px] leading-tight", children: help }), children, panel, issue && _jsx(FieldError, { id: `${id}-error`, children: cmsIssueMessage(site, issue) })] }));
+    return (_jsxs(UiField, { "data-invalid": Boolean(issue) || undefined, className: "gap-1.5", children: [_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [_jsxs(FormFieldLabel, { htmlFor: id, className: "font-semibold text-monti-muted-foreground text-xs", children: [label, " ", required && _jsx("span", { className: "text-monti-destructive", children: "*" })] }), aside || trigger ? (_jsxs("span", { className: "flex items-center gap-1", children: [aside, trigger] })) : null] }), help && _jsx(FormFieldDescription, { className: "text-[11px] leading-tight", children: help }), children, panel, issue && _jsx(FormFieldError, { id: `${id}-error`, children: issueLine(issue) })] }));
 }
 /** Relation to a record target (category, tag, collection). Search and pick; with `createInline`, a missing name can be created right from the list. */
 function RecordRelationInput({ field, id, value, invalid, describedBy, context, onChange }) {
@@ -62,14 +62,14 @@ function RecordRelationInput({ field, id, value, invalid, describedBy, context, 
                         records.remember({ ...optionOf(site, tc("untitled"), relation.to, saved), status: saved.status });
                         return saved.id;
                     }
-                    : undefined }), records.error && _jsx(FieldError, { children: t("entry.loadFailed") }), creator.sheet] }));
+                    : undefined }), records.error && _jsx(FormFieldError, { children: t("entry.loadFailed") }), creator.sheet] }));
 }
 /** Default input per field kind. If `input` points to a component, render it; otherwise render the input matching the kind. */
 function DefaultInput({ parts, ...props }) {
     const t = useTranslator(entriesMessages);
     const site = useSite();
     const { field, id, value, invalid, describedBy, context, onChange } = props;
-    const { fieldInputs } = useCmsAdminComponents();
+    const { fieldInputs } = useAdminComponents();
     const registered = field.input ? fieldInputs?.[field.input] : undefined;
     if (registered && !isFieldInputParts(registered)) {
         const Custom = registered;
@@ -98,7 +98,7 @@ function DefaultInput({ parts, ...props }) {
 }
 /** The entry a site registered under the field's `input` name, if any. */
 function useRegisteredInput(field) {
-    const { fieldInputs } = useCmsAdminComponents();
+    const { fieldInputs } = useAdminComponents();
     const input = field.definition && "input" in field.definition ? field.definition.input : undefined;
     return input ? fieldInputs?.[input] : undefined;
 }
@@ -127,7 +127,7 @@ function ValueRowView({ field, showDescriptions, form, }) {
     const entryId = useEntryFormSelector((state) => state.entryId);
     const locale = useEntryFormSelector((state) => state.locale);
     const entry = useEntryFormSelector((state) => state.entry);
-    const { fieldInputs } = useCmsAdminComponents();
+    const { fieldInputs } = useAdminComponents();
     const definition = field.definition;
     const locked = field.readOnlyReason === "locked";
     const state = store.getState();
@@ -158,7 +158,7 @@ function ValueRowView({ field, showDescriptions, form, }) {
             const length = fillFromBodyLength(definition);
             const excerpt = bodyExcerpt(site, currentDoc, length);
             field.setValue(excerpt);
-        }, className: "text-cms-muted-foreground hover:text-cms-foreground", children: _jsx(RefreshCw, { "aria-hidden": true, className: "size-3" }) })) : null;
+        }, className: "text-monti-muted-foreground hover:text-monti-foreground", children: _jsx(RefreshCw, { "aria-hidden": true, className: "size-3" }) })) : null;
     const aside = fillFromBodyButton || Aside ? (_jsxs("div", { className: "flex items-center gap-1", children: [fillFromBodyButton, Aside && _jsx(Aside, { ...props })] })) : undefined;
     return (_jsx(FieldRow, { id: field.ids.input, label: field.label, required: field.required, issue: field.error?.issue, help: help, slot: Input === null ? undefined : (field.slotRequest ?? undefined), aside: aside, children: Input === null ? null : Input ? _jsx(Input, { ...props }) : _jsx(DefaultInput, { ...props, parts: parts }) }));
 }
@@ -252,7 +252,7 @@ export function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlaceholder, 
                 if (groups.length === 1) {
                     return (_jsx("div", { className: "space-y-4", children: visible.map(renderField) }, key));
                 }
-                return (_jsxs("section", { "aria-label": group.group, className: "space-y-4 border-t pt-4", children: [_jsx("h3", { className: "font-medium text-[11px] text-cms-muted-foreground uppercase tracking-wide", children: group.group }), visible.map(renderField)] }, key));
+                return (_jsxs("section", { "aria-label": group.group, className: "space-y-4 border-t pt-4", children: [_jsx("h3", { className: "font-medium text-[11px] text-monti-muted-foreground uppercase tracking-wide", children: group.group }), visible.map(renderField)] }, key));
             }
             return (_jsx(LayoutSection, { title: group.group, 
                 // A group with values or publish problems is not collapsed.
@@ -267,7 +267,7 @@ export function SchemaFields({ onSlugChange, onRegenerateSlug, slugPlaceholder, 
 }
 function LayoutSection({ title, defaultOpen, children, }) {
     const [open, setOpen] = useState(defaultOpen);
-    return (_jsx(Collapsible, { open: open, onOpenChange: setOpen, children: _jsxs(FieldSet, { className: "gap-3", children: [_jsx(FieldLegend, { variant: "label", className: "mb-0", children: _jsxs(CollapsibleTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "-ml-2 font-semibold text-cms-muted-foreground text-xs" }), children: [_jsx(ChevronRight, { className: `transition-transform ${open ? "rotate-90" : ""}` }), title] }) }), _jsx(CollapsibleContent, { className: "space-y-4", children: children })] }) }));
+    return (_jsx(Collapsible, { open: open, onOpenChange: setOpen, children: _jsxs(FormFieldSet, { className: "gap-3", children: [_jsx(FormFieldLegend, { variant: "label", className: "mb-0", children: _jsxs(CollapsibleTrigger, { render: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "-ml-2 font-semibold text-monti-muted-foreground text-xs" }), children: [_jsx(ChevronRight, { className: `transition-transform ${open ? "rotate-90" : ""}` }), title] }) }), _jsx(CollapsibleContent, { className: "space-y-4", children: children })] }) }));
 }
 /**
  * One language's values of a record collection (category, tag, collection). Used by the language tab of the category edit panel.

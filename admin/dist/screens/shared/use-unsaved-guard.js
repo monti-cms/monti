@@ -1,5 +1,5 @@
 "use client";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useEffect, useRef } from "react";
 import { commonMessages } from "../../lib/common.messages.js";
 import { useBeforeUnload } from "../../lib/hooks/use-before-unload.js";

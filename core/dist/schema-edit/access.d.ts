@@ -1,4 +1,4 @@
-import type { Cms } from "../cms/index.js";
+import type { CmsHost } from "../cms/index.js";
 import { type SchemaLiteralIssue } from "../schema-file/literal.js";
 /**
  * Whether the settings screen may write the schema file of an instance. The decision is the server's: a production server never writes the file (it runs the schema
@@ -33,6 +33,6 @@ export type SchemaEditAccess = {
  * `AUTH_URL`) does not count, the same rule the login bypass follows: a staging server started with `NODE_ENV=development` must not rewrite its schema.
  */
 export declare const isDevelopmentServer: (env?: Readonly<Record<string, string | undefined>>) => boolean;
-export declare function schemaEditAccess(cms: Pick<Cms, "schemaFile">): SchemaEditAccess;
+export declare function schemaEditAccess(cms: Pick<CmsHost, "schemaFile">): SchemaEditAccess;
 /** The sentence the 403 answer carries for each reason. */
 export declare const READ_ONLY_MESSAGE: Record<SchemaReadOnlyReason, string>;

@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Puzzle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -36,8 +36,8 @@ export function SlashMenuPopup({ items, coords, selectedIndex, onSelect, onClose
                 event.preventDefault();
                 onClose();
             }
-        }, className: "max-h-80 w-72 overflow-y-auto rounded-lg border bg-cms-popover p-1 text-cms-popover-foreground shadow-lg", children: items.map((item, index) => (_jsxs("div", { role: "option", "aria-selected": index === selectedIndex, "data-index": index, tabIndex: -1, onMouseDown: (event) => event.preventDefault(), onClick: () => onSelect(item), onKeyDown: (event) => {
+        }, className: "max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-popover p-1 text-monti-popover-foreground shadow-lg", children: items.map((item, index) => (_jsxs("div", { role: "option", "aria-selected": index === selectedIndex, "data-index": index, tabIndex: -1, onMouseDown: (event) => event.preventDefault(), onClick: () => onSelect(item), onKeyDown: (event) => {
                 if (event.key === "Enter")
                     onSelect(item);
-            }, className: cn("flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 outline-none", index === selectedIndex ? "bg-cms-accent text-cms-accent-foreground" : "hover:bg-cms-accent/50"), children: [_jsx("span", { className: "flex size-8 shrink-0 items-center justify-center rounded-md border bg-cms-background text-cms-muted-foreground", children: _jsx(ItemIcon, { icon: item.icon }) }), _jsxs("span", { className: "min-w-0", children: [_jsx("span", { className: "block truncate font-medium text-sm", children: item.title }), _jsx("span", { className: "block truncate text-cms-muted-foreground text-xs", children: item.description })] })] }, item.id ?? item.title))) }), document.body);
+            }, className: cn("flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 outline-none", index === selectedIndex ? "bg-monti-accent text-monti-accent-foreground" : "hover:bg-monti-accent/50"), children: [_jsx("span", { className: "flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-background text-monti-muted-foreground", children: _jsx(ItemIcon, { icon: item.icon }) }), _jsxs("span", { className: "min-w-0", children: [_jsx("span", { className: "block truncate font-medium text-sm", children: item.title }), _jsx("span", { className: "block truncate text-monti-muted-foreground text-xs", children: item.description })] })] }, item.id ?? item.title))) }), document.body);
 }

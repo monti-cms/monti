@@ -1,4 +1,3 @@
-import type { DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
 import { type PropsWithChildren } from "react";
 import { type BlockLabels } from "../shared/labels.js";
 /**
@@ -10,4 +9,5 @@ export declare function CodeExplorer({ open, labels, children, }: PropsWithChild
     labels?: BlockLabels;
 }>): import("react").JSX.Element;
 /** Public components for the code explorer in the JSON renderer (`renderDocument`): the block `code-explorer`, reading its files from the stored code blocks. */
-export declare const documentComponents: ({ locale }: DocumentComponentsContext) => LooseDocumentComponents;
+declare const _default: import("@monti-cms/core/render").RenderPlugin;
+export default _default;

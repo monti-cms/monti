@@ -15,10 +15,10 @@ export function CmsCodeCollapse({ children, open }) {
         first += 1;
     const lines = nodes.slice(first);
     const rest = dropLeadingNewline(lines.slice(1));
-    return (_jsxs("details", { className: "cms-code-collapse", open: open, children: [_jsx("summary", { children: lines[0] ?? null }), rest.length > 0 ? _jsx("div", { children: rest }) : null] }));
+    return (_jsxs("details", { className: "monti-code-collapse", open: open, children: [_jsx("summary", { children: lines[0] ?? null }), rest.length > 0 ? _jsx("div", { children: rest }) : null] }));
 }
 /** Folding text inside code (the `fold` line effect). Clicking `...` expands it (no script needed). */
 export function CmsCodeFold({ children, open, label = "Show folded code", }) {
     const id = useId();
-    return (_jsxs("span", { className: "cms-code-fold", children: [_jsx("input", { id: id, type: "checkbox", "aria-label": label, defaultChecked: open }), _jsx("label", { htmlFor: id, className: "cms-code-fold-closed", children: "..." }), _jsx("label", { htmlFor: id, className: "cms-code-fold-open", children: children })] }));
+    return (_jsxs("span", { className: "monti-code-fold", children: [_jsx("input", { id: id, type: "checkbox", "aria-label": label, defaultChecked: open }), _jsx("label", { htmlFor: id, className: "monti-code-fold-closed", children: "..." }), _jsx("label", { htmlFor: id, className: "monti-code-fold-open", children: children })] }));
 }

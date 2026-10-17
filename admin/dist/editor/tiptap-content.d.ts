@@ -1,5 +1,5 @@
-import { type Site } from "@monti-cms/core/client";
 import type { CmsNode, StoredDocument } from "@monti-cms/core/document";
+import { type Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 /**
  * Stored document <-> Tiptap JSONContent conversion. This is the visual editor's load/save path, and it works on the stored document directly: no notation

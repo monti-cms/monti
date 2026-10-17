@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type AllowedFileMime, type MediaConfig } from "./media-types.js";
+import { type AllowedFileMime, type AllowedImageMimeType, isImageType, type MediaConfig } from "./media-types.js";
 export * from "./media-types.js";
 /**
  * Request contract of `/api/monti/v1`. The routes and the admin UI see the same definitions.
@@ -44,7 +44,6 @@ export declare const patchEntryBodySchema: z.ZodObject<{
     folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
     translation: z.ZodOptional<z.ZodUnknown>;
 }, z.core.$strip>;
-export type PatchEntryBody = z.infer<typeof patchEntryBodySchema>;
 /** State transitions that take only a version (archive, unarchive, trash, restore). */
 export declare const versionBodySchema: z.ZodObject<{
     expectedVersion: z.ZodNumber;
@@ -77,7 +76,6 @@ export declare const bulkBodySchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
     folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
 }, z.core.$strip>;
-export type BulkBody = z.infer<typeof bulkBodySchema>;
 export declare const adminColumnSettingsSchema: z.ZodObject<{
     order: z.ZodOptional<z.ZodArray<z.ZodString>>;
     visibility: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodBoolean>>;
@@ -114,7 +112,6 @@ export declare const exportScopeSchema: z.ZodObject<{
     }>>;
     format: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-export type ExportScopeInput = z.infer<typeof exportScopeSchema>;
 /** A template body is a document (`doc`) or a text with its format, as an entry body is. With neither, the template is empty. */
 export declare const createTemplateBodySchema: z.ZodObject<{
     name: z.ZodString;
@@ -122,7 +119,6 @@ export declare const createTemplateBodySchema: z.ZodObject<{
     body: z.ZodOptional<z.ZodString>;
     format: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-export type CreateTemplateBody = z.infer<typeof createTemplateBodySchema>;
 export declare const patchTemplateBodySchema: z.ZodObject<{
     expectedVersion: z.ZodNumber;
     name: z.ZodOptional<z.ZodString>;
@@ -130,7 +126,6 @@ export declare const patchTemplateBodySchema: z.ZodObject<{
     body: z.ZodOptional<z.ZodString>;
     format: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-export type PatchTemplateBody = z.infer<typeof patchTemplateBodySchema>;
 export declare const updateFolderBodySchema: z.ZodObject<{
     expectedVersion: z.ZodNumber;
     name: z.ZodOptional<z.ZodString>;
@@ -310,14 +305,15 @@ export declare function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiPar
             inspectorOpen: z.ZodOptional<z.ZodBoolean>;
         }, z.core.$strip>>;
     }, z.core.$strip>;
-    ALLOWED_IMAGE_MIME_TYPES: readonly ("image/avif" | "image/gif" | "image/jpeg" | "image/png" | "image/webp")[];
+    ALLOWED_IMAGE_MIME_TYPES: readonly AllowedImageMimeType[];
     MAX_MEDIA_BYTES: number;
     MAX_MEDIA_PIXELS: number;
-    ALLOWED_FILE_MIME_TYPES: readonly ("application/json" | "application/pdf" | "application/zip" | "text/csv" | "text/markdown" | "text/plain")[];
+    ALLOWED_FILE_MIME_TYPES: readonly AllowedFileMime[];
     MAX_FILE_BYTES: number;
     fileTypeFor: (filename: string) => AllowedFileMime | null;
     FILE_ACCEPT: string;
-    isImageMime: (mimeType: string | null | undefined) => boolean;
+    isImageType: typeof isImageType;
+    isAllowedImage: (mimeType: string | null | undefined) => boolean;
     mediaUploadBodySchema: z.ZodUnion<readonly [z.ZodObject<{
         mimeType: z.ZodEnum<{
             "image/avif": "image/avif";
@@ -353,7 +349,4 @@ export declare function createApi({ COLLECTIONS, LOCALES, media: MEDIA }: ApiPar
         folderId: z.ZodOptional<z.ZodNullable<z.ZodUUID>>;
     }, z.core.$strip>]>;
 };
-export type ListEntriesQuery = z.infer<SiteApi["listEntriesQuerySchema"]>;
-export type CreateEntryBody = z.infer<SiteApi["createEntryBodySchema"]>;
 export type PreferencesBody = z.infer<SiteApi["preferencesBodySchema"]>;
-export type MediaUploadBody = z.infer<SiteApi["mediaUploadBodySchema"]>;

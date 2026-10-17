@@ -1,11 +1,11 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { useCmsAdminComponents, useSourceFormat, } from "../admin-components.js";
+import { useAdminComponents, useSourceFormat, } from "../admin-components.js";
 import { commonMessages } from "../lib/common.messages.js";
 import { useAdminFeatures } from "../screens/shared/admin-features.js";
 import { editorAllowance } from "./allowed.js";
@@ -40,7 +40,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
     const allowance = useMemo(() => editorAllowance(site, allowed), [site, allowed]);
     const isSourceMode = sourceView != null && sourceView !== false;
     // Text-style extensions (block extension `:tooltip`, etc.). Provide shapes, formatting tools, and slash menu items.
-    const { marks: markSpecs = {} } = useCmsAdminComponents();
+    const { marks: markSpecs = {} } = useAdminComponents();
     const allMarkExtensions = useMarkExtensions().filter(({ name }) => allowance.allowsEditorMark(name));
     // While source is being edited, the visual editor is paused. Toolbar tools are locked too.
     const canEdit = editable && !isSourceMode;
@@ -90,16 +90,16 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
         editorProps: {
             attributes: {
                 "aria-label": t("toolbar.editorLabel"),
-                class: "prose cms-dark:prose-invert max-w-none min-h-full flex-1 p-6 focus:outline-none text-cms-foreground text-base leading-relaxed selection:bg-cms-primary/20 " +
+                class: "prose monti-dark:prose-invert max-w-none min-h-full flex-1 p-6 focus:outline-none text-monti-foreground text-base leading-relaxed selection:bg-monti-primary/20 " +
                     // Table column resize handle (prosemirror-tables columnResizing)
-                    "[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-cms-primary " +
+                    "[&_.tableWrapper]:overflow-x-auto [&_td]:relative [&_th]:relative [&.resize-cursor]:cursor-col-resize [&_.column-resize-handle]:pointer-events-none [&_.column-resize-handle]:absolute [&_.column-resize-handle]:-right-px [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:-bottom-px [&_.column-resize-handle]:w-0.5 [&_.column-resize-handle]:bg-monti-primary " +
                     // Same look as the column-split boundary: a thin line + a small handle above the first row.
-                    "[&_tr:first-child_.column-resize-handle]:after:absolute [&_tr:first-child_.column-resize-handle]:after:top-0.5 [&_tr:first-child_.column-resize-handle]:after:left-1/2 [&_tr:first-child_.column-resize-handle]:after:h-3 [&_tr:first-child_.column-resize-handle]:after:w-6 [&_tr:first-child_.column-resize-handle]:after:-translate-x-1/2 [&_tr:first-child_.column-resize-handle]:after:rounded-full [&_tr:first-child_.column-resize-handle]:after:border [&_tr:first-child_.column-resize-handle]:after:bg-cms-popover [&_tr:first-child_.column-resize-handle]:after:shadow-sm " +
+                    "[&_tr:first-child_.column-resize-handle]:after:absolute [&_tr:first-child_.column-resize-handle]:after:top-0.5 [&_tr:first-child_.column-resize-handle]:after:left-1/2 [&_tr:first-child_.column-resize-handle]:after:h-3 [&_tr:first-child_.column-resize-handle]:after:w-6 [&_tr:first-child_.column-resize-handle]:after:-translate-x-1/2 [&_tr:first-child_.column-resize-handle]:after:rounded-full [&_tr:first-child_.column-resize-handle]:after:border [&_tr:first-child_.column-resize-handle]:after:bg-monti-popover [&_tr:first-child_.column-resize-handle]:after:shadow-sm " +
                     // Block selection (marquee): lay a box with margin (-inset-1) after the line and hide the text selection highlight. List items cover the bullet too.
                     // To avoid confusion with text selection (primary purple), show "a block is selected" with a different color (sky) and border.
-                    "[&_.cms-block-selected]:relative [&_.cms-block-selected]:isolate [&_.cms-block-selected]:before:pointer-events-none [&_.cms-block-selected]:before:absolute [&_.cms-block-selected]:before:-inset-1 [&_.cms-block-selected]:before:-z-10 [&_.cms-block-selected]:before:rounded-md [&_.cms-block-selected]:before:bg-sky-500/10 [&_.cms-block-selected]:before:ring-1 [&_.cms-block-selected]:before:ring-sky-500/35 cms-dark:[&_.cms-block-selected]:before:bg-sky-400/15 cms-dark:[&_.cms-block-selected]:before:ring-sky-400/40 [&_li.cms-block-selected]:before:-left-7 [&.cms-block-range]:selection:bg-transparent " +
+                    "[&_.monti-block-selected]:relative [&_.monti-block-selected]:isolate [&_.monti-block-selected]:before:pointer-events-none [&_.monti-block-selected]:before:absolute [&_.monti-block-selected]:before:-inset-1 [&_.monti-block-selected]:before:-z-10 [&_.monti-block-selected]:before:rounded-md [&_.monti-block-selected]:before:bg-sky-500/10 [&_.monti-block-selected]:before:ring-1 [&_.monti-block-selected]:before:ring-sky-500/35 monti-dark:[&_.monti-block-selected]:before:bg-sky-400/15 monti-dark:[&_.monti-block-selected]:before:ring-sky-400/40 [&_li.monti-block-selected]:before:-left-7 [&.monti-block-range]:selection:bg-transparent " +
                     // Dragging across cells to select several (CellSelection) paints the selected cells. The range to merge is visible.
-                    "[&_.selectedCell]:bg-cms-primary/15 [&_.selectedCell]:outline-1 [&_.selectedCell]:-outline-offset-1 [&_.selectedCell]:outline-cms-primary/60",
+                    "[&_.selectedCell]:bg-monti-primary/15 [&_.selectedCell]:outline-1 [&_.selectedCell]:-outline-offset-1 [&_.selectedCell]:outline-monti-primary/60",
             },
             handleKeyDown: (view, event) => {
                 // Do not handle menu navigation or confirmation during Korean IME composition.
@@ -147,7 +147,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
     const activeList = editor ? LIST_STYLES(t).find((item) => item.isActive?.(editor)) : undefined;
     const activeAlign = editor ? ALIGN_TOOLS(t).find((item) => item.isActive?.(editor)) : undefined;
     const { handleSpot, setHandleSpot, handleMouseMove, handleDragStart, handleDragEnd } = useBlockHandle(editor);
-    const { imageDialog, openImageDialog, closeImageDialog, insertImage, fileInputRef, uploadAttachments, handlePaste, handleDrop, } = useMediaInsertion({ editor, site, t, media, allowance, canEdit });
+    const { imageDialog, fillsImageText, openImageDialog, closeImageDialog, insertImage, fileInputRef, uploadAttachments, handlePaste, handleDrop, } = useMediaInsertion({ editor, site, t, media, allowance, canEdit });
     useEffect(() => {
         editorRef.current = editor;
         if (!editor || isSourceMode)
@@ -216,7 +216,7 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
         openImageDialog,
         openFilePicker: () => fileInputRef.current?.click(),
     });
-    return (_jsxs("div", { className: "relative flex min-h-full w-full flex-1 flex-col bg-cms-background", "data-cms-editor-shell": true, 
+    return (_jsxs("div", { className: "relative flex min-h-full w-full flex-1 flex-col bg-monti-background", "data-monti-editor-shell": true, 
         // Title, body, and source use the same width (`--editor-width`).
         style: { "--editor-width": widthStep.width }, onCompositionStart: (event) => {
             // Composition in an input inside a popover (portal) reaches here through the React tree but is not body input.
@@ -238,11 +238,11 @@ export function CmsEditor({ doc, onChange, titleField, toolbarEnd, toolbarAside,
             if (target.closest('input, textarea, button, select, a, [role="toolbar"], [contenteditable="true"]'))
                 return;
             startMarquee(editor.view, event.nativeEvent);
-        }, children: [_jsxs("div", { role: "toolbar", "aria-label": t("toolbar.format"), className: "sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-cms-background/95 backdrop-blur", children: [_jsxs("div", { className: "relative flex min-h-12 items-center py-2", style: { paddingInline: asideWidth + 24 }, children: [_jsx(ToolbarRow, { editor: editor, entries: toolbarEntries, end: toolbarEnd }), _jsxs("div", { ref: asideRef, className: "absolute inset-y-0 right-4 flex items-center gap-1", children: [toolbarAside, _jsx(EditorWidthMenu, { steps: widthSteps, value: widthStep, onChange: chooseWidth })] })] }), !isSourceMode && _jsx(CodeLinkBar, { editor: editor })] }), titleField && (_jsx("div", { className: "mx-auto w-full max-w-(--editor-width) border-cms-border/60 border-b px-4 pt-12 pb-5", children: titleField })), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
+        }, children: [_jsxs("div", { role: "toolbar", "aria-label": t("toolbar.format"), className: "sticky top-0 z-10 w-full shrink-0 overflow-x-auto border-b bg-monti-background/95 backdrop-blur", children: [_jsxs("div", { className: "relative flex min-h-12 items-center py-2", style: { paddingInline: asideWidth + 24 }, children: [_jsx(ToolbarRow, { editor: editor, entries: toolbarEntries, end: toolbarEnd }), _jsxs("div", { ref: asideRef, className: "absolute inset-y-0 right-4 flex items-center gap-1", children: [toolbarAside, _jsx(EditorWidthMenu, { steps: widthSteps, value: widthStep, onChange: chooseWidth })] })] }), !isSourceMode && _jsx(CodeLinkBar, { editor: editor })] }), titleField && (_jsx("div", { className: "mx-auto w-full max-w-(--editor-width) border-monti-border/60 border-b px-4 pt-12 pb-5", children: titleField })), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
                     const files = Array.from(event.target.files ?? []);
                     event.target.value = "";
                     void uploadAttachments(files);
-                } }), _jsx(ImageInsertDialog, { open: imageDialog !== null, initialFile: imageDialog?.file ?? null, onClose: () => closeImageDialog(), onInsert: insertImage }), isSourceMode && (_jsx("div", { className: "mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-4 pt-6 pb-[35vh]", children: sourceView })), _jsx("div", { hidden: isSourceMode, 
+                } }), _jsx(ImageInsertDialog, { open: imageDialog !== null, initialFile: imageDialog?.file ?? null, onClose: () => closeImageDialog(), onInsert: insertImage, altLater: fillsImageText }), isSourceMode && (_jsx("div", { className: "mx-auto flex w-full max-w-(--editor-width) flex-1 flex-col px-4 pt-6 pb-[35vh]", children: sourceView })), _jsx("div", { hidden: isSourceMode, 
                 // Leave bottom margin (35% of screen height) so the last line does not stick to the bottom of the screen.
                 className: "mx-auto flex min-h-full w-full max-w-(--editor-width) flex-1 cursor-text flex-col px-4 pt-6 pb-[35vh]", onClick: (event) => {
                     // Move to the end only when the empty canvas outside the body is clicked. Clicks on NodeView buttons and popovers (portals)

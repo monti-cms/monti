@@ -1,3 +1,4 @@
+import { brandErrorClass } from "../core/error-brand.js";
 import { prepareSnapshot } from "../core/snapshot.js";
 import { CmsError } from "../core/store/errors.js";
 import { ServiceError } from "../core/types.js";
@@ -59,11 +60,12 @@ export async function planSchemaChange(options) {
 export class SchemaChangeError extends CmsError {
     problems;
     constructor(message, problems = []) {
-        super(message, "invalid_transforms", undefined, undefined, problems);
+        super(message, "invalid_transforms", { issues: problems });
         this.name = "SchemaChangeError";
         this.problems = problems;
     }
 }
+brandErrorClass(SchemaChangeError, "SchemaChangeError");
 /**
  * Applies the schema: runs the transforms that did not run yet, and records the schema and its version. Idempotent: each transform is recorded in
  * `cms_migrations` (like `storage.once`), so a second run runs none of them, and with the schema unchanged it only records the same schema again.

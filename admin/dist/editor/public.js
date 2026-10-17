@@ -3,7 +3,7 @@
  */
 export { DocPreview } from "../screens/entries/source-pane.js";
 export { addedMarkName, codeAnchorRef, markAttrsOf } from "./added-marks.js";
-export { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids.js";
+export { BLOCK_ID_ATTRIBUTE, findBlock, SOURCE_BLOCK_ID_ATTRIBUTE } from "./block-ids.js";
 export { BLOCK_NODES } from "./block-views.js";
 export { blockNodeName } from "./blocks/added/index.js";
 export { findAnchor, startLinkFromText, unlinkRef } from "./code-block/link-commands.js";

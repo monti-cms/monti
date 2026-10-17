@@ -1,4 +1,5 @@
-import { type BlockDefinition, type Site } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
+import { type Site } from "@monti-cms/core/site";
 import { Node } from "@tiptap/core";
 /**
  * Tiptap node for a single added block. A container holds body content (or fixed child blocks); single-line blocks and code fence blocks are selected

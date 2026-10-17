@@ -11,7 +11,7 @@ export { chartMessages } from "./messages.js";
  * A site can replace it via `fencePreviews.chart`. The public page is drawn by this extension's default `Chart` component, which a site can override (the code is the `source` attribute,
  * `remarkFenceBlocksToMdx`). Chart colors are the CSS variables `--chart-1` to `--chart-5` (defaults from this package's `render.css` if unset).
  */
-export declare const chart: () => import("@monti-cms/core").CmsPlugin<"chart", Record<string, never>, readonly [{
+export declare const chart: () => import("@monti-cms/core").Plugin<"chart", Record<string, never>, readonly [{
     readonly name: "chart";
     readonly label: string;
     readonly description: string;

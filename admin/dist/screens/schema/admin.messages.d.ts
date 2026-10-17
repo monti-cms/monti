@@ -1,2 +1,2 @@
 /** Text of the admin tab of the schema screen. */
-export declare const schemaAdminMessages: import("@monti-cms/core").MessageBundle<"admin.addressDescription" | "admin.addressTitle" | "admin.featuresDescription" | "admin.featuresTitle" | "admin.languageDescription" | "admin.languageTitle" | "admin.locale" | "admin.localeDefault" | "admin.localeHint" | "admin.path" | "admin.pathNote" | "admin.templates" | "admin.templatesHint" | "admin.translations" | "admin.translationsHint">;
+export declare const schemaAdminMessages: import("@monti-cms/core").MessageBundle<"admin.addressTitle" | "admin.featuresTitle" | "admin.languageTitle" | "admin.locale" | "admin.localeDefault" | "admin.path" | "admin.pathNote" | "admin.templates" | "admin.translations">;

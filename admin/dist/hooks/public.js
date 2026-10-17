@@ -1,10 +1,11 @@
 /**
- * Editor hooks (`@monti-cms/admin/hooks`). Hooks return state and results only: they never show a toast, open a dialog, navigate or touch
+ * Editor hooks, exported from `@monti-cms/admin`. Hooks return state and results only: they never show a toast, open a dialog, navigate or touch
  * `window.history`, so a site can draw its own UI on them. The default admin UI is built on the same hooks.
  *
- * @experimental This entry point may change in a minor release until the installed components (Roadmap C) have used it.
+ * The block view hooks (`useBlockEditor`, `BlockFrame`, `Content`) are what a block's edit view is built with. The entry editor hooks (`useField`,
+ * `useEntryEditor`, ...) are `@experimental`: they may change in a minor release until the installed components (Roadmap C) have used them.
  */
-export { cmsEntryClient, } from "../api/entries.js";
+export { adminEntryClient, } from "../api/entries.js";
 export { BlockFrame, Content, useBlockEditor, } from "../editor/blocks/use-block-editor.js";
 export { useLinkPaths } from "../editor/link-targets.js";
 export { localRecoveryStoreOf } from "../screens/entries/entry-editor-client.js";

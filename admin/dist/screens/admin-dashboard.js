@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { FolderPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -28,11 +28,11 @@ function EntryListHeaderActions({ list }) {
 function EntryListBody({ list }) {
     const t = useTranslator(screensMessages);
     const tc = useTranslator(commonMessages);
-    const { state, data, mode } = list;
+    const { state, data, mode, folders } = list;
     const isTrash = mode === "trash";
     const { items } = data;
     const record = list.recordTarget;
-    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsx(FilterChipBar, { state: state, options: list.options, onChange: list.update }), _jsx(BulkBar, { collection: state.collection, mode: mode, selected: items.filter((item) => list.selectedIds.has(item.id)).map(toSelection), folders: data.folders, onClearSelection: () => list.setSelectedIds(new Set()), onRun: (op, targets, params) => list.mutations.run(op, targets, params) }), _jsx(AdminEntriesTable, { collection: state.collection, items: items, folders: data.folders, explorer: list.explorer, state: state, options: list.options, onStateChange: (patch) => {
+    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsx(FilterChipBar, { state: state, options: list.options, onChange: list.update }), _jsx(BulkBar, { collection: state.collection, mode: mode, selected: items.filter((item) => list.selectedIds.has(item.id)).map(toSelection), folders: folders?.list ?? null, onClearSelection: () => list.setSelectedIds(new Set()), onRun: (op, targets, params) => list.mutations.run(op, targets, params) }), _jsx(AdminEntriesTable, { collection: state.collection, items: items, folders: data.folders, explorer: list.explorer, state: state, options: list.options, onStateChange: (patch) => {
                                     list.update(patch);
                                     if (patch.sortField || patch.sortDirection) {
                                         list.savePreferences({
@@ -42,15 +42,19 @@ function EntryListBody({ list }) {
                                             },
                                         });
                                     }
-                                }, columnSettings: list.columnSettings, onColumnSettingsChange: (columns) => list.savePreferences({ columns }), selectedIds: list.selectedIds, onSelectionChange: list.setSelectedIds, total: data.total, isLoading: data.isLoading, isRefreshing: data.isRefreshing, errorMessage: data.errorMessage, mode: mode, folderActions: isTrash ? undefined : list.folderActions, rowMenu: list.rowMenu, blankMenu: isTrash
+                                }, columnSettings: list.columnSettings, onColumnSettingsChange: (columns) => list.savePreferences({ columns }), selectedIds: list.selectedIds, onSelectionChange: list.setSelectedIds, total: data.total, isLoading: data.isLoading, isRefreshing: data.isRefreshing, errorMessage: data.errorMessage, mode: mode, folderActions: folders?.actions, rowMenu: list.rowMenu, blankMenu: isTrash
                                     ? undefined
                                     : [
-                                        {
-                                            kind: "item",
-                                            label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
-                                            icon: FolderPlus,
-                                            onSelect: () => list.folderActions.requestCreate(state.folder === "all" ? null : state.folder),
-                                        },
+                                        ...(folders
+                                            ? [
+                                                {
+                                                    kind: "item",
+                                                    label: state.folder === "all" ? tc("addFolder") : tc("addSubfolder"),
+                                                    icon: FolderPlus,
+                                                    onSelect: () => folders.actions.requestCreate(state.folder === "all" ? null : state.folder),
+                                                },
+                                            ]
+                                            : []),
                                         { kind: "item", label: t("list.add", { label: list.label }), icon: Plus, onSelect: list.createNew },
                                     ], onDeleteKey: list.onDeleteKey, onSelectFolder: (folder) => list.update({ folder }), openRecordId: record?.collection === state.collection ? record.id : null, onOpenRecord: (item) => void list.openRecord({ collection: state.collection, id: item.id }), onRestore: (item) => void list.restore([toSelection(item)]), onPermanentDelete: (item) => list.confirmPermanentDelete([toSelection(item)]), onPageChange: (page) => list.update({ page }, { resetPage: false }), onPageSizeChange: (pageSize) => {
                                     list.update({ pageSize });
@@ -62,7 +66,7 @@ function EntryListBody({ list }) {
                                 toast.success(tc("saved"));
                                 void list.invalidateEntries();
                                 list.reloadTaxonomies();
-                            } }, `${record.collection}:${record.id ?? "new"}`) }))] }), list.folderActions.dialogs, list.confirmDialog, list.guardDialog] }));
+                            } }, `${record.collection}:${record.id ?? "new"}`) }))] }), list.folderDialogs, list.confirmDialog, list.guardDialog] }));
 }
 // The admin list fetches data in the browser. Render after hydration so Base UI's auto IDs do not mismatch the server HTML.
 function useDashboardMounted() {
@@ -94,27 +98,26 @@ function TrashPage() {
     const t = useTranslator(screensMessages);
     const list = useEntryList("trash");
     const { state } = list;
-    return (_jsxs(AdminShell, { title: t("dashboard.trash"), count: list.data.total, sidebar: { activeNav: "trash" }, children: [_jsxs(PageActions, { children: [_jsx(EntryListHeaderActions, { list: list }), _jsx("nav", { "aria-label": t("dashboard.trashCollections"), className: "flex items-center gap-1 rounded-lg bg-cms-muted p-[3px]", children: site.COLLECTIONS.map((item) => (_jsx(Link, { href: site.adminHref(`/trash?collection=${item}`), "aria-current": state.collection === item ? "page" : undefined, className: cn(buttonVariants({ variant: "ghost", size: "xs" }), "text-cms-muted-foreground aria-[current=page]:bg-cms-background aria-[current=page]:text-cms-foreground"), children: site.COLLECTION_DEFINITIONS[item].label }, item))) })] }), _jsx(EntryListBody, { list: list })] }));
+    return (_jsxs(AdminShell, { title: t("dashboard.trash"), count: list.data.total, sidebar: { activeNav: "trash" }, children: [_jsxs(PageActions, { children: [_jsx(EntryListHeaderActions, { list: list }), _jsx("nav", { "aria-label": t("dashboard.trashCollections"), className: "flex items-center gap-1 rounded-lg bg-monti-muted p-[3px]", children: site.COLLECTIONS.map((item) => (_jsx(Link, { href: site.adminHref(`/trash?collection=${item}`), "aria-current": state.collection === item ? "page" : undefined, className: cn(buttonVariants({ variant: "ghost", size: "xs" }), "text-monti-muted-foreground aria-[current=page]:bg-monti-background aria-[current=page]:text-monti-foreground"), children: site.COLLECTION_DEFINITIONS[item].label }, item))) })] }), _jsx(EntryListBody, { list: list })] }));
 }
 function ListPage() {
     const list = useEntryList("list");
-    const { state, update, foldersEnabled } = list;
-    const { folders } = list.data;
-    const folderLabel = foldersEnabled && state.folder !== "all"
-        ? ` · ${folders.find((folder) => folder.id === state.folder)?.name ?? ""}`
+    const { state, update, folders } = list;
+    const folderLabel = folders && state.folder !== "all"
+        ? ` · ${folders.list.find((folder) => folder.id === state.folder)?.name ?? ""}`
         : "";
     return (_jsxs(AdminShell, { title: `${list.label}${folderLabel}`, count: list.data.total, sidebar: {
             activeNav: state.collection,
-            folderNav: foldersEnabled
+            folderNav: folders
                 ? {
                     collection: state.collection,
                     currentFolder: state.folder,
                     includeDescendants: state.includeDescendants,
-                    folders,
-                    folderActions: list.folderActions,
+                    folders: folders.list,
+                    folderActions: folders.actions,
                     onSelectFolder: (folder) => update({ folder }),
                     onIncludeDescendantsChange: (includeDescendants) => update({ includeDescendants }),
-                    onDropEntries: list.moveEntries,
+                    onDropEntries: folders.moveEntries,
                     onCreateEntry: list.createNew,
                 }
                 : undefined,

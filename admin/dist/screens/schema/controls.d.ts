@@ -1,4 +1,4 @@
-import type { Issue } from "@monti-cms/core/client";
+import type { ConfigIssue } from "@monti-cms/core/site";
 import { type ReactNode } from "react";
 import { type CONTROL_WIDTH } from "../shared/labeled.js";
 import { type Obj } from "./schema-model.js";
@@ -9,7 +9,7 @@ export interface SchemaEditContext {
         readonly blocks: readonly string[];
         readonly marks: readonly string[];
     };
-    readonly issues: readonly Issue[];
+    readonly issues: readonly ConfigIssue[];
     readonly collectionNames: readonly string[];
     /** Collections defined in code: the preview keeps them next to the file's. */
     readonly codeCollections: readonly string[];
@@ -19,9 +19,9 @@ export interface SchemaEditContext {
 export declare const SchemaEditProvider: import("react").Provider<SchemaEditContext>;
 export declare const useSchemaEdit: () => SchemaEditContext;
 /** The problems of the last check at `path` or below it. */
-export declare function useIssuesUnder(path: string, exclude?: string): readonly Issue[];
+export declare function useIssuesUnder(path: string, exclude?: string): readonly ConfigIssue[];
 export declare function IssueList({ issues }: {
-    issues: readonly Issue[];
+    issues: readonly ConfigIssue[];
 }): import("react").JSX.Element | null;
 export declare function TextInput({ label, value, onChange, placeholder, description, hint, type, className, optional, disabled: customDisabled, }: {
     label: string;

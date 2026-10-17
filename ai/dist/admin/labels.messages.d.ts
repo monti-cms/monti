@@ -1,5 +1,5 @@
+import { type Translator } from "@monti-cms/admin";
 import { type MessageBundle } from "@monti-cms/core";
-import { type Translator } from "@monti-cms/core/client";
 import type { AiProviderKind } from "../connection.js";
 import type { AiCheckKind, AiEngine, AiResult, AiSlot } from "../definition.js";
 type LabelKey = typeof labelMessages extends MessageBundle<infer K> ? K : never;

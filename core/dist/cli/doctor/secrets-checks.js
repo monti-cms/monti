@@ -9,7 +9,7 @@ const montiSecret = {
     title: "MONTI_SECRET",
     run: (state) => {
         const value = state.env.MONTI_SECRET?.trim();
-        const available = state.cms ? state.cms.secrets("doctor").available : Boolean(value);
+        const available = state.cms ? state.cms.plugin("doctor").secrets.available : Boolean(value);
         if (!available) {
             return fail("MONTI_SECRET is not set, so login sessions cannot be signed and no key or token can be stored", {
                 where: WHERE_TO_SET_ENV,

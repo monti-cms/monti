@@ -19,11 +19,11 @@
  * import { mermaid } from "@monti-cms/blocks/mermaid";
  * ```
  */
-export { callout, calloutBlock } from "./callout/index.js";
-export { codeExplorer, codeExplorerBlock } from "./code-explorer/index.js";
-export { codeRef, codeRefBlock } from "./code-ref/index.js";
-export { collapsible, collapsibleBlock } from "./collapsible/index.js";
-export { color, colorBlock, defaultTextPalette, } from "./color/index.js";
-export { columnBlock, columns, columnsBlock } from "./columns/index.js";
-export { tabBlock, tabs, tabsBlock } from "./tabs/index.js";
-export { tooltip, tooltipBlock } from "./tooltip/index.js";
+export { callout } from "./callout/index.js";
+export { codeExplorer } from "./code-explorer/index.js";
+export { codeRef } from "./code-ref/index.js";
+export { collapsible } from "./collapsible/index.js";
+export { cleanTextColor, color, defaultTextPalette, textColorProps, } from "./color/index.js";
+export { columns } from "./columns/index.js";
+export { tabs } from "./tabs/index.js";
+export { tooltip } from "./tooltip/index.js";

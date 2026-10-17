@@ -1,4 +1,3 @@
-import type { DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
 import { type BlockLabels } from "../shared/labels.js";
 /**
  * Rendering of the chart block (` ```chart `). The code is the `source` attribute (`remarkFenceBlocksToMdx`). If the syntax is wrong, the
@@ -9,4 +8,5 @@ export declare function Chart({ source, labels }: {
     labels?: BlockLabels;
 }): import("react").JSX.Element;
 /** Public components for the chart in the JSON renderer (`renderDocument`): the block `chart`. The code of the fence arrives as `source`. */
-export declare const documentComponents: ({ locale }: DocumentComponentsContext) => LooseDocumentComponents;
+declare const _default: import("@monti-cms/core/render").RenderPlugin;
+export default _default;

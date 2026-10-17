@@ -1,5 +1,4 @@
-import type { BulkOp, Site } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { BulkOp, Folder, ListEntriesItem, Site } from "@monti-cms/core/site";
 import type { BulkParams, BulkSelection } from "../api/entries.js";
 import type { MenuAction } from "./shared/action-menu.js";
 import type { TaxonomyOptions } from "./shared/use-taxonomy.js";
@@ -14,7 +13,8 @@ export interface RowMenuContext {
     isRecord: boolean;
     /** Collections that can be archived (documents). */
     isContent: boolean;
-    folders: readonly Folder[];
+    /** The folders rows can move to; `null` where the list shows no folders (a collection without folders, the trash), which leaves out "Move to folder". */
+    folders: readonly Folder[] | null;
     collection: string;
     /** Taxonomy field name -> options. Makes an "Add ○○" submenu for each many-relation taxonomy field (tags etc.). */
     options: TaxonomyOptions;

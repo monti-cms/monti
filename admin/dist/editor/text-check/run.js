@@ -1,4 +1,4 @@
-import { normalizeIssue, } from "@monti-cms/core/client";
+import { normalizeIssue, } from "@monti-cms/core";
 import { segmentRangeToDoc } from "./extract.js";
 /** Checker, language, paragraph text → result. The same text is not sent again. */
 export class TextCheckCache {

@@ -1,9 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
+import { AttributeInput, BlockFrame, ContainerToolbar, Content, ToolbarButton, useBlockEditor, useTranslator, } from "@monti-cms/admin";
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger, } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
 import { calloutMessages } from "./messages.js";
 import { CALLOUT_BOX_CLASS, CALLOUT_ICON_BY_VARIANT, getDefaultCalloutTitle } from "./style.js";
 const VARIANTS = ["note", "tip", "info", "warning", "danger"];

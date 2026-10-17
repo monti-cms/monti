@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type AiActionDefinition, type AiActionEditable, type AiActionOverride, type AiAttach, type AiChoices, type AiInputKind, EDITABLE_KEYS, type ResolvedAiAction } from "./action.js";
 import { type CustomBase, type CustomValue } from "./custom.js";
 import type { AiApply, AiCheck, AiEngine, AiPick, AiResult } from "./definition.js";

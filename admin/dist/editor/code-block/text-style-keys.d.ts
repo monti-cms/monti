@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import { Extension } from "@tiptap/core";
 /**
  * Keeps Mod-B, Mod-I, Mod-U and Mod-Shift-S from adding bold, italic, underline and strikethrough inside code when `codeBlock.features.textStyles` is off.

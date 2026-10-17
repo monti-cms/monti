@@ -1,6 +1,6 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils/cn.js";
 import { AdminLink as Link } from "../../router/index.js";
@@ -36,7 +36,7 @@ function SettingsBody({ tab: renderedTab }) {
     useEffect(() => {
         activeLink.current?.scrollIntoView?.({ inline: "center", block: "nearest" });
     }, [tab]);
-    return (_jsxs(_Fragment, { children: [_jsxs("header", { className: "shrink-0 border-b bg-cms-background px-4 pt-5 lg:px-10 lg:pt-6", children: [_jsxs("div", { className: "flex flex-wrap items-start justify-between gap-x-6 gap-y-3", children: [_jsxs("div", { className: "min-w-0", children: [_jsxs("div", { className: "flex flex-wrap items-center gap-2.5", children: [_jsx(SidebarTrigger, { "aria-label": shared("shell.openSidebar"), className: "-ml-1 text-cms-muted-foreground md:hidden" }), _jsx("h1", { className: "font-semibold text-[22px] leading-tight tracking-tight", children: t("title") }), _jsx("div", { ref: setFileLine, className: "flex items-center gap-1.5 empty:hidden", "data-testid": "settings-file-line" })] }), _jsx("p", { className: "mt-1 text-cms-muted-foreground text-sm", children: t("description") })] }), _jsx("div", { ref: setActions, className: "flex items-center gap-2.5", "data-testid": "settings-actions" })] }), _jsx("nav", { "aria-label": t("tabs.label"), "data-unsaved-guard": "off", className: "mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto", children: tabs.map((entry) => {
+    return (_jsxs(_Fragment, { children: [_jsxs("header", { className: "shrink-0 border-b bg-monti-background px-4 pt-5 lg:px-10 lg:pt-6", children: [_jsxs("div", { className: "flex flex-wrap items-start justify-between gap-x-6 gap-y-3", children: [_jsxs("div", { className: "min-w-0", children: [_jsxs("div", { className: "flex flex-wrap items-center gap-2.5", children: [_jsx(SidebarTrigger, { "aria-label": shared("shell.openSidebar"), className: "-ml-1 text-monti-muted-foreground md:hidden" }), _jsx("h1", { className: "font-semibold text-[22px] leading-tight tracking-tight", children: t("title") }), _jsx("div", { ref: setFileLine, className: "flex items-center gap-1.5 empty:hidden", "data-testid": "settings-file-line" })] }), _jsx("p", { className: "mt-1 text-monti-muted-foreground text-sm", children: t("description") })] }), _jsx("div", { ref: setActions, className: "flex items-center gap-2.5", "data-testid": "settings-actions" })] }), _jsx("nav", { "aria-label": t("tabs.label"), "data-unsaved-guard": "off", className: "mt-4 -mb-px flex items-stretch gap-6 overflow-x-auto", children: tabs.map((entry) => {
                             const active = entry.id === tab;
                             return (_jsx(Link, { onClick: (event) => {
                                     // A click that opens a new tab or window goes the way of a link.
@@ -44,6 +44,6 @@ function SettingsBody({ tab: renderedTab }) {
                                         return;
                                     event.preventDefault();
                                     go(entry.id);
-                                }, ref: active ? activeLink : undefined, href: entry.href, "aria-current": active ? "page" : undefined, className: cn("flex shrink-0 items-center whitespace-nowrap border-transparent border-b-2 py-2.5 text-cms-muted-foreground text-sm outline-hidden transition-colors hover:text-cms-foreground focus-visible:ring-2 focus-visible:ring-cms-ring/50 aria-[current=page]:border-cms-foreground aria-[current=page]:font-semibold aria-[current=page]:text-cms-foreground"), children: t(`tab.${entry.id}`) }, entry.id));
-                        }) })] }), _jsx("div", { className: "flex min-h-0 flex-1 flex-col bg-cms-muted/50", children: _jsx(SchemaSettings, { tab: tab, actionsSlot: actions, fileSlot: fileLine, onTab: go }) })] }));
+                                }, ref: active ? activeLink : undefined, href: entry.href, "aria-current": active ? "page" : undefined, className: cn("flex shrink-0 items-center whitespace-nowrap border-transparent border-b-2 py-2.5 text-monti-muted-foreground text-sm outline-hidden transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-[current=page]:border-monti-foreground aria-[current=page]:font-semibold aria-[current=page]:text-monti-foreground"), children: t(`tab.${entry.id}`) }, entry.id));
+                        }) })] }), _jsx("div", { className: "flex min-h-0 flex-1 flex-col bg-monti-muted/50", children: _jsx(SchemaSettings, { tab: tab, actionsSlot: actions, fileSlot: fileLine, onTab: go }) })] }));
 }

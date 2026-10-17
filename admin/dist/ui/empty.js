@@ -11,7 +11,7 @@ const emptyMediaVariants = cva("mb-2 flex shrink-0 items-center justify-center [
     variants: {
         variant: {
             default: "bg-transparent",
-            icon: "flex size-10 shrink-0 items-center justify-center rounded-lg bg-cms-muted text-cms-foreground [&_svg:not([class*='size-'])]:size-6",
+            icon: "flex size-10 shrink-0 items-center justify-center rounded-lg bg-monti-muted text-monti-foreground [&_svg:not([class*='size-'])]:size-6",
         },
     },
     defaultVariants: {
@@ -25,7 +25,7 @@ function EmptyTitle({ className, ...props }) {
     return _jsx("div", { "data-slot": "empty-title", className: cn("font-medium text-lg tracking-tight", className), ...props });
 }
 function EmptyDescription({ className, ...props }) {
-    return (_jsx("div", { "data-slot": "empty-description", className: cn("text-cms-muted-foreground text-sm/relaxed [&>a:hover]:text-cms-primary [&>a]:underline [&>a]:underline-offset-4", className), ...props }));
+    return (_jsx("div", { "data-slot": "empty-description", className: cn("text-monti-muted-foreground text-sm/relaxed [&>a:hover]:text-monti-primary [&>a]:underline [&>a]:underline-offset-4", className), ...props }));
 }
 function EmptyContent({ className, ...props }) {
     return (_jsx("div", { "data-slot": "empty-content", className: cn("flex w-full min-w-0 max-w-sm flex-col items-center gap-4 text-balance text-sm", className), ...props }));

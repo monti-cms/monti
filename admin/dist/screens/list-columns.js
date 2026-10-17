@@ -1,4 +1,4 @@
-import { valueFieldsOf } from "@monti-cms/core/client";
+import { valueFieldsOf } from "@monti-cms/core/site";
 import { screensMessages } from "./messages.js";
 /**
  * Admin list columns: the content's own values (system columns) and taxonomy fields (relation fields pointing to a taxonomy collection, e.g. tags or categories).

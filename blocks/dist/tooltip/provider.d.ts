@@ -1,6 +1,5 @@
+import { type AdminComponents, type Site, type Translator } from "@monti-cms/admin";
 import { type EditorMarkExtension } from "@monti-cms/admin/editor";
-import { type Translator } from "@monti-cms/core/client";
-import { type ReactNode } from "react";
 import { tooltipMessages } from "./messages.js";
 /** Picks a tooltip message (`useTranslator(tooltipMessages)`). */
 type TooltipText = Translator<keyof (typeof tooltipMessages)["messages"]["en"]>;
@@ -13,8 +12,6 @@ export declare const OPEN_TOOLTIP_EVENT = "cms:open-tooltip";
  * and text typed right after the end of a tooltip becomes part of it.
  */
 export declare const tooltipMarkExtension: (t: TooltipText) => EditorMarkExtension;
-/** Registers the tooltip mark's editor display, format tool, bubble, and slash menu in the admin UI. */
-export declare function TooltipProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;
+/** The tooltip mark's editor display, format tool, bubble and slash menu, in the admin language of the site. */
+export declare const tooltipComponents: (site: Site) => AdminComponents;
 export {};

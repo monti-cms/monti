@@ -1,7 +1,7 @@
 import { type NodeViewProps } from "@tiptap/react";
 import { type BlockView } from "./use-block-editor.js";
 /**
- * Default edit views of the core blocks, keyed by block name. They sit under the site's `blockViews` (`CmsAdminComponents`), so registering
+ * Default edit views of the core blocks, keyed by block name. They sit under the site's `blockViews` (`AdminComponents`), so registering
  * a view with one of these names replaces it. Exported so a replacement can render the default view inside its own frame.
  */
 export declare const DEFAULT_BLOCK_VIEWS: Readonly<Record<string, BlockView>>;

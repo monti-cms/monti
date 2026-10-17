@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { PAGE_SIZES, useTranslator } from "@monti-cms/core/client";
+import { PAGE_SIZES, useTranslator } from "@monti-cms/core/site";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "../../lib/utils/index.js";
 import { Button } from "../../ui/button.js";
@@ -27,7 +27,7 @@ export function ListPager({ page, totalPages, onPageChange, hrefFor, }) {
 }
 /** The bar pinned to the bottom of a list screen: a summary on the left, controls on the right. */
 export function ListFooter({ children, className }) {
-    return (_jsx("div", { className: cn("flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-cms-muted-foreground text-xs", className), children: children }));
+    return (_jsx("div", { className: cn("flex h-12 shrink-0 items-center justify-between gap-3 border-t px-5 text-monti-muted-foreground text-xs", className), children: children }));
 }
 /**
  * The footer of every paged list (entries, trash, media, events): the shown range on the left; on the right optional extra controls,

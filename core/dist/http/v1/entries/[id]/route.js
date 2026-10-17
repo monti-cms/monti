@@ -1,7 +1,7 @@
 import { patchEntryBodySchema } from "../../../../core/api.js";
 import { createBodyExporter } from "../../../../services/body-export.js";
 import { bodyInputOf } from "../../../../services/body-input.js";
-import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery } from "../../handler.js";
+import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery, written } from "../../handler.js";
 /**
  * An entry and the translation group needed by the editor.
  * For a translation, also returns the source's latest draft metadata (`source`). The translation properties panel shows the shared values read-only.
@@ -52,7 +52,7 @@ export const PATCH = adminRoute(async ({ request, params, cms }) => {
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
         ...(body.translation !== undefined ? { translation: body.translation } : {}),
     };
-    return ok(await cms.contentService().saveDraft(params.id, input));
+    return written(cms, await cms.contentService().saveDraft(params.id, input));
 });
 /** Permanently deletes a trashed entry. Moving to trash is `POST /entries/:id/trash`. */
 export const DELETE = adminRoute(async ({ request, params, cms }) => {

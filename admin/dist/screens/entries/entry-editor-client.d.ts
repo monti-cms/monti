@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { EntryForm } from "./entry-form.js";
 import { type LocalBackupRecord } from "./local-backup.js";
 /** What the browser keeps of an unsaved edit: one record per entry (or per new entry of a collection). */

@@ -1,4 +1,4 @@
-import { createContentLookup } from "@monti-cms/core/plugin/server";
+import { createContentLookup } from "@monti-cms/core/server";
 import { AiError } from "../errors.js";
 import { runMessages } from "../run.messages.js";
 import { siteImageUrl } from "../site-image.js";

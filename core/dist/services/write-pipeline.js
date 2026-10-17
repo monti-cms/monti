@@ -88,12 +88,12 @@ export function createWritePipeline(options) {
         };
     };
     /**
-     * Runs the transforms in order, each on the previous one's result. The input is kept when nothing changed, and only what a hook changed is replaced.
+     * Runs the `beforeValidate` subscribers in order, each on the previous one's result. The input is kept when nothing changed, and only what a hook changed is replaced.
      * Input that core preparation will reject is left alone for it to reject.
      */
     const transform = async (sources, request, given) => {
         const unchanged = { input: given, transformed: false };
-        const hooks = sources.filter((source) => source.hooks.transform);
+        const hooks = sources.filter((source) => source.hooks.beforeValidate);
         const input = given;
         if (hooks.length === 0 || !isRecord(input) || !isRecord(input.metadata) || !site.isCollection(input.collection))
             return unchanged;
@@ -113,7 +113,7 @@ export function createWritePipeline(options) {
             return unchanged;
         let data = original;
         for (const source of hooks) {
-            const hook = source.hooks.transform;
+            const hook = source.hooks.beforeValidate;
             const context = copyOf({
                 operation: request.operation,
                 collection: input.collection,
@@ -125,21 +125,21 @@ export function createWritePipeline(options) {
             });
             if (!hook || !context)
                 continue;
-            const result = await callHook(source, "transform", () => hook(context));
+            const result = await callHook(source, "beforeValidate", () => hook(context));
             if (result === undefined || result === null)
                 continue;
             if (!isRecord(result) || !isRecord(result.metadata))
-                throw hookFailed(source, "transform");
+                throw hookFailed(source, "beforeValidate");
             let doc = data.doc;
             if (result.doc !== undefined) {
                 // What a hook returns as the body must be a stored document.
-                const read = readStoredDocument(result.doc, site);
+                const read = readStoredDocument(result.doc);
                 if (!read)
-                    throw hookFailed(source, "transform");
+                    throw hookFailed(source, "beforeValidate");
                 doc = read;
             }
             if (result.slug !== undefined && result.slug !== null && typeof result.slug !== "string")
-                throw hookFailed(source, "transform");
+                throw hookFailed(source, "beforeValidate");
             data = { metadata: result.metadata, doc, slug: result.slug === undefined ? data.slug : result.slug };
         }
         const metadataChanged = !isDeepStrictEqual(data.metadata, original.metadata);
@@ -235,12 +235,12 @@ export function createWritePipeline(options) {
             ];
             if (sources.length === 0)
                 return { snapshot, warnings, transformed };
-            const added = await validate(sources, "validate", request, snapshot);
+            const added = await validate(sources, "beforeSave", request, snapshot);
             if (added.issues.length > 0)
                 throw new ServiceError("validation_failed", added.issues);
             warnings.push(...added.warnings);
             if (request.operation === "publish" || request.operation === "restore") {
-                const publish = await validate(sources, "validatePublish", request, snapshot);
+                const publish = await validate(sources, "beforePublish", request, snapshot);
                 // The issues core preparation found are blockers of a publish too, and are shown with the added ones.
                 if (publish.issues.length > 0) {
                     throw new ServiceError("publish_validation_failed", [...snapshot.issues, ...publish.issues]);

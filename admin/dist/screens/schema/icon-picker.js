@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { ChevronDown, FileText, Tag } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { cn } from "../../lib/utils/index.js";
@@ -30,7 +30,7 @@ export function IconPicker({ label, value, kind, onChange, }) {
             return COLLECTION_ICON_NAMES;
         return COLLECTION_ICON_NAMES.filter((name) => name.includes(q));
     }, [query]);
-    return (_jsx(Labeled, { label: label, htmlFor: id, children: _jsxs(Popover, { open: open, onOpenChange: setOpen, children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { id: id, type: "button", variant: "outline", disabled: disabled, "aria-label": `${label}: ${value || t("collection.iconDefault")}`, className: "h-9 w-full max-w-sm justify-start gap-2.5 font-normal" }), children: [_jsx("span", { className: "flex size-5 items-center justify-center text-cms-muted-foreground", children: _jsx(CurrentIcon, { className: "size-4" }) }), _jsx("span", { className: "truncate", children: value || t("collection.iconDefault") }), _jsx(ChevronDown, { "aria-hidden": true, className: "ml-auto size-4 shrink-0 text-cms-muted-foreground" })] }), _jsx(PopoverContent, { align: "start", className: "w-72 p-3", children: _jsxs("div", { className: "flex flex-col gap-2.5", children: [_jsx(Input, { value: query, placeholder: t("collection.iconSearch"), onChange: (e) => setQuery(e.target.value), className: "h-8 text-xs", autoFocus: true }), value && (_jsxs(Button, { type: "button", variant: "ghost", size: "xs", className: "justify-start text-cms-muted-foreground text-xs hover:text-cms-foreground", onClick: () => {
+    return (_jsx(Labeled, { label: label, htmlFor: id, children: _jsxs(Popover, { open: open, onOpenChange: setOpen, children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { id: id, type: "button", variant: "outline", disabled: disabled, "aria-label": `${label}: ${value || t("collection.iconDefault")}`, className: "h-9 w-full max-w-sm justify-start gap-2.5 font-normal" }), children: [_jsx("span", { className: "flex size-5 items-center justify-center text-monti-muted-foreground", children: _jsx(CurrentIcon, { className: "size-4" }) }), _jsx("span", { className: "truncate", children: value || t("collection.iconDefault") }), _jsx(ChevronDown, { "aria-hidden": true, className: "ml-auto size-4 shrink-0 text-monti-muted-foreground" })] }), _jsx(PopoverContent, { align: "start", className: "w-72 p-3", children: _jsxs("div", { className: "flex flex-col gap-2.5", children: [_jsx(Input, { value: query, placeholder: t("collection.iconSearch"), onChange: (e) => setQuery(e.target.value), className: "h-8 text-xs", autoFocus: true }), value && (_jsxs(Button, { type: "button", variant: "ghost", size: "xs", className: "justify-start text-monti-muted-foreground text-xs hover:text-monti-foreground", onClick: () => {
                                     onChange(undefined);
                                     setOpen(false);
                                 }, children: [t("collection.iconClear"), " (", defaultIconName, ")"] })), _jsx("div", { className: "grid max-h-56 grid-cols-6 gap-1 overflow-y-auto p-0.5", role: "listbox", children: filtered.map((name) => {
@@ -41,6 +41,6 @@ export function IconPicker({ label, value, kind, onChange, }) {
                                     return (_jsx("button", { type: "button", role: "option", "aria-selected": isSelected, title: name, "aria-label": name, onClick: () => {
                                             onChange(name);
                                             setOpen(false);
-                                        }, className: cn("flex size-9 items-center justify-center rounded-md transition-colors hover:bg-cms-accent", isSelected && "bg-cms-primary/10 text-cms-primary ring-1 ring-cms-primary"), children: _jsx(Icon, { className: "size-4" }) }, name));
-                                }) }), filtered.length === 0 && (_jsx("p", { className: "py-4 text-center text-cms-muted-foreground text-xs", children: t("collection.iconNone") }))] }) })] }) }));
+                                        }, className: cn("flex size-9 items-center justify-center rounded-md transition-colors hover:bg-monti-accent", isSelected && "bg-monti-primary/10 text-monti-primary ring-1 ring-monti-primary"), children: _jsx(Icon, { className: "size-4" }) }, name));
+                                }) }), filtered.length === 0 && (_jsx("p", { className: "py-4 text-center text-monti-muted-foreground text-xs", children: t("collection.iconNone") }))] }) })] }) }));
 }

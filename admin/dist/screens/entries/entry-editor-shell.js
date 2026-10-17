@@ -1,20 +1,21 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator, withBasePath } from "@monti-cms/core/client";
 import { isUnparsedDocument } from "@monti-cms/core/document";
+import { useSite, useTranslator, withBasePath } from "@monti-cms/core/site";
 import { FileCode, PanelLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useCmsAdminComponents, useEditorExtensions } from "../../admin-components.js";
-import { cmsEntryClient } from "../../api/entries.js";
-import { cmsIssueMessage } from "../../api/error-message.js";
+import { useAdminComponents, useEditorExtensions } from "../../admin-components.js";
+import { adminEntryClient } from "../../api/entries.js";
+import { issueLine } from "../../api/error-message.js";
 import { findBlock } from "../../editor/block-ids.js";
 import { CmsEditor } from "../../editor/tiptap-editor.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference.js";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut.js";
+import { cn } from "../../lib/utils/cn.js";
 import { AdminLink as Link, useAdminRouter } from "../../router/index.js";
 import { SOURCE_ERROR_ID } from "../../source-error-id.js";
-import { FieldLabel } from "../../ui/field.js";
+import { FormFieldLabel } from "../../ui/field.js";
 import { Input } from "../../ui/input.js";
 import { usePanelResize } from "../../ui/panel-resize.js";
 import { entryHref } from "../shared/entry-href.js";
@@ -32,7 +33,7 @@ import { formText, titleKeyOf } from "./entry-form.js";
 import { LanguageTabs } from "./language-tabs.js";
 import { entriesMessages } from "./messages.js";
 import { SourceChangeDialog } from "./source-change-dialog.js";
-import { useSourceSync } from "./source-sync.js";
+import { ACTIVE_BLOCK_STYLE, useSourceSync } from "./source-sync.js";
 import { TemplateMenu } from "./template-menu.js";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor.js";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands.js";
@@ -74,8 +75,9 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
     const [narrowClosedSourcePane, setNarrowClosedSourcePane] = useState(false);
     const isSourcePaneOpen = sourcePanePreference === "open" && !narrowClosedSourcePane;
     const [isSourceCompareOpen, setIsSourceCompareOpen] = useState(false);
-    const editorScrollRef = useRef(null);
-    const sourcePaneRef = useRef(null);
+    // The two scrolling columns of a translation, as elements: the source sync starts once both are on screen.
+    const [editorScroller, setEditorScroller] = useState(null);
+    const [sourcePane, setSourcePane] = useState(null);
     const [pendingFieldPath, setPendingFieldPath] = useState(null);
     const [incoming, setIncoming] = useState({
         items: [],
@@ -91,7 +93,7 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
     }, [load]);
     const visualEditorRef = useRef(null);
     // The source toggle exists only when a source panel is registered (`sourcePanels`). With several, the first registered is used.
-    const sourcePanel = useCmsAdminComponents().sourcePanels?.[0];
+    const sourcePanel = useAdminComponents().sourcePanels?.[0];
     // A body that could not be read (one `unparsed` node) is not opened in visual mode. Opening it would show it as a box the user cannot edit, and
     // it can be fixed in source mode or saved as is.
     const canUseVisual = !isUnparsedDocument(form.doc);
@@ -133,8 +135,8 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
     useSourceSync({
         enabled: translationSource !== null && isSourcePaneOpen,
         syncScroll: !isSourceMode,
-        editorRef: editorScrollRef,
-        paneRef: sourcePaneRef,
+        editor: editorScroller,
+        pane: sourcePane,
     });
     // Edit screen extensions (plugin toolbar and block actions, e.g. AI translation). For the same language, pass the same object so the actions are not recreated.
     const sourceLocale = translationSource?.locale;
@@ -152,7 +154,7 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
     const refreshIncoming = useCallback(async (targetId) => {
         setIncoming((current) => ({ ...current, loading: true, error: null }));
         try {
-            const data = await cmsEntryClient(site).relations(targetId);
+            const data = await adminEntryClient(site).relations(targetId);
             setIncoming({ items: data.incomingReferences ?? [], loading: false, error: null });
         }
         catch {
@@ -168,7 +170,7 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
             void refreshIncoming(entryId);
     }, [load.status, entryId, entryStatus, refreshIncoming]);
     // Shown beside a field a translation shares with the original: where to change it.
-    const lockedNote = useMemo(() => entry?.source ? (_jsxs(_Fragment, { children: [te("inspector.source", { locale: site.localeLabel(entry.source.locale) }), " ", _jsx(Link, { href: site.adminEntryEditHref(entry.source.id), className: "text-cms-primary underline-offset-2 hover:underline", children: te("inspector.sourceLink") })] })) : undefined, [entry?.source, site.adminEntryEditHref, site.localeLabel, te]);
+    const lockedNote = useMemo(() => entry?.source ? (_jsxs(_Fragment, { children: [te("inspector.source", { locale: site.localeLabel(entry.source.locale) }), " ", _jsx(Link, { href: site.adminEntryEditHref(entry.source.id), className: "text-monti-primary underline-offset-2 hover:underline", children: te("inspector.sourceLink") })] })) : undefined, [entry?.source, site.adminEntryEditHref, site.localeLabel, te]);
     /** Selects the start of a block in the visual editor and scrolls to it. False when the editor does not have that block. */
     const revealBlock = (blockId) => {
         const visual = visualEditorRef.current;
@@ -242,7 +244,7 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
     const languageTabs = site.ADMIN_TRANSLATIONS && entry && !site.isItemCollection(collection) ? (_jsx(LanguageTabs, { entry: entry, disabled: isReadOnly, onBeforeCreate: async () => !editor.getSnapshot().hasUnsavedChanges, onTrashTranslation: () => commands.confirmLifecycle("trash") })) : null;
     // The title field is the one with the title role. The label is decided by the site.
     const titleLabel = (site.isCollection(collection) ? site.titleField(collection).field.label : undefined) ?? t("title");
-    const titleInput = (_jsxs(_Fragment, { children: [_jsx(FieldLabel, { htmlFor: "cms-title-canvas", className: "sr-only", children: titleLabel }), _jsx(Input, { id: "cms-title-canvas", value: titleKey ? formText(form, titleKey) : "", readOnly: isReadOnly, "aria-invalid": Boolean(titleIssue) || undefined, "aria-describedby": titleIssue ? "cms-title-error" : undefined, onChange: (event) => titleKey && editor.setForm({ [titleKey]: event.target.value }), placeholder: translationSource?.title || tc("untitled"), className: "h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-cms-muted-foreground/40 focus-visible:ring-0 md:text-[34px]" }), titleIssue && (_jsx("p", { id: "cms-title-error", className: "text-cms-destructive text-sm", children: cmsIssueMessage(site, titleIssue) }))] }));
+    const titleInput = (_jsxs(_Fragment, { children: [_jsx(FormFieldLabel, { htmlFor: "cms-title-canvas", className: "sr-only", children: titleLabel }), _jsx(Input, { id: "cms-title-canvas", value: titleKey ? formText(form, titleKey) : "", readOnly: isReadOnly, "aria-invalid": Boolean(titleIssue) || undefined, "aria-describedby": titleIssue ? "cms-title-error" : undefined, onChange: (event) => titleKey && editor.setForm({ [titleKey]: event.target.value }), placeholder: translationSource?.title || tc("untitled"), className: "h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-monti-muted-foreground/40 focus-visible:ring-0 md:text-[34px]" }), titleIssue && (_jsx("p", { id: "cms-title-error", className: "text-monti-destructive text-sm", children: issueLine(titleIssue) }))] }));
     const sourcePaneToggle = translationSource && (_jsx(ToolbarToggle, { label: te("source"), text: te("source"), icon: PanelLeft, pressed: isSourcePaneOpen, onPressedChange: toggleSourcePane }));
     const sourceModeToggle = sourcePanel && (_jsx(ToolbarToggle, { label: sourcePanel.label, icon: FileCode, pressed: isSourceMode, 
         // A body that could not be read cannot return to visual mode.
@@ -250,10 +252,10 @@ export function EntryEditorShell({ mode, initialEntryId, collection: propCollect
     const sourceEditor = sourcePanel && (_jsxs(_Fragment, { children: [_jsx(sourcePanel.Panel, { doc: form.doc, onChange: (doc, issues) => {
                     setSourceIssues(issues);
                     editor.setBody(doc);
-                }, focusBlock: focusBlock, readOnly: isReadOnly, onComposing: editor.setComposing }), bodyIssue && (_jsx("p", { id: SOURCE_ERROR_ID, className: "mt-2 text-cms-destructive text-sm", children: cmsIssueMessage(site, bodyIssue) }))] }));
-    return (_jsx(EntryEditorProvider, { editor: editor, lockedNote: lockedNote, children: _jsxs("div", { className: "flex h-screen w-full flex-col overflow-hidden bg-cms-background text-cms-foreground", children: [_jsx(EntryEditorHeader, { editor: editor, commands: commands, statusLabel: statusLabel, isInspectorOpen: isInspectorOpen, onToggleInspector: () => setIsInspectorOpen((open) => !open) }), _jsx(EntryEditorBanners, { editor: editor, visualUnavailable: !canUseVisual && Boolean(sourcePanel), sourceProblem: sourceProblems[0], onFocusIssue: focusIssue, sourceChanged: sourceChanged && Boolean(translationSource), onCompareSource: () => setIsSourceCompareOpen(true) }), _jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [translationSource && isSourcePaneOpen && (_jsx(TranslationSourcePanel, { source: translationSource, paneRef: sourcePaneRef, onClose: () => toggleSourcePane(false) })), _jsxs("div", { ref: editorScrollRef, 
+                }, focusBlock: focusBlock, readOnly: isReadOnly, onComposing: editor.setComposing }), bodyIssue && (_jsx("p", { id: SOURCE_ERROR_ID, className: "mt-2 text-monti-destructive text-sm", children: issueLine(bodyIssue) }))] }));
+    return (_jsx(EntryEditorProvider, { editor: editor, lockedNote: lockedNote, children: _jsxs("div", { className: "flex h-screen w-full flex-col overflow-hidden bg-monti-background text-monti-foreground", children: [_jsx(EntryEditorHeader, { editor: editor, commands: commands, statusLabel: statusLabel, isInspectorOpen: isInspectorOpen, onToggleInspector: () => setIsInspectorOpen((open) => !open) }), _jsx(EntryEditorBanners, { editor: editor, visualUnavailable: !canUseVisual && Boolean(sourcePanel), sourceProblem: sourceProblems[0], onFocusIssue: focusIssue, sourceChanged: sourceChanged && Boolean(translationSource), onCompareSource: () => setIsSourceCompareOpen(true) }), _jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [translationSource && isSourcePaneOpen && (_jsx(TranslationSourcePanel, { source: translationSource, paneRef: setSourcePane, onClose: () => toggleSourcePane(false) })), _jsxs("div", { ref: setEditorScroller, 
                             // Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
-                            className: "h-full min-w-0 flex-1 overflow-y-auto", inert: (isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen, children: [_jsx(CmsEditor, { doc: form.doc, allowed: site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined, titleField: _jsxs(_Fragment, { children: [languageTabs, titleInput] }), toolbarAside: _jsxs("span", { className: "flex items-center gap-1", children: [site.ADMIN_TEMPLATES && (_jsx(TemplateMenu, { currentDoc: form.doc, disabled: isReadOnly, onApply: editor.setBody })), extensions.toolbar, sourcePaneToggle, sourceModeToggle] }), sourceView: isSourceMode ? sourceEditor : undefined, editable: !isReadOnly, onChange: editor.setBody, blockActions: extensions.blockActions.length > 0 ? extensions.blockActions : undefined, selectionActions: extensions.selectionActions, insertActions: extensions.insertActions, onEditor: (editor) => {
+                            className: cn("h-full min-w-0 flex-1 overflow-y-auto", translationSource && ACTIVE_BLOCK_STYLE), inert: (isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen, children: [_jsx(CmsEditor, { doc: form.doc, allowed: site.isCollection(collection) ? site.schemaOf(collection).allowed : undefined, titleField: _jsxs(_Fragment, { children: [languageTabs, titleInput] }), toolbarAside: _jsxs("span", { className: "flex items-center gap-1", children: [site.ADMIN_TEMPLATES && (_jsx(TemplateMenu, { currentDoc: form.doc, disabled: isReadOnly, onApply: editor.setBody })), extensions.toolbar, sourcePaneToggle, sourceModeToggle] }), sourceView: isSourceMode ? sourceEditor : undefined, editable: !isReadOnly, onChange: editor.setBody, blockActions: extensions.blockActions.length > 0 ? extensions.blockActions : undefined, selectionActions: extensions.selectionActions, insertActions: extensions.insertActions, onEditor: (editor) => {
                                         visualEditorRef.current = editor;
                                         extensions.onEditor?.(editor);
                                     }, onCompositionStart: () => editor.setComposing(true), onCompositionEnd: () => editor.setComposing(false) }), extensions.overlay] }), isInspectorOpen && (_jsx(InspectorSidePanel, { editor: editor, resize: inspectorResize, incomingItems: incoming.items, isLoadingIncoming: incoming.loading, onRefreshIncoming: (id) => void refreshIncoming(id), onClose: () => setIsInspectorOpen(false), focusPath: pendingFieldPath !== "title-canvas" ? pendingFieldPath : null, onFocused: () => setPendingFieldPath(null) }))] }), _jsx(EntryEditorRecoveryDialogs, { editor: editor }), commands.confirmDialog, translationSource && (_jsx(SourceChangeDialog, { open: isSourceCompareOpen, onOpenChange: setIsSourceCompareOpen, before: confirmed?.baseDoc, after: translationSource.doc }))] }) }));

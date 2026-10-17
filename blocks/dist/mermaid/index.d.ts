@@ -10,7 +10,7 @@ export { mermaidBlock } from "./definition.js";
  * replace it with `fencePreviews.mermaid`. The public page is drawn by this extension's default `Mermaid` component, which a site can override (the code is the `source` attribute,
  * `remarkFenceBlocksToMdx`).
  */
-export declare const mermaid: () => import("@monti-cms/core").CmsPlugin<"mermaid", Record<string, never>, readonly [{
+export declare const mermaid: () => import("@monti-cms/core").Plugin<"mermaid", Record<string, never>, readonly [{
     readonly name: "mermaid";
     readonly label: string;
     readonly description: string;

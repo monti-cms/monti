@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { X } from "lucide-react";
 import { useId, useState } from "react";
 import { Textarea } from "../ui/textarea.js";
@@ -101,7 +101,7 @@ export function FootnoteForm({ editor, target, onDone }) {
         removeFootnote(editor, target);
         onDone();
     };
-    return (_jsxs("form", { onSubmit: handleApply, onKeyDown: submitOnEnter, className: "grid gap-3", children: [_jsxs("div", { className: "flex items-center gap-1.5 font-medium", children: [_jsx("span", { className: "flex size-5 shrink-0 items-center justify-center rounded bg-cms-accent font-medium text-cms-accent-foreground text-xs leading-none", children: target.badge }), _jsx("span", { children: t("inlineBubble.footnotePanel") })] }), _jsxs("label", { htmlFor: `${id}-content`, className: "grid gap-1.5 text-xs", children: [t("inlineBubble.footnoteField"), _jsx(Textarea, { id: `${id}-content`, value: value, rows: 3, placeholder: t("inlineBubble.footnotePlaceholder"), "aria-invalid": !!error || undefined, "aria-describedby": error ? `${id}-error` : undefined, onChange: (event) => {
+    return (_jsxs("form", { onSubmit: handleApply, onKeyDown: submitOnEnter, className: "grid gap-3", children: [_jsxs("div", { className: "flex items-center gap-1.5 font-medium", children: [_jsx("span", { className: "flex size-5 shrink-0 items-center justify-center rounded bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none", children: target.badge }), _jsx("span", { children: t("inlineBubble.footnotePanel") })] }), _jsxs("label", { htmlFor: `${id}-content`, className: "grid gap-1.5 text-xs", children: [t("inlineBubble.footnoteField"), _jsx(Textarea, { id: `${id}-content`, value: value, rows: 3, placeholder: t("inlineBubble.footnotePlaceholder"), "aria-invalid": !!error || undefined, "aria-describedby": error ? `${id}-error` : undefined, onChange: (event) => {
                             setValue(event.target.value);
                             setError(null);
                         }, className: "min-h-0", autoFocus: true })] }), error && _jsx(PopoverFormError, { id: `${id}-error`, children: error }), _jsx(PopoverFormFooter, { removeLabel: t("inlineBubble.footnoteRemove"), removeIcon: _jsx(X, { "aria-hidden": true }), onRemove: handleRemove, onCancel: onDone })] }));

@@ -1,6 +1,6 @@
-import type { Site } from "@monti-cms/core/client";
 import { type CodeLineEffect, type CodeRule, type CodeSpan } from "@monti-cms/core/code-block";
 import type { CmsJsonValue, CmsNode } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { JSONContent } from "@tiptap/core";
 import type { BlockConverter } from "./types.js";
 /** The fence text of a stored code block: its code with the annotations written as Monti annotation comments. This is the model the code editor works on. */

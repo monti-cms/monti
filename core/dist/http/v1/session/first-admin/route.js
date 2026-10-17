@@ -1,6 +1,5 @@
 import { CmsError } from "../../error-handler.js";
-import { publicRoute } from "../../handler.js";
-import { validateSameOrigin } from "../../security.js";
+import { publicRoute, readFormBody } from "../../handler.js";
 const field = (form, name) => {
     const value = form.get(name);
     return typeof value === "string" ? value : "";
@@ -8,10 +7,9 @@ const field = (form, name) => {
 /**
  * `POST /api/monti/v1/session/first-admin`: creates the first admin account of the built-in email and password login, then signs that account in. A plain form post from the
  * login screen, which shows the form only while no account exists. That is not what guards it: once any account exists the login refuses the request itself (`closed`), whatever
- * the browser sent. Needs no login (there is no account to log in with yet), but the same-origin check applies. A refusal sends the browser back to the login screen with `?error=<reason>`.
+ * the browser sent. Access `same-origin-form`: needs no login (there is no account to log in with yet), and the router applies the same-origin check. A refusal sends the browser back to the login screen with `?error=<reason>`.
  */
 export const POST = publicRoute(async ({ request, cms }) => {
-    validateSameOrigin(cms, request, { form: true });
     const auth = cms.auth();
     const method = auth.providers.find((provider) => provider.credentials);
     if (!auth.accounts || !method)
@@ -20,7 +18,7 @@ export const POST = publicRoute(async ({ request, cms }) => {
         status: 303,
         headers: { location: `${cms.site.adminUrl("/login")}?error=${encodeURIComponent(error)}` },
     });
-    const form = await request.formData();
+    const form = await readFormBody(request);
     const email = field(form, "email");
     const password = field(form, "password");
     if (password !== field(form, "confirm"))

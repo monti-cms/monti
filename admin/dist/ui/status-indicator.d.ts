@@ -1,5 +1,5 @@
 import type * as React from "react";
-/** What a status means; the color follows from it (`--cms-success`, `--cms-warning`, `--cms-destructive`, muted). */
+/** What a status means; the color follows from it (`--monti-success`, `--monti-warning`, `--monti-destructive`, muted). */
 export type StatusTone = "success" | "warning" | "destructive" | "neutral";
 /** The marker's form. The meaning never rests on color alone: pair the shape with a `label`, or give the marker a name some other way. */
 export type StatusShape = "dot" | "ring" | "dashed" | "half" | "minus";

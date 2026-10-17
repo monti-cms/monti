@@ -4,10 +4,10 @@ import { cn } from "../lib/utils/index.js";
 const toneClass = cva("shrink-0", {
     variants: {
         tone: {
-            success: "text-cms-success",
-            warning: "text-cms-warning",
-            destructive: "text-cms-destructive",
-            neutral: "text-cms-muted-foreground",
+            success: "text-monti-success",
+            warning: "text-monti-warning",
+            destructive: "text-monti-destructive",
+            neutral: "text-monti-muted-foreground",
         },
         size: {
             /** A bare dot beside a name (language tabs). */
@@ -39,5 +39,5 @@ function Marker({ shape }) {
  * the save status and the language tabs all use it, so a state looks the same wherever it appears.
  */
 export function StatusIndicator({ tone = "neutral", shape = "dot", size = "md", label, labelClassName, pulse = false, className, ...props }) {
-    return (_jsxs("span", { "data-slot": "status-indicator", "data-tone": tone, className: cn("inline-flex items-center gap-1.5 whitespace-nowrap", label && "text-[13px] text-cms-foreground/80", className), ...props, children: [_jsx("svg", { "aria-hidden": "true", focusable: "false", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: "1.6", className: cn(toneClass({ tone, size }), pulse && "animate-pulse"), children: _jsx(Marker, { shape: shape }) }), label && _jsx("span", { className: labelClassName, children: label })] }));
+    return (_jsxs("span", { "data-slot": "status-indicator", "data-tone": tone, className: cn("inline-flex items-center gap-1.5 whitespace-nowrap", label && "text-[13px] text-monti-foreground/80", className), ...props, children: [_jsx("svg", { "aria-hidden": "true", focusable: "false", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: "1.6", className: cn(toneClass({ tone, size }), pulse && "animate-pulse"), children: _jsx(Marker, { shape: shape }) }), label && _jsx("span", { className: labelClassName, children: label })] }));
 }

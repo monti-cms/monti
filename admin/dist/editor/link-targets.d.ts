@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import type { InternalLinkItem } from "./internal-link.js";
 /**
  * Where an internal link goes. A link in a stored document holds the id of its entry only (the id of the translation group, which is the source entry), so the

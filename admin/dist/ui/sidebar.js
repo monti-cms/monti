@@ -2,7 +2,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { cva } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
@@ -86,26 +86,26 @@ function SidebarProvider({ defaultOpen = true, open: openProp, onOpenChange: set
                 "--sidebar-width": SIDEBAR_WIDTH,
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 ...style,
-            }, className: cn("group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-cms-sidebar", className), ...props, children: children }) }));
+            }, className: cn("group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-monti-sidebar", className), ...props, children: children }) }));
 }
 function Sidebar({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, dir, ...props }) {
     const t = useTranslator(uiMessages);
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
     if (collapsible === "none") {
-        return (_jsx("div", { "data-slot": "sidebar", className: cn("flex h-full w-(--sidebar-width) flex-col bg-cms-sidebar text-cms-sidebar-foreground", className), ...props, children: children }));
+        return (_jsx("div", { "data-slot": "sidebar", className: cn("flex h-full w-(--sidebar-width) flex-col bg-monti-sidebar text-monti-sidebar-foreground", className), ...props, children: children }));
     }
     if (isMobile) {
-        return (_jsx(Sheet, { open: openMobile, onOpenChange: setOpenMobile, ...props, children: _jsxs(SheetContent, { dir: dir, "data-sidebar": "sidebar", "data-slot": "sidebar", "data-mobile": "true", className: "w-(--sidebar-width) bg-cms-sidebar p-0 text-cms-sidebar-foreground [&>button]:hidden", style: {
+        return (_jsx(Sheet, { open: openMobile, onOpenChange: setOpenMobile, ...props, children: _jsxs(SheetContent, { dir: dir, "data-sidebar": "sidebar", "data-slot": "sidebar", "data-mobile": "true", className: "w-(--sidebar-width) bg-monti-sidebar p-0 text-monti-sidebar-foreground [&>button]:hidden", style: {
                     "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
                 }, side: side, children: [_jsxs(SheetHeader, { className: "sr-only", children: [_jsx(SheetTitle, { children: t("sidebar.title") }), _jsx(SheetDescription, { children: t("sidebar.description") })] }), _jsx("div", { className: "flex h-full w-full flex-col", children: children })] }) }));
     }
-    return (_jsxs("div", { className: "group peer hidden text-cms-sidebar-foreground md:block", "data-state": state, "data-collapsible": state === "collapsed" ? collapsible : "", "data-variant": variant, "data-side": side, "data-slot": "sidebar", children: [_jsx("div", { "data-slot": "sidebar-gap", className: cn("relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear", "group-data-[collapsible=offcanvas]:w-0", "group-data-[side=right]:rotate-180", variant === "floating" || variant === "inset"
+    return (_jsxs("div", { className: "group peer hidden text-monti-sidebar-foreground md:block", "data-state": state, "data-collapsible": state === "collapsed" ? collapsible : "", "data-variant": variant, "data-side": side, "data-slot": "sidebar", children: [_jsx("div", { "data-slot": "sidebar-gap", className: cn("relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear", "group-data-[collapsible=offcanvas]:w-0", "group-data-[side=right]:rotate-180", variant === "floating" || variant === "inset"
                     ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
                     : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)") }), _jsx("div", { "data-slot": "sidebar-container", "data-side": side, className: cn("fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=right]:right-0 data-[side=left]:left-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] md:flex", 
                 // Adjust the padding for floating and inset variants.
                 variant === "floating" || variant === "inset"
                     ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-                    : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l", className), ...props, children: _jsx("div", { "data-sidebar": "sidebar", "data-slot": "sidebar-inner", className: "group-data-[ flex size-full flex-col bg-cms-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-cms-sidebar-border", children: children }) })] }));
+                    : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l", className), ...props, children: _jsx("div", { "data-sidebar": "sidebar", "data-slot": "sidebar-inner", className: "group-data-[ flex size-full flex-col bg-monti-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-monti-sidebar-border", children: children }) })] }));
 }
 function SidebarTrigger({ className, onClick, ...props }) {
     const t = useTranslator(uiMessages);
@@ -116,7 +116,7 @@ function SidebarTrigger({ className, onClick, ...props }) {
         }, ...props, children: [_jsx(PanelLeftIcon, {}), _jsx("span", { className: "sr-only", children: t("sidebar.toggle") })] }));
 }
 function SidebarInset({ className, ...props }) {
-    return (_jsx("main", { "data-slot": "sidebar-inset", className: cn("md:peer-data-[ relative flex w-full flex-1 flex-col bg-cms-background md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl", className), ...props }));
+    return (_jsx("main", { "data-slot": "sidebar-inset", className: cn("md:peer-data-[ relative flex w-full flex-1 flex-col bg-monti-background md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl", className), ...props }));
 }
 function SidebarHeader({ className, ...props }) {
     return (_jsx("div", { "data-slot": "sidebar-header", "data-sidebar": "header", className: cn("flex flex-col gap-2 p-2", className), ...props }));
@@ -125,7 +125,7 @@ function SidebarFooter({ className, ...props }) {
     return (_jsx("div", { "data-slot": "sidebar-footer", "data-sidebar": "footer", className: cn("flex flex-col gap-2 p-2", className), ...props }));
 }
 function SidebarSeparator({ className, ...props }) {
-    return (_jsx(Separator, { "data-slot": "sidebar-separator", "data-sidebar": "separator", className: cn("mx-2 cms-horizontal:w-auto bg-cms-sidebar-border", className), ...props }));
+    return (_jsx(Separator, { "data-slot": "sidebar-separator", "data-sidebar": "separator", className: cn("mx-2 monti-horizontal:w-auto bg-monti-sidebar-border", className), ...props }));
 }
 function SidebarContent({ className, ...props }) {
     return (_jsx("div", { "data-slot": "sidebar-content", "data-sidebar": "content", className: cn("no-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden", className), ...props }));
@@ -137,7 +137,7 @@ function SidebarGroupLabel({ className, render, ...props }) {
     return useRender({
         defaultTagName: "div",
         props: mergeProps({
-            className: cn("flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-cms-sidebar-foreground/70 ring-cms-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0", className),
+            className: cn("flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-monti-sidebar-foreground/70 ring-monti-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0", className),
         }, props),
         render,
         state: {
@@ -155,11 +155,11 @@ function SidebarMenu({ className, ...props }) {
 function SidebarMenuItem({ className, ...props }) {
     return (_jsx("li", { "data-slot": "sidebar-menu-item", "data-sidebar": "menu-item", className: cn("group/menu-item relative", className), ...props }));
 }
-const sidebarMenuButtonVariants = cva("peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-cms-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground focus-visible:ring-2 active:bg-cms-sidebar-accent active:text-cms-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-cms-sidebar-accent data-open:hover:text-cms-sidebar-accent-foreground data-active:bg-cms-sidebar-accent data-active:font-medium data-active:text-cms-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate", {
+const sidebarMenuButtonVariants = cva("peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm ring-monti-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground focus-visible:ring-2 active:bg-monti-sidebar-accent active:text-monti-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-monti-sidebar-accent data-open:hover:text-monti-sidebar-accent-foreground data-active:bg-monti-sidebar-accent data-active:font-medium data-active:text-monti-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate", {
     variants: {
         variant: {
-            default: "hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground",
-            outline: "bg-cms-background shadow-[0_0_0_1px_var(--cms-sidebar-border)] hover:bg-cms-sidebar-accent hover:text-cms-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--cms-sidebar-accent)]",
+            default: "hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground",
+            outline: "bg-monti-background shadow-[0_0_0_1px_var(--monti-sidebar-border)] hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground hover:shadow-[0_0_0_1px_var(--monti-sidebar-accent)]",
         },
         size: {
             default: "h-8 text-sm",
@@ -198,6 +198,6 @@ function SidebarMenuButton({ render, isActive = false, variant = "default", size
     return (_jsxs(Tooltip, { children: [comp, _jsx(TooltipContent, { side: "right", align: "center", hidden: state !== "collapsed" || isMobile, ...tooltip })] }));
 }
 function SidebarMenuBadge({ className, ...props }) {
-    return (_jsx("div", { "data-slot": "sidebar-menu-badge", "data-sidebar": "menu-badge", className: cn("pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-md px-1 font-medium text-cms-sidebar-foreground text-xs tabular-nums peer-hover/menu-button:text-cms-sidebar-accent-foreground group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-cms-sidebar-accent-foreground", className), ...props }));
+    return (_jsx("div", { "data-slot": "sidebar-menu-badge", "data-sidebar": "menu-badge", className: cn("pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-md px-1 font-medium text-monti-sidebar-foreground text-xs tabular-nums peer-hover/menu-button:text-monti-sidebar-accent-foreground group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1.5 peer-data-[size=lg]/menu-button:top-2.5 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:text-monti-sidebar-accent-foreground", className), ...props }));
 }
 export { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarSeparator, SidebarTrigger, useSidebar, };

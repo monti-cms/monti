@@ -1,8 +1,8 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
-import { cmsIssueMessage } from "../../api/error-message.js";
+import { issueLine } from "../../api/error-message.js";
 import { assignStateSilently, createStateStore, notifyStateStore, useStoreSelector, } from "../../hooks/store.js";
 import { isSandboxSite } from "../shared/preview-sandbox.js";
 import { formTitle } from "./entry-form.js";
@@ -119,7 +119,7 @@ export function useField(name) {
         ? []
         : issues
             .filter((issue) => issue.path === name)
-            .map((issue) => ({ code: issue.code, message: cmsIssueMessage(site, issue), issue })), [issues, name, locked, site]);
+            .map((issue) => ({ code: issue.code, message: issueLine(issue), issue })), [issues, name, locked]);
     const slotRequest = useMemo(() => {
         // A preview of a screen (a draft site) has no actions: nothing it does may reach a service.
         if (locked || isSandboxSite(site))

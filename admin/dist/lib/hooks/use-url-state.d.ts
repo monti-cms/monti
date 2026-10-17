@@ -1,4 +1,4 @@
-import { type PageSize } from "@monti-cms/core/client";
+import { type PageSize } from "@monti-cms/core/site";
 /** One value kept in the address: how to read it (`null` = absent) and how to write it (`null` = leave it out, it is the default). */
 export interface UrlParam<T> {
     parse: (raw: string | null) => T;

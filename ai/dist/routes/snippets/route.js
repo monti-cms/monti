@@ -1,4 +1,4 @@
-import { adminRoute, CmsError, ok, readVersionedBody, readVersionQuery } from "@monti-cms/core/plugin/server";
+import { adminRoute, CmsError, ok, readVersionedBody, readVersionQuery } from "@monti-cms/core/server";
 import { z } from "zod";
 import { listActions } from "../../actions.js";
 import { addSnippet, deleteSnippet, getSnippetView, updateSnippetItem, updateSnippets } from "../../snippets.js";

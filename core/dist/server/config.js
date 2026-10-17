@@ -13,7 +13,7 @@ const SERVER_KEYS = [
     "secret",
     "previousSecrets",
     "trustHost",
-    "hooks",
+    "on",
     "events",
     "publicApi",
 ];
@@ -59,7 +59,7 @@ export function defineConfig(input) {
             ? { previousSecrets: input.previousSecrets.filter((secret) => Boolean(secret)) }
             : {}),
         ...(input.trustHost !== undefined ? { trustHost: input.trustHost } : {}),
-        ...(input.hooks ? { hooks: input.hooks } : {}),
+        ...(input.on ? { on: input.on } : {}),
         ...(input.events ? { events: input.events } : {}),
         ...(input.publicApi ? { publicApi: input.publicApi } : {}),
     };

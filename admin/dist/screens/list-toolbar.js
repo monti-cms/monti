@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Search, X } from "lucide-react";
 import { commonMessages } from "../lib/common.messages.js";
 import { Button } from "../ui/button.js";
@@ -68,7 +68,7 @@ export function ListSearch({ state, onChange, allowBody = true, }) {
     const t = useTranslator(screensMessages);
     const [search, setSearch] = useDebouncedInput(state.search, (text) => onChange({ search: text }));
     const isContent = site.isDocumentCollection(state.collection);
-    return (_jsxs("div", { className: "flex items-center gap-3", children: [_jsxs(InputGroup, { className: "h-8 w-64", children: [_jsx(InputGroupAddon, { children: _jsx(Search, { "aria-hidden": true }) }), _jsx(InputGroupInput, { type: "search", "aria-label": t("toolbar.searchLabel"), value: search, onChange: (event) => setSearch(event.target.value), placeholder: state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder") })] }), isContent && allowBody && (_jsxs(Label, { className: "font-normal text-cms-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: state.includeBody, onCheckedChange: (checked) => onChange({ includeBody: checked === true }) }), t("toolbar.includeBody")] }))] }));
+    return (_jsxs("div", { className: "flex items-center gap-3", children: [_jsxs(InputGroup, { className: "h-8 w-64", children: [_jsx(InputGroupAddon, { children: _jsx(Search, { "aria-hidden": true }) }), _jsx(InputGroupInput, { type: "search", "aria-label": t("toolbar.searchLabel"), value: search, onChange: (event) => setSearch(event.target.value), placeholder: state.includeBody ? t("toolbar.searchBodyPlaceholder") : t("toolbar.searchPlaceholder") })] }), isContent && allowBody && (_jsxs(Label, { className: "font-normal text-monti-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: state.includeBody, onCheckedChange: (checked) => onChange({ includeBody: checked === true }) }), t("toolbar.includeBody")] }))] }));
 }
 /** Row of applied filter chips. Not drawn when there are no filters. */
 export function FilterChipBar({ state, options, onChange, }) {
@@ -77,7 +77,7 @@ export function FilterChipBar({ state, options, onChange, }) {
     const chips = filterChips(site, state, options);
     if (chips.length === 0)
         return null;
-    return (_jsxs("ul", { "aria-label": t("toolbar.chips"), className: "flex min-h-11 flex-wrap items-center gap-1.5 border-b px-5 py-2", children: [chips.map((chip) => (_jsx("li", { children: _jsxs("span", { className: "inline-flex h-6 items-center gap-1 rounded-md bg-cms-primary/10 pr-0.5 pl-2 font-medium text-cms-primary text-xs", children: [_jsx("span", { className: "max-w-72 truncate", children: chip.label }), _jsx(IconButton, { size: "icon-xs", className: "size-5 text-cms-primary hover:bg-cms-primary/15 hover:text-cms-primary", label: t("filter.clear"), onClick: () => onChange(chip.clear), children: _jsx(X, { "aria-hidden": true }) })] }) }, chip.key))), _jsx("li", { children: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-muted-foreground", onClick: () => {
+    return (_jsxs("ul", { "aria-label": t("toolbar.chips"), className: "flex min-h-11 flex-wrap items-center gap-1.5 border-b px-5 py-2", children: [chips.map((chip) => (_jsx("li", { children: _jsxs("span", { className: "inline-flex h-6 items-center gap-1 rounded-md bg-monti-primary/10 pr-0.5 pl-2 font-medium text-monti-primary text-xs", children: [_jsx("span", { className: "max-w-72 truncate", children: chip.label }), _jsx(IconButton, { size: "icon-xs", className: "size-5 text-monti-primary hover:bg-monti-primary/15 hover:text-monti-primary", label: t("filter.clear"), onClick: () => onChange(chip.clear), children: _jsx(X, { "aria-hidden": true }) })] }) }, chip.key))), _jsx("li", { children: _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-monti-muted-foreground", onClick: () => {
                         onChange(clearFiltersPatch(state));
                     }, children: t("filter.clearAll") }) })] }));
 }

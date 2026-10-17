@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 /**
  * What stops the login from starting (a missing `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` or `MONTI_SECRET`), as the server throws it, or `undefined` when the login can
  * start. Under `next dev` the development login stands in for GitHub, so this is mostly what a production server without its settings hits.

@@ -1,5 +1,5 @@
 "use client";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/admin";
 import { useCallback, useMemo } from "react";
 import { runAiAction, runAiActionMany, streamAiAction, useAiActions } from "./ai-slot-provider.js";
 /**

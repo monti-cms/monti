@@ -1,5 +1,5 @@
 "use client";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { readPreference, removePreference, subscribePreferences, writePreference } from "../utils/site-storage.js";
 export const stringCodec = { parse: (raw) => raw, serialize: (value) => value };

@@ -2,7 +2,8 @@
  * The schema file as the settings screen edits it: plain data, changed by small pure functions that return a new copy. Key order is part of the file, so every
  * helper keeps it: a renamed key stays where it was, a new property goes where the format puts it (see `FIELD_KEY_ORDER`), and moving is an explicit step.
  */
-import { checkField, checkPathPattern, DEFAULT_TITLE_FIELD, defaultCollectionPath, fieldTraits, freshSetFields, IssueList, NAME_PATTERN, RESERVED_METADATA_KEYS, TITLE_ROLE, } from "@monti-cms/core/client";
+import { IssueList, TITLE_ROLE } from "@monti-cms/core";
+import { checkField, checkPathPattern, DEFAULT_TITLE_FIELD, defaultCollectionPath, fieldTraits, freshSetFields, kindDefaults, NAME_PATTERN, RESERVED_COLLECTION_NAMES, RESERVED_METADATA_KEYS, } from "@monti-cms/core/site";
 import { moveWithin } from "../../lib/utils/move-within.js";
 export const isObj = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 export const FIELD_KINDS = ["text", "slug", "relation", "select", "media", "conditional", "backlink", "view"];
@@ -156,17 +157,24 @@ export function sameJson(a, b) {
     }
     return a === b;
 }
-/** Why `name` cannot be used among `taken` names, or `null`. */
-export function nameProblem(name, taken) {
+const nameProblemAgainst = (name, taken, reserved) => {
     if (name.trim() === "")
         return "empty";
     if (!NAME_PATTERN.test(name))
         return "pattern";
-    if (RESERVED_METADATA_KEYS.includes(name))
+    if (reserved.includes(name))
         return "reserved";
     if (taken.includes(name))
         return "taken";
     return null;
+};
+/** Why `name` cannot be used as a field key (or option / block name) among `taken` names, or `null`. */
+export function nameProblem(name, taken) {
+    return nameProblemAgainst(name, taken, RESERVED_METADATA_KEYS);
+}
+/** Why `name` cannot be used as a collection name among `taken` names, or `null`. Collections have their own reserved names, not the field-key ones. */
+export function collectionNameProblem(name, taken) {
+    return nameProblemAgainst(name, taken, RESERVED_COLLECTION_NAMES);
 }
 // ----- the file -----
 export const collectionsOf = (file) => isObj(file.collections) ? file.collections : {};
@@ -457,13 +465,13 @@ export const hasBody = (collection) => {
         return body;
     if (isObj(body))
         return true;
-    return collection.kind !== "item";
+    return kindDefaults(collection.kind).body;
 };
 export const allowedOf = (collection) => (isObj(collection.body) ? collection.body : {});
 /** The collection with its body written back: left out when it is the default of the kind and nothing is limited, a flag, or the object form. */
 export function withBody(collection, enabled, allowed) {
     const limits = Object.fromEntries(Object.entries(allowed).filter(([, list]) => Array.isArray(list)));
-    const defaultBody = collection.kind !== "item";
+    const defaultBody = kindDefaults(collection.kind).body;
     const body = !enabled ? false : Object.keys(limits).length > 0 ? limits : defaultBody ? undefined : true;
     // The object form wins over a flag already in the file only when something is limited; an explicit `true` stays as written.
     if (body === undefined && collection.body === true)

@@ -24,7 +24,7 @@ export const ChartContainer = ({ id, className, children, config, }) => {
     const chartVars = Object.fromEntries(Object.entries(config)
         .filter(([, itemConfig]) => itemConfig.color)
         .map(([key, itemConfig]) => [`--color-${key}`, itemConfig.color]));
-    return (_jsx(ChartContext.Provider, { value: { config, dimensions }, children: _jsx("div", { "data-slot": "chart", "data-chart": chartId, style: chartVars, className: cn("flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-cms-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-cms-border/60 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-cms-border [&_.recharts-layer]:outline-hidden [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-cms-muted/60 [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden", className), children: _jsx(RechartsPrimitive.ResponsiveContainer, { width: "100%", height: "100%", initialDimension: DEFAULT_CHART_DIMENSIONS, onResize: (width, height) => {
+    return (_jsx(ChartContext.Provider, { value: { config, dimensions }, children: _jsx("div", { "data-slot": "chart", "data-chart": chartId, style: chartVars, className: cn("flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-monti-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-monti-border/60 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-monti-border [&_.recharts-layer]:outline-hidden [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-monti-muted/60 [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden", className), children: _jsx(RechartsPrimitive.ResponsiveContainer, { width: "100%", height: "100%", initialDimension: DEFAULT_CHART_DIMENSIONS, onResize: (width, height) => {
                     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
                         return;
                     }
@@ -43,13 +43,13 @@ export const ChartTooltipContent = ({ active, payload, label, className, hideLab
     if (!active || !payload?.length) {
         return null;
     }
-    return (_jsxs("div", { className: cn("grid min-w-[8rem] gap-1.5 rounded-lg border border-cms-border/50 bg-cms-background px-2.5 py-1.5 text-xs shadow-xl", className), children: [!hideLabel && label ? _jsx("div", { className: "font-medium", children: String(config[String(label)]?.label ?? label) }) : null, _jsx("div", { className: "grid gap-1.5", children: payload
+    return (_jsxs("div", { className: cn("grid min-w-[8rem] gap-1.5 rounded-lg border border-monti-border/50 bg-monti-background px-2.5 py-1.5 text-xs shadow-xl", className), children: [!hideLabel && label ? _jsx("div", { className: "font-medium", children: String(config[String(label)]?.label ?? label) }) : null, _jsx("div", { className: "grid gap-1.5", children: payload
                     .filter((item) => item.type !== "none")
                     .map((item) => {
                     const key = String(nameKey ? item.payload?.[nameKey] : (item.name ?? item.dataKey ?? "value"));
                     const itemConfig = config[key] ?? config[String(item.name ?? item.dataKey ?? "value")];
                     const itemKey = `${key}-${String(item.value ?? item.color ?? "")}`;
-                    return (_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("div", { className: "h-2.5 w-2.5 rounded-[2px]", style: { backgroundColor: item.color ?? item.payload?.fill } }), _jsxs("div", { className: "flex flex-1 items-center justify-between gap-3", children: [_jsx("span", { className: "text-cms-muted-foreground", children: itemConfig?.label ?? key }), _jsx("span", { className: "font-medium font-mono text-cms-foreground tabular-nums", children: typeof item.value === "number" ? item.value.toLocaleString() : String(item.value) })] })] }, itemKey));
+                    return (_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("div", { className: "h-2.5 w-2.5 rounded-[2px]", style: { backgroundColor: item.color ?? item.payload?.fill } }), _jsxs("div", { className: "flex flex-1 items-center justify-between gap-3", children: [_jsx("span", { className: "text-monti-muted-foreground", children: itemConfig?.label ?? key }), _jsx("span", { className: "font-medium font-mono text-monti-foreground tabular-nums", children: typeof item.value === "number" ? item.value.toLocaleString() : String(item.value) })] })] }, itemKey));
                 }) })] }));
 };
 export const ChartLegendContent = ({ payload, className, nameKey, onHeightChange, }) => {

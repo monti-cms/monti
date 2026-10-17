@@ -1,5 +1,5 @@
 import { defineMessages } from "@monti-cms/core";
-import { josa } from "@monti-cms/core/client";
+import { josa } from "@monti-cms/core/site";
 import { enSelected, koSelected } from "./shared/noun.messages.js";
 /** English: noun matching the count ("1 item" / "3 items"). */
 const items = (count) => `${count} ${Number(count) === 1 ? "item" : "items"}`;
@@ -42,9 +42,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
         "sidebar.collapse": "Collapse sidebar",
         "sidebar.folderExpand": "Expand subfolders of {name}",
         "sidebar.folderCollapse": "Collapse subfolders of {name}",
-        "sidebar.folderAll": "All",
         "sidebar.folderTree": "{label} folders",
-        "sidebar.includeDescendants": "Include subfolders",
         "sidebar.content": "Content",
         "sidebar.media": "Media",
         "sidebar.templates": "Templates",
@@ -152,9 +150,7 @@ export const screensMessages = defineMessages("cms-admin.screens", {
         "sidebar.collapse": "사이드바 접기",
         "sidebar.folderExpand": "{name} 하위 폴더 펼치기",
         "sidebar.folderCollapse": "{name} 하위 폴더 접기",
-        "sidebar.folderAll": "전체",
         "sidebar.folderTree": "{label} 폴더",
-        "sidebar.includeDescendants": "하위 폴더 포함",
         "sidebar.content": "콘텐츠",
         "sidebar.media": "미디어",
         "sidebar.templates": "템플릿",

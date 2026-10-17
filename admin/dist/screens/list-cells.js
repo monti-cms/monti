@@ -1,9 +1,9 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { fieldColumnOf } from "./list-columns.js";
 import { FittingTags } from "./shared/fitting-tags.js";
-const EMPTY = _jsx("span", { className: "text-cms-muted-foreground", children: "\u2014" });
+const EMPTY = _jsx("span", { className: "text-monti-muted-foreground", children: "\u2014" });
 /**
  * Finds a column's cell component in the admin extension (`listCells`). The column name comes first, otherwise the field's `input` name.
  * `undefined` if none (the default cell is drawn).
@@ -38,6 +38,6 @@ export function DefaultFieldCell({ collection, column, entry }) {
     if (field.kind === "select")
         return Object.hasOwn(field.options, value) ? field.options[value] : value;
     if (field.kind === "media")
-        return _jsx("span", { className: "font-mono text-cms-muted-foreground text-xs", children: value });
+        return _jsx("span", { className: "font-mono text-monti-muted-foreground text-xs", children: value });
     return value;
 }

@@ -9,6 +9,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip.js";
  * For a button that opens a menu or popover, wrap it with `trigger`: `trigger={(button) => <PopoverTrigger render={button} />}`.
  */
 export function IconButton({ label, pressed, destructive, side = "top", size = "icon-sm", variant = "ghost", className, trigger, children, ...props }) {
-    const button = (_jsx(Button, { type: "button", variant: variant, size: size, "aria-label": label, "aria-pressed": pressed, className: cn("aria-pressed:bg-cms-accent aria-pressed:text-cms-accent-foreground", destructive && "text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive", className), ...props }));
+    const button = (_jsx(Button, { type: "button", variant: variant, size: size, "aria-label": label, "aria-pressed": pressed, className: cn("aria-pressed:bg-monti-accent aria-pressed:text-monti-accent-foreground", destructive && "text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive", className), ...props }));
     return (_jsxs(Tooltip, { children: [_jsx(TooltipTrigger, { render: trigger ? trigger(button) : button, children: children }), _jsx(TooltipContent, { side: side, children: label })] }));
 }

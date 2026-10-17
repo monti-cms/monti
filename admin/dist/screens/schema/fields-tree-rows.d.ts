@@ -4,8 +4,8 @@ import { type KindTone } from "./field-summary.js";
 import { type FieldPlace, type Obj } from "./schema-model.js";
 /** The colour of a kind token in the tree: one family per meaning, light and dark. */
 export declare const TONE: Record<KindTone, string>;
-export declare const REQUIRED = "text-[#B45309] cms-dark:text-[#FCD34D]";
-export declare const OPTION = "text-[#9A3412] cms-dark:text-[#FDBA74]";
+export declare const REQUIRED = "text-[#B45309] monti-dark:text-[#FCD34D]";
+export declare const OPTION = "text-[#9A3412] monti-dark:text-[#FDBA74]";
 export declare const columnsOf: (compact: boolean) => "grid grid-cols-[minmax(0,300px)_8.75rem_minmax(0,1fr)] items-center gap-x-4" | "grid grid-cols-[minmax(0,360px)_8.75rem] items-center gap-x-4";
 export interface TreeContext {
     readonly editing: CollectionEditing;

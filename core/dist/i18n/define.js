@@ -17,7 +17,7 @@ function hasFinalConsonant(word) {
     const code = trimmed.charCodeAt(trimmed.length - 1) - 0xac00;
     return code >= 0 && code <= 11171 && code % 28 !== 0;
 }
-/** Attaches a Korean particle that fits the word. for a word ending in a consonant it picks the first particle, otherwise the second. Used by function messages in the Korean dictionaries (`@monti-cms/core/client`); not exported from the main entry. */
+/** Attaches a Korean particle that fits the word. for a word ending in a consonant it picks the first particle, otherwise the second. Used by function messages in the Korean dictionaries (`@monti-cms/core/site`); not exported from the main entry. */
 export const josa = (word, withFinal, withoutFinal) => `${word}${hasFinalConsonant(word) ? withFinal : withoutFinal}`;
 /** Picks a message from the dictionary: site override -> that locale -> English -> key. */
 export function translate(bundle, language, key, vars, overrides) {

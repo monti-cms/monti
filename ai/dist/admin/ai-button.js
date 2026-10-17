@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { errorText, useSite, useTranslator } from "@monti-cms/admin";
 import { Button, Spinner } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ import { useAiAction } from "./use-ai-action.js";
  * ```
  */
 export function AiButton({ action, input, onResult, children, className, }) {
+    const site = useSite();
     const t = useTranslator(aiCommonMessages);
     const ai = useAiAction(action);
     const [running, setRunning] = useState(false);
@@ -28,7 +29,7 @@ export function AiButton({ action, input, onResult, children, className, }) {
                 onResult(await ai.run(input()));
             }
             catch (error) {
-                toast.error(error instanceof Error && error.message ? error.message : t("runFailed"));
+                toast.error(errorText(site, error, t("runFailed")));
             }
             finally {
                 setRunning(false);

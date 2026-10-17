@@ -15,7 +15,7 @@ export declare class PreviewErrorBoundary extends Component<ErrorBoundaryProps, 
     render(): string | number | bigint | boolean | import("react").JSX.Element | Iterable<ReactNode> | Promise<string | number | bigint | boolean | Iterable<ReactNode> | import("react").ReactElement<unknown, string | import("react").JSXElementConstructor<any>> | import("react").ReactPortal | null | undefined> | null | undefined;
 }
 /**
- * Loads and renders the fence preview the site provided (`CmsAdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
+ * Loads and renders the fence preview the site provided (`AdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
  */
 export declare function LazyFencePreview({ lang, label, value, className, emptyText, }: {
     lang: string;

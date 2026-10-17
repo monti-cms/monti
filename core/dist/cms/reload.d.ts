@@ -1,6 +1,6 @@
 import type { CmsConfig } from "../config/define.js";
 import type { CmsServerConfig } from "../server/define.js";
-import type { Cms, CreateCmsOptions } from "./types.js";
+import type { CmsHost, CreateCmsOptions } from "./types.js";
 /** The members of an instance that are not rebuilt with the site. */
 export type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema" | "decisions";
 /**
@@ -11,5 +11,5 @@ export type SchemaMembers = "schemaFile" | "forSchema" | "reloadSchema" | "decis
 export declare function withSchemaControls<Config extends CmsConfig>(parts: {
     readonly options: CreateCmsOptions<Config>;
     readonly server: CmsServerConfig;
-    readonly build: (config: Config, self: () => Cms<Config>) => Omit<Cms<Config>, SchemaMembers>;
-}): Cms<Config>;
+    readonly build: (config: Config, self: () => CmsHost<Config>) => Omit<CmsHost<Config>, SchemaMembers>;
+}): CmsHost<Config>;

@@ -40,11 +40,11 @@ const labelAttribute = {
 };
 const REFERENCE_CLASS = [
     // The number comes from the `data-footnote-number` attribute that the numbering plugin sets.
-    "mx-0.5 inline-block min-w-4 cursor-pointer select-none rounded bg-cms-accent px-1 text-center align-super",
-    "font-medium text-[0.7em] text-cms-accent-foreground leading-snug",
+    "mx-0.5 inline-block min-w-4 cursor-pointer select-none rounded bg-monti-accent px-1 text-center align-super",
+    "font-medium text-[0.7em] text-monti-accent-foreground leading-snug",
     "after:content-[attr(data-footnote-number)]",
-    "data-[footnote-missing]:bg-cms-destructive/15 data-[footnote-missing]:text-cms-destructive",
-    "[&.ProseMirror-selectednode]:ring-2 [&.ProseMirror-selectednode]:ring-cms-ring",
+    "data-[footnote-missing]:bg-monti-destructive/15 data-[footnote-missing]:text-monti-destructive",
+    "[&.ProseMirror-selectednode]:ring-2 [&.ProseMirror-selectednode]:ring-monti-ring",
 ].join(" ");
 /**
  * GFM footnote reference (`text[^label]`). A small superscript chip that is selected and deleted as a whole.

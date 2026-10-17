@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_MEDIA_LIMITS, SUPPORTED_FILE_MIME_TYPES, SUPPORTED_IMAGE_MIME_TYPES, } from "./media-types.js";
+import { DEFAULT_MEDIA_LIMITS, fileTypeByExtension, isImageType, MEDIA_TYPES, SUPPORTED_FILE_MIME_TYPES, SUPPORTED_IMAGE_MIME_TYPES, } from "./media-types.js";
 import { MAX_ENTRY_SEARCH_LIMIT } from "./store/types.js";
 export * from "./media-types.js";
 /**
@@ -163,57 +163,6 @@ export const updateFolderBodySchema = z.object({
     parentId: z.uuid().nullable().optional(),
     position: z.number().int().min(0).optional(),
 });
-const CODE_EXTENSIONS = [
-    "js",
-    "mjs",
-    "cjs",
-    "jsx",
-    "ts",
-    "tsx",
-    "py",
-    "java",
-    "kt",
-    "c",
-    "h",
-    "cpp",
-    "hpp",
-    "cs",
-    "go",
-    "rs",
-    "rb",
-    "php",
-    "swift",
-    "dart",
-    "scala",
-    "css",
-    "scss",
-    "sass",
-    "less",
-    "vue",
-    "svelte",
-    "sql",
-    "yml",
-    "yaml",
-    "toml",
-    "ini",
-    "env",
-    "log",
-    "diff",
-    "patch",
-    "gradle",
-    "dockerfile",
-];
-/** Extension → storage format. Source code is stored as a text file (browsers report code file MIME types inconsistently). */
-const FILE_TYPE_BY_EXTENSION = {
-    pdf: "application/pdf",
-    zip: "application/zip",
-    txt: "text/plain",
-    md: "text/markdown",
-    markdown: "text/markdown",
-    csv: "text/csv",
-    json: "application/json",
-    ...Object.fromEntries(CODE_EXTENSIONS.map((extension) => [extension, "text/plain"])),
-};
 export const mediaPatchBodySchema = z.object({
     /** Display name and download name. Not included in the storage address. */
     filename: z.string().trim().min(1).max(255).optional(),
@@ -313,16 +262,13 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }) {
     });
     /** Attached file format decided by the file name. `null` for an unaccepted format (including those outside the config `media.fileTypes`). */
     function fileTypeFor(filename) {
-        const extension = filename.toLowerCase().split(".").pop() ?? "";
-        const type = filename.includes(".") ? (FILE_TYPE_BY_EXTENSION[extension] ?? null) : null;
+        const type = fileTypeByExtension(filename);
         return type && ALLOWED_FILE_MIME_TYPES.includes(type) ? type : null;
     }
     /** `accept` of the file picker. */
-    const FILE_ACCEPT = Object.keys(FILE_TYPE_BY_EXTENSION)
-        .filter((extension) => ALLOWED_FILE_MIME_TYPES.includes(FILE_TYPE_BY_EXTENSION[extension]))
-        .map((extension) => `.${extension}`)
-        .join(",");
-    const isImageMime = (mimeType) => typeof mimeType === "string" && ALLOWED_IMAGE_MIME_TYPES.includes(mimeType);
+    const FILE_ACCEPT = ALLOWED_FILE_MIME_TYPES.flatMap((mime) => MEDIA_TYPES[mime].extensions.map((extension) => `.${extension}`)).join(",");
+    /** Policy: does this site accept the image type for upload (it is in `media.imageTypes`)? Rendering uses `isImageType` instead. */
+    const isAllowedImage = (mimeType) => typeof mimeType === "string" && ALLOWED_IMAGE_MIME_TYPES.includes(mimeType);
     const uploadFileSchema = z.object({
         mimeType: z
             .enum(SUPPORTED_IMAGE_MIME_TYPES)
@@ -364,7 +310,8 @@ export function createApi({ COLLECTIONS, LOCALES, media: MEDIA }) {
         MAX_FILE_BYTES,
         fileTypeFor,
         FILE_ACCEPT,
-        isImageMime,
+        isImageType,
+        isAllowedImage,
         mediaUploadBodySchema,
     };
 }

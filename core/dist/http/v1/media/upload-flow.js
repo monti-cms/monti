@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { isImageType } from "../../../core/media-types.js";
 import { CmsError } from "../error-handler.js";
 import { parseWith } from "../handler.js";
-import { attachmentDisposition, extensionFor, inspectUploadedFile, UPLOAD_URL_TTL_SECONDS } from "./media-files.js";
+import { attachmentDisposition, extensionFor, extensionOf, inspectUploadedFile, sizeNotice, typeNames, UPLOAD_URL_TTL_SECONDS, } from "./media-files.js";
 /** The server decides the allowed type, size and file key. `raw` is the request body of `POST /media/uploads`. */
 export async function prepareMediaUpload(cms, raw) {
     const input = raw;
@@ -11,24 +12,34 @@ export async function prepareMediaUpload(cms, raw) {
         ...cms.site.api.ALLOWED_FILE_MIME_TYPES,
     ];
     if (input?.mimeType !== undefined && !allowed.includes(input.mimeType)) {
-        throw new CmsError(`Allowed types: ${allowed.join(", ")}`, "unsupported_media_type");
+        throw new CmsError(`Allowed types: ${allowed.join(", ")}`, "unsupported_media_type", {
+            notice: { key: "media.upload.type", vars: { types: typeNames(allowed) } },
+        });
     }
     const originalMime = input?.original?.mimeType;
     if (originalMime !== undefined &&
         !cms.site.api.ALLOWED_IMAGE_MIME_TYPES.includes(originalMime)) {
-        throw new CmsError(`Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`, "unsupported_media_type");
+        throw new CmsError(`Allowed image types: ${cms.site.api.ALLOWED_IMAGE_MIME_TYPES.join(", ")}`, "unsupported_media_type", {
+            notice: {
+                key: "media.upload.original_type",
+                vars: { types: typeNames(cms.site.api.ALLOWED_IMAGE_MIME_TYPES) },
+            },
+        });
     }
     const body = parseWith(cms.site.api.mediaUploadBodySchema, raw);
-    const isFile = !cms.site.api.isImageMime(body.mimeType);
+    const isFile = !isImageType(body.mimeType);
     // An attachment's type must match its filename extension. This stops type swaps such as sending a code file as text.
     if (isFile && cms.site.api.fileTypeFor(body.filename) !== body.mimeType) {
-        throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type");
+        const extension = extensionOf(body.filename);
+        throw new CmsError(`File extension does not match ${body.mimeType}`, "unsupported_media_type", {
+            notice: extension ? { key: "media.upload.extension", vars: { extension } } : { key: "media.upload.no_extension" },
+        });
     }
     const originalFile = "original" in body ? body.original : undefined;
     const limit = isFile ? cms.site.api.MAX_FILE_BYTES : cms.site.api.MAX_MEDIA_BYTES;
     for (const file of [body, originalFile]) {
         if (file && file.byteSize > limit) {
-            throw new CmsError(`File size exceeds the ${limit / 1024 / 1024}MiB limit (${file.byteSize} bytes)`, "payload_too_large");
+            throw new CmsError(`File size exceeds the ${limit / 1024 / 1024}MiB limit (${file.byteSize} bytes)`, "payload_too_large", { notice: sizeNotice(limit) });
         }
     }
     const mediaId = randomUUID();
@@ -55,12 +66,14 @@ export async function prepareMediaUpload(cms, raw) {
     const presigned = await mediaStore.prepareUpload({
         stagingKey,
         contentType: body.mimeType,
+        byteSize: body.byteSize,
         expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
     });
     const original = originalFile && originalStagingKey
         ? await mediaStore.prepareUpload({
             stagingKey: originalStagingKey,
             contentType: originalFile.mimeType,
+            byteSize: originalFile.byteSize,
             expiresInSeconds: UPLOAD_URL_TTL_SECONDS,
         })
         : null;
@@ -98,9 +111,9 @@ export async function completeMediaUpload(cms, mediaId) {
     let file;
     let original = null;
     try {
-        file = await inspectUploadedFile(cms.site, mediaStore, media.stagingKey, media.mimeType);
+        file = await inspectUploadedFile(cms.site, mediaStore, media.stagingKey, media.mimeType, media.byteSize ?? undefined);
         if (media.original?.stagingKey)
-            original = await inspectUploadedFile(cms.site, mediaStore, media.original.stagingKey);
+            original = await inspectUploadedFile(cms.site, mediaStore, media.original.stagingKey, undefined, media.original.byteSize ?? undefined);
     }
     catch (error) {
         // If the file is not there yet, leave it as is so it can be retried. A file that fails inspection cannot be used.
@@ -115,9 +128,7 @@ export async function completeMediaUpload(cms, mediaId) {
         expectedEtag: file.head.etag,
         contentType: file.detected.mimeType,
         // Attachments download under their original name. Images display directly in the browser.
-        ...(cms.site.api.isImageMime(file.detected.mimeType)
-            ? {}
-            : { contentDisposition: attachmentDisposition(media.filename) }),
+        ...(isImageType(file.detected.mimeType) ? {} : { contentDisposition: attachmentDisposition(media.filename) }),
     });
     let originalKey = null;
     if (original && media.original?.stagingKey) {

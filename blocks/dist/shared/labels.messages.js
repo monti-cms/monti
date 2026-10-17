@@ -3,7 +3,7 @@ import { defineMessages } from "@monti-cms/core";
  * Fixed text that public page blocks show to readers. Chosen by the content language, not the admin language (`context.locale`).
  * Chart syntax error text lives in `chart/messages`.
  */
-export const publicLabelMessages = defineMessages("cms-blocks.public", {
+export const publicLabelMessages = defineMessages("monti-blocks.public", {
     en: {
         calloutNote: "Note",
         calloutTip: "Tip",

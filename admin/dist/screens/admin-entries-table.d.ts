@@ -1,5 +1,5 @@
-import { type AdminColumnSettings, type PageSize } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { type AdminColumnSettings, type PageSize } from "@monti-cms/core/site";
 import { type ListState } from "./list-state.js";
 import { type MenuAction } from "./shared/action-menu.js";
 import type { FolderActions } from "./shared/use-folder-actions.js";

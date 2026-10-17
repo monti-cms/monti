@@ -1,8 +1,8 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Folder as FolderIcon, FolderInput, FolderUp, Image as ImageIcon, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, SearchX, Trash2, Upload, } from "lucide-react";
+import { FileText, Folder as FolderIcon, FolderInput, FolderPlus, FolderUp, Image as ImageIcon, LayoutGrid, Link2, List, PanelRightOpen, RefreshCw, SearchX, Trash2, Upload, } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { errorText } from "../../api/client.js";
@@ -12,7 +12,7 @@ import { useCmsMutation } from "../../api/use-cms-mutation.js";
 import { prepareUpload, uploadAttachment, uploadImageFile } from "../../editor/upload-helper.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference.js";
-import { enumParam, pageParam, pageSizeParam, textParam, useUrlState, } from "../../lib/hooks/use-url-state.js";
+import { enumParam, pageParam, pageSizeParam, textParam, useUrlState } from "../../lib/hooks/use-url-state.js";
 import { cn } from "../../lib/utils/cn.js";
 import { useAdminRouter } from "../../router/index.js";
 import { Button } from "../../ui/button.js";
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Skeleton } from "../../ui/skeleton.js";
 import { Switch } from "../../ui/switch.js";
 import { ToggleGroup, ToggleGroupItem } from "../../ui/toggle-group.js";
+import { ActionContextMenu } from "../shared/action-menu.js";
 import { AdminShell, PageActions } from "../shared/admin-shell.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
 import { DateRangePicker } from "../shared/date-range-picker.js";
@@ -44,17 +45,13 @@ const kindOptions = (t) => [
     { value: "file", label: t("library.kind.file") },
 ];
 const uploadAccept = (site) => `${site.api.ALLOWED_IMAGE_MIME_TYPES.join(",")},${site.api.FILE_ACCEPT}`;
-const isImageFile = (site, file) => site.api.isImageMime(file.type);
+const isAllowedImageFile = (site, file) => site.api.isAllowedImage(file.type);
 const usedOptions = (t) => [
     { value: "all", label: t("library.used.all") },
     { value: "used", label: t("library.used.used") },
     { value: "unused", label: t("library.used.unused") },
 ];
 const VIEW_CODEC = enumCodec(["grid", "list"]);
-const descendantsParam = {
-    parse: (raw) => raw === "1",
-    serialize: (value) => (value ? "1" : null),
-};
 /** The library's filters and page live in the address, so a refresh keeps them and the address can be shared. */
 const LIBRARY_PARAMS = {
     page: pageParam,
@@ -65,7 +62,6 @@ const LIBRARY_PARAMS = {
     uploadedFrom: textParam,
     uploadedTo: textParam,
     folder: textParam,
-    descendants: descendantsParam,
 };
 /**
  * Media library. Grid and list views, file name search, filters for type, upload date and usage, newest upload first.
@@ -76,7 +72,7 @@ export function MediaLibrary() {
     const t = useTranslator(mediaMessages);
     const tc = useTranslator(commonMessages);
     const router = useAdminRouter();
-    const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder, descendants }, update] = useUrlState(LIBRARY_PARAMS);
+    const [{ page, pageSize, search, used, kind, uploadedFrom, uploadedTo, folder }, update] = useUrlState(LIBRARY_PARAMS);
     const queryClient = useQueryClient();
     const [searchText, setSearchText] = useDebouncedInput(search, (text) => update({ search: text }));
     const [selectedId, setSelectedId] = useState(null);
@@ -88,6 +84,7 @@ export function MediaLibrary() {
     // The view is a per-device choice (browser preference), unlike the filters, which belong to the address.
     const [view, setView] = usePreference("media-view", VIEW_CODEC, "grid");
     const fileInputRef = useRef(null);
+    const isExplorer = !search.trim() && used === "all" && kind === "all" && !uploadedFrom && !uploadedTo;
     // Keep the previous rows while conditions change (`keepPreviousData`) so placeholders do not flicker. Placeholders show only when there is no cache.
     const query = useMemo(() => {
         const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), used });
@@ -95,10 +92,11 @@ export function MediaLibrary() {
             params.set("search", search.trim());
         if (kind !== "all")
             params.set("kind", kind);
-        if (folder !== "all" && folder !== "") {
-            params.set("folderId", folder === "unfiled" ? "null" : folder);
-            if (descendants || search.trim())
-                params.set("includeDescendants", "true");
+        if (folder && folder !== "all") {
+            params.set("folderId", folder);
+        }
+        else if (isExplorer) {
+            params.set("folderId", "null");
         }
         const from = uploadedFrom && site.parseDateTimeInput(`${uploadedFrom}T00:00`);
         const to = uploadedTo && site.parseDateTimeInput(`${uploadedTo}T23:59`);
@@ -107,7 +105,7 @@ export function MediaLibrary() {
         if (to)
             params.set("uploadedTo", new Date(Date.parse(to) + 59_999).toISOString());
         return params.toString();
-    }, [page, pageSize, used, search, kind, folder, descendants, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
+    }, [page, pageSize, used, search, kind, folder, isExplorer, uploadedFrom, uploadedTo, site.parseDateTimeInput]);
     const mediaQuery = useQuery({
         queryKey: mediaKeys.list(query),
         queryFn: ({ signal }) => listMedia(site, query, signal),
@@ -173,11 +171,11 @@ export function MediaLibrary() {
     };
     const uploadMutation = useCmsMutation({
         fn: async ({ files, optimize }) => {
-            const targetFolderId = folder !== "all" && folder !== "" && folder !== "unfiled" ? folder : null;
+            const targetFolderId = folder !== "all" && folder !== "" ? folder : null;
             for (const [index, file] of files.entries()) {
                 const onProgress = (percent) => setUpload({ current: index + 1, total: files.length, percent });
                 setUpload({ current: index + 1, total: files.length, percent: 0 });
-                if (isImageFile(site, file)) {
+                if (isAllowedImageFile(site, file)) {
                     const prepared = await prepareUpload(site, file, { optimize });
                     await uploadImageFile(site, prepared, onProgress, { folderId: targetFolderId });
                 }
@@ -199,7 +197,7 @@ export function MediaLibrary() {
             return;
         const list = [];
         for (const file of Array.from(files)) {
-            if (isImageFile(site, file) || site.api.fileTypeFor(file.name))
+            if (isAllowedImageFile(site, file) || site.api.fileTypeFor(file.name))
                 list.push(file);
             else
                 toast.error(t("library.unsupportedType", { name: file.name }));
@@ -347,6 +345,27 @@ export function MediaLibrary() {
             onSelect: () => void requestDelete(media),
         },
     ];
+    const explorer = isExplorer
+        ? {
+            folders: folders.filter((f) => (f.parentId ?? null) === (folder === "all" || !folder ? null : folder)),
+            parent: folder && folder !== "all" ? (folders.find((f) => f.id === folder)?.parentId ?? "all") : null,
+        }
+        : null;
+    const hasFolders = Boolean(explorer && (explorer.folders.length > 0 || explorer.parent !== null));
+    const blankMenu = [
+        {
+            kind: "item",
+            label: folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder"),
+            icon: FolderPlus,
+            onSelect: () => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder),
+        },
+        {
+            kind: "item",
+            label: t("library.upload"),
+            icon: Upload,
+            onSelect: () => fileInputRef.current?.click(),
+        },
+    ];
     const viewProps = {
         items,
         selectedId,
@@ -354,6 +373,10 @@ export function MediaLibrary() {
         onSelect: (media) => void openDetail(media.id),
         menuFor: mediaMenu,
         onDeleteKey: (media) => void requestDelete(media),
+        explorer,
+        folders,
+        folderActions,
+        onSelectFolder: (f) => update({ folder: f, page: 1 }),
     };
     const filtered = search.trim() !== "" || used !== "all" || kind !== "all" || uploadedFrom !== "" || uploadedTo !== "";
     const clearFilters = () => update({ search: "", used: "all", kind: "all", uploadedFrom: "", uploadedTo: "" });
@@ -364,22 +387,20 @@ export function MediaLibrary() {
             folderNav: {
                 collection: "media",
                 currentFolder: folder || "all",
-                includeDescendants: descendants,
                 folders,
                 folderActions,
                 onSelectFolder: (f) => update({ folder: f ?? "all", page: 1 }),
-                onIncludeDescendantsChange: (includeDescendants) => update({ descendants: includeDescendants, page: 1 }),
                 onDropEntries,
             },
-        }, children: [_jsx(PageActions, { children: _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Label, { className: "font-normal text-cms-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: optimize, onCheckedChange: (checked) => setOptimize(checked === true) }), t("library.optimize")] }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, hidden: true, accept: uploadAccept(site), onChange: (event) => void handleFiles(event.target.files) }), _jsxs(Button, { type: "button", size: "sm", disabled: upload !== null, onClick: () => fileInputRef.current?.click(), children: [_jsx(Upload, { "aria-hidden": true }), upload
+        }, children: [_jsx(PageActions, { children: _jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [_jsxs(Label, { className: "font-normal text-monti-muted-foreground text-xs", children: [_jsx(Switch, { size: "sm", checked: optimize, onCheckedChange: (checked) => setOptimize(checked === true) }), t("library.optimize")] }), _jsx("input", { ref: fileInputRef, type: "file", multiple: true, hidden: true, accept: uploadAccept(site), onChange: (event) => void handleFiles(event.target.files) }), _jsxs(Button, { type: "button", size: "sm", disabled: upload !== null, onClick: () => fileInputRef.current?.click(), children: [_jsx(Upload, { "aria-hidden": true }), upload
                                     ? t("library.uploadProgress", { current: upload.current, total: upload.total, percent: upload.percent })
-                                    : t("library.upload")] }), _jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: () => cleanupMutation.mutate(), children: t("library.cleanup") }), _jsx(IconButton, { label: tc("refresh"), variant: "outline", onClick: () => void mediaQuery.refetch(), children: _jsx(RefreshCw, { className: cn(mediaQuery.isFetching && "animate-spin"), "aria-hidden": true }) })] }) }), _jsxs("div", { className: "flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6", children: [_jsx(Input, { type: "search", "aria-label": t("library.search"), value: searchText, placeholder: t("library.search"), onChange: (event) => setSearchText(event.target.value), className: "h-8 w-56" }), _jsxs(Select, { value: kind, items: kindOptions(t), onValueChange: (value) => value && update({ kind: value }), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.kindLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: kindOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsxs(Select, { value: used, items: usedOptions(t), onValueChange: (value) => value && update({ used: value }), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.usedLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: usedOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsx(DateRangePicker, { label: t("library.uploadedDate"), from: uploadedFrom, to: uploadedTo, onChange: (from, to) => update({ uploadedFrom: from, uploadedTo: to }) }), _jsxs(ToggleGroup, { "aria-label": t("library.view"), variant: "outline", size: "sm", spacing: 0, value: [view], onValueChange: (next) => {
+                                    : t("library.upload")] }), _jsxs(Button, { type: "button", size: "sm", variant: "outline", onClick: () => folderActions.requestCreate(folder === "all" || folder === "" ? null : folder), children: [_jsx(FolderPlus, { "aria-hidden": true }), folder === "all" || folder === "" ? tc("addFolder") : tc("addSubfolder")] }), _jsx(Button, { type: "button", size: "sm", variant: "outline", onClick: () => cleanupMutation.mutate(), children: t("library.cleanup") }), _jsx(IconButton, { label: tc("refresh"), variant: "outline", onClick: () => void mediaQuery.refetch(), children: _jsx(RefreshCw, { className: cn(mediaQuery.isFetching && "animate-spin"), "aria-hidden": true }) })] }) }), _jsxs("div", { className: "flex flex-wrap items-center gap-2 border-b px-4 py-3 lg:px-6", children: [_jsx(Input, { type: "search", "aria-label": t("library.search"), value: searchText, placeholder: t("library.search"), onChange: (event) => setSearchText(event.target.value), className: "h-8 w-56" }), _jsxs(Select, { value: kind, items: kindOptions(t), onValueChange: (value) => value && update({ kind: value }), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.kindLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: kindOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsxs(Select, { value: used, items: usedOptions(t), onValueChange: (value) => value && update({ used: value }), children: [_jsx(SelectTrigger, { size: "sm", "aria-label": t("library.usedLabel"), children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: usedOptions(t).map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), _jsx(DateRangePicker, { label: t("library.uploadedDate"), from: uploadedFrom, to: uploadedTo, onChange: (from, to) => update({ uploadedFrom: from, uploadedTo: to }) }), _jsxs(ToggleGroup, { "aria-label": t("library.view"), variant: "outline", size: "sm", spacing: 0, value: [view], onValueChange: (next) => {
                             const picked = next[0];
                             if (picked === "grid" || picked === "list")
                                 setView(picked);
-                        }, className: "ml-auto", children: [_jsx(ToggleGroupItem, { value: "grid", "aria-label": t("library.viewGrid"), children: _jsx(LayoutGrid, { "aria-hidden": true }) }), _jsx(ToggleGroupItem, { value: "list", "aria-label": t("library.viewList"), children: _jsx(List, { "aria-hidden": true }) })] })] }), _jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-y-auto p-4 lg:p-6", children: [loadError && (_jsx(LoadErrorAlert, { message: loadError, onRetry: () => void mediaQuery.refetch(), className: "mb-4" })), items.length === 0 ? (loadError ? null : mediaQuery.isPending ? (_jsx("ul", { "aria-hidden": true, className: "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6", children: Array.from({ length: 6 }, (_, index) => (_jsx("li", { children: _jsx(Skeleton, { className: "aspect-square w-full rounded-lg" }) }, index))) })) : filtered ? (_jsx(EmptyState, { icon: SearchX, title: t("library.emptyNoMatch"), description: t("library.emptyNoMatchHint"), action: { label: t("library.clearFilters"), onClick: clearFilters } })) : (_jsx(EmptyState, { icon: ImageIcon, title: t("library.emptyYet"), description: t("library.emptyYetHint"), action: {
+                        }, className: "ml-auto", children: [_jsx(ToggleGroupItem, { value: "grid", "aria-label": t("library.viewGrid"), children: _jsx(LayoutGrid, { "aria-hidden": true }) }), _jsx(ToggleGroupItem, { value: "list", "aria-label": t("library.viewList"), children: _jsx(List, { "aria-hidden": true }) })] })] }), _jsxs("div", { className: "relative flex min-h-0 flex-1 overflow-hidden", children: [_jsxs("div", { className: "flex min-w-0 flex-1 flex-col overflow-hidden", children: [_jsxs("div", { className: cn("flex min-h-0 flex-1 flex-col overflow-y-auto", (items.length === 0 && !hasFolders) || view === "grid" ? "p-4 lg:p-6" : "p-0"), children: [loadError && (_jsx(LoadErrorAlert, { message: loadError, onRetry: () => void mediaQuery.refetch(), className: (items.length === 0 && !hasFolders) || view === "grid" ? "mb-4" : "m-4" })), items.length === 0 && !hasFolders ? (loadError ? null : mediaQuery.isPending ? (_jsx("ul", { "aria-hidden": true, className: "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6", children: Array.from({ length: 6 }, (_, index) => (_jsx("li", { children: _jsx(Skeleton, { className: "aspect-square w-full rounded-lg" }) }, index))) })) : filtered ? (_jsx(EmptyState, { icon: SearchX, title: t("library.emptyNoMatch"), description: t("library.emptyNoMatchHint"), action: { label: t("library.clearFilters"), onClick: clearFilters } })) : (_jsx(EmptyState, { icon: ImageIcon, title: t("library.emptyYet"), description: t("library.emptyYetHint"), action: {
                                             label: t("library.upload"),
                                             icon: Upload,
                                             onClick: () => fileInputRef.current?.click(),
-                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps }))] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, folders: folders, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults }), onRename: (filename) => renameMutation.mutateAsync({ media: selected, filename }), onMoveFolder: (targetFolderId) => moveMediaToFolder(selected, targetFolderId), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog, guardDialog, folderActions.dialogs] }));
+                                        } }))) : view === "grid" ? (_jsx(MediaGrid, { ...viewProps })) : (_jsx(MediaTable, { ...viewProps })), _jsx(ActionContextMenu, { actions: blankMenu, trigger: _jsx("div", { className: "min-h-16 flex-1", "aria-hidden": true }) })] }), _jsx(ListPagination, { total: total, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) })] }), selected && (_jsx(DockedPanel, { resize: MEDIA_PANEL_RESIZE, children: _jsx(MediaDetailPanel, { media: selected, folders: folders, onClose: () => void openDetail(null), onSaveDefaults: (defaults) => saveDefaultsMutation.mutateAsync({ media: selected, defaults }), onRename: (filename) => renameMutation.mutateAsync({ media: selected, filename }), onMoveFolder: (targetFolderId) => moveMediaToFolder(selected, targetFolderId), onRequestDelete: () => void requestDelete(selected), onDirtyChange: setDetailDirty }, selected.id) }))] }), dialog, guardDialog, folderActions.dialogs] }));
 }

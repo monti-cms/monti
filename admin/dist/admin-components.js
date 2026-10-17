@@ -6,7 +6,7 @@ export { SOURCE_ERROR_ID } from "./source-error-id.js";
 /** Whether the registered value is input parts (a plain object, not a component). */
 export const isFieldInputParts = (entry) => typeof entry === "object" && entry !== null && !("$$typeof" in entry);
 const CmsAdminComponentsContext = createContext({});
-export function CmsAdminComponentsProvider({ components, children, }) {
+export function AdminComponentsProvider({ components, children, }) {
     const parent = useContext(CmsAdminComponentsContext);
     const value = useMemo(() => ({
         fencePreviews: { ...parent.fencePreviews, ...components.fencePreviews },
@@ -23,22 +23,22 @@ export function CmsAdminComponentsProvider({ components, children, }) {
     }), [parent, components]);
     return _jsx(CmsAdminComponentsContext.Provider, { value: value, children: children });
 }
-export const useCmsAdminComponents = () => useContext(CmsAdminComponentsContext);
+export const useAdminComponents = () => useContext(CmsAdminComponentsContext);
 /**
  * The browser side of a format by name (`mdx`), or `undefined` when no plugin registered it. The format is a plugin's: code that needs a notation (AI, the
  * source panel) asks for it here instead of importing a parser.
  */
-export const useFormat = (name) => useCmsAdminComponents().formats?.[name];
+export const useFormat = (name) => useAdminComponents().formats?.[name];
 /** The format of the registered source panel (the notation a body is shown as text in), or `undefined` when no panel is registered. */
 export function useSourceFormat() {
-    const { sourcePanels, formats } = useCmsAdminComponents();
+    const { sourcePanels, formats } = useAdminComponents();
     const name = sourcePanels?.[0]?.format;
     return name === undefined ? undefined : formats?.[name];
 }
 const NO_CHECKERS = [];
 /** Calls all registered edit screen extensions and text check screens and merges them into one. */
 export function useEditorExtensions(context) {
-    const { editorExtensions = [], textCheckers = NO_CHECKERS } = useCmsAdminComponents();
+    const { editorExtensions = [], textCheckers = NO_CHECKERS } = useAdminComponents();
     // The extension list stays the same while the admin UI is shown. Every render calls the same number of hooks in the same order.
     const results = [
         ...editorExtensions.map((extension) => extension(context)),

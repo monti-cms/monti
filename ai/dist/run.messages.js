@@ -1,5 +1,5 @@
 import { defineMessages } from "@monti-cms/core";
-import { josa } from "@monti-cms/core/client";
+import { josa } from "@monti-cms/core/site";
 /** Error and notice messages for AI runs (runner, result checks, run API, image reading). */
 export const runMessages = defineMessages("cms-ai.run", {
     en: {
@@ -13,6 +13,8 @@ export const runMessages = defineMessages("cms-ai.run", {
         failedCheck: "The result didn't pass the {label} check.",
         failedChecks: "The result didn't pass the checks: {reason}",
         emptyResult: "The result is empty.",
+        unreadableMdx: "The body the AI wrote can't be read as a document.",
+        "retry.fix": "Try again, or choose another model.",
         notStreamable: "This action can't be streamed.",
         streamOneInput: "Streaming takes only one input.",
         disabled: "This AI action is turned off.",
@@ -35,6 +37,8 @@ export const runMessages = defineMessages("cms-ai.run", {
         failedCheck: "결과가 {label} 검사를 통과하지 못했습니다.",
         failedChecks: "결과가 검사를 통과하지 못했습니다: {reason}",
         emptyResult: "빈 결과입니다.",
+        unreadableMdx: "AI가 쓴 본문을 문서로 읽을 수 없습니다.",
+        "retry.fix": "다시 시도하거나 다른 모델을 고르세요.",
         notStreamable: "흘려받을 수 없는 기능입니다.",
         streamOneInput: "흘려받기는 입력 하나만 보낸다.",
         disabled: "꺼진 AI 기능입니다.",

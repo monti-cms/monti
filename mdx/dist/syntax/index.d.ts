@@ -8,7 +8,7 @@
  *
  * @experimental This entry point may change in a minor release.
  */
-export type { BlockDefinition } from "@monti-cms/core/client";
+export type { BlockDefinition } from "@monti-cms/core";
 export type { CmsMark, CmsNode } from "@monti-cms/core/document";
 /** The comment syntax of a code fence language and the annotation comment Monti writes in it (`// @line plus`), for extensions that read or write code comments. */
 export { type CommentSyntax, formatAnnotationComment, resolveCommentSyntax, } from "@monti-cms/core/notation";

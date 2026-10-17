@@ -56,15 +56,14 @@ export async function listActions(site, store) {
 export function actionWithEdits(site, key, edited, definition = definitionOf(site, key), snippetKeys = aiRegistryOf(site).snippetKeys) {
     const t = site.createTranslator(actionsMessages);
     const parsed = aiActionOverrideSchemaOf(site.createTranslator(coreMessages)).safeParse(edited && typeof edited === "object"
-        ? Object.fromEntries(EDITABLE_KEYS.filter((name) => name in edited).map((name) => [
-            name,
-            edited[name],
-        ]))
+        ? Object.fromEntries(EDITABLE_KEYS.filter((name) => name in edited && (name !== "label" || edited[name] !== "")).map((name) => [name, edited[name]]))
         : {});
     if (!parsed.success) {
         const issue = parsed.error.issues[0];
-        const where = issue?.path.length ? `${issue.path.join(".")}: ` : "";
-        throw new AiError("invalid_input", `${where}${issue?.message ?? t("invalidValue")}`);
+        throw new AiError("invalid_input", issue?.message ?? t("invalidValue"), {
+            detail: issue?.path.length ? issue.path.join(".") : undefined,
+            issues: parsed.error.issues,
+        });
     }
     const unknown = parsed.data.prompt ? unknownPlaceholders(parsed.data.prompt, definition.input, snippetKeys) : [];
     if (unknown.length > 0) {

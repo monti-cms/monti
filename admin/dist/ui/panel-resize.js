@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useCallback, useEffect, useRef, useState, } from "react";
 import { positiveNumberCodec, usePreference } from "../lib/hooks/use-preference.js";
 import { cn } from "../lib/utils/cn.js";
@@ -101,5 +101,5 @@ export function PanelResizeHandle({ resize, className }) {
         event.preventDefault();
         resize.setWidth(next, true);
     };
-    return (_jsx("div", { role: "separator", "aria-orientation": "vertical", "aria-label": t("panel.resize"), "aria-valuenow": resize.width, "aria-valuemin": resize.min, "aria-valuemax": resize.max, tabIndex: 0, "data-slot": "panel-resize-handle", className: cn("absolute inset-y-0 left-0 z-30 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-cms-ring/40 focus-visible:bg-cms-ring/60 focus-visible:outline-none active:bg-cms-ring/60", className), onPointerDown: onPointerDown, onPointerMove: onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd, onKeyDown: onKeyDown, onDoubleClick: resize.reset }));
+    return (_jsx("div", { role: "separator", "aria-orientation": "vertical", "aria-label": t("panel.resize"), "aria-valuenow": resize.width, "aria-valuemin": resize.min, "aria-valuemax": resize.max, tabIndex: 0, "data-slot": "panel-resize-handle", className: cn("absolute inset-y-0 left-0 z-30 w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-monti-ring/40 focus-visible:bg-monti-ring/60 focus-visible:outline-none active:bg-monti-ring/60", className), onPointerDown: onPointerDown, onPointerMove: onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd, onKeyDown: onKeyDown, onDoubleClick: resize.reset }));
 }

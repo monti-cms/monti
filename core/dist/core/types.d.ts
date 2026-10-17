@@ -5,7 +5,8 @@ import type { MetadataOf, PublishedMetadataOf } from "../schema/collection.js";
 import type { RecordTranslations } from "../schema/derive.js";
 import type { Collection } from "./collections.js";
 import type { ErrorCode } from "./error-codes.js";
-import { CmsError } from "./store/errors.js";
+import { CmsError, type NoticeRef } from "./store/errors.js";
+import type { EntryStatus } from "./store/types.js";
 import type { TranslationState } from "./translation/state.js";
 /**
  * CMS domain types. Shared by the repository implementation, service and HTTP layers; depends on none of them.
@@ -200,12 +201,16 @@ export type WorkingCopy = {
     readonly doc: StoredDocument;
     readonly version: number;
     readonly folderId: string | null;
+    /** Lifecycle status of the entry (`draft`, `published`, `archived`, `trashed`). */
+    readonly status: EntryStatus;
     /** Content locale and translation group ID. For a source, the group ID is its own ID. */
     readonly locale?: string;
     readonly translationGroupId?: string;
 };
 /** A request the service refuses; the issues say what is wrong with it. A {@link CmsError}, so the HTTP layer answers it like any other. */
 export declare class ServiceError extends CmsError {
-    constructor(code: ErrorCode, issues?: readonly Issue[], message?: string);
+    constructor(code: ErrorCode, issues?: readonly Issue[], message?: string, options?: {
+        readonly notice?: NoticeRef;
+    });
     readonly issues?: readonly Issue[];
 }

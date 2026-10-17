@@ -1,4 +1,3 @@
-export { collapsibleBlock } from "./definition.js";
 /**
  * Collapsible block (`:::collapsible`). An area that expands when its title is clicked. Add it to the site config's `plugins`.
  *
@@ -8,7 +7,7 @@ export { collapsibleBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const collapsible: () => import("@monti-cms/core").CmsPlugin<"collapsible", Record<string, never>, readonly [{
+export declare const collapsible: () => import("@monti-cms/core").Plugin<"collapsible", Record<string, never>, readonly [{
     readonly name: "collapsible";
     readonly label: string;
     readonly description: string;
@@ -43,5 +42,5 @@ export declare const collapsible: () => import("@monti-cms/core").CmsPlugin<"col
         };
     };
 }]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

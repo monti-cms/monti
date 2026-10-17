@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import { type QueryKey } from "@tanstack/react-query";
 /** An optimistic change: `update` rewrites every cached query under `queryKey`, and the old values come back if the call fails. */
 export interface OptimisticUpdate<TData, TVariables> {

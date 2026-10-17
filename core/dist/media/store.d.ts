@@ -1,7 +1,5 @@
-import { type AllowedFileMime, type AllowedImageMimeType as AllowedImageMime } from "../core/media-types.js";
-export type { AllowedImageMime };
-/** Formats the store accepts: images and attachments. */
-export type AllowedMediaMime = AllowedImageMime | AllowedFileMime;
+import { type AllowedImageMimeType as AllowedImageMime, type AllowedMediaMime } from "../core/media-types.js";
+export type { AllowedImageMime, AllowedMediaMime };
 /**
  * The store accepts every format the core can detect. The formats and sizes narrowed by the site config (`media`) are checked by the upload API.
  * The store is created by the server config (`cms.server.ts`), so it does not read the site config.
@@ -18,6 +16,8 @@ export interface PrepareUploadInput {
     stagingKey: string;
     contentType: AllowedMediaMime;
     expiresInSeconds: number;
+    /** Declared size. Implementations bind it to the signed upload so a larger body is refused by storage. */
+    byteSize: number;
     checksumSha256?: string;
 }
 export interface PrepareUploadOutput {

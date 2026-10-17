@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 export type EntryStatus = "draft" | "published" | "archived" | "trashed";
 /** Display name of each status. */
 export declare const statusLabels: (site: Pick<Site, "createTranslator">) => Record<EntryStatus, string>;

@@ -1,7 +1,7 @@
 import { checkPathPattern, patternsOverlap } from "../../core/path-pattern.js";
 import { DEFAULT_TITLE_FIELD, TITLE_ROLE } from "../../schema/fields.js";
 import { findTitleField, valueFieldsOf } from "../../schema/walk.js";
-import { NAME_PATTERN } from "../rules.js";
+import { NAME_PATTERN, RESERVED_COLLECTION_NAMES } from "../rules.js";
 import { checkField, checkRole, checkTabName } from "./fields.js";
 import { pathOf } from "./issue.js";
 /** The collections of a config, checked against each other. `defineSite` runs it for every source. */
@@ -27,6 +27,9 @@ export function checkCollection(list, name, schema, collections) {
     const base = pathOf("collections", name);
     if (!NAME_PATTERN.test(name)) {
         list.add(base, "name", `"${name}" is not a collection name: letters, digits, "_" and "-", starting with a letter or "_"`);
+    }
+    else if (RESERVED_COLLECTION_NAMES.includes(name)) {
+        list.add(base, "name", `"${name}" is reserved for the media library; give the collection another name`);
     }
     const entries = Object.entries(schema.fields);
     const env = {

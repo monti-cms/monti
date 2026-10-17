@@ -1,14 +1,15 @@
-import { type BlockDefinition, type Site } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
 import type { CmsJsonValue } from "@monti-cms/core/document";
+import { type Site } from "@monti-cms/core/site";
 import { Mark } from "@tiptap/core";
 /**
  * Editor display of added text styles (blocks from extensions or a site config's `syntax.kind: "text"` blocks). The core editor does not know style names and builds
- * Tiptap marks from block definitions. The look (classes, styles) and tools (formatting tools, bubble, slash menu) are provided by extensions through `CmsAdminComponentsProvider`'s
+ * Tiptap marks from block definitions. The look (classes, styles) and tools (formatting tools, bubble, slash menu) are provided by extensions through `AdminComponentsProvider`'s
  * `marks` (block name → `EditorMarkExtension`).
  *
  * - A mark name is `cms` + the Pascal-case block name (`tooltip` → `cmsTooltip`, `code-ref` → `cmsCodeRef`).
  * - Attributes are the definition's attributes. In the stored document (CmsNode), the mark name is the block name and the attributes are the same.
- * - In HTML it is drawn as `span[data-cms-mark="block name"]` with `data-mark-<attribute>` for each attribute (paste reads this shape too).
+ * - In HTML it is drawn as `span[data-monti-mark="block name"]` with `data-mark-<attribute>` for each attribute (paste reads this shape too).
  */
 export type MarkAttrs = Readonly<Record<string, unknown>>;
 /** Mark look that an extension changes. */

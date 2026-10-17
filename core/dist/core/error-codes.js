@@ -30,6 +30,8 @@ export const ERROR_STATUS = {
     has_translations: 409,
     source_trashed: 409,
     schema_conflict: 409,
+    /** A schema save would leave stored entries worse off and the request did not acknowledge those changes. */
+    schema_unacknowledged: 409,
     upload_incomplete: 409,
     /** A plugin cannot do what was asked yet (a missing token, a branch that does not exist); its message says how to fix it. */
     precondition_failed: 409,

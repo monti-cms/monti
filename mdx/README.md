@@ -58,7 +58,7 @@ A site without `mdx()` accepts documents (`doc`) only: a text write fails with `
 | `@monti-cms/mdx/format` | server code, tests | `mdxFormat`, `createMdxFormat({ syntax })`, and the parse and write API: `analyze`, `serialize`, `toDocument`, `bodyFromMdx`, `bodyDocument`, `documentToMdx`, `toStoredDocument`, `fromStoredDocument`, `parseMdxAst`, `readableMdx`, `compareMdxStructure`, `configuredSyntax`, `remarkFenceBlocksToMdx`, ... |
 | `@monti-cms/mdx/render` | public pages (server components) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | the admin (loaded by the plugin) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, and the admin provider that registers them |
-| `@monti-cms/mdx/server` | the plugin | `createServerMdxFormat`: the `mdx` format as the server registers it |
+| `@monti-cms/mdx/server` | the plugin | the server side of `mdx()` (its default export registers the `mdx` format) |
 | `@monti-cms/mdx/testing` | tests | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)` and re-exports of the pipeline functions |
 
 ## The `mdx` format
@@ -96,7 +96,7 @@ The site (`cms.site`) decides which blocks the text may use, and the `syntax` op
 
 ## The source panel
 
-The `mdx()` plugin registers, through its admin provider, the **source panel** and the browser side of the `mdx` format in the admin (`useCmsAdminComponents().sourcePanels`, `useFormat("mdx")`). The toggle at the end of the editor toolbar switches a body between the visual editor and the MDX text. The text is parsed in the browser as you type and the document it reads as is what is saved; a text that does not read is kept as an `unparsed` document with the findings shown beside it.
+The `mdx()` plugin registers, through its admin provider, the **source panel** and the browser side of the `mdx` format in the admin (`useAdminComponents().sourcePanels`, `useFormat("mdx")`). The toggle at the end of the editor toolbar switches a body between the visual editor and the MDX text. The text is parsed in the browser as you type and the document it reads as is what is saved; a text that does not read is kept as an `unparsed` document with the findings shown beside it.
 Without `mdx()` in `plugins`, there is no source toggle. The panel's messages are in the namespace `cms-mdx.source`. Recovery copies saved by a browser before documents existed (the body as MDX in `form.mdx`) are kept as an `unparsed` document, and the panel reads them again.
 
 ## Syntax extensions

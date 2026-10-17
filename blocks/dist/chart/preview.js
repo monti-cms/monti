@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useTranslator } from "@monti-cms/admin";
 import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
 import { AlertOctagon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, Pie, PieChart, XAxis, YAxis, } from "recharts";
@@ -21,7 +21,7 @@ function ChartErrorCard({ errors }) {
     return (_jsx("div", { className: "not-prose my-6", children: _jsxs(Alert, { variant: "destructive", children: [_jsx(AlertOctagon, {}), _jsx(AlertTitle, { children: t("error.title") }), _jsx(AlertDescription, { children: _jsx("ul", { className: "ml-4 list-disc space-y-1", children: errors.map((error) => (_jsx("li", { children: chartErrorLine(error, t) }, `${error.line}-${error.code}-${JSON.stringify(error.values ?? {})}`))) }) })] }) }));
 }
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart };
-const VALUE_LABEL_CLASS = "fill-cms-foreground font-medium text-[11px]";
+const VALUE_LABEL_CLASS = "fill-monti-foreground font-medium text-[11px]";
 /** Value labels (`show values`). */
 const valueLabel = (spec) => spec.options.showValues ? (_jsx(LabelList, { position: "top", offset: spec.type === "bar" ? 8 : 10, formatter: formatChartValue, className: VALUE_LABEL_CLASS })) : null;
 const renderSeries = (spec) => spec.series.map((series) => {

@@ -1,4 +1,5 @@
 import { describeNodeEnv } from "../../core/env.js";
+import { brandErrorClass } from "../../core/error-brand.js";
 import { problemText } from "../../core/problem.js";
 import { isLoopbackRequest, productionLikeEnvironment } from "./dev-bypass.js";
 export class AuthError extends Error {
@@ -9,6 +10,7 @@ export class AuthError extends Error {
         this.name = "AuthError";
     }
 }
+brandErrorClass(AuthError, "AuthError");
 /** Whether a GitHub numeric ID is in the admin list. Ignores leading zeros and rejects non-numeric values. */
 export function isAllowedAdminId(githubId, adminIds) {
     const target = String(githubId ?? "").trim();

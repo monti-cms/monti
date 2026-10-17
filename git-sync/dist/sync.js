@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { githubClientFactory } from "./github/rest.js";
 import { tokenKeyOf } from "./keys.js";
-import { DEFAULT_DEBOUNCE_MS, GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT, resolveTargets, } from "./options.js";
+import { DEFAULT_DEBOUNCE_MS, GIT_SYNC_PLUGIN, GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT, resolveTargets, } from "./options.js";
 import { createPathPattern } from "./path-pattern.js";
 import { serverMessages } from "./server.messages.js";
 import { createState } from "./state.js";
@@ -33,7 +33,7 @@ const LOCK_POLL_MS = 150;
 export const APPLYING_WINDOW_MS = 60 * 1000;
 /** The options of the plugin as the site config gives them. */
 export function readOptions(cms) {
-    const options = cms.site.getPluginOptions(GIT_SYNC_PLUGIN_NAME);
+    const options = cms.site.pluginOptions(GIT_SYNC_PLUGIN);
     if (!options) {
         throw new GitSyncError(cms.site.createTranslator(serverMessages)("pluginMissing"));
     }
@@ -42,7 +42,7 @@ export function readOptions(cms) {
 export function createSyncContext(cms, deps = {}) {
     const options = readOptions(cms);
     const targets = resolveTargets(options);
-    const state = createState(cms.storage(GIT_SYNC_PLUGIN_NAME));
+    const state = createState(cms.plugin(GIT_SYNC_PLUGIN_NAME).storage);
     const now = deps.now ?? Date.now;
     const sleep = deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     const factory = options.client ?? githubClientFactory;
@@ -63,7 +63,7 @@ export function createSyncContext(cms, deps = {}) {
             return found;
         },
         client: async (target) => {
-            const token = await cms.apiKeys.slot(GIT_SYNC_PLUGIN_NAME, GIT_SYNC_TOKEN_SLOT).read();
+            const token = await cms.plugin(GIT_SYNC_PLUGIN_NAME).key(GIT_SYNC_TOKEN_SLOT).read();
             if (!token) {
                 // A key that is there but cannot be read is another problem than a key that was never chosen (or was deleted).
                 const unreadable = (await tokenKeyOf(cms)) !== null;

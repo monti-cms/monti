@@ -24,9 +24,9 @@ export function CmsImage({ mediaId, src, alt, width, align, caption, decorative,
     const captionText = caption?.trim();
     const alignName = align && ALIGNS.has(align) ? align : "center";
     if (decorative && !ok)
-        return captionText ? _jsx("p", { className: "cms-image-caption", children: captionText }) : null;
+        return captionText ? _jsx("p", { className: "monti-image-caption", children: captionText }) : null;
     if (!ok) {
-        return (_jsxs("figure", { className: "cms-image cms-image-align-center", children: [_jsx("div", { role: "img", "aria-label": unavailableLabel, className: "cms-image-unavailable", children: unavailableLabel }), captionText ? _jsx("figcaption", { className: "cms-image-caption", children: captionText }) : null] }));
+        return (_jsxs("figure", { className: "monti-image monti-image-align-center", children: [_jsx("div", { role: "img", "aria-label": unavailableLabel, className: "monti-image-unavailable", children: unavailableLabel }), captionText ? _jsx("figcaption", { className: "monti-image-caption", children: captionText }) : null] }));
     }
-    return (_jsxs("figure", { className: `cms-image cms-image-align-${alignName}`, children: [_jsx(CmsImageView, { src: ok.url, alt: alt ?? "", decorative: decorative, style: validImageWidth(width) ? { width: validImageWidth(width) } : undefined, crop: crop, rotate: rotate, title: title, intrinsicSize: ok.width && ok.height ? { width: ok.width, height: ok.height } : undefined, unavailableLabel: unavailableLabel }), captionText ? _jsx("figcaption", { className: "cms-image-caption", children: captionText }) : null] }));
+    return (_jsxs("figure", { className: `monti-image monti-image-align-${alignName}`, children: [_jsx(CmsImageView, { src: ok.url, alt: alt ?? "", decorative: decorative, style: validImageWidth(width) ? { width: validImageWidth(width) } : undefined, crop: crop, rotate: rotate, title: title, intrinsicSize: ok.width && ok.height ? { width: ok.width, height: ok.height } : undefined, unavailableLabel: unavailableLabel }), captionText ? _jsx("figcaption", { className: "monti-image-caption", children: captionText }) : null] }));
 }

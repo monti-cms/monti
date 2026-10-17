@@ -23,11 +23,11 @@ export function CmsImageView({ src, alt, decorative, style, crop, rotate, title,
         aspectRatio: natural ? natural.width / natural.height : null,
     });
     if (failed) {
-        return (_jsx("div", { role: "img", "aria-label": decorative ? undefined : unavailableLabel, className: "cms-image-unavailable", children: decorative ? null : unavailableLabel }));
+        return (_jsx("div", { role: "img", "aria-label": decorative ? undefined : unavailableLabel, className: "monti-image-unavailable", children: decorative ? null : unavailableLabel }));
     }
     if (transform.isTransformed) {
         const intrinsic = intrinsicDisplayWidth(transform, natural);
-        return (_jsx("div", { className: "cms-image-transform", style: {
+        return (_jsx("div", { className: "monti-image-transform", style: {
                 ...style,
                 width: style?.width ?? (intrinsic ? `${intrinsic}px` : "100%"),
                 maxWidth: "100%",
@@ -37,5 +37,5 @@ export function CmsImageView({ src, alt, decorative, style, crop, rotate, title,
                         readNaturalSize(image);
                 }, src: src, style: transform.imageStyle, title: title }) }));
     }
-    return (_jsx("img", { alt: decorative ? "" : alt, className: "cms-image-plain", height: intrinsicSize?.height, loading: "lazy", onError: () => setFailed(true), src: src, style: style, title: title, width: intrinsicSize?.width }));
+    return (_jsx("img", { alt: decorative ? "" : alt, className: "monti-image-plain", height: intrinsicSize?.height, loading: "lazy", onError: () => setFailed(true), src: src, style: style, title: title, width: intrinsicSize?.width }));
 }

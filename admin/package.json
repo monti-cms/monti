@@ -1,6 +1,6 @@
 {
   "name": "@monti-cms/admin",
-  "version": "0.2.0-next.11",
+  "version": "0.2.0-next.12",
   "private": true,
   "description": "Admin UI for @monti-cms/core: editor, lists, media, templates, and plugin extension points. Framework-neutral: a host package (@monti-cms/nextjs) supplies the router",
   "license": "MIT",
@@ -22,29 +22,13 @@
       "types": "./dist/editor/public.d.ts",
       "default": "./dist/editor/public.js"
     },
-    "./blocks": {
-      "types": "./dist/editor/blocks/public.d.ts",
-      "default": "./dist/editor/blocks/public.js"
-    },
-    "./hooks": {
-      "types": "./dist/hooks/public.d.ts",
-      "default": "./dist/hooks/public.js"
-    },
-    "./plugins": {
-      "types": "./dist/plugins.d.ts",
-      "default": "./dist/plugins.js"
-    },
-    "./media": {
-      "types": "./dist/media.d.ts",
-      "default": "./dist/media.js"
+    "./internal/plugins": {
+      "types": "./dist/internal-plugins.d.ts",
+      "default": "./dist/internal-plugins.js"
     },
     "./slots": {
       "types": "./dist/slots/slots.d.ts",
       "default": "./dist/slots/slots.js"
-    },
-    "./api": {
-      "types": "./dist/api/index.d.ts",
-      "default": "./dist/api/index.js"
     },
     "./kit": {
       "types": "./dist/kit.d.ts",
@@ -85,7 +69,7 @@
     "react": ">=19",
     "react-dom": ">=19",
     "sonner": "^2.0.8",
-    "@monti-cms/core": "^0.2.0-next.11"
+    "@monti-cms/core": "^0.2.0-next.12"
   },
   "devDependencies": {
     "@tanstack/react-query": "^5.104.0",
@@ -107,7 +91,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.0.18",
-    "@monti-cms/core": "0.2.0-next.11"
+    "@monti-cms/core": "0.2.0-next.12"
   },
   "files": [
     "dist",

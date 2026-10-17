@@ -1,4 +1,5 @@
-import { type BlockDefinition, type Site } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
+import { type Site } from "@monti-cms/core/site";
 import type { BlockConverter } from "../../converters/types.js";
 /** Stored node type of a block used only inside a parent block (e.g. `tab`). Outside the parent it is kept as a box holding the node. */
 export declare const parentOnlyTypes: (site: Pick<Site, "ADDED_BLOCKS">) => ReadonlySet<string>;

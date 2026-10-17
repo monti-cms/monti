@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
-import { isUuid } from "@monti-cms/core/client";
 import { composeFile, parseFile } from "@monti-cms/core/front-matter";
-import { exportBodyText } from "@monti-cms/core/plugin/server";
+import { exportBodyText } from "@monti-cms/core/server";
+import { isUuid } from "@monti-cms/core/site";
 import { blobSha } from "./github/blob-sha.js";
 import { RESERVED_FRONT_MATTER_KEYS } from "./options.js";
 /** Whether an entry has a published version with an address (the only kind that has a file). */

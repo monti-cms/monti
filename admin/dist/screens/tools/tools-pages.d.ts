@@ -1,6 +1,8 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /** A plugin's page in the Tools group of the sidebar (`nav` item of the plugin definition). */
 export interface ToolsPage {
+    /** The plugin whose `nav` item this is, and whose admin side draws the page (`pages[path]`). */
+    readonly plugin: string;
     /** Single-segment address: `<admin path>/tools/<path>`. */
     readonly path: string;
     readonly href: string;

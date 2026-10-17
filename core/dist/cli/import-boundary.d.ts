@@ -8,7 +8,7 @@
  * dev server start from `withCms`.
  */
 /** Packages that hold server code. A client file importing one drags the server into the browser bundle. */
-export declare const SERVER_ONLY_MODULES: readonly ["@monti-cms/core/server", "@monti-cms/core/runtime", "@monti-cms/core/plugin/server", "@monti-cms/auth", "@monti-cms/nextjs/auth"];
+export declare const SERVER_ONLY_MODULES: readonly ["@monti-cms/core/server", "@monti-cms/auth", "@monti-cms/nextjs/auth"];
 export interface BoundaryViolation {
     /** The client file the chain starts in (relative to `cwd`, `/` separators). */
     readonly client: string;

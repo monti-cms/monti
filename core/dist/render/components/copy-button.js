@@ -4,7 +4,7 @@ import { useState } from "react";
 /** Code copy button. After copying, it briefly shows `copiedLabel`. */
 export function CmsCopyButton({ text, label, copiedLabel }) {
     const [copied, setCopied] = useState(false);
-    return (_jsx("button", { type: "button", className: "cms-code-copy", "aria-label": label, onClick: async () => {
+    return (_jsx("button", { type: "button", className: "monti-code-copy", "aria-label": label, onClick: async () => {
             if (copied)
                 return;
             try {

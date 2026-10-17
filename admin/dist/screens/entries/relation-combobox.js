@@ -1,12 +1,12 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { commonMessages } from "../../lib/common.messages.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Combobox, ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, ComboboxValue, useComboboxAnchor, } from "../../ui/combobox.js";
-import { FieldError } from "../../ui/field.js";
+import { FormFieldError } from "../../ui/field.js";
 import { EmptyState } from "../shared/empty-state.js";
 import { entriesMessages } from "./messages.js";
 /**
@@ -73,8 +73,8 @@ export function RelationCombobox({ options, known, onSearch, loading = false, mu
             setIsCreating(false);
         }
     };
-    const list = (_jsxs(ComboboxContent, { anchor: multiple ? anchor : undefined, children: [_jsx(ComboboxEmpty, { children: _jsx(EmptyState, { compact: true, title: loading ? tc("loading") : t("relation.empty") }) }), _jsx(ComboboxList, { children: (item) => (_jsx(ComboboxItem, { value: item, className: cn(item.create && "text-cms-primary"), children: item.create ? (_jsxs(_Fragment, { children: [_jsx(Plus, { "aria-hidden": true }), _jsx("span", { className: "truncate", children: t("relation.create", { label: item.label }) })] })) : (_jsx("span", { className: "truncate", children: item.label })) }, item.value)) })] }));
-    const errorText = error && _jsx(FieldError, { children: error });
+    const list = (_jsxs(ComboboxContent, { anchor: multiple ? anchor : undefined, children: [_jsx(ComboboxEmpty, { children: _jsx(EmptyState, { compact: true, title: loading ? tc("loading") : t("relation.empty") }) }), _jsx(ComboboxList, { children: (item) => (_jsx(ComboboxItem, { value: item, className: cn(item.create && "text-monti-primary"), children: item.create ? (_jsxs(_Fragment, { children: [_jsx(Plus, { "aria-hidden": true }), _jsx("span", { className: "truncate", children: t("relation.create", { label: item.label }) })] })) : (_jsx("span", { className: "truncate", children: item.label })) }, item.value)) })] }));
+    const errorText = error && _jsx(FormFieldError, { children: error });
     if (multiple) {
         return (_jsxs(_Fragment, { children: [_jsxs(Combobox, { items: items, multiple: true, autoHighlight: true, disabled: disabled || isCreating, value: selected, onValueChange: (next) => {
                         const created = next.find((item) => item.create);

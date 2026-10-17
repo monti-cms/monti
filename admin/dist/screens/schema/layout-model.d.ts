@@ -1,4 +1,4 @@
-import { type NamedPlacement } from "@monti-cms/core/client";
+import { type NamedPlacement } from "@monti-cms/core/site";
 import { type Obj } from "./schema-model.js";
 /**
  * The properties panel of the edit screen as the fields tree shows it: tab, then an ordered list of blocks, each a titled group or a run of fields in no group.
@@ -83,10 +83,6 @@ export declare function addTab(tree: Tree, name: string): Tree;
 export declare const tabCanRename: (tree: Tree, index: number) => boolean;
 /** Whether a tab can be removed: only user-added tabs after the default tab, and not locked by a plugin. */
 export declare const tabCanRemove: (tree: Tree, index: number) => boolean;
-/** Whether a tab can be moved: only user-added tabs after the default tab, and not plugin-only. */
-export declare const tabCanMove: (tree: Tree, index: number) => boolean;
-/** Whether a tab can be removed: not the default one, and not one a plugin puts fields in. */
-export declare const tabIsEditable: typeof tabCanRemove;
 export declare function renameTab(tree: Tree, index: number, name: string, defaultLabel?: string): Tree;
 /** Removes a tab; its blocks go to the end of the default tab. */
 export declare function removeTab(tree: Tree, index: number): Tree;

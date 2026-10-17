@@ -6,9 +6,9 @@ import { Button } from "./button.js";
 import { Input } from "./input.js";
 import { Textarea } from "./textarea.js";
 function InputGroup({ className, ...props }) {
-    return (_jsx("div", { "data-slot": "input-group", role: "group", className: cn("group/input-group relative flex h-9 w-full min-w-0 items-center rounded-md border border-cms-input cms-dark:bg-cms-input/30 outline-none transition-[color,box-shadow] in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-cms-ring has-[[data-slot][aria-invalid=true]]:border-cms-destructive cms-dark:has-[[data-slot][aria-invalid=true]]:ring-cms-destructive/40 has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-cms-ring/50 has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-cms-destructive/20 has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5", className), ...props }));
+    return (_jsx("div", { "data-slot": "input-group", role: "group", className: cn("group/input-group relative flex h-9 w-full min-w-0 items-center rounded-md border border-monti-input monti-dark:bg-monti-input/30 outline-none transition-[color,box-shadow] in-data-[slot=combobox-content]:focus-within:border-inherit in-data-[slot=combobox-content]:focus-within:ring-0 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-start]]:h-auto has-[>textarea]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-start]]:flex-col has-[[data-slot=input-group-control]:focus-visible]:border-monti-ring has-[[data-slot][aria-invalid=true]]:border-monti-destructive has-[[data-slot=input-group-control]:focus-visible]:ring-3 has-[[data-slot=input-group-control]:focus-visible]:ring-monti-ring/50 has-[[data-slot][aria-invalid=true]]:ring-3 has-[[data-slot][aria-invalid=true]]:ring-monti-destructive/20 monti-dark:has-[[data-slot][aria-invalid=true]]:ring-monti-destructive/40 has-[>[data-align=block-end]]:[&>input]:pt-3 has-[>[data-align=inline-end]]:[&>input]:pr-1.5 has-[>[data-align=block-start]]:[&>input]:pb-3 has-[>[data-align=inline-start]]:[&>input]:pl-1.5", className), ...props }));
 }
-const inputGroupAddonVariants = cva("flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium text-cms-muted-foreground select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4", {
+const inputGroupAddonVariants = cva("flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium text-monti-muted-foreground select-none group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4", {
     variants: {
         align: {
             "inline-start": "order-first pl-2 has-[>button]:-ml-1 has-[>kbd]:ml-[-0.15rem]",
@@ -46,15 +46,15 @@ function InputGroupButton({ className, type = "button", variant = "ghost", size 
     return (_jsx(Button, { type: type, "data-size": size, variant: variant, className: cn(inputGroupButtonVariants({ size }), className), ...props }));
 }
 function InputGroupText({ className, ...props }) {
-    return (_jsx("span", { className: cn("flex items-center gap-2 text-cms-muted-foreground text-sm [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none", className), ...props }));
+    return (_jsx("span", { className: cn("flex items-center gap-2 text-monti-muted-foreground text-sm [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none", className), ...props }));
 }
 function InputGroupInput({ className, ...props }) {
-    return (_jsx(Input, { "data-slot": "input-group-control", className: cn("flex-1 rounded-none border-0 bg-transparent cms-dark:bg-transparent shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0", 
+    return (_jsx(Input, { "data-slot": "input-group-control", className: cn("flex-1 rounded-none border-0 bg-transparent monti-dark:bg-transparent shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0", 
         // Effectively stops background color changes, so the autofill background does not paint only the inner input and clash with the group's border and buttons
         // (the input stays transparent and shows the group background). Text color also uses the theme color.
-        "autofill:[-webkit-text-fill-color:var(--cms-foreground)] autofill:[transition:background-color_100000s_ease-in-out_0s]", className), ...props }));
+        "autofill:[-webkit-text-fill-color:var(--monti-foreground)] autofill:[transition:background-color_100000s_ease-in-out_0s]", className), ...props }));
 }
 function InputGroupTextarea({ className, ...props }) {
-    return (_jsx(Textarea, { "data-slot": "input-group-control", className: cn("flex-1 resize-none rounded-none border-0 bg-transparent cms-dark:bg-transparent py-2 shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0", className), ...props }));
+    return (_jsx(Textarea, { "data-slot": "input-group-control", className: cn("flex-1 resize-none rounded-none border-0 bg-transparent monti-dark:bg-transparent py-2 shadow-none ring-0 focus-visible:ring-0 aria-invalid:ring-0", className), ...props }));
 }
 export { InputGroup, InputGroupAddon, InputGroupButton, InputGroupText, InputGroupInput, InputGroupTextarea };

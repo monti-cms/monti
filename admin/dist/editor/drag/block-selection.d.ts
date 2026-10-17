@@ -11,8 +11,8 @@ import { type EditorView } from "@tiptap/pm/view";
  */
 export declare const cmsBlockSelectionKey: PluginKey<number[] | null>;
 /** Classes put on the editor while a block selection is active and on the selected lines (styles live in the editor class). */
-export declare const BLOCK_RANGE_CLASS = "cms-block-range";
-export declare const BLOCK_SELECTED_CLASS = "cms-block-selected";
+export declare const BLOCK_RANGE_CLASS = "monti-block-range";
+export declare const BLOCK_SELECTED_CLASS = "monti-block-selected";
 export declare const selectedBlocks: (state: EditorState) => number[] | null;
 /** Selects lines. So that copy works, the ProseMirror selection is also set to the text from the first to the last line. */
 export declare function setBlockSelection(tr: Transaction, positions: readonly number[] | null): Transaction;

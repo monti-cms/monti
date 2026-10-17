@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { hostOf } from "../../cms/host.js";
 import { parseSchemaLiteral } from "../../schema-file/literal.js";
 import { findSchemaFile, loadSchemaFile } from "../../schema-file/locate.js";
 import { fail, ok, warn } from "./outcome.js";
@@ -7,7 +8,7 @@ import { messageOf } from "./types.js";
 /** The `schema` group of `monti doctor`: the schema file. */
 const posix = (file) => file.split(path.sep).join("/");
 const schemaFileOf = (state) => {
-    const fromCms = state.cms?.schemaFile();
+    const fromCms = state.cms ? hostOf(state.cms).schemaFile() : undefined;
     if (fromCms)
         return posix(path.relative(state.cwd, fromCms));
     try {

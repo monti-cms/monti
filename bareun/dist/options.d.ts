@@ -1,4 +1,4 @@
-import type { TextCheckerLimits } from "@monti-cms/core";
+import type { PluginId, TextCheckerLimits } from "@monti-cms/core";
 import { BAREUN_PLUGIN_NAME } from "./name.js";
 export { BAREUN_PLUGIN_NAME };
 /** Id of the plugin's one API key slot. */
@@ -27,4 +27,6 @@ export interface ResolvedBareunOptions {
     readonly limits: TextCheckerLimits;
 }
 /** Fills in defaults and rejects invalid values. */
+/** The plugin with the type of its options, as `bareun()` resolved them (`site.pluginOptions(BAREUN_PLUGIN)`). */
+export declare const BAREUN_PLUGIN: PluginId<typeof BAREUN_PLUGIN_NAME, ResolvedBareunOptions>;
 export declare function resolveBareunOptions(options?: BareunOptions): ResolvedBareunOptions;

@@ -21,5 +21,5 @@ export function ChartClient({ source }) {
     }, []);
     if (View)
         return _jsx(View, { source: source });
-    return (_jsx("figure", { className: "cms-block-chart", "data-state": "loading", children: _jsx("pre", { className: "cms-block-chart-source", children: _jsx("code", { children: source }) }) }));
+    return (_jsx("figure", { className: "monti-block-chart", "data-state": "loading", children: _jsx("pre", { className: "monti-block-chart-source", children: _jsx("code", { children: source }) }) }));
 }

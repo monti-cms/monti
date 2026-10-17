@@ -5,7 +5,7 @@ import { CONFIG_SOURCE, IssueList, pathOf, throwIssues } from "../config/check/i
  */
 /** Names the core uses in the admin meta API `features`. Cannot be used as plugin names. */
 export const CORE_FEATURE_KEYS = ["folders", "references", "search", "templates", "media"];
-/** The storage and secrets scope of the login connection (`cms.secrets("auth")`, its plugin storage). */
+/** The storage and secrets scope of the login connection (`AuthCreateContext.secrets`, its plugin storage). */
 export const AUTH_SCOPE = "auth";
 /** The storage and secrets scope of the API key store. */
 export const API_KEYS_SCOPE = "core-keys";
@@ -30,8 +30,6 @@ export function checkPluginNames(names) {
     }
     return list.issues;
 }
-/** Throws a {@link ConfigError} if a plugin name collides. */
-export const assertPluginNamesFree = (names) => throwIssues(CONFIG_SOURCE, checkPluginNames(names));
 /**
  * The plugin Tools pages (`path` in `nav`, or a key of an admin plugin's `pages`) that are empty or equal another plugin's.
  * Pages live under `<admin path>/tools/`, so they cannot collide with a core screen. The same path within one plugin counts as one page.
@@ -54,8 +52,6 @@ export function checkPluginPages(pages) {
     }
     return list.issues;
 }
-/** Throws a {@link ConfigError} if a plugin Tools page is empty or collides. */
-export const assertPluginPagesFree = (pages) => throwIssues(CONFIG_SOURCE, checkPluginPages(pages));
 /** `[name]` segments with different names but the same shape count as the same route. */
 const shape = (pattern) => pattern
     .split("/")

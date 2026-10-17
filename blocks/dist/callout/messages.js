@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 /** Labels, descriptions, and editing view text of the callout block. */
-export const calloutMessages = defineMessages("cms-blocks.callout", {
+export const calloutMessages = defineMessages("monti-blocks.callout", {
     en: {
         label: "Callout",
         description: "A highlighted box for notes and warnings",

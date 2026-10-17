@@ -3,7 +3,7 @@ import { keyNameCandidate, } from "../core/api-keys.js";
 import { CmsError } from "../core/store/index.js";
 /**
  * The central API key store of one CMS instance (`cms.apiKeys`). Named keys are kept in the core's own storage, encrypted with the core's own key
- * (`cms.secrets("core-keys")`, derived from the server config's `secret`). A plugin that needs a key keeps the key's id, not its value, and reads the value
+ * (the reserved scope `core-keys`, derived from the server config's `secret`). A plugin that needs a key keeps the key's id, not its value, and reads the value
  * on the server when it calls the service.
  *
  * Where a key is used is one list of assignments, each an item of a plugin (`<plugin>:<ref>`) that points at a key:
@@ -132,7 +132,9 @@ function keysOn(options, storage) {
     };
     const assertKeyExists = async (id) => {
         if (!(await keys().get(id))) {
-            throw new CmsError("The chosen key does not exist (it may have been deleted); pick another", "invalid_input");
+            throw new CmsError("The chosen key does not exist (it may have been deleted); pick another", "invalid_input", {
+                notice: { key: "key.missing" },
+            });
         }
     };
     const choose = async (choice, { baseName }) => {
@@ -238,7 +240,11 @@ function keysOn(options, storage) {
                 throw new CmsError("Key not found", "not_found");
             const found = (await usesByKey()).get(id)?.uses ?? [];
             if (found.length > 0 && !force) {
-                throw new CmsError(`${found.length} place${found.length === 1 ? "" : "s"} use this key and would stop working`, "key_in_use", current.version, { uses: found });
+                throw new CmsError(`${found.length} place${found.length === 1 ? "" : "s"} use this key and would stop working`, "key_in_use", {
+                    serverVersion: current.version,
+                    details: { uses: found },
+                    notice: { key: "key.in_use", vars: { count: found.length } },
+                });
             }
             await keys().delete(id, { expectedVersion });
             await releaseName(current.value.name, id);

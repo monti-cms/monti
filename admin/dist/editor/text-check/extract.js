@@ -1,4 +1,4 @@
-import { PLACEHOLDER } from "@monti-cms/core/client";
+import { PLACEHOLDER } from "@monti-cms/core";
 export { PLACEHOLDER };
 const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s￼]+/gi;
 const TRAILING_PUNCTUATION = /[.,;:!?)\]}\u0027\u0022’”]+$/;

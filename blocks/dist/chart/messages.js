@@ -37,7 +37,7 @@ const modelText = {
  * (admin language) and the public page (content language). AI instructions are text for the model, so they are the same English text in every
  * language; the output language follows the body text.
  */
-export const chartMessages = defineMessages("cms-blocks.chart", {
+export const chartMessages = defineMessages("monti-blocks.chart", {
     en: {
         label: "Chart",
         description: "Chart or graph",

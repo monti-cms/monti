@@ -16,6 +16,7 @@ export const uiMessages = defineMessages("cms-admin.ui", {
         "sidebar.toggle": "Toggle sidebar",
         "theme.toLight": "Switch to light mode",
         "theme.toDark": "Switch to dark mode",
+        "error.details": "Details",
     },
     ko: {
         "panel.resize": "패널 너비 조절",
@@ -32,5 +33,6 @@ export const uiMessages = defineMessages("cms-admin.ui", {
         "sidebar.toggle": "사이드바 열고 닫기",
         "theme.toLight": "라이트 모드로 전환",
         "theme.toDark": "다크 모드로 전환",
+        "error.details": "자세히",
     },
 });

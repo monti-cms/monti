@@ -1,4 +1,4 @@
-import { BLOCK_ID_ATTRIBUTE, findBlock as findBlockById, UNTRANSLATED_MARK_NAME } from "@monti-cms/admin/editor";
+import { BLOCK_ID_ATTRIBUTE, findBlock as findBlockById, SOURCE_BLOCK_ID_ATTRIBUTE, UNTRANSLATED_MARK_NAME, } from "@monti-cms/admin/editor";
 import { Fragment } from "@tiptap/pm/model";
 import { contentOfText, textOfContent } from "./mdx-format.js";
 /**
@@ -109,11 +109,16 @@ export function applyTranslation(site, format, editor, unit, mdx, hint) {
             return "invalid";
         content = list.content;
     }
-    // The translated block is the same block: it keeps the original's id (blocks it was split into get new ones).
+    // The translated block is the same block: it keeps the original's id and source link (blocks it was split into get new ids and no link).
     const id = blockIdOf(unit.original);
+    const sourceId = JSON.parse(unit.original).attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE];
     const [first] = content;
-    if (id !== undefined && first)
-        content = [{ ...first, attrs: { ...(first.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: id } }, ...content.slice(1)];
+    if (id !== undefined && first) {
+        const attrs = { ...(first.attrs ?? {}), [BLOCK_ID_ATTRIBUTE]: id };
+        if (typeof sourceId === "string")
+            attrs[SOURCE_BLOCK_ID_ATTRIBUTE] = sourceId;
+        content = [{ ...first, attrs }, ...content.slice(1)];
+    }
     let nodes;
     try {
         nodes = content.map((json) => state.schema.nodeFromJSON(json));

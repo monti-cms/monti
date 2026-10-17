@@ -1,5 +1,5 @@
-import type { PluginStorage } from "@monti-cms/core";
-import type { LoginAccounts } from "@monti-cms/core/server";
+import type { LoginAccounts } from "@monti-cms/core/adapters";
+import type { PluginStorage } from "@monti-cms/core/server";
 /** An Auth.js provider config (OAuth, OIDC or credentials): what `GitHub({ ... })` or `Credentials({ ... })` of `@auth/core/providers/*` returns. */
 export interface AuthJsProvider {
     readonly id: string;
@@ -22,7 +22,7 @@ export interface SignedInProviderAccount {
 }
 /** What a login provider can use when it is set up (once, when the login connection is created). */
 export interface LoginProviderContext {
-    /** Storage of a plugin (`cms.storage(plugin)`). A provider that keeps its own users, like a password login, keeps them here. */
+    /** Storage of a plugin (what the plugin itself reaches as `plugin.storage`). A provider that keeps its own users, like a password login, keeps them here. */
     readonly storage: (plugin: string) => PluginStorage;
     /** Whether the request host may be trusted (the config's `trustHost`, `AUTH_TRUST_HOST`, or a detected proxy platform). */
     readonly trustHost: boolean;
@@ -70,6 +70,8 @@ export interface LoginProvider {
      * provider is an admin; `admins` is not used and no "no admin is set" warning is given for it.
      */
     readonly everyAccountIsAdmin?: boolean;
+    /** Names of request headers that the sign-in hands on to this provider (the browser's request is rebuilt for Auth.js, and only the cookie survives otherwise). */
+    readonly forwardHeaders?: readonly string[];
     /** Admins of this provider: ids inside the provider (`"123"`) or qualified (`"github:123"`). Unset entries (an unset environment variable) are skipped. */
     readonly admins?: readonly (string | undefined)[];
     /**

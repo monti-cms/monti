@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/client";
+import { SiteProvider, useSite, useTranslator } from "@monti-cms/core/site";
 import { Component, useMemo, useRef, useState } from "react";
 import { emptyFormOf } from "../entries/entry-form.js";
 import { InspectorPanel } from "../entries/inspector-panel.js";
@@ -51,6 +51,6 @@ export function LayoutPreview({ file, collection, codeCollections, onClose, }) {
     if (made)
         lastGood.current = made;
     const draft = made ?? lastGood.current;
-    const problem = _jsx("p", { className: "px-4 py-4 text-cms-muted-foreground text-xs", children: t("layout.previewUnavailable") });
-    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-cms-background", "data-testid": "layout-preview", children: [_jsx("p", { className: "shrink-0 border-b bg-cms-muted/50 px-4 py-1.5 text-cms-muted-foreground text-xs", children: t("layout.previewLabel") }), draft?.isCollection(collection) ? (_jsx(SiteProvider, { site: draft, children: _jsx(PreviewBoundary, { fallback: problem, resetKey: draft, children: _jsx(PreviewPanel, { collection: collection, onClose: onClose }, collection) }) })) : (problem)] }));
+    const problem = _jsx("p", { className: "px-4 py-4 text-monti-muted-foreground text-xs", children: t("layout.previewUnavailable") });
+    return (_jsxs("div", { className: "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-monti-background", "data-testid": "layout-preview", children: [_jsx("p", { className: "shrink-0 border-b bg-monti-muted/50 px-4 py-1.5 text-monti-muted-foreground text-xs", children: t("layout.previewLabel") }), draft?.isCollection(collection) ? (_jsx(SiteProvider, { site: draft, children: _jsx(PreviewBoundary, { fallback: problem, resetKey: draft, children: _jsx(PreviewPanel, { collection: collection, onClose: onClose }, collection) }) })) : (problem)] }));
 }

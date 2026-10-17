@@ -1,7 +1,7 @@
 import { LIST_ARRAY_QUERY_KEYS } from "../../../core/api.js";
 import { emptyStoredDocument } from "../../../doc/stored-document.js";
 import { bodyInputOf } from "../../../services/body-input.js";
-import { adminRoute, ok, parseWith, readJsonBody, readQuery } from "../handler.js";
+import { adminRoute, ok, parseWith, readJsonBody, readQuery, written } from "../handler.js";
 /** Per-collection list, search, filter, sort, and paging. */
 export const GET = adminRoute(async ({ request, cms }) => {
     const query = parseWith(cms.site.api.listEntriesQuerySchema, readQuery(request, LIST_ARRAY_QUERY_KEYS), "Invalid query parameters");
@@ -39,5 +39,5 @@ export const POST = adminRoute(async ({ request, cms }) => {
         ...bodyInputOf(body, emptyStoredDocument()),
         ...(body.folderId !== undefined ? { folderId: body.folderId } : {}),
     };
-    return ok(await cms.contentService().createDraft(input), { status: 201 });
+    return written(cms, await cms.contentService().createDraft(input), { status: 201 });
 });

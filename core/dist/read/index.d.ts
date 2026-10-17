@@ -14,6 +14,7 @@ import type { AuthContext } from "../adapters/auth/auth-gateway.js";
 import type { CmsConfig } from "../config/define.js";
 import type { ContentStore, PublishedSort } from "../core/store/index.js";
 import type { CollectionName, PublishedMetadataFor } from "../core/types.js";
+export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types.js";
 import { type ReadRefs } from "../doc/document-refs.js";
 import { type PublicMediaDeps, resolvePublicMediaUrl } from "../doc/public-media.js";
 import type { StoredDocument } from "../doc/stored-document.js";
@@ -21,7 +22,6 @@ import { type ExportRefs } from "../format/convert.js";
 import type { FormatRegistry } from "../format/registry.js";
 import type { MediaStore } from "../media/store.js";
 import type { Site } from "../site/index.js";
-export type { CollectionName, MetadataFor, PublishedMetadataFor } from "../core/types.js";
 /** A published item a relation field points to. */
 export interface ReadRelation {
     readonly id: string;
@@ -166,7 +166,5 @@ export declare function createRead<Config extends CmsConfig = CmsConfig>(deps: R
 export declare function createExportRefs(deps: PublicMediaDeps & {
     readonly site: Site;
 }, scope: "published" | "working"): (doc: StoredDocument, locale: string) => Promise<ExportRefs>;
-export type { PublishedSort } from "../core/store/index.js";
 export type { DocumentRefIds, ReadLink, ReadRefs } from "../doc/document-refs.js";
 export { collectRefs } from "../doc/document-refs.js";
-export type { StoredDocument } from "../doc/stored-document.js";

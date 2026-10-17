@@ -1,4 +1,4 @@
-import type { CmsConfig } from "@monti-cms/core/client";
+import type { CmsConfig } from "@monti-cms/core";
 import type { ReactNode } from "react";
 import type { AiActionKey } from "../registry.js";
 import { type AiButtonProps } from "./ai-button.js";

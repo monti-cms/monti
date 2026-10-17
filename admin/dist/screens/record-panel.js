@@ -1,12 +1,12 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator, } from "@monti-cms/core/client";
 import { emptyStoredDocument } from "@monti-cms/core/document";
+import { useSite, useTranslator, } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CmsApiError, errorText } from "../api/client.js";
 import { createEntry, entriesKeys, getEntry, updateEntry } from "../api/entries.js";
-import { cmsIssueMessage } from "../api/error-message.js";
+import { issueLine } from "../api/error-message.js";
 import { useCmsMutation } from "../api/use-cms-mutation.js";
 import { commonMessages } from "../lib/common.messages.js";
 import { cn } from "../lib/utils/cn.js";
@@ -63,7 +63,7 @@ export function RecordPanel({ target, onClose, onSaved, onDirtyChange, initial, 
             onSaved(saved);
         },
         onError: (err) => setError(err instanceof CmsApiError && err.issues.length > 0
-            ? err.issues.map((issue) => cmsIssueMessage(site, issue)).join("\n")
+            ? err.issues.map((issue) => issueLine(issue)).join("\n")
             : errorText(site, err, tc("saveFailed"))),
     });
     const { draft: form, update, replace, dirty, isNew, } = useDraftEditor({ saved: savedForm, empty, onDirtyChange, saving: saveMutation.isPending });
@@ -120,7 +120,7 @@ export function RecordPanel({ target, onClose, onSaved, onDirtyChange, initial, 
             metadata: built.metadata,
         });
     };
-    return (_jsxs("aside", { "aria-label": heading, className: cn("flex h-full flex-col border-l bg-cms-background text-sm", className), children: [_jsx(SidePanelHeader, { title: heading, onClose: () => void close() }), _jsxs("form", { className: "flex min-h-0 flex-1 flex-col", onSubmit: (event) => {
+    return (_jsxs("aside", { "aria-label": heading, className: cn("flex h-full flex-col border-l bg-monti-background text-sm", className), children: [_jsx(SidePanelHeader, { title: heading, onClose: () => void close() }), _jsxs("form", { className: "flex min-h-0 flex-1 flex-col", onSubmit: (event) => {
                     event.preventDefault();
                     save();
                 }, children: [_jsx(EntryFormProvider, { value: { collection, form, setForm, disabled: isSaving, entryId: id ?? undefined }, children: _jsxs(Tabs, { value: locale, onValueChange: (value) => setLocale(value), className: "min-h-0 flex-1 gap-0 overflow-hidden", children: [site.ADMIN_TRANSLATIONS && (_jsx(TabsList, { variant: "line", className: "h-10 w-full shrink-0 justify-start gap-4 border-b px-4", children: site.LOCALES.map((option) => {
@@ -129,7 +129,7 @@ export function RecordPanel({ target, onClose, onSaved, onDirtyChange, initial, 
                                         return (_jsxs(TabsTrigger, { value: option, "aria-label": option === site.DEFAULT_LOCALE
                                                 ? name
                                                 : t(filled ? "record.translationOn" : "record.translationOff", { name }), className: "flex-none gap-1.5 px-0 text-xs", children: [name, option !== site.DEFAULT_LOCALE && (_jsx(StatusIndicator, { size: "xs", tone: filled ? "success" : "neutral", shape: filled ? "dot" : "ring" }))] }, option));
-                                    }) })), _jsxs("div", { className: "min-h-0 flex-1 overflow-y-auto px-4 py-4", children: [_jsxs(TabsContent, { value: site.DEFAULT_LOCALE, className: "space-y-4", children: [_jsx(SchemaFields, { slugPlaceholder: site.slugFromValues(collection, form) || slugHint }), id && _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t("record.slugChange") })] }), (site.ADMIN_TRANSLATIONS ? site.PREFIXED_LOCALES : []).map((option) => (_jsxs(TabsContent, { value: option, className: "space-y-4", children: [_jsx("p", { className: "text-cms-muted-foreground text-xs leading-relaxed", children: t("record.localeEmpty", { name: site.localeLabel(option) }) }), _jsx(RecordLocaleFields, { collection: collection, locale: option })] }, option)))] })] }) }), _jsx(EditorFooter, { className: "shrink-0 border-t px-4 py-3", 
+                                    }) })), _jsxs("div", { className: "min-h-0 flex-1 overflow-y-auto px-4 py-4", children: [_jsxs(TabsContent, { value: site.DEFAULT_LOCALE, className: "space-y-4", children: [_jsx(SchemaFields, { slugPlaceholder: site.slugFromValues(collection, form) || slugHint }), id && _jsx("p", { className: "text-monti-muted-foreground text-xs", children: t("record.slugChange") })] }), (site.ADMIN_TRANSLATIONS ? site.PREFIXED_LOCALES : []).map((option) => (_jsxs(TabsContent, { value: option, className: "space-y-4", children: [_jsx("p", { className: "text-monti-muted-foreground text-xs leading-relaxed", children: t("record.localeEmpty", { name: site.localeLabel(option) }) }), _jsx(RecordLocaleFields, { collection: collection, locale: option })] }, option)))] })] }) }), _jsx(EditorFooter, { className: "shrink-0 border-t px-4 py-3", 
                         // A new item can be saved as it is (a name may come prefilled); an existing one only once it was changed.
                         dirty: dirty || isNew, saving: isSaving, canSave: Boolean(title.trim()) && !(id && !loaded), error: error ?? loadError, align: "end", onCancel: () => void close() })] }), dialog] }));
 }

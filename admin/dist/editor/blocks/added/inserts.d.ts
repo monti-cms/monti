@@ -1,4 +1,5 @@
-import type { BlockDefinition, Site } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor, JSONContent, Range } from "@tiptap/core";
 /**
  * The node to insert from the slash menu. Follows the definition's `editor.insert` (initial value); if absent, uses attribute defaults and an empty body. If child block rules

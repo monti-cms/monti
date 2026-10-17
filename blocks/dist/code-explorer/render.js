@@ -1,5 +1,5 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { readCodeBlock } from "@monti-cms/core/render";
+import { defineRender, readCodeBlock } from "@monti-cms/core/render";
 import { Children, Fragment, isValidElement } from "react";
 import { blockLabels } from "../shared/labels.js";
 import { CodeExplorerView } from "./render.client.js";
@@ -56,11 +56,8 @@ const fileOf = (node) => {
     return { path: title, code: code.trim() !== "" };
 };
 /** Public components for the code explorer in the JSON renderer (`renderDocument`): the block `code-explorer`, reading its files from the stored code blocks. */
-export const documentComponents = ({ locale }) => {
-    const labels = blockLabels(locale);
-    return {
-        blocks: {
-            "code-explorer": ({ open, items }) => (_jsx(Explorer, { open: open, labels: labels, files: items.map((item) => fileOf(item.node)), items: items.map((item, index) => _jsx(Fragment, { children: item.element }, item.node.id ?? index)) })),
-        },
-    };
-};
+export default defineRender({
+    blocks: {
+        "code-explorer": ({ open, items, ctx }) => (_jsx(Explorer, { open: open, labels: blockLabels(ctx.locale), files: items.map((item) => fileOf(item.node)), items: items.map((item, index) => _jsx(Fragment, { children: item.element }, item.node.id ?? index)) })),
+    },
+});

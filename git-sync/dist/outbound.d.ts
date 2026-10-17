@@ -1,4 +1,4 @@
-import { type ContentEvent } from "@monti-cms/core/plugin/server";
+import type { ContentEvent } from "@monti-cms/core/server";
 import type { ResolvedTarget } from "./options.js";
 import type { SyncRecord } from "./state.js";
 import { type SyncContext } from "./sync.js";
@@ -37,7 +37,7 @@ export interface EventOutcome {
     readonly deferred: Date[];
 }
 /**
- * The part of the `afterCommit` subscriber for published files. For each target that syncs the entry's collection it queues the entry and commits the queue.
+ * The part of the `entry.changed` subscriber for published files. For each target that syncs the entry's collection it queues the entry and commits the queue.
  * The event only says that something happened; what goes to the repo is the entry as it is now (its published version, or none).
  */
 export declare function onPublishedEvent(ctx: SyncContext, event: ContentEvent): Promise<EventOutcome>;

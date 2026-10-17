@@ -1,5 +1,5 @@
-import { type BodyAllowed } from "@monti-cms/core/client";
 import { type StoredDocument } from "@monti-cms/core/document";
+import { type BodyAllowed } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { type ReactNode } from "react";
 import { type EditorInsertAction, type EditorSelectionAction } from "../admin-components.js";

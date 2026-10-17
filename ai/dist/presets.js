@@ -1,4 +1,5 @@
-import { SUMMARY_ROLE, valueFieldsOf } from "@monti-cms/core";
+import { SUMMARY_ROLE } from "@monti-cms/core";
+import { valueFieldsOf } from "@monti-cms/core/site";
 import { aiAction, aiInput } from "./action.js";
 import { presetMessages } from "./presets.messages.js";
 import { regexRuns, sameStructure, uniqueSlug } from "./validators.js";

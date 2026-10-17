@@ -1,4 +1,4 @@
-import { type Collection, type Site } from "@monti-cms/core/client";
+import { type Collection, type Site } from "@monti-cms/core/site";
 import { type EntryData, type EntryFormPatch } from "./entry-form.js";
 /** The saved item in the shape of a relation option. */
 export declare const optionOf: (site: Site, untitled: string, collection: string, saved: EntryData) => {

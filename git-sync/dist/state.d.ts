@@ -1,6 +1,6 @@
-import type { PluginStorage, StorageItem } from "@monti-cms/core/plugin/server";
+import type { PluginStorage, StorageItem } from "@monti-cms/core/server";
 /**
- * What the plugin remembers, in its own plugin storage (`cms.storage("git-sync")`): per entry the file it was last synced to, the queue of publishes waiting for
+ * What the plugin remembers, in its own plugin storage (`plugin.storage`): per entry the file it was last synced to, the queue of publishes waiting for
  * their commit, the conflicts waiting for a decision, and a lock per target. Nothing here is the entry itself: the CMS database and the repo are the two sides.
  */
 /** The collections of the plugin's storage. */

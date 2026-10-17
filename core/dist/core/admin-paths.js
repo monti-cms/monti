@@ -1,7 +1,7 @@
 import { DEFAULT_ADMIN_PATH } from "../config/rules.js";
 import { adminHrefWith, withBasePath } from "./base-path.js";
 export { DEFAULT_ADMIN_PATH };
-export { adminHrefWith, CMS_API_PATH, cmsApiUrl, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path.js";
+export { adminApiUrl, adminHrefWith, CMS_API_PATH, cmsBasePath, normalizeBasePath, withBasePath } from "./base-path.js";
 /** The admin address rules of a site config (`admin.path` and `site.home`). */
 export function createAdminPaths(config) {
     /** Admin screen path (`admin.path`, default `/admin`). Must match the app's admin route folder. */

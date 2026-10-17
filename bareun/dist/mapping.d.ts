@@ -1,5 +1,5 @@
 import { type TextIssue } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /**
  * Converts a Bareun response (`CorrectError`) into check results (`TextIssue`). Paragraphs are joined with `\n` and sent in one request (`joinSegments`),
  * and the returned positions (UTF-16 offsets over the whole text) are split back into in-paragraph positions.

@@ -2,7 +2,7 @@
  * Assembles the toolbar entries of the visual editor from the tool definitions: which slots exist for the body's allowance,
  * their hide priority, how each renders in the bar and in the "More" menu, and the final placement order.
  */
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import type { commonMessages } from "../lib/common.messages.js";
 import type { TranslatorFor } from "../translator.js";

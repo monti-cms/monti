@@ -1,8 +1,5 @@
-import { type BrowserFormat, type SourcePanelProps } from "@monti-cms/admin";
-import { type Site } from "@monti-cms/core/client";
+import { type BrowserFormat, type Site, type SourcePanelProps } from "@monti-cms/admin";
 import { type StoredDocument } from "@monti-cms/core/document";
-/** Id of the element a screen puts the findings about the text in. The panel's input refers to it as its description. */
-export declare const SOURCE_ERROR_ID = "cms-source-error";
 /** The 1-based line of the text where a top-level block of `doc` starts, or `null` when no block has this id (the text is that of `doc`). */
 export declare function lineOfBlock(doc: StoredDocument, blockId: string, format: BrowserFormat): number | null;
 /**

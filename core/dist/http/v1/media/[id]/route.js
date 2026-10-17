@@ -29,7 +29,7 @@ export const PATCH = adminRoute(async ({ request, params, cms }) => {
             throw new CmsError("Media asset not found", "not_found");
         const problem = renameProblem(media.filename, body.filename.normalize("NFC"));
         if (problem)
-            throw new CmsError(problem, "invalid_input");
+            throw new CmsError(`Invalid file name (${problem.key})`, "invalid_input", { notice: problem });
     }
     return ok(await cms.store().updateMediaMetadata({ id: params.id, ...body }));
 });

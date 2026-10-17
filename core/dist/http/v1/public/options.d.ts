@@ -43,7 +43,7 @@ export declare function defaultPublicJson(entry: ReadEntry, { body }: {
         [field: string]: unknown;
     };
     relations: Readonly<Record<string, readonly import("../../../read/index.js").ReadRelation[]>>;
-    doc?: import("../../../read/index.js").StoredDocument | null | undefined;
+    doc?: import("../../../document.js").StoredDocument | null | undefined;
     refs?: import("../../../read/index.js").ReadRefs | undefined;
     body?: import("../../../read/index.js").ReadBody | undefined;
 };

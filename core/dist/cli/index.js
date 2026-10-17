@@ -9,7 +9,6 @@ export { unifiedDiff } from "./diff.js";
 export { formatDoctorReport, runDoctor, } from "./doctor/index.js";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env.js";
 export { eventsRetry } from "./events.js";
-export { findBoundaryViolations, formatBoundaryViolations, SERVER_ONLY_MODULES, } from "./import-boundary.js";
 export { initProject } from "./init.js";
 export { detectApp, detectPackageManager } from "./init-detect.js";
 export { collectAnswers } from "./init-prompts.js";

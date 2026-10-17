@@ -1,5 +1,5 @@
 import { publishBodySchema } from "../../../../../core/api.js";
-import { adminRoute, ok, readVersionedBody } from "../../../handler.js";
+import { adminRoute, readVersionedBody, written } from "../../../handler.js";
 /**
  * Explicit publish. The draft goes through the write pipeline (hooks, core preparation), and the store re-checks it for publishing inside the transaction;
  * on failure it returns 422 with located `issues`.
@@ -9,5 +9,5 @@ import { adminRoute, ok, readVersionedBody } from "../../../handler.js";
 export const POST = adminRoute(async ({ request, params, cms }) => {
     const { expectedVersion, resetPublishedAt } = await readVersionedBody(request, publishBodySchema);
     const result = await cms.contentService().publish({ id: params.id, expectedVersion, resetPublishedAt });
-    return ok(result);
+    return written(cms, result);
 });

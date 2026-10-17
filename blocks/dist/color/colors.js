@@ -66,32 +66,25 @@ export function cleanTextColor(attrs) {
 }
 export const hasTextColor = (attrs) => Boolean(attrs.fg || attrs.bg);
 /**
- * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
+ * Display attributes shared by the public page and the editor. CSS (`.monti-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
  * Color is applied only when `data-fg` or `data-bg` is present.
  */
 export function textColorProps(attrs) {
     const style = {};
     if (attrs.fg)
-        style["--cms-fg"] = attrs.fg;
+        style["--monti-fg"] = attrs.fg;
     if (attrs.fgDark)
-        style["--cms-fg-dark"] = attrs.fgDark;
+        style["--monti-fg-dark"] = attrs.fgDark;
     if (attrs.bg)
-        style["--cms-bg"] = attrs.bg;
+        style["--monti-bg"] = attrs.bg;
     if (attrs.bgDark)
-        style["--cms-bg-dark"] = attrs.bgDark;
+        style["--monti-bg-dark"] = attrs.bgDark;
     return {
-        className: "cms-color",
+        className: "monti-color",
         ...(attrs.fg ? { "data-fg": "" } : {}),
         ...(attrs.bg ? { "data-bg": "" } : {}),
         style,
     };
-}
-/** The preset if the color matches one. Used to mark the current color in the picker list. */
-export function paletteOf(kind, attrs, palette) {
-    const light = attrs[kind];
-    if (!light)
-        return undefined;
-    return palette.find((color) => color[kind].light.toLowerCase() === light.toLowerCase());
 }
 /** The problems of the picker list (`color({ palette })`): hex values and unique `id`s. */
 export function checkTextPalette(palette) {

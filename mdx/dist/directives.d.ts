@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /**
  * Table of blocks written as elements (containers, leaves and text blocks), by renderer name. The pre-publish check reads attribute rules from it.
  * It is built from the site's block definitions (`blocks/definitions.ts` and the blocks the site adds).
@@ -28,4 +28,4 @@ export interface Directives {
 }
 /** The directive table of a site. */
 export declare const directivesOf: (site: Pick<Site, "directiveBlocks">) => Directives;
-export { TEXT_ALIGN_VALUES } from "@monti-cms/core/client";
+export { TEXT_ALIGN_VALUES } from "@monti-cms/core/site";

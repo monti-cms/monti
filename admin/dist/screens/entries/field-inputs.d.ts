@@ -1,4 +1,4 @@
-import type { BacklinkField, ValueField } from "@monti-cms/core/client";
+import type { BacklinkField, ValueField } from "@monti-cms/core";
 import type { EntryForm, FormValue } from "./entry-form.js";
 /** Values an input needs from outside the field. The edit screen fills them. */
 export interface FieldContext {

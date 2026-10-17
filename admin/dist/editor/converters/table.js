@@ -1,12 +1,24 @@
-import { boundedTableSpan, formatTableWidths, hasGfmHeaderLayout, MAX_TABLE_COLUMN_WIDTH, MAX_TABLE_COLUMNS, parseTableWidths, tableCellColumns, tableHasMergedCells, tableWidths, } from "@monti-cms/core/document";
-import { BLOCK_ID_ATTRIBUTE } from "../block-ids.js";
+import { boundedTableSpan, hasGfmHeaderLayout, MAX_TABLE_COLUMN_WIDTH, MAX_TABLE_COLUMNS, tableCellColumns, } from "@monti-cms/core/document";
+import { formatTableWidths, parseTableWidths, tableHasMergedCells, tableWidths } from "@monti-cms/core/notation";
+import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "../block-ids.js";
 import { lineBreakNode } from "./shared.js";
-/** The id a stored row has, as the editor's `blockId` attribute, so it survives the editor (the cell does the same in its attributes). */
-const idAttrs = (node) => (node.id === undefined ? {} : { attrs: { [BLOCK_ID_ATTRIBUTE]: node.id } });
-/** The id the editor holds for a row or cell, as the stored node's `id`. */
+/** The id and source link a stored row or cell has, as the editor's `blockId` and `sourceBlockId` attributes, so they survive the editor. */
+const idEditorAttrs = (node) => ({
+    ...(node.id === undefined ? {} : { [BLOCK_ID_ATTRIBUTE]: node.id }),
+    ...(node.sourceId === undefined ? {} : { [SOURCE_BLOCK_ID_ATTRIBUTE]: node.sourceId }),
+});
+const idAttrs = (node) => {
+    const attrs = idEditorAttrs(node);
+    return Object.keys(attrs).length > 0 ? { attrs } : {};
+};
+/** The id and source link the editor holds for a row or cell, as the stored node's `id` and `sourceId`. */
 const idOf = (node) => {
     const id = node.attrs?.[BLOCK_ID_ATTRIBUTE];
-    return typeof id === "string" ? { id } : {};
+    const sourceId = node.attrs?.[SOURCE_BLOCK_ID_ATTRIBUTE];
+    return {
+        ...(typeof id === "string" ? { id } : {}),
+        ...(typeof sourceId === "string" ? { sourceId } : {}),
+    };
 };
 const tableAttrs = (align, widths) => {
     const attrs = {};
@@ -39,7 +51,7 @@ export const tableConverter = {
                     const colspan = boundedTableSpan(cell.attrs?.colspan, MAX_TABLE_COLUMNS);
                     const rowspan = boundedTableSpan(cell.attrs?.rowspan, rows.length - rowIndex);
                     const attrs = {
-                        ...(cell.id === undefined ? {} : { [BLOCK_ID_ATTRIBUTE]: cell.id }),
+                        ...idEditorAttrs(cell),
                     };
                     if (colspan > 1)
                         attrs.colspan = colspan;

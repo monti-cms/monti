@@ -1,5 +1,5 @@
 import { defineCollection, parseSchemaFile } from "@monti-cms/core";
-import { createSite } from "@monti-cms/core/client";
+import { createSite } from "@monti-cms/core/site";
 import { markSandboxSite } from "../shared/preview-sandbox.js";
 /**
  * A site made from the schema being edited (the draft), for a preview that runs the real components: `schemaOf`, the layout, conditional fields, tabs, options

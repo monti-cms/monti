@@ -1,85 +1,73 @@
+import { extensionFor, isImageType, MEDIA_TYPES, sniffFile } from "../../../core/media-types.js";
 import { detectImageDimensionsAndType } from "../../../media/image-detect.js";
 import { CmsError } from "../error-handler.js";
 export const UPLOAD_URL_TTL_SECONDS = 600;
-const EXTENSIONS = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/gif": "gif",
-    "image/avif": "avif",
-    "application/pdf": "pdf",
-    "application/zip": "zip",
-    "text/plain": "txt",
-    "text/markdown": "md",
-    "text/csv": "csv",
-    "application/json": "json",
-};
-/** The file key's extension comes from the type, not from the user-supplied filename. */
-export const extensionFor = (mimeType) => EXTENSIONS[mimeType];
-/** Text files are checked by reading only the beginning. */
-const TEXT_SNIFF_BYTES = 64 * 1024;
-const startsWith = (bytes, signature) => signature.every((byte, index) => bytes[index] === byte);
-/**
- * Checks that an attachment's actual bytes match the declared type. PDF and zip use file signatures; text files are checked
- * by being readable as UTF-8 with no NUL bytes (this stops binaries from being uploaded as text files).
- */
-function detectFileType(bytes, declared) {
-    switch (declared) {
-        case "application/pdf":
-            return startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
-        case "application/zip":
-            // Regular zip and empty zip.
-            return startsWith(bytes, [0x50, 0x4b, 0x03, 0x04]) || startsWith(bytes, [0x50, 0x4b, 0x05, 0x06]);
-        default: {
-            if (bytes.includes(0))
-                return false;
-            try {
-                // Only the start was read, so the last character may be cut off. Exclude the final 3 bytes from the check.
-                const end = bytes.length >= TEXT_SNIFF_BYTES ? Math.max(0, bytes.length - 3) : bytes.length;
-                new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, end));
-                return true;
-            }
-            catch {
-                return false;
-            }
-        }
-    }
+export { extensionFor };
+/** File types as a person knows them (`JPG, PNG, PDF`: the first extension of each type, in capitals), for a notice that lists what is allowed. */
+export function typeNames(mimeTypes) {
+    const names = mimeTypes.map((mime) => (mime in MEDIA_TYPES ? extensionFor(mime) : mime).toUpperCase());
+    return [...new Set(names)].join(", ");
 }
+/** A size limit as a person reads it (`10 MB`, `2.5 MB`). */
+export const megabytes = (bytes) => `${Number((bytes / 1024 / 1024).toFixed(1))} MB`;
+/** The notice of a file that is over the size limit. */
+export const sizeNotice = (limit) => ({
+    key: "media.upload.size",
+    vars: { limit: megabytes(limit) },
+});
 /**
  * Inspects an uploaded staging file by its actual bytes: size, type (the client MIME is not trusted), and pixel count.
- * For attachments, checks that the `declared` type matches the actual content. Throws `CmsError` on failure.
+ * For attachments, checks that the `declared` type matches the actual content. When `expectedBytes` is given, the stored size must equal it. Throws `CmsError` on failure.
  */
-export async function inspectUploadedFile(site, mediaStore, stagingKey, declared) {
+export async function inspectUploadedFile(site, mediaStore, stagingKey, declared, expectedBytes) {
     const head = await mediaStore.headFile({ key: stagingKey });
     if (!head)
         throw new CmsError("File has not been uploaded to storage yet", "upload_incomplete");
-    if (declared && !site.api.isImageMime(declared)) {
+    // The stored object must be the size the upload declared: the declared size is what the limits were checked against.
+    if (expectedBytes !== undefined && head.contentLength !== expectedBytes) {
+        // Bigger than declared went past the checked limit; smaller means the upload did not finish.
+        throw new CmsError(`Uploaded file is ${head.contentLength} bytes but ${expectedBytes} bytes were declared`, head.contentLength > expectedBytes ? "payload_too_large" : "upload_incomplete");
+    }
+    if (declared && !isImageType(declared)) {
         if (!site.api.ALLOWED_FILE_MIME_TYPES.includes(declared)) {
-            throw new CmsError(`File type ${declared} is not allowed`, "unsupported_media_type");
+            throw new CmsError(`File type ${declared} is not allowed`, "unsupported_media_type", {
+                notice: {
+                    key: "media.upload.type",
+                    vars: { types: typeNames([...site.api.ALLOWED_IMAGE_MIME_TYPES, ...site.api.ALLOWED_FILE_MIME_TYPES]) },
+                },
+            });
         }
         if (head.contentLength > site.api.MAX_FILE_BYTES) {
-            throw new CmsError(`Uploaded file exceeds ${site.api.MAX_FILE_BYTES} bytes`, "payload_too_large");
+            throw new CmsError(`Uploaded file exceeds ${site.api.MAX_FILE_BYTES} bytes`, "payload_too_large", {
+                notice: sizeNotice(site.api.MAX_FILE_BYTES),
+            });
         }
         const mimeType = declared;
-        const sniff = mimeType === "application/pdf" || mimeType === "application/zip" ? 8 : TEXT_SNIFF_BYTES;
+        const sniff = MEDIA_TYPES[mimeType].sniffBytes;
         // Empty files are not read (only an empty text file passes).
         const bytes = head.contentLength > 0
             ? mediaStore.readPrefix
                 ? await mediaStore.readPrefix({ key: stagingKey, bytes: Math.min(sniff, head.contentLength) })
                 : (await mediaStore.readFile({ key: stagingKey, maxBytes: head.contentLength })).subarray(0, sniff)
             : new Uint8Array();
-        if (!detectFileType(bytes, mimeType)) {
-            throw new CmsError(`Uploaded file is not a valid ${mimeType} file`, "unsupported_media_type");
+        if (!sniffFile(bytes, mimeType)) {
+            throw new CmsError(`Uploaded file is not a valid ${mimeType} file`, "unsupported_media_type", {
+                notice: { key: "media.upload.content_file", vars: { type: typeNames([mimeType]) } },
+            });
         }
         return { head, detected: { mimeType, width: null, height: null } };
     }
     if (head.contentLength > site.api.MAX_MEDIA_BYTES) {
-        throw new CmsError(`Uploaded image exceeds ${site.api.MAX_MEDIA_BYTES} bytes`, "payload_too_large");
+        throw new CmsError(`Uploaded image exceeds ${site.api.MAX_MEDIA_BYTES} bytes`, "payload_too_large", {
+            notice: sizeNotice(site.api.MAX_MEDIA_BYTES),
+        });
     }
     const bytes = await mediaStore.readFile({ key: stagingKey, maxBytes: site.api.MAX_MEDIA_BYTES + 1 });
     const detected = detectImageDimensionsAndType(bytes);
     if (!detected || !site.api.ALLOWED_IMAGE_MIME_TYPES.includes(detected.mimeType)) {
-        throw new CmsError("Uploaded file is not a valid or allowed image format", "unsupported_media_type");
+        throw new CmsError("Uploaded file is not a valid or allowed image format", "unsupported_media_type", {
+            notice: { key: "media.upload.content_image", vars: { types: typeNames(site.api.ALLOWED_IMAGE_MIME_TYPES) } },
+        });
     }
     if (detected.width * detected.height > site.api.MAX_MEDIA_PIXELS) {
         throw new CmsError(`Image exceeds ${site.api.MAX_MEDIA_PIXELS} pixels`, "too_many_pixels");
@@ -92,20 +80,20 @@ export function attachmentDisposition(filename) {
     return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 /** The extension of a file name (lowercase, with the dot), or an empty string. */
-const extensionOf = (filename) => /\.[^./\\]{1,16}$/.exec(filename)?.[0]?.toLowerCase() ?? "";
+export const extensionOf = (filename) => /\.[^./\\]{1,16}$/.exec(filename)?.[0]?.toLowerCase() ?? "";
 /**
- * Why a new file name is not acceptable, or `null`. The name is a display and download name, so it stays one plain name (no path, no control
+ * Why a new file name is not acceptable (the notice for the person), or `null`. The name is a display and download name, so it stays one plain name (no path, no control
  * characters), has something before the extension, and keeps the extension of the file: the stored type does not change with a rename.
  */
 export function renameProblem(current, next) {
     // biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what this rejects
-    if (/[/\\\u0000-\u001f\u007f]/.test(next) || next === "." || next === "..") {
-        return "A file name can't contain slashes or control characters";
-    }
+    if (/[/\\\u0000-\u001f\u007f]/.test(next) || next === "." || next === "..")
+        return { key: "media.rename.slash" };
     const extension = extensionOf(current);
-    if (extensionOf(next) !== extension)
-        return `The file name must keep the extension ${extension || "(none)"}`;
+    if (extensionOf(next) !== extension) {
+        return extension ? { key: "media.rename.extension", vars: { extension } } : { key: "media.rename.no_extension" };
+    }
     if (next.slice(0, next.length - extension.length).trim() === "")
-        return "The file name needs a name before the extension";
+        return { key: "media.rename.empty" };
     return null;
 }

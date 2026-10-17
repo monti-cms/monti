@@ -1,3 +1,4 @@
+import { brandErrorClass } from "./error-brand.js";
 const sentence = (text) => {
     const trimmed = text.trim();
     return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
@@ -37,6 +38,7 @@ export class SetupError extends Error {
     /** The driver's error code when this explains a driver error, else the same as `kind`. */
     code;
 }
+brandErrorClass(SetupError, "SetupError");
 /** A {@link SetupError} for the problem. `cause` keeps the error underneath (a driver error, say); `kind` names the kind of problem. */
 export function problemError(problem, cause, kind) {
     return new SetupError(problem, { cause, kind });

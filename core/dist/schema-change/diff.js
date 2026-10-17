@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { kindDefaults } from "../schema/collection.js";
 import { valueFieldsOf } from "../schema/walk.js";
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const stringList = (value) => Array.isArray(value) ? value.filter((item) => typeof item === "string") : undefined;
@@ -26,7 +27,11 @@ function fieldShape(stored) {
 function bodyShape(collection) {
     const { body } = collection;
     const written = isRecord(body) ? body : isRecord(collection.allowed) ? collection.allowed : undefined;
-    const enabled = typeof body === "boolean" ? body : written !== undefined ? true : collection.kind === "document";
+    const enabled = typeof body === "boolean"
+        ? body
+        : written !== undefined
+            ? true
+            : kindDefaults(collection.kind).body;
     const blocks = stringList(written?.blocks);
     const marks = stringList(written?.marks);
     const headings = Array.isArray(written?.headings)

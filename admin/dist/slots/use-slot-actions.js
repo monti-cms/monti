@@ -1,5 +1,5 @@
 "use client";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { editorFailure, toEditorError } from "../hooks/result.js";
 import { useStoreSelector } from "../hooks/store.js";

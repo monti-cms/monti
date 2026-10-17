@@ -1,3 +1,4 @@
+import { hostOf } from "../cms/host.js";
 import { CMS_API_PATH, cmsBasePath } from "../core/base-path.js";
 import { assertPluginRoutesFree } from "../plugin/collisions.js";
 import { CMS_AUTH_BASE_PATH } from "../server/define.js";
@@ -24,7 +25,7 @@ import * as rEvents from "./v1/events/route.js";
 import * as rExport from "./v1/export/route.js";
 import * as rFolder from "./v1/folders/[id]/route.js";
 import * as rFolders from "./v1/folders/route.js";
-import { runAdminRoute, runPublicRoute } from "./v1/handler.js";
+import { runRoute } from "./v1/handler.js";
 import * as rMediaComplete from "./v1/media/[id]/complete/route.js";
 import * as rMediaItem from "./v1/media/[id]/route.js";
 import * as rMediaCleanup from "./v1/media/cleanup/route.js";
@@ -43,6 +44,8 @@ import * as rTemplate from "./v1/templates/[id]/route.js";
 import * as rTemplates from "./v1/templates/route.js";
 const METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"];
 const isMethod = (value) => METHODS.includes(value);
+/** `admin.templates: false` turns off body templates: the Templates screen, the editor's menu and these routes. */
+const templatesEnabled = (cms) => cms.site.ADMIN_TEMPLATES;
 const ROUTES = [
     // The central API key store: names, masked tails and the places that use each key. A value goes in on save and never comes back.
     { pattern: "v1/api-keys", module: rApiKeys },
@@ -62,9 +65,9 @@ const ROUTES = [
     { pattern: "v1/entries/[id]/translations", module: rEntryTranslations },
     { pattern: "v1/entries/[id]/trash", module: rEntryTrash },
     { pattern: "v1/entries/[id]/unarchive", module: rEntryUnarchive },
-    // The event outbox: failed and dead `afterCommit` deliveries. `v1/events/retry` also takes the retry secret of the server config (for a cron job).
+    // The event outbox: failed and dead durable entry event deliveries. `v1/events/retry` also takes the retry secret of the server config (for a cron job).
     { pattern: "v1/events", module: rEvents },
-    { pattern: "v1/events/retry", public: true, module: rEventsRetry },
+    { pattern: "v1/events/retry", access: "admin-or-bearer", module: rEventsRetry },
     { pattern: "v1/events/[id]/retry", module: rEventRetry },
     { pattern: "v1/events/[id]/dismiss", module: rEventDismiss },
     { pattern: "v1/export", module: rExport },
@@ -80,22 +83,28 @@ const ROUTES = [
     // The schema settings screen: reading works everywhere, the write routes answer 403 outside development.
     { pattern: "v1/schema", module: rSchema },
     { pattern: "v1/schema/preview", module: rSchemaPreview },
-    // Routes marked `public` need no login: sign in and out of the admin (browser form posts from the login screen, which check the same origin themselves),
-    // the events retry (an admin or the retry secret), and the public JSON API. Every other route is checked centrally: same origin, admin, then the handler.
-    { pattern: "v1/session/first-admin", public: true, module: rSessionFirstAdmin },
-    { pattern: "v1/session/sign-in/[provider]", public: true, module: rSessionSignIn },
-    { pattern: "v1/session/sign-out", public: true, module: rSessionSignOut },
+    // Routes with an `access` other than `admin` need no login, and the router applies the guard of the kind: sign in and out of the admin (browser form posts from the login screen,
+    // `same-origin-form`), the events retry (an admin or the retry secret, `admin-or-bearer`), and the public JSON API (`public-read`, GET only). Every other route is `admin`: same origin, admin, then the handler.
+    { pattern: "v1/session/first-admin", access: "same-origin-form", module: rSessionFirstAdmin },
+    { pattern: "v1/session/sign-in/[provider]", access: "same-origin-form", module: rSessionSignIn },
+    { pattern: "v1/session/sign-out", access: "same-origin-form", module: rSessionSignOut },
     // Public JSON API (published content only, no login). 404 if the server config has no `publicApi`.
-    { pattern: "v1/public/entries", public: true, module: rPublicList },
-    { pattern: "v1/public/entries/[collection]/[slug]", public: true, module: rPublicItem },
-    { pattern: "v1/templates", module: rTemplates },
-    { pattern: "v1/templates/[id]", module: rTemplate },
+    { pattern: "v1/public/entries", access: "public-read", module: rPublicList },
+    { pattern: "v1/public/entries/[collection]/[slug]", access: "public-read", module: rPublicItem },
+    { pattern: "v1/templates", module: rTemplates, enabled: templatesEnabled },
+    { pattern: "v1/templates/[id]", module: rTemplate, enabled: templatesEnabled },
 ];
-const compile = (routes) => routes.map((route) => ({ segments: route.pattern.split("/"), module: route.module, public: route.public === true }));
+const compile = (routes) => routes.map((route) => ({
+    segments: route.pattern.split("/"),
+    module: route.module,
+    access: route.access ?? "admin",
+    enabled: route.enabled,
+    ...(route.plugin ? { plugin: route.plugin } : {}),
+}));
 const COMPILED = compile(ROUTES);
 /** The route and params matching the path segments. Named segments match before `[name]` segments (table order). */
 export function matchRoute(path, routes = COMPILED) {
-    for (const { segments, module, public: isPublic } of routes) {
+    for (const { segments, module, access, enabled, plugin } of routes) {
         if (segments.length !== path.length)
             continue;
         const params = {};
@@ -108,13 +117,12 @@ export function matchRoute(path, routes = COMPILED) {
             return segment === part;
         });
         if (matched)
-            return { module, params, public: isPublic };
+            return { module, params, access, enabled, ...(plugin ? { plugin } : {}) };
     }
     return null;
 }
 /** Registered admin API paths (for docs and tests). */
 export const CMS_ROUTE_PATTERNS = ROUTES.map((route) => route.pattern);
-const notFound = () => handleApiError(new CmsError("Unknown CMS API path", "not_found"));
 /**
  * The path segments after the API prefix (`/api/monti/`), read from the request URL: `["v1", "entries", "<id>"]` for `/api/monti/v1/entries/<id>`.
  * The site's `basePath` is skipped when the URL has it. `null` if the URL is not under the API prefix.
@@ -145,9 +153,9 @@ export function pathFromRequest(request) {
 export function createRequestHandler(cms) {
     let pluginCompiled;
     const compiledPluginRoutes = () => {
-        // A plugin route is checked like a core one (only `public: true` is skipped), so a missing auth check never becomes an open route.
+        // A plugin route is checked like a core one (an `access` other than `admin` is the plugin's explicit choice), so a missing auth check never becomes an open route.
         // A path that collides with a core route or another plugin is an error (the core would match first and silently shadow the plugin route). Failures are not cached.
-        pluginCompiled ??= cms
+        pluginCompiled ??= hostOf(cms)
             .pluginRoutes()
             .then((routes) => {
             assertPluginRoutesFree(ROUTES.map((route) => route.pattern), routes);
@@ -159,33 +167,32 @@ export function createRequestHandler(cms) {
         });
         return pluginCompiled;
     };
+    const notFound = () => handleApiError(new CmsError("Unknown CMS API path", "not_found"), cms.site);
     return async (request, options) => {
         const path = options?.path ?? pathFromRequest(request);
         if (!path)
             return notFound();
         const method = request.method.toUpperCase();
         if (!isMethod(method)) {
-            return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
+            return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
         }
         if (path[0] === "auth") {
             const auth = cms.auth();
             if (auth.basePath !== CMS_AUTH_BASE_PATH)
                 return notFound();
             if (method !== "GET" && method !== "POST") {
-                return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
+                return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
             }
             return auth.handlers[method](request);
         }
         // If not a core route, look in the plugin route table.
         const matched = matchRoute(path) ?? matchRoute(path, await compiledPluginRoutes());
-        if (!matched)
+        if (!matched || matched.enabled?.(cms) === false)
             return notFound();
         const handler = matched.module[method];
         if (typeof handler !== "function") {
-            return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"));
+            return handleApiError(new CmsError(`${method} is not allowed here`, "method_not_allowed"), cms.site);
         }
-        return matched.public
-            ? runPublicRoute(cms, request, matched.params, handler)
-            : runAdminRoute(cms, request, matched.params, handler);
+        return runRoute(cms, request, matched.params, handler, matched.access, matched.plugin ? cms.plugin(matched.plugin) : undefined);
     };
 }

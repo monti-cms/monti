@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { cn, Field, FieldLabel, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/admin";
+import { cn, FormField, FormFieldLabel, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@monti-cms/admin/kit";
 import { useId } from "react";
 import { customBlocksOf, customEngines, customResults } from "../custom.js";
 import { customMessages } from "./custom-editor.messages.js";
@@ -95,15 +95,15 @@ export function CustomBaseFields({ base, onChange }) {
     const fieldOptions = fieldOptionsOf(site);
     const engines = customEngines(site, base.surface);
     const fieldValue = base.surface.slot === "field" ? `${base.surface.collections?.[0] ?? ""}:${base.surface.field}` : "";
-    return (_jsxs("div", { className: "grid gap-5 sm:grid-cols-2", children: [_jsxs(Field, { className: "sm:col-span-2", children: [_jsx(FieldLabel, { htmlFor: ids.label, children: t("field.name") }), _jsx(Input, { id: ids.label, value: base.label, maxLength: 40, onChange: (event) => onChange({ ...base, label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.place, children: t("field.place") }), _jsx("p", { className: "text-cms-muted-foreground text-xs", children: t(`place.hint.${base.surface.slot}`) }), _jsx(OptionSelect, { id: ids.place, value: placeValue(base.surface), options: placeOptions, onChange: (value) => {
+    return (_jsxs("div", { className: "grid gap-5 sm:grid-cols-2", children: [_jsxs(FormField, { className: "sm:col-span-2", children: [_jsx(FormFieldLabel, { htmlFor: ids.label, children: t("field.name") }), _jsx(Input, { id: ids.label, value: base.label, maxLength: 40, onChange: (event) => onChange({ ...base, label: event.target.value }), className: "h-8 text-xs md:text-xs" })] }), _jsxs(FormField, { children: [_jsx(FormFieldLabel, { htmlFor: ids.place, children: t("field.place") }), _jsx(OptionSelect, { id: ids.place, value: placeValue(base.surface), options: placeOptions, onChange: (value) => {
                             const option = placeOptions.find((item) => item.value === value);
                             if (option)
                                 setSurface(option.surface ?? firstField(site));
-                        } })] }), base.surface.slot === "field" ? (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.field, children: t("field.field") }), _jsx(OptionSelect, { id: ids.field, value: fieldValue, options: fieldOptions, onChange: (value) => {
+                        } })] }), base.surface.slot === "field" ? (_jsxs(FormField, { children: [_jsx(FormFieldLabel, { htmlFor: ids.field, children: t("field.field") }), _jsx(OptionSelect, { id: ids.field, value: fieldValue, options: fieldOptions, onChange: (value) => {
                             const [collection, field] = value.split(":");
                             if (collection && field)
                                 setSurface({ slot: "field", field, collections: [collection] });
-                        } })] })) : (_jsx("div", {})), _jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.result, children: t("field.result") }), _jsx(OptionSelect, { id: ids.result, value: base.result, options: customResults(site, base.surface).map((result) => ({ value: result, label: resultLabel(result) })), onChange: (result) => onChange({ ...base, result: result }) })] }), engines.length > 1 && (_jsxs(Field, { children: [_jsx(FieldLabel, { htmlFor: ids.engine, children: t("field.engine") }), _jsx(OptionSelect, { id: ids.engine, value: base.engine ?? "generate", options: engines.map((engine) => ({ value: engine, label: engineLabel(engine) })), onChange: (value) => {
+                        } })] })) : (_jsx("div", {})), _jsxs(FormField, { children: [_jsx(FormFieldLabel, { htmlFor: ids.result, children: t("field.result") }), _jsx(OptionSelect, { id: ids.result, value: base.result, options: customResults(site, base.surface).map((result) => ({ value: result, label: resultLabel(result) })), onChange: (result) => onChange({ ...base, result: result }) })] }), engines.length > 1 && (_jsxs(FormField, { children: [_jsx(FormFieldLabel, { htmlFor: ids.engine, children: t("field.engine") }), _jsx(OptionSelect, { id: ids.engine, value: base.engine ?? "generate", options: engines.map((engine) => ({ value: engine, label: engineLabel(engine) })), onChange: (value) => {
                             const engine = value;
                             onChange({ ...base, engine: engine === "decide" ? engine : undefined });
                         } })] }))] }));

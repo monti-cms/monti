@@ -1,4 +1,4 @@
-import { type Site, type StructureCheck } from "@monti-cms/core/client";
+import { type Site, type StructureCheck } from "@monti-cms/core/site";
 import type { SyntaxExtension } from "./syntax/types.js";
 /** Whether it can be read as MDX (even with the structure check off, it must be readable to go into the body). */
 export declare function readableMdx(site: Site, mdx: string, syntax?: readonly SyntaxExtension[]): StructureCheck;

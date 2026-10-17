@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { MoveHorizontal } from "lucide-react";
 import { useMemo } from "react";
 import { stringCodec, usePreference } from "../lib/hooks/use-preference.js";
@@ -42,5 +42,5 @@ export function useEditorWidth() {
 /** Body width menu at the right end of the toolbar. */
 export function EditorWidthMenu({ steps, value, onChange, }) {
     const t = useTranslator(editorMessages);
-    return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("editorWidth.label"), side: "bottom", className: "text-cms-muted-foreground", onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(MoveHorizontal, { "aria-hidden": true, className: "size-4" }) }), _jsx(DropdownMenuContent, { align: "end", className: "min-w-36", children: _jsx(DropdownMenuRadioGroup, { "aria-label": t("editorWidth.label"), value: value.key, onValueChange: (next) => typeof next === "string" && onChange(next), children: steps.map((step) => (_jsx(DropdownMenuRadioItem, { value: step.key, children: step.label }, step.key))) }) })] }));
+    return (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("editorWidth.label"), side: "bottom", className: "text-monti-muted-foreground", onMouseDown: (event) => event.preventDefault(), trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(MoveHorizontal, { "aria-hidden": true, className: "size-4" }) }), _jsx(DropdownMenuContent, { align: "end", className: "min-w-36", children: _jsx(DropdownMenuRadioGroup, { "aria-label": t("editorWidth.label"), value: value.key, onValueChange: (next) => typeof next === "string" && onChange(next), children: steps.map((step) => (_jsx(DropdownMenuRadioItem, { value: step.key, children: step.label }, step.key))) }) })] }));
 }

@@ -1,15 +1,18 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileIcon, ImageIcon } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { errorText } from "../../api/client.js";
+import { mediaNotConfiguredMessage } from "../../api/error-message.js";
 import { getMedia, mediaKeys } from "../../api/media.js";
 import { ImageInsertDialog } from "../../editor/image-insert-dialog.js";
 import { uploadAttachment } from "../../editor/upload-helper.js";
 import { cn } from "../../lib/utils/cn.js";
 import { Button } from "../../ui/button.js";
-import { FieldError } from "../../ui/field.js";
+import { FormFieldError } from "../../ui/field.js";
+import { useAdminFeatures } from "../shared/admin-features.js";
 import { entriesMessages } from "./messages.js";
 /** Media ID -> public URL. Shared by the input and the extension's preview. `null` if it cannot be loaded. */
 const urls = new Map();
@@ -43,7 +46,7 @@ export function useMediaUrl(mediaId) {
 /** Image preview. Shows an icon if the URL is unknown. */
 export function MediaThumbnail({ mediaId, className }) {
     const url = useMediaUrl(mediaId);
-    return url ? (_jsx("img", { src: url, alt: "", className: cn("object-cover", className) })) : (_jsx("div", { className: cn("flex items-center justify-center bg-cms-muted text-cms-muted-foreground", className), children: _jsx(ImageIcon, { "aria-hidden": true, className: "size-4" }) }));
+    return url ? (_jsx("img", { src: url, alt: "", className: cn("object-cover", className) })) : (_jsx("div", { className: cn("flex items-center justify-center bg-monti-muted text-monti-muted-foreground", className), children: _jsx(ImageIcon, { "aria-hidden": true, className: "size-4" }) }));
 }
 /** Default input of a media field (`fields.media`). Picks a file if `accept` is `file`, otherwise an image. */
 export function MediaInput(props) {
@@ -52,9 +55,11 @@ export function MediaInput(props) {
 /** Picks an image from the media library and shows the picked image small. */
 export function MediaImageInput({ field, id, value, invalid, describedBy, context, onChange }) {
     const t = useTranslator(entriesMessages);
+    const site = useSite();
+    const { media } = useAdminFeatures();
     const [picking, setPicking] = useState(false);
     const mediaId = typeof value === "string" ? value : "";
-    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "flex items-center gap-1.5", children: [mediaId && _jsx(MediaThumbnail, { mediaId: mediaId, className: "aspect-[1.91/1] h-7 shrink-0 rounded border" }), _jsx(Button, { id: id, type: "button", size: "sm", variant: "outline", className: "h-7 flex-1 text-xs", disabled: context.disabled, "aria-invalid": invalid || undefined, "aria-describedby": describedBy, onClick: () => setPicking(true), children: mediaId ? t("media.change") : t("media.chooseImage") }), mediaId && (_jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "h-7 text-xs", disabled: context.disabled, onClick: () => onChange(""), children: t("media.remove") }))] }), _jsx(ImageInsertDialog, { open: picking, initialFile: null, mode: "pick", title: field.label, onClose: () => setPicking(false), onInsert: (image) => {
+    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "flex items-center gap-1.5", children: [mediaId && _jsx(MediaThumbnail, { mediaId: mediaId, className: "aspect-[1.91/1] h-7 shrink-0 rounded border" }), _jsx(Button, { id: id, type: "button", size: "sm", variant: "outline", className: "h-7 flex-1 text-xs", disabled: context.disabled || !media, title: media ? undefined : mediaNotConfiguredMessage(site), "aria-invalid": invalid || undefined, "aria-describedby": describedBy, onClick: () => setPicking(true), children: mediaId ? t("media.change") : t("media.chooseImage") }), mediaId && (_jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "h-7 text-xs", disabled: context.disabled, onClick: () => onChange(""), children: t("media.remove") }))] }), _jsx(ImageInsertDialog, { open: picking, initialFile: null, mode: "pick", title: field.label, onClose: () => setPicking(false), onInsert: (image) => {
                     rememberMediaUrl(image.mediaId, image.publicUrl);
                     onChange(image.mediaId);
                     setPicking(false);
@@ -64,6 +69,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 function MediaFileInput({ id, value, invalid, describedBy, context, onChange }) {
     const t = useTranslator(entriesMessages);
     const site = useSite();
+    const { media } = useAdminFeatures();
     const mediaId = typeof value === "string" ? value : "";
     const fileInput = useRef(null);
     const [progress, setProgress] = useState(null);
@@ -90,16 +96,16 @@ function MediaFileInput({ id, value, invalid, describedBy, context, onChange }) 
             onChange(uploaded.mediaId);
         }
         catch (cause) {
-            setError(cause instanceof Error ? cause.message : t("media.uploadFailed"));
+            setError(errorText(site, cause, t("media.uploadFailed")));
         }
         finally {
             setProgress(null);
         }
     };
-    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "flex items-center gap-1.5", children: [mediaId && (_jsxs("span", { className: "flex min-w-0 flex-1 items-center gap-1 text-xs", children: [_jsx(FileIcon, { "aria-hidden": true, className: "size-3.5 shrink-0 text-cms-muted-foreground" }), _jsx("span", { className: "truncate", children: filename ?? mediaId })] })), _jsx(Button, { id: id, type: "button", size: "sm", variant: "outline", className: cn("h-7 text-xs", !mediaId && "flex-1"), disabled: context.disabled || progress !== null, "aria-invalid": invalid || undefined, "aria-describedby": describedBy, onClick: () => fileInput.current?.click(), children: progress !== null ? t("media.uploading", { progress }) : mediaId ? t("media.change") : t("media.chooseFile") }), mediaId && (_jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "h-7 text-xs", disabled: context.disabled, onClick: () => onChange(""), children: t("media.remove") }))] }), _jsx("input", { ref: fileInput, type: "file", accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
+    return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "flex items-center gap-1.5", children: [mediaId && (_jsxs("span", { className: "flex min-w-0 flex-1 items-center gap-1 text-xs", children: [_jsx(FileIcon, { "aria-hidden": true, className: "size-3.5 shrink-0 text-monti-muted-foreground" }), _jsx("span", { className: "truncate", children: filename ?? mediaId })] })), _jsx(Button, { id: id, type: "button", size: "sm", variant: "outline", className: cn("h-7 text-xs", !mediaId && "flex-1"), disabled: context.disabled || progress !== null || !media, title: media ? undefined : mediaNotConfiguredMessage(site), "aria-invalid": invalid || undefined, "aria-describedby": describedBy, onClick: () => fileInput.current?.click(), children: progress !== null ? t("media.uploading", { progress }) : mediaId ? t("media.change") : t("media.chooseFile") }), mediaId && (_jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "h-7 text-xs", disabled: context.disabled, onClick: () => onChange(""), children: t("media.remove") }))] }), _jsx("input", { ref: fileInput, type: "file", accept: site.api.FILE_ACCEPT, hidden: true, "aria-hidden": true, tabIndex: -1, onChange: (event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";
                     if (file)
                         void upload(file);
-                } }), error && _jsx(FieldError, { children: error })] }));
+                } }), error && _jsx(FormFieldError, { children: error })] }));
 }

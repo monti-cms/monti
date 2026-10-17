@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type EditorError, type EditorResult } from "../../hooks/result.js";
 import type { EntryData } from "./entry-form.js";
 export declare const wait: (ms: number) => Promise<void>;

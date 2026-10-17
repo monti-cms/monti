@@ -1,5 +1,5 @@
-import { type AdminColumnSettings } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { type AdminColumnSettings } from "@monti-cms/core/site";
 import { type ColumnSizingState, type ColumnVisibilityState, type Updater } from "@tanstack/react-table";
 import { type AdminListColumn } from "./list-columns.js";
 import type { ListState } from "./list-state.js";

@@ -1,5 +1,5 @@
-import type { ListSortField, Site } from "@monti-cms/core/client";
-import { type StoredField } from "@monti-cms/core/client";
+import type { ListSortField, Site } from "@monti-cms/core/site";
+import { type StoredField } from "@monti-cms/core/site";
 import type { ListState } from "./list-state.js";
 /**
  * Admin list columns: the content's own values (system columns) and taxonomy fields (relation fields pointing to a taxonomy collection, e.g. tags or categories).

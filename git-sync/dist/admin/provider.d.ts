@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-/** What the git-sync plugin adds to the whole admin screen: the icon of its sidebar item. */
-export declare function GitSyncAdminProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;
+import type { AdminComponents } from "@monti-cms/admin";
+/** The git-sync page's sidebar icon. */
+export declare const gitSyncComponents: AdminComponents;

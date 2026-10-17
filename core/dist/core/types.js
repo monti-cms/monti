@@ -1,3 +1,4 @@
+import { brandErrorClass } from "./error-brand.js";
 import { CmsError } from "./store/errors.js";
 /** An occurrence as stored. Returns `undefined` for a value that is not an occurrence. */
 export const readReferenceOccurrence = (value) => {
@@ -32,8 +33,9 @@ const errorText = (code, issues) => {
 };
 /** A request the service refuses; the issues say what is wrong with it. A {@link CmsError}, so the HTTP layer answers it like any other. */
 export class ServiceError extends CmsError {
-    constructor(code, issues, message) {
-        super(message ?? errorText(code, issues), code, undefined, undefined, issues);
+    constructor(code, issues, message, options) {
+        super(message ?? errorText(code, issues), code, { issues, ...(options?.notice ? { notice: options.notice } : {}) });
         this.name = "ServiceError";
     }
 }
+brandErrorClass(ServiceError, "ServiceError");

@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useSite } from "@monti-cms/core/client";
+import { useSite } from "@monti-cms/core/site";
 import { useState } from "react";
 import { TextCheckToolbar, TextIssuePopover } from "./text-check-controls.js";
 import { useTextCheck } from "./use-text-check.js";

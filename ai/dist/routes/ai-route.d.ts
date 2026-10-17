@@ -1,4 +1,4 @@
-import { type Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
 import type { AiRunDeps } from "../run.js";
 import type { AiRuntime } from "../settings.js";
 /**

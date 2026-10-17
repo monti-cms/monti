@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { hostOf } from "../../cms/host.js";
 import { SetupError } from "../../core/problem.js";
 import { formatDecision } from "../../server/decision.js";
 import { findBoundaryViolations } from "../import-boundary.js";
@@ -92,7 +93,7 @@ const automatic = {
     title: "What Monti decided on its own",
     needsCms: true,
     run: (state) => {
-        const decisions = state.cms?.decisions(state.env) ?? [];
+        const decisions = state.cms ? hostOf(state.cms).decisions(state.env) : [];
         return ok(decisions.map((decision) => `${formatDecision(decision)}`).join("\n"));
     },
 };

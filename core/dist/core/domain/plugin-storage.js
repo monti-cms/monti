@@ -39,5 +39,5 @@ export function serializeStorageValue(value) {
     return text;
 }
 /** The conflict a write gets when the stored version is not the expected one (`stored` is 0 when there is no item). */
-export const storageConflict = (stored) => new CmsError("Conflict", "conflict", stored);
+export const storageConflict = (stored) => new CmsError("Conflict", "conflict", { serverVersion: stored });
 export const storageNotFound = () => new CmsError("Not found", "not_found");

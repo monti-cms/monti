@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import { type ListState } from "./list-state.js";
 import type { TaxonomyOptions } from "./shared/use-taxonomy.js";
 export interface FilterChip {

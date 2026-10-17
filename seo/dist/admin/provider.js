@@ -1,6 +1,4 @@
 "use client";
-import { jsx as _jsx } from "react/jsx-runtime";
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
 import { SEO_INPUTS, SEO_PREVIEW_VIEW } from "../fields.js";
 import { seoDescriptionInput, seoNoindexInput, seoTitleInput } from "./inputs.js";
 import { SeoPreviewView } from "./preview.js";
@@ -13,6 +11,3 @@ export const SEO_ADMIN_COMPONENTS = {
         [SEO_INPUTS.noindex]: seoNoindexInput,
     },
 };
-export function SeoAdminProvider({ children }) {
-    return _jsx(CmsAdminComponentsProvider, { components: SEO_ADMIN_COMPONENTS, children: children });
-}

@@ -1,5 +1,5 @@
-import { type Site } from "@monti-cms/core/client";
 import { type CodeBlockThemes } from "@monti-cms/core/code-block";
+import { type Site } from "@monti-cms/core/site";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Highlighter } from "shiki";
 export declare const codeBlockHighlightPluginKey: PluginKey<{

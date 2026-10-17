@@ -1,4 +1,4 @@
-import { type TextChecker } from "@monti-cms/core/client";
+import { type TextChecker } from "@monti-cms/core";
 import type { Editor } from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
 import { type TextCheckPluginState } from "./plugin.js";

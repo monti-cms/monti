@@ -4,6 +4,11 @@
  */
 export const emptyServerPlugin = {};
 /**
+ * Types the server side of a plugin: `export default defineServerPlugin({ routes, on, ... })` in the module that the plugin's `server` loads
+ * (`@monti-cms/core/server`). It returns what it is given.
+ */
+export const defineServerPlugin = (plugin) => plugin;
+/**
  * Creates a plugin. A plugin package exports a function (e.g. `ai()`) that returns this value. The type of what it adds (`contributes`)
  * is preserved so the receiving plugin can read it (e.g. AI feature names).
  */

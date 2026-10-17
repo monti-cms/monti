@@ -1,4 +1,5 @@
-import { CmsError, ServiceError } from "@monti-cms/core/plugin/server";
+import { CmsError } from "@monti-cms/core/server";
+import { ServiceError } from "@monti-cms/core/site";
 import { RelationImportError, resolveRelations } from "./entry-file.js";
 import { serverMessages } from "./server.messages.js";
 import { GitSyncError } from "./sync.js";

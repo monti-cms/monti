@@ -1,4 +1,3 @@
-export type { SchemaMigration } from "../schema-file/types.js";
 export { type ApplyOptions, applySchemaChange, type PlanOptions, planSchemaChange, type SchemaApplyResult, SchemaChangeError, type SchemaPlan, schemaVersionOf, snapshotSchema, } from "./apply.js";
 export { type ChangeImpact, type CheckOptions, checkSchemaChange, type ImpactConsequence, type ImpactSample, type SchemaImpact, scanAllBodies, } from "./check.js";
 export { describeSchemaChange, diffSchema } from "./diff.js";

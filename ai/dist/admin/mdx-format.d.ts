@@ -1,5 +1,4 @@
-import { type BrowserFormat } from "@monti-cms/admin";
-import type { Site } from "@monti-cms/core/client";
+import { type BrowserFormat, type Site } from "@monti-cms/admin";
 import type { JSONContent } from "@tiptap/core";
 /**
  * The text a model reads and writes is MDX, so the AI plugin works through the `mdx` format: the editor holds documents, and the format turns them into the
@@ -14,4 +13,4 @@ export declare const textOfContent: (site: Site, format: BrowserFormat, content:
 /** The editor's content for a text the model wrote. A text the format cannot read is kept as it is, in a box, rather than dropped or half read. */
 export declare function contentOfText(site: Site, format: BrowserFormat, text: string): JSONContent[];
 /** The document a text reads as, or `null` when the format cannot read it. For showing a preview of what the model wrote. */
-export declare const documentOfText: (format: BrowserFormat, text: string) => import("@monti-cms/core/read").StoredDocument | null;
+export declare const documentOfText: (format: BrowserFormat, text: string) => import("@monti-cms/core/document").StoredDocument | null;

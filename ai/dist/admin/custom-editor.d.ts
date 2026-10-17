@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/admin";
 import { type CustomBase } from "../custom.js";
 /** Picking the basic info of a screen action: name, attach target, result shape. */
 type Option = {

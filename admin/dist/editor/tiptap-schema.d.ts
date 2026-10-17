@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import { Node } from "@tiptap/core";
 /**
  * A read-only box that preserves CMS blocks not in the Tiptap schema (a block without an edit view, a merged table with block content, a body that could

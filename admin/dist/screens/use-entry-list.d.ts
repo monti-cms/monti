@@ -1,12 +1,8 @@
-import type { CollectionPreferences } from "@monti-cms/core/client";
-import { type BulkOp } from "@monti-cms/core/client";
-import type { Folder, ListEntriesItem } from "@monti-cms/core/runtime";
-import { type BulkItemResult, type BulkParams, type BulkSelection } from "../api/entries.js";
+import type { CollectionPreferences, Folder, ListEntriesItem } from "@monti-cms/core/site";
+import { type BulkSelection } from "../api/entries.js";
 import { type ListState } from "./list-state.js";
-import type { RecordTarget } from "./record-panel.js";
 import type { MenuAction } from "./shared/action-menu.js";
 import type { DraggedEntry } from "./shared/entry-drag.js";
-import { type OptimisticOp } from "./shared/list-cache.js";
 export type ListMode = "list" | "trash";
 /**
  * State, data and actions of the list and trash screens. Draws no UI pieces.
@@ -37,7 +33,26 @@ export declare function useEntryList(mode: ListMode): {
         isRefreshing: boolean;
         retry: () => undefined;
     };
-    foldersEnabled: boolean;
+    /**
+     * The folders of this list and what can be done with them; `null` where the list shows no folders (a collection without folders, the trash).
+     * Every folder entry point (the sidebar tree, folder rows, the blank-area and row menus, the bulk move, dropping rows on a folder) reads this,
+     * so none of them can offer folders the server would refuse.
+     */
+    folders: {
+        list: Folder[];
+        actions: {
+            requestCreate: (parentId: string | null) => void;
+            requestRename: (folder: Folder) => void;
+            requestDelete: (folder: Folder) => void;
+            moveFolder: (folder: Folder, parentId: string | null) => void;
+            createFolderDirect: (name: string, parentId: string | null) => Promise<void>;
+            renameFolderDirect: (folder: Folder, newName: string) => Promise<void>;
+            dialogs: import("react").JSX.Element;
+        };
+        moveEntries: (folderId: string | null, entries: DraggedEntry[]) => undefined;
+    } | null;
+    /** The folder dialogs (create, rename, delete). Render once per screen; they open only through `folders.actions`. */
+    folderDialogs: import("react").JSX.Element;
     explorer: {
         folders: Folder[];
         parent: string | null;
@@ -45,21 +60,14 @@ export declare function useEntryList(mode: ListMode): {
     selectedIds: Set<string>;
     setSelectedIds: import("react").Dispatch<import("react").SetStateAction<Set<string>>>;
     mutations: {
-        run: (op: OptimisticOp, targets: BulkSelection[], params?: BulkParams) => Promise<BulkItemResult[]>;
-        bulk: (op: BulkOp, label: string, targets: BulkSelection[], params?: BulkParams) => Promise<void>;
+        run: (op: import("./shared/list-cache.js").OptimisticOp, targets: BulkSelection[], params?: import("../api/entries.js").BulkParams) => Promise<import("../api/entries.js").BulkItemResult[]>;
+        bulk: (op: import("@monti-cms/core/site").BulkOp, label: string, targets: BulkSelection[], params?: import("../api/entries.js").BulkParams) => Promise<void>;
         restore: (targets: BulkSelection[]) => Promise<void>;
         invalidateEntries: () => Promise<void>;
     };
-    folderActions: {
-        requestCreate: (parentId: string | null) => void;
-        requestRename: (folder: Folder) => void;
-        requestDelete: (folder: Folder) => void;
-        moveFolder: (folder: Folder, parentId: string | null) => void;
-        dialogs: import("react").JSX.Element;
-    };
-    recordTarget: RecordTarget | null;
-    openRecord: (target: RecordTarget) => Promise<void>;
-    showRecord: (target: RecordTarget) => void;
+    recordTarget: import("./record-panel.js").RecordTarget | null;
+    openRecord: (target: import("./record-panel.js").RecordTarget) => Promise<void>;
+    showRecord: (target: import("./record-panel.js").RecordTarget) => void;
     closeRecord: () => void;
     setRecordDirty: (dirty: boolean) => void;
     /** Confirm dialogs of this list (move to trash, archive, permanent delete, discard changes). Render once per screen. */
@@ -68,7 +76,6 @@ export declare function useEntryList(mode: ListMode): {
     guardDialog: import("react").ReactNode;
     reloadTaxonomies: () => undefined;
     invalidateEntries: () => Promise<void>;
-    moveEntries: (folderId: string | null, entries: DraggedEntry[]) => undefined;
     createNew: () => void;
     rowMenu: (item: ListEntriesItem) => MenuAction[];
     onDeleteKey: (item: ListEntriesItem) => void;

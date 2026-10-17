@@ -4,9 +4,9 @@ import { useEditorState } from "@tiptap/react";
  * Kept free of `ui/*` and icon imports, so `useBlockEditor` (which the hooks entry point exports) can use them.
  */
 /** Selected block border. All blocks use the same look. */
-export const SELECTED_RING = "ring-2 ring-cms-ring ring-offset-2 ring-offset-cms-background";
+export const SELECTED_RING = "ring-2 ring-monti-ring ring-offset-2 ring-offset-monti-background";
 /** Look of the control toolbar floating over a block (shared by the block toolbar, images, and tables). */
-export const BLOCK_TOOLBAR = "z-10 flex items-center gap-0.5 rounded-md border bg-cms-popover/95 p-0.5 text-cms-popover-foreground shadow-sm backdrop-blur";
+export const BLOCK_TOOLBAR = "z-10 flex items-center gap-0.5 rounded-md border bg-monti-popover/95 p-0.5 text-monti-popover-foreground shadow-sm backdrop-blur";
 /** The directive attribute values of an added block (the `values` attribute of its node). */
 export const valuesOf = (node) => (node.attrs.values ?? {});
 /** Emptied values (empty string, false) are removed from attributes. Keeping them would save a `title=""` that was not in the source. */

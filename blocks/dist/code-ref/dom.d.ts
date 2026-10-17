@@ -30,7 +30,7 @@ export interface CodePreview {
     readonly lines: readonly string[];
     readonly truncated: boolean;
 }
-/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.cms-code-title`). */
+/** Text of the linked lines (at most `max`, the rest is reported by `truncated`) and the title of their code block (`.monti-code-title`). */
 export declare function previewLines(lines: readonly HTMLElement[], max: number): CodePreview;
 /**
  * Adds a small back-link button at the end of the first line of the linked lines (code to text). Does nothing if the line already has one,

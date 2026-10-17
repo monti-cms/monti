@@ -3,15 +3,15 @@ import { type LinkResolver } from "../core/link-ids.js";
 import { prepareSnapshot } from "../core/snapshot.js";
 import { type FormatRegistry } from "../format/registry.js";
 import type { Site } from "../site/index.js";
-import type { HookProvider, WriteOperation } from "./hooks.js";
+import type { HookProvider, WriteOperation } from "./reactions.js";
 import { type Issue, type PreparedSnapshot, type ServiceInput, type StorePort } from "./types.js";
 /**
  * The one place content is prepared for a write. Create, save, publish (single and bulk), duplicate, translation and bulk metadata or folder
  * changes all build their input and call `run`, so a rule or hook added here applies to every one of them. The store never prepares content.
  *
- * Stages: `transform` hooks, core preparation (`prepareSnapshot`, always on the transformed data), the `validate` of each block
- * (warnings only), `validate` hooks, and for a publish
- * `validatePublish` hooks. The store commit and `afterCommit` come after, in the caller and the store.
+ * Stages: `entry.beforeValidate`, core preparation (`prepareSnapshot`, always on the changed data), the `validate` of each block
+ * (warnings only), `entry.beforeSave`, and for a publish
+ * `entry.beforePublish`. The store commit and the durable entry events come after, in the caller and the store.
  */
 type PrepareOptions = Omit<NonNullable<Parameters<typeof prepareSnapshot>[2]>, "import" | "imported">;
 export interface WriteRequest {
@@ -25,7 +25,7 @@ export interface WriteRequest {
     /** What the write replaces: references, document (block ids carry over) and metadata (kept keys the schema no longer has) of the current draft. */
     readonly prepare?: PrepareOptions;
     /**
-     * Do not run `transform` hooks. For a change that publishes a draft without changing it (restoring a record): validation still runs,
+     * Do not run `beforeValidate`. For a change that publishes a draft without changing it (restoring a record): validation still runs,
      * so a restriction on publishing cannot be bypassed.
      */
     readonly skipTransform?: boolean;
@@ -33,9 +33,9 @@ export interface WriteRequest {
 export interface WriteResult {
     /** Core preparation of the (transformed) input. */
     readonly snapshot: PreparedSnapshot;
-    /** Warnings: a text body that could not be read (it is kept as an `unparsed` body), the blocks' own `validate`, and the `validate` and `validatePublish` hooks. */
+    /** Warnings: a text body that could not be read (it is kept as an `unparsed` body), the blocks' own `validate`, and `beforeSave` and `beforePublish`. */
     readonly warnings: readonly Issue[];
-    /** Whether a `transform` hook changed the data. */
+    /** Whether a `beforeValidate` subscriber changed the data. */
     readonly transformed: boolean;
 }
 export interface WritePipelineOptions {

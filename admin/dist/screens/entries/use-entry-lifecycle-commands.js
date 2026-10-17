@@ -1,9 +1,8 @@
 "use client";
-// The command handlers of the entry editor screen: save, preview, publish, the lifecycle transitions (with their confirmations) and duplicate.
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useState } from "react";
 import { toast } from "sonner";
-import { cmsIssueMessage } from "../../api/error-message.js";
+import { issueLine } from "../../api/error-message.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { useAdminRouter } from "../../router/index.js";
 import { useConfirm } from "../shared/confirm-dialog.js";
@@ -112,7 +111,7 @@ export function useEntryLifecycleCommands({ editor, incomingItems, refreshIncomi
                 toast.warning(t("publishedWithWarnings", { count: warnings.length }), {
                     description: warnings
                         .slice(0, 5)
-                        .map((issue) => cmsIssueMessage(site, issue))
+                        .map((issue) => issueLine(issue))
                         .join("\n"),
                     duration: 10000,
                     action: warnings[0]?.position

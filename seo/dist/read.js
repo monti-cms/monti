@@ -1,4 +1,5 @@
-import { findTitleField, SUMMARY_ROLE, valueWithRole } from "@monti-cms/core";
+import { SUMMARY_ROLE } from "@monti-cms/core";
+import { findTitleField, valueWithRole } from "@monti-cms/core/site";
 import { SEO_ROLES } from "./fields.js";
 const filled = (value) => value.trim() || undefined;
 /**

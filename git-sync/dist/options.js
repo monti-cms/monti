@@ -1,4 +1,4 @@
-import { pluginError } from "@monti-cms/core";
+import { pluginError } from "@monti-cms/core/server";
 import { GIT_SYNC_PLUGIN_NAME } from "./name.js";
 export { GIT_SYNC_PLUGIN_NAME };
 /** Id of the plugin's one API key slot: the GitHub token. */
@@ -12,6 +12,8 @@ export const DEFAULT_BRANCH = "main";
 /** The branch `"pr"` mode commits to and opens its pull request from. */
 export const DEFAULT_PR_BRANCH = "monti/publish";
 export const DEFAULT_DEBOUNCE_MS = 2000;
+/** The plugin with the type of its options (`site.pluginOptions(GIT_SYNC_PLUGIN)`). */
+export const GIT_SYNC_PLUGIN = { name: GIT_SYNC_PLUGIN_NAME };
 const NAME = /^[a-z][a-z0-9-]*$/;
 const REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const PLACEHOLDERS = ["collection", "slug", "locale", "id", "ext"];

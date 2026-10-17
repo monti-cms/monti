@@ -10,6 +10,6 @@ import { type AiConfig } from "./action.js";
  * plugins: [ai({ siteDescription: "A personal tech blog", actions: { draft: false } })]
  * ```
  */
-export declare function ai<const Config extends AiConfig>(config?: Config): import("@monti-cms/core").CmsPlugin<"ai", Config, readonly import("@monti-cms/core").BlockDefinition[]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+export declare function ai<const Config extends AiConfig>(config?: Config): import("@monti-cms/core").Plugin<"ai", Config, readonly import("@monti-cms/core").BlockDefinition[]> & {
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

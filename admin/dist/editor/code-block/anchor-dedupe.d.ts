@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { Plugin } from "@tiptap/pm/state";
 /**
  * Keeps line labels unique in the document, so a body link points to lines of exactly one code block (the public page and the publish

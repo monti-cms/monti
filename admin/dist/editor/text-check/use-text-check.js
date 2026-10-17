@@ -1,5 +1,6 @@
 "use client";
-import { supportsLocale, useTranslator } from "@monti-cms/core/client";
+import { supportsLocale } from "@monti-cms/core";
+import { useTranslator } from "@monti-cms/core/site";
 import { PluginKey } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

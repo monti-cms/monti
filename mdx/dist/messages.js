@@ -1,4 +1,4 @@
-import { defineMessages } from "@monti-cms/core/client";
+import { defineMessages } from "@monti-cms/core";
 /**
  * MDX analysis error messages. Keys are error `code`s (`CmsMdxError.code`) and placeholders (`{name}` etc.) are the error's `params`.
  * A site overrides them with `admin.messages["cms.mdx"]`.

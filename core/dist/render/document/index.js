@@ -2,7 +2,7 @@ import katex from "katex";
 import { imageResolverFromRefs } from "../../doc/document-refs.js";
 import { readStoredDocument } from "../../doc/stored-document.js";
 import { DEFAULT_LABELS } from "../labels.js";
-import { renderModules } from "../plugin-render.js";
+import { renderPlugins } from "../plugin-render.js";
 import { analyzeDocument, DEFAULT_TOC_RANGE, tocOf } from "./analyze.js";
 import { highlightCodeBlock, highlighterFor, readCodeBlock } from "./code.js";
 import { defaultDocumentComponents } from "./defaults.js";
@@ -16,7 +16,7 @@ import { renderDocumentTree } from "./render.js";
  *
  * It never throws on content. An unknown node, mark or block, a block without a component and a node with malformed attributes go through the
  * `fallback` component and are listed in `unknown` (`strict: true` throws instead, for tests and the preview page). Components are layered core defaults →
- * block extensions (`documentComponents` of a plugin's render module) → the site's `components`.
+ * block extensions (the `defineRender` table of a plugin's render module) → the site's `components`.
  */
 const LAYERED = ["marks", "blocks", "codeTags"];
 /** Layers component tables: later ones win, and `marks`, `blocks` and `codeTags` merge by name. */
@@ -36,10 +36,7 @@ export const mergeDocumentComponents = (base, ...layers) => {
     return out;
 };
 const resolveComponents = async (options, showFoldedCode) => {
-    const context = { locale: options.locale, imageResolver: options.imageResolver };
-    const fromPlugins = await Promise.all((await renderModules(options.site)).map(async (module) => typeof module.documentComponents === "function"
-        ? (await module.documentComponents(context))
-        : undefined));
+    const fromPlugins = await renderPlugins(options.site);
     return mergeDocumentComponents(defaultDocumentComponents(showFoldedCode), ...fromPlugins, options.components);
 };
 const escapeHtml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -81,7 +78,7 @@ export async function renderDocument(input, given) {
         imageResolver: given.imageResolver ?? (given.refs ? imageResolverFromRefs(given.refs) : undefined),
     };
     const { site } = given;
-    const doc = readStoredDocument(input, site);
+    const doc = readStoredDocument(input);
     if (!doc) {
         console.error("renderDocument: the value is not a stored document of a known version; rendering an empty body");
         return EMPTY;
@@ -137,5 +134,5 @@ export function tableOfContents(doc, range = DEFAULT_TOC_RANGE) {
     const stored = readStoredDocument(doc);
     return stored ? tocOf(analyzeDocument(stored), range) : [];
 }
-export { collectRefs, imageResolverFromRefs } from "../../doc/document-refs.js";
+export { imageResolverFromRefs } from "../../doc/document-refs.js";
 export { readCodeBlock } from "./code.js";

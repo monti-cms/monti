@@ -1,7 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 // Small header pieces of the entry editor: icon actions, toggles and the save status indicator.
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "../../lib/utils/cn.js";
 import { buttonVariants } from "../../ui/button.js";
 import { IconButton } from "../../ui/icon-button.js";
@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip.js";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages.js";
 import { entriesMessages } from "./messages.js";
 export function ToolbarAction({ label, icon: Icon, href, onClick, disabled = false, }) {
-    const className = "size-8 shrink-0 text-cms-muted-foreground";
+    const className = "size-8 shrink-0 text-monti-muted-foreground";
     const icon = _jsx(Icon, { "aria-hidden": true, className: "size-4" });
     if (!href || disabled) {
         return (_jsx(IconButton, { label: label, side: "bottom", disabled: disabled, className: className, onClick: onClick, children: icon }));
@@ -21,7 +21,7 @@ export function ToolbarAction({ label, icon: Icon, href, onClick, disabled = fal
 }
 /** Toggle button at the end of the editor toolbar (source pane, MDX source). Name and tooltip are the same. */
 export function ToolbarToggle({ label, text, icon: Icon, pressed, disabled, onPressedChange, }) {
-    return (_jsxs(Tooltip, { children: [_jsxs(TooltipTrigger, { render: _jsx(Toggle, { size: "sm", "aria-label": label, pressed: pressed, disabled: disabled, onPressedChange: onPressedChange, className: "gap-1.5 text-cms-muted-foreground aria-pressed:text-cms-foreground" }), children: [_jsx(Icon, { "aria-hidden": true, className: "size-4" }), text] }), _jsx(TooltipContent, { side: "bottom", children: label })] }));
+    return (_jsxs(Tooltip, { children: [_jsxs(TooltipTrigger, { render: _jsx(Toggle, { size: "sm", "aria-label": label, pressed: pressed, disabled: disabled, onPressedChange: onPressedChange, className: "gap-1.5 text-monti-muted-foreground aria-pressed:text-monti-foreground" }), children: [_jsx(Icon, { "aria-hidden": true, className: "size-4" }), text] }), _jsx(TooltipContent, { side: "bottom", children: label })] }));
 }
 /** Name of each save status. */
 const saveStatusLabels = (te) => ({
@@ -50,5 +50,5 @@ export function SaveStatusIndicator({ status, backupAvailable }) {
     const t = useTranslator(entryEditorShellMessages);
     const te = useTranslator(entriesMessages);
     const label = `${saveStatusLabels(te)[status]}${backupAvailable ? "" : t("backupUnavailable")}`;
-    return (_jsxs("output", { "aria-live": "polite", "aria-label": label, className: "mr-1 flex items-center gap-1.5 text-cms-muted-foreground text-xs", children: [_jsx(StatusIndicator, { size: "sm", tone: SAVE_STATUS_TONE[status], pulse: status === "saving" }), _jsx("span", { className: "hidden lg:inline", children: label })] }));
+    return (_jsxs("output", { "aria-live": "polite", "aria-label": label, className: "mr-1 flex items-center gap-1.5 text-monti-muted-foreground text-xs", children: [_jsx(StatusIndicator, { size: "sm", tone: SAVE_STATUS_TONE[status], pulse: status === "saving" }), _jsx("span", { className: "hidden lg:inline", children: label })] }));
 }

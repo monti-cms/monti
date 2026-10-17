@@ -12,7 +12,7 @@ const RECOVERY_WAIT_MS = 1500;
  * editor makes it. A copy without a readable body is not offered.
  */
 function checkedRecovery(site, record) {
-    const doc = readStoredDocument(record.snapshot.doc, site);
+    const doc = readStoredDocument(record.snapshot.doc);
     if (!doc)
         return null;
     const snapshot = { ...record.snapshot, doc };

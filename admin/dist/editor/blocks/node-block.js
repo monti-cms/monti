@@ -1,4 +1,4 @@
-import { file, image, math } from "@monti-cms/core/client";
+import { file, image, math } from "@monti-cms/core/site";
 import { addedBlockOfNode } from "./added/shared.js";
 /**
  * Editor node name to block definition for the core blocks that have a dedicated view. The names are the Tiptap node names of

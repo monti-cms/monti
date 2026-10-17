@@ -1,4 +1,4 @@
-import type { MediaAdapter } from "@monti-cms/core/server";
+import type { MediaAdapter } from "@monti-cms/core/adapters";
 /** Connection settings. Anything left out is read from the `S3_*` environment variables, on first use. */
 export interface S3StorageOptions {
     /** S3 API URL. Env `S3_ENDPOINT`. When unset and a region is known, `https://s3.<region>.amazonaws.com`. */

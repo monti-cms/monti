@@ -1,4 +1,5 @@
-import { type Site, type StoredDocument, type TranslationState } from "@monti-cms/core/client";
+import { type StoredDocument } from "@monti-cms/core/document";
+import { type Site, type TranslationState } from "@monti-cms/core/site";
 /**
  * The value of one form input. Text, single relation, select and date are strings (a single relation is `null` when empty); multi relations are arrays.
  * The body is the one value that is a document (`form.doc`).
@@ -81,8 +82,6 @@ export interface EntryData {
 }
 /** Reads a form value as a string. Empty string if missing or an array. */
 export declare const formText: (form: EntryForm, name: string) => string;
-/** Reads a form value as a string array. */
-export declare const formList: (form: EntryForm, name: string) => string[];
 /** Whether this is a translation. A translation handles only per-language values as the form. */
 export declare const isTranslationEntry: (entry: Pick<EntryData, "id" | "translationGroupId"> | null | undefined) => boolean;
 /** The original shown on the translation screen. Only present for a translation that received the original body. */

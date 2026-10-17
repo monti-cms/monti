@@ -9,6 +9,11 @@ export type CmsNode = {
     type: string;
     /** Block id, unique within the document (`block-ids.ts`). Only blocks of a stored document carry one; never written to a text format. */
     id?: string;
+    /**
+     * In a translation, the id of the source block this block was made from (`block-ids.ts`). Like `id`, it is never written to a text format and is not
+     * part of the content hash; the translation screen pairs blocks by it.
+     */
+    sourceId?: string;
     attrs?: Record<string, CmsJsonValue>;
     content?: CmsNode[];
     marks?: CmsMark[];

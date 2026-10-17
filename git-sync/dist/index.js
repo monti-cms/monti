@@ -26,7 +26,7 @@ import { settingsMessages } from "./settings.messages.js";
 export const gitSync = (options = {}) => definePlugin({
     name: GIT_SYNC_PLUGIN_NAME,
     options,
-    validate: (config) => validateGitSyncConfig(options, config),
+    checkConfig: (config) => validateGitSyncConfig(options, config),
     // With `enabled: false` the plugin registers nothing: no screen, hooks or routes.
     ...(options.enabled === false
         ? {}
@@ -38,8 +38,6 @@ export const gitSync = (options = {}) => definePlugin({
                     service: "GitHub",
                     // Worked out with the site of the instance each time, so it follows the admin language.
                     label: (site) => site.createTranslator(settingsMessages)("keyLabel"),
-                    // A token was chosen: what waited for one goes out now. In the browser bundle `./server` is an empty entry point.
-                    onChange: async (cms) => (await import("@monti-cms/git-sync/server")).onTokenChanged(cms),
                 },
                 {
                     id: GIT_SYNC_WEBHOOK_SLOT,

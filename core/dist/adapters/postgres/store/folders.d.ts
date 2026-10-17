@@ -1,5 +1,12 @@
+import { type FolderSite } from "../../../core/domain/folders.js";
 import type { Folder } from "../../../core/store/types.js";
+import type { Db } from "../db/kysely.js";
 import { type StoreContext } from "./context.js";
+/**
+ * Checks that something of `collection` (an entry, or a media file with `"media"`) can be put in `folderId`: the collection uses folders and the folder
+ * belongs to it. No folder (`null`, the top level) is always allowed.
+ */
+export declare function assertFolderTarget(db: Db, site: FolderSite, folderId: string | null | undefined, collection: string): Promise<void>;
 /** Per-collection virtual folders. An admin-only grouping unrelated to entry slugs, tags, or categories. */
 export declare function createFolderOps(ctx: StoreContext): {
     createFolder: (params: {

@@ -4,7 +4,7 @@ English | [한국어](README.ko.md)
 
 The AI plugin for `@monti-cms/core`. It adds named AI actions (generate and decide), AI buttons next to fields, AI translation in the
 translation editor, the AI page of the admin Tools group (`<admin path>/tools/ai`, `/admin/tools/ai` by default), the AI API (`/api/monti/v1/ai/*`), and the AI data in the plugin storage
-(`cms.storage("ai")`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
+(`cms.plugin("ai").storage`: collections `action-overrides`, `custom-actions` and `settings`). If you don't register the plugin, none of these exist.
 
 The plugin peers on `@monti-cms/mdx`: installing the AI plugin means installing the MDX package too, and listing `mdx()` in `plugins` next to `ai()`, because its model reads and writes MDX through the `mdx` format ("The model reads and writes MDX").
 
@@ -20,6 +20,7 @@ import { aiAction, ai, aiPresets } from "@monti-cms/ai";
 plugins: [
 	ai({
 		siteDescription: "A personal tech blog", // Goes at the very top of every action's instruction. Defaults to "website"
+		autoImageText: true, // Fill in the alt text and caption of an image as it goes into the body. Off by default
 		actions: {
 			summary: aiPresets.summary({ maxLength: 120 }), // Replace (same name)
 			draft: false, // Turn off
@@ -28,6 +29,11 @@ plugins: [
 	}),
 ],
 ```
+
+`autoImageText: true` subscribes the AI plugin to the editor's `editor.imageInserted` event ("Admin events" in the [admin README](../admin/README.md)): when an
+image goes into the body, it runs `imageAlt` and `imageCaption` on it and writes the first candidate of each into the field while that field is still empty. The
+image is in at once and shows that its text is being written; what you type first is kept, and an action that is off or has no ready connection is skipped. With it
+on, the image dialog lets the alt text be left empty.
 
 ### Built-in actions
 
@@ -102,7 +108,7 @@ The model reads and writes a text format, and MDX is that format. The admin hold
   the candidate. The second argument (`AiValidatorContext`) provides the input, collection, locale (default locale if none), the entry
   being edited, the choices, and the core content lookup `content`.
 - **Core content lookup (`context.content`)**: the run API fills it with the core public API (`createContentLookup` from
-  `@monti-cms/core/plugin/server`). Plugins don't read core tables directly. For now it has
+  `@monti-cms/core/server`). Plugins don't read core tables directly. For now it has
   `slugsInUse({ collection, locale, slugs, excludeEntryId? })` (slugs already used in the same collection and locale).
 - Default code checks: `uniqueSlug` (no duplicates, for slug suggestions; asks via `content.slugsInUse`),
   `regexRuns(input, { name?, scope? })` (runs the regex, for code block regexes; without a rule name or scope it folds the whole

@@ -1,9 +1,9 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { useId, useState } from "react";
-import { useCmsAdminComponents } from "../../admin-components.js";
-import { FieldError } from "../../ui/field.js";
+import { useAdminComponents } from "../../admin-components.js";
+import { FormFieldError } from "../../ui/field.js";
 import { Textarea } from "../../ui/textarea.js";
 import { Labeled } from "../shared/labeled.js";
 import { orUndefined, Pick, TextInput, useSchemaEdit } from "./controls.js";
@@ -125,11 +125,11 @@ export function InputOptionsEditor({ value, onChange, }) {
             setBad(true);
         }
     };
-    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, description: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx(FieldError, { children: t("field.inputOptionsBad") })] }));
+    return (_jsxs(Labeled, { label: t("field.inputOptions"), htmlFor: id, description: t("field.inputOptionsHint"), children: [_jsx(Textarea, { id: id, rows: 2, value: text, disabled: disabled, "aria-invalid": bad || undefined, className: "font-mono text-xs", onChange: (event) => setText(event.target.value), onBlur: commit }), bad && _jsx(FormFieldError, { children: t("field.inputOptionsBad") })] }));
 }
 export function FieldCustomInputPicker({ value, options, disabled, onChangeInput, onChangeOptions, }) {
     const t = useTranslator(schemaFieldsMessages);
-    const { fieldInputs } = useCmsAdminComponents();
+    const { fieldInputs } = useAdminComponents();
     const registered = Object.keys(fieldInputs ?? {});
     const [customActive, setCustomActive] = useState(false);
     const isRegistered = typeof value === "string" && registered.includes(value);

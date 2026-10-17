@@ -1,5 +1,5 @@
-import { compareStructure, unreadableFailure } from "@monti-cms/core/client";
 import { unparsedDocument } from "@monti-cms/core/document";
+import { compareStructure, unreadableFailure } from "@monti-cms/core/site";
 import { analyze } from "./analyze.js";
 import { toStoredDocument } from "./body.js";
 import { toDocument } from "./to-document.js";

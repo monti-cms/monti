@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "../../../lib/utils/cn.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select.js";
 import { Switch } from "../../../ui/switch.js";
@@ -16,15 +16,15 @@ function AttributeField({ name, definition, values, setValue, editable, }) {
         return null;
     const value = values[name] ?? attribute.defaultValue ?? (attribute.type === "boolean" ? false : "");
     const id = `${definition.name}-${name}`;
-    const description = attribute.description ? (_jsx("p", { className: "text-cms-muted-foreground text-xs", children: attribute.description })) : null;
+    const description = attribute.description ? (_jsx("p", { className: "text-monti-muted-foreground text-xs", children: attribute.description })) : null;
     if (attribute.type === "boolean") {
-        return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsxs("label", { htmlFor: id, className: "flex items-center justify-between gap-2", children: [_jsx("span", { className: "text-cms-muted-foreground", children: attribute.label }), _jsx(Switch, { id: id, size: "sm", checked: value === true, disabled: !editable, onCheckedChange: (checked) => setValue(name, checked) })] }), description] }));
+        return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsxs("label", { htmlFor: id, className: "flex items-center justify-between gap-2", children: [_jsx("span", { className: "text-monti-muted-foreground", children: attribute.label }), _jsx(Switch, { id: id, size: "sm", checked: value === true, disabled: !editable, onCheckedChange: (checked) => setValue(name, checked) })] }), description] }));
     }
     if (attribute.options) {
         const options = Object.entries(attribute.options).map(([option, label]) => ({ value: option, label }));
         return (_jsxs(BlockSettingsField, { label: attribute.label, htmlFor: id, children: [_jsxs(Select, { value: String(value), items: options, disabled: !editable, onValueChange: (next) => next !== null && setValue(name, String(next)), children: [_jsx(SelectTrigger, { id: id, size: "sm", className: "h-7 w-full text-xs", children: _jsx(SelectValue, {}) }), _jsx(SelectContent, { children: options.map((option) => (_jsx(SelectItem, { value: option.value, children: option.label }, option.value))) })] }), description] }));
     }
-    return (_jsxs(BlockSettingsField, { label: attribute.label, htmlFor: id, children: [_jsx(AttributeInput, { id: id, value: String(value), readOnly: !editable, onCommit: (next) => setValue(name, next), className: "h-7 w-full rounded-md border border-cms-input cms-dark:bg-cms-input/30 px-2 text-xs shadow-xs placeholder:text-cms-muted-foreground placeholder:opacity-100 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50" }), description] }));
+    return (_jsxs(BlockSettingsField, { label: attribute.label, htmlFor: id, children: [_jsx(AttributeInput, { id: id, value: String(value), readOnly: !editable, onCommit: (next) => setValue(name, next), className: "h-7 w-full rounded-md border border-monti-input monti-dark:bg-monti-input/30 px-2 text-xs shadow-xs placeholder:text-monti-muted-foreground placeholder:opacity-100 focus-visible:border-monti-ring focus-visible:ring-3 focus-visible:ring-monti-ring/50" }), description] }));
 }
 /**
  * Default view of an added directive block that has no view registered in `blockViews`: the block name with the body below it.
@@ -36,7 +36,7 @@ export function DefaultBlockView() {
     const { definition, values, editable } = block;
     const names = Object.keys(definition.attributes);
     const container = isContainer(definition);
-    return (_jsxs(BlockFrame, { "data-cms-custom-block": definition.name, className: "my-6 rounded-md border", children: [editable && names.length > 0 && (_jsx(ContainerToolbar, { label: t("added.toolbar", { label: definition.label }), children: _jsx(BlockSettings, { children: names.map((name) => (_jsx(AttributeField, { name: name, definition: definition, values: values, setValue: block.setValue, editable: editable }, name))) }) })), _jsx("div", { contentEditable: false, className: cn("not-prose px-3 py-2 font-medium text-cms-muted-foreground text-xs", container && "border-b"), children: definition.label }), container && (_jsx("div", { className: "px-3", children: _jsx(Content, {}) }))] }));
+    return (_jsxs(BlockFrame, { "data-monti-custom-block": definition.name, className: "my-6 rounded-md border", children: [editable && names.length > 0 && (_jsx(ContainerToolbar, { label: t("added.toolbar", { label: definition.label }), children: _jsx(BlockSettings, { children: names.map((name) => (_jsx(AttributeField, { name: name, definition: definition, values: values, setValue: block.setValue, editable: editable }, name))) }) })), _jsx("div", { contentEditable: false, className: cn("not-prose px-3 py-2 font-medium text-monti-muted-foreground text-xs", container && "border-b"), children: definition.label }), container && (_jsx("div", { className: "px-3", children: _jsx(Content, {}) }))] }));
 }
 /** Default view of a code fence block: a code input and the preview supplied by the site (`fencePreviews[language]`). */
 export function FenceBlockView() {

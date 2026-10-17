@@ -1,4 +1,4 @@
-import { adminRoute, ok, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, readJsonBody } from "@monti-cms/core/server";
 import { createCustomAction, listActions } from "../../actions.js";
 import { usableActionKeys } from "../../settings.js";
 import { aiStoreFor } from "../../store.js";

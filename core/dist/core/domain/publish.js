@@ -2,10 +2,15 @@ import { isDeepStrictEqual } from "node:util";
 import { CmsError } from "../store/errors.js";
 /** A trashed entry cannot be published, and an archived one must be unarchived first. */
 export function assertPublishableStatus(status) {
-    if (status === "trashed")
-        throw new CmsError("A trashed entry cannot be published", "invalid_status");
+    if (status === "trashed") {
+        throw new CmsError("A trashed entry cannot be published", "invalid_status", {
+            notice: { key: "entry.publish.trashed" },
+        });
+    }
     if (status === "archived") {
-        throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status");
+        throw new CmsError("An archived entry must be unarchived before publishing", "invalid_status", {
+            notice: { key: "entry.publish.archived" },
+        });
     }
 }
 export function assertSameCollection(stored, given) {
@@ -14,12 +19,15 @@ export function assertSameCollection(stored, given) {
 }
 export function assertExpectedVersion(stored, expected) {
     if (stored !== expected)
-        throw new CmsError("Conflict", "conflict", stored);
+        throw new CmsError("Conflict", "conflict", { serverVersion: stored });
 }
 /** A trashed entry must be restored before it can be edited. */
 export function assertEditableStatus(status) {
-    if (status === "trashed")
-        throw new CmsError("A trashed entry must be restored before editing", "invalid_status");
+    if (status === "trashed") {
+        throw new CmsError("A trashed entry must be restored before editing", "invalid_status", {
+            notice: { key: "entry.edit.trashed" },
+        });
+    }
 }
 /**
  * The references a publish checks: the prepared snapshot's, plus the references the saved draft still has. Even stale leftovers are checked,

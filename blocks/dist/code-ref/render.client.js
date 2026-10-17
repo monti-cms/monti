@@ -74,10 +74,10 @@ export function CodeRef({ to, labels = DEFAULT_LABELS, children, }) {
     };
     if (broken)
         return _jsx(_Fragment, { children: children });
-    return (_jsxs("span", { className: "cms-block-code-ref-wrap", children: [_jsx("span", { ref: textRef, role: "button", tabIndex: 0, className: "cms-block-code-ref", "data-code-ref": to, "aria-describedby": preview ? previewId : undefined, onPointerEnter: (event) => event.pointerType === "mouse" && focus(false), onPointerLeave: (event) => event.pointerType === "mouse" && clear(), onFocus: () => focus(false), onBlur: clear, onClick: activate, onKeyDown: (event) => {
+    return (_jsxs("span", { className: "monti-block-code-ref-wrap", children: [_jsx("span", { ref: textRef, role: "button", tabIndex: 0, className: "monti-block-code-ref", "data-code-ref": to, "aria-describedby": preview ? previewId : undefined, onPointerEnter: (event) => event.pointerType === "mouse" && focus(false), onPointerLeave: (event) => event.pointerType === "mouse" && clear(), onFocus: () => focus(false), onBlur: clear, onClick: activate, onKeyDown: (event) => {
                     if (event.key !== "Enter" && event.key !== " ")
                         return;
                     event.preventDefault();
                     activate();
-                }, children: children }), preview ? (_jsxs("span", { id: previewId, role: "tooltip", className: "cms-block-code-ref-preview", children: [preview.title ? _jsx("span", { className: "cms-block-code-ref-preview-title", children: preview.title }) : null, preview.lines.map((line, index) => (_jsx("span", { className: "cms-block-code-ref-preview-line", children: line || " " }, index))), preview.truncated ? _jsx("span", { className: "cms-block-code-ref-preview-line", children: "\u2026" }) : null] })) : null] }));
+                }, children: children }), preview ? (_jsxs("span", { id: previewId, role: "tooltip", className: "monti-block-code-ref-preview", children: [preview.title ? _jsx("span", { className: "monti-block-code-ref-preview-title", children: preview.title }) : null, preview.lines.map((line, index) => (_jsx("span", { className: "monti-block-code-ref-preview-line", children: line || " " }, index))), preview.truncated ? _jsx("span", { className: "monti-block-code-ref-preview-line", children: "\u2026" }) : null] })) : null] }));
 }

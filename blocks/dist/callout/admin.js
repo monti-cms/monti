@@ -1,4 +1,4 @@
-import { defineBlockAdmin } from "../shared/define-block-admin.js";
-import { CalloutProvider } from "./provider.js";
+import { defineAdminPlugin } from "@monti-cms/admin";
+import { calloutComponents } from "./provider.js";
 /** Admin UI side of the callout block plugin. Registers the whole editing view (`blockViews`). */
-export default defineBlockAdmin(CalloutProvider);
+export default defineAdminPlugin({ components: calloutComponents });

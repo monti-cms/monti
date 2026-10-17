@@ -1,5 +1,5 @@
 import type { TextCheckSegment, TextIssue } from "@monti-cms/core";
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type BareunResponse } from "./mapping.js";
 import type { ResolvedBareunOptions } from "./options.js";
 /** Values needed to call the Bareun API. The key is handled on the server only. */

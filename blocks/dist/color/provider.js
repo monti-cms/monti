@@ -1,14 +1,13 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { useTranslator } from "@monti-cms/admin";
 import { allowsMark, BubbleButton, } from "@monti-cms/admin/editor";
 import { DropdownMenuSeparator } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/client";
 import { cleanTextColor, textColorProps } from "./colors.js";
 import { colorBlock } from "./definition.js";
 import { COLOR_MARK_NAME, TextColorIcon, TextColorMenu, TextColorMenuItems, TextColorPanel } from "./menu.js";
 import { colorMessages } from "./messages.js";
-/** Text color display in the editor. The same `.cms-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
+/** Text color display in the editor. The same `.monti-color` rule (`styles.css`, the same as `render.css` for the public page) picks the color for the theme. */
 export function colorMarkAttributes(attrs) {
     const { className, style, ...data } = textColorProps(cleanTextColor(attrs));
     return {
@@ -38,8 +37,5 @@ export const colorMarkExtension = {
     toolbar: { group: "format", priority: 3, Button: TextColorMenu, MenuItems: ColorMenuItems },
     bubble: { group: "format", Button: ColorBubbleButton },
 };
-const components = { marks: { [colorBlock.name]: colorMarkExtension } };
-/** Registers the text color mark's editor display, format tool, and bubble in the admin UI. */
-export function ColorProvider({ children }) {
-    return _jsx(CmsAdminComponentsProvider, { components: components, children: children });
-}
+/** The text color mark's editor display, format tool, and bubble. */
+export const colorComponents = { marks: { [colorBlock.name]: colorMarkExtension } };

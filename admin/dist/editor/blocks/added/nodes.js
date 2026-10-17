@@ -1,4 +1,4 @@
-import { perSite } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/site";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { BlockNodeView } from "../block-node-view.js";
@@ -33,10 +33,10 @@ function createFenceNode(block) {
             return { value: { default: "" }, meta: { default: "" }, language: { default: block.syntax.lang } };
         },
         parseHTML() {
-            return [{ tag: `div[data-cms-fence="${block.syntax.lang}"]` }];
+            return [{ tag: `div[data-monti-fence="${block.syntax.lang}"]` }];
         },
         renderHTML({ HTMLAttributes }) {
-            return ["div", mergeAttributes(HTMLAttributes, { "data-cms-fence": block.syntax.lang })];
+            return ["div", mergeAttributes(HTMLAttributes, { "data-monti-fence": block.syntax.lang })];
         },
         addNodeView() {
             return ReactNodeViewRenderer(BlockNodeView);
@@ -68,18 +68,18 @@ export function createAddedBlockNode(block, all) {
             return {
                 values: {
                     default: {},
-                    parseHTML: (element) => parseJson(element.getAttribute("data-cms-values"), {}),
-                    renderHTML: (attributes) => ({ "data-cms-values": JSON.stringify(attributes.values ?? {}) }),
+                    parseHTML: (element) => parseJson(element.getAttribute("data-monti-values"), {}),
+                    renderHTML: (attributes) => ({ "data-monti-values": JSON.stringify(attributes.values ?? {}) }),
                 },
             };
         },
         parseHTML() {
-            return [{ tag: `div[data-cms-block="${block.name}"]` }];
+            return [{ tag: `div[data-monti-block="${block.name}"]` }];
         },
         renderHTML({ HTMLAttributes }) {
             return content
-                ? ["div", mergeAttributes(HTMLAttributes, { "data-cms-block": block.name }), 0]
-                : ["div", mergeAttributes(HTMLAttributes, { "data-cms-block": block.name })];
+                ? ["div", mergeAttributes(HTMLAttributes, { "data-monti-block": block.name }), 0]
+                : ["div", mergeAttributes(HTMLAttributes, { "data-monti-block": block.name })];
         },
         addNodeView() {
             return ReactNodeViewRenderer(BlockNodeView, block.parent ? { className: PARENT_ONLY_VIEW_CLASS } : undefined);

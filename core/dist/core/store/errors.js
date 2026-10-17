@@ -1,20 +1,24 @@
+import { brandErrorClass } from "../error-brand.js";
 /**
  * The one error the server code throws for a request it cannot do. `code` is an {@link ErrorCode}, so the HTTP status comes from one table and
- * the response has one shape: `{ error: { code, message, issues?, details? } }`.
+ * the response has one shape: `{ error: { code, message, fix?, detail?, issues?, details? } }`.
+ *
+ * `message` is for developers and the server log (English, may name ids and values). The person reads the `notice`, or the text of the code when there is none.
  */
 export class CmsError extends Error {
     code;
-    /** The version the server holds, for a `conflict`: the caller can reload and retry. It reaches the response as `details.serverVersion`. */
     serverVersion;
     details;
-    /** Problems found in the request (the issues of a validation), when the code is about the content. */
     issues;
-    constructor(message, code, serverVersion, details, issues) {
-        super(message);
+    notice;
+    constructor(message, code, options = {}) {
+        super(message, options.cause === undefined ? undefined : { cause: options.cause });
         this.code = code;
-        this.serverVersion = serverVersion;
-        this.details = details;
-        this.issues = issues;
+        this.serverVersion = options.serverVersion;
+        this.details = options.details;
+        this.issues = options.issues;
+        this.notice = options.notice;
         this.name = "CmsError";
     }
 }
+brandErrorClass(CmsError, "CmsError");

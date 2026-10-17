@@ -2,7 +2,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /*
  * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
  * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
- * `cms-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
+ * `monti-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, } from "recharts";
@@ -16,7 +16,7 @@ function ChartFrame({ config, children }) {
     const style = Object.fromEntries(Object.entries(config)
         .filter(([, item]) => item.color)
         .map(([key, item]) => [`--color-${key}`, item.color]));
-    return (_jsx(FrameState.Provider, { value: { config, dimensions }, children: _jsx("div", { className: "cms-block-chart-frame", style: style, children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", initialDimension: DEFAULT_CHART_DIMENSIONS, onResize: (width, height) => {
+    return (_jsx(FrameState.Provider, { value: { config, dimensions }, children: _jsx("div", { className: "monti-block-chart-frame", style: style, children: _jsx(ResponsiveContainer, { width: "100%", height: "100%", initialDimension: DEFAULT_CHART_DIMENSIONS, onResize: (width, height) => {
                     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
                         return;
                     setDimensions((current) => current.width === width && current.height === height ? current : { width, height });
@@ -26,12 +26,12 @@ function TooltipContent({ active, payload, label, hideLabel = false, nameKey, })
     const { config } = useContext(FrameState);
     if (!active || !payload?.length)
         return null;
-    return (_jsxs("div", { className: "cms-block-chart-tooltip", children: [!hideLabel && label ? (_jsx("div", { className: "cms-block-chart-tooltip-label", children: String(config[String(label)]?.label ?? label) })) : null, payload
+    return (_jsxs("div", { className: "monti-block-chart-tooltip", children: [!hideLabel && label ? (_jsx("div", { className: "monti-block-chart-tooltip-label", children: String(config[String(label)]?.label ?? label) })) : null, payload
                 .filter((item) => item.type !== "none")
                 .map((item) => {
                 const key = String(nameKey ? item.payload?.[nameKey] : (item.name ?? item.dataKey ?? "value"));
                 const itemConfig = config[key] ?? config[String(item.name ?? item.dataKey ?? "value")];
-                return (_jsxs("div", { className: "cms-block-chart-tooltip-row", children: [_jsx("span", { className: "cms-block-chart-swatch", style: { backgroundColor: item.color ?? item.payload?.fill } }), _jsx("span", { className: "cms-block-chart-tooltip-name", children: itemConfig?.label ?? key }), _jsx("span", { className: "cms-block-chart-tooltip-value", children: formatChartValue(item.value) })] }, `${key}-${String(item.value ?? item.color ?? "")}`));
+                return (_jsxs("div", { className: "monti-block-chart-tooltip-row", children: [_jsx("span", { className: "monti-block-chart-swatch", style: { backgroundColor: item.color ?? item.payload?.fill } }), _jsx("span", { className: "monti-block-chart-tooltip-name", children: itemConfig?.label ?? key }), _jsx("span", { className: "monti-block-chart-tooltip-value", children: formatChartValue(item.value) })] }, `${key}-${String(item.value ?? item.color ?? "")}`));
             })] }));
 }
 /** Legend. Reports when its height changes because lines wrap (the pie chart is drawn to fit above the legend). */
@@ -52,17 +52,17 @@ function LegendContent({ payload, nameKey, onHeightChange, }) {
     }, [onHeightChange]);
     if (!payload?.length)
         return null;
-    return (_jsx("div", { ref: ref, className: "cms-block-chart-legend", children: payload
+    return (_jsx("div", { ref: ref, className: "monti-block-chart-legend", children: payload
             .filter((item) => item.type !== "none")
             .map((item) => {
             const key = String(nameKey ? item.payload?.[nameKey] : (item.value ?? item.dataKey ?? "value"));
             const itemConfig = config[key] ?? config[String(item.dataKey ?? "value")];
-            return (_jsxs("span", { className: "cms-block-chart-legend-item", children: [_jsx("span", { className: "cms-block-chart-swatch", style: { backgroundColor: item.color } }), itemConfig?.label ?? key] }, `${key}-${String(item.color ?? "")}`));
+            return (_jsxs("span", { className: "monti-block-chart-legend-item", children: [_jsx("span", { className: "monti-block-chart-swatch", style: { backgroundColor: item.color } }), itemConfig?.label ?? key] }, `${key}-${String(item.color ?? "")}`));
         }) }));
 }
 const CARTESIAN = { bar: BarChart, line: LineChart, area: AreaChart };
 /** Value labels (`show values`). */
-const valueLabel = (spec) => spec.options.showValues ? (_jsx(LabelList, { position: "top", offset: spec.type === "bar" ? 8 : 10, formatter: formatChartValue, className: "cms-block-chart-value" })) : null;
+const valueLabel = (spec) => spec.options.showValues ? (_jsx(LabelList, { position: "top", offset: spec.type === "bar" ? 8 : 10, formatter: formatChartValue, className: "monti-block-chart-value" })) : null;
 const renderSeries = (spec) => spec.series.map((series) => {
     const color = `var(--color-${series.key})`;
     if (spec.type === "bar") {
@@ -93,5 +93,5 @@ export function ChartView({ source }) {
     const spec = normalized.spec;
     if (!spec)
         return null;
-    return (_jsx("figure", { className: "cms-block-chart", "data-state": "ready", children: spec.type === "pie" ? _jsx(PieView, { spec: spec }) : _jsx(CartesianView, { spec: spec }) }));
+    return (_jsx("figure", { className: "monti-block-chart", "data-state": "ready", children: spec.type === "pie" ? _jsx(PieView, { spec: spec }) : _jsx(CartesianView, { spec: spec }) }));
 }

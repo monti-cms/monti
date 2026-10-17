@@ -1,4 +1,4 @@
-import { CmsError } from "@monti-cms/core/plugin/server";
+import { CmsError } from "@monti-cms/core/server";
 import { applyFile, describeError, recordOf } from "./apply.js";
 import { exportEntry, isSyncable, parseEntryFile } from "./entry-file.js";
 import { pushEntries } from "./outbound.js";
@@ -68,9 +68,11 @@ export async function resolveConflict(ctx, params) {
     const target = ctx.target(params.target);
     const conflict = await ctx.state.conflicts.get(params.target, params.entryId);
     if (!conflict)
-        throw new CmsError(t("noConflict"), "not_found");
+        throw new CmsError("No such conflict", "not_found", { notice: { what: t("noConflict") } });
     if (params.gitSha !== undefined && params.gitSha !== conflict.gitSha) {
-        throw new CmsError(t("conflictChanged"), "conflict");
+        throw new CmsError("The conflict changed since it was read", "conflict", {
+            notice: { what: t("conflictChanged") },
+        });
     }
     if (params.resolution === "server") {
         const pushed = await pushEntries(ctx, target, [params.entryId]);

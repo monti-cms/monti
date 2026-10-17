@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Settings2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { isComposingKey } from "../../lib/keyboard.js";
@@ -9,7 +9,7 @@ import { IconButton } from "../../ui/icon-button.js";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover.js";
 import { BLOCK_TOOLBAR } from "./block-model.js";
 import { blocksMessages } from "./messages.js";
-export { BLOCK_TOOLBAR, SELECTED_RING, useEditorEditable } from "./block-model.js";
+export { BLOCK_TOOLBAR, useEditorEditable } from "./block-model.js";
 /**
  * Input field for attributes (title, tab name). During Korean composition it does not write to the document, and writes when composition ends.
  * Enter returns to the body and Escape returns to the editor.
@@ -95,5 +95,5 @@ export function BlockSettings({ label: labelProp, open, onOpenChange, children, 
 }
 /** One field in the settings popover (name above, input below). */
 export function BlockSettingsField({ label, htmlFor, action, children, }) {
-    return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [_jsx("label", { htmlFor: htmlFor, className: "text-cms-muted-foreground text-xs", children: label }), action] }), children] }));
+    return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsxs("div", { className: "flex min-h-6 items-center justify-between gap-2", children: [_jsx("label", { htmlFor: htmlFor, className: "text-monti-muted-foreground text-xs", children: label }), action] }), children] }));
 }

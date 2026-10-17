@@ -21,7 +21,7 @@ export declare function defineMessages<const K extends string>(namespace: string
 } & Readonly<Record<string, Partial<MessageDict<K>>>>): MessageBundle<K>;
 /** Fills `{name}` placeholders. Unknown names are left as they are. */
 export declare const fillVars: (text: string, vars?: MessageVars) => string;
-/** Attaches a Korean particle that fits the word. for a word ending in a consonant it picks the first particle, otherwise the second. Used by function messages in the Korean dictionaries (`@monti-cms/core/client`); not exported from the main entry. */
+/** Attaches a Korean particle that fits the word. for a word ending in a consonant it picks the first particle, otherwise the second. Used by function messages in the Korean dictionaries (`@monti-cms/core/site`); not exported from the main entry. */
 export declare const josa: (word: string, withFinal: string, withoutFinal: string) => string;
 /** Picks a message from the dictionary: site override -> that locale -> English -> key. */
 export declare function translate<K extends string>(bundle: MessageBundle<K>, language: string, key: K, vars?: MessageVars, overrides?: Readonly<Record<string, Readonly<Record<string, MessageValue>>>>): string;

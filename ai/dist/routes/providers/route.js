@@ -1,4 +1,4 @@
-import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/server";
 import { aiProviderRequestSchema } from "../../connection.js";
 import { addAiProvider } from "../../settings.js";
 import { aiStoreFor } from "../../store.js";

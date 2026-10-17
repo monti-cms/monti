@@ -85,7 +85,6 @@ export function fakeCms(parts = {}) {
             subscribers: plugins.eventSubscribers,
         }).events,
         formats: async () => createFormatRegistry(parts.formats ?? []),
-        secrets: cms.secrets,
         authGateway,
         attachHost: () => undefined,
         handle: lazyHandle(() => fake),

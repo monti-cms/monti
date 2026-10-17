@@ -1,4 +1,5 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { CmsHost } from "@monti-cms/core/internal/host";
+import type { Cms } from "@monti-cms/core/server";
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 /**
  * Catch-all route handler for a Next route file. `params.path` holds the path segments after `/api/monti/` (e.g. `["v1", "entries", "<id>"]`).
@@ -19,5 +20,5 @@ export type CmsRouteHandler = (request: Request, context: {
  * export const { GET, POST, PATCH, PUT, DELETE } = createRouteHandler(cms);
  * ```
  */
-export declare function createRouteHandler(cms: Pick<Cms, "handle"> & Partial<Pick<Cms, "attachHost">>): Record<Method, CmsRouteHandler>;
+export declare function createRouteHandler(cms: Pick<Cms, "handle"> & Partial<Pick<CmsHost, "attachHost">>): Record<Method, CmsRouteHandler>;
 export {};

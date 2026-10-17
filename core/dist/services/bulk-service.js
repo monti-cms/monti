@@ -129,22 +129,13 @@ export const createBulkService = (storePort, options) => {
                     else {
                         folderId = request.folderId ?? null;
                     }
-                    const previousReferences = await storePort.getWorkingReferences({ entryId: item.id });
-                    // A metadata or folder change leaves the body as it is, block ids included.
-                    const { snapshot, warnings } = await pipeline.run({
-                        operation: "save",
-                        entryId: item.id,
-                        locale: working.locale ?? site.DEFAULT_LOCALE,
-                        input: toServiceInput(working, metadata),
-                        prepare: { previousReferences, previousDoc: working.doc, previousMetadata: working.metadata },
-                    });
-                    const saved = (await storePort.saveWorkingWithReferences({
-                        entryId: item.id,
+                    // The single save, so a bulk change follows every rule of a save: the write pipeline (the body stays as it is, block ids included),
+                    // and an item collection publishing with the save.
+                    const { entry: saved, warnings } = await content.saveDraft(item.id, {
+                        ...toServiceInput(working, metadata),
                         expectedVersion: item.expectedVersion,
-                        snapshot,
-                        references: snapshot.references,
-                        folderId,
-                    }));
+                        ...(folderId === undefined ? {} : { folderId }),
+                    });
                     results.push({ id: item.id, ok: true, version: saved.version, ...(warnings.length > 0 ? { warnings } : {}) });
                 }
                 catch (e) {

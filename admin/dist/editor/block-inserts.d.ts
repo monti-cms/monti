@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 export declare const OPEN_IMAGE_DIALOG_EVENT = "cms:open-image-dialog";
 /** Opens the attachment picker (slash menu "File"). */

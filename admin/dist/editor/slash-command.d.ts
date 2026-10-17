@@ -1,4 +1,4 @@
-import { type BlockDefinition, type Site } from "@monti-cms/core/client";
+import { type Site } from "@monti-cms/core/site";
 import type { Editor, Range } from "@tiptap/core";
 import { type LucideIcon } from "lucide-react";
 import type { TranslatorFor } from "../translator.js";
@@ -6,6 +6,7 @@ import { type EditorAllowance } from "./allowed.js";
 import { type BlockInsertAction } from "./block-inserts.js";
 import { editorMessages } from "./messages.js";
 export { OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT } from "./block-inserts.js";
+import type { BlockDefinition } from "@monti-cms/core";
 export interface SlashCommandItem {
     /** Name of the block insertion item (nodeView for core blocks, block name for added blocks). Absent for basic formatting items. */
     id?: string;

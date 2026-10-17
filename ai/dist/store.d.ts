@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
-import type { ApiKeys, Cms, PluginStorage } from "@monti-cms/core/plugin/server";
+import type { ApiKeys, Cms, PluginStorage } from "@monti-cms/core/server";
+import type { Site } from "@monti-cms/core/site";
 import type { AiSettingsStore } from "./settings.js";
 /** Row name in the AI settings (collection `settings`). */
 export type AiSettingsId = "default" | "shared";

@@ -8,7 +8,7 @@ import { isUniqueViolation } from "./errors.js";
 import { mapTemplateRow, readDoc } from "./rows.js";
 const COLUMNS = ["id", "name", "doc", "version", "created_at", "updated_at"];
 const mapTemplateError = (err) => isUniqueViolation(err, ["body_templates_name_idx", "body_templates_pkey"])
-    ? new CmsError("Template name already exists", "conflict")
+    ? new CmsError("Template name already exists", "conflict", { notice: { key: "template.name_taken" } })
     : err;
 /**
  * A template body as it is stored: a stored document, checked for its shape and put in the canonical form every body is stored in. Its blocks keep the ids of
@@ -22,9 +22,10 @@ const storedTemplateDoc = (site, value, previous) => {
     catch {
         throw new CmsError("Template body is not a stored document", "invalid_input");
     }
-    if (size > MAX_DOC_BYTES)
-        throw new CmsError("Template body is too large", "invalid_input");
-    const read = readStoredDocument(value, site);
+    if (size > MAX_DOC_BYTES) {
+        throw new CmsError("Template body is too large", "invalid_input", { notice: { key: "template.too_large" } });
+    }
+    const read = readStoredDocument(value);
     if (!read)
         throw new CmsError("Template body is not a stored document", "invalid_input");
     const doc = canonicalDocument(site, read);
@@ -50,8 +51,9 @@ export function createTemplateOps(ctx) {
         },
         createTemplate: async (data) => {
             const name = (data.name || "").trim();
-            if (!name)
-                throw new CmsError("Template name is required", "invalid_input");
+            if (!name) {
+                throw new CmsError("Template name is required", "invalid_input", { notice: { key: "template.name_empty" } });
+            }
             const doc = storedTemplateDoc(site, data.doc === undefined ? emptyStoredDocument() : data.doc);
             const now = new Date();
             try {
@@ -76,10 +78,13 @@ export function createTemplateOps(ctx) {
             if (!cur)
                 throw new CmsError("Template not found", "not_found");
             if (cur.version !== params.expectedVersion)
-                throw new CmsError("Conflict", "conflict", cur.version);
+                throw new CmsError("Conflict", "conflict", { serverVersion: cur.version });
             const name = params.name !== undefined ? params.name.trim() : cur.name;
-            if (!name)
-                throw new CmsError("Template name cannot be empty", "invalid_input");
+            if (!name) {
+                throw new CmsError("Template name cannot be empty", "invalid_input", {
+                    notice: { key: "template.name_empty" },
+                });
+            }
             // A name-only update keeps the stored body as it is.
             const doc = params.doc === undefined
                 ? JSON.stringify(readDoc(cur.doc) ?? emptyStoredDocument())
@@ -102,7 +107,7 @@ export function createTemplateOps(ctx) {
             if (!cur)
                 throw new CmsError("Template not found", "not_found");
             if (cur.version !== params.expectedVersion)
-                throw new CmsError("Conflict", "conflict", cur.version);
+                throw new CmsError("Conflict", "conflict", { serverVersion: cur.version });
             await trx.deleteFrom("body_templates").where("id", "=", params.id).execute();
         }),
     };

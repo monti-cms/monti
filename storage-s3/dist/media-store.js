@@ -1,6 +1,6 @@
 import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { ALLOWED_MEDIA_MIMES, } from "@monti-cms/core/server";
+import { ALLOWED_MEDIA_MIMES, } from "@monti-cms/core/adapters";
 /** S3 API media store (R2, S3, MinIO, etc.). Uploads via presigned URLs, then the server verifies and moves the file. */
 export function createS3MediaStore(config) {
     const s3 = new S3Client({
@@ -21,6 +21,8 @@ export function createS3MediaStore(config) {
                 Bucket: config.bucket,
                 Key: input.stagingKey,
                 ContentType: input.contentType,
+                // Signed into the URL: storage refuses a body whose length differs from the declared size.
+                ContentLength: input.byteSize,
             });
             const expiresIn = Math.min(Math.max(input.expiresInSeconds, 60), 900); // 1~15 mins, default 10m
             const url = await getSignedUrl(s3, command, { expiresIn });

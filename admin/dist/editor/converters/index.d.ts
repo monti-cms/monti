@@ -1,5 +1,5 @@
-import { type Site } from "@monti-cms/core/client";
 import type { CmsNode } from "@monti-cms/core/document";
+import { type Site } from "@monti-cms/core/site";
 import type { BlockConverter } from "./types.js";
 export type { BlockConverter, ConverterContext } from "./types.js";
 /**

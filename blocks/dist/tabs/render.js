@@ -1,9 +1,10 @@
 import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+import { defineRender } from "@monti-cms/core/render";
 import { Children, isValidElement } from "react";
 import { TabsView } from "./render.client.js";
 /** One tab. `Tabs` reads its name and body, so when used on its own only the body is rendered. */
 export function Tab({ children }) {
-    return _jsx("div", { className: "cms-block-tabs-panel", children: children });
+    return _jsx("div", { className: "monti-block-tabs-panel", children: children });
 }
 /**
  * Tab group. Builds the tab row from the child `Tab` names (`label`) and each tab's panel from its body. The initially open tab (`defaultValue`) is a tab name,
@@ -28,7 +29,7 @@ export function DocumentTabs({ defaultValue, items, children }) {
     return (_jsx(TabsView, { labels: labels, panels: tabs.map((tab) => tab.children), defaultIndex: Math.max(0, labels.indexOf(defaultValue ?? "")) }));
 }
 /** Public components for tabs in the JSON renderer (`renderDocument`): the blocks `tabs` and `tab`. */
-export const documentComponents = (_context) => ({
+export default defineRender({
     blocks: {
         tabs: DocumentTabs,
         tab: ({ children }) => _jsx(Tab, { children: children }),

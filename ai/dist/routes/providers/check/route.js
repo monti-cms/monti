@@ -1,4 +1,4 @@
-import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, parseWith, readJsonBody } from "@monti-cms/core/server";
 import { z } from "zod";
 import { aiProviderCheckSchema } from "../../../connection.js";
 import { AiError } from "../../../errors.js";

@@ -21,12 +21,13 @@
  * see `Site.snapshot()`), so the browser never loads the config file. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  */
 import { type AdminLayoutProps, type AdminPageProps } from "@monti-cms/admin/host";
-import type { Cms } from "@monti-cms/core/runtime";
+import type { CmsHost } from "@monti-cms/core/internal/host";
+import type { Cms } from "@monti-cms/core/server";
 import type { Metadata } from "next";
 import { NextAdminRouter } from "./router.js";
 export { NextAdminRouter };
 /** Admin UI metadata of an instance. Use it in the app's admin layout: `export const generateMetadata = () => cmsAdminMetadata(cms);`. */
-export declare const cmsAdminMetadata: (cms: Pick<Cms, "site"> & Partial<Pick<Cms, "attachHost">>) => Metadata;
+export declare const cmsAdminMetadata: (cms: Pick<Cms, "site"> & Partial<Pick<CmsHost, "attachHost">>) => Metadata;
 export type CmsAdminLayoutProps = AdminLayoutProps;
 /**
  * Admin UI layout. Rendered by the app's `app/(admin)/admin/layout.tsx`. Styles: the app imports the prebuilt `@monti-cms/admin/styles.css` (and the plugins' `styles.css`) in this layout; no Tailwind is needed.

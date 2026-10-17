@@ -6,7 +6,7 @@ export interface EventsRetryOptions extends AppOptions {
     readonly limit?: number;
 }
 /**
- * `monti events:retry`: loads the app's CMS instance and delivers the `afterCommit` events that are due (the retries of failed deliveries, and events a
+ * `monti events:retry`: loads the app's CMS instance and delivers the durable entry events that are due (the retries of failed deliveries, and events a
  * stopped process never delivered), then prints what happened and how many deliveries are failed or dead. Returns 0 unless the retry itself broke (that error is
  * thrown), so a subscriber that keeps failing does not make a cron job fail; the printed counts say so.
  */

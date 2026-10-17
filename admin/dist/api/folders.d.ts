@@ -1,5 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder, Site } from "@monti-cms/core/site";
 /** What deleting a folder moves up to its parent: the entries and child folders directly inside. */
 export interface FolderContents {
     entryCount: number;

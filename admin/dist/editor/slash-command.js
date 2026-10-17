@@ -1,4 +1,4 @@
-import { perSite } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/site";
 import { Heading2, Heading3, Heading4, Image, Link2, List, ListOrdered, ListTodo, Minus, Paperclip, Pilcrow, Quote, SquareCode, Superscript, Table2, } from "lucide-react";
 import { OPEN_ALLOWANCE } from "./allowed.js";
 import { blockInsertActions, OPEN_FILE_PICKER_EVENT, OPEN_IMAGE_DIALOG_EVENT, } from "./block-inserts.js";

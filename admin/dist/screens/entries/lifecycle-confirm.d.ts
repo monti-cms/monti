@@ -1,5 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem, Site } from "@monti-cms/core/site";
 import type { ConfirmRequest } from "../shared/confirm-dialog.js";
 import { type EntryData } from "./entry-form.js";
 /** Status transitions of the edit screen. */

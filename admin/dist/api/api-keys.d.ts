@@ -1,4 +1,4 @@
-import { type ApiKeyList, type Site } from "@monti-cms/core/client";
+import { type ApiKeyList, type Site } from "@monti-cms/core/site";
 /** Query keys. Everything under `all` is refetched after a key is added, renamed, replaced or deleted. */
 export declare const apiKeysKeys: {
     all: readonly ["cms", "api-keys"];

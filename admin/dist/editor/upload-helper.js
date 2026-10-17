@@ -1,3 +1,4 @@
+import { NoticeError } from "../api/client.js";
 import { apiErrorMessages } from "../api/error-message.messages.js";
 import { completeUpload, requestUpload } from "../api/media.js";
 import { isSandboxSite } from "../screens/shared/preview-sandbox.js";
@@ -10,6 +11,8 @@ export const DEFAULT_OPTIMIZE_POLICY = {
     outputType: "image/webp",
     rename: (name) => `${name.replace(/\.[^.]+$/, "") || "image"}.webp`,
 };
+/** `accept` value of an image file input: the image types this site allows. */
+export const imageAccept = (site) => site.api.ALLOWED_IMAGE_MIME_TYPES.join(",");
 const readBytes = (blob) => typeof blob.arrayBuffer === "function"
     ? blob.arrayBuffer()
     : new Promise((resolve, reject) => {
@@ -38,6 +41,10 @@ export async function prepareUpload(site, file, options = { optimize: false }) {
     const policy = options.policy ?? DEFAULT_OPTIMIZE_POLICY;
     if (!policy.formats.includes(file.type)) {
         return { file, optimized: false, skippedReason: t("upload.keepFormat") };
+    }
+    // Converting to a type the site does not allow would be refused by the server: keep the original instead.
+    if (!site.api.isAllowedImage(policy.outputType)) {
+        return { file, optimized: false, skippedReason: t("upload.outputNotAllowed") };
     }
     if (file.type === "image/webp" && (await isAnimatedWebp(file))) {
         return { file, optimized: false, skippedReason: t("upload.keepAnimated") };
@@ -102,7 +109,7 @@ async function uploadCall(site, call) {
     }
     catch (error) {
         if (error instanceof TypeError)
-            throw new Error(site.createTranslator(editorMessages)("upload.networkError"));
+            throw new NoticeError(site.createTranslator(editorMessages)("upload.networkError"));
         throw error;
     }
 }
@@ -110,9 +117,12 @@ export async function uploadImageFile(site, input, onProgress, options) {
     const t = site.createTranslator(editorMessages);
     const prepared = input instanceof File ? { file: input, optimized: false } : input;
     const { file, original } = prepared;
+    // Server stays the authority. This only spares the user an upload that would be refused.
+    if (file.size > site.api.MAX_MEDIA_BYTES)
+        throw new NoticeError(t("upload.tooLarge", { mb: site.api.MAX_MEDIA_BYTES / 1024 / 1024 }));
     // A preview of a screen runs on a draft site: nothing is uploaded from it (the storage PUT below included).
     if (isSandboxSite(site))
-        throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
+        throw new NoticeError(site.createTranslator(apiErrorMessages)("previewNoWrite"));
     const ticket = await uploadCall(site, () => requestUpload(site, {
         filename: original?.name ?? file.name,
         mimeType: file.type,
@@ -155,12 +165,12 @@ export async function uploadAttachment(site, file, onProgress, options) {
     const t = site.createTranslator(editorMessages);
     // A preview of a screen runs on a draft site: nothing is uploaded from it.
     if (isSandboxSite(site))
-        throw new Error(site.createTranslator(apiErrorMessages)("previewNoWrite"));
+        throw new NoticeError(site.createTranslator(apiErrorMessages)("previewNoWrite"));
     const mimeType = site.api.fileTypeFor(file.name);
     if (!mimeType)
-        throw new Error(t("upload.unsupportedType"));
+        throw new NoticeError(t("upload.unsupportedType"));
     if (file.size > site.api.MAX_FILE_BYTES)
-        throw new Error(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
+        throw new NoticeError(t("upload.tooLarge", { mb: site.api.MAX_FILE_BYTES / 1024 / 1024 }));
     const typed = file.type === mimeType ? file : new File([file], file.name, { type: mimeType });
     const uploaded = await uploadImageFile(site, typed, onProgress, options);
     return { mediaId: uploaded.mediaId };

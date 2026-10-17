@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import type { AdminServer } from "./server.js";
 export interface AdminPageProps {
     params: Promise<{

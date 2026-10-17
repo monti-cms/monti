@@ -10,7 +10,6 @@ export { unifiedDiff } from "./diff.js";
 export { type DoctorOptions, type DoctorReport, type DoctorResult, type DoctorSummary, formatDoctorReport, runDoctor, } from "./doctor/index.js";
 export { DEFAULT_ENV_FILES, loadEnvFiles } from "./env.js";
 export { type EventsRetryOptions, eventsRetry } from "./events.js";
-export { type BoundaryViolation, findBoundaryViolations, formatBoundaryViolations, SERVER_ONLY_MODULES, } from "./import-boundary.js";
 export { initProject } from "./init.js";
 export { type DetectedApp, detectApp, detectPackageManager } from "./init-detect.js";
 export { collectAnswers, type InitAnswerFlags } from "./init-prompts.js";

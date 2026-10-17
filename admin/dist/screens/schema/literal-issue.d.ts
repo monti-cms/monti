@@ -1,4 +1,4 @@
-import type { SchemaLiteralIssue } from "@monti-cms/core/schema-edit";
+import type { SchemaLiteralIssue } from "@monti-cms/core/internal/schema-edit";
 import type { TranslatorFor } from "../../translator.js";
 import type { schemaMessages } from "./messages.js";
 type T = TranslatorFor<typeof schemaMessages>;

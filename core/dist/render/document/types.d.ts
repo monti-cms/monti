@@ -313,15 +313,10 @@ export type DocumentComponentsOf<Cms extends {
 }> = DocumentComponentsFor<Cms["site"]["config"]>;
 /** The component table of any site: `blocks` and `marks` by name with untyped props. Use `DocumentComponentsOf` or `DocumentComponentsFor` for a typed one. */
 export type DocumentComponents = LooseDocumentComponents;
-/** A component table with untyped `blocks` and `marks`: what a block extension returns and what the renderer merges. */
+/** A component table with untyped `blocks` and `marks`: what the renderer merges (a block extension's `defineRender` table is a part of it). */
 export interface LooseDocumentComponents extends CoreDocumentComponents {
     readonly marks?: Readonly<Record<string, ComponentType<any>>>;
     readonly blocks?: Readonly<Record<string, ComponentType<any>>>;
-}
-/** What a block extension's render module gets (`documentComponents(context)`). */
-export interface DocumentComponentsContext {
-    readonly locale?: string;
-    readonly imageResolver?: ImageResolver;
 }
 export interface RenderDocumentOptions {
     /**

@@ -10,7 +10,7 @@ interface TopLevelBlock {
     end: number;
     node: PmNode;
 }
-/** Top-level block containing the document position (kept for backward compatibility). */
+/** Top-level block containing the document position: where a block command falls back to when no nested target block is there. */
 export declare function topLevelBlockAt(doc: PmNode, pos: number): TopLevelBlock | null;
 export declare function moveBlock(editor: Editor, pos: number, direction: -1 | 1): boolean;
 export declare function duplicateBlock(editor: Editor, pos: number): boolean;

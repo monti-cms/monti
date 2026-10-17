@@ -1,4 +1,4 @@
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
 interface InspectorPanelProps {
     incomingReferences: IncomingReferenceItem[];
     isLoadingIncomingReferences: boolean;

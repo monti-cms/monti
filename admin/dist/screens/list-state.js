@@ -1,4 +1,4 @@
-import { LIST_SORT_FIELDS, } from "@monti-cms/core/client";
+import { LIST_SORT_FIELDS, } from "@monti-cms/core/site";
 import { pageParam, pageSizeParam } from "../lib/hooks/use-url-state.js";
 export const LIST_STATUSES = ["draft", "published", "archived"];
 export const DEFAULT_LIST_STATE = {
@@ -56,10 +56,13 @@ export function parseListState(site, params) {
     const collection = params.get("collection");
     const sortField = params.get("sortField") ?? "";
     const statuses = [...new Set(params.getAll("status"))].filter((status) => LIST_STATUSES.includes(status));
+    const listed = site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION;
+    const folder = params.get("folder");
     const state = {
         ...DEFAULT_LIST_STATE,
-        collection: site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION,
-        folder: !params.get("folder") || params.get("folder") === "unfiled" ? "all" : params.get("folder"),
+        collection: listed,
+        // A collection without folders has no folder to be in, so a `?folder=` left in the URL is ignored.
+        folder: !site.foldersEnabled(listed) || !folder ? "all" : folder,
         includeDescendants: params.get("descendants") === "1",
         search: params.get("search") ?? "",
         includeBody: params.get("body") === "1",
@@ -67,8 +70,9 @@ export function parseListState(site, params) {
         slugContains: params.get("slug") ?? "",
         statuses,
         hasChanges: params.get("changes") === "1",
-        relations: readRelations(site, params.getAll("relation"), site.isCollection(collection) ? collection : site.DEFAULT_COLLECTION),
-        locales: [...new Set(params.getAll("locale"))].filter(site.isLocale),
+        relations: readRelations(site, params.getAll("relation"), listed),
+        // The locale filter is hidden without translations, so a `?locale=` left in the URL must not filter the list.
+        locales: site.ADMIN_TRANSLATIONS ? [...new Set(params.getAll("locale"))].filter(site.isLocale) : [],
         sortField: LIST_SORT_FIELDS.includes(sortField)
             ? sortField
             : DEFAULT_LIST_STATE.sortField,
@@ -139,7 +143,8 @@ export function listStateToApiQuery(site, state, options = {}) {
     });
     if (!options.trash && site.schemaOf(state.collection).kind === "document")
         query.set("group", "translation");
-    if (!options.trash) {
+    // A collection without folders lists everything: entries filed in folders before its folders were turned off stay in the list.
+    if (!options.trash && site.foldersEnabled(state.collection)) {
         // Browse mode shows only items directly in the current location; search, filters or "include subfolders" show everything under the current location.
         const flat = !isExplorerMode(state);
         if (state.folder === "all") {

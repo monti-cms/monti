@@ -1,4 +1,4 @@
-import { apiKeyChoiceSchema } from "@monti-cms/core/client";
+import { apiKeyChoiceSchema } from "@monti-cms/core/site";
 import { z } from "zod";
 /**
  * AI service connections. Several are saved in the admin AI screen's Connections tab, and each action picks which connection's which model to use.

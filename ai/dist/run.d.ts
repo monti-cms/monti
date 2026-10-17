@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { type AiContentLookup, type AiRunEnv, type ResolvedAiAction } from "./action.js";
 import { type AiRunResult } from "./definition.js";
 import type { AiContent, AiDecider, AiProvider } from "./provider.js";

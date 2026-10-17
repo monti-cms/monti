@@ -19,10 +19,12 @@ interface ImageInsertDialogProps {
     /** `pick` picks a single image without inserting it into the body (media field). Does not ask for alt text or caption. */
     mode?: "insert" | "pick";
     title?: string;
+    /** Something fills in the alt text after the insert (`editor.imageInserted`), so it may be left empty here. */
+    altLater?: boolean;
 }
 /**
  * Image insertion. Upload a new file (original kept by default, web optimization optional) or reuse from the library.
  * The library's default alt and caption are copied on insertion. An image that needs a description must have alt.
  */
-export declare function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode, title: titleProp, }: ImageInsertDialogProps): import("react").JSX.Element;
+export declare function ImageInsertDialog({ open, initialFile, onClose, onInsert, mode, title: titleProp, altLater, }: ImageInsertDialogProps): import("react").JSX.Element;
 export {};

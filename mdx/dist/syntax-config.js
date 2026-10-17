@@ -1,5 +1,5 @@
 import { perSite } from "./per-site.js";
-import { MDX_PLUGIN_NAME } from "./plugin.js";
+import { MDX_PLUGIN } from "./plugin.js";
 /** The blocks the site uses, as syntax extensions see them. */
 export const siteSyntaxBlocks = perSite((site) => ({
     list: site.BLOCKS,
@@ -11,7 +11,7 @@ export const siteCodeLineEffects = perSite((site) => new Set(site.CODE_LINE_EFFE
 /** No syntax extension: standard MDX (CommonMark + GFM + standard MDX JSX). The same array every time, so parsers can be cached by it. */
 export const NO_SYNTAX = [];
 /** The syntax extensions the site gave to `mdx({ syntax })`, in precedence order (none when the site config has no `mdx()` plugin). */
-export const configuredSyntax = (site) => site.getPluginOptions(MDX_PLUGIN_NAME)?.syntax ?? NO_SYNTAX;
+export const configuredSyntax = (site) => site.pluginOptions(MDX_PLUGIN)?.syntax ?? NO_SYNTAX;
 /** Remark plugins of the extensions (parsing), built for the site's blocks and line effects. The parser and the public render chain both use them. */
 export const syntaxRemarkPlugins = (site, extensions) => {
     const blocks = siteSyntaxBlocks(site);

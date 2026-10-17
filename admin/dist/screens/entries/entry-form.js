@@ -1,5 +1,5 @@
-import { parseTranslationState, RECORD_TRANSLATIONS_KEY, } from "@monti-cms/core/client";
 import { emptyStoredDocument, STORED_DOCUMENT_VERSION } from "@monti-cms/core/document";
+import { parseTranslationState, RECORD_TRANSLATIONS_KEY, } from "@monti-cms/core/site";
 import { documentKey } from "../../editor/document-key.js";
 import { commonMessages } from "../../lib/common.messages.js";
 import { entriesMessages } from "./messages.js";
@@ -38,11 +38,6 @@ export function copyTitle(site, collection, title) {
 const text = (value) => (typeof value === "string" ? value : "");
 /** Reads a form value as a string. Empty string if missing or an array. */
 export const formText = (form, name) => text(form[name]);
-/** Reads a form value as a string array. */
-export const formList = (form, name) => {
-    const value = form[name];
-    return Array.isArray(value) ? value : [];
-};
 /** Whether this is a translation. A translation handles only per-language values as the form. */
 export const isTranslationEntry = (entry) => Boolean(entry?.translationGroupId && entry.translationGroupId !== entry.id);
 /** For a translation, the original's body, language and title. Used by the source pane, the title hint and AI translation. */
@@ -122,7 +117,7 @@ export function formFromEntry(site, entry) {
     Object.assign(form, recordTranslationsToForm(site, entry.collection, metadata));
     // A translation also handles translation state as the form, so autosave, recovery and conflict comparison see it along with the body.
     if (isTranslationEntry(entry)) {
-        // If it is not a valid state, use an empty source so "source changed" is shown. A state of an older version is read as version 4.
+        // If it is not a valid state, use an empty source so "source changed" is shown.
         form[TRANSLATION_FORM_KEY] = stringifyTranslation(parseTranslationState(entry.working.translation) ?? UNCONFIRMED_TRANSLATION);
     }
     return form;

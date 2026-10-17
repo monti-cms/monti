@@ -1,15 +1,11 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useFormat } from "@monti-cms/admin";
-import { useLinkPaths } from "@monti-cms/admin/hooks";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { SOURCE_ERROR_ID, useFormat, useLinkPaths, useSite, useTranslator, } from "@monti-cms/admin";
 import { assignBlockIds, entryLinkIds, forEachBlock, isUnparsedDocument, mapLinkAttrs, unparsedDocument, } from "@monti-cms/core/document";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createMdxBrowserFormat } from "./format.js";
 import { MdxSourceEditor } from "./mdx-source-editor.js";
 import { mdxSourceMessages } from "./messages.js";
-/** Id of the element a screen puts the findings about the text in. The panel's input refers to it as its description. */
-export const SOURCE_ERROR_ID = "cms-source-error";
 /** The 1-based line of the text where a top-level block of `doc` starts, or `null` when no block has this id (the text is that of `doc`). */
 export function lineOfBlock(doc, blockId, format) {
     if (isUnparsedDocument(doc))

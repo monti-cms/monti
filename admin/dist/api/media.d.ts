@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /** One item of the media list API. */
 export interface MediaItem {
     id: string;

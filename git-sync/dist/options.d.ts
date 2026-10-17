@@ -1,4 +1,4 @@
-import { type PluginConfigView } from "@monti-cms/core";
+import type { PluginConfigView, PluginId } from "@monti-cms/core";
 import type { GitHubClientFactory } from "./github/client.js";
 import { GIT_SYNC_PLUGIN_NAME } from "./name.js";
 export { GIT_SYNC_PLUGIN_NAME };
@@ -51,6 +51,8 @@ export interface GitSyncTarget {
     /** REST API root of GitHub Enterprise Server (`https://git.example.com/api/v3`). Default: github.com. */
     readonly apiUrl?: string;
 }
+/** The plugin with the type of its options (`site.pluginOptions(GIT_SYNC_PLUGIN)`). */
+export declare const GIT_SYNC_PLUGIN: PluginId<typeof GIT_SYNC_PLUGIN_NAME, GitSyncOptions>;
 export interface GitSyncOptions {
     /**
      * The places to sync to. Default: none, so `gitSync()` with no arguments adds the screen and the commands but syncs nothing until a target is listed.

@@ -1,4 +1,5 @@
-import { type BlockDefinition, type Site } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
+import { type Site } from "@monti-cms/core/site";
 /**
  * Editor representation of added blocks (block extension plugins and the site config's `blocks`). Blocks with `editor.view: "node"` are edited as
  * Tiptap nodes built from the definition; the rest stay as source-preserving boxes.
@@ -12,7 +13,7 @@ export declare const blockNodeName: (block: Pick<BlockDefinition, "name">) => st
 export declare const CONTAINER_GROUP = "cmsContainer";
 export declare const BODY_CONTAINER_GROUP = "cmsBodyContainer";
 /** Class on the node view of a block used only inside a parent block (a single tab or column), so the pointer logic can tell such a frame from the DOM. */
-export declare const PARENT_ONLY_VIEW_CLASS = "cms-parent-only-block";
+export declare const PARENT_ONLY_VIEW_CLASS = "monti-parent-only-block";
 /** Added blocks edited as editor nodes. */
 export declare const addedNodeBlocks: (site: Pick<Site, "ADDED_BLOCKS">) => readonly BlockDefinition[];
 /** Tiptap node name → added block definition. */

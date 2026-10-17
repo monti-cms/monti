@@ -1,4 +1,4 @@
-import type { BlockChild } from "@monti-cms/admin/hooks";
+import { type BlockChild } from "@monti-cms/admin";
 /** One code block of a code explorer as the editor sees it: its position among the children and its path (the `title` meta). */
 export interface EditorFile {
     /** Child index inside the container (also counts children that are not code blocks). */

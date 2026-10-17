@@ -5,11 +5,11 @@ import type { MediaStore } from "../media/store.js";
 import type { PluginStorage } from "../plugin/storage.js";
 import type { PluginSecrets } from "../secrets/index.js";
 import type { EventDeliveryOptions } from "../services/events.js";
-import type { WriteHooks } from "../services/hooks.js";
+import type { ServerEvents } from "../services/reactions.js";
 import type { Site } from "../site/index.js";
 import type { Decision } from "./decision.js";
 /**
- * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, hooks and the public API. Read on the server only.
+ * The server part of the config (`monti.config.ts`): the store, media and login connections, the secret, `on` and the public API. Read on the server only.
  * Unlike the site data (`monti.schema.ts`), it may hold secrets, and usually reads them from environment variables.
  * An app writes these options in `defineConfig({ database, auth, storage, ... })` of `@monti-cms/core/server`, which hands them to `createCms` as this shape.
  *
@@ -55,7 +55,7 @@ export interface DatabaseAdapter {
     readonly name: string;
     /**
      * Creates the store. `site` is the instance's site (its collections, locales, blocks, links). The store writes the events of every change (the outbox,
-     * `EventStore`) in the transaction of the change; the core delivers them (`afterCommit` of the server config and plugins) after the commit.
+     * `EventStore`) in the transaction of the change; the core delivers them (the durable `on.entry` events of the server config and plugins) after the commit.
      */
     createStore(options: {
         readonly site: Site;
@@ -69,7 +69,7 @@ export interface DatabaseAdapter {
         readonly formats?: FormatRegistry;
     }): Promise<MigrationSummary | undefined | void>;
     /**
-     * The storage of one plugin (`cms.storage(name)`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
+     * The storage of one plugin (`plugin.storage`): documents in named collections, scoped to the plugin. It needs the tables `migrate()` creates.
      * An adapter implements it over its own database; plugins never see the database.
      */
     pluginStorage(plugin: string): PluginStorage;
@@ -148,7 +148,7 @@ export declare const CMS_AUTH_BASE_PATH = "/api/monti/auth";
 export interface CmsAuth {
     /**
      * Login API path (e.g. `/api/monti/auth`). If it is `CMS_AUTH_BASE_PATH`, the admin API catch-all hands requests to `handlers`.
-     * For another path, the app puts a route file at that path and exports `handlers` from `@monti-cms/core/runtime`.
+     * For another path, the app puts a route file at that path and exports these `handlers`.
      */
     readonly basePath?: string;
     /** Login API route handlers (requests under `basePath`). */
@@ -220,7 +220,7 @@ export interface AuthCreateContext {
     /** Whether the `Host` header may be trusted to build login callback URLs (see `trustHost` in the server config). */
     readonly trustHost: boolean;
     /**
-     * The secrets API of the login connection (`cms.secrets("auth")`): keys derived from the config's `secret` (`MONTI_SECRET`), never the secret itself.
+     * The secrets API of the login connection (the reserved scope `auth`): keys derived from the config's `secret` (`MONTI_SECRET`), never the secret itself.
      * The login derives its session-signing key from it. `available` is false when no secret is set.
      */
     readonly secrets: PluginSecrets;
@@ -228,7 +228,7 @@ export interface AuthCreateContext {
     readonly host: RequestHost;
     /** Admin login page URL (admin path + `/login`, e.g. `/admin/login`). Includes the Next `basePath` if set, so it is the browser-facing URL. */
     readonly loginPath: string;
-    /** Storage of a plugin (`cms.storage(plugin)`). A login method that keeps its own users (a password login) keeps them here. */
+    /** Storage of a plugin (what the plugin itself reaches as `plugin.storage`). A login method that keeps its own users (a password login) keeps them here. */
     readonly storage: (plugin: string) => PluginStorage;
 }
 export interface AuthAdapter {
@@ -255,12 +255,12 @@ export interface CmsServerConfig {
      */
     readonly previousSecrets?: readonly string[];
     /**
-     * Hooks on every content write: `transform` (change the data before it is prepared), `validate` and `validatePublish` (add failures and warnings), and
-     * `afterCommit` (notification after the change is committed: cache refresh, webhooks, search indexing; the change stands even if it fails, and a failed
-     * delivery is retried, so it must be idempotent). They run before the plugins' hooks of the same name. See "Hook contract" in the core README.
+     * What the server reacts to, by target and event: `on.entry.beforeValidate` (change the data before it is prepared), `beforeSave` and `beforePublish` (add failures
+     * and warnings), and the durable events after a commit (`published`, `saved`, `changed`, ...: cache refresh, webhooks, search indexing; the change stands even if
+     * one fails, and a failed delivery is retried, so it must be idempotent). They run before the plugins' subscribers of the same event. See "Events" in the core README.
      */
-    readonly hooks?: WriteHooks;
-    /** How `afterCommit` deliveries are retried and kept, and the secret of the retry route. See "Event delivery" in the core README. */
+    readonly on?: ServerEvents;
+    /** How the durable entry events are retried and kept, and the secret of the retry route. See "Event delivery" in the core README. */
     readonly events?: EventDeliveryOptions;
     /**
      * Whether the server sits behind a proxy or platform (Vercel, nginx, a load balancer) that sets `Host` and `X-Forwarded-Host`.

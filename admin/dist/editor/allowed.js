@@ -1,4 +1,4 @@
-import { bodyRules, bodyVocabulary, CORE_BODY_MARKS, HEADING_LEVELS, } from "@monti-cms/core/client";
+import { bodyRules, bodyVocabulary, CORE_BODY_MARKS, HEADING_LEVELS, } from "@monti-cms/core/site";
 import { addedMarkByEditorName } from "./added-marks.js";
 import { addedBlockOfNode } from "./blocks/added/shared.js";
 /** Tiptap node names of the core blocks, by the name they have in the list. */

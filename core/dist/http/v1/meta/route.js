@@ -1,3 +1,4 @@
+import { hostOf } from "../../../cms/host.js";
 import { LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api.js";
 import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits.js";
 import { MAX_SLUG_LENGTH } from "../../../core/slug.js";
@@ -8,7 +9,7 @@ import { adminRoute, ok } from "../handler.js";
  */
 export const GET = adminRoute(async ({ cms }) => {
     // Plugin feature flags live under the plugin name (`features.ai` etc.). The config rejects plugin names that collide with core names.
-    const plugins = await cms.pluginFeatures();
+    const plugins = await hostOf(cms).pluginFeatures();
     return ok({
         version: "v1",
         collections: cms.site.COLLECTIONS,
@@ -17,11 +18,12 @@ export const GET = adminRoute(async ({ cms }) => {
         blocks: cms.site.BLOCKS,
         // The formats a body can be read and written in (the `format` option): the built-in ones and those plugins add.
         formats: (await cms.formats()).info(),
+        // What this site offers, from its config. Which collections use folders is `definitions[name].folders`; `folders` says whether any does.
         features: {
-            folders: true,
+            folders: cms.site.COLLECTIONS.some((collection) => cms.site.foldersEnabled(collection)),
             references: true,
             search: true,
-            templates: true,
+            templates: cms.site.ADMIN_TEMPLATES,
             media: cms.isMediaConfigured,
             ...plugins,
         },

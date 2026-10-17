@@ -1,11 +1,11 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/utils/cn.js";
 import { CollectionIcon } from "../screens/shared/collection-icon.js";
-import { FieldError } from "../ui/field.js";
+import { FormFieldError } from "../ui/field.js";
 import { Spinner } from "../ui/spinner.js";
 import { internalLinkHref } from "./internal-link.js";
 import { editorMessages } from "./messages.js";
@@ -48,8 +48,8 @@ export function InternalLinkPopup({ items, isLoading, error, coords, selectedInd
                 event.preventDefault();
                 onClose();
             }
-        }, className: "max-h-80 w-72 overflow-y-auto rounded-lg border bg-cms-popover p-1 text-cms-popover-foreground shadow-lg", children: [items.map((item, index) => (_jsxs("div", { role: "option", "aria-selected": index === selectedIndex, "data-index": index, tabIndex: -1, onMouseDown: (event) => event.preventDefault(), onClick: () => onSelect(item), onKeyDown: (event) => {
+        }, className: "max-h-80 w-72 overflow-y-auto rounded-lg border bg-monti-popover p-1 text-monti-popover-foreground shadow-lg", children: [items.map((item, index) => (_jsxs("div", { role: "option", "aria-selected": index === selectedIndex, "data-index": index, tabIndex: -1, onMouseDown: (event) => event.preventDefault(), onClick: () => onSelect(item), onKeyDown: (event) => {
                     if (event.key === "Enter")
                         onSelect(item);
-                }, className: cn("flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 outline-none", index === selectedIndex ? "bg-cms-accent text-cms-accent-foreground" : "hover:bg-cms-accent/50"), children: [_jsx("span", { "aria-hidden": true, className: "flex size-8 shrink-0 items-center justify-center rounded-md border bg-cms-background text-cms-muted-foreground [&_svg]:size-4", children: _jsx(CollectionIcon, { collection: item.collection }) }), _jsxs("span", { className: "min-w-0", children: [_jsx("span", { className: "block truncate font-medium text-sm", children: item.title }), _jsx("span", { className: "block truncate text-cms-muted-foreground text-xs", children: itemMeta(site, item) })] })] }, item.id))), isLoading ? (_jsxs("output", { className: "flex items-center gap-2 px-2 py-1.5 text-cms-muted-foreground text-xs", children: [_jsx(Spinner, { className: "size-3.5" }), t("internalLink.searching")] })) : error ? (_jsx(FieldError, { className: "px-2 py-1.5", children: error })) : (items.length === 0 && _jsx("p", { className: "px-2 py-1.5 text-cms-muted-foreground text-xs", children: t("internalLink.empty") }))] }), document.body);
+                }, className: cn("flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 outline-none", index === selectedIndex ? "bg-monti-accent text-monti-accent-foreground" : "hover:bg-monti-accent/50"), children: [_jsx("span", { "aria-hidden": true, className: "flex size-8 shrink-0 items-center justify-center rounded-md border bg-monti-background text-monti-muted-foreground [&_svg]:size-4", children: _jsx(CollectionIcon, { collection: item.collection }) }), _jsxs("span", { className: "min-w-0", children: [_jsx("span", { className: "block truncate font-medium text-sm", children: item.title }), _jsx("span", { className: "block truncate text-monti-muted-foreground text-xs", children: itemMeta(site, item) })] })] }, item.id))), isLoading ? (_jsxs("output", { className: "flex items-center gap-2 px-2 py-1.5 text-monti-muted-foreground text-xs", children: [_jsx(Spinner, { className: "size-3.5" }), t("internalLink.searching")] })) : error ? (_jsx(FormFieldError, { className: "px-2 py-1.5", children: error })) : (items.length === 0 && (_jsx("p", { className: "px-2 py-1.5 text-monti-muted-foreground text-xs", children: t("internalLink.empty") })))] }), document.body);
 }

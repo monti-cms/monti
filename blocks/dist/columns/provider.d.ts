@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-/** Registers the columns block's editing view and menu icon in the admin UI. */
-export declare function ColumnsProvider({ children }: {
-    children: ReactNode;
-}): import("react").JSX.Element;
+import type { AdminComponents } from "@monti-cms/admin";
+/** The columns block's editing view and menu icon. */
+export declare const columnsComponents: AdminComponents;

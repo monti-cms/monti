@@ -1,5 +1,5 @@
-import type { ApiKeyView } from "@monti-cms/core/client";
-import type { Cms } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
+import type { ApiKeyView } from "@monti-cms/core/site";
 /**
  * The plugin holds two secrets, both keys of the central API key store (`cms.apiKeys`) assigned to the plugin's key slots (`keySlots` in `index.ts`):
  * the GitHub `token` it calls GitHub with, and the `webhook-secret` the push webhook is signed with. The plugin reads each value from the store when it needs it;

@@ -2,7 +2,7 @@
  * Test helpers of the MDX package (`@monti-cms/mdx/testing`): the MDX pipeline with a given list of syntax extensions, the stored document of MDX text, the sample
  * posts, and a fixture renderer. Use only in package and site tests.
  */
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import { analyze } from "./analyze.js";
 import { bodyDocument, bodyFromMdx } from "./body.js";
 import { parseMdxAst } from "./parse.js";
@@ -28,7 +28,7 @@ export declare const mdxWith: (site: Site, syntax: readonly SyntaxExtension[]) =
     writeTwice: (source: string) => string;
 };
 /** The stored document of MDX text (an `unparsed` body when it cannot be read), as a write would store it. */
-export declare const docOfMdx: (site: Site, mdx: string, syntax?: readonly SyntaxExtension[]) => import("@monti-cms/core/read").StoredDocument;
+export declare const docOfMdx: (site: Site, mdx: string, syntax?: readonly SyntaxExtension[]) => import("@monti-cms/core/document").StoredDocument;
 /** MDX text drawn the way the public page draws it (`renderMdx`): the markup, the table of contents and the React tree. */
 export declare const renderFixture: (source: string, options: RenderMdxOptions) => Promise<{
     content: import("react").ReactNode;

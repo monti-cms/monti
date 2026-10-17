@@ -70,7 +70,7 @@ export function createEventDispatcher(options) {
                 return "failed";
             });
             result[state] += 1;
-            console.error(`[cms] afterCommit of ${subscriber} failed (${change.kind} ${change.entryId}, event ${change.eventId}, try ${attempts}${state === "dead" ? ", dead-lettered" : ""})`, error);
+            console.error(`[cms] event subscriber ${subscriber} failed (${change.kind} ${change.entryId}, event ${change.eventId}, try ${attempts}${state === "dead" ? ", dead-lettered" : ""})`, error);
         }
     };
     /** Claims and delivers what is due until nothing is left or `limit` deliveries were tried. */
@@ -126,7 +126,7 @@ export function createEventDispatcher(options) {
         const subscribers = await options.subscribers();
         if (subscribers.length > 0) {
             await store().enqueueEvents({
-                subscribers: subscribers.map((subscriber) => subscriber.name),
+                subscribers: subscribers.map(({ name, kinds }) => ({ name, kinds })),
                 since: new Date(now().getTime() - ORPHAN_WINDOW_MS),
                 now: now(),
             });
@@ -172,7 +172,7 @@ export function createEventDispatcher(options) {
             const subscribers = await options.subscribers();
             if (subscribers.length > 0) {
                 await store().enqueueEvents({
-                    subscribers: subscribers.map((subscriber) => subscriber.name),
+                    subscribers: subscribers.map(({ name, kinds }) => ({ name, kinds })),
                     entryId,
                     now: now(),
                 });

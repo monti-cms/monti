@@ -56,5 +56,5 @@ export function MermaidView({ source }) {
     }, [source, dark, baseId]);
     const svg = state && "svg" in state ? state.svg : null;
     const error = state && "error" in state ? state.error : null;
-    return (_jsxs("figure", { className: "cms-block-mermaid", "data-state": svg ? "ready" : error ? "error" : "loading", children: [svg ? (_jsx("div", { className: "cms-block-mermaid-diagram", dangerouslySetInnerHTML: { __html: svg } })) : (_jsx("pre", { className: "cms-block-mermaid-source", children: _jsx("code", { children: source }) })), error ? _jsx("figcaption", { className: "cms-block-mermaid-error", children: error }) : null] }));
+    return (_jsxs("figure", { className: "monti-block-mermaid", "data-state": svg ? "ready" : error ? "error" : "loading", children: [svg ? (_jsx("div", { className: "monti-block-mermaid-diagram", dangerouslySetInnerHTML: { __html: svg } })) : (_jsx("pre", { className: "monti-block-mermaid-source", children: _jsx("code", { children: source }) })), error ? _jsx("figcaption", { className: "monti-block-mermaid-error", children: error }) : null] }));
 }

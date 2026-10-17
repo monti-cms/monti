@@ -1,4 +1,5 @@
-import { IssueList, pathOf, valueFieldsOf } from "@monti-cms/core";
+import { IssueList, pathOf } from "@monti-cms/core";
+import { valueFieldsOf } from "@monti-cms/core/site";
 import { SEO_ROLES } from "./fields.js";
 /**
  * Checks that SEO roles are attached to fields of the right kind (`validate` of `seo()`). Title, description and canonical URL must be text, the share image media,

@@ -1,4 +1,4 @@
-import { adminRoute, assertVersionPresent, ok, parseWith, readJsonBody, readVersionQuery, } from "@monti-cms/core/plugin/server";
+import { adminRoute, assertVersionPresent, ok, parseWith, readJsonBody, readVersionQuery, } from "@monti-cms/core/server";
 import { z } from "zod";
 import { deleteCustomAction, updateAction } from "../../../actions.js";
 import { aiStoreFor } from "../../../store.js";

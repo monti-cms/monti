@@ -1,5 +1,5 @@
 import type { Issue, PreparedSnapshot, Reference, WorkingCopy } from "../types.js";
-import type { ClaimedDelivery, EventDelivery, EventDeliveryCounts, EventLogState } from "./events.js";
+import type { ClaimedDelivery, ContentChangeKind, EventDelivery, EventDeliveryCounts, EventLogState } from "./events.js";
 import type { AppliedSchemaChange, ApplySchemaChangeParams, BodyCursor, ScannedBody, SchemaState } from "./schema-change.js";
 import type { BodyTemplate, CompleteMediaAssetInput, CreateMediaAssetInput, Entry, EntrySearchHit, ExportSnapshot, Folder, IncomingReferenceItem, JsonObject, ListEntriesParams, ListEntriesResult, ListMediaParams, ListMediaResult, MediaAssetRecord, PublishedEntryLookup, PublishedEntryRecord, PublishedPageParams, SearchEntriesParams, TranslationGroup } from "./types.js";
 /**
@@ -309,11 +309,14 @@ export interface SchemaChangeStore {
  */
 export interface EventStore {
     /**
-     * Makes the delivery rows (one per subscriber, `pending`, due now) of the events that have none: those of one entry, or the recent ones of any entry
+     * Makes the delivery rows (one per subscriber, `pending`, due now) of the events that have none, for the subscribers that take the event's kind: those of one entry, or the recent ones of any entry
      * (committed since `since`). It is idempotent, and returns the number of rows made.
      */
     enqueueEvents(params: {
-        subscribers: readonly string[];
+        subscribers: readonly {
+            readonly name: string;
+            readonly kinds: readonly ContentChangeKind[];
+        }[];
         entryId?: string;
         since?: Date;
         now: Date;

@@ -2,7 +2,7 @@ import type { StoredDocument } from "@monti-cms/core/document";
 import type { FormatIssue } from "@monti-cms/core/format";
 /**
  * A format as the browser uses it: its context (the site's blocks, the language) is bound, so a caller only gives documents and text. Both directions are
- * pure and synchronous, which is what a format promises (`@monti-cms/core/format`). A plugin registers one with `CmsAdminComponents.formats`; code that needs a
+ * pure and synchronous, which is what a format promises (`@monti-cms/core/format`). A plugin registers one with `AdminComponents.formats`; code that needs a
  * notation (the source panel, AI) asks for it by name with `useFormat`.
  */
 export interface BrowserFormat {

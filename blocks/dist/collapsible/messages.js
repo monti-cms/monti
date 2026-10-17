@@ -1,6 +1,6 @@
 import { defineMessages } from "@monti-cms/core";
 /** Labels, descriptions, and editing view text of the collapsible block. */
-export const collapsibleMessages = defineMessages("cms-blocks.collapsible", {
+export const collapsibleMessages = defineMessages("monti-blocks.collapsible", {
     en: {
         label: "Collapsible",
         description: "An area that opens when you click the title",

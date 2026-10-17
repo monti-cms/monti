@@ -82,7 +82,7 @@ export function createPublishing(ctx) {
             const before = firstAddresses.get(addressKey(link.collection, link.locale, link.slug));
             const after = lockedAddresses.get(addressKey(link.collection, link.locale, link.slug));
             if (linkTargetChanged(before && holderOf(before), after && holderOf(after))) {
-                throw new CmsError("Internal link target changed during publish", "conflict", entry.version);
+                throw new CmsError("Internal link target changed during publish", "conflict", { serverVersion: entry.version });
             }
         }
         const mediaIds = Array.from(new Set(publishSnapshot.references.filter((ref) => ref.kind === "media").map((ref) => ref.targetId)));
@@ -280,7 +280,9 @@ export function createPublishing(ctx) {
         // A link in the body to a trashed entry is not refused (the draft can still be saved and the link removed); publishing it is, as an unpublished link.
         const trashed = new Set(rows.filter((row) => row.status === "trashed").map((row) => row.id));
         if (references.some((ref) => trashed.has(ref.targetId) && ref.occurrences.some((o) => o.type !== "body"))) {
-            throw new CmsError("Cannot reference a trashed entry", "invalid_reference");
+            throw new CmsError("Cannot reference a trashed entry", "invalid_reference", {
+                notice: { key: "entry.reference.trashed" },
+            });
         }
         const found = new Set(rows.map((row) => row.id));
         const onlyLinks = (ref) => ref.occurrences.length > 0 && ref.occurrences.every((o) => o.type === "body");
@@ -309,13 +311,15 @@ export function createPublishing(ctx) {
             .orderBy("source_id")
             .execute();
         if (usage.length > 0) {
-            throw new CmsError("Other entries still reference this entry", "in_use", undefined, {
-                usages: usage.map((row) => ({
-                    entryId: row.source_id,
-                    title: row.title,
-                    collection: row.collection,
-                    state: row.state,
-                })),
+            throw new CmsError("Other entries still reference this entry", "in_use", {
+                details: {
+                    usages: usage.map((row) => ({
+                        entryId: row.source_id,
+                        title: row.title,
+                        collection: row.collection,
+                        state: row.state,
+                    })),
+                },
             });
         }
     };

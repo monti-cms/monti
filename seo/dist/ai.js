@@ -1,5 +1,5 @@
 // The contract types come from core, so this file never loads (or points at) the AI plugin.
-import { valueFieldsOf } from "@monti-cms/core";
+import { valueFieldsOf } from "@monti-cms/core/site";
 import { SEO_DEFAULT_LIMITS, SEO_ROLES } from "./fields.js";
 import { seoMessages } from "./messages.js";
 /**

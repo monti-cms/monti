@@ -1,14 +1,12 @@
 import { CmsError } from "../../../error-handler.js";
-import { publicRoute } from "../../../handler.js";
-import { validateSameOrigin } from "../../../security.js";
+import { publicRoute, readFormBody } from "../../../handler.js";
 /**
  * `POST /api/monti/v1/session/sign-in/<method>`: starts signing in with one of the login methods (`cms.auth().providers`). The login screen submits a plain form here.
- * Needs no login (it is how one signs in), but the same-origin check applies. On success the login connection redirects the browser (to the provider, then to the admin).
+ * Access `same-origin-form`: needs no login (it is how one signs in), and the router applies the same-origin check. On success the login connection redirects the browser (to the provider, then to the admin).
  *
  * It is a route and not a server action because a server action cannot carry the CMS instance: its closed-over values must be serializable.
  */
 export const POST = publicRoute(async ({ request, params, cms }) => {
-    validateSameOrigin(cms, request, { form: true });
     const { provider = "" } = params;
     const auth = cms.auth();
     if (!auth.providers.some((method) => method.id === provider)) {
@@ -18,7 +16,7 @@ export const POST = publicRoute(async ({ request, params, cms }) => {
     // An email and password method sends what the form holds along; an OAuth method has no fields.
     let credentials;
     if (method?.credentials) {
-        const form = await request.formData();
+        const form = await readFormBody(request);
         const field = (name) => (typeof form.get(name) === "string" ? String(form.get(name)) : "");
         credentials = { email: field("email"), password: field("password") };
     }

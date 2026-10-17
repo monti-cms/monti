@@ -1,4 +1,4 @@
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import type { Ref } from "react";
 import { type usePanelResize } from "../../ui/panel-resize.js";
 import type { EntryEditor } from "./entry-editor-types.js";

@@ -1,5 +1,5 @@
 import type { Cms } from "../cms/index.js";
-import { type Issue } from "../config/check/issue.js";
+import { type ConfigIssue } from "../config/check/issue.js";
 import { type BodyVocabulary } from "../schema/allowed.js";
 import { type ChangeImpact, type ImpactSample, type SchemaChange, SchemaChangeError, type SuggestedTransform, type TransformProblem } from "../schema-change/index.js";
 import { type SchemaLiteralIssue } from "../schema-file/literal.js";
@@ -23,7 +23,7 @@ export interface SchemaScreenState {
     /** The file has comments; saving writes it again without them. */
     readonly comments: boolean;
     /** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
-    readonly issues: readonly Issue[];
+    readonly issues: readonly ConfigIssue[];
     /** The version the instance runs. */
     readonly schemaVersion: number;
     /** The schema last applied to the dev database, or `null` when none was (or the store has no schema record yet). */
@@ -87,7 +87,7 @@ export interface SchemaDecision {
 export interface SchemaEditPreview {
     /** The edit checks. When it does not, `issues` says what is wrong, with JSON paths, and the rest is empty. */
     readonly valid: boolean;
-    readonly issues: readonly Issue[];
+    readonly issues: readonly ConfigIssue[];
     /** Something would be written or applied: the content differs from the file, or a change or transform is pending. */
     readonly changed: boolean;
     /** The schema changes the stored data cares about (collections, fields, options, locales, allowed blocks), each with the entries it touches. */
@@ -112,11 +112,18 @@ export declare function previewSchemaEdit(cms: Cms, input: SchemaEditInput): Pro
 export interface SchemaSaveInput extends SchemaEditInput {
     /** The hash of the file the edit started from (`SchemaScreenState.hash`). A different one means the file changed meanwhile. */
     readonly baseHash: string;
+    /**
+     * The impacts the writer reviewed (`ChangeImpact.key` of the preview they saw). A change that leaves stored entries worse off
+     * ({@link needsAcknowledgement}) is saved only when its key is here, so a direct request cannot drop or strand data nobody looked at.
+     */
+    readonly acknowledged?: readonly string[];
 }
+/** Whether an impact must be acknowledged before the save: it touches stored entries, and not harmlessly. */
+export declare const needsAcknowledgement: (impact: ChangeImpact) => boolean;
 export type SchemaSaveResult = {
     readonly saved: false;
     readonly reason: "invalid";
-    readonly issues: readonly Issue[];
+    readonly issues: readonly ConfigIssue[];
 } | {
     readonly saved: false;
     readonly reason: "problems";
@@ -124,6 +131,12 @@ export type SchemaSaveResult = {
 } | {
     readonly saved: false;
     readonly reason: "conflict";
+}
+/** Changes that touch stored entries were not acknowledged (`SchemaSaveInput.acknowledged`). Review them and send their keys. */
+ | {
+    readonly saved: false;
+    readonly reason: "unacknowledged";
+    readonly impacts: readonly ChangeImpact[];
 } | {
     readonly saved: false;
     readonly reason: "unchanged";
@@ -162,4 +175,4 @@ export type SchemaSaveResult = {
  */
 export declare function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<SchemaSaveResult>;
 export { SchemaChangeError };
-export type { Issue };
+export type { ConfigIssue };

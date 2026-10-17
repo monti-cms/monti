@@ -1,4 +1,4 @@
-import { type EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core/client";
+import type { EditorWidthStep as EditorWidthStepConfig } from "@monti-cms/core";
 import type { TranslatorFor } from "../translator.js";
 import { editorMessages } from "./messages.js";
 /** One width step of the editor: `key` is what the browser remembers, `width` the CSS value of the body's `max-width`. */

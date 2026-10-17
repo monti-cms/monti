@@ -1,7 +1,8 @@
 import { Auth, skipCSRFCheck } from "@auth/core";
 import { defineMessages, describeNodeEnv, problemText, WHERE_TO_SET_ENV } from "@monti-cms/core";
-import { assertDevBypassSafe, isDevAuthBypassEnabled, productionLikeEnvironment, withBasePath, } from "@monti-cms/core/adapters/auth";
-import { CMS_AUTH_BASE_PATH } from "@monti-cms/core/server";
+import { CMS_AUTH_BASE_PATH } from "@monti-cms/core/adapters";
+import { assertDevBypassSafe, isDevAuthBypassEnabled, productionLikeEnvironment } from "@monti-cms/core/adapters/auth";
+import { withBasePath } from "@monti-cms/core/site";
 import { collectAdmins, ignoredAdminText } from "./admins.js";
 import { qualifyAccountId, splitAccountId } from "./provider.js";
 const FORM = "application/x-www-form-urlencoded";
@@ -216,6 +217,7 @@ export function auth(options) {
                 requireConfigured();
                 return Auth(normalize(request), config);
             };
+            const forwardHeaders = providers.flatMap((provider) => provider.forwardHeaders ?? []);
             const headersOf = async (request) => request?.headers ?? (await host.requestHeaders?.()) ?? null;
             /** A request Auth.js answers, built from the headers of the browser's request. */
             const internalRequest = (path, headers, init = {}, requestUrl) => {
@@ -223,9 +225,17 @@ export function auth(options) {
                 if (!origin)
                     return null;
                 const cookie = headers.get("cookie");
+                const forwarded = Object.fromEntries(forwardHeaders.flatMap((name) => {
+                    const value = headers.get(name);
+                    return value ? [[name, value]] : [];
+                }));
                 return new Request(`${origin}${config.basePath}${path}`, {
                     ...init,
-                    headers: { ...(cookie ? { cookie } : {}), ...(init.method === "POST" ? { "content-type": FORM } : {}) },
+                    headers: {
+                        ...forwarded,
+                        ...(cookie ? { cookie } : {}),
+                        ...(init.method === "POST" ? { "content-type": FORM } : {}),
+                    },
                 });
             };
             const flow = async (path, request, redirectTo, fields = {}) => {

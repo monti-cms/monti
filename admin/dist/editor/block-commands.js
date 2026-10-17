@@ -3,7 +3,7 @@ import { Fragment } from "@tiptap/pm/model";
 import { TextSelection } from "@tiptap/pm/state";
 import { targetBlockAt } from "./drag/block-resolve.js";
 const isTargetBlock = (block) => "parent" in block;
-/** Top-level block containing the document position (kept for backward compatibility). */
+/** Top-level block containing the document position: where a block command falls back to when no nested target block is there. */
 export function topLevelBlockAt(doc, pos) {
     if (doc.childCount === 0)
         return null;

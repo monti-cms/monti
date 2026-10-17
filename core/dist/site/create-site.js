@@ -90,7 +90,7 @@ export function createSite(config) {
             ...createPanel(schemas, plugins),
             config,
             plugins,
-            getPluginOptions: (name) => plugins.find((plugin) => plugin.name === name)?.options,
+            pluginOptions: ({ name }) => plugins.find((plugin) => plugin.name === name)?.options,
             api,
             snapshot: () => {
                 snapshot ??= withActiveLocale(i18n.ADMIN_LANGUAGE, config.admin?.messages, () => snapshotOf(config, blocks));

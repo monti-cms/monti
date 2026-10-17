@@ -44,7 +44,7 @@ export interface CollectionSchema<Fields extends Readonly<Record<string, Field>>
      * If absent or unknown, it is the default icon for the kind.
      */
     readonly icon?: string;
-    /** Whether entries can be organized into virtual folders. If absent, document collections enable folders by default. */
+    /** Whether entries can be organized into virtual folders. If absent, the kind decides (`kindDefaults`): a document collection has them, an item collection not. */
     readonly folders?: boolean;
     /** Custom title for the default properties tab. If absent, the admin's translated default is used. */
     readonly defaultTab?: string;
@@ -65,6 +65,14 @@ type CollectionInput<Fields extends Readonly<Record<string, Field>>> = Omit<Coll
 export declare function defineCollection<const Fields extends Readonly<Record<string, Field>>, const Kind extends CollectionKind>(schema: CollectionInput<Fields> & {
     kind: Kind;
 }): CollectionSchema<Fields, Kind>;
+/**
+ * What a collection's kind gives the options its definition leaves out: a document collection has a body and folders, an item collection neither.
+ * The one place this default lives; the site, the schema file writer and the admin's schema editor all read it.
+ */
+export declare function kindDefaults(kind: CollectionKind | undefined): {
+    readonly body: boolean;
+    readonly folders: boolean;
+};
 /**
  * Normalizes a collection definition: fills the body default (only `document` has a body) and turns the object form of `body` into `body: true` and `allowed`.
  * Called by `defineCollection` and `defineSite` (an already normalized definition stays as is). It does not judge the definition: `defineSite` checks the normalized

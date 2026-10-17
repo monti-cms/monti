@@ -1,4 +1,4 @@
-import { type StoredDocument } from "@monti-cms/core/client";
+import { type StoredDocument } from "@monti-cms/core/document";
 /** List of blocks that differ between the source the translator last confirmed and the current source. */
 export declare function SourceChangeDialog({ open, onOpenChange, before, after, }: {
     open: boolean;

@@ -1,4 +1,4 @@
-import { type TextChecker } from "@monti-cms/core/client";
+import type { TextChecker } from "@monti-cms/core";
 import type { EditorExtensionContext, EditorExtensionResult } from "../../admin-components.js";
 /**
  * Text check (spelling, etc.) UI. When an extension adds a checker to the admin extension point `textCheckers`, each checker gets a toolbar button,

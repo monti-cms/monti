@@ -1,8 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { errorText } from "@monti-cms/admin/api";
+import { errorText, useSite, useTranslator } from "@monti-cms/admin";
 import { Button, isComposingKey, Popover, PopoverContent, PopoverTrigger, Textarea } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { Languages, Square } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -195,7 +194,7 @@ export function useAiTranslate(locales) {
         run: (editor, pos) => void translateOne(editor, pos, item.key),
     })), [features, busyBlocks, progress, translateOne, format, site]);
     const running = progress !== null || busyBlocks.size > 0;
-    const toolbar = feature ? (running ? (_jsxs("span", { className: "flex items-center gap-1", children: [progress && (_jsx("span", { className: "text-cms-muted-foreground text-xs tabular-nums", children: t("progress", { done: progress.done, total: progress.total }) })), _jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "gap-1.5 text-cms-muted-foreground", onClick: stop, children: [_jsx(Square, { "aria-hidden": true, className: "size-4" }), t("stop")] })] })) : (_jsxs(Popover, { open: open, onOpenChange: setOpen, children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "gap-1.5 text-cms-muted-foreground" }), children: [_jsx(Languages, { "aria-hidden": true, className: "size-4" }), t("all")] }), _jsx(PopoverContent, { align: "end", className: "w-72 gap-2 p-3 text-xs", children: _jsxs("form", { className: "flex flex-col gap-2", onSubmit: (event) => {
+    const toolbar = feature ? (running ? (_jsxs("span", { className: "flex items-center gap-1", children: [progress && (_jsx("span", { className: "text-monti-muted-foreground text-xs tabular-nums", children: t("progress", { done: progress.done, total: progress.total }) })), _jsxs(Button, { type: "button", size: "sm", variant: "ghost", className: "gap-1.5 text-monti-muted-foreground", onClick: stop, children: [_jsx(Square, { "aria-hidden": true, className: "size-4" }), t("stop")] })] })) : (_jsxs(Popover, { open: open, onOpenChange: setOpen, children: [_jsxs(PopoverTrigger, { render: _jsx(Button, { type: "button", size: "sm", variant: "ghost", className: "gap-1.5 text-monti-muted-foreground" }), children: [_jsx(Languages, { "aria-hidden": true, className: "size-4" }), t("all")] }), _jsx(PopoverContent, { align: "end", className: "w-72 gap-2 p-3 text-xs", children: _jsxs("form", { className: "flex flex-col gap-2", onSubmit: (event) => {
                         event.preventDefault();
                         void translateAll();
                     }, children: [features.length > 1 && (_jsx(OptionSelect, { "aria-label": t("action"), value: feature.key, options: features.map((item) => ({ value: item.key, label: item.label })), onChange: setChosenKey })), feature.askInstruction && (_jsx(Textarea, { "aria-label": t("request"), placeholder: t("request"), rows: 3, value: request, onChange: (event) => setRequest(event.target.value), onKeyDown: (event) => {

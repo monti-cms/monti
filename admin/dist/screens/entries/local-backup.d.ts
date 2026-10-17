@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /** The name of a site's recovery database. */
 export declare const backupDatabaseName: (site: Site) => string;
 export interface LocalBackupRecord<Snapshot = Record<string, unknown>> {

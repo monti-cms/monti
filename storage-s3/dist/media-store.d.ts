@@ -1,4 +1,4 @@
-import { type MediaStore } from "@monti-cms/core/server";
+import { type MediaStore } from "@monti-cms/core/adapters";
 /** S3 API store connection (R2, S3, MinIO, etc.). */
 export interface MediaStoreConfig {
     accessKeyId: string;

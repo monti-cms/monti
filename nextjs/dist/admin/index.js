@@ -22,6 +22,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
  * see `Site.snapshot()`), so the browser never loads the config file. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  */
 import { AdminLayout, AdminPage, adminMetadata, } from "@monti-cms/admin/host";
+import { hostOf } from "@monti-cms/core/internal/host";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -51,7 +52,7 @@ export function CmsAdminLayout(props) {
 async function AdminShell(props) {
     await connection();
     // The login reads the headers of the request through Next, so the site's config needs no `host`.
-    props.cms.attachHost?.(nextHost);
+    hostOf(props.cms).attachHost?.(nextHost);
     return (_jsx(NextAdminRouter, { children: _jsx(AdminLayout, { ...props }) }));
 }
 /**
@@ -65,6 +66,6 @@ async function AdminShell(props) {
  */
 export function CmsAdminPage({ cms, ...props }) {
     assertCms(cms, "<CmsAdminPage cms={cms}>");
-    cms.attachHost?.(nextHost);
+    hostOf(cms).attachHost?.(nextHost);
     return _jsx(AdminPage, { ...props, cms: cms, server: { redirect: (href) => redirect(href), notFound } });
 }

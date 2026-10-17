@@ -15,10 +15,10 @@ export const CmsMathNode = Node.create({
         };
     },
     parseHTML() {
-        return [{ tag: "div[data-cms-math]" }];
+        return [{ tag: "div[data-monti-math]" }];
     },
     renderHTML({ HTMLAttributes }) {
-        return ["div", mergeAttributes(HTMLAttributes, { "data-cms-math": "" })];
+        return ["div", mergeAttributes(HTMLAttributes, { "data-monti-math": "" })];
     },
     addNodeView() {
         return ReactNodeViewRenderer(BlockNodeView);

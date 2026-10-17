@@ -3,10 +3,9 @@ import { type ImageWarningResolvers } from "../core/snapshot.js";
 import type { Entry } from "../core/store/index.js";
 import type { FormatRegistry } from "../format/registry.js";
 import type { Site } from "../site/index.js";
-import type { HookProvider } from "./hooks.js";
+import type { HookProvider } from "./reactions.js";
 import { type Issue, type RestorePort, type SaveDraftInput, type ServiceInput, type StorePort } from "./types.js";
 import { type WritePipeline } from "./write-pipeline.js";
-export { imageWarningsForSnapshot, prepareSnapshot, validateForPublish } from "../core/snapshot.js";
 export interface ContentServiceOptions {
     /** The site the writes are for. */
     readonly site: Site;
@@ -23,7 +22,7 @@ export interface ContentServiceOptions {
 }
 /**
  * What every write of the content service returns (create, save, translate, duplicate, publish, restore): the entry as it is now, and the warnings the
- * write found (core's, the blocks' and the hooks'). The warnings never block and are never part of the entry; the list is empty when there are none.
+ * write found (core's, the blocks' and the `before…` subscribers'). The warnings never block and are never part of the entry; the list is empty when there are none.
  */
 export interface WriteResult {
     readonly entry: Entry;
@@ -78,7 +77,7 @@ export declare const createContentService: (storePort: StorePort & Partial<Resto
     }) => Promise<WriteResult>;
     /**
      * Trash to restore. A record is published again, so its draft goes through the write pipeline first as a `restore`: `validate` and
-     * `validatePublish` hooks run (a restriction on publishing cannot be bypassed by trash and restore), `transform` hooks do not (the content
+     * `beforePublish` subscribers run (a restriction on publishing cannot be bypassed by trash and restore), `beforeValidate` ones do not (the content
      * is unchanged). Other collections return to draft and are not published, so nothing runs for them.
      */
     restore: (params: {

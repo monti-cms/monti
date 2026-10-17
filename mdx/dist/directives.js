@@ -18,4 +18,4 @@ export const directivesOf = perSite((site) => {
         DIRECTIVE_BY_COMPONENT: new Map(DIRECTIVES.map((definition) => [definition.component, definition])),
     };
 });
-export { TEXT_ALIGN_VALUES } from "@monti-cms/core/client";
+export { TEXT_ALIGN_VALUES } from "@monti-cms/core/site";

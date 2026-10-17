@@ -1,4 +1,4 @@
-import { type Issue } from "../../config/check/issue.js";
+import { type ConfigIssue } from "../../config/check/issue.js";
 /**
  * Code block line effect definitions (`// @line name {2-4}`). Adds the site config's `codeBlock.lineEffects` to the core defaults
  * (highlight, focus, plus, minus, warning, error). A site definition replaces one with the same name.
@@ -71,6 +71,6 @@ export declare const DEFAULT_CODE_LINE_EFFECTS: readonly CodeLineEffectDefinitio
 /** Default highlighting themes. */
 export declare const DEFAULT_CODE_BLOCK_THEMES: CodeBlockThemes;
 /** Checks the `codeBlock` settings of the site config. */
-export declare function checkCodeBlockConfig(config: CodeBlockConfig | undefined): Issue[];
+export declare function checkCodeBlockConfig(config: CodeBlockConfig | undefined): ConfigIssue[];
 /** Merges site definitions into the default line effects. A same name is replaced in place; a new name is appended. */
 export declare function resolveCodeLineEffects(added: readonly CodeLineEffectDefinition[] | undefined): readonly CodeLineEffectDefinition[];

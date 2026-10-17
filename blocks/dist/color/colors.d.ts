@@ -1,4 +1,4 @@
-import { type Issue } from "@monti-cms/core";
+import { type ConfigIssue } from "@monti-cms/core";
 /**
  * Text color and text background color (`:color[text]{fg="#…" fgDark="#…" bg="#…" bgDark="#…"}`).
  * The body stores colors as hex values, not names. Light and dark theme values are paired, and when there is no dark value
@@ -35,7 +35,7 @@ export declare const isHexColor: (value: unknown) => value is string;
 export declare function cleanTextColor(attrs: Readonly<Record<string, unknown>> | null | undefined): TextColorAttrs;
 export declare const hasTextColor: (attrs: TextColorAttrs) => boolean;
 /**
- * Display attributes shared by the public page and the editor. CSS (`.cms-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
+ * Display attributes shared by the public page and the editor. CSS (`.monti-color`, this package's `render.css` for the public page and `styles.css` for the editor) picks the variable for the theme.
  * Color is applied only when `data-fg` or `data-bg` is present.
  */
 export declare function textColorProps(attrs: TextColorAttrs): {
@@ -44,7 +44,5 @@ export declare function textColorProps(attrs: TextColorAttrs): {
     "data-bg"?: "";
     style: Record<string, string>;
 };
-/** The preset if the color matches one. Used to mark the current color in the picker list. */
-export declare function paletteOf(kind: "fg" | "bg", attrs: TextColorAttrs, palette: readonly PaletteColor[]): PaletteColor | undefined;
 /** The problems of the picker list (`color({ palette })`): hex values and unique `id`s. */
-export declare function checkTextPalette(palette: readonly PaletteColor[] | undefined): Issue[];
+export declare function checkTextPalette(palette: readonly PaletteColor[] | undefined): ConfigIssue[];

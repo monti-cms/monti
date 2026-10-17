@@ -1,7 +1,5 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-// Column state of the entries table: order/visibility/sizes persisted to the user's collection preferences,
-// responsive hiding by width, and the TanStack table instance.
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { columnOrderingFeature, columnResizingFeature, columnSizingFeature, columnVisibilityFeature, createColumnHelper, rowSelectionFeature, tableFeatures, useTable, } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commonMessages } from "../lib/common.messages.js";
@@ -64,7 +62,7 @@ export function useEntriesTable({ collection, items, folders, explorer, state, o
                 size: 52,
                 enableResizing: false,
                 header: () => _jsx("span", { className: "sr-only", children: t("list.actions") }),
-                cell: ({ row }) => (_jsxs("div", { className: "flex items-center justify-end gap-1 whitespace-nowrap", children: [isTrash && (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: () => onRestore?.(row.original), children: tc("lifecycle.restore") }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-cms-destructive", onClick: () => onPermanentDelete?.(row.original), children: tc("lifecycle.deletePermanently") })] })), _jsx(MoreActionsButton, { actions: rowMenu(row.original), label: t("list.rowActions", { title: row.original.title ?? tc("untitled") }) })] })),
+                cell: ({ row }) => (_jsxs("div", { className: "flex items-center justify-end gap-1 whitespace-nowrap", children: [isTrash && (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "ghost", size: "xs", onClick: () => onRestore?.(row.original), children: tc("lifecycle.restore") }), _jsx(Button, { type: "button", variant: "ghost", size: "xs", className: "text-monti-destructive", onClick: () => onPermanentDelete?.(row.original), children: tc("lifecycle.deletePermanently") })] })), _jsx(MoreActionsButton, { actions: rowMenu(row.original), label: t("list.rowActions", { title: row.original.title ?? tc("untitled") }) })] })),
             }),
         ]);
     }, [

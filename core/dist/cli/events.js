@@ -1,7 +1,7 @@
 import { loadApp } from "./app.js";
 import { appOptionsOf, defineCommand } from "./command.js";
 /**
- * `monti events:retry`: loads the app's CMS instance and delivers the `afterCommit` events that are due (the retries of failed deliveries, and events a
+ * `monti events:retry`: loads the app's CMS instance and delivers the durable entry events that are due (the retries of failed deliveries, and events a
  * stopped process never delivered), then prints what happened and how many deliveries are failed or dead. Returns 0 unless the retry itself broke (that error is
  * thrown), so a subscriber that keeps failing does not make a cron job fail; the printed counts say so.
  */
@@ -21,7 +21,7 @@ export async function eventsRetry(options) {
 }
 export const eventsRetryCommand = defineCommand({
     name: "events:retry",
-    summary: "Deliver the afterCommit events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)",
+    summary: "Deliver the entry events that are due: retries of failed deliveries, and events a stopped process never delivered (run it from a cron job)",
     options: {
         all: { type: "boolean", help: "Also try the failed deliveries that are not due yet" },
         limit: { type: "string", value: "<n>", help: "Most deliveries to try (default 100)" },

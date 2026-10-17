@@ -1,13 +1,13 @@
 "use client";
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { charEffectByName } from "@monti-cms/core/code-block";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { posToDOMRect } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { ChevronsLeftRightEllipsis, Eye, EyeOff, Link2, MessageSquareMore, Pencil, Regex, Trash2, Unlink, X, } from "lucide-react";
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useCmsAdminComponents, } from "../admin-components.js";
+import { useAdminComponents, } from "../admin-components.js";
 import { isComposingKey } from "../lib/keyboard.js";
 import { cn } from "../lib/utils/cn.js";
 import { IconButton } from "../ui/icon-button.js";
@@ -35,7 +35,7 @@ const CODE_TOOLTIP_LABELS = (t) => ({
  * of blocks the site does not use are ignored).
  */
 export function useMarkExtensions(editor) {
-    const { marks = {} } = useCmsAdminComponents();
+    const { marks = {} } = useAdminComponents();
     return Object.entries(marks).flatMap(([block, extension]) => {
         const name = addedMarkName(block);
         return !editor || editor.schema.marks[name] ? [{ name, extension }] : [];
@@ -66,7 +66,7 @@ function anchorRange(target, ranged) {
  * - When text is selected by dragging: tools to apply effects like bold and italic, and tooltip and link, right away.
  * - When the cursor is inside an effect: the spanning effects and a remove button, the link URL / tooltip text and an edit button.
  * Link and tooltip editing expands into an input form inside the bubble (no need to go to the top formatting tools).
- * For an extension's text styles (`CmsAdminComponents.marks`), it renders the buttons and content that extension provides.
+ * For an extension's text styles (`AdminComponents.marks`), it renders the buttons and content that extension provides.
  */
 export function InlineBubble({ editor, actions = [], }) {
     const site = useSite();
@@ -186,7 +186,7 @@ export function InlineBubble({ editor, actions = [], }) {
         const width = bubble?.offsetWidth ?? 0;
         // Keep it from being covered by the top (sticky) formatting tools. If there is no room above, float it below the text.
         const formatBar = editor.view.dom
-            .closest("[data-cms-editor-shell]")
+            .closest("[data-monti-editor-shell]")
             ?.querySelector(`[role="toolbar"][aria-label="${t("toolbar.format")}"]`);
         const minTop = (formatBar?.getBoundingClientRect().bottom ?? 0) + GAP;
         if (rect.bottom < minTop || rect.top > window.innerHeight) {
@@ -236,13 +236,13 @@ export function InlineBubble({ editor, actions = [], }) {
             // An internal link holds the id of its entry: the bubble shows the entry it goes to, not an address.
             const entryId = typeof mark.attrs.entryId === "string" && mark.attrs.entryId ? mark.attrs.entryId : null;
             const href = entryId ? "" : String(mark.attrs.href ?? "");
-            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(Link2, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), entryId ? (_jsx(LinkTargetAnchor, { entryId: entryId })) : (_jsx("a", { href: href, target: "_blank", rel: "noreferrer noopener", title: href, 
+            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(Link2, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-monti-muted-foreground" }), entryId ? (_jsx(LinkTargetAnchor, { entryId: entryId })) : (_jsx("a", { href: href, target: "_blank", rel: "noreferrer noopener", title: href, 
                         // If focus is taken from the editor on press, the bubble disappears first and the link does not open.
-                        onMouseDown: (event) => event.preventDefault(), className: "max-w-56 truncate px-1 text-cms-primary text-xs underline underline-offset-2", children: href })), _jsx(BubbleButton, { label: t("link.edit"), onClick: () => openLink({ from: mark.from, to: mark.to, existing: true, href, entryId }), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("link.remove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(Unlink, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
+                        onMouseDown: (event) => event.preventDefault(), className: "max-w-56 truncate px-1 text-monti-primary text-xs underline underline-offset-2", children: href })), _jsx(BubbleButton, { label: t("link.edit"), onClick: () => openLink({ from: mark.from, to: mark.to, existing: true, href, entryId }), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("link.remove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(Unlink, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
         }
         if (mark.name === CODE_TOOLTIP_MARK_NAME) {
             const content = String(mark.attrs.content ?? "");
-            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(MessageSquareMore, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), _jsx("span", { className: "max-w-48 truncate px-1 text-cms-muted-foreground text-xs", title: content, children: content }), _jsx(BubbleButton, { label: t("inlineBubble.tooltipEdit"), onClick: () => openCodeTooltip(mark), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("inlineBubble.tooltipRemove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(X, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
+            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(MessageSquareMore, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-monti-muted-foreground" }), _jsx("span", { className: "max-w-48 truncate px-1 text-monti-muted-foreground text-xs", title: content, children: content }), _jsx(BubbleButton, { label: t("inlineBubble.tooltipEdit"), onClick: () => openCodeTooltip(mark), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("inlineBubble.tooltipRemove"), onClick: act(() => removeInlineMark(editor, mark)), children: _jsx(X, { "aria-hidden": true, className: "size-4" }) })] }, mark.name));
         }
         const Detail = markExtensions.find(({ name }) => name === mark.name)?.extension.detail;
         if (Detail) {
@@ -260,7 +260,7 @@ export function InlineBubble({ editor, actions = [], }) {
             const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? region.defaultOpen;
             const publicOpen = mark.attrs.open === true;
             const type = editor.schema.marks.codeFold;
-            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(ChevronsLeftRightEllipsis, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), _jsx("span", { className: "px-1 text-cms-muted-foreground text-xs", children: t("inlineBubble.fold") }), _jsx(BubbleButton, { label: open ? t("inlineBubble.collapse") : t("inlineBubble.expand"), onClick: act(() => setFoldOpen(editor.view, { ...region, open }, !open)), children: open ? _jsx(EyeOff, { "aria-hidden": true, className: "size-4" }) : _jsx(Eye, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("inlineBubble.openByDefault"), pressed: publicOpen, className: "text-xs", onClick: act(() => {
+            return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(ChevronsLeftRightEllipsis, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-monti-muted-foreground" }), _jsx("span", { className: "px-1 text-monti-muted-foreground text-xs", children: t("inlineBubble.fold") }), _jsx(BubbleButton, { label: open ? t("inlineBubble.collapse") : t("inlineBubble.expand"), onClick: act(() => setFoldOpen(editor.view, { ...region, open }, !open)), children: open ? _jsx(EyeOff, { "aria-hidden": true, className: "size-4" }) : _jsx(Eye, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("inlineBubble.openByDefault"), pressed: publicOpen, className: "text-xs", onClick: act(() => {
                             if (!type)
                                 return;
                             editor
@@ -276,14 +276,14 @@ export function InlineBubble({ editor, actions = [], }) {
         const tool = inlineMarkTools(site).find((item) => item.mark === mark.name);
         if (!tool)
             return null;
-        return (_jsxs(BubbleButton, { label: t("markText.remove", { name: tool.title ?? tool.label }), onClick: act(() => removeInlineMark(editor, mark)), className: "gap-0.5", children: [_jsx(tool.icon, { "aria-hidden": true, className: "size-4" }), _jsx(X, { "aria-hidden": true, className: "size-3 text-cms-muted-foreground" })] }, mark.name));
+        return (_jsxs(BubbleButton, { label: t("markText.remove", { name: tool.title ?? tool.label }), onClick: act(() => removeInlineMark(editor, mark)), className: "gap-0.5", children: [_jsx(tool.icon, { "aria-hidden": true, className: "size-4" }), _jsx(X, { "aria-hidden": true, className: "size-3 text-monti-muted-foreground" })] }, mark.name));
     };
     /** Spot found by a regex rule. Being a rule, only this spot cannot be cleared — clear the whole rule, or resolve it into individual effects and clear one by one. */
     const renderRule = ({ rule, blockPos, from, to, count }) => {
         const label = charEffectByName(rule.name)?.label ?? rule.name;
         const region = { key: `m:${from}`, kind: "fold", from, to, defaultOpen: true, hiddenLines: 0 };
         const open = codeEffectsKey.getState(editor.state)?.overrides.get(region.key) ?? true;
-        return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(Regex, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-cms-muted-foreground" }), _jsx("span", { className: "max-w-48 truncate px-1 text-cms-muted-foreground text-xs", title: `/${rule.pattern}/${rule.flags}`, children: t("inlineBubble.ruleSummary", { label, count }) }), rule.name === "fold" && (_jsx(BubbleButton, { label: open ? t("inlineBubble.collapse") : t("inlineBubble.expand"), onClick: act(() => setFoldOpen(editor.view, { ...region, open }, !open)), children: open ? _jsx(EyeOff, { "aria-hidden": true, className: "size-4" }) : _jsx(Eye, { "aria-hidden": true, className: "size-4" }) })), _jsx(BubbleButton, { label: t("inlineBubble.ruleExpand"), className: "text-xs", onClick: act(() => expandRule(editor.view, blockPos, rule.id)), children: t("inlineBubble.ruleExpandShort") }), _jsx(BubbleButton, { label: t("inlineBubble.ruleDelete"), destructive: true, onClick: act(() => removeRule(editor.view, blockPos, rule.id)), children: _jsx(Trash2, { "aria-hidden": true, className: "size-4" }) })] }, rule.id));
+        return (_jsxs("div", { className: "flex items-center gap-0.5", children: [_jsx(Regex, { "aria-hidden": true, className: "mx-1 size-4 shrink-0 text-monti-muted-foreground" }), _jsx("span", { className: "max-w-48 truncate px-1 text-monti-muted-foreground text-xs", title: `/${rule.pattern}/${rule.flags}`, children: t("inlineBubble.ruleSummary", { label, count }) }), rule.name === "fold" && (_jsx(BubbleButton, { label: open ? t("inlineBubble.collapse") : t("inlineBubble.expand"), onClick: act(() => setFoldOpen(editor.view, { ...region, open }, !open)), children: open ? _jsx(EyeOff, { "aria-hidden": true, className: "size-4" }) : _jsx(Eye, { "aria-hidden": true, className: "size-4" }) })), _jsx(BubbleButton, { label: t("inlineBubble.ruleExpand"), className: "text-xs", onClick: act(() => expandRule(editor.view, blockPos, rule.id)), children: t("inlineBubble.ruleExpandShort") }), _jsx(BubbleButton, { label: t("inlineBubble.ruleDelete"), destructive: true, onClick: act(() => removeRule(editor.view, blockPos, rule.id)), children: _jsx(Trash2, { "aria-hidden": true, className: "size-4" }) })] }, rule.id));
     };
     const renderMarks = (marks, rules) => {
         const withDetail = marks.filter((mark) => [...ranged, "codeFold"].includes(mark.name));
@@ -295,7 +295,7 @@ export function InlineBubble({ editor, actions = [], }) {
         ];
         return groups.map((group, index) => (_jsxs("div", { className: "flex items-center gap-0.5", children: [index > 0 && _jsx(Separator, { orientation: "vertical", className: "mx-0.5 h-4" }), group] }, group.key)));
     };
-    const renderFootnote = (target) => (_jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "flex size-5 shrink-0 items-center justify-center rounded bg-cms-accent font-medium text-cms-accent-foreground text-xs leading-none", children: target.badge }), _jsx("button", { type: "button", onClick: () => setPanel({ kind: "footnote", target }), className: "max-w-48 truncate px-1 text-left text-cms-muted-foreground text-xs hover:text-cms-foreground", title: target.defText || t("inlineBubble.footnoteEmpty"), children: target.defText || t("inlineBubble.footnoteEmpty") }), _jsx(BubbleButton, { label: t("inlineBubble.footnoteEdit"), onClick: () => setPanel({ kind: "footnote", target }), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("inlineBubble.footnoteRemove"), onClick: act(() => {
+    const renderFootnote = (target) => (_jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "flex size-5 shrink-0 items-center justify-center rounded bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none", children: target.badge }), _jsx("button", { type: "button", onClick: () => setPanel({ kind: "footnote", target }), className: "max-w-48 truncate px-1 text-left text-monti-muted-foreground text-xs hover:text-monti-foreground", title: target.defText || t("inlineBubble.footnoteEmpty"), children: target.defText || t("inlineBubble.footnoteEmpty") }), _jsx(BubbleButton, { label: t("inlineBubble.footnoteEdit"), onClick: () => setPanel({ kind: "footnote", target }), children: _jsx(Pencil, { "aria-hidden": true, className: "size-4" }) }), _jsx(BubbleButton, { label: t("inlineBubble.footnoteRemove"), onClick: act(() => {
                     removeFootnote(editor, target);
                 }), children: _jsx(X, { "aria-hidden": true, className: "size-4" }) })] }));
     // In a code block, only the effects it accepts (bold, italic, strikethrough, underline, tooltip) and text folding are shown. Extension buttons hide themselves.
@@ -310,14 +310,14 @@ export function InlineBubble({ editor, actions = [], }) {
                 allowsMark(editor.state, CODE_TOOLTIP_MARK_NAME) &&
                 offersMarkTool(site, editor.state, CODE_TOOLTIP_MARK_NAME) && (_jsx(BubbleButton, { label: editor.isActive(CODE_TOOLTIP_MARK_NAME) ? t("inlineBubble.tooltipEdit") : t("inlineBubble.tooltipAdd"), onClick: () => openCodeTooltip(), children: _jsx(MessageSquareMore, { "aria-hidden": true, className: "size-4" }) })), linkTools.filter(({ bubble }) => (bubble.order ?? 1) < 0).map(renderTool), allowsMark(editor.state, "link") && !inCode && allowance.allowsMark("link") && (_jsx(BubbleButton, { label: editor.isActive("link") ? t("link.edit") : t("link.add"), onClick: () => openLink(linkDraftFromSelection(editor)), children: _jsx(Link2, { "aria-hidden": true, className: "size-4" }) })), linkTools.filter(({ bubble }) => (bubble.order ?? 1) >= 0).map(renderTool), inCode && allowsMark(editor.state, "codeFold") && offersMarkTool(site, editor.state, "codeFold") && (_jsx(BubbleButton, { label: t("inlineBubble.fold"), pressed: editor.isActive("codeFold"), onClick: () => editor.chain().focus().toggleMark("codeFold").run(), children: _jsx(ChevronsLeftRightEllipsis, { "aria-hidden": true, className: "size-4" }) }))] }));
     const style = { position: "fixed", top: position?.top ?? -9999, left: position?.left ?? -9999, zIndex: 40 };
-    const surface = "rounded-md border bg-cms-popover/95 text-cms-popover-foreground shadow-sm backdrop-blur";
+    const surface = "rounded-md border bg-monti-popover/95 text-monti-popover-foreground shadow-sm backdrop-blur";
     return createPortal(panel ? (_jsx("div", { ref: bubbleRef, role: "dialog", "aria-label": panel.kind === "link"
             ? t("inlineBubble.linkPanel")
             : panel.kind === "codeTooltip"
                 ? t("inlineBubble.tooltipPanel")
                 : panel.kind === "footnote"
                     ? t("inlineBubble.footnotePanel")
-                    : panel.panel.label, "data-cms-inline-bubble": true, style: style, className: cn(surface, "flex flex-col gap-3 p-3 text-xs", panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-2" : "w-80"), onKeyDown: (event) => {
+                    : panel.panel.label, "data-monti-inline-bubble": true, style: style, className: cn(surface, "flex flex-col gap-3 p-3 text-xs", panel.kind === "extension" && panel.panel.size === "auto" ? "w-auto p-2" : "w-80"), onKeyDown: (event) => {
             if (event.key === "Escape" && !isComposingKey(event)) {
                 event.preventDefault();
                 closePanel();
@@ -326,7 +326,7 @@ export function InlineBubble({ editor, actions = [], }) {
             ? t("inlineBubble.selectionLabel")
             : target.kind === "footnote"
                 ? t("inlineBubble.footnoteTitle")
-                : t("inlineBubble.effectLabel"), "data-cms-inline-bubble": true, style: style, className: BLOCK_TOOLBAR, children: target.kind === "selection"
+                : t("inlineBubble.effectLabel"), "data-monti-inline-bubble": true, style: style, className: BLOCK_TOOLBAR, children: target.kind === "selection"
             ? renderSelectionTools()
             : target.kind === "footnote"
                 ? renderFootnote(target)

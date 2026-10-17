@@ -1,4 +1,4 @@
-import { type PageSize } from "@monti-cms/core/client";
+import { type PageSize } from "@monti-cms/core/site";
 /** Previous / page of pages / next, as used at the bottom of every paged list. */
 export declare function ListPager({ page, totalPages, onPageChange, hrefFor, }: {
     page: number;

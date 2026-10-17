@@ -1,3 +1,6 @@
+import { kindDefaults } from "../schema/collection.js";
+/** The folder scope of the media library. A reserved collection name (`RESERVED_COLLECTION_NAMES`), so it never collides with a collection. */
+export const MEDIA_FOLDER_SCOPE = "media";
 /** The collection helpers of a site config's collections (`config.collections`), on top of the rules of its schemas. */
 export function createCollections(collections, schemas) {
     /** Collection names (keys of `collections` in `cms.config.ts`). Follows declaration order. */
@@ -13,7 +16,7 @@ export function createCollections(collections, schemas) {
                 kind: schema.kind,
                 fields: schemas.storageTypes(name),
                 ...(relations.length > 0 ? { relations } : {}),
-                ...(schema.folders !== undefined ? { folders: schema.folders } : {}),
+                folders: schema.folders ?? kindDefaults(schema.kind).folders,
             },
         ];
     }));
@@ -39,6 +42,15 @@ export function createCollections(collections, schemas) {
             ? [{ ...stored, to: stored.field.to }]
             : []);
     }
+    /**
+     * Whether this folder scope uses folders: the media library (`"media"`, a reserved collection name) always does, a collection when its definition says so.
+     * The one answer to "are there folders here": the store checks every folder write against it, and the admin offers folder actions only where it is true.
+     */
+    const foldersEnabled = (collection) => {
+        if (collection === MEDIA_FOLDER_SCOPE)
+            return true;
+        return isCollection(collection) && COLLECTION_DEFINITIONS[collection].folders;
+    };
     return {
         COLLECTIONS,
         COLLECTION_DEFINITIONS,
@@ -48,5 +60,6 @@ export function createCollections(collections, schemas) {
         DOCUMENT_COLLECTIONS,
         DEFAULT_COLLECTION,
         taxonomyFieldsOf,
+        foldersEnabled,
     };
 }

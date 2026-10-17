@@ -58,7 +58,7 @@ import "@monti-cms/admin/styles.css";
 | `@monti-cms/mdx/format` | 서버 코드, 테스트 | `mdxFormat`, `createMdxFormat({ syntax })`, 그리고 해석·쓰기 API: `analyze`·`serialize`·`toDocument`·`bodyFromMdx`·`bodyDocument`·`documentToMdx`·`toStoredDocument`·`fromStoredDocument`·`parseMdxAst`·`readableMdx`·`compareMdxStructure`·`configuredSyntax`·`remarkFenceBlocksToMdx` 등 |
 | `@monti-cms/mdx/render` | 공개 화면(서버 컴포넌트) | `renderMdx(source, options)` |
 | `@monti-cms/mdx/admin` | 관리자(플러그인이 불러온다) | `MdxSourcePanel`, `EditorToggle`, `createMdxBrowserFormat(site, options)`, 그리고 이를 등록하는 관리자 공급자 |
-| `@monti-cms/mdx/server` | 플러그인 | `createServerMdxFormat`: 서버가 등록하는 `mdx` 형식 |
+| `@monti-cms/mdx/server` | 플러그인 | `mdx()`의 서버 쪽(기본 내보내기가 `mdx` 형식을 등록한다) |
 | `@monti-cms/mdx/testing` | 테스트 | `mdxWith(syntax)`, `docOfMdx(mdx, syntax?)`, `readSamples()`, `renderFixture(source, options)`, 파이프라인 함수의 재내보내기 |
 
 ## `mdx` 형식
@@ -96,7 +96,7 @@ const { content, toc, unknown } = await renderMdx(source, { site: cms.site, loca
 
 ## 원문 패널
 
-`mdx()` 플러그인은 관리자 공급자로 **원문 패널**과 `mdx` 형식의 브라우저 쪽을 관리자에 등록한다(`useCmsAdminComponents().sourcePanels`, `useFormat("mdx")`). 편집기 도구 줄 끝의 토글이 본문을 시각 편집기와 MDX 글 사이에서 바꾼다. 글은 입력하는 동안 브라우저에서 해석되고, 저장되는 것은 그 글이 읽히는 문서다. 읽히지 않는 글은 발견한 것을 옆에 보이며 `unparsed` 문서로 보관된다.
+`mdx()` 플러그인은 관리자 공급자로 **원문 패널**과 `mdx` 형식의 브라우저 쪽을 관리자에 등록한다(`useAdminComponents().sourcePanels`, `useFormat("mdx")`). 편집기 도구 줄 끝의 토글이 본문을 시각 편집기와 MDX 글 사이에서 바꾼다. 글은 입력하는 동안 브라우저에서 해석되고, 저장되는 것은 그 글이 읽히는 문서다. 읽히지 않는 글은 발견한 것을 옆에 보이며 `unparsed` 문서로 보관된다.
 `plugins`에 `mdx()`가 없으면 원문 토글이 없다. 패널의 문구는 이름공간 `cms-mdx.source`에 있다. 문서가 생기기 전에 브라우저가 저장한 복구 사본(본문이 `form.mdx`의 MDX)은 `unparsed` 문서로 보관되고, 패널이 다시 읽는다.
 
 ## 문법 확장

@@ -1,3 +1,4 @@
+import { defineServerPlugin } from "@monti-cms/core/server";
 import * as resetAction from "./routes/actions/[key]/reset/route.js";
 import * as action from "./routes/actions/[key]/route.js";
 import * as actions from "./routes/actions/route.js";
@@ -11,7 +12,7 @@ import * as snippets from "./routes/snippets/route.js";
 import { getAiSettingsView, keyUseLabels } from "./settings.js";
 import { aiStoreFor } from "./store.js";
 /** Server side of the AI plugin. Loaded by the core API handler and `monti db:migrate`. Not included in the browser bundle. */
-const aiServer = {
+export default defineServerPlugin({
     routes: [
         { pattern: "v1/ai/actions", module: actions },
         { pattern: "v1/ai/actions/[key]", module: action },
@@ -25,10 +26,9 @@ const aiServer = {
         { pattern: "v1/ai/snippets", module: snippets },
     ],
     // What the API keys screen shows for a connection that uses a key: its current name, in the admin language.
-    keyUses: (cms, refs) => keyUseLabels(cms.site, aiStoreFor(cms), refs),
+    keyUses: (refs, { cms }) => keyUseLabels(cms.site, aiStoreFor(cms), refs),
     // `features.ai.ready` of the admin meta API: is at least one connection ready?
-    features: async (cms) => ({
+    features: async ({ cms }) => ({
         ready: await getAiSettingsView(cms.site, aiStoreFor(cms)).then((view) => view.fake || view.providers.some((item) => item.ready), () => false),
     }),
-};
-export default aiServer;
+});

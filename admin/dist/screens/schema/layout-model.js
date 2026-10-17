@@ -1,4 +1,4 @@
-import { DEFAULT_TAB, isPanelField, panelGroupsOf, } from "@monti-cms/core/client";
+import { DEFAULT_TAB, isPanelField, panelGroupsOf } from "@monti-cms/core/site";
 import { moveWithin } from "../../lib/utils/move-within.js";
 import { COLLECTION_KEY_ORDER, fieldsOf, setProp, withLayout } from "./schema-model.js";
 const copy = (tree) => structuredClone(tree);
@@ -254,10 +254,6 @@ export function addTab(tree, name) {
 export const tabCanRename = (tree, index) => (tree.tabs[index]?.locked.length ?? 0) === 0;
 /** Whether a tab can be removed: only user-added tabs after the default tab, and not locked by a plugin. */
 export const tabCanRemove = (tree, index) => index > 0 && (tree.tabs[index]?.locked.length ?? 0) === 0;
-/** Whether a tab can be moved: only user-added tabs after the default tab, and not plugin-only. */
-export const tabCanMove = (tree, index) => index > 0 && !pluginOnly(tree.tabs[index]);
-/** Whether a tab can be removed: not the default one, and not one a plugin puts fields in. */
-export const tabIsEditable = tabCanRemove;
 export function renameTab(tree, index, name, defaultLabel) {
     const next = copy(tree);
     const tab = next.tabs[index];

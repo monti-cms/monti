@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Puzzle } from "lucide-react";
 import { useMemo } from "react";
 import { useIconByName } from "../screens/shared/collection-icon.js";
@@ -27,7 +27,7 @@ export function CustomBlockMenuItems({ editor }) {
             onClick: () => {
                 const { from } = editor.state.selection;
                 block.action(editor, { from, to: from });
-            }, children: [_jsx(Icon, { "aria-hidden": true, className: "size-4" }), _jsxs("span", { className: "min-w-0 flex-1", children: [_jsx("span", { className: "block truncate", children: block.title }), _jsx("span", { className: "block truncate text-cms-muted-foreground text-xs", children: block.description })] })] }, block.id ?? block.title));
+            }, children: [_jsx(Icon, { "aria-hidden": true, className: "size-4" }), _jsxs("span", { className: "min-w-0 flex-1", children: [_jsx("span", { className: "block truncate", children: block.title }), _jsx("span", { className: "block truncate text-monti-muted-foreground text-xs", children: block.description })] })] }, block.id ?? block.title));
     });
 }
 /** Inserts a custom component (block) at the cursor from the toolbar. */

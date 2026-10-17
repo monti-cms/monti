@@ -1,4 +1,4 @@
-import { type Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 /** Local shapes of the events API responses (dates arrive as ISO strings). */
 export interface EventDeliveryItem {
     change: {

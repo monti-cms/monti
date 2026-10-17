@@ -1,7 +1,8 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useSite } from "@monti-cms/admin";
 import { cn, Switch } from "@monti-cms/admin/kit";
-import { SUMMARY_ROLE, useSite } from "@monti-cms/core/client";
+import { SUMMARY_ROLE } from "@monti-cms/core";
 import { SEO_DEFAULT_LIMITS } from "../fields.js";
 /** Recommended length: field `max` → `inputOptions.limit` → default. */
 const limitOf = (field, fallback) => {
@@ -13,7 +14,7 @@ const limitOf = (field, fallback) => {
 const current = (props) => (typeof props.value === "string" ? props.value : "");
 /** Character count. Changes color when it exceeds the recommended length. When empty, it is the length of the fallback value. */
 function Counter({ length, limit }) {
-    return (_jsxs("span", { className: cn("text-[11px] text-cms-muted-foreground tabular-nums", length > limit && "text-cms-warning-foreground"), children: [length, "/", limit] }));
+    return (_jsxs("span", { className: cn("text-[11px] text-monti-muted-foreground tabular-nums", length > limit && "text-monti-warning-foreground"), children: [length, "/", limit] }));
 }
 /** Input piece that shows a hint and character count using the value the public page falls back to when empty. */
 const withFallback = (fallback, defaultLimit) => ({

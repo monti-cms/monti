@@ -274,7 +274,7 @@ export async function lockEntryForUpdate(db, id, expectedVersion) {
     if (!row)
         throw new CmsError("Entry not found", "not_found");
     if (expectedVersion !== undefined && row.version !== expectedVersion) {
-        throw new CmsError("Conflict", "conflict", row.version);
+        throw new CmsError("Conflict", "conflict", { serverVersion: row.version });
     }
     return row;
 }

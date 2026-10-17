@@ -19,7 +19,7 @@ export interface SeoPluginOptions {
  * plugins: [seo(), ai()]
  * ```
  */
-export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/core").CmsPlugin<"seo", SeoPluginOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
+export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/core").Plugin<"seo", SeoPluginOptions, readonly import("@monti-cms/core").BlockDefinition[]> & {
     readonly contributes?: {
         readonly layout: readonly PluginPlacement[];
         readonly fieldSets: readonly PluginFieldSet[];
@@ -27,7 +27,7 @@ export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/cor
             actions: {
                 seoTitle: (site: {
                     readonly collections: import("@monti-cms/core").CollectionsConfig;
-                    readonly createTranslator: import("@monti-cms/core/client").Site["createTranslator"];
+                    readonly createTranslator: import("@monti-cms/admin").Site["createTranslator"];
                 }) => {
                     label: string;
                     input: {
@@ -64,7 +64,7 @@ export declare const seo: (options?: SeoPluginOptions) => import("@monti-cms/cor
                 } | undefined;
                 seoDescription: (site: {
                     readonly collections: import("@monti-cms/core").CollectionsConfig;
-                    readonly createTranslator: import("@monti-cms/core/client").Site["createTranslator"];
+                    readonly createTranslator: import("@monti-cms/admin").Site["createTranslator"];
                 }) => {
                     label: string;
                     input: {

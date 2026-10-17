@@ -1,4 +1,5 @@
-import { type Cms, type Entry, type EntryBody } from "@monti-cms/core/plugin/server";
+import type { Cms } from "@monti-cms/core/server";
+import type { Entry, EntryBody } from "@monti-cms/core/site";
 import { type ResolvedTarget } from "./options.js";
 import type { PathPattern } from "./path-pattern.js";
 /**

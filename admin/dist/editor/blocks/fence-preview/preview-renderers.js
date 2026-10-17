@@ -1,8 +1,8 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { Component, useEffect, useState } from "react";
-import { useCmsAdminComponents } from "../../../admin-components.js";
+import { useAdminComponents } from "../../../admin-components.js";
 import { cn } from "../../../lib/utils/cn.js";
 import { blocksMessages } from "../messages.js";
 export class PreviewErrorBoundary extends Component {
@@ -23,17 +23,17 @@ export class PreviewErrorBoundary extends Component {
             if (this.props.fallback) {
                 return this.props.fallback(this.state.error);
             }
-            return (_jsx("div", { className: "rounded-md border border-cms-destructive/40 bg-cms-destructive/10 p-3 font-mono text-cms-destructive text-xs", children: this.state.error.message }));
+            return (_jsx("div", { className: "rounded-md border border-monti-destructive/40 bg-monti-destructive/10 p-3 font-mono text-monti-destructive text-xs", children: this.state.error.message }));
         }
         return this.props.children;
     }
 }
 /**
- * Loads and renders the fence preview the site provided (`CmsAdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
+ * Loads and renders the fence preview the site provided (`AdminComponents.fencePreviews`). If none was provided, shows the raw source as is.
  */
 export function LazyFencePreview({ lang, label, value, className, emptyText, }) {
     const t = useTranslator(blocksMessages);
-    const load = useCmsAdminComponents().fencePreviews?.[lang];
+    const load = useAdminComponents().fencePreviews?.[lang];
     const [Renderer, setRenderer] = useState(null);
     const [loadError, setLoadError] = useState(null);
     useEffect(() => {
@@ -55,18 +55,18 @@ export function LazyFencePreview({ lang, label, value, className, emptyText, }) 
     }, [load]);
     const trimmed = value.trim();
     if (!load) {
-        return (_jsx("pre", { className: cn("overflow-x-auto whitespace-pre-wrap font-mono text-cms-muted-foreground text-xs", className), children: trimmed || emptyText }));
+        return (_jsx("pre", { className: cn("overflow-x-auto whitespace-pre-wrap font-mono text-monti-muted-foreground text-xs", className), children: trimmed || emptyText }));
     }
     if (loadError) {
-        return (_jsx("div", { className: "rounded-md border border-cms-destructive/40 bg-cms-destructive/10 p-3 font-mono text-cms-destructive text-xs", children: t("preview.loadFailed", { label, error: loadError }) }));
+        return (_jsx("div", { className: "rounded-md border border-monti-destructive/40 bg-monti-destructive/10 p-3 font-mono text-monti-destructive text-xs", children: t("preview.loadFailed", { label, error: loadError }) }));
     }
     if (!Renderer) {
-        return _jsx("div", { className: "py-2 text-center text-cms-muted-foreground text-xs", children: t("preview.loading", { label }) });
+        return (_jsx("div", { className: "py-2 text-center text-monti-muted-foreground text-xs", children: t("preview.loading", { label }) }));
     }
     if (!trimmed) {
-        return _jsx("div", { className: "py-2 text-center text-cms-muted-foreground text-xs italic", children: emptyText });
+        return _jsx("div", { className: "py-2 text-center text-monti-muted-foreground text-xs italic", children: emptyText });
     }
-    return (_jsx(PreviewErrorBoundary, { resetKey: trimmed, children: _jsx("div", { className: cn("w-full min-w-0 overflow-x-auto [&_[data-error=true]]:text-cms-destructive [&_[data-error=true]_span]:text-cms-destructive", className), children: _jsx(Renderer, { source: trimmed }) }) }));
+    return (_jsx(PreviewErrorBoundary, { resetKey: trimmed, children: _jsx("div", { className: cn("w-full min-w-0 overflow-x-auto [&_[data-error=true]]:text-monti-destructive [&_[data-error=true]_span]:text-monti-destructive", className), children: _jsx(Renderer, { source: trimmed }) }) }));
 }
 export function MathPreview({ value, className }) {
     const t = useTranslator(blocksMessages);
@@ -109,10 +109,10 @@ export function MathPreview({ value, className }) {
         };
     }, [trimmed]);
     if (error) {
-        return (_jsx("div", { className: "rounded-md border border-cms-destructive/40 bg-cms-destructive/10 p-3 font-mono text-cms-destructive text-xs", children: error }));
+        return (_jsx("div", { className: "rounded-md border border-monti-destructive/40 bg-monti-destructive/10 p-3 font-mono text-monti-destructive text-xs", children: error }));
     }
     if (!value.trim()) {
-        return _jsx("div", { className: "py-2 text-center text-cms-muted-foreground text-xs italic", children: t("math.placeholder") });
+        return _jsx("div", { className: "py-2 text-center text-monti-muted-foreground text-xs italic", children: t("math.placeholder") });
     }
     return (_jsx(PreviewErrorBoundary, { resetKey: trimmed, children: _jsx("div", { className: cn("overflow-x-auto py-2 text-center", className), 
             // biome-ignore lint/security/noDangerouslySetInnerHtml: katex produces safe display math markup

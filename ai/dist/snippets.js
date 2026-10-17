@@ -48,7 +48,7 @@ const isConfigKey = (site, key) => Object.hasOwn(contextOf(site).config, key);
 function readStored(site, value) {
     const current = storedSchema.safeParse(value);
     if (!current.success)
-        return { texts: stringsOf(value), added: [] };
+        return { texts: {}, added: [] };
     const seen = new Set();
     const added = current.data.added.flatMap((item) => {
         const parsed = contextOf(site).addedSchema.safeParse(item);

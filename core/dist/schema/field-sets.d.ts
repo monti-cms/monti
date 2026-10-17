@@ -1,3 +1,4 @@
+import type { PluginContributions } from "../plugin/define.js";
 /**
  * Field sets that plugins offer: a group of fields a plugin works with (the SEO extension's search title, description, share image, ...). The
  * schema screen shows one as an "Add <name> fields" action on the Fields tab and writes the fields into the collection as plain data, so the
@@ -24,7 +25,7 @@ export interface NamedFieldSet extends PluginFieldSet {
 /** The field sets the plugins offer, read from their `contributes` (a plugin of the browser's snapshot has it as data). */
 export declare function fieldSetsOf(plugins: readonly {
     readonly name: string;
-    readonly contributes?: Readonly<Record<string, unknown>>;
+    readonly contributes?: PluginContributions;
 }[]): NamedFieldSet[];
 /** Whether a collection (its `fields`) already has the set: any of its fields carries one of the set's roles. */
 export declare function hasFieldSet(set: Pick<PluginFieldSet, "roles">, fields: Readonly<Record<string, unknown>>): boolean;

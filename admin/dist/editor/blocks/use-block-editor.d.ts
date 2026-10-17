@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
 import type { Editor } from "@tiptap/core";
 import { type Node as PmNode } from "@tiptap/pm/model";
 import { type NodeViewProps } from "@tiptap/react";
@@ -143,7 +143,7 @@ export interface BlockEditor<V extends BlockValues = BlockValues> {
     readonly raw: BlockEditorRaw;
 }
 /**
- * The edit view of a block. Registered by block name in `blockViews` (`CmsAdminComponents`) for every block, including the core image, file
+ * The edit view of a block. Registered by block name in `blockViews` (`AdminComponents`) for every block, including the core image, file
  * and math blocks. It takes no props: it reads its block with {@link useBlockEditor} and draws the nested body with {@link Content}.
  *
  * @experimental
@@ -179,8 +179,8 @@ export interface ContentProps extends Omit<ComponentProps<"div">, "ref" | "child
  * The editable nested body of a container block: the place where the block's children are edited in the document. It replaces the Tiptap
  * node view content. A block without a body (image, math) renders nothing.
  *
- * DOM contract: the element has `data-cms-block-content`, and the child blocks are inside its first child element
- * (`[data-cms-block-content] > *` holds them), so a view can lay them out with `[&>*]:grid` or `[&>*>:first-child]:mt-0`.
+ * DOM contract: the element has `data-monti-block-content`, and the child blocks are inside its first child element
+ * (`[data-monti-block-content] > *` holds them), so a view can lay them out with `[&>*]:grid` or `[&>*>:first-child]:mt-0`.
  *
  * @experimental
  */

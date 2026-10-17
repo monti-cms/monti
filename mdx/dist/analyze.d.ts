@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { SyntaxExtension } from "./syntax/types.js";
 import type { CmsMdxAnalysis } from "./types.js";
 /** `syntax` is the syntax extensions to read with (none: standard MDX). */

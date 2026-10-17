@@ -1,4 +1,4 @@
-import { perSite } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/site";
 import { addedBlockConvertersOf } from "../blocks/added/index.js";
 import { codeBlockConverter } from "./code-block.js";
 import { mathConverter } from "./fence-preview.js";

@@ -28,7 +28,7 @@ export function TabsView({ labels, panels, defaultIndex = 0, }) {
         event.preventDefault();
         select(target);
     };
-    return (_jsxs("div", { className: "cms-block-tabs", children: [_jsx("div", { className: "cms-block-tabs-list", role: "tablist", "aria-orientation": "horizontal", children: labels.map((label, index) => (_jsx("button", { ref: (element) => {
+    return (_jsxs("div", { className: "monti-block-tabs", children: [_jsx("div", { className: "monti-block-tabs-list", role: "tablist", "aria-orientation": "horizontal", children: labels.map((label, index) => (_jsx("button", { ref: (element) => {
                         buttons.current[index] = element;
-                    }, type: "button", role: "tab", id: `${id}-tab-${index}`, className: "cms-block-tabs-tab", "aria-selected": index === active, "aria-controls": `${id}-panel-${index}`, tabIndex: index === active ? 0 : -1, onClick: () => setActive(index), onKeyDown: (event) => onKeyDown(event, index), children: label }, index))) }), panels.map((panel, index) => (_jsx("div", { role: "tabpanel", id: `${id}-panel-${index}`, className: "cms-block-tabs-panel", "aria-labelledby": `${id}-tab-${index}`, hidden: index !== active, children: panel }, index)))] }));
+                    }, type: "button", role: "tab", id: `${id}-tab-${index}`, className: "monti-block-tabs-tab", "aria-selected": index === active, "aria-controls": `${id}-panel-${index}`, tabIndex: index === active ? 0 : -1, onClick: () => setActive(index), onKeyDown: (event) => onKeyDown(event, index), children: label }, index))) }), panels.map((panel, index) => (_jsx("div", { role: "tabpanel", id: `${id}-panel-${index}`, className: "monti-block-tabs-panel", "aria-labelledby": `${id}-tab-${index}`, hidden: index !== active, children: panel }, index)))] }));
 }

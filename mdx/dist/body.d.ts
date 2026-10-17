@@ -1,5 +1,5 @@
-import type { Site } from "@monti-cms/core/client";
 import { type CmsNode, type StoredDocument } from "@monti-cms/core/document";
+import type { Site } from "@monti-cms/core/site";
 import type { SyntaxExtension } from "./syntax/types.js";
 import type { CmsMdxAnalysis } from "./types.js";
 /** The stored form of a working document, or `null` when the body cannot be stored as a document (it has front matter). */

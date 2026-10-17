@@ -1,4 +1,4 @@
-import type { Site } from "@monti-cms/core/client";
+import type { Site } from "@monti-cms/core/site";
 import type { SyntaxExtension } from "./syntax/types.js";
 /**
  * Writes a document as MDX for `site`. The standard notation is CommonMark + GFM + standard MDX JSX; `extensions` (none: standard MDX only)

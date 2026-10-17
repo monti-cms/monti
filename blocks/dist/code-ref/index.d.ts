@@ -1,4 +1,3 @@
-export { codeRefBlock } from "./definition.js";
 /**
  * Code ref (`:code-ref[text]{to="c1"}`). Add it to the site config's `plugins`.
  *
@@ -10,7 +9,7 @@ export { codeRefBlock } from "./definition.js";
  * Line anchors (the `anchor` line effect) and the linking view are core code block features; this extension provides the body-side mark and bubble.
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const codeRef: () => import("@monti-cms/core").CmsPlugin<"code-ref", Record<string, never>, readonly [{
+export declare const codeRef: () => import("@monti-cms/core").Plugin<"code-ref", Record<string, never>, readonly [{
     readonly name: "code-ref";
     readonly label: string;
     readonly syntax: {
@@ -30,5 +29,5 @@ export declare const codeRef: () => import("@monti-cms/core").CmsPlugin<"code-re
         readonly view: "mark";
     };
 }]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

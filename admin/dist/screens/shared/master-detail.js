@@ -18,7 +18,7 @@ export function MasterDetail({ list, children }) {
  */
 export function ListPane({ label, loading = false, skeletonRows = 3, empty, header, className, children, }) {
     const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
-    return (_jsxs("div", { className: cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH, className), children: [header, _jsx("ul", { className: cn("min-h-0 flex-1 divide-y overflow-y-auto", !hasRows && !loading && "flex flex-col"), "aria-label": label, children: loading
+    return (_jsxs("div", { className: cn("flex shrink-0 flex-col border-r", LIST_PANE_WIDTH, className), children: [header, _jsx("ul", { className: cn("min-h-0 flex-1 divide-y overflow-y-auto overflow-x-hidden", !hasRows && !loading && "flex flex-col"), "aria-label": label, children: loading
                     ? Array.from({ length: skeletonRows }, (_, index) => (_jsx("li", { className: "p-3", "aria-hidden": true, children: _jsx(Skeleton, { className: "h-9 w-full" }) }, index)))
                     : hasRows
                         ? children
@@ -34,8 +34,8 @@ export function ListRow({ title, status, detail, current, onClick, actions, acti
                 event.preventDefault();
                 onDelete();
             }
-        }, className: "h-auto min-w-0 flex-1 flex-col items-start gap-0.5 px-1 py-1 text-left font-normal hover:bg-transparent", children: [_jsxs("span", { className: "flex w-full items-center gap-2", children: [_jsx("span", { className: "truncate font-medium text-sm", children: title }), status && _jsx("span", { className: "ml-auto shrink-0 text-cms-muted-foreground text-xs", children: status })] }), detail && _jsx("span", { className: "w-full truncate text-cms-muted-foreground text-xs", children: detail })] }));
-    const rowClass = cn("group flex items-center justify-between gap-2 px-2 py-1.5 transition-colors", current ? OPEN_ITEM : "hover:bg-cms-accent/50");
+        }, className: "h-auto min-w-0 flex-1 flex-col items-start gap-0.5 px-1 py-1 text-left font-normal hover:bg-transparent", children: [_jsxs("span", { className: "flex w-full items-center gap-2", children: [_jsx("span", { className: "truncate font-medium text-sm", children: title }), status && _jsx("span", { className: "ml-auto shrink-0 text-monti-muted-foreground text-xs", children: status })] }), detail && _jsx("span", { className: "w-full truncate text-monti-muted-foreground text-xs", children: detail })] }));
+    const rowClass = cn("group flex items-center justify-between gap-2 px-2 py-1.5 transition-colors", current ? OPEN_ITEM : "hover:bg-monti-accent/50");
     if (!actions || actions.length === 0) {
         return (_jsxs("li", { className: rowClass, children: [button, trailing] }));
     }

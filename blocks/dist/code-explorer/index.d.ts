@@ -1,4 +1,3 @@
-export { codeExplorerBlock } from "./definition.js";
 /**
  * Code explorer block (`:::code-explorer`). A file tree with the code of the picked file. Add it to the site config's `plugins`.
  *
@@ -8,7 +7,7 @@ export { codeExplorerBlock } from "./definition.js";
  *
  * For the public page, this extension provides a default public component (`render`, used by `@monti-cms/core/render`). A site can override it with a component of the same name.
  */
-export declare const codeExplorer: () => import("@monti-cms/core").CmsPlugin<"code-explorer", Record<string, never>, readonly [{
+export declare const codeExplorer: () => import("@monti-cms/core").Plugin<"code-explorer", Record<string, never>, readonly [{
     readonly name: "code-explorer";
     readonly label: string;
     readonly description: string;
@@ -39,5 +38,5 @@ export declare const codeExplorer: () => import("@monti-cms/core").CmsPlugin<"co
         };
     };
 }]> & {
-    readonly contributes?: Readonly<Record<string, unknown>> | undefined;
+    readonly contributes?: import("@monti-cms/core").PluginContributions | undefined;
 };

@@ -3,7 +3,7 @@ import { adminRoute, ok, readJsonBody, runAdminRoute } from "../http/v1/handler.
 import { handleTextCheck } from "./server-handler.js";
 export { handleTextCheck, parseTextCheckBody, } from "./server-handler.js";
 /**
- * Server route for spelling and sentence checks (`@monti-cms/core/plugin/server`). Only admins can call it (core admin auth and same-origin check),
+ * Server route for spelling and sentence checks (`@monti-cms/core/server`). Only admins can call it (core admin auth and same-origin check),
  * it takes `{ segments }` and returns `{ issues }`. The browser side calls this route with `remoteTextChecker({ url })`.
  *
  * ```ts

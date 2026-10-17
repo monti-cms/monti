@@ -11,6 +11,6 @@ import { nextHost } from "./auth/host.js";
  * ```
  */
 export function previewEntry(cms, params) {
-    cms.attachHost(nextHost);
+    cms.attachHost?.(nextHost);
     return cms.read.getPreview(params);
 }

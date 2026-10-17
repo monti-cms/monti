@@ -1,4 +1,4 @@
-import type { IncomingReferenceItem } from "@monti-cms/core/runtime";
+import type { IncomingReferenceItem } from "@monti-cms/core/site";
 import { type CmsIssue } from "../../api/error-message.js";
 import type { EntryEditor } from "./entry-editor-types.js";
 import { type ConfirmedLifecycleAction, type LifecycleAction } from "./lifecycle-confirm.js";

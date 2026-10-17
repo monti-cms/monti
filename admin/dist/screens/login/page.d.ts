@@ -1,4 +1,4 @@
-import type { Cms } from "@monti-cms/core/runtime";
+import type { Cms } from "@monti-cms/core/server";
 import type * as React from "react";
 import type { AdminServer } from "../../host/server.js";
 /**

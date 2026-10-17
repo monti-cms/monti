@@ -1,4 +1,4 @@
-import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/import-boundary";
+import { findBoundaryViolations, formatBoundaryViolations } from "@monti-cms/core/internal/import-boundary";
 const PACKAGES = ["@monti-cms/core"];
 const CHECKED = Symbol.for("monti.import-boundary.checked");
 /**
@@ -45,7 +45,7 @@ export function withCms(nextConfig) {
     checkImportBoundaryInDev(process.cwd());
     return {
         ...nextConfig,
-        // Tells the server and browser bundles Next `basePath` (read by `cmsApiUrl()` and `withBasePath()`). Site code has nothing to do.
+        // Tells the server and browser bundles Next `basePath` (read by `adminApiUrl()` and `withBasePath()`). Site code has nothing to do.
         env: { ...nextConfig.env, NEXT_PUBLIC_CMS_BASE_PATH: nextConfig.basePath?.replace(/\/+$/, "") ?? "" },
         transpilePackages: [...new Set([...(nextConfig.transpilePackages ?? []), ...PACKAGES])],
     };

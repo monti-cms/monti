@@ -1,6 +1,5 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { tooltipBlock } from "./definition.js";
-export { tooltipBlock } from "./definition.js";
 /**
  * Tooltip (`:tooltip[text]{content="description"}`). Add it to the site config's `plugins`.
  *

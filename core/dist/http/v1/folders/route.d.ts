@@ -1,4 +1,4 @@
-/** Folder tree per collection. */
+/** Folder tree per collection. The store rejects a collection that does not use folders (`assertFoldersEnabled`). */
 export declare const GET: import("../handler.js").AdminHandler<{
     [x: string]: string;
 }>;

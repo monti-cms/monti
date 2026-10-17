@@ -19,9 +19,9 @@ export declare function cmsBasePath(): string;
  */
 export declare const withBasePath: (path: string) => string;
 /**
- * Admin API address. `cmsApiUrl("/v1/entries?page=2")` is `/api/monti/v1/entries?page=2` (prefixed with `basePath` if set).
+ * Admin API address. `adminApiUrl("/v1/entries?page=2")` is `/api/monti/v1/entries?page=2` (prefixed with `basePath` if set).
  * Every API call from the admin screen and extensions builds its address with this function.
  */
-export declare function cmsApiUrl(path: string): string;
+export declare function adminApiUrl(path: string): string;
 /** Admin address rules that do not read the config. `path` is an empty string, `/…` or `?…`. */
 export declare function adminHrefWith(base: string, path?: string): string;

@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -65,15 +65,15 @@ export function LanguageTabs({ entry, disabled, onBeforeCreate, onTrashTranslati
     return (_jsx("nav", { "aria-label": t("lang.nav"), className: cn("mb-3.5 flex flex-wrap items-center gap-1 px-4 pt-2", className), children: site.LOCALES.map((target) => {
             const member = members.find((item) => item.locale === target);
             if (!member) {
-                return (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", disabled: createDisabled, "aria-label": t("lang.add", { lang: site.localeLabel(target) }), className: "h-7 gap-1 border border-dashed px-2 text-cms-muted-foreground text-xs", onClick: () => void create(target), children: [_jsx(Plus, { "aria-hidden": true, className: "size-3" }), target.toUpperCase()] }, target));
+                return (_jsxs(Button, { type: "button", size: "sm", variant: "ghost", disabled: createDisabled, "aria-label": t("lang.add", { lang: site.localeLabel(target) }), className: "h-7 gap-1 border border-dashed px-2 text-monti-muted-foreground text-xs", onClick: () => void create(target), children: [_jsx(Plus, { "aria-hidden": true, className: "size-3" }), target.toUpperCase()] }, target));
             }
             const current = member.id === entry.id;
             return (_jsxs("div", { className: "flex items-center", children: [_jsxs(Button, { type: "button", size: "sm", variant: "ghost", "aria-current": current ? "page" : undefined, "aria-label": t(member.isSource ? "lang.currentSource" : "lang.current", {
                             lang: site.localeLabel(target),
                             status: statusLabels(site)[member.status],
-                        }), className: cn("h-7 gap-1.5 px-2 text-xs", current ? "bg-cms-muted text-cms-foreground" : "text-cms-muted-foreground"), onClick: () => {
+                        }), className: cn("h-7 gap-1.5 px-2 text-xs", current ? "bg-monti-muted text-monti-foreground" : "text-monti-muted-foreground"), onClick: () => {
                             if (!current)
                                 router.navigate(site.adminEntryEditHref(member.id));
-                        }, children: [_jsx(StatusIndicator, { size: "xs", tone: STATUS_TONE[member.status] ?? "neutral" }), _jsx("span", { "aria-hidden": true, className: "font-medium", children: target.toUpperCase() }), member.isSource && (_jsx("span", { "aria-hidden": true, className: "font-normal text-cms-muted-foreground", children: t("source") }))] }), current && isTranslation && entry.status !== "trashed" && (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("lang.menu"), className: "size-7 text-cms-muted-foreground", trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(MoreHorizontal, { "aria-hidden": true, className: "size-3.5" }) }), _jsx(DropdownMenuContent, { align: "start", children: _jsxs(DropdownMenuItem, { variant: "destructive", onClick: onTrashTranslation, children: [_jsx(Trash2, { "aria-hidden": true }), tc("lifecycle.trash")] }) })] }))] }, target));
+                        }, children: [_jsx(StatusIndicator, { size: "xs", tone: STATUS_TONE[member.status] ?? "neutral" }), _jsx("span", { "aria-hidden": true, className: "font-medium", children: target.toUpperCase() }), member.isSource && (_jsx("span", { "aria-hidden": true, className: "font-normal text-monti-muted-foreground", children: t("source") }))] }), current && isTranslation && entry.status !== "trashed" && (_jsxs(DropdownMenu, { children: [_jsx(IconButton, { label: t("lang.menu"), className: "size-7 text-monti-muted-foreground", trigger: (button) => _jsx(DropdownMenuTrigger, { render: button }), children: _jsx(MoreHorizontal, { "aria-hidden": true, className: "size-3.5" }) }), _jsx(DropdownMenuContent, { align: "start", children: _jsxs(DropdownMenuItem, { variant: "destructive", onClick: onTrashTranslation, children: [_jsx(Trash2, { "aria-hidden": true }), tc("lifecycle.trash")] }) })] }))] }, target));
         }) }));
 }

@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { commonMessages } from "../../lib/common.messages.js";
 import { Alert, AlertDescription } from "../../ui/alert.js";
 import { Button } from "../../ui/button.js";

@@ -1,3 +1,4 @@
+import { hostOf } from "../cms/host.js";
 import { loadApp } from "./app.js";
 import { appOptionsOf, defineCommand } from "./command.js";
 /**
@@ -8,7 +9,7 @@ import { appOptionsOf, defineCommand } from "./command.js";
 export async function dbMigrate(options) {
     const cms = await loadApp({ ...options, quiet: true });
     try {
-        const state = await cms.databaseState();
+        const state = await hostOf(cms).databaseState();
         if (state && !state.set) {
             options.error(`Monti is not set up in this database yet (schema "${state.schema}"). Run \`monti db:setup\` first; \`monti db:migrate\` is for after you update Monti.`);
             return 1;
@@ -27,7 +28,7 @@ export async function dbMigrate(options) {
 export async function dbSetup(options) {
     const cms = await loadApp({ ...options, quiet: true });
     try {
-        await cms.setup({ log: options.log });
+        await hostOf(cms).setup({ log: options.log });
         return 0;
     }
     finally {

@@ -1,5 +1,6 @@
 import { fromCodeBlockDocumentToCodeFence } from "@monti-cms/core/code-block";
-import { entryIdOfMark, entryLinkHref, formatTableWidths, hasNonGfmHeaderLayout, tableHasMergedCells, tableWidths, } from "@monti-cms/core/document";
+import { entryIdOfMark, entryLinkHref } from "@monti-cms/core/document";
+import { formatTableWidths, hasNonGfmHeaderLayout, tableHasMergedCells, tableWidths } from "@monti-cms/core/notation";
 import { serializeFrontmatter } from "./frontmatter.js";
 import { jsxRegistryOf } from "./registry.js";
 import { NO_SYNTAX, siteCodeLineEffects, siteSyntaxBlocks } from "./syntax-config.js";

@@ -1,4 +1,4 @@
-import type { WriteOperation } from "../services/hooks.js";
+import type { WriteOperation } from "../services/reactions.js";
 import type { Site } from "../site/index.js";
 /**
  * Body block definition spec. Defines one block's storage syntax, settings attributes, child rules, editing mode, and public renderer in one place.
@@ -10,7 +10,7 @@ import type { Site } from "../site/index.js";
  * - Public renderer: the site's MDX component table (`component` name)
  * - Editor: core blocks (image, file, math) use the admin package's `editor/block-views.ts` (`editor.nodeView` name) for the node. For added blocks,
  *   the admin package builds editor nodes from the definition. Every block's edit view, core blocks included, is looked up by block name in
- *   `blockViews` from `CmsAdminComponentsProvider`. If none is registered, the default view is used.
+ *   `blockViews` from `AdminComponentsProvider`. If none is registered, the default view is used.
  *
  * Sites add blocks through `blocks` in the config, and block extensions (e.g. `@monti-cms/blocks`) add them through a plugin's `blocks` (`blocks/resolve.ts`).
  */
@@ -84,10 +84,10 @@ export interface BlockInsert {
  * - `opaque`: read-only box that preserves the source (edited in source mode). Default for blocks with no insert UI.
  * - `node`: edited with a dedicated NodeView (`nodeView` name).
  * - `mark`: text mark (inline directive `:name[text]{attrs}`). For added blocks, the admin editor builds the text display from the definition,
- *   and the extension supplies picker tools and bubbles through `marks` in `CmsAdminComponentsProvider`.
+ *   and the extension supplies picker tools and bubbles through `marks` in `AdminComponentsProvider`.
  * - `attribute`: represented as another node's attribute (e.g. paragraph alignment).
  */
-export interface BlockEditor {
+export interface BlockEditing {
     readonly view: "opaque" | "node" | "mark" | "attribute";
     readonly nodeView?: string;
     /** Shown in the slash menu. */
@@ -152,7 +152,7 @@ export interface BlockDefinition {
     readonly parent?: string;
     /** The translation view expands the box and translates inner blocks one by one (if absent, the whole block is one unit). */
     readonly translateInside?: boolean;
-    readonly editor: BlockEditor;
+    readonly editor: BlockEditing;
     /**
      * Checks the syntax of one node of this block. Results are warnings (save warnings and publish warnings), never blockers.
      * Runs on the server only: a function is not part of the definition data the browser receives.

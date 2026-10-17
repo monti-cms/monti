@@ -1,6 +1,5 @@
 import { defineBlockPlugin } from "../shared/define-block-plugin.js";
 import { calloutBlock } from "./definition.js";
-export { calloutBlock } from "./definition.js";
 /**
  * Callout block (`:::callout`). A box that highlights content such as notes and warnings. Add it to the site config's `plugins`.
  *

@@ -1,4 +1,4 @@
-import { adminRoute, ok, readVersionedBody } from "@monti-cms/core/plugin/server";
+import { adminRoute, ok, readVersionedBody } from "@monti-cms/core/server";
 import { z } from "zod";
 import { resetAction } from "../../../../actions.js";
 import { aiStoreFor } from "../../../../store.js";

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { kindDefaults } from "../schema/collection.js";
 import { parseSchemaFile } from "../schema-file/format.js";
 import { printSchemaFile } from "../schema-file/print.js";
 import { createSite } from "../site/index.js";
@@ -31,7 +32,7 @@ export function extractSchemaData(config, options = {}) {
         if (allowed)
             return [name, { ...rest, body: allowed }];
         // The default is left out: documents have a body, items do not.
-        return [name, body === (collection.kind === "document") ? rest : { ...rest, body }];
+        return [name, body === kindDefaults(collection.kind).body ? rest : { ...rest, body }];
     }));
     const lost = functionPaths(config.collections, "collections");
     if (lost.length > 0) {

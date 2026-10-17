@@ -1,4 +1,4 @@
-import type { BulkOp } from "@monti-cms/core/client";
+import type { BulkOp } from "@monti-cms/core/site";
 import type { EntriesPage } from "../../api/entries.js";
 import type { ListState } from "../list-state.js";
 export type OptimisticOp = BulkOp | "restore";

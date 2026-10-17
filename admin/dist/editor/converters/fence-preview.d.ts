@@ -1,4 +1,4 @@
-import type { BlockDefinition } from "@monti-cms/core/client";
+import type { BlockDefinition } from "@monti-cms/core";
 import type { BlockConverter } from "./types.js";
 /**
  * Converter for an added code fence block (e.g. ` ```mermaid `). Turns a code block of that language into a block node and restores the language and meta

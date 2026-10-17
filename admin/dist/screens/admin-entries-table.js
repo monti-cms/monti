@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useSite, useTranslator } from "@monti-cms/core/client";
+import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Inbox, Plus, SearchX, Trash2 } from "lucide-react";
 import { Fragment } from "react";
 import { commonMessages } from "../lib/common.messages.js";
@@ -54,12 +54,12 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
         onDeleteKey(item);
     };
     const pageHref = (page) => `?page=${page}`;
-    return (_jsxs("section", { "aria-label": t("list.label"), className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [errorMessage && _jsx(LoadErrorAlert, { message: errorMessage, onRetry: onRetry, className: "mx-5 mt-3" }), _jsxs("div", { ref: scrollRef, className: "flex min-h-0 flex-1 flex-col overflow-auto", children: [_jsxs(Table, { containerClassName: "overflow-visible", style: tableWidth ? { width: tableWidth } : undefined, className: "table-fixed [&_td:first-child]:pl-5 [&_td:last-child]:pr-4 [&_th:first-child]:pl-5 [&_th:last-child]:pr-4", children: [_jsx(TableHeader, { className: "sticky top-0 z-10 bg-cms-background [&_tr]:border-b", children: table.getHeaderGroups().map((group) => (_jsx(TableRow, { children: group.headers
+    return (_jsxs("section", { "aria-label": t("list.label"), className: "flex min-h-0 flex-1 flex-col overflow-hidden", children: [errorMessage && _jsx(LoadErrorAlert, { message: errorMessage, onRetry: onRetry, className: "mx-5 mt-3" }), _jsxs("div", { ref: scrollRef, className: "flex min-h-0 flex-1 flex-col overflow-auto", children: [_jsxs(Table, { containerClassName: "overflow-visible", style: tableWidth ? { width: tableWidth } : undefined, className: "table-fixed [&_td:first-child]:pl-5 [&_td:last-child]:pr-4 [&_th:first-child]:pl-5 [&_th:last-child]:pr-4", children: [_jsx(TableHeader, { className: "sticky top-0 z-10 bg-monti-background [&_tr]:border-b", children: table.getHeaderGroups().map((group) => (_jsx(TableRow, { children: group.headers
                                         .filter((header) => isShown(header.column.id))
                                         .map((header) => {
                                         const sortField = columnConfig(site, collection, header.column.id).sortField;
                                         const active = sortField !== undefined && sortField === state.sortField;
-                                        return (_jsxs(Fragment, { children: [header.column.id === "actions" && _jsx(TableHead, { "aria-hidden": true, className: "p-0" }), _jsxs(TableHead, { style: { width: header.getSize() }, className: cn("group/th relative h-9 font-normal text-cms-muted-foreground text-xs", header.column.id === "select" && "w-10"), "aria-sort": active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined, children: [header.isPlaceholder ? null : _jsx(table.FlexRender, { header: header }), header.column.getCanResize() && (_jsx(ColumnResizeHandle, { label: columnLabel(site, collection, header.column.id), width: header.getSize(), resizing: header.column.getIsResizing(), onStart: (event) => {
+                                        return (_jsxs(Fragment, { children: [header.column.id === "actions" && _jsx(TableHead, { "aria-hidden": true, className: "p-0" }), _jsxs(TableHead, { style: { width: header.getSize() }, className: cn("group/th relative h-9 font-normal text-monti-muted-foreground text-xs", header.column.id === "select" && "w-10"), "aria-sort": active ? (state.sortDirection === "asc" ? "ascending" : "descending") : undefined, children: [header.isPlaceholder ? null : _jsx(table.FlexRender, { header: header }), header.column.getCanResize() && (_jsx(ColumnResizeHandle, { label: columnLabel(site, collection, header.column.id), width: header.getSize(), resizing: header.column.getIsResizing(), onStart: (event) => {
                                                                 freezeTitle();
                                                                 header.getResizeHandler()(event);
                                                             }, onNudge: (delta) => updateSizing((current) => ({
@@ -74,7 +74,7 @@ export function AdminEntriesTable({ collection, items, folders, explorer, state,
                                         ? Array.from({ length: 5 }, (_, index) => (_jsx(TableRow, { "aria-hidden": true, children: _jsx(TableCell, { colSpan: visibleCount, children: _jsx(Skeleton, { className: "h-5 w-full" }) }) }, index)))
                                         : items.length === 0
                                             ? null
-                                            : table.getRowModel().rows.map((row) => (_jsx(ActionContextMenu, { actions: rowMenu(row.original), trigger: _jsx(TableRow, { className: cn("h-11 data-[state=selected]:bg-cms-primary/5", row.original.id === openRecordId && OPEN_ITEM), "aria-current": row.original.id === openRecordId ? "true" : undefined, "data-state": row.getIsSelected() ? "selected" : undefined, draggable: !isTrash, onDragStart: (event) => {
+                                            : table.getRowModel().rows.map((row) => (_jsx(ActionContextMenu, { actions: rowMenu(row.original), trigger: _jsx(TableRow, { className: cn("h-11 data-[state=selected]:bg-monti-primary/5", row.original.id === openRecordId && OPEN_ITEM), "aria-current": row.original.id === openRecordId ? "true" : undefined, "data-state": row.getIsSelected() ? "selected" : undefined, draggable: !isTrash, onDragStart: (event) => {
                                                         // Dragging a selected row moves the whole selection; otherwise just this row.
                                                         const group = selectedIds.has(row.original.id)
                                                             ? items.filter((item) => selectedIds.has(item.id))

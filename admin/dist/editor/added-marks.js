@@ -1,4 +1,4 @@
-import { perSite } from "@monti-cms/core/client";
+import { perSite } from "@monti-cms/core/site";
 import { Mark, mergeAttributes } from "@tiptap/core";
 const pascal = (name) => name.replace(/(^|-)([a-z0-9])/g, (_, _dash, char) => char.toUpperCase());
 const kebab = (name) => name.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
@@ -54,7 +54,7 @@ export function createAddedMark(block, spec = {}) {
             ]));
         },
         parseHTML() {
-            return [{ tag: `span[data-cms-mark="${block.name}"]` }];
+            return [{ tag: `span[data-monti-mark="${block.name}"]` }];
         },
         renderHTML({ mark, HTMLAttributes }) {
             const attrs = mark.attrs;
@@ -65,7 +65,7 @@ export function createAddedMark(block, spec = {}) {
             const anchorValue = anchor ? attrs[anchor] : undefined;
             return [
                 "span",
-                mergeAttributes(HTMLAttributes, { "data-cms-mark": block.name, ...data }, 
+                mergeAttributes(HTMLAttributes, { "data-monti-mark": block.name, ...data }, 
                 // When pointing at a code line label, the editor code block highlights the line the mouse is over (`data-code-ref`).
                 typeof anchorValue === "string" && anchorValue ? { "data-code-ref": anchorValue } : {}, spec.render?.(attrs) ?? {}),
                 0,

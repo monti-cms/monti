@@ -1,5 +1,5 @@
 "use client";
-import { PAGE_SIZES } from "@monti-cms/core/client";
+import { PAGE_SIZES } from "@monti-cms/core/site";
 import { useCallback, useMemo } from "react";
 import { useAdminRouter } from "../../router/index.js";
 /** A page number (1, 2, …); page 1 is left out of the address. */

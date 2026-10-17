@@ -1,4 +1,4 @@
-import type { Folder } from "@monti-cms/core/runtime";
+import type { Folder } from "@monti-cms/core/site";
 import type { MediaItem } from "../../api/media.js";
 /**
  * Media detail. Opens on the right whichever view (grid or list) it was picked from.

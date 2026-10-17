@@ -1,10 +1,9 @@
+import { assertDuplicable } from "../core/domain/lifecycle.js";
 import { imageWarningsForSnapshot, serviceInputKeys, validateExactRecord, } from "../core/snapshot.js";
 import { withTranslationHints } from "../core/translation/hints.js";
 import { confirmedSourceState } from "../core/translation/state.js";
 import { ServiceError, } from "./types.js";
 import { createWritePipeline, linkResolverOf } from "./write-pipeline.js";
-// Snapshot rules live in the domain layer (`core/snapshot`). Re-exported to keep the existing import path.
-export { imageWarningsForSnapshot, prepareSnapshot, validateForPublish } from "../core/snapshot.js";
 const assertInputKeys = (input, baseKeys) => {
     if (!input || typeof input !== "object" || Array.isArray(input))
         throw new ServiceError("invalid_input");
@@ -95,13 +94,18 @@ export const createContentService = (storePort, options) => {
          * If called on a translation, it is created from that group's source.
          */
         createTranslation: async (params) => {
-            if (!site.isLocale(params.locale))
-                throw new ServiceError("invalid_input");
+            if (!site.isLocale(params.locale)) {
+                throw new ServiceError("invalid_input", undefined, undefined, {
+                    notice: { key: "translation.locale_unknown", vars: { locale: params.locale } },
+                });
+            }
             const picked = await storePort.getWorking({ entryId: params.sourceId });
             const sourceId = picked.translationGroupId ?? params.sourceId;
             const source = sourceId === params.sourceId ? picked : await storePort.getWorking({ entryId: sourceId });
             if (!site.isCollection(source.collection) || site.isItemCollection(source.collection)) {
-                throw new ServiceError("invalid_input");
+                throw new ServiceError("invalid_input", undefined, undefined, {
+                    notice: { key: "translation.not_translatable" },
+                });
             }
             // A translation starts from the source skeleton. Structure (headings, paragraphs, boxes, lists, tables), code and images are kept, and text
             // becomes translation notes (faded source text). Per-language values such as title and summary are emptied (the edit screen shows the source title as a placeholder).
@@ -134,10 +138,14 @@ export const createContentService = (storePort, options) => {
          */
         duplicate: async (params) => {
             const source = await storePort.getWorking({ entryId: params.id });
-            if (site.isItemCollection(source.collection))
-                throw new ServiceError("invalid_input");
+            assertDuplicable(source.status);
+            if (site.isItemCollection(source.collection)) {
+                throw new ServiceError("invalid_input", undefined, undefined, { notice: { key: "entry.duplicate.record" } });
+            }
             if (source.translationGroupId !== undefined && source.translationGroupId !== params.id) {
-                throw new ServiceError("invalid_input");
+                throw new ServiceError("invalid_input", undefined, undefined, {
+                    notice: { key: "entry.duplicate.translation" },
+                });
             }
             const metadata = params.title === undefined
                 ? source.metadata
@@ -209,7 +217,7 @@ export const createContentService = (storePort, options) => {
         },
         /**
          * Trash to restore. A record is published again, so its draft goes through the write pipeline first as a `restore`: `validate` and
-         * `validatePublish` hooks run (a restriction on publishing cannot be bypassed by trash and restore), `transform` hooks do not (the content
+         * `beforePublish` subscribers run (a restriction on publishing cannot be bypassed by trash and restore), `beforeValidate` ones do not (the content
          * is unchanged). Other collections return to draft and are not published, so nothing runs for them.
          */
         restore: async (params) => {

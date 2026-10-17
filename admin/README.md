@@ -13,7 +13,7 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 
 - **Admin path.** Defaults to `/admin`; change it with the site config's `admin.path` (e.g. `/studio`). The app's admin route folder
   (`app/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
-  plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/core/client`).
+  plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/admin`).
   The admin API (`/api/monti/v1`) does not change.
 - **View site.** The external-link icon button next to the site name in the sidebar header (tooltip `View site`) opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
 - **Preview.** `Preview` on the edit screen appends the public path to `site.previewPath` and passes the language as `site.previewLocaleParam` (default
@@ -22,55 +22,49 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 ## Adding site components
 
 Field inputs, block edit screens and code fence previews are added by extensions, and the site can add to or override them (e.g. the block extension's Mermaid and chart provide a default
-preview). The site adds its own through a plugin of its own: the plugin names an admin side, and the admin loads it (there is no separate file in `app/`). The Provider of that admin side is a client component that wraps the admin and uses `CmsAdminComponentsProvider`. If the site's entry has the same name as an extension's, the site's wins.
+preview). The site adds its own through a plugin of its own: the plugin names an admin side, and the admin loads it (there is no separate file in `app/`). The admin side **declares** what it adds,
+`defineAdminPlugin({ components })`, and the admin applies it; there is no provider to write. If the site's entry has the same name as an extension's, the site's wins (a later plugin wins).
 
 ```ts
 // plugins/site-admin/index.ts
 import { definePlugin } from "@monti-cms/core";
 
-export const siteAdmin = () => definePlugin({ name: "site-admin", options: {}, admin: () => import("./admin") });
-
-// plugins/site-admin/admin.ts: the default export is the admin side
-import { defineAdminPlugin } from "@monti-cms/admin/plugins";
-import { SiteAdminComponents } from "./provider";
-
-export default defineAdminPlugin({ Provider: SiteAdminComponents });
+export const siteAdmin = () => definePlugin({ name: "site-admin", admin: () => import("./admin") });
 ```
-
-Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` is a sketch. The provider:
 
 ```tsx
-// plugins/site-admin/provider.tsx
+// plugins/site-admin/admin.tsx: the default export is the admin side
 "use client";
-import { CmsAdminComponentsProvider } from "@monti-cms/admin";
+import { defineAdminPlugin } from "@monti-cms/admin";
 
-const components = {
-	fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
-	fieldInputs: { color: ColorInput }, // renders fields with fields.text({ input: "color" }) using this input
-	blockViews: { notice: NoticeView, image: SiteImageView }, // edit view of any block, the core image, file and math included. A view takes no props: it calls useBlockEditor()
-};
-
-export function SiteAdminComponents({ children }) {
-	return <CmsAdminComponentsProvider components={components}>{children}</CmsAdminComponentsProvider>;
-}
+export default defineAdminPlugin({
+	components: {
+		fencePreviews: { chart: () => import("./chart").then((m) => m.Chart) }, // ({ source }) => ReactNode
+		fieldInputs: { color: ColorInput }, // renders fields with fields.text({ input: "color" }) using this input
+		blockViews: { notice: NoticeView, image: SiteImageView }, // edit view of any block, the core image, file and math included. A view takes no props: it calls useBlockEditor()
+	},
+});
 ```
 
-A fence nobody registers shows its source as is.
+Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` and `examples/blog/plugins/site-callout` are examples. A fence nobody registers shows its source as is.
+
+- **Where the code may live.** The admin loads the module on the server and hands its declaration to the browser as it is. Make the module `"use client"` (the simplest: its components in it), or keep it a plain module whose components come from `"use client"` modules. A function written in a plain admin module cannot reach the browser and fails there.
+- **Components that depend on the site.** Give `components` as a function of the site, `components: (site) => ({ … })`, when they come from the site config (the plugin's options, the admin language). It runs in the browser, with the site the admin shows.
+- **Slots and providers.** `slots` attaches actions to the screen slots (`SlotSource`s, "Screen slots" below). `Provider` is for a plugin that needs a React context of its own, such as state its parts share; most need none.
 
 ### Icons
 
 A block definition's `editor.icon`, a plugin page's `icon`, a collection's `icon` and a code line effect's `icon` are lucide names.
-The admin package includes only the commonly used icons, so register other names with the same provider's `icons`. Unknown names show a default icon
+The admin package includes only the commonly used icons, so register other names with `icons` of the same `components`. Unknown names show a default icon
 (puzzle, plug, etc.).
 
 ```tsx
 import { Eye } from "lucide-react";
 
-const components = { icons: { eye: Eye } };
+export default defineAdminPlugin({ components: { icons: { eye: Eye } } });
 ```
 
-A plugin registers these inside its admin-side `Provider` (see each block of `@monti-cms/blocks`, and `@monti-cms/ai`, for examples). A server layout
-cannot pass components to the browser, so they are registered through a client provider, not the plugin definition.
+Each block of `@monti-cms/blocks` and `@monti-cms/ai` declare theirs the same way.
 
 ## The body is a stored document
 
@@ -85,11 +79,12 @@ involved in loading it into the editor or saving it from there.
 - The edit screen's form holds the body as `form.doc` (the draft, the browser recovery copy and the conflict comparison all see the document, compared by what it says:
   block ids and key order do not count). Recovery copies saved before that, with the body as MDX text in `form.mdx`, still restore: they are kept as an `unparsed` document, and the source panel of the `mdx()` plugin (`@monti-cms/mdx`) reads them again when it is open.
 - `DocPreview` (`@monti-cms/admin/editor`) is the read-only view of a document the translation screen shows the source in, and AI shows results in.
+  On the translation screen the source column follows the block being written: the source block paired with the block under the cursor (by its source link, see core's "Source links") sits at the same height and both are marked; while you only scroll, the source follows the middle of the translation. Inside a callout, collapsible or quote it goes down to the inner block, and a collapsed box in the translation collapses its source box.
 
 ### Source panels
 
 The source toggle at the end of the toolbar edits the body as text in some notation. The notation is a plugin's: the toggle is shown only when a **source panel** is registered, in the
-same provider as the other site components (`useCmsAdminComponents().sourcePanels`). With several registered, the first one is used.
+same provider as the other site components (`useAdminComponents().sourcePanels`). With several registered, the first one is used.
 
 ```tsx
 // what the `mdx()` plugin of @monti-cms/mdx registers for you:
@@ -104,7 +99,7 @@ as a document holding it in one `unparsed` node, with the findings in `issues`),
 `readOnly` and `onComposing(composing)` (a save waits for an IME composition to end). The panel parses in the browser, so a mistake shows as it is typed.
 A `BrowserFormat` is a format with its context bound: `export(doc): string` and `import(text)` (`{ ok: true, doc, warnings }` or `{ ok: false, issues }`), both synchronous.
 The admin has no panel of its own: the MDX source panel and the `mdx` browser format are provided by `@monti-cms/mdx` (`@monti-cms/mdx/admin`), registered by the admin provider of its `mdx()` plugin. Without that plugin there is no source toggle. The panel's messages are in the namespace `cms-mdx.source`.
-`SOURCE_ERROR_ID` (`@monti-cms/admin`) is the id of the element a panel shows its findings in, and `useLinkPaths` (`@monti-cms/admin/hooks`) gives a panel the paths of entry links. `mdxBrowserFormat` is no longer exported by `@monti-cms/admin/editor`.
+`SOURCE_ERROR_ID` (`@monti-cms/admin`) is the id of the element a panel shows its findings in, and `useLinkPaths` (`@monti-cms/admin`) gives a panel the paths of entry links. `mdxBrowserFormat` is no longer exported by `@monti-cms/admin/editor`.
 
 ### Links to entries
 
@@ -133,9 +128,9 @@ const components = {
 ```
 
 Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
-(`fields.view({ view })`) renders in that place the screen registered under `fieldViews` of `CmsAdminComponentsProvider` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/client` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
+(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is one.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
-uses `MediaThumbnail` and `useMediaUrl` from `@monti-cms/admin/media` (the search preview in the SEO extension `@monti-cms/seo` is an example).
+uses `MediaThumbnail` from `@monti-cms/admin/kit` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
 label (e.g. "Choose a post"). An entry of an item collection (`kind: "item"`) opens in a small form in the list. Places that point to several
 collections, such as media usage, open that entry's cell with `<admin path>?collection=<collection>&open=<ID>`, and opening `<admin path>/entries/<ID>/edit` also
@@ -175,7 +170,7 @@ name, e.g. `cmsNotice`), conversion, slash menu insertion and drag rules from th
 - `blockViews` is the one place a block's edit view is registered, for every block: the blocks you add and the core `image`, `file` and `math` blocks
   (register `blockViews.image` to redraw images). A view replaces the default view of that block, frame included.
 - A view takes no props. It reads and writes its block with `useBlockEditor()`, draws the editable nested body of a container with `<Content />` and wraps itself in
-  `<BlockFrame>`, all from `@monti-cms/admin/hooks`. No Tiptap or ProseMirror types are needed. The UI parts (tool row, settings popover, attribute input) are in `@monti-cms/admin/blocks`.
+  `<BlockFrame>`, all from `@monti-cms/admin`. No Tiptap or ProseMirror types are needed. The UI parts (`ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`) are there too.
   The callout, tabs, columns, collapsible and code explorer screens of `@monti-cms/blocks` are examples.
 - `blockEditors` and `CustomBlockEditorProps` are removed. `content` becomes `<Content />`, `values` and `setValue` become `useBlockEditor().values` and `.setValue`,
   and `editable` and `selected` are fields of the same object. Wrap the result in `<BlockFrame>`, which the old default frame did for you.
@@ -183,7 +178,7 @@ name, e.g. `cmsNotice`), conversion, slash menu insertion and drag rules from th
   are no longer exported; `useBlockEditor()` covers them. `BLOCK_NODE_VIEWS` is now `BLOCK_NODES` (the old name is removed).
 
 ```tsx
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin/hooks";
+import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
 
 function NoticeView() {
 	const block = useBlockEditor<{ level: string }>();
@@ -198,11 +193,27 @@ function NoticeView() {
 }
 ```
 
+## Admin events
+
+A plugin's admin side reacts to what happens in the admin with `on`, written by target and event like `on` on the server:
+`defineAdminPlugin({ on: { editor: { imageInserted: [fillAltText] } } })` (the types are `AdminEvents`, `ImageInserted` and `ImageInsertedEvent`). Admin events are
+past tense: they come after the fact and never block it. Each takes a list of independent subscribers, in plugin order, and a subscriber that fails shows a short
+notice without touching the action or the others. A subscriber is a client function, so it goes in the plugin's `"use client"` admin module.
+
+| Event | When | What the subscriber gets |
+|---|---|---|
+| `editor.imageInserted` | An image went into the body. Drop, paste, the slash menu and the toolbar all insert through the image dialog, so it fires for each | `{ image: { mediaId?, src?, alt, caption, decorative }, around, site, signal, fill }` |
+
+The image is in at once and shows "Writing the image text…" while any subscriber runs. `fill({ alt?, caption? })` writes a field only while it is still empty
+and the person has not typed in it since the insert (and no alt text into a decorative image), and writes nothing once the image was removed, when `signal` is
+aborted too. It returns whether it wrote anything. While a plugin subscribes, the image dialog lets the alt text be left empty. `ai({ autoImageText: true })` of
+`@monti-cms/ai` is one subscriber, and the [image alt recipe](../../docs/recipes/image-alt.md) is a small one of your own.
+
 ## Text marks
 
 A block extension's text mark (`syntax.kind: "text"`, `editor.view: "mark"`, e.g. tooltip, code link and text color in `@monti-cms/blocks`) makes the admin
 UI build the editor mark (`cms` + Pascal-case name, `addedMarkName("tooltip")` -> `cmsTooltip`) and the stored document conversion from the definition. The core
-editor does not know mark names and renders only what an extension provides through `marks` (block name -> `EditorMarkExtension`) of `CmsAdminComponentsProvider`.
+editor does not know mark names and renders only what an extension provides through `marks` (block name -> `EditorMarkExtension`) of its `components`.
 
 ```tsx
 import type { EditorMarkExtension } from "@monti-cms/admin/editor";
@@ -221,7 +232,7 @@ const components = { marks: { note } };
 - Bubble buttons and content receive `{ editor, inCode, openPanel, closePanel, act }`. `openPanel({ label, size, content })` expands an
   input panel inside the bubble. To get the same look, use `BubbleButton`, `MarkTextForm`, `MarkTextPopover`,
   `removeInlineMark` and `allowsMark` from `@monti-cms/admin/editor`.
-- In HTML it is `span[data-cms-mark="name"]` with `data-mark-<attribute>` for each attribute. The mark name in the stored document (CmsNode) is the block name,
+- In HTML it is `span[data-monti-mark="name"]` with `data-mark-<attribute>` for each attribute. The mark name in the stored document (CmsNode) is the block name,
   and only the attributes in the definition are kept (`markAttrsOf`).
 - A mark whose attribute has `codeAnchor: true` points to a code block line label (`CODE_ANCHOR_REF`). The code block's line menu "Link to text",
   the linking hint row, the hovered-line highlight (`data-code-ref`) and the broken-link indicator use this mark, and they are hidden when no such mark exists. The
@@ -240,8 +251,8 @@ The Bareun checker is `@monti-cms/bareun`, a plugin you list in `plugins` of `mo
 
 ```tsx
 "use client";
-import { defineTextChecker } from "@monti-cms/core/client";
-import type { CmsAdminComponents } from "@monti-cms/admin";
+import { defineTextChecker } from "@monti-cms/core";
+import type { AdminComponents } from "@monti-cms/admin";
 
 const myChecker = defineTextChecker({
 	id: "my-words",
@@ -255,7 +266,7 @@ const myChecker = defineTextChecker({
 	],
 });
 
-const components: CmsAdminComponents = { textCheckers: [myChecker] };
+const components: AdminComponents = { textCheckers: [myChecker] };
 ```
 
 - The unit of checking is one paragraph (a block holding text, such as a heading, list item or table cell): `{ id, text, locale }`. A result's `start` and `end` are
@@ -275,11 +286,11 @@ and returns `{ issues }`. `textCheckRoute` checks the admin login and same origi
 
 ```ts
 // Admin side of a plugin (browser)
-import { remoteTextChecker } from "@monti-cms/core/client";
+import { remoteTextChecker } from "@monti-cms/core";
 const checker = remoteTextChecker({ id: "bareun", label: "Bareun", locales: ["ko"], url: "/api/text-check" });
 
 // app/api/text-check/route.ts (server)
-import { textCheckRoute } from "@monti-cms/core/plugin/server";
+import { textCheckRoute } from "@monti-cms/core/server";
 import { cms } from "@/monti.config";
 export const POST = textCheckRoute({
 	cms, // a route file of the app names its instance for the admin check
@@ -300,60 +311,56 @@ export const POST = textCheckRoute({
   They do not check spacing or grammar.
 - For checkers that return only the misspelled word without a position, find the word in the paragraph text to determine the position (in order if the same word appears several times).
 
-`plugins/word-list` in `examples/blog` is an example of a small banned-word checker that runs in the browser, registered as a plugin (`index.ts`, `admin.ts`, `provider.tsx`).
+`plugins/word-list` in `examples/blog` is an example of a small banned-word checker that runs in the browser, registered as a plugin (`index.ts`, and `admin.tsx` with the checker and its declaration).
 
 The underline styles are included in `@monti-cms/admin/styles.css`.
 
 ## Plugin screens
 
-The module that a plugin definition's `admin` loads provides `defineAdminPlugin()` (`@monti-cms/admin/plugins`) as its default export.
+The module that a plugin definition's `admin` loads provides `defineAdminPlugin()` (`@monti-cms/admin`) as its default export.
 
 ```ts
 export default defineAdminPlugin({
-	pages: { my: MyPage }, // the "my" page of Tools: <admin path>/tools/my (default /admin/tools/my, a client component). The admin UI handles the login check
-	Provider: MyProvider, // wraps the whole admin UI. Inside it, add input and edit screen extensions with CmsAdminComponentsProvider
+	pages: { my: MyPage }, // the page of the `nav` item "my": <admin path>/tools/my (default /admin/tools/my, a client component). The admin UI handles the login check
+	components: { fieldViews: { "my-view": MyView } }, // field inputs and views, block views, marks, editor extensions, text checkers, icons, ... ("Adding site components")
+	slots: [mySlotSource], // actions on the screen slots
+	// Provider: MyProvider, // only for a plugin that needs a React context of its own
 });
 ```
 
-A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `cmsFetch(site, cmsApiUrl("/v1/<plugin>/<route>"))` (`@monti-cms/admin/api`, `cmsApiUrl` and `useSite` from `@monti-cms/core/client`), which throws a `CmsApiError` whose `message` is the text to show:
+A page is a client component and shows as an item of the sidebar's Tools group: the plugin definition's `nav` item (`{ path: "my", label, icon }`) names it, and the page draws only its body (the admin already provides the sidebar and the title). `PageActions` (`@monti-cms/admin/kit`) puts the page's one primary action on the right of the title bar. It calls the plugin's API with `useAdminFetch()` (`@monti-cms/admin`): `adminFetch("/v1/<plugin>/<route>", init)` takes the path after `/api/monti` and throws a `CmsApiError` whose `message` is the text to show. The site of the admin gives the language of that text and stops a write from the settings screen's preview. Outside a component, `adminFetch(site, path, init)` takes the site itself:
 
 ```tsx
 "use client";
-import { cmsFetch } from "@monti-cms/admin/api";
-import { cmsApiUrl, useSite } from "@monti-cms/core/client";
+import { useAdminFetch } from "@monti-cms/admin";
 import { useQuery } from "@tanstack/react-query";
 
 export function StatsPage() {
-	const site = useSite();
-	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => cmsFetch<{ published: number }>(site, cmsApiUrl("/v1/post-stats/summary"), { signal }) });
+	const adminFetch = useAdminFetch();
+	const stats = useQuery({ queryKey: ["post-stats"], queryFn: ({ signal }) => adminFetch<{ published: number }>("/v1/post-stats/summary", { signal }) });
 	return <div>{stats.data?.published}</div>;
 }
 ```
 
-The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is a sketch of the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
+The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
 
 Edit screen extensions (`editorExtensions`) are hooks that add an element at the end of the toolbar, an action next to the block handle, and actions for the selection menu and slash menu. For the field side, body images, media and code blocks,
-attach actions to the slots with `SlotRegistryProvider` (`@monti-cms/admin/slots`).
+attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource` type and the slot parts are in `@monti-cms/admin/slots`).
 
 To build screens that look like the admin UI, use the extension kit `@monti-cms/admin/kit`. It contains parts such as buttons, input boxes, dialogs, menus and tables,
-`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`) and a page in the admin frame (`ShellPage`),
-the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`, `DialogFormFooter`), the status pieces (`StatusIndicator`, `Badge`,
-`Alert`, `LoadErrorAlert`, `FieldError`), `commonMessages` (Save, Cancel, Retry, ...), `usePreference`, icon lookup (`useIconByName`), `useDebounced` and the entry form value types
-(`EntryForm`, `EntryData`). Colors come from the `--cms-success`, `--cms-warning` and `--cms-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
+`cn`, the confirm dialog (`useConfirm`) and the unsaved-changes guard (`useUnsavedGuard`), the title bar actions (`PageActions`),
+the list-and-editor layout (`MasterDetail`, `ListPane`, `ListRow`), the edit-form pieces (`useDraftEditor`, `EditorFooter`), the status pieces (`Badge`,
+`Alert`, `LoadErrorAlert`, `FormFieldError`), `commonMessages` (Save, Cancel, Retry, ...), `useDebounced`, the media preview (`MediaThumbnail`) and the entry form value types
+(`EntryForm`, `EntryData`). Only what the Monti packages and the examples use is exported; a part that is missing is added when an extension needs it. Colors come from the `--monti-success`, `--monti-warning` and `--monti-destructive` tokens (with `-soft` and `-foreground`), never from raw color classes.
 Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | Adding site components (`CmsAdminComponentsProvider`: source panels, formats, `useFormat`), properties panel and list cell types |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
-| `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
-| `/hooks` (experimental) | Editor hooks that return state and results only (`useSlotActions`, `useField`, `useBlockEditor`, `useEntryEditor`), the block view components `Content` and `BlockFrame`, and `EditorResult` / `EditorError` |
-| `/plugins` | `defineAdminPlugin` |
 | `/slots` | Attaching actions to screen slots |
-| `/media` | Media picker and preview |
-| `/api` | Calling the admin API (`cmsFetch`, `CmsApiError`, `errorText`, `isConflict`) and writing with it (`useCmsMutation`) |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |
 
@@ -377,7 +384,7 @@ A test keeps the boundary: no source file of the admin may import `next/*`.
 
 ### Editor hooks (experimental)
 
-`@monti-cms/admin/hooks` is experimental and may change in a minor release until the installed components have used it.
+The entry editor hooks (`useField`, `useEntryEditor` and their types) are experimental and may change in a minor release until the installed components have used them.
 Its hooks return state and results only: they never show a toast, open a confirm dialog or navigate, so a site can draw its own UI on them.
 The default admin UI is built on the same hooks. Commands return an `EditorResult` (`{ ok: true, value }` or `{ ok: false, error }`) instead of throwing
 for expected failures, and `EditorError.code` (`conflict`, `session_expired`, `offline`, `validation`, `invalid_state`, ...) is what to branch on.
@@ -399,7 +406,7 @@ are managed with `addChild`, `removeChild`, `moveChild` and `setChildValue`; the
 code `limit` when a bound would be broken (`read_only` while the editor is locked). `transact(tx => ...)` groups several edits, which read the live document, into one document change
 and so one undo step, for example renaming a tab and the default tab that points at it. `raw` (`{ editor, node, getPos }`) is the one escape hatch and the only place Tiptap and
 ProseMirror types appear; it is not stable. `<Content />` renders the editable nested body (with `visibleChild` to show one child, such as the open tab) and `<BlockFrame />`
-is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-cms-block-content]`.
+is the outer element with the selected ring and hover scope. The child blocks sit inside the first element of `[data-monti-block-content]`.
 
 `useEntryEditor(options)` is the entry editor without its screen: load, a local recovery copy, explicit server save, publish, status changes
 (archive, trash, restore), and recovery and conflict state. **It is not a server autosave.** While editing, only a recovery copy is kept in the browser
@@ -426,7 +433,7 @@ return (
 
 ## Data layer and remembered state
 
-Screens never call `fetch` themselves. Each resource has one module in `src/api/` (`entries`, `media`, `folders`, `templates`, `events`, `api-keys`, `schema`, `preferences`) that exports typed request functions and one query-key factory (`entriesKeys`, `mediaKeys`, ...). Plugin pages follow the same shape with an `api.ts` of their own. A write goes through `useCmsMutation({ fn, success, failure, invalidate, optimistic })` (`@monti-cms/admin/api`), which owns the toast, the optimistic update and its rollback, and the invalidation. `errorText(site, error, fallback)` is the one place an error becomes text, and `isConflict(error)` tells a stale write from other failures.
+Screens never call `fetch` themselves. Each resource has one module in `src/api/` (`entries`, `media`, `folders`, `templates`, `events`, `api-keys`, `schema`, `preferences`) that exports typed request functions and one query-key factory (`entriesKeys`, `mediaKeys`, ...). Plugin pages follow the same shape with an `api.ts` of their own. A write goes through `useCmsMutation({ fn, success, failure, invalidate, optimistic })` (`@monti-cms/admin`), which owns the toast, the optimistic update and its rollback, and the invalidation. `errorText(site, error, fallback)` is the one place an error becomes text, and `isConflict(error)` tells a stale write from other failures.
 
 What a screen remembers lives in one of three places:
 
@@ -450,26 +457,26 @@ An app that uses Tailwind 4 for its own public pages keeps doing so; the two do 
 
 How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm build`; the sources are in `styles/`):
 
-- **Scoped.** Every selector sits under `:where(html:has(.cms-admin))`, a document that contains the admin UI (zero specificity, so a class keeps the strength it has in Tailwind). Popups are
-  portaled to `body`, so the scope is the document, not the `.cms-admin` element. Public pages of the app, which never contain `.cms-admin`, are not affected.
+- **Scoped.** Every selector sits under `:where(html:has(.monti-admin))`, a document that contains the admin UI (zero specificity, so a class keeps the strength it has in Tailwind). Popups are
+  portaled to `body`, so the scope is the document, not the `.monti-admin` element. Public pages of the app, which never contain `.monti-admin`, are not affected.
 - **Reset.** Tailwind's preflight is part of the bundle, but only under that scope, so it does not restyle the app's pages.
-- **Names.** Every custom property the bundle declares starts with `--cms-` (Tailwind's own `--tw-*` became `--cms-tw-*`, and its theme is inlined), keyframes are `cms-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
+- **Names.** Every custom property the bundle declares starts with `--monti-` (Tailwind's own `--tw-*` became `--monti-tw-*`, and its theme is inlined), keyframes are `monti-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
 - **Math.** The KaTeX styles and fonts for the math preview are included (the fonts are copied to `dist/fonts` and linked relatively), so sites do not import KaTeX CSS for the admin.
 - **Font.** Like Tailwind's preflight, the bundle falls back to the system sans-serif stack on `html` of an admin document. A font the app sets on `body` wins.
 
-What the bundle provides (everything carries the `cms` prefix, so nothing collides with the app's names):
+What the bundle provides (everything carries the `monti` prefix, so nothing collides with the app's names):
 
-- **Color names.** `cms-*` colors such as `bg-cms-background`, `text-cms-muted-foreground` and `border-cms-border` (values come from `--cms-*` variables). The app's shadcn
-  names (`bg-background`, etc.) and variables (`--background`, etc.) are left untouched. `--cms-*` apply only to documents that contain the admin UI.
-- **Variants.** `cms-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `cms-horizontal:` and `cms-vertical:` apply for Base UI's
+- **Color names.** `monti-*` colors such as `bg-monti-background`, `text-monti-muted-foreground` and `border-monti-border` (values come from `--monti-*` variables). The app's shadcn
+  names (`bg-background`, etc.) and variables (`--background`, etc.) are left untouched. `--monti-*` apply only to documents that contain the admin UI.
+- **Variants.** `monti-dark:` applies when `html` (or an ancestor) has `.dark` or `[data-theme="dark"]`; `monti-horizontal:` and `monti-vertical:` apply for Base UI's
   `data-orientation`. They are independent of the app's `dark` and `data-horizontal` definitions. Whatever theme mechanism the app uses (class or `data-theme`), the admin UI's
   dark theme follows it.
-- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--cms-radius`; the `rounded-*` utilities of the bundle are computed from it).
+- **Everything else.** Default border and focus outline colors, `color-scheme`, the thin scrollbar, and the admin's corner radius (`--monti-radius`; the `rounded-*` utilities of the bundle are computed from it).
 
 Plugins that add admin UI: the admin bundle also compiles the sources of the first-party plugins (`@monti-cms/ai`, `@monti-cms/blocks`, `@monti-cms/mdx`, `@monti-cms/seo`; see the `@source` lines of `styles/index.css`),
 so the shared utilities, `prose`, the theme and the reset are defined in **one** file. That is the point: a second file that defined `.prose` again would load later and reset what the admin's dark variant had set.
 `ai`, `mdx` and `seo` therefore ship no CSS. `@monti-cms/blocks/styles.css` holds only what utilities cannot say (the callout look, the text color rule, default variables) and is imported after the admin file.
-A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `cms-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
+A third-party plugin ships its own prebuilt CSS with classes of its own only (its own `monti-`prefixed names), never redefining shared utilities or `prose`. The confinement test fails when a selector is defined in two bundles.
 The cost is that the admin file carries the classes of first-party plugins an app does not install (a few KB).
 
 `CmsAdminLayout` (`@monti-cms/nextjs/admin`) takes the CMS instance (`cms`, exported by the app's `monti.config.ts`) and has optional props to turn off the providers the admin UI adds. If the site already has a `next-themes` provider or a `sonner` `Toaster`, turn them off to avoid duplicates.
@@ -486,6 +493,100 @@ The cost is that the admin file carries the classes of first-party plugins an ap
   `.dark` or `[data-theme="dark"]` that the site's provider puts on `html`, and the theme toggle in the admin changes the site's theme.
 - `themeStorageKey` (default `monti-admin-theme`): the `localStorage` key for the admin's theme, used only with `themeProvider`.
 - `toaster` (default `true`): the admin UI adds `sonner`'s `Toaster`. When off, admin notifications appear in the site's `Toaster` (when using the same `sonner`).
+
+## Admin theme
+
+A site themes the admin by overriding CSS custom properties. The tokens below are the public contract: their names and meaning are kept stable, and the admin's components read only `--monti-*` names, so
+the site's own variables (`--primary`, `--background`, ...) never leak in and nothing else needs to be touched. A token you do not set keeps its default.
+
+The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` rule of the site wins whatever order the stylesheets load in. The admin also sets `color-scheme` (`light`, and `dark` under
+`.dark` or `[data-theme="dark"]` on `html`, the two ways it detects the dark theme), so `light-dark()` picks the right value for each mode and both modes fit in one line:
+
+```css
+/* app/globals.css: any stylesheet of the site, loaded before or after @monti-cms/admin/styles.css */
+:root {
+	--monti-primary: light-dark(#0d9488, #2dd4bf);
+	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
+	--monti-ring: light-dark(#14b8a6, #5eead4);
+	--monti-radius: 0.75rem;
+}
+```
+
+**A plain value applies to both modes.** A default has zero specificity in light *and* dark, so `:root { --monti-background: #fff; }` also replaces the dark default. Either write the value with `light-dark()`
+as above, or set the token again for the dark theme:
+
+```css
+:root {
+	--monti-primary: #0d9488;
+}
+.dark,
+[data-theme="dark"] {
+	--monti-primary: #2dd4bf;
+}
+```
+
+Every color token that colors a surface has a `-foreground` partner for the text on it. Colors are any CSS color. Tokens that only follow another one are derived, so setting the base updates them; set
+one only to break away. Tokens by role:
+
+| Role | Tokens | What they color |
+| --- | --- | --- |
+| Surface | `--monti-background`, `--monti-foreground` | The page behind the admin and its default text |
+| | `--monti-card`, `--monti-card-foreground` | Panels and cards (`-foreground` follows `--monti-foreground` unless set) |
+| | `--monti-popover`, `--monti-popover-foreground` | Menus, dialogs, tooltips and other popups (`-foreground` follows `--monti-foreground` unless set) |
+| Text | `--monti-muted-foreground` | Secondary text: hints, labels, placeholders |
+| Primary | `--monti-primary`, `--monti-primary-foreground` | Main buttons, checked controls, selection |
+| Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips (`--monti-secondary` follows `--monti-muted` unless set, its `-foreground` follows `--monti-foreground`) |
+| Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items (`--monti-accent-foreground` follows `--monti-foreground` unless set) |
+| Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill (follows `--monti-destructive` unless set) |
+| | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings (`-soft` follows `--monti-warning` unless set) |
+| | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states (`-soft` follows `--monti-success` unless set) |
+| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring |
+| Sidebar | `--monti-sidebar`, `--monti-sidebar-foreground` | The navigation sidebar and its text |
+| | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
+| | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
+| | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
+| Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+
+### Reusing a shadcn theme
+
+The token names mirror shadcn's, so a site that already has a shadcn theme can point the admin at it. shadcn swaps its variables under `.dark`, so the admin follows the site's dark mode with no second block:
+
+```css
+:root {
+	--monti-background: var(--background);
+	--monti-foreground: var(--foreground);
+	--monti-card: var(--card);
+	--monti-card-foreground: var(--card-foreground);
+	--monti-popover: var(--popover);
+	--monti-popover-foreground: var(--popover-foreground);
+	--monti-primary: var(--primary);
+	--monti-primary-foreground: var(--primary-foreground);
+	--monti-secondary: var(--secondary);
+	--monti-secondary-foreground: var(--secondary-foreground);
+	--monti-muted: var(--muted);
+	--monti-muted-foreground: var(--muted-foreground);
+	--monti-accent: var(--accent);
+	--monti-accent-foreground: var(--accent-foreground);
+	--monti-destructive: var(--destructive);
+	--monti-border: var(--border);
+	--monti-input: var(--input);
+	--monti-ring: var(--ring);
+	--monti-sidebar: var(--sidebar);
+	--monti-sidebar-foreground: var(--sidebar-foreground);
+	--monti-sidebar-primary: var(--sidebar-primary);
+	--monti-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--monti-sidebar-accent: var(--sidebar-accent);
+	--monti-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--monti-sidebar-border: var(--sidebar-border);
+	--monti-sidebar-ring: var(--sidebar-ring);
+	--monti-radius: var(--radius);
+}
+```
+
+shadcn has no warning or success colors, so those keep the admin's defaults. If the site's variables hold bare channels (the older `--primary: 222 47% 11%` style), wrap them: `hsl(var(--primary))`.
+
+Blocks add `--monti-callout-*` and `--monti-chart-1` to `--monti-chart-5` (see `@monti-cms/blocks`). To check a theme, open the admin in light and dark; the rest of the admin
+(dark variants, tints, hover states) is derived from these tokens. There is no config option: the CSS above is the whole interface.
 
 ## Development
 

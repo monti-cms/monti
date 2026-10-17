@@ -1,6 +1,5 @@
-import { type BulkOp, type Site } from "@monti-cms/core/client";
 import type { StoredDocument } from "@monti-cms/core/document";
-import type { IncomingReferenceItem, ListEntriesItem } from "@monti-cms/core/runtime";
+import type { BulkOp, EntryStatus, IncomingReferenceItem, ListEntriesItem, Site } from "@monti-cms/core/site";
 import type { EntryData } from "../screens/entries/entry-form.js";
 import type { CmsIssue } from "./error-message.js";
 /** One page of the list API response. */
@@ -110,10 +109,12 @@ export type BulkItemResult = {
     issues?: CmsIssue[];
     usages?: BulkUsage[];
 };
+/** A row a bulk action targets. `status`, when known, lets a lifecycle action leave out rows it cannot change (`canTransition`). */
 export type BulkSelection = {
     id: string;
     expectedVersion: number;
     title?: string | null;
+    status?: EntryStatus;
 };
 export type BulkParams = {
     field?: string;
@@ -124,7 +125,7 @@ export type BulkParams = {
 /** `POST /v1/bulk`: one answer per item. */
 export declare function bulkEntries(site: Site, op: BulkOp, items: BulkSelection[], params?: BulkParams): Promise<BulkItemResult[]>;
 /**
- * The server calls the entry editor makes. The default is {@link cmsEntryClient} (the admin API). A test or another transport passes its own to
+ * The server calls the entry editor makes. The default is {@link adminEntryClient} (the admin API). A test or another transport passes its own to
  * `useEntryEditor({ client })`. Methods reject with `CmsApiError` for an error response and with a `TypeError` when the network is down;
  * the editor turns both into an `EditorError`.
  *
@@ -162,4 +163,4 @@ export interface EntryEditorClient {
  *
  * @experimental
  */
-export declare const cmsEntryClient: (site: Site) => EntryEditorClient;
+export declare const adminEntryClient: (site: Site) => EntryEditorClient;

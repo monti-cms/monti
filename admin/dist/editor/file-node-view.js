@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator, } from "@monti-cms/core/client";
+import { fileKindOf, fileTypeLabel, formatFileSize, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
 import { FileArchive, FileText, FileType } from "lucide-react";
 import { getMedia, mediaKeys } from "../api/media.js";
@@ -35,7 +35,7 @@ export function FileBlockView() {
                 .filter(Boolean)
                 .join(" · ")
             : tc("loading");
-    return (_jsxs(BlockFrame, { framed: false, "data-file-block": true, className: "not-prose my-6 flex items-center gap-3 rounded-lg border bg-cms-card px-4 py-3", children: [_jsx(Icon, { "aria-hidden": true, className: "size-8 shrink-0 text-cms-muted-foreground", strokeWidth: 1.5 }), _jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("input", { "aria-label": t("fileNode.displayName"), value: label, placeholder: filename || t("fileNode.fallbackName"), disabled: !editable, 
+    return (_jsxs(BlockFrame, { framed: false, "data-file-block": true, className: "not-prose my-6 flex items-center gap-3 rounded-lg border bg-monti-card px-4 py-3", children: [_jsx(Icon, { "aria-hidden": true, className: "size-8 shrink-0 text-monti-muted-foreground", strokeWidth: 1.5 }), _jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("input", { "aria-label": t("fileNode.displayName"), value: label, placeholder: filename || t("fileNode.fallbackName"), disabled: !editable, 
                         // Keep typed characters from leaking into the editor document.
-                        onKeyDown: (event) => event.stopPropagation(), onChange: (event) => block.setValues({ label: event.target.value || null }), className: "w-full truncate bg-transparent font-medium text-sm outline-none placeholder:text-cms-foreground" }), _jsx("p", { className: cn("text-cms-muted-foreground text-xs", media === "failed" && "text-cms-destructive"), children: details })] })] }));
+                        onKeyDown: (event) => event.stopPropagation(), onChange: (event) => block.setValues({ label: event.target.value || null }), className: "w-full truncate bg-transparent font-medium text-sm outline-none placeholder:text-monti-foreground" }), _jsx("p", { className: cn("text-monti-muted-foreground text-xs", media === "failed" && "text-monti-destructive"), children: details })] })] }));
 }

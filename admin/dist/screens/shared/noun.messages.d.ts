@@ -1,4 +1,5 @@
-import { type MessageVars, type Site } from "@monti-cms/core/client";
+import type { MessageVars } from "@monti-cms/core";
+import { type Site } from "@monti-cms/core/site";
 /**
  * How admin messages name the entries of a collection. They take the collection's own label ("Post", "Memo", "게시글"), so a memo screen says "memo" and not "post".
  * The label goes into messages as the `noun` variable; each dictionary decides how it reads in its language.

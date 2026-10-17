@@ -1,6 +1,6 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 // Column width resize handle of the entries table header.
-import { useTranslator } from "@monti-cms/core/client";
+import { useTranslator } from "@monti-cms/core/site";
 import { cn } from "../lib/utils/cn.js";
 import { MAX_COLUMN_SIZE, MIN_COLUMN_SIZE } from "./entries-table-widths.js";
 import { screensMessages } from "./messages.js";
@@ -14,5 +14,5 @@ export function ColumnResizeHandle({ label, width, resizing, onStart, onNudge, o
                 event.preventDefault();
                 onNudge(event.key === "ArrowLeft" ? -16 : 16);
             }
-        }, className: "absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none", children: _jsx("span", { className: cn("h-full w-px bg-transparent transition-colors group-hover/th:bg-cms-border", resizing && "bg-cms-primary group-hover/th:bg-cms-primary", "[div:focus-visible>&]:bg-cms-ring") }) }));
+        }, className: "absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none select-none justify-center outline-none", children: _jsx("span", { className: cn("h-full w-px bg-transparent transition-colors group-hover/th:bg-monti-border", resizing && "bg-monti-primary group-hover/th:bg-monti-primary", "[div:focus-visible>&]:bg-monti-ring") }) }));
 }

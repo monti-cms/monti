@@ -11,18 +11,18 @@ function TableBody({ className, ...props }) {
     return _jsx("tbody", { "data-slot": "table-body", className: cn("[&_tr:last-child]:border-0", className), ...props });
 }
 function TableFooter({ className, ...props }) {
-    return (_jsx("tfoot", { "data-slot": "table-footer", className: cn("border-t bg-cms-muted/50 font-medium [&>tr]:last:border-b-0", className), ...props }));
+    return (_jsx("tfoot", { "data-slot": "table-footer", className: cn("border-t bg-monti-muted/50 font-medium [&>tr]:last:border-b-0", className), ...props }));
 }
 function TableRow({ className, ...props }) {
-    return (_jsx("tr", { "data-slot": "table-row", className: cn("border-b transition-colors hover:bg-cms-muted/50 has-aria-expanded:bg-cms-muted/50 data-[state=selected]:bg-cms-muted", className), ...props }));
+    return (_jsx("tr", { "data-slot": "table-row", className: cn("border-b transition-colors hover:bg-monti-muted/50 has-aria-expanded:bg-monti-muted/50 data-[state=selected]:bg-monti-muted", className), ...props }));
 }
 function TableHead({ className, ...props }) {
-    return (_jsx("th", { "data-slot": "table-head", className: cn("h-10 whitespace-nowrap px-2 text-left align-middle font-medium text-cms-foreground [&:has([role=checkbox])]:pr-0", className), ...props }));
+    return (_jsx("th", { "data-slot": "table-head", className: cn("h-10 whitespace-nowrap px-2 text-left align-middle font-medium text-monti-foreground [&:has([role=checkbox])]:pr-0", className), ...props }));
 }
 function TableCell({ className, ...props }) {
     return (_jsx("td", { "data-slot": "table-cell", className: cn("whitespace-nowrap p-2 align-middle [&:has([role=checkbox])]:pr-0", className), ...props }));
 }
 function TableCaption({ className, ...props }) {
-    return (_jsx("caption", { "data-slot": "table-caption", className: cn("mt-4 text-cms-muted-foreground text-sm", className), ...props }));
+    return (_jsx("caption", { "data-slot": "table-caption", className: cn("mt-4 text-monti-muted-foreground text-sm", className), ...props }));
 }
 export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };

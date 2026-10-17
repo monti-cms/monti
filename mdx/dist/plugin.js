@@ -1,6 +1,8 @@
 import { definePlugin, IssueList, pathOf } from "@monti-cms/core";
 import { MDX_PLUGIN_NAME } from "./name.js";
 export { MDX_PLUGIN_NAME };
+/** The MDX plugin with the type of its options (`site.pluginOptions(MDX_PLUGIN)`). */
+export const MDX_PLUGIN = { name: MDX_PLUGIN_NAME };
 /** The problems of the options: every extension has a name, and no name is listed twice. */
 export const checkMdxOptions = (options) => {
     const list = new IssueList();
@@ -28,11 +30,9 @@ export const mdx = (options = {}) => {
     return definePlugin({
         name: MDX_PLUGIN_NAME,
         options,
-        validate: () => checkMdxOptions(options),
+        checkConfig: () => checkMdxOptions(options),
         // The format is read on the server only: the parser stays out of the browser bundle (`@monti-cms/mdx/server` is empty there).
-        server: {
-            formats: async () => (await import("@monti-cms/mdx/server")).createServerMdxFormat(options),
-        },
+        server: () => import("@monti-cms/mdx/server"),
         admin: () => import("@monti-cms/mdx/admin"),
     });
 };

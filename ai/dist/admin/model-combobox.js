@@ -1,8 +1,7 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { errorText } from "@monti-cms/admin/api";
+import { errorText, useSite, useTranslator } from "@monti-cms/admin";
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList, cn, } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { aiCommonMessages } from "./ai-common.messages.js";
@@ -42,5 +41,5 @@ export function ModelCombobox({ id, value, onChange, models, loading, error, pla
     const items = typed && typed !== value && !options.some((option) => option.value === typed)
         ? [...options, { value: typed, label: typed, custom: true }]
         : options;
-    return (_jsxs(Combobox, { items: items, autoHighlight: true, value: selected, onValueChange: (next) => onChange(next?.value ?? ""), onInputValueChange: setQuery, itemToStringLabel: (item) => item.label, isItemEqualToValue: (a, b) => a.value === b.value, children: [_jsx(ComboboxInput, { id: id, "aria-label": ariaLabel, placeholder: loading ? t("modelsLoading") : placeholder, showClear: Boolean(value), className: "h-8 w-full min-w-0 [&_input]:font-mono [&_input]:text-xs" }), _jsxs(ComboboxContent, { children: [_jsx(ComboboxEmpty, { children: error ?? (loading ? t("modelsLoading") : t("modelsHint")) }), _jsx(ComboboxList, { children: (item) => (_jsx(ComboboxItem, { value: item, className: cn("font-mono text-xs", item.custom && "text-cms-primary"), children: _jsx("span", { className: "truncate", children: item.custom ? t("modelUse", { label: item.label }) : item.label }) }, item.value)) })] })] }));
+    return (_jsxs(Combobox, { items: items, autoHighlight: true, value: selected, onValueChange: (next) => onChange(next?.value ?? ""), onInputValueChange: setQuery, itemToStringLabel: (item) => item.label, isItemEqualToValue: (a, b) => a.value === b.value, children: [_jsx(ComboboxInput, { id: id, "aria-label": ariaLabel, placeholder: loading ? t("modelsLoading") : placeholder, showClear: Boolean(value), className: "h-8 w-full min-w-0 [&_input]:font-mono [&_input]:text-xs" }), _jsxs(ComboboxContent, { children: [_jsx(ComboboxEmpty, { children: error ?? (loading ? t("modelsLoading") : t("modelsHint")) }), _jsx(ComboboxList, { children: (item) => (_jsx(ComboboxItem, { value: item, className: cn("font-mono text-xs", item.custom && "text-monti-primary"), children: _jsx("span", { className: "truncate", children: item.custom ? t("modelUse", { label: item.label }) : item.label }) }, item.value)) })] })] }));
 }

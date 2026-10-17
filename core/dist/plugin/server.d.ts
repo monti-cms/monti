@@ -2,18 +2,17 @@ import type { Cms } from "../cms/index.js";
 import { type FormatRegistry } from "../format/registry.js";
 import type { CmsServerConfig } from "../server/define.js";
 import type { EventSubscriber } from "../services/events.js";
-import type { HookSource } from "../services/hooks.js";
-import type { CmsPlugin, CmsServerPlugin, OwnedPluginRoute } from "./define.js";
-import type { PluginStorage } from "./storage.js";
-/** The server side of one plugin: its inline object, or the default export of its loader. `undefined` for a plugin without one. */
-export declare function serverSideOf(plugin: Pick<CmsPlugin, "server">): Promise<CmsServerPlugin | undefined>;
+import { type HookSource, type PluginScope } from "../services/reactions.js";
+import type { OwnedPluginRoute, Plugin, ServerPlugin } from "./define.js";
+/** The server side of one plugin: the default export of its loader. `undefined` for a plugin without one. */
+export declare function serverSideOf(plugin: Pick<Plugin, "server">): Promise<ServerPlugin | undefined>;
 /** The server side of a plugin, with the plugin's name. A plugin without a server side is empty. */
-export type LoadedServerPlugin = CmsServerPlugin & {
+export type LoadedServerPlugin = ServerPlugin & {
     readonly name: string;
 };
 /**
  * The server side of one site's plugins, owned by one CMS instance (`createCms`): the loaded server modules, the route table, feature flags,
- * migrations, and the write hooks that run in order (server config first, then plugins).
+ * migrations, and the `before…` subscribers that run in order (server config first, then plugins).
  */
 export interface ServerPlugins {
     /**
@@ -33,18 +32,22 @@ export interface ServerPlugins {
      * Plugins with no feature flags, or that fail, are left out.
      */
     features(): Promise<Record<string, Readonly<Record<string, boolean>>>>;
-    /** Runs each plugin's migration hook with that plugin's storage. Called after the core tables are created (`monti db:migrate`). */
-    migrate(storageOf: (plugin: string) => PluginStorage, log?: (message: string) => void): Promise<void>;
+    /** Runs each plugin's migration hook with its scope (its storage is `plugin.storage`). Called after the core tables are created (`monti db:migrate`). */
+    migrate(log?: (message: string) => void): Promise<void>;
+    /** What a server callback of the named plugin gets: the instance and the plugin's own context. */
+    scopeOf(name: string): PluginScope;
+    /** Tells the plugin's `on.keySlot.changed` subscribers that a slot of the plugin was assigned or cleared. */
+    keySlotChanged(plugin: string, slot: string): Promise<void>;
     /**
-     * Write hooks in the order they run: the server config first, then the plugins in the site config's order. Each is tagged with its owner
-     * (`server`, `plugin:<name>`), which a failing hook is reported with.
+     * The checks before the save, one per hook in the order they run: the server config's lists first, then the plugins' in the site config's order.
+     * Each is tagged with its owner (`server`, `plugin:<name>`), which a failing hook is reported with.
      */
     writeHooks(): Promise<readonly HookSource[]>;
     /**
-     * The subscribers of the committed changes, in the order they are delivered to: the server config's `hooks.afterCommit`, then each plugin's. The name
-     * is the hook's owner (`server`, `plugin:<name>`) and keys the delivery state of the outbox.
+     * The subscribers of the committed changes, in the order they are delivered to: the server config's `on.entry` durable subscribers, then each plugin's.
+     * The name is `<owner>:<name>` (`server:revalidate`, `plugin:git-sync:sync`) and keys the delivery state of the outbox.
      */
     eventSubscribers(): Promise<readonly EventSubscriber[]>;
 }
-/** `cms` is the instance that owns these plugins. It is passed to the plugin's `migrate` and `features`. */
-export declare function createServerPlugins(plugins: readonly CmsPlugin[], serverConfig: () => Pick<CmsServerConfig, "hooks">, cms: () => Cms): ServerPlugins;
+/** `cms` is the instance that owns these plugins. The plugins' callbacks get it with their own context (`{ cms, plugin }`). */
+export declare function createServerPlugins(plugins: readonly Plugin[], serverConfig: () => Pick<CmsServerConfig, "on">, cms: () => Cms): ServerPlugins;
