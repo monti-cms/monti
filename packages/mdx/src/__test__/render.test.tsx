@@ -1,5 +1,5 @@
 import { definePlugin } from "@monti-cms/core";
-import { renderDocument } from "@monti-cms/core/render";
+import { defineRender, renderDocument } from "@monti-cms/core/render";
 import { createSite } from "@monti-cms/core/site";
 import type { Root } from "mdast";
 import type { ReactNode } from "react";
@@ -18,7 +18,7 @@ const fake = definePlugin({
 	name: "fake-callout-render",
 	options: {},
 	render: async () => ({
-		documentComponents: () => ({
+		default: defineRender({
 			blocks: {
 				callout: ({ title, children }: { title?: string; children?: ReactNode }) => (
 					<aside data-from-plugin="yes">

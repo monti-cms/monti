@@ -10,7 +10,7 @@ import { createLocales, type SiteLocales } from "../core/locales";
 import { createTime, type SiteTime } from "../core/time";
 import { createI18n, type SiteI18n } from "../i18n";
 import { createActiveTranslator, resolveLabels, withActiveLocale } from "../i18n/active";
-import type { Plugin, PluginNavItem } from "../plugin/define";
+import type { Plugin, PluginContributions, PluginId, PluginNavItem } from "../plugin/define";
 import { createSchemas, type SiteSchemas } from "../schema/derive";
 import { createPanel, type SitePanel } from "../schema/layout";
 
@@ -19,7 +19,7 @@ export interface PluginSnapshot {
 	readonly name: string;
 	readonly options: unknown;
 	readonly nav?: readonly PluginNavItem[];
-	readonly contributes?: Readonly<Record<string, unknown>>;
+	readonly contributes?: PluginContributions;
 }
 
 /**
@@ -49,10 +49,10 @@ export type Site<Config extends CmsConfig = CmsConfig> = SiteI18n &
 		/** The plugins of the config (an empty list if it has none). */
 		readonly plugins: readonly Plugin[];
 		/**
-		 * The `options` of a plugin picked by name from `plugins` in the site config. This is the official way for an extension to read its own config. `undefined`
-		 * if that plugin is not in the config.
+		 * The `options` of a plugin in `plugins` of the site config, typed by its id (`site.pluginOptions(GIT_SYNC_PLUGIN)`, see {@link PluginId}). This is how an
+		 * extension reads its own config. `undefined` if that plugin is not in the config.
 		 */
-		getPluginOptions<Options = unknown>(name: string): Options | undefined;
+		pluginOptions<Options>(plugin: PluginId<string, Options>): Options | undefined;
 		/** The request schemas and upload rules that depend on the site's collections, locales and `media`. */
 		readonly api: SiteApi;
 		/** The config as data, for the browser (see {@link SiteSnapshot}). The same object every call. */
@@ -148,7 +148,7 @@ export function createSite<const Config extends CmsConfig>(config: Config): Site
 			...createPanel(schemas, plugins),
 			config,
 			plugins,
-			getPluginOptions: <Options = unknown>(name: string) =>
+			pluginOptions: <Options>({ name }: PluginId<string, Options>) =>
 				plugins.find((plugin) => plugin.name === name)?.options as Options | undefined,
 			api,
 			snapshot: () => {

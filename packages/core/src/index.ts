@@ -45,6 +45,7 @@ export {
 	translate,
 } from "./i18n/define";
 export {
+	type AdminPluginShape,
 	definePlugin,
 	emptyServerPlugin,
 	type Plugin,
@@ -52,6 +53,8 @@ export {
 	type PluginCommandContext,
 	type PluginCommandOption,
 	type PluginConfigView,
+	type PluginContributions,
+	type PluginId,
 	type PluginKeySlot,
 	type PluginLabel,
 	type PluginNamed,

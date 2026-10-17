@@ -6,6 +6,7 @@ import { githubClientFactory } from "./github/rest";
 import { tokenKeyOf } from "./keys";
 import {
 	DEFAULT_DEBOUNCE_MS,
+	GIT_SYNC_PLUGIN,
 	GIT_SYNC_PLUGIN_NAME,
 	GIT_SYNC_TOKEN_SLOT,
 	type GitSyncOptions,
@@ -75,7 +76,7 @@ export interface SyncContext {
 
 /** The options of the plugin as the site config gives them. */
 export function readOptions(cms: Cms): GitSyncOptions {
-	const options = cms.site.getPluginOptions<GitSyncOptions>(GIT_SYNC_PLUGIN_NAME);
+	const options = cms.site.pluginOptions(GIT_SYNC_PLUGIN);
 	if (!options) {
 		throw new GitSyncError(cms.site.createTranslator(serverMessages)("pluginMissing"));
 	}

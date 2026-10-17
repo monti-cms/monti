@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { defineCollection, definePlugin, defineSite, fields } from "../..";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { defineCollection, definePlugin, defineSite, fields, type PluginId } from "../..";
 import { createSite } from "../../site";
 
 const page = defineCollection({
@@ -23,20 +23,25 @@ const site = createSite(
 	}),
 );
 
-describe("site.getPluginOptions", () => {
-	it("returns the options of the plugin with that name", () => {
-		expect(site.getPluginOptions<{ palette: string[] }>("color")).toEqual({ palette: ["red"] });
+const COLOR: PluginId<"color", { readonly palette: readonly string[] }> = { name: "color" };
+const AI: PluginId<"ai", { readonly model: string }> = { name: "ai" };
+
+describe("site.pluginOptions", () => {
+	it("returns the options of the plugin with that id's name, typed by the id", () => {
+		const options = site.pluginOptions(COLOR);
+		expect(options).toEqual({ palette: ["red"] });
+		expectTypeOf(options).toEqualTypeOf<{ readonly palette: readonly string[] } | undefined>();
 	});
 
 	it("is undefined for a plugin the site config does not list", () => {
-		expect(site.getPluginOptions("ai")).toBeUndefined();
+		expect(site.pluginOptions(AI)).toBeUndefined();
 	});
 
 	it("is undefined for every name when the config lists no plugins", () => {
 		const bare = createSite(
 			defineSite({ collections: { page }, locales: [{ code: "en", name: "English" }], defaultLocale: "en" }),
 		);
-		expect(bare.getPluginOptions("color")).toBeUndefined();
+		expect(bare.pluginOptions(COLOR)).toBeUndefined();
 	});
 
 	it("keeps the options of two sites apart", () => {
@@ -48,8 +53,8 @@ describe("site.getPluginOptions", () => {
 				plugins: [definePlugin({ name: "color", options: { palette: ["blue"] } })],
 			}),
 		);
-		expect(other.getPluginOptions("color")).toEqual({ palette: ["blue"] });
-		expect(site.getPluginOptions("color")).toEqual({ palette: ["red"] });
+		expect(other.pluginOptions(COLOR)).toEqual({ palette: ["blue"] });
+		expect(site.pluginOptions(COLOR)).toEqual({ palette: ["red"] });
 	});
 });
 

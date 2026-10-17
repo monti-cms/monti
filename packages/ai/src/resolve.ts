@@ -1,4 +1,4 @@
-import { configError, pathOf } from "@monti-cms/core";
+import { configError, type PluginContributions, pathOf } from "@monti-cms/core";
 import type {
 	AiActionDefinition,
 	AiActionSource,
@@ -24,7 +24,7 @@ import { DEFAULT_AI_ACTIONS } from "./presets";
 /** An AI action contribution of a plugin. */
 interface PluginLike {
 	readonly name: string;
-	readonly contributes?: Readonly<Record<string, unknown>>;
+	readonly contributes?: PluginContributions;
 }
 
 const contributionOf = (plugin: PluginLike): AiContribution | undefined => {

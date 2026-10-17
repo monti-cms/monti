@@ -1,7 +1,7 @@
 import type { Site } from "@monti-cms/core/site";
 import type { PluggableList } from "unified";
 import { perSite } from "./per-site";
-import { MDX_PLUGIN_NAME, type MdxPluginOptions } from "./plugin";
+import { MDX_PLUGIN } from "./plugin";
 import type { SyntaxBlocks, SyntaxExtension } from "./syntax/types";
 
 /** The blocks the site uses, as syntax extensions see them. */
@@ -22,8 +22,8 @@ export const siteCodeLineEffects = perSite(
 export const NO_SYNTAX: readonly SyntaxExtension[] = [];
 
 /** The syntax extensions the site gave to `mdx({ syntax })`, in precedence order (none when the site config has no `mdx()` plugin). */
-export const configuredSyntax = (site: Pick<Site, "getPluginOptions">): readonly SyntaxExtension[] =>
-	site.getPluginOptions<MdxPluginOptions>(MDX_PLUGIN_NAME)?.syntax ?? NO_SYNTAX;
+export const configuredSyntax = (site: Pick<Site, "pluginOptions">): readonly SyntaxExtension[] =>
+	site.pluginOptions(MDX_PLUGIN)?.syntax ?? NO_SYNTAX;
 
 /** Remark plugins of the extensions (parsing), built for the site's blocks and line effects. The parser and the public render chain both use them. */
 export const syntaxRemarkPlugins = (site: Site, extensions: readonly SyntaxExtension[]): PluggableList => {

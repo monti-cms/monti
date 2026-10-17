@@ -30,7 +30,7 @@ const fromMdx = (source: string): Doc => {
 	return body.doc;
 };
 
-/** The block extensions draw a stored document by themselves (`documentComponents` of each extension's render module), without compiling MDX. */
+/** The block extensions draw a stored document by themselves (the `defineRender` table of each extension's render module), without compiling MDX. */
 describe("block extension components of the JSON renderer", () => {
 	it("draws a callout from its stored attributes, and the title and body follow the language", async () => {
 		const callout = (attrs: Record<string, string>, content: Node[]): Node => ({ type: "callout", attrs, content });

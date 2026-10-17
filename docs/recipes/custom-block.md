@@ -10,7 +10,7 @@ The snippets below are a sketch to adapt, not tested code.
 2. **A plugin carries the block** and its two sides as lazy loaders: `blocks` (the definition), `admin` (the editor view, loaded only by the admin) and `render` (the public component, loaded only on the server). Neither reaches the other's bundle.
 3. **`validate(node, ctx)`** on the definition runs on the server in the write pipeline for every use of the block. Its findings are warnings: shown under the block, returned as `warnings`, never blocking.
 4. **The editor view** is a component registered in `blockViews` by block name. It takes no props: it reads and writes its block with `useBlockEditor()`, draws the editable body with `<Content />`, and wraps itself in `<BlockFrame>` (`@monti-cms/admin`).
-5. **The public component** is `documentComponents`, exported by the `render` module: the components by block name, with the attributes as flat props typed from the definition (`BlockProps<typeof noticeBlock>`).
+5. **The public component** goes in `defineRender({ blocks })`, the default export of the `render` module: the components by block name, with the attributes as flat props typed from the definition (`BlockProps<typeof noticeBlock>`) and `ctx` (the page's `locale`). Pass a render module to `admin`, or an admin module to `render`, and type checking stops it.
 
 ## A sketch
 
@@ -78,10 +78,10 @@ function NoticeView() {
 export default defineAdminPlugin({ components: { blockViews: { notice: NoticeView } } }); // by block name
 ```
 
-The public component, exported by the `render` module:
+The public component, in the `render` module's default export:
 
 ```tsx
-import type { BlockProps, LooseDocumentComponents } from "@monti-cms/core/render";
+import { type BlockProps, defineRender } from "@monti-cms/core/render";
 
 function Notice({ level, title, children }: BlockProps<typeof noticeBlock>) {
 	return (
@@ -92,7 +92,7 @@ function Notice({ level, title, children }: BlockProps<typeof noticeBlock>) {
 	);
 }
 
-export const documentComponents = (): LooseDocumentComponents => ({ blocks: { notice: Notice } });
+export default defineRender({ blocks: { notice: Notice } });
 ```
 
 In `monti.config.ts`, one line (and delete it to remove the block): `plugins: [notice()]`.

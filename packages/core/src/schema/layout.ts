@@ -1,5 +1,6 @@
 import { checkTabName } from "../config/check/fields";
 import { type ConfigIssue, IssueList, pathOf } from "../config/check/issue";
+import type { PluginContributions } from "../plugin/define";
 import type { CollectionSchema, LayoutGroup } from "./collection";
 import { findTitleField } from "./walk";
 
@@ -61,10 +62,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /** What the plugins place, read from their `contributes` (a plugin of the browser's snapshot has it as data). */
 export function placementsOf(
-	plugins: readonly { readonly name: string; readonly contributes?: Readonly<Record<string, unknown>> }[],
+	plugins: readonly { readonly name: string; readonly contributes?: PluginContributions }[],
 ): NamedPlacement[] {
 	return plugins.flatMap((plugin) => {
-		const placed = plugin.contributes?.[LAYOUT_CONTRIBUTION];
+		const placed: unknown = plugin.contributes?.[LAYOUT_CONTRIBUTION];
 		if (!Array.isArray(placed)) return [];
 		return placed
 			.filter(isRecord)
@@ -74,11 +75,11 @@ export function placementsOf(
 
 /** The problems of what plugins place: a tab name the panel can show, and role and view names that are text. */
 export function checkPlacements(
-	plugins: readonly { readonly name: string; readonly contributes?: Readonly<Record<string, unknown>> }[],
+	plugins: readonly { readonly name: string; readonly contributes?: PluginContributions }[],
 ): ConfigIssue[] {
 	const list = new IssueList();
 	for (const plugin of plugins) {
-		const placed = plugin.contributes?.[LAYOUT_CONTRIBUTION];
+		const placed: unknown = plugin.contributes?.[LAYOUT_CONTRIBUTION];
 		if (placed === undefined) continue;
 		const base = pathOf("plugins", plugin.name, "contributes", LAYOUT_CONTRIBUTION);
 		if (!Array.isArray(placed)) {
@@ -183,7 +184,7 @@ export function panelTabOf(
 /** The panel of the collections of one site: its plugins' placements applied to `schemaOf`. */
 export function createPanel(
 	schemas: { schemaOf(collection: string): CollectionSchema },
-	plugins: readonly { readonly name: string; readonly contributes?: Readonly<Record<string, unknown>> }[],
+	plugins: readonly { readonly name: string; readonly contributes?: PluginContributions }[],
 ) {
 	const placements = placementsOf(plugins);
 	return {

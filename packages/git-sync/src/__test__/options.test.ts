@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import config from "../../test/cms.config";
 import { gitSync } from "../index";
 import {
+	GIT_SYNC_PLUGIN,
 	type GitSyncOptions,
 	type GitSyncTarget,
 	resolveTarget,
@@ -175,7 +176,7 @@ describe("the plugin", () => {
 			...config,
 			plugins: [gitSync({ targets: [target()], client: (() => undefined) as never })],
 		});
-		expect(site.getPluginOptions("git-sync")).toMatchObject({ targets: [{ repo: "acme/site" }] });
+		expect(site.pluginOptions(GIT_SYNC_PLUGIN)).toMatchObject({ targets: [{ repo: "acme/site" }] });
 		const snapshot = site.snapshot().plugins?.find((plugin) => plugin.name === "git-sync");
 		expect(JSON.stringify(snapshot)).not.toContain("client");
 	});

@@ -1,4 +1,4 @@
-import type { CmsConfig, CollectionsConfig, Plugin, PluginNamed } from "@monti-cms/core";
+import type { CmsConfig, CollectionsConfig, Plugin, PluginId, PluginNamed } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
 import type {
 	AiActionDefinition,
@@ -39,7 +39,10 @@ type ContributedActions<Config extends CmsConfig> = UnionToIntersection<
 		? P extends { readonly contributes?: { readonly ai?: { readonly actions?: infer A } } }
 			? unknown extends A
 				? never
-				: A
+				: // A plugin that adds no actions of its own has the open `PluginContributions` type: it names no action.
+					string extends keyof A
+					? never
+					: A
 			: never
 		: never
 >;
@@ -99,8 +102,10 @@ export const aiSiteViewOf = (site: Site): Omit<AiSiteView, "snippetKeys"> => ({
 	createTranslator: site.createTranslator,
 });
 
+const AI_PLUGIN: PluginId<typeof AI_PLUGIN_NAME, AiConfig> = { name: AI_PLUGIN_NAME };
+
 function createRegistry(site: Site): AiRegistry {
-	const aiConfig = site.getPluginOptions<AiConfig>(AI_PLUGIN_NAME);
+	const aiConfig = site.pluginOptions(AI_PLUGIN);
 	// Functions of the config (factories, checks) reach a site made from the browser snapshot as nothing: an action that only a function defines is missing there, and a
 	// definition keeps its data (attach points, inputs, labels, check names). The server resolves from the real config.
 	const actions: Readonly<Record<string, AiActionDefinition>> = aiConfig

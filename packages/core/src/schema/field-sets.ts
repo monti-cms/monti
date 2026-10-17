@@ -1,3 +1,5 @@
+import type { PluginContributions } from "../plugin/define";
+
 /**
  * Field sets that plugins offer: a group of fields a plugin works with (the SEO extension's search title, description, share image, ...). The
  * schema screen shows one as an "Add <name> fields" action on the Fields tab and writes the fields into the collection as plain data, so the
@@ -30,10 +32,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /** The field sets the plugins offer, read from their `contributes` (a plugin of the browser's snapshot has it as data). */
 export function fieldSetsOf(
-	plugins: readonly { readonly name: string; readonly contributes?: Readonly<Record<string, unknown>> }[],
+	plugins: readonly { readonly name: string; readonly contributes?: PluginContributions }[],
 ): NamedFieldSet[] {
 	return plugins.flatMap((plugin) => {
-		const offered = plugin.contributes?.[FIELD_SETS_CONTRIBUTION];
+		const offered: unknown = plugin.contributes?.[FIELD_SETS_CONTRIBUTION];
 		if (!Array.isArray(offered)) return [];
 		return offered
 			.filter(

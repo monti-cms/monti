@@ -1,4 +1,4 @@
-import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
+import { type BlockProps, defineRender } from "@monti-cms/core/render";
 import { Children, type CSSProperties, isValidElement, type PropsWithChildren } from "react";
 import type { columnBlock, columnsBlock } from "./definition";
 import { columnsGridTemplate, parseColumnWidths } from "./layout";
@@ -20,7 +20,7 @@ export function Column({ children }: PropsWithChildren) {
 }
 
 /** Public components for columns in the JSON renderer (`renderDocument`): the blocks `columns` and `column`. The columns are counted from the stored `column` nodes. */
-export const documentComponents = (_context: DocumentComponentsContext): LooseDocumentComponents => ({
+export default defineRender({
 	blocks: {
 		columns: ({ widths, items, children }: BlockProps<typeof columnsBlock>) => (
 			<Columns widths={widths} count={items.filter((item) => item.node.type === "column").length}>

@@ -1,5 +1,4 @@
-import type { BlockProps, DocumentComponentsContext, LooseDocumentComponents } from "@monti-cms/core/render";
-import { readCodeBlock } from "@monti-cms/core/render";
+import { type BlockProps, defineRender, readCodeBlock } from "@monti-cms/core/render";
 import { Children, Fragment, isValidElement, type PropsWithChildren, type ReactNode } from "react";
 import { type BlockLabels, blockLabels } from "../shared/labels";
 import type { codeExplorerBlock } from "./definition";
@@ -91,18 +90,15 @@ const fileOf = (node: BlockProps<typeof codeExplorerBlock>["items"][number]["nod
 };
 
 /** Public components for the code explorer in the JSON renderer (`renderDocument`): the block `code-explorer`, reading its files from the stored code blocks. */
-export const documentComponents = ({ locale }: DocumentComponentsContext): LooseDocumentComponents => {
-	const labels = blockLabels(locale);
-	return {
-		blocks: {
-			"code-explorer": ({ open, items }: BlockProps<typeof codeExplorerBlock>) => (
-				<Explorer
-					open={open}
-					labels={labels}
-					files={items.map((item) => fileOf(item.node))}
-					items={items.map((item, index) => <Fragment key={item.node.id ?? index}>{item.element}</Fragment>)}
-				/>
-			),
-		},
-	};
-};
+export default defineRender({
+	blocks: {
+		"code-explorer": ({ open, items, ctx }: BlockProps<typeof codeExplorerBlock>) => (
+			<Explorer
+				open={open}
+				labels={blockLabels(ctx.locale)}
+				files={items.map((item) => fileOf(item.node))}
+				items={items.map((item, index) => <Fragment key={item.node.id ?? index}>{item.element}</Fragment>)}
+			/>
+		),
+	},
+});

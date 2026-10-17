@@ -5,13 +5,12 @@ import { readStoredDocument, type StoredDocument } from "../../doc/stored-docume
 import type { CmsNode } from "../../doc/types";
 import type { Site } from "../../site";
 import { DEFAULT_LABELS } from "../labels";
-import { renderModules } from "../plugin-render";
+import { renderPlugins } from "../plugin-render";
 import { analyzeDocument, DEFAULT_TOC_RANGE, tocOf } from "./analyze";
 import { type HighlightedCode, highlightCodeBlock, highlighterFor, readCodeBlock } from "./code";
 import { defaultDocumentComponents } from "./defaults";
 import { type ResolvedComponents, renderDocumentTree } from "./render";
 import type {
-	DocumentComponentsContext,
 	DocumentTocItem,
 	LooseDocumentComponents,
 	RenderDocumentOptions,
@@ -28,7 +27,7 @@ import type {
  *
  * It never throws on content. An unknown node, mark or block, a block without a component and a node with malformed attributes go through the
  * `fallback` component and are listed in `unknown` (`strict: true` throws instead, for tests and the preview page). Components are layered core defaults →
- * block extensions (`documentComponents` of a plugin's render module) → the site's `components`.
+ * block extensions (the `defineRender` table of a plugin's render module) → the site's `components`.
  */
 
 const LAYERED = ["marks", "blocks", "codeTags"] as const;
@@ -55,14 +54,7 @@ const resolveComponents = async (
 	options: RenderDocumentOptions,
 	showFoldedCode: string,
 ): Promise<ResolvedComponents> => {
-	const context: DocumentComponentsContext = { locale: options.locale, imageResolver: options.imageResolver };
-	const fromPlugins = await Promise.all(
-		(await renderModules(options.site)).map(async (module) =>
-			typeof module.documentComponents === "function"
-				? ((await module.documentComponents(context)) as LooseDocumentComponents)
-				: undefined,
-		),
-	);
+	const fromPlugins = await renderPlugins(options.site);
 	return mergeDocumentComponents(
 		defaultDocumentComponents(showFoldedCode),
 		...fromPlugins,
@@ -214,7 +206,6 @@ export type {
 	CoreDocumentComponents,
 	CoreMarkComponents,
 	DocumentComponents,
-	DocumentComponentsContext,
 	DocumentComponentsFor,
 	DocumentComponentsOf,
 	DocumentTocItem,

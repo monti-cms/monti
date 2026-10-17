@@ -1,8 +1,12 @@
+import type { AiContribution } from "../ai-contract";
 import type { BlockDefinition } from "../blocks/define";
 import type { ConfigIssue } from "../config/check/issue";
 import type { CollectionsConfig } from "../config/define";
 import type { CmsFormat } from "../format/types";
 import type { RouteAccess } from "../http/v1/handler";
+import type { RenderPlugin } from "../render/plugin-render";
+import type { PluginFieldSet } from "../schema/field-sets";
+import type { PluginPlacement } from "../schema/layout";
 import type { PluginScope, WriteHooks } from "../services/hooks";
 import type { Site } from "../site";
 
@@ -44,19 +48,52 @@ export interface Plugin<
 	readonly checkConfig?: (config: PluginConfigView) => readonly ConfigIssue[] | void;
 	/** Server side. Inline for a plugin that only needs hooks (it loads with every server start, so keep it light), or a loader for routes, commands and heavy code. */
 	readonly server?: ServerPluginSource;
-	/** Admin UI side (pages, providers). The default export is the admin package's `AdminPlugin`. */
-	readonly admin?: () => Promise<{ readonly default: unknown }>;
+	/** Admin UI side (pages, block views, slots, providers): a loader of a module whose default export is `defineAdminPlugin({ ... })` (`@monti-cms/admin`). */
+	readonly admin?: () => Promise<{ readonly default: AdminPluginShape }>;
 	/**
-	 * Public UI side (public components for body blocks). The module's named export `documentComponents` is `(context) => component table` of the document renderer
-	 * (`renderDocument`: `blocks` and `marks` by block name, `codeTags`). `@monti-cms/core/render` calls it (`context`: site locale, image resolver). It is read on
-	 * the server; the module marks client components with `"use client"`.
+	 * Public UI side (the components of its body blocks): a loader of a module whose default export is `defineRender({ blocks, marks, codeTags })`
+	 * (`@monti-cms/core/render`). It is read on the server, by the document renderer; the module marks client components with `"use client"`.
 	 */
-	readonly render?: () => Promise<{ readonly documentComponents?: unknown }>;
+	readonly render?: () => Promise<{ readonly default: RenderPlugin }>;
 	/**
-	 * What this plugin adds to other plugins. The key is a name chosen by the receiving side (e.g. the AI plugin reads `ai: { actions }`). The core reads one key itself, `layout`: the tabs of the edit screen's properties panel this plugin places its fields in (see `PluginPlacement`).
-	 * It is unused if no plugin receives it, so an extension can add features without knowing the receiving plugin.
+	 * What this plugin adds to other plugins, by the key the receiving side reads (see {@link PluginContributions}): `ai` (actions of the AI plugin), `layout` (the
+	 * tabs of the edit screen's properties panel this plugin places its fields in) and `fieldSets` (field sets the schema screen offers). Unused if no plugin receives it.
 	 */
-	readonly contributes?: Readonly<Record<string, unknown>>;
+	readonly contributes?: PluginContributions;
+}
+
+/**
+ * What a plugin can add to other plugins (`contributes`), by key. The core reads `layout` and `fieldSets`, and the AI plugin reads `ai`. A plugin that receives
+ * something of its own adds its key to this interface, so the plugins that give it are checked:
+ *
+ * ```ts
+ * declare module "@monti-cms/core" {
+ *   interface PluginContributions {
+ *     readonly search?: { readonly fields: readonly string[] };
+ *   }
+ * }
+ * ```
+ *
+ * Values that are data reach the browser's snapshot; functions stay on the server.
+ */
+export interface PluginContributions {
+	/** AI actions this plugin adds (read by `@monti-cms/ai`). */
+	readonly ai?: AiContribution;
+	/** Where this plugin places its fields in the properties panel. */
+	readonly layout?: readonly PluginPlacement[];
+	/** Field sets the schema screen offers to add to a collection. */
+	readonly fieldSets?: readonly PluginFieldSet[];
+}
+
+/**
+ * What the core knows of a plugin's admin side: the parts `defineAdminPlugin` (`@monti-cms/admin`) declares, with the values the admin reads left open. It
+ * keeps a module of another kind (a render module, a server module) out of `admin`.
+ */
+export interface AdminPluginShape {
+	readonly pages?: Readonly<Record<string, unknown>>;
+	readonly components?: unknown;
+	readonly slots?: readonly unknown[];
+	readonly Provider?: unknown;
 }
 
 /** One API key a plugin needs. */
@@ -201,7 +238,7 @@ export function definePlugin<
 	const Name extends string,
 	Options = Record<string, never>,
 	const Blocks extends readonly BlockDefinition[] = readonly BlockDefinition[],
-	const Contributes extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>,
+	const Contributes extends PluginContributions = PluginContributions,
 >(
 	plugin: Omit<Plugin<Name, Options, Blocks>, "options"> & {
 		/** Config values both sides read. Optional: a plugin without any (a hook-only plugin) has `{}`. */
@@ -211,6 +248,18 @@ export function definePlugin<
 ): Plugin<Name, Options, Blocks> & { readonly contributes?: Contributes } {
 	if (!/^[a-z][a-z0-9-]*$/.test(plugin.name)) throw new Error(`cms plugin: invalid name "${plugin.name}"`);
 	return { ...plugin, options: plugin.options ?? ({} as Options) };
+}
+
+declare const pluginOptionsType: unique symbol;
+
+/**
+ * A plugin's name with the type of its options, for reading them from a site: `site.pluginOptions(GIT_SYNC_PLUGIN)` is `GitSyncOptions | undefined`. A plugin
+ * package declares it once, next to its options type: `export const GIT_SYNC_PLUGIN: PluginId<"git-sync", GitSyncOptions> = { name: "git-sync" };`.
+ */
+export interface PluginId<Name extends string = string, Options = unknown> {
+	readonly name: Name;
+	/** Type only: carries the options' type, and is never set. */
+	readonly [pluginOptionsType]?: Options;
 }
 
 /** The type of a plugin picked by name from the site config's plugin list. */

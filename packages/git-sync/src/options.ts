@@ -1,4 +1,4 @@
-import type { PluginConfigView } from "@monti-cms/core";
+import type { PluginConfigView, PluginId } from "@monti-cms/core";
 import { pluginError } from "@monti-cms/core/server";
 import type { GitHubClientFactory } from "./github/client";
 import { GIT_SYNC_PLUGIN_NAME } from "./name";
@@ -57,6 +57,9 @@ export interface GitSyncTarget {
 	/** REST API root of GitHub Enterprise Server (`https://git.example.com/api/v3`). Default: github.com. */
 	readonly apiUrl?: string;
 }
+
+/** The plugin with the type of its options (`site.pluginOptions(GIT_SYNC_PLUGIN)`). */
+export const GIT_SYNC_PLUGIN: PluginId<typeof GIT_SYNC_PLUGIN_NAME, GitSyncOptions> = { name: GIT_SYNC_PLUGIN_NAME };
 
 export interface GitSyncOptions {
 	/**
