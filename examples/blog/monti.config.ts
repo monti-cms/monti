@@ -47,6 +47,8 @@ export const cms = defineConfig({
 		// The AI screen and buttons render without an API key (running an action needs a connection saved on the admin AI screen). The style guide is appended to the polish and draft instructions.
 		ai({
 			siteDescription: "A personal tech blog",
+			// An image dropped into a post gets its alt text and caption written by the AI (once a connection is saved); what you type first is kept.
+			autoImageText: true,
 			snippets: {
 				styleGuide: {
 					label: "Style guide",

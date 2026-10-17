@@ -1,6 +1,7 @@
 import type { Site } from "@monti-cms/core/site";
 import type { ComponentType, ReactNode } from "react";
 import type { AdminComponents } from "./admin-components";
+import type { AdminEvents } from "./events";
 import type { SlotSource } from "./slots/registry";
 
 /**
@@ -27,6 +28,12 @@ export interface AdminPlugin {
 	 * declare `components` and `slots` and need none.
 	 */
 	readonly Provider?: ComponentType<{ readonly children: ReactNode }>;
+	/**
+	 * What the plugin reacts to in the admin, by target and event: `on: { editor: { imageInserted: [fillAltText] } }` (see `AdminEvents`). The same shape
+	 * as `on` of the server side. Give a function of the site when the subscribers depend on the site config (an option that turns them on). The
+	 * subscribers, and that function, are client functions, so give them from a `"use client"` module.
+	 */
+	readonly on?: AdminEvents | ((site: Site) => AdminEvents);
 }
 
 /** Declares the admin side of a plugin. It returns what it is given, typed. */

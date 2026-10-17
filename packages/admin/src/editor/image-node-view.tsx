@@ -3,7 +3,7 @@
 import { computeImageTransform, resolveImageUrl } from "@monti-cms/core/document";
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery } from "@tanstack/react-query";
-import { AlignCenter, AlignLeft, AlignRight, Crop } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Crop, Loader2 } from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import { getMedia, mediaKeys } from "../api/media";
@@ -20,6 +20,7 @@ import { BlockSettings, BlockSettingsField, ContainerToolbar, ToolbarButton } fr
 import { BlockFrame, useBlockEditor } from "./blocks/use-block-editor";
 import { ImageCropDialog } from "./image-crop-dialog";
 import { altRequiredMessage } from "./image-insert-dialog";
+import { useImageGenerating } from "./image-inserted";
 import { editorMessages } from "./messages";
 
 /** Width input: 1 to 100%, or a positive integer px of at most 4096. Empty means fit to the body. */
@@ -90,6 +91,8 @@ export function ImageBlockView() {
 		};
 	}, []);
 	const isEditable = block.editable;
+	/** `editor.imageInserted` subscribers are still filling in this image's text. */
+	const generating = useImageGenerating(block.id);
 	/** Body image slot (alt, caption). The server reads media library images and images at this site's addresses (`/images/...`). */
 	const siteSrc = src.startsWith("/") && !src.startsWith("//") ? src : undefined;
 	const imageSlot = (target: "alt" | "caption"): SlotRequest => ({
@@ -169,6 +172,12 @@ export function ImageBlockView() {
 			center: "text-center",
 			right: "text-right",
 		}[align as "left" | "center" | "right"] || "text-center";
+	const captionJustifyClass =
+		{
+			left: "justify-start",
+			center: "justify-center",
+			right: "justify-end",
+		}[align as "left" | "center" | "right"] || "justify-center";
 
 	// Resize width by dragging a corner (bottom left/right) handle
 	const handleResizeStart = (e: React.PointerEvent, handle: "left" | "right") => {
@@ -371,18 +380,32 @@ export function ImageBlockView() {
 
 			{/* Caption Input / Display */}
 			<figcaption className={cn("mt-2 flex items-center gap-1", captionAlignClass)}>
-				<Input
-					type="text"
-					value={caption || ""}
-					placeholder={t("imageDialog.caption")}
-					aria-label={t("imageNode.caption")}
-					readOnly={!isEditable}
-					onChange={(e) => block.setValues({ caption: e.target.value })}
-					className={cn(
-						"h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-0 py-0 text-cms-muted-foreground text-xs shadow-none placeholder:text-cms-muted-foreground/50 focus-visible:ring-0 md:text-xs",
-						captionAlignClass,
+				{/* While the text is being written, the empty caption's place says so. The field stays editable, and what is typed there is kept. */}
+				<div className="relative w-full">
+					<Input
+						type="text"
+						value={caption || ""}
+						placeholder={generating && !caption ? "" : t("imageDialog.caption")}
+						aria-label={t("imageNode.caption")}
+						readOnly={!isEditable}
+						onChange={(e) => block.setValues({ caption: e.target.value })}
+						className={cn(
+							"h-auto w-full rounded-none border-0 bg-transparent cms-dark:bg-transparent px-0 py-0 text-cms-muted-foreground text-xs shadow-none placeholder:text-cms-muted-foreground/50 focus-visible:ring-0 md:text-xs",
+							captionAlignClass,
+						)}
+					/>
+					{generating && (
+						<output
+							className={cn(
+								"pointer-events-none absolute inset-0 flex items-center gap-1.5 text-cms-muted-foreground/70 text-xs",
+								caption ? "sr-only" : captionJustifyClass,
+							)}
+						>
+							<Loader2 aria-hidden className="size-3 shrink-0 animate-spin" />
+							{t("imageNode.generating")}
+						</output>
 					)}
-				/>
+				</div>
 				{isEditable && captionSlot.trigger}
 			</figcaption>
 			{captionSlot.panel && <div className="mt-1 text-left">{captionSlot.panel}</div>}

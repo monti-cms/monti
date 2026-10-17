@@ -95,6 +95,7 @@ export interface AdminPluginShape {
 	readonly components?: unknown;
 	readonly slots?: readonly unknown[];
 	readonly Provider?: unknown;
+	readonly on?: unknown;
 }
 
 /** One API key a plugin needs. */

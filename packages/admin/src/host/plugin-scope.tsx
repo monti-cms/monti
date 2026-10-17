@@ -3,20 +3,23 @@
 import { useSite } from "@monti-cms/core/site";
 import { type ReactNode, useMemo } from "react";
 import { AdminComponentsProvider } from "../admin-components";
+import { AdminEventsProvider } from "../events";
 import type { LoadedAdminPlugin } from "../internal-plugins";
 import type { AdminPlugin } from "../plugins";
 import { SlotRegistryProvider } from "../slots/registry";
 
-/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components` and its `slots`. */
+/** Applies one plugin's declaration around the admin: its `Provider` outside, then its `components`, its `on` and its `slots`. */
 function PluginLayer({ plugin, children }: { readonly plugin: AdminPlugin; readonly children: ReactNode }) {
 	const site = useSite();
-	const { components, slots, Provider } = plugin;
+	const { components, slots, Provider, on } = plugin;
 	const resolved = useMemo(
 		() => (typeof components === "function" ? components(site) : components),
 		[components, site],
 	);
+	const events = useMemo(() => (typeof on === "function" ? on(site) : on), [on, site]);
 	let inner = children;
 	if (slots && slots.length > 0) inner = <SlotRegistryProvider sources={slots}>{inner}</SlotRegistryProvider>;
+	if (events) inner = <AdminEventsProvider on={events}>{inner}</AdminEventsProvider>;
 	if (resolved) inner = <AdminComponentsProvider components={resolved}>{inner}</AdminComponentsProvider>;
 	return Provider ? <Provider>{inner}</Provider> : inner;
 }

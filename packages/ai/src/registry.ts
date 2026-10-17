@@ -1,16 +1,8 @@
-import type { CmsConfig, CollectionsConfig, Plugin, PluginId, PluginNamed } from "@monti-cms/core";
+import type { CmsConfig, CollectionsConfig, Plugin, PluginNamed } from "@monti-cms/core";
 import type { Site } from "@monti-cms/core/site";
-import type {
-	AiActionDefinition,
-	AiActionInput,
-	AiActionResult,
-	AiAttach,
-	AiConfig,
-	AiSiteView,
-	AiSnippet,
-} from "./action";
+import type { AiActionDefinition, AiActionInput, AiActionResult, AiAttach, AiSiteView, AiSnippet } from "./action";
 import type { AiSlot } from "./definition";
-import { AI_PLUGIN_NAME } from "./name";
+import { AI_PLUGIN, type AI_PLUGIN_NAME } from "./name";
 import type { DEFAULT_AI_ACTIONS } from "./presets";
 import { resolveAiActions } from "./resolve";
 
@@ -101,8 +93,6 @@ export const aiSiteViewOf = (site: Site): Omit<AiSiteView, "snippetKeys"> => ({
 	locales: site.config.locales,
 	createTranslator: site.createTranslator,
 });
-
-const AI_PLUGIN: PluginId<typeof AI_PLUGIN_NAME, AiConfig> = { name: AI_PLUGIN_NAME };
 
 function createRegistry(site: Site): AiRegistry {
 	const aiConfig = site.pluginOptions(AI_PLUGIN);
