@@ -1,5 +1,4 @@
-import { adminFetch } from "@monti-cms/admin";
-import type { Site } from "@monti-cms/core/site";
+import { adminFetch, type Site } from "@monti-cms/admin";
 
 /** The shapes of the plugin's API responses, as the screen reads them (dates arrive as ISO strings). */
 export interface PullSummaryView {

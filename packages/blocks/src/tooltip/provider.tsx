@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminComponents } from "@monti-cms/admin";
+import { type AdminComponents, type Site, type Translator, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
 	allowsMark,
@@ -13,7 +13,6 @@ import {
 	MarkTextPopover,
 	removeInlineMark,
 } from "@monti-cms/admin/editor";
-import { type Site, type Translator, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { MessageSquareMore, Pencil, X } from "lucide-react";
 import { keywordList } from "../shared/text";

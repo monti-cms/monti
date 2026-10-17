@@ -1,6 +1,6 @@
 "use client";
 
-import { errorText, useCmsMutation } from "@monti-cms/admin";
+import { errorText, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	type ApiKeyChoice,
 	ApiKeyField,
@@ -23,7 +23,6 @@ import {
 	useDebounced,
 	useDraftEditor,
 } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plug, PlugZap, Plus, Save } from "lucide-react";
 import { useId, useState } from "react";

@@ -1,5 +1,5 @@
+import { type Translator, useTranslator } from "@monti-cms/admin";
 import { defineMessages, type MessageBundle } from "@monti-cms/core";
-import { type Translator, useTranslator } from "@monti-cms/core/site";
 import { useMemo } from "react";
 import type { AiProviderKind } from "../connection";
 import type { AiCheckKind, AiEngine, AiResult, AiSlot } from "../definition";

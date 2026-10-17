@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminComponents } from "@monti-cms/admin";
+import { type AdminComponents, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	addedMarkName,
 	allowsMark,
@@ -13,7 +13,6 @@ import {
 	unlinkRef,
 } from "@monti-cms/admin/editor";
 import { cn } from "@monti-cms/admin/kit";
-import { useSite, useTranslator } from "@monti-cms/core/site";
 import type { Editor } from "@tiptap/core";
 import { Code2, Unlink } from "lucide-react";
 import { codeRefBlock } from "./definition";

@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { BLOCK_TOOLBAR } from "./block-model";
 import { blocksMessages } from "./messages";
 
-export { BLOCK_TOOLBAR, SELECTED_RING, useEditorEditable } from "./block-model";
+export { BLOCK_TOOLBAR, useEditorEditable } from "./block-model";
 
 /**
  * Input field for attributes (title, tab name). During Korean composition it does not write to the document, and writes when composition ends.

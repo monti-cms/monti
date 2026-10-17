@@ -58,7 +58,7 @@ const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof callo
 <CmsContent cms={cms} entry={entry} components={{ blocks: { callout: PublicSiteCallout } }} />;
 ```
 
-관리자 편집기에서는 블록 뷰가 같은 컴포넌트로 편집 가능한 본문을 감싼다(`plugins/site-callout/`, `monti.config.ts`에 `siteCallout()` 한 줄, `plugins/word-list/`와 같은 방식으로 등록). `useBlockEditor()`, `BlockFrame`, `Content`는 `@monti-cms/admin`에서, `AttributeInput`과 `ContainerToolbar`는 `@monti-cms/admin/blocks`에서 가져온다.
+관리자 편집기에서는 블록 뷰가 같은 컴포넌트로 편집 가능한 본문을 감싼다(`plugins/site-callout/`, `monti.config.ts`에 `siteCallout()` 한 줄, `plugins/word-list/`와 같은 방식으로 등록). `useBlockEditor()`, `BlockFrame`, `Content`, `AttributeInput`, `ContainerToolbar`를 모두 `@monti-cms/admin`에서 가져온다.
 
 ```tsx
 function SiteCalloutView() {

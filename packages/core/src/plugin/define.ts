@@ -13,15 +13,13 @@ import type { Site } from "../site";
 /** A label shown in the admin: plain text, or a function of the site that follows the admin language (`(site) => site.createTranslator(messages)("label")`). */
 export type PluginLabel = string | ((site: Pick<Site, "createTranslator">) => string);
 
-/** The server side of a plugin: given inline, or as a loader of a module whose default export it is (read only when used). */
-export type ServerPluginSource = ServerPlugin | (() => Promise<{ readonly default: ServerPlugin }>);
-
 /**
  * Plugin. Listed once in `plugins` of the site config (`cms.config.ts`). Its parts are grouped by who reads them:
  *
  * - **Both sides** read `options`, `blocks`, `nav`, `keySlots`, `checkConfig` and `contributes`. Apart from functions, only JSON values go here.
- * - **The server** reads `server`: routes, hooks, formats, commands, migrations, feature flags and the labels of key uses, inline or as a loader (`() => import("my-plugin/server")`).
- *   A loader is read only when used, and the plugin package provides an empty browser entry point (the `browser` condition of `exports`) so server code stays out of the browser bundle.
+ * - **The server** reads `server`: routes, hooks, formats, commands, migrations, feature flags and the labels of key uses, always as a loader of a module of their own
+ *   (`server: () => import("./server")`). The factory module can reach the browser bundle, so server code never sits in it: only the module behind the loader holds it,
+ *   and a plugin package gives that module an empty browser entry point (the `browser` condition of `exports`).
  * - **The admin UI** reads `admin` (a loader), and **the public page** reads `render` (a loader).
  *
  * Every concept has one place: hooks only in `server`, API key slots only in `keySlots`.
@@ -46,8 +44,11 @@ export interface Plugin<
 	/** Validation called when the site config is created. Returns the issues it finds (a path into the config and a message each); `defineSite` reports them with every other problem. */
 	// biome-ignore lint/suspicious/noConfusingVoidType: a plugin with nothing to report returns nothing
 	readonly checkConfig?: (config: PluginConfigView) => readonly ConfigIssue[] | void;
-	/** Server side. Inline for a plugin that only needs hooks (it loads with every server start, so keep it light), or a loader for routes, commands and heavy code. */
-	readonly server?: ServerPluginSource;
+	/**
+	 * Server side: a loader of a module whose default export is `defineServerPlugin({ routes, hooks, formats, ... })` (`@monti-cms/core/server`), written
+	 * `server: () => import("./server")`. Read on the server only, when first needed. There is no inline form: whatever the factory module holds can end up in the browser.
+	 */
+	readonly server?: () => Promise<{ readonly default: ServerPlugin }>;
 	/** Admin UI side (pages, block views, slots, providers): a loader of a module whose default export is `defineAdminPlugin({ ... })` (`@monti-cms/admin`). */
 	readonly admin?: () => Promise<{ readonly default: AdminPluginShape }>;
 	/**
@@ -194,9 +195,12 @@ export interface ServerPlugin {
 	readonly hooks?: WriteHooks<PluginScope>;
 	/**
 	 * Formats this plugin adds (`@monti-cms/core/format`): notations the stored document can be written as and read from, picked with the `format` option of
-	 * the read and write APIs. Called when the instance first needs its formats; two formats with one name (a plugin's and a built-in one included) fail there.
+	 * the read and write APIs. Called with the plugin's scope when the instance first needs its formats (a format that depends on the plugin's options reads them with
+	 * `cms.site.pluginOptions(...)`); two formats with one name (a plugin's and a built-in one included) fail there.
 	 */
-	readonly formats?: () => Promise<CmsFormat | readonly CmsFormat[]> | CmsFormat | readonly CmsFormat[];
+	readonly formats?: (
+		scope: PluginScope,
+	) => Promise<CmsFormat | readonly CmsFormat[]> | CmsFormat | readonly CmsFormat[];
 	/**
 	 * Command line commands of this plugin: `monti <plugin name>:<command>` loads the app (like `monti db:migrate`), runs the command with the instance and
 	 * exits with the code it returns (0 when it returns nothing). The key is the command name after the colon (lowercase letters, digits and `-`).

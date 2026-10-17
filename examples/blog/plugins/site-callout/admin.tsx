@@ -1,7 +1,13 @@
 "use client";
 
-import { BlockFrame, Content, defineAdminPlugin, useBlockEditor } from "@monti-cms/admin";
-import { AttributeInput, ContainerToolbar } from "@monti-cms/admin/blocks";
+import {
+	AttributeInput,
+	BlockFrame,
+	ContainerToolbar,
+	Content,
+	defineAdminPlugin,
+	useBlockEditor,
+} from "@monti-cms/admin";
 import { SiteCallout } from "../../components/callout";
 
 const VARIANTS = ["note", "tip", "info", "warning", "danger"] as const;

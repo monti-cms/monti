@@ -1,6 +1,15 @@
 "use client";
 
-import { type BrowserFormat, SOURCE_ERROR_ID, type SourcePanelProps, useFormat, useLinkPaths } from "@monti-cms/admin";
+import {
+	type BrowserFormat,
+	type Site,
+	SOURCE_ERROR_ID,
+	type SourcePanelProps,
+	useFormat,
+	useLinkPaths,
+	useSite,
+	useTranslator,
+} from "@monti-cms/admin";
 import {
 	assignBlockIds,
 	entryLinkIds,
@@ -10,7 +19,6 @@ import {
 	type StoredDocument,
 	unparsedDocument,
 } from "@monti-cms/core/document";
-import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createMdxBrowserFormat } from "./format";
 import { MdxSourceEditor } from "./mdx-source-editor";

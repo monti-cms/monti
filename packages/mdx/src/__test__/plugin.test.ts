@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { createSite } from "@monti-cms/core/site";
+import { serverSideOf } from "@monti-cms/core/testing";
 import { describe, expect, it } from "vitest";
-import { testSite } from "../../../core/test/site";
+import { testConfig, testSite } from "../../../core/test/site";
 import "../format";
 import { checkMdxOptions, MDX_PLUGIN_NAME, mdx } from "../plugin";
 import type { SyntaxExtension } from "../syntax";
@@ -29,10 +31,10 @@ describe("mdx()", () => {
 		expect(plugin.options).toEqual({});
 	});
 
-	it("provides its admin side and its formats lazily", () => {
+	it("provides its admin side and its server side (the formats) lazily", async () => {
 		const plugin = mdx();
 		expect(typeof plugin.admin).toBe("function");
-		expect(typeof (plugin.server as { formats?: unknown }).formats).toBe("function");
+		expect(typeof (await serverSideOf(plugin))?.formats).toBe("function");
 	});
 
 	describe("validation", () => {
@@ -63,8 +65,12 @@ describe("mdx()", () => {
 	});
 
 	describe("formats", () => {
+		// The server side reads the options the site gave to `mdx()`, so the format is made for a site that lists the plugin.
 		const formatOf = async (options?: Parameters<typeof mdx>[0]) => {
-			const provided = await (mdx(options).server as { formats(): Promise<unknown> }).formats();
+			const plugin = mdx(options);
+			const site = createSite({ ...testConfig, plugins: [plugin] });
+			const server = await serverSideOf(plugin);
+			const provided = await server?.formats?.({ cms: { site }, plugin: {} } as never);
 			if (!provided || Array.isArray(provided)) throw new Error("expected one format");
 			return provided as import("@monti-cms/core/format").CmsFormat;
 		};

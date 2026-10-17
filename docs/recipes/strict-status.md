@@ -4,7 +4,7 @@ Goal: a post address that does not exist answers a real `404`, and the old addre
 
 You only need this if you care about the status code, and only with `cacheComponents: true`. Most blogs do not need it.
 
-The snippets below are a sketch to adapt, not tested code.
+The code below is the recipe's own files in [`src/site/`](src/site/), type checked in CI.
 
 ## What you need to know
 
@@ -13,14 +13,17 @@ The snippets below are a sketch to adapt, not tested code.
 3. **A proxy answers before any page runs**, so it can send the real status. Next's docs recommend it for this.
 4. **The decision is one small function** that takes a path and asks `cms.read.getEntry`, which answers `found`, `redirect` (an old address) or `not_found`. The proxy only turns the answer into a response.
 
-## A sketch
+## The code
 
 The decision, as a function:
 
+<!-- src/site/strict-status.ts -->
 ```ts
+import type { BlogCms } from "./monti.config";
+
 type StatusAnswer = { status: 404 } | { status: 308; location: string };
 
-async function strictStatus(cms: BlogCms, pathname: string): Promise<StatusAnswer | undefined> {
+export async function strictStatus(cms: BlogCms, pathname: string): Promise<StatusAnswer | undefined> {
 	for (const locale of cms.site.LOCALES) {
 		const base = `${cms.site.localizePath(locale, "/posts")}/`;
 		if (!pathname.startsWith(base)) continue;
@@ -43,9 +46,11 @@ async function strictStatus(cms: BlogCms, pathname: string): Promise<StatusAnswe
 
 The `proxy.ts` of your app (next to `app/`, or in `src/`):
 
+<!-- src/site/proxy.ts -->
 ```ts
 import { type NextRequest, NextResponse } from "next/server";
 import { cms } from "./monti.config";
+import { strictStatus } from "./strict-status";
 
 export async function proxy(request: NextRequest) {
 	const answer = await strictStatus(cms, request.nextUrl.pathname);

@@ -137,7 +137,7 @@ describe("inline server", () => {
 		const check = { validate: [() => undefined] };
 		const plugins = serverPlugins(
 			[
-				{ name: "inline", server: { hooks: check } },
+				{ name: "inline", server: async () => ({ default: { hooks: check } }) },
 				{ name: "lazy", server: async () => ({ default: { hooks: check } }) },
 			],
 			check,
@@ -153,7 +153,9 @@ describe("inline server", () => {
 		const plugins = serverPlugins([
 			{
 				name: "both",
-				server: { hooks: { validate: [() => undefined] }, features: async () => ({ ready: true }) },
+				server: async () => ({
+					default: { hooks: { validate: [() => undefined] }, features: async () => ({ ready: true }) },
+				}),
 			},
 		]);
 		expect(await plugins.features()).toEqual({ both: { ready: true } });
@@ -172,7 +174,7 @@ describe("eventSubscribers", () => {
 					server: async () => ({ default: { hooks: { afterCommit: [subscriber("index"), subscriber("notify")] } } }),
 				},
 				{ name: "no-after-commit", server: async () => ({ default: { hooks: { validate: [() => undefined] } } }) },
-				{ name: "b", server: { hooks: { afterCommit: [subscriber("sync")] } } },
+				{ name: "b", server: async () => ({ default: { hooks: { afterCommit: [subscriber("sync")] } } }) },
 			],
 			{ afterCommit: [subscriber("revalidate")] },
 		);
@@ -197,7 +199,7 @@ describe("eventSubscribers", () => {
 		});
 		const plugins = serverPlugins(
 			[
-				{ name: "inline", server: { hooks: { afterCommit: [subscriber("inline")] } } },
+				{ name: "inline", server: async () => ({ default: { hooks: { afterCommit: [subscriber("inline")] } } }) },
 				{ name: "lazy", server: async () => ({ default: { hooks: { afterCommit: [subscriber("lazy")] } } }) },
 			],
 			{ afterCommit: [subscriber("server")] },
@@ -215,14 +217,16 @@ describe("eventSubscribers", () => {
 			serverPlugins([
 				{
 					name: "a",
-					server: {
-						hooks: {
-							afterCommit: [
-								{ name: "sync", run },
-								{ name: "sync", run },
-							],
+					server: async () => ({
+						default: {
+							hooks: {
+								afterCommit: [
+									{ name: "sync", run },
+									{ name: "sync", run },
+								],
+							},
 						},
-					},
+					}),
 				},
 			]).eventSubscribers(),
 		).rejects.toThrow(/afterCommit of plugin:a: the subscriber name "sync" is used twice/);
@@ -259,8 +263,8 @@ describe("formats", () => {
 
 	it("has no format with no plugins, and lists the formats of the plugins in the order of the plugins", async () => {
 		const registry = await serverPlugins([
-			{ name: "one", server: { formats: async () => format("hugo") } },
-			{ name: "two", server: { formats: async () => [format("zola"), format("jekyll")] } },
+			{ name: "one", server: async () => ({ default: { formats: async () => format("hugo") } }) },
+			{ name: "two", server: async () => ({ default: { formats: async () => [format("zola"), format("jekyll")] } }) },
 			{ name: "plain" },
 		]).formats();
 
@@ -270,7 +274,7 @@ describe("formats", () => {
 
 	it("loads the plugins' formats once, and hands out the same registry afterwards", async () => {
 		const load = vi.fn(async () => format("hugo"));
-		const plugins = serverPlugins([{ name: "one", server: { formats: load } }]);
+		const plugins = serverPlugins([{ name: "one", server: async () => ({ default: { formats: load } }) }]);
 
 		const first = await plugins.formats();
 		const second = await plugins.formats();
@@ -282,8 +286,8 @@ describe("formats", () => {
 	it("fails when two formats have one name, and tries again on the next call", async () => {
 		let name = "same";
 		const plugins = serverPlugins([
-			{ name: "one", server: { formats: async () => format("same") } },
-			{ name: "two", server: { formats: async () => format(name) } },
+			{ name: "one", server: async () => ({ default: { formats: async () => format("same") } }) },
+			{ name: "two", server: async () => ({ default: { formats: async () => format(name) } }) },
 		]);
 
 		await expect(plugins.formats()).rejects.toThrow(/"same" is provided twice/);
@@ -292,8 +296,8 @@ describe("formats", () => {
 
 		await expect(
 			serverPlugins([
-				{ name: "one", server: { formats: async () => format("same") } },
-				{ name: "two", server: { formats: async () => format("same") } },
+				{ name: "one", server: async () => ({ default: { formats: async () => format("same") } }) },
+				{ name: "two", server: async () => ({ default: { formats: async () => format("same") } }) },
 			]).formats(),
 		).rejects.toThrow(/"same" is provided twice/);
 	});

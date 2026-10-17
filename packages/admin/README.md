@@ -13,7 +13,7 @@ For installation, routes and styles, follow "Install in an empty Next app" in th
 
 - **Admin path.** Defaults to `/admin`; change it with the site config's `admin.path` (e.g. `/studio`). The app's admin route folder
   (`app/studio/[[...path]]/page.tsx` and `layout.tsx`) must use the same path. Links inside screens, the login redirect (`<admin path>/login`) and
-  plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/core/site`).
+  plugin screen URLs follow this path. Screen code builds URLs with `site.adminHref("/media")` and `site.adminEntryEditHref(id)` of the site it gets from `useSite()` (`@monti-cms/admin`).
   The admin API (`/api/monti/v1`) does not change.
 - **View site.** The external-link icon button next to the site name in the sidebar header (tooltip `View site`) opens `site.home` (default `/`). If the admin UI is on a different host, give a full URL.
 - **Preview.** `Preview` on the edit screen appends the public path to `site.previewPath` and passes the language as `site.previewLocaleParam` (default
@@ -46,7 +46,7 @@ export default defineAdminPlugin({
 });
 ```
 
-Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` and `examples/blog/plugins/site-callout` are sketches. A fence nobody registers shows its source as is.
+Then list `siteAdmin()` in `plugins` of `monti.config.ts`. `examples/blog/plugins/word-list` and `examples/blog/plugins/site-callout` are examples. A fence nobody registers shows its source as is.
 
 - **Where the code may live.** The admin loads the module on the server and hands its declaration to the browser as it is. Make the module `"use client"` (the simplest: its components in it), or keep it a plain module whose components come from `"use client"` modules. A function written in a plain admin module cannot reach the browser and fails there.
 - **Components that depend on the site.** Give `components` as a function of the site, `components: (site) => ({ … })`, when they come from the site config (the plugin's options, the admin language). It runs in the browser, with the site the admin shows.
@@ -127,7 +127,7 @@ const components = {
 ```
 
 Each `layout` group `tab` creates a tab in the properties panel (the first tab holds the groups with no `tab`; the fields a plugin places, such as the SEO fields, get a tab of their own). The groups are worked out by core (`site.panelGroupsOf`), and the fields tree of the Settings screen is drawn from the same groups. A view field
-(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` of `@monti-cms/core/site` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is a sketch.
+(`fields.view({ view })`) renders in that place the screen declared under `fieldViews` of a plugin's `components` (`{ name: ({ collection, form, entry }) => … }`). `form` is the entry as it is being edited, and `form.doc` is the live body (a stored document; `toPlainText(site, form.doc)` gives its text), so a computed value follows the typing; `entry` is what the server last saved. The [reading time recipe](../../docs/recipes/reading-time-field.md) is one.
 If no screen is registered, nothing is rendered. A screen that renders a preview from a media ID
 uses `MediaThumbnail` from `@monti-cms/admin/kit` (the search preview in the SEO extension `@monti-cms/seo` is an example).
 Dates and times are shown in the site config's `timeZone` and formatted by `admin.locale` (default `ko-KR`). The hint text of a relation input uses the target collection's
@@ -169,7 +169,7 @@ name, e.g. `cmsNotice`), conversion, slash menu insertion and drag rules from th
 - `blockViews` is the one place a block's edit view is registered, for every block: the blocks you add and the core `image`, `file` and `math` blocks
   (register `blockViews.image` to redraw images). A view replaces the default view of that block, frame included.
 - A view takes no props. It reads and writes its block with `useBlockEditor()`, draws the editable nested body of a container with `<Content />` and wraps itself in
-  `<BlockFrame>`, all from `@monti-cms/admin`. No Tiptap or ProseMirror types are needed. The UI parts (tool row, settings popover, attribute input) are in `@monti-cms/admin/blocks`.
+  `<BlockFrame>`, all from `@monti-cms/admin`. No Tiptap or ProseMirror types are needed. The UI parts (`ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`) are there too.
   The callout, tabs, columns, collapsible and code explorer screens of `@monti-cms/blocks` are examples.
 - `blockEditors` and `CustomBlockEditorProps` are removed. `content` becomes `<Content />`, `values` and `setValue` become `useBlockEditor().values` and `.setValue`,
   and `editable` and `selected` are fields of the same object. Wrap the result in `<BlockFrame>`, which the old default frame did for you.
@@ -325,7 +325,7 @@ export function StatsPage() {
 }
 ```
 
-The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is a sketch of the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
+The route it calls is a plugin route (`adminRoute`, "Plugins" in the `@monti-cms/core` README). The [admin page recipe](../../docs/recipes/admin-page.md) is the whole plugin; the [custom block recipe](../../docs/recipes/custom-block.md) is a block with an editor view.
 
 Edit screen extensions (`editorExtensions`) are hooks that add an element at the end of the toolbar, an action next to the block handle, and actions for the selection menu and slash menu. For the field side, body images, media and code blocks,
 attach actions to the slots with `slots` of `defineAdminPlugin` (the `SlotSource` type and the slot parts are in `@monti-cms/admin/slots`).
@@ -339,11 +339,10 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`) and the editor hooks (`useField`, `useEntryEditor`, ...; experimental) |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
-| `/blocks` | Block edit screen UI (tool row, settings popover, attribute input) |
 | `/slots` | Attaching actions to screen slots |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |

@@ -1,14 +1,17 @@
 "use client";
 
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
 import {
 	AttributeInput,
+	BlockFrame,
 	BlockSettings,
 	BlockSettingsField,
 	ContainerToolbar,
+	Content,
 	formatMeta,
 	ToolbarButton,
-} from "@monti-cms/admin/blocks";
+	useBlockEditor,
+	useTranslator,
+} from "@monti-cms/admin";
 import {
 	cn,
 	commonMessages,
@@ -18,7 +21,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/site";
 import { File, FilePlus, Folder, FolderPlus, FolderTree, Trash2 } from "lucide-react";
 import { useId } from "react";
 import { filesOf, uniquePath } from "./editor-files";

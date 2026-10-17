@@ -1,9 +1,8 @@
 "use client";
 
-import { errorText } from "@monti-cms/admin";
+import { errorText, useSite, useTranslator } from "@monti-cms/admin";
 import { Button, Spinner } from "@monti-cms/admin/kit";
 import type { CmsConfig } from "@monti-cms/core";
-import { useSite, useTranslator } from "@monti-cms/core/site";
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";

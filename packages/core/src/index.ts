@@ -61,7 +61,6 @@ export {
 	type PluginNavItem,
 	type PluginRoute,
 	type ServerPlugin,
-	type ServerPluginSource,
 } from "./plugin/define";
 
 export {

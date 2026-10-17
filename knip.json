@@ -2,26 +2,52 @@
 	"$schema": "https://unpkg.com/knip@5/schema.json",
 	"workspaces": {
 		".": {
-			"entry": ["scripts/*.mjs"]
+			"entry": [
+				"scripts/*.mjs"
+			]
 		},
 		"packages/admin": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"],
-			"ignoreIssues": { "src/ui/**": ["exports", "types"] }
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			],
+			"ignoreIssues": {
+				"src/ui/**": [
+					"exports",
+					"types"
+				]
+			}
 		},
 		"packages/ai": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}", "src/routes/**/route.ts!"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}",
+				"src/routes/**/route.ts!"
+			]
 		},
 		"packages/git-sync": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/seo": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/bareun": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/blocks": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/core": {
 			"entry": [
@@ -32,24 +58,51 @@
 			]
 		},
 		"packages/nextjs": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/mdx": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/auth": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/storage-s3": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/syntax-directive": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
 		},
 		"packages/syntax-shiki": {
-			"entry": ["src/**/*.test.{ts,tsx}", "src/**/__test__/**/*.{ts,tsx}"]
+			"entry": [
+				"src/**/*.test.{ts,tsx}",
+				"src/**/__test__/**/*.{ts,tsx}"
+			]
+		},
+		"docs/recipes": {
+			"entry": [
+				"src/**/*.{ts,tsx}"
+			]
 		}
 	},
 	"ignoreExportsUsedInFile": true,
-	"ignore": ["examples/**", "packages/*/src/**/__test__/fixtures/**", ".claude/**"]
+	"ignore": [
+		"examples/**",
+		"packages/*/src/**/__test__/fixtures/**",
+		".claude/**"
+	]
 }

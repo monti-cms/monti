@@ -58,7 +58,7 @@ const PublicSiteCallout = ({ variant, title, children }: BlockProps<typeof callo
 <CmsContent cms={cms} entry={entry} components={{ blocks: { callout: PublicSiteCallout } }} />;
 ```
 
-In the admin editor, a block view draws the same component around the editable body (`plugins/site-callout/`, one `siteCallout()` line in `monti.config.ts`, registered like `plugins/word-list/`). `useBlockEditor()`, `BlockFrame` and `Content` come from `@monti-cms/admin`, `AttributeInput` and `ContainerToolbar` from `@monti-cms/admin/blocks`:
+In the admin editor, a block view draws the same component around the editable body (`plugins/site-callout/`, one `siteCallout()` line in `monti.config.ts`, registered like `plugins/word-list/`). `useBlockEditor()`, `BlockFrame`, `Content`, `AttributeInput` and `ContainerToolbar` all come from `@monti-cms/admin`:
 
 ```tsx
 function SiteCalloutView() {

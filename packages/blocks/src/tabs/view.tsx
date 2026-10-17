@@ -1,9 +1,15 @@
 "use client";
 
-import { BlockFrame, Content, useBlockEditor } from "@monti-cms/admin";
-import { AttributeInput, ContainerToolbar, ToolbarButton } from "@monti-cms/admin/blocks";
+import {
+	AttributeInput,
+	BlockFrame,
+	ContainerToolbar,
+	Content,
+	ToolbarButton,
+	useBlockEditor,
+	useTranslator,
+} from "@monti-cms/admin";
 import { cn } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/site";
 import { PencilLine, Plus, Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { tabsMessages } from "./messages";

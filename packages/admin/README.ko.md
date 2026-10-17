@@ -13,7 +13,7 @@
 
 - **관리자 경로.** 기본 `/admin`이고 사이트 설정 `admin.path`로 바꾼다(예: `/studio`). 앱의 관리자 라우트 폴더
   (`app/studio/[[...path]]/page.tsx`·`layout.tsx`)가 같은 경로여야 한다. 화면 안 링크·로그인 이동(`<관리자 경로>/login`)·
-  플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/core/site`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
+  플러그인 화면 주소가 이 경로를 따른다. 화면 코드는 `useSite()`(`@monti-cms/admin`)로 받은 사이트의 `site.adminHref("/media")`·`site.adminEntryEditHref(id)`로
   주소를 만든다. 관리자 API(`/api/monti/v1`)는 바뀌지 않는다.
 - **사이트 보기.** 사이드바 맨 위 사이트 이름 옆의 외부 링크 아이콘 단추(툴팁 `사이트 보기`)가 `site.home`(기본 `/`)을 연다. 관리자 화면이 다른 호스트에 있으면 전체 주소를 적는다.
 - **미리보기.** 편집 화면 `미리보기`는 `site.previewPath` 뒤에 공개 경로를 붙이고 언어는 `site.previewLocaleParam`(기본
@@ -46,7 +46,7 @@ export default defineAdminPlugin({
 });
 ```
 
-그런 다음 `monti.config.ts`의 `plugins`에 `siteAdmin()`을 넣는다. `examples/blog/plugins/word-list`와 `examples/blog/plugins/site-callout`이 스케치다. 아무도 넣지 않은 펜스는 원문을 그대로 보인다.
+그런 다음 `monti.config.ts`의 `plugins`에 `siteAdmin()`을 넣는다. `examples/blog/plugins/word-list`와 `examples/blog/plugins/site-callout`이 그 예다. 아무도 넣지 않은 펜스는 원문을 그대로 보인다.
 
 - **코드를 둘 곳.** 관리자는 모듈을 서버에서 불러와 그 선언을 그대로 브라우저에 넘긴다. 모듈을 `"use client"`로 두거나(가장 간단하다: 컴포넌트도 그 안에 둔다), 평범한 모듈로 두고 컴포넌트는 `"use client"` 모듈에서 가져온다. 평범한 관리자 모듈 안에 쓴 함수는 브라우저로 갈 수 없어 거기서 실패한다.
 - **사이트에 따라 달라지는 컴포넌트.** 사이트 설정(플러그인 옵션, 관리자 언어)에서 나오는 컴포넌트는 `components: (site) => ({ … })`처럼 사이트를 받는 함수로 준다. 관리자가 보여 주는 사이트로 브라우저에서 돈다.
@@ -126,7 +126,7 @@ const components = {
 
 `layout` 묶음의 `tab`마다 속성 칸에 탭이 생긴다(첫 탭은 `tab`이 없는 묶음을 담고, SEO 필드처럼 플러그인이 두는 필드는 제 탭을 가진다). 묶음은 core가 계산하고(`site.panelGroupsOf`), 설정 화면의 필드 트리도 같은 묶음으로 그린다. 보기 필드
 (`fields.view({ view })`)는 그 자리에 플러그인 `components`의 `fieldViews`(`{ 이름: ({ collection, form, entry }) => … }`)로
-선언한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `@monti-cms/core/site`의 `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)는 스케치다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
+선언한 화면을 그린다. `form`은 편집 중인 항목이고 `form.doc`은 지금 편집 중인 본문(저장 문서 형태, `toPlainText(site, form.doc)`가 그 텍스트를 준다)이라, 계산한 값이 입력을 따라 바뀐다. `entry`는 서버가 마지막으로 저장한 상태다. [읽는 시간 레시피](../../docs/recipes/reading-time-field.md)가 그 예다. 등록한 화면이 없으면 아무것도 그리지 않는다. 미디어 ID로 미리보기를 그리는 화면은
 `@monti-cms/admin/kit`의 `MediaThumbnail`을 쓴다(SEO 확장 `@monti-cms/seo`의 검색 미리보기가 예시다).
 날짜·시각은 사이트 설정의 `timeZone`으로, 표기는 `admin.locale`(기본 `ko-KR`)로 보인다. 관계 입력의 안내 문구는 대상 컬렉션의
 이름표를 쓴다(예: "게시글 고르기"). 항목 컬렉션(`kind: "item"`)의 항목은 목록의 작은 폼으로 연다. 미디어 사용처처럼 여러
@@ -167,7 +167,7 @@ const components = {
 - `blockViews`가 블록 편집 화면을 등록하는 유일한 자리이고, 더한 블록과 기본 `image`·`file`·`math` 블록 모두 여기에 등록한다
   (`blockViews.image`를 등록하면 이미지 화면을 다시 그린다). 등록한 화면은 틀까지 포함해 그 블록의 기본 화면을 대신한다.
 - 화면은 props를 받지 않는다. `useBlockEditor()`로 자기 블록을 읽고 쓰고, 컨테이너의 편집 가능한 중첩 본문은 `<Content />`로 그리며,
-  `<BlockFrame>`으로 감싼다. 모두 `@monti-cms/admin`에 있고 Tiptap·ProseMirror 타입이 필요 없다. 도구 줄·설정 팝오버·속성 입력 칸 같은 화면 부품은 `@monti-cms/admin/blocks`에 있다.
+  `<BlockFrame>`으로 감싼다. 모두 `@monti-cms/admin`에 있고 Tiptap·ProseMirror 타입이 필요 없다. 도구 줄·설정 팝오버·속성 입력 칸 같은 화면 부품(`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`)도 거기 있다.
   `@monti-cms/blocks`의 콜아웃·탭·단·접기·코드 탐색기 화면이 예시다.
 - `blockEditors`와 `CustomBlockEditorProps`는 없어졌다. `content`는 `<Content />`가 되고, `values`·`setValue`는 `useBlockEditor().values`·`.setValue`가 되며,
   `editable`·`selected`도 같은 객체의 값이다. 예전 기본 틀이 해 주던 감싸기는 `<BlockFrame>`으로 직접 한다.
@@ -323,7 +323,7 @@ export function StatsPage() {
 }
 ```
 
-부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다. [관리자 페이지 레시피](../../docs/recipes/admin-page.md)가 플러그인 전체 스케치이고, [커스텀 블록 레시피](../../docs/recipes/custom-block.md)는 편집기 뷰가 있는 블록이다.
+부르는 경로는 플러그인 경로(`adminRoute`, `@monti-cms/core` README의 "플러그인")다. [관리자 페이지 레시피](../../docs/recipes/admin-page.md)가 플러그인 전체이고, [커스텀 블록 레시피](../../docs/recipes/custom-block.md)는 편집기 뷰가 있는 블록이다.
 
 편집 화면 확장(`editorExtensions`)은 툴바 끝 요소·블록 손잡이 옆 동작·선택 영역 메뉴·슬래시 메뉴 동작을 더하는 훅이다. 필드 옆·본문 이미지·미디어·코드 블록
 자리에는 `defineAdminPlugin`의 `slots`로 동작을 붙인다(`SlotSource` 타입과 슬롯 부품은 `@monti-cms/admin/slots`에 있다).
@@ -337,11 +337,10 @@ export function StatsPage() {
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험) |
+| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
 | `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
 | `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
-| `/blocks` | 블록 편집 화면 부품(도구 줄·설정 팝오버·속성 입력 칸) |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |

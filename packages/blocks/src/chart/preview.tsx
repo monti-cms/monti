@@ -1,7 +1,7 @@
 "use client";
 
+import { useTranslator } from "@monti-cms/admin";
 import { Alert, AlertDescription, AlertTitle, cn } from "@monti-cms/admin/kit";
-import { useTranslator } from "@monti-cms/core/site";
 import { AlertOctagon } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
