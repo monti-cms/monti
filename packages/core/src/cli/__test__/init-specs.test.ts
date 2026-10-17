@@ -6,7 +6,7 @@ import { initProject } from "../init";
 import { installSpecs } from "../init-install";
 import { CREATE_NEXT_APP, fakeHost, fixtureApp } from "./init-helpers";
 
-const GITHUB = "github:monti-cms/monti#release/v0.2.0-next.11&path:/core";
+const GITHUB = "github:monti-cms/monti#release/v0.2.0-next.12&path:/core";
 
 /** A fresh Next app whose package.json lists `@monti-cms/core` with the given spec. */
 function appWithCore(spec: string, field: "dependencies" | "devDependencies" = "dependencies") {
@@ -18,8 +18,8 @@ function appWithCore(spec: string, field: "dependencies" | "devDependencies" = "
 describe("installSpecs", () => {
 	it("gives each Monti package the core address with its own folder, and leaves other packages bare", () => {
 		expect(installSpecs(["@monti-cms/admin", "@monti-cms/syntax-shiki", "next-themes"], GITHUB)).toEqual([
-			"@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.11&path:/admin",
-			"@monti-cms/syntax-shiki@github:monti-cms/monti#release/v0.2.0-next.11&path:/syntax-shiki",
+			"@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.12&path:/admin",
+			"@monti-cms/syntax-shiki@github:monti-cms/monti#release/v0.2.0-next.12&path:/syntax-shiki",
 			"next-themes",
 		]);
 	});
@@ -44,8 +44,8 @@ describe("monti init with a GitHub spec for core", () => {
 			const host = fakeHost();
 			await initProject({ cwd: appWithCore(GITHUB, field), host });
 			const args = host.install.mock.calls[0]?.[0].args ?? [];
-			expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.11&path:/admin");
-			expect(args).toContain("@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.11&path:/nextjs");
+			expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.12&path:/admin");
+			expect(args).toContain("@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.12&path:/nextjs");
 			expect(args).not.toContain("@monti-cms/admin");
 			expect(args).not.toContain("@monti-cms/core");
 			expect(args.some((arg) => arg.startsWith("@monti-cms/core@"))).toBe(false);
@@ -58,7 +58,7 @@ describe("monti init with a GitHub spec for core", () => {
 		await initProject({ cwd: appWithCore(GITHUB), host, directiveSyntax: true });
 		const args = host.install.mock.calls[0]?.[0].args ?? [];
 		expect(args).toContain(
-			"@monti-cms/syntax-directive@github:monti-cms/monti#release/v0.2.0-next.11&path:/syntax-directive",
+			"@monti-cms/syntax-directive@github:monti-cms/monti#release/v0.2.0-next.12&path:/syntax-directive",
 		);
 		const without = fakeHost();
 		await initProject({ cwd: appWithCore(GITHUB), host: without, directiveSyntax: false });
@@ -77,14 +77,14 @@ describe("monti init with a GitHub spec for core", () => {
 		const dir = appWithCore(GITHUB);
 		const report = await initProject({ cwd: dir, host: fakeHost(), install: false });
 		const text = report.next.find((item) => item.startsWith("Install the packages:"))?.split("\n")[1] ?? "";
-		expect(text).toContain("'@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.11&path:/admin'");
+		expect(text).toContain("'@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.12&path:/admin'");
 		expect(text).toMatch(/ next-themes /);
 		// A shell reads the printed line back as the same arguments, with no `&` or `#` acting on the command.
 		const run = spawnSync("sh", ["-c", `set -- ${text.replace(/^pnpm add /, "")}; printf '%s\\n' "$@"`], {
 			encoding: "utf8",
 		});
 		const args = run.stdout.trim().split("\n");
-		expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.11&path:/admin");
+		expect(args).toContain("@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.12&path:/admin");
 		expect(args).toContain("next-themes");
 	});
 
