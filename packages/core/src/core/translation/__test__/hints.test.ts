@@ -45,18 +45,19 @@ describe("translation hints", () => {
 		expect(documentText(testSite, hinted, SEARCH_TEXT)).toContain("제목");
 	});
 
-	it("gives the translation blocks of its own: no block ids", () => {
+	it("gives the translation blocks of its own, each linked to the source block it was made from", () => {
 		const hinted = withTranslationHints(testSite, source);
-		let ids = 0;
+		const links: (string | undefined)[] = [];
 		forEachBlock(hinted.content, (block) => {
-			if (block.id !== undefined) ids += 1;
+			expect(block.id).toBeUndefined();
+			links.push(block.sourceId);
 		});
-		expect(ids).toBe(0);
-		let sourceIds = 0;
+		const sourceIds: (string | undefined)[] = [];
 		forEachBlock(source.content, (block) => {
-			if (block.id !== undefined) sourceIds += 1;
+			sourceIds.push(block.id);
 		});
-		expect(sourceIds).toBeGreaterThan(0);
+		expect(sourceIds.every((id) => id !== undefined)).toBe(true);
+		expect(links).toEqual(sourceIds);
 	});
 
 	it("does not change the document it is given", () => {

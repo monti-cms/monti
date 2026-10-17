@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { testSite } from "../../../test/site";
 import { docOf as docOfText } from "../../../test/stored-content";
 import { computeContentHash } from "../../core/content-hash";
-import { assignBlockIds, BLOCK_ID_PATTERN, forEachBlock, regenerateBlockIds, withoutBlockIds } from "../block-ids";
+import {
+	assignBlockIds,
+	BLOCK_ID_PATTERN,
+	copyBlockIds,
+	forEachBlock,
+	linkedToSource,
+	regenerateBlockIds,
+	withoutBlockIds,
+} from "../block-ids";
 import { canonicalDocument, STORED_DOCUMENT_VERSION, type StoredDocument } from "../stored-document";
 import type { CmsNode } from "../types";
 
@@ -262,5 +270,60 @@ describe("block ids", () => {
 		expect(withoutBlockIds(copy.content)).toEqual(withoutBlockIds(original.content));
 		// The original is not touched.
 		expect(blocks(original)).toEqual(before);
+	});
+});
+
+describe("source links", () => {
+	/** A translation of `source` as it is first stored: linked blocks, given ids of their own. */
+	const translationOf = (source: StoredDocument): CmsNode[] => assignBlockIds(linkedToSource(source.content));
+	const linksOf = (nodes: readonly CmsNode[]) => {
+		const links: (string | undefined)[] = [];
+		forEachBlock(nodes, (block) => {
+			links.push(block.sourceId);
+		});
+		return links;
+	};
+
+	it("link every block of a new translation, nested ones too, to its source block, with ids of its own", () => {
+		const source = sample();
+		const translation = translationOf(source);
+		expect(linksOf(translation)).toEqual(blocks(source).map((block) => block.id));
+		const sourceIds = new Set(blocks(source).map((block) => block.id));
+		forEachBlock(translation, (block) => {
+			expect(block.id).toMatch(BLOCK_ID_PATTERN);
+			expect(sourceIds.has(block.id as string)).toBe(false);
+		});
+	});
+
+	it("are not part of the content and are dropped with the ids", () => {
+		const source = sample();
+		const translation = translationOf(source);
+		const unlinked = translation.map(({ sourceId: _sourceId, ...node }) => node);
+		const doc = (content: CmsNode[]): StoredDocument => ({ type: "doc", version: STORED_DOCUMENT_VERSION, content });
+		expect(computeContentHash({}, doc(translation))).toBe(computeContentHash({}, doc(unlinked)));
+		expect(linksOf(withoutBlockIds(translation)).every((link) => link === undefined)).toBe(true);
+	});
+
+	it("are inherited with the id when the translation is read again as text", () => {
+		const source = docOf("One.\n\nTwo.\n");
+		const translation = translationOf(source);
+		const edited = assignBlockIds([paragraph("One, edited."), paragraph("New."), paragraph("Two.")], [translation]);
+		expect(edited.map((node) => node.sourceId)).toEqual([
+			translation[0]?.sourceId,
+			undefined,
+			translation[1]?.sourceId,
+		]);
+	});
+
+	it("are not given to a copy of a linked block", () => {
+		const translation = translationOf(docOf("One.\n"));
+		const [one] = translation;
+		const pasted = assignBlockIds([...translation, { ...(one as CmsNode) }]);
+		expect(pasted.map((node) => node.sourceId)).toEqual([one?.sourceId, undefined]);
+	});
+
+	it("are copied with the ids onto the same document read back", () => {
+		const translation = translationOf(docOf("One.\n\nTwo.\n"));
+		expect(copyBlockIds(withoutBlockIds(translation), translation)).toEqual(translation);
 	});
 });

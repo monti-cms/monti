@@ -1,126 +1,298 @@
-import { describe, expect, it } from "vitest";
-import { alignBlocks, blockIndexOf, blocksOf, itemAt, itemPathOf, syncOffset } from "../source-sync";
+import type { CmsNode } from "@monti-cms/core/document";
+import { renderHook, waitFor } from "@testing-library/react";
+import { Editor } from "@tiptap/core";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { testSite } from "../../../../../core/test/site";
+import { buildEditorExtensions } from "../../../editor/extensions";
+import { storedToTiptap } from "../../../editor/tiptap-content";
+import { para } from "../../../test/stored-doc";
+import {
+	ACTIVE_BLOCK_CLASS,
+	blockPathAt,
+	followCollapsed,
+	type PairBox,
+	pairSyncBlocks,
+	SOURCE_COLLAPSED_ATTRIBUTE,
+	type SyncBlock,
+	sourceLineAt,
+	syncBlocksOf,
+	useSourceSync,
+} from "../source-sync";
 
-const boxes = (...tops: number[]) => tops.map((top, i) => ({ top, bottom: tops[i + 1] ?? top + 100 }));
+// Ids are 8 characters of base36; a translation block names its source block by `sourceId`.
+const id = (name: string) => name.padEnd(8, "0");
+const block = (node: CmsNode, name?: string, link?: string): CmsNode => ({
+	...node,
+	...(name ? { id: id(name) } : {}),
+	...(link ? { sourceId: id(link) } : {}),
+});
+const heading = (value: string): CmsNode => ({
+	type: "heading",
+	attrs: { level: 2 },
+	content: [{ type: "text", text: value }],
+});
+const callout = (...content: CmsNode[]): CmsNode => ({ type: "callout", attrs: { type: "note" }, content });
+const quote = (...content: CmsNode[]): CmsNode => ({ type: "blockquote", content });
+const list = (...items: string[]): CmsNode => ({
+	type: "bulletList",
+	content: items.map((item) => ({ type: "listItem", content: [para(item)] })),
+});
 
-describe("syncOffset", () => {
-	// Editor blocks: 100-200, 200-400, 400-500 / source blocks: 300-350, 350-450, 450-550
-	const editorBlocks = [
-		{ top: 100, bottom: 200 },
-		{ top: 200, bottom: 400 },
-		{ top: 400, bottom: 500 },
-	];
-	const paneBlocks = [
-		{ top: 300, bottom: 350 },
-		{ top: 350, bottom: 450 },
-		{ top: 450, bottom: 550 },
-	];
+const editors: Editor[] = [];
+afterEach(() => {
+	for (const editor of editors.splice(0)) editor.destroy();
+	document.body.innerHTML = "";
+	vi.restoreAllMocks();
+});
 
-	it("moves so the same point of the block under the baseline lands on the source pane baseline", () => {
-		// Baseline 300 is half of the second block. Half of the source's second block (400) lands on baseline 60.
-		expect(syncOffset({ editorBlocks, editorLine: 300, paneBlocks, paneLine: 60, paneScrollTop: 20 })).toBe(
-			20 + 400 - 60,
+const editorOf = (content: CmsNode[], element?: HTMLElement) => {
+	const editor = new Editor({
+		...(element ? { element } : {}),
+		extensions: buildEditorExtensions(testSite),
+		content: storedToTiptap(testSite, { type: "doc", version: 2, content } as never),
+	});
+	editors.push(editor);
+	return editor;
+};
+const blocksOf = (...content: CmsNode[]) => syncBlocksOf(editorOf(content).state.doc);
+
+/** For each translation block (top level, then inside boxes), the id of its source partner or `null`. */
+const partnersOf = (translation: readonly SyncBlock[], source: readonly SyncBlock[]) => {
+	const pairs = pairSyncBlocks(translation, source);
+	const walk = (blocks: readonly SyncBlock[]): unknown[] =>
+		blocks.map((item) => {
+			const partner = pairs.get(item)?.id ?? null;
+			return item.children ? { partner, inside: walk(item.children) } : partner;
+		});
+	return walk(translation);
+};
+
+describe("pairing translation blocks with source blocks", () => {
+	it("pairs by the stored link before kind", () => {
+		const source = blocksOf(block(heading("A"), "a"), block(para("B"), "b"), block(para("C"), "c"));
+		// By kind alone the paragraph would take B, the first paragraph of the source.
+		const translation = blocksOf(block(heading("A'"), "t1", "a"), block(para("C'"), "t2", "c"));
+		expect(partnersOf(translation, source)).toEqual([id("a"), id("c")]);
+	});
+
+	it("pairs blocks without a link by kind between the linked ones", () => {
+		const source = blocksOf(block(heading("A"), "a"), block(para("B"), "b"), block(para("C"), "c"));
+		const translation = blocksOf(
+			block(heading("A'"), "t1", "a"),
+			block(para("B'"), "t2"),
+			block(para("C'"), "t3", "c"),
 		);
+		expect(partnersOf(translation, source)).toEqual([id("a"), id("b"), id("c")]);
 	});
 
-	it("with a different number of blocks, aligns to the last block", () => {
-		const short = paneBlocks.slice(0, 2);
-		// At the start of the third block (400-500), the source aligns to the start of its last (second) block.
-		expect(syncOffset({ editorBlocks, editorLine: 400, paneBlocks: short, paneLine: 50, paneScrollTop: 0 })).toBe(
-			350 - 50,
+	it("leaves a block added between two linked blocks unpaired", () => {
+		const source = blocksOf(block(para("A"), "a"), block(para("B"), "b"));
+		// The second part of a split paragraph, and a new paragraph, carry no link.
+		const translation = blocksOf(
+			block(para("A'"), "t1", "a"),
+			block(para("split"), "t2"),
+			block(para("new"), "t3"),
+			block(para("B'"), "t4", "b"),
 		);
+		expect(partnersOf(translation, source)).toEqual([id("a"), null, null, id("b")]);
 	});
 
-	it("a baseline past the end is treated as the end of the last block", () => {
-		expect(syncOffset({ editorBlocks, editorLine: 900, paneBlocks, paneLine: 0, paneScrollTop: 0 })).toBe(550);
+	it("leaves a source block unpaired once its translation block is deleted", () => {
+		const source = blocksOf(block(para("A"), "a"), block(para("B"), "b"), block(para("C"), "c"));
+		const translation = blocksOf(block(para("A'"), "t1", "a"), block(para("C'"), "t3", "c"));
+		const pairs = pairSyncBlocks(translation, source);
+		expect([...pairs.values()].map((partner) => partner.id)).not.toContain(id("b"));
 	});
 
-	it("above the first block (title area), keeps that gap and aligns the first block position", () => {
-		// Baseline is 30px above the first block: put the point 30px above the source's first block on the baseline.
-		expect(syncOffset({ editorBlocks, editorLine: 70, paneBlocks, paneLine: 48, paneScrollTop: 0 })).toBe(
-			300 - 30 - 48,
+	it("falls back to kind when a link no longer matches a source block", () => {
+		const source = blocksOf(block(heading("A"), "a"), block(para("B"), "b2"));
+		const translation = blocksOf(block(heading("A'"), "t1", "a"), block(para("B'"), "t2", "b"));
+		expect(partnersOf(translation, source)).toEqual([id("a"), id("b2")]);
+	});
+
+	it("pairs the blocks inside paired boxes, by link and then by kind", () => {
+		const source = blocksOf(
+			block(callout(block(para("X"), "x"), block(heading("Y"), "y"), block(para("Z"), "z")), "k"),
+			block(para("after"), "p"),
 		);
-		// Negative values are clamped to 0.
-		expect(syncOffset({ editorBlocks, editorLine: 0, paneBlocks, paneLine: 300, paneScrollTop: 0 })).toBe(0);
+		const translation = blocksOf(
+			block(callout(block(para("X'"), "t2"), block(heading("Y'"), "t3", "y"), block(para("Z'"), "t4", "z")), "t1", "k"),
+			block(para("after'"), "t5", "p"),
+		);
+		expect(partnersOf(translation, source)).toEqual([
+			{ partner: id("k"), inside: [id("x"), id("y"), id("z")] },
+			id("p"),
+		]);
 	});
 
-	it("returns null when there is no block to align", () => {
-		expect(syncOffset({ editorBlocks: [], editorLine: 0, paneBlocks, paneLine: 0, paneScrollTop: 0 })).toBeNull();
-		expect(syncOffset({ editorBlocks, editorLine: 0, paneBlocks: [], paneLine: 0, paneScrollTop: 0 })).toBeNull();
-		expect(boxes(0, 10)).toHaveLength(2);
+	it("treats lists and tables as one block, and boxes whose body is blocks as boxes", () => {
+		const [first, second] = blocksOf(list("one", "two"), callout(para("inside")));
+		expect(first?.children).toBeNull();
+		expect(second?.children?.map((child) => child.kind)).toEqual(["paragraph"]);
 	});
 });
 
-describe("finding top-level blocks", () => {
-	const root = document.createElement("div");
-	root.innerHTML =
-		'<p>하나<strong>굵게</strong></p><div class="ProseMirror-gapcursor"></div><ul><li>목록</li></ul><br class="ProseMirror-trailingBreak">';
-	document.body.append(root);
-
-	it("placeholder elements are not counted as blocks", () => {
-		expect(blocksOf(root).map((block) => block.tagName)).toEqual(["P", "UL"]);
+describe("the block the cursor is in", () => {
+	it("is the innermost block holding the position, inside boxes", () => {
+		const blocks = blocksOf(para("before"), callout(para("first"), para("second")));
+		const box = blocks[1] as SyncBlock;
+		const inner = box.children?.[1] as SyncBlock;
+		expect(blockPathAt(blocks, inner.pos + 2)).toEqual([box, inner]);
+		expect(blockPathAt(blocks, (blocks[0] as SyncBlock).pos + 1)).toEqual([blocks[0]]);
 	});
 
-	it("from an inner node, finds the order of the top-level block that contains it", () => {
-		expect(blockIndexOf(root, root.querySelector("strong")?.firstChild ?? null)).toBe(0);
-		expect(blockIndexOf(root, root.querySelector("li"))).toBe(1);
-		expect(blockIndexOf(root, document.body)).toBeNull();
-		expect(blockIndexOf(root, null)).toBeNull();
+	it("stops at a list: a list is anchored as a whole", () => {
+		const blocks = blocksOf(list("one", "two"));
+		expect(blockPathAt(blocks, (blocks[0] as SyncBlock).pos + 6)).toEqual([blocks[0]]);
 	});
 });
 
-describe("block pairing", () => {
-	it("the same structure pairs in the same order", () => {
-		expect(alignBlocks(["H2", "UL", "P"], ["H2", "UL", "P"])).toEqual([0, 1, 2]);
+describe("following the translation's middle line", () => {
+	const pair = (translation: [number, number], source: [number, number], inner?: PairBox[]): PairBox => ({
+		translation: { top: translation[0], bottom: translation[1] },
+		source: { top: source[0], bottom: source[1] },
+		...(inner ? { inner: () => inner } : {}),
 	});
 
-	it("even if a list splits in two in the translation, later blocks do not shift", () => {
-		// Translation: heading, list, paragraph, list, heading / source: heading, list, heading
-		expect(alignBlocks(["H2", "UL", "P", "UL", "H2"], ["H2", "UL", "H2"])).toEqual([0, 1, 1, 1, 2]);
+	it("puts the same share of the paired source block on the line", () => {
+		const pairs = [pair([100, 200], [300, 350]), pair([200, 400], [350, 450])];
+		// The line is halfway down the second translation block: halfway down its source block.
+		expect(sourceLineAt(pairs, 300)).toBe(400);
 	});
 
-	it("a block not in the source at the very start attaches to the first pair", () => {
-		expect(alignBlocks(["P", "H2", "UL"], ["H2", "UL"])).toEqual([0, 0, 1]);
-		expect(alignBlocks(["P"], [])).toEqual([]);
+	it("keeps the distance to the nearest block above the first and below the last", () => {
+		const pairs = [pair([100, 200], [300, 350]), pair([200, 400], [350, 450])];
+		expect(sourceLineAt(pairs, 70)).toBe(270);
+		expect(sourceLineAt(pairs, 500)).toBe(550);
 	});
 
-	it("scrolling also aligns to the paired source block", () => {
-		const editorBlocks = [
-			{ top: 0, bottom: 100 },
-			{ top: 100, bottom: 200 },
-			{ top: 200, bottom: 300 },
-		];
-		const paneBlocks = [
-			{ top: 0, bottom: 50 },
-			{ top: 50, bottom: 100 },
-		];
-		// Start of the third block -> start of the source's second block (50).
-		expect(
-			syncOffset({ editorBlocks, editorLine: 200, paneBlocks, paneLine: 0, paneScrollTop: 0, map: [0, 0, 1] }),
-		).toBe(50);
+	it("goes inside a box to the inner pair holding the line", () => {
+		const pairs = [pair([100, 500], [100, 300], [pair([150, 250], [120, 160]), pair([250, 450], [160, 280])])];
+		expect(sourceLineAt(pairs, 350)).toBe(220);
+	});
+
+	it("is null with no pairs", () => {
+		expect(sourceLineAt([], 100)).toBeNull();
 	});
 });
 
-describe("list item marking", () => {
-	const make = (html: string) => {
+describe("collapsible boxes in the source", () => {
+	const view = (collapsed: boolean, nested?: HTMLElement) => {
 		const root = document.createElement("div");
-		root.innerHTML = html;
-		return root.firstElementChild as Element;
+		root.className = "react-renderer";
+		const body = document.createElement("div");
+		body.setAttribute("data-node-view-content", "");
+		if (collapsed) body.setAttribute("data-monti-collapsed", "");
+		if (nested) body.append(nested);
+		root.append(body);
+		return { root, body };
 	};
 
-	it("finds the same source item by the editor list item's order", () => {
-		const editorList = make("<ul><li><p>a</p></li><li><p>b</p><ul><li><p>c</p></li><li><p>d</p></li></ul></li></ul>");
-		const paneList = make("<ul><li><p>A</p></li><li><p>B</p><ul><li><p>C</p></li><li><p>D</p></li></ul></li></ul>");
-		const d = editorList.querySelectorAll("p")[3]?.firstChild as Node;
-		expect(itemPathOf(editorList, d)).toEqual([1, 1]);
-		expect(itemAt(paneList, [1, 1]).textContent).toBe("D");
-		expect(itemAt(paneList, [0]).textContent).toBe("A");
+	it("collapse and open as the paired translation box does", () => {
+		const source = view(false);
+		followCollapsed(view(true).root, source.root);
+		expect(source.body.hasAttribute(SOURCE_COLLAPSED_ATTRIBUTE)).toBe(true);
+		followCollapsed(view(false).root, source.root);
+		expect(source.body.hasAttribute(SOURCE_COLLAPSED_ATTRIBUTE)).toBe(false);
 	});
 
-	it("if not a list or the source lacks that item, it is the block itself", () => {
-		const paragraph = make("<p>글</p>");
-		expect(itemPathOf(paragraph, paragraph.firstChild as Node)).toEqual([]);
-		const paneList = make("<ul><li>A</li></ul>");
-		expect(itemAt(paneList, [3])).toBe(paneList);
+	it("follow only their own body, not a box nested inside", () => {
+		const nested = view(false);
+		const source = view(false, nested.root);
+		followCollapsed(view(true, view(false).root).root, source.root);
+		expect(source.body.hasAttribute(SOURCE_COLLAPSED_ATTRIBUTE)).toBe(true);
+		expect(nested.body.hasAttribute(SOURCE_COLLAPSED_ATTRIBUTE)).toBe(false);
+	});
+});
+
+describe("useSourceSync", () => {
+	/** Lays every element out (jsdom has no layout): each block is shown, at a top that follows document order. */
+	const layOut = () => {
+		vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
+			() => [new DOMRect(0, 0, 100, 20)] as unknown as DOMRectList,
+		);
+		vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() => new DOMRect(0, 0, 100, 20));
+	};
+
+	const mount = (translationContent: CmsNode[], sourceContent: CmsNode[]) => {
+		const scroller = document.createElement("div");
+		const pane = document.createElement("aside");
+		document.body.append(pane, scroller);
+		const translation = editorOf(translationContent, scroller);
+		const source = editorOf(sourceContent, pane);
+		renderHook(() =>
+			useSourceSync({
+				enabled: true,
+				syncScroll: true,
+				editor: scroller,
+				pane,
+			}),
+		);
+		const marked = (editor: Editor) =>
+			Array.from(editor.view.dom.querySelectorAll(`.${ACTIVE_BLOCK_CLASS}`)).map((element) => element.textContent);
+		const putCursorIn = (text: string) => {
+			let at = 0;
+			translation.state.doc.descendants((node, pos) => {
+				if (at === 0 && node.isText && node.text === text) at = pos + 1;
+			});
+			translation.commands.setTextSelection(at);
+			const selection = document.getSelection();
+			selection?.collapse(translation.view.domAtPos(at).node, 0);
+			document.dispatchEvent(new Event("selectionchange"));
+		};
+		return { translation, source, marked, putCursorIn };
+	};
+
+	it("marks the block under the cursor and its source block, by link", async () => {
+		layOut();
+		const { translation, source, marked, putCursorIn } = mount(
+			[block(para("둘째 번역"), "t1", "b"), block(para("첫째 번역"), "t2", "a")],
+			[block(para("첫째"), "a"), block(para("둘째"), "b")],
+		);
+		putCursorIn("첫째 번역");
+		await waitFor(() => expect(marked(source)).toEqual(["첫째"]));
+		expect(marked(translation)).toEqual(["첫째 번역"]);
+		putCursorIn("둘째 번역");
+		await waitFor(() => expect(marked(source)).toEqual(["둘째"]));
+	});
+
+	it("marks the innermost paired block inside a box", async () => {
+		layOut();
+		const { source, marked, putCursorIn } = mount(
+			[block(quote(block(para("밖 번역"), "t2", "w"), block(para("안 번역"), "t3", "x")), "t1", "k")],
+			[block(quote(block(para("밖"), "w"), block(para("안"), "x")), "k")],
+		);
+		putCursorIn("안 번역");
+		await waitFor(() => expect(marked(source)).toEqual(["안"]));
+	});
+
+	it("keeps the mark on the first part of a split block and leaves the source where it is", async () => {
+		layOut();
+		const { translation, source, marked, putCursorIn } = mount(
+			[block(para("첫째 번역"), "t1", "a"), block(para("둘째 번역"), "t2", "b")],
+			[block(para("첫째"), "a"), block(para("둘째"), "b")],
+		);
+		putCursorIn("첫째 번역");
+		await waitFor(() => expect(marked(translation)).toEqual(["첫째 번역"]));
+		// Split the first paragraph with the cursor left in its first part.
+		const at = translation.state.selection.from;
+		translation.commands.splitBlock();
+		translation.commands.setTextSelection(at);
+		document.dispatchEvent(new Event("selectionchange"));
+		await waitFor(() => expect(marked(translation)).toEqual(["첫"]));
+		expect(marked(source)).toEqual(["첫째"]);
+	});
+
+	it("marks nothing for a block with no pair", async () => {
+		layOut();
+		const { translation, source, marked, putCursorIn } = mount(
+			[block(para("번역"), "t1", "a"), block(para("새 문단"), "t2")],
+			[block(para("원문"), "a")],
+		);
+		putCursorIn("번역");
+		await waitFor(() => expect(marked(source)).toEqual(["원문"]));
+		putCursorIn("새 문단");
+		await waitFor(() => expect(marked(translation)).toEqual([]));
+		expect(marked(source)).toEqual([]);
 	});
 });

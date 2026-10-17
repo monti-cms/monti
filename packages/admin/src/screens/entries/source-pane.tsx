@@ -13,14 +13,12 @@ import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { IconButton } from "../../ui/icon-button";
 import { entriesMessages } from "./messages";
+import { ACTIVE_BLOCK_STYLE } from "./source-sync";
 
 const PROSE =
 	"prose monti-dark:prose-invert max-w-none text-base text-monti-foreground leading-relaxed focus:outline-none " +
-	// Read-only: hide the code block tool row and keep collapsible boxes always open.
-	"[&_[data-code-ui]]:hidden [&_[data-monti-collapsed]]:block " +
-	// The source block matching the block under the cursor in the translation editor (source-sync).
-	// Let only a faint background spread around the block, with no bar (a shadow spread, so it does not shift layout and also wraps list bullets).
-	"[&_.monti-source-active]:rounded-sm [&_.monti-source-active]:bg-monti-primary/8 [&_.monti-source-active]:shadow-[0_0_0_12px_color-mix(in_oklab,var(--color-monti-primary)_8%,transparent)] [&_.monti-source-active]:transition-[background-color,box-shadow]";
+	// Read-only: hide the code block tool row. A collapsible box is open unless the translation box it is paired with is collapsed (source-sync).
+	`[&_[data-code-ui]]:hidden [&_[data-monti-collapsed]]:block [&_[data-source-collapsed]]:hidden! ${ACTIVE_BLOCK_STYLE}`;
 
 function PreviewEditor({ doc, label }: { doc: StoredDocument; label: string }) {
 	const site = useSite();

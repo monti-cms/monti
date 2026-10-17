@@ -15,6 +15,7 @@ import { CmsEditor } from "../../editor/tiptap-editor";
 import { commonMessages } from "../../lib/common.messages";
 import { enumCodec, usePreference } from "../../lib/hooks/use-preference";
 import { useSaveShortcut } from "../../lib/hooks/use-save-shortcut";
+import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link, useAdminRouter } from "../../router";
 import { SOURCE_ERROR_ID } from "../../source-error-id";
 import { FormFieldLabel } from "../../ui/field";
@@ -35,7 +36,7 @@ import { formText, titleKeyOf } from "./entry-form";
 import { LanguageTabs } from "./language-tabs";
 import { entriesMessages } from "./messages";
 import { SourceChangeDialog } from "./source-change-dialog";
-import { useSourceSync } from "./source-sync";
+import { ACTIVE_BLOCK_STYLE, useSourceSync } from "./source-sync";
 import { TemplateMenu } from "./template-menu";
 import { EntryEditorProvider, useEntryEditor } from "./use-entry-editor";
 import { useEntryLifecycleCommands } from "./use-entry-lifecycle-commands";
@@ -100,8 +101,9 @@ export function EntryEditorShell({
 	const [narrowClosedSourcePane, setNarrowClosedSourcePane] = useState(false);
 	const isSourcePaneOpen = sourcePanePreference === "open" && !narrowClosedSourcePane;
 	const [isSourceCompareOpen, setIsSourceCompareOpen] = useState(false);
-	const editorScrollRef = useRef<HTMLDivElement>(null);
-	const sourcePaneRef = useRef<HTMLElement>(null);
+	// The two scrolling columns of a translation, as elements: the source sync starts once both are on screen.
+	const [editorScroller, setEditorScroller] = useState<HTMLDivElement | null>(null);
+	const [sourcePane, setSourcePane] = useState<HTMLElement | null>(null);
 	const [pendingFieldPath, setPendingFieldPath] = useState<string | null>(null);
 	const [incoming, setIncoming] = useState<{ items: IncomingReferenceItem[]; loading: boolean; error: string | null }>({
 		items: [],
@@ -165,8 +167,8 @@ export function EntryEditorShell({
 	useSourceSync({
 		enabled: translationSource !== null && isSourcePaneOpen,
 		syncScroll: !isSourceMode,
-		editorRef: editorScrollRef,
-		paneRef: sourcePaneRef,
+		editor: editorScroller,
+		pane: sourcePane,
 	});
 
 	// Edit screen extensions (plugin toolbar and block actions, e.g. AI translation). For the same language, pass the same object so the actions are not recreated.
@@ -391,14 +393,14 @@ export function EntryEditorShell({
 					{translationSource && isSourcePaneOpen && (
 						<TranslationSourcePanel
 							source={translationSource}
-							paneRef={sourcePaneRef}
+							paneRef={setSourcePane}
 							onClose={() => toggleSourcePane(false)}
 						/>
 					)}
 					<div
-						ref={editorScrollRef}
+						ref={setEditorScroller}
 						// Keep the source pane and bottom padding equal so correspondence holds even when scrolled to the end.
-						className="h-full min-w-0 flex-1 overflow-y-auto"
+						className={cn("h-full min-w-0 flex-1 overflow-y-auto", translationSource && ACTIVE_BLOCK_STYLE)}
 						inert={(isInspectorOpen || (Boolean(translationSource) && isSourcePaneOpen)) && isNarrowScreen}
 					>
 						<CmsEditor

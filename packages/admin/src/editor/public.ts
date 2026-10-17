@@ -10,7 +10,7 @@ export type {
 } from "../admin-components";
 export { DocPreview } from "../screens/entries/source-pane";
 export { addedMarkName, codeAnchorRef, type EditorMarkSpec, type MarkAttrs, markAttrsOf } from "./added-marks";
-export { BLOCK_ID_ATTRIBUTE, findBlock } from "./block-ids";
+export { BLOCK_ID_ATTRIBUTE, findBlock, SOURCE_BLOCK_ID_ATTRIBUTE } from "./block-ids";
 export { BLOCK_NODES } from "./block-views";
 export { blockNodeName } from "./blocks/added";
 export { findAnchor, startLinkFromText, unlinkRef } from "./code-block/link-commands";

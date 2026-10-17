@@ -23,7 +23,7 @@ import {
 import { type EditorError, type EditorResult, editorFailure } from "../../hooks/result";
 import { cn } from "../../lib/utils/cn";
 import { allowanceOfState } from "../allowed-extension";
-import { BLOCK_ID_ATTRIBUTE } from "../block-ids";
+import { BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE } from "../block-ids";
 import { blockNodeName } from "./added/shared";
 import { BlockIssueNotice } from "./block-issues";
 import { type ContainerValues, childPos, SELECTED_RING, useEditorEditable, valuesOf, withValue } from "./block-model";
@@ -223,8 +223,8 @@ const hasValuesMap = (node: PmNode) => node.attrs != null && "values" in node.at
 
 const typeHasValuesMap = (type: NodeType) => Boolean(type.spec.attrs && "values" in type.spec.attrs);
 
-/** Attributes that are not block values: the stored id and the source text of code blocks. */
-const INTERNAL_ATTRIBUTES: ReadonlySet<string> = new Set([BLOCK_ID_ATTRIBUTE, "value"]);
+/** Attributes that are not block values: the stored id, the source link and the source text of code blocks. */
+const INTERNAL_ATTRIBUTES: ReadonlySet<string> = new Set([BLOCK_ID_ATTRIBUTE, SOURCE_BLOCK_ID_ATTRIBUTE, "value"]);
 
 const readValues = (node: PmNode): BlockValues => {
 	if (hasValuesMap(node)) return valuesOf(node);
