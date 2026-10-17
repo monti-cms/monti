@@ -98,7 +98,7 @@ function OptionsEditor({
 			<legend className="font-medium text-xs">{t("options.title")}</legend>
 			<ul className="flex flex-col gap-1.5">
 				{values.map((value, index) => (
-					<li key={value} className="flex flex-wrap items-end gap-2 rounded-md border bg-cms-background p-2">
+					<li key={value} className="flex flex-wrap items-end gap-2 rounded-md border bg-monti-background p-2">
 						<NameInput
 							label={t("options.value")}
 							value={value}
@@ -435,17 +435,17 @@ export function FieldEditor({
 		<Collapsible
 			open={open}
 			onOpenChange={setOpen}
-			className="rounded-lg border bg-cms-card"
+			className="rounded-lg border bg-monti-card"
 			data-testid={`field-${name}`}
 		>
 			<div className="flex items-center gap-1 pr-1">
 				<CollapsibleTrigger
 					aria-label={t("field.toggle", { name })}
-					className="group/field flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-cms-ring"
+					className="group/field flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-monti-ring"
 				>
 					<ChevronRight aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-90")} />
 					<code className="shrink-0 font-medium text-sm">{name}</code>
-					<span className="truncate text-cms-muted-foreground text-xs">{label}</span>
+					<span className="truncate text-monti-muted-foreground text-xs">{label}</span>
 					<Badge variant="secondary" className="shrink-0">
 						{t(`kind.${kind}`)}
 					</Badge>
@@ -539,7 +539,7 @@ export function FieldEditor({
 					)}
 					<KindOptions name={name} field={field} editing={editing} set={set} change={change} />
 					<details className="rounded-md border border-dashed px-2.5 py-1.5 text-sm">
-						<summary className="cursor-pointer text-cms-muted-foreground text-xs">{t("field.advanced")}</summary>
+						<summary className="cursor-pointer text-monti-muted-foreground text-xs">{t("field.advanced")}</summary>
 						<div className="mt-3 flex flex-col gap-4">
 							{!isSlug && valueKind && (
 								<FieldRolePicker
@@ -627,7 +627,7 @@ export function NewFieldDialog({
 					/>
 					<KindOptions name={name} field={field} editing={draftEditing} set={set} change={change} />
 					{problems.length > 0 && (
-						<ul className="flex flex-col gap-0.5 text-cms-muted-foreground text-xs" data-testid="new-field-problems">
+						<ul className="flex flex-col gap-0.5 text-monti-muted-foreground text-xs" data-testid="new-field-problems">
 							{problems.map((problem) => (
 								<li key={problem}>{t(`field.needs.${problem}`)}</li>
 							))}
@@ -676,7 +676,7 @@ export function FieldList({
 	const problem = nameProblem(name, taken);
 	return (
 		<div className="flex flex-col gap-2">
-			{names.length === 0 && <p className="text-cms-muted-foreground text-xs">{t("field.none")}</p>}
+			{names.length === 0 && <p className="text-monti-muted-foreground text-xs">{t("field.none")}</p>}
 			{names.map((fieldName, index) => (
 				<FieldEditor
 					key={fieldName}

@@ -12,7 +12,7 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
 		<CommandPrimitive
 			data-slot="command"
 			className={cn(
-				"flex size-full flex-col overflow-hidden rounded-xl! bg-cms-popover p-1 text-cms-popover-foreground",
+				"flex size-full flex-col overflow-hidden rounded-xl! bg-monti-popover p-1 text-monti-popover-foreground",
 				className,
 			)}
 			{...props}
@@ -53,7 +53,7 @@ function CommandDialog({
 function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
 	return (
 		<div data-slot="command-input-wrapper" className="p-1 pb-0">
-			<InputGroup className="h-8! rounded-lg! border-cms-input/30 bg-cms-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+			<InputGroup className="h-8! rounded-lg! border-monti-input/30 bg-monti-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
 				<CommandPrimitive.Input
 					data-slot="command-input"
 					className={cn("w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50", className)}
@@ -92,7 +92,7 @@ function CommandGroup({ className, ...props }: React.ComponentProps<typeof Comma
 		<CommandPrimitive.Group
 			data-slot="command-group"
 			className={cn(
-				"overflow-hidden p-1 text-cms-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-cms-muted-foreground **:[[cmdk-group-heading]]:text-xs",
+				"overflow-hidden p-1 text-monti-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-monti-muted-foreground **:[[cmdk-group-heading]]:text-xs",
 				className,
 			)}
 			{...props}
@@ -104,7 +104,7 @@ function CommandSeparator({ className, ...props }: React.ComponentProps<typeof C
 	return (
 		<CommandPrimitive.Separator
 			data-slot="command-separator"
-			className={cn("-mx-1 h-px w-auto bg-cms-border", className)}
+			className={cn("-mx-1 h-px w-auto bg-monti-border", className)}
 			{...props}
 		/>
 	);
@@ -115,7 +115,7 @@ function CommandItem({ className, children, ...props }: React.ComponentProps<typ
 		<CommandPrimitive.Item
 			data-slot="command-item"
 			className={cn(
-				"group/command-item relative flex cursor-default select-none items-center gap-2 in-data-[slot=dialog-content]:rounded-lg! rounded-sm px-2 py-1.5 text-sm outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-cms-accent data-[selected=true]:text-cms-accent-foreground data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-cms-foreground",
+				"group/command-item relative flex cursor-default select-none items-center gap-2 in-data-[slot=dialog-content]:rounded-lg! rounded-sm px-2 py-1.5 text-sm outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-accent data-[selected=true]:text-monti-accent-foreground data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-foreground",
 				className,
 			)}
 			{...props}
@@ -131,7 +131,7 @@ function CommandShortcut({ className, ...props }: React.ComponentProps<"span">) 
 		<span
 			data-slot="command-shortcut"
 			className={cn(
-				"ml-auto text-cms-muted-foreground text-xs tracking-widest group-data-[selected=true]/command-item:text-cms-foreground",
+				"ml-auto text-monti-muted-foreground text-xs tracking-widest group-data-[selected=true]/command-item:text-monti-foreground",
 				className,
 			)}
 			{...props}

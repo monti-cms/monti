@@ -40,26 +40,26 @@ describe("CMS component showcase", () => {
 		}
 
 		// Default components of the block extensions
-		expect(html).toContain('class="cms-block-callout"');
-		expect(html).toContain('<details class="cms-block-collapsible"');
+		expect(html).toContain('class="monti-block-callout"');
+		expect(html).toContain('<details class="monti-block-collapsible"');
 		// Code line collapse (`@line collapse`) is a core default component.
-		expect(html).toContain("cms-code-collapse");
+		expect(html).toContain("monti-code-collapse");
 		expect(html).toContain('role="tablist"');
 		expect(html).toContain('role="tabpanel"');
-		expect(html).toContain('class="cms-block-columns"');
-		expect(html).toContain('class="cms-block-column"');
-		expect(html).toContain('class="cms-block-tooltip"');
+		expect(html).toContain('class="monti-block-columns"');
+		expect(html).toContain('class="monti-block-column"');
+		expect(html).toContain('class="monti-block-tooltip"');
 		// Code explorer: every file is in the HTML (hidden only on screen), with its path.
 		expect(html).toContain("src/app/page.tsx");
 		expect(html).toContain("src/lib/db.ts");
 		// Fence blocks show the source on the server (drawing happens in the browser). No syntax errors.
-		expect(html).toContain('class="cms-block-chart"');
-		expect(html).toContain('class="cms-block-mermaid"');
-		expect(html).not.toContain("cms-block-chart-error");
+		expect(html).toContain('class="monti-block-chart"');
+		expect(html).toContain('class="monti-block-mermaid"');
+		expect(html).not.toContain("monti-block-chart-error");
 
 		// Core default components
-		expect(html).toContain("cms-align-center");
-		expect(html).toContain('<figure class="cms-image');
+		expect(html).toContain("monti-align-center");
+		expect(html).toContain('<figure class="monti-image');
 		expect(html).toContain("<u>밑줄</u>");
 		expect(html).toContain("<sup>위 첨자</sup>");
 		expect(html).toContain("<sub>아래 첨자</sub>");

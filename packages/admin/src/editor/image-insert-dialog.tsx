@@ -252,7 +252,7 @@ export function ImageInsertDialog({
 										/>
 										{t("imageDialog.optimize")}
 									</Label>
-									<p className="text-cms-muted-foreground text-xs" aria-live="polite">
+									<p className="text-monti-muted-foreground text-xs" aria-live="polite">
 										{prepared?.optimized
 											? `WebP · ${formatBytes(file.size)} → ${formatBytes(prepared.file.size)} · ${prepared.width}×${prepared.height}`
 											: `${t("imageDialog.keepOriginal", { size: formatBytes(file.size) })}${prepared?.skippedReason ? ` · ${prepared.skippedReason}` : ""}`}
@@ -286,7 +286,7 @@ export function ImageInsertDialog({
 									</Alert>
 								)}
 								{library.length === 0 && !isLibraryLoading && !libraryFailed && (
-									<p className="col-span-3 py-6 text-center text-cms-muted-foreground text-sm">
+									<p className="col-span-3 py-6 text-center text-monti-muted-foreground text-sm">
 										{t("imageDialog.libraryEmpty")}
 									</p>
 								)}
@@ -299,13 +299,13 @@ export function ImageInsertDialog({
 										onClick={() => pick(item)}
 										className={cn(
 											"h-auto flex-col items-stretch gap-0 overflow-hidden p-0 text-left font-normal text-xs",
-											picked?.id === item.id && "ring-2 ring-cms-primary",
+											picked?.id === item.id && "ring-2 ring-monti-primary",
 										)}
 									>
 										{item.publicUrl ? (
 											<img src={item.publicUrl} alt="" className="h-20 w-full object-cover" />
 										) : (
-											<span className="flex h-20 items-center justify-center bg-cms-muted">
+											<span className="flex h-20 items-center justify-center bg-monti-muted">
 												{t("imageDialog.noPreview")}
 											</span>
 										)}
@@ -335,7 +335,7 @@ export function ImageInsertDialog({
 						/>
 						{showAltError && <FormFieldError id={altErrorId}>{altRequiredMessage(t)}</FormFieldError>}
 						{altLater && !decorative && !alt.trim() && (
-							<p id={altLaterId} className="text-cms-muted-foreground text-xs">
+							<p id={altLaterId} className="text-monti-muted-foreground text-xs">
 								{t("imageDialog.altLater")}
 							</p>
 						)}

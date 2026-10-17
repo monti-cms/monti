@@ -185,7 +185,7 @@ describe("spellcheck button", () => {
 		const [sent] = (checker.check as ReturnType<typeof vi.fn>).mock.calls[0] as [TextCheckSegment[]];
 		expect(sent.map((segment) => segment.text)).toEqual(["첫 문단은 틀린말 입니다", "둘째 문단"]);
 		expect(sent.every((segment) => segment.locale === "ko")).toBe(true);
-		expect(editor.view.dom.querySelector(".cms-text-issue")?.textContent).toBe("틀린말");
+		expect(editor.view.dom.querySelector(".monti-text-issue")?.textContent).toBe("틀린말");
 		expect(screen.getByRole("button", { name: t("results") }).textContent).toBe("1");
 	});
 

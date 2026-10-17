@@ -15,8 +15,8 @@ import { deleteBlockSet, MOVED_BLOCKS_META } from "./drag-commands";
 export const cmsBlockSelectionKey = new PluginKey<number[] | null>("cmsBlockSelection");
 
 /** Classes put on the editor while a block selection is active and on the selected lines (styles live in the editor class). */
-export const BLOCK_RANGE_CLASS = "cms-block-range";
-export const BLOCK_SELECTED_CLASS = "cms-block-selected";
+export const BLOCK_RANGE_CLASS = "monti-block-range";
+export const BLOCK_SELECTED_CLASS = "monti-block-selected";
 
 const LIST_NODES = new Set(["bulletList", "orderedList", "taskList"]);
 
@@ -239,8 +239,8 @@ export function startMarquee(view: EditorView, event: MouseEvent): void {
 		if (!box) {
 			box = document.createElement("div");
 			box.setAttribute("aria-hidden", "true");
-			box.dataset.cmsMarquee = "";
-			box.className = "pointer-events-none fixed z-50 rounded-sm border border-cms-primary/60 bg-cms-primary/10";
+			box.dataset.montiMarquee = "";
+			box.className = "pointer-events-none fixed z-50 rounded-sm border border-monti-primary/60 bg-monti-primary/10";
 			document.body.appendChild(box);
 		}
 		box.style.left = `${left}px`;

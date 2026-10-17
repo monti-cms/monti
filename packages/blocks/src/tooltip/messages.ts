@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /** Label and editing view text of the tooltip inline mark. */
-export const tooltipMessages = defineMessages("cms-blocks.tooltip", {
+export const tooltipMessages = defineMessages("monti-blocks.tooltip", {
 	en: {
 		label: "Tooltip",
 		"content.label": "Description",

@@ -30,13 +30,13 @@ function AttributeField({
 	const value = values[name] ?? attribute.defaultValue ?? (attribute.type === "boolean" ? false : "");
 	const id = `${definition.name}-${name}`;
 	const description = attribute.description ? (
-		<p className="text-cms-muted-foreground text-xs">{attribute.description}</p>
+		<p className="text-monti-muted-foreground text-xs">{attribute.description}</p>
 	) : null;
 	if (attribute.type === "boolean") {
 		return (
 			<div className="flex flex-col gap-1">
 				<label htmlFor={id} className="flex items-center justify-between gap-2">
-					<span className="text-cms-muted-foreground">{attribute.label}</span>
+					<span className="text-monti-muted-foreground">{attribute.label}</span>
 					<Switch
 						id={id}
 						size="sm"
@@ -81,7 +81,7 @@ function AttributeField({
 				value={String(value)}
 				readOnly={!editable}
 				onCommit={(next) => setValue(name, next)}
-				className="h-7 w-full rounded-md border border-cms-input cms-dark:bg-cms-input/30 px-2 text-xs shadow-xs placeholder:text-cms-muted-foreground placeholder:opacity-100 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50"
+				className="h-7 w-full rounded-md border border-monti-input monti-dark:bg-monti-input/30 px-2 text-xs shadow-xs placeholder:text-monti-muted-foreground placeholder:opacity-100 focus-visible:border-monti-ring focus-visible:ring-3 focus-visible:ring-monti-ring/50"
 			/>
 			{description}
 		</BlockSettingsField>
@@ -99,7 +99,7 @@ export function DefaultBlockView() {
 	const names = Object.keys(definition.attributes);
 	const container = isContainer(definition);
 	return (
-		<BlockFrame data-cms-custom-block={definition.name} className="my-6 rounded-md border">
+		<BlockFrame data-monti-custom-block={definition.name} className="my-6 rounded-md border">
 			{editable && names.length > 0 && (
 				<ContainerToolbar label={t("added.toolbar", { label: definition.label })}>
 					<BlockSettings>
@@ -118,7 +118,7 @@ export function DefaultBlockView() {
 			)}
 			<div
 				contentEditable={false}
-				className={cn("not-prose px-3 py-2 font-medium text-cms-muted-foreground text-xs", container && "border-b")}
+				className={cn("not-prose px-3 py-2 font-medium text-monti-muted-foreground text-xs", container && "border-b")}
 			>
 				{definition.label}
 			</div>

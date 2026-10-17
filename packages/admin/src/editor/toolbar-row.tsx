@@ -38,7 +38,7 @@ const OVERFLOW_WIDTH = 32;
 const END_KEY = "end";
 
 export function ToolbarDivider() {
-	return <span aria-hidden className="mx-1 h-5 w-px shrink-0 self-center bg-cms-border" />;
+	return <span aria-hidden className="mx-1 h-5 w-px shrink-0 self-center bg-monti-border" />;
 }
 
 /** One tool row in a dropdown or the "More" menu. */

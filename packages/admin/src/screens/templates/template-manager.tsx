@@ -134,7 +134,9 @@ function TemplateEditPanel({
 				/>
 				<EditorFooter dirty={dirty || isNew} saving={save.isPending} onSave={handleSave} onCancel={onCancel} />
 			</div>
-			{saveError && <FormFieldError className="border-b bg-cms-destructive-soft px-6 py-2">{saveError}</FormFieldError>}
+			{saveError && (
+				<FormFieldError className="border-b bg-monti-destructive-soft px-6 py-2">{saveError}</FormFieldError>
+			)}
 			<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 				<CmsEditor doc={draft.doc} onChange={(doc) => update({ doc })} />
 			</div>

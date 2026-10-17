@@ -75,8 +75,8 @@ function StateHeader({
 						variant="ghost"
 						size="sm"
 						className={cn(
-							"-ml-2 h-7 gap-1 px-2 font-normal text-cms-muted-foreground text-xs",
-							filtered && "text-cms-primary",
+							"-ml-2 h-7 gap-1 px-2 font-normal text-monti-muted-foreground text-xs",
+							filtered && "text-monti-primary",
 						)}
 						aria-label={`${t("column.state")}${filtered ? t("filter.activeSuffix") : ""}`}
 					/>
@@ -230,7 +230,7 @@ export function EventsScreen() {
 										<TableCell>{item.subscriber ?? ""}</TableCell>
 										<TableCell>{t(`kind.${change.kind}`)}</TableCell>
 										<TableCell>
-											<span className="text-cms-muted-foreground">{change.collection} </span>
+											<span className="text-monti-muted-foreground">{change.collection} </span>
 											{change.kind === "deleted" ? (
 												<span className="font-mono text-xs">{change.entryId}</span>
 											) : (

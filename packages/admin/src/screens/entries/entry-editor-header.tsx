@@ -80,7 +80,7 @@ export function EntryEditorHeader({
 	const previewHref = previewPath === null ? null : withBasePath(previewPath);
 
 	return (
-		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-cms-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
+		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-monti-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
 			<div className="flex min-w-0 items-center gap-2 text-[13px]">
 				<Tooltip>
 					<TooltipTrigger
@@ -90,7 +90,7 @@ export function EntryEditorHeader({
 								aria-label={t("backToList")}
 								className={cn(
 									buttonVariants({ variant: "ghost", size: "icon-sm" }),
-									"size-8 text-cms-muted-foreground",
+									"size-8 text-monti-muted-foreground",
 								)}
 							>
 								<ChevronLeft aria-hidden className="size-4" />
@@ -99,7 +99,7 @@ export function EntryEditorHeader({
 					/>
 					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
 				</Tooltip>
-				<span className="hidden rounded bg-cms-muted px-1.5 py-0.5 text-cms-muted-foreground text-xs sm:inline-flex">
+				<span className="hidden rounded bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs sm:inline-flex">
 					{statusLabel}
 				</span>
 			</div>
@@ -111,7 +111,7 @@ export function EntryEditorHeader({
 						type="button"
 						size="sm"
 						variant="ghost"
-						className="text-cms-muted-foreground"
+						className="text-monti-muted-foreground"
 						onClick={() => void editor.retry()}
 					>
 						{te("retry")}
@@ -177,25 +177,25 @@ export function EntryEditorHeader({
 				) : (
 					// For an already published post, publish and "republish with today's date" are combined into one button.
 					// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
-					<div className="ml-1 flex h-8 items-center overflow-hidden rounded-[min(var(--radius-md),10px)] bg-cms-primary text-cms-primary-foreground">
+					<div className="ml-1 flex h-8 items-center overflow-hidden rounded-[min(var(--radius-md),10px)] bg-monti-primary text-monti-primary-foreground">
 						<Button
 							id="cms-publish"
 							type="button"
 							size="sm"
-							className="h-full rounded-none bg-transparent pr-2 pl-3 hover:bg-cms-primary-foreground/10"
+							className="h-full rounded-none bg-transparent pr-2 pl-3 hover:bg-monti-primary-foreground/10"
 							disabled={isSubmitting}
 							onClick={() => void handlePublish()}
 						>
 							{isPublishing ? t("publishing") : tc("lifecycle.publish")}
 						</Button>
-						<span aria-hidden className="h-4 w-px bg-cms-primary-foreground/30" />
+						<span aria-hidden className="h-4 w-px bg-monti-primary-foreground/30" />
 						<DropdownMenu>
 							<IconButton
 								label={t("publishOptions")}
 								side="bottom"
 								variant="default"
 								disabled={isSubmitting}
-								className="h-full w-7 rounded-none bg-transparent hover:bg-cms-primary-foreground/10 aria-expanded:bg-cms-primary-foreground/10"
+								className="h-full w-7 rounded-none bg-transparent hover:bg-monti-primary-foreground/10 aria-expanded:bg-monti-primary-foreground/10"
 								trigger={(button) => <DropdownMenuTrigger render={button} />}
 							>
 								<ChevronDown aria-hidden className="size-3.5" />
@@ -212,12 +212,12 @@ export function EntryEditorHeader({
 						</DropdownMenu>
 					</div>
 				)}
-				<span aria-hidden className="mx-1 h-4 w-px bg-cms-border" />
+				<span aria-hidden className="mx-1 h-4 w-px bg-monti-border" />
 				<IconButton
 					label={t("properties")}
 					side="bottom"
 					pressed={isInspectorOpen}
-					className="size-8 text-cms-muted-foreground"
+					className="size-8 text-monti-muted-foreground"
 					onClick={onToggleInspector}
 				>
 					<PanelRight aria-hidden className="size-4" />
@@ -226,7 +226,7 @@ export function EntryEditorHeader({
 					<IconButton
 						label={t("more")}
 						side="bottom"
-						className="size-8 text-cms-muted-foreground"
+						className="size-8 text-monti-muted-foreground"
 						trigger={(button) => <DropdownMenuTrigger render={button} />}
 					>
 						<MoreHorizontal aria-hidden className="size-4" />

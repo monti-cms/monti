@@ -185,7 +185,7 @@ export function RecordPanel({
 	};
 
 	return (
-		<aside aria-label={heading} className={cn("flex h-full flex-col border-l bg-cms-background text-sm", className)}>
+		<aside aria-label={heading} className={cn("flex h-full flex-col border-l bg-monti-background text-sm", className)}>
 			<SidePanelHeader title={heading} onClose={() => void close()} />
 			<form
 				className="flex min-h-0 flex-1 flex-col"
@@ -232,11 +232,11 @@ export function RecordPanel({
 						<div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
 							<TabsContent value={site.DEFAULT_LOCALE} className="space-y-4">
 								<SchemaFields slugPlaceholder={site.slugFromValues(collection, form) || slugHint} />
-								{id && <p className="text-cms-muted-foreground text-xs">{t("record.slugChange")}</p>}
+								{id && <p className="text-monti-muted-foreground text-xs">{t("record.slugChange")}</p>}
 							</TabsContent>
 							{(site.ADMIN_TRANSLATIONS ? site.PREFIXED_LOCALES : []).map((option) => (
 								<TabsContent key={option} value={option} className="space-y-4">
-									<p className="text-cms-muted-foreground text-xs leading-relaxed">
+									<p className="text-monti-muted-foreground text-xs leading-relaxed">
 										{t("record.localeEmpty", { name: site.localeLabel(option) })}
 									</p>
 									<RecordLocaleFields collection={collection} locale={option} />

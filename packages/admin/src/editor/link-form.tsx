@@ -93,7 +93,7 @@ export function PopoverFormFooter({
 					type="button"
 					variant="ghost"
 					size="sm"
-					className="text-cms-destructive hover:bg-cms-destructive/10 hover:text-cms-destructive"
+					className="text-monti-destructive hover:bg-monti-destructive/10 hover:text-monti-destructive"
 					onClick={onRemove}
 				>
 					{removeIcon}

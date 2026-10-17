@@ -30,7 +30,7 @@ export function TranslationSourcePanel({
 			title={source.title}
 			locale={source.locale}
 			onClose={onClose}
-			className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-cms-pop lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
+			className="absolute inset-y-0 left-0 z-10 w-[min(100%,28rem)] shadow-monti-pop lg:static lg:w-[45%] lg:shrink-0 lg:shadow-none"
 		/>
 	);
 }
@@ -62,7 +62,7 @@ export function InspectorSidePanel({
 		// On narrow screens it overlays the body; on wide screens it sits beside it at the width the writer dragged it to.
 		<div
 			className={cn(
-				"absolute inset-y-0 right-0 z-20 max-w-full shadow-cms-pop lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",
+				"absolute inset-y-0 right-0 z-20 max-w-full shadow-monti-pop lg:relative lg:z-auto lg:shrink-0 lg:shadow-none",
 				SIDE_PANEL_WIDTH,
 			)}
 			style={resize.style}

@@ -93,7 +93,7 @@ export function InspectorPanel({
 			value={tab}
 			onValueChange={(value) => setTab(String(value))}
 			aria-label={t("tab.default")}
-			className="h-full w-full gap-0 overflow-hidden border-l bg-cms-background text-sm"
+			className="h-full w-full gap-0 overflow-hidden border-l bg-monti-background text-sm"
 		>
 			<SidePanelHeader onClose={onClose}>
 				<TabsList variant="line" className="h-full flex-1 justify-start gap-3">

@@ -46,7 +46,7 @@ export type AdminLayoutProps = {
 };
 
 /**
- * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `cms-*` colors) come from the app's global CSS.
+ * Admin UI layout, framework-neutral. A host package renders it inside the router provider (`CmsAdminLayout` of `@monti-cms/nextjs/admin` for Next.js). Styles (Tailwind, `monti-*` colors) come from the app's global CSS.
  * Supports both light and dark themes and, by default, renders the `next-themes` provider and the toast container.
  * If the site already has them, turn them off with `<AdminLayout cms={cms} themeProvider={false} toaster={false}>`.
  */
@@ -64,7 +64,7 @@ export async function AdminLayout({
 	const content = (
 		<AdminPluginScope plugins={plugins}>
 			<TooltipProvider>
-				<div className="cms-admin min-h-screen bg-cms-background text-cms-foreground">{children}</div>
+				<div className="monti-admin min-h-screen bg-monti-background text-monti-foreground">{children}</div>
 				{toaster ? <Toaster richColors closeButton position="bottom-right" /> : null}
 			</TooltipProvider>
 		</AdminPluginScope>

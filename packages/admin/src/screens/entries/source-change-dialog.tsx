@@ -50,17 +50,17 @@ function ChangeItem({ change }: { change: SourceChange }) {
 	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : kindLabels(t)[change.kind];
 	return (
 		<li className="flex flex-col gap-2 rounded-md border p-3">
-			<span className="w-fit rounded bg-cms-muted px-1.5 py-0.5 font-medium text-xs">{label}</span>
+			<span className="w-fit rounded bg-monti-muted px-1.5 py-0.5 font-medium text-xs">{label}</span>
 			<div className="grid gap-3 md:grid-cols-2">
 				{before && (
 					<div className="min-w-0">
-						<p className="mb-1 text-cms-muted-foreground text-xs">{t("sourceChange.before")}</p>
+						<p className="mb-1 text-monti-muted-foreground text-xs">{t("sourceChange.before")}</p>
 						<UnitView unit={before} />
 					</div>
 				)}
 				{after && (
 					<div className="min-w-0">
-						<p className="mb-1 text-cms-muted-foreground text-xs">{t("sourceChange.after")}</p>
+						<p className="mb-1 text-monti-muted-foreground text-xs">{t("sourceChange.after")}</p>
 						<UnitView unit={after} />
 					</div>
 				)}
@@ -93,9 +93,9 @@ export function SourceChangeDialog({
 					<DialogDescription>{t("sourceChange.description")}</DialogDescription>
 				</DialogHeader>
 				{changes === null ? (
-					<p className="text-cms-muted-foreground text-sm">{t("sourceChange.cantCompare")}</p>
+					<p className="text-monti-muted-foreground text-sm">{t("sourceChange.cantCompare")}</p>
 				) : changes.length === 0 ? (
-					<p className="text-cms-muted-foreground text-sm">{t("sourceChange.none")}</p>
+					<p className="text-monti-muted-foreground text-sm">{t("sourceChange.none")}</p>
 				) : (
 					<ol className="flex flex-col gap-3">
 						{changes.map((change, index) => (

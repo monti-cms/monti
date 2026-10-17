@@ -441,7 +441,7 @@ export function MediaLibrary() {
 		>
 			<PageActions>
 				<div className="flex flex-wrap items-center gap-2">
-					<Label className="font-normal text-cms-muted-foreground text-xs">
+					<Label className="font-normal text-monti-muted-foreground text-xs">
 						<Switch size="sm" checked={optimize} onCheckedChange={(checked) => setOptimize(checked === true)} />
 						{t("library.optimize")}
 					</Label>

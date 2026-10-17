@@ -47,7 +47,7 @@ export function CmsImageView({
 
 	if (failed) {
 		return (
-			<div role="img" aria-label={decorative ? undefined : unavailableLabel} className="cms-image-unavailable">
+			<div role="img" aria-label={decorative ? undefined : unavailableLabel} className="monti-image-unavailable">
 				{decorative ? null : unavailableLabel}
 			</div>
 		);
@@ -56,7 +56,7 @@ export function CmsImageView({
 		const intrinsic = intrinsicDisplayWidth(transform, natural);
 		return (
 			<div
-				className="cms-image-transform"
+				className="monti-image-transform"
 				style={{
 					...style,
 					width: style?.width ?? (intrinsic ? `${intrinsic}px` : "100%"),
@@ -82,7 +82,7 @@ export function CmsImageView({
 	return (
 		<img
 			alt={decorative ? "" : alt}
-			className="cms-image-plain"
+			className="monti-image-plain"
 			height={intrinsicSize?.height}
 			loading="lazy"
 			onError={() => setFailed(true)}

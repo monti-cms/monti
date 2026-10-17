@@ -28,9 +28,9 @@ export function MediaThumb({ media, iconClassName }: { media: MediaItem; iconCla
 	const site = useSite();
 	if (!site.api.isImageType(media.mimeType)) {
 		const Icon = FILE_ICONS[fileKindOf(media.mimeType)];
-		return <Icon className={cn("text-cms-muted-foreground", iconClassName)} aria-hidden />;
+		return <Icon className={cn("text-monti-muted-foreground", iconClassName)} aria-hidden />;
 	}
-	if (!media.publicUrl) return <File className={cn("text-cms-muted-foreground", iconClassName)} aria-hidden />;
+	if (!media.publicUrl) return <File className={cn("text-monti-muted-foreground", iconClassName)} aria-hidden />;
 	return <img src={media.publicUrl} alt="" loading="lazy" className="h-full w-full object-cover" />;
 }
 
@@ -101,12 +101,12 @@ export function MediaGrid({
 						variant="outline"
 						type="button"
 						onClick={() => onSelectFolder(explorer.parent ?? "all")}
-						className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-cms-card p-0 text-left font-normal hover:border-cms-foreground/30"
+						className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-monti-card p-0 text-left font-normal hover:border-monti-foreground/30"
 					>
-						<span className="relative flex aspect-square items-center justify-center bg-cms-muted/50 text-cms-muted-foreground hover:text-cms-foreground">
+						<span className="relative flex aspect-square items-center justify-center bg-monti-muted/50 text-monti-muted-foreground hover:text-monti-foreground">
 							<FolderUp className="size-10" aria-hidden />
 						</span>
-						<span className="truncate p-2 font-medium text-cms-muted-foreground text-xs">{ts("list.folderUp")}</span>
+						<span className="truncate p-2 font-medium text-monti-muted-foreground text-xs">{ts("list.folderUp")}</span>
 					</Button>
 				</li>
 			)}
@@ -119,17 +119,17 @@ export function MediaGrid({
 							type="button"
 							onClick={() => onSelectFolder?.(folder.id)}
 							onKeyDown={folderActions ? folderKeyHandler(folder, folderActions) : undefined}
-							className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-cms-card p-0 text-left font-normal hover:border-cms-foreground/30"
+							className="h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-monti-card p-0 text-left font-normal hover:border-monti-foreground/30"
 						>
-							<span className="relative flex aspect-square items-center justify-center bg-cms-muted/50 text-cms-muted-foreground">
-								<FolderIcon className="size-10 text-cms-muted-foreground" aria-hidden />
+							<span className="relative flex aspect-square items-center justify-center bg-monti-muted/50 text-monti-muted-foreground">
+								<FolderIcon className="size-10 text-monti-muted-foreground" aria-hidden />
 							</span>
 							<span className="truncate p-2 font-medium text-xs">{folder.name}</span>
 						</Button>
 						<MoreActionsButton
 							actions={actions}
 							label={ts("list.folderActions", { name: folder.name })}
-							className="absolute top-1 right-1 size-7 bg-cms-background/80"
+							className="absolute top-1 right-1 size-7 bg-monti-background/80"
 						/>
 					</ActionContextMenu>
 				);
@@ -145,17 +145,17 @@ export function MediaGrid({
 						onClick={() => onSelect(media)}
 						onKeyDown={deleteKey(media, onDeleteKey)}
 						className={cn(
-							"h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-cms-card p-0 text-left font-normal",
+							"h-auto w-full flex-col items-stretch gap-0 overflow-hidden rounded-lg bg-monti-card p-0 text-left font-normal",
 							selectedId === media.id
-								? cn(OPEN_ITEM, "border-cms-foreground/40 hover:bg-cms-accent")
-								: "hover:border-cms-foreground/30",
+								? cn(OPEN_ITEM, "border-monti-foreground/40 hover:bg-monti-accent")
+								: "hover:border-monti-foreground/30",
 						)}
 					>
-						<span className="relative flex aspect-square items-center justify-center bg-cms-muted">
+						<span className="relative flex aspect-square items-center justify-center bg-monti-muted">
 							{site.api.isImageType(media.mimeType) ? (
 								<MediaThumb media={media} iconClassName="size-10" />
 							) : (
-								<span className="flex flex-col items-center gap-1.5 text-cms-muted-foreground">
+								<span className="flex flex-col items-center gap-1.5 text-monti-muted-foreground">
 									<MediaThumb media={media} iconClassName="size-10" />
 									<span className="font-medium text-[10px]">{fileTypeLabel(media.filename, media.mimeType)}</span>
 								</span>
@@ -169,7 +169,7 @@ export function MediaGrid({
 					<MoreActionsButton
 						actions={menuFor(media)}
 						label={t("views.itemActions", { name: media.filename })}
-						className="absolute top-1 right-1 size-7 bg-cms-background/80"
+						className="absolute top-1 right-1 size-7 bg-monti-background/80"
 					/>
 				</ActionContextMenu>
 			))}
@@ -201,18 +201,18 @@ export function MediaTable({
 				dimmed && "opacity-60",
 			)}
 		>
-			<TableHeader className="sticky top-0 z-10 bg-cms-background [&_tr]:border-b">
+			<TableHeader className="sticky top-0 z-10 bg-monti-background [&_tr]:border-b">
 				<TableRow>
-					<TableHead className="w-14 font-normal text-cms-muted-foreground">
+					<TableHead className="w-14 font-normal text-monti-muted-foreground">
 						<span className="sr-only">{t("views.preview")}</span>
 					</TableHead>
-					<TableHead className="font-normal text-cms-muted-foreground">{t("views.filename")}</TableHead>
-					<TableHead className="w-28 font-normal text-cms-muted-foreground">{t("views.type")}</TableHead>
-					<TableHead className="w-24 font-normal text-cms-muted-foreground">{t("views.size")}</TableHead>
-					<TableHead className="w-28 font-normal text-cms-muted-foreground">{t("views.dimensions")}</TableHead>
-					<TableHead className="w-20 font-normal text-cms-muted-foreground">{t("views.usage")}</TableHead>
-					<TableHead className="w-40 font-normal text-cms-muted-foreground">{t("views.uploadedAt")}</TableHead>
-					<TableHead className="w-10 font-normal text-cms-muted-foreground">
+					<TableHead className="font-normal text-monti-muted-foreground">{t("views.filename")}</TableHead>
+					<TableHead className="w-28 font-normal text-monti-muted-foreground">{t("views.type")}</TableHead>
+					<TableHead className="w-24 font-normal text-monti-muted-foreground">{t("views.size")}</TableHead>
+					<TableHead className="w-28 font-normal text-monti-muted-foreground">{t("views.dimensions")}</TableHead>
+					<TableHead className="w-20 font-normal text-monti-muted-foreground">{t("views.usage")}</TableHead>
+					<TableHead className="w-40 font-normal text-monti-muted-foreground">{t("views.uploadedAt")}</TableHead>
+					<TableHead className="w-10 font-normal text-monti-muted-foreground">
 						<span className="sr-only">{t("views.actions")}</span>
 					</TableHead>
 				</TableRow>
@@ -246,7 +246,7 @@ export function MediaTable({
 							}
 						>
 							<TableCell className="py-1.5">
-								<span className="flex size-9 items-center justify-center overflow-hidden rounded border bg-cms-muted">
+								<span className="flex size-9 items-center justify-center overflow-hidden rounded border bg-monti-muted">
 									<MediaThumb media={media} iconClassName="size-4" />
 								</span>
 							</TableCell>
@@ -264,17 +264,17 @@ export function MediaTable({
 									{media.filename}
 								</button>
 							</TableCell>
-							<TableCell className="text-cms-muted-foreground">
+							<TableCell className="text-monti-muted-foreground">
 								{site.api.isImageType(media.mimeType)
 									? (media.mimeType?.replace("image/", "").toUpperCase() ?? "—")
 									: fileTypeLabel(media.filename, media.mimeType)}
 							</TableCell>
 							<TableCell className="tabular-nums">{formatFileSize(media.byteSize ?? 0)}</TableCell>
-							<TableCell className="text-cms-muted-foreground tabular-nums">
+							<TableCell className="text-monti-muted-foreground tabular-nums">
 								{media.width && media.height ? `${media.width}×${media.height}` : "—"}
 							</TableCell>
 							<TableCell>{usageLabel(t, media)}</TableCell>
-							<TableCell className="text-cms-muted-foreground tabular-nums">
+							<TableCell className="text-monti-muted-foreground tabular-nums">
 								{formatDateTime(site, media.createdAt, { dateStyle: "medium", timeStyle: "short" })}
 							</TableCell>
 							<TableCell onClick={(event) => event.stopPropagation()}>

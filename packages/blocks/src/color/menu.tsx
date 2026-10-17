@@ -66,7 +66,7 @@ export function applyTextColor(editor: Editor, kind: ColorKind, color: ColorPair
 	}
 }
 
-/** Sample letter (a Hangul syllable). It uses the same `.cms-color` rule as the real body, so it shows in the current theme's color. */
+/** Sample letter (a Hangul syllable). It uses the same `.monti-color` rule as the real body, so it shows in the current theme's color. */
 function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 	const t = useTranslator(colorMessages);
 	const props = color
@@ -134,7 +134,7 @@ function SwatchRow({
 											applyTextColor(editor, kind, color);
 											onPicked?.();
 										}}
-										className="relative flex justify-center rounded-sm p-0.5 outline-none hover:bg-cms-accent focus-visible:ring-2 focus-visible:ring-cms-ring"
+										className="relative flex justify-center rounded-sm p-0.5 outline-none hover:bg-monti-accent focus-visible:ring-2 focus-visible:ring-monti-ring"
 									/>
 								)
 							}
@@ -143,7 +143,7 @@ function SwatchRow({
 							{selected && (
 								<Check
 									aria-hidden
-									className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-cms-primary p-px text-cms-primary-foreground"
+									className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-monti-primary p-px text-monti-primary-foreground"
 								/>
 							)}
 						</TooltipTrigger>
@@ -177,9 +177,9 @@ export function TextColorPanel({ editor, onPicked }: { editor: Editor; onPicked?
 	const t = useTranslator(colorMessages);
 	return (
 		<div className="flex flex-col gap-1">
-			<p className="px-1 text-cms-muted-foreground">{t("fg.label")}</p>
+			<p className="px-1 text-monti-muted-foreground">{t("fg.label")}</p>
 			<SwatchRow editor={editor} kind="fg" variant="buttons" onPicked={onPicked} />
-			<p className="px-1 text-cms-muted-foreground">{t("bg.label")}</p>
+			<p className="px-1 text-monti-muted-foreground">{t("bg.label")}</p>
 			<SwatchRow editor={editor} kind="bg" variant="buttons" onPicked={onPicked} />
 		</div>
 	);

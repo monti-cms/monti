@@ -20,9 +20,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
 			}}
 			style={
 				{
-					"--normal-bg": "var(--cms-popover)",
-					"--normal-text": "var(--cms-popover-foreground)",
-					"--normal-border": "var(--cms-border)",
+					"--normal-bg": "var(--monti-popover)",
+					"--normal-text": "var(--monti-popover-foreground)",
+					"--normal-border": "var(--monti-border)",
 					"--border-radius": "var(--radius)",
 				} as React.CSSProperties
 			}

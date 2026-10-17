@@ -13,13 +13,13 @@ export function EntryEditorLoading() {
 	const t = useTranslator(entryEditorShellMessages);
 	return (
 		<div
-			className="flex h-screen w-full flex-col overflow-hidden bg-cms-background text-cms-foreground"
+			className="flex h-screen w-full flex-col overflow-hidden bg-monti-background text-monti-foreground"
 			aria-busy="true"
 		>
 			<span className="sr-only">{t("loadingDocument")}</span>
 
 			{/* Top Header skeleton */}
-			<header className="flex h-14 shrink-0 items-center justify-between border-b bg-cms-background px-4">
+			<header className="flex h-14 shrink-0 items-center justify-between border-b bg-monti-background px-4">
 				<div className="flex items-center gap-2">
 					<Skeleton className="size-4 rounded-sm" />
 					<Skeleton className="h-4 w-12 rounded-md" />
@@ -37,10 +37,10 @@ export function EntryEditorLoading() {
 				{/* Canvas Area */}
 				<div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
 					{/* Formatting Toolbar skeleton */}
-					<div className="relative flex min-h-12 w-full shrink-0 items-center border-b bg-cms-background/95 px-6 py-2 backdrop-blur">
+					<div className="relative flex min-h-12 w-full shrink-0 items-center border-b bg-monti-background/95 px-6 py-2 backdrop-blur">
 						<div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
 							<Skeleton className="h-7 w-20 rounded-md" />
-							<span className="mx-1 h-4 w-px bg-cms-border" />
+							<span className="mx-1 h-4 w-px bg-monti-border" />
 							<div className="flex items-center gap-1">
 								<Skeleton className="size-7 rounded-md" />
 								<Skeleton className="size-7 rounded-md" />
@@ -48,7 +48,7 @@ export function EntryEditorLoading() {
 								<Skeleton className="size-7 rounded-md" />
 								<Skeleton className="size-7 rounded-md" />
 							</div>
-							<span className="mx-1 h-4 w-px bg-cms-border" />
+							<span className="mx-1 h-4 w-px bg-monti-border" />
 							<div className="flex items-center gap-1">
 								<Skeleton className="size-7 rounded-md" />
 								<Skeleton className="size-7 rounded-md" />
@@ -73,7 +73,7 @@ export function EntryEditorLoading() {
 							{/* Title skeleton */}
 							<Skeleton className="h-10 w-3/4 rounded-md" />
 
-							<div className="border-cms-border/60 border-b pt-1" />
+							<div className="border-monti-border/60 border-b pt-1" />
 
 							{/* Paragraph skeletons */}
 							<div className="space-y-3 pt-4">
@@ -93,7 +93,7 @@ export function EntryEditorLoading() {
 				</div>
 
 				{/* Inspector Side Panel skeleton (visible on wide screens) */}
-				<aside className="hidden w-80 shrink-0 flex-col border-l bg-cms-background lg:flex">
+				<aside className="hidden w-80 shrink-0 flex-col border-l bg-monti-background lg:flex">
 					{/* Inspector Header / Tabs */}
 					<div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
 						<div className="flex items-center gap-2">

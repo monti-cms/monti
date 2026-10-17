@@ -1,95 +1,96 @@
-/* Hand-written admin rules, compiled into the prebuilt bundle (`index.css`). Every selector here is scoped to a document that contains `.cms-admin`. */
+/* Hand-written admin rules, compiled into the prebuilt bundle (`index.css`). Every selector here is scoped to a document that contains `.monti-admin`. */
 
 /*
  * CMS admin UI tokens. The host's own tokens are left untouched.
  * Popups and menus are portaled to body, so these apply to the whole document (html) that contains the admin container.
+ * The defaults have zero specificity (`:where()`), so a site's own `:root { --monti-primary: ... }` or `.dark { ... }` wins whatever order the stylesheets load in.
  */
-html:has(.cms-admin) {
-	--cms-background: #ffffff;
-	--cms-foreground: #18181b;
-	--cms-card: #ffffff;
-	--cms-card-foreground: #18181b;
-	--cms-popover: #ffffff;
-	--cms-popover-foreground: #18181b;
-	--cms-primary: #4f46e5;
-	--cms-primary-foreground: #ffffff;
-	--cms-secondary: #f4f4f5;
-	--cms-secondary-foreground: #18181b;
-	--cms-muted: #f4f4f5;
-	--cms-muted-foreground: #71717a;
-	--cms-accent: #f0f0f2;
-	--cms-accent-foreground: #18181b;
-	--cms-destructive: #dc2626;
-	--cms-destructive-soft: #dc262612;
-	--cms-destructive-foreground: #b91c1c;
-	--cms-warning: #d97706;
-	--cms-warning-soft: #d9770614;
-	--cms-warning-foreground: #b45309;
-	--cms-success: #059669;
-	--cms-success-soft: #05966914;
-	--cms-success-foreground: #047857;
-	--cms-border: #ececef;
-	--cms-input: #e4e4e7;
-	--cms-ring: #6366f1;
-	--cms-sidebar: #f7f7f8;
-	--cms-sidebar-foreground: #3f3f46;
-	--cms-sidebar-primary: #18181b;
-	--cms-sidebar-primary-foreground: #fafafa;
-	--cms-sidebar-accent: #ececee;
-	--cms-sidebar-accent-foreground: #18181b;
-	--cms-sidebar-border: #e7e7ea;
-	--cms-sidebar-ring: #6366f1;
+:where(html:has(.monti-admin)) {
+	--monti-background: #ffffff;
+	--monti-foreground: #18181b;
+	--monti-card: #ffffff;
+	--monti-card-foreground: #18181b;
+	--monti-popover: #ffffff;
+	--monti-popover-foreground: #18181b;
+	--monti-primary: #4f46e5;
+	--monti-primary-foreground: #ffffff;
+	--monti-secondary: #f4f4f5;
+	--monti-secondary-foreground: #18181b;
+	--monti-muted: #f4f4f5;
+	--monti-muted-foreground: #71717a;
+	--monti-accent: #f0f0f2;
+	--monti-accent-foreground: #18181b;
+	--monti-destructive: #dc2626;
+	--monti-destructive-soft: #dc262612;
+	--monti-destructive-foreground: #b91c1c;
+	--monti-warning: #d97706;
+	--monti-warning-soft: #d9770614;
+	--monti-warning-foreground: #b45309;
+	--monti-success: #059669;
+	--monti-success-soft: #05966914;
+	--monti-success-foreground: #047857;
+	--monti-border: #ececef;
+	--monti-input: #e4e4e7;
+	--monti-ring: #6366f1;
+	--monti-sidebar: #f7f7f8;
+	--monti-sidebar-foreground: #3f3f46;
+	--monti-sidebar-primary: #18181b;
+	--monti-sidebar-primary-foreground: #fafafa;
+	--monti-sidebar-accent: #ececee;
+	--monti-sidebar-accent-foreground: #18181b;
+	--monti-sidebar-border: #e7e7ea;
+	--monti-sidebar-ring: #6366f1;
 	/* Base corner radius. The `rounded-*` utilities of the admin bundle are computed from it (see `theme.css`); the host's `--radius*` is not touched. */
-	--cms-radius: 0.5rem;
+	--monti-radius: 0.5rem;
 }
 
-html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
-	--cms-background: #0c0c0e;
-	--cms-foreground: #f4f4f5;
-	--cms-card: #111113;
-	--cms-card-foreground: #f4f4f5;
-	--cms-popover: #151518;
-	--cms-popover-foreground: #f4f4f5;
-	--cms-primary: #6366f1;
-	--cms-primary-foreground: #ffffff;
-	--cms-secondary: #1c1c20;
-	--cms-secondary-foreground: #f4f4f5;
-	--cms-muted: #1c1c20;
-	--cms-muted-foreground: #a1a1aa;
-	--cms-accent: #1f1f24;
-	--cms-accent-foreground: #f4f4f5;
-	--cms-destructive: #f87171;
-	--cms-destructive-soft: #f8717126;
-	--cms-destructive-foreground: #fca5a5;
-	--cms-warning: #fbbf24;
-	--cms-warning-soft: #fbbf2420;
-	--cms-warning-foreground: #fbbf24;
-	--cms-success: #34d399;
-	--cms-success-soft: #34d39920;
-	--cms-success-foreground: #34d399;
-	--cms-border: #232328;
-	--cms-input: #2a2a30;
-	--cms-ring: #818cf8;
-	--cms-sidebar: #0f0f12;
-	--cms-sidebar-foreground: #d4d4d8;
-	--cms-sidebar-primary: #f4f4f5;
-	--cms-sidebar-primary-foreground: #0c0c0e;
-	--cms-sidebar-accent: #1f1f24;
-	--cms-sidebar-accent-foreground: #f4f4f5;
-	--cms-sidebar-border: #1f1f24;
-	--cms-sidebar-ring: #818cf8;
+:where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {
+	--monti-background: #0c0c0e;
+	--monti-foreground: #f4f4f5;
+	--monti-card: #111113;
+	--monti-card-foreground: #f4f4f5;
+	--monti-popover: #151518;
+	--monti-popover-foreground: #f4f4f5;
+	--monti-primary: #6366f1;
+	--monti-primary-foreground: #ffffff;
+	--monti-secondary: #1c1c20;
+	--monti-secondary-foreground: #f4f4f5;
+	--monti-muted: #1c1c20;
+	--monti-muted-foreground: #a1a1aa;
+	--monti-accent: #1f1f24;
+	--monti-accent-foreground: #f4f4f5;
+	--monti-destructive: #f87171;
+	--monti-destructive-soft: #f8717126;
+	--monti-destructive-foreground: #fca5a5;
+	--monti-warning: #fbbf24;
+	--monti-warning-soft: #fbbf2420;
+	--monti-warning-foreground: #fbbf24;
+	--monti-success: #34d399;
+	--monti-success-soft: #34d39920;
+	--monti-success-foreground: #34d399;
+	--monti-border: #232328;
+	--monti-input: #2a2a30;
+	--monti-ring: #818cf8;
+	--monti-sidebar: #0f0f12;
+	--monti-sidebar-foreground: #d4d4d8;
+	--monti-sidebar-primary: #f4f4f5;
+	--monti-sidebar-primary-foreground: #0c0c0e;
+	--monti-sidebar-accent: #1f1f24;
+	--monti-sidebar-accent-foreground: #f4f4f5;
+	--monti-sidebar-border: #1f1f24;
+	--monti-sidebar-ring: #818cf8;
 }
 
 /* Makes scrollbars and default form controls follow the theme (fixes the light default scrollbar looking like a white line in dark mode). */
-html:has(.cms-admin) {
+html:has(.monti-admin) {
 	color-scheme: light;
 }
-html:is(.dark, [data-theme="dark"]):has(.cms-admin) {
+html:is(.dark, [data-theme="dark"]):has(.monti-admin) {
 	color-scheme: dark;
 }
 /* Keeps the app's body background from showing through at the admin edges. */
-html:has(.cms-admin) body {
-	background-color: var(--cms-background);
+html:has(.monti-admin) body {
+	background-color: var(--monti-background);
 }
 
 /*
@@ -97,59 +98,59 @@ html:has(.cms-admin) body {
  * Applied to the whole document because popups are portaled to body; its selector has zero specificity, so utility classes win.
  */
 @layer base {
-	:where(html:has(.cms-admin)) * {
-		border-color: var(--cms-border);
-		outline-color: color-mix(in oklab, var(--cms-ring) 50%, transparent);
+	:where(html:has(.monti-admin)) * {
+		border-color: var(--monti-border);
+		outline-color: color-mix(in oklab, var(--monti-ring) 50%, transparent);
 	}
 }
 
-.cms-admin {
+.monti-admin {
 	font-size: 14px;
 	-webkit-font-smoothing: antialiased;
 }
 
 /* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */
-.cms-admin,
-.cms-admin * {
+.monti-admin,
+.monti-admin * {
 	scrollbar-width: thin;
 	scrollbar-color: transparent transparent;
 }
-.cms-admin *:hover {
-	scrollbar-color: color-mix(in oklab, var(--cms-muted-foreground) 45%, transparent) transparent;
+.monti-admin *:hover {
+	scrollbar-color: color-mix(in oklab, var(--monti-muted-foreground) 45%, transparent) transparent;
 }
-.cms-admin ::-webkit-scrollbar {
+.monti-admin ::-webkit-scrollbar {
 	width: 8px;
 	height: 8px;
 }
-.cms-admin ::-webkit-scrollbar-track {
+.monti-admin ::-webkit-scrollbar-track {
 	background: transparent;
 }
-.cms-admin ::-webkit-scrollbar-thumb {
+.monti-admin ::-webkit-scrollbar-thumb {
 	background: transparent;
 	border-radius: 999px;
 }
-.cms-admin *:hover::-webkit-scrollbar-thumb {
-	background: color-mix(in oklab, var(--cms-muted-foreground) 45%, transparent);
+.monti-admin *:hover::-webkit-scrollbar-thumb {
+	background: color-mix(in oklab, var(--monti-muted-foreground) 45%, transparent);
 }
 
 /* Numbers and dates in tables use tabular figures. */
-.cms-admin .tabular {
+.monti-admin .tabular {
 	font-variant-numeric: tabular-nums;
 }
 
 /* Underlines for text check results (spelling, etc.) (editor decoration). The color differs by severity. */
-.cms-admin .cms-text-issue {
+.monti-admin .monti-text-issue {
 	text-decoration-line: underline;
 	text-decoration-style: wavy;
 	text-decoration-thickness: 1px;
 	text-decoration-skip-ink: none;
 	text-underline-offset: 3px;
-	text-decoration-color: var(--cms-warning);
+	text-decoration-color: var(--monti-warning);
 	cursor: pointer;
 }
-.cms-admin .cms-text-issue[data-severity="error"] {
-	text-decoration-color: var(--cms-destructive);
+.monti-admin .monti-text-issue[data-severity="error"] {
+	text-decoration-color: var(--monti-destructive);
 }
-.cms-admin .cms-text-issue[data-severity="info"] {
-	text-decoration-color: var(--cms-primary);
+.monti-admin .monti-text-issue[data-severity="info"] {
+	text-decoration-color: var(--monti-primary);
 }

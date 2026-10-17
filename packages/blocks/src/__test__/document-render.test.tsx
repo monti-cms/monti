@@ -37,9 +37,9 @@ describe("block extension components of the JSON renderer", () => {
 		const markup = await html(
 			doc(callout({ variant: "warning", title: "주의" }, [paragraph(text("본문", [{ type: "bold" }]))])),
 		);
-		expect(markup).toContain('class="cms-block-callout"');
+		expect(markup).toContain('class="monti-block-callout"');
 		expect(markup).toContain('data-variant="warning"');
-		expect(markup).toContain('<div class="cms-block-callout-title">주의</div>');
+		expect(markup).toContain('<div class="monti-block-callout-title">주의</div>');
 		expect(markup).toContain("<strong>본문</strong>");
 
 		expect(await html(doc(callout({ variant: "tip" }, [paragraph(text("내용"))])), { locale: "ko" })).toContain(
@@ -49,10 +49,10 @@ describe("block extension components of the JSON renderer", () => {
 		// A choice that is not one of the variants is the default, and a callout with no body has no body slot.
 		const unknown = await html(doc(callout({ variant: "nope", title: "제목만" }, [])));
 		expect(unknown).toContain('data-variant="note"');
-		expect(unknown).not.toContain("cms-block-callout-body");
+		expect(unknown).not.toContain("monti-block-callout-body");
 		// The empty paragraph the editor leaves in an empty container is not a body either.
 		expect(await html(doc(callout({ title: "제목만" }, [{ type: "paragraph", content: [] }])))).not.toContain(
-			"cms-block-callout-body",
+			"monti-block-callout-body",
 		);
 	});
 
@@ -65,7 +65,7 @@ describe("block extension components of the JSON renderer", () => {
 		const open = await html(doc(collapsible({ title: "더 보기", defaultOpen: true })));
 		expect(open).toContain("<details");
 		expect(open).toContain(" open");
-		expect(open).toContain('<summary class="cms-block-collapsible-summary">더 보기</summary>');
+		expect(open).toContain('<summary class="monti-block-collapsible-summary">더 보기</summary>');
 		const closed = await html(doc(collapsible({})), { locale: "ko" });
 		expect(closed).not.toContain(" open");
 		expect(closed).toContain(">펼치기</summary>");
@@ -95,7 +95,7 @@ describe("block extension components of the JSON renderer", () => {
 			doc(tabs({ defaultValue: "없음" }, tab("a", paragraph(text("A"))), tab("b", paragraph(text("B"))))),
 		);
 		expect(fallback).toMatch(/aria-selected="true"[^>]*>a/);
-		expect(fallback).not.toContain('cms-block-tabs-panel"><div');
+		expect(fallback).not.toContain('monti-block-tabs-panel"><div');
 	});
 
 	it("draws columns from the stored columns, and the widths follow the column count", async () => {
@@ -104,12 +104,12 @@ describe("block extension components of the JSON renderer", () => {
 		const two = await html(
 			doc(columns({ widths: "60,40" }, column(paragraph(text("왼쪽"))), column(paragraph(text("오른쪽"))))),
 		);
-		expect(two).toContain("--cms-columns:minmax(0, 60fr) minmax(0, 40fr)");
-		expect(two.match(/class="cms-block-column"/g)).toHaveLength(2);
+		expect(two).toContain("--monti-columns:minmax(0, 60fr) minmax(0, 40fr)");
+		expect(two.match(/class="monti-block-column"/g)).toHaveLength(2);
 		const mismatch = await html(
 			doc(columns({ widths: "60,40,10" }, column(paragraph(text("a"))), column(paragraph(text("b"))))),
 		);
-		expect(mismatch).toContain("--cms-columns:repeat(2, minmax(0, 1fr))");
+		expect(mismatch).toContain("--monti-columns:repeat(2, minmax(0, 1fr))");
 	});
 
 	it("draws a code explorer from the stored code blocks: the tree from their titles and the code of the picked file", async () => {
@@ -135,14 +135,14 @@ describe("block extension components of the JSON renderer", () => {
 		);
 		expect(markup).toContain("const");
 		// Every file's code block is in the page; the explorer keeps one of them visible. The paragraph that is not a file comes after it.
-		expect(markup.match(/class="cms-code"/g)).toHaveLength(2);
+		expect(markup.match(/class="monti-code"/g)).toHaveLength(2);
 		expect(markup).toContain("<p>뒤 문단</p>");
 		expect(markup).toContain("src");
 		// With no file that has a path the children are shown as they are.
 		const plain = await html(
 			doc(explorer({}, { type: "codeBlock", attrs: { language: "ts", meta: "", code: "const x = 1;" } })),
 		);
-		expect(plain).toContain('class="cms-code"');
+		expect(plain).toContain('class="monti-code"');
 		expect(plain).not.toContain('role="tree"');
 	});
 
@@ -158,17 +158,17 @@ describe("block extension components of the JSON renderer", () => {
 				),
 			),
 		);
-		expect(markup).toContain('class="cms-block-tooltip-content">설명</span>');
+		expect(markup).toContain('class="monti-block-tooltip-content">설명</span>');
 		expect(markup).toContain('data-code-ref="c1"');
-		expect(markup).toContain('class="cms-color" style="--cms-fg:#dc2626;--cms-fg-dark:#f87171" data-fg=""');
+		expect(markup).toContain('class="monti-color" style="--monti-fg:#dc2626;--monti-fg-dark:#f87171" data-fg=""');
 		// A value that is not a hex color is dropped.
 		expect(markup).not.toContain("red");
 	});
 
 	it("draws the tooltip inside a code block, numbered, as the MDX renderer did", async () => {
 		const markup = await html(fromMdx('```ts\n// @char Tooltip {0-5} content="코드 설명"\nconst a = 1;\n```'));
-		expect(markup).toContain('class="cms-block-tooltip-content">코드 설명</span>');
-		expect(markup).toContain('class="cms-code-notes"');
+		expect(markup).toContain('class="monti-block-tooltip-content">코드 설명</span>');
+		expect(markup).toContain('class="monti-code-notes"');
 	});
 
 	it("draws Mermaid and chart code fences from the source", async () => {

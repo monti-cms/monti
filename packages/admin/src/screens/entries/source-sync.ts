@@ -7,7 +7,7 @@ export interface BlockBox {
 }
 
 /** Marker name attached to the block under the cursor in the source pane. */
-export const ACTIVE_BLOCK_CLASS = "cms-source-active";
+export const ACTIVE_BLOCK_CLASS = "monti-source-active";
 
 /**
  * Translation editor block -> source block order. Pairs blocks of the same kind from the top using the longest common subsequence.

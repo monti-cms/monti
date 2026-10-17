@@ -23,8 +23,8 @@ export function ChartClient({ source }: { source: string }) {
 
 	if (View) return <View source={source} />;
 	return (
-		<figure className="cms-block-chart" data-state="loading">
-			<pre className="cms-block-chart-source">
+		<figure className="monti-block-chart" data-state="loading">
+			<pre className="monti-block-chart-source">
 				<code>{source}</code>
 			</pre>
 		</figure>

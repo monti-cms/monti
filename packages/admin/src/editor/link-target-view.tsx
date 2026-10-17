@@ -18,14 +18,14 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 	const tc = useTranslator(commonMessages);
 	const state = useLinkTarget(entryId);
 	if (!state || state.status === "loading") {
-		return <span className={cn("px-1 text-cms-muted-foreground text-xs", className)}>{t("link.targetLoading")}</span>;
+		return <span className={cn("px-1 text-monti-muted-foreground text-xs", className)}>{t("link.targetLoading")}</span>;
 	}
 	if (state.status === "missing") {
-		return <span className={cn("px-1 text-cms-destructive text-xs", className)}>{t("link.targetMissing")}</span>;
+		return <span className={cn("px-1 text-monti-destructive text-xs", className)}>{t("link.targetMissing")}</span>;
 	}
 	if (state.status === "error") {
 		return (
-			<span className={cn("px-1 text-cms-muted-foreground text-xs", className)}>{t("link.targetUnavailable")}</span>
+			<span className={cn("px-1 text-monti-muted-foreground text-xs", className)}>{t("link.targetUnavailable")}</span>
 		);
 	}
 	const { target } = state;
@@ -43,8 +43,8 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 			onMouseDown={(event) => event.preventDefault()}
 			className={cn("flex min-w-0 max-w-64 flex-col px-1 text-xs", className)}
 		>
-			<span className="truncate text-cms-primary underline underline-offset-2">{nameOf(tc, target)}</span>
-			<span className="truncate text-cms-muted-foreground">
+			<span className="truncate text-monti-primary underline underline-offset-2">{nameOf(tc, target)}</span>
+			<span className="truncate text-monti-muted-foreground">
 				{target.path ?? ""}
 				{target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}
 			</span>
@@ -65,9 +65,9 @@ export function LinkTargetSummary({ entryId }: { entryId: string }) {
 	const path = state?.status === "ready" ? state.target.path : null;
 	return (
 		<div className="grid gap-0.5 text-xs">
-			<p className={cn(state?.status === "missing" && "text-cms-destructive")}>{text}</p>
-			{path && <p className="text-cms-muted-foreground">{path}</p>}
-			<p className="text-cms-muted-foreground">{t("link.replaceHint")}</p>
+			<p className={cn(state?.status === "missing" && "text-monti-destructive")}>{text}</p>
+			{path && <p className="text-monti-muted-foreground">{path}</p>}
+			<p className="text-monti-muted-foreground">{t("link.replaceHint")}</p>
 		</div>
 	);
 }

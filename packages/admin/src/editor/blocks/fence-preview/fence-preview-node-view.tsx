@@ -170,27 +170,27 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 			data-fence-preview={kind}
 			onBlur={handleBlur}
 			className={cn(
-				"group relative my-4 rounded-md border border-cms-border bg-cms-card p-3 shadow-xs transition-colors",
+				"group relative my-4 rounded-md border border-monti-border bg-monti-card p-3 shadow-xs transition-colors",
 				isOpen && SELECTED_RING,
 			)}
 		>
 			{isOpen ? (
 				<div className="space-y-3">
-					<div className="flex items-center justify-between border-cms-border/40 border-b pb-1 text-cms-muted-foreground text-xs">
+					<div className="flex items-center justify-between border-monti-border/40 border-b pb-1 text-monti-muted-foreground text-xs">
 						<span className="font-medium font-mono text-[11px]">{meta.label}</span>
-						<span className="text-[10px] text-cms-muted-foreground/70">
+						<span className="text-[10px] text-monti-muted-foreground/70">
 							{isEditing ? t("fence.editing") : t("fence.selected")}
 						</span>
 					</div>
 
 					{/* Preview (shown at the top at the same time) */}
-					<div className="min-h-[40px] rounded-md border border-cms-border/40 bg-cms-background/50 p-2">
+					<div className="min-h-[40px] rounded-md border border-monti-border/40 bg-monti-background/50 p-2">
 						{renderPreview()}
 					</div>
 
 					{/* Raw input field (mono, IME safe) */}
 					<div className="space-y-1">
-						<label htmlFor={inputId} className="font-mono text-[11px] text-cms-muted-foreground">
+						<label htmlFor={inputId} className="font-mono text-[11px] text-monti-muted-foreground">
 							{t("fence.sourceCode")}
 						</label>
 						<textarea
@@ -206,7 +206,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 							onCompositionStart={handleCompositionStart}
 							onCompositionEnd={handleCompositionEnd}
 							onKeyDown={handleKeyDown}
-							className="field-sizing-content min-h-[96px] w-full resize-y rounded-md border border-cms-input bg-transparent px-2.5 py-2 font-mono text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-cms-muted-foreground/50 focus-visible:border-cms-ring focus-visible:ring-3 focus-visible:ring-cms-ring/50 md:text-sm"
+							className="field-sizing-content min-h-[96px] w-full resize-y rounded-md border border-monti-input bg-transparent px-2.5 py-2 font-mono text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-monti-muted-foreground/50 focus-visible:border-monti-ring focus-visible:ring-3 focus-visible:ring-monti-ring/50 md:text-sm"
 						/>
 					</div>
 				</div>
@@ -221,7 +221,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 					{draft.trim() ? (
 						renderPreview()
 					) : (
-						<div className="rounded border border-cms-border/80 border-dashed p-4 text-center text-cms-muted-foreground text-xs hover:border-cms-foreground/30">
+						<div className="rounded border border-monti-border/80 border-dashed p-4 text-center text-monti-muted-foreground text-xs hover:border-monti-foreground/30">
 							{t("fence.enter", { label: meta.label })}
 						</div>
 					)}

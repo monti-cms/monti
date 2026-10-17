@@ -1497,10 +1497,10 @@ describe("translation source pane", () => {
 			document.dispatchEvent(new Event("selectionchange"));
 		};
 		moveCaretTo(1);
-		await waitFor(() => expect(blocks[1]?.classList.contains("cms-source-active")).toBe(true));
-		expect(blocks[0]?.classList.contains("cms-source-active")).toBe(false);
+		await waitFor(() => expect(blocks[1]?.classList.contains("monti-source-active")).toBe(true));
+		expect(blocks[0]?.classList.contains("monti-source-active")).toBe(false);
 		moveCaretTo(0);
-		await waitFor(() => expect(blocks[0]?.classList.contains("cms-source-active")).toBe(true));
-		expect(blocks[1]?.classList.contains("cms-source-active")).toBe(false);
+		await waitFor(() => expect(blocks[0]?.classList.contains("monti-source-active")).toBe(true));
+		expect(blocks[1]?.classList.contains("monti-source-active")).toBe(false);
 	});
 });

@@ -60,7 +60,7 @@ export function AdminEditor({ file, update }: { file: Obj; update: (change: (fil
 			<Section wide title={t("admin.addressTitle")}>
 				<div>
 					<Labeled label={t("admin.path")} description={t("admin.pathNote")}>
-						<code className="w-fit rounded-md bg-cms-muted px-3 py-2 text-sm" data-testid="admin-path">
+						<code className="w-fit rounded-md bg-monti-muted px-3 py-2 text-sm" data-testid="admin-path">
 							{path}
 						</code>
 					</Labeled>

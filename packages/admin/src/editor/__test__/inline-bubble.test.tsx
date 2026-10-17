@@ -85,7 +85,7 @@ const focusAt = (editor: Editor, position: number | { from: number; to: number }
 
 // Positions: "가나" (1–3), bold "다라" (4–6), link "마바" (7–9), note decoration "사아" (10–12)
 const HTML =
-	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-cms-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
+	'<p>가나 <strong>다라</strong> <a href="https://example.com">마바</a> <span data-monti-mark="note" data-mark-text="설명">사아</span> 자</p><pre><code>code</code></pre>';
 
 describe("inlineBubbleTarget", () => {
 	it("shows the selection tool when text is selected", () => {
@@ -272,7 +272,7 @@ describe("InlineBubble", () => {
 		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 넣기" })));
 		expect(screen.getByRole("dialog", { name: "메모 편집" })).toBeTruthy();
 		act(() => fireEvent.click(screen.getByRole("button", { name: "메모 적용" })));
-		expect(editor.getHTML()).toMatch(/<span data-cms-mark="note" data-mark-text="새 메모">가나<\/span>/);
+		expect(editor.getHTML()).toMatch(/<span data-monti-mark="note" data-mark-text="새 메모">가나<\/span>/);
 		unmount();
 
 		// With the cursor at the decoration boundary, the registered content renders, and removing does not close the bubble.

@@ -11,7 +11,9 @@ import base from "./cms.config";
 export default defineSite({
 	...base,
 	codeBlock: {
-		lineEffects: [{ name: "focus", label: "Focus", class: "line-focus", editor: { background: "bg-cms-primary/10" } }],
+		lineEffects: [
+			{ name: "focus", label: "Focus", class: "line-focus", editor: { background: "bg-monti-primary/10" } },
+		],
 	},
 	plugins: [mdx({ syntax: [shikiNotation()] })],
 });

@@ -7,7 +7,7 @@ import type { ChartRenderError } from "./types";
 
 function ChartError({ errors, labels }: { errors: readonly ChartRenderError[]; labels: BlockLabels }) {
 	return (
-		<div className="cms-block-chart-error" role="alert">
+		<div className="monti-block-chart-error" role="alert">
 			<strong>{labels.chartError}</strong>
 			<ul>
 				{errors.map((error) => (

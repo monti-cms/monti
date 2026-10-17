@@ -41,13 +41,13 @@ export function EntryEditorBanners({
 			{isTrashed && (
 				<section
 					aria-label={t("trash")}
-					className="flex flex-wrap items-center gap-2 border-b bg-cms-muted px-4 py-2 text-sm"
+					className="flex flex-wrap items-center gap-2 border-b bg-monti-muted px-4 py-2 text-sm"
 				>
 					<span>{t("trashNotice", nounVars(site, collection))}</span>
 				</section>
 			)}
 			{visualUnavailable && (
-				<output className="border-b bg-cms-warning-soft px-4 py-2 text-cms-warning-foreground text-sm">
+				<output className="border-b bg-monti-warning-soft px-4 py-2 text-monti-warning-foreground text-sm">
 					{t("visualUnavailable")} {sourceProblem ? issueLine(issueText(site, sourceProblem)) : ""}
 				</output>
 			)}
@@ -73,8 +73,8 @@ export function EntryEditorBanners({
 			)}
 
 			{sourceChanged && (
-				<output className="flex flex-wrap items-center gap-2 border-b bg-cms-warning-soft px-4 py-1.5 text-sm">
-					<span className="flex-1 font-medium text-cms-warning-foreground">{t("sourceChanged")}</span>
+				<output className="flex flex-wrap items-center gap-2 border-b bg-monti-warning-soft px-4 py-1.5 text-sm">
+					<span className="flex-1 font-medium text-monti-warning-foreground">{t("sourceChanged")}</span>
 					<Button type="button" size="sm" variant="outline" onClick={onCompareSource}>
 						{t("compare")}
 					</Button>

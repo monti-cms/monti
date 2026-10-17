@@ -110,14 +110,14 @@ export function ListRow({
 		>
 			<span className="flex w-full items-center gap-2">
 				<span className="truncate font-medium text-sm">{title}</span>
-				{status && <span className="ml-auto shrink-0 text-cms-muted-foreground text-xs">{status}</span>}
+				{status && <span className="ml-auto shrink-0 text-monti-muted-foreground text-xs">{status}</span>}
 			</span>
-			{detail && <span className="w-full truncate text-cms-muted-foreground text-xs">{detail}</span>}
+			{detail && <span className="w-full truncate text-monti-muted-foreground text-xs">{detail}</span>}
 		</Button>
 	);
 	const rowClass = cn(
 		"group flex items-center justify-between gap-2 px-2 py-1.5 transition-colors",
-		current ? OPEN_ITEM : "hover:bg-cms-accent/50",
+		current ? OPEN_ITEM : "hover:bg-monti-accent/50",
 	);
 	if (!actions || actions.length === 0) {
 		return (

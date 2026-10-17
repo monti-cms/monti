@@ -45,13 +45,13 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 
 	return (
 		<>
-			<header className="shrink-0 border-b bg-cms-background px-4 pt-5 lg:px-10 lg:pt-6">
+			<header className="shrink-0 border-b bg-monti-background px-4 pt-5 lg:px-10 lg:pt-6">
 				<div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
 					<div className="min-w-0">
 						<div className="flex flex-wrap items-center gap-2.5">
 							<SidebarTrigger
 								aria-label={shared("shell.openSidebar")}
-								className="-ml-1 text-cms-muted-foreground md:hidden"
+								className="-ml-1 text-monti-muted-foreground md:hidden"
 							/>
 							<h1 className="font-semibold text-[22px] leading-tight tracking-tight">{t("title")}</h1>
 							<div
@@ -60,7 +60,7 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 								data-testid="settings-file-line"
 							/>
 						</div>
-						<p className="mt-1 text-cms-muted-foreground text-sm">{t("description")}</p>
+						<p className="mt-1 text-monti-muted-foreground text-sm">{t("description")}</p>
 					</div>
 					<div ref={setActions} className="flex items-center gap-2.5" data-testid="settings-actions" />
 				</div>
@@ -84,7 +84,7 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 								href={entry.href}
 								aria-current={active ? "page" : undefined}
 								className={cn(
-									"flex shrink-0 items-center whitespace-nowrap border-transparent border-b-2 py-2.5 text-cms-muted-foreground text-sm outline-hidden transition-colors hover:text-cms-foreground focus-visible:ring-2 focus-visible:ring-cms-ring/50 aria-[current=page]:border-cms-foreground aria-[current=page]:font-semibold aria-[current=page]:text-cms-foreground",
+									"flex shrink-0 items-center whitespace-nowrap border-transparent border-b-2 py-2.5 text-monti-muted-foreground text-sm outline-hidden transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-[current=page]:border-monti-foreground aria-[current=page]:font-semibold aria-[current=page]:text-monti-foreground",
 								)}
 							>
 								{t(`tab.${entry.id}` as "tab.collections")}
@@ -93,7 +93,7 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 					})}
 				</nav>
 			</header>
-			<div className="flex min-h-0 flex-1 flex-col bg-cms-muted/50">
+			<div className="flex min-h-0 flex-1 flex-col bg-monti-muted/50">
 				<SchemaSettings tab={tab} actionsSlot={actions} fileSlot={fileLine} onTab={go} />
 			</div>
 		</>

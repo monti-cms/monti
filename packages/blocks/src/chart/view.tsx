@@ -1,7 +1,7 @@
 /*
  * Public-page chart (drawn on recharts, optional dependency `recharts`). Read only when `render.client.tsx` loads it in the browser.
  * Uses the same chart syntax and colors (`--chart-1` to `--chart-5`) as the editor preview (`./preview`), and is styled with
- * `cms-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
+ * `monti-block-chart-*` classes (this package's `render.css`) without admin UI code or Tailwind.
  */
 
 import { createContext, type ReactElement, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -54,7 +54,7 @@ function ChartFrame({ config, children }: { config: ChartConfig; children: React
 	);
 	return (
 		<FrameState.Provider value={{ config, dimensions }}>
-			<div className="cms-block-chart-frame" style={style}>
+			<div className="monti-block-chart-frame" style={style}>
 				<ResponsiveContainer
 					width="100%"
 					height="100%"
@@ -89,9 +89,9 @@ function TooltipContent({
 	const { config } = useContext(FrameState);
 	if (!active || !payload?.length) return null;
 	return (
-		<div className="cms-block-chart-tooltip">
+		<div className="monti-block-chart-tooltip">
 			{!hideLabel && label ? (
-				<div className="cms-block-chart-tooltip-label">{String(config[String(label)]?.label ?? label)}</div>
+				<div className="monti-block-chart-tooltip-label">{String(config[String(label)]?.label ?? label)}</div>
 			) : null}
 			{payload
 				.filter((item) => item.type !== "none")
@@ -99,10 +99,13 @@ function TooltipContent({
 					const key = String(nameKey ? item.payload?.[nameKey] : (item.name ?? item.dataKey ?? "value"));
 					const itemConfig = config[key] ?? config[String(item.name ?? item.dataKey ?? "value")];
 					return (
-						<div key={`${key}-${String(item.value ?? item.color ?? "")}`} className="cms-block-chart-tooltip-row">
-							<span className="cms-block-chart-swatch" style={{ backgroundColor: item.color ?? item.payload?.fill }} />
-							<span className="cms-block-chart-tooltip-name">{itemConfig?.label ?? key}</span>
-							<span className="cms-block-chart-tooltip-value">{formatChartValue(item.value)}</span>
+						<div key={`${key}-${String(item.value ?? item.color ?? "")}`} className="monti-block-chart-tooltip-row">
+							<span
+								className="monti-block-chart-swatch"
+								style={{ backgroundColor: item.color ?? item.payload?.fill }}
+							/>
+							<span className="monti-block-chart-tooltip-name">{itemConfig?.label ?? key}</span>
+							<span className="monti-block-chart-tooltip-value">{formatChartValue(item.value)}</span>
 						</div>
 					);
 				})}
@@ -136,15 +139,15 @@ function LegendContent({
 
 	if (!payload?.length) return null;
 	return (
-		<div ref={ref} className="cms-block-chart-legend">
+		<div ref={ref} className="monti-block-chart-legend">
 			{payload
 				.filter((item) => item.type !== "none")
 				.map((item) => {
 					const key = String(nameKey ? item.payload?.[nameKey] : (item.value ?? item.dataKey ?? "value"));
 					const itemConfig = config[key] ?? config[String(item.dataKey ?? "value")];
 					return (
-						<span key={`${key}-${String(item.color ?? "")}`} className="cms-block-chart-legend-item">
-							<span className="cms-block-chart-swatch" style={{ backgroundColor: item.color }} />
+						<span key={`${key}-${String(item.color ?? "")}`} className="monti-block-chart-legend-item">
+							<span className="monti-block-chart-swatch" style={{ backgroundColor: item.color }} />
 							{itemConfig?.label ?? key}
 						</span>
 					);
@@ -162,7 +165,7 @@ const valueLabel = (spec: CartesianChartSpec) =>
 			position="top"
 			offset={spec.type === "bar" ? 8 : 10}
 			formatter={formatChartValue}
-			className="cms-block-chart-value"
+			className="monti-block-chart-value"
 		/>
 	) : null;
 
@@ -274,7 +277,7 @@ export function ChartView({ source }: { readonly source: string }) {
 	const spec = normalized.spec;
 	if (!spec) return null;
 	return (
-		<figure className="cms-block-chart" data-state="ready">
+		<figure className="monti-block-chart" data-state="ready">
 			{spec.type === "pie" ? <PieView spec={spec} /> : <CartesianView spec={spec} />}
 		</figure>
 	);

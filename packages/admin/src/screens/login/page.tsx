@@ -182,7 +182,7 @@ function TextField({
 	return (
 		<div className="flex flex-col gap-1.5">
 			<Label htmlFor={id}>{label}</Label>
-			{hint ? <p className="text-cms-muted-foreground text-xs">{hint}</p> : null}
+			{hint ? <p className="text-monti-muted-foreground text-xs">{hint}</p> : null}
 			<Input id={id} required {...props} />
 		</div>
 	);

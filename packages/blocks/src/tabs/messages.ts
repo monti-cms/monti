@@ -1,7 +1,7 @@
 import { defineMessages } from "@monti-cms/core";
 
 /** Labels, descriptions, and editing view text of the tabs block. */
-export const tabsMessages = defineMessages("cms-blocks.tabs", {
+export const tabsMessages = defineMessages("monti-blocks.tabs", {
 	en: {
 		label: "Tabs",
 		description: "Split content into tabs",

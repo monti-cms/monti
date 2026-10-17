@@ -65,7 +65,7 @@ function Decision({
 	return (
 		<fieldset className="flex flex-col gap-1.5 rounded-lg border p-3" data-testid={`decision-${decision.key}`}>
 			<legend className="px-1 font-medium text-sm">{describeChange(decision.change, t)}</legend>
-			<p className="text-cms-muted-foreground text-xs">
+			<p className="text-monti-muted-foreground text-xs">
 				{decision.entries === 0 ? t("review.noEntries") : t("review.entriesCount", { count: decision.entries })}
 			</p>
 			<label className="flex items-start gap-2 text-sm">
@@ -81,7 +81,7 @@ function Decision({
 							<span>
 								{describeTransform(suggestion, t)}
 								{suggestion.op === "dropField" && (
-									<span className="ml-1 text-cms-destructive text-xs">{t("transform.dropWarning")}</span>
+									<span className="ml-1 text-monti-destructive text-xs">{t("transform.dropWarning")}</span>
 								)}
 							</span>
 						</span>
@@ -113,7 +113,7 @@ function Sample({
 	const t = useTranslator(schemaReviewMessages);
 	return (
 		<div className="text-xs">
-			<span className="text-cms-muted-foreground">{t("review.sample")} </span>
+			<span className="text-monti-muted-foreground">{t("review.sample")} </span>
 			<ul className="inline">
 				{sample.map((entry, index) => (
 					<li key={entry.id} className="inline">
@@ -125,7 +125,7 @@ function Sample({
 						>
 							{entry.title ?? entry.id.slice(0, 8)}
 						</AdminLink>
-						<span className="text-cms-muted-foreground">
+						<span className="text-monti-muted-foreground">
 							{" "}
 							({entry.collection}, {entry.locale}, {entry.status})
 						</span>
@@ -133,7 +133,7 @@ function Sample({
 				))}
 			</ul>
 			{entries > sample.length && (
-				<span className="text-cms-muted-foreground"> {t("review.more", { count: entries - sample.length })}</span>
+				<span className="text-monti-muted-foreground"> {t("review.more", { count: entries - sample.length })}</span>
 			)}
 		</div>
 	);
@@ -153,9 +153,9 @@ function Impact({ impact }: { impact: ChangeImpact }) {
 				)}
 			</div>
 			{impact.entries > 0 && (
-				<p className="text-cms-muted-foreground text-xs">{t(`consequence.${impact.consequence}`)}</p>
+				<p className="text-monti-muted-foreground text-xs">{t(`consequence.${impact.consequence}`)}</p>
 			)}
-			{!impact.checked && <p className="text-cms-muted-foreground text-xs">{t("review.notChecked")}</p>}
+			{!impact.checked && <p className="text-monti-muted-foreground text-xs">{t("review.notChecked")}</p>}
 			{impact.sample.length > 0 && <Sample sample={impact.sample} entries={impact.entries} site={site} />}
 		</li>
 	);
@@ -334,13 +334,13 @@ export function ReviewDialog({
 					{preview?.valid && (
 						<>
 							<div
-								className="flex items-center gap-2.5 rounded-lg border border-cms-border bg-cms-muted/40 px-3.5 py-2.5 text-sm"
+								className="flex items-center gap-2.5 rounded-lg border border-monti-border bg-monti-muted/40 px-3.5 py-2.5 text-sm"
 								data-testid="review-summary"
 							>
 								{dataChanges === 0 ? (
-									<CheckCircle2 className="size-4 shrink-0 text-cms-primary" aria-hidden />
+									<CheckCircle2 className="size-4 shrink-0 text-monti-primary" aria-hidden />
 								) : (
-									<Info className="size-4 shrink-0 text-cms-muted-foreground" aria-hidden />
+									<Info className="size-4 shrink-0 text-monti-muted-foreground" aria-hidden />
 								)}
 								<p>
 									{preview.changed
@@ -349,12 +349,12 @@ export function ReviewDialog({
 								</p>
 							</div>
 							{preview.baseline === "file" && (
-								<p className="text-cms-muted-foreground text-xs">{t("review.baselineFile")}</p>
+								<p className="text-monti-muted-foreground text-xs">{t("review.baselineFile")}</p>
 							)}
 							{preview.decisions.length > 0 && (
 								<section className="flex flex-col gap-2" aria-label={t("review.decisions")}>
 									<h3 className="font-medium text-sm">{t("review.decisions")}</h3>
-									<p className="text-cms-muted-foreground text-xs">{t("review.decisionsHint")}</p>
+									<p className="text-monti-muted-foreground text-xs">{t("review.decisionsHint")}</p>
 									{preview.decisions.map((decision) => (
 										<Decision
 											key={decision.key}
@@ -376,17 +376,17 @@ export function ReviewDialog({
 										{settings.map((setting) => (
 											<li
 												key={setting.path}
-												className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-cms-border bg-cms-muted/20 px-3 py-2 font-mono text-xs"
+												className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-monti-border bg-monti-muted/20 px-3 py-2 font-mono text-xs"
 											>
 												<div>
-													<code className="font-semibold text-cms-foreground">{setting.path}</code>:{" "}
+													<code className="font-semibold text-monti-foreground">{setting.path}</code>:{" "}
 												</div>
 												<div className="flex items-center gap-2">
-													<span className="text-cms-muted-foreground line-through decoration-cms-muted-foreground/60">
+													<span className="text-monti-muted-foreground line-through decoration-monti-muted-foreground/60">
 														{settingText(setting.from, t("review.unset"))}
 													</span>
 													{" -> "}
-													<span className="rounded bg-cms-primary/10 px-1.5 py-0.5 font-medium text-cms-primary">
+													<span className="rounded bg-monti-primary/10 px-1.5 py-0.5 font-medium text-monti-primary">
 														{settingText(setting.to, t("review.unset"))}
 													</span>
 												</div>
@@ -406,7 +406,7 @@ export function ReviewDialog({
 								</section>
 							)}
 							{preview.transforms.length > 0 && (
-								<p className="text-cms-muted-foreground text-xs">
+								<p className="text-monti-muted-foreground text-xs">
 									{t("review.transforms", { ids: preview.transforms.map((item) => item.id).join(", ") })}
 								</p>
 							)}

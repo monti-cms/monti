@@ -37,7 +37,7 @@ import { mediaMessages } from "./messages";
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
 		<section className="space-y-3 border-t px-4 py-4">
-			<h3 className="font-medium text-[11px] text-cms-muted-foreground uppercase tracking-wide">{title}</h3>
+			<h3 className="font-medium text-[11px] text-monti-muted-foreground uppercase tracking-wide">{title}</h3>
 			{children}
 		</section>
 	);
@@ -47,7 +47,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="space-y-0.5">
-			<dt className="text-[11px] text-cms-muted-foreground">{label}</dt>
+			<dt className="text-[11px] text-monti-muted-foreground">{label}</dt>
 			<dd className="break-all">{children}</dd>
 		</div>
 	);
@@ -180,17 +180,17 @@ export function MediaDetailPanel({
 	return (
 		<aside
 			aria-label={t("detail.label")}
-			className={cn("flex h-full flex-col border-l bg-cms-background text-xs", className)}
+			className={cn("flex h-full flex-col border-l bg-monti-background text-xs", className)}
 		>
 			<SidePanelHeader title={media.filename} onClose={onClose} />
 
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="space-y-3 p-4">
-					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border bg-cms-muted/50">
+					<div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border bg-monti-muted/50">
 						{isImage && media.publicUrl ? (
 							<img src={media.publicUrl} alt="" className="max-h-full max-w-full object-contain" />
 						) : (
-							<span className="flex flex-col items-center gap-2 text-cms-muted-foreground">
+							<span className="flex flex-col items-center gap-2 text-monti-muted-foreground">
 								<MediaThumb media={media} iconClassName="size-12" />
 								<span className="font-medium">{fileTypeLabel(media.filename, media.mimeType)}</span>
 							</span>
@@ -269,7 +269,10 @@ export function MediaDetailPanel({
 												className="h-8 min-w-0 flex-1 text-xs md:text-xs"
 											/>
 											{extension && (
-												<span className="shrink-0 text-cms-muted-foreground" title={t("detail.filename.extensionKept")}>
+												<span
+													className="shrink-0 text-monti-muted-foreground"
+													title={t("detail.filename.extensionKept")}
+												>
 													{extension}
 												</span>
 											)}
@@ -346,7 +349,7 @@ export function MediaDetailPanel({
 
 				{isImage && (
 					<Section title={t("detail.section.defaults")}>
-						<p className="text-cms-muted-foreground">{t("detail.defaultsHelp")}</p>
+						<p className="text-monti-muted-foreground">{t("detail.defaultsHelp")}</p>
 						<form
 							className="space-y-3"
 							onSubmit={(event) => {
@@ -408,18 +411,18 @@ export function MediaDetailPanel({
 
 				<Section title={t("detail.section.usage", { count: usageCount(media) })}>
 					{media.referencesCount === 0 ? (
-						<p className="text-cms-muted-foreground">{t("detail.noUsage")}</p>
+						<p className="text-monti-muted-foreground">{t("detail.noUsage")}</p>
 					) : (
 						<ul className="space-y-1">
 							{mediaUsages(media).map((usage) => (
 								<li key={usage.entryId}>
 									<a
 										href={withBasePath(entryHref(site, usage.collection, usage.entryId))}
-										className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-cms-accent"
+										className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-monti-accent"
 									>
 										<span className="min-w-0 flex-1 truncate">{usage.title || tc("untitled")}</span>
 										{usage.note && (
-											<span className="shrink-0 text-cms-muted-foreground text-xs">
+											<span className="shrink-0 text-monti-muted-foreground text-xs">
 												{usageNoteLabel(t, usage.note)}
 											</span>
 										)}
@@ -443,7 +446,7 @@ export function MediaDetailPanel({
 					{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
 				</Button>
 				{media.referencesCount > 0 && (
-					<p className="text-center text-[11px] text-cms-muted-foreground">{t("detail.inUse")}</p>
+					<p className="text-center text-[11px] text-monti-muted-foreground">{t("detail.inUse")}</p>
 				)}
 			</div>
 		</aside>

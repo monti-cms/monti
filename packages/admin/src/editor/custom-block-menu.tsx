@@ -38,7 +38,7 @@ export function CustomBlockMenuItems({ editor }: { editor: Editor }) {
 				<Icon aria-hidden className="size-4" />
 				<span className="min-w-0 flex-1">
 					<span className="block truncate">{block.title}</span>
-					<span className="block truncate text-cms-muted-foreground text-xs">{block.description}</span>
+					<span className="block truncate text-monti-muted-foreground text-xs">{block.description}</span>
 				</span>
 			</DropdownMenuItem>
 		);

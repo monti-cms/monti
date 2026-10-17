@@ -7,8 +7,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * CSS confinement. The admin and plugin stylesheets ship prebuilt (`scripts/build-styles.mjs`), so the host needs no Tailwind and imports them as they are.
- * The sources only use names carrying the `cms` prefix, and the built files must not restyle the host: every selector sits under a document that
- * contains the admin, and every custom property, keyframes name is `cms`-prefixed, and no layer is left.
+ * The sources only use names carrying the `monti` prefix, and the built files must not restyle the host: every selector sits under a document that
+ * contains the admin, and every custom property, keyframes name is `monti`-prefixed, and no layer is left.
  */
 const packagesDir = path.resolve(__dirname, "../../..");
 const buildScript = path.resolve(packagesDir, "../scripts/build-styles.mjs");
@@ -70,30 +70,44 @@ function selectorsOf(root: postcss.Root): string[] {
 	return out;
 }
 /** Whether a selector sits under a document that contains the admin. */
-const scoped = (selector: string) => /^(?::where\()?html\b.*?:has\(\.cms-admin\)/.test(selector.trim());
+const scoped = (selector: string) => /^(?::where\()?html\b.*?:has\(\.monti-admin\)/.test(selector.trim());
 
 describe("admin CSS confinement", () => {
-	it("the theme defines only cms-prefixed names", () => {
-		// `@theme` holds `--color-cms-*` and the radius names (inlined into the bundle, computed from `--cms-radius`).
+	it("the theme defines only monti-prefixed names", () => {
+		// `@theme` holds `--color-monti-*` and the radius names (inlined into the bundle, computed from `--monti-radius`).
 		const theme = themeCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
 		const names = [...theme.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]);
-		expect(names.filter((name) => name.startsWith("--color-cms-")).length).toBeGreaterThan(0);
-		for (const name of names) expect(name).toMatch(/^--(?:color-cms-|shadow-cms-|radius-(?:sm|md|lg|xl|dialog)$)/);
-		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--cms-radius");
-		// Variant names also start with `cms-`.
-		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^cms-/);
+		expect(names.filter((name) => name.startsWith("--color-monti-")).length).toBeGreaterThan(0);
+		for (const name of names) expect(name).toMatch(/^--(?:color-monti-|shadow-monti-|radius-(?:sm|md|lg|xl|dialog)$)/);
+		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--monti-radius");
+		// Variant names also start with `monti-`.
+		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^monti-/);
 		// The dark theme follows both `.dark` and `[data-theme="dark"]`.
-		expect(themeCss).toMatch(/@custom-variant cms-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/);
-		expect(adminCss).toMatch(/html:is\(\.dark, \[data-theme="dark"\]\):has\(\.cms-admin\)/);
+		expect(themeCss).toMatch(/@custom-variant monti-dark[^;]*\.dark[^;]*\[data-theme="dark"\]/);
+		expect(adminCss).toMatch(/html:is\(\.dark, \[data-theme="dark"\]\):has\(\.monti-admin\)/);
+	});
+
+	it("the default token values have zero specificity, so a site's own --monti-* wins in any import order", () => {
+		const holders: string[] = [];
+		postcss.parse(adminCss).walkRules((rule) => {
+			if (rule.nodes.some((node) => node.type === "decl" && node.prop === "--monti-background"))
+				holders.push(rule.selector);
+		});
+		// One block for light, one for dark; each is a single `:where(...)`, so nothing outside it adds specificity.
+		expect(holders).toHaveLength(2);
+		for (const selector of holders) expect(selector).toMatch(/^:where\((?:[^()]|\([^()]*\))*\)$/);
+	});
+
+	it("the theme keeps the admin's own names only", () => {
 		// Tailwind's `--radius*` is not defined by the hand-written rules.
 		expect(adminCss).not.toMatch(/^\s*--radius/m);
 	});
 
-	it("color variables only define --cms-* names", () => {
+	it("color variables only define --monti-* names", () => {
 		const definitions = [...adminCss.matchAll(/^\t(--[\w-]+)\s*:/gm)].map((m) => m[1]);
 		const colorVars = definitions.filter((name) => new RegExp(`^--(${TOKENS})$`).test(name));
 		expect(colorVars).toEqual([]);
-		expect(definitions.filter((name) => !name.startsWith("--cms-"))).toEqual([]);
+		expect(definitions.filter((name) => !name.startsWith("--monti-"))).toEqual([]);
 	});
 
 	describe("prebuilt stylesheets", () => {
@@ -117,7 +131,7 @@ describe("admin CSS confinement", () => {
 				const root = postcss.parse(css);
 				// Every selector sits under a document that contains the admin.
 				expect(selectorsOf(root).filter((selector) => !scoped(selector))).toEqual([]);
-				// Every custom property the file declares (and registers) is `--cms-*`.
+				// Every custom property the file declares (and registers) is `--monti-*`.
 				const declared = new Set<string>();
 				root.walkDecls((decl) => {
 					if (decl.prop.startsWith("--")) declared.add(decl.prop);
@@ -125,7 +139,7 @@ describe("admin CSS confinement", () => {
 				root.walkAtRules("property", (rule) => {
 					declared.add(rule.params.trim());
 				});
-				expect([...declared].filter((name) => !name.startsWith("--cms-"))).toEqual([]);
+				expect([...declared].filter((name) => !name.startsWith("--monti-"))).toEqual([]);
 				// No Tailwind, theme or import directive is left in the output, and the host's names are not used as keyframes.
 				const directives: string[] = [];
 				const layers: string[] = [];
@@ -156,7 +170,7 @@ describe("admin CSS confinement", () => {
 				expect(directives).toEqual([]);
 				// Layers are flattened: a layered rule would rank against the host's layers by load order and could lose to its `.hidden` or `.prose`.
 				expect(layers).toEqual([]);
-				expect(keyframes.filter((name) => !name.startsWith("cms-"))).toEqual([]);
+				expect(keyframes.filter((name) => !name.startsWith("monti-"))).toEqual([]);
 			});
 		}
 
@@ -203,15 +217,16 @@ describe("admin CSS confinement", () => {
 			const css = built.get("admin") ?? "";
 			const selectors = selectorsOf(postcss.parse(css));
 			// Tailwind's preflight is there, but only under the scope (the check above rejects a bare `*`, `body` or `button`).
-			expect(selectors).toContain(":where(html:has(.cms-admin)) button");
-			expect(css).toContain("html:has(.cms-admin){--cms-background:");
-			expect(css).toMatch(/html:is\(\.dark,\[data-theme=dark\]\):has\(\.cms-admin\)\{[^}]*color-scheme:dark/);
+			expect(selectors).toContain(":where(html:has(.monti-admin)) button");
+			expect(css).toContain(":where(html:has(.monti-admin)){--monti-background:");
+			expect(css).toMatch(/html:is\(\.dark,\[data-theme=dark\]\):has\(\.monti-admin\)\{[^}]*color-scheme:dark/);
+			expect(css).toMatch(/:where\(html:is\(\.dark,\[data-theme=dark\]\):has\(\.monti-admin\)\)\{--monti-background:/);
 			expect(css).toContain(".katex");
 			expect(css).toContain("KaTeX_Main");
 			// The host's Tailwind names are not redefined: no `--radius*`, `--color-*`, `--spacing`, `--font-*` declaration.
 			expect(css).not.toMatch(/(?:^|[;{])--(?:radius|color|spacing|font|text|shadow|ease|animate)(?:-[\w-]+)?:/);
 			// Radius utilities are computed from the admin's own base radius.
-			expect(css).toMatch(/border-radius:calc\(var\(--cms-radius\)/);
+			expect(css).toMatch(/border-radius:calc\(var\(--monti-radius\)/);
 		});
 	});
 

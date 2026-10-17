@@ -9,25 +9,25 @@ const html = async (source: string, locale?: string) =>
 describe("block extension public components", () => {
 	it("callout renders variant, title and body, and uses the variant name when there is no title", async () => {
 		const markup = await html('<Callout variant="warning" title="주의">\n\n본문 **굵게**\n\n</Callout>');
-		expect(markup).toContain('class="cms-block-callout"');
+		expect(markup).toContain('class="monti-block-callout"');
 		expect(markup).toContain('data-variant="warning"');
-		expect(markup).toContain('<div class="cms-block-callout-title">주의</div>');
+		expect(markup).toContain('<div class="monti-block-callout-title">주의</div>');
 		expect(markup).toContain("<strong>굵게</strong>");
 
 		const fallback = await html('<Callout variant="tip">\n\n내용\n\n</Callout>', "ko");
-		expect(fallback).toContain('<div class="cms-block-callout-title">팁</div>');
+		expect(fallback).toContain('<div class="monti-block-callout-title">팁</div>');
 		expect(await html("<Callout>\n\n내용\n\n</Callout>", "en")).toContain(">Note</div>");
 		// An unknown variant falls back to note, and a callout with no body has no body slot.
 		const unknown = await html('<Callout variant="nope" title="제목만" />');
 		expect(unknown).toContain('data-variant="note"');
-		expect(unknown).not.toContain("cms-block-callout-body");
+		expect(unknown).not.toContain("monti-block-callout-body");
 	});
 
 	it("collapsible renders as details and follows title, initially open and default title", async () => {
 		const markup = await html('<Collapsible title="더 보기" defaultOpen>\n\n숨은 내용\n\n</Collapsible>');
 		expect(markup).toContain("<details");
 		expect(markup).toContain(" open");
-		expect(markup).toContain('<summary class="cms-block-collapsible-summary">더 보기</summary>');
+		expect(markup).toContain('<summary class="monti-block-collapsible-summary">더 보기</summary>');
 		expect(markup).toContain("숨은 내용");
 
 		const closed = await html("<Collapsible>\n\n내용\n\n</Collapsible>", "ko");
@@ -65,36 +65,36 @@ describe("block extension public components", () => {
 		const markup = await html(
 			'<Columns widths="60,40">\n\n<Column>\n\n왼쪽\n\n</Column>\n\n<Column>\n\n오른쪽\n\n</Column>\n\n</Columns>',
 		);
-		expect(markup).toContain('class="cms-block-columns"');
-		expect(markup).toContain("--cms-columns:minmax(0, 60fr) minmax(0, 40fr)");
-		expect(markup.match(/class="cms-block-column"/g)).toHaveLength(2);
+		expect(markup).toContain('class="monti-block-columns"');
+		expect(markup).toContain("--monti-columns:minmax(0, 60fr) minmax(0, 40fr)");
+		expect(markup.match(/class="monti-block-column"/g)).toHaveLength(2);
 
 		// Widths that do not match the column count are split evenly.
 		const equal = await html(
 			'<Columns widths="70,20,10">\n\n<Column>\n\na\n\n</Column>\n\n<Column>\n\nb\n\n</Column>\n\n</Columns>',
 		);
-		expect(equal).toContain("--cms-columns:repeat(2, minmax(0, 1fr))");
+		expect(equal).toContain("--monti-columns:repeat(2, minmax(0, 1fr))");
 	});
 
 	it("text color accepts only hex values", async () => {
 		const markup = await html('<Color fg="#DC2626" fgDark="#f87171" bg="#fee2e2">빨강</Color>');
-		expect(markup).toContain('class="cms-color"');
+		expect(markup).toContain('class="monti-color"');
 		expect(markup).toContain("data-fg");
 		expect(markup).toContain("data-bg");
-		expect(markup).toContain("--cms-fg:#dc2626");
-		expect(markup).toContain("--cms-fg-dark:#f87171");
+		expect(markup).toContain("--monti-fg:#dc2626");
+		expect(markup).toContain("--monti-fg-dark:#f87171");
 		expect(markup).toContain("빨강");
 
 		const bad = await html('<Color fg="red;background:url(x)" bg="expression(1)">나쁨</Color>');
 		expect(bad).not.toContain("data-fg");
-		expect(bad).not.toContain("--cms-fg");
+		expect(bad).not.toContain("--monti-fg");
 		expect(bad).not.toContain("url(");
 		expect(bad).toContain("나쁨");
 	});
 
 	it("tooltip renders the text and description as keyboard-reachable elements", async () => {
 		const markup = await html('<Tooltip content="뜻풀이">용어</Tooltip>');
-		expect(markup).toContain('class="cms-block-tooltip"');
+		expect(markup).toContain('class="monti-block-tooltip"');
 		expect(markup).toContain("용어");
 		const id = /aria-describedby="([^"]+)"/.exec(markup)?.[1];
 		expect(id).toBeTruthy();
@@ -112,9 +112,9 @@ describe("block extension public components", () => {
 
 	it("Mermaid shows the source on the server (the diagram is drawn in the browser)", async () => {
 		const markup = await html("```mermaid\ngraph TD\n  A --> B\n```");
-		expect(markup).toContain('class="cms-block-mermaid"');
+		expect(markup).toContain('class="monti-block-mermaid"');
 		expect(markup).toContain('data-state="loading"');
-		expect(markup).toContain('<pre class="cms-block-mermaid-source"><code>graph TD\n  A --&gt; B</code></pre>');
+		expect(markup).toContain('<pre class="monti-block-mermaid-source"><code>graph TD\n  A --&gt; B</code></pre>');
 	});
 
 	it("chart shows the source on the server and reports an error per line when the syntax is wrong", async () => {
@@ -128,13 +128,13 @@ describe("block extension public components", () => {
 			"Jan | 1200",
 		].join("\n");
 		const ok = await html(`\`\`\`chart\n${source}\n\`\`\``);
-		expect(ok).toContain('class="cms-block-chart"');
+		expect(ok).toContain('class="monti-block-chart"');
 		expect(ok).toContain('data-state="loading"');
 		expect(ok).toContain("Jan | 1200");
-		expect(ok).not.toContain("cms-block-chart-error");
+		expect(ok).not.toContain("monti-block-chart-error");
 
 		const broken = await html("```chart\nchart nope\n```", "en");
-		expect(broken).toContain('class="cms-block-chart-error"');
+		expect(broken).toContain('class="monti-block-chart-error"');
 		expect(broken).toContain('role="alert"');
 		// One entry per error, naming the line (the source's first line) and the offending value.
 		expect(broken).toMatch(/<li>[^<]*\b1\b[^<]*<\/li>/);
@@ -158,6 +158,6 @@ describe("block extension public components", () => {
 		});
 		const markup = renderToStaticMarkup(content);
 		expect(markup).toContain('<aside id="mine">');
-		expect(markup).not.toContain("cms-block-callout");
+		expect(markup).not.toContain("monti-block-callout");
 	});
 });

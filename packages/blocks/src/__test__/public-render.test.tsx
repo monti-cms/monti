@@ -12,11 +12,11 @@ describe("text color public page", () => {
 
 	it("attaches per-theme CSS variables and drops non-hex values", async () => {
 		const markup = await html(`${SOURCE}\n\n<Color fg="red; background:url(x)">위험</Color>`);
-		expect(markup).toContain('class="cms-color" style="--cms-fg:#dc2626;--cms-fg-dark:#f87171" data-fg=""');
+		expect(markup).toContain('class="monti-color" style="--monti-fg:#dc2626;--monti-fg-dark:#f87171" data-fg=""');
 		expect(markup).toMatch(
-			/<span class="cms-color" style="--cms-bg:#fef3c7;--cms-bg-dark:#453a12" data-bg=""><strong>강조<\/strong><\/span>/,
+			/<span class="monti-color" style="--monti-bg:#fef3c7;--monti-bg-dark:#453a12" data-bg=""><strong>강조<\/strong><\/span>/,
 		);
-		expect(markup).toContain('<span class="cms-color">위험</span>');
+		expect(markup).toContain('<span class="monti-color">위험</span>');
 		expect(markup).not.toContain("url(x)");
 	});
 });

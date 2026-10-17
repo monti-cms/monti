@@ -48,23 +48,23 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 		<div
 			role="status"
 			aria-label={t("linkBar.label")}
-			className="flex w-full flex-wrap items-center justify-center gap-2 border-t bg-cms-primary/5 px-4 py-1.5 text-xs"
+			className="flex w-full flex-wrap items-center justify-center gap-2 border-t bg-monti-primary/5 px-4 py-1.5 text-xs"
 		>
-			<Code2 aria-hidden className="size-4 shrink-0 text-cms-primary" />
+			<Code2 aria-hidden className="size-4 shrink-0 text-monti-primary" />
 			<span className="min-w-0">
 				{status.kind === "text" ? (
 					<>
 						{t("linkBar.pickLinesBefore")}
 						<b>{quoted}</b>
 						{t("linkBar.pickLinesAfter")}
-						{status.lines && <b className="ml-1 text-cms-primary">· {lineLabel(t, status.lines)}</b>}
+						{status.lines && <b className="ml-1 text-monti-primary">· {lineLabel(t, status.lines)}</b>}
 					</>
 				) : (
 					<>
 						{t("linkBar.pickTextBefore")}
 						<b>{t("linkBar.codeLines", { lines: status.lines ? lineLabel(t, status.lines) : "" })}</b>
 						{t("linkBar.pickTextAfter")}
-						{status.text && <b className="ml-1 text-cms-primary">· {quoted}</b>}
+						{status.text && <b className="ml-1 text-monti-primary">· {quoted}</b>}
 					</>
 				)}
 			</span>

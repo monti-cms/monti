@@ -58,16 +58,16 @@ export function MermaidView({ source }: { source: string }) {
 	const svg = state && "svg" in state ? state.svg : null;
 	const error = state && "error" in state ? state.error : null;
 	return (
-		<figure className="cms-block-mermaid" data-state={svg ? "ready" : error ? "error" : "loading"}>
+		<figure className="monti-block-mermaid" data-state={svg ? "ready" : error ? "error" : "loading"}>
 			{svg ? (
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: SVG sanitized by mermaid with `securityLevel: "strict"`
-				<div className="cms-block-mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />
+				<div className="monti-block-mermaid-diagram" dangerouslySetInnerHTML={{ __html: svg }} />
 			) : (
-				<pre className="cms-block-mermaid-source">
+				<pre className="monti-block-mermaid-source">
 					<code>{source}</code>
 				</pre>
 			)}
-			{error ? <figcaption className="cms-block-mermaid-error">{error}</figcaption> : null}
+			{error ? <figcaption className="monti-block-mermaid-error">{error}</figcaption> : null}
 		</figure>
 	);
 }
