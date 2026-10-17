@@ -47,8 +47,6 @@ const storeOf = (overrides: Partial<Record<keyof ContentStore, unknown>> = {}) =
 		dismissDelivery: vi.fn(async () => true),
 		enqueueEvents: vi.fn(async () => 0),
 		claimDeliveries: vi.fn(async () => []),
-		deliverySubscribers: vi.fn(async () => []),
-		renameSubscriber: vi.fn(async () => 0),
 		...overrides,
 	}) as unknown as ContentStore;
 

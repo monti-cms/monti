@@ -19,8 +19,6 @@ function fakeDatabase(tag: string) {
 				completeDelivery: vi.fn(async () => undefined),
 				failDelivery: vi.fn(async () => "failed" as const),
 				pruneEvents: vi.fn(async () => 0),
-				deliverySubscribers: vi.fn(async () => [] as string[]),
-				renameSubscriber: vi.fn(async () => 0),
 				getPreferences: async () => ({ editor: { inspectorOpen: tag === "a" } }),
 				listPublishedTranslations: async () => [
 					{ collection: contentCollection, slug: `slug-${tag}`, locale: defaultLocale },

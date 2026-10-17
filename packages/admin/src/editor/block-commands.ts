@@ -17,7 +17,7 @@ interface TopLevelBlock {
 
 const isTargetBlock = (block: TargetBlock | TopLevelBlock): block is TargetBlock => "parent" in block;
 
-/** Top-level block containing the document position (kept for backward compatibility). */
+/** Top-level block containing the document position: where a block command falls back to when no nested target block is there. */
 export function topLevelBlockAt(doc: PmNode, pos: number): TopLevelBlock | null {
 	if (doc.childCount === 0) return null;
 	const $pos = doc.resolve(Math.max(0, Math.min(pos, doc.content.size)));

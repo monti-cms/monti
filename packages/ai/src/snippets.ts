@@ -12,7 +12,6 @@ import { settingsMessages } from "./settings.messages";
  * - **Added text**: text added in the admin screen by entering key, name and content. The key cannot be changed after creation; delete it if no action uses it.
  *
  * Both are kept in one `shared` row (the stored row name is kept) of the AI settings table as `{ texts: { key: edited content }, added: [{ key, label, text }] }`.
- * The old shape (config text key -> edited content) is also read, and saving changes it to the new shape.
  */
 
 export interface AiSnippetStore {
@@ -96,7 +95,7 @@ const isConfigKey = (site: Site, key: string) => Object.hasOwn(contextOf(site).c
  */
 function readStored(site: Site, value: unknown): Stored {
 	const current = storedSchema.safeParse(value);
-	if (!current.success) return { texts: stringsOf(value), added: [] };
+	if (!current.success) return { texts: {}, added: [] };
 	const seen = new Set<string>();
 	const added = current.data.added.flatMap((item) => {
 		const parsed = contextOf(site).addedSchema.safeParse(item);
