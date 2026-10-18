@@ -290,7 +290,6 @@ export const foldersContract: ContractSuite = (factory) => {
 				slug: "fc4-slug",
 				metadata: { title: "FC4" },
 				text: "body text",
-				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
 
@@ -399,7 +398,6 @@ export const foldersContract: ContractSuite = (factory) => {
 				slug: "fc5-e",
 				metadata: { title: "E5" },
 				text: "e5 body",
-				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
 			const e5pub = await publishDraft(testSite, store, { id: e5.id, expectedVersion: e5.version });
@@ -466,7 +464,6 @@ export const foldersContract: ContractSuite = (factory) => {
 				slug: "fc6-e",
 				metadata: { title: "E6" },
 				text: "e6 body",
-				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
 			const e6pub = await publishDraft(testSite, store, { id: e6.id, expectedVersion: e6.version });

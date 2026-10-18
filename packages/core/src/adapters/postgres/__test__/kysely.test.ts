@@ -249,7 +249,6 @@ describe("kysely", () => {
 						entry_id: row.id,
 						state: "working",
 						metadata: JSON.stringify(row.metadata),
-						schema_version: 1,
 						content_hash: "h",
 						updated_at: now,
 					})
@@ -293,7 +292,6 @@ describe("kysely", () => {
 					entry_id: id,
 					state: "working",
 					metadata: JSON.stringify({ name: "Name", translations: { en: { name: "English" }, fr: { name: "  " } } }),
-					schema_version: 1,
 					content_hash: "h",
 					updated_at: now,
 				})

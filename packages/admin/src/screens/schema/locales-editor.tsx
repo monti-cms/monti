@@ -482,13 +482,7 @@ export function LocalesEditor({ file, update }: { file: Obj; update: (change: (f
 						value={typeof file.timeZone === "string" ? file.timeZone : undefined}
 						onChange={(value) =>
 							update((current) =>
-								setProp(current, "timeZone", value, [
-									"schemaVersion",
-									"collections",
-									"migrations",
-									"locales",
-									"defaultLocale",
-								]),
+								setProp(current, "timeZone", value, ["collections", "migrations", "locales", "defaultLocale"]),
 							)
 						}
 					/>

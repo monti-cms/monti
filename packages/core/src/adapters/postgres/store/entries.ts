@@ -139,7 +139,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 					await writeBody(site, trx, id, "working", {
 						metadata,
 						doc: params.snapshot.doc,
-						schemaVersion: params.snapshot.schemaVersion,
 						contentHash: params.snapshot.contentHash,
 						updatedAt: now,
 						translation,
@@ -245,7 +244,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 							await writeBody(site, trx, params.entryId, "working", {
 								metadata,
 								doc: params.snapshot.doc,
-								schemaVersion: params.snapshot.schemaVersion,
 								contentHash: params.snapshot.contentHash,
 								updatedAt: now,
 								translation,
@@ -270,7 +268,6 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						await writeBody(site, trx, params.entryId, "working", {
 							metadata,
 							doc: params.snapshot.doc,
-							schemaVersion: body.schema_version,
 							contentHash: body.content_hash,
 							updatedAt: body.updated_at,
 							translation,

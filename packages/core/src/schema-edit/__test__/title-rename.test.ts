@@ -26,7 +26,6 @@ const auth = (): CmsAuth => ({
 });
 
 const schema = {
-	schemaVersion: 1,
 	collections: {
 		post: {
 			label: "Post",

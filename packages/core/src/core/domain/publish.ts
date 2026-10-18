@@ -8,8 +8,7 @@ import type { Reference } from "../types";
  */
 
 /**
- * A stored body (working or published) as far as these rules look at it. The schema version a body is stored under is not compared here: it says which schema
- * the body was written under, not what it says, so a body saved again under a newer schema version is the same body.
+ * A stored body (working or published) as far as these rules look at it.
  */
 export interface BodyState {
 	readonly contentHash: string;

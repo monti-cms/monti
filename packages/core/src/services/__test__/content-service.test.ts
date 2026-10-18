@@ -252,12 +252,10 @@ describe("ContentService Contract", () => {
 	});
 
 	describe("3. Deterministic Hashing", () => {
-		it("computes the SHA-256 vector with key-order equivalence and metadata and MDX changes, but not a schema version change", async () => {
+		it("computes the SHA-256 vector with key-order equivalence and metadata and MDX changes", async () => {
 			const ids = ["123e4567-e89b-12d3-a456-426614174002", "123e4567-e89b-12d3-a456-426614174001"];
-			const snapshotOf = (metadata: Record<string, unknown>, mdx = "Hello", schemaVersion = 1) =>
-				prepareSnapshot(input({ collection: content, slug: "a", metadata, format: "paragraphs", body: mdx }), {
-					schemaVersion,
-				});
+			const snapshotOf = (metadata: Record<string, unknown>, mdx = "Hello") =>
+				prepareSnapshot(input({ collection: content, slug: "a", metadata, format: "paragraphs", body: mdx }));
 			const snap1 = await snapshotOf({ title: "A", [many.name]: ids });
 			const snap2 = await snapshotOf({ [many.name]: ids, title: "A" });
 
@@ -281,11 +279,6 @@ describe("ContentService Contract", () => {
 
 			const snapDiffMetadata = await snapshotOf({ title: "B", [many.name]: ids });
 			expect(snap1.contentHash).not.toEqual(snapDiffMetadata.contentHash);
-
-			const snapDiffSchema = await snapshotOf({ title: "A", [many.name]: ids }, "Hello", 2);
-			// The schema version an entry is stored under is not part of the hash.
-			expect(snapDiffSchema.schemaVersion).toBe(2);
-			expect(snap1.contentHash).toEqual(snapDiffSchema.contentHash);
 		});
 
 		it("rejects caller provided contentHash", async () => {
@@ -509,7 +502,6 @@ describe("ContentService Contract", () => {
 				[many.name]: ["123e4567-e89b-12d3-a456-426614174002"],
 			},
 			doc: docOf("Content"),
-			schemaVersion: 1,
 			contentHash: "hash",
 			references: [
 				{
@@ -691,7 +683,6 @@ describe("ContentService Contract", () => {
 				},
 				format: "paragraphs",
 				body: "",
-				schemaVersion: 1,
 				contentHash: "hash",
 				references: [],
 				issues: [],
@@ -723,7 +714,6 @@ describe("ContentService Contract", () => {
 				},
 				format: "paragraphs",
 				body: "",
-				schemaVersion: 1,
 				contentHash: "hash",
 				references: [
 					{

@@ -26,7 +26,6 @@ const post = (fields: Record<string, unknown>) => ({
 });
 
 const schemaOf = (fields: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
-	schemaVersion: 1,
 	collections: { post: post(fields) },
 	locales: [{ code: "en", name: "English" }],
 	defaultLocale: "en",
@@ -208,7 +207,7 @@ describe("schema settings API", () => {
 		// A hand-formatted file with comments: saving writes it again in the printer's form, in the key order of the data.
 		writeFileSync(
 			file,
-			`// my schema\nimport { defineSchema } from '@monti-cms/core'\n\nexport default defineSchema({\n\tschemaVersion: 1,\n\tcollections: {\n\t\tpost: {\n\t\t\tlabel: 'Post', kind: 'document',\n\t\t\tfields: {\n\t\t\t\ttitle: { kind: 'text', label: 'Title', required: true },\n\t\t\t\tslug: { kind: 'slug', label: 'Address', from: 'title' },\n\t\t\t},\n\t\t\tpath: '/posts/:slug',\n\t\t\tlayout: [{ fields: ['title', 'slug'] }],\n\t\t},\n\t},\n\tlocales: [{ code: 'en', name: 'English' }],\n\tdefaultLocale: 'en',\n})\n`,
+			`// my schema\nimport { defineSchema } from '@monti-cms/core'\n\nexport default defineSchema({\n\tcollections: {\n\t\tpost: {\n\t\t\tlabel: 'Post', kind: 'document',\n\t\t\tfields: {\n\t\t\t\ttitle: { kind: 'text', label: 'Title', required: true },\n\t\t\t\tslug: { kind: 'slug', label: 'Address', from: 'title' },\n\t\t\t},\n\t\t\tpath: '/posts/:slug',\n\t\t\tlayout: [{ fields: ['title', 'slug'] }],\n\t\t},\n\t},\n\tlocales: [{ code: 'en', name: 'English' }],\n\tdefaultLocale: 'en',\n})\n`,
 		);
 		const cms = newCms();
 		const state = await (await call(cms, "GET", "schema")).json();
@@ -229,21 +228,19 @@ describe("schema settings API", () => {
 		const res = await call(cms, "PUT", "schema", { schema: edited, baseHash: hash });
 		expect(res.status).toBe(200);
 		const saved = await res.json();
-		expect(saved).toMatchObject({ saved: true, reloaded: true, schemaVersion: 2 });
+		expect(saved).toMatchObject({ saved: true, reloaded: true });
 
-		// The file is the printer's output for the saved data, with the new field in place and the version raised.
+		// The file is the printer's output for the saved data, with the new field in place.
 		const onDisk = onDiskData();
 		expect(text()).toBe(printSchemaFile(onDisk));
 		expect(text()).not.toContain("// my schema");
 		expect(text()).toContain('\t\t\t\trating: {\n\t\t\t\t\tkind: "select",');
 		expect(onDisk.collections.post.fields.rating.options).toEqual({ good: "Good", bad: "Bad" });
-		expect(onDisk.schemaVersion).toBe(2);
-		expect(Object.keys(onDisk)).toEqual(["schemaVersion", "collections", "locales", "defaultLocale"]);
+		expect(Object.keys(onDisk)).toEqual(["collections", "locales", "defaultLocale"]);
 		expect(Object.keys(onDisk.collections.post)).toEqual(["label", "kind", "fields", "path", "layout"]);
 		// A later load of the module sees the change.
 		const loaded = await loadSchemaFile(dir, file, { fresh: true });
 		expect(Object.keys(loaded.collections.post?.fields ?? {})).toEqual(["title", "slug", "rating"]);
-		expect(loaded.schemaVersion).toBe(2);
 		// The instance runs the new schema without a restart.
 		expect(Object.keys(cms.site.config.collections.post?.fields ?? {})).toContain("rating");
 	});
@@ -282,7 +279,7 @@ describe("schema settings API", () => {
 		expect(preview.transforms).toEqual([]);
 	});
 
-	it("renames a field with a transform: the stored values move, the transform is recorded, the file and version follow", async () => {
+	it("renames a field with a transform: the stored values move, the transform is recorded, the file follows", async () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const cms = newCms();
 		const { hash, schema } = await read(cms);
@@ -311,7 +308,6 @@ describe("schema settings API", () => {
 			from: "summary",
 			to: "excerpt",
 		});
-		expect(onDisk.schemaVersion).toBeGreaterThanOrEqual(2);
 		expect(Object.keys(onDisk.collections.post.fields)).toContain("excerpt");
 		expect(Object.keys(onDisk.collections.post.fields)).not.toContain("summary");
 	});
@@ -372,7 +368,7 @@ describe("schema settings API", () => {
 		vi.stubEnv("NODE_ENV", "development");
 		const withSpread = printSchemaFile(schemaOf({})).replace(
 			"export default defineSchema({\n",
-			"const base = { schemaVersion: 1 };\n\nexport default defineSchema({\n\t...base,\n",
+			"const base = { defaultLocale: 'en' };\n\nexport default defineSchema({\n\t...base,\n",
 		);
 		write(schemaOf({}));
 		const cms = newCms();

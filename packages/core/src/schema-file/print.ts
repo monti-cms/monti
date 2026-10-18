@@ -102,7 +102,7 @@ function print(value: unknown, depth: number, column: number, expand = false): s
 	throw new Error(`a schema cannot hold a ${typeof value}`);
 }
 
-/** The text of `monti.schema.ts` for `schema` (the data of the file: `schemaVersion`, `collections`, `locales`, ...). */
+/** The text of `monti.schema.ts` for `schema` (the data of the file: `collections`, `locales`, ...). */
 export function printSchemaFile(schema: Record<string, unknown>): string {
 	return `import { defineSchema } from "${SCHEMA_MODULE}";\n\nexport default defineSchema(${print(schema, 0, 0, true)});\n`;
 }

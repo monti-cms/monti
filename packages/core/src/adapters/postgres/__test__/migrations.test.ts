@@ -35,7 +35,7 @@ describe("migrations", () => {
 		);
 
 	it("has exactly the baseline as its step list (a guard against renaming a step)", () => {
-		expect([...CONTENT_STORE_MIGRATIONS]).toEqual(["0001_baseline", "0002_media_folders"]);
+		expect([...CONTENT_STORE_MIGRATIONS]).toEqual(["0001_baseline", "0002_media_folders", "0003_drop_schema_version"]);
 	});
 
 	it("runs one at a time even when started twice concurrently, and records the steps and the seed once", async () => {
@@ -53,6 +53,36 @@ describe("migrations", () => {
 		const again = await migrateContentStore(pool, { site: testSite, schema: schemaName });
 		expect(again).toEqual({ applied: 0, upToDate: CONTENT_STORE_MIGRATIONS.length });
 		expect(await applied(schemaName)).toEqual(before);
+	});
+
+	it("drops the schema version columns from a store that still has them, keeping its rows", async () => {
+		const schema = `cms_mig_${randomBytes(4).toString("hex")}`;
+		extraSchemas.push(schema);
+		await migrateContentStore(pool, { site: testSite, schema });
+		const hasColumn = async (table: string) =>
+			(
+				await pool.query(
+					"SELECT 1 FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = 'schema_version'",
+					[schema, table],
+				)
+			).rows.length > 0;
+		expect(await hasColumn("entry_bodies")).toBe(false);
+		expect(await hasColumn("schema_state")).toBe(false);
+
+		// A store the previous release created: both columns exist, and the step has not run.
+		await pool.query(`ALTER TABLE "${schema}".entry_bodies ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 3`);
+		await pool.query(`ALTER TABLE "${schema}".schema_state ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 3`);
+		await pool.query(`DELETE FROM "${schema}".cms_migrations WHERE name = '0003_drop_schema_version'`);
+		const store = createContentStore(pool, { site: testSite, schema });
+		const entry = await seedEntry(store, { collection: "x", slug: "kept", metadata: { title: "Kept" }, text: "words" });
+
+		expect(await migrateContentStore(pool, { site: testSite, schema })).toEqual({
+			applied: 1,
+			upToDate: CONTENT_STORE_MIGRATIONS.length - 1,
+		});
+		expect(await hasColumn("entry_bodies")).toBe(false);
+		expect(await hasColumn("schema_state")).toBe(false);
+		expect(contentOf((await store.getEntry(entry.id)).working.doc)).toEqual(contentOf(docOf("words")));
 	});
 
 	it("creates no MDX text columns, and a normal write stores the document only", async () => {

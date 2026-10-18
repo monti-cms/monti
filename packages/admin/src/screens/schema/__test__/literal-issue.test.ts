@@ -20,7 +20,7 @@ const SAMPLE: Record<SchemaLiteralIssueCode, Record<string, string>> = {
 	computed_key: {},
 	spread: {},
 	method: { name: "build" },
-	shorthand: { name: "schemaVersion" },
+	shorthand: { name: "defaultLocale" },
 	proto_key: {},
 	duplicate_key: { name: "a" },
 	empty_slot: {},

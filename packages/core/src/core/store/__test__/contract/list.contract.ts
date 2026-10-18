@@ -91,7 +91,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: `list-test-${to}`,
 					metadata: await requiredMetadata(to, relationTargetTitle(to), relationTarget),
 					text: "",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				return (await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).id;
@@ -143,7 +142,6 @@ export const listContract: ContractSuite = (factory) => {
 				metadata: await metadataFor(collection, title),
 				text: opts.text ?? "default body",
 				doc: opts.doc,
-				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
 
@@ -448,7 +446,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "first-tag",
 					metadata: { title: "First tag" },
 					text: "",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				const secondTag = await seedEntry(store, {
@@ -456,7 +453,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "second-tag",
 					metadata: { title: "Second tag" },
 					text: "",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				const post = await seedEntry(store, {
@@ -464,7 +460,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "tagged-post",
 					metadata: { title: "Tagged", [many.name]: [secondTag.id, firstTag.id] },
 					text: "body",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 
@@ -493,7 +488,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "values-filled",
 					metadata: { title: "Has values", [stored.name]: value },
 					text: "body",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				const empty = await seedEntry(store, {
@@ -501,7 +495,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "values-empty",
 					metadata: { title: "No values", [stored.name]: "" },
 					text: "body",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				const result = await store.listEntries({ collection: content });
@@ -524,7 +517,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "tag-react",
 					metadata: { title: "리액트", translations },
 					text: "",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				const plain = await seedEntry(store, {
@@ -532,7 +524,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "tag-plain",
 					metadata: { title: "그냥" },
 					text: "",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 				});
 				const { items } = await store.listEntries({ collection: records });
@@ -631,7 +622,6 @@ export const listContract: ContractSuite = (factory) => {
 					slug: "loc-other",
 					metadata: await metadataFor(content, "Locale other"),
 					text: "",
-					schemaVersion: 1,
 					contentHash: uniqueHash(),
 					locale: secondLocale,
 				});

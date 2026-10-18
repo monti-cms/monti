@@ -98,7 +98,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "test-timestamps",
 				metadata: { title: "Timestamps" },
 				text: "test",
-				schemaVersion: 1,
 				contentHash: "hash-ts",
 			});
 
@@ -118,7 +117,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: null,
 				metadata: { title: "Draft" },
 				text: "draft 1",
-				schemaVersion: 1,
 				contentHash: "hash-slug-1",
 			});
 			const draft2 = await seedEntry(store, {
@@ -126,7 +124,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: null,
 				metadata: { title: "Draft" },
 				text: "draft 2",
-				schemaVersion: 1,
 				contentHash: "hash-slug-2",
 			});
 
@@ -139,7 +136,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "draft-1-slug",
 				metadata: { title: "Draft" },
 				text: "draft 1 updated",
-				schemaVersion: 1,
 				contentHash: "hash-slug-1-updated",
 			});
 
@@ -154,7 +150,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "draft-1-slug-new",
 				metadata: { title: "Draft" },
 				text: "draft 1 updated again",
-				schemaVersion: 1,
 				contentHash: "hash-slug-1-updated-again",
 			});
 
@@ -168,7 +163,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "time-test",
 				metadata: { title: "Draft" },
 				text: "time test",
-				schemaVersion: 1,
 				contentHash: "hash-time",
 			});
 
@@ -191,7 +185,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: published.version,
 				metadata: { title: "Draft" },
 				text: "time test updated",
-				schemaVersion: 1,
 				contentHash: "hash-time-2",
 			});
 
@@ -207,7 +200,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "identical",
 				metadata: { title: "Draft" },
 				text: "draft content",
-				schemaVersion: 1,
 				contentHash: "hash-identical",
 			});
 
@@ -215,7 +207,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: entry.version,
 				metadata: { title: "Draft" },
 				text: "draft content",
-				schemaVersion: 1,
 				contentHash: "hash-identical",
 			});
 
@@ -230,11 +221,10 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.working.contentHash).toBe(entry.working.contentHash);
 			expect(reloaded.working.metadata).toEqual(entry.working.metadata);
 			expect(contentOf(reloaded.working.doc)).toEqual(contentOf(entry.working.doc));
-			expect(reloaded.working.schemaVersion).toBe(entry.working.schemaVersion);
 		});
 
 		describe("a syntax-only change (same content hash, different MDX string)", () => {
-			it("still counts as a change when the slug, metadata or translation differ, but not a different schema version", async () => {
+			it("still counts as a change when the slug, metadata or translation differ, but not the same content again", async () => {
 				const entry = await seedEntry(store, {
 					collection: contentCollection,
 					slug: "syntax-only-other-change",
@@ -252,16 +242,14 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				});
 				expect(slugChanged.version).toBe(entry.version + 1);
 
-				// The schema version an entry is stored under says which schema it was written under, not what it says: the same content is not an edit.
+				// The same content saved again is not an edit.
 				const schemaChanged = await seedSave(store, entry.id, {
 					expectedVersion: slugChanged.version,
 					metadata: { title: "Syntax" },
 					text: "words again",
-					schemaVersion: 2,
 					contentHash: "hash-syntax-other",
 				});
 				expect(schemaChanged.version).toBe(slugChanged.version);
-				expect(schemaChanged.working.schemaVersion).toBe(1);
 			});
 
 			it("is a republish when published: the published snapshot is not replaced", async () => {
@@ -292,13 +280,12 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			});
 		});
 
-		it("same-hash correctness: changed metadata/MDX/schemaVersion with reused hash is published", async () => {
+		it("same-hash correctness: changed metadata/MDX with reused hash is published", async () => {
 			const entry = await seedEntry(store, {
 				collection: contentCollection,
 				slug: "republish-hash",
 				metadata: { title: "Hash Test" },
 				text: "hash test",
-				schemaVersion: 1,
 				contentHash: "same-hash",
 			});
 
@@ -308,20 +295,17 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: firstPublish.version,
 				metadata: { title: "Hash Test Changed" },
 				text: "hash test changed",
-				schemaVersion: 2,
 				contentHash: "same-hash",
 			});
 
 			const secondPublish = await publishDraft(testSite, store, { id: entry.id, expectedVersion: secondSave.version });
 			expect(secondPublish.published?.metadata).toEqual(await filled("Hash Test Changed"));
 			expect(contentOf(secondPublish.published?.doc)).toEqual(bodyText("hash test changed"));
-			expect(secondPublish.published?.schemaVersion).toBe(2);
 			expect(secondPublish.published?.contentHash).toBe("same-hash");
 
 			const reloaded = await store.getEntry(entry.id);
 			expect(reloaded.published?.metadata).toEqual(await filled("Hash Test Changed"));
 			expect(contentOf(reloaded.published?.doc)).toEqual(bodyText("hash test changed"));
-			expect(reloaded.published?.schemaVersion).toBe(2);
 			expect(reloaded.published?.contentHash).toBe("same-hash");
 		});
 
@@ -331,7 +315,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "json-boundary",
 				metadata: { title: "JSON Boundary" },
 				text: "json",
-				schemaVersion: 1,
 				contentHash: "hash-json",
 			});
 
@@ -346,7 +329,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					expectedVersion: entry.version,
 					metadata: badMetadata,
 					text: "json updated",
-					schemaVersion: 1,
 					contentHash: "hash-json-2",
 				});
 			} catch (e) {
@@ -367,7 +349,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "simul-test",
 				metadata: { title: "Simultaneous" },
 				text: "simul",
-				schemaVersion: 1,
 				contentHash: "hash-simul",
 			});
 
@@ -375,14 +356,12 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: entry.version,
 				metadata: { title: "Win 1" },
 				text: "win 1",
-				schemaVersion: 1,
 				contentHash: "hash-simul-1",
 			});
 			const p2 = seedSave(store, entry.id, {
 				expectedVersion: entry.version,
 				metadata: { title: "Win 2" },
 				text: "win 2",
-				schemaVersion: 1,
 				contentHash: "hash-simul-2",
 			});
 
@@ -419,7 +398,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "stale-test",
 				metadata: { title: "Initial" },
 				text: "initial",
-				schemaVersion: 1,
 				contentHash: "hash-1",
 			});
 
@@ -427,7 +405,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: entry.version,
 				metadata: { title: "Update 1" },
 				text: "update 1",
-				schemaVersion: 1,
 				contentHash: "hash-2",
 			});
 
@@ -435,7 +412,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: entry.version,
 				metadata: { title: "Update 2" },
 				text: "update 2",
-				schemaVersion: 1,
 				contentHash: "hash-3",
 			});
 
@@ -461,7 +437,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "separation-test",
 				metadata: { title: "Initial Draft" },
 				text: "initial draft",
-				schemaVersion: 1,
 				contentHash: "hash-draft",
 			});
 
@@ -472,7 +447,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: published.version,
 				metadata: { title: "Updated Draft" },
 				text: "updated draft",
-				schemaVersion: 2,
 				contentHash: "hash-updated",
 			});
 
@@ -481,7 +455,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 			expect(reloaded.working.metadata).toEqual(await filled("Updated Draft"));
 			expect(contentOf(reloaded.working.doc)).toEqual(bodyText("updated draft"));
 			expect(reloaded.working.contentHash).toBe("hash-updated");
-			expect(reloaded.working.schemaVersion).toBe(2);
 
 			expect(reloaded.published).toEqual(published.published);
 			expect(reloaded.publishedAt?.getTime()).toEqual(published.publishedAt?.getTime());
@@ -493,7 +466,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "republish-hash-identical",
 				metadata: { title: "Hash Test" },
 				text: "hash test",
-				schemaVersion: 1,
 				contentHash: "same-hash-ident",
 			});
 
@@ -503,7 +475,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				expectedVersion: firstPublish.version,
 				metadata: { title: "Hash Test" },
 				text: "hash test",
-				schemaVersion: 1,
 				contentHash: "same-hash-ident",
 			});
 
@@ -520,7 +491,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "clear-slug-test",
 				metadata: { title: "Clear" },
 				text: "test",
-				schemaVersion: 1,
 				contentHash: "hash-c1",
 			});
 
@@ -531,7 +501,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: null,
 				metadata: {},
 				text: "test null",
-				schemaVersion: 1,
 				contentHash: "hash-c2",
 			});
 
@@ -554,7 +523,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					slug: "clear-slug-test",
 					metadata: {},
 					text: "collision",
-					schemaVersion: 1,
 					contentHash: "hash-c3",
 				}),
 			).rejects.toThrow();
@@ -568,7 +536,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					slug: "validation-missing-required",
 					metadata: { title: "Missing required" },
 					text: "A valid body.",
-					schemaVersion: 1,
 					contentHash: "validation-missing-required-hash",
 				});
 
@@ -644,7 +611,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "validation-link-target",
 				metadata: { title: "Target" },
 				text: "Target body.",
-				schemaVersion: 1,
 				contentHash: "validation-link-target-hash",
 			});
 			const source = await seedEntry(store, {
@@ -653,7 +619,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				metadata: { title: "Source" },
 				// The public URL shape follows the config's `path` (the reference blog uses `/posts/:slug`).
 				text: `[Target](${testSite.contentPath(contentCollection, "validation-link-target")})`,
-				schemaVersion: 1,
 				contentHash: "validation-link-source-hash",
 			});
 
@@ -674,7 +639,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 					slug: "validation-collection-draft-item",
 					metadata: { title: "Draft item" },
 					text: "Draft body.",
-					schemaVersion: 1,
 					contentHash: "validation-collection-draft-item-hash",
 				});
 				expect(draftItem.status).toBe("draft");
@@ -709,7 +673,6 @@ const createSaveAndPublishContract: ContractSuite = (factory) => {
 				slug: "proto-test",
 				metadata,
 				text: "test",
-				schemaVersion: 1,
 				contentHash: "hash-proto",
 			});
 
@@ -755,7 +718,6 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				slug: null,
 				metadata,
 				text: body,
-				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 			});
 
@@ -764,7 +726,6 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				slug,
 				metadata,
 				text: body,
-				schemaVersion: 1,
 				contentHash: `hash-${slug}-saved`,
 			});
 		}
@@ -798,7 +759,6 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				slug: "edited-after-publish",
 				metadata: { title: "편집된 제목" },
 				text: "발행 후 편집 본문",
-				schemaVersion: 1,
 				contentHash: "hash-edited-after-publish",
 			});
 
@@ -819,7 +779,6 @@ const createWorkingEntryBySlugContract: ContractSuite = (factory) => {
 				slug: "shared-slug",
 				metadata: { title: "메모" },
 				text: "메모 본문",
-				schemaVersion: 1,
 				contentHash: "hash-memo-shared",
 			});
 			expect(other.workingSlug).toBe("shared-slug");
@@ -1627,7 +1586,6 @@ const createDuplicateContract: ContractSuite = (factory) => {
 				slug: "keep-title",
 				metadata: { title: "Same title" },
 				text: "",
-				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
 			const copy = await duplicateDraft(testSite, store, { id: original.id });

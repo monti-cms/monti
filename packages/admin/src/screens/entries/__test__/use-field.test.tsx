@@ -65,7 +65,6 @@ describe("useField in a preview", () => {
 		const draft = draftSiteOf(
 			testSite,
 			{
-				schemaVersion: 1,
 				collections: { page: { label: "Page", kind: "document", fields: { title: { kind: "text", label: "Title" } } } },
 				locales: [{ code: "en", name: "English" }],
 				defaultLocale: "en",

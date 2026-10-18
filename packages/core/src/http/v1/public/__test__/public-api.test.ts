@@ -55,7 +55,6 @@ describe("Public JSON API", () => {
 				slug,
 				metadata: { title: `Title ${slug}`, ...metadata },
 				doc: docOf(`Body ${slug}`),
-				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 				references: [],
 				issues: [],

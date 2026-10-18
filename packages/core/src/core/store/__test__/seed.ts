@@ -17,7 +17,6 @@ type SeedInput = {
 	/** The body as plain text (read by `docOfText`) unless `doc` is given. */
 	text?: string;
 	doc?: StoredDocument;
-	schemaVersion?: number;
 	contentHash?: string;
 	folderId?: string | null;
 	locale?: string;
@@ -29,7 +28,6 @@ const rawSnapshot = (input: Omit<SeedInput, "folderId" | "locale">): PreparedSna
 		slug: input.slug,
 		metadata: input.metadata,
 		doc: input.doc ?? docOfText(input.text ?? ""),
-		schemaVersion: input.schemaVersion ?? 1,
 		contentHash: input.contentHash ?? `seed-${Math.random().toString(36).slice(2)}`,
 		references: [],
 		issues: [],
@@ -59,7 +57,6 @@ export async function seedSave(
 			metadata: input.metadata,
 			text: input.text,
 			doc: input.doc,
-			schemaVersion: input.schemaVersion,
 			contentHash: input.contentHash,
 		}),
 		references,
@@ -82,7 +79,6 @@ export async function moveToFolder(
 			slug: current.workingSlug,
 			metadata: current.working.metadata,
 			doc: current.working.doc,
-			schemaVersion: current.working.schemaVersion,
 			contentHash: current.working.contentHash,
 		}),
 		references,

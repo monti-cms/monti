@@ -302,7 +302,6 @@ export async function prepareSnapshot(
 	site: Site,
 	input: ServiceInput,
 	options?: {
-		schemaVersion?: number;
 		previousReferences?: readonly Reference[];
 		/** The stored document this body replaces (the current draft). Its block ids carry over to the blocks that pair with them. */
 		previousDoc?: StoredDocument | null;
@@ -380,15 +379,6 @@ export async function prepareSnapshot(
 		}
 	}
 
-	// The version the entry is stored under: the site's schema version. It is not part of the content hash.
-	let schemaVersion = site.config.schemaVersion ?? 1;
-	if (options?.schemaVersion !== undefined) {
-		if (!Number.isInteger(options.schemaVersion) || options.schemaVersion <= 0) {
-			throw new ServiceError("invalid_input");
-		}
-		schemaVersion = options.schemaVersion;
-	}
-
 	const freeze = <T extends object>(items: T[]) => Object.freeze(items.map((item) => Object.freeze({ ...item })));
 
 	return Object.freeze({
@@ -396,7 +386,6 @@ export async function prepareSnapshot(
 		slug,
 		metadata: Object.freeze(metadata),
 		doc,
-		schemaVersion,
 		contentHash: computeContentHash(metadata, doc),
 		references: Object.freeze(
 			collector.refs.map((ref) =>

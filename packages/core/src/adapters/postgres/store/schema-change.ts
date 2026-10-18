@@ -23,7 +23,6 @@ interface BodyScanRow {
 	state: "working" | "published";
 	metadata: EntryMetadata;
 	doc: unknown;
-	schema_version: number;
 }
 
 const toScanned = (row: BodyScanRow): ScannedBody => ({
@@ -35,7 +34,6 @@ const toScanned = (row: BodyScanRow): ScannedBody => ({
 	state: row.state,
 	metadata: row.metadata,
 	doc: readBodyDoc(row.doc),
-	schemaVersion: row.schema_version,
 });
 
 /** A batch of bodies after the key `after` (entry id, state), `collections` only when given. `lock` takes the row locks of the transaction. */
@@ -64,7 +62,6 @@ async function readBatch(
 			"b.state",
 			"b.metadata",
 			"b.doc",
-			"b.schema_version",
 		])
 		.$if(collections !== undefined, (qb) =>
 			qb.where("e.collection", "=", sql<string>`any(${[...(collections as readonly string[])]}::text[])`),
@@ -171,16 +168,16 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 
 	return {
 		readSchemaState: async () => {
-			let rows: { schema_version: number; schema: JsonObject; applied_at: Date }[];
+			let rows: { schema: JsonObject; applied_at: Date }[];
 			try {
-				rows = await db.selectFrom("schema_state").select(["schema_version", "schema", "applied_at"]).execute();
+				rows = await db.selectFrom("schema_state").select(["schema", "applied_at"]).execute();
 			} catch (error) {
 				// A store that was not migrated to the step that creates the table has recorded nothing.
 				if ((error as { code?: string }).code === "42P01") return null;
 				throw error;
 			}
 			const row = rows[0];
-			return row ? { schemaVersion: row.schema_version, schema: row.schema, appliedAt: row.applied_at } : null;
+			return row ? { schema: row.schema, appliedAt: row.applied_at } : null;
 		},
 
 		appliedSchemaTransforms: async (ids) => {
@@ -254,7 +251,6 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 										metadata: JSON.stringify(result.metadata),
 										doc: JSON.stringify(result.doc),
 										content_hash: result.contentHash,
-										schema_version: params.schemaVersion,
 										search_text: extractVisibleText(site, result.doc),
 									})
 									.where("entry_id", "=", row.entry_id)
@@ -288,13 +284,11 @@ export function createSchemaChangeOps(ctx: StoreContext): SchemaChangeStore {
 						.insertInto("schema_state")
 						.values({
 							id: true,
-							schema_version: params.schemaVersion,
 							schema: JSON.stringify(params.schema),
 							applied_at: sql<Date>`now()`,
 						})
 						.onConflict((conflict) =>
 							conflict.column("id").doUpdateSet((eb) => ({
-								schema_version: eb.ref("excluded.schema_version"),
 								schema: eb.ref("excluded.schema"),
 								applied_at: eb.ref("excluded.applied_at"),
 							})),

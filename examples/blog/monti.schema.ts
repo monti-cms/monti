@@ -1,7 +1,6 @@
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
-	schemaVersion: 3,
 	collections: {
 		post: {
 			label: "Post",

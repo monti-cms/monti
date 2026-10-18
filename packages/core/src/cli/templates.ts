@@ -22,7 +22,6 @@ export function schemaTemplate(
 	const { collections } = starterCollections(options.folder?.keys ?? [], answers.locales.length > 1);
 	const { post, ...related } = collections;
 	const schema = {
-		schemaVersion: 1,
 		collections: {
 			post: {
 				label: "Post",

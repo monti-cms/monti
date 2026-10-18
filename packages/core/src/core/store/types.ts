@@ -42,7 +42,6 @@ export interface EntryBody {
 	metadata: EntryMetadata;
 	/** The stored document of the body (one `unparsed` node when the body could not become a document, which only a draft can be). */
 	doc: StoredDocument;
-	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;
 	/** Translation status of a translation. `null` for sources and legacy translations. */
@@ -333,7 +332,6 @@ export interface IncomingReferenceItem {
 export interface ExportSnapshotBody {
 	metadata: EntryMetadata;
 	doc: StoredDocument;
-	schemaVersion: number;
 	contentHash: string;
 	updatedAt: Date;
 	/** Translation status of a translation. */

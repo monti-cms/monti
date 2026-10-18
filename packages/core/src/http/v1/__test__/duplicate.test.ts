@@ -21,7 +21,6 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 		working: {
 			metadata: { title: title ?? "Original" },
 			mdx: "body",
-			schemaVersion: 1,
 		},
 	});
 });

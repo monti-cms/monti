@@ -41,7 +41,6 @@ const reload = vi.hoisted(() => ({ reloadPage: vi.fn(), rememberSaved: vi.fn(), 
 vi.mock("../reload", () => reload);
 
 const schema = () => ({
-	schemaVersion: 2,
 	collections: {
 		post: {
 			label: "Post",
@@ -68,8 +67,7 @@ const screenState = (over: Record<string, unknown> = {}) => ({
 	source: "file",
 	comments: false,
 	issues: [],
-	schemaVersion: 2,
-	applied: { schemaVersion: 2, appliedAt: "2026-01-01T00:00:00.000Z" },
+	applied: { appliedAt: "2026-01-01T00:00:00.000Z" },
 	codeCollections: [],
 	vocabulary: { blocks: ["table", "image", "callout"], marks: ["bold", "italic"] },
 	collections: ["post", "tag"],
@@ -85,8 +83,6 @@ const previewOf = (over: Record<string, unknown> = {}) => ({
 	decisions: [],
 	transforms: [],
 	problems: [],
-	nextVersion: 3,
-	currentVersion: 2,
 	baseline: "applied",
 	bodiesRead: 0,
 	...over,
@@ -108,7 +104,6 @@ beforeEach(() => {
 			saved: true,
 			file: "monti.schema.ts",
 			hash: "hash-2",
-			schemaVersion: 3,
 			transforms: [],
 			entriesRewritten: 0,
 			reloaded: true,
@@ -238,12 +233,10 @@ describe("SchemaScreen", () => {
 		expect(review().disabled).toBe(true);
 	});
 
-	it("names the schema file and its version in the header line, with the reason when it is read-only", async () => {
+	it("names the schema file alone in the header line, with the reason when it is read-only", async () => {
 		renderScreen();
 		await screen.findByTestId("collection-post");
-		expect(screen.getByTestId("file-line").textContent).toBe(
-			`monti.schema.ts · ${t("status.version", { version: 2 })}`,
-		);
+		expect(screen.getByTestId("file-line").textContent).toBe("monti.schema.ts");
 		cleanup();
 
 		state = screenState({ access: { writable: false, reason: "production" } });
@@ -356,13 +349,13 @@ describe("SchemaScreen", () => {
 
 		await screen.findByTestId("review-summary");
 		expect(lastPreview()?.body).toMatchObject({ schema: { collections: { post: { label: "Article" } } } });
-		expect(screen.getByTestId("review-summary").textContent).toContain("2");
+		expect(screen.getByTestId("review-summary").textContent).not.toMatch(/version|버전/i);
 
 		fireEvent.click(screen.getByRole("button", { name: tReview("review.save") }));
 		await waitFor(() => expect(reload.reloadPage).toHaveBeenCalled());
 		const put = requests.find((request) => request.method === "PUT");
 		expect(put?.body).toMatchObject({ baseHash: "hash-1", schema: { collections: { post: { label: "Article" } } } });
-		expect(reload.rememberSaved).toHaveBeenCalledWith(expect.stringContaining("3"));
+		expect(reload.rememberSaved).toHaveBeenCalledWith(expect.not.stringMatching(/version|버전/i));
 	});
 
 	it("acknowledges the impacts the dialog showed: the save carries their keys", async () => {

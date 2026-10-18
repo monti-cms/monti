@@ -36,7 +36,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "test-publish-1",
 					metadata: { title: "Draft Post" },
 					text: "Content 1",
-					schemaVersion: 1,
 					contentHash: "hash-1",
 				});
 
@@ -58,7 +57,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "test-archive-1",
 					metadata: { title: "To Archive" },
 					text: "Content",
-					schemaVersion: 1,
 					contentHash: "hash-arch",
 				});
 
@@ -82,7 +80,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "test-unarchive-1",
 					metadata: { title: "To Unarchive" },
 					text: "Content",
-					schemaVersion: 1,
 					contentHash: "hash-unarch",
 				});
 
@@ -110,7 +107,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "test-trash-1",
 					metadata: { title: "To Trash" },
 					text: "Content",
-					schemaVersion: 1,
 					contentHash: "hash-trash",
 				});
 
@@ -128,7 +124,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "test-restore-1",
 					metadata: { title: "To Restore" },
 					text: "Content",
-					schemaVersion: 1,
 					contentHash: "hash-res",
 				});
 
@@ -151,7 +146,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "test-perm-delete-1",
 					metadata: { title: "Perm Delete" },
 					text: "Content",
-					schemaVersion: 1,
 					contentHash: "hash-perm",
 				});
 
@@ -179,7 +173,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: "test-perm-delete-1",
 						metadata: { title: "Reuse Slug Attempt" },
 						text: "Content",
-						schemaVersion: 1,
 						contentHash: "hash-reuse",
 					}),
 				).rejects.toThrow(/conflict|Slug conflict/i);
@@ -193,7 +186,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "tag-active",
 					metadata: { title: "Active Tag" },
 					text: "",
-					schemaVersion: 1,
 					contentHash: "tag-hash",
 				});
 
@@ -205,7 +197,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "post-with-ref",
 					metadata: { title: "Post" },
 					text: "Hello",
-					schemaVersion: 1,
 					contentHash: "post-hash",
 				});
 
@@ -218,7 +209,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: "post-with-ref",
 						metadata: { title: "Post" },
 						doc: docOf("Hello"),
-						schemaVersion: 1,
 						contentHash: "post-hash-2",
 						issues: [],
 						references: [],
@@ -255,7 +245,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: `tag-in-use-${randomUUID()}`,
 					metadata: { title: "In-use tag" },
 					text: "",
-					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
 				const publishedTag = await publishDraft(testSite, store, { id: tag.id, expectedVersion: tag.version });
@@ -264,7 +253,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: `post-uses-tag-${randomUUID()}`,
 					metadata: { title: "Tagged post" },
 					text: "Tagged body.",
-					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
 				const saved = await store.saveWorkingWithReferences({
@@ -275,7 +263,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: post.workingSlug,
 						metadata: { title: "Tagged post" },
 						doc: docOf("Tagged body."),
-						schemaVersion: 1,
 						contentHash: "tagged-post-with-reference",
 						issues: [],
 						references: [],
@@ -305,7 +292,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: publishedPost.workingSlug,
 						metadata: { title: "Tagged post" },
 						doc: docOf("Tagged body."),
-						schemaVersion: 1,
 						contentHash: randomUUID(),
 						issues: [],
 						references: [],
@@ -327,7 +313,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: `trashed-entry-${randomUUID()}`,
 					metadata: { title: "Trashed entry" },
 					text: "Body.",
-					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
 				const trashed = await store.trashEntry({ id: draft.id, expectedVersion: draft.version });
@@ -344,7 +329,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: `tag-draft-use-${randomUUID()}`,
 					metadata: { title: "Draft-used tag" },
 					text: "",
-					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
 				const tag = await publishDraft(testSite, store, { id: tagDraft.id, expectedVersion: tagDraft.version });
@@ -353,7 +337,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: `draft-uses-tag-${randomUUID()}`,
 					metadata: { title: "Draft using tag" },
 					text: "Draft body.",
-					schemaVersion: 1,
 					contentHash: randomUUID(),
 				});
 				await store.saveWorkingWithReferences({
@@ -364,7 +347,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: post.workingSlug,
 						metadata: { title: "Draft using tag" },
 						doc: docOf("Draft body."),
-						schemaVersion: 1,
 						contentHash: "draft-post-with-reference",
 						issues: [],
 						references: [],
@@ -390,7 +372,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: "tag-to-archive",
 						metadata: { title: "Tag" },
 						text: "",
-						schemaVersion: 1,
 						contentHash: "tag-hash-arch",
 					});
 					// A record collection cannot be archived. Use an unpublished (draft) tag as the target.
@@ -399,7 +380,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: "post-rollback-test",
 						metadata: { title: "Prior Title" },
 						text: "Prior body",
-						schemaVersion: 1,
 						contentHash: "post-prior-hash",
 					});
 
@@ -415,7 +395,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 							slug: "post-rollback-test",
 							metadata: { title: "Broken Title" },
 							doc: docOf("Broken body"),
-							schemaVersion: 1,
 							contentHash: "post-broken-hash",
 							issues: [],
 							references: [],
@@ -454,7 +433,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "post-timestamp-test",
 					metadata: { title: "Timestamp Post" },
 					text: "V1",
-					schemaVersion: 1,
 					contentHash: "ts-hash-1",
 				});
 				const pub1 = await publishDraft(testSite, store, { id: post.id, expectedVersion: post.version });
@@ -469,7 +447,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 						slug: "post-timestamp-test",
 						metadata: { title: "Timestamp Post V2" },
 						doc: docOf("V2"),
-						schemaVersion: 1,
 						contentHash: "ts-hash-2",
 						issues: [],
 						references: [],
@@ -495,7 +472,6 @@ export const lifecycleContract: ContractSuite = (factory) => {
 					slug: "post-unparsed",
 					metadata: { title: "Broken" },
 					doc: unparsedDocument("<<<Unclosed", null, "paragraphs"),
-					schemaVersion: 1,
 					contentHash: "broken-hash",
 				});
 

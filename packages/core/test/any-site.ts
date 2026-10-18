@@ -132,7 +132,6 @@ export function fillRequiredMetadata(store: ContentStore) {
 				slug: `fixture-${to}-${sequence}`,
 				metadata,
 				doc: docOf(""),
-				schemaVersion: 1,
 				contentHash: `fixture-${to}-${sequence}`,
 				references: [],
 				issues: [],

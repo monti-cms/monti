@@ -82,7 +82,7 @@ describe("content hash v2", () => {
 			expect(hashOf("Hello", { title: "B" })).not.toBe(hashOf("Hello"));
 		});
 
-		it("keeps the value every stored entry has: the hash is defined over schema version 1, whatever version an entry is stored under", () => {
+		it("keeps the value every stored entry has: the hash rule is a constant, so every hash stored so far stays", () => {
 			const doc = docOf("Hello");
 			const expected = createHash("sha256")
 				.update(JSON.stringify(["cms-snapshot-v3", 1, metadata, canonicalBodyForHash(doc)]))

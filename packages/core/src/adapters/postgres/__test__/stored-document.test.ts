@@ -99,7 +99,6 @@ describe("stored documents", () => {
 	interface Stored {
 		metadata: JsonValue;
 		doc: unknown;
-		schema_version: number;
 		content_hash: string;
 		search_text: string;
 		updated_at: Date;
@@ -108,7 +107,7 @@ describe("stored documents", () => {
 	const stored = async (entryId: string, state: "working" | "published") => {
 		const found = (
 			await pool.query<Stored>(
-				`SELECT metadata, doc, schema_version, content_hash, search_text, updated_at
+				`SELECT metadata, doc, content_hash, search_text, updated_at
 				 FROM "${schemaName}".entry_bodies WHERE entry_id = $1 AND state = $2`,
 				[entryId, state],
 			)

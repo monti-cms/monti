@@ -319,7 +319,7 @@ describe("monti doctor on a project with missing settings", () => {
 			path.join(dir, "monti.schema.ts"),
 			SCHEMA_TEXT.replace(
 				"export default defineSchema({\n",
-				"const base = { schemaVersion: 1 };\nexport default defineSchema({\n\t...base,\n",
+				"const base = { defaultLocale: 'en' };\nexport default defineSchema({\n\t...base,\n",
 			),
 		);
 		const { report } = await doctor(dir);
