@@ -37,7 +37,6 @@ function buildSnapshot(overrides: Partial<PreparedSnapshot> & { text?: string } 
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
 		doc: docOf(text ?? "Test content"),
-		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],
 		imageSources: [],
@@ -151,7 +150,6 @@ describe("ContentStore References", () => {
 			slug: `source-${randomUUID()}`,
 			metadata: {},
 			text: "",
-			schemaVersion: 1,
 			contentHash: "src",
 		});
 		const targetA = await seedEntry(store, {
@@ -159,7 +157,6 @@ describe("ContentStore References", () => {
 			slug: `target-a-${randomUUID()}`,
 			metadata: {},
 			text: "",
-			schemaVersion: 1,
 			contentHash: "ta",
 		});
 		const targetB = await seedEntry(store, {
@@ -167,7 +164,6 @@ describe("ContentStore References", () => {
 			slug: `target-b-${randomUUID()}`,
 			metadata: {},
 			text: "",
-			schemaVersion: 1,
 			contentHash: "tb",
 		});
 
@@ -237,7 +233,6 @@ describe("ContentStore References", () => {
 			slug: `media-src-${randomUUID()}`,
 			metadata: {},
 			text: "",
-			schemaVersion: 1,
 			contentHash: "m-src",
 		});
 
@@ -319,7 +314,6 @@ describe("ContentStore References", () => {
 			slug: `media-valid-2-${randomUUID()}`,
 			metadata: { title: "Media 2" },
 			text: "Updated media content",
-			schemaVersion: 2,
 			contentHash: "hash-media-2",
 			references: [refValid2],
 		});
@@ -335,7 +329,6 @@ describe("ContentStore References", () => {
 		expect(entryUpdated.workingSlug).toBe(snapshotValid2.slug);
 		expect(entryUpdated.working.metadata).toEqual(snapshotValid2.metadata);
 		expect(entryUpdated.working.doc).toEqual(snapshotValid2.doc);
-		expect(entryUpdated.working.schemaVersion).toEqual(snapshotValid2.schemaVersion);
 		expect(entryUpdated.working.contentHash).toEqual(snapshotValid2.contentHash);
 
 		const refsUpdated = await store.getWorkingReferences({ entryId: entryValid.id });
@@ -354,7 +347,6 @@ describe("ContentStore References", () => {
 			slug: `media-fail-${randomUUID()}`,
 			metadata: { title: "Media Fail" },
 			text: "Failed media content",
-			schemaVersion: 3,
 			contentHash: "hash-media-fail",
 			references: [refFail],
 		});

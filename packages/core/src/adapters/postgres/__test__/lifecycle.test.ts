@@ -42,7 +42,6 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				slug: `tag-race-${randomUUID()}`,
 				metadata: { title: "Race tag" },
 				text: "",
-				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
 			const tag = await publishDraft(testSite, store, { id: tagDraft.id, expectedVersion: tagDraft.version });
@@ -51,7 +50,6 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				slug: `post-tag-race-${randomUUID()}`,
 				metadata: { title: "Concurrent draft" },
 				text: "Draft.",
-				schemaVersion: 1,
 				contentHash: randomUUID(),
 			});
 			const coordinator = await pool.connect();
@@ -68,7 +66,6 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 						slug: post.workingSlug,
 						metadata: { title: "Concurrent draft" },
 						doc: docOf("Draft."),
-						schemaVersion: 1,
 						contentHash: randomUUID(),
 						issues: [],
 						references: [],
@@ -96,7 +93,6 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				slug: "post-reset-date",
 				metadata: { title: "Reset" },
 				text: "Body",
-				schemaVersion: 1,
 				contentHash: "ts-hash-reset",
 			});
 			await pool.query(`UPDATE "${schemaName}".entries SET published_at = $2 WHERE id = $1`, [post.id, original]);
@@ -121,7 +117,6 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 					slug: "post-reset-date",
 					metadata: { title: "Reset V2" },
 					doc: docOf("V2"),
-					schemaVersion: 1,
 					contentHash: "ts-hash-reset-2",
 					issues: [],
 					references: [],
@@ -144,7 +139,6 @@ describe("Publishing, Lifecycle & Published-References Contracts", () => {
 				slug: "post-preset-date",
 				metadata: { title: "Migrated" },
 				text: "Body",
-				schemaVersion: 1,
 				contentHash: "ts-hash-preset",
 			});
 			const original = new Date("2023-07-16T15:00:00Z");

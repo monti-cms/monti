@@ -6,7 +6,6 @@ import { fakeAuth, fakeCms } from "../fake-cms";
 
 const schemaOf = (extra: Record<string, unknown> = {}) =>
 	({
-		schemaVersion: 1,
 		collections: {
 			post: {
 				label: "Post",

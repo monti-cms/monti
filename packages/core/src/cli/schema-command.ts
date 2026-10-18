@@ -63,8 +63,7 @@ export const schemaDiffCommand = defineCommand({
 
 export const schemaApplyCommand = defineCommand({
 	name: "schema:apply",
-	summary:
-		"Run the data transforms of the schema file (migrations) once each, record the schema, and raise schemaVersion in the file when the schema changed",
+	summary: "Run the data transforms of the schema file (migrations) once each, and record the schema",
 	options: {
 		...SCHEMA_OPTION,
 		"dry-run": { type: "boolean", help: "Run everything in a transaction that is rolled back, and write nothing" },

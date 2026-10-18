@@ -405,7 +405,6 @@ describe("export archive builder", () => {
 			updatedAt: "2026-09-22T00:00:00.000Z",
 			metadata: {},
 			doc: fixtureDocument("body"),
-			schemaVersion: 1,
 			contentHash: "h",
 		});
 		expect(valid.success).toBe(true);
@@ -418,7 +417,6 @@ describe("export archive builder", () => {
 			updatedAt: "2026-09-22T00:00:00.000Z",
 			metadata: {},
 			doc: fixtureDocument("body"),
-			schemaVersion: 1,
 			contentHash: "h",
 			working: { doc: fixtureDocument("draft") },
 		});

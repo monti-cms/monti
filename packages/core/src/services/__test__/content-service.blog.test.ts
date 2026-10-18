@@ -24,7 +24,7 @@ describe("ContentService Contract (blog config)", () => {
 				format: "paragraphs",
 				body: "Hello",
 			} as unknown as ServiceInput,
-			{ schemaVersion: 1, import: { formats: createFormatRegistry([paragraphsFormat]) } },
+			{ import: { formats: createFormatRegistry([paragraphsFormat]) } },
 		);
 		// Pins the hash format. The value changed from the v1 vector ("ce4f8728…", which hashed the MDX string) on purpose when the
 		// hash moved to the parsed body ("cms-snapshot-v2"), and again when it moved to the stored document ("cms-snapshot-v3"). The hashed document

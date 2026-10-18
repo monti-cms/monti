@@ -80,7 +80,6 @@ export const publicReadContract: ContractSuite = (factory) => {
 				slug: params.slug,
 				metadata,
 				text: params.text ?? `# ${params.slug}`,
-				schemaVersion: 1,
 				contentHash: `hash-${params.slug}`,
 			});
 		}
@@ -192,7 +191,6 @@ export const publicReadContract: ContractSuite = (factory) => {
 				slug: "after-rename",
 				metadata: { title: "이름 변경" },
 				text: "# 이름 변경",
-				schemaVersion: 1,
 				contentHash: "hash-renamed",
 			});
 
@@ -244,7 +242,6 @@ export const publicReadContract: ContractSuite = (factory) => {
 						[tagField]: relationValue(workingTag.id),
 					},
 					text: "# Working body",
-					schemaVersion: 1,
 					contentHash: "f10-working-content",
 				});
 
@@ -302,7 +299,6 @@ export const publicReadContract: ContractSuite = (factory) => {
 				slug: "alias-then-archive-2",
 				metadata: { title: "이름 변경" },
 				text: "# 이름 변경",
-				schemaVersion: 1,
 				contentHash: "hash-alias-archive",
 			});
 			const republished = await publishDraft(testSite, store, { id: saved.id, expectedVersion: saved.version });

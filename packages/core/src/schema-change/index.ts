@@ -6,7 +6,6 @@ export {
 	type SchemaApplyResult,
 	SchemaChangeError,
 	type SchemaPlan,
-	schemaVersionOf,
 	snapshotSchema,
 } from "./apply";
 export {

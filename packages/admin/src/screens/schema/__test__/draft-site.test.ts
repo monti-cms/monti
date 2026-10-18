@@ -6,7 +6,6 @@ import { draftSiteOf } from "../draft-site";
 import type { Obj } from "../schema-model";
 
 const draft = (extraFields: Obj = {}): Obj => ({
-	schemaVersion: 1,
 	collections: {
 		page: {
 			label: "Page",

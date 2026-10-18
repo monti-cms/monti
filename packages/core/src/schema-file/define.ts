@@ -10,7 +10,6 @@ import type { SchemaFile } from "./types";
  * import { defineSchema } from "@monti-cms/core";
  *
  * export default defineSchema({
- * 	schemaVersion: 1,
  * 	locales: [{ code: "en", name: "English" }],
  * 	defaultLocale: "en",
  * 	collections: { post: { label: "Post", kind: "document", fields: { title: { kind: "text", label: "Title" } } } },

@@ -2,7 +2,6 @@ import { defineSchema } from "@monti-cms/core";
 
 /** The small site the recipes are written for: posts with tags. */
 export default defineSchema({
-	schemaVersion: 3,
 	collections: {
 		post: {
 			label: "Post",

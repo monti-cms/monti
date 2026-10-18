@@ -14,7 +14,7 @@ import { readBodyDoc } from "../store/rows";
 import { closeGlobalPool, createIsolatedTestPool, dropIsolatedTestPool } from "./test-database";
 
 /**
- * Schema changes against a real database: the impact check, the transforms, `cms_migrations` records, hashes, references, versions and the schema version.
+ * Schema changes against a real database: the impact check, the transforms, `cms_migrations` records, hashes, references and versions.
  * The data is written under the schema "before" through the real write path, the change is applied under the schema "after".
  */
 
@@ -49,7 +49,7 @@ const beforeConfig = defineSite({
 });
 
 /** The schema after the change: `summary` is `excerpt`, `old` is gone, `legacy` is gone (dropped), `legacy2` is gone (kept as an orphan), `author` is required, `categoryId` is `topicId`. */
-const afterConfig = (schemaVersion?: number) =>
+const afterConfig = () =>
 	defineSite({
 		collections: {
 			category: defineCollection({ label: "Category", kind: "item", fields: { title, slug } }),
@@ -74,7 +74,6 @@ const afterConfig = (schemaVersion?: number) =>
 		},
 		locales: [{ code: "en", name: "English" }],
 		defaultLocale: "en",
-		...(schemaVersion === undefined ? {} : { schemaVersion }),
 	});
 
 const migrations: SchemaMigration[] = [
@@ -90,7 +89,6 @@ interface BodyRow {
 	state: "working" | "published";
 	metadata: Record<string, unknown>;
 	doc: unknown;
-	schema_version: number;
 	content_hash: string;
 	updated_at: Date;
 }
@@ -100,7 +98,6 @@ describe("schema changes", () => {
 	let schemaName: string;
 	const siteBefore = createSite(beforeConfig as CmsConfig);
 	const siteAfter = createSite(afterConfig() as CmsConfig);
-	const siteAfterV2 = createSite(afterConfig(2) as CmsConfig);
 
 	const storeFor = (site: Site) => createContentStore(pool, { site, schema: schemaName });
 	const serviceFor = (site: Site) => createContentService(storeFor(site), { site });
@@ -179,7 +176,7 @@ describe("schema changes", () => {
 		new Map(
 			(
 				await pool.query<BodyRow>(
-					`SELECT entry_id, state, metadata, doc, schema_version, content_hash, updated_at FROM "${schemaName}".entry_bodies`,
+					`SELECT entry_id, state, metadata, doc, content_hash, updated_at FROM "${schemaName}".entry_bodies`,
 				)
 			).rows.map((row) => [`${row.entry_id}/${row.state}`, row]),
 		);
@@ -192,9 +189,7 @@ describe("schema changes", () => {
 			)
 		).rows.map((row) => row.name);
 	const state = async () =>
-		(await pool.query(`SELECT schema_version, schema FROM "${schemaName}".schema_state`)).rows[0] as
-			| { schema_version: number; schema: unknown }
-			| undefined;
+		(await pool.query(`SELECT schema FROM "${schemaName}".schema_state`)).rows[0] as { schema: unknown } | undefined;
 	const references = async (entryId: string) =>
 		(
 			await pool.query<{ state: string; kind: string; target_id: string; occurrences: unknown }>(
@@ -212,7 +207,6 @@ describe("schema changes", () => {
 			expect(plan.applied).toBeNull();
 			expect(plan.diff.changes).toEqual([]);
 			expect(plan.changed).toBe(false);
-			expect(plan.nextVersion).toBe(1);
 
 			const rowsBefore = await rows();
 			const entriesBefore = await entryRows();
@@ -220,11 +214,11 @@ describe("schema changes", () => {
 			expect(done.result).toMatchObject({ applied: [], bodies: 0, entries: 0 });
 			expect(await rows()).toEqual(rowsBefore);
 			expect(await entryRows()).toEqual(entriesBefore);
-			expect((await state())?.schema_version).toBe(1);
+			expect((await state())?.schema).toBeDefined();
 
 			// Applying it again changes nothing either, and the plan now has an old side that equals the new one.
 			const again = await planSchemaChange({ site: siteBefore, store, migrations: [] });
-			expect(again.applied?.schemaVersion).toBe(1);
+			expect(again.applied?.schema).toBeDefined();
 			expect(again.diff.changes).toEqual([]);
 			await baseline();
 			expect(await rows()).toEqual(rowsBefore);
@@ -232,7 +226,7 @@ describe("schema changes", () => {
 	});
 
 	describe("the plan and the impact check", () => {
-		it("lists what changed, with the transforms that handle each change, and raises the version", async () => {
+		it("lists what changed, with the transforms that handle each change", async () => {
 			const store = storeFor(siteAfter);
 			const plan = await planSchemaChange({ site: siteAfter, store, migrations });
 			expect(plan.problems).toEqual([]);
@@ -256,13 +250,6 @@ describe("schema changes", () => {
 			expect(handled["field_added:author"]).toBe("author-default");
 			expect(handled["field_removed:legacy"]).toBe("drop-legacy");
 			expect(handled["field_removed:legacy2"]).toBeUndefined();
-			// The file's version is 1 (unset) and the schema changed: the apply goes to 2 and the file has to be raised.
-			expect(plan.nextVersion).toBe(2);
-			expect(plan.needsVersionBump).toBe(true);
-			// A file that already carries the raised version is left alone.
-			const raised = await planSchemaChange({ site: siteAfterV2, store, migrations });
-			expect(raised.nextVersion).toBe(2);
-			expect(raised.needsVersionBump).toBe(false);
 		});
 
 		it("counts the entries each change touches, with a sample, and reads without writing", async () => {
@@ -326,8 +313,8 @@ describe("schema changes", () => {
 			const recordedBefore = await recorded();
 			const stateBefore = await state();
 			const done = await applySchemaChange({
-				site: siteAfterV2,
-				store: storeFor(siteAfterV2),
+				site: siteAfter,
+				store: storeFor(siteAfter),
 				migrations,
 				dryRun: true,
 			});
@@ -369,8 +356,7 @@ describe("schema changes", () => {
 			expect(differs(rowsBefore, ids.a)).toBe(false);
 			expect(differs(rowsBefore, ids.b)).toBe(true);
 
-			const done = await applySchemaChange({ site: siteAfterV2, store: storeFor(siteAfterV2), migrations });
-			expect(done.schemaVersion).toBe(2);
+			const done = await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
 			expect(done.result.applied).toEqual(migrations.map((item) => item.id));
 			expect(done.result.dryRun).toBe(false);
 
@@ -401,18 +387,14 @@ describe("schema changes", () => {
 			expect(rowsAfter.get(`${ids.d}/working`)?.metadata).toEqual({ title: "D", author: "Staff" });
 
 			for (const [key, row] of rowsAfter) {
-				// The hash is the one the write rules give for what is stored now (and stays defined over schema version 1).
+				// The hash is the one the write rules give for what is stored now.
 				expect(row.content_hash, key).toBe(computeContentHash(row.metadata as never, readBodyDoc(row.doc)));
 			}
 			// "Unpublished changes" is true or false as it was.
 			expect(differs(rowsAfter, ids.a)).toBe(false);
 			expect(differs(rowsAfter, ids.b)).toBe(true);
 
-			// Stamped with the version they were transformed under; entries written before keep the older one only if nothing changed them (here every post changed).
-			expect(rowsAfter.get(`${ids.a}/working`)?.schema_version).toBe(2);
-			expect(rowsAfter.get(`${ids.a}/published`)?.schema_version).toBe(2);
 			const category = rowsAfter.get(`${ids.category}/working`);
-			expect(category?.schema_version).toBe(1);
 			expect(category?.content_hash).toBe(rowsBefore.get(`${ids.category}/working`)?.content_hash);
 
 			// version and updated_at of entries and bodies are kept, as in the data migrations before.
@@ -430,17 +412,17 @@ describe("schema changes", () => {
 				expect(ref.occurrences).toEqual([{ type: "metadata", path: "topicId" }]);
 			}
 
-			// The schema and its version are recorded, and every transform once.
-			expect((await state())?.schema_version).toBe(2);
+			// The schema is recorded, and every transform once.
+			expect((await state())?.schema).toBeDefined();
 			expect(await recorded()).toEqual(migrations.map((item) => `schema:${item.id}`).sort());
 		});
 
 		it("reads as the new schema does: no warnings for what was transformed, a warning for the orphan", async () => {
-			const service = serviceFor(siteAfterV2);
-			const working = await storeFor(siteAfterV2).getWorking({ entryId: ids.c });
+			const service = serviceFor(siteAfter);
+			const working = await storeFor(siteAfter).getWorking({ entryId: ids.c });
 			const { warnings } = await service.publish({
 				id: ids.c,
-				expectedVersion: (await storeFor(siteAfterV2).getEntry(ids.c)).version,
+				expectedVersion: (await storeFor(siteAfter).getEntry(ids.c)).version,
 			});
 			expect(working.metadata).toMatchObject({ status: "live" });
 			expect(warnings.map((warning) => `${warning.code}:${warning.path}`)).toEqual(["orphaned_metadata_key:legacy2"]);
@@ -449,16 +431,15 @@ describe("schema changes", () => {
 		it("is idempotent: a second apply runs nothing and changes nothing", async () => {
 			const rowsBefore = await rows();
 			const recordedBefore = await recorded();
-			const done = await applySchemaChange({ site: siteAfterV2, store: storeFor(siteAfterV2), migrations });
+			const done = await applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
 			expect(done.result.applied).toEqual([]);
 			expect(done.result.skipped).toEqual(migrations.map((item) => item.id));
 			expect(done.result).toMatchObject({ bodies: 0, entries: 0 });
 			expect(await rows()).toEqual(rowsBefore);
 			expect(await recorded()).toEqual(recordedBefore);
-			const plan = await planSchemaChange({ site: siteAfterV2, store: storeFor(siteAfterV2), migrations });
+			const plan = await planSchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations });
 			expect(plan.changed).toBe(false);
 			expect(plan.diff.changes).toEqual([]);
-			expect(plan.nextVersion).toBe(2);
 		});
 
 		it("two applies at once run each transform once", async () => {
@@ -467,8 +448,8 @@ describe("schema changes", () => {
 				{ id: "author-default-2", op: "setDefault", collection: "post", field: "author", value: "Other" },
 			];
 			const results = await Promise.all([
-				applySchemaChange({ site: siteAfterV2, store: storeFor(siteAfterV2), migrations: extra }),
-				applySchemaChange({ site: siteAfterV2, store: storeFor(siteAfterV2), migrations: extra }),
+				applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations: extra }),
+				applySchemaChange({ site: siteAfter, store: storeFor(siteAfter), migrations: extra }),
 			]);
 			const ran = results.flatMap((item) => item.result.applied);
 			expect(ran).toEqual(["author-default-2"]);
@@ -495,8 +476,8 @@ describe("schema changes", () => {
 				[draft.id],
 			);
 			const done = await applySchemaChange({
-				site: siteAfterV2,
-				store: storeFor(siteAfterV2),
+				site: siteAfter,
+				store: storeFor(siteAfter),
 				migrations: [
 					...migrations,
 					{ id: "rename-summary-again", op: "renameField", collection: "post", from: "summary", to: "excerpt" },
@@ -510,13 +491,11 @@ describe("schema changes", () => {
 		});
 	});
 
-	describe("the schema version and the hash", () => {
-		it("a save of the same content under a newer schema version is not an edit: the hash, the entry version and the stored version stay", async () => {
-			// The category was never transformed, so it is stored under schema version 1.
-			const entry = await storeFor(siteAfterV2).getEntry(ids.category);
-			expect(entry.working.schemaVersion).toBe(1);
+	describe("the hash", () => {
+		it("a save of the same content is not an edit: the hash and the entry version stay", async () => {
+			const entry = await storeFor(siteAfter).getEntry(ids.category);
 			const saved = (
-				await serviceFor(siteAfterV2).saveDraft(ids.category, {
+				await serviceFor(siteAfter).saveDraft(ids.category, {
 					collection: "category",
 					slug: "news",
 					metadata: { ...entry.working.metadata },
@@ -526,13 +505,12 @@ describe("schema changes", () => {
 			).entry;
 			expect(saved.version).toBe(entry.version);
 			expect(saved.working.contentHash).toBe(entry.working.contentHash);
-			expect(saved.working.schemaVersion).toBe(1);
 		});
 
-		it("an edit is stored under the site's schema version, and the hash does not depend on it", async () => {
-			const entry = await storeFor(siteAfterV2).getEntry(ids.category);
+		it("an edit changes the hash to the one of its content", async () => {
+			const entry = await storeFor(siteAfter).getEntry(ids.category);
 			const saved = (
-				await serviceFor(siteAfterV2).saveDraft(ids.category, {
+				await serviceFor(siteAfter).saveDraft(ids.category, {
 					collection: "category",
 					slug: "news",
 					metadata: { title: "News, renamed" },
@@ -541,19 +519,7 @@ describe("schema changes", () => {
 				} as never)
 			).entry;
 			expect(saved.version).toBeGreaterThan(entry.version);
-			expect(saved.working.schemaVersion).toBe(2);
 			expect(saved.working.contentHash).toBe(computeContentHash(saved.working.metadata, saved.working.doc));
-			// The same content written under another schema version has the same hash.
-			const other = (
-				await serviceFor(siteAfter).createDraft({
-					collection: "category",
-					slug: "news-copy",
-					metadata: { ...saved.working.metadata },
-					doc: saved.working.doc,
-				} as never)
-			).entry;
-			expect(other.working.schemaVersion).toBe(1);
-			expect(other.working.contentHash).toBe(saved.working.contentHash);
 		});
 	});
 

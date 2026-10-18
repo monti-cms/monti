@@ -13,7 +13,6 @@ import { hostOf } from "../host";
 import type { Cms } from "../types";
 
 const schema = defineSchema({
-	schemaVersion: 1,
 	collections: {
 		page: {
 			label: "Page",

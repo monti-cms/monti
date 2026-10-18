@@ -63,7 +63,6 @@ interface ExtendedContentStore {
 			slug: string | null;
 			metadata: Record<string, unknown>;
 			doc: unknown;
-			schemaVersion: number;
 			contentHash: string;
 			references: unknown[];
 			issues: unknown[];
@@ -123,7 +122,6 @@ describe("listEntries in Postgres", () => {
 				slug: `list-test-${to}`,
 				metadata: await requiredMetadata(to, relationTargetTitle(to), relationTarget),
 				text: "",
-				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
 			return (await publishDraft(testSite, store, { id: draft.id, expectedVersion: draft.version })).id;
@@ -202,7 +200,6 @@ describe("listEntries in Postgres", () => {
 			slug,
 			metadata: await metadataFor(collection, title),
 			text: opts.text ?? "default body",
-			schemaVersion: 1,
 			contentHash: uniqueHash(),
 		});
 
@@ -451,7 +448,6 @@ describe("listEntries in Postgres", () => {
 				slug: "d1-direct",
 				metadata: { [single.name]: "cat-1", [many.name]: ["tag-a", "tag-b"] },
 				text: "body",
-				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
 
@@ -460,7 +456,6 @@ describe("listEntries in Postgres", () => {
 				slug: "cat-real",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
 			const targetTag1 = await seedEntry(store, {
@@ -468,7 +463,6 @@ describe("listEntries in Postgres", () => {
 				slug: "tag-real1",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
 			const targetTag2 = await seedEntry(store, {
@@ -476,7 +470,6 @@ describe("listEntries in Postgres", () => {
 				slug: "tag-real2",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
 
@@ -486,7 +479,6 @@ describe("listEntries in Postgres", () => {
 					slug: "d1-ref",
 					metadata: { [single.name]: "cat-meta", [many.name]: ["tag-meta1", "tag-meta2"] },
 					doc: docOf("body"),
-					schemaVersion: 1,
 					contentHash: randomBytes(16).toString("hex"),
 					references: [],
 					issues: [],
@@ -504,7 +496,6 @@ describe("listEntries in Postgres", () => {
 				slug: "d1-hist",
 				metadata: await metadataFor(content, "Historical date"),
 				text: "body",
-				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
 			// If the publish date is set beforehand, like a migrated entry, it stays as is after publishing.
@@ -516,7 +507,6 @@ describe("listEntries in Postgres", () => {
 				slug: "d1-nometa",
 				metadata: await metadataFor(content, "No explicit published date"),
 				text: "body",
-				schemaVersion: 1,
 				contentHash: randomBytes(16).toString("hex"),
 			});
 			const pubNoMetaE = await publishDraft(testSite, store, { id: noMetaE.id, expectedVersion: noMetaE.version });
@@ -564,7 +554,6 @@ describe("listEntries in Postgres", () => {
 				slug,
 				metadata: await metadataFor(content, slug),
 				text: "body",
-				schemaVersion: 1,
 				contentHash: uniqueHash(),
 			});
 			if (publishedAt) {

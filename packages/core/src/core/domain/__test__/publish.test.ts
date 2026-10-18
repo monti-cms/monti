@@ -107,12 +107,6 @@ describe("when saving or publishing changes nothing", () => {
 		expect(isSameWorkingBody(body, { ...body, translation: { state: "stale" } })).toBe(false);
 	});
 
-	it("the schema version an entry is stored under is not a difference: the same content saved under a newer schema is not an edit", () => {
-		expect(isSameWorkingBody({ ...body, schemaVersion: 1 } as never, { ...body, schemaVersion: 2 } as never)).toBe(
-			true,
-		);
-	});
-
 	it("an unset translation status equals a stored null", () => {
 		expect(isSameWorkingBody({ ...body, translation: undefined }, body)).toBe(true);
 	});

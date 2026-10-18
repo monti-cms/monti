@@ -44,7 +44,6 @@ export {
 	type SchemaDiffResult,
 	schemaApply,
 	schemaDiff,
-	withSchemaVersion,
 } from "./schema-apply";
 export {
 	type ExtractedSchema,

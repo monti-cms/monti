@@ -23,7 +23,6 @@ export const publicExportEntrySchema = z
 		metadata: z.record(z.string(), z.unknown()),
 		/** The stored document: the body. (A text of the body in a format is a file of its own, written only when the export asks for a `format`.) */
 		doc: z.record(z.string(), z.unknown()),
-		schemaVersion: z.number().int(),
 		contentHash: z.string(),
 	})
 	.strict();
@@ -198,7 +197,6 @@ const bodyFile = (entry: ExportSnapshotEntry, state: "working" | "published"): {
 			status: entry.status,
 			slug: state === "working" ? entry.workingSlug : entry.publishedSlug,
 			metadata: body.metadata,
-			schemaVersion: body.schemaVersion,
 			contentHash: body.contentHash,
 			// Only translated entries have this; the source file shape is unchanged.
 			...(body.translation ? { translation: body.translation } : {}),
@@ -224,7 +222,6 @@ const publicEntry = (site: PublicSite, entry: ExportSnapshotEntry): PublicExport
 		updatedAt: iso(entry.published.updatedAt) ?? iso(entry.updatedAt) ?? "",
 		metadata: pickPublicMetadata(site, entry.collection, entry.published.metadata),
 		doc: entry.published.doc,
-		schemaVersion: entry.published.schemaVersion,
 		contentHash: entry.published.contentHash,
 	});
 };

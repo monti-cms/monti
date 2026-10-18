@@ -37,7 +37,7 @@ const mockStore = {
 			collection: contentCollection,
 			version: 1,
 			workingSlug: "my-post",
-			working: { metadata: { title: "Title" }, mdx: "Hello", schemaVersion: 1 },
+			working: { metadata: { title: "Title" }, mdx: "Hello" },
 		});
 	}),
 	publishEntry: vi.fn().mockImplementation(({ id, expectedVersion }: { id: string; expectedVersion: number }) => {

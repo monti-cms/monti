@@ -42,7 +42,6 @@ function buildSnapshot(overrides: Partial<PreparedSnapshot> & { text?: string } 
 		slug: `test-slug-${Math.random().toString(36).slice(2, 8)}`,
 		metadata: { title: "Test" },
 		doc: docOf(text ?? "Test content"),
-		schemaVersion: 1,
 		contentHash: `hash-${Math.random().toString(36).slice(2, 8)}`,
 		issues: [],
 		imageSources: [],
@@ -84,7 +83,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: `incoming-tag-${randomUUID()}`,
 				metadata: { title: "Reference tag" },
 				text: "",
-				schemaVersion: 1,
 				contentHash: `tag-${randomUUID()}`,
 			});
 			if (target.status !== "published")
@@ -156,7 +154,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-1",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "c1",
 			});
 			const targetTag = await seedEntry(store, {
@@ -164,7 +161,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "tag-1",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "t1",
 			});
 
@@ -188,7 +184,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "create-refs",
 				contentHash: "fixed-hash",
 				text: "fixed-mdx",
-				schemaVersion: 2,
 				metadata: { test: "val" },
 				references: [ref2, ref1],
 			});
@@ -210,7 +205,6 @@ export const referencesContract: ContractSuite = (factory) => {
 			const saved = await store.getEntry(entry.id);
 			expect(saved.working.metadata).toEqual(snapshot.metadata);
 			expect(contentOf(saved.working.doc)).toEqual(contentOf(snapshot.doc));
-			expect(saved.working.schemaVersion).toEqual(snapshot.schemaVersion);
 			expect(saved.working.contentHash).toEqual(snapshot.contentHash);
 			expect(saved.workingSlug).toEqual(snapshot.slug);
 		});
@@ -221,7 +215,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "old-tag",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const targetNew = await seedEntry(store, {
@@ -229,7 +222,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "new-cat",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "2",
 			});
 
@@ -243,7 +235,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				metadata: { title: "Updated" },
 				contentHash: "hash-2",
 				text: "updated",
-				schemaVersion: 3,
 				references: [refNew],
 			});
 
@@ -259,7 +250,6 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(entry2.working.metadata).toEqual(snapshot2.metadata);
 			expect(contentOf(entry2.working.doc)).toEqual(contentOf(snapshot2.doc));
 			expect(entry2.working.contentHash).toEqual(snapshot2.contentHash);
-			expect(entry2.working.schemaVersion).toEqual(snapshot2.schemaVersion);
 
 			const refs = await store.getWorkingReferences({ entryId: entry1.id });
 			expect(refs).toHaveLength(1);
@@ -272,7 +262,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-stale",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 
@@ -297,7 +286,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-ref-only",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const ref1 = buildReference({ targetId: target.id, isStale: false });
@@ -343,7 +331,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-opt-1",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const target2 = await seedEntry(store, {
@@ -351,7 +338,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-opt-2",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "2",
 			});
 
@@ -404,7 +390,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-real-1",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 
@@ -450,7 +435,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-real-2",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 
@@ -521,7 +505,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-iso-1",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const target2 = await seedEntry(store, {
@@ -529,7 +512,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "cat-iso-2",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "2",
 			});
 
@@ -556,7 +538,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "empty-save-cat",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const ref1 = buildReference({ kind: "entry", targetId: targetReal.id });
@@ -567,7 +548,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "empty-save-2",
 				metadata: { title: "Cleared" },
 				text: "cleared content",
-				schemaVersion: 2,
 				contentHash: "hash-empty-2",
 				references: [],
 			});
@@ -581,7 +561,6 @@ export const referencesContract: ContractSuite = (factory) => {
 			expect(entry2.workingSlug).toBe("empty-save-2");
 			expect(entry2.working.metadata).toEqual(snapshot2.metadata);
 			expect(contentOf(entry2.working.doc)).toEqual(contentOf(snapshot2.doc));
-			expect(entry2.working.schemaVersion).toEqual(snapshot2.schemaVersion);
 			expect(entry2.working.contentHash).toEqual(snapshot2.contentHash);
 
 			const currentRefs = await store.getWorkingReferences({ entryId: entry1.id });
@@ -594,7 +573,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: "noop-cat",
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const ref1 = buildReference({ kind: "entry", targetId: targetReal.id });
@@ -625,7 +603,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: `target-${randomUUID()}`,
 				metadata: {},
 				text: "",
-				schemaVersion: 1,
 				contentHash: "1",
 			});
 			const ref1 = buildReference({ kind: "entry", targetId: targetReal.id });
@@ -690,7 +667,6 @@ export const referencesContract: ContractSuite = (factory) => {
 				slug: `cat-norm-${randomUUID()}`,
 				metadata: { name: "Category Normalization Target" },
 				text: "",
-				schemaVersion: 1,
 				contentHash: "hash-cat-norm",
 			});
 

@@ -104,7 +104,6 @@ describe("links by entry id", () => {
 				slug,
 				metadata: { title: `Title ${slug}` },
 				doc: typeof body === "string" ? docOf(body) : body,
-				schemaVersion: 1,
 				contentHash: `hash-${slug}`,
 				references: [],
 				issues: [],

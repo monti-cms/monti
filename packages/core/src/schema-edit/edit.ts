@@ -31,7 +31,7 @@ import { type SchemaEditAccess, schemaEditAccess } from "./access";
 
 /**
  * What the settings screen does with the schema file (`monti.schema.ts`): it reads it (`readSchemaScreen`), checks an edit against the stored content (`previewSchemaEdit`: the
- * diff, the entries each change touches, and the data transforms the writer can pick), and saves it (`saveSchemaEdit`: the file, its migrations and version,
+ * diff, the entries each change touches, and the data transforms the writer can pick), and saves it (`saveSchemaEdit`: the file, its migrations,
  * the dev database and the running instance). The two that need a writable file are guarded by `schemaEditAccess`; the routes answer 403 when it
  * says no. All of it is data in, data out; the admin routes and the tests call these.
  */
@@ -62,10 +62,8 @@ export interface SchemaScreenState {
 	readonly comments: boolean;
 	/** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
 	readonly issues: readonly ConfigIssue[];
-	/** The version the instance runs. */
-	readonly schemaVersion: number;
 	/** The schema last applied to the dev database, or `null` when none was (or the store has no schema record yet). */
-	readonly applied: { readonly schemaVersion: number; readonly appliedAt: string } | null;
+	readonly applied: { readonly appliedAt: string } | null;
 	/** Collections the config adds in code: not in the file, so the screen cannot edit them. */
 	readonly codeCollections: readonly string[];
 	/** The block and mark names a body list can name. */
@@ -131,7 +129,6 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 	if (schema === undefined && issues.length === 0) {
 		// Without a file, or with code in it: the schema the instance runs.
 		schema = {
-			schemaVersion: config.schemaVersion ?? 1,
 			collections: config.collections,
 			locales: config.locales,
 			defaultLocale: config.defaultLocale,
@@ -157,8 +154,7 @@ export async function readSchemaScreen(cms: Cms): Promise<SchemaScreenState> {
 		source: literal?.ok ? "file" : "site",
 		comments,
 		issues,
-		schemaVersion: config.schemaVersion ?? 1,
-		applied: applied ? { schemaVersion: applied.schemaVersion, appliedAt: applied.appliedAt.toISOString() } : null,
+		applied: applied ? { appliedAt: applied.appliedAt.toISOString() } : null,
 		codeCollections: !literal?.ok ? [] : Object.keys(config.collections).filter((name) => !inFile.includes(name)),
 		vocabulary: bodyVocabulary(cms.site),
 		collections: Object.keys(config.collections),
@@ -191,7 +187,7 @@ export type RenameInput =
 
 /** What the screen sends to check or save an edit. */
 export interface SchemaEditInput {
-	/** The schema file's content as edited. `migrations` and `schemaVersion` are the file's own; the save appends the chosen transforms and raises the version. */
+	/** The schema file's content as edited. `migrations` is the file's own; the save appends the chosen transforms. */
 	readonly schema: unknown;
 	/**
 	 * The transforms the writer picked (without ids; the server names them). Left out: the defaults of {@link decisionsOf} (a rename when the screen did one,
@@ -228,9 +224,6 @@ export interface SchemaEditPreview {
 	readonly transforms: readonly SchemaMigration[];
 	/** Problems that stop the save (a transform that does not fit the schema). */
 	readonly problems: readonly TransformProblem[];
-	/** The version the save would record. */
-	readonly nextVersion: number;
-	readonly currentVersion: number;
 	/** The schema applied to the dev database is older than the file (the file was changed by hand and not applied): the diff includes that. */
 	readonly baseline: "applied" | "file";
 	readonly bodiesRead: number;
@@ -243,11 +236,11 @@ const OPS: Record<SchemaMigration["op"], string> = {
 	setDefault: "default",
 };
 
-/** The id a new transform gets: `v<version>-<op>-<collection>-<field>`, with a number added when it is taken. */
-function idFor(transform: SuggestedTransform, version: number, taken: Set<string>): string {
+/** The id a new transform gets: `<op>-<collection>-<field>`, with a number added when it is taken. */
+function idFor(transform: SuggestedTransform, taken: Set<string>): string {
 	const subject =
 		transform.op === "renameField" ? transform.from : transform.op === "mapOption" ? transform.field : transform.field;
-	const base = `v${version}-${OPS[transform.op]}-${transform.collection}-${subject}`;
+	const base = `${OPS[transform.op]}-${transform.collection}-${subject}`;
 	let id = base;
 	for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
 	taken.add(id);
@@ -396,21 +389,8 @@ async function evaluate(
 	const extra = (explicit ?? []).filter((transform) => !asking.some((item) => answers(transform, item.change)));
 	const chosenRaw = [...picks.filter((pick): pick is SuggestedTransform => pick !== null), ...extra];
 
-	const currentVersion = cms.site.config.schemaVersion ?? 1;
-	const fileVersion = parsed.schemaVersion ?? 1;
 	const taken = new Set(own.map((item) => item.id));
-	// The version is decided by whether anything changes, which the transforms do not alter: a diff, or transforms pending.
-	const changesData = base.changes.length > 0 || chosenRaw.length > 0 || ownPending.length > 0;
-	const nextVersion = applied
-		? changesData
-			? Math.max(fileVersion, applied.schemaVersion + 1)
-			: Math.max(fileVersion, applied.schemaVersion)
-		: changesData
-			? Math.max(fileVersion, currentVersion + 1)
-			: fileVersion;
-	const chosen = chosenRaw.map(
-		(transform) => ({ ...transform, id: idFor(transform, nextVersion, taken) }) as SchemaMigration,
-	);
+	const chosen = chosenRaw.map((transform) => ({ ...transform, id: idFor(transform, taken) }) as SchemaMigration);
 	const pending = [...ownPending, ...chosen];
 	const problems = checkTransforms(next.site, pending);
 
@@ -443,8 +423,6 @@ async function evaluate(
 		decisions,
 		transforms: chosen,
 		problems,
-		nextVersion,
-		currentVersion,
 		baseline: applied ? "applied" : "file",
 		bodiesRead: impact.bodiesRead,
 	};
@@ -459,8 +437,6 @@ const invalid = (issues: readonly ConfigIssue[]): SchemaEditPreview => ({
 	decisions: [],
 	transforms: [],
 	problems: [],
-	nextVersion: 0,
-	currentVersion: 0,
 	baseline: "file",
 	bodiesRead: 0,
 });
@@ -508,7 +484,6 @@ export type SchemaSaveResult =
 			readonly saved: true;
 			readonly file: string;
 			readonly hash: string;
-			readonly schemaVersion: number;
 			/** The transforms appended to `migrations` and run. */
 			readonly transforms: readonly SchemaMigration[];
 			/** Entries the apply rewrote. */
@@ -548,7 +523,7 @@ function withKey(
  *
  * 1. Checks the edit (format, then the rules between collections) and the transforms; refuses a file that changed since the edit started (`baseHash`).
  * 2. Dry-runs the transforms on the dev database (nothing written) so an entry that cannot be rewritten stops the save before the file is touched.
- * 3. Writes `monti.schema.ts` whole (`printSchemaFile`) with the chosen transforms appended to `migrations` and `schemaVersion` raised, in the key order of the edit.
+ * 3. Writes `monti.schema.ts` whole (`printSchemaFile`) with the chosen transforms appended to `migrations` in the key order of the edit.
  *    Comments in the file are dropped; a file that has code is never written (`schemaEditAccess` refuses it).
  * 4. Runs `applySchemaChange` against the dev database (creating the tables first when the store has none) with the schema as written.
  * 5. Makes the running instance run the new schema (`cms.reloadSchema(schema)`); the dev server evaluates the config again because the file changed.
@@ -573,16 +548,12 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 	);
 	if (unacknowledged.length > 0) return { saved: false, reason: "unacknowledged", impacts: unacknowledged };
 
-	// What goes into the file: the edit as the writer arranged it (its key order), with the new transforms and the version.
+	// What goes into the file: the edit as the writer arranged it (its key order), with the new transforms.
 	const raw = JSON.parse(JSON.stringify(input.schema)) as Record<string, unknown>;
 	let content = raw;
 	if (preview.transforms.length > 0) {
 		const before = Array.isArray(raw.migrations) ? raw.migrations : [];
 		content = withKey(content, "migrations", [...before, ...preview.transforms], ["collections"]);
-	}
-	const version = preview.nextVersion;
-	if (version !== (typeof raw.schemaVersion === "number" ? raw.schemaVersion : 1)) {
-		content = withKey(content, "schemaVersion", version, []);
 	}
 	const final = content;
 	const text = printSchemaFile(final);
@@ -591,7 +562,7 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 	const written = JSON.parse(JSON.stringify(final)) as unknown;
 	const target = hostOf(cms).forSchema(written);
 	const migrations = (parseSchemaFile(written).migrations ?? []) as readonly SchemaMigration[];
-	const options = { site: target.site, store: target.store(), migrations, schemaVersion: version };
+	const options = { site: target.site, store: target.store(), migrations };
 	try {
 		await applySchemaChange({ ...options, dryRun: true });
 	} catch (error) {
@@ -632,7 +603,6 @@ export async function saveSchemaEdit(cms: Cms, input: SchemaSaveInput): Promise<
 		saved: true,
 		file: relativeToCwd(file),
 		hash,
-		schemaVersion: applied.schemaVersion,
 		transforms: preview.transforms,
 		entriesRewritten: applied.result.entries,
 		reloaded: reload.reloaded,

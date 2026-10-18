@@ -159,12 +159,6 @@ export interface CmsConfig<
 	readonly timeZone?: string;
 	/** Data to seed a new store with. */
 	readonly seed?: SeedConfig;
-	/**
-	 * The version of the schema (a whole number from 1, 1 if unset). Every entry written from now on records it (`entry_bodies.schema_version`), so a stored entry shows which
-	 * schema it was written or transformed under. A site with a schema file keeps it there (`schemaVersion` of `monti.schema.ts`), where `monti schema:apply` raises it
-	 * when the schema changes. It is not part of an entry's content hash.
-	 */
-	readonly schemaVersion?: number;
 	/** Admin UI settings. */
 	readonly admin?: AdminConfig;
 	/** The editor: the width steps of its width menu. */
@@ -254,8 +248,6 @@ export interface SchemaCmsConfig<
 	readonly locales?: never;
 	/** Set in the schema file only. */
 	readonly defaultLocale?: never;
-	/** Set in the schema file only (`monti schema:apply` raises it there). */
-	readonly schemaVersion?: never;
 }
 
 /**

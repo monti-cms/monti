@@ -53,7 +53,6 @@ export const fixtureBody = (
 ) => ({
 	metadata: { title, ...extraMetadata },
 	doc: fixtureDocument(text),
-	schemaVersion: 1,
 	contentHash,
 	updatedAt: FIXTURE_TIME,
 });

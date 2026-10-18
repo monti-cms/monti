@@ -48,7 +48,6 @@ export const readTranslation = (value: unknown): TranslationState | null =>
 export interface BodyRow {
 	content_hash: string;
 	doc: StoredDocument;
-	schema_version: number;
 	metadata: EntryMetadata;
 	updated_at: Date;
 	translation: TranslationState | null;
@@ -224,7 +223,7 @@ export async function readReferences(db: Db, entryId: string, state: "working" |
 export async function readBody(db: Db, entryId: string, state: "working" | "published"): Promise<BodyRow | undefined> {
 	const row = await db
 		.selectFrom("entry_bodies")
-		.select(["metadata", "doc", "schema_version", "content_hash", "updated_at", "translation"])
+		.select(["metadata", "doc", "content_hash", "updated_at", "translation"])
 		.where("entry_id", "=", entryId)
 		.where("state", "=", state)
 		.executeTakeFirst();
@@ -243,7 +242,6 @@ export async function writeBody(
 	body: {
 		metadata: EntryMetadata;
 		doc: StoredDocument;
-		schemaVersion: number;
 		contentHash: string;
 		updatedAt: Date;
 		/** Translation status of a translation. `null` for the source. */
@@ -257,7 +255,6 @@ export async function writeBody(
 			state,
 			metadata: JSON.stringify(body.metadata),
 			doc: JSON.stringify(body.doc),
-			schema_version: body.schemaVersion,
 			content_hash: body.contentHash,
 			updated_at: body.updatedAt,
 			search_text: extractVisibleText(site, body.doc),
@@ -267,7 +264,6 @@ export async function writeBody(
 			conflict.columns(["entry_id", "state"]).doUpdateSet({
 				metadata: proposed<string>("metadata"),
 				doc: proposed<string>("doc"),
-				schema_version: proposed<number>("schema_version"),
 				content_hash: proposed<string>("content_hash"),
 				updated_at: proposed<Date>("updated_at"),
 				search_text: proposed<string>("search_text"),
@@ -305,7 +301,6 @@ export async function loadEntry(db: Db, id: string): Promise<Entry> {
 			"b.state",
 			"b.metadata",
 			"b.doc",
-			"b.schema_version",
 			"b.content_hash",
 			"b.updated_at as body_updated_at",
 			"b.translation",
@@ -319,11 +314,10 @@ export async function loadEntry(db: Db, id: string): Promise<Entry> {
 	let published: EntryBody | undefined;
 	for (const row of rows) {
 		if (row.state === null || row.metadata === null) continue;
-		if (row.schema_version === null || row.content_hash === null || row.body_updated_at === null) continue;
+		if (row.content_hash === null || row.body_updated_at === null) continue;
 		const body: EntryBody = {
 			metadata: row.metadata,
 			doc: readBodyDoc(row.doc),
-			schemaVersion: row.schema_version,
 			contentHash: row.content_hash,
 			updatedAt: row.body_updated_at,
 			translation: readTranslation(row.translation),

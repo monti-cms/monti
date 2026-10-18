@@ -188,7 +188,6 @@ pnpm exec monti init --no-install    # 파일만 쓰고 설치 명령을 적어 
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
-	schemaVersion: 1,
 	collections: {
 		post: {
 			label: "Post",
@@ -569,7 +568,7 @@ DB 연결 자체를 바꾸는 것은 다시 시작해야 한다. 운영과 테�
 이미 가진 내용을 다른 표기로 저장하면 아무것도 바뀌지 않는다(새 버전도 생기지 않는다). 원문 패널(`mdx()` 플러그인이 준다)에 입력한 글은 브라우저에서 문서로 읽히고, 저장되는 것은 그 문서다.
 문서가 될 수 없는 본문(글이 해석되지 않거나, 머리말이 있거나, 다시 읽었을 때 같지 않은 본문)은 **`unparsed`** 문서로 저장된다. 노드 하나 `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<받은 글 그대로>" } }`이고, 글은 그대로 보존된다. 초안은 이 상태로 둘 수 있고 편집기는 소스로 보여 주며, 발행은 `unparsed_body` 문제로 막힌다. 거절된 이유(글의 줄·칸을 담은 `mdx_error`, `frontmatter_present`)는 함께 알려 준다.
 
-**무엇을 검사하나.** 코어는 글이 아니라 저장된 문서를 검사하고, 해시를 만들고, 검색한다. 그래서 본문은 어떻게 쓰였든 어떤 경로로 왔든 똑같이 다뤄진다. 대상은 `prepareSnapshot`과 `validateForPublish`(블록 속성의 필수·모르는·잘못된 값, 참조, 내부 링크, 이미지 출처, 각주, 코드 줄 링크, 표 병합, 글에 남은 번역 안내), 내용 해시(`computeContentHash(metadata, doc)`. 값은 전과 같다. 블록 ID를 뺀 문서를 키 순서대로 정렬해 해시하고, 글이 저장된 스키마 버전은 들어가지 않는다. "스키마 바꾸기" 참고)
+**무엇을 검사하나.** 코어는 글이 아니라 저장된 문서를 검사하고, 해시를 만들고, 검색한다. 그래서 본문은 어떻게 쓰였든 어떤 경로로 왔든 똑같이 다뤄진다. 대상은 `prepareSnapshot`과 `validateForPublish`(블록 속성의 필수·모르는·잘못된 값, 참조, 내부 링크, 이미지 출처, 각주, 코드 줄 링크, 표 병합, 글에 남은 번역 안내), 내용 해시(`computeContentHash(metadata, doc)`. 값은 전과 같다. 블록 ID를 뺀 문서를 키 순서대로 정렬해 해시한다)
 , 검색용 글자와 발췌(`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`), 번역 도구(`withTranslationHints`, `compareStructure`, `diffSources`는 문서를 받는다)다. 글로 받은 본문은 먼저 그 형식으로 문서로 읽고, 문서로 받은 본문은 그대로 쓴다(글 조각과 끝의 빈 문단만 정해진 모양으로 맞춘다).
 발견한 것의 위치는 그것이 든 블록이다. 문제의 `position`은 `{ blockId }`이고(읽히지 않은 글은 그 글의 `{ line, column }`을 대신 가진다), 본문 참조 위치는 `{ "type": "body", "blockId" }`다.
 
@@ -1228,7 +1227,7 @@ it("refuses a bad slug", async () => {
 
 ## 스키마 파일
 
-사이트 루트(또는 `src/`)의 `monti.schema.ts`는 사이트 설정 중 순수 데이터인 부분을 담는다. 컬렉션과 필드·레이아웃, 언어와 기본 언어, 시간대, 데이터로 쓸 수 있는 `site` 설정, `admin`(경로·언어·문자열 문구 바꾸기), 시드 템플릿(저장된 문서, 또는 글과 그 형식), `schemaVersion`, 데이터 변환(`migrations`, "스키마 바꾸기" 참고)이다.
+사이트 루트(또는 `src/`)의 `monti.schema.ts`는 사이트 설정 중 순수 데이터인 부분을 담는다. 컬렉션과 필드·레이아웃, 언어와 기본 언어, 시간대, 데이터로 쓸 수 있는 `site` 설정, `admin`(경로·언어·문자열 문구 바꾸기), 시드 템플릿(저장된 문서, 또는 글과 그 형식), 데이터 변환(`migrations`, "스키마 바꾸기" 참고)이다.
 기본 export가 `defineSchema`에 넘긴 객체 리터럴 하나인 TypeScript 파일이다. `defineSchema`는 const 제네릭을 쓰는 타입 있는 항등 함수라서 컬렉션·필드·언어 이름이 `defineConfig`의 타입으로 흘러가고, 틀린 `kind`나 옵션 값은 파일 안에서 타입 오류가 된다.
 
 ```ts
@@ -1236,7 +1235,6 @@ it("refuses a bad slug", async () => {
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
-	schemaVersion: 1,
 	collections: {
 		post: {
 			label: "Post",
@@ -1304,7 +1302,7 @@ Fix: correct the lines above; `monti doctor` checks the files again.
 | 부분 | 규칙 |
 | --- | --- |
 | `collections` | 파일의 컬렉션 뒤에 코드로 쓴 것(`defineCollection`)을 더한다. 같은 이름이 둘 다 있으면 오류 |
-| `locales`, `defaultLocale`, `schemaVersion` | 파일에만 둔다. 코드에도 쓰면 오류(`schemaVersion`은 스키마 파일이 없는 설정에는 쓸 수 있다) |
+| `locales`, `defaultLocale` | 파일에만 둔다. 코드에도 쓰면 오류 |
 | `site`, `admin` | 키마다 코드 값이 이긴다. `undefined`로 둔 키(비어 있는 환경 변수)는 파일 값을 그대로 둔다. `site.url`은 보통 코드에 둔다 |
 | `timeZone` | 코드 값이 이긴다 |
 | `seed.templates` | 파일의 템플릿 뒤에 코드의 템플릿 |
@@ -1334,15 +1332,12 @@ Stays in code (monti.config.ts):
 
 스키마를 고치다 보면 필드나 선택지를 지우는 일은 흔하다. 데이터가 깨지지는 않는다(지운 필드나 선택지의 저장된 값은 "고아 값"으로 남는다. 발행할 때 경고하고, 공개 읽기는 숨긴다). 그리고 직접 말하지 않는 한 아무것도 지워지지 않는다. 명령 둘과 함수 몇 개가 변경을 **안전하고 설명 가능하게** 만든다. 저장하기 전에 변경이 어떤 글에 닿는지 보여 주고, 선언한 데이터 변환을 돌리고, 각 글이 어느 스키마로 쓰였는지 기록한다.
 
-**적용된 스키마.** 데이터베이스는 마지막으로 적용한 스키마(`monti schema:apply`)를 기억한다. `schemaVersion`과 데이터 모델(컬렉션, 필드, 선택지, 언어, 허용 블록)을 `schema_state` 표에 JSON 스냅샷으로 둔다. 이 스냅샷이 모든 diff의 옛 쪽이다. 저장된 데이터가 마지막으로 맞춰진 기준이 바로 이것이기 때문이다(저장소의 브랜치나 태그는 이것과 다를 수 있다). 한 번도 적용하지 않은 저장소는 **기준선**에 있다. 첫 `schema:apply`는 스키마를 기록할 뿐 어떤 글도 바꾸지 않는다. 그래서 기존 블로그의 이전 경로는 `monti schema:extract` 다음에 변환 없이 `monti schema:apply`를 돌리는 것이고, 이는 아무것도 바꾸지 않는다.
-
-**`schemaVersion`.** 스키마 파일의 1 이상 정수다(빼면 1이고, `monti schema:extract`가 써 준다). 모든 글 본문은 자기가 쓰이거나 변환된 버전을 기록한다(`entry_bodies.schema_version`). 이 버전은 **내용 해시에 들어가지 않는다**. `computeContentHash(metadata, doc)`는 상수로 정의되므로 지금까지 저장된 해시는 모두 그대로이고, 글의 내용을 건드리지 않는 스키마 변경은 글을 고친 것처럼 보이게 하지 않는다. 같은 내용을 더 새로운 버전으로 저장해도 아무것도 바뀌지 않고(글 버전도, 수정 시각도 그대로이며 저장된 버전도 그대로다), 고친 글은 사이트의 현재 버전으로 저장된다. `schema:apply`는 스키마가 바뀌었거나(또는 변환이 남았고) 파일의 번호가 옛것이면 파일의 번호를 올린다. 그 파일은 커밋한다. 이미 올린 번호가 적힌 파일(개발 기계에서 적용하고 배포한 경우)은 건드리지 않으므로, 운영에서 돌리면 같은 버전을 기록하고 파일에는 아무것도 쓰지 않는다.
+**적용된 스키마.** 데이터베이스는 마지막으로 적용한 스키마(`monti schema:apply`)를 기억한다. 데이터 모델(컬렉션, 필드, 선택지, 언어, 허용 블록)을 `schema_state` 표에 JSON 스냅샷으로 둔다. 이 스냅샷이 모든 diff의 옛 쪽이다. 저장된 데이터가 마지막으로 맞춰진 기준이 바로 이것이기 때문이다(저장소의 브랜치나 태그는 이것과 다를 수 있다). 한 번도 적용하지 않은 저장소는 **기준선**에 있다. 첫 `schema:apply`는 스키마를 기록할 뿐 어떤 글도 바꾸지 않는다. 그래서 기존 블로그의 이전 경로는 `monti schema:extract` 다음에 변환 없이 `monti schema:apply`를 돌리는 것이고, 이는 아무것도 바꾸지 않는다.
 
 **변환**은 스키마 파일의 `migrations`에, 그것이 속한 스키마 곁에 둔다. 각 변환은 `id`(영원한 이름이다. 한 번 돌면 `schema:<id>`로 `cms_migrations`에 기록되어 `storage.once`처럼 다시 돌지 않고, 적용된 변환은 기록으로 목록에 남는다), `op`, 그리고 변경**후** 스키마의 이름을 가진다.
 
 ```json
 {
-	"schemaVersion": 3,
 	"collections": { "post": { "fields": { "excerpt": { "kind": "text", "label": "Excerpt" }, "stage": { "kind": "select", "label": "Stage", "options": { "idea": "Idea", "done": "Done" }, "defaultValue": "idea" } } } },
 	"migrations": [
 		{ "id": "2026-10-rename-summary", "op": "renameField", "collection": "post", "from": "summary", "to": "excerpt" },
@@ -1371,11 +1366,10 @@ Stays in code (monti.config.ts):
 두 명령은 TypeScript 스키마 파일을 tsx로 읽는다.
 
 - `monti schema:diff [--schema <파일>] [--check]`(읽기 전용)는 앱의 스키마를 적용된 스키마와 견주어, 모든 변경을 닿는 글과 그 결과와 함께 보여 준다. 고아 값으로 남음, 변환이 다시 씀, `dropField`가 지움, 채우기 전에는 발행할 수 없음 등이다. `--check`를 주면 적용할 것이 있을 때 1로 끝난다.
-- `monti schema:apply [--schema <파일>] [--dry-run]`은 저장소를 이전하고(`monti db:migrate`), 아직 돌지 않은 변환을 돌리고, 스키마와 버전을 기록하고, 필요하면 파일의 `schemaVersion`을 올린다(파일 텍스트의 숫자를 그 자리에서 고친다). 여러 번 돌려도 같다. `--dry-run`은 되돌리는 트랜잭션 안에서 모든 것을 돌리고 파일을 포함해 아무것도 쓰지 않는다.
+- `monti schema:apply [--schema <파일>] [--dry-run]`은 저장소를 이전하고(`monti db:migrate`), 아직 돌지 않은 변환을 돌리고, 스키마를 기록한다. 여러 번 돌려도 같다. `--dry-run`은 되돌리는 트랜잭션 안에서 모든 것을 돌리고 아무것도 쓰지 않는다.
 
 ```text
 $ monti schema:diff
-Applied schema version: 2. After the apply: 3.
 Changes (3):
   - post.summary renamed to excerpt [transform 2026-10-rename-summary]: 12 entries ("Hello", "Notes", ...); rewritten by its transform
   - post.stage option "draft" removed [transform 2026-10-merge-draft]: 4 entries ("WIP", ...); rewritten by its transform
@@ -1390,7 +1384,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `diffSchema(old, new, { transforms })` | `{ changes, renameHints }`. 변경은 `collection_added`, `collection_removed`, `collection_kind_changed`, `body_changed`, `allowed_changed`, `field_added`, `field_removed`, `field_renamed`, `field_type_changed`, `field_required_changed`, `field_locale_changed`, `field_moved`, `option_added`, `option_removed`, `option_renamed`, `locale_added`, `locale_removed`, `default_locale_changed` 중 하나다. `renameField`나 `mapOption` 변환은 제거와 추가의 쌍을 이름 바꾸기로 바꾸고, 변환이 맡는 변경에는 `handledBy`가 붙는다. `changeKey(change)`는 목록용 안정된 키, `describeSchemaChange(change)`는 영어 한 문장이다. 순수 함수 |
 | `checkSchemaChange(store, diff, { site, transforms, sampleSize })` | 변경마다 `entries`(글은 한 번만 센다), id와 제목의 `sample`, `consequence`, 그리고 `checked` 여부. 저장된 본문을 한 번 읽고 아무것도 쓰지 않는다. 허용 블록 변경과 분기 안의 필수 필드를 점검하려면 새 스키마의 `site`가 필요하다 |
 | `suggestTransforms(change, { options, renameTo })` | 변경에 맞는 변환(삭제, 이름 바꾸기, 남은 선택지마다의 매핑, 기본값). id는 없고, 화면이 제안하는 데 쓴다 |
-| `planSchemaChange({ site, store, migrations })` | 적용된 스키마와의 diff, 남은 변환, `problems`, `nextVersion`, 파일의 번호를 올려야 하는지(`needsVersionBump`). 읽기 전용 |
+| `planSchemaChange({ site, store, migrations })` | 적용된 스키마와의 diff, 남은 변환, `problems`. 읽기 전용 |
 | `applySchemaChange({ site, store, migrations, dryRun })` | 계획을 실행한다. 돈 것, 변환마다 바뀐 글과 본문 수, 이름 바꾸기의 `conflicts`를 돌려준다. 실패하면 `SchemaChangeError`를 던지고 아무것도 바꾸지 않는다 |
 | `applyTransforms`, `checkTransforms` | 순수한 조각. 글 하나의 메타데이터를 변환에 통과시키는 것, 변환을 스키마에 견주어 확인하는 것 |
 
@@ -1407,16 +1401,16 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | 경로 | 하는 일 |
 | --- | --- |
 | `GET` | 파일의 내용과 `hash`, 쓸 수 있는지(`access`, `has_code`일 때는 `detail`도), 파일에 주석이 있는지(`comments`), 파일이 맞지 않을 때의 `issues`(경로 포함), 적용된 버전, 설정이 코드로 더한 컬렉션, 본문 목록에 쓸 수 있는 블록과 서식 이름 |
-| `POST /preview` | 본문 `{ schema, transforms?, renames? }`. 편집을 점검하고 아무것도 쓰지 않는다. `valid`와 `issues`(경로와 메시지), 변경마다의 `impacts`(영향받는 글 수, id와 제목 표본, 결과), `decisions`(저장된 값을 여러 방법으로 다룰 수 있는 변경과 `suggestTransforms`의 선택지, 적용 중인 선택), 기록될 `transforms`와 그 `problems`, `nextVersion` |
+| `POST /preview` | 본문 `{ schema, transforms?, renames? }`. 편집을 점검하고 아무것도 쓰지 않는다. `valid`와 `issues`(경로와 메시지), 변경마다의 `impacts`(영향받는 글 수, id와 제목 표본, 결과), `decisions`(저장된 값을 여러 방법으로 다룰 수 있는 변경과 `suggestTransforms`의 선택지, 적용 중인 선택), 기록될 `transforms`와 그 `problems` |
 | `PUT` | 본문 `{ schema, transforms?, renames?, baseHash }`. 편집을 저장한다(아래). `baseHash` 뒤로 파일이 바뀌었으면 `409 schema_conflict`, `issues`와 함께 `400 invalid_schema`, `422 invalid_transforms`, `500 schema_apply_failed`(파일은 썼고 데이터베이스는 바뀌지 않았다) |
 
-`transforms`는 작성자의 선택이고 id가 없다(서버가 `v<버전>-<op>-<컬렉션>-<필드>`로 이름 붙인다). 빼면 서버가 결정마다 고른다. 화면이 `renames`로 알려 준 이름 바꾸기(작성자가 이름을 바꾼 필드나 선택지)는 이름 바꾸기, 매핑이나 삭제는 그 값을 가진 **저장된 글이 없을 때만**(값을 지우게 되는 삭제는 작성자 대신 고르지 않는다), 기본값은 값이 있을 때만이다. 선택이 없으면 값은 전처럼 고아로 남는다.
+`transforms`는 작성자의 선택이고 id가 없다(서버가 `<op>-<컬렉션>-<필드>`로 이름 붙인다). 빼면 서버가 결정마다 고른다. 화면이 `renames`로 알려 준 이름 바꾸기(작성자가 이름을 바꾼 필드나 선택지)는 이름 바꾸기, 매핑이나 삭제는 그 값을 가진 **저장된 글이 없을 때만**(값을 지우게 되는 삭제는 작성자 대신 고르지 않는다), 기본값은 값이 있을 때만이다. 선택이 없으면 값은 전처럼 고아로 남는다.
 
 **저장이 하는 일, 순서대로** (처음 실패에서 멈춘다):
 
 1. 편집한 내용에 파일 형식과 `defineConfig`의 규칙을, 변환에는 그 스키마와의 맞음을 확인한다. 편집을 시작한 뒤 디스크의 파일이 바뀌었으면(해시) 저장을 거절한다.
 2. 변환을 개발 데이터베이스에서 시험 실행한다. 다시 쓸 수 없는 글이 있으면 파일을 건드리기 전에 저장이 멈춘다.
-3. 고른 변환을 `migrations`에 붙이고 `schemaVersion`을 올린 스키마 데이터로 `monti.schema.ts` 전체를 찍어서 쓴다.
+3. 고른 변환을 `migrations`에 붙인 스키마 데이터로 `monti.schema.ts` 전체를 찍어서 쓴다.
 4. 개발 데이터베이스에 `applySchemaChange`를 돌린다(표가 없으면 먼저 만든다). 스키마를 적용된 것으로 기록하는 것도 이때다.
 5. 돌고 있는 인스턴스가 새 스키마로 돌게 한다(`hostOf(cms).reloadSchema(schema)`). 그다음 화면이 관리자 페이지를 다시 불러온다.
 

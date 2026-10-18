@@ -68,7 +68,6 @@ describe("ContentStore (Postgres)", () => {
 			slug: "rollback-test",
 			metadata: { title: "First Publish" },
 			text: "first publish",
-			schemaVersion: 1,
 			contentHash: "hash-rollback-1",
 		});
 
@@ -78,7 +77,6 @@ describe("ContentStore (Postgres)", () => {
 			expectedVersion: firstPublish.version,
 			metadata: { title: "Second Publish" },
 			text: "second publish",
-			schemaVersion: 1,
 			contentHash: "hash-rollback-2",
 		});
 

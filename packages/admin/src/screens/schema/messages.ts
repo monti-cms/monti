@@ -9,7 +9,6 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		title: "Schema",
 		"tabs.collections": "Collections",
 		"status.noFile": "no schema file",
-		"status.version": "version {version}",
 		"readonly.short.production": "saved on the dev server only",
 		"readonly.short.noFile": "no schema file",
 		"readonly.short.notWritable": "the file cannot be written",
@@ -89,8 +88,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"file.messages": "Admin text overrides (admin.messages)",
 		"site.name": "Site name",
 		"file.migrations": "Recorded data transforms",
-		"save.done": ({ version, transforms, entries: rewritten }) =>
-			`Schema saved as version ${version}${Number(transforms) > 0 ? `; ${transforms} data transform(s) ran (${entries(rewritten)} rewritten)` : ""}.`,
+		"save.done": ({ transforms, entries: rewritten }) =>
+			`Schema saved${Number(transforms) > 0 ? `; ${transforms} data transform(s) ran (${entries(rewritten)} rewritten)` : ""}.`,
 		"save.applyFailedNote":
 			"The schema file was saved but not applied to the database. Run monti schema:apply, or reload this screen.",
 	},
@@ -98,7 +97,6 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		title: "스키마",
 		"tabs.collections": "컬렉션",
 		"status.noFile": "스키마 파일 없음",
-		"status.version": "버전 {version}",
 		"readonly.short.production": "개발 서버에서만 저장할 수 있어요",
 		"readonly.short.noFile": "스키마 파일이 없어요",
 		"readonly.short.notWritable": "파일에 쓸 수 없어요",
@@ -178,8 +176,8 @@ export const schemaMessages = defineMessages("cms-admin.schema", {
 		"file.messages": "관리자 문구 덮어쓰기 (admin.messages)",
 		"site.name": "사이트 이름",
 		"file.migrations": "기록된 데이터 변환",
-		"save.done": ({ version, transforms, entries: rewritten }) =>
-			`스키마를 저장했습니다(버전 ${version})${Number(transforms) > 0 ? `. 데이터 변환 ${transforms}개를 실행했습니다(항목 ${rewritten}개 다시 씀)` : ""}.`,
+		"save.done": ({ transforms, entries: rewritten }) =>
+			`스키마를 저장했습니다${Number(transforms) > 0 ? `. 데이터 변환 ${transforms}개를 실행했습니다(항목 ${rewritten}개 다시 씀)` : ""}.`,
 		"save.applyFailedNote":
 			"스키마 파일은 저장했지만 데이터베이스에는 적용하지 못했습니다. monti schema:apply를 실행하거나 이 화면을 다시 불러오세요.",
 	},

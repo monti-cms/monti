@@ -63,7 +63,6 @@ export interface EntryBodiesTable {
 	entry_id: string;
 	state: "working" | "published";
 	metadata: Jsonb<EntryMetadata>;
-	schema_version: number;
 	content_hash: string;
 	updated_at: Date;
 	search_text: Generated<string>;
@@ -154,7 +153,6 @@ export interface PluginDocumentsTable {
 
 export interface SchemaStateTable {
 	id: Generated<boolean>;
-	schema_version: number;
 	schema: Jsonb<JsonObject>;
 	applied_at: Generated<Date>;
 }

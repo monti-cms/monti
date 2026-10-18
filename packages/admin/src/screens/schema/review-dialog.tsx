@@ -342,11 +342,7 @@ export function ReviewDialog({
 								) : (
 									<Info className="size-4 shrink-0 text-monti-muted-foreground" aria-hidden />
 								)}
-								<p>
-									{preview.changed
-										? t("review.summary", { count: dataChanges, from: preview.currentVersion, to: preview.nextVersion })
-										: t("review.unchanged")}
-								</p>
+								<p>{preview.changed ? t("review.summary", { count: dataChanges }) : t("review.unchanged")}</p>
 							</div>
 							{preview.baseline === "file" && (
 								<p className="text-monti-muted-foreground text-xs">{t("review.baselineFile")}</p>

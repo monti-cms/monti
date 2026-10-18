@@ -26,7 +26,6 @@ import { defineSchema } from '@monti-cms/core'
    comment */
 export default defineSchema(
 	{
-		schemaVersion: 2, // bump on change
 		"collections": {
 			post: { label: 'Post', kind: "document", fields: { title: { kind: 'text', label: \`Title\`, max: 200, }, }, },
 		},
@@ -40,7 +39,6 @@ export default defineSchema(
 		const result = parseSchemaLiteral(text);
 		expect(result).toMatchObject({ ok: true, comments: true });
 		expect(result.ok && result.value).toEqual({
-			schemaVersion: 2,
 			collections: {
 				post: { label: "Post", kind: "document", fields: { title: { kind: "text", label: "Title", max: 200 } } },
 			},
@@ -66,19 +64,19 @@ describe("parseSchemaLiteral: a file that has code", () => {
 			/module other than/,
 		],
 		["a variable before the export", file("{}", "const x = 1;"), /code before the schema|expected `export`/],
-		["a spread in an object", file("{ ...base, schemaVersion: 1 }"), /spread/],
+		["a spread in an object", file("{ ...base, defaultLocale: 1 }"), /spread/],
 		["a spread in a list", file("{ locales: [...more] }"), /spread/],
 		["a function call", file("{ site: { url: process.env.SITE_URL } }"), /property access on `process`/],
 		["a call of a function", file("{ locales: build() }"), /function call `build\(\.\.\.\)`/],
 		["an identifier", file("{ defaultLocale: locale }"), /identifier `locale`/],
 		["undefined", file("{ timeZone: undefined }"), /identifier `undefined`/],
 		["a computed key", file('{ ["a" + "b"]: 1 }'), /computed key/],
-		["a shorthand property", file("{ schemaVersion }"), /shorthand property `schemaVersion`/],
+		["a shorthand property", file("{ defaultLocale }"), /shorthand property `defaultLocale`/],
 		["a method", file("{ build() { return 1; } }"), /method or accessor/],
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: the text under test is a template literal
 		["a template expression", file("{ label: `Hello ${name}` }"), /template expression/],
-		["a binary expression", file("{ schemaVersion: 1 + 1 }"), /expected `,` or `}`/],
-		["a cast", file("{ schemaVersion: 1 } as const"), /expected `\)`/],
+		["a binary expression", file("{ defaultLocale: 1 + 1 }"), /expected `,` or `}`/],
+		["a cast", file("{ defaultLocale: 1 } as const"), /expected `\)`/],
 		["code after the export", `${file("{}")}\nconsole.log("x");\n`, /code after the schema/],
 		["a second export", `${file("{}")}\nexport const x = 1;\n`, /code after the schema/],
 		["another export", `${IMPORT}\nexport const schema = defineSchema({});`, /expected `default`/],
@@ -101,13 +99,13 @@ describe("parseSchemaLiteral: a file that has code", () => {
 		["an identifier", file("{ defaultLocale: locale }"), "identifier", { name: "locale" }],
 		["a duplicate key", file("{ a: 1, a: 2 }"), "duplicate_key", { name: "a" }],
 		["code after the schema", `${file("{}")}\nconsole.log("x");\n`, "code_after", {}],
-		["a missing comma", file("{ schemaVersion: 1 + 1 }"), "expected_token", { what: "`,` or `}`" }],
+		["a missing comma", file("{ defaultLocale: 1 + 1 }"), "expected_token", { what: "`,` or `}`" }],
 	])("gives %s a code and the names it mentions, for the screen to translate", (_name, text, code, params) => {
 		expect(parseSchemaLiteral(text)).toMatchObject({ ok: false, code, params: expect.objectContaining(params) });
 	});
 
 	it("names the line the code is on", () => {
-		const text = file("{\n\tschemaVersion: 1,\n\tlocales: [...more],\n}");
+		const text = file("{\n\tdefaultLocale: 1,\n\tlocales: [...more],\n}");
 		const result = parseSchemaLiteral(text);
 		expect(result).toMatchObject({ ok: false, line: 5 });
 		expect(refusal(text)).toMatch(/^line 5:/);

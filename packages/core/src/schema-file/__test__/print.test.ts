@@ -15,7 +15,6 @@ describe("printSchemaFile", () => {
 
 	it("round-trips awkward values: quotes, escapes, odd keys, unicode, numbers, null and empty containers", async () => {
 		const data = {
-			schemaVersion: 3,
 			// biome-ignore lint/suspicious/noTemplateCurlyInString: the text holds a literal ${...} on purpose
 			note: 'He said "hi"\nthen\tleft \\   \u{1f600} `tick` ${not}',
 			"needs-quotes": { "1st": 1, ok_key: -0.5, $dollar: 1e21, empty: {}, none: [], nothing: null },
@@ -34,21 +33,21 @@ describe("printSchemaFile", () => {
 		if (!literal.ok) throw new Error(literal.message);
 		expect(printSchemaFile(literal.value)).toBe(text);
 		expect(Object.keys(literal.value)).toEqual(Object.keys(blogSchema));
-		const reordered = { collections: blogSchema.collections, schemaVersion: 1 };
+		const reordered = { collections: blogSchema.collections, defaultLocale: "en" };
 		expect(Object.keys((parseSchemaLiteral(printSchemaFile(reordered)) as { value: object }).value)).toEqual([
 			"collections",
-			"schemaVersion",
+			"defaultLocale",
 		]);
 	});
 
 	it("writes the one import and the one export, with tabs, trailing commas and unquoted keys", () => {
-		const text = printSchemaFile({ schemaVersion: 1, collections: { post: { label: "Post", kind: "document" } } });
+		const text = printSchemaFile({ defaultLocale: "en", collections: { post: { label: "Post", kind: "document" } } });
 		expect(text).toBe(
 			[
 				'import { defineSchema } from "@monti-cms/core";',
 				"",
 				"export default defineSchema({",
-				"\tschemaVersion: 1,",
+				'\tdefaultLocale: "en",',
 				"\tcollections: {",
 				'\t\tpost: { label: "Post", kind: "document" },',
 				"\t},",
