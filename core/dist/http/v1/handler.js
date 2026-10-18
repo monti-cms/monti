@@ -201,8 +201,21 @@ export function readFormatQuery(request) {
         throw new CmsError("Invalid format", "invalid_input");
     return raw;
 }
-/** The answer to a write of the content service: the entry, and its warnings with their person's text (`text`, `where`) in the admin language. */
-export const written = (cms, result, init) => ok({ ...result, warnings: tellIssues(cms.site, result.warnings) }, init);
+/** The translation group of an entry (the languages the editor shows as existing). Empty for an item collection, which has no translations. */
+export async function translationsOf(cms, entry) {
+    if (cms.site.isItemCollection(entry.collection))
+        return [];
+    return (await cms.store().getTranslationGroup({ entryId: entry.id })).members;
+}
+/**
+ * The answer to a write of the content service: the entry with its translation group (the same list a read returns, so the editor needs no second request to
+ * show a language the write just created), and its warnings with their person's text (`text`, `where`) in the admin language.
+ */
+export const written = async (cms, result, init) => ok({
+    ...result,
+    entry: { ...result.entry, translations: await translationsOf(cms, result.entry) },
+    warnings: tellIssues(cms.site, result.warnings),
+}, init);
 /** The answer to a bulk operation: every item's warnings or issues with their person's text. */
 export const bulkWritten = (cms, result) => ok({
     results: result.results.map((item) => item.ok

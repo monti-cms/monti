@@ -39,13 +39,15 @@ export declare function TextInput({ label, value, onChange, placeholder, descrip
 /** A text value that is `undefined` when empty (an optional property of the file). */
 export declare const orUndefined: (value: string) => string | undefined;
 export declare const countOrUndefined: (value: string) => number | undefined;
-export declare function FlagSwitch({ label, checked, onChange, description, hint, className, }: {
+export declare function FlagSwitch({ label, checked, onChange, description, hint, className, locked, }: {
     label: string;
     checked: boolean;
     onChange: (value: boolean) => void;
     description?: ReactNode;
     hint?: ReactNode;
     className?: string;
+    /** The switch cannot be changed here (the value is fixed by something else): shown as it is, disabled. */
+    locked?: boolean;
 }): import("react").JSX.Element;
 /** A few exclusive choices side by side in one rounded strip (a segmented control). */
 export declare function Segmented({ label, value, items, onChange, description, hint, }: {

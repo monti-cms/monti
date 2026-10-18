@@ -64,10 +64,10 @@ function FileRest({ file }) {
         return null;
     return (_jsxs(_Fragment, { children: [rest.map(([title, value]) => (_jsx(Section, { wide: true, title: title, note: t("file.hint"), children: _jsx("pre", { className: "max-h-64 overflow-auto rounded-md bg-monti-muted/60 p-3 text-xs", children: JSON.stringify(value, null, 2) }) }, title))), migrations.length > 0 && (_jsx(Section, { wide: true, title: t("file.migrations"), children: _jsx("ul", { className: "-my-2 flex flex-col divide-y text-sm", children: migrations.map((migration) => (_jsxs("li", { className: "flex items-center gap-2 py-2", children: [_jsx("code", { className: "text-xs", children: String(migration.id) }), " ", _jsx("span", { className: "text-monti-muted-foreground text-xs", children: String(migration.op) })] }, String(migration.id)))) }) }))] }));
 }
-/** The chip next to the Settings title: the schema file, its version, and why it is read-only when it is. */
+/** The chip next to the Settings title: the schema file, and why it is read-only when it is. */
 function FileLine({ state, reason }) {
     const t = useTranslator(schemaMessages);
-    return (_jsxs("span", { className: "inline-flex items-center gap-1.5 rounded-full border border-monti-border bg-monti-muted/40 px-2.5 py-0.5 font-mono text-monti-muted-foreground text-xs", children: [state.file ?? t("status.noFile"), " \u00B7 ", t("status.version", { version: state.schemaVersion }), reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`] }));
+    return (_jsxs("span", { className: "inline-flex items-center gap-1.5 rounded-full border border-monti-border bg-monti-muted/40 px-2.5 py-0.5 font-mono text-monti-muted-foreground text-xs", children: [state.file ?? t("status.noFile"), reason && ` · ${t("status.readOnly")}: ${t(READ_ONLY_SHORT_KEY[reason])}`] }));
 }
 function CollectionNavItem({ name, collection, active, isNew, writable, index, total, onSelect, onMove, }) {
     const t = useTranslator(schemaMessages);
@@ -183,7 +183,6 @@ function SchemaEditor({ state, tab, actionsSlot, fileSlot, onTab, }) {
                 } }), state.hash !== null && (_jsx(ReviewDialog, { open: reviewing, onOpenChange: setReviewing, draft: draft, renames: renames, settings: settingChanges(base, draft), baseHash: state.hash, onIssues: setIssues, onApplyFailed: () => setApplyFailed(true), onSaved: (saved) => {
                     rememberScroll(scroller.current?.scrollTop ?? 0);
                     rememberSaved(t("save.done", {
-                        version: saved.schemaVersion,
                         transforms: saved.transforms.length,
                         entries: saved.entriesRewritten,
                     }));

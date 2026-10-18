@@ -57,11 +57,6 @@ export type SchemaMigration = {
 });
 /** The parsed schema file. */
 export interface SchemaFile {
-    /**
-     * The version of the schema, a whole number from 1 (1 if left out). `monti schema:apply` raises it when the schema changes; entries record the version they
-     * were written or transformed under.
-     */
-    readonly schemaVersion?: number;
     /** Collection name -> definition. The name is a stored value, so do not change it in production. */
     readonly collections: Readonly<Record<string, SchemaCollection>>;
     /** Data transforms `monti schema:apply` runs once each, in this order. Applied ones stay as history. */

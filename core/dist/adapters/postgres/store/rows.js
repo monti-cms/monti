@@ -141,7 +141,7 @@ export async function readReferences(db, entryId, state) {
 export async function readBody(db, entryId, state) {
     const row = await db
         .selectFrom("entry_bodies")
-        .select(["metadata", "doc", "schema_version", "content_hash", "updated_at", "translation"])
+        .select(["metadata", "doc", "content_hash", "updated_at", "translation"])
         .where("entry_id", "=", entryId)
         .where("state", "=", state)
         .executeTakeFirst();
@@ -158,7 +158,6 @@ export async function writeBody(site, db, entryId, state, body) {
         state,
         metadata: JSON.stringify(body.metadata),
         doc: JSON.stringify(body.doc),
-        schema_version: body.schemaVersion,
         content_hash: body.contentHash,
         updated_at: body.updatedAt,
         search_text: extractVisibleText(site, body.doc),
@@ -167,7 +166,6 @@ export async function writeBody(site, db, entryId, state, body) {
         .onConflict((conflict) => conflict.columns(["entry_id", "state"]).doUpdateSet({
         metadata: proposed("metadata"),
         doc: proposed("doc"),
-        schema_version: proposed("schema_version"),
         content_hash: proposed("content_hash"),
         updated_at: proposed("updated_at"),
         search_text: proposed("search_text"),
@@ -203,7 +201,6 @@ export async function loadEntry(db, id) {
         "b.state",
         "b.metadata",
         "b.doc",
-        "b.schema_version",
         "b.content_hash",
         "b.updated_at as body_updated_at",
         "b.translation",
@@ -218,12 +215,11 @@ export async function loadEntry(db, id) {
     for (const row of rows) {
         if (row.state === null || row.metadata === null)
             continue;
-        if (row.schema_version === null || row.content_hash === null || row.body_updated_at === null)
+        if (row.content_hash === null || row.body_updated_at === null)
             continue;
         const body = {
             metadata: row.metadata,
             doc: readBodyDoc(row.doc),
-            schemaVersion: row.schema_version,
             contentHash: row.content_hash,
             updatedAt: row.body_updated_at,
             translation: readTranslation(row.translation),

@@ -39,7 +39,6 @@ export interface TextImport {
  */
 export declare const readInputBody: (site: Site, input: ServiceInput, previous: StoredDocument | null | undefined, options?: TextImport) => Promise<InputBody>;
 export declare function prepareSnapshot(site: Site, input: ServiceInput, options?: {
-    schemaVersion?: number;
     previousReferences?: readonly Reference[];
     /** The stored document this body replaces (the current draft). Its block ids carry over to the blocks that pair with them. */
     previousDoc?: StoredDocument | null;

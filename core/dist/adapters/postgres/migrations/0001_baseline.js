@@ -46,7 +46,6 @@ export const up = (client, qSchema, { site }) => client.query(`
 			entry_id UUID NOT NULL REFERENCES "${qSchema}".entries(id) ON DELETE CASCADE,
 			state TEXT NOT NULL CHECK (state IN ('working', 'published')),
 			metadata JSONB NOT NULL,
-			schema_version INTEGER NOT NULL,
 			content_hash TEXT NOT NULL,
 			updated_at TIMESTAMPTZ NOT NULL,
 			search_text TEXT NOT NULL DEFAULT '',
@@ -136,10 +135,9 @@ export const up = (client, qSchema, { site }) => client.query(`
 			PRIMARY KEY (plugin, collection, key)
 		);
 
-		-- The schema last applied to the store (\`monti schema:apply\`): one row holding its version and its data model as JSON.
+		-- The schema last applied to the store (\`monti schema:apply\`): one row holding its data model as JSON.
 		CREATE TABLE "${qSchema}".schema_state (
 			id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
-			schema_version INTEGER NOT NULL CHECK (schema_version >= 1),
 			schema JSONB NOT NULL,
 			applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);

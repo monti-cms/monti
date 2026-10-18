@@ -154,7 +154,6 @@ export type PreparedSnapshot = {
      * which only a draft can be (`unparsed_body` blocks publishing).
      */
     readonly doc: StoredDocument;
-    readonly schemaVersion: number;
     readonly contentHash: string;
     readonly references: readonly Reference[];
     /** Issues that block publishing. They do not block draft saves. */

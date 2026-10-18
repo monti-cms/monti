@@ -1,7 +1,7 @@
 import { patchEntryBodySchema } from "../../../../core/api.js";
 import { createBodyExporter } from "../../../../services/body-export.js";
 import { bodyInputOf } from "../../../../services/body-input.js";
-import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery, written } from "../../handler.js";
+import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery, translationsOf, written, } from "../../handler.js";
 /**
  * An entry and the translation group needed by the editor.
  * For a translation, also returns the source's latest draft metadata (`source`). The translation properties panel shows the shared values read-only.
@@ -13,15 +13,13 @@ export const GET = adminRoute(async ({ request, params, cms }) => {
     const format = readFormatQuery(request);
     const exporter = format === undefined ? undefined : await createBodyExporter(cms, { format });
     const bodyOf = async (body, locale) => (exporter ? { ...body, body: await exporter.text(body.doc, locale) } : body);
-    const translations = cms.site.isItemCollection(entry.collection)
-        ? null
-        : await store.getTranslationGroup({ entryId: entry.id });
+    const translations = await translationsOf(cms, entry);
     const source = entry.translationGroupId !== entry.id ? await store.getEntry(entry.translationGroupId).catch(() => null) : null;
     return ok({
         ...entry,
         working: await bodyOf(entry.working, entry.locale),
         ...(entry.published ? { published: await bodyOf(entry.published, entry.locale) } : {}),
-        translations: translations?.members ?? [],
+        translations,
         ...(source
             ? {
                 source: {

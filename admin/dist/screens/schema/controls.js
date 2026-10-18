@@ -48,9 +48,10 @@ export const countOrUndefined = (value) => {
     const count = Number.parseInt(value, 10);
     return Number.isFinite(count) && count > 0 ? count : undefined;
 };
-export function FlagSwitch({ label, checked, onChange, description, hint, className, }) {
+export function FlagSwitch({ label, checked, onChange, description, hint, className, locked, }) {
     const id = useId();
-    const { disabled } = useSchemaEdit();
+    const { disabled: readOnly } = useSchemaEdit();
+    const disabled = readOnly || locked === true;
     const desc = description ?? hint;
     return (_jsxs(UiField, { orientation: "horizontal", className: cn("w-full items-start justify-between gap-4", className), children: [_jsxs("div", { className: "flex flex-col gap-0.5", children: [_jsx(FormFieldLabel, { htmlFor: id, className: "font-medium text-sm", children: label }), desc && _jsx(FormFieldDescription, { className: HELP, children: desc })] }), _jsx(Switch, { id: id, size: "sm", checked: checked, disabled: disabled, className: "mt-0.5 shrink-0", onCheckedChange: (next) => onChange(next === true) })] }));
 }

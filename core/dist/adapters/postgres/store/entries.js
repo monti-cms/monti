@@ -90,7 +90,6 @@ export function createEntryOps(ctx, publishing) {
             await writeBody(site, trx, id, "working", {
                 metadata,
                 doc: params.snapshot.doc,
-                schemaVersion: params.snapshot.schemaVersion,
                 contentHash: params.snapshot.contentHash,
                 updatedAt: now,
                 translation,
@@ -101,7 +100,7 @@ export function createEntryOps(ctx, publishing) {
                 ? await publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
                 : await loadEntry(trx, id);
             // A create that also published is reported as the create, then the publish.
-            await recordEvents(client, qSchema, entry, [
+            await recordEvents(client, qSchema, site, entry, [
                 "created",
                 ...(params.publishImmediately && entry.status === "published" ? ["published"] : []),
             ]);
@@ -163,7 +162,6 @@ export function createEntryOps(ctx, publishing) {
                     await writeBody(site, trx, params.entryId, "working", {
                         metadata,
                         doc: params.snapshot.doc,
-                        schemaVersion: params.snapshot.schemaVersion,
                         contentHash: params.snapshot.contentHash,
                         updatedAt: now,
                         translation,
@@ -187,7 +185,6 @@ export function createEntryOps(ctx, publishing) {
                 await writeBody(site, trx, params.entryId, "working", {
                     metadata,
                     doc: params.snapshot.doc,
-                    schemaVersion: body.schema_version,
                     contentHash: body.content_hash,
                     updatedAt: body.updated_at,
                     translation,
@@ -202,7 +199,7 @@ export function createEntryOps(ctx, publishing) {
                     onWarnings: params.onWarnings,
                 })
                 : await loadEntry(trx, params.entryId);
-            await recordEvents(client, qSchema, entry, [
+            await recordEvents(client, qSchema, site, entry, [
                 "saved",
                 ...(params.publishImmediately && entry.status === "published" ? ["published"] : []),
             ]);
@@ -300,7 +297,7 @@ export function createEntryOps(ctx, publishing) {
         /** Publishes the saved draft. `snapshot` is the prepared draft (see `PublishOptions.snapshot`). */
         publishEntry: async (params) => withTrx(ctx, async (_trx, client) => {
             const entry = await publishWithinTransaction(client, params.id, params);
-            await recordEvents(client, qSchema, entry, ["published"]);
+            await recordEvents(client, qSchema, site, entry, ["published"]);
             return entry;
         }, { mapError: mapEntryWriteError }),
         slugsInUse: async (params) => {

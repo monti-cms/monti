@@ -17,7 +17,7 @@ export function createLifecycleOps(ctx, publishing) {
         assertTransitionAllowed(action, locked.status, locked.version);
         await apply(trx, client, locked);
         const entry = await loadEntry(trx, params.id);
-        await recordEvents(client, qSchema, entry, [kind]);
+        await recordEvents(client, qSchema, site, entry, [kind]);
         return entry;
     }, { mapError: mapEntryWriteError });
     /**
@@ -184,12 +184,16 @@ export function createLifecycleOps(ctx, publishing) {
                     details: { translations },
                 });
             }
+            // Every entry that goes leaves its own event (the translations as well as the source), each read before its row is deleted.
+            const removed = [];
             for (const member of members) {
                 await publishing.assertNotReferenced(client, member.id, { ignoreTrashedSources: false });
+                removed.push(await loadEntry(trx, member.id));
                 await deleteEntryRow(trx, member.id);
             }
             await deleteEntryRow(trx, params.id);
-            await recordEvents(client, qSchema, last, ["deleted"]);
+            for (const entry of [...removed, last])
+                await recordEvents(client, qSchema, site, entry, ["deleted"]);
         }),
     };
 }

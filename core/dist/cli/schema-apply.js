@@ -1,7 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
 import { applySchemaChange, checkSchemaChange, describeSchemaChange, planSchemaChange, } from "../schema-change/index.js";
-import { locateSchemaVersion } from "../schema-file/literal.js";
 import { findSchemaFile, loadSchemaFile } from "../schema-file/locate.js";
 import { loadApp } from "./app.js";
 /** What the apply does to entries that a change touches, in words. */
@@ -35,9 +32,6 @@ export function formatSchemaPlan(plan, impact) {
     if (!plan.applied) {
         lines.push("No schema has been applied to this store yet: the first `monti schema:apply` records the current schema as the baseline and changes no entry.");
     }
-    else {
-        lines.push(`Applied schema version: ${plan.applied.schemaVersion}. After the apply: ${plan.nextVersion}.`);
-    }
     if (plan.applied) {
         lines.push(plan.diff.changes.length === 0
             ? "No change to collections, fields, options, locales or allowed blocks."
@@ -56,51 +50,33 @@ export function formatSchemaPlan(plan, impact) {
     return lines.join("\n");
 }
 /** The text for a finished (or dry) apply. */
-export function formatApplyResult(done, wroteVersion, schemaFile) {
+export function formatApplyResult(done) {
     const { result } = done;
     const lines = [];
     if (result.applied.length === 0) {
-        lines.push(`No transform to run. Recorded the schema at version ${done.schemaVersion}.`);
+        lines.push(`No transform to run. Recorded the schema.`);
     }
     else {
         for (const id of result.applied) {
             const count = result.changed[id];
             lines.push(`Ran ${id}: ${count?.entries ?? 0} entries (${count?.bodies ?? 0} stored bodies) changed.`);
         }
-        lines.push(`Recorded the schema at version ${done.schemaVersion} (${result.entries} entries rewritten).`);
+        lines.push(`Recorded the schema (${result.entries} entries rewritten).`);
     }
     if (result.skipped.length > 0)
         lines.push(`Already applied before: ${result.skipped.join(", ")}.`);
     for (const conflict of done.conflicts) {
         lines.push(`WARNING ${conflict.id}: entry ${conflict.entryId} has a value under "${conflict.to}" already; "${conflict.from}" was kept next to it (nothing was overwritten).`);
     }
-    if (wroteVersion)
-        lines.push(`Raised schemaVersion in ${schemaFile} to ${done.schemaVersion}; commit it.`);
     if (result.dryRun)
         lines.push("Dry run: nothing was changed.");
     return lines.join("\n");
-}
-/**
- * Sets `schemaVersion` in the text of a schema file without reformatting it: the existing number is replaced; a file without one gets the line first in the
- * object passed to `defineSchema`. Works on the text so the file's own formatting stays (and whatever else the file holds).
- */
-export function withSchemaVersion(text, version) {
-    const { number, insertAt } = locateSchemaVersion(text);
-    if (number)
-        return `${text.slice(0, number.start)}${version}${text.slice(number.end)}`;
-    const lineEnd = insertAt === null ? null : /^[^\S\n]*\n/.exec(text.slice(insertAt));
-    if (insertAt === null || !lineEnd) {
-        throw new Error("the schema file does not have `defineSchema({` followed by a new line");
-    }
-    const at = insertAt + lineEnd[0].length;
-    const indent = /^[ \t]*/.exec(text.slice(at))?.[0] || "\t";
-    return `${text.slice(0, at)}${indent}schemaVersion: ${version},\n${text.slice(at)}`;
 }
 async function load(options) {
     const file = findSchemaFile(options.cwd, options.schema);
     const schema = await loadSchemaFile(options.cwd, file, { fresh: true });
     const cms = await (options.loadCms ?? loadApp)(options);
-    return { cms, file, migrations: schema.migrations ?? [] };
+    return { cms, migrations: schema.migrations ?? [] };
 }
 /** The store is not migrated to the step that records the applied schema. */
 const MIGRATE_HINT = "the store has no schema record yet; run `monti db:migrate` first";
@@ -123,12 +99,11 @@ export async function schemaDiff(options) {
     }
 }
 /**
- * `monti schema:apply [--dry-run]`: migrates the store, runs the transforms of the schema file that did not run yet (`migrations`), and records the schema and its
- * version. It raises `schemaVersion` in the schema file when the schema changed and the file still has the old one (commit the file). Running it again does
- * nothing more. `dryRun` does everything inside a transaction that is rolled back, and writes nothing, not even the file.
+ * `monti schema:apply [--dry-run]`: migrates the store, runs the transforms of the schema file that did not run yet (`migrations`), and records the schema. Running it again does
+ * nothing more. `dryRun` does everything inside a transaction that is rolled back, and writes nothing.
  */
 export async function schemaApply(options) {
-    const { cms, file, migrations } = await load(options);
+    const { cms, migrations } = await load(options);
     try {
         // The migration runs first, as the command says; its lines head the output so the tables it touched are not changed silently.
         const migrated = [];
@@ -150,13 +125,7 @@ export async function schemaApply(options) {
                 return { text: `${head}${preview}\n${MIGRATE_HINT}`, ok: false };
             throw error;
         }
-        let wroteVersion = false;
-        if (!options.dryRun && plan.needsVersionBump) {
-            const target = path.resolve(options.cwd, file);
-            writeFileSync(target, withSchemaVersion(readFileSync(target, "utf8"), done.schemaVersion));
-            wroteVersion = true;
-        }
-        return { text: `${head}${preview}\n${formatApplyResult(done, wroteVersion, file)}`, ok: true, done };
+        return { text: `${head}${preview}\n${formatApplyResult(done)}`, ok: true, done };
     }
     finally {
         await cms.close();

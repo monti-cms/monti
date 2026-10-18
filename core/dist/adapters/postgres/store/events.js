@@ -8,10 +8,12 @@ const MAX_ERROR_LENGTH = 2000;
  * Writes the events of a change in the transaction that makes it, so a change that rolls back leaves no event and a change that commits always has one.
  * `entry` is the entry as the change leaves it (for a deletion, as it was).
  */
-export async function recordEvents(client, qSchema, entry, kinds) {
+export async function recordEvents(client, qSchema, site, entry, kinds) {
     const db = dbOn(client, qSchema);
     for (const kind of kinds) {
-        const row = eventRowOf(kind, entry);
+        const row = eventRowOf(kind, entry, 
+        // A collection the site does not know has no title field to read; the log must still record the change.
+        site.isCollection(entry.collection) ? site.titleOfValues(entry.collection, entry.working.metadata) : null);
         await db
             .insertInto("cms_events")
             .values({
@@ -49,6 +51,7 @@ const changeOf = (row) => ({
     status: row.payload.status,
     publishedSlug: row.payload.publishedSlug,
     workingSlug: row.payload.workingSlug,
+    title: row.payload.title,
     actor: row.payload.actor ?? null,
     version: row.version,
     contentHash: row.content_hash,

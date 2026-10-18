@@ -3,6 +3,7 @@ import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-run
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
+import { useState } from "react";
 import { errorText } from "../../api/client.js";
 import { dismissEvent, EVENTS_FILTERS, eventsKeys, listEvents, retryAllEvents, retryEvent, } from "../../api/events.js";
 import { useCmsMutation } from "../../api/use-cms-mutation.js";
@@ -22,6 +23,8 @@ import { entryHref } from "../shared/entry-href.js";
 import { formatDateTime } from "../shared/format-date.js";
 import { ListPagination } from "../shared/list-pager.js";
 import { LoadErrorAlert } from "../shared/load-error-alert.js";
+import { EventDetailSheet } from "./event-detail-sheet.js";
+import { eventEntryLabel, STATE_TONE } from "./event-display.js";
 import { eventsMessages } from "./messages.js";
 /** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
 const EVENTS_PARAMS = {
@@ -31,15 +34,6 @@ const EVENTS_PARAMS = {
 };
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
-const STATE_TONE = {
-    delivered: "success",
-    failed: "destructive",
-    dead: "destructive",
-    pending: "warning",
-    delivering: "warning",
-    dismissed: "neutral",
-    recorded: "neutral",
-};
 /** Status column header; its popup filters deliveries by status, like the entries list column headers. */
 function StateHeader({ filter, options, onChange, }) {
     const t = useTranslator(eventsMessages);
@@ -58,6 +52,10 @@ export function EventsScreen() {
         placeholderData: keepPreviousData,
     });
     const items = listQuery.data?.items ?? [];
+    // The opened row is kept by its key, so a refetch (a retry, a dismiss) shows its new state in the detail.
+    const [openedKey, setOpenedKey] = useState(null);
+    const rowKey = (item) => `${item.change.eventId}:${item.subscriber ?? ""}`;
+    const opened = openedKey === null ? null : (items.find((item) => rowKey(item) === openedKey) ?? null);
     /** Deliveries the retry can still send (pending or failed and due); recorded, delivered and dead ones give it nothing to do. */
     const counts = listQuery.data?.counts;
     const waiting = counts ? counts.pending + counts.failed : 0;
@@ -97,6 +95,12 @@ export function EventsScreen() {
                     (filter === "all" ? (_jsx(EmptyState, { icon: BellRing, title: t("list.emptyYet"), description: t("list.emptyYetHint") })) : (_jsx(EmptyState, { icon: SearchX, title: t("list.emptyNoMatch"), description: t("list.emptyNoMatchHint"), action: { label: t("list.clearFilters"), onClick: () => changeFilter("all") } })))) : (_jsxs(Table, { "aria-label": t("list.label"), children: [_jsx(TableHeader, { children: _jsxs(TableRow, { children: [_jsx(TableHead, { children: _jsx(StateHeader, { filter: filter, options: filterOptions, onChange: changeFilter }) }), _jsx(TableHead, { children: t("column.when") }), _jsx(TableHead, { children: t("column.subscriber") }), _jsx(TableHead, { children: t("column.kind") }), _jsx(TableHead, { children: t("column.entry") }), _jsx(TableHead, { children: t("column.actor") }), _jsx(TableHead, { children: t("column.attempts") }), _jsx(TableHead, { children: t("column.lastError") }), _jsx(TableHead, { children: t("column.nextAttempt") }), _jsx(TableHead, { children: _jsx("span", { className: "sr-only", children: t("column.actions") }) })] }) }), _jsx(TableBody, { children: items.map((item) => {
                                 const { change } = item;
                                 const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
-                                return (_jsxs(TableRow, { children: [_jsx(TableCell, { children: _jsx(StatusIndicator, { tone: STATE_TONE[item.state], label: t(`state.${item.state}`) }) }), _jsx(TableCell, { className: "whitespace-nowrap", children: formatDateTime(site, change.occurredAt) }), _jsx(TableCell, { children: item.subscriber ?? "" }), _jsx(TableCell, { children: t(`kind.${change.kind}`) }), _jsxs(TableCell, { children: [_jsxs("span", { className: "text-monti-muted-foreground", children: [change.collection, " "] }), change.kind === "deleted" ? (_jsx("span", { className: "font-mono text-xs", children: change.entryId })) : (_jsx(Link, { href: entryHref(site, change.collection, change.entryId), className: "underline", children: change.workingSlug ?? change.publishedSlug ?? change.entryId }))] }), _jsx(TableCell, { children: change.actor ?? "" }), _jsx(TableCell, { className: "tabular-nums", children: item.attempts }), _jsx(TableCell, { className: "max-w-64 truncate", title: item.lastError ?? undefined, children: item.lastError ? truncate(item.lastError) : "" }), _jsx(TableCell, { className: "whitespace-nowrap", children: item.state === "failed" && item.nextAttemptAt ? formatDateTime(site, item.nextAttemptAt) : "" }), _jsx(TableCell, { className: "whitespace-nowrap text-right", children: (item.state === "failed" || item.state === "dead") && (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "outline", size: "xs", "aria-label": t("action.retryLabel", { subscriber: item.subscriber ?? "" }), disabled: retry.isPending, onClick: () => retry.mutate(key), children: tc("retry") }), " ", _jsx(Button, { type: "button", variant: "ghost", size: "xs", "aria-label": t("action.dismissLabel", { subscriber: item.subscriber ?? "" }), onClick: () => void requestDismiss(key), children: t("action.dismiss") })] })) })] }, `${change.eventId}:${item.subscriber ?? ""}`));
-                            }) })] })) }), _jsx(ListPagination, { total: listQuery.data?.total ?? 0, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) }), dialog] }));
+                                return (_jsxs(TableRow, { className: "cursor-pointer", onClick: () => setOpenedKey(rowKey(item)), children: [_jsx(TableCell, { children: _jsx(StatusIndicator, { tone: STATE_TONE[item.state], label: t(`state.${item.state}`) }) }), _jsx(TableCell, { className: "whitespace-nowrap", children: formatDateTime(site, change.occurredAt) }), _jsx(TableCell, { children: item.subscriber ?? "" }), _jsx(TableCell, { children: _jsx("button", { type: "button", className: "text-left underline-offset-2 hover:underline", "aria-label": t("detail.open", {
+                                                    kind: t(`kind.${change.kind}`),
+                                                    entry: eventEntryLabel(change),
+                                                }), onClick: (event) => {
+                                                    event.stopPropagation();
+                                                    setOpenedKey(rowKey(item));
+                                                }, children: t(`kind.${change.kind}`) }) }), _jsxs(TableCell, { children: [_jsxs("span", { className: "text-monti-muted-foreground", children: [change.collection, " "] }), change.kind === "deleted" ? (_jsx("span", { children: eventEntryLabel(change) })) : (_jsx(Link, { href: entryHref(site, change.collection, change.entryId), className: "underline", onClick: (event) => event.stopPropagation(), children: eventEntryLabel(change) }))] }), _jsx(TableCell, { children: change.actor ?? "" }), _jsx(TableCell, { className: "tabular-nums", children: item.attempts }), _jsx(TableCell, { className: "max-w-64 truncate", title: item.lastError ?? undefined, children: item.lastError ? truncate(item.lastError) : "" }), _jsx(TableCell, { className: "whitespace-nowrap", children: item.state === "failed" && item.nextAttemptAt ? formatDateTime(site, item.nextAttemptAt) : "" }), _jsx(TableCell, { className: "whitespace-nowrap text-right", onClick: (event) => event.stopPropagation(), children: (item.state === "failed" || item.state === "dead") && (_jsxs(_Fragment, { children: [_jsx(Button, { type: "button", variant: "outline", size: "xs", "aria-label": t("action.retryLabel", { subscriber: item.subscriber ?? "" }), disabled: retry.isPending, onClick: () => retry.mutate(key), children: tc("retry") }), " ", _jsx(Button, { type: "button", variant: "ghost", size: "xs", "aria-label": t("action.dismissLabel", { subscriber: item.subscriber ?? "" }), onClick: () => void requestDismiss(key), children: t("action.dismiss") })] })) })] }, rowKey(item)));
+                            }) })] })) }), _jsx(ListPagination, { total: listQuery.data?.total ?? 0, shown: items.length, page: page, pageSize: pageSize, onPageChange: (next) => update({ page: next }), onPageSizeChange: (size) => update({ pageSize: size }) }), _jsx(EventDetailSheet, { item: opened, deliveries: opened ? items.filter((item) => item.change.eventId === opened.change.eventId) : [], onClose: () => setOpenedKey(null) }), dialog] }));
 }

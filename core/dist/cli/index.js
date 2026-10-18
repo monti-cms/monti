@@ -19,5 +19,5 @@ export { CONFIG_CANDIDATES, EXTRACT_CONFIG_CANDIDATES, locateConfig, locateExtra
 export { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
 export { Cancelled, createClackPrompter } from "./prompt.js";
 export { runCli } from "./run.js";
-export { formatApplyResult, formatSchemaPlan, schemaApply, schemaDiff, withSchemaVersion, } from "./schema-apply.js";
+export { formatApplyResult, formatSchemaPlan, schemaApply, schemaDiff, } from "./schema-apply.js";
 export { extractSchema, extractSchemaData, formatExtractReport, schemaFileText, } from "./schema-extract.js";

@@ -123,7 +123,7 @@ export function GroupRow({ ops, tab, block }) {
             onClick: () => ops.change((tree) => removeGroup(tree, ref)),
         },
     ];
-    return (_jsxs("div", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("group/row relative mt-1 border-y bg-monti-muted/30", isDragging && "z-10 bg-monti-card opacity-80"), "data-testid": `group-${tab}-${block}`, children: [_jsxs("div", { className: "flex items-center gap-1 py-0.5 pr-5 pl-9", children: [_jsx(InlineName, { className: "-ml-1.5", value: group.title, label: t("layout.groupTitle"), disabled: ops.disabled, inputRef: inputRef, onCommit: (title) => ops.change((tree) => editGroup(tree, ref, { title })) }), group.collapsed && (_jsx("span", { className: "shrink-0 text-monti-muted-foreground text-xs", children: t("layout.collapsedMark") })), _jsx("span", { className: "flex-1" }), _jsx(RowButtons, { buttons: buttons }), moving && (_jsx(MoveDialog, { title: t("layout.moveGroupTitle", { name: group.title }), destinations: ops.tree.tabs.flatMap((item, at) => at === tab
+    return (_jsxs("div", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("group/row relative mt-3 border-y bg-monti-muted/30 first:mt-0", isDragging && "z-10 bg-monti-card opacity-80"), "data-testid": `group-${tab}-${block}`, children: [_jsxs("div", { className: "flex items-center gap-1 py-1.5 pr-5 pl-9", children: [_jsx(InlineName, { className: "-ml-1.5", value: group.title, label: t("layout.groupTitle"), disabled: ops.disabled, inputRef: inputRef, onCommit: (title) => ops.change((tree) => editGroup(tree, ref, { title })) }), group.collapsed && (_jsx("span", { className: "shrink-0 text-monti-muted-foreground text-xs", children: t("layout.collapsedMark") })), _jsx("span", { className: "flex-1" }), _jsx(RowButtons, { buttons: buttons }), moving && (_jsx(MoveDialog, { title: t("layout.moveGroupTitle", { name: group.title }), destinations: ops.tree.tabs.flatMap((item, at) => at === tab
                             ? []
                             : [
                                 {
@@ -135,5 +135,5 @@ export function GroupRow({ ops, tab, block }) {
 /** The place to drop a field into a group that has none, or after the last block of a tab. */
 export function DropRow({ id, label, testId }) {
     const { setNodeRef, transform, transition } = useSortable({ id, disabled: { draggable: true } });
-    return (_jsx("div", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("pr-5 pl-9 text-monti-muted-foreground text-xs", label ? "py-1" : "h-2"), "data-testid": testId, children: label }));
+    return (_jsx("div", { ref: setNodeRef, style: { transform: CSS.Translate.toString(transform), transition }, className: cn("pr-5 pl-9 text-monti-muted-foreground text-xs", label ? "py-1.5" : "-mb-2 h-2"), "data-testid": testId, children: label }));
 }

@@ -1,7 +1,7 @@
 import { isUuid } from "../core/ids.js";
 import { slugify } from "../core/slug.js";
 import { fieldTraits, isRequiredField, RECORD_TRANSLATIONS_KEY, storageTypeOf, } from "./fields.js";
-import { fieldWithRole, titleFieldOf, titleValue, valueFieldsOf, valueWithRole, } from "./walk.js";
+import { fieldWithRole, findTitleField, titleFieldOf, titleValue, valueFieldsOf, valueWithRole, } from "./walk.js";
 /**
  * Validates the meaning of values that passed the storage format check. If there is a problem, returns the legacy API's error code.
  */
@@ -157,15 +157,18 @@ export function createSchemas(collections) {
     function missingRequiredIssues(collection, snapshot, options = {}) {
         const issues = [];
         // A translation has only per-language values, so common required values (category etc.) are checked on the source (translation group).
-        const required = (field) => "required" in field && isRequiredField(field) && (!options.localizedOnly || Boolean(field.localized));
+        // The title field is always required, whatever its `required` says: an entry without a title cannot be published.
+        const titleName = findTitleField(schemaOf(collection))?.name;
+        const required = (field, name) => (name === titleName || ("required" in field && isRequiredField(field))) &&
+            (!options.localizedOnly || Boolean(field.localized));
         for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
-            if (field.kind !== "slug" || !required(field))
+            if (field.kind !== "slug" || !required(field, name))
                 continue;
             if (!snapshot.slug)
                 issues.push({ code: NULL_SLUG, path: name });
         }
         for (const { name, field, when } of storedFields(collection)) {
-            if (!required(field))
+            if (!required(field, name))
                 continue;
             if (when && snapshot.metadata[when.field] !== when.value)
                 continue;

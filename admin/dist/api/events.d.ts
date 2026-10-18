@@ -6,10 +6,16 @@ export interface EventDeliveryItem {
         kind: "created" | "saved" | "published" | "archived" | "unarchived" | "trashed" | "restored" | "deleted";
         entryId: string;
         collection: string;
+        locale?: string;
+        translationGroupId?: string;
+        status?: string;
+        version?: number;
         occurredAt: string;
         actor?: string | null;
         publishedSlug?: string | null;
         workingSlug?: string | null;
+        /** The entry's title when the change was made. */
+        title?: string | null;
     };
     /** `null` for an event no subscriber was made a delivery for (`recorded`). */
     subscriber: string | null;
@@ -17,6 +23,8 @@ export interface EventDeliveryItem {
     attempts: number;
     lastError: string | null;
     nextAttemptAt: string | null;
+    lastAttemptAt?: string | null;
+    deliveredAt?: string | null;
 }
 export interface EventCounts {
     pending: number;

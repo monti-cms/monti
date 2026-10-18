@@ -24,7 +24,6 @@ export declare const readTranslation: (value: unknown) => TranslationState | nul
 export interface BodyRow {
     content_hash: string;
     doc: StoredDocument;
-    schema_version: number;
     metadata: EntryMetadata;
     updated_at: Date;
     translation: TranslationState | null;
@@ -68,7 +67,6 @@ export declare function readBody(db: Db, entryId: string, state: "working" | "pu
 export declare function writeBody(site: Site, db: Db, entryId: string, state: "working" | "published", body: {
     metadata: EntryMetadata;
     doc: StoredDocument;
-    schemaVersion: number;
     contentHash: string;
     updatedAt: Date;
     /** Translation status of a translation. `null` for the source. */

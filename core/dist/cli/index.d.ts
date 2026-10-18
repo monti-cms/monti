@@ -21,5 +21,5 @@ export { CONFIG_CANDIDATES, EXTRACT_CONFIG_CANDIDATES, locateConfig, locateExtra
 export { isPluginCommandName, runPluginCommand } from "./plugin-command.js";
 export { Cancelled, createClackPrompter, type Prompter } from "./prompt.js";
 export { runCli } from "./run.js";
-export { formatApplyResult, formatSchemaPlan, type SchemaApplyOutcome, type SchemaCommandOptions, type SchemaDiffResult, schemaApply, schemaDiff, withSchemaVersion, } from "./schema-apply.js";
+export { formatApplyResult, formatSchemaPlan, type SchemaApplyOutcome, type SchemaCommandOptions, type SchemaDiffResult, schemaApply, schemaDiff, } from "./schema-apply.js";
 export { type ExtractedSchema, type ExtractOptions, type ExtractReport, extractSchema, extractSchemaData, formatExtractReport, type StaysInCode, schemaFileText, } from "./schema-extract.js";

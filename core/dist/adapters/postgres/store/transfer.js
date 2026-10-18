@@ -34,16 +34,7 @@ export function createTransferOps(ctx) {
                 .execute();
             const bodiesRes = await trx
                 .selectFrom("entry_bodies")
-                .select([
-                "entry_id",
-                "state",
-                "metadata",
-                "doc",
-                "schema_version",
-                "content_hash",
-                "updated_at",
-                "translation",
-            ])
+                .select(["entry_id", "state", "metadata", "doc", "content_hash", "updated_at", "translation"])
                 .orderBy("entry_id", "asc")
                 .orderBy("state", "asc")
                 .execute();
@@ -90,7 +81,6 @@ export function createTransferOps(ctx) {
                 const body = {
                     metadata: row.metadata,
                     doc: readBodyDoc(row.doc),
-                    schemaVersion: row.schema_version,
                     contentHash: row.content_hash,
                     updatedAt: row.updated_at,
                     translation: readTranslation(row.translation),

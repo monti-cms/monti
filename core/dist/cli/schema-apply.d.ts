@@ -10,12 +10,7 @@ export interface SchemaCommandOptions extends AppOptions {
 /** The text `schema:diff` and `schema:apply` print for a plan and its impact. */
 export declare function formatSchemaPlan(plan: SchemaPlan, impact: SchemaImpact): string;
 /** The text for a finished (or dry) apply. */
-export declare function formatApplyResult(done: SchemaApplyResult, wroteVersion: boolean, schemaFile: string): string;
-/**
- * Sets `schemaVersion` in the text of a schema file without reformatting it: the existing number is replaced; a file without one gets the line first in the
- * object passed to `defineSchema`. Works on the text so the file's own formatting stays (and whatever else the file holds).
- */
-export declare function withSchemaVersion(text: string, version: number): string;
+export declare function formatApplyResult(done: SchemaApplyResult): string;
 export interface SchemaDiffResult {
     readonly text: string;
     readonly plan: SchemaPlan;
@@ -36,9 +31,8 @@ export interface SchemaApplyOutcome {
     readonly done?: SchemaApplyResult;
 }
 /**
- * `monti schema:apply [--dry-run]`: migrates the store, runs the transforms of the schema file that did not run yet (`migrations`), and records the schema and its
- * version. It raises `schemaVersion` in the schema file when the schema changed and the file still has the old one (commit the file). Running it again does
- * nothing more. `dryRun` does everything inside a transaction that is rolled back, and writes nothing, not even the file.
+ * `monti schema:apply [--dry-run]`: migrates the store, runs the transforms of the schema file that did not run yet (`migrations`), and records the schema. Running it again does
+ * nothing more. `dryRun` does everything inside a transaction that is rolled back, and writes nothing.
  */
 export declare function schemaApply(options: SchemaCommandOptions & {
     readonly dryRun?: boolean;

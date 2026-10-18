@@ -101,7 +101,7 @@ function print(value, depth, column, expand = false) {
     }
     throw new Error(`a schema cannot hold a ${typeof value}`);
 }
-/** The text of `monti.schema.ts` for `schema` (the data of the file: `schemaVersion`, `collections`, `locales`, ...). */
+/** The text of `monti.schema.ts` for `schema` (the data of the file: `collections`, `locales`, ...). */
 export function printSchemaFile(schema) {
     return `import { defineSchema } from "${SCHEMA_MODULE}";\n\nexport default defineSchema(${print(schema, 0, 0, true)});\n`;
 }

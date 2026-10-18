@@ -35,16 +35,3 @@ export type SchemaLiteral = {
 };
 /** Parses the text of a schema file that is a pure literal. A file that has code (or is not valid) is refused with a message that names the line. */
 export declare function parseSchemaLiteral(text: string): SchemaLiteral;
-/**
- * Where the number of `schemaVersion` sits in the text of a schema file: the property of the object passed to `defineSchema` itself, not one of a nested object, a string
- * or a comment. Unlike {@link parseSchemaLiteral} it also reads a file that holds code (a spread, a variable), because it only walks the text.
- * `start` and `end` span the number; `null` when the object has no `schemaVersion: <number>`. `insertAt` is the index just after the object's opening `{` (or `null`
- * when the file has no `defineSchema({`).
- */
-export declare function locateSchemaVersion(text: string): {
-    readonly number: {
-        readonly start: number;
-        readonly end: number;
-    } | null;
-    readonly insertAt: number | null;
-};

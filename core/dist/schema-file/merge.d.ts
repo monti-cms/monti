@@ -21,7 +21,7 @@ export declare const layerSite: (config: Record<string, unknown>, defaults: Conf
  * and may override its environment-specific settings, but never silently replaces its data:
  *
  * - `collections`: the file's collections and the code's, side by side. The same name in both is an error.
- * - `locales`, `defaultLocale` and `schemaVersion`: only in the file (setting them in code too is an error).
+ * - `locales` and `defaultLocale`: only in the file (setting them in code too is an error).
  * - `site` and `admin`: key by key, the code's value wins. A key set to `undefined` in code leaves the file's value.
  * - `timeZone`: the code's value wins.
  * - `seed.templates`: the file's templates, then the code's.

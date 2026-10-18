@@ -19,7 +19,7 @@ Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.12&path:/core"
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.13&path:/core"
 # 2. Run init; it installs the other Monti packages from the same release
 pnpm exec monti init
 ```
@@ -82,7 +82,7 @@ The quick way is the quick start above (step 2 below is `monti init`): it does s
 ### 1. Packages
 
 ```sh
-pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.12&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.12&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.12&path:/nextjs" \
+pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.13&path:/core" "@monti-cms/admin@github:monti-cms/monti#release/v0.2.0-next.13&path:/admin" "@monti-cms/nextjs@github:monti-cms/monti#release/v0.2.0-next.13&path:/nextjs" \
   next-themes @tanstack/react-query sonner @tiptap/core @tiptap/pm @tiptap/react lucide-react
 ```
 
@@ -188,7 +188,6 @@ The site's data lives in `monti.schema.ts`; `monti.config.ts` imports it and add
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
-	schemaVersion: 1,
 	collections: {
 		post: {
 			label: "Post",
@@ -572,7 +571,7 @@ Every body (the working and published bodies of entries, the source a translatio
 Saving a body in another spelling of the content it already has changes nothing (no new version). A text typed in a source panel (the `mdx()` plugin provides one) is read in the browser into a document, and the document is what is saved.
 A body that cannot become a document (its text does not parse, has front matter, or would not read back the same) is stored as an **`unparsed`** document: one node `{ "type": "unparsed", "attrs": { "format": "mdx", "source": "<the text as given>" } }`, which keeps the text exactly. A draft can hold it, the editor shows it as source, and publishing it is blocked by the issue `unparsed_body`. The reasons it was rejected (`mdx_error` with the line and column in the text, `frontmatter_present`) are reported next to it.
 
-**What is checked.** Core checks, hashes and searches the stored document, never a text, so a body is treated the same however it was written or sent. Those are `prepareSnapshot` and `validateForPublish` (required, unknown and invalid block attributes, references, internal links, image sources, footnotes, code-line links, table merges, translation notes left in the text), the content hash (`computeContentHash(metadata, doc)`, the same value as before: the document without block ids, keys sorted; the schema version an entry is stored under is not part of it, see "Changing the schema")
+**What is checked.** Core checks, hashes and searches the stored document, never a text, so a body is treated the same however it was written or sent. Those are `prepareSnapshot` and `validateForPublish` (required, unknown and invalid block attributes, references, internal links, image sources, footnotes, code-line links, table merges, translation notes left in the text), the content hash (`computeContentHash(metadata, doc)`, the same value as before: the document without block ids, keys sorted)
 , the search text and excerpts (`documentText(doc, options)`, `bodyExcerpt(doc, maxLength)`) and the translation helpers (`withTranslationHints`, `compareStructure`, `diffSources` take documents). A body given as text is read into a document by its format first, and a document is taken as given (its text runs and trailing blank paragraphs are put in their canonical form).
 Where a finding is, is the block it is in: an issue's `position` is `{ blockId }` (a text that could not be read has `{ line, column }` in that text instead), and a body reference occurrence is `{ "type": "body", "blockId" }`.
 
@@ -1231,7 +1230,7 @@ it("refuses a bad slug", async () => {
 
 ## The schema file
 
-`monti.schema.ts` at the site root (or under `src/`) holds the plain-data part of the site config: the collections with their fields and layouts, the locales and the default locale, the time zone, the plain-data `site` settings, `admin` (the path, the language and string text overrides), the seed templates (stored documents, or a text and its format), the `schemaVersion` and the data transforms (`migrations`, see "Changing the schema").
+`monti.schema.ts` at the site root (or under `src/`) holds the plain-data part of the site config: the collections with their fields and layouts, the locales and the default locale, the time zone, the plain-data `site` settings, `admin` (the path, the language and string text overrides), the seed templates (stored documents, or a text and its format), and the data transforms (`migrations`, see "Changing the schema").
 It is a TypeScript file whose default export is one object literal passed to `defineSchema`. `defineSchema` is a typed identity with const generics: the collection, field and locale names flow into `defineConfig`, and a wrong `kind` or option value is a type error in the file.
 
 ```ts
@@ -1239,7 +1238,6 @@ It is a TypeScript file whose default export is one object literal passed to `de
 import { defineSchema } from "@monti-cms/core";
 
 export default defineSchema({
-	schemaVersion: 1,
 	collections: {
 		post: {
 			label: "Post",
@@ -1307,7 +1305,7 @@ Fix: correct the lines above; `monti doctor` checks the files again.
 | Part | Rule |
 | --- | --- |
 | `collections` | The file's collections, then the ones written in code (`defineCollection`). The same name in both is an error |
-| `locales`, `defaultLocale`, `schemaVersion` | Only in the file. Setting them in code too is an error (`schemaVersion` can be set in a config that has no schema file) |
+| `locales`, `defaultLocale` | Only in the file. Setting them in code too is an error |
 | `site`, `admin` | Key by key, the code's value wins. A key set to `undefined` (an unset environment variable) leaves the file's value. `site.url` usually lives in code |
 | `timeZone` | The code's value wins |
 | `seed.templates` | The file's templates, then the code's |
@@ -1337,15 +1335,12 @@ Then replace the collections, locales, `defaultLocale`, `timeZone`, `seed` and t
 
 Removing a field or a select option is routine once the schema is edited. The data does not break (a removed field or option keeps its stored values as "orphans": publishing warns, the public read hides them), and nothing is dropped unless you say so. Two commands and a few functions make a change **safe and explainable**: they show which entries a change touches before it is saved, run data transforms you declare, and record which schema every entry was written under.
 
-**The applied schema.** The database remembers the schema that was last applied (`monti schema:apply`): its `schemaVersion` and its data model (collections, fields, options, locales, allowed blocks) as a JSON snapshot in the `schema_state` table. That snapshot is the old side of every diff, because it is exactly what the stored data was last conformed to (a branch or tag of the repo can differ from it). A store that never applied one is at its **baseline**: the first `schema:apply` records the schema and changes no entry. So the migration path of an existing blog is `monti schema:extract`, then `monti schema:apply` with no transforms, which is a no-op.
-
-**`schemaVersion`.** A whole number from 1 in the schema file (1 if it is left out; `monti schema:extract` writes it). Every entry body records the version it was written or transformed under (`entry_bodies.schema_version`). The version is **not part of the content hash**: `computeContentHash(metadata, doc)` is defined over a constant, so every hash stored so far stays as it is, and a schema change that does not touch an entry's content does not make it look edited. Saving the same content under a newer version changes nothing (no new entry version, no new modified date; the stored version stays), and an edit is stored under the site's current version. `schema:apply` raises the number in the file when the schema changed (or transforms are pending) and the file still has the old one; commit the file. A file that already carries the raised number (applied on a development machine, then deployed) is left alone, so the production run records the same version and writes nothing to the file.
+**The applied schema.** The database remembers the schema that was last applied (`monti schema:apply`): its data model (collections, fields, options, locales, allowed blocks) as a JSON snapshot in the `schema_state` table. That snapshot is the old side of every diff, because it is exactly what the stored data was last conformed to (a branch or tag of the repo can differ from it). A store that never applied one is at its **baseline**: the first `schema:apply` records the schema and changes no entry. So the migration path of an existing blog is `monti schema:extract`, then `monti schema:apply` with no transforms, which is a no-op.
 
 **Transforms** live in the schema file, in `migrations`, next to the schema they belong to. Each has an `id` (a name for good: it is recorded in `cms_migrations` as `schema:<id>` once it ran, like `storage.once`, so it never runs twice, and applied ones stay in the list as history), an `op` and the names of the schema **after** the change:
 
 ```json
 {
-	"schemaVersion": 3,
 	"collections": { "post": { "fields": { "excerpt": { "kind": "text", "label": "Excerpt" }, "stage": { "kind": "select", "label": "Stage", "options": { "idea": "Idea", "done": "Done" }, "defaultValue": "idea" } } } },
 	"migrations": [
 		{ "id": "2026-10-rename-summary", "op": "renameField", "collection": "post", "from": "summary", "to": "excerpt" },
@@ -1374,11 +1369,10 @@ Moving a field into or out of a conditional branch needs no transform: every sto
 Both commands load the TypeScript schema file through tsx.
 
 - `monti schema:diff [--schema <file>] [--check]` (read-only) compares the schema of the app with the applied one and prints every change with the entries it touches and what happens to them: kept as orphans, rewritten by a transform, deleted by a `dropField`, cannot be published until filled, and so on. With `--check` it exits 1 when there is anything to apply.
-- `monti schema:apply [--schema <file>] [--dry-run]` migrates the store (`monti db:migrate`), runs the transforms that did not run yet, records the schema and its version, and raises `schemaVersion` in the file when needed (it edits the number in the file text in place). It is idempotent. `--dry-run` runs everything in a transaction that is rolled back and writes nothing, not even the file.
+- `monti schema:apply [--schema <file>] [--dry-run]` migrates the store (`monti db:migrate`), runs the transforms that did not run yet, and records the schema. It is idempotent. `--dry-run` runs everything in a transaction that is rolled back and writes nothing.
 
 ```text
 $ monti schema:diff
-Applied schema version: 2. After the apply: 3.
 Changes (3):
   - post.summary renamed to excerpt [transform 2026-10-rename-summary]: 12 entries ("Hello", "Notes", ...); rewritten by its transform
   - post.stage option "draft" removed [transform 2026-10-merge-draft]: 4 entries ("WIP", ...); rewritten by its transform
@@ -1393,7 +1387,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
 | `diffSchema(old, new, { transforms })` | `{ changes, renameHints }`. A change is one of `collection_added`, `collection_removed`, `collection_kind_changed`, `body_changed`, `allowed_changed`, `field_added`, `field_removed`, `field_renamed`, `field_type_changed`, `field_required_changed`, `field_locale_changed`, `field_moved`, `option_added`, `option_removed`, `option_renamed`, `locale_added`, `locale_removed`, `default_locale_changed`. A `renameField` or `mapOption` transform turns a removal plus an addition into a rename; a change a transform handles has `handledBy`. `changeKey(change)` is a stable key for a list, `describeSchemaChange(change)` an English sentence. Pure |
 | `checkSchemaChange(store, diff, { site, transforms, sampleSize })` | Per change: `entries` (an entry counts once), a `sample` of ids and titles, the `consequence` and whether it was `checked`. It reads every stored body once and writes nothing. `site` (the new schema's) is needed to check allowed-blocks changes and required fields in a branch |
 | `suggestTransforms(change, { options, renameTo })` | The transforms that fit a change (a drop, a rename, a mapping per remaining option, a default), without ids, for a screen to offer |
-| `planSchemaChange({ site, store, migrations })` | The diff against the applied schema, the pending transforms, `problems`, the `nextVersion` and whether the file needs a raise (`needsVersionBump`). Read-only |
+| `planSchemaChange({ site, store, migrations })` | The diff against the applied schema, the pending transforms, and `problems`. Read-only |
 | `applySchemaChange({ site, store, migrations, dryRun })` | Runs the plan. Returns what ran, how many entries and bodies each transform changed, and the `conflicts` of renames. Throws `SchemaChangeError` (changing nothing) |
 | `applyTransforms`, `checkTransforms` | The pure pieces: one entry's metadata through the transforms, and the check of transforms against a schema |
 
@@ -1410,16 +1404,16 @@ The admin has schema settings (`<admin path>/settings/collections`, in the sideb
 | Route | What it does |
 | --- | --- |
 | `GET` | The file's content and `hash`, whether it can be written (`access`, with a `detail` for `has_code`), whether the file has comments (`comments`), its `issues` if it does not check (with paths), the applied version, the collections the config adds in code, and the block and mark names a body list can use |
-| `POST /preview` | Body `{ schema, transforms?, renames? }`. Checks an edit and writes nothing: `valid` and `issues` (path and message), the `impacts` of every change (entries touched, a sample of ids and titles, the consequence), the `decisions` (changes whose stored values can be treated in more than one way, with the `suggestTransforms` choices and the one in effect), the `transforms` that would be recorded and their `problems`, and `nextVersion` |
+| `POST /preview` | Body `{ schema, transforms?, renames? }`. Checks an edit and writes nothing: `valid` and `issues` (path and message), the `impacts` of every change (entries touched, a sample of ids and titles, the consequence), the `decisions` (changes whose stored values can be treated in more than one way, with the `suggestTransforms` choices and the one in effect), the `transforms` that would be recorded and and their `problems` |
 | `PUT` | Body `{ schema, transforms?, renames?, baseHash }`. Saves the edit (below). `409 schema_conflict` when the file changed since `baseHash`, `400 invalid_schema` with `issues`, `422 invalid_transforms`, `500 schema_apply_failed` (the file was written, the database was not changed) |
 
-`transforms` are the picks of the writer, without ids (the server names them `v<version>-<op>-<collection>-<field>`). Left out, the server picks for each decision: a rename when the screen reports one in `renames` (a field or option the writer renamed), a mapping or a drop only where **no stored entry** holds the value (a drop that would delete values is never picked for the writer), a default only where it has a value. Without a pick the values stay as orphans, as before.
+`transforms` are the picks of the writer, without ids (the server names them `<op>-<collection>-<field>`). Left out, the server picks for each decision: a rename when the screen reports one in `renames` (a field or option the writer renamed), a mapping or a drop only where **no stored entry** holds the value (a drop that would delete values is never picked for the writer), a default only where it has a value. Without a pick the values stay as orphans, as before.
 
 **What a save does, in this order**, stopping at the first failure:
 
 1. Checks the file format and `defineConfig`'s rules on the edited content, and the transforms against it. The save is refused if the file changed on disk since the edit started (its hash).
 2. Dry-runs the transforms on the dev database, so an entry that cannot be rewritten stops the save before the file is touched.
-3. Writes `monti.schema.ts`, the whole file, printed from the schema data with the picked transforms appended to `migrations` and `schemaVersion` raised.
+3. Writes `monti.schema.ts`, the whole file, printed from the schema data with the picked transforms appended to `migrations`.
 4. Runs `applySchemaChange` against the dev database (creating the tables first if there are none), which also records the schema as applied.
 5. Makes the running instance run the new schema with `hostOf(cms).reloadSchema(schema)`; the screen then reloads the admin page.
 
@@ -1486,6 +1480,7 @@ A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It i
   and a file in use cannot be deleted. A value that is not a media ID is `invalid_metadata_value`, and an empty value (`""`) means nothing is picked.
 
 - **Required field (`required: true`).** Blocks an empty value when a document collection is published, or when an item collection is saved. Saving a draft is not blocked.
+  The title field (the one with the `title` role, or the text field named `title`) is always required, whatever its `required` says: the check treats it as `required: true`.
   The old value `required: "publish"` was removed (use `true`); a config that still has it fails with a message.
 - **Field value errors.** Error codes are the same regardless of the field. An empty required value is `missing_field` (`null_slug` for the URL), and a length over `max`
   is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target

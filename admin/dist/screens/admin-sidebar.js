@@ -250,7 +250,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
         const nav = active && folderNav?.collection === scope ? folderNav : undefined;
         const folderCount = nav ? nav.folders.length : (folderCounts?.[scope] ?? 0);
         const chevron = folderCount > 0 ? (active ? (_jsx(ChevronDown, { "aria-hidden": true, className: "size-3! text-monti-sidebar-foreground/60 group-data-[collapsible=icon]:hidden" })) : (_jsx(ChevronRight, { "aria-hidden": true, className: "size-3! text-monti-sidebar-foreground/50 group-data-[collapsible=icon]:hidden" }))) : null;
-        return (_jsxs(Fragment, { children: [navLink(href, scope, label, icon, undefined, chevron), nav && (_jsx(SidebarMenuItem, { children: _jsx(FolderTree, { nav: nav, closeMobile: closeMobile }) }))] }, scope));
+        return (_jsxs(Fragment, { children: [navLink(href, scope, label, icon, undefined, chevron), nav && nav.folders.length > 0 && (_jsx(SidebarMenuItem, { children: _jsx(FolderTree, { nav: nav, closeMobile: closeMobile }) }))] }, scope));
     };
     const collectionEntry = (collection) => entryWithFolders(collection, site.adminHref(`?collection=${collection}`), site.COLLECTION_DEFINITIONS[collection].label, _jsx(CollectionIcon, { collection: collection }));
     const mediaEntry = () => entryWithFolders("media", site.adminHref("/media"), t("sidebar.media"), _jsx(FileImage, {}));

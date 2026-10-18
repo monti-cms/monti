@@ -8,7 +8,6 @@ export const SITE_KEYS = [
     "site",
     "timeZone",
     "seed",
-    "schemaVersion",
     "admin",
     "editor",
     "blocks",
@@ -112,7 +111,7 @@ function checkSeed(list, seed) {
         }
     }
 }
-/** The site-wide settings: top-level keys, locales, site and admin options, time zone, schema version, the editor and the seed. */
+/** The site-wide settings: top-level keys, locales, site and admin options, time zone, the editor and the seed. */
 export function checkSite(list, config, alsoKnown = []) {
     checkKnownKeys(list, "", config, [...SITE_KEYS, ...alsoKnown]);
     checkLocales(list, config);
@@ -120,9 +119,6 @@ export function checkSite(list, config, alsoKnown = []) {
     checkAdmin(list, config.admin);
     if (config.timeZone !== undefined && !isTimeZone(config.timeZone)) {
         list.add("timeZone", "time-zone", `"${config.timeZone}" is not an IANA time zone`);
-    }
-    if (config.schemaVersion !== undefined && (!Number.isInteger(config.schemaVersion) || config.schemaVersion < 1)) {
-        list.add("schemaVersion", "schema-version", `must be a whole number from 1 (got ${String(config.schemaVersion)})`);
     }
     checkEditor(list, config.editor);
     checkSeed(list, config.seed);

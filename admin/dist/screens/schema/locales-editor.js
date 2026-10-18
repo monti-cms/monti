@@ -205,13 +205,7 @@ export function LocalesEditor({ file, update }) {
     return (_jsxs("div", { className: "flex flex-col gap-12", children: [_jsx(Section, { wide: true, card: false, title: t("locales.contentTitle"), testId: "locales-content", children: _jsxs(Panel, { className: "overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between gap-4 border-b px-4 py-3", children: [_jsx("span", { className: "text-monti-muted-foreground text-sm", children: t("locales.count", { count: locales.length }) }), _jsxs(Button, { type: "button", variant: "outline", size: "sm", disabled: disabled, onClick: () => setDialog({ code: null }), children: [_jsx(Plus, { "aria-hidden": true }), t("locales.add")] })] }), _jsx("ul", { className: "divide-y", children: _jsx(SortableList, { items: taken, onDragEnd: onDrop, children: locales.map((locale, index) => (_jsx(LocaleRow, { locale: locale, isDefault: locale.code === defaultLocale, dragDisabled: disabled, buttons: buttons(locale, index) }, locale.code))) }) })] }) }), _jsx(Section, { wide: true, title: t("locales.defaultTitle"), testId: "locales-default", children: _jsxs("div", { className: "flex flex-col gap-6", children: [_jsx(Pick, { label: t("locales.default"), value: defaultLocale, items: locales.map((locale) => ({
                                 value: locale.code,
                                 label: `${locale.label ?? locale.name} (${locale.code})`,
-                            })), onChange: (value) => update((current) => ({ ...current, defaultLocale: value })) }), _jsx(TimeZonePick, { value: typeof file.timeZone === "string" ? file.timeZone : undefined, onChange: (value) => update((current) => setProp(current, "timeZone", value, [
-                                "schemaVersion",
-                                "collections",
-                                "migrations",
-                                "locales",
-                                "defaultLocale",
-                            ])) })] }) }), dialog && (_jsx(LocaleDialog, { locale: editing, taken: taken, onClose: () => setDialog(null), onSave: (locale) => {
+                            })), onChange: (value) => update((current) => ({ ...current, defaultLocale: value })) }), _jsx(TimeZonePick, { value: typeof file.timeZone === "string" ? file.timeZone : undefined, onChange: (value) => update((current) => setProp(current, "timeZone", value, ["collections", "migrations", "locales", "defaultLocale"])) })] }) }), dialog && (_jsx(LocaleDialog, { locale: editing, taken: taken, onClose: () => setDialog(null), onSave: (locale) => {
                     change(editing ? locales.map((item) => (item.code === editing.code ? locale : item)) : [...locales, locale]);
                     setDialog(null);
                 } }, dialog.code ?? "new"))] }));

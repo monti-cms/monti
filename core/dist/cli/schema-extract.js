@@ -83,8 +83,6 @@ export function extractSchemaData(config, options = {}) {
     if (config.media)
         stays.push({ what: "media", detail: "upload limits and formats" });
     const schema = {
-        // The first version of the file: `monti schema:apply` raises it when the schema changes.
-        schemaVersion: config.schemaVersion ?? 1,
         collections,
         locales: config.locales,
         defaultLocale: config.defaultLocale,

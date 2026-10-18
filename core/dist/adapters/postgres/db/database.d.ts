@@ -29,6 +29,8 @@ export interface EventPayload {
     status: EntryStatus;
     publishedSlug: string | null;
     workingSlug: string | null;
+    /** The entry's title when the change was made (a deleted entry has no row left to read it from). */
+    title: string | null;
     /** Who made the change; absent on events recorded before the field existed. */
     actor?: string | null;
 }
@@ -54,7 +56,6 @@ export interface EntryBodiesTable {
     entry_id: string;
     state: "working" | "published";
     metadata: Jsonb<EntryMetadata>;
-    schema_version: number;
     content_hash: string;
     updated_at: Date;
     search_text: Generated<string>;
@@ -137,7 +138,6 @@ export interface PluginDocumentsTable {
 }
 export interface SchemaStateTable {
     id: Generated<boolean>;
-    schema_version: number;
     schema: Jsonb<JsonObject>;
     applied_at: Generated<Date>;
 }

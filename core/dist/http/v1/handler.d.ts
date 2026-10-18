@@ -98,8 +98,23 @@ export declare function readVersionQuery(request: Request): number;
 export declare function readQuery(request: Request, arrayKeys?: readonly string[]): Record<string, unknown>;
 /** The `format` query param of a read, or `undefined`. An invalid name is a 400; whether the format is installed is decided where it is used. */
 export declare function readFormatQuery(request: Request): string | undefined;
-/** The answer to a write of the content service: the entry, and its warnings with their person's text (`text`, `where`) in the admin language. */
-export declare const written: (cms: Cms, result: WriteResult, init?: ResponseInit) => Response;
+/** The translation group of an entry (the languages the editor shows as existing). Empty for an item collection, which has no translations. */
+export declare function translationsOf(cms: Cms, entry: {
+    readonly id: string;
+    readonly collection: string;
+}): Promise<{
+    id: string;
+    locale: string;
+    status: import("../../site-entry.js").EntryStatus;
+    isSource: boolean;
+    title: string | null;
+    workingSlug: string | null;
+}[]>;
+/**
+ * The answer to a write of the content service: the entry with its translation group (the same list a read returns, so the editor needs no second request to
+ * show a language the write just created), and its warnings with their person's text (`text`, `where`) in the admin language.
+ */
+export declare const written: (cms: Cms, result: WriteResult, init?: ResponseInit) => Promise<Response>;
 /** The answer to a bulk operation: every item's warnings or issues with their person's text. */
 export declare const bulkWritten: (cms: Cms, result: {
     readonly results: readonly BulkItemResult[];

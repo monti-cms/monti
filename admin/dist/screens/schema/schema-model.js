@@ -72,7 +72,6 @@ export function setProp(obj, key, value, order = []) {
     return Object.fromEntries(entries);
 }
 const FILE_KEY_ORDER = [
-    "schemaVersion",
     "collections",
     "migrations",
     "locales",

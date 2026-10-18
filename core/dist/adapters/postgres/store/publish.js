@@ -170,7 +170,6 @@ export function createPublishing(ctx) {
             await writeBody(site, trx, id, "published", {
                 metadata: working.metadata,
                 doc: working.doc,
-                schemaVersion: working.schema_version,
                 contentHash: working.content_hash,
                 updatedAt: working.updated_at,
                 translation: working.translation,

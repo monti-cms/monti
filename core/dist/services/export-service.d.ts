@@ -19,7 +19,6 @@ export declare const publicExportEntrySchema: z.ZodObject<{
     updatedAt: z.ZodString;
     metadata: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     doc: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    schemaVersion: z.ZodNumber;
     contentHash: z.ZodString;
 }, z.core.$strict>;
 export type PublicExportEntry = z.infer<typeof publicExportEntrySchema>;

@@ -1,4 +1,4 @@
-export { type ApplyOptions, applySchemaChange, type PlanOptions, planSchemaChange, type SchemaApplyResult, SchemaChangeError, type SchemaPlan, schemaVersionOf, snapshotSchema, } from "./apply.js";
+export { type ApplyOptions, applySchemaChange, type PlanOptions, planSchemaChange, type SchemaApplyResult, SchemaChangeError, type SchemaPlan, snapshotSchema, } from "./apply.js";
 export { type ChangeImpact, type CheckOptions, checkSchemaChange, type ImpactConsequence, type ImpactSample, type SchemaImpact, scanAllBodies, } from "./check.js";
 export { describeSchemaChange, diffSchema } from "./diff.js";
 export { applyTransforms, checkTransforms, type SuggestedTransform, suggestTransforms, type TransformProblem, type TransformResult, transformCollections, } from "./transforms.js";

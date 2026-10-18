@@ -31,7 +31,6 @@ export declare const saveSchema: (site: Site, request: EditRequest & {
     readonly saved: true;
     readonly file: string;
     readonly hash: string;
-    readonly schemaVersion: number;
     readonly transforms: readonly import("@monti-cms/core").SchemaMigration[];
     readonly entriesRewritten: number;
     readonly reloaded: boolean;

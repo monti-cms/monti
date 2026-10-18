@@ -286,21 +286,12 @@ export async function prepareSnapshot(site, input, options) {
             });
         }
     }
-    // The version the entry is stored under: the site's schema version. It is not part of the content hash.
-    let schemaVersion = site.config.schemaVersion ?? 1;
-    if (options?.schemaVersion !== undefined) {
-        if (!Number.isInteger(options.schemaVersion) || options.schemaVersion <= 0) {
-            throw new ServiceError("invalid_input");
-        }
-        schemaVersion = options.schemaVersion;
-    }
     const freeze = (items) => Object.freeze(items.map((item) => Object.freeze({ ...item })));
     return Object.freeze({
         collection: rawCollection,
         slug,
         metadata: Object.freeze(metadata),
         doc,
-        schemaVersion,
         contentHash: computeContentHash(metadata, doc),
         references: Object.freeze(collector.refs.map((ref) => Object.freeze({ ...ref, occurrences: Object.freeze(ref.occurrences.map((o) => Object.freeze({ ...o }))) }))),
         issues: freeze(issues),

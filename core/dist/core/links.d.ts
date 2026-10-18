@@ -23,6 +23,7 @@ export declare function createLinks(config: Pick<CmsConfig, "site" | "defaultLoc
     readonly locales: Pick<SiteLocales, "LOCALES" | "localePrefix">;
 }): {
     LINKABLE_COLLECTIONS: readonly string[];
+    previewBlocker: (collection: string, slug: string | null | undefined) => "no-preview-path" | "no-public-page" | "no-slug" | null;
     contentPath: (collection: string, slug: string | null | undefined) => string | null;
     parseContentPath: (pathname: string) => {
         collection: Collection;

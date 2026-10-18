@@ -24,11 +24,8 @@ export interface SchemaScreenState {
     readonly comments: boolean;
     /** The file is on disk but does not check: what is wrong with it, with JSON paths. The screen shows these instead of editing. */
     readonly issues: readonly ConfigIssue[];
-    /** The version the instance runs. */
-    readonly schemaVersion: number;
     /** The schema last applied to the dev database, or `null` when none was (or the store has no schema record yet). */
     readonly applied: {
-        readonly schemaVersion: number;
         readonly appliedAt: string;
     } | null;
     /** Collections the config adds in code: not in the file, so the screen cannot edit them. */
@@ -62,7 +59,7 @@ export type RenameInput = {
 };
 /** What the screen sends to check or save an edit. */
 export interface SchemaEditInput {
-    /** The schema file's content as edited. `migrations` and `schemaVersion` are the file's own; the save appends the chosen transforms and raises the version. */
+    /** The schema file's content as edited. `migrations` is the file's own; the save appends the chosen transforms. */
     readonly schema: unknown;
     /**
      * The transforms the writer picked (without ids; the server names them). Left out: the defaults of {@link decisionsOf} (a rename when the screen did one,
@@ -97,9 +94,6 @@ export interface SchemaEditPreview {
     readonly transforms: readonly SchemaMigration[];
     /** Problems that stop the save (a transform that does not fit the schema). */
     readonly problems: readonly TransformProblem[];
-    /** The version the save would record. */
-    readonly nextVersion: number;
-    readonly currentVersion: number;
     /** The schema applied to the dev database is older than the file (the file was changed by hand and not applied): the diff includes that. */
     readonly baseline: "applied" | "file";
     readonly bodiesRead: number;
@@ -144,7 +138,6 @@ export type SchemaSaveResult = {
     readonly saved: true;
     readonly file: string;
     readonly hash: string;
-    readonly schemaVersion: number;
     /** The transforms appended to `migrations` and run. */
     readonly transforms: readonly SchemaMigration[];
     /** Entries the apply rewrote. */
@@ -166,7 +159,7 @@ export type SchemaSaveResult = {
  *
  * 1. Checks the edit (format, then the rules between collections) and the transforms; refuses a file that changed since the edit started (`baseHash`).
  * 2. Dry-runs the transforms on the dev database (nothing written) so an entry that cannot be rewritten stops the save before the file is touched.
- * 3. Writes `monti.schema.ts` whole (`printSchemaFile`) with the chosen transforms appended to `migrations` and `schemaVersion` raised, in the key order of the edit.
+ * 3. Writes `monti.schema.ts` whole (`printSchemaFile`) with the chosen transforms appended to `migrations` in the key order of the edit.
  *    Comments in the file are dropped; a file that has code is never written (`schemaEditAccess` refuses it).
  * 4. Runs `applySchemaChange` against the dev database (creating the tables first when the store has none) with the schema as written.
  * 5. Makes the running instance run the new schema (`cms.reloadSchema(schema)`); the dev server evaluates the config again because the file changed.

@@ -226,10 +226,6 @@ const migration = z.discriminatedUnion("op", [
 ], { error: 'a migration needs an "op" of renameField, mapOption, dropField or setDefault' });
 /** The keys of the plain data both the schema file and the code config hold (the file adds `migrations`). */
 const plainShape = {
-    schemaVersion: z
-        .number()
-        .optional()
-        .describe("Version of the schema (1 if left out). `monti schema:apply` raises it when the schema changes; entries record the version they were written or transformed under."),
     locales: z.array(locale).describe("Content locales, in the order the admin shows them."),
     defaultLocale: text.describe("Default locale. Public URLs get no prefix for it."),
     timeZone: text.optional().describe("IANA time zone for dates and times. UTC if unset."),

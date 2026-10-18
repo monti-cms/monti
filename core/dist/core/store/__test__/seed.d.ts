@@ -12,7 +12,6 @@ type SeedInput = {
     /** The body as plain text (read by `docOfText`) unless `doc` is given. */
     text?: string;
     doc?: StoredDocument;
-    schemaVersion?: number;
     contentHash?: string;
     folderId?: string | null;
     locale?: string;

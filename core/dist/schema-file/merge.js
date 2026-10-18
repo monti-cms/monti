@@ -20,7 +20,7 @@ export const layerSite = (config, defaults) => {
  * and may override its environment-specific settings, but never silently replaces its data:
  *
  * - `collections`: the file's collections and the code's, side by side. The same name in both is an error.
- * - `locales`, `defaultLocale` and `schemaVersion`: only in the file (setting them in code too is an error).
+ * - `locales` and `defaultLocale`: only in the file (setting them in code too is an error).
  * - `site` and `admin`: key by key, the code's value wins. A key set to `undefined` in code leaves the file's value.
  * - `timeZone`: the code's value wins.
  * - `seed.templates`: the file's templates, then the code's.
@@ -31,12 +31,12 @@ export function resolveSchemaConfig(config, defaults = {}) {
     const file = parseSchemaFile(option, SCHEMA_SOURCE_NAME);
     const source = SCHEMA_SOURCE_NAME;
     const issues = [];
-    for (const key of ["locales", "defaultLocale", "schemaVersion"]) {
+    for (const key of ["locales", "defaultLocale"]) {
         if (code[key] !== undefined) {
             issues.push({
                 path: key,
                 code: "set-twice",
-                message: `is set in the config and in ${source}; keep it in the schema file (a site's locales, default locale and schema version have one place)`,
+                message: `is set in the config and in ${source}; keep it in the schema file (a site's locales and default locale have one place)`,
             });
         }
     }
@@ -62,8 +62,6 @@ export function resolveSchemaConfig(config, defaults = {}) {
         locales: file.locales,
         defaultLocale: file.defaultLocale,
     };
-    if (file.schemaVersion !== undefined)
-        merged.schemaVersion = file.schemaVersion;
     const timeZone = code.timeZone ?? file.timeZone;
     if (timeZone !== undefined)
         merged.timeZone = timeZone;
