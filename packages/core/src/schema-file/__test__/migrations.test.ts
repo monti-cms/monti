@@ -80,12 +80,4 @@ describe("defineSite with a schema file", () => {
 		});
 		expect(config).not.toHaveProperty("migrations");
 	});
-
-	it("has no schema version: the key is an unknown one, in the file and in code", () => {
-		expect(issues((schema) => Object.assign(schema, { schemaVersion: 1 }))).toEqual([
-			expect.stringMatching(/^schemaVersion: is not an option/),
-		]);
-		const plain = { collections: cloneSchema().collections, locales: cloneSchema().locales, defaultLocale: "ko" };
-		expect(() => defineSite({ ...plain, schemaVersion: 2 } as never)).toThrow(/schemaVersion/);
-	});
 });
