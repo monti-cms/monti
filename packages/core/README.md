@@ -1486,6 +1486,7 @@ A collection's `path` (e.g. `/posts/:slug`) is the shape of the public URL. It i
   and a file in use cannot be deleted. A value that is not a media ID is `invalid_metadata_value`, and an empty value (`""`) means nothing is picked.
 
 - **Required field (`required: true`).** Blocks an empty value when a document collection is published, or when an item collection is saved. Saving a draft is not blocked.
+  The title field (the one with the `title` role, or the text field named `title`) is always required, whatever its `required` says: the check treats it as `required: true`.
   The old value `required: "publish"` was removed (use `true`); a config that still has it fails with a message.
 - **Field value errors.** Error codes are the same regardless of the field. An empty required value is `missing_field` (`null_slug` for the URL), and a length over `max`
   is `field_too_long`. In the issue (`issues`), `path` holds the field name and `message` the field label (the title too). A different relation target

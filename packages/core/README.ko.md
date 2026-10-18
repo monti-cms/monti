@@ -1483,6 +1483,7 @@ Transforms to run (2): 2026-10-rename-summary, 2026-10-merge-draft
   보이고, 쓰고 있는 파일은 지울 수 없다. 미디어 ID가 아닌 값은 `invalid_metadata_value`, 빈 값(`""`)은 고르지 않은 것이다.
 
 - **필수 필드(`required: true`).** 문서 컬렉션은 발행할 때, 항목 컬렉션은 저장할 때 비어 있으면 막는다. 초안 저장은 막지 않는다.
+  제목 필드(`title` 역할이 있는 필드, 없으면 이름이 `title`인 텍스트 필드)는 `required`를 어떻게 쓰든 항상 필수다. 검사에서 `required: true`로 취급한다.
   예전 값 `required: "publish"`는 없앴다(`true`를 쓴다). 아직 쓰는 설정은 안내 메시지와 함께 실패한다.
 - **필드 값 오류.** 오류 코드는 필드와 상관없이 같다. 필수값이 비면 `missing_field`(주소는 `null_slug`), 글자 수가 `max`를
   넘으면 `field_too_long`이다. 문제(`issues`)의 `path`에 필드 이름, `message`에 필드 이름표가 담긴다(제목도 같다). 관계 대상
