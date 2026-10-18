@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { defineCollection, fields } from "../..";
+import { defineCollection, defineSite, fields } from "../..";
+import { createSite } from "../../site";
 import { findTitleField, titleFieldOf, titleValue } from "../walk";
 
 const slug = fields.slug({ label: "Slug" });
@@ -49,5 +50,39 @@ describe("the title field of a collection", () => {
 			fields: { title: fields.select({ label: "Title", options: { a: "A" }, defaultValue: "a" }), slug },
 		});
 		expect(findTitleField(schema)).toBeUndefined();
+	});
+});
+
+describe("the title field is always required", () => {
+	const site = createSite(
+		defineSite({
+			collections: {
+				post: defineCollection({
+					label: "Post",
+					kind: "document",
+					fields: { headline: fields.text({ label: "Headline", role: "title", required: undefined }), slug },
+				}),
+				tag: defineCollection({
+					label: "Tag",
+					kind: "item",
+					fields: { title: fields.text({ label: "Name" }), slug },
+				}),
+			},
+			locales: [{ code: "en", name: "English" }],
+			defaultLocale: "en",
+		}),
+	);
+
+	it("asks for a title whatever its `required` says, on a document and on an item", () => {
+		expect(site.missingRequiredIssues("post", { slug: "a", metadata: {} })).toEqual([
+			{ code: "missing_field", path: "headline", message: "Headline" },
+		]);
+		expect(site.missingRequiredIssues("tag", { slug: "a", metadata: {} })).toEqual([
+			{ code: "missing_field", path: "title", message: "Name" },
+		]);
+	});
+
+	it("is satisfied once the title has a value", () => {
+		expect(site.missingRequiredIssues("post", { slug: "a", metadata: { headline: "Hello" } })).toEqual([]);
 	});
 });
