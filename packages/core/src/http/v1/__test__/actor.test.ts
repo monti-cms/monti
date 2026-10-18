@@ -17,6 +17,7 @@ async function actorWhileSaving(auth: AuthContext): Promise<string | null> {
 	const cms = fakeCms({
 		config: testConfig,
 		store: {
+			getTranslationGroup: async ({ entryId }: { entryId: string }) => ({ groupId: entryId, members: [] }),
 			getEntry: async () =>
 				({
 					id: ID,
@@ -29,7 +30,7 @@ async function actorWhileSaving(auth: AuthContext): Promise<string | null> {
 		contentService: {
 			saveDraft: async () => {
 				seen = currentActor();
-				return { id: ID, version: 2, warnings: [] } as never;
+				return { entry: { id: ID, collection: contentCollection, version: 2 }, warnings: [] } as never;
 			},
 		},
 		verifyAdmin: async () => auth,

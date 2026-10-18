@@ -3,7 +3,16 @@ import type { StoredDocument } from "../../../../doc/stored-document";
 import { createBodyExporter } from "../../../../services/body-export";
 import { bodyInputOf } from "../../../../services/body-input";
 import type { SaveDraftInput } from "../../../../services/types";
-import { adminRoute, deleted, ok, readFormatQuery, readVersionedBody, readVersionQuery, written } from "../../handler";
+import {
+	adminRoute,
+	deleted,
+	ok,
+	readFormatQuery,
+	readVersionedBody,
+	readVersionQuery,
+	translationsOf,
+	written,
+} from "../../handler";
 
 type IdParams = { id: string };
 
@@ -21,16 +30,14 @@ export const GET = adminRoute<IdParams>(async ({ request, params, cms }) => {
 		body: B,
 		locale: string,
 	): Promise<B & { body?: string }> => (exporter ? { ...body, body: await exporter.text(body.doc, locale) } : body);
-	const translations = cms.site.isItemCollection(entry.collection)
-		? null
-		: await store.getTranslationGroup({ entryId: entry.id });
+	const translations = await translationsOf(cms, entry);
 	const source =
 		entry.translationGroupId !== entry.id ? await store.getEntry(entry.translationGroupId).catch(() => null) : null;
 	return ok({
 		...entry,
 		working: await bodyOf(entry.working, entry.locale),
 		...(entry.published ? { published: await bodyOf(entry.published, entry.locale) } : {}),
-		translations: translations?.members ?? [],
+		translations,
 		...(source
 			? {
 					source: {

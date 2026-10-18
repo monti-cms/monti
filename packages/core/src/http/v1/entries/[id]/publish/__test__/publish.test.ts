@@ -17,6 +17,9 @@ const { verifyAdmin, publish } = vi.hoisted(() => ({
 
 const cms = fakeCms({
 	config: testConfig,
+	store: {
+		getTranslationGroup: async ({ entryId }: { entryId: string }) => ({ groupId: entryId, members: [] }),
+	} as never,
 	contentService: { publish },
 	verifyAdmin: () => verifyAdmin(),
 });

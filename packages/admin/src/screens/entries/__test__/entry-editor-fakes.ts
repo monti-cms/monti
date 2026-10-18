@@ -46,6 +46,17 @@ export function fakeClient(initial: EntryData = ENTRY) {
 				workingSlug: input.slug,
 				working: { metadata: input.metadata, doc: input.doc },
 			};
+			// Like the real server, a write answers with the translation group; a fresh entry is its only member.
+			server.current.translations = [
+				{
+					id: "created-1",
+					locale: server.current.locale ?? "ko",
+					status: "draft",
+					isSource: true,
+					title: null,
+					workingSlug: input.slug,
+				},
+			];
 			return { entry: structuredClone(server.current), warnings: [] };
 		}),
 		update: vi.fn(async (_id: string, input: Parameters<EntryEditorClient["update"]>[1]): Promise<EntryWriteResult> => {

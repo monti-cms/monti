@@ -27,6 +27,7 @@ const item = (
 		collection: "post",
 		occurredAt: "2026-01-01T00:00:00.000Z",
 		workingSlug: `slug-${eventId}`,
+		...(kind === "deleted" ? { title: `Title ${eventId}` } : {}),
 	},
 	subscriber,
 	state,
@@ -83,9 +84,29 @@ describe("EventsScreen", () => {
 		const deadRow = screen.getByText("webhook").closest("tr") as HTMLElement;
 		expect(within(failedRow).getByText(t("state.failed"))).toBeTruthy();
 		expect(within(deadRow).getByText(t("state.dead"))).toBeTruthy();
-		// A deleted entry shows only its id.
-		expect(within(deadRow).getByText("entry-e2").closest("a")).toBeNull();
+		// A deleted entry is named by the title the event kept, as plain text (there is nothing to link to).
+		expect(within(deadRow).getByText("Title e2").closest("a")).toBeNull();
+		expect(within(deadRow).queryByText("entry-e2")).toBeNull();
 		expect(within(failedRow).getByText("slug-e1").closest("a")).not.toBeNull();
+	});
+
+	it("opens the full record of an event from its row without breaking the row's own actions", async () => {
+		renderScreen();
+
+		const row = (await screen.findByText("webhook")).closest("tr") as HTMLElement;
+		fireEvent.click(within(row).getByText("Title e2"));
+		const detail = await screen.findByRole("dialog");
+		expect(within(detail).getByText("entry-e2")).toBeTruthy();
+		expect(within(detail).getByText("e2")).toBeTruthy();
+		expect(within(detail).getByText("webhook")).toBeTruthy();
+		expect(within(detail).getByText("boom")).toBeTruthy();
+		fireEvent.keyDown(detail, { key: "Escape" });
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+		// Retry in the row still retries and does not open the detail.
+		fireEvent.click(within(row).getByRole("button", { name: t("action.retryLabel", { subscriber: "webhook" }) }));
+		await waitFor(() => expect(posts().length).toBe(1));
+		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
 	it("labels an event with no subscribers as recorded, with no retry or dismiss", async () => {
@@ -98,7 +119,7 @@ describe("EventsScreen", () => {
 		expect(within(row).getByText(t("state.recorded"))).toBeTruthy();
 		expect(within(row).queryByText(t("state.pending"))).toBeNull();
 		expect(within(row).queryByText(t("state.failed"))).toBeNull();
-		expect(within(row).queryByRole("button")).toBeNull();
+		expect(within(row).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 	});
 
 	it("retries one delivery with its subscriber", async () => {
@@ -169,9 +190,9 @@ describe("EventsScreen", () => {
 		expect(within(deliveredRow).getByText(t("state.delivered"))).toBeTruthy();
 		expect(within(deliveredRow).getByText(t("kind.saved"))).toBeTruthy();
 		// A delivered event has nothing to retry or dismiss; a failed one does.
-		expect(within(deliveredRow).queryByRole("button")).toBeNull();
+		expect(within(deliveredRow).queryByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toBeNull();
 		const failedRow = screen.getByText("slug-e1").closest("tr") as HTMLElement;
-		expect(within(failedRow).getAllByRole("button")).toHaveLength(2);
+		expect(within(failedRow).getAllByRole("button", { name: /Retry|Dismiss|다시 시도|무시/ })).toHaveLength(2);
 		const url = new URL(
 			String(fetchMock.mock.calls.map(([input]) => input).find((input) => String(input).includes("state="))),
 			"http://localhost",

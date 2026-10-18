@@ -149,8 +149,19 @@ export function createLinks(
 		});
 	}
 
+	/** Why {@link previewHref} gives `null` (checked in the order the user fixes them): no `site.previewPath`, no public path for the collection, or no slug yet. `null` when the preview works. */
+	function previewBlocker(
+		collection: string,
+		slug: string | null | undefined,
+	): "no-preview-path" | "no-public-page" | "no-slug" | null {
+		if (!config.site?.previewPath) return "no-preview-path";
+		if (!PATH_RULES.some((rule) => rule.collection === collection)) return "no-public-page";
+		return slug ? null : "no-slug";
+	}
+
 	return {
 		LINKABLE_COLLECTIONS,
+		previewBlocker,
 		contentPath,
 		parseContentPath,
 		parseInternalLink,

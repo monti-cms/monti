@@ -18,6 +18,14 @@ const getMeta = routeCaller(getMetaHandler);
 const mockVerifyAdmin = vi.fn();
 
 const mockStore = {
+	getTranslationGroup: vi.fn().mockImplementation(({ entryId }: { entryId: string }) =>
+		Promise.resolve({
+			groupId: entryId,
+			members: [
+				{ id: entryId, locale: "ko", status: "draft", isSource: true, title: "Test Post", workingSlug: "test-slug" },
+			],
+		}),
+	),
 	listEntries: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 25 }),
 	searchEntries: vi.fn().mockResolvedValue([{ id: "e1", title: "Hello", slug: "hello", status: "published" }]),
 	getEntry: vi.fn().mockImplementation((id: string) => {
@@ -45,11 +53,13 @@ const mockService = {
 	createDraft: vi.fn().mockImplementation((input) => {
 		return Promise.resolve({
 			warnings: [],
-			id: "new-entry-id",
-			collection: input.collection,
-			version: 1,
-			workingSlug: input.slug,
-			folderId: input.folderId,
+			entry: {
+				id: "new-entry-id",
+				collection: input.collection,
+				version: 1,
+				workingSlug: input.slug,
+				folderId: input.folderId,
+			},
 		});
 	}),
 	saveDraft: vi.fn().mockImplementation((id, input) => {
@@ -61,11 +71,13 @@ const mockService = {
 		}
 		return Promise.resolve({
 			warnings: [],
-			id,
-			collection: input.collection,
-			version: input.expectedVersion + 1,
-			workingSlug: input.slug,
-			folderId: input.folderId,
+			entry: {
+				id,
+				collection: input.collection,
+				version: input.expectedVersion + 1,
+				workingSlug: input.slug,
+				folderId: input.folderId,
+			},
 		});
 	}),
 };
@@ -133,8 +145,12 @@ describe("HTTP API Contract (Updated with Security & Atomic Folders)", () => {
 		const res = await postEntries(req, { cms });
 		expect(res.status).toBe(201);
 		const data = await res.json();
-		expect(data.id).toBe("new-entry-id");
-		expect(data.folderId).toBe("a0000000-0000-4000-8000-000000000001");
+		expect(data.entry.id).toBe("new-entry-id");
+		expect(data.entry.folderId).toBe("a0000000-0000-4000-8000-000000000001");
+		// The answer carries the translation group, so the editor can show the saved language as existing without asking again.
+		expect(data.entry.translations).toEqual([
+			expect.objectContaining({ id: "new-entry-id", locale: "ko", isSource: true }),
+		]);
 	});
 
 	it("PATCH /entries/:id rejects without version with 428 version_required", async () => {
