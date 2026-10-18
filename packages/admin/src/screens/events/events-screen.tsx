@@ -3,6 +3,7 @@
 import { useSite, useTranslator } from "@monti-cms/core/site";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { BellRing, ChevronDown, ListFilter, RotateCw, SearchX } from "lucide-react";
+import { useState } from "react";
 import { errorText } from "../../api/client";
 import {
 	type DeliveryKey,
@@ -23,7 +24,7 @@ import { AdminLink as Link } from "../../router";
 import { Button } from "../../ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Skeleton } from "../../ui/skeleton";
-import { StatusIndicator, type StatusTone } from "../../ui/status-indicator";
+import { StatusIndicator } from "../../ui/status-indicator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
 import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
@@ -32,6 +33,8 @@ import { entryHref } from "../shared/entry-href";
 import { formatDateTime } from "../shared/format-date";
 import { ListPagination } from "../shared/list-pager";
 import { LoadErrorAlert } from "../shared/load-error-alert";
+import { EventDetailSheet } from "./event-detail-sheet";
+import { eventEntryLabel, STATE_TONE } from "./event-display";
 import { eventsMessages } from "./messages";
 
 /** The filter and page live in the address, so a refresh keeps them and the address can be shared. */
@@ -43,16 +46,6 @@ const EVENTS_PARAMS = {
 
 const ERROR_MAX_LENGTH = 80;
 const truncate = (text: string) => (text.length > ERROR_MAX_LENGTH ? `${text.slice(0, ERROR_MAX_LENGTH)}…` : text);
-
-const STATE_TONE: Record<EventDeliveryItem["state"], StatusTone> = {
-	delivered: "success",
-	failed: "destructive",
-	dead: "destructive",
-	pending: "warning",
-	delivering: "warning",
-	dismissed: "neutral",
-	recorded: "neutral",
-};
 
 /** Status column header; its popup filters deliveries by status, like the entries list column headers. */
 function StateHeader({
@@ -124,6 +117,10 @@ export function EventsScreen() {
 		placeholderData: keepPreviousData,
 	});
 	const items = listQuery.data?.items ?? [];
+	// The opened row is kept by its key, so a refetch (a retry, a dismiss) shows its new state in the detail.
+	const [openedKey, setOpenedKey] = useState<string | null>(null);
+	const rowKey = (item: EventDeliveryItem) => `${item.change.eventId}:${item.subscriber ?? ""}`;
+	const opened = openedKey === null ? null : (items.find((item) => rowKey(item) === openedKey) ?? null);
 	/** Deliveries the retry can still send (pending or failed and due); recorded, delivered and dead ones give it nothing to do. */
 	const counts = listQuery.data?.counts;
 	const waiting = counts ? counts.pending + counts.failed : 0;
@@ -222,20 +219,39 @@ export function EventsScreen() {
 								const { change } = item;
 								const key = { eventId: change.eventId, subscriber: item.subscriber ?? "" };
 								return (
-									<TableRow key={`${change.eventId}:${item.subscriber ?? ""}`}>
+									<TableRow key={rowKey(item)} className="cursor-pointer" onClick={() => setOpenedKey(rowKey(item))}>
 										<TableCell>
 											<StatusIndicator tone={STATE_TONE[item.state]} label={t(`state.${item.state}`)} />
 										</TableCell>
 										<TableCell className="whitespace-nowrap">{formatDateTime(site, change.occurredAt)}</TableCell>
 										<TableCell>{item.subscriber ?? ""}</TableCell>
-										<TableCell>{t(`kind.${change.kind}`)}</TableCell>
+										<TableCell>
+											<button
+												type="button"
+												className="text-left underline-offset-2 hover:underline"
+												aria-label={t("detail.open", {
+													kind: t(`kind.${change.kind}`),
+													entry: eventEntryLabel(change),
+												})}
+												onClick={(event) => {
+													event.stopPropagation();
+													setOpenedKey(rowKey(item));
+												}}
+											>
+												{t(`kind.${change.kind}`)}
+											</button>
+										</TableCell>
 										<TableCell>
 											<span className="text-monti-muted-foreground">{change.collection} </span>
 											{change.kind === "deleted" ? (
-												<span className="font-mono text-xs">{change.entryId}</span>
+												<span>{eventEntryLabel(change)}</span>
 											) : (
-												<Link href={entryHref(site, change.collection, change.entryId)} className="underline">
-													{change.workingSlug ?? change.publishedSlug ?? change.entryId}
+												<Link
+													href={entryHref(site, change.collection, change.entryId)}
+													className="underline"
+													onClick={(event) => event.stopPropagation()}
+												>
+													{eventEntryLabel(change)}
 												</Link>
 											)}
 										</TableCell>
@@ -247,7 +263,7 @@ export function EventsScreen() {
 										<TableCell className="whitespace-nowrap">
 											{item.state === "failed" && item.nextAttemptAt ? formatDateTime(site, item.nextAttemptAt) : ""}
 										</TableCell>
-										<TableCell className="whitespace-nowrap text-right">
+										<TableCell className="whitespace-nowrap text-right" onClick={(event) => event.stopPropagation()}>
 											{(item.state === "failed" || item.state === "dead") && (
 												<>
 													<Button
@@ -286,6 +302,11 @@ export function EventsScreen() {
 				pageSize={pageSize}
 				onPageChange={(next) => update({ page: next })}
 				onPageSizeChange={(size) => update({ pageSize: size })}
+			/>
+			<EventDetailSheet
+				item={opened}
+				deliveries={opened ? items.filter((item) => item.change.eventId === opened.change.eventId) : []}
+				onClose={() => setOpenedKey(null)}
 			/>
 			{dialog}
 		</div>

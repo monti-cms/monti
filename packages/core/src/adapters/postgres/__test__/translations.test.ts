@@ -65,5 +65,31 @@ describe("translation groups (postgres storage)", () => {
 			expect(await statusOf(source.id)).toBeUndefined();
 			expect(await statusOf(translation.id)).toBeUndefined();
 		});
+
+		it("records one named deleted event for the source and for each translation it deletes with it", async () => {
+			const source = await createPost("delete-events");
+			const translation = (await service.createTranslation({ sourceId: source.id, locale: second })).entry;
+			const trashedTranslation = await store.trashEntry({
+				id: translation.id,
+				expectedVersion: await versionOf(translation.id),
+			});
+			const trashed = await store.trashEntry({ id: source.id, expectedVersion: source.version });
+			await store.permanentDeleteEntry({ id: source.id, expectedVersion: trashed.version });
+
+			const { rows } = await pool.query<{
+				entry_id: string;
+				locale: string;
+				payload: { title?: string | null; workingSlug?: string | null };
+			}>(
+				`SELECT entry_id, locale, payload FROM "${schemaName}".cms_events WHERE kind = 'deleted' AND entry_id = ANY($1::uuid[])`,
+				[[source.id, translation.id]],
+			);
+			expect(rows.map((row) => row.entry_id).sort()).toEqual([source.id, translation.id].sort());
+			expect(new Set(rows.map((row) => row.locale)).size).toBe(2);
+			// The entries are gone, so what the event kept (the title, or the address for a translation that has no title of its own) is what still names them.
+			expect(rows.find((row) => row.entry_id === source.id)?.payload.title).toBeTruthy();
+			for (const row of rows) expect(row.payload.title || row.payload.workingSlug).toBeTruthy();
+			expect(trashedTranslation.status).toBe("trashed");
+		});
 	});
 });

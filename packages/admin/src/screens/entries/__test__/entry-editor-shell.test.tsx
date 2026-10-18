@@ -339,6 +339,16 @@ describe("entry editor shell", () => {
 		expect(window.location.pathname).toBe("/admin/entries/created-entry/edit");
 	});
 
+	it("keeps the preview button for an entry with no address yet, disabled, and says why", async () => {
+		serve(() => undefined);
+		renderShell(<EntryEditorShell mode="new" adminId={ADMIN} collection="post" />);
+		await editorTitle();
+		const button = within(screen.getByRole("banner")).getByRole("button", { name: "미리보기" });
+		expect(button.getAttribute("aria-disabled")).toBe("true");
+		fireEvent.focus(button);
+		expect(await screen.findByText(/먼저 저장해/)).toBeTruthy();
+	});
+
 	it("creates and publishes a local new entry when Publish is clicked", async () => {
 		serve((input, init) => {
 			if (input === "/api/monti/v1/entries" && init?.method === "POST") {

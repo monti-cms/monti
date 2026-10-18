@@ -47,6 +47,8 @@ export interface ContentChange {
 	readonly publishedSlug: string | null;
 	/** Draft URL. */
 	readonly workingSlug: string | null;
+	/** The entry's title when the change was made, so the log can still name an entry that was deleted. `null` when it had none (or the event is older than the field). */
+	readonly title: string | null;
 	/** Entry version after the change (a create or save that also published has the final version on both of its events). */
 	readonly version: number;
 	/** Content hash of the body the change leaves: the published body for `published`, the draft for every other kind. */
@@ -142,7 +144,7 @@ export interface ClaimedDelivery {
 export type EventDeliveryCounts = Readonly<Record<EventDeliveryState, number>>;
 
 /** The event of a change on an entry, built from the entry as the change leaves it. Stores use it to write the row. */
-export function eventRowOf(kind: ContentChangeKind, entry: Entry) {
+export function eventRowOf(kind: ContentChangeKind, entry: Entry, title: string | null) {
 	return {
 		kind,
 		entryId: entry.id,
@@ -155,6 +157,7 @@ export function eventRowOf(kind: ContentChangeKind, entry: Entry) {
 			status: entry.status,
 			publishedSlug: entry.publishedSlug,
 			workingSlug: entry.workingSlug,
+			title,
 		},
 	};
 }

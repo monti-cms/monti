@@ -452,7 +452,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 		return (
 			<Fragment key={scope}>
 				{navLink(href, scope, label, icon, undefined, chevron)}
-				{nav && (
+				{nav && nav.folders.length > 0 && (
 					<SidebarMenuItem>
 						<FolderTree nav={nav} closeMobile={closeMobile} />
 					</SidebarMenuItem>

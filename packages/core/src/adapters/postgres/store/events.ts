@@ -12,6 +12,7 @@ import {
 } from "../../../core/store/events";
 import type { EventStore } from "../../../core/store/ports";
 import type { Entry } from "../../../core/store/types";
+import type { Site } from "../../../site";
 import type { EventPayload } from "../db/database";
 import { dbOn } from "../db/kysely";
 import type { StoreContext } from "./context";
@@ -25,12 +26,18 @@ const MAX_ERROR_LENGTH = 2000;
 export async function recordEvents(
 	client: PoolClient,
 	qSchema: string,
+	site: Site,
 	entry: Entry,
 	kinds: readonly ContentChangeKind[],
 ): Promise<void> {
 	const db = dbOn(client, qSchema);
 	for (const kind of kinds) {
-		const row = eventRowOf(kind, entry);
+		const row = eventRowOf(
+			kind,
+			entry,
+			// A collection the site does not know has no title field to read; the log must still record the change.
+			site.isCollection(entry.collection) ? site.titleOfValues(entry.collection, entry.working.metadata) : null,
+		);
 		await db
 			.insertInto("cms_events")
 			.values({
@@ -83,6 +90,7 @@ const changeOf = (row: EventColumns): ContentChange => ({
 	status: row.payload.status,
 	publishedSlug: row.payload.publishedSlug,
 	workingSlug: row.payload.workingSlug,
+	title: row.payload.title ?? null,
 	actor: row.payload.actor ?? null,
 	version: row.version,
 	contentHash: row.content_hash,

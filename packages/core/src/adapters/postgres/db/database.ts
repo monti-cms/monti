@@ -34,6 +34,8 @@ export interface EventPayload {
 	status: EntryStatus;
 	publishedSlug: string | null;
 	workingSlug: string | null;
+	/** The entry's title when the change was made (a deleted entry has no row left to read it from); absent on events recorded before the field existed. */
+	title?: string | null;
 	/** Who made the change; absent on events recorded before the field existed. */
 	actor?: string | null;
 }

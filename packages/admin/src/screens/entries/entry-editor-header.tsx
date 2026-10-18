@@ -78,6 +78,8 @@ export function EntryEditorHeader({
 	const previewPath = entry ? site.previewHref(collection, entry.workingSlug, entry.locale) : null;
 	// This is a URL opened in a new tab, so Next does not prepend `basePath`.
 	const previewHref = previewPath === null ? null : withBasePath(previewPath);
+	// When the preview cannot work, the button stays and says why instead of vanishing.
+	const previewBlocker = previewHref === null ? site.previewBlocker(collection, entry?.workingSlug) : null;
 
 	return (
 		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-monti-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
@@ -134,13 +136,34 @@ export function EntryEditorHeader({
 					disabled={isReadOnly || isSubmitting || saveStatus === "saving"}
 					onClick={() => void handleSaveNow()}
 				/>
-				{previewHref && (
+				{previewHref ? (
 					<ToolbarAction
 						label={t("preview")}
 						icon={Eye}
 						href={editor.hasUnsavedChanges ? undefined : previewHref}
 						onClick={() => void handlePreview(previewHref)}
 					/>
+				) : (
+					<Tooltip>
+						{/* `aria-disabled` instead of `disabled`: a disabled button gets no hover or focus, so it could not show the reason. */}
+						<TooltipTrigger
+							render={
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon-sm"
+									aria-disabled
+									aria-label={t("preview")}
+									className="size-8 cursor-not-allowed text-monti-muted-foreground opacity-50 hover:bg-transparent"
+								>
+									<Eye aria-hidden className="size-4" />
+								</Button>
+							}
+						/>
+						<TooltipContent side="bottom" className="max-w-64">
+							{t(`preview.${previewBlocker ?? "no-slug"}`)}
+						</TooltipContent>
+					</Tooltip>
 				)}
 				{/* Single-step transitions (publish, unarchive, restore) happen right away without asking. */}
 				{isTrashed ? (
