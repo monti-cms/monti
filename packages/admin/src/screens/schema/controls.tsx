@@ -133,6 +133,7 @@ export function FlagSwitch({
 	description,
 	hint,
 	className,
+	locked,
 }: {
 	label: string;
 	checked: boolean;
@@ -140,9 +141,12 @@ export function FlagSwitch({
 	description?: ReactNode;
 	hint?: ReactNode;
 	className?: string;
+	/** The switch cannot be changed here (the value is fixed by something else): shown as it is, disabled. */
+	locked?: boolean;
 }) {
 	const id = useId();
-	const { disabled } = useSchemaEdit();
+	const { disabled: readOnly } = useSchemaEdit();
+	const disabled = readOnly || locked === true;
 	const desc = description ?? hint;
 	return (
 		<UiField orientation="horizontal" className={cn("w-full items-start justify-between gap-4", className)}>

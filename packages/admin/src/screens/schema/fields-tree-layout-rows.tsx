@@ -201,12 +201,12 @@ export function GroupRow({ ops, tab, block }: { ops: LayoutOps; tab: number; blo
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
 			className={cn(
-				"group/row relative mt-1 border-y bg-monti-muted/30",
+				"group/row relative mt-3 border-y bg-monti-muted/30 first:mt-0",
 				isDragging && "z-10 bg-monti-card opacity-80",
 			)}
 			data-testid={`group-${tab}-${block}`}
 		>
-			<div className="flex items-center gap-1 py-0.5 pr-5 pl-9">
+			<div className="flex items-center gap-1 py-1.5 pr-5 pl-9">
 				<InlineName
 					className="-ml-1.5"
 					value={group.title}
@@ -259,7 +259,7 @@ export function DropRow({ id, label, testId }: { id: string; label?: string; tes
 		<div
 			ref={setNodeRef}
 			style={{ transform: CSS.Translate.toString(transform), transition }}
-			className={cn("pr-5 pl-9 text-monti-muted-foreground text-xs", label ? "py-1" : "h-2")}
+			className={cn("pr-5 pl-9 text-monti-muted-foreground text-xs", label ? "py-1.5" : "-mb-2 h-2")}
 			data-testid={testId}
 		>
 			{label}

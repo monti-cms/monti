@@ -141,12 +141,11 @@ export function SiteEditor({
 						</div>
 					)}
 				</div>
-				<div className="border-t pt-6">
-					<Labeled label={t("site.url")} control="normal">
-						<div className="flex flex-col gap-0.5 rounded-md bg-monti-muted px-3 py-2 text-sm" data-testid="site-url">
-							{siteUrl.url && <code className="text-xs">{siteUrl.url}</code>}
-							<span className="text-monti-muted-foreground text-xs">{t(URL_NOTE[siteUrl.from])}</span>
-						</div>
+				<div className="border-t pt-6" data-testid="site-url">
+					<Labeled label={t("site.url")} description={t(URL_NOTE[siteUrl.from])} control="normal">
+						{siteUrl.url ? (
+							<code className="block rounded-md bg-monti-muted px-3 py-2 text-xs">{siteUrl.url}</code>
+						) : null}
 					</Labeled>
 				</div>
 			</Section>
