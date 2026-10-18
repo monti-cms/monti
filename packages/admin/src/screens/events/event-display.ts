@@ -11,6 +11,6 @@ export const STATE_TONE: Record<EventDeliveryItem["state"], StatusTone> = {
 	recorded: "neutral",
 };
 
-/** What names the entry of an event: its title when the change was made, else its address, else the id (an event older than the title has only those). */
+/** What names the entry of an event: its title when the change was made, else its address, else the id (an entry may have no title). */
 export const eventEntryLabel = (change: EventDeliveryItem["change"]): string =>
 	change.title || change.workingSlug || change.publishedSlug || change.entryId;

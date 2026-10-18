@@ -90,7 +90,7 @@ const changeOf = (row: EventColumns): ContentChange => ({
 	status: row.payload.status,
 	publishedSlug: row.payload.publishedSlug,
 	workingSlug: row.payload.workingSlug,
-	title: row.payload.title ?? null,
+	title: row.payload.title,
 	actor: row.payload.actor ?? null,
 	version: row.version,
 	contentHash: row.content_hash,

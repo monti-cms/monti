@@ -47,7 +47,7 @@ export interface ContentChange {
 	readonly publishedSlug: string | null;
 	/** Draft URL. */
 	readonly workingSlug: string | null;
-	/** The entry's title when the change was made, so the log can still name an entry that was deleted. `null` when it had none (or the event is older than the field). */
+	/** The entry's title when the change was made, so the log can still name an entry that was deleted. `null` when it had none. */
 	readonly title: string | null;
 	/** Entry version after the change (a create or save that also published has the final version on both of its events). */
 	readonly version: number;

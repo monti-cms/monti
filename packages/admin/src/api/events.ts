@@ -16,7 +16,7 @@ export interface EventDeliveryItem {
 		actor?: string | null;
 		publishedSlug?: string | null;
 		workingSlug?: string | null;
-		/** The entry's title when the change was made (absent on events older than the field). */
+		/** The entry's title when the change was made. */
 		title?: string | null;
 	};
 	/** `null` for an event no subscriber was made a delivery for (`recorded`). */
