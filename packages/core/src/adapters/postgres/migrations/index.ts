@@ -5,7 +5,6 @@ import type { Site } from "../../../site";
 import { validateSchemaName, withTransaction } from "../store/context";
 import { up as baseline } from "./0001_baseline";
 import { up as mediaFolders } from "./0002_media_folders";
-import { up as dropSchemaVersion } from "./0003_drop_schema_version";
 import { seedInitialBodyTemplates } from "./seed-initial-body-templates";
 import type { MigrationContext, MigrationUp } from "./types";
 
@@ -22,7 +21,6 @@ interface MigrationStep {
 const STEPS: readonly MigrationStep[] = [
 	{ name: "0001_baseline", up: baseline },
 	{ name: "0002_media_folders", up: mediaFolders },
-	{ name: "0003_drop_schema_version", up: dropSchemaVersion },
 ];
 
 /** The name the seed job of the initial body templates is recorded under. */
