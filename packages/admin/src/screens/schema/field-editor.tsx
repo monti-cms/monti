@@ -508,16 +508,18 @@ export function FieldEditor({
 							{kind === "text" && !place.branch && (
 								<FlagSwitch
 									label={t("field.isTitle")}
-									description={t("field.isTitleHint")}
+									description={isTitle ? t("field.isTitleFixedHint") : t("field.isTitleHint")}
 									checked={isTitle}
+									locked={isTitle}
 									onChange={(on) => on && editing.update((collection) => setTitleField(collection, name))}
 								/>
 							)}
 							{kind !== "conditional" && (
 								<FlagSwitch
 									label={t("field.required")}
-									description={t("field.requiredHint")}
-									checked={field.required === true}
+									description={isTitle ? t("field.requiredTitleHint") : t("field.requiredHint")}
+									checked={isTitle || field.required === true}
+									locked={isTitle}
 									onChange={(on) => set("required", on ? true : undefined)}
 								/>
 							)}
