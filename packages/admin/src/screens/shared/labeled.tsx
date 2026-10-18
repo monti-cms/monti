@@ -31,7 +31,9 @@ export function Labeled({
 			<FormFieldLabel htmlFor={htmlFor} className="font-medium text-sm">
 				{label}
 			</FormFieldLabel>
-			{description && <FormFieldDescription className={HELP}>{description}</FormFieldDescription>}
+			{description && (
+				<FormFieldDescription className={cn(HELP, "nth-last-2:mt-0")}>{description}</FormFieldDescription>
+			)}
 			<div className={cn("w-full", CONTROL_WIDTH[control])}>{children}</div>
 			{hint && <FormFieldDescription className={HELP}>{hint}</FormFieldDescription>}
 		</UiField>

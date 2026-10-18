@@ -17,6 +17,7 @@ import {
 } from "./fields";
 import {
 	fieldWithRole,
+	findTitleField,
 	type StoredField,
 	type TitleField,
 	titleFieldOf,
@@ -259,14 +260,17 @@ export function createSchemas(collections: CollectionsConfig) {
 	): { code: string; path: string; message?: string }[] {
 		const issues: { code: string; path: string; message?: string }[] = [];
 		// A translation has only per-language values, so common required values (category etc.) are checked on the source (translation group).
-		const required = (field: Field) =>
-			"required" in field && isRequiredField(field) && (!options.localizedOnly || Boolean(field.localized));
+		// The title field is always required, whatever its `required` says: an entry without a title cannot be published.
+		const titleName = findTitleField(schemaOf(collection))?.name;
+		const required = (field: Field, name?: string) =>
+			(name === titleName || ("required" in field && isRequiredField(field))) &&
+			(!options.localizedOnly || Boolean(field.localized));
 		for (const [name, field] of Object.entries(schemaOf(collection).fields)) {
-			if (field.kind !== "slug" || !required(field)) continue;
+			if (field.kind !== "slug" || !required(field, name)) continue;
 			if (!snapshot.slug) issues.push({ code: NULL_SLUG, path: name });
 		}
 		for (const { name, field, when } of storedFields(collection)) {
-			if (!required(field)) continue;
+			if (!required(field, name)) continue;
 			if (when && snapshot.metadata[when.field] !== when.value) continue;
 			if (isEmptyValue(snapshot.metadata[name])) {
 				issues.push({ code: "missing_field", path: name, message: field.label });

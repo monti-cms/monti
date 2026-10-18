@@ -150,7 +150,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 						? await publishWithinTransaction(client, id, { expectedVersion: 1, snapshot: params.snapshot })
 						: await loadEntry(trx, id);
 					// A create that also published is reported as the create, then the publish.
-					await recordEvents(client, qSchema, entry, [
+					await recordEvents(client, qSchema, site, entry, [
 						"created",
 						...(params.publishImmediately && entry.status === "published" ? (["published"] as const) : []),
 					]);
@@ -283,7 +283,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 								onWarnings: params.onWarnings,
 							})
 						: await loadEntry(trx, params.entryId);
-					await recordEvents(client, qSchema, entry, [
+					await recordEvents(client, qSchema, site, entry, [
 						"saved",
 						...(params.publishImmediately && entry.status === "published" ? (["published"] as const) : []),
 					]);
@@ -402,7 +402,7 @@ export function createEntryOps(ctx: StoreContext, publishing: Publishing) {
 				ctx,
 				async (_trx, client) => {
 					const entry = await publishWithinTransaction(client, params.id, params);
-					await recordEvents(client, qSchema, entry, ["published"]);
+					await recordEvents(client, qSchema, site, entry, ["published"]);
 					return entry;
 				},
 				{ mapError: mapEntryWriteError },

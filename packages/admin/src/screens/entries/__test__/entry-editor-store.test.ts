@@ -279,6 +279,17 @@ describe("save", () => {
 		expect(editor().hasUnsavedChanges).toBe(false);
 	});
 
+	it("shows the language a new entry was saved in as existing right after the first save", async () => {
+		const { editor } = await opened({ target: { mode: "new", collection: "post" } });
+		expect(editor().entry?.translations ?? []).toEqual([]);
+		editor().setForm({ title: "새 글" });
+		const result = await editor().save();
+		expect(result.ok).toBe(true);
+		const members = editor().entry?.translations ?? [];
+		expect(members.map((member) => member.id)).toContain("created-1");
+		expect(members.find((member) => member.id === "created-1")?.locale).toBeTruthy();
+	});
+
 	it("creates a new entry with POST (with its folder), asks the UI to move to the edit URL, and drops the new-entry copy", async () => {
 		const { editor, client, onSaved, recovery } = await opened({
 			target: { mode: "new", collection: "post", folderId: "folder-1" },

@@ -11,6 +11,7 @@ export const schemaFieldsMessages = defineMessages("cms-admin.schema.fields", {
 		"field.titleBadge": "Title",
 		"field.isTitle": "Use as the title",
 		"field.isTitleHint": "Used as the primary title in listings, search, and links.",
+		"field.isTitleFixedHint": "Turning it on in another text field changes the title.",
 		"field.problems": "{count} problem(s)",
 		"field.name": "Name",
 		"field.nameHint": "Identifier used for stored data. Renaming offers to move existing values.",
@@ -19,6 +20,8 @@ export const schemaFieldsMessages = defineMessages("cms-admin.schema.fields", {
 		"field.description": "Help text",
 		"field.required": "Required",
 		"field.requiredHint": "Required when publishing documents or saving items.",
+		"field.requiredTitleHint":
+			"The title field is always required. It is checked when publishing (or saving an item); a draft can still be saved without it.",
 		"field.localized": "Languages",
 		"field.localizedShared": "Same in every language",
 		"field.localizedOwn": "Own per language",
@@ -188,6 +191,7 @@ export const schemaFieldsMessages = defineMessages("cms-admin.schema.fields", {
 		"field.titleBadge": "제목",
 		"field.isTitle": "제목으로 사용",
 		"field.isTitleHint": "목록, 검색, 링크 등에서 항목의 대표 제목으로 사용합니다.",
+		"field.isTitleFixedHint": "다른 텍스트 필드에서 '제목으로 사용'을 켜면 바뀝니다.",
 		"field.problems": "문제 {count}개",
 		"field.name": "이름",
 		"field.nameHint": "데이터 저장에 사용되는 식별자입니다. 변경 시 기존 데이터를 이전할 수 있습니다.",
@@ -196,6 +200,8 @@ export const schemaFieldsMessages = defineMessages("cms-admin.schema.fields", {
 		"field.description": "도움말",
 		"field.required": "필수",
 		"field.requiredHint": "문서는 발행 시, 항목은 저장 시 입력을 검증합니다.",
+		"field.requiredTitleHint":
+			"제목 필드는 항상 필수입니다. 발행할 때(항목은 저장할 때) 검사하고, 초안은 제목 없이도 저장할 수 있습니다.",
 		"field.localized": "언어",
 		"field.localizedShared": "모든 언어 공통",
 		"field.localizedOwn": "언어마다 따로",

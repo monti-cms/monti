@@ -232,6 +232,13 @@ describe("folder tree under a collection", () => {
 		expect(screen.getByRole("list", { name: t("sidebar.folderTree", { label }) })).toBeTruthy();
 	});
 
+	it("leaves no empty row under an open collection that has no folders", () => {
+		const on = siteWithFolders(site.DEFAULT_COLLECTION, true);
+		const { container } = renderSidebar({ activeNav: on.DEFAULT_COLLECTION, folderNav: folderNav([]) }, on);
+		const items = container.querySelectorAll('[data-sidebar="menu-item"]');
+		expect(Array.from(items).filter((item) => item.children.length === 0)).toEqual([]);
+	});
+
 	it("provides context menu with subfolder create, rename, and delete without + Add folder button", () => {
 		const nav = folderNav([folder("a", "Dev")]);
 		renderSidebar({ folderNav: nav });

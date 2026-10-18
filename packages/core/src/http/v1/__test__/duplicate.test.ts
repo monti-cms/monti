@@ -12,20 +12,28 @@ const duplicateEntry = vi.fn(({ id, title }: { id: string; title?: string }) => 
 		return Promise.reject(new CmsError("Entry not found", "not_found"));
 	return Promise.resolve({
 		warnings: [],
-		id: "new-duplicated-id",
-		collection: "post",
-		version: 1,
-		status: "draft",
-		workingSlug: null,
-		folderId: "folder-1",
-		working: {
-			metadata: { title: title ?? "Original" },
-			mdx: "body",
+		entry: {
+			id: "new-duplicated-id",
+			collection: "post",
+			version: 1,
+			status: "draft",
+			workingSlug: null,
+			folderId: "folder-1",
+			working: {
+				metadata: { title: title ?? "Original" },
+				mdx: "body",
+			},
 		},
 	});
 });
 
-const cms = fakeCms({ config: testConfig, contentService: { duplicate: duplicateEntry as never } });
+const cms = fakeCms({
+	config: testConfig,
+	store: {
+		getTranslationGroup: async ({ entryId }: { entryId: string }) => ({ groupId: entryId, members: [] }),
+	} as never,
+	contentService: { duplicate: duplicateEntry as never },
+});
 
 const postReq = (url: string, origin = "http://localhost", body?: unknown) =>
 	new Request(url, {
@@ -48,9 +56,9 @@ describe("Duplicate API Route", () => {
 		);
 		expect(res.status).toBe(201);
 		const data = await res.json();
-		expect(data.id).toBe("new-duplicated-id");
-		expect(data.status).toBe("draft");
-		expect(data.working.metadata.title).toBe("Original");
+		expect(data.entry.id).toBe("new-duplicated-id");
+		expect(data.entry.status).toBe("draft");
+		expect(data.entry.working.metadata.title).toBe("Original");
 		expect(duplicateEntry).toHaveBeenLastCalledWith({ id: "00000000-0000-4000-8000-000000000001", title: undefined });
 	});
 
@@ -66,7 +74,7 @@ describe("Duplicate API Route", () => {
 			{ params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000001" }), cms },
 		);
 		expect(res.status).toBe(201);
-		expect((await res.json()).working.metadata.title).toBe("Original (copy)");
+		expect((await res.json()).entry.working.metadata.title).toBe("Original (copy)");
 		expect(duplicateEntry).toHaveBeenLastCalledWith({
 			id: "00000000-0000-4000-8000-000000000001",
 			title: "Original (copy)",

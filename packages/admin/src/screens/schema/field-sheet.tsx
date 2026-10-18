@@ -121,13 +121,9 @@ export function FieldSheet({
 						<SheetDescription className="text-xs">
 							<code>{name}</code> · {t(`kind.${kind}`)}
 						</SheetDescription>
-						<LineTabs className="mt-4 h-auto gap-5 rounded-none p-0">
-							<TabsTrigger value="basic" className="h-9 flex-none px-0">
-								{t("sheet.tabBasic")}
-							</TabsTrigger>
-							<TabsTrigger value="advanced" className="h-9 flex-none px-0">
-								{t("sheet.tabAdvanced")}
-							</TabsTrigger>
+						<LineTabs className="-mx-6 mt-4 w-auto px-6">
+							<TabsTrigger value="basic">{t("sheet.tabBasic")}</TabsTrigger>
+							<TabsTrigger value="advanced">{t("sheet.tabAdvanced")}</TabsTrigger>
 						</LineTabs>
 					</SheetHeader>
 					<div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
@@ -152,8 +148,9 @@ export function FieldSheet({
 								{kind === "text" && !place.branch && (
 									<FlagSwitch
 										label={t("field.isTitle")}
-										description={t("field.isTitleHint")}
+										description={isTitle ? t("field.isTitleFixedHint") : t("field.isTitleHint")}
 										checked={isTitle}
+										locked={isTitle}
 										onChange={(on) => on && draftEditing.update((collection) => setTitleField(collection, name))}
 									/>
 								)}
@@ -165,8 +162,9 @@ export function FieldSheet({
 									{kind !== "conditional" && (
 										<FlagSwitch
 											label={t("field.required")}
-											description={t("field.requiredHint")}
-											checked={field.required === true}
+											description={isTitle ? t("field.requiredTitleHint") : t("field.requiredHint")}
+											checked={isTitle || field.required === true}
+											locked={isTitle}
 											onChange={(on) => set("required", on ? true : undefined)}
 										/>
 									)}

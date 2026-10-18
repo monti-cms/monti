@@ -46,6 +46,10 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		title: "Title",
 		signInNewWindow: "Sign in in a new window",
 		preview: "Preview",
+		"preview.no-preview-path": "Preview isn't set up. Set previewPath in monti.schema.ts (site section).",
+		"preview.no-public-page":
+			"This collection has no public page, so there is nothing to preview. Give it a path in monti.schema.ts.",
+		"preview.no-slug": "Save first so the entry has an address to preview.",
 		restoring: "Restoring…",
 		unarchiving: "Unarchiving…",
 		publishing: "Publishing…",
@@ -87,6 +91,10 @@ export const entryEditorShellMessages = defineMessages("cms-admin.entries.shell"
 		title: "제목",
 		signInNewWindow: "새 창에서 로그인",
 		preview: "미리보기",
+		"preview.no-preview-path": "미리보기가 설정되지 않았습니다. monti.schema.ts의 site에 previewPath를 지정하세요.",
+		"preview.no-public-page":
+			"이 컬렉션은 공개 페이지가 없어 미리볼 수 없습니다. monti.schema.ts에서 path를 지정하세요.",
+		"preview.no-slug": "먼저 저장해 항목에 주소가 생겨야 미리볼 수 있습니다.",
 		restoring: "복원 중…",
 		unarchiving: "보관 해제 중…",
 		publishing: "발행 중…",

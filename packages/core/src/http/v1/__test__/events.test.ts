@@ -25,6 +25,7 @@ const failed: EventDelivery = {
 		status: "draft",
 		publishedSlug: null,
 		workingSlug: "hello",
+		title: "Hello",
 		version: 3,
 		contentHash: "abc",
 		actor: null,
