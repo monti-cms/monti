@@ -4,18 +4,23 @@ import { AuthError } from "../../../adapters/auth";
 import { fakeCms } from "../../../cms";
 import { STORED_DOCUMENT_VERSION } from "../../../doc/stored-document";
 import { paragraphsFormat } from "../../../format/__test__/paragraphs-format";
+import { defineFormat } from "../../../format/types";
 import {
 	FIXTURE_CONTENT_COLLECTION,
 	FIXTURE_DRAFT_COLLECTION,
 	fixtureEntryPath,
 	makeExportFixtureSnapshot,
 } from "../../../services/__test__/export-fixture";
+import { EXPORT_FORMAT_VERSION } from "../../../services/export-service";
 import { readZipArchive } from "../../../services/zip";
 import { routeCaller } from "../../../testing";
 import { GET as GETHandler, POST as POSTHandler } from "../export/route";
+import { GET as SUMMARY_GET, POST as SUMMARY_POST } from "../export/summary/route";
 
 const GET = routeCaller(GETHandler);
 const POST = routeCaller(POSTHandler);
+const SUMMARY = routeCaller(SUMMARY_GET);
+const SUMMARY_BY_POST = routeCaller(SUMMARY_POST);
 
 const mockVerifyAdmin = vi.fn();
 const mockReadExportSnapshot = vi.fn();
@@ -24,7 +29,20 @@ const cms = fakeCms({
 	config: testConfig,
 	store: { readExportSnapshot: () => mockReadExportSnapshot() },
 	verifyAdmin: () => mockVerifyAdmin(),
-	formats: [paragraphsFormat],
+	formats: [
+		paragraphsFormat,
+		// A format that cannot write one of the bodies (the draft's).
+		defineFormat({
+			...paragraphsFormat,
+			name: "flaky",
+			extension: "flk",
+			export: (document, context) => {
+				const text = paragraphsFormat.export(document, context);
+				if (String(text).includes("draft secret")) throw new Error("cannot write this one");
+				return text;
+			},
+		}),
+	],
 });
 
 const decoder = new TextDecoder();
@@ -71,13 +89,13 @@ describe("GET/POST /api/monti/v1/export", () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("application/zip");
-		expect(res.headers.get("content-disposition")).toContain("cms-export-admin-");
-		expect(res.headers.get("x-cms-export-digest")).toMatch(/^[0-9a-f]{64}$/);
+		expect(res.headers.get("content-disposition")).toContain("monti-export-admin-");
+		expect(res.headers.get("x-monti-export-digest")).toMatch(/^[0-9a-f]{64}$/);
 
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const manifest = JSON.parse(findFile(zip, "manifest.json"));
 		expect(manifest.scope).toBe("admin");
-		expect(manifest.formatVersion).toBe(4);
+		expect(manifest.formatVersion).toBe(EXPORT_FORMAT_VERSION);
 		expect(manifest.format).toBeNull();
 		expect(manifest.counts.entries).toBe(3);
 		expect(findFile(zip, DRAFT_WORKING)).toContain("draft secret body");
@@ -136,7 +154,7 @@ describe("GET/POST /api/monti/v1/export", () => {
 	it("public export excludes drafts and does not include working values", async () => {
 		const res = await GET(request("http://localhost/api/monti/v1/export?scope=public"), { cms });
 		expect(res.status).toBe(200);
-		expect(res.headers.get("x-cms-export-scope")).toBe("public");
+		expect(res.headers.get("x-monti-export-scope")).toBe("public");
 
 		const zip = new Uint8Array(await res.arrayBuffer());
 		const paths = readZipArchive(zip).map((entry) => entry.path);
@@ -172,13 +190,149 @@ describe("GET/POST /api/monti/v1/export", () => {
 			{ cms },
 		);
 		expect(res.status).toBe(200);
-		expect(res.headers.get("x-cms-export-scope")).toBe("public");
+		expect(res.headers.get("x-monti-export-scope")).toBe("public");
 	});
 
 	it("maps a store error to 500 and does not expose the digest header", async () => {
 		mockReadExportSnapshot.mockRejectedValue(new Error("db down"));
 		const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
 		expect(res.status).toBe(500);
-		expect(res.headers.get("x-cms-export-digest")).toBeNull();
+		expect(res.headers.get("x-monti-export-digest")).toBeNull();
+	});
+
+	describe("a selection (ids)", () => {
+		const POST_ID = "11111111-1111-4111-8111-111111111111";
+		const DRAFT = "22222222-2222-4222-8222-222222222222";
+		const post = (body: unknown) =>
+			POST(
+				request("http://localhost/api/monti/v1/export", {
+					method: "POST",
+					headers: { origin: "http://localhost", "content-type": "application/json", host: "localhost" },
+					body: JSON.stringify(body),
+				}),
+				{ cms },
+			);
+
+		it("limits the archive to those entries (a comma list in the query), templates and preferences left out", async () => {
+			const res = await GET(request(`http://localhost/api/monti/v1/export?ids=${POST_ID}`), { cms });
+			expect(res.status).toBe(200);
+
+			const zip = new Uint8Array(await res.arrayBuffer());
+			const manifest = JSON.parse(findFile(zip, "manifest.json"));
+			expect(manifest.selection).toEqual({ ids: [POST_ID] });
+			expect(manifest.entries.map((entry: { id: string }) => entry.id)).toEqual([POST_ID]);
+			expect(manifest.counts).toMatchObject({ entries: 1, templates: 0, preferences: 0 });
+			expect(decoder.decode(zip)).not.toContain("draft secret body");
+		});
+
+		it("takes an array in a POST body, and with the public scope holds published members only", async () => {
+			const res = await post({ ids: [POST_ID, DRAFT], scope: "public" });
+			expect(res.status).toBe(200);
+
+			const manifest = JSON.parse(findFile(new Uint8Array(await res.arrayBuffer()), "manifest.json"));
+			expect(manifest.selection).toEqual({ ids: [POST_ID, DRAFT] });
+			expect(manifest.entries.map((entry: { id: string }) => entry.id)).toEqual([POST_ID]);
+		});
+
+		it("rejects ids that are empty or not IDs", async () => {
+			for (const ids of ["", "not-an-id", `${POST_ID},nope`]) {
+				const res = await GET(request(`http://localhost/api/monti/v1/export?ids=${ids}`), { cms });
+				expect(res.status, ids).toBe(400);
+			}
+			expect((await post({ ids: [] })).status).toBe(400);
+		});
+
+		it("a whole-site export records no selection", async () => {
+			const res = await GET(request("http://localhost/api/monti/v1/export"), { cms });
+			const manifest = JSON.parse(findFile(new Uint8Array(await res.arrayBuffer()), "manifest.json"));
+			expect(manifest.selection).toBeNull();
+		});
+	});
+
+	describe("a body the format cannot write", () => {
+		it("keeps the body's JSON, skips its text, records it, and still exports the rest", async () => {
+			const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+			const res = await GET(request("http://localhost/api/monti/v1/export?format=flaky"), { cms });
+			quiet.mockRestore();
+			expect(res.status).toBe(200);
+			expect(res.headers.get("x-monti-export-not-written")).toBe("1");
+
+			const zip = new Uint8Array(await res.arrayBuffer());
+			const manifest = JSON.parse(findFile(zip, "manifest.json"));
+			expect(manifest.notWritten).toEqual([{ id: DRAFT_ID, state: "working", reason: expect.any(String) }]);
+			const paths = readZipArchive(zip).map((entry) => entry.path);
+			const draftText = fixtureEntryPath(FIXTURE_DRAFT_COLLECTION, DRAFT_ID, "working.flk");
+			expect(paths).toContain(DRAFT_WORKING);
+			expect(paths).not.toContain(draftText);
+			expect(manifest.files).not.toContain(draftText);
+			// The other bodies were written.
+			expect(paths).toContain(
+				fixtureEntryPath(FIXTURE_CONTENT_COLLECTION, "11111111-1111-4111-8111-111111111111", "working.flk"),
+			);
+			// The error's detail does not reach the archive.
+			expect(decoder.decode(zip)).not.toContain("cannot write this one");
+		});
+
+		it("an export where every body was written says 0 and lists nothing", async () => {
+			const res = await GET(request("http://localhost/api/monti/v1/export?format=paragraphs"), { cms });
+			expect(res.headers.get("x-monti-export-not-written")).toBe("0");
+			const manifest = JSON.parse(findFile(new Uint8Array(await res.arrayBuffer()), "manifest.json"));
+			expect(manifest.notWritten).toEqual([]);
+		});
+	});
+});
+
+describe("GET/POST /api/monti/v1/export/summary", () => {
+	const POST_ID = "11111111-1111-4111-8111-111111111111";
+	const DRAFT = "22222222-2222-4222-8222-222222222222";
+	const base = "http://localhost/api/monti/v1/export/summary";
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockVerifyAdmin.mockResolvedValue({ userId: "123", accountId: "123", isAdmin: true });
+		mockReadExportSnapshot.mockResolvedValue(makeExportFixtureSnapshot());
+	});
+
+	it("is admin-only", async () => {
+		mockVerifyAdmin.mockRejectedValue(new AuthError("unauthorized", "Session required"));
+		expect((await SUMMARY(request(base), { cms })).status).toBe(401);
+	});
+
+	it("counts what the export would hold, and agrees with the archive's manifest", async () => {
+		const summary = await (await SUMMARY(request(base), { cms })).json();
+		const archive = await GET(request("http://localhost/api/monti/v1/export"), { cms });
+		const manifest = JSON.parse(findFile(new Uint8Array(await archive.arrayBuffer()), "manifest.json"));
+
+		expect(summary).toMatchObject({
+			scope: "admin",
+			entries: manifest.counts.entries,
+			templates: manifest.counts.templates,
+			folders: manifest.counts.folders,
+			addresses: manifest.counts.addresses,
+			media: manifest.counts.media,
+			addedByTranslations: 0,
+		});
+	});
+
+	it("takes scope, ids and format like the export, and public counts the entries it leaves out", async () => {
+		const res = await SUMMARY(request(`${base}?scope=public&ids=${POST_ID},${DRAFT}&format=paragraphs`), { cms });
+		expect(await res.json()).toMatchObject({ scope: "public", entries: 1, notPublished: 1, templates: 0, folders: 0 });
+
+		const byPost = await SUMMARY_BY_POST(
+			request(base, {
+				method: "POST",
+				headers: { origin: "http://localhost", "content-type": "application/json", host: "localhost" },
+				body: JSON.stringify({ ids: [POST_ID] }),
+			}),
+			{ cms },
+		);
+		expect(await byPost.json()).toMatchObject({ entries: 1, templates: 0 });
+	});
+
+	it("rejects a format nobody provides and bad options", async () => {
+		const unknown = await SUMMARY(request(`${base}?format=hugo`), { cms });
+		expect(unknown.status).toBe(400);
+		expect((await unknown.json()).error.code).toBe("unknown_format");
+		expect((await SUMMARY(request(`${base}?scope=x`), { cms })).status).toBe(400);
 	});
 });

@@ -86,7 +86,7 @@ export type CmsAdminPageProps = Pick<AdminPageProps, "params" | "searchParams">;
  * selects the screen.
  *
  * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` event log · `/admin/api-keys` API keys
- * - `/admin/settings/<tab>` Settings: the schema file (`collections`, `locales`, `site`, `admin`, `file`)
+ * - `/admin/settings/<tab>` Settings: the schema file (`collections`, `locales`, `site`, `admin`) and `data` (the site backup)
  * - `/admin/tools/<path>` one page per plugin `nav` item (e.g. the AI plugin's `/admin/tools/ai`)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */

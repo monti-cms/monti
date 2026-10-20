@@ -979,6 +979,35 @@ describe("entry editor shell", () => {
 		expect(screen.getByRole("alertdialog", { name: "보관" })).toBeTruthy();
 	});
 
+	it("exports this entry from the more menu: the dialog asks for the entry and its translations, and nothing else", async () => {
+		serve((input, init) => {
+			if (input === "/api/monti/v1/meta") return json({ formats: [] });
+			if (input === "/api/monti/v1/export/summary" && init?.method === "POST") {
+				return json({
+					scope: "admin",
+					entries: 3,
+					addedByTranslations: 2,
+					notPublished: 0,
+					notFound: 0,
+					templates: 0,
+					folders: 0,
+					addresses: 1,
+					media: 0,
+				});
+			}
+		});
+		renderEdit();
+		await editorTitle();
+		fireEvent.click(within(screen.getByRole("banner")).getByRole("button", { name: "더보기" }));
+		fireEvent.click(screen.getByRole("menuitem", { name: "이 글 내보내기" }));
+		const dialog = await screen.findByRole("dialog", { name: "이 글 내보내기" });
+		expect(await within(dialog).findByTestId("export-headline")).toBeTruthy();
+		expect(JSON.parse(String(methodCalls("POST", "/export/summary")[0]?.[1]?.body))).toEqual({
+			scope: "admin",
+			ids: ["entry-1"],
+		});
+	});
+
 	it("opens and closes the inspector from the top bar toggle and its close button", async () => {
 		renderEdit();
 		const close = await screen.findByRole("button", { name: "닫기" });

@@ -26,7 +26,7 @@ export interface AdminPageProps {
  * selects the screen. The admin path is the site config's `admin.path` (default `/admin`) and must match the route folder.
  *
  * - `/admin` list · `/admin/trash` trash · `/admin/media` media · `/admin/templates` body templates · `/admin/events` event log · `/admin/api-keys` API keys
- * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `file`, `admin` (the schema file)
+ * - `/admin/settings/<tab>` Settings: `site`, `locales`, `collections`, `admin` (the schema file) and `data` (the site backup, not part of the schema file)
  * - `/admin/tools/<path>` Tools: one page per plugin `nav` item (e.g. the AI plugin's `/admin/tools/ai`)
  * - `/admin/entries/new` new entry · `/admin/entries/<id>/edit` edit · `/admin/login` login
  */

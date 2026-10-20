@@ -16,8 +16,10 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { FormFieldError } from "../../ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { ExportDialog } from "../export/export-dialog";
+import { exportMessages } from "../export/messages";
 import { useConfirm } from "../shared/confirm-dialog";
-import { nounVars } from "../shared/noun.messages";
+import { collectionNoun, nounVars } from "../shared/noun.messages";
 import { useTaxonomyOptions } from "../shared/use-taxonomy";
 import { bulkBarMessages } from "./bulk-bar.messages";
 
@@ -29,7 +31,7 @@ type RelationOp = Extract<BulkOp, `relation.${string}`>;
  * Actions on screen. A category action pairs a relation-field bulk action with a field name, like `relation.add:tagIds`.
  * It is sent to the server as a relation-field bulk action (`relation.*`).
  */
-type ListAction = Exclude<BulkOp, RelationOp> | `${RelationOp}:${string}`;
+type ListAction = Exclude<BulkOp, RelationOp> | `${RelationOp}:${string}` | "export";
 
 type ActionDef = {
 	value: ListAction;
@@ -91,6 +93,7 @@ export function taxonomyActions(site: Site, collection: string): ActionDef[] {
 const listActions = (
 	t: TranslatorFor<typeof bulkBarMessages>,
 	tc: TranslatorFor<typeof commonMessages>,
+	tx: TranslatorFor<typeof exportMessages>,
 	noun: { noun: string },
 ): ActionDef[] => [
 	{
@@ -117,6 +120,8 @@ const listActions = (
 		ask: (count) => t("ask.unarchive", { count, ...noun }),
 		content: true,
 	},
+	// Not a change to the entries: it opens the export dialog, which says what goes in and asks for the rest.
+	{ value: "export", label: tx("action.selected"), ask: () => "" },
 	{ value: "trash", label: tc("lifecycle.trash"), ask: (count) => t("ask.trash", { count }), destructive: true },
 ];
 
@@ -259,6 +264,8 @@ export function BulkBar({
 	const site = useSite();
 	const t = useTranslator(bulkBarMessages);
 	const tc = useTranslator(commonMessages);
+	const tx = useTranslator(exportMessages);
+	const [isExporting, setIsExporting] = useState(false);
 	const isRecord = site.isItemCollection(collection);
 	const actions = useMemo(
 		() =>
@@ -266,11 +273,11 @@ export function BulkBar({
 				? trashActions(t, tc)
 				: [
 						...taxonomyActions(site, collection),
-						...listActions(t, tc, nounVars(site, collection)).filter(
+						...listActions(t, tc, tx, nounVars(site, collection)).filter(
 							(action) => (!action.content || !isRecord) && (action.value !== "folder.move" || folders !== null),
 						),
 					],
-		[isRecord, folders, collection, mode, site, t, tc],
+		[isRecord, folders, collection, mode, site, t, tc, tx],
 	);
 	const [action, setAction] = useState<ListAction>(actions[0]?.value ?? "trash");
 	const [checked, setChecked] = useState<string[]>([]);
@@ -341,6 +348,10 @@ export function BulkBar({
 	// Actions that change many items at once always ask.
 	const start = async () => {
 		if (!activeAction) return;
+		if (activeAction.value === "export") {
+			setIsExporting(true);
+			return;
+		}
 		const ok = await confirm({
 			title: activeAction.label,
 			description: activeAction.ask(selected.length, targetName()),
@@ -459,6 +470,13 @@ export function BulkBar({
 				</ul>
 			)}
 			{dialog}
+			<ExportDialog
+				open={isExporting}
+				onOpenChange={setIsExporting}
+				kind="selected"
+				ids={selected.map((item) => item.id)}
+				noun={collectionNoun(site, collection)}
+			/>
 		</section>
 	);
 }

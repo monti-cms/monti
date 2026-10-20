@@ -149,11 +149,53 @@ describe("bulk actions", () => {
 		expect(onDone).toHaveBeenCalledWith(["entry-1"]);
 	});
 
+	it("exports the picked entries: the action opens the export dialog instead of changing them", async () => {
+		const requests: string[] = [];
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = String(input);
+				requests.push(`${init?.method ?? "GET"} ${url}`);
+				if (url.startsWith("/api/monti/v1/entries?"))
+					return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
+				if (url === "/api/monti/v1/meta") return { ok: true, status: 200, json: async () => ({ formats: [] }) };
+				if (url === "/api/monti/v1/export/summary") {
+					return {
+						ok: true,
+						status: 200,
+						json: async () => ({
+							scope: "admin",
+							entries: 1,
+							addedByTranslations: 0,
+							notPublished: 0,
+							notFound: 0,
+							templates: 0,
+							folders: 0,
+							addresses: 0,
+							media: 0,
+						}),
+					};
+				}
+				throw new Error(`Unexpected fetch: ${url}`);
+			}),
+		);
+		render(
+			<BulkBar collection="post" selected={selected} folders={folders} onClearSelection={vi.fn()} onDone={vi.fn()} />,
+		);
+		await choose("일괄 작업 종류", "내보내기");
+		fireEvent.click(screen.getByRole("button", { name: "내보내기" }));
+		const dialog = await screen.findByRole("dialog");
+		expect(await within(dialog).findByTestId("export-headline")).toBeTruthy();
+		expect(requests).not.toContain("POST /api/monti/v1/bulk");
+	});
+
 	it("offers only record-safe actions for record collections", async () => {
 		stubBulkApi();
 		render(<BulkBar collection="tag" selected={selected} folders={null} onClearSelection={vi.fn()} onDone={vi.fn()} />);
-		expect(screen.getByRole("button", { name: "휴지통으로 이동" })).toBeTruthy();
-		expect(screen.queryByRole("combobox", { name: "일괄 작업 종류" })).toBeNull();
+		// Publishing and archiving are for documents; a record can be exported or trashed.
+		fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
+		const labels = (await screen.findAllByRole("option")).map((option) => option.textContent);
+		expect(labels).toEqual(["내보내기", "휴지통으로 이동"]);
 	});
 
 	it("offers folder move for record collections that have folders enabled", async () => {
@@ -171,7 +213,7 @@ describe("bulk actions", () => {
 		);
 		fireEvent.click(screen.getByRole("combobox", { name: "일괄 작업 종류" }));
 		const labels = (await screen.findAllByRole("option")).map((option) => option.textContent);
-		expect(labels).toEqual(["폴더로 이동", "휴지통으로 이동"]);
+		expect(labels).toEqual(["폴더로 이동", "내보내기", "휴지통으로 이동"]);
 	});
 
 	it("offers the folder move only when the list shows folders", async () => {
