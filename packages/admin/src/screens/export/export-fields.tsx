@@ -4,6 +4,7 @@ import { useSite, useTranslator } from "@monti-cms/core/site";
 import { useId } from "react";
 import { errorText } from "../../api/client";
 import type { ExportScope, ExportSummary } from "../../api/export";
+import { cn } from "../../lib/utils/cn";
 import { Button } from "../../ui/button";
 import { Checkbox } from "../../ui/checkbox";
 import { Spinner } from "../../ui/spinner";
@@ -85,7 +86,12 @@ export function ExportFields({
 	const busy = form.isExporting;
 	return (
 		<div className="flex flex-col gap-6">
-			<section aria-label={t("summary.includes")} className="flex flex-col gap-3">
+			<section
+				aria-label={t("summary.includes")}
+				// While the counts of another scope are being fetched, the old ones stay in view but are marked as out of date.
+				aria-busy={summaryQuery.isPlaceholderData}
+				className={cn("flex flex-col gap-3 transition-opacity", summaryQuery.isPlaceholderData && "opacity-50")}
+			>
 				{summary ? (
 					<SummaryView summary={summary} selection={selection} noun={noun} />
 				) : summaryQuery.isError ? (
@@ -208,7 +214,7 @@ export function ExportButton({
 	return (
 		<Button
 			type="button"
-			disabled={form.isExporting || form.summary === undefined || empty}
+			disabled={form.isExporting || form.summary === undefined || form.summaryQuery.isPlaceholderData || empty}
 			onClick={() => void form.run().then((ok) => ok && onDone?.())}
 		>
 			{label}
