@@ -28,6 +28,7 @@ import * as rExportSummary from "./v1/export/summary/route";
 import * as rFolder from "./v1/folders/[id]/route";
 import * as rFolders from "./v1/folders/route";
 import { type RouteAccess, runRoute } from "./v1/handler";
+import * as rImportEntries from "./v1/import/entries/route";
 import * as rMediaComplete from "./v1/media/[id]/complete/route";
 import * as rMediaItem from "./v1/media/[id]/route";
 import * as rMediaCleanup from "./v1/media/cleanup/route";
@@ -93,6 +94,7 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/events/[id]/dismiss", module: rEventDismiss },
 	{ pattern: "v1/export", module: rExport },
 	{ pattern: "v1/export/summary", module: rExportSummary },
+	{ pattern: "v1/import/entries", access: "admin-upload", module: rImportEntries },
 	{ pattern: "v1/folders", module: rFolders },
 	{ pattern: "v1/folders/[id]", module: rFolder },
 	{ pattern: "v1/media", module: rMedia },

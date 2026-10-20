@@ -5,6 +5,8 @@ import { SidebarTrigger } from "../../ui/sidebar";
 import { ExportButton, ExportFields, ExportProgressLine } from "../export/export-fields";
 import { exportMessages } from "../export/messages";
 import { useExportForm } from "../export/use-export-form";
+import { ImportEntriesFields } from "../import/import-entries-card";
+import { importMessages } from "../import/messages";
 import { ShellPage } from "../shared/admin-shell";
 import { sharedMessages } from "../shared/messages";
 import { PageBody } from "../shared/page-body";
@@ -14,7 +16,7 @@ import { SettingsTabBar } from "./settings-tab-bar";
 
 /**
  * The Data page of Settings (`<admin path>/settings/data`): what is kept in the site rather than in its schema file. It is a page of its own and shares nothing with the
- * schema tabs' draft, so it has no save bar. Today it holds the Site backup card.
+ * schema tabs' draft, so it has no save bar. It holds the Site backup card and, below it, the Import entries card.
  */
 export function DataScreen() {
 	const t = useTranslator(settingsMessages);
@@ -28,6 +30,7 @@ export function DataScreen() {
 function DataBody() {
 	const t = useTranslator(settingsMessages);
 	const te = useTranslator(exportMessages);
+	const ti = useTranslator(importMessages);
 	const shared = useTranslator(sharedMessages);
 	const site = useSite();
 	const form = useExportForm();
@@ -52,6 +55,9 @@ function DataBody() {
 						<div>
 							<ExportButton form={form} label={te("action.all")} />
 						</div>
+					</Section>
+					<Section wide title={ti("title")} description={ti("description")} testId="import-entries">
+						<ImportEntriesFields />
 					</Section>
 				</PageBody>
 			</div>

@@ -1,6 +1,6 @@
 import { hostOf } from "../../../cms/host";
 import { LIST_SORT_FIELDS, PAGE_SIZES } from "../../../core/api";
-import { MAX_DOC_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
+import { MAX_DOC_BYTES, MAX_IMPORT_BYTES, MAX_METADATA_BYTES, MAX_TEXT_BYTES } from "../../../core/limits";
 import { MAX_SLUG_LENGTH } from "../../../core/slug";
 import { adminRoute, ok } from "../handler";
 
@@ -38,6 +38,7 @@ export const GET = adminRoute(async ({ cms }) => {
 			mediaTypes: cms.site.api.ALLOWED_IMAGE_MIME_TYPES,
 			fileBytes: cms.site.api.MAX_FILE_BYTES,
 			fileTypes: cms.site.api.ALLOWED_FILE_MIME_TYPES,
+			importBytes: MAX_IMPORT_BYTES,
 			pageSizes: PAGE_SIZES,
 			sortFields: LIST_SORT_FIELDS,
 		},

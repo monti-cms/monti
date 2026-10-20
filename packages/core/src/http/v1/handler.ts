@@ -48,9 +48,10 @@ export type PublicHandler<P extends Params = Params> = (input: PublicRequest<P>)
  * - `public-read`: no login, and nothing but `GET`/`HEAD` (any other method is a 405). For the public JSON API.
  * - `same-origin-form`: no login, the same-origin check where a browser form post is accepted too. For the sign-in, sign-out and first-admin forms.
  * - `signed`: no login and no check of the router: the request proves itself (a webhook signature). The handler must verify it, and that is the only kind that leaves a check to the handler.
+ * - `admin-upload`: the same as `admin`, and the request may be a file upload (`multipart/form-data`). For the routes that take a file (the entry import).
  * - `admin-or-bearer`: a request with a `Bearer` token reaches the handler, which verifies the token (a cron job, no cookie, so no same-origin check). A request without one is guarded as `admin`.
  */
-export type RouteAccess = "admin" | "public-read" | "same-origin-form" | "signed" | "admin-or-bearer";
+export type RouteAccess = "admin" | "admin-upload" | "public-read" | "same-origin-form" | "signed" | "admin-or-bearer";
 
 /** What a handler of an `admin-or-bearer` route gets: the admin guard has run when `auth` is set, and a request without `auth` carries a `Bearer` token that the handler must verify. */
 export interface BearerRequest<P extends Params = Params> extends Omit<AdminRequest<P>, "auth"> {
@@ -67,8 +68,9 @@ async function guardedAdmin<P extends Params, R>(
 	request: Request,
 	params: P,
 	run: (auth: AuthContext) => Promise<R>,
+	options: { readonly upload?: boolean } = {},
 ): Promise<R> {
-	validateSameOrigin(hostOf(cms), request);
+	validateSameOrigin(hostOf(cms), request, options);
 	const auth = await hostOf(cms).authGateway.verifyAdmin();
 	// Every `[id]` in the admin API is a UUID (entries, folders, templates, media, events, API keys). Anything else cannot exist, and the database
 	// would reject it as a malformed value (an internal error), so it is a missing item here.
@@ -89,10 +91,15 @@ export async function runAdminRoute<P extends Params>(
 	params: P,
 	handler: AdminHandler<P>,
 	plugin?: PluginContext,
+	options: { readonly upload?: boolean } = {},
 ): Promise<Response> {
 	try {
-		return await guardedAdmin(cms, request, params, (auth) =>
-			handler({ request, params, auth, cms, plugin: plugin as PluginContext }),
+		return await guardedAdmin(
+			cms,
+			request,
+			params,
+			(auth) => handler({ request, params, auth, cms, plugin: plugin as PluginContext }),
+			options,
 		);
 	} catch (error) {
 		return handleApiError(error, cms.site);
@@ -112,7 +119,11 @@ export async function runRoute<P extends Params>(
 	/** The plugin that owns the route. A core route has none, and its handler never reads `plugin`. */
 	plugin?: PluginContext,
 ): Promise<Response> {
-	if (access === "admin") return runAdminRoute(cms, request, params, handler as AdminHandler<P>, plugin);
+	if (access === "admin" || access === "admin-upload") {
+		return runAdminRoute(cms, request, params, handler as AdminHandler<P>, plugin, {
+			upload: access === "admin-upload",
+		});
+	}
 	const owner = plugin as PluginContext;
 	try {
 		switch (access) {

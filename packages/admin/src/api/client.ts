@@ -63,8 +63,11 @@ export function apiErrorOf(
 	);
 }
 
-/** What `adminFetch` takes besides the path: `fetch`'s options, `json` for a JSON body, and the `fallback` message of a failure the server does not explain. */
-export type AdminFetchInit = Omit<RequestInit, "body"> & { json?: unknown; fallback?: string };
+/**
+ * What `adminFetch` takes besides the path: `fetch`'s options, `json` for a JSON body, `form` for a multipart upload (the browser sets its content type), and the
+ * `fallback` message of a failure the server does not explain.
+ */
+export type AdminFetchInit = Omit<RequestInit, "body"> & { json?: unknown; form?: FormData; fallback?: string };
 
 /**
  * Calls the admin API at `path`, the part after `/api/monti` (`"/v1/entries?page=2"`; the site's `basePath` is added). Passing `json` sends a JSON body.
@@ -76,7 +79,7 @@ export async function adminFetch<T = unknown>(
 	path: string,
 	init: AdminFetchInit = {},
 ): Promise<T> {
-	const { json, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
+	const { json, form, fallback = site.createTranslator(apiErrorMessages)("fallback"), headers, ...rest } = init;
 	// A preview runs on a draft site and must not write.
 	if (isSandboxSite(site) && isWrite(rest.method)) {
 		throw new CmsApiError(0, "preview", site.createTranslator(apiErrorMessages)("previewNoWrite"), [], {});
@@ -84,7 +87,7 @@ export async function adminFetch<T = unknown>(
 	const response = await fetch(adminApiUrl(path), {
 		...rest,
 		headers: json === undefined ? headers : { "Content-Type": "application/json", ...headers },
-		body: json === undefined ? undefined : JSON.stringify(json),
+		body: form ?? (json === undefined ? undefined : JSON.stringify(json)),
 	});
 	if (response.status === 204) return undefined as T;
 	const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
