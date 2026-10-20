@@ -100,6 +100,10 @@ export interface ExportManifestEntry {
 	createdAt: string | null;
 	updatedAt: string | null;
 	publishedAt: string | null;
+	/** Backup only (`null` in a public archive): when the entry went to the trash, and who made the latest change and when. */
+	trashedAt: string | null;
+	changedBy: string | null;
+	changedAt: string | null;
 	hasWorking: boolean;
 	hasPublished: boolean;
 	/** Canonical digest of one state. */
@@ -338,6 +342,9 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 				createdAt: iso(entry.createdAt),
 				updatedAt: iso(entry.updatedAt),
 				publishedAt: iso(entry.publishedAt),
+				trashedAt: iso(entry.trashedAt),
+				changedBy: entry.changedBy,
+				changedAt: iso(entry.changedAt),
 				hasWorking: true,
 				hasPublished: entry.published !== undefined,
 				workingDigest: stateDigest(entry, "working", snapshot.references),
@@ -371,6 +378,9 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			createdAt: null,
 			updatedAt: iso(entry.published?.updatedAt),
 			publishedAt: iso(entry.publishedAt),
+			trashedAt: null,
+			changedBy: null,
+			changedAt: null,
 			hasWorking: false,
 			hasPublished: true,
 			workingDigest: null,
@@ -463,6 +473,7 @@ function exportedMedia(snapshot: ExportSnapshot, scope: ExportScope, publishedId
 	if (scope === "admin") {
 		return sorted.map((asset) => ({
 			id: asset.id,
+			folderId: asset.folderId,
 			status: asset.status,
 			filename: asset.filename,
 			mimeType: asset.mimeType,
@@ -471,6 +482,9 @@ function exportedMedia(snapshot: ExportSnapshot, scope: ExportScope, publishedId
 			height: asset.height,
 			storageKey: asset.storageKey,
 			stagingKey: asset.stagingKey,
+			original: asset.original,
+			defaultAlt: asset.defaultAlt,
+			defaultCaption: asset.defaultCaption,
 			createdAt: iso(asset.createdAt),
 			updatedAt: iso(asset.updatedAt),
 			readyAt: iso(asset.readyAt),

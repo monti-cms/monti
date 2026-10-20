@@ -184,4 +184,56 @@ export const preferencesTransferContract: ContractSuite = (factory) => {
 			expect(second).toEqual(first);
 		});
 	});
+
+	describe("TransferStore restoreArchive", () => {
+		let from: StoreSession;
+		let into: StoreSession;
+
+		beforeAll(async () => {
+			from = await factory.create();
+			into = await factory.create();
+			fillRequiredMetadata(from.store);
+		});
+
+		afterAll(async () => {
+			await from.close();
+			await into.close();
+		});
+
+		it("puts a snapshot into an empty store as it was, and refuses a second restore", async () => {
+			const created = await seedEntry(from.store, {
+				collection: contentCollection,
+				slug: "restore-live",
+				metadata: { title: "Restore live" },
+				text: "# Live body",
+			});
+			const published = await publishDraft(testSite, from.store, { id: created.id, expectedVersion: created.version });
+			await seedSave(from.store, published.id, {
+				expectedVersion: published.version,
+				metadata: { title: "Restore live, edited" },
+				text: "# Edited body",
+			});
+			await seedEntry(from.store, {
+				collection: contentCollection,
+				slug: "restore-draft",
+				metadata: { title: "Restore draft" },
+				text: "# Draft body",
+			});
+			const snapshot = await from.store.readExportSnapshot();
+
+			expect(await into.store.countSiteContent()).toEqual({ entries: 0, folders: 0, media: 0 });
+			const result = await into.store.restoreArchive(snapshot);
+
+			expect(result).toMatchObject({ entries: snapshot.entries.length, translations: 0 });
+			const restored = await into.store.readExportSnapshot();
+			expect(restored.entries).toEqual(snapshot.entries);
+			expect(restored.references).toEqual(snapshot.references);
+			expect(restored.addresses).toEqual(snapshot.addresses);
+			expect((await into.store.countSiteContent()).entries).toBe(snapshot.entries.length);
+
+			const err = await into.store.restoreArchive(snapshot).catch((e) => e);
+			expect(err).toBeInstanceOf(CmsError);
+			expect((err as CmsError).code).toBe("conflict");
+		});
+	});
 };
