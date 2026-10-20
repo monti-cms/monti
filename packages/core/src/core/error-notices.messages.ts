@@ -88,6 +88,17 @@ export const noticeMessages = defineMessages("cms.core.notices", {
 		"import.format.missing.fix": "Install @monti-cms/mdx to import .md and .mdx files.",
 		"import.mapping.invalid": "{collection} can only be imported into a document collection of this site, or skipped.",
 		"import.mapping.invalid.fix": "Pick another collection for it.",
+		"restore.archive.invalid": "This file is not a backup that this version can read.",
+		"restore.archive.invalid.fix": "Choose a full backup made on Settings > Data of this version.",
+		"restore.not_empty": "A backup can only be restored into an empty site.",
+		"restore.not_empty.fix":
+			"This site already has entries, folders or media. Use Import entries to add entries from a backup.",
+		"restore.not_backup": "This archive is not a full backup.",
+		"restore.not_backup.fix":
+			"Only a full backup from Settings > Data (everything, drafts included) can be restored. Use Import entries for a selection or a public export.",
+		"restore.problems": "The backup does not fit this site, so nothing was restored.",
+		"restore.problems.fix":
+			"Fix the problems listed for each entry, or restore a backup made with this site's current schema.",
 	},
 	ko: {
 		"media.rename.slash": "파일 이름에는 슬래시(/, \\)나 제어 문자를 쓸 수 없습니다.",
@@ -170,5 +181,15 @@ export const noticeMessages = defineMessages("cms.core.notices", {
 		"import.format.missing.fix": ".md, .mdx 파일을 가져오려면 @monti-cms/mdx를 설치하세요.",
 		"import.mapping.invalid": "{collection}은(는) 이 사이트의 문서 컬렉션으로만 가져오거나 건너뛸 수 있습니다.",
 		"import.mapping.invalid.fix": "다른 컬렉션을 고르세요.",
+		"restore.archive.invalid": "이 버전에서 읽을 수 있는 백업 파일이 아닙니다.",
+		"restore.archive.invalid.fix": "이 버전의 설정 > 데이터에서 만든 전체 백업을 고르세요.",
+		"restore.not_empty": "백업은 빈 사이트에만 복원할 수 있습니다.",
+		"restore.not_empty.fix":
+			"이 사이트에는 이미 글, 폴더 또는 미디어가 있습니다. 백업의 글을 더하려면 글 가져오기를 쓰세요.",
+		"restore.not_backup": "전체 백업 파일이 아닙니다.",
+		"restore.not_backup.fix":
+			"설정 > 데이터에서 만든 전체 백업(초안 포함, 전체)만 복원할 수 있습니다. 일부만 고른 파일이나 공개 내보내기는 글 가져오기를 쓰세요.",
+		"restore.problems": "백업이 이 사이트와 맞지 않아 아무것도 복원하지 않았습니다.",
+		"restore.problems.fix": "글마다 나열된 문제를 고치거나, 이 사이트의 현재 스키마로 만든 백업을 복원하세요.",
 	},
 });

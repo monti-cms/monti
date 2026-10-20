@@ -12,6 +12,7 @@ import { createMediaOps } from "./store/media";
 import { createPreferenceOps } from "./store/preferences";
 import { createPublicReadOps } from "./store/public-read";
 import { createPublishing } from "./store/publish";
+import { createRestoreOps } from "./store/restore";
 import { createSchemaChangeOps } from "./store/schema-change";
 import { createTemplateOps } from "./store/templates";
 import { createTransferOps } from "./store/transfer";
@@ -48,6 +49,7 @@ export function createContentStore(
 		...createPublicReadOps(ctx),
 		...createPreferenceOps(ctx),
 		...createTransferOps(ctx),
+		...createRestoreOps(ctx),
 		...createMediaOps(ctx),
 		...createTemplateOps(ctx),
 		...createSchemaChangeOps(ctx),

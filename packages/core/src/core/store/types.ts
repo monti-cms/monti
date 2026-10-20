@@ -352,6 +352,11 @@ export interface ExportSnapshotEntry {
 	createdAt: Date;
 	updatedAt: Date;
 	publishedAt: Date | null;
+	/** When the entry went to the trash (translations trashed together share it). `null` for an entry that is not in the trash. */
+	trashedAt: Date | null;
+	/** Who made the latest change that raised the version, and when. Both `null` for an entry no change was recorded for. */
+	changedBy: string | null;
+	changedAt: Date | null;
 	working: ExportSnapshotBody;
 	published?: ExportSnapshotBody;
 }
@@ -382,6 +387,44 @@ export interface ExportSnapshot {
 	media: MediaAssetRecord[];
 	templates: BodyTemplate[];
 	preferences: { userId: string; preferences: JsonObject; updatedAt: Date }[];
+}
+
+/**
+ * Everything a backup puts back into an empty site: the admin backup minus the preferences. `entries` hold the bodies, `references` are the index rows
+ * of every entry and state, and each address is a row of the address table as it was (current, alias, reservation, deleted). A translation names its
+ * source in `translationGroupId`; a source names itself.
+ */
+export type RestorePlan = Pick<
+	ExportSnapshot,
+	"entries" | "references" | "folders" | "addresses" | "media" | "templates"
+>;
+
+/** How many rows a site holds of what a restore needs empty. The seeded templates do not count. */
+export interface SiteContentCounts {
+	entries: number;
+	folders: number;
+	media: number;
+}
+
+/** A template the restore did not add, and why: its id is already in the site, or its name is (names are unique, ignoring case). */
+export interface SkippedTemplate {
+	id: string;
+	name: string;
+	reason: "id" | "name";
+}
+
+/** What a restore wrote. */
+export interface RestoreResult {
+	entries: number;
+	/** Per status of the entries. */
+	byStatus: Record<string, number>;
+	translations: number;
+	folders: number;
+	media: number;
+	addresses: number;
+	references: number;
+	templatesAdded: number;
+	templatesSkipped: SkippedTemplate[];
 }
 
 /** Public list sort. Publish date is the source's, modified date is this language body's, title is this language's title. */

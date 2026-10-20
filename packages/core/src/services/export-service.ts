@@ -63,8 +63,10 @@ export function pickPublicMetadata(
  * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
  * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
  * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
+ * Version 6: the backup holds what a restore needs to put a site back as it was. Each manifest entry also has `trashedAt`, `changedBy` and `changedAt`, and each
+ * record of the backup's `media.json` also has `folderId`, `original`, `defaultAlt` and `defaultCaption`. Nothing reads an older version.
  */
-export const EXPORT_FORMAT_VERSION = 5;
+export const EXPORT_FORMAT_VERSION = 6;
 
 /** The bodies of an export written as text in one format, produced before the archive is built (formats are asynchronous, the archive is not). */
 export interface ExportTexts {
@@ -100,6 +102,10 @@ export interface ExportManifestEntry {
 	createdAt: string | null;
 	updatedAt: string | null;
 	publishedAt: string | null;
+	/** Backup only (`null` in a public archive): when the entry went to the trash, and who made the latest change and when. */
+	trashedAt: string | null;
+	changedBy: string | null;
+	changedAt: string | null;
 	hasWorking: boolean;
 	hasPublished: boolean;
 	/** Canonical digest of one state. */
@@ -338,6 +344,9 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 				createdAt: iso(entry.createdAt),
 				updatedAt: iso(entry.updatedAt),
 				publishedAt: iso(entry.publishedAt),
+				trashedAt: iso(entry.trashedAt),
+				changedBy: entry.changedBy,
+				changedAt: iso(entry.changedAt),
 				hasWorking: true,
 				hasPublished: entry.published !== undefined,
 				workingDigest: stateDigest(entry, "working", snapshot.references),
@@ -371,6 +380,9 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			createdAt: null,
 			updatedAt: iso(entry.published?.updatedAt),
 			publishedAt: iso(entry.publishedAt),
+			trashedAt: null,
+			changedBy: null,
+			changedAt: null,
 			hasWorking: false,
 			hasPublished: true,
 			workingDigest: null,
@@ -463,6 +475,7 @@ function exportedMedia(snapshot: ExportSnapshot, scope: ExportScope, publishedId
 	if (scope === "admin") {
 		return sorted.map((asset) => ({
 			id: asset.id,
+			folderId: asset.folderId,
 			status: asset.status,
 			filename: asset.filename,
 			mimeType: asset.mimeType,
@@ -471,6 +484,9 @@ function exportedMedia(snapshot: ExportSnapshot, scope: ExportScope, publishedId
 			height: asset.height,
 			storageKey: asset.storageKey,
 			stagingKey: asset.stagingKey,
+			original: asset.original,
+			defaultAlt: asset.defaultAlt,
+			defaultCaption: asset.defaultCaption,
 			createdAt: iso(asset.createdAt),
 			updatedAt: iso(asset.updatedAt),
 			readyAt: iso(asset.readyAt),

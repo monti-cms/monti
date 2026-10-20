@@ -181,6 +181,7 @@ function serve(options: { limit?: number; preview?: ImportPreview; previewStatus
 				media: 0,
 			});
 		}
+		if (url === "/api/monti/v1/import/restore") return jsonResponse({ empty: true, entries: 0, folders: 0, media: 0 });
 		if (url === "/api/monti/v1/import/entries") {
 			const form = init?.body as FormData;
 			if (form.get("mode") === "run") return jsonResponse(RUN);

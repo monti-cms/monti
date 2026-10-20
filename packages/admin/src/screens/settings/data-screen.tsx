@@ -7,6 +7,8 @@ import { exportMessages } from "../export/messages";
 import { useExportForm } from "../export/use-export-form";
 import { ImportEntriesFields } from "../import/import-entries-card";
 import { importMessages } from "../import/messages";
+import { restoreMessages } from "../restore/messages";
+import { RestoreBackupFields } from "../restore/restore-card";
 import { ShellPage } from "../shared/admin-shell";
 import { sharedMessages } from "../shared/messages";
 import { PageBody } from "../shared/page-body";
@@ -16,7 +18,7 @@ import { SettingsTabBar } from "./settings-tab-bar";
 
 /**
  * The Data page of Settings (`<admin path>/settings/data`): what is kept in the site rather than in its schema file. It is a page of its own and shares nothing with the
- * schema tabs' draft, so it has no save bar. It holds the Site backup card and, below it, the Import entries card.
+ * schema tabs' draft, so it has no save bar. It holds the Site backup card, below it the Import entries card, and last the Restore backup card.
  */
 export function DataScreen() {
 	const t = useTranslator(settingsMessages);
@@ -31,6 +33,7 @@ function DataBody() {
 	const t = useTranslator(settingsMessages);
 	const te = useTranslator(exportMessages);
 	const ti = useTranslator(importMessages);
+	const tr = useTranslator(restoreMessages);
 	const shared = useTranslator(sharedMessages);
 	const site = useSite();
 	const form = useExportForm();
@@ -58,6 +61,9 @@ function DataBody() {
 					</Section>
 					<Section wide title={ti("title")} description={ti("description")} testId="import-entries">
 						<ImportEntriesFields />
+					</Section>
+					<Section wide title={tr("title")} description={tr("description")} testId="restore-backup">
+						<RestoreBackupFields />
 					</Section>
 				</PageBody>
 			</div>
