@@ -206,7 +206,7 @@ describe("export archive builder", () => {
 		);
 	});
 
-	it("the admin archive is format version 4 and writes the document, the only body", () => {
+	it("the admin archive is format version 6 and writes the document, the only body", () => {
 		const { manifest, zip } = buildExportArchive(makeSnapshot(), {
 			site: testSite,
 			scope: "admin",

@@ -63,8 +63,10 @@ export function pickPublicMetadata(
  * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
  * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
  * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
+ * Version 6: the backup holds what a restore needs to put a site back as it was. Each manifest entry also has `trashedAt`, `changedBy` and `changedAt`, and each
+ * record of the backup's `media.json` also has `folderId`, `original`, `defaultAlt` and `defaultCaption`. Nothing reads an older version.
  */
-export const EXPORT_FORMAT_VERSION = 5;
+export const EXPORT_FORMAT_VERSION = 6;
 
 /** The bodies of an export written as text in one format, produced before the archive is built (formats are asynchronous, the archive is not). */
 export interface ExportTexts {
