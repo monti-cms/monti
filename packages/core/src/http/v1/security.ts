@@ -17,6 +17,8 @@ export function validateSameOrigin(
 	options: {
 		/** Also accept a browser form post (`application/x-www-form-urlencoded`), for the sign-in and sign-out forms. */
 		readonly form?: boolean;
+		/** Also accept a file upload (`multipart/form-data`). The origin check above still has to pass, so another site cannot send one. */
+		readonly upload?: boolean;
 	} = {},
 ): void {
 	const method = request.method.toUpperCase();
@@ -52,7 +54,11 @@ export function validateSameOrigin(
 
 	if (["POST", "PATCH", "PUT"].includes(method)) {
 		const contentType = request.headers.get("content-type");
-		const accepted = options.form ? ["application/json", "application/x-www-form-urlencoded"] : ["application/json"];
+		const accepted = [
+			"application/json",
+			...(options.form ? ["application/x-www-form-urlencoded"] : []),
+			...(options.upload ? ["multipart/form-data"] : []),
+		];
 		if (!accepted.some((type) => contentType?.toLowerCase().includes(type))) {
 			throw new CmsError(`Content-Type must be ${accepted.join(" or ")}`, "unsupported_media_type");
 		}
