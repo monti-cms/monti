@@ -56,18 +56,31 @@ export function pickPublicMetadata(
 }
 
 /**
- * Format version of the archive, in the manifest and in the body JSON files. Version 2 added `working.doc.json` / `published.doc.json` and the
+ * Format version of the archive, in the manifest and in the body JSON files. Version 5: an archive can be partial. The manifest says so (`selection`: the
+ * entry IDs the export was asked for, or `null` for the whole site), a partial archive holds the whole translation groups of the selection, only the folders
+ * (with their ancestors), addresses and media those entries use, and no templates or preferences. A body that could not be written in the chosen format
+ * keeps its JSON document and is listed in `notWritten` (empty when every body was written). Version 2 added `working.doc.json` / `published.doc.json` and the
  * `doc` of templates to the admin archive. Version 3: the public archive's `published.json` carries the stored document as `doc` (the same document as
  * `published.doc.json` in the admin archive), next to the MDX text. Version 4: the document is the only body. Text files (`working.<ext>`, `published.<ext>`)
  * and the `body` of a template are written only when the export asked for a `format` (the manifest names it), and the `mdx` of an item and a template is gone.
  */
-export const EXPORT_FORMAT_VERSION = 4;
+export const EXPORT_FORMAT_VERSION = 5;
 
 /** The bodies of an export written as text in one format, produced before the archive is built (formats are asynchronous, the archive is not). */
 export interface ExportTexts {
 	readonly format: { readonly name: string; readonly extension: string };
 	/** The text of each body, by `exportTextKey`. A body that has none (an entry without a published copy) is not in it. */
 	readonly bodies: ReadonlyMap<string, string>;
+	/** The bodies that could not be written in the format. Their JSON documents are in the archive; only the text file is missing. */
+	readonly notWritten: readonly ExportNotWritten[];
+}
+
+/** A body whose text could not be written. `reason` is the error code of the failure (it never carries the body or the error's detail). */
+export interface ExportNotWritten {
+	/** The entry or template ID. */
+	id: string;
+	state: "working" | "published" | "template";
+	reason: string;
 }
 
 /** The key of a body in `ExportTexts.bodies`: an entry's `working` or `published` body, or a template. */
@@ -116,6 +129,10 @@ export interface ExportManifest {
 	};
 	/** The format the text files of the archive are written in. `null`: the archive holds documents only. */
 	format: ExportTexts["format"] | null;
+	/** The entries the export was asked for (the archive holds their whole translation groups). `null`: the whole site. */
+	selection: { ids: string[] } | null;
+	/** The bodies that were kept as JSON only because the format could not write them. Empty when every body was written. */
+	notWritten: ExportNotWritten[];
 	entries: ExportManifestEntry[];
 	files: string[];
 }
@@ -249,6 +266,8 @@ export interface BuildExportOptions {
 	exportedAt: Date;
 	/** The bodies as text in a format. Without it the archive holds the documents only. */
 	texts?: ExportTexts;
+	/** The entries the export was asked for (`ExportPlan.selection`). Only recorded in the manifest. */
+	selection?: readonly string[] | null;
 	/** File timestamp inside the archive. A fixed value can be used for snapshot tests. */
 	archiveModifiedAt?: Date;
 }
@@ -361,44 +380,7 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 		});
 	}
 
-	const publishedIds = new Set(manifestEntries.map((entry) => entry.id));
-	const media =
-		scope === "admin"
-			? [...snapshot.media]
-					.sort((left, right) => (left.id < right.id ? -1 : 1))
-					.map((asset) => ({
-						id: asset.id,
-						status: asset.status,
-						filename: asset.filename,
-						mimeType: asset.mimeType,
-						byteSize: asset.byteSize,
-						width: asset.width,
-						height: asset.height,
-						storageKey: asset.storageKey,
-						stagingKey: asset.stagingKey,
-						createdAt: iso(asset.createdAt),
-						updatedAt: iso(asset.updatedAt),
-						readyAt: iso(asset.readyAt),
-					}))
-			: [...snapshot.media]
-					.filter((asset) =>
-						snapshot.references.some(
-							(reference) =>
-								reference.kind === "media" &&
-								reference.state === "published" &&
-								reference.targetId === asset.id &&
-								publishedIds.has(reference.entryId),
-						),
-					)
-					.sort((left, right) => (left.id < right.id ? -1 : 1))
-					.map((asset) => ({
-						id: asset.id,
-						filename: asset.filename,
-						mimeType: asset.mimeType,
-						byteSize: asset.byteSize,
-						width: asset.width,
-						height: asset.height,
-					}));
+	const media = exportedMedia(snapshot, scope, new Set(manifestEntries.map((entry) => entry.id)));
 
 	if (scope === "admin") {
 		files.push({ path: "folders.json", data: jsonFile(snapshot.folders.map((folder) => ({ ...folder }))) });
@@ -456,6 +438,8 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 			files: files.length + 1,
 		},
 		format: texts ? texts.format : null,
+		selection: options.selection ? { ids: [...options.selection] } : null,
+		notWritten: texts ? texts.notWritten.map((item) => ({ ...item })) : [],
 		entries: manifestEntries,
 		files: ["manifest.json", ...files.map((file) => file.path)],
 	};
@@ -471,6 +455,145 @@ export function buildExportArchive(snapshot: ExportSnapshot, options: BuildExpor
 		manifest,
 		digest,
 	};
+}
+
+/** The media records an archive holds: all of them in a backup, those the published copies of the included entries use in a public archive. */
+function exportedMedia(snapshot: ExportSnapshot, scope: ExportScope, publishedIds: ReadonlySet<string>) {
+	const sorted = [...snapshot.media].sort((left, right) => (left.id < right.id ? -1 : 1));
+	if (scope === "admin") {
+		return sorted.map((asset) => ({
+			id: asset.id,
+			status: asset.status,
+			filename: asset.filename,
+			mimeType: asset.mimeType,
+			byteSize: asset.byteSize,
+			width: asset.width,
+			height: asset.height,
+			storageKey: asset.storageKey,
+			stagingKey: asset.stagingKey,
+			createdAt: iso(asset.createdAt),
+			updatedAt: iso(asset.updatedAt),
+			readyAt: iso(asset.readyAt),
+		}));
+	}
+	return sorted
+		.filter((asset) =>
+			snapshot.references.some(
+				(reference) =>
+					reference.kind === "media" &&
+					reference.state === "published" &&
+					reference.targetId === asset.id &&
+					publishedIds.has(reference.entryId),
+			),
+		)
+		.map((asset) => ({
+			id: asset.id,
+			filename: asset.filename,
+			mimeType: asset.mimeType,
+			byteSize: asset.byteSize,
+			width: asset.width,
+			height: asset.height,
+		}));
+}
+
+const isPublic = (entry: ExportSnapshotEntry): boolean => entry.status === "published" && entry.published !== undefined;
+
+/** What an export would hold, in counts. It is what the admin shows before the person exports, and what the archive's manifest agrees with. */
+export interface ExportSummary {
+	scope: ExportScope;
+	/** The entries in the archive. */
+	entries: number;
+	/** How many of them were not asked for but belong to the translation group of one that was. */
+	addedByTranslations: number;
+	/** Entries of the selection (and their translations) left out because the public archive holds published entries only. Always 0 for a backup. */
+	notPublished: number;
+	/** Asked-for IDs that match no entry. */
+	notFound: number;
+	templates: number;
+	folders: number;
+	addresses: number;
+	/** Media records (the files stay in storage and are not part of the archive). */
+	media: number;
+}
+
+export interface ExportPlan {
+	/** The snapshot the archive is built from: the selection, its translation groups, and what they use. */
+	snapshot: ExportSnapshot;
+	/** The IDs the export was asked for (without repeats), or `null` for the whole site. */
+	selection: string[] | null;
+	summary: ExportSummary;
+}
+
+/**
+ * Narrows a snapshot to what an export holds. Without `ids` it is the whole site. With `ids` it is those entries, always expanded to their whole translation
+ * groups, with only the folders they sit in (and the folders' ancestors), their addresses, the media their bodies reference, and no templates or
+ * preferences. A public archive holds the published members only.
+ */
+export function planExport(
+	snapshot: ExportSnapshot,
+	options: { scope: ExportScope; ids?: readonly string[] | undefined },
+): ExportPlan {
+	const { scope } = options;
+	const selection = options.ids ? [...new Set(options.ids)] : null;
+	const asked = new Set(selection ?? []);
+	const known = new Set(snapshot.entries.map((entry) => entry.id));
+
+	const groups = new Set(
+		snapshot.entries.filter((entry) => asked.has(entry.id)).map((entry) => entry.translationGroupId),
+	);
+	const members = selection
+		? snapshot.entries.filter((entry) => groups.has(entry.translationGroupId))
+		: snapshot.entries;
+	const entries = scope === "public" ? members.filter(isPublic) : members;
+	const entryIds = new Set(entries.map((entry) => entry.id));
+
+	const summaryOf = (narrowed: ExportSnapshot): ExportSummary => ({
+		scope,
+		entries: entries.length,
+		addedByTranslations: selection ? entries.filter((entry) => !asked.has(entry.id)).length : 0,
+		notPublished: scope === "public" ? members.length - entries.length : 0,
+		notFound: selection ? selection.filter((id) => !known.has(id)).length : 0,
+		templates: narrowed.templates.length,
+		folders: narrowed.folders.length,
+		addresses: narrowed.addresses.length,
+		media: exportedMedia(narrowed, scope, entryIds).length,
+	});
+
+	if (scope === "admin" && !selection) return { snapshot, selection, summary: summaryOf(snapshot) };
+
+	const references = snapshot.references.filter((reference) => entryIds.has(reference.entryId));
+	if (scope === "public") {
+		const narrowed: ExportSnapshot = {
+			entries,
+			references,
+			folders: [],
+			addresses: [],
+			media: snapshot.media,
+			templates: [],
+			preferences: [],
+		};
+		return { snapshot: narrowed, selection, summary: summaryOf(narrowed) };
+	}
+
+	const mediaIds = new Set(
+		references.filter((reference) => reference.kind === "media").map((reference) => reference.targetId),
+	);
+	const folderById = new Map(snapshot.folders.map((folder) => [folder.id, folder]));
+	const folderIds = new Set<string>();
+	for (const entry of entries) {
+		for (let id = entry.folderId; id && !folderIds.has(id); id = folderById.get(id)?.parentId ?? null)
+			folderIds.add(id);
+	}
+	const narrowed: ExportSnapshot = {
+		entries,
+		references,
+		folders: snapshot.folders.filter((folder) => folderIds.has(folder.id)),
+		addresses: snapshot.addresses.filter((address) => address.entryId !== null && entryIds.has(address.entryId)),
+		media: snapshot.media.filter((asset) => mediaIds.has(asset.id)),
+		templates: [],
+		preferences: [],
+	};
+	return { snapshot: narrowed, selection, summary: summaryOf(narrowed) };
 }
 
 function jsonFile(value: unknown): Uint8Array {

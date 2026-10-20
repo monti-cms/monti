@@ -24,6 +24,7 @@ import * as rEventRetry from "./v1/events/[id]/retry/route";
 import * as rEventsRetry from "./v1/events/retry/route";
 import * as rEvents from "./v1/events/route";
 import * as rExport from "./v1/export/route";
+import * as rExportSummary from "./v1/export/summary/route";
 import * as rFolder from "./v1/folders/[id]/route";
 import * as rFolders from "./v1/folders/route";
 import { type RouteAccess, runRoute } from "./v1/handler";
@@ -91,6 +92,7 @@ const ROUTES: readonly Route[] = [
 	{ pattern: "v1/events/[id]/retry", module: rEventRetry },
 	{ pattern: "v1/events/[id]/dismiss", module: rEventDismiss },
 	{ pattern: "v1/export", module: rExport },
+	{ pattern: "v1/export/summary", module: rExportSummary },
 	{ pattern: "v1/folders", module: rFolders },
 	{ pattern: "v1/folders/[id]", module: rFolder },
 	{ pattern: "v1/media", module: rMedia },

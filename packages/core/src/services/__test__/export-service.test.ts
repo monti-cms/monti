@@ -5,6 +5,7 @@ import { STORED_DOCUMENT_VERSION, unparsedDocument } from "../../doc/stored-docu
 import {
 	buildExportArchive,
 	canonicalJson,
+	EXPORT_FORMAT_VERSION,
 	type ExportTexts,
 	exportTextKey,
 	pickPublicMetadata,
@@ -213,11 +214,11 @@ describe("export archive builder", () => {
 		});
 		const archive = readAll(zip);
 
-		expect(manifest.formatVersion).toBe(4);
-		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(4);
+		expect(manifest.formatVersion).toBe(EXPORT_FORMAT_VERSION);
+		expect(JSON.parse(archive.text("manifest.json")).formatVersion).toBe(EXPORT_FORMAT_VERSION);
 		for (const path of archive.paths.filter((item) => /\/(working|published)\.json$/.test(item))) {
 			const body = JSON.parse(archive.text(path));
-			expect(body.formatVersion, path).toBe(4);
+			expect(body.formatVersion, path).toBe(EXPORT_FORMAT_VERSION);
 			expect(body).not.toHaveProperty("mdx");
 		}
 		const workingDoc = archive.text(entryPath(CONTENT, PUBLISHED_ID, "working.doc.json"));
@@ -280,6 +281,7 @@ describe("export archive builder", () => {
 				[exportTextKey(PUBLISHED_ID, "published"), "published text"],
 				[exportTextKey(TEMPLATE_ID, "template"), "template text"],
 			]),
+			notWritten: [],
 		};
 
 		it("the admin archive also holds each body as a file of that format, named by the format's extension", () => {
@@ -371,7 +373,7 @@ describe("export archive builder", () => {
 		const base = buildExportArchive(makeSnapshot(), options);
 		const archive = readAll(base.zip);
 
-		expect(base.manifest.formatVersion).toBe(4);
+		expect(base.manifest.formatVersion).toBe(EXPORT_FORMAT_VERSION);
 		// The document is a field of the entry, not a file of its own, and it is the document the admin archive stores.
 		expect(archive.paths.some((path) => path.includes(".doc.json"))).toBe(false);
 		const published = JSON.parse(archive.text(entryPath(CONTENT, PUBLISHED_ID, "published.json")));

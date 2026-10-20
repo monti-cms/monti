@@ -7,7 +7,7 @@ import { screensMessages } from "../../messages";
 import { AdminQueryProvider } from "../../shared/query-provider";
 import { settingsMessages } from "../messages";
 import { SettingsScreen } from "../settings-screen";
-import { SCHEMA_TABS, type SchemaTab } from "../tabs";
+import { DATA_TAB, SCHEMA_TABS, type SchemaTab } from "../tabs";
 
 vi.mock("../../schema/schema-screen", () => ({
 	SchemaSettings: ({ tab, actionsSlot }: { tab: string; actionsSlot?: HTMLElement | null }) => (
@@ -40,7 +40,8 @@ describe("settings tabs", () => {
 	it("lists the tabs in order, each with its own address", () => {
 		renderSettings("collections");
 		const links = within(tabBar()).getAllByRole("link");
-		const ids = SCHEMA_TABS;
+		// The schema file's tabs, then Data: a page of its own beside them.
+		const ids = [...SCHEMA_TABS, DATA_TAB] as const;
 		expect(links.map((link) => link.textContent)).toEqual(ids.map((id) => t(`tab.${id}`)));
 		expect(links.map((link) => link.getAttribute("href"))).toEqual(
 			ids.map((id) => testSite.adminHref(`/settings/${id}`)),

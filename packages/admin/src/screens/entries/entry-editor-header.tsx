@@ -9,6 +9,7 @@ import {
 	ChevronDown,
 	ChevronLeft,
 	Copy,
+	Download,
 	Eye,
 	MoreHorizontal,
 	PanelRight,
@@ -18,6 +19,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useState } from "react";
 import { commonMessages } from "../../lib/common.messages";
 import { cn } from "../../lib/utils/cn";
 import { AdminLink as Link } from "../../router";
@@ -31,6 +33,9 @@ import {
 } from "../../ui/dropdown-menu";
 import { IconButton } from "../../ui/icon-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
+import { ExportDialog } from "../export/export-dialog";
+import { exportMessages } from "../export/messages";
+import { collectionNoun } from "../shared/noun.messages";
 import { entryEditorShellMessages } from "./entry-editor-shell.messages";
 import { SaveStatusIndicator, ToolbarAction } from "./entry-editor-toolbar";
 import type { EntryEditor } from "./entry-editor-types";
@@ -58,6 +63,8 @@ export function EntryEditorHeader({
 	const t = useTranslator(entryEditorShellMessages);
 	const te = useTranslator(entriesMessages);
 	const tc = useTranslator(commonMessages);
+	const tx = useTranslator(exportMessages);
+	const [isExporting, setIsExporting] = useState(false);
 	const { resolvedTheme, setTheme } = useTheme();
 	const { entry, collection, busy, saveStatus } = editor;
 	const isReadOnly = editor.readOnly;
@@ -274,6 +281,12 @@ export function EntryEditorHeader({
 							</>
 						)}
 						{entry && (
+							<DropdownMenuItem onClick={() => setIsExporting(true)}>
+								<Download aria-hidden />
+								{tx("menu.exportEntry")}
+							</DropdownMenuItem>
+						)}
+						{entry && (
 							<>
 								{!isTrashed && <DropdownMenuSeparator />}
 								{isTrashed ? (
@@ -297,6 +310,16 @@ export function EntryEditorHeader({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
+			{entry && (
+				<ExportDialog
+					open={isExporting}
+					onOpenChange={setIsExporting}
+					kind="entry"
+					ids={[entry.id]}
+					noun={collectionNoun(site, collection)}
+					unsaved={editor.hasUnsavedChanges}
+				/>
+			)}
 		</header>
 	);
 }
