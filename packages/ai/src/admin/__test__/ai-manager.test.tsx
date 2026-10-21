@@ -247,9 +247,8 @@ describe("AI Manager UI", () => {
 	});
 
 	it("marks an action with an edited instruction as modified and opens Advanced for it", async () => {
-		const slug = actions[0] as AiActionView;
-		slug.prompt = "Write a very different slug";
-		slug.overridden = ["prompt"];
+		// The fixture is a fresh clone per test (beforeEach), so replacing the item here touches nothing else.
+		actions[0] = { ...(actions[0] as AiActionView), prompt: "Write a very different slug", overridden: ["prompt"] };
 		renderManager();
 		await screen.findByText("Suggest slug");
 		expect(screen.getAllByText(tManager("status.modified"))).toHaveLength(1);
@@ -260,8 +259,7 @@ describe("AI Manager UI", () => {
 	});
 
 	it("resets an edited instruction to the default", async () => {
-		const slug = actions[0] as AiActionView;
-		slug.prompt = "Write a very different slug";
+		actions[0] = { ...(actions[0] as AiActionView), prompt: "Write a very different slug" };
 		renderManager();
 		fireEvent.click(await screen.findByText("Suggest slug"));
 		const prompt = (await screen.findByLabelText(tManager("field.prompt"))) as HTMLTextAreaElement;
