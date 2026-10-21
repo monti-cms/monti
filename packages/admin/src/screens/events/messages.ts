@@ -4,6 +4,10 @@ import { defineMessages } from "@monti-cms/core";
 export const eventsMessages = defineMessages("cms-admin.events", {
 	en: {
 		title: "Event log",
+		description: "Every change to your content and whether it reached each connected service.",
+		"detail.section.event": "Event",
+		"detail.section.entry": "Entry",
+		"detail.section.delivery": "Delivery",
 		"list.label": "Events",
 		"list.loadFailed": "Couldn't load the event deliveries.",
 		"list.emptyYet": "No events yet",
@@ -71,6 +75,10 @@ export const eventsMessages = defineMessages("cms-admin.events", {
 	},
 	ko: {
 		title: "이벤트 기록",
+		description: "콘텐츠에 생긴 모든 변경과 연결된 서비스에 전달된 결과입니다.",
+		"detail.section.event": "이벤트",
+		"detail.section.entry": "항목",
+		"detail.section.delivery": "전달",
 		"list.label": "이벤트",
 		"list.loadFailed": "이벤트 전달 목록을 불러오지 못했습니다.",
 		"list.emptyYet": "아직 이벤트가 없습니다",
