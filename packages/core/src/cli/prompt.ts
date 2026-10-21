@@ -28,6 +28,14 @@ export interface Prompter {
 	/** A secret: not echoed. */
 	password(question: { message: string }): Promise<string>;
 	confirm(question: { message: string; initial?: boolean }): Promise<boolean>;
+	/** Runs one step of work behind a progress line (a spinner at the terminal), then prints how it ended. `work` must not throw and must not print. */
+	task(title: string, work: () => Promise<TaskOutcome>): Promise<TaskOutcome>;
+}
+
+/** How a step ended: the line that replaces its progress line. */
+export interface TaskOutcome {
+	readonly status: "done" | "skipped" | "failed";
+	readonly message: string;
 }
 
 /** Thrown when the person cancels a prompt (Ctrl+C). The command ends with exit code 130, the shell convention for an interrupt, and nothing was changed. */
@@ -81,5 +89,13 @@ export async function createClackPrompter(): Promise<Prompter> {
 		password: async (question) => answer<string>(await clack.password({ message: question.message })),
 		confirm: async (question) =>
 			answer<boolean>(await clack.confirm({ message: question.message, initialValue: question.initial })),
+		task: async (title, work) => {
+			const spinner = clack.spinner();
+			spinner.start(title);
+			const outcome = await work();
+			if (outcome.status === "failed") spinner.error(outcome.message);
+			else spinner.stop(outcome.message);
+			return outcome;
+		},
 	};
 }

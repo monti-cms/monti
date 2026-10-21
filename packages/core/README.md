@@ -12,10 +12,10 @@ You need a Next.js 16 (App Router) app on React 19. Install `@monti-cms/core` fi
 The whole flow:
 
 ```text
-install → monti init → monti db:setup → monti doctor → pnpm dev
+install → monti init (does .env.local, db:setup and doctor) → pnpm dev
 ```
 
-Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti's own new files, asks before installing the other packages, and prints what is left; it makes the two small edits Monti needs, says which, and never touches the database). Copy the block for your package manager:
+Steps 1 and 2: **install** `@monti-cms/core`, then run **init** (it writes Monti's own new files, asks before installing the other packages, makes the two small edits Monti needs and says which, creates `.env.local` with a secret, sets up the database when a URL is there, runs the doctor, and prints what you chose and what is left for you). Copy the block for your package manager:
 
 ```sh
 # 1. Add @monti-cms/core by its GitHub address (pnpm only until the public release)
@@ -31,8 +31,8 @@ allowBuilds:
   esbuild: true
 ```
 
-3. **Do the steps init printed.** Init wrapped `next.config` in `withCms`, added `suppressHydrationWarning` to `<html>`, and added `.env.local` and `.monti/` to `.gitignore` itself (the summary lists each edited file under "Changed:"; a file it could not edit safely is in the numbered list with the reason). What is left is `cp .env.example .env.local` (fill it in; `.env.example` says what each value is and where to get it, and `openssl rand -base64 32` makes `MONTI_SECRET`).
-4. **Create the tables and check the setup.** `pnpm exec monti db:setup` (once; after you update Monti it is `monti db:migrate`), then `pnpm exec monti doctor`, which lists every check as `ok`, `warn` or `FAIL`; every warning says what is wrong, where, and how to fix it (it also tells you if one of the init steps above is missing). It also lists what Monti decided on its own, with where each value came from.
+3. **Do the steps init printed.** Init wrapped `next.config` in `withCms`, added `suppressHydrationWarning` to `<html>`, and added `.env.local` and `.monti/` to `.gitignore` itself (the summary lists each edited file under "Changed:"; a file it could not edit safely is in the numbered list with the reason). Init also created `.env.local` from `.env.example` with a new `MONTI_SECRET` (an existing `.env.local` is never overwritten; only an empty `MONTI_SECRET` is filled). What is left is to put your Postgres URL in `DATABASE_URL` there (`.env.example` says where to get it), when it was not set yet.
+4. **Create the tables and check the setup.** Init runs `monti db:setup` itself when `DATABASE_URL` is in the environment or `.env.local` (once; after you update Monti it is `monti db:migrate`), and runs `monti doctor` at the end and summarizes it. When there was no URL, run `pnpm exec monti db:setup` after you add it; `pnpm exec monti doctor` any time, which lists every check as `ok`, `warn` or `FAIL`; every warning says what is wrong, where, and how to fix it (it also tells you if one of the init steps above is missing). It also lists what Monti decided on its own, with where each value came from.
 5. **Run the app.** `pnpm dev`, then open `http://localhost:3000/studio` (`monti init` writes the admin at `/studio`; `--admin-path` changes it).
 
 `monti --help` prints every command; `monti <command> --help` (for example `monti init --help`) prints only that command's help. Everything below is the reference.
@@ -96,9 +96,11 @@ pnpm 12 fails the install if there are install scripts that have not been allowe
 
 ### 2. `monti init`
 
-Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes Monti's own new files, installs the packages (after you confirm), and ends with a plain, numbered list of what is left. **It edits three files your app already has, and tells you exactly which** (a "Changed:" list in the summary, one line per file): it wraps the export of `next.config` in `withCms(...)`, adds `suppressHydrationWarning` to the `<html>` of the root layout, and adds `.env.local` and `.monti/` to `.gitignore`. It asks nothing about them. A file in a shape it cannot change safely (a config that exports a function, a layout with no `<html>`, ...) is left alone and its step is in the list of what is left, with the reason. It writes no `.env.local`. It never overwrites a file without asking, and it is safe to run again.
+Run it in the app folder (where `package.json` is), after `@monti-cms/core` is installed: `pnpm exec monti init` (see the quick start for the other package managers; `npx monti` before the install fetches a different package). It adds Monti to an existing Next.js app (App Router): it reads the app, asks a few questions, writes Monti's own new files, installs the packages (after you confirm), does the machine steps (after a second confirmation), and ends with what you chose and a plain, numbered list of what is left for you. **It edits three files your app already has, and tells you exactly which** (a "Changed:" list in the summary, one line per file): it wraps the export of `next.config` in `withCms(...)`, adds `suppressHydrationWarning` to the `<html>` of the root layout, and adds `.env.local` and `.monti/` to `.gitignore`. It asks nothing about them. A file in a shape it cannot change safely (a config that exports a function, a layout with no `<html>`, ...) is left alone and its step is in the list of what is left, with the reason. It never overwrites a file without asking, and it is safe to run again.
 
 **What it detects:** the App Router folder (`app/` or `src/app/`), the package manager (from the lockfile or `packageManager`), TypeScript, the dev port (from the `dev` script), the shape of an existing `next.config`, a `.gitignore` that misses `.env.local`, whether the root layout's `<html>` has `suppressHydrationWarning` (the files it edits and what it prints), and folders of Markdown or MDX (`content/`, `posts/`, `_posts/`, `blog/`, ...). The front matter keys of those folders shape the starter `post` collection (see "Shaped by your front matter" below). An app with only a `pages/` folder is refused with a message.
+
+**The first question** is "How do you want to set up Monti?": **Recommended setup** asks only the default language and the login, and takes the default for everything else; **Choose each option** asks every question below. A flag still skips its question, and the first question is not asked when the flags already settle everything it would decide. The login is always asked (there is no silent default; `--yes` and a run without a terminal take `password`, as before).
 
 **The questions** (each has a flag, see below):
 
@@ -112,6 +114,7 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 | Block syntax | "How are blocks written in Markdown?": with `:::` blocks such as `:::callout` (the directive syntax, `@monti-cms/syntax-directive`; the config gets `mdx({ syntax: [directiveSyntax()] })`), or plain MDX only | the directive syntax when blocks are installed, else plain MDX |
 | Login | "How should people sign in to the admin?": email and password (built in, no other service needed), or GitHub (needs a GitHub OAuth app). There is no "none" choice | email and password |
 | Install | when the packages are missing: the exact install command for the detected package manager, then "run it?" | yes |
+| Machine steps | "Set up .env.local, the secret and the database now?" (see below) | yes |
 
 **What it writes** (only new files; one that already exists is skipped and reported, and replaced only on a yes or `--overwrite`):
 
@@ -125,20 +128,26 @@ Run it in the app folder (where `package.json` is), after `@monti-cms/core` is i
 
 For apps that use `src/`, the config files go in `src/` and the routes under `src/app/`. A Monti app has three Next files: the admin layout, the admin page and the API route. The layout is a file of its own on purpose: Next remounts the whole subtree of a dynamic segment (`[[...path]]`) whenever its value changes, so a layout inside the page would remount the admin (navigation, query cache, theme provider) on every screen change. It lives one segment above, where it stays mounted.
 
-**After the files** it shows the exact install command for the detected package manager (`--package-manager` overrides), asks whether to run it (default yes; `--yes` accepts without asking), and runs it. `--no-install` skips it and puts the command in the list instead. It stops there: **it never starts a database, runs `monti db:setup`, installs styles, adds pages, edits any file other than the three above or touches `pnpm-workspace.yaml`.** If the install fails, the files stay, the summary does not say "Monti is added" (it says the setup is only partly done, with the failed step and the exact install command), and running `monti init` again continues: existing files are kept.
+**After the files** it shows the exact install command for the detected package manager (`--package-manager` overrides), asks whether to run it (default yes; `--yes` accepts without asking), and runs it. `--no-install` skips it and puts the command in the list instead. If the install fails, the files stay, the summary does not say "Monti is added" (it says the setup is only partly done, with the failed step and the exact install command), and running `monti init` again continues: existing files are kept.
 
-The summary then lists what is left as numbered steps, each with the exact content to copy and each only when your app needs it:
+**Then the machine steps**, after one question ("Set up .env.local, the secret and the database now?", default yes; `--yes`, `--json` and a run without a terminal run them; `--no-setup` skips them and `--dry-run` only plans them). Each is one progress line, and none stops init:
+
+1. `.env.local` is created from `.env.example` only when it does not exist, with a new `MONTI_SECRET` (32 random bytes as base64, like `openssl rand -base64 32`). An existing `.env.local` is never overwritten: only an empty or missing `MONTI_SECRET` is filled, and no other line is touched.
+2. `monti db:setup` runs when a `DATABASE_URL` is in the environment or in `.env.local` (the placeholder URL that `.env.example` carries does not count). Without one the step is skipped with one line that says how to run it later. If the setup fails, the reason is shown and the step is added to what is left, and the run ends with exit code 1.
+3. `monti doctor` runs at the end and is summarized (for example `Checked the setup: 8 ok, 1 warning, 1 to fix`). Each failed check, with its hint, goes into what is left (a database failure is left out when the database step was skipped for want of a URL, and the sign-in checks when the login is GitHub, because those steps are listed already).
+
+The database setup and the doctor wait when the packages are not installed (`--no-install`, a failed install): they are skipped and listed.
+
+The summary prints **what you chose** (languages, sign-in, image storage, extra features, body blocks, admin path, block syntax) with where to change each later (`monti.config.ts`, `monti.schema.ts`, or the admin Settings screen), then lists what is left as numbered steps, each with the exact content to copy and each only when it still needs a person:
 
 1. the install command, if it did not run (a short TypeScript note comes before it when the app has none);
 2. the `next.config` change and the `suppressHydrationWarning` on `<html>`, only when init could not make them itself (each with the reason and the exact change). When it edits, it lists the file and the change under "Changed:" instead; a file that already has the change is left as it is and listed as already there. With no `next.config`, init creates `next.config.ts`;
-3. `cp .env.example .env.local`, then fill it in, with the commands that generate `MONTI_SECRET` (`openssl rand -base64 32`, or a one-line `node -e` command);
-4. `monti db:setup` ("Create Monti's tables in your database (once)");
-5. `monti doctor` (it tells you if any step above is missing);
-6. `pnpm dev`, then open the admin address (`/studio`);
+3. whatever a machine step did not finish: the `DATABASE_URL` to put in `.env.local`, then `monti db:setup`; a failed setup; what the doctor found. With `--no-setup` (or a no) these are the by-hand steps instead: `cp .env.example .env.local` with the commands that generate `MONTI_SECRET`, `monti db:setup`, and `monti doctor`;
+4. `pnpm dev`, then open the admin address (`/studio`);
 
-followed by the notes that apply: the git-sync target, and one item about the login. With **email and password** (the default): right after you deploy, open the admin and create the first admin (or create it beforehand by running the app in production mode against the production database; under `next dev` you are the admin without signing in, so the screen does not show), and `monti admin:reset-password` for a forgotten password. With **GitHub**: create the OAuth app, with its homepage and callback URL, and fill `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID`. Either way `monti.config.ts` already has the `auth: auth({ providers: [...] })` line, and `@monti-cms/auth` is installed.
+followed by the notes that apply: the git-sync target, and one item about the login. With **email and password** (the default): right after you deploy, open the admin and create the first admin (or create it beforehand by running the app in production mode against the production database; under `next dev` you are the admin without signing in, so the screen does not show), and `monti admin:reset-password` for a forgotten password. With **GitHub**: create the OAuth app, with its homepage and callback URL, and fill `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` and `MONTI_ADMIN_GITHUB_ID` (in the `.env.local` init made). Either way `monti.config.ts` already has the `auth: auth({ providers: [...] })` line, and `@monti-cms/auth` is installed.
 
-**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked and every question takes its flag or its default. Output of `--json` is one JSON document (`ok`, `created`, `changed`, `skipped`, `overwritten`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
+**Without prompts.** A question is not asked when its flag is given. With `--yes`, `--json`, or when there is no terminal (CI), nothing is asked, every question takes its flag or its default, and the machine steps run. Output of `--json` is one JSON document (`ok`, `created`, `changed`, `skipped`, `overwritten`, `steps`, `notes`, `next`, ...), and an error is `{ "ok": false, "error": "..." }`. The exit code is 0 on success, 1 when a step failed or the input was wrong, 130 when cancelled.
 
 ```sh
 pnpm exec monti init                 # interactive
@@ -146,11 +155,12 @@ pnpm exec monti init --yes           # all defaults: the light block set, /studi
 pnpm exec monti init --yes --json --locales ko,en --storage s3 --extras ai,git-sync --blocks default,mermaid
 pnpm exec monti init --dry-run --yes # show what would be written and run
 pnpm exec monti init --no-install    # write the files, print the install command
+pnpm exec monti init --no-setup      # leave .env.local, the database and the doctor to you
 ```
 
 | Flag | Meaning | Default |
 | --- | --- | --- |
-| `--yes`, `-y` | no prompts; unanswered questions take their default, and the install runs without asking | |
+| `--yes`, `-y` | no prompts; unanswered questions take their default, and the install and the machine steps run without asking | |
 | `--json` | print the result as JSON (implies `--yes`) | |
 | `--dry-run` | write and run nothing; show the plan | |
 | `--site-url <url>` | public site URL, the example value of `SITE_URL` in `.env.example` | `http://localhost:<dev port>` |
@@ -164,6 +174,7 @@ pnpm exec monti init --no-install    # write the files, print the install comman
 | `--login <password\|github>` | how people sign in to the admin: the built-in email and password login, or GitHub | `password` |
 | `--overwrite` | replace existing files that differ | keep them |
 | `--no-install` | do not install packages; the install command is printed in the list of what is left | |
+| `--no-setup` | do not create `.env.local`, fill `MONTI_SECRET`, set up the database or run the doctor; they are printed in the list of what is left | |
 | `--package-manager <m>` | `npm`, `pnpm`, `yarn` or `bun` | detected |
 
 **Light blocks by default.** The default set is `callout`, `collapsible`, `tabs`, `code-ref` and `color`. `mermaid` is opt-in because it brings about 26 MB of `node_modules` and a large browser script; `chart` is opt-in because it adds recharts and d3. Ask for them with `--blocks all`, or name them next to the default set (`--blocks default,mermaid`). The heavy blocks have their own entry points (`import { chart } from "@monti-cms/blocks/chart"`, `import { mermaid } from "@monti-cms/blocks/mermaid"`) and their libraries are optional peers of `@monti-cms/blocks`, so an app that does not choose them installs neither, and nothing of them is loaded: `@monti-cms/blocks` itself stays light. `monti init` writes the import from the right entry and installs the library only for the blocks chosen.

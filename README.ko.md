@@ -17,12 +17,12 @@ pnpm add "@monti-cms/core@github:monti-cms/monti#release/v0.2.0-next.16&path:/co
 pnpm exec monti init
 ```
 
-앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고, Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.ts`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **앱의 파일 셋을 고치고, 고친 파일과 정확한 변경을 "Changed:" 아래에 하나씩 적어 준다**(`next.config`를 `withCms`로 감싸기, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`, `.gitignore`의 `.env.local`·`.monti/`). 안전하게 고칠 수 없는 모양의 파일은 건드리지 않고 이유와 함께 할 일 목록에 넣는다. `.env.local`은 쓰지 않는다. 남은 일은 복사할 내용 그대로 번호를 붙여 쉬운 말로 적어 준다(`cp .env.example .env.local`, 그다음 `monti db:setup`, `monti doctor`, `pnpm dev`). 데이터베이스는 건드리지 않는다.
+앱을 살펴본 뒤(App Router, `src/` 여부, 패키지 매니저, TypeScript, 이미 있는 Markdown·MDX `content/` 폴더) 몇 가지를 묻고(첫 질문은 "추천 설정"으로, 기본 언어와 로그인만 묻거나 "하나씩 고르기"다), Monti가 새로 만드는 파일만, 읽고 고칠 수 있게 그대로 적어 준다. `monti.config.ts`(기능마다 한 줄, 줄마다 주석), `monti.schema.ts`(시작용 `post` 컬렉션. 콘텐츠가 있으면 front matter를 따른다), Next 파일 셋(`app/studio/layout.tsx`, `app/studio/[[...path]]/page.tsx`, `app/api/monti/[...path]/route.ts`), 주석이 달린 `.env.example`(변수마다 무엇이고 어디서 얻는지)이다. 설치 명령을 보여 주고 물은 뒤에 돌린다. **앱의 파일 셋을 고치고, 고친 파일과 정확한 변경을 "Changed:" 아래에 하나씩 적어 준다**(`next.config`를 `withCms`로 감싸기, 루트 레이아웃 `<html>`의 `suppressHydrationWarning`, `.gitignore`의 `.env.local`·`.monti/`). 안전하게 고칠 수 없는 모양의 파일은 건드리지 않고 이유와 함께 할 일 목록에 넣는다. 그다음 한 번 확인을 받고 기계가 할 일을 직접 한다: `.env.example`에서 `.env.local`을 만들고 새 `MONTI_SECRET`을 채우고(있는 `.env.local`은 덮어쓰지 않는다), 데이터베이스 주소가 있으면 `monti db:setup`을 돌리고, `monti doctor`를 돌린다. 끝에는 무엇을 골랐는지, 그리고 사람이 할 일을 번호를 붙여 쉬운 말로 적어 준다(없던 `DATABASE_URL`, `pnpm dev`, 첫 관리자나 GitHub OAuth 앱).
 
 전체 흐름:
 
 ```text
-설치 → monti init → monti db:setup → monti doctor → pnpm dev
+설치 → monti init(.env.local, db:setup, doctor까지 한다) → pnpm dev
 ```
 
 pnpm 12라면 1단계 전에 `pnpm-workspace.yaml`에 이렇게 적는다(core가 쓰는 `tsx`가 esbuild를 가져오고, pnpm 12는 그 설치 스크립트를 허락할 때까지 설치를 멈춘다. Monti는 그 파일을 고치지 않는다).
@@ -33,7 +33,7 @@ allowBuilds:
 ```
 
 - **질문:** 언어, 이미지 저장소(S3·R2·MinIO 또는 없음), 부가 기능(AI 글쓰기, git 동기화), 본문 블록, 관리자 경로(기본 `/studio`). 관리자 로그인 방법도 묻는다: 내장 이메일·비밀번호 로그인(기본, 다른 서비스 불필요) 또는 GitHub(OAuth 앱 필요). 이메일·비밀번호면 배포한 직후 관리자를 열어 첫 관리자 화면에서 첫 관리자를 만들고, 비밀번호를 잊었을 때는 `monti admin:reset-password`로 새로 정한다.
-- **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓰고 묻지 않고 설치한다. `--no-install`은 설치하지 않고 설치 명령을 적어 준다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
+- **질문 없이:** 모든 질문에 플래그가 있고, `--yes`는 기본값을 쓰고 묻지 않고 설치한다. `--no-install`은 설치하지 않고 설치 명령을 적어 주고, `--no-setup`은 `.env.local`·데이터베이스·doctor를 사람에게 맡긴다. CI와 AI 도구를 위해 `--json`은 결과를 JSON으로, `--dry-run`은 하게 될 일만 보여 준다. `monti init --help`나 [core README](packages/core/README.ko.md)의 "`monti init`"을 본다.
 - **안전:** 이미 있는 파일은 (위의 세 가지 수정 말고는) 고치지 않고(건너뛰고 알려 준다), 묻지 않고 덮어쓰지 않고, 프로젝트 밖에는 쓰지 않으며, 중간에 멈추면 무엇을 썼는지 알려 준다. 설치가 실패하면 그렇게 말하고 설치 명령을 그대로 적어 준다. `monti init`을 다시 돌리면 이어서 하고, 있는 파일은 그대로 둔다.
 - **언어:** `hello.ko.mdx` + `hello.en.mdx` 같은 파일 이름(또는 `ko/`, `en/` 폴더)이 사이트 언어가 된다. `--yes`에서는 그대로 쓰고, 기본 언어는 짝이 없는 파일을 가진 언어다.
 - **블록:** 기본 본문 블록은 가벼운 묶음이고, `mermaid`와 `chart`는 직접 고를 때만 들어간다(`--blocks all`). 둘은 `@monti-cms/blocks/mermaid`와 `@monti-cms/blocks/chart`에서 오고, 고른 경우에만 `mermaid`와 `recharts`가 따라오므로 고르지 않은 앱은 둘 다 불러오지도 설치하지도 않는다.

@@ -1,3 +1,4 @@
+import type { DoctorReport } from "./doctor";
 import type { InitAnswers } from "./init-answers";
 import type { PackageManager } from "./init-detect";
 import type { InitAnswerFlags } from "./init-prompts";
@@ -18,6 +19,12 @@ export interface InitHost {
 	install(command: InstallCommand): void | Promise<void>;
 	/** The time zone of this computer (an IANA name), or `undefined` when it cannot be read. */
 	systemTimeZone(): string | undefined;
+	/** The environment `DATABASE_URL` is looked up in. */
+	environment(): Record<string, string | undefined>;
+	/** `monti db:setup` for the app in `cwd`. Throws, with the reason, when it fails. */
+	setupDatabase(cwd: string): Promise<void>;
+	/** `monti doctor` for the app in `cwd`. Throws when it cannot run at all. */
+	runDoctor(cwd: string): Promise<DoctorReport>;
 }
 
 export interface InitOptions extends InitAnswerFlags {
@@ -33,6 +40,8 @@ export interface InitOptions extends InitAnswerFlags {
 	readonly install?: boolean;
 	/** Override the detected package manager. */
 	readonly packageManager?: PackageManager;
+	/** `false` (`--no-setup`): do not create `.env.local`, set up the database or run the doctor; the steps are in the list of what is left. */
+	readonly setup?: boolean;
 	/** Progress lines while the work runs. */
 	readonly log?: (message: string) => void;
 	readonly host?: Partial<InitHost>;

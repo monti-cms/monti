@@ -1,5 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { chosenBlocks } from "./block-choices";
+import type { DoctorReport } from "./doctor";
 import type { InitAnswers } from "./init-answers";
 import type { DetectedApp, PackageManager } from "./init-detect";
 import { detectSystemTimeZone } from "./init-prompts";
@@ -44,9 +47,45 @@ export function packagesFor(answers: InitAnswers): string[] {
 	]);
 }
 
-/** The real host: spawns the package manager. */
+/** Runs `monti <args>` of the app's own install in a child process (its own module cache and database connection), and collects the output. */
+function runMonti(cwd: string, args: readonly string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+	const bin = path.join(cwd, "node_modules", "@monti-cms", "core", "bin", "monti.mjs");
+	return new Promise((resolve, reject) => {
+		if (!existsSync(bin)) {
+			reject(new Error("@monti-cms/core is not installed in this app yet"));
+			return;
+		}
+		execFile(
+			process.execPath,
+			[bin, ...args],
+			{ cwd, maxBuffer: 16 * 1024 * 1024, timeout: 120_000 },
+			(error, stdout, stderr) => {
+				if (error && typeof error.code !== "number") reject(error);
+				else resolve({ code: error ? (error.code as number) : 0, stdout: String(stdout), stderr: String(stderr) });
+			},
+		);
+	});
+}
+
+/** The last lines of what a command printed, which is where its reason is. */
+const tail = (text: string, lines = 4): string => text.trim().split("\n").slice(-lines).join("\n");
+
+/** The real host: spawns the package manager and the `monti` command of the app. */
 export const defaultInitHost: InitHost = {
 	systemTimeZone: detectSystemTimeZone,
+	environment: () => process.env,
+	setupDatabase: async (cwd) => {
+		const result = await runMonti(cwd, ["db:setup"]);
+		if (result.code !== 0) throw new Error(tail(result.stderr || result.stdout) || "db:setup failed");
+	},
+	runDoctor: async (cwd) => {
+		const result = await runMonti(cwd, ["doctor", "--json"]);
+		try {
+			return JSON.parse(result.stdout) as DoctorReport;
+		} catch {
+			throw new Error(tail(result.stderr || result.stdout) || "doctor printed nothing");
+		}
+	},
 	install: (command) => {
 		const result = spawnSync(command.command, [...command.args], { cwd: command.cwd, stdio: "inherit" });
 		if (result.error || result.status !== 0) {

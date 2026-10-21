@@ -194,6 +194,7 @@ describe("monti init on the command line", () => {
 		const result = run(dir, [], { interactive: true, prompter, host });
 		expect(await result.code).toBe(0);
 		expect(prompter.asked).toEqual([
+			QUESTIONS.setup,
 			QUESTIONS.defaultLocale,
 			QUESTIONS.otherLocales,
 			QUESTIONS.storage,
@@ -204,6 +205,10 @@ describe("monti init on the command line", () => {
 			QUESTIONS.login,
 			QUESTIONS.directive,
 			expect.stringContaining("Install the"),
+			QUESTIONS.setupNow,
+			"task: Setting up .env.local",
+			"task: Creating Monti's tables",
+			"task: Checking the setup",
 		]);
 		expect(prompter.notes[0]).toMatchObject({ title: "Detected" });
 		expect(prompter.notes[0]?.body).toContain("App Router");

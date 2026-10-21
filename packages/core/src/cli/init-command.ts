@@ -10,11 +10,13 @@ const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn", "bun"] as const;
 export const initCommand = defineCommand({
 	name: "init",
 	summary: `Add Monti to an existing Next app (App Router): asks a few questions, writes Monti's own new files (monti.config.ts, monti.schema.ts, the
-admin pages, the API route and a commented .env.example), installs the packages, and prints what is left (.env.local, db:setup).
+admin pages, the API route and a commented .env.example), installs the packages, creates .env.local with a new MONTI_SECRET, sets up the database when
+a DATABASE_URL is there, runs the doctor, and prints what you chose and what is left for you to do.
+The first question is "Recommended setup" (asks the default language and the login only) or "Choose each option".
 It makes edits to your own files and lists them under "Changed:": it wraps the export of next.config in withCms(), adds suppressHydrationWarning to the <html> of
 the root layout, and adds .env.local and .monti/ to .gitignore (a file in a shape it cannot edit safely is left alone and the step is in the list).
-It writes no .env.local. A file that already exists is never overwritten without a yes.
-Every question has a flag; with --yes, --json, or no terminal nothing is asked.`,
+An existing .env.local is never overwritten: only an empty MONTI_SECRET is filled. A file that already exists is never overwritten without a yes.
+Every question has a flag; with --yes, --json, or no terminal nothing is asked and every step runs (use --no-install and --no-setup to skip them).`,
 	options: {
 		yes: {
 			type: "boolean",
@@ -70,6 +72,10 @@ The first one is created on the admin screen; GitHub's values go in .env.local`,
 			type: "boolean",
 			help: "Do not install packages: the install command is printed in the list of what is left",
 		},
+		"no-setup": {
+			type: "boolean",
+			help: "Do not create .env.local, fill MONTI_SECRET, set up the database or run the doctor: they are printed in the list of what is left",
+		},
 		"package-manager": { type: "string", value: "<m>", help: "npm, pnpm, yarn or bun (default: detected)" },
 	},
 	run: async (context) => {
@@ -87,6 +93,7 @@ The first one is created on the admin screen; GitHub's values go in .env.local`,
 			dryRun: values["dry-run"],
 			overwrite: values.overwrite,
 			install: values["no-install"] ? false : undefined,
+			setup: values["no-setup"] ? false : undefined,
 			packageManager: manager as PackageManager | undefined,
 			siteUrl: values["site-url"],
 			locales: values.locales ?? values.locale,
