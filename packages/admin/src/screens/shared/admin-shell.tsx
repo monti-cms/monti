@@ -2,7 +2,7 @@
 
 import { type Site, useSite, useTranslator } from "@monti-cms/core/site";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { entriesKeys, listEntries } from "../../api/entries";
 import { countFailedEvents, eventsKeys } from "../../api/events";
@@ -11,6 +11,8 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "../../ui/sidebar"
 import { AdminSidebar, type AdminSidebarProps } from "../admin-sidebar";
 import { useAdminFeatures } from "./admin-features";
 import { sharedMessages } from "./messages";
+import { useNavQueriesReady } from "./nav-queries";
+import { StatusBar, type StatusBarContextValue, type StatusBarScreen } from "./status-bar";
 
 interface AdminNavContextValue {
 	/** Number of trash items across all collections. null before loading. */
@@ -72,35 +74,22 @@ async function countTrash(site: Site): Promise<number> {
 	return totals.reduce((sum, total) => sum + total, 0);
 }
 
-/** The longest the sidebar's background counts wait for the page's own requests. */
-const NAV_QUERIES_MAX_WAIT_MS = 2500;
+/** The screens whose `count` is a number of entries (the status bar shows it on the right). */
+const COUNTED_SCREENS: readonly StatusBarScreen[] = ["list", "trash", "media"];
 
-const startsWith = (key: readonly unknown[], prefix: readonly unknown[]) =>
-	prefix.every((part, index) => key[index] === part);
-
-/** The sidebar's counts are background work (a request per collection for the trash and for the folders). */
-const isNavQuery = (key: readonly unknown[]) =>
-	startsWith(key, foldersKeys.all) || startsWith(key, eventsKeys.count()) || startsWith(key, entriesKeys.trashCount());
-
-/**
- * Whether the sidebar's counts may start. A screen's own list is what the person waits for, and a browser sends only a handful of requests to one host at a
- * time, so the counts (two requests per collection) wait until the page's requests have finished, or a short while at most.
- */
-function useNavQueriesReady(): boolean {
-	const queryClient = useQueryClient();
-	const [ready, setReady] = useState(false);
-	useEffect(() => {
-		const idle = () => queryClient.isFetching({ predicate: (query) => !isNavQuery(query.queryKey) }) === 0;
-		const started = Date.now();
-		const timer = setInterval(() => {
-			if (idle() || Date.now() - started > NAV_QUERIES_MAX_WAIT_MS) {
-				setReady(true);
-				clearInterval(timer);
-			}
-		}, 60);
-		return () => clearInterval(timer);
-	}, [queryClient]);
-	return ready;
+/** What the status bar's items read for a shell page: the screen kind from the current sidebar item, and the entry count a list passes. */
+function shellStatusContext(
+	site: Site,
+	activeNav: AdminSidebarProps["activeNav"],
+	count: number | undefined,
+): StatusBarContextValue {
+	const isCollection = site.COLLECTIONS.includes(activeNav);
+	const screen: StatusBarScreen = isCollection ? "list" : activeNav.startsWith("tools:") ? "tools" : activeNav;
+	return {
+		screen,
+		...(isCollection ? { collection: activeNav } : {}),
+		...(count !== undefined && COUNTED_SCREENS.includes(screen) ? { count } : {}),
+	};
 }
 
 /** Trash badge state. The screen's list logic must update this value too, so it lives outside the shell. */
@@ -175,6 +164,7 @@ export function AdminShell({
 	children: ReactNode;
 }) {
 	const t = useTranslator(sharedMessages);
+	const site = useSite();
 	const nav = useContext(AdminNavContext);
 	const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
 	if (!nav) {
@@ -234,6 +224,7 @@ export function AdminShell({
 				<ActionsSlotContext.Provider value={actionsSlot}>
 					<div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
 				</ActionsSlotContext.Provider>
+				<StatusBar context={shellStatusContext(site, sidebar.activeNav, count)} />
 			</SidebarInset>
 		</SidebarProvider>
 	);

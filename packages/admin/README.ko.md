@@ -354,13 +354,35 @@ export function StatsPage() {
 
 | 진입점 | 내용 |
 |---|---|
-| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
+| `@monti-cms/admin` | 플러그인의 관리자 코드가 쓰는 것: `defineAdminPlugin`(`pages`·`components`·`slots`·`statusItems`), 컴포넌트 타입(`FieldViewProps`·`AdminComponents` 등), 관리자 API(`useAdminFetch`·`adminFetch`·`CmsApiError`·`errorText`·`isConflict`·`useCmsMutation`), 블록 편집 화면(`useBlockEditor`·`BlockFrame`·`Content`·`ContainerToolbar`·`ToolbarButton`·`BlockSettings`·`AttributeInput`), 편집기 훅(`useField`·`useEntryEditor` 등, 실험), 관리자 코드가 읽는 사이트(`useSite`·`useTranslator`·`toPlainText`·`Site` 등, `@monti-cms/core/site`와 같은 값). 플러그인의 관리자 코드는 이 진입점 하나와, 화면 부품이 필요하면 `/kit`만 쓴다 |
 | `/host` | 프레임워크에 묶이지 않는 관리자 레이아웃·페이지(`AdminLayout`·`AdminPage`·`adminMetadata`)와 `AdminServer` 타입. `@monti-cms/nextjs` 같은 호스트 패키지가 붙인다 |
 | `/router` | 라우터 어댑터: `AdminRouterProvider`, `AdminRouter` 타입, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | 저장 문서와 편집기(`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), 편집기 확장 도우미(버블·슬래시 메뉴·코드 블록 잇기) |
 | `/slots` | 화면 자리에 동작 붙이기 |
 | `/kit` | 확장용 부품·도우미 묶음 |
 | `/styles.css` | 관리자 스타일(미리 만들어져 있어 앱에 Tailwind가 필요 없다) |
+
+### 상태 표시줄
+
+모든 관리자 화면의 맨 아래에는 장식 없는 상태 표시줄(높이 24px, 사이드바 배경, 위쪽 가는 선)이 있다. 항목은 코어와 플러그인이 채운다. 규칙은 하나다. 항목은 바뀌는 상태 가운데 눌렀을 때 갈 곳이 있는 것만 보여 주고, 할 말이 없으면 아무것도 그리지 않는다. 코어는 편집기의 저장 상태("초안 · 저장됨 2분 전", 누르면 저장), 언어, 본문 글자 수와 읽는 시간(공백을 뺀 글자 수, 분당 약 500자, 최소 1분), 실패한 이벤트 전달(이벤트 로그로 연결), 목록의 항목 수를 낸다.
+
+플러그인은 `defineAdminPlugin`의 `statusItems`로 이름을 붙여 항목을 더한다. 항목마다 그룹(`align: "start"`는 왼쪽, `"end"`는 오른쪽)과 `order`(오름차순, 코어 항목은 왼쪽 10~80, 오른쪽 10), 그리고 `StatusBarItem` 또는 `null`을 그리는 컴포넌트를 밝힌다.
+
+```tsx
+"use client";
+import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+
+function DraftsStatus() {
+	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
+	const drafts = useDrafts(collection); // 직접 만든 쿼리
+	if (screen !== "list" || !drafts) return null; // null이면 항목이 빠지고 빈틈도 남지 않는다
+	return <StatusBarItem tone="warning" href="/admin?status=draft" title="초안 열기">초안 {drafts}건</StatusBarItem>;
+}
+
+export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
+```
+
+`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크) 또는 `onClick`(버튼), `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 글자 수, 읽는 시간, 텍스트 검사기가 찾은 항목과 첫 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
 
 ### 라우터 어댑터
 

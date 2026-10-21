@@ -356,13 +356,35 @@ Internal admin file paths (`ui/*`, `screens/*`) are not public.
 
 | Entry point | Contents |
 |---|---|
-| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
+| `@monti-cms/admin` | What a plugin's admin code needs: `defineAdminPlugin` (`pages`, `components`, `slots`, `statusItems`), the component types (`FieldViewProps`, `AdminComponents`, ...), the admin API (`useAdminFetch`, `adminFetch`, `CmsApiError`, `errorText`, `isConflict`, `useCmsMutation`), a block's edit view (`useBlockEditor`, `BlockFrame`, `Content`, `ContainerToolbar`, `ToolbarButton`, `BlockSettings`, `AttributeInput`), the editor hooks (`useField`, `useEntryEditor`, ...; experimental) and the site as admin code reads it (`useSite`, `useTranslator`, `toPlainText`, `Site`, ..., the same values as `@monti-cms/core/site`). A plugin's admin code needs only this entry point, and `/kit` for screen parts |
 | `/host` | The framework-neutral admin layout and page (`AdminLayout`, `AdminPage`, `adminMetadata`) and the `AdminServer` type, which a host package such as `@monti-cms/nextjs` mounts |
 | `/router` | The router adapter: `AdminRouterProvider`, the `AdminRouter` type, `AdminLink`, `useAdminRouter`, `useAdminPathname`, `useAdminSearchParams` |
 | `/editor` | The stored document and the editor (`CmsEditor`, `storedToTiptap`, `tiptapToStored`, `DocPreview`), editor extension helpers (bubble, slash menu, code block linking) |
 | `/slots` | Attaching actions to screen slots |
 | `/kit` | Parts and helpers for extensions |
 | `/styles.css` | Admin styles (prebuilt, no Tailwind needed in the app) |
+
+### Status bar
+
+Every admin screen ends with a plain status bar (24px, the sidebar's background, a hairline on top). Core and plugins contribute items; the rule is that an item shows only changing state that leads somewhere when clicked, and renders nothing when there is nothing to say. Core ships the save state of the editor ("Draft · Saved 2 min ago", click to save), the language, the character count and reading time of the body (characters without whitespace, about 500 a minute, at least 1), failed event deliveries (links to the event log) and the entry count of lists.
+
+A plugin adds items with `statusItems` of `defineAdminPlugin`, by name. Each item declares its group (`align: "start"` is the left group, `"end"` the right one) and its `order` (ascending; the core items use 10 to 80 on the left and 10 on the right), and a component that renders a `StatusBarItem` or `null`:
+
+```tsx
+"use client";
+import { StatusBarItem, useStatusBarContext } from "@monti-cms/admin/kit";
+
+function DraftsStatus() {
+	const { screen, collection } = useStatusBarContext(); // "list" | "entry" | "media" | "settings" | "tools" | ...
+	const drafts = useDrafts(collection); // your own query
+	if (screen !== "list" || !drafts) return null; // null hides the item, with no gap
+	return <StatusBarItem tone="warning" href="/admin?status=draft" title="Open the drafts">{drafts} drafts</StatusBarItem>;
+}
+
+export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
+```
+
+`StatusBarItem` takes `icon`, `tone` (`default`, `warning`, `danger`), `href` (a link inside the admin) or `onClick` (a button), a `title` (tooltip) and its text as children. `useStatusBarContext()` returns the screen kind, the `collection`, the `count` of a list, and on the editor the `entryId`, the `locale` and an `EditorStatus` (save state, time of the last save, character count, reading time, and the findings of the text checkers with a way to the first one). Give a function of the site (`statusItems: (site) => ({ ... })`) when the items depend on the site config; the components come from a `"use client"` module. On narrow screens the bar hides its `end` items first and never wraps.
 
 ### Router adapter
 

@@ -16,9 +16,19 @@ export { PageActions } from "./screens/shared/admin-shell";
 export { useConfirm } from "./screens/shared/confirm-dialog";
 export { EditorFooter } from "./screens/shared/editor-footer";
 export { EmptyState } from "./screens/shared/empty-state";
+export { formatAgo } from "./screens/shared/format-date";
 export { DETAIL_PANE_FRAME } from "./screens/shared/layout";
 export { LoadErrorAlert } from "./screens/shared/load-error-alert";
 export { ListPane, ListRow, MasterDetail } from "./screens/shared/master-detail";
+export {
+	type EditorStatus,
+	type StatusBarContextValue,
+	StatusBarItem,
+	type StatusBarItemProps,
+	type StatusBarScreen,
+	type StatusItemDefinition,
+	useStatusBarContext,
+} from "./screens/shared/status-bar";
 export { useDebounced } from "./screens/shared/use-debounced";
 export { useDraftEditor } from "./screens/shared/use-draft-editor";
 export { useUnsavedGuard } from "./screens/shared/use-unsaved-guard";
