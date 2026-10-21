@@ -111,17 +111,26 @@ export function columnConfig(site: Site, collection: string, column: AdminListCo
 	};
 }
 
+/**
+ * Whether the collection is translated per locale in the admin. A document always has a per-locale body; an item only has per-locale values when
+ * one of its text fields is `localized: true`, so an item without one shows no locale column or locale tabs.
+ */
+export function collectionTranslated(site: Site, collection: string): boolean {
+	if (!site.ADMIN_TRANSLATIONS || !site.isCollection(collection)) return false;
+	return !site.isItemCollection(collection) || site.recordLocalizedFields(collection).length > 0;
+}
+
 export const columnLabel = (site: Site, collection: string, column: AdminListColumn) =>
 	columnConfig(site, collection, column).label;
 
 /**
  * Default columns, used until the writer chooses their own in the list screen's column settings. Document collections: title, status, locale, taxonomy fields, updated date, published date; item collections:
- * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`), the slug column only when there is a slug field.
+ * title, slug, locale, status, updated date. The locale column appears only where the translation UI is shown (two or more locales, `admin.translations` not `false`, and for an item collection a `localized` field), the slug column only when there is a slug field.
  */
 export function defaultListColumns(site: Site, collection: string): AdminListColumn[] {
 	if (!site.isCollection(collection)) return ["title", "status"];
 	const schema = site.schemaOf(collection);
-	const locale = site.ADMIN_TRANSLATIONS ? ["locale"] : [];
+	const locale = collectionTranslated(site, collection) ? ["locale"] : [];
 	if (schema.kind === "item") {
 		const slug = Object.values(schema.fields).some((field) => field.kind === "slug") ? ["slug"] : [];
 		return ["title", ...slug, ...locale, "status", "updatedAt"];
@@ -146,8 +155,8 @@ export function columnsFor(
 		// Item collections have no publishing: saving is publishing. The locale column shows locales that have a name.
 		if (column === "publishedAt") return schema.kind === "document";
 		if (column === "slug") return slugField !== undefined;
-		// A site with one locale, or one that turned the translation UI off, has no locale column.
-		if (column === "locale") return site.ADMIN_TRANSLATIONS;
+		// A site with one locale, one that turned the translation UI off, or an item collection with no per-locale field has no locale column.
+		if (column === "locale") return collectionTranslated(site, collection);
 		return true;
 	});
 	const taxonomy = site.taxonomyFieldsOf(collection).map((stored) => stored.name);

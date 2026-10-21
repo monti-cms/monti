@@ -239,14 +239,30 @@ export function pathProblem(path: string): "slash" | "slug" | null {
 	return checkPathPattern(path)?.code ?? null;
 }
 
-/** A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place. */
+/**
+ * A new collection: every collection needs a title, and a slug is what the public address is made from, so both start in place.
+ * On a site with several locales the title is per locale, and a document's slug starts from the source locale's, as init writes them.
+ */
 export function addCollection(file: Obj, name: string, kind: "document" | "item", path?: string, label?: string): Obj {
+	const multiLocale = localesOf(file).length > 1;
 	let collection: Obj = {
 		label: label?.trim() || name.charAt(0).toUpperCase() + name.slice(1),
 		kind,
 		fields: {
-			title: { kind: "text", label: "Title", required: true, role: TITLE_ROLE },
-			slug: { kind: "slug", label: "Slug", required: true, from: "title" },
+			title: {
+				kind: "text",
+				label: "Title",
+				required: true,
+				...(multiLocale ? { localized: true } : {}),
+				role: TITLE_ROLE,
+			},
+			slug: {
+				kind: "slug",
+				label: "Slug",
+				required: true,
+				...(multiLocale && kind === "document" ? { localized: "inherit" } : {}),
+				from: "title",
+			},
 		},
 	};
 	if (path && path.trim() !== "") collection = setProp(collection, "path", path, COLLECTION_KEY_ORDER);

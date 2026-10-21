@@ -89,6 +89,21 @@ describe("taxonomy edit panel", () => {
 		expect(screen.getByRole("textbox", { name: /^이름/ })).toBeTruthy();
 	});
 
+	it("shows no language tabs for a collection without a per-locale field, since every locale would edit nothing", async () => {
+		const tagDefinition = testConfig.collections.tag;
+		const title = { ...tagDefinition.fields.title, localized: undefined };
+		const site = createSite({
+			...testConfig,
+			collections: { ...testConfig.collections, tag: { ...tagDefinition, fields: { ...tagDefinition.fields, title } } },
+		});
+		render(
+			withSite(<RecordPanel target={{ collection: "tag", id: "tag-1" }} onClose={vi.fn()} onSaved={vi.fn()} />, site),
+		);
+		await screen.findByDisplayValue("리액트");
+		expect(within(panel()).queryAllByRole("tab")).toHaveLength(0);
+		expect(screen.getByRole("textbox", { name: /^이름/ })).toBeTruthy();
+	});
+
 	it("a new item is saved with just a name, passes the created item on, and does not close the slot", async () => {
 		const { onSaved, onClose } = renderPanel({ collection: "tag", id: null });
 		expect(screen.getByRole("heading", { name: "태그 추가" })).toBeTruthy();
