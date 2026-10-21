@@ -146,7 +146,7 @@ function StatusSegments({ state, onChange }: { state: ListState; onChange: (patc
 					key={key}
 					type="button"
 					aria-pressed={active === key}
-					className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-foreground aria-pressed:font-medium aria-pressed:text-monti-foreground"
+					className="-mb-px border-transparent border-b-2 text-monti-body text-monti-muted-foreground outline-none transition-colors hover:text-monti-foreground focus-visible:ring-2 focus-visible:ring-monti-ring/50 aria-pressed:border-monti-highlight aria-pressed:font-medium aria-pressed:text-monti-foreground"
 					onClick={() => onChange({ statuses: key === "all" ? [] : [key], hasChanges: false })}
 				>
 					{label}

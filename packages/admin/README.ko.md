@@ -523,10 +523,11 @@ import "@monti-cms/admin/styles.css";
 | 주색 | `--monti-primary`, `--monti-primary-foreground` | 주 버튼, 체크된 컨트롤, 선택 영역 |
 | 보조색 | `--monti-secondary`, `--monti-secondary-foreground` | 보조 버튼과 칩(`--monti-secondary`는 정하지 않으면 `--monti-muted`를, `-foreground`는 `--monti-foreground`를 따른다) |
 | 흐린 면과 강조 | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | 조용한 배경(코드, 비활성 영역)과 행·메뉴 항목의 호버·강조 배경(`--monti-accent-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
+| 강조 | `--monti-highlight`, `--monti-highlight-soft` | 상호작용 상태에만 쓰는 단 하나의 강조색: 링크, 포커스 링, 현재 탭과 사이드바 항목, 체크된 컨트롤, 에디터 선택 영역. 라이트 `#2f54eb`, 다크 `#7b93ff`(두 모드 모두 배경 위 글자 대비 4.5:1 이상). 버튼은 `--monti-primary`를 유지한다. `-soft`는 선택 영역의 옅은 배경(정하지 않으면 `--monti-highlight`를 따른다) |
 | 상태 | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | 오류와 삭제 동작. `-soft`는 옅게 물든 배경(정하지 않으면 `--monti-destructive`를 따른다) |
 | | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | 경고(`-soft`는 정하지 않으면 `--monti-warning`을 따른다) |
 | | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | 성공과 발행된 상태(`-soft`는 정하지 않으면 `--monti-success`를 따른다) |
-| 선 | `--monti-border`, `--monti-input`, `--monti-ring` | 구분선, 입력 컨트롤 테두리, 포커스 링 |
+| 선 | `--monti-border`, `--monti-input`, `--monti-ring` | 구분선, 입력 컨트롤 테두리, 포커스 링(`--monti-ring`은 정하지 않으면 `--monti-highlight`를 따른다) |
 | 사이드바 | `--monti-sidebar`, `--monti-sidebar-foreground` | 내비게이션 사이드바와 그 글자 |
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | 사이드바에서 활성이거나 강조된 항목 |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |

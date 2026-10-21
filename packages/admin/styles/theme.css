@@ -45,6 +45,8 @@
 	--color-monti-success-foreground: var(--monti-success-foreground);
 	--color-monti-border: var(--monti-border);
 	--color-monti-input: var(--monti-input);
+	--color-monti-highlight: var(--monti-highlight);
+	--color-monti-highlight-soft: var(--monti-highlight-soft);
 	--color-monti-ring: var(--monti-ring);
 	--color-monti-sidebar: var(--monti-sidebar);
 	--color-monti-sidebar-foreground: var(--monti-sidebar-foreground);

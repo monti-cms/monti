@@ -538,10 +538,11 @@ one only to break away. Tokens by role:
 | Primary | `--monti-primary`, `--monti-primary-foreground` | Main buttons, checked controls, selection |
 | Secondary | `--monti-secondary`, `--monti-secondary-foreground` | Secondary buttons and chips (`--monti-secondary` follows `--monti-muted` unless set, its `-foreground` follows `--monti-foreground`) |
 | Muted and accent | `--monti-muted`, `--monti-accent`, `--monti-accent-foreground` | Quiet fills (code, inactive areas) and the hover or highlight fill of rows and menu items (`--monti-accent-foreground` follows `--monti-foreground` unless set) |
+| Highlight | `--monti-highlight`, `--monti-highlight-soft` | The one accent color, for interactive states only: links, the focus ring, the current tab and sidebar item, checked controls, the editor selection. Light `#2f54eb`, dark `#7b93ff` (at least 4.5:1 text contrast on the page background in both). Buttons stay `--monti-primary`. `-soft` is the tinted fill for selections (follows `--monti-highlight` unless set) |
 | Status | `--monti-destructive`, `--monti-destructive-soft`, `--monti-destructive-foreground` | Errors and delete actions; `-soft` is the tinted fill (follows `--monti-destructive` unless set) |
 | | `--monti-warning`, `--monti-warning-soft`, `--monti-warning-foreground` | Warnings (`-soft` follows `--monti-warning` unless set) |
 | | `--monti-success`, `--monti-success-soft`, `--monti-success-foreground` | Success and published states (`-soft` follows `--monti-success` unless set) |
-| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring |
+| Lines | `--monti-border`, `--monti-input`, `--monti-ring` | Dividers, form control outlines, the focus ring (`--monti-ring` follows `--monti-highlight` unless set) |
 | Sidebar | `--monti-sidebar`, `--monti-sidebar-foreground` | The navigation sidebar and its text |
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |

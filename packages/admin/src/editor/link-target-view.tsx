@@ -43,7 +43,7 @@ export function LinkTargetAnchor({ entryId, className }: { entryId: string; clas
 			onMouseDown={(event) => event.preventDefault()}
 			className={cn("flex min-w-0 max-w-64 flex-col px-1 text-xs", className)}
 		>
-			<span className="truncate text-monti-primary underline underline-offset-2">{nameOf(tc, target)}</span>
+			<span className="truncate text-monti-highlight underline underline-offset-2">{nameOf(tc, target)}</span>
 			<span className="truncate text-monti-muted-foreground">
 				{target.path ?? ""}
 				{target.published ? "" : `${target.path ? " · " : ""}${t("link.targetDraft")}`}

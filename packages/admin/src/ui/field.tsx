@@ -122,7 +122,7 @@ function FormFieldDescription({ className, ...props }: React.ComponentProps<"p">
 			className={cn(
 				"text-left font-normal text-monti-muted-foreground text-sm leading-normal group-has-monti-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
 				"nth-last-2:-mt-1 last:mt-0",
-				"[&>a:hover]:text-monti-primary [&>a]:underline [&>a]:underline-offset-4",
+				"[&>a]:text-monti-highlight [&>a]:underline [&>a]:underline-offset-4",
 				className,
 			)}
 			{...props}

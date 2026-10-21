@@ -126,6 +126,8 @@ describe("admin CSS confinement", () => {
 			),
 			"warning-soft": expect.stringMatching(/^color-mix\(in srgb, var\(--monti-warning\) [\d.]+%, transparent\)$/),
 			"success-soft": expect.stringMatching(/^color-mix\(in srgb, var\(--monti-success\) [\d.]+%, transparent\)$/),
+			"highlight-soft": expect.stringMatching(/^color-mix\(in srgb, var\(--monti-highlight\) [\d.]+%, transparent\)$/),
+			ring: "var(--monti-highlight)",
 		};
 		let blocks = 0;
 		postcss.parse(adminCss).walkRules((rule) => {
@@ -137,6 +139,38 @@ describe("admin CSS confinement", () => {
 			}
 		});
 		expect(blocks).toBe(2);
+	});
+
+	it("the accent exists in both modes, readable as text, and the focus ring follows it", () => {
+		const luminance = (hex: string) => {
+			const [r, g, b] = [1, 3, 5].map((i) => {
+				const v = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
+				return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+			});
+			return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+		};
+		const contrast = (a: string, b: string) => {
+			const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+			return (hi + 0.05) / (lo + 0.05);
+		};
+		const modes: Record<string, { highlight: string; background: string }> = {};
+		postcss.parse(adminCss).walkRules((rule) => {
+			const value = (prop: string) => {
+				const decl = rule.nodes.find((node) => node.type === "decl" && node.prop === prop);
+				return decl?.type === "decl" ? decl.value : "";
+			};
+			if (!value("--monti-background")) return;
+			modes[rule.selector.includes(".dark") ? "dark" : "light"] = {
+				highlight: value("--monti-highlight"),
+				background: value("--monti-background"),
+			};
+		});
+		expect(Object.keys(modes).sort()).toEqual(["dark", "light"]);
+		for (const { highlight, background } of Object.values(modes)) {
+			expect(highlight).toMatch(/^#[\da-f]{6}$/);
+			expect(contrast(highlight, background)).toBeGreaterThanOrEqual(4.5);
+		}
+		expect(themeCss).toContain("--color-monti-highlight: var(--monti-highlight)");
 	});
 
 	it("the theme keeps the admin's own names only", () => {
