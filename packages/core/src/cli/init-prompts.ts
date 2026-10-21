@@ -97,6 +97,8 @@ export function validateFlags(flags: InitAnswerFlags): void {
 
 /** What the questions ask, for the tests and the docs. */
 export const QUESTIONS = {
+	setup: "How do you want to set up Monti?",
+	setupNow: "Set up .env.local, the secret and the database now?",
 	defaultLocale: "Default language of the site",
 	otherLocales: "Other languages (optional)",
 	localesOther: "Language code (or several, comma-separated, like pt-BR or sv)",
@@ -121,8 +123,12 @@ export function detectedLocales(
 /** The "Other..." entry of the language picker. It is not a language code (it has no valid one's shape), so it cannot collide with one. */
 const OTHER_LOCALES = "Other...";
 
-/** Asks for the default language, then the others; the default is first in the result. */
-async function askLocales(prompter: Prompter, found: ReturnType<typeof detectedLocales>): Promise<string[]> {
+/** Asks for the default language, then (unless `asksOthers` is false) the others; the default is first in the result. */
+async function askLocales(
+	prompter: Prompter,
+	found: ReturnType<typeof detectedLocales>,
+	asksOthers: boolean,
+): Promise<string[]> {
 	const detected = found?.codes ?? [];
 	const known = new Set(COMMON_LOCALES.map((locale) => locale.code));
 	const label = (code: string) => `${languageLabel(code)} (${code})`;
@@ -141,6 +147,9 @@ async function askLocales(prompter: Prompter, found: ReturnType<typeof detectedL
 	});
 	const defaultLocale =
 		first === OTHER_LOCALES ? ((await askCodes(QUESTIONS.localesOther))[0] ?? DEFAULT_INIT_LOCALE) : first;
+
+	// The recommended setup asks the default language only; the other languages found in the content stay.
+	if (!asksOthers) return [...new Set([defaultLocale, ...detected])];
 
 	const remaining = languages.filter((code) => code !== defaultLocale);
 	const more = await prompter.multiselect({
@@ -165,11 +174,36 @@ export async function collectAnswers(
 	validateFlags(flags);
 	const siteUrl = flags.siteUrl ?? `http://localhost:${app.devPort}`;
 
+	// The first question: the recommended setup asks the default language and the login, and takes the default for everything else.
+	// With the flags of all of those given there is nothing left for it to decide, so it is not asked.
+	const decides = [flags.storage, flags.extras, flags.blocks, flags.adminPath, flags.directiveSyntax];
+	const recommended =
+		prompter !== undefined &&
+		decides.some((value) => value === undefined) &&
+		(await prompter.select<"recommended" | "custom">({
+			message: QUESTIONS.setup,
+			options: [
+				{
+					value: "recommended",
+					label: "Recommended setup",
+					hint: "asks only the default language and how to sign in",
+				},
+				{
+					value: "custom",
+					label: "Choose each option",
+					hint: "languages, storage, features, blocks, admin path, syntax",
+				},
+			],
+			initial: "recommended",
+		})) === "recommended";
+	// A question is asked only when a person is there, did not give its flag, and chose to be asked.
+	const asking = recommended ? undefined : prompter;
+
 	// Locales, the default first
 	let locales: string[];
 	const foundLocales = detectedLocales(app);
 	if (flags.locales !== undefined) locales = splitList(flags.locales);
-	else if (prompter) locales = await askLocales(prompter, foundLocales);
+	else if (prompter) locales = await askLocales(prompter, foundLocales, !recommended);
 	else locales = foundLocales ? foundLocales.codes : [DEFAULT_INIT_LOCALE];
 	locales = [...new Set(locales)];
 
@@ -177,8 +211,8 @@ export async function collectAnswers(
 	const storage =
 		flags.storage !== undefined
 			? (flags.storage as "s3" | "none")
-			: prompter
-				? await prompter.select({
+			: asking
+				? await asking.select({
 						message: QUESTIONS.storage,
 						options: [
 							{ value: "none", label: "Nowhere yet", hint: "the media menu stays hidden" },
@@ -191,8 +225,8 @@ export async function collectAnswers(
 	// Extras (Bareun is not offered)
 	let extras: string[];
 	if (flags.extras !== undefined) extras = splitList(flags.extras);
-	else if (prompter) {
-		extras = await prompter.multiselect({
+	else if (asking) {
+		extras = await asking.multiselect({
 			message: QUESTIONS.extras,
 			options: [
 				{ value: "ai", label: "AI writing", hint: "polish, draft and translate buttons" },
@@ -205,9 +239,9 @@ export async function collectAnswers(
 	// Blocks
 	let blocks: string[];
 	if (flags.blocks !== undefined) blocks = parseBlocks(flags.blocks);
-	else if (prompter) {
+	else if (asking) {
 		const heavy = BLOCK_CHOICES.filter((block) => block.heavy);
-		const mode = await prompter.select({
+		const mode = await asking.select({
 			message: QUESTIONS.blocks,
 			options: [
 				{
@@ -229,7 +263,7 @@ export async function collectAnswers(
 				? BLOCK_IDS.filter((id) => DEFAULT_BLOCK_IDS.includes(id))
 				: mode === "all"
 					? [...BLOCK_IDS]
-					: await prompter.multiselect({
+					: await asking.multiselect({
 							message: QUESTIONS.blockList,
 							options: BLOCK_CHOICES.map((block) => ({
 								value: block.id,
@@ -243,9 +277,9 @@ export async function collectAnswers(
 	// Admin path
 	const adminPath =
 		flags.adminPath ??
-		(prompter
+		(asking
 			? (
-					await prompter.text({
+					await asking.text({
 						message: QUESTIONS.adminPath,
 						initial: DEFAULT_INIT_ADMIN_PATH,
 						validate: (value) => check.adminPath(value.trim()),
@@ -272,8 +306,8 @@ export async function collectAnswers(
 	const blocksInstalled = blocks.filter((id) => BLOCK_IDS.includes(id)).length > 0;
 	const directiveSyntax =
 		flags.directiveSyntax ??
-		(prompter
-			? (await prompter.select<"directive" | "mdx">({
+		(asking
+			? (await asking.select<"directive" | "mdx">({
 					message: QUESTIONS.directive,
 					options: [
 						{ value: "directive", label: "With ::: blocks, e.g. :::callout (directive syntax)" },

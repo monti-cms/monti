@@ -1,3 +1,4 @@
+import type { InitAnswers } from "./init-answers";
 import type { InitReport, InitStep } from "./init-types";
 
 /** The text of `monti init`: the progress line after the files are written, and the plain summary at the end. */
@@ -26,6 +27,21 @@ export const placementLine = (src: boolean): string =>
 		? "Your app uses src/app, so Monti's files are in src/ (next to app/)."
 		: "Your app uses app/, so Monti's files are in the project root (next to app/).";
 
+/** What was chosen, one line each, and the file or screen that changes it later (the language and the admin path live in `monti.schema.ts`, which the Settings screen edits). */
+export function chosenLines(answers: InitAnswers): string[] {
+	const [defaultLocale, ...otherLocales] = answers.locales;
+	const features = [...(answers.ai ? ["AI writing"] : []), ...(answers.gitSync ? ["Git sync"] : [])];
+	return [
+		`Languages: ${[`${defaultLocale} (default)`, ...otherLocales].join(", ")}. Change: admin Settings (Languages) or monti.schema.ts`,
+		`Sign-in: ${answers.login === "github" ? "GitHub" : "email and password"}. Change: monti.config.ts (auth)`,
+		`Image storage: ${answers.storage === "s3" ? "S3-compatible storage" : "none yet"}. Change: monti.config.ts (storage)`,
+		`Extra features: ${features.length > 0 ? features.join(", ") : "none"}. Change: monti.config.ts (plugins)`,
+		`Body blocks: ${answers.blocks.length > 0 ? answers.blocks.join(", ") : "none"}. Change: monti.config.ts (plugins, one line per block)`,
+		`Admin path: ${answers.adminPath}. Change: monti.schema.ts (move the admin pages folder with it)`,
+		`Block syntax: ${answers.directiveSyntax ? "::: blocks (directive syntax)" : "plain MDX"}. Change: monti.config.ts (the mdx() line)`,
+	];
+}
+
 /** The plain summary: what was done, then what is left, numbered. */
 export function formatInitReport(report: InitReport): string {
 	const dry = report.dryRun;
@@ -42,6 +58,7 @@ export function formatInitReport(report: InitReport): string {
 		"",
 	);
 	out.push(placementLine(report.app.src), "");
+	out.push("You chose:", ...chosenLines(report.answers).map((line) => `  - ${line}`), "");
 	out.push(
 		...list(dry ? "Would create:" : "Created:", report.created),
 		...(report.changed.length === 0

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { detectApp } from "../init-detect";
 import { timeZoneNote } from "../init-plan";
 import { collectAnswers, QUESTIONS } from "../init-prompts";
-import { fixtureApp, scriptedPrompter } from "./init-helpers";
+import { fixtureApp, POST_MDX, scriptedPrompter } from "./init-helpers";
 
 /** The question flow with mocked answers: the order, what each answer decides, and what a flag or `--yes` skips. */
 
@@ -20,11 +20,80 @@ const everything = {
 	[QUESTIONS.directive]: "mdx",
 };
 
+describe("the recommended setup", () => {
+	const other = [
+		QUESTIONS.storage,
+		QUESTIONS.extras,
+		QUESTIONS.blocks,
+		QUESTIONS.blockList,
+		QUESTIONS.adminPath,
+		QUESTIONS.directive,
+	];
+
+	it("asks the setup question first, then only the default language and the login", async () => {
+		const prompter = scriptedPrompter({
+			[QUESTIONS.setup]: "recommended",
+			[QUESTIONS.defaultLocale]: "ko",
+			[QUESTIONS.login]: "github",
+		});
+		const answers = await collectAnswers(app(), {}, prompter, () => "UTC");
+		expect(prompter.asked).toEqual([QUESTIONS.setup, QUESTIONS.defaultLocale, QUESTIONS.login]);
+		for (const question of other) expect(prompter.asked).not.toContain(question);
+		expect(answers.login).toBe("github");
+		expect(answers.locales).toEqual(["ko"]);
+	});
+
+	it("takes the same defaults as a run without a terminal for everything it does not ask", async () => {
+		const prompter = scriptedPrompter({
+			[QUESTIONS.setup]: "recommended",
+			[QUESTIONS.defaultLocale]: "en",
+			[QUESTIONS.login]: "password",
+		});
+		const recommended = await collectAnswers(app(), {}, prompter, () => "UTC");
+		const defaults = await collectAnswers(app(), {}, undefined, () => "UTC");
+		expect(recommended).toEqual(defaults);
+	});
+
+	it("keeps the other languages found in the content, and still asks for the login when a flag skips the rest", async () => {
+		const found = detectApp(fixtureApp({ "content/ko/a.mdx": POST_MDX("a"), "content/ja/b.mdx": POST_MDX("b") }));
+		const prompter = scriptedPrompter({
+			[QUESTIONS.setup]: "recommended",
+			[QUESTIONS.defaultLocale]: "ja",
+			[QUESTIONS.login]: "password",
+		});
+		const answers = await collectAnswers(found, {}, prompter, () => "UTC");
+		expect(answers.locales[0]).toBe("ja");
+		expect(new Set(answers.locales)).toEqual(new Set(["ja", "ko"]));
+		expect(prompter.asked).not.toContain(QUESTIONS.otherLocales);
+	});
+
+	it("is not asked when the flags already settle everything it would decide, and the login is still asked", async () => {
+		const prompter = scriptedPrompter({ [QUESTIONS.login]: "password" });
+		await collectAnswers(
+			app(),
+			{ locales: "en", storage: "none", extras: "none", blocks: "none", adminPath: "/studio", directiveSyntax: false },
+			prompter,
+		);
+		expect(prompter.asked).toEqual([QUESTIONS.login]);
+	});
+
+	it("never picks a login silently: without a flag the login is asked, only a run without a terminal defaults it", async () => {
+		const prompter = scriptedPrompter({
+			[QUESTIONS.setup]: "recommended",
+			[QUESTIONS.defaultLocale]: "en",
+			[QUESTIONS.login]: "github",
+		});
+		expect((await collectAnswers(app(), {}, prompter, () => "UTC")).login).toBe("github");
+		expect((await collectAnswers(app(), {}, undefined, () => "UTC")).login).toBe("password");
+	});
+});
+
 describe("the questions of monti init", () => {
 	it("asks in the order locales, storage, extras, blocks, admin path, login", async () => {
 		const prompter = scriptedPrompter(everything);
 		const answers = await collectAnswers(app(), {}, prompter, () => "UTC");
 		expect(prompter.asked).toEqual([
+			QUESTIONS.setup,
 			QUESTIONS.defaultLocale,
 			QUESTIONS.otherLocales,
 			QUESTIONS.storage,
@@ -203,7 +272,7 @@ describe("the questions of monti init", () => {
 		const prompter = scriptedPrompter({ [QUESTIONS.extras]: [] });
 		const flags = { locales: "en", storage: "none", blocks: "none", adminPath: "/studio", directiveSyntax: false };
 		expect((await collectAnswers(app(), { ...flags, login: "github" }, prompter)).login).toBe("github");
-		expect(prompter.asked).toEqual([QUESTIONS.extras]);
+		expect(prompter.asked).toEqual([QUESTIONS.setup, QUESTIONS.extras]);
 		expect((await collectAnswers(app(), { login: "password" })).login).toBe("password");
 		await expect(collectAnswers(app(), { login: "none" })).rejects.toThrow(
 			'--login "none" must be "password" or "github"',
@@ -225,7 +294,7 @@ describe("the questions of monti init", () => {
 			},
 			prompter,
 		);
-		expect(prompter.asked).toEqual([QUESTIONS.extras]);
+		expect(prompter.asked).toEqual([QUESTIONS.setup, QUESTIONS.extras]);
 		expect(answers).toMatchObject({
 			locales: ["ja"],
 			storage: "none",
