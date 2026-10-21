@@ -463,6 +463,7 @@ How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm b
 - **Names.** Every custom property the bundle declares starts with `--monti-` (Tailwind's own `--tw-*` became `--monti-tw-*`, and its theme is inlined), keyframes are `monti-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
 - **Math.** The KaTeX styles and fonts for the math preview are included (the fonts are copied to `dist/fonts` and linked relatively), so sites do not import KaTeX CSS for the admin.
 - **Font.** Like Tailwind's preflight, the bundle falls back to the system sans-serif stack on `html` of an admin document. A font the app sets on `body` wins.
+- **Bundled fonts.** The admin ships Pretendard (UI text, Korean and Latin; variable font in `unicode-range` slices, so a page downloads only the slices it shows) and IBM Plex Mono (code, field keys, slugs; latin, weights 400, 500, 600) in `dist/fonts`, linked relatively from `styles.css` with `font-display: swap`. Nothing is requested from a third-party server. They are registered as `Monti Pretendard` and `Monti Plex Mono`, so they never collide with a copy the site loads itself. Both are licensed under the SIL Open Font License 1.1; the license texts sit next to the files (`dist/fonts/pretendard/LICENSE.txt`, `dist/fonts/ibm-plex-mono/LICENSE.txt`).
 
 What the bundle provides (everything carries the `monti` prefix, so nothing collides with the app's names):
 
@@ -545,7 +546,7 @@ one only to break away. Tokens by role:
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
-| Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: a system monospace stack) |
+| Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: Pretendard, then a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: IBM Plex Mono, then a system monospace stack) |
 | | `--monti-content-font` | The font of the writing area (post title, editor body, translation source). Not set by default: the admin copies the font your `body` computes to when it opens, so the writing area keeps looking like the site. Set it in `:root` to use another |
 | Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
 
