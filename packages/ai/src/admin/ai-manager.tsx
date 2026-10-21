@@ -3,7 +3,11 @@
 import { errorText, issueMessages, useCmsMutation, useSite, useTranslator } from "@monti-cms/admin";
 import {
 	Button,
+	booleanCodec,
 	Checkbox,
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
 	cn,
 	commonMessages,
 	DETAIL_PANE_FRAME,
@@ -36,6 +40,7 @@ import {
 	useConfirm,
 	useDraftEditor,
 	useHydratedQuery,
+	usePreference,
 	useUnsavedGuard,
 } from "@monti-cms/admin/kit";
 import { SLOT_CHIP } from "@monti-cms/admin/slots";
@@ -94,6 +99,24 @@ function groupOf(feature: Pick<AiActionView, "custom" | "attach">): FeatureGroup
 	if (slot === "selection" || slot === "insert" || slot === "block" || slot === "codeRules") return "editor";
 	if (slot === "image" || slot === "media") return "media";
 	return "fields";
+}
+
+/** The values that live under Advanced: what is sent, the instructions and the checks. An action counts as modified when any of them differs from the definition. */
+const advancedEdited = (
+	action: Pick<AiActionView, "prompt" | "send" | "checks">,
+	defaults: Pick<AiActionView, "prompt" | "send" | "checks"> | null,
+): boolean =>
+	defaults !== null &&
+	JSON.stringify({ prompt: action.prompt, send: action.send, checks: action.checks }) !==
+		JSON.stringify({ prompt: defaults.prompt, send: defaults.send, checks: defaults.checks });
+
+/** The small muted chip that marks an action whose advanced values were edited. */
+function ModifiedChip({ label }: { label: string }) {
+	return (
+		<span className="rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-micro text-monti-muted-foreground">
+			{label}
+		</span>
+	);
 }
 
 /** Values editable in the admin screen. Sent with save and test. */
@@ -475,7 +498,7 @@ export function AiManager() {
 				onValueChange={(value) => void changeTab(value as AiTab)}
 				className="flex min-h-0 flex-1 flex-col gap-0"
 			>
-				<PageTabs>
+				<PageTabs className="px-8">
 					<TabsTrigger value="features" className="flex-none px-0 text-xs">
 						<Sparkles aria-hidden />
 						{t("tab.features")}
@@ -549,6 +572,11 @@ export function AiManager() {
 													<ListRow
 														key={feature.key}
 														title={feature.label}
+														status={
+															advancedEdited(feature, feature.defaults) ? (
+																<ModifiedChip label={t("status.modified")} />
+															) : null
+														}
 														detail={`${placeLabel(feature)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
 														current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
 														onClick={() => void openFeature(feature)}
@@ -572,7 +600,12 @@ export function AiManager() {
 											<ListRow
 												key={feature.key}
 												title={feature.label}
-												status={t("status.hidden")}
+												status={
+													<>
+														{t("status.hidden")}
+														{advancedEdited(feature, feature.defaults) && <ModifiedChip label={t("status.modified")} />}
+													</>
+												}
 												detail={`${placeLabel(feature)}${feature.custom ? ` · ${t("detail.custom")}` : ""}`}
 												current={editing !== null && !editing.isNew && editing.feature.key === feature.key}
 												onClick={() => void openFeature(feature)}
@@ -897,6 +930,15 @@ function FeatureEditor({
 		{ status: "running" } | { status: "done"; result: AiRunResult } | { status: "error"; message: string } | null
 	>(null);
 	const set = (patch: Partial<Editable>) => onChange({ ...spec, ...patch });
+	// Advanced is closed unless the person opened it before in this browser, or the action has edited advanced values.
+	const [advancedChoice, setAdvancedChoice] = usePreference("ai-advanced-open", booleanCodec, false);
+	const [advancedOpen, setAdvancedOpen] = useState(
+		advancedChoice || advancedEdited(spec, custom ? null : feature.defaults),
+	);
+	const toggleAdvanced = (open: boolean) => {
+		setAdvancedOpen(open);
+		setAdvancedChoice(open);
+	};
 	// Defaults of a code action. Reset to default only reverts the input fields (enabled stays as is); saving is a separate click.
 	const defaults = custom ? null : feature.defaults;
 	const atDefaults =
@@ -944,248 +986,55 @@ function FeatureEditor({
 		<div className={DETAIL_PANE_FRAME}>
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2">
 				<div className="min-w-0 flex-1">
-					<h2 className="truncate font-medium text-base">
+					<h2 className="truncate font-medium text-monti-title">
 						{(custom ? custom.base.label.trim() : spec.label?.trim() || feature.label) || t("title.new")}
 					</h2>
-					<p className="truncate text-monti-muted-foreground text-xs">{placeLabel(feature)}</p>
+					<p className="text-monti-muted-foreground text-xs leading-relaxed">
+						{deciding ? t("about.decide") : t(`about.${feature.result}`)}
+					</p>
+					<p className="mt-0.5 truncate text-monti-caption text-monti-muted-foreground">{placeLabel(feature)}</p>
 				</div>
 				<Label className="font-normal text-xs">
 					<Switch size="sm" checked={spec.enabled} onCheckedChange={(enabled) => set({ enabled })} />
 					{t("toggle.on")}
 				</Label>
-				<Label className="font-normal text-xs">
-					<Switch
-						size="sm"
-						checked={spec.askInstruction}
-						onCheckedChange={(askInstruction) => set({ askInstruction })}
-					/>
-					{t("toggle.ask")}
-				</Label>
-				{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
-					<Label className="font-normal text-xs">
-						<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
-						{t("toggle.instant")}
-					</Label>
-				)}
 			</div>
 
-			{custom ? (
-				<section aria-label={t("section.basics")} className="rounded-md border p-3">
+			{custom && (
+				<section aria-label={t("section.basics")} className="border-y py-4">
 					<CustomBaseFields base={custom.base} onChange={custom.onBaseChange} />
-				</section>
-			) : (
-				<section aria-label={t("section.basics")} className="rounded-md border p-3">
-					<FormField>
-						<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
-						<Input
-							id={ids.name}
-							value={spec.label ?? feature.label}
-							maxLength={60}
-							placeholder={feature.defaults?.label ?? feature.label}
-							onChange={(event) => set({ label: event.target.value })}
-							className="h-8 text-xs md:text-xs"
-						/>
-					</FormField>
 				</section>
 			)}
 
-			<FormFieldGroup className="gap-5">
-				<FormField>
-					<FormFieldLabel htmlFor={ids.provider}>{t("field.connection")}</FormFieldLabel>
-					<div className="flex min-w-0 items-center gap-2">
-						<OptionSelect
-							id={ids.provider}
-							value={spec.providerId ?? ""}
-							options={providerOptions}
-							onChange={(value) => set({ providerId: value || null, modelName: "" })}
-						/>
-						<ModelCombobox
-							aria-label={t("field.model")}
-							value={spec.modelName}
-							models={modelList.models}
-							loading={modelList.loading}
-							error={modelList.error}
-							placeholder={chosen?.defaultModel || t("field.defaultModel")}
-							onChange={(modelName) => set({ modelName })}
-						/>
-					</div>
-				</FormField>
-
-				{inputs.length > 0 && (
-					<FormField role="group" aria-labelledby={ids.sendTitle}>
-						<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
-						<div className="flex flex-wrap gap-3">
-							{inputs.map(([name, input]) => (
-								<Label key={name} className="font-normal text-xs">
-									<Checkbox
-										checked={uses(name) || input.required}
-										disabled={input.required}
-										onCheckedChange={(checked) =>
-											set({
-												send: checked === true ? [...spec.send, name] : spec.send.filter((item) => item !== name),
-											})
-										}
-									/>
-									{input.label}
-								</Label>
-							))}
-						</div>
-					</FormField>
-				)}
-
-				{deciding && (
-					<FormField>
-						<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
-						<div className="flex items-center gap-2 text-xs">
-							<Input
-								id={ids.threshold}
-								type="number"
-								min={1}
-								max={99}
-								value={Math.round(spec.threshold * 100)}
-								onChange={(event) =>
-									set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
-								}
-								className="h-8 w-20 text-xs md:text-xs"
-							/>
-							<span className="text-monti-muted-foreground">{t("field.percentOrMore")}</span>
-							<Input
-								type="number"
-								aria-label={t("field.maxCount")}
-								min={1}
-								max={20}
-								value={spec.maxCount}
-								onChange={(event) => set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })}
-								className="ml-3 h-8 w-16 text-xs md:text-xs"
-							/>
-							<span className="text-monti-muted-foreground">{t("field.countUpTo")}</span>
-						</div>
-					</FormField>
-				)}
-
-				<FormField role="group" aria-labelledby={ids.checksTitle}>
-					<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
-					<div className="flex flex-col gap-1.5 text-xs">
-						<ul className="flex flex-col gap-1.5" aria-label={t("field.checks")}>
-							{spec.checks.map((check, index) => (
-								<CheckRow
-									key={checkKey(check)}
-									check={check}
-									label={
-										check.kind === "code" ? (feature.validatorLabels[check.name] ?? check.name) : checkLabel(check.kind)
-									}
-									onChange={(next) => set({ checks: spec.checks.map((item, i) => (i === index ? next : item)) })}
-									onRemove={
-										feature.definedChecks.includes(checkKey(check))
-											? undefined
-											: () => set({ checks: spec.checks.filter((_, i) => i !== index) })
-									}
-								/>
-							))}
-						</ul>
-						{addableChecks.length > 0 && (
-							<DropdownMenu>
-								<DropdownMenuTrigger
-									render={
-										<Button
-											type="button"
-											size="xs"
-											variant="ghost"
-											className="self-start text-monti-muted-foreground"
-										/>
-									}
-								>
-									<Plus aria-hidden />
-									{t("field.addCheck")}
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="start" className="min-w-32">
-									{addableChecks.map((kind) => (
-										<DropdownMenuItem
-											key={kind}
-											onClick={() => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] })}
-										>
-											<Plus aria-hidden />
-											{checkLabel(kind)}
-										</DropdownMenuItem>
-									))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
-					</div>
-				</FormField>
-
-				<FormField>
-					<FormFieldLabel htmlFor={ids.prompt}>{deciding ? t("field.criteria") : t("field.prompt")}</FormFieldLabel>
-					<Textarea
-						id={ids.prompt}
-						rows={PROMPT_ROWS}
-						value={spec.prompt}
-						onChange={(event) => set({ prompt: event.target.value })}
-						className={PROMPT_TEXTAREA}
+			<FormField>
+				<FormFieldLabel htmlFor={ids.provider}>{t("field.connection")}</FormFieldLabel>
+				<div className="flex min-w-0 items-center gap-2">
+					<OptionSelect
+						id={ids.provider}
+						value={spec.providerId ?? ""}
+						options={providerOptions}
+						onChange={(value) => set({ providerId: value || null, modelName: "" })}
 					/>
-				</FormField>
-			</FormFieldGroup>
-
-			<EditorFooter
-				dirty={dirty}
-				saving={saving}
-				deleting={deleting}
-				canSave={!(custom?.isNew === true && !custom.base.label.trim())}
-				error={error}
-				saveIcon={<Save aria-hidden />}
-				onSave={onSave}
-				onCancel={custom?.isNew ? custom.onCancel : undefined}
-				onDelete={custom && !custom.isNew ? custom.onDelete : undefined}
-			>
-				{!custom && (
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						disabled={saving}
-						onClick={() => (onToggleHide ? onToggleHide(!spec.hidden) : set({ hidden: !spec.hidden }))}
-					>
-						{spec.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
-						{spec.hidden ? t("button.unhide") : t("button.hide")}
-					</Button>
-				)}
-				{defaults && (
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
-						disabled={atDefaults}
-						onClick={() => onChange({ ...defaults, enabled: spec.enabled, hidden: false })}
-					>
-						<RotateCcw aria-hidden />
-						{t("button.reset")}
-					</Button>
-				)}
-				{!custom?.isNew && (
-					<span className="flex-1 text-right text-monti-muted-foreground text-xs">
-						{feature.updatedAt
-							? t("meta.edited", {
-									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
-								})
-							: t("meta.default")}
-					</span>
-				)}
-			</EditorFooter>
+					<ModelCombobox
+						aria-label={t("field.model")}
+						value={spec.modelName}
+						models={modelList.models}
+						loading={modelList.loading}
+						error={modelList.error}
+						placeholder={chosen?.defaultModel || t("field.defaultModel")}
+						onChange={(modelName) => set({ modelName })}
+					/>
+				</div>
+			</FormField>
 
 			<section
-				className="flex flex-col gap-2 rounded-md border bg-monti-muted/30 p-3 text-xs"
+				className="flex flex-col gap-2 rounded-md bg-monti-muted/40 p-3 text-xs"
 				aria-label={t("test.title")}
+				data-testid="ai-try"
 			>
-				<div className="flex items-center gap-2">
-					<span className="font-medium">{t("test.title")}</span>
-					<Button
-						type="button"
-						size="xs"
-						variant="outline"
-						className="ml-auto"
-						disabled={testDisabled}
-						onClick={() => void runTest()}
-					>
+				<div className="flex items-center gap-3">
+					<p className="min-w-0 flex-1 text-monti-muted-foreground">{t("test.hint")}</p>
+					<Button type="button" size="sm" variant="outline" disabled={testDisabled} onClick={() => void runTest()}>
 						<Sparkles aria-hidden />
 						{testRunning ? t("test.running") : t("test.run")}
 					</Button>
@@ -1232,6 +1081,217 @@ function FeatureEditor({
 						<p className="whitespace-pre-wrap rounded-lg border bg-monti-background p-2">{test.result.text}</p>
 					))}
 			</section>
+
+			<Collapsible open={advancedOpen} onOpenChange={toggleAdvanced} className="border-t pt-4">
+				<CollapsibleTrigger
+					className="group/advanced flex w-full items-center gap-2 text-left font-medium text-sm"
+					data-testid="ai-advanced-toggle"
+				>
+					<ChevronDown
+						aria-hidden
+						className="size-4 -rotate-90 text-monti-muted-foreground transition-transform group-data-[panel-open]/advanced:rotate-0"
+					/>
+					{t("advanced.title")}
+					{advancedEdited(spec, defaults) && <ModifiedChip label={t("status.modified")} />}
+					<span className="font-normal text-monti-caption text-monti-muted-foreground">{t("advanced.hint")}</span>
+				</CollapsibleTrigger>
+				<CollapsibleContent data-testid="ai-advanced">
+					<FormFieldGroup className="gap-5 pt-4">
+						{!custom && (
+							<FormField>
+								<FormFieldLabel htmlFor={ids.name}>{t("field.name")}</FormFieldLabel>
+								<Input
+									id={ids.name}
+									value={spec.label ?? feature.label}
+									maxLength={60}
+									placeholder={feature.defaults?.label ?? feature.label}
+									onChange={(event) => set({ label: event.target.value })}
+									className="h-8 text-xs md:text-xs"
+								/>
+							</FormField>
+						)}
+
+						<div className="flex flex-wrap gap-x-6 gap-y-3">
+							<Label className="font-normal text-xs">
+								<Switch
+									size="sm"
+									checked={spec.askInstruction}
+									onCheckedChange={(askInstruction) => set({ askInstruction })}
+								/>
+								{t("toggle.ask")}
+							</Label>
+							{feature.apply !== "none" && (feature.result === "candidates" || feature.result === "text") && (
+								<Label className="font-normal text-xs">
+									<Switch size="sm" checked={spec.instant} onCheckedChange={(instant) => set({ instant })} />
+									{t("toggle.instant")}
+								</Label>
+							)}
+						</div>
+
+						{inputs.length > 0 && (
+							<FormField role="group" aria-labelledby={ids.sendTitle}>
+								<FormFieldTitle id={ids.sendTitle}>{t("field.send")}</FormFieldTitle>
+								<div className="flex flex-wrap gap-3">
+									{inputs.map(([name, input]) => (
+										<Label key={name} className="font-normal text-xs">
+											<Checkbox
+												checked={uses(name) || input.required}
+												disabled={input.required}
+												onCheckedChange={(checked) =>
+													set({
+														send: checked === true ? [...spec.send, name] : spec.send.filter((item) => item !== name),
+													})
+												}
+											/>
+											{input.label}
+										</Label>
+									))}
+								</div>
+							</FormField>
+						)}
+
+						{deciding && (
+							<FormField>
+								<FormFieldLabel htmlFor={ids.threshold}>{t("field.threshold")}</FormFieldLabel>
+								<div className="flex items-center gap-2 text-xs">
+									<Input
+										id={ids.threshold}
+										type="number"
+										min={1}
+										max={99}
+										value={Math.round(spec.threshold * 100)}
+										onChange={(event) =>
+											set({ threshold: Math.min(99, Math.max(1, Number(event.target.value) || 1)) / 100 })
+										}
+										className="h-8 w-20 text-xs md:text-xs"
+									/>
+									<span className="text-monti-muted-foreground">{t("field.percentOrMore")}</span>
+									<Input
+										type="number"
+										aria-label={t("field.maxCount")}
+										min={1}
+										max={20}
+										value={spec.maxCount}
+										onChange={(event) => set({ maxCount: Math.min(20, Math.max(1, Number(event.target.value) || 1)) })}
+										className="ml-3 h-8 w-16 text-xs md:text-xs"
+									/>
+									<span className="text-monti-muted-foreground">{t("field.countUpTo")}</span>
+								</div>
+							</FormField>
+						)}
+
+						<FormField role="group" aria-labelledby={ids.checksTitle}>
+							<FormFieldTitle id={ids.checksTitle}>{t("field.checks")}</FormFieldTitle>
+							<div className="flex flex-col gap-1.5 text-xs">
+								<ul className="flex flex-col gap-1.5" aria-label={t("field.checks")}>
+									{spec.checks.map((check, index) => (
+										<CheckRow
+											key={checkKey(check)}
+											check={check}
+											label={
+												check.kind === "code"
+													? (feature.validatorLabels[check.name] ?? check.name)
+													: checkLabel(check.kind)
+											}
+											onChange={(next) => set({ checks: spec.checks.map((item, i) => (i === index ? next : item)) })}
+											onRemove={
+												feature.definedChecks.includes(checkKey(check))
+													? undefined
+													: () => set({ checks: spec.checks.filter((_, i) => i !== index) })
+											}
+										/>
+									))}
+								</ul>
+								{addableChecks.length > 0 && (
+									<DropdownMenu>
+										<DropdownMenuTrigger
+											render={
+												<Button
+													type="button"
+													size="xs"
+													variant="ghost"
+													className="self-start text-monti-muted-foreground"
+												/>
+											}
+										>
+											<Plus aria-hidden />
+											{t("field.addCheck")}
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="start" className="min-w-32">
+											{addableChecks.map((kind) => (
+												<DropdownMenuItem
+													key={kind}
+													onClick={() => set({ checks: [...spec.checks, ADDABLE_CHECKS[kind]] })}
+												>
+													<Plus aria-hidden />
+													{checkLabel(kind)}
+												</DropdownMenuItem>
+											))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								)}
+							</div>
+						</FormField>
+
+						<FormField>
+							<FormFieldLabel htmlFor={ids.prompt}>{deciding ? t("field.criteria") : t("field.prompt")}</FormFieldLabel>
+							<Textarea
+								id={ids.prompt}
+								rows={PROMPT_ROWS}
+								value={spec.prompt}
+								onChange={(event) => set({ prompt: event.target.value })}
+								className={PROMPT_TEXTAREA}
+							/>
+						</FormField>
+					</FormFieldGroup>
+				</CollapsibleContent>
+			</Collapsible>
+
+			<EditorFooter
+				dirty={dirty}
+				saving={saving}
+				deleting={deleting}
+				canSave={!(custom?.isNew === true && !custom.base.label.trim())}
+				error={error}
+				saveIcon={<Save aria-hidden />}
+				onSave={onSave}
+				onCancel={custom?.isNew ? custom.onCancel : undefined}
+				onDelete={custom && !custom.isNew ? custom.onDelete : undefined}
+			>
+				{!custom && (
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						disabled={saving}
+						onClick={() => (onToggleHide ? onToggleHide(!spec.hidden) : set({ hidden: !spec.hidden }))}
+					>
+						{spec.hidden ? <Eye aria-hidden /> : <EyeOff aria-hidden />}
+						{spec.hidden ? t("button.unhide") : t("button.hide")}
+					</Button>
+				)}
+				{defaults && (
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						disabled={atDefaults}
+						onClick={() => onChange({ ...defaults, enabled: spec.enabled, hidden: false })}
+					>
+						<RotateCcw aria-hidden />
+						{t("button.reset")}
+					</Button>
+				)}
+				{!custom?.isNew && (
+					<span className="flex-1 text-right text-monti-muted-foreground text-xs">
+						{feature.updatedAt
+							? t("meta.edited", {
+									time: new Date(feature.updatedAt).toLocaleString(site.ADMIN_LOCALE, { timeZone: site.CMS_TIME_ZONE }),
+								})
+							: t("meta.default")}
+					</span>
+				)}
+			</EditorFooter>
 		</div>
 	);
 }

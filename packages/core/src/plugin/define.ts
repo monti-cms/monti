@@ -119,6 +119,8 @@ export interface PluginNavItem {
 	readonly path: string;
 	/** The page name in the sidebar. A function of the site follows the admin language. */
 	readonly label: PluginLabel;
+	/** The line under the page title, one sentence on what the page is for. A function of the site follows the admin language. */
+	readonly description?: PluginLabel;
 	/** lucide icon name (e.g. `sparkles`). */
 	readonly icon?: string;
 	/** The sidebar group the page belongs to: `writing` (next to Templates, for tools used while writing) or `site` (site administration, collapsed by default). Default `site`. */

@@ -84,7 +84,7 @@ export function ListRow({
 	trailing,
 }: {
 	title: string;
-	status?: string | null;
+	status?: ReactNode;
 	detail?: ReactNode;
 	current: boolean;
 	onClick: () => void;
