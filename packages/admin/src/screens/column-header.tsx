@@ -265,7 +265,7 @@ export function ColumnHeader({
 						size="sm"
 						className={cn(
 							"-ml-2 h-7 gap-1 px-2 font-normal text-monti-muted-foreground text-xs",
-							filtered && "text-monti-primary",
+							filtered && "text-monti-foreground",
 						)}
 						aria-label={`${config.label}${sorted ? t("filter.sortedSuffix", { direction: sorted === "asc" ? t("filter.sortAsc") : t("filter.sortDesc") }) : ""}${filtered ? t("filter.filteredSuffix") : ""}`}
 					/>

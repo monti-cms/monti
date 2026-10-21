@@ -262,7 +262,7 @@ export function AdminEntriesTable({
 											trigger={
 												<TableRow
 													className={cn(
-														"h-10 data-[state=selected]:bg-monti-primary/5",
+														"h-10 data-[state=selected]:bg-monti-accent",
 														row.original.id === openRecordId && OPEN_ITEM,
 													)}
 													aria-current={row.original.id === openRecordId ? "true" : undefined}

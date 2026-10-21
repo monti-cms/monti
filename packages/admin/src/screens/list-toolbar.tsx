@@ -112,7 +112,7 @@ export function ListSearch({
 						title={t("toolbar.includeBody")}
 						pressed={state.includeBody}
 						onPressedChange={(pressed) => onChange({ includeBody: pressed })}
-						className="h-6 min-w-6 px-1 text-monti-muted-foreground aria-pressed:bg-monti-primary/10 aria-pressed:text-monti-primary"
+						className="h-6 min-w-6 px-1 text-monti-muted-foreground aria-pressed:bg-monti-accent aria-pressed:text-monti-foreground"
 					>
 						<AlignLeft aria-hidden />
 					</Toggle>
@@ -190,11 +190,11 @@ export function ListSubToolbar({
 				<ul aria-label={t("toolbar.chips")} className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
 					{chips.map((chip) => (
 						<li key={chip.key}>
-							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-primary/10 pr-0.5 pl-2 font-medium text-monti-caption text-monti-primary">
+							<span className="inline-flex h-6 items-center gap-1 rounded-sm bg-monti-accent pr-0.5 pl-2 font-medium text-monti-caption text-monti-foreground">
 								<span className="max-w-72 truncate">{chip.label}</span>
 								<IconButton
 									size="icon-xs"
-									className="size-5 text-monti-primary hover:bg-monti-primary/15 hover:text-monti-primary"
+									className="size-5 text-monti-foreground hover:bg-monti-border hover:text-monti-foreground"
 									label={t("filter.clear")}
 									onClick={() => onChange(chip.clear)}
 								>

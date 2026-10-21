@@ -109,7 +109,7 @@ export function ExportFields({
 				{SCOPES.map((scope) => (
 					<label
 						key={scope}
-						className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm has-disabled:cursor-not-allowed has-checked:border-monti-primary has-checked:bg-monti-primary/5 has-disabled:opacity-60"
+						className="flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm has-disabled:cursor-not-allowed has-checked:border-monti-primary has-checked:bg-monti-accent has-disabled:opacity-60"
 					>
 						<input
 							type="radio"

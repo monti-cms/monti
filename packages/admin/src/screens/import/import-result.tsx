@@ -61,7 +61,7 @@ function ResultRow({ entry }: { entry: ImportResultEntry }) {
 				{entry.id && (
 					<a
 						href={site.adminEntryEditHref(entry.id)}
-						className="ml-auto text-monti-primary text-xs underline-offset-4 hover:underline"
+						className="ml-auto text-monti-primary text-xs underline underline-offset-4"
 					>
 						{t("result.open")}
 					</a>

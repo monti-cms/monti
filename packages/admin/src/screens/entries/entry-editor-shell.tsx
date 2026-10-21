@@ -219,7 +219,7 @@ export function EntryEditorShell({
 					{te("inspector.source", { locale: site.localeLabel(entry.source.locale) })}{" "}
 					<Link
 						href={site.adminEntryEditHref(entry.source.id)}
-						className="text-monti-primary underline-offset-2 hover:underline"
+						className="text-monti-primary underline underline-offset-2"
 					>
 						{te("inspector.sourceLink")}
 					</Link>

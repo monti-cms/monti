@@ -48,7 +48,7 @@ export function CodeLinkBar({ editor }: { editor: Editor }) {
 		<div
 			role="status"
 			aria-label={t("linkBar.label")}
-			className="flex w-full flex-wrap items-center justify-center gap-2 border-t bg-monti-primary/5 px-4 py-1.5 text-xs"
+			className="flex w-full flex-wrap items-center justify-center gap-2 border-t bg-monti-accent px-4 py-1.5 text-xs"
 		>
 			<Code2 aria-hidden className="size-4 shrink-0 text-monti-primary" />
 			<span className="min-w-0">

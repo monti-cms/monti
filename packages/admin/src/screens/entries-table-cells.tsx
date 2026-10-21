@@ -176,7 +176,7 @@ function DefaultEntryCell({
 						variant="link"
 						size="sm"
 						onClick={() => onOpenRecord(item)}
-						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-foreground hover:text-monti-primary"
+						className="h-auto max-w-full shrink-0 p-0 font-medium text-monti-body text-monti-foreground hover:underline"
 					>
 						<span className="truncate">{title}</span>
 					</Button>
@@ -186,7 +186,7 @@ function DefaultEntryCell({
 				<span className="flex min-w-0 items-baseline gap-2">
 					<Link
 						href={site.adminEntryEditHref(item.id)}
-						className={cn(titleClass, "text-monti-foreground hover:text-monti-primary")}
+						className={cn(titleClass, "text-monti-foreground hover:underline")}
 					>
 						{title}
 					</Link>
