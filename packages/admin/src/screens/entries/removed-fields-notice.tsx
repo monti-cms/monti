@@ -17,7 +17,10 @@ export function RemovedFieldsNotice({
 	const keys = site.isCollection(collection) ? site.orphanedMetadataKeys(collection, metadata ?? {}) : [];
 	if (keys.length === 0) return null;
 	return (
-		<div role="note" className="mb-4 space-y-1 rounded-md border border-dashed p-3 text-monti-muted-foreground text-xs">
+		<div
+			role="note"
+			className="mb-4 space-y-1 rounded-md border border-monti-border border-dashed p-3 text-monti-caption text-monti-muted-foreground"
+		>
 			<p className="font-medium">{t("inspector.removed.title")}</p>
 			<p className="break-words">{t("inspector.removed.body", { keys: keys.join(", ") })}</p>
 		</div>

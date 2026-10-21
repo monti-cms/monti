@@ -110,7 +110,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 		);
 	}
 	const labelNode = (
-		<FormFieldLabel htmlFor={id} className="font-semibold text-monti-muted-foreground text-xs">
+		<FormFieldLabel htmlFor={id} className="font-medium text-monti-label">
 			{label} {required && <span className="text-monti-destructive">*</span>}
 		</FormFieldLabel>
 	);
@@ -146,7 +146,7 @@ function SlotFieldRow({
 	return (
 		<UiField data-invalid={Boolean(issue) || undefined} className="gap-1.5">
 			<div className="flex min-h-6 items-center justify-between gap-2">
-				<FormFieldLabel htmlFor={id} className="font-semibold text-monti-muted-foreground text-xs">
+				<FormFieldLabel htmlFor={id} className="font-medium text-monti-label">
 					{label} {required && <span className="text-monti-destructive">*</span>}
 				</FormFieldLabel>
 				{aside || trigger ? (
@@ -242,7 +242,7 @@ function DefaultInput({ parts, ...props }: FieldInputProps & { parts?: FieldInpu
 					aria-describedby={describedBy}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					className="resize-none text-xs md:text-xs"
+					className="resize-none rounded-md text-monti-label md:text-monti-label"
 				/>
 			) : (
 				<Input
@@ -445,7 +445,7 @@ const SlugRow = memo(function SlugRow({
 			help={showDescriptions ? field.description : undefined}
 			slot={slot}
 		>
-			<InputGroup className="h-8">
+			<InputGroup className="h-8 rounded-md">
 				<InputGroupInput
 					id={field.ids.input}
 					autoComplete="off"
@@ -454,7 +454,7 @@ const SlugRow = memo(function SlugRow({
 					value={field.value ?? ""}
 					onChange={(event) => changeSlug(event.target.value)}
 					placeholder={placeholder ?? definition.placeholder}
-					className="font-mono text-xs md:text-xs"
+					className="font-mono text-monti-label md:text-monti-label"
 				/>
 				{onRegenerateSlug && definition.from && (
 					<InputGroupAddon align="inline-end">
@@ -619,10 +619,8 @@ export function SchemaFields({
 						);
 					}
 					return (
-						<section key={key} aria-label={group.group} className="space-y-4 border-t pt-4">
-							<h3 className="font-medium text-monti-caption text-monti-muted-foreground uppercase tracking-wide">
-								{group.group}
-							</h3>
+						<section key={key} aria-label={group.group} className="space-y-4 border-monti-border border-t pt-5">
+							<h3 className="font-medium text-monti-label">{group.group}</h3>
 							{visible.map(renderField)}
 						</section>
 					);
@@ -668,14 +666,7 @@ function LayoutSection({
 			<FormFieldSet className="gap-3">
 				<FormFieldLegend variant="label" className="mb-0">
 					<CollapsibleTrigger
-						render={
-							<Button
-								type="button"
-								variant="ghost"
-								size="xs"
-								className="-ml-2 font-semibold text-monti-muted-foreground text-xs"
-							/>
-						}
+						render={<Button type="button" variant="ghost" size="xs" className="-ml-2 font-medium text-monti-label" />}
 					>
 						<ChevronRight className={`transition-transform ${open ? "rotate-90" : ""}`} />
 						{title}
@@ -729,7 +720,7 @@ function RecordLocaleField({
 					value={value}
 					disabled={field.readOnly}
 					onChange={(event) => field.setValue(event.target.value)}
-					className="resize-none text-xs md:text-xs"
+					className="resize-none rounded-md text-monti-label md:text-monti-label"
 				/>
 			) : (
 				<Input
