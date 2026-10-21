@@ -96,6 +96,25 @@ export function EntryEditorHeader({ editor, commands, isInspectorOpen, onToggleI
 			</div>
 
 			<div className="flex w-full items-center justify-end gap-1 whitespace-nowrap sm:w-auto">
+				{/* There is no server autosave, so unsaved changes get a visible save button (⌘S does the same); the status bar says the rest. */}
+				{editor.hasUnsavedChanges && !isTrashed && (
+					<Tooltip>
+						<TooltipTrigger
+							render={
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									disabled={busy !== null || isSubmitting}
+									onClick={() => void commands.handleSaveNow()}
+								>
+									{editor.saveStatus === "saving" ? tc("saving") : tc("save")}
+								</Button>
+							}
+						/>
+						<TooltipContent side="bottom">⌘S</TooltipContent>
+					</Tooltip>
+				)}
 				{previewHref && !editor.hasUnsavedChanges ? (
 					// A link stays a link (open in new tab, copy URL).
 					<a

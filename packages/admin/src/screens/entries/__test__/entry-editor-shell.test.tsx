@@ -261,6 +261,24 @@ describe("entry editor shell", () => {
 		expect(bar.queryByText("저장 중…")).toBeNull();
 	});
 
+	it("shows a header save button only while there are unsaved changes, and it saves", async () => {
+		serve(async (_input, init) => {
+			if (init?.method !== "PATCH") return undefined;
+			const body = JSON.parse(String(init.body));
+			return json({
+				entry: { ...entry, version: 5, working: { metadata: body.metadata, doc: body.doc } },
+				warnings: [],
+			});
+		});
+		renderEdit();
+		await screen.findByRole("region", { name: "상태" });
+		expect(screen.queryByRole("button", { name: "저장" })).toBeNull();
+		fireEvent.change(await editorTitle(), { target: { value: "헤더에서 저장" } });
+		fireEvent.click(screen.getByRole("button", { name: "저장" }));
+		await waitFor(() => expect(methodCalls("PATCH")).toHaveLength(1));
+		await waitFor(() => expect(screen.queryByRole("button", { name: "저장" })).toBeNull());
+	});
+
 	it("writes the waiting browser backup right away when the page is left", async () => {
 		renderEdit();
 		fireEvent.change(await editorTitle(), { target: { value: "떠나기 전 수정" } });
