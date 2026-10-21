@@ -179,7 +179,7 @@ function RuleRow({
 			)}
 			<p
 				className={cn(
-					"text-[11px]",
+					"text-monti-caption",
 					problem && rule.pattern ? "text-monti-destructive" : "text-monti-muted-foreground",
 				)}
 			>

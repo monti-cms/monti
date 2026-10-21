@@ -74,11 +74,15 @@ const scoped = (selector: string) => /^(?::where\()?html\b.*?:has\(\.monti-admin
 
 describe("admin CSS confinement", () => {
 	it("the theme defines only monti-prefixed names", () => {
-		// `@theme` holds `--color-monti-*` and the radius names (inlined into the bundle, computed from `--monti-radius`).
+		// `@theme` holds `--color-monti-*`, the type scale, the radius names (inlined into the bundle, computed from `--monti-radius`), `--font-sans`/`--font-mono` (mapped to `--monti-font-*`) and the reset fonts `--default-font-family`/`--default-mono-font-family` (stock stacks).
 		const theme = themeCss.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
 		const names = [...theme.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1]);
 		expect(names.filter((name) => name.startsWith("--color-monti-")).length).toBeGreaterThan(0);
-		for (const name of names) expect(name).toMatch(/^--(?:color-monti-|shadow-monti-|radius-(?:sm|md|lg|xl|dialog)$)/);
+		for (const name of names)
+			expect(name).toMatch(
+				/^--(?:color-monti-|shadow-monti-|text-monti-|radius-(?:sm|md|lg|xl|dialog)$|font-(?:sans|mono)$|default-(?:mono-)?font-family$)/,
+			);
+		for (const font of theme.matchAll(/--font-(?:sans|mono):\s*([^;]+);/g)) expect(font[1]).toContain("--monti-font-");
 		for (const radius of theme.matchAll(/--radius-[a-z]+:\s*([^;]+);/g)) expect(radius[1]).toContain("--monti-radius");
 		// Variant names also start with `monti-`.
 		for (const variant of themeCss.matchAll(/@custom-variant\s+([\w-]+)/g)) expect(variant[1]).toMatch(/^monti-/);

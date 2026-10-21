@@ -219,10 +219,10 @@ export function Row({
 					)}
 				>
 					<div className="flex min-w-0 items-center">
-						<span aria-hidden className="whitespace-pre font-mono text-[13px] text-monti-muted-foreground/40">
+						<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-muted-foreground/40">
 							{prefix}
 						</span>
-						<span className="max-w-[70%] shrink-0 truncate font-mono text-[13px]" title={name}>
+						<span className="max-w-[70%] shrink-0 truncate font-mono text-monti-label" title={name}>
 							{name}
 						</span>
 						{label && (
@@ -305,11 +305,11 @@ export function Row({
 					<div key={option}>
 						<div className={cn(columnsOf(ctx.compact), "min-h-[30px] py-1.5 pr-5 pl-9")}>
 							<div className="flex min-w-0 items-center">
-								<span aria-hidden className="whitespace-pre font-mono text-[13px] text-monti-muted-foreground/40">
+								<span aria-hidden className="whitespace-pre font-mono text-monti-label text-monti-muted-foreground/40">
 									{childLead}
 									{last ? "└ " : "├ "}
 								</span>
-								<span className={cn("font-mono text-[13px]", OPTION)}>= "{option}"</span>
+								<span className={cn("font-mono text-monti-label", OPTION)}>= "{option}"</span>
 							</div>
 							<div />
 							<div

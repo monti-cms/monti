@@ -321,7 +321,7 @@ export function EntryEditorShell({
 				aria-describedby={titleIssue ? "cms-title-error" : undefined}
 				onChange={(event) => titleKey && editor.setForm({ [titleKey]: event.target.value })}
 				placeholder={translationSource?.title || tc("untitled")}
-				className="h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-6 py-1 font-semibold text-[34px] leading-tight tracking-tight shadow-none placeholder:text-monti-muted-foreground/40 focus-visible:ring-0 md:text-[34px]"
+				className="monti-content-font h-auto w-full rounded-none border-0 bg-transparent monti-dark:bg-transparent px-6 py-1 font-semibold text-monti-display leading-tight tracking-tight shadow-none placeholder:text-monti-muted-foreground/40 focus-visible:ring-0 md:text-monti-display"
 			/>
 			{titleIssue && (
 				<p id="cms-title-error" className="text-monti-destructive text-sm">

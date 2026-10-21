@@ -28,7 +28,7 @@ interface LineMenuProps {
 }
 
 const ITEM_CLASS =
-	"flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-monti-accent disabled:pointer-events-none disabled:opacity-50";
+	"flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs hover:bg-monti-accent disabled:pointer-events-none disabled:opacity-50";
 
 interface ItemProps {
 	disabled?: boolean;

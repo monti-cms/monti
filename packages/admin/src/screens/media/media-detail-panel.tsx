@@ -37,7 +37,7 @@ import { mediaMessages } from "./messages";
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
 		<section className="space-y-3 border-t px-4 py-4">
-			<h3 className="font-medium text-[11px] text-monti-muted-foreground uppercase tracking-wide">{title}</h3>
+			<h3 className="font-medium text-monti-caption text-monti-muted-foreground uppercase tracking-wide">{title}</h3>
 			{children}
 		</section>
 	);
@@ -47,7 +47,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function Row({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="space-y-0.5">
-			<dt className="text-[11px] text-monti-muted-foreground">{label}</dt>
+			<dt className="text-monti-caption text-monti-muted-foreground">{label}</dt>
 			<dd className="break-all">{children}</dd>
 		</div>
 	);
@@ -342,7 +342,7 @@ export function MediaDetailPanel({
 						)}
 						<Row label={t("detail.row.uploadedAt")}>{formatDateTime(site, media.createdAt)}</Row>
 						<Row label={t("detail.row.id")}>
-							<code className="text-[11px]">{media.id}</code>
+							<code className="text-monti-caption">{media.id}</code>
 						</Row>
 					</dl>
 				</Section>
@@ -446,7 +446,7 @@ export function MediaDetailPanel({
 					{media.status === "deleting" ? t("detail.retryDelete") : tc("delete")}
 				</Button>
 				{media.referencesCount > 0 && (
-					<p className="text-center text-[11px] text-monti-muted-foreground">{t("detail.inUse")}</p>
+					<p className="text-center text-monti-caption text-monti-muted-foreground">{t("detail.inUse")}</p>
 				)}
 			</div>
 		</aside>

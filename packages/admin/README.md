@@ -463,6 +463,7 @@ How the bundle is built and confined (`scripts/build-styles.mjs`, run by `pnpm b
 - **Names.** Every custom property the bundle declares starts with `--monti-` (Tailwind's own `--tw-*` became `--monti-tw-*`, and its theme is inlined), keyframes are `monti-*`, and no `@layer` is left in the file: unlayered rules beat the app's layered ones whatever order the stylesheets load in, so the app's own `.hidden`, `.prose` or reset (in its Tailwind `utilities` or `base` layer) cannot override the admin. The app's `--radius*` and theme variables are not defined or changed.
 - **Math.** The KaTeX styles and fonts for the math preview are included (the fonts are copied to `dist/fonts` and linked relatively), so sites do not import KaTeX CSS for the admin.
 - **Font.** Like Tailwind's preflight, the bundle falls back to the system sans-serif stack on `html` of an admin document. A font the app sets on `body` wins.
+- **Bundled fonts.** The admin ships Pretendard (UI text, Korean and Latin; variable font in `unicode-range` slices, so a page downloads only the slices it shows) and IBM Plex Mono (code, field keys, slugs; latin, weights 400, 500, 600) in `dist/fonts`, linked relatively from `styles.css` with `font-display: swap`. Nothing is requested from a third-party server. They are registered as `Monti Pretendard` and `Monti Plex Mono`, so they never collide with a copy the site loads itself. Both are licensed under the SIL Open Font License 1.1; the license texts sit next to the files (`dist/fonts/pretendard/LICENSE.txt`, `dist/fonts/ibm-plex-mono/LICENSE.txt`).
 
 What the bundle provides (everything carries the `monti` prefix, so nothing collides with the app's names):
 
@@ -508,7 +509,7 @@ The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` r
 	--monti-primary: light-dark(#0d9488, #2dd4bf);
 	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
 	--monti-ring: light-dark(#14b8a6, #5eead4);
-	--monti-radius: 0.75rem;
+	--monti-radius: 0.5rem;
 }
 ```
 
@@ -545,7 +546,21 @@ one only to break away. Tokens by role:
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
-| Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+| Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: Pretendard, then a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: IBM Plex Mono, then a system monospace stack) |
+| | `--monti-content-font` | The font of the writing area (post title, editor body, translation source). Not set by default: the admin copies the font your `body` computes to when it opens, so the writing area keeps looking like the site. Set it in `:root` to use another |
+| Radius | `--monti-radius` | Base corner radius (default `6px`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+
+### Type scale
+
+Sizes are px, so the root font-size of the site cannot rescale the admin. The classes are `text-monti-<role>` (size / line-height); they are not tokens a site overrides:
+
+- `micro` (11/14): counters, keyboard hints and badge counts only
+- `caption` (12/16): meta, timestamps, helper and hint text
+- `label` (13/18): buttons, menu items, tabs, sidebar items, table cells, field labels
+- `body` (14/20): default text, inputs, descriptions
+- `title` (16/22): panel, dialog and card titles, the top-bar page title
+- `heading` (20/28): in-page screen headings
+- `display` (34/1.15): the post title in the editor and the source pane
 
 ### Reusing a shadcn theme
 

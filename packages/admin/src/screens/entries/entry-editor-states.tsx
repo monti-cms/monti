@@ -66,8 +66,8 @@ export function EntryEditorLoading() {
 						<div className="mx-auto w-full max-w-[760px] space-y-6">
 							{/* Language tabs skeleton */}
 							<div className="flex items-center gap-2">
-								<Skeleton className="h-6 w-20 rounded-full" />
-								<Skeleton className="h-6 w-14 rounded-full" />
+								<Skeleton className="h-6 w-20 rounded-sm" />
+								<Skeleton className="h-6 w-14 rounded-sm" />
 							</div>
 
 							{/* Title skeleton */}

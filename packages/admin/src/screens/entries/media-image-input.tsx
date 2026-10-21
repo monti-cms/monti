@@ -82,7 +82,7 @@ export function MediaImageInput({ field, id, value, invalid, describedBy, contex
 	return (
 		<>
 			<div className="flex items-center gap-1.5">
-				{mediaId && <MediaThumbnail mediaId={mediaId} className="aspect-[1.91/1] h-7 shrink-0 rounded border" />}
+				{mediaId && <MediaThumbnail mediaId={mediaId} className="aspect-[1.91/1] h-7 shrink-0 rounded-md border" />}
 				<Button
 					id={id}
 					type="button"

@@ -177,8 +177,8 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 			{isOpen ? (
 				<div className="space-y-3">
 					<div className="flex items-center justify-between border-monti-border/40 border-b pb-1 text-monti-muted-foreground text-xs">
-						<span className="font-medium font-mono text-[11px]">{meta.label}</span>
-						<span className="text-[10px] text-monti-muted-foreground/70">
+						<span className="font-medium font-mono text-monti-caption">{meta.label}</span>
+						<span className="text-monti-micro text-monti-muted-foreground/70">
 							{isEditing ? t("fence.editing") : t("fence.selected")}
 						</span>
 					</div>
@@ -190,7 +190,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 
 					{/* Raw input field (mono, IME safe) */}
 					<div className="space-y-1">
-						<label htmlFor={inputId} className="font-mono text-[11px] text-monti-muted-foreground">
+						<label htmlFor={inputId} className="font-mono text-monti-caption text-monti-muted-foreground">
 							{t("fence.sourceCode")}
 						</label>
 						<textarea
@@ -221,7 +221,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 					{draft.trim() ? (
 						renderPreview()
 					) : (
-						<div className="rounded border border-monti-border/80 border-dashed p-4 text-center text-monti-muted-foreground text-xs hover:border-monti-foreground/30">
+						<div className="rounded-md border border-monti-border/80 border-dashed p-4 text-center text-monti-muted-foreground text-xs hover:border-monti-foreground/30">
 							{t("fence.enter", { label: meta.label })}
 						</div>
 					)}

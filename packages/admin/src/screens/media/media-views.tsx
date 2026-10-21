@@ -157,10 +157,10 @@ export function MediaGrid({
 							) : (
 								<span className="flex flex-col items-center gap-1.5 text-monti-muted-foreground">
 									<MediaThumb media={media} iconClassName="size-10" />
-									<span className="font-medium text-[10px]">{fileTypeLabel(media.filename, media.mimeType)}</span>
+									<span className="font-medium text-monti-micro">{fileTypeLabel(media.filename, media.mimeType)}</span>
 								</span>
 							)}
-							<Badge variant="secondary" className="absolute top-1.5 left-1.5 text-[10px]">
+							<Badge variant="secondary" className="absolute top-1.5 left-1.5 text-monti-micro">
 								{usageLabel(t, media)}
 							</Badge>
 						</span>
@@ -246,7 +246,7 @@ export function MediaTable({
 							}
 						>
 							<TableCell className="py-1.5">
-								<span className="flex size-9 items-center justify-center overflow-hidden rounded border bg-monti-muted">
+								<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border bg-monti-muted">
 									<MediaThumb media={media} iconClassName="size-4" />
 								</span>
 							</TableCell>

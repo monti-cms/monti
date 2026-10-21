@@ -448,6 +448,7 @@ import "@monti-cms/admin/styles.css";
 - **이름.** 묶음이 선언하는 사용자 정의 속성은 모두 `--monti-`로 시작하고(Tailwind의 `--tw-*`는 `--monti-tw-*`가 되고 테마는 값으로 풀어 넣는다), 키프레임은 `monti-*`이며, 파일에는 `@layer`가 남아 있지 않다. 레이어 없는 규칙은 스타일시트가 어떤 순서로 불러와지든 앱의 레이어 규칙을 이기므로, 앱 자신의 `.hidden`·`.prose`·리셋(Tailwind `utilities`·`base` 레이어)이 관리자를 덮어쓰지 못한다. 앱의 `--radius*`와 테마 변수는 정의하지도 바꾸지도 않는다.
 - **수식.** 편집기 수식 미리보기용 KaTeX 스타일과 글꼴이 들어 있다(글꼴은 `dist/fonts`로 복사해 상대 경로로 잇는다). 사이트가 관리자용으로 KaTeX CSS를 따로 불러올 필요가 없다.
 - **글꼴.** Tailwind preflight처럼 관리자 문서의 `html`에는 시스템 산세리프 글꼴이 기본으로 깔린다. 앱이 `body`에 정한 글꼴이 우선한다.
+- **내장 글꼴.** 관리자는 Pretendard(화면 글자, 한글과 영문. 가변 글꼴을 `unicode-range` 조각으로 나눠 두어 화면에 쓰이는 조각만 내려받는다)와 IBM Plex Mono(코드, 필드 키, 슬러그. 라틴, 굵기 400·500·600)를 `dist/fonts`에 담아 `styles.css`에서 상대 경로로 잇고 `font-display: swap`을 쓴다. 외부 서버에는 아무것도 요청하지 않는다. 글꼴 이름은 `Monti Pretendard`, `Monti Plex Mono`로 등록해 사이트가 따로 불러온 같은 글꼴과 겹치지 않는다. 두 글꼴 모두 SIL Open Font License 1.1이며 라이선스 전문은 글꼴 파일 옆(`dist/fonts/pretendard/LICENSE.txt`, `dist/fonts/ibm-plex-mono/LICENSE.txt`)에 있다.
 
 묶음이 주는 것(모두 `monti` 이름표가 붙어 앱의 이름과 겹치지 않는다):
 
@@ -493,7 +494,7 @@ import "@monti-cms/admin/styles.css";
 	--monti-primary: light-dark(#0d9488, #2dd4bf);
 	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
 	--monti-ring: light-dark(#14b8a6, #5eead4);
-	--monti-radius: 0.75rem;
+	--monti-radius: 0.5rem;
 }
 ```
 
@@ -530,7 +531,21 @@ import "@monti-cms/admin/styles.css";
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | 사이드바에서 활성이거나 강조된 항목 |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | 사이드바의 구분선과 포커스 링(`--monti-sidebar-ring`은 정하지 않으면 `--monti-ring`을 따른다) |
-| 모서리 | `--monti-radius` | 기본 모서리 반경(기본값 `0.5rem`). 관리자의 모든 `rounded-*`가 이 값에서 계산된다. `:root`에 한 번만 정하며 어두운 값은 없다 |
+| 글꼴 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴. `--monti-font-sans`는 화면 구성(기본값: Pretendard, 이어서 한글 대체 글꼴을 포함한 시스템 스택), `--monti-font-mono`는 코드와 소스 화면(기본값: IBM Plex Mono, 이어서 시스템 고정폭 스택) |
+| | `--monti-content-font` | 글 쓰는 영역(글 제목, 편집기 본문, 번역 원문)의 글꼴. 기본값은 없다. 관리자가 열릴 때 사이트 `body`의 계산된 글꼴을 복사하므로 글 쓰는 영역이 사이트처럼 보인다. 다른 글꼴을 쓰려면 `:root`에 정한다 |
+| 모서리 | `--monti-radius` | 기본 모서리 반경(기본값 `6px`). 관리자의 모든 `rounded-*`가 이 값에서 계산된다. `:root`에 한 번만 정하며 어두운 값은 없다 |
+
+### 글자 크기 체계
+
+크기는 px이라 사이트의 루트 글자 크기가 관리자를 키우거나 줄이지 못한다. 클래스는 `text-monti-<역할>`(크기 / 줄 높이)이며, 사이트가 덮어쓰는 토큰이 아니다.
+
+- `micro`(11/14): 카운터, 단축키 안내, 배지 숫자에만
+- `caption`(12/16): 메타 정보, 시각, 도움말과 힌트
+- `label`(13/18): 버튼, 메뉴 항목, 탭, 사이드바 항목, 표 셀, 필드 라벨
+- `body`(14/20): 기본 글, 입력창, 설명
+- `title`(16/22): 패널·대화상자·카드 제목, 상단 바의 화면 제목
+- `heading`(20/28): 화면 안의 제목
+- `display`(34/1.15): 편집기와 원문 창의 글 제목
 
 ### shadcn 테마 재사용
 

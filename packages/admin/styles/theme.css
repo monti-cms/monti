@@ -60,8 +60,45 @@
 	--radius-md: calc(var(--monti-radius) - 2px);
 	--radius-lg: var(--monti-radius);
 	--radius-xl: calc(var(--monti-radius) + 4px);
-	/* Scale in use: chips 4px (sm), controls and rows 6px (md), cards 8px (lg), dialogs and the side sheet 10px (dialog). */
+	/* Scale in use (base 6px): chips, badges and tags 2px (sm), buttons, inputs, list rows and menu items 4px (md), cards, panels and menus 6px (lg), dialogs and the side sheet 8px (dialog). Pills (`rounded-full`) are reserved for switches, avatars and status dots. Bare `rounded` is not used: Tailwind resolves it to a fixed 0.25rem outside this scale. */
 	--radius-dialog: calc(var(--monti-radius) + 2px);
+
+	/*
+	 * Type scale. Sizes are px so a host with another root font-size cannot rescale the admin. Use `text-monti-<role>`:
+	 *   micro   11/14  counters, keyboard hints and badge counts only
+	 *   caption 12/16  meta, timestamps, helper and hint text
+	 *   label   13/18  buttons, menu items, tabs, sidebar items, table cells, field labels
+	 *   body    14/20  default text, inputs, descriptions
+	 *   title   16/22  panel, dialog and card titles, the top-bar page title
+	 *   heading 20/28  in-page screen headings
+	 *   display 34/1.15  the post title in the editor and the source pane
+	 */
+	--text-monti-micro: 11px;
+	--text-monti-micro--line-height: 14px;
+	--text-monti-caption: 12px;
+	--text-monti-caption--line-height: 16px;
+	--text-monti-label: 13px;
+	--text-monti-label--line-height: 18px;
+	--text-monti-body: 14px;
+	--text-monti-body--line-height: 20px;
+	--text-monti-title: 16px;
+	--text-monti-title--line-height: 22px;
+	--text-monti-heading: 20px;
+	--text-monti-heading--line-height: 28px;
+	--text-monti-display: 34px;
+	--text-monti-display--line-height: 1.15;
+
+	/* Fonts. `font-sans` and `font-mono` follow the admin tokens, never the host's. */
+	--font-sans: var(--monti-font-sans);
+	--font-mono: var(--monti-font-mono);
+	/*
+	 * The reset's document-level fonts (`html`, `code`, `pre`) keep Tailwind's stock stacks: the reset is unlayered, so following the admin tokens here
+	 * would beat the site's own layered base font and the writing area (`--monti-content-font`, read from `body`) would lose the blog's font.
+	 */
+	--default-font-family:
+		ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--default-mono-font-family:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
 	/* The one shadow of a popover or a small raised control: a hairline lift beside its border, never a soft glow. Use `shadow-monti-pop`. */
 	--shadow-monti-pop: 0 1px 2px rgb(0 0 0 / 0.1);

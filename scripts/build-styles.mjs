@@ -12,9 +12,10 @@
 // - No `@layer` is left (Tailwind's layers are flattened after it has sorted its output): unlayered rules beat the host's layered ones, whatever order
 //   the stylesheets load in, so a host's `.hidden`, `.prose` or reset in its own `utilities` or `base` layer cannot override the admin.
 // - KaTeX fonts are copied next to the CSS and linked relatively.
+// - The admin bundle also ships its own UI fonts (Pretendard, IBM Plex Mono; see `bundledFonts`), so the admin never asks a third-party server for a font.
 // - The admin bundle also compiles the sources of the first-party plugins (ai, blocks, mdx, seo, git-sync), so the shared utilities, `prose`, theme and reset
 //   exist once. A later file that redefined `.prose` would reset what the admin's dark variant set.
-import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -209,21 +210,81 @@ export function localizeFonts(css, packageDir) {
 	return { css: kept, fonts };
 }
 
+/**
+ * The admin's own fonts, as `@font-face` rules plus the files to copy next to the built CSS (`dist/fonts/...`, linked relatively like the KaTeX fonts).
+ * Pretendard is the variable font in its dynamic subsets (one file per `unicode-range`, so a page only downloads the slices it shows), IBM Plex Mono
+ * is the latin subset in 400, 500 and 600. Both are renamed (`Monti Pretendard`, `Monti Plex Mono`) so they never collide with a site's own copy.
+ * The fonts are devDependencies of the admin package: only the admin bundle has them, other bundles return `null`.
+ */
+export function bundledFonts(packageDir) {
+	const require = createRequire(path.join(packageDir, "package.json"));
+	let pretendardDir;
+	let plexDir;
+	try {
+		pretendardDir = path.dirname(require.resolve("pretendard/package.json"));
+		plexDir = path.dirname(require.resolve("@fontsource/ibm-plex-mono/package.json"));
+	} catch {
+		return null;
+	}
+	const licenses = path.join(packageDir, "styles", "fonts");
+	const subsets = path.join(pretendardDir, "dist", "web", "variable", "woff2-dynamic-subset");
+	const pretendardCss = readFileSync(
+		path.join(pretendardDir, "dist", "web", "variable", "pretendardvariable-dynamic-subset.css"),
+		"utf8",
+	)
+		.replace(/\/\*[\s\S]*?\*\//g, "")
+		.replace(/\s+/g, " ")
+		.replace(/'Pretendard Variable'/g, '"Monti Pretendard"')
+		.replace(/url\(\.\/woff2-dynamic-subset\//g, "url(./fonts/pretendard/")
+		.replace(/format\('woff2-variations'\)/g, 'format("woff2")')
+		.replace(/\} /g, "}\n")
+		.trim();
+	const latin = JSON.parse(readFileSync(path.join(plexDir, "unicode.json"), "utf8")).latin;
+	const plexCss = [400, 500, 600]
+		.map(
+			(weight) =>
+				`@font-face{font-family:"Monti Plex Mono";font-style:normal;font-display:swap;font-weight:${weight};` +
+				`src:url(./fonts/ibm-plex-mono/ibm-plex-mono-latin-${weight}-normal.woff2) format("woff2");unicode-range:${latin}}`,
+		)
+		.join("\n");
+	return {
+		css: `${pretendardCss}\n${plexCss}\n`,
+		copies: [
+			{
+				from: subsets,
+				to: "fonts/pretendard",
+				filter: (file) => !file.endsWith(".woff2") || /subset\.\d+\.woff2$/.test(file),
+			},
+			...[400, 500, 600].map((weight) => ({
+				from: path.join(plexDir, "files", `ibm-plex-mono-latin-${weight}-normal.woff2`),
+				to: `fonts/ibm-plex-mono/ibm-plex-mono-latin-${weight}-normal.woff2`,
+			})),
+			{ from: path.join(licenses, "LICENSE-Pretendard.txt"), to: "fonts/pretendard/LICENSE.txt" },
+			{ from: path.join(licenses, "LICENSE-IBM-Plex-Mono.txt"), to: "fonts/ibm-plex-mono/LICENSE.txt" },
+		].filter((copy) => existsSync(copy.from)),
+	};
+}
+
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 	const packageDir = process.cwd();
-	const css = await buildStyles(packageDir);
+	const fonts = bundledFonts(packageDir);
+	const css = (await buildStyles(packageDir)) + (fonts?.css ?? "");
 	if (process.argv.includes("--missing")) {
 		// Utilities used in the sources that the built CSS lacks (JSON list). The confinement test runs this.
 		process.stdout.write(JSON.stringify(await missingUtilities(packageDir, css)));
 	} else if (process.argv.includes("--stdout")) {
 		process.stdout.write(css);
 	} else {
-		const { css: finalCss, fonts } = localizeFonts(css, packageDir);
+		const { css: finalCss, fonts: katexFonts } = localizeFonts(css, packageDir);
 		const dist = path.join(packageDir, "dist");
 		mkdirSync(dist, { recursive: true });
 		writeFileSync(path.join(dist, "styles.css"), finalCss);
-		if (fonts)
-			cpSync(fonts, path.join(dist, "fonts"), { recursive: true, filter: (from) => !/\.(woff|ttf)$/.test(from) });
+		if (katexFonts)
+			cpSync(katexFonts, path.join(dist, "fonts"), { recursive: true, filter: (from) => !/\.(woff|ttf)$/.test(from) });
+		for (const copy of fonts?.copies ?? []) {
+			mkdirSync(path.dirname(path.join(dist, copy.to)), { recursive: true });
+			cpSync(copy.from, path.join(dist, copy.to), { recursive: true, filter: copy.filter });
+		}
 		console.log(`built ${path.basename(packageDir)} styles: ${(finalCss.length / 1024).toFixed(0)} KB`);
 	}
 }

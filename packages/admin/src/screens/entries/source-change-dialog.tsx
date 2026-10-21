@@ -50,7 +50,7 @@ function ChangeItem({ change }: { change: SourceChange }) {
 	const label = change.kind === "moved" && change.edited ? t("sourceChange.movedChanged") : kindLabels(t)[change.kind];
 	return (
 		<li className="flex flex-col gap-2 rounded-md border p-3">
-			<span className="w-fit rounded bg-monti-muted px-1.5 py-0.5 font-medium text-xs">{label}</span>
+			<span className="w-fit rounded-sm bg-monti-muted px-1.5 py-0.5 font-medium text-xs">{label}</span>
 			<div className="grid gap-3 md:grid-cols-2">
 				{before && (
 					<div className="min-w-0">

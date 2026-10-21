@@ -44,7 +44,12 @@
 	--monti-sidebar-border: #e7e7ea;
 	--monti-sidebar-ring: var(--monti-ring);
 	/* Base corner radius. The `rounded-*` utilities of the admin bundle are computed from it (see `theme.css`); the host's `--radius*` is not touched. */
-	--monti-radius: 0.5rem;
+	--monti-radius: 6px;
+	/* Admin fonts (Pretendard and IBM Plex Mono ship in the bundle, see `scripts/build-styles.mjs`): the chrome uses the sans token, code and source views the mono one. The post body and title keep the site's font (`--monti-content-font`, see below). */
+	--monti-font-sans:
+		"Monti Pretendard", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
+		sans-serif;
+	--monti-font-mono: "Monti Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 :where(html:is(.dark, [data-theme="dark"]):has(.monti-admin)) {
@@ -102,8 +107,17 @@ html:has(.monti-admin) body {
 }
 
 .monti-admin {
+	font-family: var(--monti-font-sans);
 	font-size: 14px;
 	-webkit-font-smoothing: antialiased;
+}
+
+/*
+ * The writing area (post title, editor body, translation source pane) looks like the site, not like the admin chrome.
+ * `--monti-content-font` is the site's body font, read once when the admin mounts (see `content-font.tsx`); a site can set it itself.
+ */
+.monti-admin .monti-content-font {
+	font-family: var(--monti-content-font, var(--monti-font-sans));
 }
 
 /* Thin, unobtrusive scrollbar. The thumb darkens only on hover. */

@@ -12,7 +12,7 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
 		<CommandPrimitive
 			data-slot="command"
 			className={cn(
-				"flex size-full flex-col overflow-hidden rounded-xl! bg-monti-popover p-1 text-monti-popover-foreground",
+				"flex size-full flex-col overflow-hidden rounded-dialog! bg-monti-popover p-1 text-monti-popover-foreground",
 				className,
 			)}
 			{...props}
@@ -41,7 +41,7 @@ function CommandDialog({
 				<DialogDescription>{description}</DialogDescription>
 			</DialogHeader>
 			<DialogContent
-				className={cn("top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0", className)}
+				className={cn("top-1/3 translate-y-0 overflow-hidden rounded-dialog! p-0", className)}
 				showCloseButton={showCloseButton}
 			>
 				{children}
@@ -53,7 +53,7 @@ function CommandDialog({
 function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
 	return (
 		<div data-slot="command-input-wrapper" className="p-1 pb-0">
-			<InputGroup className="h-8! rounded-lg! border-monti-input/30 bg-monti-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+			<InputGroup className="h-8! rounded-md! border-monti-input/30 bg-monti-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
 				<CommandPrimitive.Input
 					data-slot="command-input"
 					className={cn("w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50", className)}
@@ -115,7 +115,7 @@ function CommandItem({ className, children, ...props }: React.ComponentProps<typ
 		<CommandPrimitive.Item
 			data-slot="command-item"
 			className={cn(
-				"group/command-item relative flex cursor-default select-none items-center gap-2 in-data-[slot=dialog-content]:rounded-lg! rounded-sm px-2 py-1.5 text-sm outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-accent data-[selected=true]:text-monti-accent-foreground data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-foreground",
+				"group/command-item relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden data-[disabled=true]:pointer-events-none data-[selected=true]:bg-monti-accent data-[selected=true]:text-monti-accent-foreground data-[disabled=true]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 data-[selected=true]:**:[svg]:text-monti-foreground",
 				className,
 			)}
 			{...props}

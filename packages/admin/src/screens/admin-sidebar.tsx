@@ -102,7 +102,7 @@ export function folderKeyHandler(folder: Folder, actions: FolderActions) {
 const TREE_INDENT = 8;
 const TREE_STEP = 16;
 const subRow =
-	"group/row flex h-7 items-center gap-1 rounded-md pr-1 text-[13px] text-monti-sidebar-foreground/80 hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground data-active:bg-monti-sidebar-accent data-active:font-medium data-active:text-monti-sidebar-accent-foreground";
+	"group/row flex h-7 items-center gap-1 rounded-md pr-1 text-monti-label text-monti-sidebar-foreground/80 hover:bg-monti-sidebar-accent hover:text-monti-sidebar-accent-foreground data-active:bg-monti-sidebar-accent data-active:font-medium data-active:text-monti-sidebar-accent-foreground";
 
 /** The folders of the open collection, drawn under its entry: All, the folders (nested), then Add folder. */
 function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: () => void }) {
@@ -298,7 +298,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 								void commitRename(folder);
 							}}
 							onClick={(e) => e.stopPropagation()}
-							className="h-6 min-w-0 flex-1 rounded bg-monti-background px-1.5 text-[13px] text-monti-foreground outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
+							className="h-6 min-w-0 flex-1 rounded-md bg-monti-background px-1.5 text-monti-foreground text-monti-label outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
 						/>
 					) : (
 						<button
@@ -351,7 +351,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									onBlur={() => {
 										void commitCreate();
 									}}
-									className="h-6 min-w-0 flex-1 rounded bg-monti-background px-1.5 text-[13px] text-monti-foreground outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
+									className="h-6 min-w-0 flex-1 rounded-md bg-monti-background px-1.5 text-monti-foreground text-monti-label outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
 								/>
 							</li>
 						)}
@@ -487,7 +487,7 @@ export function AdminSidebar({ activeNav, folderNav, trashCount, eventsCount, fo
 					>
 						{(site.SITE_NAME || "CMS").slice(0, 1)}
 					</span>
-					<span className="truncate font-semibold text-[13px] text-monti-sidebar-accent-foreground">
+					<span className="truncate font-semibold text-monti-label text-monti-sidebar-accent-foreground">
 						{site.SITE_NAME || "CMS"}
 					</span>
 				</Link>

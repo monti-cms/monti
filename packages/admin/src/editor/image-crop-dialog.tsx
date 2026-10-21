@@ -221,7 +221,7 @@ export function ImageCropDialog({ open, onOpenChange, src, crop, rotate, onApply
 									ref={imgRef}
 									src={src}
 									alt={t("imageCrop.target")}
-									className="pointer-events-none block max-h-[360px] max-w-full select-none rounded"
+									className="pointer-events-none block max-h-[360px] max-w-full select-none rounded-md"
 									draggable={false}
 								/>
 

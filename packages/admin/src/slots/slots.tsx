@@ -193,7 +193,7 @@ function SlotResult({
 	}
 	return (
 		<div className="flex flex-col gap-1.5">
-			<p className="whitespace-pre-wrap rounded border bg-monti-background p-2">{result.text}</p>
+			<p className="whitespace-pre-wrap rounded-lg border bg-monti-background p-2">{result.text}</p>
 			{result.kind === "text" && action.apply !== "none" && (
 				<Button type="button" size="xs" variant="outline" className="self-start" onClick={() => onApply(result.text)}>
 					{action.apply === "append" ? t("insert") : t("replace")}

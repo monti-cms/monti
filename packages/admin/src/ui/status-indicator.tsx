@@ -83,7 +83,7 @@ export function StatusIndicator({
 			data-tone={tone}
 			className={cn(
 				"inline-flex items-center gap-1.5 whitespace-nowrap",
-				label && "text-[13px] text-monti-foreground/80",
+				label && "text-monti-foreground/80 text-monti-label",
 				className,
 			)}
 			{...props}

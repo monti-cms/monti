@@ -135,8 +135,8 @@ function RunProgress({ count }: { count: number }) {
 				<Spinner aria-hidden className="size-3.5" />
 				{t("progress.running", { count })}
 			</div>
-			<div className="h-1 overflow-hidden rounded-full bg-monti-muted">
-				<div className="h-full w-1/3 animate-pulse rounded-full bg-monti-primary" />
+			<div className="h-1 overflow-hidden rounded-sm bg-monti-muted">
+				<div className="h-full w-1/3 animate-pulse rounded-sm bg-monti-primary" />
 			</div>
 			<p className="text-monti-muted-foreground text-xs">{t("progress.hint")}</p>
 		</output>

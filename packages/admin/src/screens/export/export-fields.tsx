@@ -184,12 +184,12 @@ export function ExportProgressLine({ phase }: { phase: ExportPhase | null }) {
 						? t("progress.downloadingUnknown")
 						: t("progress.downloading", { percent })}
 			</div>
-			<div className="h-1 overflow-hidden rounded-full bg-monti-muted">
+			<div className="h-1 overflow-hidden rounded-sm bg-monti-muted">
 				<div
 					className={
 						percent === null
-							? "h-full w-1/3 animate-pulse rounded-full bg-monti-primary"
-							: "h-full rounded-full bg-monti-primary transition-[width]"
+							? "h-full w-1/3 animate-pulse rounded-sm bg-monti-primary"
+							: "h-full rounded-sm bg-monti-primary transition-[width]"
 					}
 					style={percent === null ? undefined : { width: `${percent}%` }}
 				/>

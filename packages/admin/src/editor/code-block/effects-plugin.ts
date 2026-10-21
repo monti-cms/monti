@@ -235,7 +235,7 @@ function foldWidget(t: TranslatorFor<typeof codeBlockMessages>, region: FoldRegi
 			button.contentEditable = "false";
 			button.dataset.codeFoldToggle = region.kind;
 			button.className =
-				"mx-0.5 inline-flex h-5 items-center rounded bg-monti-muted px-1 align-middle font-sans text-monti-muted-foreground text-xs leading-none hover:bg-monti-accent hover:text-monti-foreground";
+				"mx-0.5 inline-flex h-5 items-center rounded-sm bg-monti-muted px-1 align-middle font-sans text-monti-muted-foreground text-xs leading-none hover:bg-monti-accent hover:text-monti-foreground";
 			button.textContent = region.kind === "collapse" ? `⋯ ${t("fold.lines", { count: region.hiddenLines })}` : "…";
 			button.title =
 				region.kind === "collapse" ? t("fold.expandLines", { count: region.hiddenLines }) : t("fold.expandText");
