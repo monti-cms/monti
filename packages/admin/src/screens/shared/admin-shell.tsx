@@ -196,7 +196,7 @@ export function AdminShell({
 							aria-label={t("shell.openSidebar")}
 							className="-ml-1 text-monti-muted-foreground md:hidden"
 						/>
-						<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-[15px]">
+						<h1 className="flex min-w-0 flex-1 items-baseline gap-2 truncate font-semibold text-monti-title">
 							<span className="truncate">{title}</span>
 							{count !== undefined && (
 								<span className="tabular font-normal text-monti-muted-foreground text-sm">{count}</span>

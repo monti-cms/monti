@@ -64,7 +64,7 @@ export function SeoPreview({
 	return (
 		<div className="space-y-3">
 			<Panel role="region" aria-label={t("preview.search")} className="space-y-1 bg-monti-muted/30 p-3">
-				<p className="truncate text-[11px] text-monti-muted-foreground">
+				<p className="truncate text-monti-caption text-monti-muted-foreground">
 					{site.SITE_NAME}
 					{path
 						.split("/")
@@ -77,14 +77,16 @@ export function SeoPreview({
 				<p className={cn("line-clamp-2 text-xs leading-relaxed", !description && "text-monti-muted-foreground italic")}>
 					{description || t("preview.noDescription")}
 				</p>
-				{noindex && <p className="pt-1 font-medium text-[11px] text-monti-warning-foreground">{t("preview.hidden")}</p>}
+				{noindex && (
+					<p className="pt-1 font-medium text-monti-caption text-monti-warning-foreground">{t("preview.hidden")}</p>
+				)}
 			</Panel>
 
 			{hasImageField && (
 				<Panel role="region" aria-label={t("preview.share")} className="overflow-hidden">
 					{imageId && <MediaThumbnail mediaId={imageId} className="aspect-[1.91/1] w-full border-b" />}
 					<div className="space-y-0.5 p-3">
-						<p className="truncate text-[11px] text-monti-muted-foreground">{site.SITE_NAME}</p>
+						<p className="truncate text-monti-caption text-monti-muted-foreground">{site.SITE_NAME}</p>
 						<p className="line-clamp-2 font-medium text-sm leading-snug">{title || tc("untitled")}</p>
 						{description && (
 							<p className="line-clamp-2 text-monti-muted-foreground text-xs leading-relaxed">{description}</p>

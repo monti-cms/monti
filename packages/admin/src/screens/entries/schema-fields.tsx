@@ -124,7 +124,7 @@ export function FieldRow({ id, label, required, issue, help, slot, aside, childr
 			) : (
 				labelNode
 			)}
-			{help && <FormFieldDescription className="text-[11px] leading-tight">{help}</FormFieldDescription>}
+			{help && <FormFieldDescription className="text-monti-caption leading-tight">{help}</FormFieldDescription>}
 			{children}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
 		</UiField>
@@ -156,7 +156,7 @@ function SlotFieldRow({
 					</span>
 				) : null}
 			</div>
-			{help && <FormFieldDescription className="text-[11px] leading-tight">{help}</FormFieldDescription>}
+			{help && <FormFieldDescription className="text-monti-caption leading-tight">{help}</FormFieldDescription>}
 			{children}
 			{panel}
 			{issue && <FormFieldError id={`${id}-error`}>{issueLine(issue)}</FormFieldError>}
@@ -620,7 +620,7 @@ export function SchemaFields({
 					}
 					return (
 						<section key={key} aria-label={group.group} className="space-y-4 border-t pt-4">
-							<h3 className="font-medium text-[11px] text-monti-muted-foreground uppercase tracking-wide">
+							<h3 className="font-medium text-monti-caption text-monti-muted-foreground uppercase tracking-wide">
 								{group.group}
 							</h3>
 							{visible.map(renderField)}

@@ -22,7 +22,7 @@ function ErrorNoticeView({ notice, className, ...props }: React.ComponentProps<"
 			{notice.detail && (
 				<details className="text-monti-muted-foreground">
 					<summary className="cursor-pointer select-none">{t("error.details")}</summary>
-					<pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded bg-monti-muted/40 p-2 font-mono text-[11px]">
+					<pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded bg-monti-muted/40 p-2 font-mono text-monti-caption">
 						{notice.detail}
 					</pre>
 				</details>

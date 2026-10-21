@@ -545,7 +545,21 @@ one only to break away. Tokens by role:
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | The active or emphasized item in the sidebar |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | Hover and selected fill in the sidebar (`-foreground` follows `--monti-foreground` unless set) |
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
+| Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: a system monospace stack) |
+| | `--monti-content-font` | The font of the writing area (post title, editor body, translation source). Not set by default: the admin copies the font your `body` computes to when it opens, so the writing area keeps looking like the site. Set it in `:root` to use another |
 | Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+
+### Type scale
+
+Sizes are px, so the root font-size of the site cannot rescale the admin. The classes are `text-monti-<role>` (size / line-height); they are not tokens a site overrides:
+
+- `micro` (11/14): counters, keyboard hints and badge counts only
+- `caption` (12/16): meta, timestamps, helper and hint text
+- `label` (13/18): buttons, menu items, tabs, sidebar items, table cells, field labels
+- `body` (14/20): default text, inputs, descriptions
+- `title` (16/22): panel, dialog and card titles, the top-bar page title
+- `heading` (20/28): in-page screen headings
+- `display` (34/1.15): the post title in the editor and the source pane
 
 ### Reusing a shadcn theme
 

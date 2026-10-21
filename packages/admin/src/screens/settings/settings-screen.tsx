@@ -44,7 +44,7 @@ function SettingsBody({ tab: renderedTab }: { tab: SchemaTab }) {
 								aria-label={shared("shell.openSidebar")}
 								className="-ml-1 text-monti-muted-foreground md:hidden"
 							/>
-							<h1 className="font-semibold text-[22px] leading-tight tracking-tight">{t("title")}</h1>
+							<h1 className="font-semibold text-monti-heading leading-tight tracking-tight">{t("title")}</h1>
 							<div
 								ref={setFileLine}
 								className="flex items-center gap-1.5 empty:hidden"

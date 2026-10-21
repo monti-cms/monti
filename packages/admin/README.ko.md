@@ -530,7 +530,21 @@ import "@monti-cms/admin/styles.css";
 | | `--monti-sidebar-primary`, `--monti-sidebar-primary-foreground` | 사이드바에서 활성이거나 강조된 항목 |
 | | `--monti-sidebar-accent`, `--monti-sidebar-accent-foreground` | 사이드바의 호버·선택 배경(`-foreground`는 정하지 않으면 `--monti-foreground`를 따른다) |
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | 사이드바의 구분선과 포커스 링(`--monti-sidebar-ring`은 정하지 않으면 `--monti-ring`을 따른다) |
+| 글꼴 | `--monti-font-sans`, `--monti-font-mono` | 관리자의 글꼴. `--monti-font-sans`는 화면 구성(기본값: 한글 대체 글꼴을 포함한 시스템 스택), `--monti-font-mono`는 코드와 소스 화면(기본값: 시스템 고정폭 스택) |
+| | `--monti-content-font` | 글 쓰는 영역(글 제목, 편집기 본문, 번역 원문)의 글꼴. 기본값은 없다. 관리자가 열릴 때 사이트 `body`의 계산된 글꼴을 복사하므로 글 쓰는 영역이 사이트처럼 보인다. 다른 글꼴을 쓰려면 `:root`에 정한다 |
 | 모서리 | `--monti-radius` | 기본 모서리 반경(기본값 `0.5rem`). 관리자의 모든 `rounded-*`가 이 값에서 계산된다. `:root`에 한 번만 정하며 어두운 값은 없다 |
+
+### 글자 크기 체계
+
+크기는 px이라 사이트의 루트 글자 크기가 관리자를 키우거나 줄이지 못한다. 클래스는 `text-monti-<역할>`(크기 / 줄 높이)이며, 사이트가 덮어쓰는 토큰이 아니다.
+
+- `micro`(11/14): 카운터, 단축키 안내, 배지 숫자에만
+- `caption`(12/16): 메타 정보, 시각, 도움말과 힌트
+- `label`(13/18): 버튼, 메뉴 항목, 탭, 사이드바 항목, 표 셀, 필드 라벨
+- `body`(14/20): 기본 글, 입력창, 설명
+- `title`(16/22): 패널·대화상자·카드 제목, 상단 바의 화면 제목
+- `heading`(20/28): 화면 안의 제목
+- `display`(34/1.15): 편집기와 원문 창의 글 제목
 
 ### shadcn 테마 재사용
 

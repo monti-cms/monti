@@ -19,7 +19,7 @@ function Counter({ length, limit }: { length: number; limit: number }) {
 	return (
 		<span
 			className={cn(
-				"text-[11px] text-monti-muted-foreground tabular-nums",
+				"text-monti-micro text-monti-muted-foreground tabular-nums",
 				length > limit && "text-monti-warning-foreground",
 			)}
 		>

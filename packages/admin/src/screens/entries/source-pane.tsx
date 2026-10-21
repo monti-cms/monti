@@ -82,13 +82,13 @@ export function SourcePane({
 			</div>
 			<h1
 				className={cn(
-					"px-6 pt-12 pb-5 font-semibold text-[34px] leading-tight tracking-tight",
+					"monti-content-font px-6 pt-12 pb-5 font-semibold text-monti-display leading-tight tracking-tight",
 					!title && "text-monti-muted-foreground/40",
 				)}
 			>
 				{title || tc("untitled")}
 			</h1>
-			<div className="px-6 pt-6 pb-[35vh]">
+			<div className="monti-content-font px-6 pt-6 pb-[35vh]">
 				<DocPreview doc={doc} label={t("sourcePane.body")} />
 			</div>
 		</aside>

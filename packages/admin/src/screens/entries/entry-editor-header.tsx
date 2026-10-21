@@ -90,7 +90,7 @@ export function EntryEditorHeader({
 
 	return (
 		<header className="z-20 flex min-h-13 shrink-0 flex-wrap items-center justify-between gap-1 border-b bg-monti-background/95 px-3 py-2 backdrop-blur sm:flex-nowrap lg:px-4">
-			<div className="flex min-w-0 items-center gap-2 text-[13px]">
+			<div className="flex min-w-0 items-center gap-2 text-monti-label">
 				<Tooltip>
 					<TooltipTrigger
 						render={
