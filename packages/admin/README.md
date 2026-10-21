@@ -384,7 +384,33 @@ function DraftsStatus() {
 export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
 ```
 
-`StatusBarItem` takes `icon`, `tone` (`default`, `warning`, `danger`), `href` (a link inside the admin) or `onClick` (a button), a `title` (tooltip) and its text as children. `useStatusBarContext()` returns the screen kind, the `collection`, the `count` of a list, and on the editor the `entryId`, the `locale` and an `EditorStatus` (save state, time of the last save, character count, reading time, and the findings of the text checkers with a way to the first one). Give a function of the site (`statusItems: (site) => ({ ... })`) when the items depend on the site config; the components come from a `"use client"` module. On narrow screens the bar hides its `end` items first and never wraps.
+`StatusBarItem` takes `icon`, `tone` (`default`, `warning`, `danger`), at most one of `href` (a link inside the admin), `onClick` (a button) or `popover` (a popup), a `title` (tooltip) and its text as children. `useStatusBarContext()` returns the screen kind, the `collection`, the `count` of a list, and on the editor the `entryId`, the `locale` and an `EditorStatus` (save state, time of the last save, the size of the body, the browser copy on offer, the translations, and the findings of the text checkers with a way to each). Give a function of the site (`statusItems: (site) => ({ ... })`) when the items depend on the site config; the components come from a `"use client"` module. On narrow screens the bar hides its `end` items first and never wraps.
+
+With `popover`, clicking the item (or Enter and Space) opens a popup above it, lined up with the item's left edge in the `start` group and its right edge in the `end` group; Escape closes it and the focus returns to the item. The popup is 320px wide and scrolls when the screen is short. Build its content from `StatusPopoverHeader` (a title and an optional action on the right, `{ label, onClick }` or `{ label, href, newTab }`) and `StatusPopoverRow` (a `label` on the left and a `value` in mono on the right; `href` makes it a link, `onClick` a button, and both close the popup). Core uses popups for the save state (status, last save, Save now, Retry, Sign in, restoring the browser copy), the language (the translations and where each stands), the body counts, and the latest failed deliveries (Retry all, the event log):
+
+```tsx
+function DraftsStatus() {
+	const { collection } = useStatusBarContext();
+	const drafts = useDrafts(collection); // your own query: [{ id, title }]
+	if (!drafts.length) return null;
+	return (
+		<StatusBarItem
+			tone="warning"
+			title="Show the drafts"
+			popover={
+				<>
+					<StatusPopoverHeader title="Drafts" action={{ label: "Open all", href: "/admin?status=draft" }} />
+					{drafts.map((draft) => (
+						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
+					))}
+				</>
+			}
+		>
+			{drafts.length} drafts
+		</StatusBarItem>
+	);
+}
+```
 
 ### Router adapter
 

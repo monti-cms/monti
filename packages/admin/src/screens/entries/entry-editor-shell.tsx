@@ -316,7 +316,25 @@ export function EntryEditorShell({
 		statusLabel,
 		charCount: stats.chars,
 		readingMinutes: stats.minutes,
+		bodyStats: {
+			charsWithSpaces: stats.charsWithSpaces,
+			words: stats.words,
+			paragraphs: stats.paragraphs,
+			headings: stats.headings,
+		},
 		backupAvailable: editor.recoveryCopyAvailable,
+		recovery: editor.recovery
+			? { restore: editor.restoreRecovery, discard: () => void editor.discardRecovery() }
+			: null,
+		translations:
+			site.ADMIN_TRANSLATIONS && entry && !site.isItemCollection(collection)
+				? (entry.translations ?? []).map((member) => ({
+						id: member.id,
+						locale: member.locale,
+						status: member.status,
+						current: member.id === entry.id,
+					}))
+				: null,
 		save: () => void commands.handleSaveNow(),
 		textIssues: extensions.textIssues,
 	};

@@ -382,7 +382,33 @@ function DraftsStatus() {
 export default defineAdminPlugin({ statusItems: { drafts: { align: "start", order: 100, Component: DraftsStatus } } });
 ```
 
-`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크) 또는 `onClick`(버튼), `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 글자 수, 읽는 시간, 텍스트 검사기가 찾은 항목과 첫 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
+`StatusBarItem`은 `icon`, `tone`(`default`·`warning`·`danger`), `href`(관리자 안의 링크)·`onClick`(버튼)·`popover`(팝업) 중 하나 이하, `title`(툴팁)과 자식 글자를 받는다. `useStatusBarContext()`는 화면 종류, `collection`, 목록의 `count`를 돌려주고, 편집기에서는 `entryId`, `locale`, `EditorStatus`(저장 상태, 마지막 저장 시각, 본문의 크기, 복원을 권하는 브라우저 사본, 번역 목록, 텍스트 검사기가 찾은 항목과 각 항목으로 가는 방법)도 돌려준다. 항목이 사이트 설정에 달려 있으면 사이트의 함수(`statusItems: (site) => ({ ... })`)를 준다. 컴포넌트는 `"use client"` 모듈에서 가져온다. 좁은 화면에서는 `end` 항목부터 숨기고 두 줄로 넘기지 않는다.
+
+`popover`를 주면 항목을 누르거나(Enter, Space도 같다) 항목 위에 팝업이 열린다. 팝업은 `start` 그룹에서는 항목의 왼쪽 끝에, `end` 그룹에서는 오른쪽 끝에 맞춘다. Esc로 닫으면 포커스가 항목으로 돌아온다. 팝업은 너비 320px이고 화면이 낮으면 안에서 스크롤한다. 내용은 `StatusPopoverHeader`(제목과 오른쪽의 선택 동작, `{ label, onClick }` 또는 `{ label, href, newTab }`)와 `StatusPopoverRow`(왼쪽 `label`, 오른쪽 mono `value`, `href`를 주면 링크, `onClick`을 주면 버튼이며 둘 다 팝업을 닫는다)로 짠다. 코어는 저장 상태(상태, 마지막 저장, 지금 저장·다시 시도·로그인, 브라우저 사본 복원), 언어(번역 목록과 각 상태), 본문 수치, 최근 실패한 전달(모두 다시 시도, 이벤트 로그)에 팝업을 쓴다.
+
+```tsx
+function DraftsStatus() {
+	const { collection } = useStatusBarContext();
+	const drafts = useDrafts(collection); // 직접 만든 쿼리: [{ id, title }]
+	if (!drafts.length) return null;
+	return (
+		<StatusBarItem
+			tone="warning"
+			title="초안 보기"
+			popover={
+				<>
+					<StatusPopoverHeader title="초안" action={{ label: "모두 열기", href: "/admin?status=draft" }} />
+					{drafts.map((draft) => (
+						<StatusPopoverRow key={draft.id} label={draft.title} href={`/admin/entries/${draft.id}`} />
+					))}
+				</>
+			}
+		>
+			초안 {drafts.length}건
+		</StatusBarItem>
+	);
+}
+```
 
 ### 라우터 어댑터
 

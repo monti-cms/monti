@@ -928,7 +928,9 @@ describe("entry editor shell", () => {
 			await waitFor(() => expect(methodCalls("PATCH").length).toBeGreaterThanOrEqual(index + 1), { timeout: 4000 });
 			await waitFor(() => expect(screen.getAllByText(expected[index] as string).length).toBeGreaterThan(0));
 		}
-		expect(screen.getByRole("link", { name: "세션 만료 · 로그인" }).getAttribute("href")).toContain("/login");
+		fireEvent.click(screen.getByRole("button", { name: "세션 만료 · 로그인" }));
+		const signIn = await within(await screen.findByRole("dialog")).findByRole("link", { name: "로그인" });
+		expect(signIn.getAttribute("href")).toContain("/login");
 		expect(saveLocalBackup).toHaveBeenLastCalledWith(
 			expect.objectContaining({
 				key: `${ADMIN}:entry-1`,

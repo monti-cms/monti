@@ -22,11 +22,15 @@ export { LoadErrorAlert } from "./screens/shared/load-error-alert";
 export { ListPane, ListRow, MasterDetail } from "./screens/shared/master-detail";
 export {
 	type EditorStatus,
+	type EditorTextIssue,
+	type EditorTranslation,
 	type StatusBarContextValue,
 	StatusBarItem,
 	type StatusBarItemProps,
 	type StatusBarScreen,
 	type StatusItemDefinition,
+	StatusPopoverHeader,
+	StatusPopoverRow,
 	useStatusBarContext,
 } from "./screens/shared/status-bar";
 export { useDebounced } from "./screens/shared/use-debounced";
