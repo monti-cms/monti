@@ -9,7 +9,6 @@ import { useCmsMutation } from "../../api/use-cms-mutation";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
-import { Panel } from "../../ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../ui/dialog";
 import { DialogFormFooter } from "../../ui/dialog-form-footer";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/empty";
@@ -21,8 +20,6 @@ import { PageActions } from "../shared/admin-shell";
 import { useConfirm } from "../shared/confirm-dialog";
 import { Labeled } from "../shared/labeled";
 import { LoadErrorAlert } from "../shared/load-error-alert";
-import { PageBody } from "../shared/page-body";
-import { Section } from "../shared/section";
 import { type ApiKeyChoice, ApiKeyField, choiceReady } from "./api-key-field";
 import { apiKeysMessages } from "./messages";
 
@@ -90,7 +87,7 @@ export function ApiKeysSettings() {
 	];
 
 	return (
-		<PageBody data-testid="api-keys-settings">
+		<div data-testid="api-keys-settings" className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 			<PageActions>
 				<Button type="button" size="sm" disabled={!list?.secretsAvailable} onClick={() => setEditing({ mode: "add" })}>
 					<Plus aria-hidden />
@@ -98,34 +95,29 @@ export function ApiKeysSettings() {
 				</Button>
 			</PageActions>
 			{list && !list.secretsAvailable && (
-				<Alert variant="destructive" layout="stack">
+				<Alert variant="destructive" layout="stack" className="mx-8 mb-4 w-auto">
 					<AlertTitle>{t("secret.title")}</AlertTitle>
 					<AlertDescription>{t("secret.description")}</AlertDescription>
 				</Alert>
 			)}
-			<Section wide card={false} title={t("title")} description={t("description")} note={t("note")}>
-				<Panel className="overflow-hidden">
-					<div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-						<span className="text-monti-muted-foreground text-sm">
-							{list
-								? [
-										t("count.keys", { count: list.items.length }),
-										...(list.slots.some((slot) => !slot.key)
-											? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
-											: []),
-									].join(" · ")
-								: "\u00a0"}
-						</span>
-					</div>
-					<KeyRows
-						query={query}
-						menu={rowMenu}
-						onAssign={setSlotEditing}
-						onRetry={() => void query.refetch()}
-						onAdd={() => setEditing({ mode: "add" })}
-					/>
-				</Panel>
-			</Section>
+			<div className="flex min-h-11 shrink-0 items-center border-monti-border border-y px-8 text-monti-caption text-monti-muted-foreground">
+				{list
+					? [
+							t("count.keys", { count: list.items.length }),
+							...(list.slots.some((slot) => !slot.key)
+								? [t("count.needed", { count: list.slots.filter((slot) => !slot.key).length })]
+								: []),
+						].join(" · ")
+					: "\u00a0"}
+			</div>
+			<KeyRows
+				query={query}
+				menu={rowMenu}
+				onAssign={setSlotEditing}
+				onRetry={() => void query.refetch()}
+				onAdd={() => setEditing({ mode: "add" })}
+			/>
+			<p className="px-8 py-4 text-monti-caption text-monti-muted-foreground">{t("note")}</p>
 			{editing && (
 				<KeyDialog
 					key={editing.mode === "add" ? "add" : `${editing.mode}:${editing.key.id}`}
@@ -142,7 +134,7 @@ export function ApiKeysSettings() {
 				/>
 			)}
 			{dialog}
-		</PageBody>
+		</div>
 	);
 }
 
@@ -165,15 +157,19 @@ function KeyRows({
 	if (!list) {
 		if (query.error) {
 			return (
-				<LoadErrorAlert message={errorText(site, query.error, t("load.failed"))} onRetry={onRetry} className="m-3" />
+				<LoadErrorAlert
+					message={errorText(site, query.error, t("load.failed"))}
+					onRetry={onRetry}
+					className="mx-8 my-3"
+				/>
 			);
 		}
-		return <Skeleton className="m-4 h-12" />;
+		return <Skeleton className="mx-8 my-4 h-12" />;
 	}
 	const emptySlots = list.slots.filter((slot) => !slot.key);
 	if (list.items.length === 0 && list.slots.length === 0) {
 		return (
-			<Empty>
+			<Empty className="min-h-64">
 				<EmptyHeader>
 					<EmptyMedia variant="icon">
 						<KeyRound aria-hidden />
@@ -191,28 +187,39 @@ function KeyRows({
 		);
 	}
 	return (
-		<ul className="divide-y" aria-label={t("title")}>
+		<ul className="divide-y divide-monti-border border-monti-border border-b" aria-label={t("title")}>
 			{list.items.map((key) => (
-				<li key={key.id} className="flex items-center gap-3.5 px-4 py-3" data-testid={`api-key-${key.name}`}>
+				<li key={key.id} className="flex items-center gap-3.5 px-8 py-3" data-testid={`api-key-${key.name}`}>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-2">
-							<span className="truncate font-medium text-sm">{key.name}</span>
+							<span className="truncate font-medium text-monti-body">{key.name}</span>
 							{!key.readable && (
 								<Badge variant="destructive" title={t("row.unreadableHint")}>
 									{t("row.unreadable")}
 								</Badge>
 							)}
 						</div>
-						<p className="mt-0.5 truncate text-monti-muted-foreground text-xs">
-							{!key.readable
-								? t("row.unreadableHint")
-								: key.uses.length > 0
-									? t("row.usedBy", { uses: key.uses.map((use) => use.label).join(", ") })
-									: t("row.unused")}
-						</p>
+						{!key.readable ? (
+							<p className="mt-0.5 truncate text-monti-caption text-monti-muted-foreground">
+								{t("row.unreadableHint")}
+							</p>
+						) : key.uses.length > 0 ? (
+							<ul aria-label={t("row.usedBy")} className="mt-1.5 flex flex-wrap gap-1">
+								{key.uses.map((use) => (
+									<li
+										key={`${use.plugin}:${use.ref}`}
+										className="rounded-sm bg-monti-accent px-1.5 py-0.5 font-medium text-monti-caption text-monti-foreground"
+									>
+										{use.label}
+									</li>
+								))}
+							</ul>
+						) : (
+							<p className="mt-0.5 truncate text-monti-caption text-monti-muted-foreground">{t("row.unused")}</p>
+						)}
 					</div>
 					<span
-						className="shrink-0 font-mono text-monti-muted-foreground text-xs"
+						className="shrink-0 font-mono text-monti-caption text-monti-muted-foreground"
 						title={key.tail ? t("row.mask", { tail: key.tail }) : t("row.maskShort")}
 					>
 						{"••••"}
@@ -224,13 +231,13 @@ function KeyRows({
 			{emptySlots.map((slot) => (
 				<li
 					key={`${slot.plugin}:${slot.slot}`}
-					className="flex items-center gap-3.5 px-4 py-3"
+					className="flex items-center gap-3.5 px-8 py-3"
 					data-testid={`api-key-slot-${slot.plugin}-${slot.slot}`}
 				>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-2">
-							<span className="truncate font-medium text-sm">{slot.label}</span>
-							<span className="text-monti-muted-foreground text-xs">{t("slot.empty")}</span>
+							<span className="truncate font-medium text-monti-body">{slot.label}</span>
+							<span className="text-monti-caption text-monti-muted-foreground">{t("slot.empty")}</span>
 						</div>
 					</div>
 					<Button
@@ -388,7 +395,7 @@ function KeyDialog({
 								aria-invalid={nameTaken ? true : undefined}
 								onChange={(event) => setName(event.target.value)}
 							/>
-							{nameTaken && <FormFieldError className="text-xs">{t("field.nameTaken")}</FormFieldError>}
+							{nameTaken && <FormFieldError className="text-monti-caption">{t("field.nameTaken")}</FormFieldError>}
 						</Labeled>
 					)}
 					{needsValue && (
