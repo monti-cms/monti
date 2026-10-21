@@ -509,7 +509,7 @@ The defaults have zero specificity (`:where(...)`), so a plain `:root { ... }` r
 	--monti-primary: light-dark(#0d9488, #2dd4bf);
 	--monti-primary-foreground: light-dark(#ffffff, #042f2e);
 	--monti-ring: light-dark(#14b8a6, #5eead4);
-	--monti-radius: 0.75rem;
+	--monti-radius: 0.5rem;
 }
 ```
 
@@ -548,7 +548,7 @@ one only to break away. Tokens by role:
 | | `--monti-sidebar-border`, `--monti-sidebar-ring` | The sidebar's dividers and focus ring (`--monti-sidebar-ring` follows `--monti-ring` unless set) |
 | Type | `--monti-font-sans`, `--monti-font-mono` | The admin's fonts: `--monti-font-sans` for the chrome (default: Pretendard, then a system stack with Korean fallbacks), `--monti-font-mono` for code and source views (default: IBM Plex Mono, then a system monospace stack) |
 | | `--monti-content-font` | The font of the writing area (post title, editor body, translation source). Not set by default: the admin copies the font your `body` computes to when it opens, so the writing area keeps looking like the site. Set it in `:root` to use another |
-| Radius | `--monti-radius` | Base corner radius (default `0.5rem`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
+| Radius | `--monti-radius` | Base corner radius (default `6px`); every `rounded-*` of the admin is computed from it. Set once in `:root`, there is no dark value |
 
 ### Type scale
 

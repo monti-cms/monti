@@ -55,7 +55,7 @@ export function IssueList({ issues }: { issues: readonly ConfigIssue[] }) {
 		<ul className="flex flex-col gap-0.5 text-monti-destructive text-xs" data-testid="schema-issues">
 			{issues.map((issue) => (
 				<li key={`${issue.path}:${issue.message}`}>
-					<code className="rounded bg-monti-destructive/10 px-1">{issue.path || "(root)"}</code> {issue.message}
+					<code className="rounded-sm bg-monti-destructive/10 px-1">{issue.path || "(root)"}</code> {issue.message}
 				</li>
 			))}
 		</ul>
@@ -168,7 +168,7 @@ export function FlagSwitch({
 	);
 }
 
-/** A few exclusive choices side by side in one rounded strip (a segmented control). */
+/** A few exclusive choices side by side in one strip with soft ends (a segmented control). */
 export function Segmented({
 	label,
 	value,
@@ -207,7 +207,7 @@ export function Segmented({
 						disabled={disabled}
 						onClick={() => onChange(item.value)}
 						className={cn(
-							"h-7 rounded-[3px] border border-transparent px-3 text-monti-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:opacity-50",
+							"h-7 rounded-sm border border-transparent px-3 text-monti-muted-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-monti-ring/50 disabled:opacity-50",
 							item.value === value && "border-monti-border bg-monti-background font-medium text-monti-foreground",
 						)}
 					>

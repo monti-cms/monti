@@ -159,7 +159,7 @@ function ComparePanes({
 	const pane = (label: string, value: EntryForm) => {
 		const body = bodyText(value.doc);
 		return (
-			<div className="space-y-2 rounded border p-3">
+			<div className="space-y-2 rounded-lg border p-3">
 				<p className="font-semibold text-sm">{label}</p>
 				<p className="text-xs">
 					{t("conflict.summary", {

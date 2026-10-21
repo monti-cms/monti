@@ -88,7 +88,7 @@ export function CodeExplorerNodeView() {
 										aria-current={current ? "true" : undefined}
 										onClick={() => block.focus({ child: file.index })}
 										className={cn(
-											"inline-flex max-w-full items-center gap-1 rounded border border-transparent px-1.5 py-0.5 font-mono text-monti-muted-foreground text-xs hover:bg-monti-accent hover:text-monti-foreground",
+											"inline-flex max-w-full items-center gap-1 rounded-md border border-transparent px-1.5 py-0.5 font-mono text-monti-muted-foreground text-xs hover:bg-monti-accent hover:text-monti-foreground",
 											current && "border-monti-border bg-monti-background text-monti-foreground shadow-xs",
 										)}
 									>

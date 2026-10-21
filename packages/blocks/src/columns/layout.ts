@@ -19,9 +19,9 @@ export const toPercentWidths = (widths: readonly number[] | null, count: number)
 	if (count <= 0) return [];
 	const source = widths && widths.length === count ? widths : Array.from({ length: count }, () => 1);
 	const total = source.reduce((sum, width) => sum + width, 0);
-	const rounded = source.map((width) => Math.round((width / total) * 100));
-	rounded[count - 1] = 100 - rounded.slice(0, -1).reduce((sum, width) => sum + width, 0);
-	return rounded;
+	const percents = source.map((width) => Math.round((width / total) * 100));
+	percents[count - 1] = 100 - percents.slice(0, -1).reduce((sum, width) => sum + width, 0);
+	return percents;
 };
 
 /** If all columns have the same ratio, nothing is stored (empty string). */

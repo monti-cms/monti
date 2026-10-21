@@ -153,7 +153,7 @@ export function ColumnsNodeView() {
 							<span
 								aria-hidden
 								className={cn(
-									"absolute top-3 bottom-0 left-0 w-0.5 -translate-x-1/2 rounded-full bg-monti-primary opacity-0 transition-opacity group-hover/container:opacity-30",
+									"absolute top-3 bottom-0 left-0 w-0.5 -translate-x-1/2 rounded-sm bg-monti-primary opacity-0 transition-opacity group-hover/container:opacity-30",
 									draft && "opacity-100 group-hover/container:opacity-100",
 								)}
 							/>

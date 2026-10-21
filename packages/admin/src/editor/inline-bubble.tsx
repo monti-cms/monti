@@ -488,7 +488,7 @@ export function InlineBubble({
 
 	const renderFootnote = (target: Extract<InlineBubbleTarget, { kind: "footnote" }>) => (
 		<div className="flex items-center gap-1">
-			<span className="flex size-5 shrink-0 items-center justify-center rounded bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
+			<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
 				{target.badge}
 			</span>
 			<button

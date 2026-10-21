@@ -728,7 +728,7 @@ function OneOfInput({
 			{items.map((item, index) => (
 				<span
 					key={item}
-					className="inline-flex items-center gap-1 rounded bg-monti-muted px-2 py-0.5 font-mono text-monti-foreground text-xs"
+					className="inline-flex items-center gap-1 rounded-sm bg-monti-muted px-2 py-0.5 font-mono text-monti-foreground text-xs"
 				>
 					<span className="max-w-40 truncate">{item}</span>
 					{!disabled && (
@@ -1229,7 +1229,7 @@ function FeatureEditor({
 							</ul>
 						)
 					) : (
-						<p className="whitespace-pre-wrap rounded border bg-monti-background p-2">{test.result.text}</p>
+						<p className="whitespace-pre-wrap rounded-lg border bg-monti-background p-2">{test.result.text}</p>
 					))}
 			</section>
 		</div>

@@ -379,7 +379,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
 												event.stopPropagation();
 												setFoldOpen(editor.view, collapse, !collapse.open);
 											}}
-											className="size-4 rounded p-0 hover:bg-monti-accent"
+											className="size-4 rounded-md p-0 hover:bg-monti-accent"
 										>
 											<ChevronRight
 												aria-hidden

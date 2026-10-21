@@ -79,7 +79,7 @@ function Swatch({ kind, color }: { kind: ColorKind; color: ColorPair | null }) {
 			className={cn(
 				"flex size-6 items-center justify-center rounded-md border font-medium text-xs",
 				props?.className,
-				// The background sample fills the rounded rectangle completely (overriding the body background color's padding and corner rules).
+				// The background sample fills the rectangle completely (overriding the body background color's padding and corner rules).
 				kind === "bg" && "![padding:0] !rounded-md",
 			)}
 		>

@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { sharedMessages } from "./messages";
 
 const GAP = 4;
-const CHIP = "shrink-0 rounded bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs";
+const CHIP = "shrink-0 rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs";
 
 /**
  * Shows as many tags as fit the cell width and shortens the rest to `+N`. Remeasures when the column width changes.

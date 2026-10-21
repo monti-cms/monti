@@ -382,7 +382,7 @@ export function ReviewDialog({
 														{settingText(setting.from, t("review.unset"))}
 													</span>
 													{" -> "}
-													<span className="rounded bg-monti-primary/10 px-1.5 py-0.5 font-medium text-monti-primary">
+													<span className="rounded-sm bg-monti-primary/10 px-1.5 py-0.5 font-medium text-monti-primary">
 														{settingText(setting.to, t("review.unset"))}
 													</span>
 												</div>

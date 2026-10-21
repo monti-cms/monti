@@ -298,7 +298,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 								void commitRename(folder);
 							}}
 							onClick={(e) => e.stopPropagation()}
-							className="h-6 min-w-0 flex-1 rounded bg-monti-background px-1.5 text-monti-foreground text-monti-label outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
+							className="h-6 min-w-0 flex-1 rounded-md bg-monti-background px-1.5 text-monti-foreground text-monti-label outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
 						/>
 					) : (
 						<button
@@ -351,7 +351,7 @@ function FolderTree({ nav, closeMobile }: { nav: FolderNavigation; closeMobile: 
 									onBlur={() => {
 										void commitCreate();
 									}}
-									className="h-6 min-w-0 flex-1 rounded bg-monti-background px-1.5 text-monti-foreground text-monti-label outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
+									className="h-6 min-w-0 flex-1 rounded-md bg-monti-background px-1.5 text-monti-foreground text-monti-label outline-hidden ring-1 ring-monti-input focus:ring-2 focus:ring-monti-ring"
 								/>
 							</li>
 						)}

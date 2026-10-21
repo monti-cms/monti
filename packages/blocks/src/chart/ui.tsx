@@ -139,10 +139,7 @@ export const ChartTooltipContent = ({
 
 						return (
 							<div key={itemKey} className="flex items-center gap-2">
-								<div
-									className="h-2.5 w-2.5 rounded-[2px]"
-									style={{ backgroundColor: item.color ?? item.payload?.fill }}
-								/>
+								<div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.color ?? item.payload?.fill }} />
 								<div className="flex flex-1 items-center justify-between gap-3">
 									<span className="text-monti-muted-foreground">{itemConfig?.label ?? key}</span>
 									<span className="font-medium font-mono text-monti-foreground tabular-nums">
@@ -216,7 +213,7 @@ export const ChartLegendContent = ({
 
 					return (
 						<div key={itemKey} className="flex items-center gap-1.5">
-							<div className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: item.color }} />
+							<div className="h-2 w-2 rounded-sm" style={{ backgroundColor: item.color }} />
 							<span>{itemConfig?.label ?? lookupKey}</span>
 						</div>
 					);

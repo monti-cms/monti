@@ -60,7 +60,7 @@
 	--radius-md: calc(var(--monti-radius) - 2px);
 	--radius-lg: var(--monti-radius);
 	--radius-xl: calc(var(--monti-radius) + 4px);
-	/* Scale in use: chips 4px (sm), controls and rows 6px (md), cards 8px (lg), dialogs and the side sheet 10px (dialog). */
+	/* Scale in use (base 6px): chips, badges and tags 2px (sm), buttons, inputs, list rows and menu items 4px (md), cards, panels and menus 6px (lg), dialogs and the side sheet 8px (dialog). Pills (`rounded-full`) are reserved for switches, avatars and status dots. Bare `rounded` is not used: Tailwind resolves it to a fixed 0.25rem outside this scale. */
 	--radius-dialog: calc(var(--monti-radius) + 2px);
 
 	/*

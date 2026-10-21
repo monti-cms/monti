@@ -44,7 +44,7 @@
 	--monti-sidebar-border: #e7e7ea;
 	--monti-sidebar-ring: var(--monti-ring);
 	/* Base corner radius. The `rounded-*` utilities of the admin bundle are computed from it (see `theme.css`); the host's `--radius*` is not touched. */
-	--monti-radius: 0.5rem;
+	--monti-radius: 6px;
 	/* Admin fonts (Pretendard and IBM Plex Mono ship in the bundle, see `scripts/build-styles.mjs`): the chrome uses the sans token, code and source views the mono one. The post body and title keep the site's font (`--monti-content-font`, see below). */
 	--monti-font-sans:
 		"Monti Pretendard", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",

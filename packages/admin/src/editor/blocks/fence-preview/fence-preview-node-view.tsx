@@ -221,7 +221,7 @@ export function FencePreviewBlockView({ meta }: { readonly meta: FenceEditorMeta
 					{draft.trim() ? (
 						renderPreview()
 					) : (
-						<div className="rounded border border-monti-border/80 border-dashed p-4 text-center text-monti-muted-foreground text-xs hover:border-monti-foreground/30">
+						<div className="rounded-md border border-monti-border/80 border-dashed p-4 text-center text-monti-muted-foreground text-xs hover:border-monti-foreground/30">
 							{t("fence.enter", { label: meta.label })}
 						</div>
 					)}

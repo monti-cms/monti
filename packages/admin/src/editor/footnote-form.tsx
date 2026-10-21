@@ -124,7 +124,7 @@ export function FootnoteForm({ editor, target, onDone }: FootnoteFormProps) {
 	return (
 		<form onSubmit={handleApply} onKeyDown={submitOnEnter} className="grid gap-3">
 			<div className="flex items-center gap-1.5 font-medium">
-				<span className="flex size-5 shrink-0 items-center justify-center rounded bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
+				<span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-monti-accent font-medium text-monti-accent-foreground text-xs leading-none">
 					{target.badge}
 				</span>
 				<span>{t("inlineBubble.footnotePanel")}</span>

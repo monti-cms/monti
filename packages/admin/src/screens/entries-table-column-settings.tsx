@@ -37,7 +37,7 @@ export function ColumnSettingsPopover({
 					{order.map((column, index) => (
 						<li
 							key={column}
-							className="flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-monti-accent"
+							className="flex items-center justify-between gap-2 rounded-md px-1 py-1 hover:bg-monti-accent"
 						>
 							<Label className="font-normal">
 								<Checkbox

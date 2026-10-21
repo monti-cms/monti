@@ -108,7 +108,7 @@ export function EntryEditorHeader({
 					/>
 					<TooltipContent side="bottom">{t("backToList")}</TooltipContent>
 				</Tooltip>
-				<span className="hidden rounded bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs sm:inline-flex">
+				<span className="hidden rounded-sm bg-monti-muted px-1.5 py-0.5 text-monti-muted-foreground text-xs sm:inline-flex">
 					{statusLabel}
 				</span>
 			</div>
@@ -207,7 +207,7 @@ export function EntryEditorHeader({
 				) : (
 					// For an already published post, publish and "republish with today's date" are combined into one button.
 					// To look like one button, the wrapper paints the background and the two buttons are separated only by a thin line.
-					<div className="ml-1 flex h-8 items-center overflow-hidden rounded-[min(var(--radius-md),10px)] bg-monti-primary text-monti-primary-foreground">
+					<div className="ml-1 flex h-8 items-center overflow-hidden rounded-md bg-monti-primary text-monti-primary-foreground">
 						<Button
 							id="cms-publish"
 							type="button"

@@ -246,7 +246,7 @@ export function MediaTable({
 							}
 						>
 							<TableCell className="py-1.5">
-								<span className="flex size-9 items-center justify-center overflow-hidden rounded border bg-monti-muted">
+								<span className="flex size-9 items-center justify-center overflow-hidden rounded-md border bg-monti-muted">
 									<MediaThumb media={media} iconClassName="size-4" />
 								</span>
 							</TableCell>

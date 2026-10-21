@@ -56,7 +56,7 @@ export function CollapsibleNodeView() {
 					aria-expanded={open}
 					aria-label={open ? t("toggle.close") : t("toggle.open")}
 					onClick={toggle}
-					className="-m-1 rounded p-1 hover:bg-monti-accent"
+					className="-m-1 rounded-md p-1 hover:bg-monti-accent"
 				>
 					<ChevronRight
 						className={cn("size-4 shrink-0 text-monti-muted-foreground transition-transform", open && "rotate-90")}
